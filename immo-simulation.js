@@ -739,7 +739,7 @@ class SimulateurImmo {
 
         const resultats = this.params.resultats;
         return {
-            labels: ['Prix d\'achat', 'Coût total', 'Rentabilité (%)', 'Cash-flow mensuel'],
+            labels: ['Prix d\\'achat', 'Coût total', 'Rentabilité (%)', 'Cash-flow mensuel'],
             datasets: [
                 {
                     label: 'Achat Classique',
@@ -845,7 +845,7 @@ class SimulateurImmo {
         
         // Répartition des coûts pour l'achat classique
         const classique = {
-            labels: ['Prix d\'achat', 'Frais de notaire', 'Commission', 'Travaux', 'Frais bancaires'],
+            labels: ['Prix d\\'achat', 'Frais de notaire', 'Commission', 'Travaux', 'Frais bancaires'],
             datasets: [{
                 data: [
                     resultats.classique.prixAchat,
@@ -867,7 +867,7 @@ class SimulateurImmo {
         
         // Répartition des coûts pour la vente aux enchères
         const encheres = {
-            labels: ['Prix d\'achat', 'Droits d\'enregistrement', 'Émoluments', 'Honoraires avocat', 'Travaux', 'Frais divers', 'Frais bancaires'],
+            labels: ['Prix d\\'achat', 'Droits d\\'enregistrement', 'Émoluments', 'Honoraires avocat', 'Travaux', 'Frais divers', 'Frais bancaires'],
             datasets: [{
                 data: [
                     resultats.encheres.prixAchat,
@@ -962,8 +962,7 @@ class SimulateurImmo {
                     data: valeursEncheres,
                     borderColor: 'rgba(245, 158, 11, 1)',
                     backgroundColor: 'rgba(245, 158, 11, 0.05)',
-                    borderWidth: the
-                    2,
+                    borderWidth: 2,
                     fill: false,
                     tension: 0.1,
                     pointRadius: 2,
@@ -989,6 +988,48 @@ class SimulateurImmo {
                     pointRadius: 2,
                 }
             ]
+        };
+    }
+
+    /**
+     * Calcule la surface et l'emprunt optimaux selon l'apport et le rendement
+     * @returns {Object} - Surface et montant d'emprunt optimaux
+     */
+    calculerParametresOptimaux() {
+        const apport = this.params.base.apport;
+        const taux = this.params.base.taux;
+        const duree = this.params.base.duree;
+        const rendementMin = this.params.base.rendementMin;
+        const loyerM2 = this.params.communs.loyerM2;
+        const travauxM2 = this.params.communs.travauxM2;
+        
+        // Prix moyen au m² estimé (zone moyenne en France)
+        const prixMoyenM2 = 3000;
+        
+        // Calcul de capacité d'emprunt (règle simplifiée)
+        const mensualiteMax = (loyerM2 * 0.7) * 12 / 12; // 70% du loyer comme mensualité max
+        const tauxMensuel = taux / 100 / 12;
+        const nombreMensualites = duree * 12;
+        
+        // Capacité d'emprunt basée sur la mensualité max
+        let capaciteEmpruntMax = mensualiteMax * ((1 - Math.pow(1 + tauxMensuel, -nombreMensualites)) / tauxMensuel);
+        
+        // Surface max possible avec l'apport et la capacité d'emprunt
+        const budgetTotal = apport + capaciteEmpruntMax;
+        const coutM2Travaux = travauxM2;
+        const coutM2Total = prixMoyenM2 + (prixMoyenM2 * 0.08) + coutM2Travaux; // Prix + 8% frais + travaux
+        
+        const surfaceOptimale = Math.floor(budgetTotal / coutM2Total);
+        
+        // Montant d'emprunt ajusté
+        const montantEmpruntOptimal = Math.min(
+            capaciteEmpruntMax,
+            (surfaceOptimale * coutM2Total) - apport
+        );
+        
+        return {
+            surface: surfaceOptimale,
+            montantEmprunt: montantEmpruntOptimal
         };
     }
 }
