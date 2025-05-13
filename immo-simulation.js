@@ -31,7 +31,8 @@ class SimulateurImmo {
                 travauxM2: 400,               // €/m²
                 entretienAnnuel: 0.5,         // % du prix d'achat
                 assurancePNO: 250,            // € par an
-                chargesNonRecuperables: 10    // % des loyers
+                chargesNonRecuperables: 10,   // % des loyers
+                prixM2: 2000                  // Prix du marché immobilier en €/m²
             },
             classique: {
                 publiciteFonciere: 0.72,      // % du prix
@@ -108,6 +109,8 @@ class SimulateurImmo {
             this.params.communs.assurancePNO = parseFloat(formData.assurancePNO);
         if (formData.chargesNonRecuperables !== undefined)
             this.params.communs.chargesNonRecuperables = parseFloat(formData.chargesNonRecuperables);
+        if (formData.prixM2 !== undefined)
+            this.params.communs.prixM2 = parseFloat(formData.prixM2);
 
         // Paramètres achat classique
         if (formData.publiciteFonciere !== undefined) 
@@ -241,7 +244,7 @@ class SimulateurImmo {
             emoluments += (prix - 6500) * this.params.encheres.emolumentsPoursuivant2 / 100;
         } else if (prix <= 83500) {
             emoluments = 6500 * this.params.encheres.emolumentsPoursuivant1 / 100;
-            emoluments += (23500 - 6500) * this.params.encheres.emolementsPoursuivant2 / 100;
+            emoluments += (23500 - 6500) * this.params.encheres.emolumentsPoursuivant2 / 100;
             emoluments += (prix - 23500) * this.params.encheres.emolumentsPoursuivant3 / 100;
         } else {
             emoluments = 6500 * this.params.encheres.emolumentsPoursuivant1 / 100;
@@ -430,9 +433,8 @@ class SimulateurImmo {
         const travauxM2 = this.params.communs.travauxM2;
         
         // Prix d'achat (en fonction de la surface)
-        // Dans un cas réel, ce prix serait basé sur les données du marché
-        // Pour cet exemple, on utilise un prix fixe par m²
-        const prixM2 = 2000; // Exemple de prix au m² (à ajuster selon vos besoins)
+        // Utiliser le prix au m² paramétré ou par défaut
+        const prixM2 = parseFloat(this.params.communs.prixM2) || 2000;
         const prixAchat = surface * prixM2;
         
         // Travaux
@@ -584,7 +586,8 @@ class SimulateurImmo {
         const SURFACE_MAX = this.params.base.surfaceMax || 100;
         const { rendementMin } = this.params.base;
         
-        let surface = Math.max(10, pas); // Commencer à minimum 10 m²
+        // Commence à 1m² (ou au pas paramétré) pour tester les micro-studios
+        let surface = Math.max(1, pas);
         let best = null;
         
         while (surface <= SURFACE_MAX) {
