@@ -13,9 +13,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnAdvancedToggle = document.getElementById('btn-advanced-toggle');
     const advancedParams = document.getElementById('advanced-params');
     const btnSimulate = document.getElementById('btn-simulate');
+    const btnSaveSimulation = document.getElementById('btn-save-simulation');
+    const simulationNameInput = document.getElementById('simulation-name');
     const resultsContainer = document.getElementById('results');
     const objectifSelect = document.getElementById('objectif');
     const rendementMinGroup = document.getElementById('rendement-min-group');
+    const historiqueContainer = document.getElementById('historique-container');
+    const historiqueList = document.getElementById('historique-list');
 
     // Éléments des onglets
     const tabs = document.querySelectorAll('.tab');
@@ -27,6 +31,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Variables pour stocker les instances de graphiques
     let comparisonChart = null;
     let cashflowChart = null;
+    let valuationChart = null;
+    let costPieChartClassique = null;
+    let costPieChartEncheres = null;
 
     // Écouteurs d'événements
     // --------------------
@@ -106,10 +113,31 @@ document.addEventListener('DOMContentLoaded', function() {
             // Créer les graphiques
             creerGraphiques();
             
+            // Afficher le bouton de sauvegarde
+            if (btnSaveSimulation) {
+                btnSaveSimulation.classList.remove('hidden');
+            }
+            
             // Défiler vers les résultats
             resultsContainer.scrollIntoView({ behavior: 'smooth' });
         }, 1000);
     });
+
+    // Sauvegarde d'une simulation
+    if (btnSaveSimulation) {
+        btnSaveSimulation.addEventListener('click', function() {
+            const nomSimulation = simulationNameInput.value || `Simulation du ${new Date().toLocaleDateString()}`;
+            if (simulateur.sauvegarderSimulation(nomSimulation)) {
+                // Mettre à jour l'affichage de l'historique
+                mettreAJourHistoriqueSimulations();
+                // Animation de confirmation
+                this.innerHTML = '<i class="fas fa-check"></i> Sauvegardé';
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-save"></i> Sauvegarder la simulation';
+                }, 2000);
+            }
+        });
+    }
 
     // Adapter l'interface selon l'appareil
     window.addEventListener('resize', adapterInterfaceSelonAppareil);
@@ -117,6 +145,268 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Fonctions
     // --------------------
+
+    /**
+     * Met à jour l'affichage de l'historique des simulations
+     */
+    function mettreAJourHistoriqueSimulations() {
+        if (!historiqueList) return;
+        
+        // Vider la liste
+        historiqueList.innerHTML = '';
+        
+        // Récupérer l'historique
+        const historique = simulateur.getHistoriqueSimulations();
+        
+        if (historique.length === 0) {
+            historiqueContainer.classList.add('hidden');
+            return;
+        }
+        
+        // Afficher l'historique
+        historiqueContainer.classList.remove('hidden');
+        
+        // Ajouter chaque simulation à la liste
+        historique.forEach(sim => {
+            const item = document.createElement('div');
+            item.className = 'historique-item';
+            item.innerHTML = `
+                <div class="historique-header">
+                    <h3>${sim.nom}</h3>
+                    <span class="historique-date">${sim.date.toLocaleDateString()}</span>
+                </div>
+                <div class="historique-details">
+                    <div class="historique-option">
+                        <strong>Achat classique:</strong> 
+                        ${formaterMontant(sim.resultats.classique.prixAchat)} 
+                        (${formaterPourcentage(sim.resultats.classique.rendementNet)})
+                    </div>
+                    <div class="historique-option">
+                        <strong>Enchères:</strong> 
+                        ${formaterMontant(sim.resultats.encheres.prixAchat)} 
+                        (${formaterPourcentage(sim.resultats.encheres.rendementNet)})
+                    </div>
+                </div>
+                <div class="historique-actions">
+                    <button class="btn btn-sm btn-outline historique-btn-details" data-id="${sim.id}">
+                        <i class="fas fa-eye"></i> Détails
+                    </button>
+                    <button class="btn btn-sm btn-outline historique-btn-charger" data-id="${sim.id}">
+                        <i class="fas fa-upload"></i> Charger
+                    </button>
+                </div>
+            `;
+            
+            historiqueList.appendChild(item);
+        });
+        
+        // Ajouter les écouteurs d'événements
+        document.querySelectorAll('.historique-btn-details').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const simId = parseInt(this.getAttribute('data-id'));
+                afficherDetailsSimulation(simId);
+            });
+        });
+        
+        document.querySelectorAll('.historique-btn-charger').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const simId = parseInt(this.getAttribute('data-id'));
+                chargerSimulation(simId);
+            });
+        });
+    }
+
+    /**
+     * Affiche les détails d'une simulation sauvegardée
+     * @param {number} simId - ID de la simulation
+     */
+    function afficherDetailsSimulation(simId) {
+        const historique = simulateur.getHistoriqueSimulations();
+        const simulation = historique.find(sim => sim.id === simId);
+        
+        if (!simulation) return;
+        
+        // Créer une modal pour afficher les détails
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>${simulation.nom}</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <h3>Paramètres</h3>
+                    <div class="grid grid-2">
+                        <div>
+                            <p><strong>Apport:</strong> ${formaterMontant(simulation.params.base.apport)}</p>
+                            <p><strong>Surface:</strong> ${simulation.params.base.surface} m²</p>
+                            <p><strong>Taux:</strong> ${simulation.params.base.taux}%</p>
+                            <p><strong>Durée:</strong> ${simulation.params.base.duree} ans</p>
+                        </div>
+                        <div>
+                            <p><strong>Loyer m²:</strong> ${simulation.params.communs.loyerM2} €/m²</p>
+                            <p><strong>Vacance:</strong> ${simulation.params.communs.vacanceLocative}%</p>
+                            <p><strong>Travaux:</strong> ${simulation.params.communs.travauxM2} €/m²</p>
+                        </div>
+                    </div>
+                    
+                    <h3>Résultats</h3>
+                    <div class="grid grid-2">
+                        <div>
+                            <h4>Achat Classique</h4>
+                            <p><strong>Prix d'achat:</strong> ${formaterMontant(simulation.resultats.classique.prixAchat)}</p>
+                            <p><strong>Coût total:</strong> ${formaterMontant(simulation.resultats.classique.coutTotal)}</p>
+                            <p><strong>Mensualité:</strong> ${formaterMontantMensuel(simulation.resultats.classique.mensualite)}</p>
+                            <p><strong>Cash-flow:</strong> ${formaterMontantMensuel(simulation.resultats.classique.cashFlow)}</p>
+                            <p><strong>Rentabilité:</strong> ${formaterPourcentage(simulation.resultats.classique.rendementNet)}</p>
+                        </div>
+                        <div>
+                            <h4>Vente aux Enchères</h4>
+                            <p><strong>Prix d'achat:</strong> ${formaterMontant(simulation.resultats.encheres.prixAchat)}</p>
+                            <p><strong>Coût total:</strong> ${formaterMontant(simulation.resultats.encheres.coutTotal)}</p>
+                            <p><strong>Mensualité:</strong> ${formaterMontantMensuel(simulation.resultats.encheres.mensualite)}</p>
+                            <p><strong>Cash-flow:</strong> ${formaterMontantMensuel(simulation.resultats.encheres.cashFlow)}</p>
+                            <p><strong>Rentabilité:</strong> ${formaterPourcentage(simulation.resultats.encheres.rendementNet)}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline modal-close-btn">Fermer</button>
+                    <button class="btn btn-primary btn-charger-sim" data-id="${simulation.id}">Charger cette simulation</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Ajouter les écouteurs pour fermer la modal
+        modal.querySelector('.modal-close').addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+        
+        modal.querySelector('.modal-close-btn').addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+        
+        // Ajouter l'écouteur pour charger la simulation
+        modal.querySelector('.btn-charger-sim').addEventListener('click', () => {
+            chargerSimulation(simId);
+            document.body.removeChild(modal);
+        });
+        
+        // Fermer la modal si on clique en dehors
+        modal.addEventListener('click', e => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+    }
+
+    /**
+     * Charge une simulation sauvegardée
+     * @param {number} simId - ID de la simulation
+     */
+    function chargerSimulation(simId) {
+        const historique = simulateur.getHistoriqueSimulations();
+        const simulation = historique.find(sim => sim.id === simId);
+        
+        if (!simulation) return;
+        
+        // Remplir le formulaire avec les paramètres de la simulation
+        document.getElementById('apport').value = simulation.params.base.apport;
+        document.getElementById('surface').value = simulation.params.base.surface;
+        document.getElementById('taux').value = simulation.params.base.taux;
+        document.getElementById('duree').value = simulation.params.base.duree;
+        document.getElementById('objectif').value = simulation.params.base.objectif;
+        document.getElementById('rendement-min').value = simulation.params.base.rendementMin;
+        
+        // Mettre à jour l'affichage du groupe rendement min
+        rendementMinGroup.style.display = simulation.params.base.objectif === 'rendement' ? 'block' : 'none';
+        
+        // Paramètres communs
+        document.getElementById('frais-bancaires-dossier').value = simulation.params.communs.fraisBancairesDossier;
+        document.getElementById('frais-bancaires-compte').value = simulation.params.communs.fraisBancairesCompte;
+        document.getElementById('frais-garantie').value = simulation.params.communs.fraisGarantie;
+        document.getElementById('taxe-fonciere').value = simulation.params.communs.taxeFonciere;
+        document.getElementById('vacance-locative').value = simulation.params.communs.vacanceLocative;
+        document.getElementById('loyer-m2').value = simulation.params.communs.loyerM2;
+        document.getElementById('travaux-m2').value = simulation.params.communs.travauxM2;
+        
+        // Afficher les paramètres avancés
+        advancedParams.classList.remove('hidden');
+        btnAdvancedToggle.innerHTML = '<i class="fas fa-times"></i> Masquer les paramètres';
+        
+        // Mettre focus sur le bouton de simulation
+        btnSimulate.focus();
+        btnSimulate.scrollIntoView({ behavior: 'smooth' });
+        
+        // Animation pour indiquer que les paramètres ont été chargés
+        btnSimulate.classList.add('btn-highlight');
+        setTimeout(() => {
+            btnSimulate.classList.remove('btn-highlight');
+        }, 1000);
+        
+        // Message de toast pour confirmer
+        afficherToast(`Simulation "${simulation.nom}" chargée`, 'success');
+    }
+
+    /**
+     * Affiche un message toast
+     * @param {string} message - Message à afficher
+     * @param {string} type - Type de message (info, success, warning, error)
+     */
+    function afficherToast(message, type = 'info') {
+        // Vérifier si le conteneur des toasts existe, sinon le créer
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            document.body.appendChild(toastContainer);
+        }
+        
+        // Créer le toast
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type} fade-in`;
+        
+        // Icône selon le type
+        let icon;
+        switch (type) {
+            case 'success': icon = 'fa-check-circle'; break;
+            case 'warning': icon = 'fa-exclamation-triangle'; break;
+            case 'error': icon = 'fa-times-circle'; break;
+            default: icon = 'fa-info-circle';
+        }
+        
+        toast.innerHTML = `
+            <div class="toast-icon"><i class="fas ${icon}"></i></div>
+            <div class="toast-content">${message}</div>
+            <button class="toast-close"><i class="fas fa-times"></i></button>
+        `;
+        
+        // Ajouter au conteneur
+        toastContainer.appendChild(toast);
+        
+        // Ajouter écouteur pour fermer
+        toast.querySelector('.toast-close').addEventListener('click', () => {
+            toast.classList.add('fade-out');
+            setTimeout(() => {
+                toastContainer.removeChild(toast);
+            }, 300);
+        });
+        
+        // Disparaître après 5 secondes
+        setTimeout(() => {
+            if (toastContainer.contains(toast)) {
+                toast.classList.add('fade-out');
+                setTimeout(() => {
+                    if (toastContainer.contains(toast)) {
+                        toastContainer.removeChild(toast);
+                    }
+                }, 300);
+            }
+        }, 5000);
+    }
 
     /**
      * Adapte l'interface selon la taille de l'écran
@@ -224,181 +514,313 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     function creerGraphiques() {
         // Détruire les graphiques existants
-        if (comparisonChart) {
-            comparisonChart.destroy();
-        }
-        if (cashflowChart) {
-            cashflowChart.destroy();
-        }
+        if (comparisonChart) comparisonChart.destroy();
+        if (cashflowChart) cashflowChart.destroy();
+        if (valuationChart) valuationChart.destroy();
+        if (costPieChartClassique) costPieChartClassique.destroy();
+        if (costPieChartEncheres) costPieChartEncheres.destroy();
         
         // Récupérer les contextes
-        const ctxComparison = document.getElementById('chart-comparison').getContext('2d');
-        const ctxCashflow = document.getElementById('chart-cashflow').getContext('2d');
+        const ctxComparison = document.getElementById('chart-comparison')?.getContext('2d');
+        const ctxCashflow = document.getElementById('chart-cashflow')?.getContext('2d');
+        const ctxValuation = document.getElementById('chart-valuation')?.getContext('2d');
+        const ctxPieClassique = document.getElementById('chart-pie-classique')?.getContext('2d');
+        const ctxPieEncheres = document.getElementById('chart-pie-encheres')?.getContext('2d');
+        
+        // Configuration commune des graphiques
+        Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
+        Chart.defaults.font.family = 'Inter';
         
         // Récupérer les données
         const comparisonData = simulateur.getComparisonChartData();
         const cashflowData = simulateur.getAmortissementData();
+        const valuationData = simulateur.getEvolutionValeurData(2); // 2% d'appréciation annuelle
+        const costPieData = simulateur.getCoutsPieChartData();
         
         // Créer le graphique de comparaison
-        comparisonChart = new Chart(ctxComparison, {
-            type: 'bar',
-            data: comparisonData,
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.7)',
+        if (ctxComparison && comparisonData) {
+            comparisonChart = new Chart(ctxComparison, {
+                type: 'bar',
+                data: comparisonData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Comparaison des options',
+                            color: 'rgba(255, 255, 255, 0.9)',
                             font: {
-                                family: 'Inter'
+                                size: 16,
+                                weight: 'bold'
                             }
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Comparaison des options',
-                        color: 'rgba(255, 255, 255, 0.9)',
-                        font: {
-                            family: 'Inter',
-                            size: 16,
-                            weight: 'bold'
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                if (context.parsed.y !== null) {
-                                    if (context.datasetIndex === 0 || context.datasetIndex === 1) {
-                                        // Pour les prix et coûts, formater en euros
-                                        if (context.dataIndex <= 1) {
-                                            label += formaterMontant(context.parsed.y);
-                                        }
-                                        // Pour la rentabilité, formater en pourcentage
-                                        else if (context.dataIndex === 2) {
-                                            label += formaterPourcentage(context.parsed.y);
-                                        }
-                                        // Pour le cash-flow, formater en euros par mois
-                                        else {
-                                            label += formaterMontantMensuel(context.parsed.y);
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        if (context.datasetIndex === 0 || context.datasetIndex === 1) {
+                                            // Pour les prix et coûts, formater en euros
+                                            if (context.dataIndex <= 1) {
+                                                label += formaterMontant(context.parsed.y);
+                                            }
+                                            // Pour la rentabilité, formater en pourcentage
+                                            else if (context.dataIndex === 2) {
+                                                label += formaterPourcentage(context.parsed.y);
+                                            }
+                                            // Pour le cash-flow, formater en euros par mois
+                                            else {
+                                                label += formaterMontantMensuel(context.parsed.y);
+                                            }
                                         }
                                     }
+                                    return label;
                                 }
-                                return label;
                             }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            font: {
-                                family: 'Inter'
-                            },
-                            callback: function(value) {
-                                // Formater les valeurs en fonction de l'axe
-                                if (value >= 1000) {
-                                    return value / 1000 + 'k€';
-                                }
-                                return value + '€';
-                            }
-                        },
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
                         }
                     },
-                    x: {
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            font: {
-                                family: 'Inter'
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    // Formater les valeurs en fonction de l'axe
+                                    if (value >= 1000) {
+                                        return value / 1000 + 'k€';
+                                    }
+                                    return value + '€';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
                             }
                         },
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
                         }
+                    },
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeOutQuart'
                     }
                 }
-            }
-        });
+            });
+        }
         
         // Créer le graphique d'évolution du cash-flow
-        cashflowChart = new Chart(ctxCashflow, {
-            type: 'line',
-            data: cashflowData,
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.7)',
+        if (ctxCashflow && cashflowData) {
+            cashflowChart = new Chart(ctxCashflow, {
+                type: 'line',
+                data: cashflowData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Évolution du cash-flow sur la durée du prêt',
+                            color: 'rgba(255, 255, 255, 0.9)',
                             font: {
-                                family: 'Inter'
-                            }
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Évolution du cash-flow sur la durée du prêt',
-                        color: 'rgba(255, 255, 255, 0.9)',
-                        font: {
-                            family: 'Inter',
-                            size: 16,
-                            weight: 'bold'
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                if (context.parsed.y !== null) {
-                                    label += formaterMontant(context.parsed.y);
-                                }
-                                return label;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            font: {
-                                family: 'Inter'
-                            },
-                            callback: function(value) {
-                                return value / 1000 + 'k€';
+                                size: 16,
+                                weight: 'bold'
                             }
                         },
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += formaterMontant(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
                         }
                     },
-                    x: {
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            font: {
-                                family: 'Inter'
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return value / 1000 + 'k€';
+                                }
                             },
-                            maxRotation: 45,
-                            minRotation: 45
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
                         },
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
                         }
+                    },
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeOutQuart'
                     }
                 }
-            }
-        });
+            });
+        }
+        
+        // Créer le graphique d'évolution de la valeur du bien
+        if (ctxValuation && valuationData) {
+            valuationChart = new Chart(ctxValuation, {
+                type: 'line',
+                data: valuationData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Évolution de la valeur patrimoniale',
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += formaterMontant(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return value / 1000 + 'k€';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+        
+        // Créer les graphiques en camembert pour la répartition des coûts
+        if (ctxPieClassique && costPieData) {
+            costPieChartClassique = new Chart(ctxPieClassique, {
+                type: 'doughnut',
+                data: costPieData.classique,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Répartition des coûts - Achat Classique',
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = formaterMontant(context.raw);
+                                    const percentage = ((context.raw / context.chart._metasets[0].total) * 100).toFixed(1) + '%';
+                                    return `${label}: ${value} (${percentage})`;
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 2000,
+                        animateRotate: true,
+                        animateScale: true
+                    }
+                }
+            });
+        }
+        
+        if (ctxPieEncheres && costPieData) {
+            costPieChartEncheres = new Chart(ctxPieEncheres, {
+                type: 'doughnut',
+                data: costPieData.encheres,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Répartition des coûts - Vente aux Enchères',
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = formaterMontant(context.raw);
+                                    const percentage = ((context.raw / context.chart._metasets[0].total) * 100).toFixed(1) + '%';
+                                    return `${label}: ${value} (${percentage})`;
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 2000,
+                        animateRotate: true,
+                        animateScale: true
+                    }
+                }
+            });
+        }
     }
 
     /**
@@ -423,6 +845,16 @@ document.addEventListener('DOMContentLoaded', function() {
             vacanceLocative: document.getElementById('vacance-locative').value,
             loyerM2: document.getElementById('loyer-m2').value,
             travauxM2: document.getElementById('travaux-m2').value,
+            
+            // Paramètres fiscaux (s'ils existent)
+            tauxPrelevementsSociaux: document.getElementById('taux-prelevements-sociaux')?.value || 17.2,
+            tauxMarginalImpot: document.getElementById('taux-marginal-impot')?.value || 30,
+            deficitFoncier: document.getElementById('deficit-foncier')?.checked || true,
+            
+            // Paramètres entretien et charges (s'ils existent)
+            entretienAnnuel: document.getElementById('entretien-annuel')?.value || 0.5,
+            assurancePNO: document.getElementById('assurance-pno')?.value || 250,
+            chargesNonRecuperables: document.getElementById('charges-non-recuperables')?.value || 10,
             
             // Paramètres achat classique
             publiciteFonciere: document.getElementById('publicite-fonciere').value,
@@ -531,7 +963,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Vérifier si des résultats ont été trouvés
         if (!classique || !encheres) {
-            alert('Impossible de trouver une solution avec les paramètres actuels. Veuillez ajuster vos critères.');
+            afficherToast('Impossible de trouver une solution avec les paramètres actuels. Veuillez ajuster vos critères.', 'error');
             return;
         }
         
@@ -552,6 +984,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
         document.getElementById('classique-rentabilite').textContent = formaterPourcentage(classique.rendementNet);
         
+        // Affichage des données fiscales pour l'achat classique si les éléments existent
+        if (document.getElementById('classique-revenu-foncier')) {
+            document.getElementById('classique-revenu-foncier').textContent = formaterMontant(classique.revenuFoncier);
+            document.getElementById('classique-impact-fiscal').textContent = formaterMontant(classique.impactFiscal);
+            document.getElementById('classique-cashflow-apres-impot').textContent = formaterMontantMensuel(
+                classique.cashFlow + (classique.impactFiscal / 12)
+            );
+        }
+        
         // Affichage des résultats pour la vente aux enchères
         document.getElementById('encheres-prix-max').textContent = formaterMontant(encheres.prixAchat);
         document.getElementById('encheres-prix-achat').textContent = formaterMontant(encheres.prixAchat);
@@ -571,6 +1012,15 @@ document.addEventListener('DOMContentLoaded', function() {
         cashflowEncheres.className = getClasseValeur(encheres.cashFlow);
         
         document.getElementById('encheres-rentabilite').textContent = formaterPourcentage(encheres.rendementNet);
+        
+        // Affichage des données fiscales pour les enchères si les éléments existent
+        if (document.getElementById('encheres-revenu-foncier')) {
+            document.getElementById('encheres-revenu-foncier').textContent = formaterMontant(encheres.revenuFoncier);
+            document.getElementById('encheres-impact-fiscal').textContent = formaterMontant(encheres.impactFiscal);
+            document.getElementById('encheres-cashflow-apres-impot').textContent = formaterMontantMensuel(
+                encheres.cashFlow + (encheres.impactFiscal / 12)
+            );
+        }
         
         // Comparatif
         document.getElementById('comp-classique-prix').textContent = formaterMontant(classique.prixAchat);
@@ -657,5 +1107,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Afficher les avantages
         document.getElementById('classique-avantages').textContent = "Points forts: " + avantagesClassique.join(", ");
         document.getElementById('encheres-avantages').textContent = "Points forts: " + avantagesEncheres.join(", ");
+        
+        // Mettre à jour l'historique des simulations
+        mettreAJourHistoriqueSimulations();
     }
 });
