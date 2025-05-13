@@ -80,23 +80,32 @@ function createSearchInterface() {
         <div class="relative">
           <input type="text" id="terms-search" aria-label="Rechercher un terme juridique ou fiscal" class="w-full bg-blue-800 bg-opacity-50 border border-blue-700 rounded-lg px-4 py-3 pl-10 text-white placeholder-gray-300" placeholder="Rechercher un terme...">
           <i class="fas fa-search absolute left-3 top-3.5 text-gray-300" aria-hidden="true"></i>
-        </div>
-        
-        <div class="mt-4">
-          <div role="tablist" class="flex flex-wrap gap-2" id="category-filters">
-            <button role="tab" aria-selected="true" class="category-btn px-3 py-1 rounded-md bg-green-500 text-gray-900 font-medium" data-category="all">Tous</button>
-            <button role="tab" aria-selected="false" class="category-btn px-3 py-1 rounded-md bg-blue-800 text-white" data-category="fiscal">Fiscal</button>
-            <button role="tab" aria-selected="false" class="category-btn px-3 py-1 rounded-md bg-blue-800 text-white" data-category="juridique">Juridique</button>
-            <button role="tab" aria-selected="false" class="category-btn px-3 py-1 rounded-md bg-blue-800 text-white" data-category="social">Social</button>
+          
+          <!-- Container for autocomplete suggestions -->
+          <div id="search-suggestions" class="absolute w-full bg-blue-900 rounded-lg mt-1 shadow-lg z-10 overflow-hidden" style="display: none;">
+            <!-- Suggestions will be added here -->
           </div>
         </div>
       </div>
       
+      <!-- Cette div restera vide, les résultats principaux ne seront pas affichés -->
       <div id="terms-results" class="mt-6" aria-live="polite">
         <div class="text-center text-gray-400">
           <i class="fas fa-spinner fa-spin text-2xl"></i>
           <p class="mt-2">Chargement des termes...</p>
         </div>
+      </div>
+      
+      <!-- Contenu personnalisé -->
+      <div id="my-custom-content" class="mt-12">
+        <div class="flex items-center">
+          <i class="fas fa-building text-green-400 text-3xl mr-4"></i>
+          <h3 class="text-2xl font-bold">Quel statut juridique pour votre projet ?</h3>
+        </div>
+        
+        <p class="mt-4 text-lg">
+          Le choix de la forme juridique est une étape cruciale dans la création d'une entreprise. Ce simulateur vous aide à trouver le statut le plus adapté à votre situation en fonction de vos besoins, objectifs et contraintes. Répondez aux questions ci-dessous pour obtenir une recommandation personnalisée.
+        </p>
       </div>
     </div>
   `;
@@ -116,7 +125,7 @@ function loadLegalTerms() {
       // Convertir en format plus facile à utiliser
       const termsArray = Object.entries(data).map(([key, value]) => {
         return {
-          terme: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          terme: key.replace(/_/g, ' ').replace(/\\b\\w/g, l => l.toUpperCase()),
           definition: value.definition,
           detail: value.example,
           related: value.related_terms,
@@ -144,126 +153,95 @@ function loadLegalTerms() {
 function initializeSearchInterface(terms) {
   console.log("Initialisation interface, termes:", terms.length);
   
-  // Afficher tous les termes
-  renderTermsList(terms, 'all');
+  // Vider le conteneur de résultats
+  const resultsContainer = document.getElementById('terms-results');
+  resultsContainer.innerHTML = '';
   
-  // Configurer la recherche avec debounce
+  // Référence à l'élément de suggestions
+  const suggestionsContainer = document.getElementById('search-suggestions');
+  
+  // Configurer la recherche avec autocomplete
   const searchInput = document.getElementById('terms-search');
+  
+  // Événement d'entrée avec debounce pour afficher les suggestions
   searchInput.addEventListener('input', debounce(function() {
-    const query = this.value.toLowerCase();
-    const activeCategory = document.querySelector('.category-btn[aria-selected="true"]').dataset.category;
+    const query = this.value.toLowerCase().trim();
     
+    // Si la requête est vide, masquer les suggestions
+    if (!query) {
+      suggestionsContainer.style.display = 'none';
+      return;
+    }
+    
+    // Filtrer les termes selon la requête
     const filteredTerms = window.legalTermsData.filter(term => {
-      const matchesQuery = term.terme.toLowerCase().includes(query) || 
-                          term.definition.toLowerCase().includes(query);
-      const matchesCategory = activeCategory === 'all' || term.categorie === activeCategory;
-      
-      return matchesQuery && matchesCategory;
-    });
+      return term.terme.toLowerCase().includes(query);
+    }).slice(0, 5); // Limiter à 5 suggestions
     
-    renderTermsList(filteredTerms, activeCategory);
+    // Afficher les suggestions si des résultats sont trouvés
+    if (filteredTerms.length > 0) {
+      renderSuggestions(filteredTerms);
+      suggestionsContainer.style.display = 'block';
+    } else {
+      suggestionsContainer.style.display = 'none';
+    }
   }, 200));
   
-  // Configurer les filtres de catégorie
-  document.querySelectorAll('.category-btn').forEach(button => {
-    button.addEventListener('click', function() {
-      // Update button appearance and ARIA
-      document.querySelectorAll('.category-btn').forEach(btn => {
-        btn.classList.remove('bg-green-500', 'text-gray-900', 'font-medium');
-        btn.classList.add('bg-blue-800', 'text-white');
-        btn.setAttribute('aria-selected', 'false');
-      });
-      this.classList.remove('bg-blue-800', 'text-white');
-      this.classList.add('bg-green-500', 'text-gray-900', 'font-medium');
-      this.setAttribute('aria-selected', 'true');
+  // Masquer les suggestions quand on clique ailleurs
+  document.addEventListener('click', function(e) {
+    if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+      suggestionsContainer.style.display = 'none';
+    }
+  });
+}
+
+// Fonction pour afficher les suggestions de recherche
+function renderSuggestions(terms) {
+  const container = document.getElementById('search-suggestions');
+  
+  let html = '';
+  
+  terms.forEach(term => {
+    // Couleur basée sur la catégorie
+    const categoryColor = term.categorie === 'fiscal' ? 'text-green-400' : 
+                          term.categorie === 'juridique' ? 'text-blue-400' : 
+                          'text-purple-400';
+                          
+    const categoryBadge = `<span class="ml-2 px-2 py-0.5 rounded text-xs ${term.categorie === 'fiscal' ? 'bg-green-900 text-green-300' : 
+                            term.categorie === 'juridique' ? 'bg-blue-900 text-blue-300' : 
+                            'bg-purple-900 text-purple-300'}">${term.categorie}</span>`;
+    
+    html += `
+      <div class="suggestion-item p-3 cursor-pointer hover:bg-blue-800 border-b border-blue-700 flex items-center">
+        <span class="mr-2">•</span>
+        <span class="${categoryColor} font-medium">${term.terme}</span>
+        ${categoryBadge}
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+  
+  // Ajouter des événements de clic aux suggestions
+  document.querySelectorAll('.suggestion-item').forEach((item, index) => {
+    item.addEventListener('click', function() {
+      // Récupérer le terme sélectionné
+      const selectedTerm = terms[index].terme;
       
-      // Filter results
-      const category = this.dataset.category;
-      const query = document.getElementById('terms-search').value.toLowerCase();
+      // Mettre à jour l'input de recherche
+      document.getElementById('terms-search').value = selectedTerm;
       
-      const filteredTerms = window.legalTermsData.filter(term => {
-        const matchesQuery = term.terme.toLowerCase().includes(query) || 
-                            term.definition.toLowerCase().includes(query);
-        const matchesCategory = category === 'all' || term.categorie === category;
-        
-        return matchesQuery && matchesCategory;
-      });
+      // Cacher les suggestions
+      document.getElementById('search-suggestions').style.display = 'none';
       
-      renderTermsList(filteredTerms, category);
+      // Afficher le détail du terme (optionnel - actuellement désactivé)
+      // displayTermDetail(terms[index]);
     });
   });
 }
 
-function renderTermsList(terms, category) {
-  console.log("Rendu de", terms.length, "termes, catégorie:", category);
-  const resultsContainer = document.getElementById('terms-results');
-  
-  if (terms.length === 0) {
-    resultsContainer.innerHTML = `
-      <div class="bg-blue-900 bg-opacity-20 p-4 rounded-lg text-center">
-        <p>Aucun terme trouvé pour cette recherche.</p>
-      </div>
-    `;
-    return;
-  }
-  
-  // Trier par ordre alphabétique
-  terms.sort((a, b) => a.terme.localeCompare(b.terme, 'fr'));
-  
-  // Générer le HTML
-  let html = '';
-  let currentLetter = '';
-  
-  terms.forEach(term => {
-    const firstLetter = term.terme.charAt(0).toUpperCase();
-    
-    // Ajouter séparateur de lettre
-    if (firstLetter !== currentLetter) {
-      currentLetter = firstLetter;
-      html += `
-        <div class="letter-divider mt-6 mb-3 border-b border-blue-700 pb-1">
-          <span class="text-xl font-bold text-green-400">${currentLetter}</span>
-        </div>
-      `;
-    }
-    
-    // Couleur par catégorie
-    const categoryColor = term.categorie === 'fiscal' ? 'bg-green-900 text-green-300' : 
-                          term.categorie === 'juridique' ? 'bg-blue-900 text-blue-300' : 
-                          'bg-purple-900 text-purple-300';
-    
-    // Liens termes associés
-    const relatedLinks = term.related ? 
-      `<div class="mt-2 text-sm">
-        <span class="text-gray-400">Termes associés:</span> 
-        ${term.related.map(r => `<button class="related-term cursor-pointer text-blue-400 hover:underline" role="button">${r}</button>`).join(', ')}
-      </div>` : '';
-    
-    html += `
-      <div class="term-card mb-4 bg-blue-900 bg-opacity-20 p-4 rounded-lg border border-blue-800">
-        <div class="flex justify-between items-start">
-          <h4 class="font-bold text-white text-lg">${term.terme}</h4>
-          <span class="category-badge ${categoryColor} px-2 py-1 rounded text-xs">${term.categorie}</span>
-        </div>
-        <p class="mt-2">${term.definition}</p>
-        ${term.detail ? `<p class="mt-2 text-gray-300 text-sm italic">${term.detail}</p>` : ''}
-        ${relatedLinks}
-      </div>
-    `;
-  });
-  
-  resultsContainer.innerHTML = html;
-  
-  // Ajouter événements pour les termes associés
-  document.querySelectorAll('.related-term').forEach(link => {
-    link.addEventListener('click', function() {
-      const searchTerm = this.textContent.toLowerCase();
-      const searchInput = document.getElementById('terms-search');
-      searchInput.value = searchTerm;
-      // Déclencher une recherche
-      searchInput.dispatchEvent(new Event('input'));
-      // Scroller vers le haut pour voir les résultats
-      window.scrollTo({top: searchInput.offsetTop - 100, behavior: 'smooth'});
-    });
-  });
+// Fonction désactivée pour le moment - serait utilisée pour afficher le détail d'un terme
+function displayTermDetail(term) {
+  // Cette fonction n'est pas utilisée actuellement car vous voulez garder l'espace sous la recherche vide
+  // Mais elle pourrait être réactivée si nécessaire
 }
