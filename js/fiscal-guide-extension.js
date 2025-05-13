@@ -1,78 +1,101 @@
 // Extrait corrigé de fiscal-guide.js
 function setupSectorOptions() {
-    // Code de débogage pour vérifier si les éléments sont trouvés
+    // Trouver les sélecteurs
     const secteurSelect = document.querySelector('#secteur-select, [id$="secteur-select"]');
     const tailleSelect = document.querySelector('#taille-select, [id$="taille-select"]');
     console.log("Éléments trouvés:", !!secteurSelect, !!tailleSelect);
-    if (secteurSelect) console.log("ID secteur:", secteurSelect.id);
-    if (tailleSelect) console.log("ID taille:", tailleSelect.id);
     
-    // CORRECTION MAJEURE: Initialiser les options sectorielles immédiatement au chargement
+    // Initialiser immédiatement au chargement
     if (secteurSelect && tailleSelect) {
-        console.log("Initialisation des options sectorielles");
+        // Définir les valeurs normalisées
+        const secteurValue = secteurSelect.value === "Par défaut" ? "Tous" : secteurSelect.value;
+        const tailleValue = tailleSelect.value === "Par défaut" ? "<50" : tailleSelect.value;
         
-        // Initialisation immédiate des valeurs
         window.sectorOptions = {
-            secteur: secteurSelect.value,
-            taille: tailleSelect.value
+            secteur: secteurValue,
+            taille: tailleValue,
+            isDefault: secteurSelect.value === "Par défaut" && tailleSelect.value === "Par défaut"
         };
+        
         console.log("Options sectorielles initiales:", window.sectorOptions);
         
-        // CORRECTION: Force le rafraîchissement des valeurs actuelles dans window.sectorOptions
-        document.dispatchEvent(new CustomEvent('sectorOptionsChanged', { 
-            detail: window.sectorOptions
-        }));
-        
-        // Ajouter des écouteurs d'événements
+        // Ajouter le gestionnaire d'événement pour secteur
         secteurSelect.addEventListener('change', function() {
+            const newSecteur = this.value === "Par défaut" ? "Tous" : this.value;
+            
             window.sectorOptions = {
-                secteur: this.value,
-                taille: tailleSelect.value
+                secteur: newSecteur,
+                taille: window.sectorOptions.taille,
+                isDefault: this.value === "Par défaut" && tailleSelect.value === "Par défaut"
             };
+            
             console.log("Options sectorielles mises à jour:", window.sectorOptions);
             
-            // CORRECTION: Déclencher un événement personnalisé pour notifier du changement
+            // Fermer tout modal de détail ouvert
+            const openModal = document.querySelector('.detail-modal');
+            if (openModal) {
+                openModal.remove();
+                console.log("Modal de détail fermé pour mise à jour sectorielle");
+            }
+            
+            // Déclencher l'événement de changement
             document.dispatchEvent(new CustomEvent('sectorOptionsChanged', { 
-                detail: window.sectorOptions
+                detail: window.sectorOptions 
             }));
             
-            // Force une comparaison complète après changement de secteur
+            // Ajouter un effet visuel de mise à jour
+            const resultsContainer = document.getElementById('sim-results');
+            if (resultsContainer) {
+                resultsContainer.classList.add('updating');
+                setTimeout(() => resultsContainer.classList.remove('updating'), 500);
+            }
+            
+            // Force une nouvelle comparaison
             runComparison();
         });
         
+        // Même logique pour le sélecteur de taille
         tailleSelect.addEventListener('change', function() {
+            const newTaille = this.value === "Par défaut" ? "<50" : this.value;
+            
             window.sectorOptions = {
-                secteur: secteurSelect.value,
-                taille: this.value
+                secteur: window.sectorOptions.secteur,
+                taille: newTaille,
+                isDefault: secteurSelect.value === "Par défaut" && this.value === "Par défaut"
             };
+            
+            // Même logique que pour le secteur...
             console.log("Options sectorielles mises à jour:", window.sectorOptions);
             
-            // CORRECTION: Déclencher un événement personnalisé pour notifier du changement
+            // Fermer tout modal de détail ouvert
+            const openModal = document.querySelector('.detail-modal');
+            if (openModal) openModal.remove();
+            
+            // Déclencher l'événement
             document.dispatchEvent(new CustomEvent('sectorOptionsChanged', { 
-                detail: window.sectorOptions
+                detail: window.sectorOptions 
             }));
             
-            // Force une comparaison complète après changement de taille
+            // Effet visuel
+            const resultsContainer = document.getElementById('sim-results');
+            if (resultsContainer) {
+                resultsContainer.classList.add('updating');
+                setTimeout(() => resultsContainer.classList.remove('updating'), 500);
+            }
+            
+            // Nouvelle comparaison
             runComparison();
         });
     } else {
-        console.warn("Sélecteurs de secteur/taille non trouvés - paramètres sectoriels non disponibles");
-        
-        // CORRECTION: Définir des valeurs par défaut même si les sélecteurs ne sont pas trouvés
+        // Si les sélecteurs n'existent pas, utiliser des valeurs par défaut
         window.sectorOptions = {
             secteur: "Tous",
-            taille: "<50"
+            taille: "<50",
+            isDefault: true
         };
         console.log("Options sectorielles par défaut créées:", window.sectorOptions);
     }
 }
-
-// AJOUT: Module d'écoute des événements sectoriels pour le débogage
-document.addEventListener('sectorOptionsChanged', function(e) {
-    console.log("ÉVÉNEMENT: Paramètres sectoriels modifiés:", e.detail);
-    // Vérifier si les options ont bien été appliquées à la variable globale
-    console.log("window.sectorOptions actuel:", window.sectorOptions);
-});
 
 // CORRECTION: Force la réinitialisation complète lors d'un changement d'onglet
 function initFiscalSimulator() {
@@ -105,16 +128,21 @@ function runComparison() {
     
     if (secteurSelect && tailleSelect) {
         // Mise à jour forcée et synchronisée des options sectorielles
+        const secteurValue = secteurSelect.value === "Par défaut" ? "Tous" : secteurSelect.value;
+        const tailleValue = tailleSelect.value === "Par défaut" ? "<50" : tailleSelect.value;
+        
         window.sectorOptions = {
-            secteur: secteurSelect.value,
-            taille: tailleSelect.value
+            secteur: secteurValue,
+            taille: tailleValue,
+            isDefault: secteurSelect.value === "Par défaut" && tailleSelect.value === "Par défaut"
         };
         console.log("runComparison: Synchronisation des options sectorielles:", window.sectorOptions);
     } else if (!window.sectorOptions) {
         // Valeurs par défaut si non définies
         window.sectorOptions = {
             secteur: "Tous",
-            taille: "<50"
+            taille: "<50",
+            isDefault: true
         };
         console.log("runComparison: Options sectorielles par défaut:", window.sectorOptions);
     }
@@ -143,5 +171,26 @@ function runComparison() {
     // Logging des paramètres pour débogage
     console.log("Paramètres complets:", params);
     console.log("Options sectorielles utilisées:", window.sectorOptions);
+}
+
+// Ajouter à la fin du fichier
+document.addEventListener('sectorOptionsChanged', function(e) {
+    console.log("ÉVÉNEMENT: Paramètres sectoriels modifiés:", e.detail);
     
-    // Reste de la fonction runComparison inchangé...
+    // Mettre à jour tout modal de détail actuellement affiché
+    const detailModal = document.querySelector('.detail-modal');
+    if (detailModal) {
+        const statutId = detailModal.getAttribute('data-statut');
+        if (statutId && window.latestSimulationResults) {
+            // Forcer la fermeture du modal actuel
+            detailModal.remove();
+            
+            // Recréer avec les nouvelles données après le recalcul
+            setTimeout(() => {
+                if (window.latestSimulationResults) {
+                    showCalculationDetails(statutId, window.latestSimulationResults);
+                }
+            }, 200);
+        }
+    }
+});
