@@ -510,14 +510,8 @@ class SimulateurImmo {
                 loyerNet * 12, chargesDeductibles, impactFiscal, coutTotal + fraisBancaires
             );
             
-            // Vérifier si les critères sont respectés
-            let criteresRespectes = false;
-            
-            if (objectif === 'cashflow') {
-                criteresRespectes = cashFlow >= cashFlowMin;
-            } else {
-                criteresRespectes = rendementNet >= rendementMin && cashFlow >= cashFlowMin;
-            }
+            // On ne garde que la condition "loyer net ≥ mensualité + 1 €"
+            let criteresRespectes = loyerNet >= (mensualite + 1);
             
             if (criteresRespectes) {
                 prixMin = prixTest;
@@ -545,6 +539,7 @@ class SimulateurImmo {
                     cashFlowAnnuel: cashFlow * 12,
                     rendementNet: rendementNet,
                     prixM2: prixTest / surface,
+                    marge: loyerNet - mensualite,
                     tableauAmortissement: tableauAmortissement
                 };
             } else {
@@ -662,14 +657,8 @@ class SimulateurImmo {
                 loyerNet * 12, chargesDeductibles, impactFiscal, coutTotal + fraisBancaires
             );
             
-            // Vérifier si les critères sont respectés
-            let criteresRespectes = false;
-            
-            if (objectif === 'cashflow') {
-                criteresRespectes = cashFlow >= cashFlowMin;
-            } else {
-                criteresRespectes = rendementNet >= rendementMin && cashFlow >= cashFlowMin;
-            }
+            // On ne garde que la condition "loyer net ≥ mensualité + 1 €"
+            let criteresRespectes = loyerNet >= (mensualite + 1);
             
             if (criteresRespectes) {
                 prixMin = prixTest;
@@ -701,6 +690,7 @@ class SimulateurImmo {
                     cashFlowAnnuel: cashFlow * 12,
                     rendementNet: rendementNet,
                     prixM2: prixTest / surface,
+                    marge: loyerNet - mensualite,
                     tableauAmortissement: tableauAmortissement
                 };
             } else {
