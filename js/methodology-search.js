@@ -208,10 +208,22 @@ function initializeSearchInterface(terms) {
       return;
     }
     
-    // Filtrer les termes selon la requête (commençant par la lettre/mot saisi)
-    const filteredTerms = window.legalTermsData.filter(term => {
-      return term.terme.toLowerCase().startsWith(query);
-    }).slice(0, 10); // Limiter à 10 pour les performances
+    // MODIFICATION: Recherche les termes qui contiennent la requête n'importe où dans le texte
+    // et tri pour mettre en premier ceux qui commencent par la requête
+    const filteredTerms = window.legalTermsData
+      .filter(term => term.terme.toLowerCase().includes(query))
+      .sort((a, b) => {
+        // Si a commence par la requête mais pas b, a vient en premier
+        const aStartsWith = a.terme.toLowerCase().startsWith(query);
+        const bStartsWith = b.terme.toLowerCase().startsWith(query);
+        
+        if (aStartsWith && !bStartsWith) return -1;
+        if (!aStartsWith && bStartsWith) return 1;
+        
+        // Sinon tri alphabétique
+        return a.terme.localeCompare(b.terme);
+      })
+      .slice(0, 10); // Limiter à 10 pour les performances
     
     console.log("Résultats trouvés:", filteredTerms.length);
     
@@ -239,11 +251,19 @@ function renderSuggestions(terms, query) {
   let html = '';
   
   terms.forEach(term => {
-    // Mettre en évidence la partie qui correspond à la requête
-    const highlightedTerm = term.terme.replace(
-      new RegExp('^' + query, 'i'), 
-      '<span class="text-green-400">$&</span>'
-    );
+    // MODIFICATION: Mettre en évidence toutes les occurrences du terme recherché
+    let highlightedTerm = term.terme;
+    const termLower = term.terme.toLowerCase();
+    const queryLower = query.toLowerCase();
+    const startIndex = termLower.indexOf(queryLower);
+    
+    if (startIndex !== -1) {
+      const endIndex = startIndex + query.length;
+      highlightedTerm = 
+        term.terme.substring(0, startIndex) + 
+        `<span class="text-green-400">${term.terme.substring(startIndex, endIndex)}</span>` + 
+        term.terme.substring(endIndex);
+    }
     
     html += `
       <div class="suggestion-item p-3 cursor-pointer hover:bg-blue-800 border-b border-blue-700 flex items-center" role="option">
