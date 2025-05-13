@@ -14,7 +14,9 @@ function log(...args) {
 
 // NOUVEAU: Normalisation des valeurs sectorielles
 function normalize(value) {
-    if (!value) return "Tous";
+    // Si la valeur est "Par défaut", retourner "Tous" (valeur par défaut)
+    if (!value || value === "Par défaut") return "Tous";
+    
     return value.trim()
         .replace(/^</,"<")     // garde "<50"
         .replace(/^>=/,">=")   // garde ">=50"
@@ -192,9 +194,15 @@ class FiscalUtils {
     
     // Calcul des charges salariales avec table paramétrable - CORRECTION MAJEURE
     static calculChargesSalariales(remuneration, params = {}) {
-        // Normaliser le secteur et la taille
-        const secteur = normalize(params.secteur || window.sectorOptions?.secteur || "Tous");
-        const taille = (params.taille || window.sectorOptions?.taille || "<50").trim();
+        // Considérer "Par défaut" comme équivalent à "Tous"
+        let secteur = params.secteur || window.sectorOptions?.secteur || "Tous";
+        if (secteur === "Par défaut") secteur = "Tous";
+        
+        let taille = (params.taille || window.sectorOptions?.taille || "<50").trim();
+        if (taille === "Par défaut") taille = "<50";
+        
+        // Normaliser pour s'assurer de la cohérence
+        secteur = normalize(secteur);
         
         log(`FiscalUtils: Calcul des charges - secteur=${secteur}, taille=${taille}, remuneration=${remuneration}`);
         
@@ -358,10 +366,22 @@ class FiscalUtils {
             };
         });
     }
+    
+    // Ajouter après la dernière méthode de la classe, avant la ligne "window.FiscalUtils = FiscalUtils;"
+    static isUsingDefaultSectorOptions() {
+        const secteurSelect = document.querySelector('#secteur-select, [id$="secteur-select"]');
+        const tailleSelect = document.querySelector('#taille-select, [id$="taille-select"]');
+        
+        return (secteurSelect && secteurSelect.value === "Par défaut") &&
+               (tailleSelect && tailleSelect.value === "Par défaut");
+    }
 }
 
 // Exposer la classe au niveau global
 window.FiscalUtils = FiscalUtils;
+
+// Ajouter après window.FiscalUtils = FiscalUtils;
+window.isUsingDefaultSectorOptions = FiscalUtils.isUsingDefaultSectorOptions;
 
 // Exposer la fonction normalize au niveau global
 window.normalizeSecteur = normalize;
