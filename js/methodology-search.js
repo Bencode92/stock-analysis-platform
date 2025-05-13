@@ -1,4 +1,4 @@
-// methodology-search.js - Moteur de recherche pour l'onglet Méthodologie
+// methodology-search.js - Moteur de recherche pour l'onglet Glossaire
 // Optimisé pour l'accessibilité et les performances
 
 // Fonction debounce améliorée pour conserver le contexte
@@ -27,20 +27,20 @@ function getCategoryFromTerm(key) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  // S'initialise quand l'onglet Méthodologie est cliqué - méthode ROBUSTE par texte
+  // S'initialise quand l'onglet Glossaire est cliqué - méthode ROBUSTE par texte
   const tabItems = document.querySelectorAll('.tab-item');
   
   // Rechercher l'onglet par son texte plutôt que son index
   tabItems.forEach(item => {
-    if (item.textContent.trim() === "Méthodologie") {
-      item.addEventListener('click', initMethodologyTab);
-      console.log("Écouteur ajouté à l'onglet Méthodologie");
+    if (item.textContent.trim() === "Glossaire") {
+      item.addEventListener('click', initGlossaireTab);
+      console.log("Écouteur ajouté à l'onglet Glossaire");
     }
   });
 });
 
-function initMethodologyTab() {
-  console.log("Initialisation de l'onglet Méthodologie");
+function initGlossaireTab() {
+  console.log("Initialisation de l'onglet Glossaire");
   
   // Masquer contenu du simulateur
   document.getElementById('question-container').style.display = 'none';
@@ -56,9 +56,9 @@ function initMethodologyTab() {
   const tabItems = document.querySelectorAll('.tab-item');
   tabItems.forEach(item => item.classList.remove('active'));
   
-  // Activer l'onglet Méthodologie
+  // Activer l'onglet Glossaire
   tabItems.forEach(item => {
-    if (item.textContent.trim() === "Méthodologie") {
+    if (item.textContent.trim() === "Glossaire") {
       item.classList.add('active');
     }
   });
