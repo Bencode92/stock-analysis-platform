@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const resultsContainer = document.getElementById('results');
     const objectifSelect = document.getElementById('objectif');
     const rendementMinGroup = document.getElementById('rendement-min-group');
+    const montantEmpruntMaxGroup = document.getElementById('montant-emprunt-max-group');
+    const cashFlowMinGroup = document.getElementById('cashflow-min-group');
     const historiqueContainer = document.getElementById('historique-container');
     const historiqueList = document.getElementById('historique-list');
 
@@ -240,6 +242,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="grid grid-2">
                         <div>
                             <p><strong>Apport:</strong> ${formaterMontant(simulation.params.base.apport)}</p>
+                            <p><strong>Emprunt Max:</strong> ${formaterMontant(simulation.params.base.montantEmpruntMax || 0)}</p>
                             <p><strong>Surface:</strong> ${simulation.params.base.surface} m²</p>
                             <p><strong>Taux:</strong> ${simulation.params.base.taux}%</p>
                             <p><strong>Durée:</strong> ${simulation.params.base.duree} ans</p>
@@ -248,6 +251,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <p><strong>Loyer m²:</strong> ${simulation.params.communs.loyerM2} €/m²</p>
                             <p><strong>Vacance:</strong> ${simulation.params.communs.vacanceLocative}%</p>
                             <p><strong>Travaux:</strong> ${simulation.params.communs.travauxM2} €/m²</p>
+                            <p><strong>Cash-flow min:</strong> ${formaterMontant(simulation.params.base.cashFlowMin || 1)}/mois</p>
                         </div>
                     </div>
                     
@@ -315,11 +319,22 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Remplir le formulaire avec les paramètres de la simulation
         document.getElementById('apport').value = simulation.params.base.apport;
+        
+        // Gestion du montant d'emprunt maximum
+        if (document.getElementById('montant-emprunt-max')) {
+            document.getElementById('montant-emprunt-max').value = simulation.params.base.montantEmpruntMax || 150000;
+        }
+        
         document.getElementById('surface').value = simulation.params.base.surface;
         document.getElementById('taux').value = simulation.params.base.taux;
         document.getElementById('duree').value = simulation.params.base.duree;
         document.getElementById('objectif').value = simulation.params.base.objectif;
         document.getElementById('rendement-min').value = simulation.params.base.rendementMin;
+        
+        // Gestion du cash-flow minimum
+        if (document.getElementById('cashflow-min')) {
+            document.getElementById('cashflow-min').value = simulation.params.base.cashFlowMin || 1;
+        }
         
         // Mettre à jour l'affichage du groupe rendement min
         rendementMinGroup.style.display = simulation.params.base.objectif === 'rendement' ? 'block' : 'none';
@@ -831,11 +846,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = {
             // Paramètres de base
             apport: document.getElementById('apport').value,
+            montantEmpruntMax: document.getElementById('montant-emprunt-max')?.value || 150000,
             surface: document.getElementById('surface').value,
             taux: document.getElementById('taux').value,
             duree: document.getElementById('duree').value,
             objectif: document.getElementById('objectif').value,
             rendementMin: document.getElementById('rendement-min').value,
+            cashFlowMin: document.getElementById('cashflow-min')?.value || 1,
             
             // Paramètres communs
             fraisBancairesDossier: document.getElementById('frais-bancaires-dossier').value,
