@@ -739,7 +739,7 @@ class SimulateurImmo {
 
         const resultats = this.params.resultats;
         return {
-            labels: ['Prix d\\'achat', 'Coût total', 'Rentabilité (%)', 'Cash-flow mensuel'],
+            labels: ['Prix d\'achat', 'Coût total', 'Rentabilité (%)', 'Cash-flow mensuel'],
             datasets: [
                 {
                     label: 'Achat Classique',
@@ -845,7 +845,7 @@ class SimulateurImmo {
         
         // Répartition des coûts pour l'achat classique
         const classique = {
-            labels: ['Prix d\\'achat', 'Frais de notaire', 'Commission', 'Travaux', 'Frais bancaires'],
+            labels: ['Prix d\'achat', 'Frais de notaire', 'Commission', 'Travaux', 'Frais bancaires'],
             datasets: [{
                 data: [
                     resultats.classique.prixAchat,
@@ -867,7 +867,7 @@ class SimulateurImmo {
         
         // Répartition des coûts pour la vente aux enchères
         const encheres = {
-            labels: ['Prix d\\'achat', 'Droits d\\'enregistrement', 'Émoluments', 'Honoraires avocat', 'Travaux', 'Frais divers', 'Frais bancaires'],
+            labels: ['Prix d\'achat', 'Droits d\\'enregistrement', 'Émoluments', 'Honoraires avocat', 'Travaux', 'Frais divers', 'Frais bancaires'],
             datasets: [{
                 data: [
                     resultats.encheres.prixAchat,
