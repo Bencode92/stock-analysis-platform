@@ -24,12 +24,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Éléments accordion
     const accordionHeaders = document.querySelectorAll('.accordion-header');
 
+    // Variables pour stocker les instances de graphiques
+    let comparisonChart = null;
+    let cashflowChart = null;
+
     // Écouteurs d'événements
     // --------------------
 
     // Affichage/masquage des paramètres avancés
     btnAdvancedToggle.addEventListener('click', function() {
         advancedParams.classList.toggle('hidden');
+        advancedParams.classList.toggle('fade-in');
         btnAdvancedToggle.innerHTML = advancedParams.classList.contains('hidden') 
             ? '<i class="fas fa-sliders-h"></i> Mode Avancé'
             : '<i class="fas fa-times"></i> Masquer les paramètres';
@@ -38,6 +43,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Changement d'objectif
     objectifSelect.addEventListener('change', function() {
         rendementMinGroup.style.display = this.value === 'rendement' ? 'block' : 'none';
+        if (this.value === 'rendement') {
+            rendementMinGroup.classList.add('fade-in');
+        }
     });
 
     // Gestion des onglets
@@ -52,7 +60,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Afficher le contenu correspondant
             const tabId = this.getAttribute('data-tab');
-            document.getElementById(tabId).classList.add('active');
+            const tabContent = document.getElementById(tabId);
+            tabContent.classList.add('active');
+            tabContent.classList.add('fade-in');
         });
     });
 
@@ -86,16 +96,310 @@ document.addEventListener('DOMContentLoaded', function() {
             // Masquer l'indicateur de chargement
             document.querySelector('.loading').style.display = 'none';
             
-            // Afficher les résultats
+            // Afficher les résultats avec animation
             resultsContainer.classList.remove('hidden');
+            resultsContainer.classList.add('fade-in');
+            
+            // Animer les valeurs numériques
+            animerResultats();
+            
+            // Créer les graphiques
+            creerGraphiques();
             
             // Défiler vers les résultats
             resultsContainer.scrollIntoView({ behavior: 'smooth' });
         }, 1000);
     });
 
+    // Adapter l'interface selon l'appareil
+    window.addEventListener('resize', adapterInterfaceSelonAppareil);
+    window.addEventListener('DOMContentLoaded', adapterInterfaceSelonAppareil);
+
     // Fonctions
     // --------------------
+
+    /**
+     * Adapte l'interface selon la taille de l'écran
+     */
+    function adapterInterfaceSelonAppareil() {
+        const estMobile = window.innerWidth < 768;
+        
+        if (estMobile) {
+            document.querySelectorAll('.grid-2, .grid-3').forEach(grid => {
+                grid.style.display = 'block';
+            });
+            document.querySelectorAll('.results-card').forEach(card => {
+                card.style.marginBottom = '2rem';
+            });
+        } else {
+            document.querySelectorAll('.grid-2').forEach(grid => {
+                grid.style.display = 'grid';
+                grid.style.gridTemplateColumns = '1fr 1fr';
+            });
+            document.querySelectorAll('.grid-3').forEach(grid => {
+                grid.style.display = 'grid';
+                grid.style.gridTemplateColumns = '1fr 1fr 1fr';
+            });
+        }
+    }
+
+    /**
+     * Anime les valeurs numériques des résultats
+     */
+    function animerResultats() {
+        // Animation des prix maximums
+        const classiquePrixMax = document.getElementById('classique-prix-max');
+        const encheresPrixMax = document.getElementById('encheres-prix-max');
+        
+        if (classiquePrixMax && encheresPrixMax) {
+            // Récupérer les valeurs finales sans formatage
+            const prixClassique = simulateur.params.resultats.classique.prixAchat;
+            const prixEncheres = simulateur.params.resultats.encheres.prixAchat;
+            
+            // Animer les prix
+            animerNombre(classiquePrixMax, 0, prixClassique, 1200);
+            animerNombre(encheresPrixMax, 0, prixEncheres, 1200);
+        }
+        
+        // Animation des rentabilités
+        const classiqueRentabilite = document.getElementById('classique-rentabilite');
+        const encheresRentabilite = document.getElementById('encheres-rentabilite');
+        
+        if (classiqueRentabilite && encheresRentabilite) {
+            // Récupérer les valeurs de rentabilité
+            const rentClassique = simulateur.params.resultats.classique.rendementNet;
+            const rentEncheres = simulateur.params.resultats.encheres.rendementNet;
+            
+            // Animer les rentabilités
+            setTimeout(() => {
+                classiqueRentabilite.textContent = formaterPourcentage(rentClassique);
+                encheresRentabilite.textContent = formaterPourcentage(rentEncheres);
+                
+                // Mettre à jour les classes des badges selon le niveau de rentabilité
+                majClasseRentabilite(classiqueRentabilite.parentElement, rentClassique);
+                majClasseRentabilite(encheresRentabilite.parentElement, rentEncheres);
+            }, 500);
+        }
+    }
+
+    /**
+     * Met à jour la classe d'un badge de rentabilité selon sa valeur
+     * @param {HTMLElement} element - Élément badge à mettre à jour
+     * @param {number} rentabilite - Valeur de rentabilité
+     */
+    function majClasseRentabilite(element, rentabilite) {
+        element.classList.remove('tag-success', 'tag-warning', 'tag-danger');
+        
+        if (rentabilite >= 7) {
+            element.classList.add('tag-success');
+        } else if (rentabilite >= 4) {
+            element.classList.add('tag-warning');
+        } else {
+            element.classList.add('tag-danger');
+        }
+    }
+
+    /**
+     * Anime un nombre de 0 à sa valeur finale
+     * @param {HTMLElement} element - Élément DOM à animer
+     * @param {number} debut - Valeur de départ
+     * @param {number} fin - Valeur finale
+     * @param {number} duree - Durée de l'animation en ms
+     */
+    function animerNombre(element, debut, fin, duree) {
+        const increment = fin > debut ? Math.ceil((fin - debut) / 50) : Math.floor((fin - debut) / 50);
+        let current = debut;
+        const timer = setInterval(() => {
+            current += increment;
+            if ((increment > 0 && current >= fin) || (increment < 0 && current <= fin)) {
+                clearInterval(timer);
+                current = fin;
+            }
+            element.textContent = formaterMontant(current);
+        }, duree / 50);
+    }
+
+    /**
+     * Crée et affiche les graphiques de comparaison
+     */
+    function creerGraphiques() {
+        // Détruire les graphiques existants
+        if (comparisonChart) {
+            comparisonChart.destroy();
+        }
+        if (cashflowChart) {
+            cashflowChart.destroy();
+        }
+        
+        // Récupérer les contextes
+        const ctxComparison = document.getElementById('chart-comparison').getContext('2d');
+        const ctxCashflow = document.getElementById('chart-cashflow').getContext('2d');
+        
+        // Récupérer les données
+        const comparisonData = simulateur.getComparisonChartData();
+        const cashflowData = simulateur.getAmortissementData();
+        
+        // Créer le graphique de comparaison
+        comparisonChart = new Chart(ctxComparison, {
+            type: 'bar',
+            data: comparisonData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            font: {
+                                family: 'Inter'
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Comparaison des options',
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        font: {
+                            family: 'Inter',
+                            size: 16,
+                            weight: 'bold'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    if (context.datasetIndex === 0 || context.datasetIndex === 1) {
+                                        // Pour les prix et coûts, formater en euros
+                                        if (context.dataIndex <= 1) {
+                                            label += formaterMontant(context.parsed.y);
+                                        }
+                                        // Pour la rentabilité, formater en pourcentage
+                                        else if (context.dataIndex === 2) {
+                                            label += formaterPourcentage(context.parsed.y);
+                                        }
+                                        // Pour le cash-flow, formater en euros par mois
+                                        else {
+                                            label += formaterMontantMensuel(context.parsed.y);
+                                        }
+                                    }
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            font: {
+                                family: 'Inter'
+                            },
+                            callback: function(value) {
+                                // Formater les valeurs en fonction de l'axe
+                                if (value >= 1000) {
+                                    return value / 1000 + 'k€';
+                                }
+                                return value + '€';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            font: {
+                                family: 'Inter'
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Créer le graphique d'évolution du cash-flow
+        cashflowChart = new Chart(ctxCashflow, {
+            type: 'line',
+            data: cashflowData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            font: {
+                                family: 'Inter'
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Évolution du cash-flow sur la durée du prêt',
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        font: {
+                            family: 'Inter',
+                            size: 16,
+                            weight: 'bold'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += formaterMontant(context.parsed.y);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            font: {
+                                family: 'Inter'
+                            },
+                            callback: function(value) {
+                                return value / 1000 + 'k€';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            font: {
+                                family: 'Inter'
+                            },
+                            maxRotation: 45,
+                            minRotation: 45
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                }
+            }
+        });
+    }
 
     /**
      * Récupère toutes les valeurs du formulaire
@@ -271,23 +575,43 @@ document.addEventListener('DOMContentLoaded', function() {
         // Comparatif
         document.getElementById('comp-classique-prix').textContent = formaterMontant(classique.prixAchat);
         document.getElementById('comp-encheres-prix').textContent = formaterMontant(encheres.prixAchat);
-        document.getElementById('comp-prix-diff').textContent = formaterMontantAvecSigne(encheres.prixAchat - classique.prixAchat);
+        
+        const diffPrix = encheres.prixAchat - classique.prixAchat;
+        const compPrixDiff = document.getElementById('comp-prix-diff');
+        compPrixDiff.textContent = formaterMontantAvecSigne(diffPrix);
+        compPrixDiff.className = diffPrix < 0 ? 'positive' : diffPrix > 0 ? 'negative' : '';
         
         document.getElementById('comp-classique-total').textContent = formaterMontant(classique.coutTotal);
         document.getElementById('comp-encheres-total').textContent = formaterMontant(encheres.coutTotal);
-        document.getElementById('comp-total-diff').textContent = formaterMontantAvecSigne(encheres.coutTotal - classique.coutTotal);
+        
+        const diffTotal = encheres.coutTotal - classique.coutTotal;
+        const compTotalDiff = document.getElementById('comp-total-diff');
+        compTotalDiff.textContent = formaterMontantAvecSigne(diffTotal);
+        compTotalDiff.className = diffTotal < 0 ? 'positive' : diffTotal > 0 ? 'negative' : '';
         
         document.getElementById('comp-classique-loyer').textContent = formaterMontant(classique.loyerBrut);
         document.getElementById('comp-encheres-loyer').textContent = formaterMontant(encheres.loyerBrut);
-        document.getElementById('comp-loyer-diff').textContent = formaterMontantAvecSigne(encheres.loyerBrut - classique.loyerBrut);
+        
+        const diffLoyer = encheres.loyerBrut - classique.loyerBrut;
+        const compLoyerDiff = document.getElementById('comp-loyer-diff');
+        compLoyerDiff.textContent = formaterMontantAvecSigne(diffLoyer);
+        compLoyerDiff.className = diffLoyer > 0 ? 'positive' : diffLoyer < 0 ? 'negative' : '';
         
         document.getElementById('comp-classique-rentabilite').textContent = formaterPourcentage(classique.rendementNet);
         document.getElementById('comp-encheres-rentabilite').textContent = formaterPourcentage(encheres.rendementNet);
-        document.getElementById('comp-rentabilite-diff').textContent = formaterPourcentage(encheres.rendementNet - classique.rendementNet, 2);
+        
+        const diffRentabilite = encheres.rendementNet - classique.rendementNet;
+        const compRentabiliteDiff = document.getElementById('comp-rentabilite-diff');
+        compRentabiliteDiff.textContent = formaterPourcentage(diffRentabilite, 2);
+        compRentabiliteDiff.className = diffRentabilite > 0 ? 'positive' : diffRentabilite < 0 ? 'negative' : '';
         
         document.getElementById('comp-classique-cashflow').textContent = formaterMontantAvecSigne(classique.cashFlow);
         document.getElementById('comp-encheres-cashflow').textContent = formaterMontantAvecSigne(encheres.cashFlow);
-        document.getElementById('comp-cashflow-diff').textContent = formaterMontantAvecSigne(encheres.cashFlow - classique.cashFlow);
+        
+        const diffCashflow = encheres.cashFlow - classique.cashFlow;
+        const compCashflowDiff = document.getElementById('comp-cashflow-diff');
+        compCashflowDiff.textContent = formaterMontantAvecSigne(diffCashflow);
+        compCashflowDiff.className = diffCashflow > 0 ? 'positive' : diffCashflow < 0 ? 'negative' : '';
         
         // Mettre à jour les avantages en fonction des résultats réels
         let avantagesClassique = [];
