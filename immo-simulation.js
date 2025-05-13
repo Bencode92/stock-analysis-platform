@@ -433,8 +433,8 @@ class SimulateurImmo {
         const travauxM2 = this.params.communs.travauxM2;
         
         // Prix d'achat (en fonction de la surface)
-        // Utiliser le prix au m² paramétré ou par défaut
-        const prixM2 = parseFloat(this.params.communs.prixM2) || 2000;
+        // Utiliser le prix au m² paramétré
+        const prixM2 = parseFloat(this.params.communs.prixM2);
         const prixAchat = surface * prixM2;
         
         // Travaux
