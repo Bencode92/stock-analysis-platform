@@ -1002,33 +1002,33 @@ class SimulateurImmo {
         const rendementMin = this.params.base.rendementMin;
         const loyerM2 = this.params.communs.loyerM2;
         const travauxM2 = this.params.communs.travauxM2;
+        const vacance = this.params.communs.vacanceLocative / 100;
         
-        // Prix moyen au m² estimé (zone moyenne en France)
-        const prixMoyenM2 = 3000;
+        // Calcul orienté rendement
+        const loyerAnnuelM2 = loyerM2 * 12;
+        const loyerNetAnnuelM2 = loyerAnnuelM2 * (1 - vacance);
         
-        // Calcul de capacité d'emprunt (règle simplifiée)
-        const mensualiteMax = (loyerM2 * 0.7) * 12 / 12; // 70% du loyer comme mensualité max
+        // Prix maximum au m² pour atteindre le rendement souhaité
+        const fraisAcquisition = 0.08; // 8% frais de notaire, etc.
+        const prixM2Max = loyerNetAnnuelM2 / (rendementMin / 100);
+        const coutTotalM2 = prixM2Max * (1 + fraisAcquisition) + travauxM2;
+        
+        // Calcul de l'emprunt maximum
         const tauxMensuel = taux / 100 / 12;
         const nombreMensualites = duree * 12;
+        const mensualiteParM2 = loyerM2 * 0.7; // 70% du loyer en mensualité max
+        const capaciteEmpruntM2 = mensualiteParM2 * ((1 - Math.pow(1 + tauxMensuel, -nombreMensualites)) / tauxMensuel);
         
-        // Capacité d'emprunt basée sur la mensualité max
-        let capaciteEmpruntMax = mensualiteMax * ((1 - Math.pow(1 + tauxMensuel, -nombreMensualites)) / tauxMensuel);
+        // Surface maximale possible
+        const surfaceMaxEmprunt = Math.floor(this.params.base.montantEmpruntMax / capaciteEmpruntM2);
+        const surfaceMaxApport = Math.floor(apport / (coutTotalM2 - capaciteEmpruntM2));
+        const surfaceOptimale = Math.min(surfaceMaxEmprunt, surfaceMaxApport);
         
-        // Surface max possible avec l'apport et la capacité d'emprunt
-        const budgetTotal = apport + capaciteEmpruntMax;
-        const coutM2Travaux = travauxM2;
-        const coutM2Total = prixMoyenM2 + (prixMoyenM2 * 0.08) + coutM2Travaux; // Prix + 8% frais + travaux
-        
-        const surfaceOptimale = Math.floor(budgetTotal / coutM2Total);
-        
-        // Montant d'emprunt ajusté
-        const montantEmpruntOptimal = Math.min(
-            capaciteEmpruntMax,
-            (surfaceOptimale * coutM2Total) - apport
-        );
+        // Montant d'emprunt correspondant
+        const montantEmpruntOptimal = surfaceOptimale * capaciteEmpruntM2;
         
         return {
-            surface: surfaceOptimale,
+            surface: surfaceOptimale > 0 ? surfaceOptimale : 30, // valeur minimum par défaut
             montantEmprunt: montantEmpruntOptimal
         };
     }
