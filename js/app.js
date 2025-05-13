@@ -3,7 +3,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Gestionnaire des onglets
     const tabItems = document.querySelectorAll('.tab-item');
-    const introSection = document.querySelector('.intro-section');
     const tabContentContainer = document.getElementById('tab-content-container');
     const questionContainer = document.getElementById('question-container');
     const resultsContainer = document.getElementById('results-container');
@@ -13,14 +12,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateVisibility(activeTabName) {
         // Si l'onglet Simulateur est actif
         if (activeTabName === 'Simulateur') {
-            // Afficher les éléments du simulateur
-            if (introSection) introSection.style.display = 'block';
             tabContentContainer.style.display = 'none';
             questionContainer.style.display = 'block';
             progressElements.forEach(el => { if(el) el.style.display = 'flex'; });
         } else {
-            // Masquer les éléments du simulateur pour les autres onglets
-            if (introSection) introSection.style.display = 'none';
             tabContentContainer.style.display = 'block';
             questionContainer.style.display = 'none';
             progressElements.forEach(el => { if(el) el.style.display = 'none'; });
