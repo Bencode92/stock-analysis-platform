@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ImmoSim - Simulateur d'Investissement Immobilier</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4F46E5;
+            --primary-light: #818CF8;
+            --primary-dark: #3730A3;
+            --accent-color: #F59E0B;
+            --success-color: #10B981;
+            --warning-color: #F59E0B;
+            --danger-color: #EF4444;
+            --background-dark: #111827;
+            --card-background: rgba(31, 41, 55, 0.8);
+            --header-background: rgba(17, 24, 39, 0.9);
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background-dark);
+            color: #E5E7EB;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+        
+        header {
+            background-color: var(--header-background);
+            padding: 1.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: white;
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo i {
+            color: var(--accent-color);
+            margin-right: 0.5rem;
+        }
+        
+        .page-title {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            color: white;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #9CA3AF;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background-color: var(--card-background);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.75rem;
+        }
+        
+        .card-icon {
+            background-color: rgba(79, 70, 229, 0.2);
+            color: var(--primary-light);
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+        }
+        
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background-color: rgba(17, 24, 39, 0.8);
+            color: white;
+            font-size: 1rem;
+            transition: border-color 0.15s ease-in-out;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        }
+        
+        .form-help {
+            display: block;
+            margin-top: 0.25rem;
+            font-size: 0.875rem;
+            color: #9CA3AF;
+        }
+        
+        .form-addon {
+            position: relative;
+        }
+        
+        .form-addon .form-input {
+            padding-right: 3rem;
+        }
+        
+        .form-addon-text {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9CA3AF;
+        }
+        
+        .btn {
+            display: inline-block;
+            font-weight: 500;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .btn-accent {
+            background-color: var(--accent-color);
+            color: #1F2937;
+        }
+        
+        .btn-accent:hover {
+            background-color: #D97706;
+        }
+        
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-light);
+        }
+        
+        .btn-outline:hover {
+            background-color: rgba(79, 70, 229, 0.1);
+        }
+        
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+        
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+        
+        .grid-2 {
+            grid-template-columns: 1fr;
+        }
+        
+        @media (min-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        .grid-3 {
+            grid-template-columns: 1fr;
+        }
+        
+        @media (min-width: 768px) {
+            .grid-3 {
+                grid-template-columns: 1fr 1fr 1fr;
+            }
+        }
+        
+        .flex {
+            display: flex;
+        }
+        
+        .justify-between {
+            justify-content: space-between;
+        }
+        
+        .items-center {
+            align-items: center;
+        }
+        
+        .mt-4 {
+            margin-top: 1rem;
+        }
+        
+        .mt-8 {
+            margin-top: 2rem;
+        }
+        
+        .mb-4 {
+            margin-bottom: 1rem;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .badge-primary {
+            background-color: rgba(79, 70, 229, 0.2);
+            color: var(--primary-light);
+        }
+        
+        .badge-accent {
+            background-color: rgba(245, 158, 11, 0.2);
+            color: var(--accent-color);
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+        
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            font-weight: 500;
+            color: #9CA3AF;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .tab:hover {
+            color: #E5E7EB;
+        }
+        
+        .tab.active {
+            color: var(--primary-light);
+            border-bottom-color: var(--primary-color);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(107, 114, 128, 0.3);
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: var(--primary-color);
+        }
+        
+        input:focus + .slider {
+            box-shadow: 0 0 1px var(--primary-color);
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .comparison-table th, .comparison-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .comparison-table th {
+            background-color: rgba(31, 41, 55, 0.5);
+            font-weight: 600;
+        }
+        
+        .comparison-table td.highlight {
+            color: var(--primary-light);
+            font-weight: 600;
+        }
+        
+        .comparison-header {
+            padding: 0.5rem 1rem;
+            background-color: rgba(79, 70, 229, 0.1);
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .results-card {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+        
+        .results-header {
+            background-color: rgba(79, 70, 229, 0.2);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .results-body {
+            padding: 1.5rem;
+        }
+        
+        .results-footer {
+            background-color: rgba(31, 41, 55, 0.5);
+            padding: 1rem 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .results-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+            margin: 1rem 0;
+        }
+        
+        .results-label {
+            font-size: 0.875rem;
+            color: #9CA3AF;
+        }
+        
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-right: 0.5rem;
+        }
+        
+        .tag-success {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: var(--success-color);
+        }
+        
+        .tag-warning {
+            background-color: rgba(245, 158, 11, 0.2);
+            color: var(--warning-color);
+        }
+        
+        .tag-danger {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: var(--danger-color);
+        }
+        
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }
+        
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 200px;
+            background-color: #374151;
+            color: #F3F4F6;
+            text-align: center;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.875rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(17, 24, 39, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(79, 70, 229, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        .positive {
+            color: var(--success-color);
+        }
+        
+        .negative {
+            color: var(--danger-color);
+        }
+        
+        .accordion {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+        
+        .accordion-header {
+            background-color: rgba(31, 41, 55, 0.5);
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .accordion-header:hover {
+            background-color: rgba(31, 41, 55, 0.7);
+        }
+        
+        .accordion-body {
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        
+        .accordion-body.active {
+            padding: 1rem 1.5rem;
+            max-height: 1000px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <i class="fas fa-home"></i>
+                <span>ImmoSim</span>
+            </div>
+            <button id="btn-advanced-toggle" class="btn btn-outline btn-sm">
+                <i class="fas fa-sliders-h"></i> Mode Avancé
+            </button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="page-title">
+            <h1>Simulateur d'Investissement Immobilier</h1>
+            <div class="subtitle">Comparez achat classique et vente aux enchères</div>
+        </div>
+        
+        <!-- Inputs de base -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <h2 class="card-title">Paramètres de base</h2>
+            </div>
+            
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label" for="apport">Apport disponible</label>
+                    <div class="form-addon">
+                        <input type="number" id="apport" class="form-input" placeholder="20000" value="20000">
+                        <span class="form-addon-text">€</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="surface">Surface visée</label>
+                    <div class="form-addon">
+                        <input type="number" id="surface" class="form-input" placeholder="50" value="50">
+                        <span class="form-addon-text">m²</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="taux">Taux d'emprunt</label>
+                    <div class="form-addon">
+                        <input type="number" id="taux" class="form-input" placeholder="3.5" value="3.5" step="0.1">
+                        <span class="form-addon-text">%</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="duree">Durée du prêt</label>
+                    <div class="form-addon">
+                        <input type="number" id="duree" class="form-input" placeholder="20" value="20">
+                        <span class="form-addon-text">ans</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="objectif">Objectif financier</label>
+                    <div class="flex items-center">
+                        <select id="objectif" class="form-input">
+                            <option value="cashflow">Cash-flow positif ≥ 0€</option>
+                            <option value="rendement">Rendement net minimum</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group" id="rendement-min-group" style="display: none;">
+                    <label class="form-label" for="rendement-min">Rendement net minimum</label>
+                    <div class="form-addon">
+                        <input type="number" id="rendement-min" class="form-input" placeholder="5" value="5" step="0.1">
+                        <span class="form-addon-text">%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-between items-center mt-4">
+                <button id="btn-simulate" class="btn btn-accent">
+                    <i class="fas fa-calculator"></i> Simuler
+                </button>
+            </div>
+        </div>
+        
+        <!-- Paramètres avancés (masqués par défaut) -->
+        <div id="advanced-params" class="hidden">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <h2 class="card-title">Paramètres avancés</h2>
+                </div>
+                
+                <div class="tabs">
+                    <div class="tab active" data-tab="params-communs">Communs</div>
+                    <div class="tab" data-tab="params-classique">Achat Classique</div>
+                    <div class="tab" data-tab="params-encheres">Vente aux Enchères</div>
+                </div>
+                
+                <!-- Paramètres communs -->
+                <div class="tab-content active" id="params-communs">
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="frais-bancaires-dossier">Frais bancaires - dossier</label>
+                            <div class="form-addon">
+                                <input type="number" id="frais-bancaires-dossier" class="form-input" value="2000">
+                                <span class="form-addon-text">€</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="frais-bancaires-compte">Frais bancaires - tenue de compte</label>
+                            <div class="form-addon">
+                                <input type="number" id="frais-bancaires-compte" class="form-input" value="710">
+                                <span class="form-addon-text">€</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="frais-garantie">Frais de garantie (caution/PPD)</label>
+                            <div class="form-addon">
+                                <input type="number" id="frais-garantie" class="form-input" value="1.3709" step="0.0001">
+                                <span class="form-addon-text">%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="taxe-fonciere">Taxe foncière</label>
+                            <div class="form-addon">
+                                <input type="number" id="taxe-fonciere" class="form-input" value="1" step="0.1">
+                                <span class="form-addon-text">%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="vacance-locative">Vacance locative</label>
+                            <div class="form-addon">
+                                <input type="number" id="vacance-locative" class="form-input" value="8" step="1">
+                                <span class="form-addon-text">%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="loyer-m2">Loyer moyen</label>
+                            <div class="form-addon">
+                                <input type="number" id="loyer-m2" class="form-input" value="12" step="0.1">
+                                <span class="form-addon-text">€/m²/mois</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="travaux-m2">Travaux au m²</label>
+                            <div class="form-addon">
+                                <input type="number" id="travaux-m2" class="form-input" value="400" step="10">
+                                <span class="form-addon-text">€/m²</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Paramètres achat classique -->
+                <div class="tab-content" id="params-classique">
+                    <div class="form-group">
+                        <label class="form-label">Frais de notaire détaillés</label>
+                    </div>
+                    
+                    <div class="grid grid-3">
+                        <div class="form-group">
+                            <label class="form-label" for="publicite-fonciere">Publicité foncière</label>
+                            <div class="form-addon">
+                                <input type="number" id="publicite-fonciere" class="form-input" value="0.72" step="0.01">
+                                <span class="form-addon-text">%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="droits-mutation">Droits de mutation</label>
+                            <div class="form-addon">
+                                <input type="number" id="droits-mutation" class="form-input" value="5.81" step="0.01">
+                                <span class="form-addon-text">%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="securite-immobiliere">Sécurité immobilière</label>
+                            <div class="form-addon">
+                                <input type="number" id="securite-immobiliere" class="form-input" value="0.10" step="0.01">
+                                <span class="form-addon-text">%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="emoluments-vente">Émoluments / frais de vente</label>
+                            <div class="form-addon">
+                                <input type="number" id="emoluments-vente" class="form-input" value="1.12" step="0.01">
+                                <span class="form-addon-text">%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="formalites">Formalités</label>
+                            <div class="form-addon">
+                                <input type="number" id="formalites" class="form-input" value="0.28" step="0.01">
+                                <span class="form-addon-text">%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="debours">Débours</label>
+                            <div class="form-addon">
+                                <input type="number" id="debours" class="form-input" value="0.13" step="0.01">
+                                <span class="form-addon-text">%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="commission-immo">Commission immobilière</label>
+                        <div class="form-addon">
+                            <input type="number" id="commission-immo" class="form-input" value="5" step="0.1">
+                            <span class="form-addon-text">%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Paramètres vente aux enchères -->
+                <div class="tab-content" id="params-encheres">
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="droits-enregistrement">Droits d'enregistrement</label>
+                            <div class="form-addon">
+                                <input type="number" id="droits-enregistrement" class="form-input" value="5.70" step="0.01">
+                                <span class="form-addon-text">%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="coef-mutation">Coefficient de mutation</label>
+                            <div class="form-addon">
+                                <input type="number" id="coef-mutation" class="form-input" value="2.37" step="0.01">
+                                <span class="form-addon-text">coef</span>
+                            </div>
+                            <span class="form-help">Peut varier de 2.17 à 2.37 selon le tribunal</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Émoluments du poursuivant</label>
+                        <div class="grid grid-2">
+                            <div class="form-group">
+                                <label class="form-label" for="emoluments-poursuivant-1">0 à 6 500 €</label>
+                                <div class="form-addon">
+                                    <input type="number" id="emoluments-poursuivant-1" class="form-input" value="7" step="0.1">
+                                    <span class="form-addon-text">%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="emoluments-poursuivant-2">6 500 à 23 500 €</label>
+                                <div class="form-addon">
+                                    <input type="number" id="emoluments-poursuivant-2" class="form-input" value="3" step="0.1">
+                                    <span class="form-addon-text">%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="emoluments-poursuivant-3">23 500 à 83 500 €</label>
+                                <div class="form-addon">
+                                    <input type="number" id="emoluments-poursuivant-3" class="form-input" value="2" step="0.1">
+                                    <span class="form-addon-text">%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="emoluments-poursuivant-4">Au-delà de 83 500 €</label>
+                                <div class="form-addon">
+                                    <input type="number" id="emoluments-poursuivant-4" class="form-input" value="1" step="0.1">
+                                    <span class="form-addon-text">%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="honoraires-avocat-coef">Honoraires avocat (coef)</label>
+                            <div class="form-addon">
+                                <input type="number" id="honoraires-avocat-coef" class="form-input" value="0.25" step="0.01">
+                                <span class="form-addon-text">x</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="honoraires-avocat-tva">TVA honoraires avocat</label>
+                            <div class="form-addon">
+                                <input type="number" id="honoraires-avocat-tva" class="form-input" value="20" step="1">
+                                <span class="form-addon-text">%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="publicite-fonciere-encheres">Publicité foncière</label>
+                            <div class="form-addon">
+                                <input type="number" id="publicite-fonciere-encheres" class="form-input" value="0.10" step="0.01">
+                                <span class="form-addon-text">%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="frais-fixes">Frais fixes administratifs</label>
+                            <div class="form-addon">
+                                <input type="number" id="frais-fixes" class="form-input" value="50">
+                                <span class="form-addon-text">€</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="avocat-enchere">Avocat - porter l'enchère</label>
+                            <div class="form-addon">
+                                <input type="number" id="avocat-enchere" class="form-input" value="300">
+                                <span class="form-addon-text">€</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="suivi-dossier">Suivi de dossier</label>
+                            <div class="form-addon">
+                                <input type="number" id="suivi-dossier" class="form-input" value="1200">
+                                <span class="form-addon-text">€</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="caution-pourcent">Caution (% mise à prix)</label>
+                            <div class="form-addon">
+                                <input type="number" id="caution-pourcent" class="form-input" value="5" step="1">
+                                <span class="form-addon-text">%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="caution-restituee">Caution restituée</label>
+                            <div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="caution-restituee" checked>
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="form-help">Si non cochée, la caution est incluse dans le coût total</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Résultats (masqués par défaut) -->
+        <div id="results" class="hidden">
+            <h2 class="mt-8">Résultats de la simulation</h2>
+            
+            <div class="grid grid-2 mt-4">
+                <div class="results-card">
+                    <div class="results-header">
+                        <div class="flex justify-between items-center">
+                            <h3 class="card-title">
+                                <i class="fas fa-home mr-2"></i> Achat Classique
+                            </h3>
+                            <div class="tag tag-success">
+                                <i class="fas fa-chart-line mr-1"></i> <span id="classique-rentabilite">--</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="results-body">
+                        <div class="results-label">Prix d'achat maximum</div>
+                        <div class="results-value" id="classique-prix-max">--</div>
+                        
+                        <div class="accordion">
+                            <div class="accordion-header">
+                                <span>Détail des coûts</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div class="accordion-body">
+                                <table class="comparison-table">
+                                    <tr>
+                                        <td>Prix d'achat</td>
+                                        <td class="highlight" id="classique-prix-achat">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Frais de notaire</td>
+                                        <td id="classique-frais-notaire">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Commission immobilière</td>
+                                        <td id="classique-commission">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Travaux</td>
+                                        <td id="classique-travaux">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Frais bancaires</td>
+                                        <td id="classique-frais-bancaires">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Coût total du projet</td>
+                                        <td class="highlight" id="classique-total">--</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="results-footer">
+                        <div class="flex justify-between">
+                            <div>
+                                <div class="results-label">Mensualité</div>
+                                <div id="classique-mensualite">--</div>
+                            </div>
+                            <div>
+                                <div class="results-label">Loyer net</div>
+                                <div id="classique-loyer-net">--</div>
+                            </div>
+                            <div>
+                                <div class="results-label">Cash-flow</div>
+                                <div id="classique-cashflow">--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="results-card">
+                    <div class="results-header">
+                        <div class="flex justify-between items-center">
+                            <h3 class="card-title">
+                                <i class="fas fa-gavel mr-2"></i> Vente aux Enchères
+                            </h3>
+                            <div class="tag tag-success">
+                                <i class="fas fa-chart-line mr-1"></i> <span id="encheres-rentabilite">--</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="results-body">
+                        <div class="results-label">Prix d'achat maximum</div>
+                        <div class="results-value" id="encheres-prix-max">--</div>
+                        
+                        <div class="accordion">
+                            <div class="accordion-header">
+                                <span>Détail des coûts</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div class="accordion-body">
+                                <table class="comparison-table">
+                                    <tr>
+                                        <td>Prix d'adjudication</td>
+                                        <td class="highlight" id="encheres-prix-achat">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Droits d'enregistrement</td>
+                                        <td id="encheres-droits">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Émoluments du poursuivant</td>
+                                        <td id="encheres-emoluments">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Honoraires avocat</td>
+                                        <td id="encheres-honoraires">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Publicité foncière</td>
+                                        <td id="encheres-publicite">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Frais divers (fixes + avocat + suivi)</td>
+                                        <td id="encheres-frais-divers">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Travaux</td>
+                                        <td id="encheres-travaux">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Frais bancaires</td>
+                                        <td id="encheres-frais-bancaires">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Coût total du projet</td>
+                                        <td class="highlight" id="encheres-total">--</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="results-footer">
+                        <div class="flex justify-between">
+                            <div>
+                                <div class="results-label">Mensualité</div>
+                                <div id="encheres-mensualite">--</div>
+                            </div>
+                            <div>
+                                <div class="results-label">Loyer net</div>
+                                <div id="encheres-loyer-net">--</div>
+                            </div>
+                            <div>
+                                <div class="results-label">Cash-flow</div>
+                                <div id="encheres-cashflow">--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-balance-scale"></i>
+                    </div>
+                    <h2 class="card-title">Comparatif des options</h2>
+                </div>
+                
+                <div class="comparison-header">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <strong>Achat classique vs Vente aux enchères</strong>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="comparison-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Critère</th>
+                                <th>Achat Classique</th>
+                                <th>Vente aux Enchères</th>
+                                <th>Différence</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Prix d'achat</td>
+                                <td id="comp-classique-prix">--</td>
+                                <td id="comp-encheres-prix">--</td>
+                                <td id="comp-prix-diff">--</td>
+                            </tr>
+                            <tr>
+                                <td>Budget total</td>
+                                <td id="comp-classique-total">--</td>
+                                <td id="comp-encheres-total">--</td>
+                                <td id="comp-total-diff">--</td>
+                            </tr>
+                            <tr>
+                                <td>Loyer mensuel</td>
+                                <td id="comp-classique-loyer">--</td>
+                                <td id="comp-encheres-loyer">--</td>
+                                <td id="comp-loyer-diff">--</td>
+                            </tr>
+                            <tr>
+                                <td>Rentabilité nette</td>
+                                <td id="comp-classique-rentabilite">--</td>
+                                <td id="comp-encheres-rentabilite">--</td>
+                                <td id="comp-rentabilite-diff">--</td>
+                            </tr>
+                            <tr>
+                                <td>Cash-flow mensuel</td>
+                                <td id="comp-classique-cashflow">--</td>
+                                <td id="comp-encheres-cashflow">--</td>
+                                <td id="comp-cashflow-diff">--</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-4">
+                    <div class="badge badge-primary mr-2">
+                        <i class="fas fa-home mr-1"></i> Achat Classique
+                    </div>
+                    <span id="classique-avantages">
+                        Points forts: Processus d'achat plus simple, délais plus courts, moins de risques juridiques
+                    </span>
+                </div>
+                
+                <div class="mt-4">
+                    <div class="badge badge-accent mr-2">
+                        <i class="fas fa-gavel mr-1"></i> Vente aux Enchères
+                    </div>
+                    <span id="encheres-avantages">
+                        Points forts: Prix d'achat potentiellement plus bas, absence de négociation, potentiel de valorisation supérieur
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading indicator -->
+    <div class="loading" style="display: none;">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="immo-simulation.js"></script>
+    <script src="simulation-interface.js"></script>
+</body>
+</html>
