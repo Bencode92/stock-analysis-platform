@@ -1,12 +1,15 @@
 // methodology-search.js - Moteur de recherche pour l'onglet Méthodologie
 // Optimisé pour l'accessibilité et les performances
 
-// Fonction debounce pour limiter la fréquence d'exécution des recherches
+// Fonction debounce améliorée pour conserver le contexte
 function debounce(func, timeout = 300) {
   let timer;
-  return (...args) => {
+  return function(...args) {  // Function classique au lieu d'arrow function
+    const context = this;     // Capture le contexte (this = élément input)
     clearTimeout(timer);
-    timer = setTimeout(() => { func.apply(this, args); }, timeout);
+    timer = setTimeout(() => { 
+      func.apply(context, args); 
+    }, timeout);
   };
 }
 
@@ -81,14 +84,14 @@ function createSearchInterface() {
           <input type="text" id="terms-search" aria-label="Rechercher un terme juridique ou fiscal" class="w-full bg-blue-800 bg-opacity-50 border border-blue-700 rounded-lg px-4 py-3 pl-10 text-white placeholder-gray-300" placeholder="Rechercher un terme...">
           <i class="fas fa-search absolute left-3 top-3.5 text-gray-300" aria-hidden="true"></i>
           
-          <!-- Container for autocomplete suggestions -->
-          <div id="search-suggestions" class="absolute w-full bg-blue-900 rounded-lg mt-1 shadow-lg z-10 overflow-hidden" style="display: none;">
-            <!-- Suggestions will be added here -->
+          <!-- Container pour les suggestions avec attributs d'accessibilité -->
+          <div id="search-suggestions" class="absolute w-full bg-blue-900 rounded-lg mt-1 shadow-lg z-10 hidden max-h-80 overflow-y-auto" role="listbox">
+            <!-- Les suggestions seront ajoutées ici -->
           </div>
         </div>
       </div>
       
-      <!-- Cette div restera vide, les résultats principaux ne seront pas affichés -->
+      <!-- Conteneur de résultats -->
       <div id="terms-results" class="mt-6" aria-live="polite">
         <div class="text-center text-gray-400">
           <i class="fas fa-spinner fa-spin text-2xl"></i>
@@ -113,16 +116,18 @@ function createSearchInterface() {
 
 function loadLegalTerms() {
   console.log("Chargement des termes juridiques...");
-  // CORRECTION DU CHEMIN : data/ au lieu de js/
+  // Ajouter un log pour le chemin d'accès
+  console.log("Tentative de chargement depuis: data/legal-terms.json");
+  
   fetch('data/legal-terms.json')
     .then(response => {
       if (!response.ok) {
-        throw new Error('Fichier non trouvé');
+        throw new Error('Fichier non trouvé: ' + response.status);
       }
       return response.json();
     })
     .then(data => {
-      console.log("Données chargées:", Object.keys(data).length, "termes");
+      console.log("Données chargées avec succès:", Object.keys(data).length, "termes");
       // Convertir en format plus facile à utiliser
       const termsArray = Object.entries(data).map(([key, value]) => {
         return {
@@ -146,8 +151,30 @@ function loadLegalTerms() {
         <div class="bg-red-900 bg-opacity-30 p-4 rounded-lg text-center">
           <i class="fas fa-exclamation-triangle text-red-400 text-2xl mb-2"></i>
           <p>Impossible de charger les termes: ${error.message}</p>
+          <p class="mt-2 text-sm">Veuillez vérifier que le fichier data/legal-terms.json existe et est accessible.</p>
         </div>
       `;
+      
+      // Essayer un autre chemin comme fallback
+      console.log("Tentative avec un chemin alternatif: ./data/legal-terms.json");
+      setTimeout(() => {
+        fetch('./data/legal-terms.json')
+          .then(response => response.json())
+          .then(data => {
+            console.log("Données chargées avec le chemin alternatif!");
+            // Même traitement que ci-dessus
+            const termsArray = Object.entries(data).map(([key, value]) => ({
+              terme: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+              definition: value.definition,
+              detail: value.example,
+              related: value.related_terms,
+              categorie: getCategoryFromTerm(key)
+            }));
+            window.legalTermsData = termsArray;
+            initializeSearchInterface(termsArray);
+          })
+          .catch(err => console.error("Échec également avec le chemin alternatif:", err));
+      }, 1000);
     });
 }
 
@@ -165,51 +192,58 @@ function initializeSearchInterface(terms) {
   const searchInput = document.getElementById('terms-search');
   
   // Événement d'entrée avec debounce pour afficher les suggestions
-  searchInput.addEventListener('input', debounce(function() {
-    const query = this.value.toLowerCase().trim();
+  searchInput.addEventListener('input', debounce(function(e) {
+    // Utiliser e.target.value au lieu de this.value comme plan B
+    const query = (this.value || e.target.value).toLowerCase().trim();
+    console.log("Recherche pour:", query);
     
     // Si la requête est vide, masquer les suggestions
     if (!query) {
-      suggestionsContainer.style.display = 'none';
+      suggestionsContainer.classList.add('hidden');
       return;
     }
     
-    // Filtrer les termes selon la requête
+    // Filtrer les termes selon la requête (commençant par la lettre/mot saisi)
     const filteredTerms = window.legalTermsData.filter(term => {
-      return term.terme.toLowerCase().includes(query);
-    }).slice(0, 5); // Limiter à 5 suggestions
+      return term.terme.toLowerCase().startsWith(query);
+    }).slice(0, 10); // Limiter à 10 pour les performances
+    
+    console.log("Résultats trouvés:", filteredTerms.length);
     
     // Afficher les suggestions si des résultats sont trouvés
     if (filteredTerms.length > 0) {
-      renderSuggestions(filteredTerms);
-      suggestionsContainer.style.display = 'block';
+      renderSuggestions(filteredTerms, query);
+      suggestionsContainer.classList.remove('hidden');
     } else {
-      suggestionsContainer.style.display = 'none';
+      suggestionsContainer.classList.add('hidden');
     }
   }, 200));
   
   // Masquer les suggestions quand on clique ailleurs
   document.addEventListener('click', function(e) {
     if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-      suggestionsContainer.style.display = 'none';
+      suggestionsContainer.classList.add('hidden');
     }
   });
 }
 
 // Fonction pour afficher les suggestions de recherche
-function renderSuggestions(terms) {
+function renderSuggestions(terms, query) {
   const container = document.getElementById('search-suggestions');
   
   let html = '';
   
   terms.forEach(term => {
-    // Mettre la couleur indépendamment de la catégorie
-    const categoryClass = 'text-green-400';
+    // Mettre en évidence la partie qui correspond à la requête
+    const highlightedTerm = term.terme.replace(
+      new RegExp('^' + query, 'i'), 
+      '<span class="text-green-400">$&</span>'
+    );
     
     html += `
-      <div class="suggestion-item p-3 cursor-pointer hover:bg-blue-800 border-b border-blue-700 flex items-center">
+      <div class="suggestion-item p-3 cursor-pointer hover:bg-blue-800 border-b border-blue-700 flex items-center" role="option">
         <span class="mr-2">•</span>
-        <span class="${categoryClass} font-medium">${term.terme}</span>
+        <span class="font-medium">${highlightedTerm}</span>
       </div>
     `;
   });
@@ -226,7 +260,7 @@ function renderSuggestions(terms) {
       document.getElementById('terms-search').value = selectedTerm;
       
       // Cacher les suggestions
-      document.getElementById('search-suggestions').style.display = 'none';
+      document.getElementById('search-suggestions').classList.add('hidden');
       
       // Afficher le détail du terme (optionnel - actuellement désactivé)
       // displayTermDetail(terms[index]);
