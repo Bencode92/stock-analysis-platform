@@ -1040,6 +1040,13 @@ document.addEventListener('DOMContentLoaded', function() {
         cashflowClassique.textContent = formaterMontantMensuel(classique.cashFlow);
         cashflowClassique.className = getClasseValeur(classique.cashFlow);
         
+        // Affichage de la marge loyer-dette
+        const margeClassique = document.getElementById('classique-marge');
+        if (margeClassique) {
+            margeClassique.textContent = formaterMontantMensuel(classique.marge);
+            margeClassique.className = getClasseValeur(classique.marge);
+        }
+        
         document.getElementById('classique-rentabilite').textContent = formaterPourcentage(classique.rendementNet);
         
         // Affichage des données fiscales pour l'achat classique si les éléments existent
@@ -1068,6 +1075,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const cashflowEncheres = document.getElementById('encheres-cashflow');
         cashflowEncheres.textContent = formaterMontantMensuel(encheres.cashFlow);
         cashflowEncheres.className = getClasseValeur(encheres.cashFlow);
+        
+        // Affichage de la marge loyer-dette
+        const margeEncheres = document.getElementById('encheres-marge');
+        if (margeEncheres) {
+            margeEncheres.textContent = formaterMontantMensuel(encheres.marge);
+            margeEncheres.className = getClasseValeur(encheres.marge);
+        }
         
         document.getElementById('encheres-rentabilite').textContent = formaterPourcentage(encheres.rendementNet);
         
