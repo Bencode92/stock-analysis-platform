@@ -511,9 +511,9 @@ class SimulateurImmo {
             let criteresRespectes = false;
             
             if (objectif === 'cashflow') {
-                criteresRespectes = cashFlow >= 0;
+                criteresRespectes = cashFlow >= 1;
             } else {
-                criteresRespectes = rendementNet >= rendementMin;
+                criteresRespectes = rendementNet >= rendementMin && cashFlow >= 1;
             }
             
             if (criteresRespectes) {
@@ -656,9 +656,9 @@ class SimulateurImmo {
             let criteresRespectes = false;
             
             if (objectif === 'cashflow') {
-                criteresRespectes = cashFlow >= 0;
+                criteresRespectes = cashFlow >= 1;
             } else {
-                criteresRespectes = rendementNet >= rendementMin;
+                criteresRespectes = rendementNet >= rendementMin && cashFlow >= 1;
             }
             
             if (criteresRespectes) {
