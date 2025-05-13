@@ -867,7 +867,7 @@ class SimulateurImmo {
         
         // Répartition des coûts pour la vente aux enchères
         const encheres = {
-            labels: ['Prix d\'achat', 'Droits d\\'enregistrement', 'Émoluments', 'Honoraires avocat', 'Travaux', 'Frais divers', 'Frais bancaires'],
+            labels: ['Prix d\'achat', 'Droits d\'enregistrement', 'Émoluments', 'Honoraires avocat', 'Travaux', 'Frais divers', 'Frais bancaires'],
             datasets: [{
                 data: [
                     resultats.encheres.prixAchat,
