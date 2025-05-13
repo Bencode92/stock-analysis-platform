@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Vérifier si des résultats ont été trouvés
             if (!resultats.classique || !resultats.encheres) {
-                afficherToast('Impossible de trouver une solution viable avec les paramètres actuels.', 'error');
+                afficherToast('Aucune surface viable avec ces paramètres.', 'warning');
                 return;
             }
             
@@ -493,18 +493,17 @@ document.addEventListener('DOMContentLoaded', function() {
      * Anime les valeurs numériques des résultats
      */
     function animerResultats() {
-        // Animation des prix maximums
+        // Animation des surfaces optimales
         const classiquePrixMax = document.getElementById('classique-prix-max');
         const encheresPrixMax = document.getElementById('encheres-prix-max');
         
         if (classiquePrixMax && encheresPrixMax) {
-            // Récupérer les valeurs finales sans formatage
-            const prixClassique = simulateur.params.resultats.classique.prixAchat;
-            const prixEncheres = simulateur.params.resultats.encheres.prixAchat;
+            const surfaceClassique = simulateur.params.resultats.classique.surface;
+            const surfaceEncheres = simulateur.params.resultats.encheres.surface;
             
-            // Animer les prix
-            animerNombre(classiquePrixMax, 0, prixClassique, 1200);
-            animerNombre(encheresPrixMax, 0, prixEncheres, 1200);
+            // Afficher directement les surfaces
+            classiquePrixMax.textContent = surfaceClassique + " m²";
+            encheresPrixMax.textContent = surfaceEncheres + " m²";
         }
         
         // Animation des rentabilités
@@ -902,6 +901,7 @@ document.addEventListener('DOMContentLoaded', function() {
             vacanceLocative: document.getElementById('vacance-locative').value,
             loyerM2: document.getElementById('loyer-m2').value,
             travauxM2: document.getElementById('travaux-m2').value,
+            prixM2: document.getElementById('prix-m2-marche').value,
             
             // Paramètres fiscaux (s'ils existent)
             tauxPrelevementsSociaux: document.getElementById('taux-prelevements-sociaux')?.value || 17.2,
@@ -1008,7 +1008,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Affichage des résultats pour l'achat classique
-        document.getElementById('classique-prix-max').textContent = formaterMontant(classique.prixAchat);
+        document.getElementById('classique-prix-max').textContent = classique.surface + " m²";
         document.getElementById('classique-prix-achat').textContent = formaterMontant(classique.prixAchat);
         document.getElementById('classique-frais-notaire').textContent = formaterMontant(classique.fraisNotaire);
         document.getElementById('classique-commission').textContent = formaterMontant(classique.commission);
@@ -1042,7 +1042,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Affichage des résultats pour la vente aux enchères
-        document.getElementById('encheres-prix-max').textContent = formaterMontant(encheres.prixAchat);
+        document.getElementById('encheres-prix-max').textContent = encheres.surface + " m²";
         document.getElementById('encheres-prix-achat').textContent = formaterMontant(encheres.prixAchat);
         document.getElementById('encheres-droits').textContent = formaterMontant(encheres.droitsEnregistrement);
         document.getElementById('encheres-emoluments').textContent = formaterMontant(encheres.emolumentsPoursuivant);
