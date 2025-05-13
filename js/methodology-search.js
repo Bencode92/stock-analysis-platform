@@ -95,26 +95,6 @@ function createSearchInterface() {
       <div id="term-detail" class="mt-6 bg-blue-900 bg-opacity-30 p-6 rounded-xl mb-8 hidden">
         <!-- La définition sera affichée ici -->
       </div>
-      
-      <!-- Conteneur de résultats -->
-      <div id="terms-results" class="mt-6" aria-live="polite">
-        <div class="text-center text-gray-400">
-          <i class="fas fa-spinner fa-spin text-2xl"></i>
-          <p class="mt-2">Chargement des termes...</p>
-        </div>
-      </div>
-      
-      <!-- Contenu personnalisé -->
-      <div id="my-custom-content" class="mt-12">
-        <div class="flex items-center">
-          <i class="fas fa-building text-green-400 text-3xl mr-4"></i>
-          <h3 class="text-2xl font-bold">Quel statut juridique pour votre projet ?</h3>
-        </div>
-        
-        <p class="mt-4 text-lg">
-          Le choix de la forme juridique est une étape cruciale dans la création d'une entreprise. Ce simulateur vous aide à trouver le statut le plus adapté à votre situation en fonction de vos besoins, objectifs et contraintes. Répondez aux questions ci-dessous pour obtenir une recommandation personnalisée.
-        </p>
-      </div>
     </div>
   `;
 }
@@ -152,13 +132,14 @@ function loadLegalTerms() {
     })
     .catch(error => {
       console.error("Erreur chargement termes:", error);
-      document.getElementById('terms-results').innerHTML = `
+      document.getElementById('term-detail').innerHTML = `
         <div class="bg-red-900 bg-opacity-30 p-4 rounded-lg text-center">
           <i class="fas fa-exclamation-triangle text-red-400 text-2xl mb-2"></i>
           <p>Impossible de charger les termes: ${error.message}</p>
           <p class="mt-2 text-sm">Veuillez vérifier que le fichier data/legal-terms.json existe et est accessible.</p>
         </div>
       `;
+      document.getElementById('term-detail').classList.remove('hidden');
       
       // Essayer un autre chemin comme fallback
       console.log("Tentative avec un chemin alternatif: ./data/legal-terms.json");
@@ -185,10 +166,6 @@ function loadLegalTerms() {
 
 function initializeSearchInterface(terms) {
   console.log("Initialisation interface, termes:", terms.length);
-  
-  // Vider le conteneur de résultats
-  const resultsContainer = document.getElementById('terms-results');
-  resultsContainer.innerHTML = '';
   
   // Référence à l'élément de suggestions
   const suggestionsContainer = document.getElementById('search-suggestions');
