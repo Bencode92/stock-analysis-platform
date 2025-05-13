@@ -4,8 +4,8 @@
  * Ce script contient toutes les fonctions de calcul nécessaires pour la simulation
  * d'investissement immobilier, comparant l'achat classique et la vente aux enchères.
  * 
- * Version 2.0 - Optimisée pour calculer le prix maximum possible selon l'apport
- * et le prêt disponible, en maintenant un cash-flow minimum.
+ * Version 3.0 - Refactorisée pour calculer le prêt automatiquement et plafonner
+ * la surface à 100m²
  */
 
 class SimulateurImmo {
@@ -14,13 +14,12 @@ class SimulateurImmo {
         this.params = {
             base: {
                 apport: 20000,                // Apport disponible
-                montantEmpruntMax: 150000,    // Montant maximum d'emprunt disponible
                 surface: 50,                  // Surface en m²
                 taux: 3.5,                    // Taux d'emprunt
                 duree: 20,                    // Durée du prêt
                 objectif: 'cashflow',         // Objectif: cashflow ou rendement
                 rendementMin: 5,              // Rendement minimum souhaité
-                cashFlowMin: 1                // Cash-flow minimum souhaité (1€)
+                surfaceMax: 100               // Surface maximale autorisée
             },
             communs: {
                 fraisBancairesDossier: 2000,
@@ -82,13 +81,11 @@ class SimulateurImmo {
     chargerParametres(formData) {
         // Paramètres de base
         this.params.base.apport = parseFloat(formData.apport) || 20000;
-        this.params.base.montantEmpruntMax = parseFloat(formData.montantEmpruntMax) || 150000;
         this.params.base.surface = parseFloat(formData.surface) || 50;
         this.params.base.taux = parseFloat(formData.taux) || 3.5;
         this.params.base.duree = parseFloat(formData.duree) || 20;
         this.params.base.objectif = formData.objectif || 'cashflow';
         this.params.base.rendementMin = parseFloat(formData.rendementMin) || 5;
-        this.params.base.cashFlowMin = parseFloat(formData.cashFlowMin) || 1;
 
         // Paramètres communs
         if (formData.fraisBancairesDossier !== undefined) 
@@ -244,7 +241,7 @@ class SimulateurImmo {
             emoluments += (prix - 6500) * this.params.encheres.emolumentsPoursuivant2 / 100;
         } else if (prix <= 83500) {
             emoluments = 6500 * this.params.encheres.emolumentsPoursuivant1 / 100;
-            emoluments += (23500 - 6500) * this.params.encheres.emolumentsPoursuivant2 / 100;
+            emoluments += (23500 - 6500) * this.params.encheres.emolementsPoursuivant2 / 100;
             emoluments += (prix - 23500) * this.params.encheres.emolumentsPoursuivant3 / 100;
         } else {
             emoluments = 6500 * this.params.encheres.emolumentsPoursuivant1 / 100;
@@ -419,133 +416,200 @@ class SimulateurImmo {
     }
 
     /**
+     * Calcule tous les paramètres pour une surface et un mode (classique/enchères) donnés
+     * @param {number} surface - Surface en m²
+     * @param {string} mode - Mode d'achat ("classique" ou "encheres")
+     * @returns {Object} - Résultats complets de la simulation
+     */
+    calculeTout(surface, mode) {
+        const apport = this.params.base.apport;
+        const taux = this.params.base.taux;
+        const duree = this.params.base.duree;
+        const loyerM2 = this.params.communs.loyerM2;
+        const vacanceLocative = this.params.communs.vacanceLocative;
+        const travauxM2 = this.params.communs.travauxM2;
+        
+        // Prix d'achat (en fonction de la surface)
+        // Dans un cas réel, ce prix serait basé sur les données du marché
+        // Pour cet exemple, on utilise un prix fixe par m²
+        const prixM2 = 2000; // Exemple de prix au m² (à ajuster selon vos besoins)
+        const prixAchat = surface * prixM2;
+        
+        // Travaux
+        const travaux = surface * travauxM2;
+        
+        // Frais spécifiques selon le mode d'achat
+        let fraisSpecifiques = 0;
+        let fraisDetails = {};
+        
+        if (mode === 'classique') {
+            const fraisNotaire = this.calculerFraisNotaireClassique(prixAchat);
+            const commission = prixAchat * this.params.classique.commissionImmo / 100;
+            fraisSpecifiques = fraisNotaire + commission;
+            fraisDetails = {
+                fraisNotaire,
+                commission
+            };
+        } else { // mode === 'encheres'
+            const droitsEnregistrement = this.calculerDroitsEnregistrement(prixAchat);
+            const emolumentsPoursuivant = this.calculerEmolumentsPoursuivant(prixAchat);
+            const honorairesAvocat = this.calculerHonorairesAvocat(emolumentsPoursuivant);
+            const publiciteFonciere = prixAchat * this.params.encheres.publiciteFonciereEncheres / 100;
+            const fraisDivers = this.params.encheres.fraisFixes + 
+                              this.params.encheres.avocatEnchere + 
+                              this.params.encheres.suiviDossier;
+            const caution = this.params.encheres.cautionRestituee ? 0 : 
+                          prixAchat * this.params.encheres.cautionPourcent / 100;
+            
+            fraisSpecifiques = droitsEnregistrement + emolumentsPoursuivant + 
+                             honorairesAvocat + publiciteFonciere + fraisDivers + caution;
+            
+            fraisDetails = {
+                droitsEnregistrement,
+                emolumentsPoursuivant,
+                honorairesAvocat,
+                publiciteFonciere,
+                fraisDivers,
+                caution
+            };
+        }
+        
+        // Coût hors frais bancaires
+        const coutHorsFraisB = prixAchat + fraisSpecifiques + travaux;
+        
+        // Calcul analytique de l'emprunt
+        const fraisDossier = this.params.communs.fraisBancairesDossier;
+        const fraisCompte = this.params.communs.fraisBancairesCompte;
+        const tauxGarantie = this.params.communs.fraisGarantie / 100;
+        
+        const emprunt = (coutHorsFraisB - apport + fraisDossier + fraisCompte) 
+                     / (1 - tauxGarantie);
+        
+        // Frais bancaires
+        const fraisBancaires = fraisDossier + fraisCompte + emprunt * tauxGarantie;
+        
+        // Coût total
+        const coutTotal = coutHorsFraisB + fraisBancaires;
+        
+        // Mensualité
+        const mensualite = this.calculerMensualite(emprunt, taux, duree);
+        
+        // Loyer
+        const loyerBrut = surface * loyerM2;
+        const loyerNet = this.calculerLoyerNet(surface, loyerM2, vacanceLocative);
+        
+        // Taxe foncière
+        const taxeFonciere = prixAchat * this.params.communs.taxeFonciere / 100;
+        
+        // Charges non récupérables
+        const chargesNonRecuperables = this.calculerChargesNonRecuperables(loyerBrut);
+        
+        // Entretien
+        const entretienMensuel = this.calculerEntretienMensuel(prixAchat);
+        
+        // Assurance PNO
+        const assurancePNO = this.params.communs.assurancePNO;
+        
+        // Cash-flow
+        const cashFlow = this.calculerCashFlow(
+            loyerNet, mensualite, taxeFonciere, 
+            chargesNonRecuperables, entretienMensuel, assurancePNO
+        );
+        
+        // Calcul des intérêts pour la première année
+        const tableauAmortissement = this.calculerTableauAmortissement(emprunt, taux, duree);
+        const interetsPremierAnnee = tableauAmortissement.slice(0, 12).reduce((sum, m) => sum + m.interets, 0);
+        
+        // Revenu foncier avant impôt
+        const chargesDeductibles = taxeFonciere + assurancePNO + (chargesNonRecuperables * 12) + (entretienMensuel * 12);
+        const revenuFoncier = (loyerNet * 12) - chargesDeductibles - interetsPremierAnnee;
+        
+        // Impact fiscal
+        const impactFiscal = this.calculerImpactFiscal(revenuFoncier, interetsPremierAnnee);
+        
+        // Rendement net
+        const rendementNet = this.calculerRendementNet(
+            loyerNet * 12, chargesDeductibles, impactFiscal, coutTotal
+        );
+        
+        // Construire le résultat
+        const resultat = {
+            surface,
+            prixAchat,
+            prixM2,
+            travaux,
+            fraisBancaires,
+            coutTotal,
+            emprunt,
+            mensualite,
+            loyerNet,
+            loyerBrut,
+            taxeFonciere,
+            chargesNonRecuperables: chargesNonRecuperables * 12,
+            entretienAnnuel: entretienMensuel * 12,
+            assurancePNO,
+            interetsAnnee1: interetsPremierAnnee,
+            revenuFoncier,
+            impactFiscal,
+            cashFlow,
+            cashFlowAnnuel: cashFlow * 12,
+            rendementNet,
+            marge: loyerNet - mensualite,
+            tableauAmortissement
+        };
+        
+        // Ajouter les détails spécifiques selon le mode
+        if (mode === 'classique') {
+            resultat.fraisNotaire = fraisDetails.fraisNotaire;
+            resultat.commission = fraisDetails.commission;
+        } else {
+            resultat.droitsEnregistrement = fraisDetails.droitsEnregistrement;
+            resultat.emolumentsPoursuivant = fraisDetails.emolumentsPoursuivant;
+            resultat.honorairesAvocat = fraisDetails.honorairesAvocat;
+            resultat.publiciteFonciere = fraisDetails.publiciteFonciere;
+            resultat.fraisDivers = fraisDetails.fraisDivers;
+            resultat.caution = fraisDetails.caution;
+        }
+        
+        return resultat;
+    }
+
+    /**
+     * Cherche la surface maximale viable selon les contraintes
+     * @param {string} mode - Mode d'achat ("classique" ou "encheres")
+     * @param {number} pas - Pas d'incrémentation de la surface
+     * @returns {Object} - Résultats de la simulation pour la surface optimale
+     */
+    chercheSurfaceMax(mode, pas = 1) {
+        const SURFACE_MAX = this.params.base.surfaceMax || 100;
+        const { rendementMin } = this.params.base;
+        
+        let surface = Math.max(10, pas); // Commencer à minimum 10 m²
+        let best = null;
+        
+        while (surface <= SURFACE_MAX) {
+            const res = this.calculeTout(surface, mode);
+            
+            const margeOK = res.loyerNet >= res.mensualite + 1;
+            const rendementOK = res.rendementNet >= rendementMin;
+            
+            if (margeOK && rendementOK) {
+                best = res;          // on garde
+                surface += pas;      // on tente plus grand
+            } else {
+                break;               // premier échec → on stoppe
+            }
+        }
+        
+        return best; // null si aucune surface ne passe
+    }
+
+    /**
      * Calcule le prix maximum pour l'achat classique selon les critères
-     * en respectant la contrainte du montant d'emprunt maximum
      * @returns {Object} - Résultats de la simulation pour l'achat classique
      */
     simulerAchatClassique() {
-        // Paramètres
-        const apport = this.params.base.apport;
-        const montantEmpruntMax = this.params.base.montantEmpruntMax;
-        const surface = this.params.base.surface;
-        const taux = this.params.base.taux;
-        const duree = this.params.base.duree;
-        const objectif = this.params.base.objectif;
-        const rendementMin = this.params.base.rendementMin;
-        const cashFlowMin = this.params.base.cashFlowMin;
-        const loyerM2 = this.params.communs.loyerM2;
-        const vacanceLocative = this.params.communs.vacanceLocative;
-        
-        // Recherche dichotomique pour trouver le prix maximum
-        let prixMin = 1000; // Prix minimum (à ajuster selon les besoins)
-        let prixMax = 1000000; // Prix maximum (à ajuster selon les besoins)
-        let prixOptimal = 0;
-        let resultats = null;
-        
-        while (prixMax - prixMin > 100) { // Précision de 100€
-            const prixTest = Math.floor((prixMin + prixMax) / 2);
-            
-            // Calculer tous les coûts pour ce prix
-            const fraisNotaire = this.calculerFraisNotaireClassique(prixTest);
-            const commission = prixTest * this.params.classique.commissionImmo / 100;
-            const travaux = surface * this.params.communs.travauxM2;
-            
-            // Coût total du projet
-            const coutTotal = prixTest + fraisNotaire + commission + travaux;
-            
-            // Montant à emprunter
-            const montantPret = coutTotal - apport;
-            
-            // Vérifier si l'apport est suffisant ET si le montant d'emprunt ne dépasse pas le maximum
-            if (montantPret <= 0 || montantPret > montantEmpruntMax) {
-                if (montantPret <= 0) {
-                    prixMin = prixTest; // Si l'apport couvre tout, on peut tester un prix plus élevé
-                } else {
-                    prixMax = prixTest; // Si l'emprunt est trop élevé, on doit réduire le prix
-                }
-                continue;
-            }
-            
-            // Frais bancaires
-            const fraisBancaires = this.calculerFraisBancaires(montantPret);
-            
-            // Mensualité
-            const mensualite = this.calculerMensualite(montantPret + fraisBancaires, taux, duree);
-            
-            // Loyer net
-            const loyerBrut = surface * loyerM2;
-            const loyerNet = this.calculerLoyerNet(surface, loyerM2, vacanceLocative);
-            
-            // Taxe foncière
-            const taxeFonciere = prixTest * this.params.communs.taxeFonciere / 100;
-            
-            // Charges non récupérables
-            const chargesNonRecuperables = this.calculerChargesNonRecuperables(loyerBrut);
-            
-            // Entretien
-            const entretienMensuel = this.calculerEntretienMensuel(prixTest);
-            
-            // Assurance PNO
-            const assurancePNO = this.params.communs.assurancePNO;
-            
-            // Cash-flow
-            const cashFlow = this.calculerCashFlow(
-                loyerNet, mensualite, taxeFonciere, 
-                chargesNonRecuperables, entretienMensuel, assurancePNO
-            );
-            
-            // Calcul des intérêts pour la première année
-            const tableauAmortissement = this.calculerTableauAmortissement(montantPret + fraisBancaires, taux, duree);
-            const interetsPremierAnnee = tableauAmortissement.slice(0, 12).reduce((sum, m) => sum + m.interets, 0);
-            
-            // Revenu foncier avant impôt
-            const chargesDeductibles = taxeFonciere + (assurancePNO) + (chargesNonRecuperables * 12) + (entretienMensuel * 12);
-            const revenuFoncier = (loyerNet * 12) - chargesDeductibles - interetsPremierAnnee;
-            
-            // Impact fiscal
-            const impactFiscal = this.calculerImpactFiscal(revenuFoncier, interetsPremierAnnee);
-            
-            // Rendement net
-            const rendementNet = this.calculerRendementNet(
-                loyerNet * 12, chargesDeductibles, impactFiscal, coutTotal + fraisBancaires
-            );
-            
-            // On ne garde que la condition "loyer net ≥ mensualité + 1 €"
-            let criteresRespectes = loyerNet >= (mensualite + 1);
-            
-            if (criteresRespectes) {
-                prixMin = prixTest;
-                prixOptimal = prixTest;
-                
-                resultats = {
-                    prixAchat: prixTest,
-                    fraisNotaire: fraisNotaire,
-                    commission: commission,
-                    travaux: travaux,
-                    fraisBancaires: fraisBancaires,
-                    coutTotal: coutTotal + fraisBancaires,
-                    montantPret: montantPret + fraisBancaires,
-                    mensualite: mensualite,
-                    loyerNet: loyerNet,
-                    loyerBrut: loyerBrut,
-                    taxeFonciere: taxeFonciere,
-                    chargesNonRecuperables: chargesNonRecuperables * 12,
-                    entretienAnnuel: entretienMensuel * 12,
-                    assurancePNO: assurancePNO,
-                    interetsAnnee1: interetsPremierAnnee,
-                    revenuFoncier: revenuFoncier,
-                    impactFiscal: impactFiscal,
-                    cashFlow: cashFlow,
-                    cashFlowAnnuel: cashFlow * 12,
-                    rendementNet: rendementNet,
-                    prixM2: prixTest / surface,
-                    marge: loyerNet - mensualite,
-                    tableauAmortissement: tableauAmortissement
-                };
-            } else {
-                prixMax = prixTest;
-            }
-        }
+        const resultats = this.chercheSurfaceMax('classique');
         
         // Stocker les résultats
         this.params.resultats.classique = resultats;
@@ -555,148 +619,10 @@ class SimulateurImmo {
 
     /**
      * Calcule le prix maximum pour la vente aux enchères selon les critères
-     * en respectant la contrainte du montant d'emprunt maximum
      * @returns {Object} - Résultats de la simulation pour la vente aux enchères
      */
     simulerVenteEncheres() {
-        // Paramètres
-        const apport = this.params.base.apport;
-        const montantEmpruntMax = this.params.base.montantEmpruntMax;
-        const surface = this.params.base.surface;
-        const taux = this.params.base.taux;
-        const duree = this.params.base.duree;
-        const objectif = this.params.base.objectif;
-        const rendementMin = this.params.base.rendementMin;
-        const cashFlowMin = this.params.base.cashFlowMin;
-        const loyerM2 = this.params.communs.loyerM2;
-        const vacanceLocative = this.params.communs.vacanceLocative;
-        
-        // Recherche dichotomique pour trouver le prix maximum
-        let prixMin = 1000; // Prix minimum (à ajuster selon les besoins)
-        let prixMax = 1000000; // Prix maximum (à ajuster selon les besoins)
-        let prixOptimal = 0;
-        let resultats = null;
-        
-        while (prixMax - prixMin > 100) { // Précision de 100€
-            const prixTest = Math.floor((prixMin + prixMax) / 2);
-            
-            // Calculer tous les coûts pour ce prix
-            const droitsEnregistrement = this.calculerDroitsEnregistrement(prixTest);
-            const emolumentsPoursuivant = this.calculerEmolumentsPoursuivant(prixTest);
-            const honorairesAvocat = this.calculerHonorairesAvocat(emolumentsPoursuivant);
-            const publiciteFonciere = prixTest * this.params.encheres.publiciteFonciereEncheres / 100;
-            const fraisDivers = this.params.encheres.fraisFixes + 
-                               this.params.encheres.avocatEnchere + 
-                               this.params.encheres.suiviDossier;
-            
-            // Caution (si non restituée)
-            const caution = this.params.encheres.cautionRestituee ? 0 : 
-                           prixTest * this.params.encheres.cautionPourcent / 100;
-            
-            // Travaux
-            const travaux = surface * this.params.communs.travauxM2;
-            
-            // Coût total avant frais bancaires
-            const coutTotal = prixTest + droitsEnregistrement + emolumentsPoursuivant + 
-                             honorairesAvocat + publiciteFonciere + fraisDivers + caution + travaux;
-            
-            // Montant à emprunter
-            const montantPret = coutTotal - apport;
-            
-            // Vérifier si l'apport est suffisant ET si le montant d'emprunt ne dépasse pas le maximum
-            if (montantPret <= 0 || montantPret > montantEmpruntMax) {
-                if (montantPret <= 0) {
-                    prixMin = prixTest; // Si l'apport couvre tout, on peut tester un prix plus élevé
-                } else {
-                    prixMax = prixTest; // Si l'emprunt est trop élevé, on doit réduire le prix
-                }
-                continue;
-            }
-            
-            // Frais bancaires
-            const fraisBancaires = this.calculerFraisBancaires(montantPret);
-            
-            // Mensualité
-            const mensualite = this.calculerMensualite(montantPret + fraisBancaires, taux, duree);
-            
-            // Loyer
-            const loyerBrut = surface * loyerM2;
-            const loyerNet = this.calculerLoyerNet(surface, loyerM2, vacanceLocative);
-            
-            // Taxe foncière
-            const taxeFonciere = prixTest * this.params.communs.taxeFonciere / 100;
-            
-            // Charges non récupérables
-            const chargesNonRecuperables = this.calculerChargesNonRecuperables(loyerBrut);
-            
-            // Entretien
-            const entretienMensuel = this.calculerEntretienMensuel(prixTest);
-            
-            // Assurance PNO
-            const assurancePNO = this.params.communs.assurancePNO;
-            
-            // Cash-flow
-            const cashFlow = this.calculerCashFlow(
-                loyerNet, mensualite, taxeFonciere,
-                chargesNonRecuperables, entretienMensuel, assurancePNO
-            );
-            
-            // Calcul des intérêts pour la première année
-            const tableauAmortissement = this.calculerTableauAmortissement(montantPret + fraisBancaires, taux, duree);
-            const interetsPremierAnnee = tableauAmortissement.slice(0, 12).reduce((sum, m) => sum + m.interets, 0);
-            
-            // Revenu foncier avant impôt
-            const chargesDeductibles = taxeFonciere + (assurancePNO) + (chargesNonRecuperables * 12) + (entretienMensuel * 12);
-            const revenuFoncier = (loyerNet * 12) - chargesDeductibles - interetsPremierAnnee;
-            
-            // Impact fiscal
-            const impactFiscal = this.calculerImpactFiscal(revenuFoncier, interetsPremierAnnee);
-            
-            // Rendement net
-            const rendementNet = this.calculerRendementNet(
-                loyerNet * 12, chargesDeductibles, impactFiscal, coutTotal + fraisBancaires
-            );
-            
-            // On ne garde que la condition "loyer net ≥ mensualité + 1 €"
-            let criteresRespectes = loyerNet >= (mensualite + 1);
-            
-            if (criteresRespectes) {
-                prixMin = prixTest;
-                prixOptimal = prixTest;
-                
-                resultats = {
-                    prixAchat: prixTest,
-                    droitsEnregistrement: droitsEnregistrement,
-                    emolumentsPoursuivant: emolumentsPoursuivant,
-                    honorairesAvocat: honorairesAvocat,
-                    publiciteFonciere: publiciteFonciere,
-                    fraisDivers: fraisDivers,
-                    caution: caution,
-                    travaux: travaux,
-                    fraisBancaires: fraisBancaires,
-                    coutTotal: coutTotal + fraisBancaires,
-                    montantPret: montantPret + fraisBancaires,
-                    mensualite: mensualite,
-                    loyerNet: loyerNet,
-                    loyerBrut: loyerBrut,
-                    taxeFonciere: taxeFonciere,
-                    chargesNonRecuperables: chargesNonRecuperables * 12,
-                    entretienAnnuel: entretienMensuel * 12,
-                    assurancePNO: assurancePNO,
-                    interetsAnnee1: interetsPremierAnnee,
-                    revenuFoncier: revenuFoncier,
-                    impactFiscal: impactFiscal,
-                    cashFlow: cashFlow,
-                    cashFlowAnnuel: cashFlow * 12,
-                    rendementNet: rendementNet,
-                    prixM2: prixTest / surface,
-                    marge: loyerNet - mensualite,
-                    tableauAmortissement: tableauAmortissement
-                };
-            } else {
-                prixMax = prixTest;
-            }
-        }
+        const resultats = this.chercheSurfaceMax('encheres');
         
         // Stocker les résultats
         this.params.resultats.encheres = resultats;
@@ -906,8 +832,8 @@ class SimulateurImmo {
         const valeursEncheres = [resultats.encheres.prixAchat];
         
         // Évolution de la valeur patrimoniale (valeur du bien - capital restant dû)
-        const patrimoineClassique = [resultats.classique.prixAchat - resultats.classique.montantPret];
-        const patrimoineEncheres = [resultats.encheres.prixAchat - resultats.encheres.montantPret];
+        const patrimoineClassique = [resultats.classique.prixAchat - resultats.classique.emprunt];
+        const patrimoineEncheres = [resultats.encheres.prixAchat - resultats.encheres.emprunt];
         
         let valeurClassique = resultats.classique.prixAchat;
         let valeurEncheres = resultats.encheres.prixAchat;
@@ -978,48 +904,6 @@ class SimulateurImmo {
                     pointRadius: 2,
                 }
             ]
-        };
-    }
-
-    /**
-     * Calcule la surface et l'emprunt optimaux selon l'apport et le rendement
-     * @returns {Object} - Surface et montant d'emprunt optimaux
-     */
-    calculerParametresOptimaux() {
-        const apport = this.params.base.apport;
-        const taux = this.params.base.taux;
-        const duree = this.params.base.duree;
-        const rendementMin = this.params.base.rendementMin;
-        const loyerM2 = this.params.communs.loyerM2;
-        const travauxM2 = this.params.communs.travauxM2;
-        const vacance = this.params.communs.vacanceLocative / 100;
-        
-        // Calcul orienté rendement
-        const loyerAnnuelM2 = loyerM2 * 12;
-        const loyerNetAnnuelM2 = loyerAnnuelM2 * (1 - vacance);
-        
-        // Prix maximum au m² pour atteindre le rendement souhaité
-        const fraisAcquisition = 0.08; // 8% frais de notaire, etc.
-        const prixM2Max = loyerNetAnnuelM2 / (rendementMin / 100);
-        const coutTotalM2 = prixM2Max * (1 + fraisAcquisition) + travauxM2;
-        
-        // Calcul de l'emprunt maximum
-        const tauxMensuel = taux / 100 / 12;
-        const nombreMensualites = duree * 12;
-        const mensualiteParM2 = loyerM2 * 0.7; // 70% du loyer en mensualité max
-        const capaciteEmpruntM2 = mensualiteParM2 * ((1 - Math.pow(1 + tauxMensuel, -nombreMensualites)) / tauxMensuel);
-        
-        // Surface maximale possible
-        const surfaceMaxEmprunt = Math.floor(this.params.base.montantEmpruntMax / capaciteEmpruntM2);
-        const surfaceMaxApport = Math.floor(apport / (coutTotalM2 - capaciteEmpruntM2));
-        const surfaceOptimale = Math.min(surfaceMaxEmprunt, surfaceMaxApport);
-        
-        // Montant d'emprunt correspondant
-        const montantEmpruntOptimal = surfaceOptimale * capaciteEmpruntM2;
-        
-        return {
-            surface: surfaceOptimale > 0 ? surfaceOptimale : 30, // valeur minimum par défaut
-            montantEmprunt: montantEmpruntOptimal
         };
     }
 }
