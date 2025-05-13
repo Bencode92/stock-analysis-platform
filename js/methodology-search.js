@@ -24,14 +24,21 @@ function getCategoryFromTerm(key) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  // S'initialise quand l'onglet Méthodologie est cliqué
+  // S'initialise quand l'onglet Méthodologie est cliqué - méthode ROBUSTE par texte
   const tabItems = document.querySelectorAll('.tab-item');
-  if (tabItems && tabItems.length > 4) {
-    tabItems[4].addEventListener('click', initMethodologyTab);
-  }
+  
+  // Rechercher l'onglet par son texte plutôt que son index
+  tabItems.forEach(item => {
+    if (item.textContent.trim() === "Méthodologie") {
+      item.addEventListener('click', initMethodologyTab);
+      console.log("Écouteur ajouté à l'onglet Méthodologie");
+    }
+  });
 });
 
 function initMethodologyTab() {
+  console.log("Initialisation de l'onglet Méthodologie");
+  
   // Masquer contenu du simulateur
   document.getElementById('question-container').style.display = 'none';
   document.getElementById('results-container').style.display = 'none';
@@ -45,7 +52,13 @@ function initMethodologyTab() {
   // Mettre à jour l'onglet actif
   const tabItems = document.querySelectorAll('.tab-item');
   tabItems.forEach(item => item.classList.remove('active'));
-  tabItems[4].classList.add('active');
+  
+  // Activer l'onglet Méthodologie
+  tabItems.forEach(item => {
+    if (item.textContent.trim() === "Méthodologie") {
+      item.classList.add('active');
+    }
+  });
   
   // Générer l'interface
   tabContainer.innerHTML = createSearchInterface();
@@ -90,9 +103,16 @@ function createSearchInterface() {
 }
 
 function loadLegalTerms() {
+  console.log("Chargement des termes juridiques...");
   fetch('js/legal-terms.json')
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Fichier non trouvé');
+      }
+      return response.json();
+    })
     .then(data => {
+      console.log("Données chargées:", Object.keys(data).length, "termes");
       // Convertir en format plus facile à utiliser
       const termsArray = Object.entries(data).map(([key, value]) => {
         return {
@@ -111,6 +131,7 @@ function loadLegalTerms() {
       initializeSearchInterface(termsArray);
     })
     .catch(error => {
+      console.error("Erreur chargement termes:", error);
       document.getElementById('terms-results').innerHTML = `
         <div class="bg-red-900 bg-opacity-30 p-4 rounded-lg text-center">
           <i class="fas fa-exclamation-triangle text-red-400 text-2xl mb-2"></i>
@@ -121,6 +142,8 @@ function loadLegalTerms() {
 }
 
 function initializeSearchInterface(terms) {
+  console.log("Initialisation interface, termes:", terms.length);
+  
   // Afficher tous les termes
   renderTermsList(terms, 'all');
   
@@ -172,6 +195,7 @@ function initializeSearchInterface(terms) {
 }
 
 function renderTermsList(terms, category) {
+  console.log("Rendu de", terms.length, "termes, catégorie:", category);
   const resultsContainer = document.getElementById('terms-results');
   
   if (terms.length === 0) {
