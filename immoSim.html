@@ -284,6 +284,13 @@
             margin-bottom: 2rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 8px 15px rgba(0, 255, 135, 0.1);
+            border-color: rgba(0, 255, 135, 0.2);
         }
         
         .card-header {
@@ -332,13 +339,14 @@
             background-color: rgba(1, 42, 74, 0.6);
             color: white;
             font-size: 1rem;
-            transition: border-color 0.15s ease-in-out;
+            transition: all 0.2s ease-in-out;
         }
         
         .form-input:focus {
             outline: none;
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(0, 255, 135, 0.2);
+            transform: translateY(-1px);
         }
         
         .form-help {
@@ -373,7 +381,38 @@
             border: none;
             cursor: pointer;
             font-size: 1rem;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+        
+        .btn:hover::after {
+            animation: ripple 1s ease-out;
+        }
+        
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(20, 20);
+                opacity: 0;
+            }
         }
         
         .btn-primary {
@@ -385,6 +424,7 @@
         .btn-primary:hover {
             background-color: var(--primary-dark);
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 255, 135, 0.3);
         }
         
         .btn-accent {
@@ -605,6 +645,14 @@
             overflow: hidden;
             margin-bottom: 2rem;
             background-color: var(--card-background);
+            transition: all 0.3s ease;
+            transform: translateY(0);
+        }
+        
+        .results-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            border-color: rgba(0, 255, 135, 0.3);
         }
         
         .results-header {
@@ -731,6 +779,11 @@
             border-radius: 0.5rem;
             margin-bottom: 1rem;
             overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .accordion:hover {
+            border-color: rgba(0, 255, 135, 0.2);
         }
         
         .accordion-header {
@@ -740,6 +793,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: all 0.2s ease;
         }
         
         .accordion-header:hover {
@@ -750,12 +804,42 @@
             padding: 0;
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.3s ease-out;
+            transition: max-height 0.3s ease-out, padding 0.3s ease;
         }
         
         .accordion-body.active {
             padding: 1rem 1.5rem;
             max-height: 1000px;
+        }
+        
+        /* Nouvelles animations et styles */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .backdrop-blur-md {
+            backdrop-filter: blur(8px);
+        }
+        
+        .bg-opacity-20 {
+            background-opacity: 0.2;
+        }
+        
+        .shadow-lg {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .hover\:shadow-blue-500\/5:hover {
+            box-shadow: 0 0 20px 5px rgba(0, 130, 255, 0.05);
+        }
+        
+        .transition-all {
+            transition: all 0.3s ease;
         }
     </style>
 </head>
@@ -848,7 +932,7 @@
         </div>
         
         <!-- Inputs de base -->
-        <div class="card">
+        <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg hover:shadow-blue-500/5 transition-all">
             <div class="card-header">
                 <div class="card-icon">
                     <i class="fas fa-money-bill-wave"></i>
@@ -912,12 +996,15 @@
                 <button id="btn-simulate" class="btn btn-primary">
                     <i class="fas fa-calculator"></i> Simuler
                 </button>
+                <button id="btn-advanced-toggle" class="btn btn-outline">
+                    <i class="fas fa-sliders-h"></i> Mode Avancé
+                </button>
             </div>
         </div>
         
         <!-- Paramètres avancés (masqués par défaut) -->
-        <div id="advanced-params" class="hidden">
-            <div class="card">
+        <div id="advanced-params" class="hidden fade-in">
+            <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg transition-all">
                 <div class="card-header">
                     <div class="card-icon">
                         <i class="fas fa-cogs"></i>
@@ -1341,7 +1428,7 @@
                 </div>
             </div>
             
-            <div class="card mt-4">
+            <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg transition-all mt-4">
                 <div class="card-header">
                     <div class="card-icon">
                         <i class="fas fa-balance-scale"></i>
@@ -1420,6 +1507,20 @@
                     </span>
                 </div>
             </div>
+            
+            <!-- Nouvelle section pour les graphiques -->
+            <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg transition-all mt-4">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <h2 class="card-title">Comparaison Visuelle</h2>
+                </div>
+                <div class="grid grid-2">
+                    <canvas id="chart-comparison" height="250"></canvas>
+                    <canvas id="chart-cashflow" height="250"></canvas>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1429,6 +1530,7 @@
     </div>
 
     <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script src="immo-simulation.js"></script>
     <script src="simulation-interface.js"></script>
     <script src="debug-immo.js"></script>
