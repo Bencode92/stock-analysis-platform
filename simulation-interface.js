@@ -21,6 +21,38 @@ document.addEventListener('DOMContentLoaded', function() {
     const historiqueContainer = document.getElementById('historique-container');
     const historiqueList = document.getElementById('historique-list');
 
+    // Masquer le champ surface visée
+    const surfaceField = document.getElementById('surface');
+    if (surfaceField && surfaceField.parentNode) {
+        surfaceField.parentNode.style.display = 'none';
+    }
+
+    // Ajouter un style pour les éléments mis en évidence
+    const styleEl = document.createElement('style');
+    styleEl.id = 'highlight-styles';
+    styleEl.textContent = `
+        .highlight-field {
+            border-color: var(--primary-color) !important;
+            box-shadow: 0 0 0 3px rgba(0, 255, 135, 0.2) !important;
+            animation: pulse-border 1.5s infinite;
+        }
+        
+        @keyframes pulse-border {
+            0% { border-color: var(--primary-color); }
+            50% { border-color: rgba(0, 255, 135, 0.5); }
+            100% { border-color: var(--primary-color); }
+        }
+        
+        .info-message {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background-color: rgba(0, 255, 135, 0.1);
+            border-radius: 0.5rem;
+            border: 1px solid rgba(0, 255, 135, 0.3);
+        }
+    `;
+    document.head.appendChild(styleEl);
+
     // Éléments des onglets
     const tabs = document.querySelectorAll('.tab');
     const tabContents = document.querySelectorAll('.tab-content');
@@ -34,71 +66,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let valuationChart = null;
     let costPieChartClassique = null;
     let costPieChartEncheres = null;
-
-    // Ajouter un bouton pour le mode optimisation auto
-    const btnAutoCalc = document.createElement('button');
-    btnAutoCalc.className = 'btn btn-outline';
-    btnAutoCalc.innerHTML = '<i class="fas fa-magic"></i> Optimiser automatiquement';
-    btnAutoCalc.style.marginRight = '10px';
-
-    // Insérer avant le bouton Mode Avancé
-    if (btnAdvancedToggle) {
-        btnAdvancedToggle.parentNode.insertBefore(
-            btnAutoCalc, 
-            btnAdvancedToggle
-        );
-    }
-
-    // Écouteur pour l'optimisation auto
-    btnAutoCalc.addEventListener('click', function() {
-        try {
-            const params = simulateur.calculerParametresOptimaux();
-            
-            // Mettre à jour les champs
-            document.getElementById('surface').value = params.surface;
-            document.getElementById('montant-emprunt-max').value = Math.round(params.montantEmprunt);
-            
-            // Ajouter des styles pour la mise en évidence (si pas déjà présents)
-            if (!document.getElementById('highlight-styles')) {
-                const styleEl = document.createElement('style');
-                styleEl.id = 'highlight-styles';
-                styleEl.textContent = `
-                    .highlight-field {
-                        border-color: var(--primary-color) !important;
-                        box-shadow: 0 0 0 3px rgba(0, 255, 135, 0.2) !important;
-                        animation: pulse-border 1.5s infinite;
-                    }
-                    
-                    @keyframes pulse-border {
-                        0% { border-color: var(--primary-color); }
-                        50% { border-color: rgba(0, 255, 135, 0.5); }
-                        100% { border-color: var(--primary-color); }
-                    }
-                `;
-                document.head.appendChild(styleEl);
-            }
-            
-            // Mettre en évidence les champs modifiés
-            document.getElementById('surface').classList.add('highlight-field');
-            document.getElementById('montant-emprunt-max').classList.add('highlight-field');
-            
-            // Animation pour indiquer que le calcul est terminé
-            this.innerHTML = '<i class="fas fa-check"></i> Paramètres optimisés';
-            setTimeout(() => {
-                this.innerHTML = '<i class="fas fa-magic"></i> Optimiser automatiquement';
-                
-                // Retirer la mise en évidence
-                document.getElementById('surface').classList.remove('highlight-field');
-                document.getElementById('montant-emprunt-max').classList.remove('highlight-field');
-            }, 2000);
-            
-            // Afficher un toast de confirmation
-            afficherToast('Paramètres optimisés en fonction de votre apport et du rendement souhaité', 'success');
-        } catch (error) {
-            console.error('Erreur lors de l\'optimisation:', error);
-            afficherToast('Une erreur est survenue lors de l\'optimisation des paramètres', 'error');
-        }
-    });
 
     // Écouteurs d'événements
     // --------------------
@@ -148,14 +115,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Lancement de la simulation
+    // Lancement de la simulation avec surface optimale calculée automatiquement
     btnSimulate.addEventListener('click', function() {
         // Afficher l'indicateur de chargement
         document.querySelector('.loading').style.display = 'flex';
         
         // Délai artificiel pour montrer le chargement (à retirer en production)
         setTimeout(() => {
-            executerSimulation();
+            // Récupérer les données du formulaire
+            const formData = collecterDonneesFormulaire();
+            
+            // Calculer la surface optimale
+            const paramsOptimaux = simulateur.calculerParametresOptimaux();
+            formData.surface = paramsOptimaux.surface;
+            
+            // Mettre à jour le champ caché
+            document.getElementById('surface').value = paramsOptimaux.surface;
+            
+            // Charger les paramètres dans le simulateur
+            simulateur.chargerParametres(formData);
+            
+            // Exécuter la simulation
+            const resultats = simulateur.simuler();
             
             // Masquer l'indicateur de chargement
             document.querySelector('.loading').style.display = 'none';
@@ -163,6 +144,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // Afficher les résultats avec animation
             resultsContainer.classList.remove('hidden');
             resultsContainer.classList.add('fade-in');
+            
+            // Ajouter la notification de surface calculée
+            const notification = document.createElement('div');
+            notification.className = 'info-message fade-in';
+            notification.innerHTML = `<i class="fas fa-ruler-combined"></i> Surface optimale calculée: <strong>${paramsOptimaux.surface} m²</strong> pour un rendement de <strong>${formData.rendementMin}%</strong>`;
+            
+            // Ajouter la notification avant les résultats
+            resultsContainer.insertBefore(notification, resultsContainer.firstChild);
             
             // Animer les valeurs numériques
             animerResultats();
