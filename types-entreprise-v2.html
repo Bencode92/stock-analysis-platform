@@ -758,37 +758,105 @@
             
             <!-- Onglets horizontaux (nouveaux) -->
             <div class="tab-navigation mb-8">
-                <div class="tab-item active">Simulateur</div>
-                <div class="tab-item">Comparatif des statuts</div>
-                <div class="tab-item">Guide fiscal</div>
-                <div class="tab-item">Glossaire</div>
+                <div class="tab-item active" data-target="simulateur-entreprise">Simulateur Entreprise</div>
+                <div class="tab-item" data-target="comparatif-statuts">Comparatif des statuts</div>
+                <div class="tab-item" data-target="guide-fiscal">Guide fiscal</div>
+                <div class="tab-item" data-target="glossaire">Glossaire</div>
+                <div class="tab-item" data-target="simulateur-immobilier">Simulateur Immobilier</div>
             </div>
 
-            <!-- Conteneur pour le contenu des onglets autres que Simulateur -->
-            <div id="tab-content-container" style="display: none;"></div>
+            <!-- Conteneur pour le contenu des onglets -->
+            <div id="tab-content-container">
+                <!-- Tab Simulateur Entreprise -->
+                <div id="simulateur-entreprise" class="tab-panel active">
+                    <!-- Barre de progression -->
+                    <div class="progress-info">
+                        <span class="progress-percentage" id="progress-percentage">0% complété</span>
+                        <span class="time-estimate" id="time-estimate">Temps estimé: 8 minutes</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+                    </div>
 
-            <!-- Barre de progression -->
-            <div class="progress-info">
-                <span class="progress-percentage" id="progress-percentage">0% complété</span>
-                <span class="time-estimate" id="time-estimate">Temps estimé: 8 minutes</span>
-            </div>
-            <div class="progress-bar-container">
-                <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
-            </div>
+                    <!-- Progress Steps -->
+                    <div class="progress-steps mb-8" id="progress-steps-container">
+                        <!-- Les étapes seront générées dynamiquement -->
+                    </div>
 
-            <!-- Progress Steps -->
-            <div class="progress-steps mb-8" id="progress-steps-container">
-                <!-- Les étapes seront générées dynamiquement -->
-            </div>
-
-            <!-- Questions du simulateur -->
-            <div id="question-container" class="max-w-4xl mx-auto mb-12">
-                <!-- Les sections seront injectées ici -->
-            </div>
-            
-            <!-- Résultats du simulateur -->
-            <div id="results-container" class="max-w-4xl mx-auto mb-12" style="display: none;">
-                <!-- Les résultats seront injectés ici -->
+                    <!-- Questions du simulateur -->
+                    <div id="question-container" class="max-w-4xl mx-auto mb-12">
+                        <!-- Les sections seront injectées ici -->
+                    </div>
+                    
+                    <!-- Résultats du simulateur -->
+                    <div id="results-container" class="max-w-4xl mx-auto mb-12" style="display: none;">
+                        <!-- Les résultats seront injectés ici -->
+                    </div>
+                </div>
+                
+                <!-- Tab Simulateur Immobilier -->
+                <div id="simulateur-immobilier" class="tab-panel hidden">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl font-bold mb-4">Simulateur d'Investissement Immobilier</h2>
+                        <p class="text-lg text-gray-300 mb-6">Comparez les options d'achat classique et vente aux enchères</p>
+                        <a href="immoSim.html" class="bg-green-500 hover:bg-green-400 text-gray-900 font-bold py-3 px-6 rounded-lg inline-flex items-center">
+                            <i class="fas fa-calculator mr-2"></i> Accéder au simulateur immobilier
+                        </a>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+                        <div class="bg-blue-900 bg-opacity-40 rounded-xl p-6 border border-gray-700">
+                            <div class="flex items-center mb-4">
+                                <div class="bg-opacity-20 bg-green-500 w-12 h-12 rounded-full flex items-center justify-center mr-4">
+                                    <i class="fas fa-home text-green-400 text-2xl"></i>
+                                </div>
+                                <h3 class="text-xl font-bold">Achat Classique</h3>
+                            </div>
+                            <ul class="space-y-2">
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-green-400 mt-1 mr-2"></i>
+                                    <span>Calcul du prix maximum d'acquisition</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-green-400 mt-1 mr-2"></i>
+                                    <span>Frais de notaire et commissions détaillés</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-green-400 mt-1 mr-2"></i>
+                                    <span>Estimation du rendement et cash-flow</span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-blue-900 bg-opacity-40 rounded-xl p-6 border border-gray-700">
+                            <div class="flex items-center mb-4">
+                                <div class="bg-opacity-20 bg-yellow-500 w-12 h-12 rounded-full flex items-center justify-center mr-4">
+                                    <i class="fas fa-gavel text-yellow-400 text-2xl"></i>
+                                </div>
+                                <h3 class="text-xl font-bold">Vente aux Enchères</h3>
+                            </div>
+                            <ul class="space-y-2">
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-green-400 mt-1 mr-2"></i>
+                                    <span>Prix d'adjudication maximum estimé</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-green-400 mt-1 mr-2"></i>
+                                    <span>Droits d'enregistrement et émoluments</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-green-400 mt-1 mr-2"></i>
+                                    <span>Comparaison détaillée avec l'achat classique</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Autres onglets (conservés vides pour ne pas interférer avec le JS existant) -->
+                <div id="comparatif-statuts" class="tab-panel hidden"></div>
+                <div id="guide-fiscal" class="tab-panel hidden"></div>
+                <div id="glossaire" class="tab-panel hidden"></div>
             </div>
         </div>
     </div>
@@ -853,6 +921,44 @@
     <script src="js/fiscal-guide.js?v=20250506_2" defer></script>
     <!-- Script du module de recherche pour l'onglet Glossaire -->
     <script src="js/methodology-search.js?v=20250513_2" defer></script>
+    
+    <!-- Script pour gérer les onglets et le contenu -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gestion des onglets
+        const tabItems = document.querySelectorAll('.tab-item');
+        const tabPanels = document.querySelectorAll('.tab-panel');
+        
+        tabItems.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Masquer tous les panneaux et désactiver tous les onglets
+                tabItems.forEach(item => item.classList.remove('active'));
+                tabPanels.forEach(panel => panel.classList.add('hidden'));
+                
+                // Activer l'onglet cliqué
+                this.classList.add('active');
+                
+                // Afficher le panneau correspondant
+                const targetId = this.getAttribute('data-target');
+                const targetPanel = document.getElementById(targetId);
+                if (targetPanel) {
+                    targetPanel.classList.remove('hidden');
+                    
+                    // Si nous passons à un autre onglet que le simulateur, masquer progress-info, etc.
+                    if (targetId !== 'simulateur-entreprise') {
+                        document.querySelector('.progress-info').style.display = 'none';
+                        document.querySelector('.progress-bar-container').style.display = 'none';
+                        document.getElementById('progress-steps-container').style.display = 'none';
+                    } else {
+                        document.querySelector('.progress-info').style.display = 'flex';
+                        document.querySelector('.progress-bar-container').style.display = 'block';
+                        document.getElementById('progress-steps-container').style.display = 'flex';
+                    }
+                }
+            });
+        });
+    });
+    </script>
     
     <!-- Script pour gérer l'indicateur de chargement -->
     <script>
