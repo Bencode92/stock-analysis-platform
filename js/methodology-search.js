@@ -113,7 +113,8 @@ function createSearchInterface() {
 
 function loadLegalTerms() {
   console.log("Chargement des termes juridiques...");
-  fetch('js/legal-terms.json')
+  // CORRECTION DU CHEMIN : data/ au lieu de js/
+  fetch('data/legal-terms.json')
     .then(response => {
       if (!response.ok) {
         throw new Error('Fichier non trouvé');
@@ -125,7 +126,7 @@ function loadLegalTerms() {
       // Convertir en format plus facile à utiliser
       const termsArray = Object.entries(data).map(([key, value]) => {
         return {
-          terme: key.replace(/_/g, ' ').replace(/\\b\\w/g, l => l.toUpperCase()),
+          terme: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
           definition: value.definition,
           detail: value.example,
           related: value.related_terms,
@@ -202,20 +203,13 @@ function renderSuggestions(terms) {
   let html = '';
   
   terms.forEach(term => {
-    // Couleur basée sur la catégorie
-    const categoryColor = term.categorie === 'fiscal' ? 'text-green-400' : 
-                          term.categorie === 'juridique' ? 'text-blue-400' : 
-                          'text-purple-400';
-                          
-    const categoryBadge = `<span class="ml-2 px-2 py-0.5 rounded text-xs ${term.categorie === 'fiscal' ? 'bg-green-900 text-green-300' : 
-                            term.categorie === 'juridique' ? 'bg-blue-900 text-blue-300' : 
-                            'bg-purple-900 text-purple-300'}">${term.categorie}</span>`;
+    // Mettre la couleur indépendamment de la catégorie
+    const categoryClass = 'text-green-400';
     
     html += `
       <div class="suggestion-item p-3 cursor-pointer hover:bg-blue-800 border-b border-blue-700 flex items-center">
         <span class="mr-2">•</span>
-        <span class="${categoryColor} font-medium">${term.terme}</span>
-        ${categoryBadge}
+        <span class="${categoryClass} font-medium">${term.terme}</span>
       </div>
     `;
   });
