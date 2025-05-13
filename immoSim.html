@@ -950,6 +950,14 @@
                 </div>
                 
                 <div class="form-group">
+                    <label class="form-label" for="montant-emprunt-max">Emprunt maximum</label>
+                    <div class="form-addon">
+                        <input type="number" id="montant-emprunt-max" class="form-input" value="150000">
+                        <span class="form-addon-text">€</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
                     <label class="form-label" for="surface">Surface visée</label>
                     <div class="form-addon">
                         <input type="number" id="surface" class="form-input" placeholder="50" value="50">
@@ -974,22 +982,11 @@
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label" for="objectif">Objectif financier</label>
-                    <div class="flex items-center">
-                        <select id="objectif" class="form-input">
-                            <option value="cashflow">Cash-flow positif ≥ 1€</option>
-                            <option value="rendement">Rendement net minimum + cash-flow ≥ 1€</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="form-group" id="rendement-min-group" style="display: none;">
-                    <label class="form-label" for="rendement-min">Rendement net minimum</label>
+                    <label class="form-label" for="rendement-min">Rendement locatif souhaité</label>
                     <div class="form-addon">
-                        <input type="number" id="rendement-min" class="form-input" placeholder="5" value="5" step="0.1">
+                        <input type="number" id="rendement-min" class="form-input" value="5" step="0.1">
                         <span class="form-addon-text">%</span>
                     </div>
-                    <span class="form-help">Le cash-flow minimum de 1€ est également appliqué</span>
                 </div>
             </div>
             
@@ -1022,6 +1019,15 @@
                 <!-- Paramètres communs -->
                 <div class="tab-content active" id="params-communs">
                     <div class="grid grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="cashflow-min">Cash-flow minimum</label>
+                            <div class="form-addon">
+                                <input type="number" id="cashflow-min" class="form-input" value="1" step="1">
+                                <span class="form-addon-text">€</span>
+                            </div>
+                            <span class="form-help">Cash-flow mensuel minimum souhaité</span>
+                        </div>
+
                         <div class="form-group">
                             <label class="form-label" for="frais-bancaires-dossier">Frais bancaires - dossier</label>
                             <div class="form-addon">
@@ -1517,9 +1523,9 @@
     </div>
 
     <!-- Scripts -->
-    <script src="immo-simulation.js"></script>
-    <script src="simulation-interface.js"></script>
-    <script src="debug-immo.js"></script>
+    <script src="./immo-simulation.js"></script>
+    <script src="./simulation-interface.js"></script>
+    <script src="./debug-immo.js"></script>
     
     <!-- Script pour mettre à jour l'heure du marché -->
     <script>
