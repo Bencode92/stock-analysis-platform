@@ -5,6 +5,7 @@
  * d'investissement immobilier, comparant l'achat classique et la vente aux enchères.
  * 
  * Version 4.0 - Refactorisée pour calculer le prix maximum finançable
+ * Version 4.1 - Optimisation par recherche dichotomique
  */
 
 class SimulateurImmo {
@@ -75,13 +76,13 @@ class SimulateurImmo {
     }
 
     /**
-     * Cherche le prix maximum finançable
+     * Cherche le prix maximum finançable (méthode linéaire)
      * @param {string} mode - Mode d'achat ("classique" ou "encheres")
      * @param {number} step - Pas d'incrémentation du prix
      * @param {number} maxPrice - Prix maximum à tester
      * @returns {Object} - Résultats de la simulation
      */
-    cherchePrixMax(mode, step = 1000, maxPrice = 3000000) {
+    cherchePrixMaxStep(mode, step = 1000, maxPrice = 3000000) {
         let best = null;
         let margePositiveRencontree = false;
         for (let P = step; P <= maxPrice; P += step) {
@@ -95,6 +96,37 @@ class SimulateurImmo {
                 // on vient de dépasser le plafond viable
                 break;
             }
+        }
+        return best;
+    }
+    
+    /**
+     * Recherche dichotomique du prix maximum finançable
+     * @param {string} mode   "classique" | "encheres"
+     * @param {number} Pmin   borne basse (>= 0)
+     * @param {number} Pmax   borne haute (ex: 3 000 000 €)
+     * @param {number} eps    précision souhaitée (ex: 100 €)
+     * @returns {Object|null} résultats complets pour le prix max trouvé
+     */
+    cherchePrixMaxDicho(mode, Pmin = 0, Pmax = 3000000, eps = 100) {
+        let best = null;
+
+        // Si la marge est déjà négative au plancher, rien n'est finançable
+        if (this.calculeToutDepuisPrix(Pmin, mode).marge < 0) return null;
+
+        while (Pmax - Pmin > eps) {
+            const Pmid = (Pmin + Pmax) / 2;
+            const res = this.calculeToutDepuisPrix(Pmid, mode);
+
+            if (res.marge >= 0) {         // Toujours viable : on peut monter
+                best = res;
+                Pmin = Pmid;
+            } else {                      // Plus viable : on doit baisser
+                Pmax = Pmid;
+            }
+            
+            // Option: arrêt précoce si on trouve presque exactement la solution
+            if (Math.abs(res.marge) < eps/10) return res;
         }
         return best;
     }
@@ -630,7 +662,12 @@ class SimulateurImmo {
      * @returns {Object} - Résultats de la simulation pour l'achat classique
      */
     simulerAchatClassique() {
-        const resultats = this.cherchePrixMax('classique');
+        // Utilisation intelligente des bornes
+        const apport = this.params.base.apport;
+        const Pmin = Math.max(1000, apport * 1.1); // Prix minimum réaliste
+        const Pmax = Math.min(3000000, (apport / 0.1) * 2); // 2x capacité approximative
+        
+        const resultats = this.cherchePrixMaxDicho('classique', Pmin, Pmax);
         
         // Stocker les résultats
         this.params.resultats.classique = resultats;
@@ -643,7 +680,12 @@ class SimulateurImmo {
      * @returns {Object} - Résultats de la simulation pour la vente aux enchères
      */
     simulerVenteEncheres() {
-        const resultats = this.cherchePrixMax('encheres');
+        // Utilisation intelligente des bornes
+        const apport = this.params.base.apport;
+        const Pmin = Math.max(1000, apport * 1.1); // Prix minimum réaliste
+        const Pmax = Math.min(3000000, (apport / 0.1) * 2); // 2x capacité approximative
+        
+        const resultats = this.cherchePrixMaxDicho('encheres', Pmin, Pmax);
         
         // Stocker les résultats
         this.params.resultats.encheres = resultats;
