@@ -15,6 +15,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialiser le simulateur
     const simulateur = new SimulateurImmo();
+    // Rendre le simulateur accessible globalement pour les extensions
+    window.simulateur = simulateur;
 
     // Éléments DOM
     const btnAdvancedToggle = document.getElementById('btn-advanced-toggle');
