@@ -158,13 +158,16 @@ document.addEventListener('DOMContentLoaded', function() {
         resultsContainer.classList.remove('hidden');
         resultsContainer.classList.add('fade-in');
         
+        // Récupérer le pas de recherche utilisé
+        const pas = document.getElementById('pas-surface') ? document.getElementById('pas-surface').value : 1;
+        
         // Ajouter la notification de prix maximum calculé avec badge d'optimisation
         const notification = document.createElement('div');
         notification.className = 'info-message fade-in';
         notification.innerHTML = `
             <i class="fas fa-check-circle"></i> 
-            Calcul terminé : <strong>Prix maximum finançable</strong> déterminé par une marge positive entre loyer et mensualité
-            <span class="optimization-badge"><i class="fas fa-bolt"></i> Recherche dichotomique (ε = 100 €)</span>
+            Calcul terminé : <strong>Surface maximale autofinancée</strong> déterminée par une marge positive entre loyer et mensualité
+            <span class="optimization-badge"><i class="fas fa-ruler"></i> Recherche par surface décroissante (pas = ${pas} m²)</span>
         `;
         
         // Mettre à jour le champ caché de surface
@@ -401,6 +404,17 @@ document.addEventListener('DOMContentLoaded', function() {
         // Récupération du pourcentage d'apport minimum s'il existe
         if (simulation.params.base.pourcentApportMin && document.getElementById('pourcent-apport')) {
             document.getElementById('pourcent-apport').value = simulation.params.base.pourcentApportMin;
+        }
+        
+        // Récupération des paramètres de surface
+        if (simulation.params.base.surfaceMax && document.getElementById('surface-max')) {
+            document.getElementById('surface-max').value = simulation.params.base.surfaceMax;
+        }
+        if (simulation.params.base.surfaceMin && document.getElementById('surface-min')) {
+            document.getElementById('surface-min').value = simulation.params.base.surfaceMin;
+        }
+        if (simulation.params.base.pasSurface && document.getElementById('pas-surface')) {
+            document.getElementById('pas-surface').value = simulation.params.base.pasSurface;
         }
         
         // Afficher les paramètres avancés
@@ -831,6 +845,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Ajouter le paramètre d'apport minimum
             pourcentApportMin: document.getElementById('pourcent-apport')?.value || 10,
+            
+            // Paramètres de surface
+            surfaceMax: document.getElementById('surface-max')?.value || 120,
+            surfaceMin: document.getElementById('surface-min')?.value || 20,
+            pasSurface: document.getElementById('pas-surface')?.value || 1,
             
             // Paramètres communs
             fraisBancairesDossier: document.getElementById('frais-bancaires-dossier').value,
