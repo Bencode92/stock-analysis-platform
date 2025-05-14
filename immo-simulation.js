@@ -7,6 +7,7 @@
  * Version 4.0 - Refactorisée pour calculer le prix maximum finançable
  * Version 4.1 - Optimisation par recherche dichotomique
  * Version 4.2 - Optimisation de la recherche en commençant par le maximum théorique
+ * Version 4.3 - Nouvelle méthode de recherche par surface décroissante
  */
 
 class SimulateurImmo {
@@ -20,7 +21,8 @@ class SimulateurImmo {
                 duree: 20,                    // Durée du prêt
                 // objectif: 'cashflow',      // Objectif: cashflow ou rendement (supprimé)
                 // rendementMin: 5,           // Rendement minimum souhaité (supprimé)
-                surfaceMax: 100,              // Surface maximale autorisée
+                surfaceMax: 120,              // Surface maximale autorisée
+                surfaceMin: 20,               // Surface minimale autorisée (ajouté)
                 pourcentApportMin: 10         // Pourcentage d'apport minimum exigé (ajouté)
             },
             communs: {
@@ -169,6 +171,31 @@ class SimulateurImmo {
     }
 
     /**
+     * Recherche de la surface maximale autofinancée
+     * - démarre du plafond surfaceMax (120 m² par défaut)
+     * - descend jusqu'à surfaceMin (20 m²) par pas
+     * - stoppe dès que loyer net ≥ mensualité
+     * @param {"classique"|"encheres"} mode
+     * @param {number} pas - pas de décrémentation (par défaut 1 m²)
+     * @returns {Object|null}  résultats complets ou null si rien de viable
+     */
+    chercheSurfaceDesc(mode, pas = 1) {
+        const { apport, pourcentApportMin, surfaceMax = 120, surfaceMin = 20 } = this.params.base;
+        const prixM2 = this.params.communs.prixM2;
+        const ratio = (pourcentApportMin ?? 10) / 100;
+        const prixMax = apport / ratio;  // ex. 20 000 / 0.10 = 200 000 €
+
+        for (let S = surfaceMax; S >= surfaceMin; S -= pas) {
+            const prixAchat = S * prixM2;
+            if (prixAchat > prixMax) continue;  // dépassement du plafond financier
+
+            const res = this.calculeTout(S, mode);
+            if (res.marge >= 0) return res;  // on a trouvé la + grande surface viable
+        }
+        return null; // aucune solution autofinancée dans l'intervalle
+    }
+
+    /**
      * Calcule tous les paramètres à partir d'un prix d'achat
      * @param {number} prixAchat - Prix d'achat du bien
      * @param {string} mode - Mode d'achat ("classique" ou "encheres")
@@ -193,6 +220,14 @@ class SimulateurImmo {
         // Ajouter le chargement du pourcentage d'apport minimum
         if (formData.pourcentApportMin !== undefined)
             this.params.base.pourcentApportMin = parseFloat(formData.pourcentApportMin) || 10;
+        
+        // Paramètres de surface min/max et pas
+        if (formData.surfaceMax !== undefined)
+            this.params.base.surfaceMax = parseFloat(formData.surfaceMax) || 120;
+        if (formData.surfaceMin !== undefined)
+            this.params.base.surfaceMin = parseFloat(formData.surfaceMin) || 20;
+        if (formData.pasSurface !== undefined)
+            this.params.base.pasSurface = parseFloat(formData.pasSurface) || 1;
         
         // Paramètres communs
         if (formData.fraisBancairesDossier !== undefined) 
@@ -700,8 +735,9 @@ class SimulateurImmo {
      * @returns {Object} - Résultats de la simulation pour l'achat classique
      */
     simulerAchatClassique() {
-        // Utilisation de cherchePrixMaxApport au lieu de cherchePrixMaxDicho
-        const resultats = this.cherchePrixMaxApport('classique');
+        // Utilisation de chercheSurfaceDesc au lieu de cherchePrixMaxApport
+        const pas = this.params.base.pasSurface || 1;
+        const resultats = this.chercheSurfaceDesc('classique', pas);
         
         // Stocker les résultats
         this.params.resultats.classique = resultats;
@@ -714,8 +750,9 @@ class SimulateurImmo {
      * @returns {Object} - Résultats de la simulation pour la vente aux enchères
      */
     simulerVenteEncheres() {
-        // Utilisation de cherchePrixMaxApport au lieu de cherchePrixMaxDicho
-        const resultats = this.cherchePrixMaxApport('encheres');
+        // Utilisation de chercheSurfaceDesc au lieu de cherchePrixMaxApport
+        const pas = this.params.base.pasSurface || 1;
+        const resultats = this.chercheSurfaceDesc('encheres', pas);
         
         // Stocker les résultats
         this.params.resultats.encheres = resultats;
