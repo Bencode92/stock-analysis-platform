@@ -506,9 +506,9 @@ class SimulateurImmo {
         // Mensualité
         const mensualite = this.calculerMensualite(emprunt, taux, duree);
         
-        // Loyer (basé sur le rendement souhaité)
-        const loyerBrut = this.calculerLoyerBrut(prixAchat, rendementSouhaite, surface);
-        const loyerM2 = surface > 0 ? loyerBrut / surface : 0; // Calcul du loyer au m²
+        // Loyer (basé sur la valeur au m² du marché, non plus sur le rendement souhaité)
+        const loyerBrut = surface * this.params.communs.loyerM2;
+        const rendementBrut = (loyerBrut * 12) / prixAchat * 100;
         const loyerNet = this.calculerLoyerNet(loyerBrut, vacanceLocative);
         
         // Taxe foncière (5% du loyer annuel brut)
@@ -558,7 +558,7 @@ class SimulateurImmo {
             mensualite,
             loyerNet,
             loyerBrut,
-            loyerM2,
+            loyerM2: surface > 0 ? loyerBrut / surface : 0,
             taxeFonciere,
             chargesNonRecuperables: chargesCopro,
             entretienAnnuel: entretienMensuel * 12,
@@ -569,6 +569,7 @@ class SimulateurImmo {
             cashFlow,
             cashFlowAnnuel: cashFlow * 12,
             rendementNet,
+            rendementBrut,
             marge: loyerNet - mensualite,
             tableauAmortissement
         };
@@ -602,10 +603,16 @@ class SimulateurImmo {
         let surface = Math.max(1, pas);
         let best = null;
         
+        // Récupérer le seuil de cash-flow minimum
+        const seuilCF = Number(
+            document.getElementById('cashflow-min')?.value || 1
+        );
+        
         while (surface <= SURFACE_MAX) {
             const res = this.calculeTout(surface, mode);
             
-            const margeOK = res.loyerNet >= res.mensualite + 1;
+            // Supprimer la condition de rendement, ne garder que le test de cash-flow
+            const margeOK = res.loyerNet >= res.mensualite + seuilCF;
             
             if (margeOK) {
                 best = res;          // on garde
