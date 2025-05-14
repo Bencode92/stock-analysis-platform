@@ -78,17 +78,23 @@ class SimulateurImmo {
      * Cherche le prix maximum finançable
      * @param {string} mode - Mode d'achat ("classique" ou "encheres")
      * @param {number} step - Pas d'incrémentation du prix
+     * @param {number} maxPrice - Prix maximum à tester
      * @returns {Object} - Résultats de la simulation
      */
-    cherchePrixMax(mode, step = 1000) {
-        let P = step;
+    cherchePrixMax(mode, step = 1000, maxPrice = 3000000) {
         let best = null;
-        while (true) {
+        let margePositiveRencontree = false;
+        for (let P = step; P <= maxPrice; P += step) {
             const res = this.calculeToutDepuisPrix(P, mode);
-            if (res.marge >= 0) {          // loyer net ≥ mensualité
-                best = res;
-                P += step;
-            } else break;
+
+            if (res.marge >= 0) {
+                // première marge positive rencontrée → on pourra commencer à mémoriser
+                margePositiveRencontree = true;
+                best = res;               // on garde le dernier viable
+            } else if (margePositiveRencontree) {
+                // on vient de dépasser le plafond viable
+                break;
+            }
         }
         return best;
     }
@@ -165,12 +171,12 @@ class SimulateurImmo {
             this.params.encheres.coefMutation = parseFloat(formData.coefMutation);
         if (formData.emolumentsPoursuivant1 !== undefined) 
             this.params.encheres.emolumentsPoursuivant1 = parseFloat(formData.emolumentsPoursuivant1);
-        if (formData.emolumentsPoursuivant2 !== undefined) 
-            this.params.encheres.emolumentsPoursuivant2 = parseFloat(formData.emolumentsPoursuivant2);
-        if (formData.emolumentsPoursuivant3 !== undefined) 
-            this.params.encheres.emolumentsPoursuivant3 = parseFloat(formData.emolumentsPoursuivant3);
-        if (formData.emolumentsPoursuivant4 !== undefined) 
-            this.params.encheres.emolumentsPoursuivant4 = parseFloat(formData.emolumentsPoursuivant4);
+        if (formData.emolementsPoursuivant2 !== undefined) 
+            this.params.encheres.emolementsPoursuivant2 = parseFloat(formData.emolementsPoursuivant2);
+        if (formData.emolementsPoursuivant3 !== undefined) 
+            this.params.encheres.emolementsPoursuivant3 = parseFloat(formData.emolementsPoursuivant3);
+        if (formData.emolementsPoursuivant4 !== undefined) 
+            this.params.encheres.emolementsPoursuivant4 = parseFloat(formData.emolementsPoursuivant4);
         if (formData.honorairesAvocatCoef !== undefined) 
             this.params.encheres.honorairesAvocatCoef = parseFloat(formData.honorairesAvocatCoef);
         if (formData.honorairesAvocatTVA !== undefined) 
