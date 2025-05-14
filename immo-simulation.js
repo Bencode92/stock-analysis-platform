@@ -9,10 +9,20 @@
  * Version 4.2 - Optimisation de la recherche en commençant par le maximum théorique
  * Version 4.3 - Nouvelle méthode de recherche par surface décroissante
  * Version 4.4 - Optimisation des performances et amélioration de l'architecture
+ * Version 4.5 - Corrections des coquilles et optimisations mineures
  */
 
 class SimulateurImmo {
     constructor() {
+        // Constantes par défaut
+        this.defaults = {
+            surfaceMax: 120,              // Surface maximale par défaut (m²)
+            surfaceMin: 20,               // Surface minimale par défaut (m²)
+            pasSurface: 1,                // Pas de décrémentation pour la recherche
+            chargesNonRecuperablesAnnuelles: 30, // €/m²/an
+            pourcentageTravauxDefaut: 0.005      // 0.5% du prix d'achat
+        };
+        
         // Paramètres initialisés par défaut
         this.params = {
             base: {
@@ -139,8 +149,8 @@ class SimulateurImmo {
      * @returns {Object} - Résultats de la simulation
      */
     cherchePrixMaxStep(mode, step = 1000, maxPrice = 3000000) {
-        if (this.debug) console.warn("Méthode obsolète: utiliser chercheSurfaceDesc() à la place.");
-        return this.chercheSurfaceDesc(mode, this.params.base.pasSurface || 1);
+        this.debug && console.warn("Méthode obsolète: utiliser chercheSurfaceDesc() à la place.");
+        return this.chercheSurfaceDesc(mode, this.params.base.pasSurface || this.defaults.pasSurface);
     }
     
     /**
@@ -153,8 +163,8 @@ class SimulateurImmo {
      * @returns {Object|null} résultats complets pour le prix max trouvé
      */
     cherchePrixMaxDicho(mode, Pmin = 0, Pmax = null, eps = 100) {
-        if (this.debug) console.warn("Méthode obsolète: utiliser chercheSurfaceDesc() à la place.");
-        return this.chercheSurfaceDesc(mode, this.params.base.pasSurface || 1);
+        this.debug && console.warn("Méthode obsolète: utiliser chercheSurfaceDesc() à la place.");
+        return this.chercheSurfaceDesc(mode, this.params.base.pasSurface || this.defaults.pasSurface);
     }
 
     /**
@@ -164,8 +174,8 @@ class SimulateurImmo {
      * @returns {Object|null} résultats complets pour le prix max trouvé
      */
     cherchePrixMaxApport(mode) {
-        if (this.debug) console.warn("Méthode obsolète: utiliser chercheSurfaceDesc() à la place.");
-        return this.chercheSurfaceDesc(mode, this.params.base.pasSurface || 1);
+        this.debug && console.warn("Méthode obsolète: utiliser chercheSurfaceDesc() à la place.");
+        return this.chercheSurfaceDesc(mode, this.params.base.pasSurface || this.defaults.pasSurface);
     }
 
     /**
@@ -211,9 +221,9 @@ class SimulateurImmo {
         // Travaux avec protection division par zéro
         let travauxCoefficient;
         if (this.params.communs.useFixedTravauxPercentage) {
-            travauxCoefficient = 0.005;
+            travauxCoefficient = this.defaults.pourcentageTravauxDefaut;
         } else {
-            travauxCoefficient = prixM2 > 0 ? (this.params.communs.travauxM2 / prixM2) : 0.005;
+            travauxCoefficient = prixM2 > 0 ? (this.params.communs.travauxM2 / prixM2) : this.defaults.pourcentageTravauxDefaut;
         }
         const travaux = prixAchat * travauxCoefficient;
         
@@ -270,8 +280,11 @@ class SimulateurImmo {
      * @param {number} pas - pas de décrémentation (par défaut 1 m²)
      * @returns {Object|null}  résultats complets ou null si rien de viable
      */
-    chercheSurfaceDesc(mode, pas = 1) {
-        const { apport, pourcentApportMin, surfaceMax = 120, surfaceMin = 20 } = this.params.base;
+    chercheSurfaceDesc(mode, pas = null) {
+        pas = pas || this.defaults.pasSurface;
+        const { apport, pourcentApportMin } = this.params.base;
+        const surfaceMax = this.params.base.surfaceMax || this.defaults.surfaceMax;
+        const surfaceMin = this.params.base.surfaceMin || this.defaults.surfaceMin;
         const prixM2 = this.params.communs.prixM2;
         const ratio = (pourcentApportMin ?? 10) / 100;
         const prixMax = apport / ratio;  // ex. 20 000 / 0.10 = 200 000 €
@@ -317,11 +330,11 @@ class SimulateurImmo {
         
         // Paramètres de surface min/max et pas
         if (formData.surfaceMax !== undefined)
-            this.params.base.surfaceMax = parseFloat(formData.surfaceMax) || 120;
+            this.params.base.surfaceMax = parseFloat(formData.surfaceMax) || this.defaults.surfaceMax;
         if (formData.surfaceMin !== undefined)
-            this.params.base.surfaceMin = parseFloat(formData.surfaceMin) || 20;
+            this.params.base.surfaceMin = parseFloat(formData.surfaceMin) || this.defaults.surfaceMin;
         if (formData.pasSurface !== undefined)
-            this.params.base.pasSurface = parseFloat(formData.pasSurface) || 1;
+            this.params.base.pasSurface = parseFloat(formData.pasSurface) || this.defaults.pasSurface;
         
         // Paramètres communs
         if (formData.fraisBancairesDossier !== undefined) 
@@ -372,12 +385,12 @@ class SimulateurImmo {
             this.params.encheres.coefMutation = parseFloat(formData.coefMutation);
         if (formData.emolumentsPoursuivant1 !== undefined) 
             this.params.encheres.emolumentsPoursuivant1 = parseFloat(formData.emolumentsPoursuivant1);
-        if (formData.emolementsPoursuivant2 !== undefined) 
-            this.params.encheres.emolementsPoursuivant2 = parseFloat(formData.emolementsPoursuivant2);
-        if (formData.emolementsPoursuivant3 !== undefined) 
-            this.params.encheres.emolementsPoursuivant3 = parseFloat(formData.emolementsPoursuivant3);
-        if (formData.emolementsPoursuivant4 !== undefined) 
-            this.params.encheres.emolementsPoursuivant4 = parseFloat(formData.emolementsPoursuivant4);
+        if (formData.emolumentsPoursuivant2 !== undefined) 
+            this.params.encheres.emolumentsPoursuivant2 = parseFloat(formData.emolumentsPoursuivant2);
+        if (formData.emolumentsPoursuivant3 !== undefined) 
+            this.params.encheres.emolumentsPoursuivant3 = parseFloat(formData.emolumentsPoursuivant3);
+        if (formData.emolumentsPoursuivant4 !== undefined) 
+            this.params.encheres.emolumentsPoursuivant4 = parseFloat(formData.emolumentsPoursuivant4);
         if (formData.honorairesAvocatCoef !== undefined) 
             this.params.encheres.honorairesAvocatCoef = parseFloat(formData.honorairesAvocatCoef);
         if (formData.honorairesAvocatTVA !== undefined) 
@@ -486,8 +499,8 @@ class SimulateurImmo {
         } else {
             emoluments = 6500 * this.params.encheres.emolumentsPoursuivant1 / 100;
             emoluments += (23500 - 6500) * this.params.encheres.emolumentsPoursuivant2 / 100;
-            emoluments += (83500 - 23500) * this.params.encheres.emolementsPoursuivant3 / 100;
-            emoluments += (prix - 83500) * this.params.encheres.emolementsPoursuivant4 / 100;
+            emoluments += (83500 - 23500) * this.params.encheres.emolumentsPoursuivant3 / 100;
+            emoluments += (prix - 83500) * this.params.encheres.emolumentsPoursuivant4 / 100;
         }
         
         return emoluments;
@@ -570,8 +583,8 @@ class SimulateurImmo {
      * @returns {number} - Montant mensuel des charges non récupérables
      */
     calculerChargesNonRecuperables(surface) {
-        // 30€/m²/an, divisé par 12 pour obtenir la valeur mensuelle
-        return (surface * 30) / 12;
+        // Utilisé la valeur externalisée dans defaults
+        return (surface * this.defaults.chargesNonRecuperablesAnnuelles) / 12;
     }
 
     /**
@@ -686,10 +699,10 @@ class SimulateurImmo {
         // Travaux (0,5% du prix d'achat ou valeur paramétrable)
         let travauxCoefficient;
         if (this.params.communs.useFixedTravauxPercentage) {
-            travauxCoefficient = 0.005; // 0.5% du prix d'achat
+            travauxCoefficient = this.defaults.pourcentageTravauxDefaut; // 0.5% du prix d'achat
         } else {
             // Protection contre division par zéro
-            travauxCoefficient = prixM2 > 0 ? (this.params.communs.travauxM2 / prixM2) : 0.005;
+            travauxCoefficient = prixM2 > 0 ? (this.params.communs.travauxM2 / prixM2) : this.defaults.pourcentageTravauxDefaut;
         }
         const travaux = prixAchat * travauxCoefficient;
         
@@ -758,7 +771,7 @@ class SimulateurImmo {
         const taxeFonciere = loyerBrut * 12 * 0.05;
         
         // Charges non récupérables (30€/m²/an)
-        const chargesCopro = surface * 30;
+        const chargesCopro = surface * this.defaults.chargesNonRecuperablesAnnuelles;
         const chargesNonRecuperables = chargesCopro / 12; // Mensuel
         
         // Entretien
@@ -839,7 +852,7 @@ class SimulateurImmo {
      */
     simulerAchatClassique() {
         // Utilisation de chercheSurfaceDesc au lieu de cherchePrixMaxApport
-        const pas = this.params.base.pasSurface || 1;
+        const pas = this.params.base.pasSurface || this.defaults.pasSurface;
         const resultats = this.chercheSurfaceDesc('classique', pas);
         
         // Stocker les résultats
@@ -854,7 +867,7 @@ class SimulateurImmo {
      */
     simulerVenteEncheres() {
         // Utilisation de chercheSurfaceDesc au lieu de cherchePrixMaxApport
-        const pas = this.params.base.pasSurface || 1;
+        const pas = this.params.base.pasSurface || this.defaults.pasSurface;
         const resultats = this.chercheSurfaceDesc('encheres', pas);
         
         // Stocker les résultats
