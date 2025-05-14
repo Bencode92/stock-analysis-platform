@@ -972,7 +972,7 @@
             </div>
             <div class="mode-info-content">
                 <h3>Mode 100% marché</h3>
-                <p>Ce simulateur fonctionne avec les données réelles du marché : prix d'achat au m² et loyer au m². La surface maximale est déterminée uniquement par le cash-flow positif. Spécifiez le seuil de cash-flow minimum souhaité dans les paramètres avancés pour affiner les résultats.</p>
+                <p>Ce simulateur fonctionne avec les données réelles du marché : prix d'achat au m² et loyer au m². Le prix maximum d'acquisition est déterminé uniquement par la marge positive (loyer ≥ mensualité).</p>
             </div>
         </div>
         
@@ -1011,15 +1011,6 @@
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label" for="cashflow-min">Cash-flow minimum</label>
-                    <div class="form-addon">
-                        <input type="number" id="cashflow-min" class="form-input highlight-field" value="1" step="1">
-                        <span class="form-addon-text">€</span>
-                    </div>
-                    <span class="form-help">Cash-flow mensuel minimum pour considérer l'investissement viable</span>
-                </div>
-                
-                <div class="form-group">
                     <label class="form-label" for="taux">Taux d'emprunt</label>
                     <div class="form-addon">
                         <input type="number" id="taux" class="form-input" placeholder="3.5" value="3.5" step="0.1">
@@ -1036,7 +1027,6 @@
                 </div>
                 
                 <!-- Champs cachés pour compatibilité -->
-                <input type="hidden" id="rendement-min" value="0">
                 <input type="hidden" id="surface" value="50">
                 <input type="hidden" id="montant-emprunt-max" value="150000">
             </div>
@@ -1332,8 +1322,11 @@
                         </div>
                     </div>
                     <div class="results-body">
-                        <div class="results-label">Surface optimale</div>
-                        <div class="results-value" id="classique-prix-max">--</div>
+                        <div class="results-label">Prix d'acquisition max</div>
+                        <div class="results-value" id="classique-budget-max">--</div>
+                        
+                        <div class="results-label">Surface correspondante</div>
+                        <div class="results-value" id="classique-surface-max">--</div>
                         
                         <div class="accordion">
                             <div class="accordion-header">
@@ -1404,8 +1397,11 @@
                         </div>
                     </div>
                     <div class="results-body">
-                        <div class="results-label">Surface optimale</div>
-                        <div class="results-value" id="encheres-prix-max">--</div>
+                        <div class="results-label">Prix d'acquisition max</div>
+                        <div class="results-value" id="encheres-budget-max">--</div>
+                        
+                        <div class="results-label">Surface correspondante</div>
+                        <div class="results-value" id="encheres-surface-max">--</div>
                         
                         <div class="accordion">
                             <div class="accordion-header">
