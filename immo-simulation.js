@@ -136,7 +136,7 @@ class SimulateurImmo {
         if (formData.emolumentsPoursuivant1 !== undefined) 
             this.params.encheres.emolumentsPoursuivant1 = parseFloat(formData.emolumentsPoursuivant1);
         if (formData.emolumentsPoursuivant2 !== undefined) 
-            this.params.encheres.emolementsPoursuivant2 = parseFloat(formData.emolementsPoursuivant2);
+            this.params.encheres.emolumentsPoursuivant2 = parseFloat(formData.emolumentsPoursuivant2);
         if (formData.emolumentsPoursuivant3 !== undefined) 
             this.params.encheres.emolumentsPoursuivant3 = parseFloat(formData.emolumentsPoursuivant3);
         if (formData.emolumentsPoursuivant4 !== undefined) 
@@ -248,7 +248,7 @@ class SimulateurImmo {
             emoluments += (prix - 23500) * this.params.encheres.emolumentsPoursuivant3 / 100;
         } else {
             emoluments = 6500 * this.params.encheres.emolumentsPoursuivant1 / 100;
-            emoluments += (23500 - 6500) * this.params.encheres.emolementsPoursuivant2 / 100;
+            emoluments += (23500 - 6500) * this.params.encheres.emolumentsPoursuivant2 / 100;
             emoluments += (83500 - 23500) * this.params.encheres.emolumentsPoursuivant3 / 100;
             emoluments += (prix - 83500) * this.params.encheres.emolumentsPoursuivant4 / 100;
         }
