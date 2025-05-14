@@ -136,7 +136,7 @@ class SimulateurImmo {
         if (formData.emolumentsPoursuivant1 !== undefined) 
             this.params.encheres.emolumentsPoursuivant1 = parseFloat(formData.emolumentsPoursuivant1);
         if (formData.emolumentsPoursuivant2 !== undefined) 
-            this.params.encheres.emolumentsPoursuivant2 = parseFloat(formData.emolementsPoursuivant2);
+            this.params.encheres.emolementsPoursuivant2 = parseFloat(formData.emolementsPoursuivant2);
         if (formData.emolumentsPoursuivant3 !== undefined) 
             this.params.encheres.emolumentsPoursuivant3 = parseFloat(formData.emolumentsPoursuivant3);
         if (formData.emolumentsPoursuivant4 !== undefined) 
@@ -597,7 +597,6 @@ class SimulateurImmo {
      */
     chercheSurfaceMax(mode, pas = 1) {
         const SURFACE_MAX = this.params.base.surfaceMax || 100;
-        const { rendementMin } = this.params.base;
         
         // Commence à 1m² (ou au pas paramétré) pour tester les micro-studios
         let surface = Math.max(1, pas);
@@ -607,9 +606,8 @@ class SimulateurImmo {
             const res = this.calculeTout(surface, mode);
             
             const margeOK = res.loyerNet >= res.mensualite + 1;
-            const rendementOK = res.rendementNet >= rendementMin;
             
-            if (margeOK && rendementOK) {
+            if (margeOK) {
                 best = res;          // on garde
                 surface += pas;      // on tente plus grand
             } else {
