@@ -27,7 +27,7 @@ class SimulateurImmo {
                 fraisGarantie: 1.3709,        // % du capital emprunté
                 taxeFonciere: 0,              // % du prix (remplacé par 5% du loyer)
                 vacanceLocative: 8,           // % des loyers
-                loyerM2: 12,                  // €/m²/mois
+                loyerM2: 12,                  // €/m²/mois (valeur utilisée si calcul par rendement impossible)
                 travauxM2: 10,                // €/m² (remplacé par 0.5% du prix)
                 entretienAnnuel: 0.5,         // % du prix d'achat
                 assurancePNO: 250,            // € par an
@@ -136,7 +136,7 @@ class SimulateurImmo {
         if (formData.emolumentsPoursuivant1 !== undefined) 
             this.params.encheres.emolumentsPoursuivant1 = parseFloat(formData.emolumentsPoursuivant1);
         if (formData.emolumentsPoursuivant2 !== undefined) 
-            this.params.encheres.emolumentsPoursuivant2 = parseFloat(formData.emolumentsPoursuivant2);
+            this.params.encheres.emolumentsPoursuivant2 = parseFloat(formData.emolementsPoursuivant2);
         if (formData.emolumentsPoursuivant3 !== undefined) 
             this.params.encheres.emolumentsPoursuivant3 = parseFloat(formData.emolumentsPoursuivant3);
         if (formData.emolumentsPoursuivant4 !== undefined) 
@@ -248,7 +248,7 @@ class SimulateurImmo {
             emoluments += (prix - 23500) * this.params.encheres.emolumentsPoursuivant3 / 100;
         } else {
             emoluments = 6500 * this.params.encheres.emolumentsPoursuivant1 / 100;
-            emoluments += (23500 - 6500) * this.params.encheres.emolumentsPoursuivant2 / 100;
+            emoluments += (23500 - 6500) * this.params.encheres.emolementsPoursuivant2 / 100;
             emoluments += (83500 - 23500) * this.params.encheres.emolumentsPoursuivant3 / 100;
             emoluments += (prix - 83500) * this.params.encheres.emolumentsPoursuivant4 / 100;
         }
@@ -306,14 +306,24 @@ class SimulateurImmo {
     }
 
     /**
-     * Calcule le loyer mensuel net
+     * Calcule le loyer mensuel brut en fonction du rendement souhaité
+     * @param {number} prixAchat - Prix d'achat du bien
+     * @param {number} rendementSouhaite - Rendement souhaité en %
      * @param {number} surface - Surface en m²
-     * @param {number} prixM2 - Prix du loyer au m²
+     * @returns {number} - Loyer mensuel brut
+     */
+    calculerLoyerBrut(prixAchat, rendementSouhaite, surface) {
+        // Loyer basé sur le rendement souhaité (prix d'achat * rendement annuel / 12 mois)
+        return (prixAchat * (rendementSouhaite / 100)) / 12;
+    }
+
+    /**
+     * Calcule le loyer mensuel net
+     * @param {number} loyerBrut - Loyer mensuel brut
      * @param {number} vacance - Taux de vacance locative en %
      * @returns {number} - Loyer mensuel net
      */
-    calculerLoyerNet(surface, prixM2, vacance) {
-        const loyerBrut = surface * prixM2;
+    calculerLoyerNet(loyerBrut, vacance) {
         return loyerBrut * (1 - vacance / 100);
     }
 
@@ -429,7 +439,7 @@ class SimulateurImmo {
         const apport = this.params.base.apport;
         const taux = this.params.base.taux;
         const duree = this.params.base.duree;
-        const loyerM2 = this.params.communs.loyerM2;
+        const rendementSouhaite = this.params.base.rendementMin;
         const vacanceLocative = this.params.communs.vacanceLocative;
         
         // Prix d'achat (en fonction de la surface)
@@ -496,9 +506,10 @@ class SimulateurImmo {
         // Mensualité
         const mensualite = this.calculerMensualite(emprunt, taux, duree);
         
-        // Loyer
-        const loyerBrut = surface * loyerM2;
-        const loyerNet = this.calculerLoyerNet(surface, loyerM2, vacanceLocative);
+        // Loyer (basé sur le rendement souhaité)
+        const loyerBrut = this.calculerLoyerBrut(prixAchat, rendementSouhaite, surface);
+        const loyerM2 = surface > 0 ? loyerBrut / surface : 0; // Calcul du loyer au m²
+        const loyerNet = this.calculerLoyerNet(loyerBrut, vacanceLocative);
         
         // Taxe foncière (5% du loyer annuel brut)
         const taxeFonciere = loyerBrut * 12 * 0.05;
@@ -547,6 +558,7 @@ class SimulateurImmo {
             mensualite,
             loyerNet,
             loyerBrut,
+            loyerM2,
             taxeFonciere,
             chargesNonRecuperables: chargesCopro,
             entretienAnnuel: entretienMensuel * 12,
