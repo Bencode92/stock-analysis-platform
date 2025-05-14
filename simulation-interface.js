@@ -17,17 +17,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const simulationNameInput = document.getElementById('simulation-name');
     const resultsContainer = document.getElementById('results');
     const montantEmpruntMaxGroup = document.getElementById('montant-emprunt-max-group');
-    const cashFlowMinGroup = document.getElementById('cashflow-min-group');
     const historiqueContainer = document.getElementById('historique-container');
     const historiqueList = document.getElementById('historique-list');
 
     // Masquer les champs non nécessaires
     if (montantEmpruntMaxGroup) {
         montantEmpruntMaxGroup.style.display = 'none';
-    }
-    
-    if (cashFlowMinGroup) {
-        cashFlowMinGroup.style.display = 'none';
     }
     
     // Masquer le champ surface visée
@@ -84,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
         advancedParams.classList.toggle('hidden');
         advancedParams.classList.toggle('fade-in');
         btnAdvancedToggle.innerHTML = advancedParams.classList.contains('hidden') 
-            ? '<i class="fas fa-sliders-h"></i> Mode Avancé'
+            ? '<i class="fas fa-sliders-h"></i> Paramètres avancés'
             : '<i class="fas fa-times"></i> Masquer les paramètres';
     });
 
@@ -145,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Vérifier si des résultats ont été trouvés
             if (!resultats.classique || !resultats.encheres) {
-                afficherToast('Aucune surface viable avec ces paramètres.', 'warning');
+                afficherToast('Aucun prix viable avec ces paramètres.', 'warning');
                 return;
             }
             
@@ -153,10 +148,10 @@ document.addEventListener('DOMContentLoaded', function() {
             resultsContainer.classList.remove('hidden');
             resultsContainer.classList.add('fade-in');
             
-            // Ajouter la notification de surface calculée
+            // Ajouter la notification de prix maximum calculé
             const notification = document.createElement('div');
             notification.className = 'info-message fade-in';
-            notification.innerHTML = `<i class="fas fa-ruler-combined"></i> Surface optimale calculée: <strong>${resultats.classique.surface} m²</strong> pour un rendement de <strong>${formData.rendementMin}%</strong>`;
+            notification.innerHTML = `<i class="fas fa-check-circle"></i> Calcul terminé : <strong>Prix maximum finançable</strong> déterminé par une marge positive entre loyer et mensualité`;
             
             // Mettre à jour le champ caché de surface
             document.getElementById('surface').value = resultats.classique.surface;
@@ -165,7 +160,7 @@ document.addEventListener('DOMContentLoaded', function() {
             resultsContainer.insertBefore(notification, resultsContainer.firstChild);
             
             // Animer les valeurs numériques
-            animerResultats();
+            afficherResultats(resultats);
             
             // Créer les graphiques
             creerGraphiques();
@@ -305,7 +300,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             <p><strong>Loyer m²:</strong> ${simulation.params.communs.loyerM2} €/m²</p>
                             <p><strong>Vacance:</strong> ${simulation.params.communs.vacanceLocative}%</p>
                             <p><strong>Travaux:</strong> ${simulation.params.communs.travauxM2} €/m²</p>
-                            <p><strong>Rendement min:</strong> ${simulation.params.base.rendementMin}%</p>
                         </div>
                     </div>
                     
@@ -378,7 +372,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('surface').value = simulation.params.base.surface;
         document.getElementById('taux').value = simulation.params.base.taux;
         document.getElementById('duree').value = simulation.params.base.duree;
-        document.getElementById('rendement-min').value = simulation.params.base.rendementMin;
+        document.getElementById('prix-m2-marche').value = simulation.params.communs.prixM2;
+        document.getElementById('loyer-m2').value = simulation.params.communs.loyerM2;
         
         // Paramètres communs
         document.getElementById('frais-bancaires-dossier').value = simulation.params.communs.fraisBancairesDossier;
@@ -386,7 +381,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('frais-garantie').value = simulation.params.communs.fraisGarantie;
         document.getElementById('taxe-fonciere').value = simulation.params.communs.taxeFonciere;
         document.getElementById('vacance-locative').value = simulation.params.communs.vacanceLocative;
-        document.getElementById('loyer-m2').value = simulation.params.communs.loyerM2;
         document.getElementById('travaux-m2').value = simulation.params.communs.travauxM2;
         
         // Afficher les paramètres avancés
@@ -487,93 +481,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 grid.style.gridTemplateColumns = '1fr 1fr 1fr';
             });
         }
-    }
-
-    /**
-     * Anime les valeurs numériques des résultats
-     */
-    function animerResultats() {
-        // Récupérer les valeurs
-        const classique = simulateur.params.resultats.classique;
-        const encheres = simulateur.params.resultats.encheres;
-
-        // Mise à jour des éléments d'affichage du budget et de la surface
-        if (classique && encheres) {
-            // Budget et surface pour l'achat classique
-            document.getElementById('classique-budget-max').textContent = formaterMontant(classique.prixAchat);
-            document.getElementById('classique-surface-max').textContent = classique.surface.toFixed(1) + " m²";
-            
-            // Affichage du prix au m² final
-            const prixM2Classique = classique.prixAchat / classique.surface;
-            document.getElementById('classique-prix-m2-final').textContent = 
-                "Soit " + formaterMontant(prixM2Classique, 0) + "/m²";
-            
-            // Budget et surface pour la vente aux enchères
-            document.getElementById('encheres-budget-max').textContent = formaterMontant(encheres.prixAchat);
-            document.getElementById('encheres-surface-max').textContent = encheres.surface.toFixed(1) + " m²";
-            
-            // Affichage du prix au m² final pour les enchères
-            const prixM2Encheres = encheres.prixAchat / encheres.surface;
-            document.getElementById('encheres-prix-m2-final').textContent = 
-                "Soit " + formaterMontant(prixM2Encheres, 0) + "/m²";
-        }
-        
-        // Animation des rentabilités
-        const classiqueRentabilite = document.getElementById('classique-rentabilite');
-        const encheresRentabilite = document.getElementById('encheres-rentabilite');
-        
-        if (classiqueRentabilite && encheresRentabilite) {
-            // Récupérer les valeurs de rentabilité
-            const rentClassique = simulateur.params.resultats.classique.rendementNet;
-            const rentEncheres = simulateur.params.resultats.encheres.rendementNet;
-            
-            // Animer les rentabilités
-            setTimeout(() => {
-                classiqueRentabilite.textContent = formaterPourcentage(rentClassique);
-                encheresRentabilite.textContent = formaterPourcentage(rentEncheres);
-                
-                // Mettre à jour les classes des badges selon le niveau de rentabilité
-                majClasseRentabilite(classiqueRentabilite.parentElement, rentClassique);
-                majClasseRentabilite(encheresRentabilite.parentElement, rentEncheres);
-            }, 500);
-        }
-    }
-
-    /**
-     * Met à jour la classe d'un badge de rentabilité selon sa valeur
-     * @param {HTMLElement} element - Élément badge à mettre à jour
-     * @param {number} rentabilite - Valeur de rentabilité
-     */
-    function majClasseRentabilite(element, rentabilite) {
-        element.classList.remove('tag-success', 'tag-warning', 'tag-danger');
-        
-        if (rentabilite >= 7) {
-            element.classList.add('tag-success');
-        } else if (rentabilite >= 4) {
-            element.classList.add('tag-warning');
-        } else {
-            element.classList.add('tag-danger');
-        }
-    }
-
-    /**
-     * Anime un nombre de 0 à sa valeur finale
-     * @param {HTMLElement} element - Élément DOM à animer
-     * @param {number} debut - Valeur de départ
-     * @param {number} fin - Valeur finale
-     * @param {number} duree - Durée de l'animation en ms
-     */
-    function animerNombre(element, debut, fin, duree) {
-        const increment = fin > debut ? Math.ceil((fin - debut) / 50) : Math.floor((fin - debut) / 50);
-        let current = debut;
-        const timer = setInterval(() => {
-            current += increment;
-            if ((increment > 0 && current >= fin) || (increment < 0 && current <= fin)) {
-                clearInterval(timer);
-                current = fin;
-            }
-            element.textContent = formaterMontant(current);
-        }, duree / 50);
     }
 
     /**
@@ -901,9 +808,6 @@ document.addEventListener('DOMContentLoaded', function() {
             surface: document.getElementById('surface').value,
             taux: document.getElementById('taux').value,
             duree: document.getElementById('duree').value,
-            // Forcer le mode rendement
-            objectif: 'rendement',
-            rendementMin: document.getElementById('rendement-min').value,
             
             // Paramètres communs
             fraisBancairesDossier: document.getElementById('frais-bancaires-dossier').value,
@@ -1007,6 +911,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
+     * Met à jour la classe d'un badge de rentabilité selon sa valeur
+     * @param {HTMLElement} element - Élément badge à mettre à jour
+     * @param {number} rentabilite - Valeur de rentabilité
+     */
+    function majClasseRentabilite(element, rentabilite) {
+        element.classList.remove('tag-success', 'tag-warning', 'tag-danger');
+        
+        if (rentabilite >= 7) {
+            element.classList.add('tag-success');
+        } else if (rentabilite >= 4) {
+            element.classList.add('tag-warning');
+        } else {
+            element.classList.add('tag-danger');
+        }
+    }
+
+    /**
      * Affiche les résultats de la simulation
      * @param {Object} resultats - Résultats de la simulation
      */
@@ -1024,11 +945,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('classique-budget-max').textContent = formaterMontant(classique.prixAchat);
         document.getElementById('classique-surface-max').textContent = classique.surface.toFixed(1) + " m²";
         
-        // Prix au m² final
-        const prixM2Classique = classique.prixAchat / classique.surface;
-        document.getElementById('classique-prix-m2-final').textContent = 
-            "Soit " + formaterMontant(prixM2Classique, 0) + "/m²";
-        
         // Anciens éléments et détails
         document.getElementById('classique-prix-achat').textContent = formaterMontant(classique.prixAchat);
         document.getElementById('classique-frais-notaire').textContent = formaterMontant(classique.fraisNotaire);
@@ -1036,7 +952,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('classique-travaux').textContent = formaterMontant(classique.travaux);
         document.getElementById('classique-frais-bancaires').textContent = formaterMontant(classique.fraisBancaires);
         document.getElementById('classique-total').textContent = formaterMontant(classique.coutTotal);
-        document.getElementById('classique-emprunt').textContent = formaterMontant(classique.emprunt);
         document.getElementById('classique-mensualite').textContent = formaterMontantMensuel(classique.mensualite);
         document.getElementById('classique-loyer-net').textContent = formaterMontantMensuel(classique.loyerNet);
         
@@ -1051,7 +966,22 @@ document.addEventListener('DOMContentLoaded', function() {
             margeClassique.className = getClasseValeur(classique.marge);
         }
         
-        document.getElementById('classique-rentabilite').textContent = formaterPourcentage(classique.rendementNet);
+        // Animation des rentabilités
+        const classiqueRentabilite = document.getElementById('classique-rentabilite');
+        const encheresRentabilite = document.getElementById('encheres-rentabilite');
+        
+        if (classiqueRentabilite && encheresRentabilite) {
+            // Récupérer les valeurs de rentabilité
+            const rentClassique = classique.rendementNet;
+            const rentEncheres = encheres.rendementNet;
+            
+            classiqueRentabilite.textContent = formaterPourcentage(rentClassique);
+            encheresRentabilite.textContent = formaterPourcentage(rentEncheres);
+            
+            // Mettre à jour les classes des badges selon le niveau de rentabilité
+            majClasseRentabilite(classiqueRentabilite.parentElement, rentClassique);
+            majClasseRentabilite(encheresRentabilite.parentElement, rentEncheres);
+        }
         
         // Affichage des données fiscales pour l'achat classique si les éléments existent
         if (document.getElementById('classique-revenu-foncier')) {
@@ -1067,11 +997,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('encheres-budget-max').textContent = formaterMontant(encheres.prixAchat);
         document.getElementById('encheres-surface-max').textContent = encheres.surface.toFixed(1) + " m²";
         
-        // Prix au m² final pour enchères
-        const prixM2Encheres = encheres.prixAchat / encheres.surface;
-        document.getElementById('encheres-prix-m2-final').textContent = 
-            "Soit " + formaterMontant(prixM2Encheres, 0) + "/m²";
-        
         // Anciens éléments et détails
         document.getElementById('encheres-prix-achat').textContent = formaterMontant(encheres.prixAchat);
         document.getElementById('encheres-droits').textContent = formaterMontant(encheres.droitsEnregistrement);
@@ -1082,7 +1007,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('encheres-travaux').textContent = formaterMontant(encheres.travaux);
         document.getElementById('encheres-frais-bancaires').textContent = formaterMontant(encheres.fraisBancaires);
         document.getElementById('encheres-total').textContent = formaterMontant(encheres.coutTotal);
-        document.getElementById('encheres-emprunt').textContent = formaterMontant(encheres.emprunt);
         document.getElementById('encheres-mensualite').textContent = formaterMontantMensuel(encheres.mensualite);
         document.getElementById('encheres-loyer-net').textContent = formaterMontantMensuel(encheres.loyerNet);
         
@@ -1096,8 +1020,6 @@ document.addEventListener('DOMContentLoaded', function() {
             margeEncheres.textContent = formaterMontantMensuel(encheres.marge);
             margeEncheres.className = getClasseValeur(encheres.marge);
         }
-        
-        document.getElementById('encheres-rentabilite').textContent = formaterPourcentage(encheres.rendementNet);
         
         // Affichage des données fiscales pour les enchères si les éléments existent
         if (document.getElementById('encheres-revenu-foncier')) {
@@ -1193,8 +1115,5 @@ document.addEventListener('DOMContentLoaded', function() {
         // Afficher les avantages
         document.getElementById('classique-avantages').textContent = "Points forts: " + avantagesClassique.join(", ");
         document.getElementById('encheres-avantages').textContent = "Points forts: " + avantagesEncheres.join(", ");
-        
-        // Mettre à jour l'historique des simulations
-        mettreAJourHistoriqueSimulations();
     }
 });
