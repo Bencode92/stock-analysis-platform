@@ -10,6 +10,7 @@
  * Version 4.3 - Nouvelle méthode de recherche par surface décroissante
  * Version 4.4 - Optimisation des performances et amélioration de l'architecture
  * Version 4.5 - Corrections des coquilles et optimisations mineures
+ * Version 4.6 - Correction du ratio d'apport appliqué au coût total du projet
  */
 
 class SimulateurImmo {
@@ -34,7 +35,8 @@ class SimulateurImmo {
                 // rendementMin: 5,           // Rendement minimum souhaité (supprimé)
                 surfaceMax: 120,              // Surface maximale autorisée
                 surfaceMin: 20,               // Surface minimale autorisée (ajouté)
-                pourcentApportMin: 10         // Pourcentage d'apport minimum exigé (ajouté)
+                pourcentApportMin: 10,        // Pourcentage d'apport minimum exigé (ajouté)
+                apportCouvreFrais: false      // Nouveau: l'apport doit-il couvrir au moins les frais
             },
             communs: {
                 fraisBancairesDossier: 2000,
@@ -282,16 +284,54 @@ class SimulateurImmo {
      */
     chercheSurfaceDesc(mode, pas = null) {
         pas = pas || this.defaults.pasSurface;
-        const { apport, pourcentApportMin } = this.params.base;
+        const { apport, pourcentApportMin, apportCouvreFrais } = this.params.base;
         const surfaceMax = this.params.base.surfaceMax || this.defaults.surfaceMax;
         const surfaceMin = this.params.base.surfaceMin || this.defaults.surfaceMin;
         const prixM2 = this.params.communs.prixM2;
         const ratio = (pourcentApportMin ?? 10) / 100;
-        const prixMax = apport / ratio;  // ex. 20 000 / 0.10 = 200 000 €
 
         for (let S = surfaceMax; S >= surfaceMin; S -= pas) {
             const prixAchat = S * prixM2;
-            if (prixAchat > prixMax) continue;  // dépassement du plafond financier
+            
+            // Calcul préalable des frais spécifiques selon le mode
+            let fraisSpecifiques = 0;
+            if (mode === 'classique') {
+                const fraisNotaire = this.calculerFraisNotaireClassique(prixAchat);
+                const commission = prixAchat * this.params.classique.commissionImmo / 100;
+                fraisSpecifiques = fraisNotaire + commission;
+            } else {
+                const droitsEnregistrement = this.calculerDroitsEnregistrement(prixAchat);
+                const emolumentsPoursuivant = this.calculerEmolementsPoursuivant(prixAchat);
+                const honorairesAvocat = this.calculerHonorairesAvocat(emolementsPoursuivant);
+                const publiciteFonciere = prixAchat * this.params.encheres.publiciteFonciereEncheres / 100;
+                const fraisDivers = this.params.encheres.fraisFixes + 
+                                this.params.encheres.avocatEnchere + 
+                                this.params.encheres.suiviDossier;
+                const caution = this.params.encheres.cautionRestituee ? 0 : 
+                            prixAchat * this.params.encheres.cautionPourcent / 100;
+                
+                fraisSpecifiques = droitsEnregistrement + emolementsPoursuivant + 
+                                honorairesAvocat + publiciteFonciere + fraisDivers + caution;
+            }
+            
+            // Calcul des travaux
+            let travauxCoefficient;
+            if (this.params.communs.useFixedTravauxPercentage) {
+                travauxCoefficient = this.defaults.pourcentageTravauxDefaut;
+            } else {
+                travauxCoefficient = prixM2 > 0 ? (this.params.communs.travauxM2 / prixM2) : this.defaults.pourcentageTravauxDefaut;
+            }
+            const travaux = prixAchat * travauxCoefficient;
+            
+            // MODIFICATION PRINCIPALE : Vérification du ratio d'apport sur le coût total du projet
+            const coutTotalProjet = prixAchat + fraisSpecifiques + travaux;
+            if (coutTotalProjet > apport / ratio) continue;  // dépassement du plafond financier
+
+            // Vérification optionnelle : l'apport doit couvrir les frais
+            if (apportCouvreFrais) {
+                const fraisTotaux = fraisSpecifiques + travaux;
+                if (apport < fraisTotaux) continue;  // L'apport ne couvre pas les frais
+            }
 
             // Utiliser la vérification rapide de viabilité
             if (this.calculerViabilite(S, mode)) {
@@ -327,6 +367,10 @@ class SimulateurImmo {
         // Ajouter le chargement du pourcentage d'apport minimum
         if (formData.pourcentApportMin !== undefined)
             this.params.base.pourcentApportMin = parseFloat(formData.pourcentApportMin) || 10;
+        
+        // Chargement du nouveau paramètre apportCouvreFrais
+        if (formData.apportCouvreFrais !== undefined)
+            this.params.base.apportCouvreFrais = formData.apportCouvreFrais;
         
         // Paramètres de surface min/max et pas
         if (formData.surfaceMax !== undefined)
@@ -390,7 +434,7 @@ class SimulateurImmo {
         if (formData.emolumentsPoursuivant3 !== undefined) 
             this.params.encheres.emolumentsPoursuivant3 = parseFloat(formData.emolumentsPoursuivant3);
         if (formData.emolumentsPoursuivant4 !== undefined) 
-            this.params.encheres.emolumentsPoursuivant4 = parseFloat(formData.emolumentsPoursuivant4);
+            this.params.encheres.emolumentsPoursuivant4 = parseFloat(formData.emolementsPoursuivant4);
         if (formData.honorairesAvocatCoef !== undefined) 
             this.params.encheres.honorairesAvocatCoef = parseFloat(formData.honorairesAvocatCoef);
         if (formData.honorairesAvocatTVA !== undefined) 
@@ -484,7 +528,7 @@ class SimulateurImmo {
      * @param {number} prix - Prix d'adjudication
      * @returns {number} - Montant des émoluments
      */
-    calculerEmolumentsPoursuivant(prix) {
+    calculerEmolementsPoursuivant(prix) {
         let emoluments = 0;
         
         if (prix <= 6500) {
@@ -720,8 +764,8 @@ class SimulateurImmo {
             };
         } else { // mode === 'encheres'
             const droitsEnregistrement = this.calculerDroitsEnregistrement(prixAchat);
-            const emolumentsPoursuivant = this.calculerEmolumentsPoursuivant(prixAchat);
-            const honorairesAvocat = this.calculerHonorairesAvocat(emolumentsPoursuivant);
+            const emolementsPoursuivant = this.calculerEmolementsPoursuivant(prixAchat);
+            const honorairesAvocat = this.calculerHonorairesAvocat(emolementsPoursuivant);
             const publiciteFonciere = prixAchat * this.params.encheres.publiciteFonciereEncheres / 100;
             const fraisDivers = this.params.encheres.fraisFixes + 
                               this.params.encheres.avocatEnchere + 
@@ -729,12 +773,12 @@ class SimulateurImmo {
             const caution = this.params.encheres.cautionRestituee ? 0 : 
                           prixAchat * this.params.encheres.cautionPourcent / 100;
             
-            fraisSpecifiques = droitsEnregistrement + emolumentsPoursuivant + 
+            fraisSpecifiques = droitsEnregistrement + emolementsPoursuivant + 
                              honorairesAvocat + publiciteFonciere + fraisDivers + caution;
             
             fraisDetails = {
                 droitsEnregistrement,
-                emolumentsPoursuivant,
+                emolementsPoursuivant,
                 honorairesAvocat,
                 publiciteFonciere,
                 fraisDivers,
@@ -836,7 +880,7 @@ class SimulateurImmo {
             resultat.commission = fraisDetails.commission;
         } else {
             resultat.droitsEnregistrement = fraisDetails.droitsEnregistrement;
-            resultat.emolumentsPoursuivant = fraisDetails.emolumentsPoursuivant;
+            resultat.emolementsPoursuivant = fraisDetails.emolementsPoursuivant;
             resultat.honorairesAvocat = fraisDetails.honorairesAvocat;
             resultat.publiciteFonciere = fraisDetails.publiciteFonciere;
             resultat.fraisDivers = fraisDetails.fraisDivers;
@@ -1138,7 +1182,7 @@ class SimulateurImmo {
                 data: [
                     resultats.encheres.prixAchat,
                     resultats.encheres.droitsEnregistrement,
-                    resultats.encheres.emolumentsPoursuivant,
+                    resultats.encheres.emolementsPoursuivant,
                     resultats.encheres.honorairesAvocat,
                     resultats.encheres.travaux,
                     resultats.encheres.fraisDivers,
