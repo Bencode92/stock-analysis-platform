@@ -841,6 +841,40 @@
         .transition-all {
             transition: all 0.3s ease;
         }
+
+        /* New styles for mode info banner */
+        .mode-info-banner {
+            background-color: rgba(0, 255, 135, 0.1);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .mode-info-icon {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            margin-right: 1rem;
+            margin-top: 0.2rem;
+        }
+
+        .mode-info-content h3 {
+            margin: 0 0 0.5rem 0;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .mode-info-content p {
+            margin: 0;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .highlight-field {
+            border-color: var(--primary-color) !important;
+            box-shadow: 0 0 0 3px rgba(0, 255, 135, 0.2) !important;
+        }
     </style>
 </head>
 <body>
@@ -930,6 +964,17 @@
             <h1>Simulateur d'Investissement Immobilier</h1>
             <div class="subtitle">Comparez achat classique et vente aux enchères</div>
         </div>
+
+        <!-- Banner explicative du mode 100% marché -->
+        <div class="mode-info-banner fade-in">
+            <div class="mode-info-icon">
+                <i class="fas fa-info-circle"></i>
+            </div>
+            <div class="mode-info-content">
+                <h3>Mode 100% marché</h3>
+                <p>Ce simulateur fonctionne avec les données réelles du marché : prix d'achat au m² et loyer au m². La surface maximale est déterminée uniquement par le cash-flow positif. Spécifiez le seuil de cash-flow minimum souhaité dans les paramètres avancés pour affiner les résultats.</p>
+            </div>
+        </div>
         
         <!-- Inputs de base -->
         <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg hover:shadow-blue-500/5 transition-all">
@@ -950,19 +995,28 @@
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label" for="montant-emprunt-max">Emprunt maximum</label>
+                    <label class="form-label" for="prix-m2-marche">Prix au m² du marché</label>
                     <div class="form-addon">
-                        <input type="number" id="montant-emprunt-max" class="form-input" value="150000">
-                        <span class="form-addon-text">€</span>
+                        <input type="number" id="prix-m2-marche" class="form-input highlight-field" value="2000" step="50">
+                        <span class="form-addon-text">€/m²</span>
                     </div>
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label" for="surface">Surface visée</label>
+                    <label class="form-label" for="loyer-m2">Loyer au m² du marché</label>
                     <div class="form-addon">
-                        <input type="number" id="surface" class="form-input" placeholder="50" value="50">
-                        <span class="form-addon-text">m²</span>
+                        <input type="number" id="loyer-m2" class="form-input highlight-field" value="12" step="0.1">
+                        <span class="form-addon-text">€/m²/mois</span>
                     </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="cashflow-min">Cash-flow minimum</label>
+                    <div class="form-addon">
+                        <input type="number" id="cashflow-min" class="form-input highlight-field" value="1" step="1">
+                        <span class="form-addon-text">€</span>
+                    </div>
+                    <span class="form-help">Cash-flow mensuel minimum pour considérer l'investissement viable</span>
                 </div>
                 
                 <div class="form-group">
@@ -981,13 +1035,10 @@
                     </div>
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label" for="rendement-min">Rendement locatif souhaité</label>
-                    <div class="form-addon">
-                        <input type="number" id="rendement-min" class="form-input" value="5" step="0.1">
-                        <span class="form-addon-text">%</span>
-                    </div>
-                </div>
+                <!-- Champs cachés pour compatibilité -->
+                <input type="hidden" id="rendement-min" value="0">
+                <input type="hidden" id="surface" value="50">
+                <input type="hidden" id="montant-emprunt-max" value="150000">
             </div>
             
             <div class="flex justify-between items-center mt-4">
@@ -995,7 +1046,7 @@
                     <i class="fas fa-calculator"></i> Simuler
                 </button>
                 <button id="btn-advanced-toggle" class="btn btn-outline">
-                    <i class="fas fa-sliders-h"></i> Mode Avancé
+                    <i class="fas fa-sliders-h"></i> Paramètres avancés
                 </button>
             </div>
         </div>
@@ -1019,15 +1070,6 @@
                 <!-- Paramètres communs -->
                 <div class="tab-content active" id="params-communs">
                     <div class="grid grid-2">
-                        <div class="form-group">
-                            <label class="form-label" for="cashflow-min">Cash-flow minimum</label>
-                            <div class="form-addon">
-                                <input type="number" id="cashflow-min" class="form-input" value="1" step="1">
-                                <span class="form-addon-text">€</span>
-                            </div>
-                            <span class="form-help">Cash-flow mensuel minimum souhaité</span>
-                        </div>
-
                         <div class="form-group">
                             <label class="form-label" for="frais-bancaires-dossier">Frais bancaires - dossier</label>
                             <div class="form-addon">
@@ -1069,25 +1111,9 @@
                         </div>
                         
                         <div class="form-group">
-                            <label class="form-label" for="loyer-m2">Loyer moyen</label>
-                            <div class="form-addon">
-                                <input type="number" id="loyer-m2" class="form-input" value="12" step="0.1">
-                                <span class="form-addon-text">€/m²/mois</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
                             <label class="form-label" for="travaux-m2">Travaux au m²</label>
                             <div class="form-addon">
                                 <input type="number" id="travaux-m2" class="form-input" value="400" step="10">
-                                <span class="form-addon-text">€/m²</span>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label" for="prix-m2-marche">Prix du marché</label>
-                            <div class="form-addon">
-                                <input type="number" id="prix-m2-marche" class="form-input" value="2000" step="50">
                                 <span class="form-addon-text">€/m²</span>
                             </div>
                         </div>
