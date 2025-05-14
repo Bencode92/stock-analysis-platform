@@ -1,1585 +1,937 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ImmoSim - Simulateur d'Investissement Immobilier</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #00FF87;
-            --primary-dark: #00CC6A;
-            --accent-color: #F59E0B;
-            --success-color: #10B981;
-            --warning-color: #F59E0B;
-            --danger-color: #EF4444;
-            --background-dark: #011627;
-            --card-background: rgba(1, 42, 74, 0.8);
-            --header-background: rgba(1, 22, 39, 0.8);
-        }
-        
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--background-dark);
-            color: #E6E6E6;
-            margin: 0;
-            padding: 0;
-            line-height: 1.6;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem 1rem;
-            margin-left: 60px; /* Ajouté pour tenir compte de la sidebar */
-            margin-top: 70px; /* Ajouté pour tenir compte du header principal */
-        }
-        
-        /* Sidebar styles */
-        .sidebar {
-            position: fixed;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 60px;
-            background-color: rgba(1, 42, 74, 0.5);
-            backdrop-filter: blur(10px);
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 100;
-            transition: width 0.3s;
-            overflow-x: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+/**
+ * immo-simulation.js - Logique de calcul pour le simulateur immobilier
+ * 
+ * Ce script contient toutes les fonctions de calcul nécessaires pour la simulation
+ * d'investissement immobilier, comparant l'achat classique et la vente aux enchères.
+ * 
+ * Version 3.0 - Refactorisée pour calculer le prêt automatiquement et plafonner
+ * la surface à 100m²
+ */
 
-        .sidebar-logo {
-            font-size: 24px;
-            font-weight: bold;
-            color: var(--primary-color);
-            text-align: center;
-            margin: 20px 0;
-            transition: all 0.3s;
-        }
-
-        .sidebar-nav {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            flex-grow: 1;
-            overflow-y: auto;
-            width: 100%;
-        }
-
-        .nav-item {
-            width: 100%;
-            height: 60px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #E6E6E6;
-            transition: background-color 0.2s;
-            position: relative;
-            margin-bottom: 5px;
-            text-decoration: none;
-        }
-
-        .nav-item:hover {
-            background-color: rgba(0, 255, 135, 0.1);
-            color: var(--primary-color);
-        }
-
-        .nav-item.active {
-            background-color: rgba(0, 255, 135, 0.15);
-            color: var(--primary-color);
-            border-left: 3px solid var(--primary-color);
-        }
-
-        .nav-item i {
-            font-size: 20px;
-        }
-
-        /* Main header styles */
-        .main-header {
-            position: fixed;
-            top: 0;
-            left: 60px;
-            right: 0;
-            height: 70px;
-            background-color: var(--header-background);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
-            z-index: 50;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-        }
-
-        .logo-container {
-            display: flex;
-            align-items: center;
-            font-weight: 900;
-            font-size: 22px;
-            color: var(--primary-color);
-            margin-right: 40px;
-            position: relative;
-        }
-
-        .pulse-dot {
-            width: 8px;
-            height: 8px;
-            background-color: var(--primary-color);
-            border-radius: 50%;
-            margin-right: 10px;
-            position: relative;
-        }
-
-        .pulse-dot::after {
-            content: '';
-            position: absolute;
-            top: -4px;
-            left: -4px;
-            width: 16px;
-            height: 16px;
-            background-color: rgba(0, 255, 135, 0.3);
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        .main-nav {
-            display: flex;
-            height: 100%;
-        }
-
-        .main-nav a {
-            height: 100%;
-            padding: 0 15px;
-            display: flex;
-            align-items: center;
-            color: #E6E6E6;
-            font-weight: 500;
-            transition: all 0.2s;
-            position: relative;
-            text-decoration: none;
-        }
-
-        .main-nav a:hover {
-            color: var(--primary-color);
-        }
-
-        .main-nav a.active {
-            color: var(--primary-color);
-        }
-
-        .main-nav a.active::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 15px;
-            right: 15px;
-            height: 3px;
-            background-color: var(--primary-color);
-        }
-
-        /* Header right */
-        .header-right {
-            display: flex;
-            align-items: center;
-        }
-
-        .market-status {
-            display: flex;
-            align-items: center;
-            font-size: 14px;
-            margin-right: 20px;
-        }
-
-        .market-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-
-        .market-indicator.green {
-            background-color: #00CC6A;
-            box-shadow: 0 0 10px rgba(0, 204, 106, 0.7);
-        }
-
-        .market-time {
-            margin-left: 8px;
-            font-family: 'Inter', monospace;
-            color: var(--primary-color);
-        }
-
-        /* Search button */
-        .search-button {
-            background-color: rgba(0, 255, 135, 0.15);
-            color: var(--primary-color);
-            border: 1px solid rgba(0, 255, 135, 0.3);
-            border-radius: 8px;
-            padding: 8px 15px;
-            display: flex;
-            align-items: center;
-            transition: all 0.2s;
-            position: relative;
-            overflow: hidden;
-            text-decoration: none;
-        }
-
-        .search-button:hover {
-            background-color: rgba(0, 255, 135, 0.25);
-        }
-
-        .search-button i {
-            margin-right: 8px;
-        }
-
-        /* Animation for pulse dot */
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-                opacity: 0.7;
+class SimulateurImmo {
+    constructor() {
+        // Paramètres initialisés par défaut
+        this.params = {
+            base: {
+                apport: 20000,                // Apport disponible
+                surface: 50,                  // Surface en m²
+                taux: 3.5,                    // Taux d'emprunt
+                duree: 20,                    // Durée du prêt
+                objectif: 'cashflow',         // Objectif: cashflow ou rendement
+                rendementMin: 5,              // Rendement minimum souhaité
+                surfaceMax: 100               // Surface maximale autorisée
+            },
+            communs: {
+                fraisBancairesDossier: 2000,
+                fraisBancairesCompte: 710,
+                fraisGarantie: 1.3709,        // % du capital emprunté
+                taxeFonciere: 0,              // % du prix (remplacé par 5% du loyer)
+                vacanceLocative: 5,           // % des loyers (modifié de 8% à 5%)
+                loyerM2: 12,                  // €/m²/mois (valeur utilisée si calcul par rendement impossible)
+                travauxM2: 10,                // €/m² (remplacé par 0.5% du prix)
+                entretienAnnuel: 0.5,         // % du prix d'achat
+                assurancePNO: 250,            // € par an
+                chargesNonRecuperables: 0,    // Remplacé par un montant fixe
+                prixM2: 2000                  // Prix du marché immobilier en €/m²
+            },
+            classique: {
+                publiciteFonciere: 0.72,      // % du prix
+                droitsMutation: 5.81,         // % du prix
+                securiteImmobiliere: 0.10,    // % du prix
+                emolumentsVente: 1.12,        // % du prix
+                formalites: 0.28,             // % du prix
+                debours: 0.13,                // % du prix
+                commissionImmo: 5             // % du prix
+            },
+            encheres: {
+                droitsEnregistrement: 5.70,   // % du prix
+                coefMutation: 2.37,           // Coefficient
+                emolumentsPoursuivant1: 7,    // % (0-6500€)
+                emolumentsPoursuivant2: 3,    // % (6500-23500€)
+                emolumentsPoursuivant3: 2,    // % (23500-83500€)
+                emolumentsPoursuivant4: 1,    // % (au-delà de 83500€)
+                honorairesAvocatCoef: 0.25,   // x émoluments
+                honorairesAvocatTVA: 20,      // %
+                publiciteFonciereEncheres: 0.10, // % du prix
+                fraisFixes: 50,               // €
+                avocatEnchere: 300,           // €
+                suiviDossier: 1200,           // €
+                cautionPourcent: 5,           // % du prix de mise à prix
+                cautionRestituee: true
+            },
+            fiscalite: {
+                tauxPrelevementsSociaux: 17.2, // %
+                tauxMarginalImpot: 30,        // %
+                deficitFoncier: true
+            },
+            // Pour stocker les résultats
+            resultats: {
+                classique: {},
+                encheres: {}
             }
-            70% {
-                transform: scale(1.5);
-                opacity: 0;
-            }
-            100% {
-                transform: scale(1);
-                opacity: 0;
-            }
-        }
-        
-        .page-title {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        
-        h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-            color: white;
-            text-transform: uppercase;
-        }
-        
-        .subtitle {
-            font-size: 1.2rem;
-            color: rgba(255, 255, 255, 0.7);
-            margin-bottom: 2rem;
-        }
-        
-        .card {
-            background-color: var(--card-background);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-        }
-        
-        .card:hover {
-            box-shadow: 0 8px 15px rgba(0, 255, 135, 0.1);
-            border-color: rgba(0, 255, 135, 0.2);
-        }
-        
-        .card-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 0.75rem;
-        }
-        
-        .card-icon {
-            background-color: rgba(0, 255, 135, 0.15);
-            color: var(--primary-color);
-            width: 2.5rem;
-            height: 2.5rem;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 1rem;
-        }
-        
-        .card-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin: 0;
-        }
-        
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-        
-        .form-label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            font-size: 0.95rem;
-            color: rgba(255, 255, 255, 0.9);
-        }
-        
-        .form-input {
-            width: 100%;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background-color: rgba(1, 42, 74, 0.6);
-            color: white;
-            font-size: 1rem;
-            transition: all 0.2s ease-in-out;
-        }
-        
-        .form-input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(0, 255, 135, 0.2);
-            transform: translateY(-1px);
-        }
-        
-        .form-help {
-            display: block;
-            margin-top: 0.25rem;
-            font-size: 0.875rem;
-            color: rgba(255, 255, 255, 0.6);
-        }
-        
-        .form-addon {
-            position: relative;
-        }
-        
-        .form-addon .form-input {
-            padding-right: 3rem;
-        }
-        
-        .form-addon-text {
-            position: absolute;
-            right: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: rgba(255, 255, 255, 0.7);
-        }
-        
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            font-weight: 500;
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
-            border: none;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .btn::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 5px;
-            height: 5px;
-            background: rgba(255, 255, 255, 0.5);
-            opacity: 0;
-            border-radius: 100%;
-            transform: scale(1, 1) translate(-50%);
-            transform-origin: 50% 50%;
-        }
-        
-        .btn:hover::after {
-            animation: ripple 1s ease-out;
-        }
-        
-        @keyframes ripple {
-            0% {
-                transform: scale(0, 0);
-                opacity: 0.5;
-            }
-            100% {
-                transform: scale(20, 20);
-                opacity: 0;
-            }
-        }
-        
-        .btn-primary {
-            background-color: var(--primary-color);
-            color: #011627;
-            font-weight: 600;
-        }
-        
-        .btn-primary:hover {
-            background-color: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 255, 135, 0.3);
-        }
-        
-        .btn-accent {
-            background-color: var(--accent-color);
-            color: #1F2937;
-        }
-        
-        .btn-accent:hover {
-            background-color: #D97706;
-            transform: translateY(-2px);
-        }
-        
-        .btn-outline {
-            background-color: transparent;
-            border: 1px solid var(--primary-color);
-            color: var(--primary-color);
-        }
-        
-        .btn-outline:hover {
-            background-color: rgba(0, 255, 135, 0.1);
-        }
-        
-        .btn-sm {
-            padding: 0.5rem 1rem;
-            font-size: 0.875rem;
-        }
-        
-        .btn i {
-            margin-right: 0.5rem;
-        }
-        
-        .grid {
-            display: grid;
-            gap: 1.5rem;
-        }
-        
-        .grid-2 {
-            grid-template-columns: 1fr;
-        }
-        
-        @media (min-width: 768px) {
-            .grid-2 {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-        
-        .grid-3 {
-            grid-template-columns: 1fr;
-        }
-        
-        @media (min-width: 768px) {
-            .grid-3 {
-                grid-template-columns: 1fr 1fr 1fr;
-            }
-        }
-        
-        .flex {
-            display: flex;
-        }
-        
-        .justify-between {
-            justify-content: space-between;
-        }
-        
-        .items-center {
-            align-items: center;
-        }
-        
-        .mt-4 {
-            margin-top: 1rem;
-        }
-        
-        .mt-8 {
-            margin-top: 2rem;
-        }
-        
-        .mb-4 {
-            margin-bottom: 1rem;
-        }
-        
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-        
-        .badge-primary {
-            background-color: rgba(0, 255, 135, 0.15);
-            color: var(--primary-color);
-        }
-        
-        .badge-accent {
-            background-color: rgba(245, 158, 11, 0.2);
-            color: var(--accent-color);
-        }
-        
-        .hidden {
-            display: none;
-        }
-        
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 1.5rem;
-        }
-        
-        .tab {
-            padding: 0.75rem 1.5rem;
-            cursor: pointer;
-            font-weight: 500;
-            color: rgba(255, 255, 255, 0.7);
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s ease;
-        }
-        
-        .tab:hover {
-            color: #E6E6E6;
-        }
-        
-        .tab.active {
-            color: var(--primary-color);
-            border-bottom-color: var(--primary-color);
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 34px;
-        }
-        
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(107, 114, 128, 0.3);
-            transition: .4s;
-            border-radius: 34px;
-        }
-        
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 26px;
-            width: 26px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        
-        input:checked + .slider {
-            background-color: var(--primary-color);
-        }
-        
-        input:focus + .slider {
-            box-shadow: 0 0 1px var(--primary-color);
-        }
-        
-        input:checked + .slider:before {
-            transform: translateX(26px);
-        }
-        
-        .comparison-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-            font-size: 0.95rem;
-        }
-        
-        .comparison-table th, .comparison-table td {
-            padding: 0.75rem 1rem;
-            text-align: left;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .comparison-table th {
-            background-color: rgba(1, 42, 74, 0.5);
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.9);
-        }
-        
-        .comparison-table td.highlight {
-            color: var(--primary-color);
-            font-weight: 600;
-        }
-        
-        .comparison-header {
-            padding: 0.5rem 1rem;
-            background-color: rgba(0, 255, 135, 0.15);
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        .results-card {
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 0.75rem;
-            overflow: hidden;
-            margin-bottom: 2rem;
-            background-color: var(--card-background);
-            transition: all 0.3s ease;
-            transform: translateY(0);
-        }
-        
-        .results-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-            border-color: rgba(0, 255, 135, 0.3);
-        }
-        
-        .results-header {
-            background-color: rgba(0, 255, 135, 0.1);
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .results-body {
-            padding: 1.5rem;
-        }
-        
-        .results-footer {
-            background-color: rgba(1, 42, 74, 0.5);
-            padding: 1rem 1.5rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .results-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: white;
-            margin: 1rem 0;
-        }
-        
-        .results-label {
-            font-size: 0.875rem;
-            color: rgba(255, 255, 255, 0.7);
-        }
-        
-        .tag {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-right: 0.5rem;
-        }
-        
-        .tag-success {
-            background-color: rgba(16, 185, 129, 0.2);
-            color: var(--success-color);
-        }
-        
-        .tag-warning {
-            background-color: rgba(245, 158, 11, 0.2);
-            color: var(--warning-color);
-        }
-        
-        .tag-danger {
-            background-color: rgba(239, 68, 68, 0.2);
-            color: var(--danger-color);
-        }
-        
-        .tooltip {
-            position: relative;
-            display: inline-block;
-            cursor: pointer;
-        }
-        
-        .tooltip .tooltip-text {
-            visibility: hidden;
-            width: 200px;
-            background-color: rgba(1, 42, 74, 0.95);
-            color: #F3F4F6;
-            text-align: center;
-            border-radius: 0.5rem;
-            padding: 0.75rem;
-            position: absolute;
-            z-index: 1;
-            bottom: 125%;
-            left: 50%;
-            transform: translateX(-50%);
-            opacity: 0;
-            transition: opacity 0.3s;
-            font-size: 0.875rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        
-        .tooltip:hover .tooltip-text {
-            visibility: visible;
-            opacity: 1;
-        }
-        
-        .loading {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(1, 22, 39, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-        
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(0, 255, 135, 0.3);
-            border-radius: 50%;
-            border-top-color: var(--primary-color);
-            animation: spin 1s ease-in-out infinite;
-        }
-        
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-        
-        .positive {
-            color: var(--success-color);
-        }
-        
-        .negative {
-            color: var(--danger-color);
-        }
-        
-        .accordion {
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-        
-        .accordion:hover {
-            border-color: rgba(0, 255, 135, 0.2);
-        }
-        
-        .accordion-header {
-            background-color: rgba(1, 42, 74, 0.5);
-            padding: 1rem 1.5rem;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.2s ease;
-        }
-        
-        .accordion-header:hover {
-            background-color: rgba(1, 42, 74, 0.7);
-        }
-        
-        .accordion-body {
-            padding: 0;
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-out, padding 0.3s ease;
-        }
-        
-        .accordion-body.active {
-            padding: 1rem 1.5rem;
-            max-height: 1000px;
-        }
-        
-        /* Nouvelles animations et styles */
-        .fade-in {
-            animation: fadeIn 0.5s ease-in-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .backdrop-blur-md {
-            backdrop-filter: blur(8px);
-        }
-        
-        .bg-opacity-20 {
-            background-opacity: 0.2;
-        }
-        
-        .shadow-lg {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-        
-        .hover\:shadow-blue-500\/5:hover {
-            box-shadow: 0 0 20px 5px rgba(0, 130, 255, 0.05);
-        }
-        
-        .transition-all {
-            transition: all 0.3s ease;
-        }
-    </style>
-</head>
-<body>
-    <!-- Sidebar de navigation verticale -->
-    <aside class="sidebar">
-        <div class="sidebar-logo">TP</div>
-        <nav class="sidebar-nav">
-            <a href="actualites.html" class="nav-item" title="Actualités">
-                <i class="fas fa-newspaper"></i>
-            </a>
-            <a href="portefeuille.html" class="nav-item" title="Portefeuilles">
-                <i class="fas fa-chart-pie"></i>
-            </a>
-            <a href="dashboard.html" class="nav-item" title="Tableau de bord">
-                <i class="fas fa-tachometer-alt"></i>
-            </a>
-            <a href="marches.html" class="nav-item" title="Marchés">
-                <i class="fas fa-chart-line"></i>
-            </a>
-            <a href="secteurs.html" class="nav-item" title="Secteurs">
-                <i class="fas fa-industry"></i>
-            </a>
-            <a href="liste.html" class="nav-item" title="Listes">
-                <i class="fas fa-list"></i>
-            </a>
-            <a href="etf.html" class="nav-item" title="ETF">
-                <i class="fas fa-funnel-dollar"></i>
-            </a>
-            <a href="crypto.html" class="nav-item" title="Crypto">
-                <i class="fab fa-bitcoin"></i>
-            </a>
-            <a href="simulation.html" class="nav-item" title="Simulation">
-                <i class="fas fa-calculator"></i>
-            </a>
-            <a href="guide-placements.html" class="nav-item" title="Guide Placements">
-                <i class="fas fa-book"></i>
-            </a>
-            <a href="types-entreprise.html" class="nav-item" title="Types d'Entreprise">
-                <i class="fas fa-building"></i>
-            </a>
-            <a href="immoSim.html" class="nav-item active" title="Simulateur Immobilier">
-                <i class="fas fa-home"></i>
-            </a>
-            <a href="parametres.html" class="nav-item" title="Paramètres">
-                <i class="fas fa-cog"></i>
-            </a>
-        </nav>
-    </aside>
+        };
+        
+        // Historique des simulations pour comparaisons
+        this.historiqueSimulations = [];
+    }
 
-    <!-- Header principal -->
-    <header class="main-header">
-        <div class="header-left">
-            <div class="logo-container">
-                <div class="pulse-dot"></div>
-                <a href="index.html">TRADEPULSE</a>
-            </div>
-            <nav class="main-nav">
-                <a href="actualites.html">Actualités</a>
-                <a href="portefeuille.html?type=modere">Portefeuilles</a>
-                <a href="dashboard.html">Tableau de bord</a>
-                <a href="marches.html">Marchés</a>
-                <a href="secteurs.html">Secteurs</a>
-                <a href="liste.html">Listes</a>
-                <a href="etf.html">ETF</a>
-                <a href="crypto.html">Crypto</a>
-                <a href="simulation.html">Simulation</a>
-                <a href="guide-placements.html">Guide Placements</a>
-                <a href="types-entreprise.html">Types d'Entreprise</a>
-                <a href="immoSim.html" class="active">Simulateur Immobilier</a>
-            </nav>
-        </div>
-        <div class="header-right">
-            <div class="market-status">
-                <div class="market-indicator green"></div>
-                <span>Marché ouvert</span>
-                <span class="market-time" id="marketTime">15:52:47</span>
-            </div>
-            <a href="recherche.html" class="search-button ripple">
-                <i class="fas fa-search"></i>
-                <span>Ma question</span>
-            </a>
-        </div>
-    </header>
+    /**
+     * Charge les paramètres depuis le formulaire
+     * @param {Object} formData - Données du formulaire
+     */
+    chargerParametres(formData) {
+        // Paramètres de base
+        this.params.base.apport = parseFloat(formData.apport) || 20000;
+        this.params.base.surface = parseFloat(formData.surface) || 50;
+        this.params.base.taux = parseFloat(formData.taux) || 3.5;
+        this.params.base.duree = parseFloat(formData.duree) || 20;
+        this.params.base.objectif = formData.objectif || 'cashflow';
+        this.params.base.rendementMin = parseFloat(formData.rendementMin) || 5;
 
-    <div class="container">
-        <div class="page-title">
-            <h1>Simulateur d'Investissement Immobilier</h1>
-            <div class="subtitle">Comparez achat classique et vente aux enchères</div>
-        </div>
-        
-        <!-- Inputs de base -->
-        <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg hover:shadow-blue-500/5 transition-all">
-            <div class="card-header">
-                <div class="card-icon">
-                    <i class="fas fa-money-bill-wave"></i>
-                </div>
-                <h2 class="card-title">Paramètres de base</h2>
-            </div>
+        // Paramètres communs
+        if (formData.fraisBancairesDossier !== undefined) 
+            this.params.communs.fraisBancairesDossier = parseFloat(formData.fraisBancairesDossier);
+        if (formData.fraisBancairesCompte !== undefined) 
+            this.params.communs.fraisBancairesCompte = parseFloat(formData.fraisBancairesCompte);
+        if (formData.fraisGarantie !== undefined) 
+            this.params.communs.fraisGarantie = parseFloat(formData.fraisGarantie);
+        if (formData.taxeFonciere !== undefined) 
+            this.params.communs.taxeFonciere = parseFloat(formData.taxeFonciere);
+        if (formData.vacanceLocative !== undefined) 
+            this.params.communs.vacanceLocative = parseFloat(formData.vacanceLocative);
+        if (formData.loyerM2 !== undefined) 
+            this.params.communs.loyerM2 = parseFloat(formData.loyerM2);
+        if (formData.travauxM2 !== undefined) 
+            this.params.communs.travauxM2 = parseFloat(formData.travauxM2);
+        if (formData.entretienAnnuel !== undefined)
+            this.params.communs.entretienAnnuel = parseFloat(formData.entretienAnnuel);
+        if (formData.assurancePNO !== undefined)
+            this.params.communs.assurancePNO = parseFloat(formData.assurancePNO);
+        if (formData.chargesNonRecuperables !== undefined)
+            this.params.communs.chargesNonRecuperables = parseFloat(formData.chargesNonRecuperables);
+        if (formData.prixM2 !== undefined)
+            this.params.communs.prixM2 = parseFloat(formData.prixM2);
+
+        // Paramètres achat classique
+        if (formData.publiciteFonciere !== undefined) 
+            this.params.classique.publiciteFonciere = parseFloat(formData.publiciteFonciere);
+        if (formData.droitsMutation !== undefined) 
+            this.params.classique.droitsMutation = parseFloat(formData.droitsMutation);
+        if (formData.securiteImmobiliere !== undefined) 
+            this.params.classique.securiteImmobiliere = parseFloat(formData.securiteImmobiliere);
+        if (formData.emolumentsVente !== undefined) 
+            this.params.classique.emolumentsVente = parseFloat(formData.emolumentsVente);
+        if (formData.formalites !== undefined) 
+            this.params.classique.formalites = parseFloat(formData.formalites);
+        if (formData.debours !== undefined) 
+            this.params.classique.debours = parseFloat(formData.debours);
+        if (formData.commissionImmo !== undefined) 
+            this.params.classique.commissionImmo = parseFloat(formData.commissionImmo);
+
+        // Paramètres vente aux enchères
+        if (formData.droitsEnregistrement !== undefined) 
+            this.params.encheres.droitsEnregistrement = parseFloat(formData.droitsEnregistrement);
+        if (formData.coefMutation !== undefined) 
+            this.params.encheres.coefMutation = parseFloat(formData.coefMutation);
+        if (formData.emolumentsPoursuivant1 !== undefined) 
+            this.params.encheres.emolumentsPoursuivant1 = parseFloat(formData.emolumentsPoursuivant1);
+        if (formData.emolumentsPoursuivant2 !== undefined) 
+            this.params.encheres.emolumentsPoursuivant2 = parseFloat(formData.emolumentsPoursuivant2);
+        if (formData.emolumentsPoursuivant3 !== undefined) 
+            this.params.encheres.emolumentsPoursuivant3 = parseFloat(formData.emolumentsPoursuivant3);
+        if (formData.emolumentsPoursuivant4 !== undefined) 
+            this.params.encheres.emolumentsPoursuivant4 = parseFloat(formData.emolumentsPoursuivant4);
+        if (formData.honorairesAvocatCoef !== undefined) 
+            this.params.encheres.honorairesAvocatCoef = parseFloat(formData.honorairesAvocatCoef);
+        if (formData.honorairesAvocatTVA !== undefined) 
+            this.params.encheres.honorairesAvocatTVA = parseFloat(formData.honorairesAvocatTVA);
+        if (formData.publiciteFonciereEncheres !== undefined) 
+            this.params.encheres.publiciteFonciereEncheres = parseFloat(formData.publiciteFonciereEncheres);
+        if (formData.fraisFixes !== undefined) 
+            this.params.encheres.fraisFixes = parseFloat(formData.fraisFixes);
+        if (formData.avocatEnchere !== undefined) 
+            this.params.encheres.avocatEnchere = parseFloat(formData.avocatEnchere);
+        if (formData.suiviDossier !== undefined) 
+            this.params.encheres.suiviDossier = parseFloat(formData.suiviDossier);
+        if (formData.cautionPourcent !== undefined) 
+            this.params.encheres.cautionPourcent = parseFloat(formData.cautionPourcent);
+        if (formData.cautionRestituee !== undefined) 
+            this.params.encheres.cautionRestituee = formData.cautionRestituee;
             
-            <div class="grid grid-2">
-                <div class="form-group">
-                    <label class="form-label" for="apport">Apport disponible</label>
-                    <div class="form-addon">
-                        <input type="number" id="apport" class="form-input" placeholder="20000" value="20000">
-                        <span class="form-addon-text">€</span>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="montant-emprunt-max">Emprunt maximum</label>
-                    <div class="form-addon">
-                        <input type="number" id="montant-emprunt-max" class="form-input" value="150000">
-                        <span class="form-addon-text">€</span>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="surface">Surface visée</label>
-                    <div class="form-addon">
-                        <input type="number" id="surface" class="form-input" placeholder="50" value="50">
-                        <span class="form-addon-text">m²</span>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="taux">Taux d'emprunt</label>
-                    <div class="form-addon">
-                        <input type="number" id="taux" class="form-input" placeholder="3.5" value="3.5" step="0.1">
-                        <span class="form-addon-text">%</span>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="duree">Durée du prêt</label>
-                    <div class="form-addon">
-                        <input type="number" id="duree" class="form-input" placeholder="20" value="20">
-                        <span class="form-addon-text">ans</span>
-                    </div>
-                </div>
-                
-                <!-- Champ caché pour compatibilité avec le code existant -->
-                <input type="hidden" id="rendement-min" value="0">
-                
-                <!-- Ajout du champ cash-flow minimum -->
-                <div id="cashflow-min-group" class="form-group" style="display: none;">
-                    <label class="form-label" for="cashflow-min">Cash-flow minimum</label>
-                    <div class="form-addon">
-                        <input type="number" id="cashflow-min" class="form-input" value="1" step="1">
-                        <span class="form-addon-text">€</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="flex justify-between items-center mt-4">
-                <button id="btn-simulate" class="btn btn-primary">
-                    <i class="fas fa-calculator"></i> Simuler
-                </button>
-                <button id="btn-advanced-toggle" class="btn btn-outline">
-                    <i class="fas fa-sliders-h"></i> Mode Avancé
-                </button>
-            </div>
-        </div>
+        // Paramètres fiscalité
+        if (formData.tauxPrelevementsSociaux !== undefined)
+            this.params.fiscalite.tauxPrelevementsSociaux = parseFloat(formData.tauxPrelevementsSociaux);
+        if (formData.tauxMarginalImpot !== undefined)
+            this.params.fiscalite.tauxMarginalImpot = parseFloat(formData.tauxMarginalImpot);
+        if (formData.deficitFoncier !== undefined)
+            this.params.fiscalite.deficitFoncier = formData.deficitFoncier;
+    }
+
+    /**
+     * Sauvegarde les résultats de la simulation actuelle dans l'historique
+     * @param {string} nom - Nom de la simulation
+     * @returns {boolean} - Succès de la sauvegarde
+     */
+    sauvegarderSimulation(nom) {
+        // Vérifier si des résultats existent
+        if (!this.params.resultats.classique || !this.params.resultats.encheres) {
+            return false;
+        }
         
-        <!-- Paramètres avancés (masqués par défaut) -->
-        <div id="advanced-params" class="hidden fade-in">
-            <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg transition-all">
-                <div class="card-header">
-                    <div class="card-icon">
-                        <i class="fas fa-cogs"></i>
-                    </div>
-                    <h2 class="card-title">Paramètres avancés</h2>
-                </div>
-                
-                <div class="tabs">
-                    <div class="tab active" data-tab="params-communs">Communs</div>
-                    <div class="tab" data-tab="params-classique">Achat Classique</div>
-                    <div class="tab" data-tab="params-encheres">Vente aux Enchères</div>
-                </div>
-                
-                <!-- Paramètres communs -->
-                <div class="tab-content active" id="params-communs">
-                    <div class="grid grid-2">
-                        <div class="form-group">
-                            <label class="form-label" for="cashflow-min">Cash-flow minimum</label>
-                            <div class="form-addon">
-                                <input type="number" id="cashflow-min" class="form-input" value="1" step="1">
-                                <span class="form-addon-text">€</span>
-                            </div>
-                            <span class="form-help">Cash-flow mensuel minimum souhaité</span>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label" for="frais-bancaires-dossier">Frais bancaires - dossier</label>
-                            <div class="form-addon">
-                                <input type="number" id="frais-bancaires-dossier" class="form-input" value="2000">
-                                <span class="form-addon-text">€</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="frais-bancaires-compte">Frais bancaires - tenue de compte</label>
-                            <div class="form-addon">
-                                <input type="number" id="frais-bancaires-compte" class="form-input" value="710">
-                                <span class="form-addon-text">€</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="frais-garantie">Frais de garantie (caution/PPD)</label>
-                            <div class="form-addon">
-                                <input type="number" id="frais-garantie" class="form-input" value="1.3709" step="0.0001">
-                                <span class="form-addon-text">%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="taxe-fonciere">Taxe foncière</label>
-                            <div class="form-addon">
-                                <input type="number" id="taxe-fonciere" class="form-input" value="1" step="0.1">
-                                <span class="form-addon-text">%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="vacance-locative">Vacance locative</label>
-                            <div class="form-addon">
-                                <input type="number" id="vacance-locative" class="form-input" value="8" step="1">
-                                <span class="form-addon-text">%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="loyer-m2">Loyer moyen</label>
-                            <div class="form-addon">
-                                <input type="number" id="loyer-m2" class="form-input" value="12" step="0.1">
-                                <span class="form-addon-text">€/m²/mois</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="travaux-m2">Travaux au m²</label>
-                            <div class="form-addon">
-                                <input type="number" id="travaux-m2" class="form-input" value="400" step="10">
-                                <span class="form-addon-text">€/m²</span>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label" for="prix-m2-marche">Prix du marché</label>
-                            <div class="form-addon">
-                                <input type="number" id="prix-m2-marche" class="form-input" value="2000" step="50">
-                                <span class="form-addon-text">€/m²</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Paramètres achat classique -->
-                <div class="tab-content" id="params-classique">
-                    <div class="form-group">
-                        <label class="form-label">Frais de notaire détaillés</label>
-                    </div>
-                    
-                    <div class="grid grid-3">
-                        <div class="form-group">
-                            <label class="form-label" for="publicite-fonciere">Publicité foncière</label>
-                            <div class="form-addon">
-                                <input type="number" id="publicite-fonciere" class="form-input" value="0.72" step="0.01">
-                                <span class="form-addon-text">%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="droits-mutation">Droits de mutation</label>
-                            <div class="form-addon">
-                                <input type="number" id="droits-mutation" class="form-input" value="5.81" step="0.01">
-                                <span class="form-addon-text">%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="securite-immobiliere">Sécurité immobilière</label>
-                            <div class="form-addon">
-                                <input type="number" id="securite-immobiliere" class="form-input" value="0.10" step="0.01">
-                                <span class="form-addon-text">%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="emoluments-vente">Émoluments / frais de vente</label>
-                            <div class="form-addon">
-                                <input type="number" id="emoluments-vente" class="form-input" value="1.12" step="0.01">
-                                <span class="form-addon-text">%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="formalites">Formalités</label>
-                            <div class="form-addon">
-                                <input type="number" id="formalites" class="form-input" value="0.28" step="0.01">
-                                <span class="form-addon-text">%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="debours">Débours</label>
-                            <div class="form-addon">
-                                <input type="number" id="debours" class="form-input" value="0.13" step="0.01">
-                                <span class="form-addon-text">%</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="commission-immo">Commission immobilière</label>
-                        <div class="form-addon">
-                            <input type="number" id="commission-immo" class="form-input" value="5" step="0.1">
-                            <span class="form-addon-text">%</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Paramètres vente aux enchères -->
-                <div class="tab-content" id="params-encheres">
-                    <div class="grid grid-2">
-                        <div class="form-group">
-                            <label class="form-label" for="droits-enregistrement">Droits d'enregistrement</label>
-                            <div class="form-addon">
-                                <input type="number" id="droits-enregistrement" class="form-input" value="5.70" step="0.01">
-                                <span class="form-addon-text">%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="coef-mutation">Coefficient de mutation</label>
-                            <div class="form-addon">
-                                <input type="number" id="coef-mutation" class="form-input" value="2.37" step="0.01">
-                                <span class="form-addon-text">coef</span>
-                            </div>
-                            <span class="form-help">Peut varier de 2.17 à 2.37 selon le tribunal</span>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Émoluments du poursuivant</label>
-                        <div class="grid grid-2">
-                            <div class="form-group">
-                                <label class="form-label" for="emoluments-poursuivant-1">0 à 6 500 €</label>
-                                <div class="form-addon">
-                                    <input type="number" id="emoluments-poursuivant-1" class="form-input" value="7" step="0.1">
-                                    <span class="form-addon-text">%</span>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label" for="emoluments-poursuivant-2">6 500 à 23 500 €</label>
-                                <div class="form-addon">
-                                    <input type="number" id="emoluments-poursuivant-2" class="form-input" value="3" step="0.1">
-                                    <span class="form-addon-text">%</span>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label" for="emoluments-poursuivant-3">23 500 à 83 500 €</label>
-                                <div class="form-addon">
-                                    <input type="number" id="emoluments-poursuivant-3" class="form-input" value="2" step="0.1">
-                                    <span class="form-addon-text">%</span>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label" for="emoluments-poursuivant-4">Au-delà de 83 500 €</label>
-                                <div class="form-addon">
-                                    <input type="number" id="emoluments-poursuivant-4" class="form-input" value="1" step="0.1">
-                                    <span class="form-addon-text">%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-2">
-                        <div class="form-group">
-                            <label class="form-label" for="honoraires-avocat-coef">Honoraires avocat (coef)</label>
-                            <div class="form-addon">
-                                <input type="number" id="honoraires-avocat-coef" class="form-input" value="0.25" step="0.01">
-                                <span class="form-addon-text">x</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="honoraires-avocat-tva">TVA honoraires avocat</label>
-                            <div class="form-addon">
-                                <input type="number" id="honoraires-avocat-tva" class="form-input" value="20" step="1">
-                                <span class="form-addon-text">%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="publicite-fonciere-encheres">Publicité foncière</label>
-                            <div class="form-addon">
-                                <input type="number" id="publicite-fonciere-encheres" class="form-input" value="0.10" step="0.01">
-                                <span class="form-addon-text">%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="frais-fixes">Frais fixes administratifs</label>
-                            <div class="form-addon">
-                                <input type="number" id="frais-fixes" class="form-input" value="50">
-                                <span class="form-addon-text">€</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="avocat-enchere">Avocat - porter l'enchère</label>
-                            <div class="form-addon">
-                                <input type="number" id="avocat-enchere" class="form-input" value="300">
-                                <span class="form-addon-text">€</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="suivi-dossier">Suivi de dossier</label>
-                            <div class="form-addon">
-                                <input type="number" id="suivi-dossier" class="form-input" value="1200">
-                                <span class="form-addon-text">€</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="caution-pourcent">Caution (% mise à prix)</label>
-                            <div class="form-addon">
-                                <input type="number" id="caution-pourcent" class="form-input" value="5" step="1">
-                                <span class="form-addon-text">%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="caution-restituee">Caution restituée</label>
-                            <div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="caution-restituee" checked>
-                                    <span class="slider"></span>
-                                </label>
-                                <span class="form-help">Si non cochée, la caution est incluse dans le coût total</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        // Créer une copie des résultats et paramètres actuels
+        const copieResultats = JSON.parse(JSON.stringify(this.params.resultats));
+        const copieParams = {
+            base: {...this.params.base},
+            communs: {...this.params.communs},
+            classique: {...this.params.classique},
+            encheres: {...this.params.encheres},
+            fiscalite: {...this.params.fiscalite}
+        };
         
-        <!-- Résultats (masqués par défaut) -->
-        <div id="results" class="hidden">
-            <h2 class="mt-8">Résultats de la simulation</h2>
+        // Ajouter à l'historique
+        this.historiqueSimulations.push({
+            id: Date.now(),
+            nom: nom || `Simulation du ${new Date().toLocaleDateString()}`,
+            date: new Date(),
+            params: copieParams,
+            resultats: copieResultats
+        });
+        
+        // Limiter l'historique à 10 simulations
+        if (this.historiqueSimulations.length > 10) {
+            this.historiqueSimulations.shift();
+        }
+        
+        return true;
+    }
+
+    /**
+     * Récupère l'historique des simulations
+     * @returns {Array} - Historique des simulations
+     */
+    getHistoriqueSimulations() {
+        return this.historiqueSimulations;
+    }
+
+    /**
+     * Calcule le montant total des frais de notaire pour l'achat classique
+     * @param {number} prix - Prix d'achat
+     * @returns {number} - Montant total des frais de notaire
+     */
+    calculerFraisNotaireClassique(prix) {
+        return prix * (
+            this.params.classique.publiciteFonciere / 100 +
+            this.params.classique.droitsMutation / 100 +
+            this.params.classique.securiteImmobiliere / 100 +
+            this.params.classique.emolumentsVente / 100 +
+            this.params.classique.formalites / 100 +
+            this.params.classique.debours / 100
+        );
+    }
+
+    /**
+     * Calcule les émoluments du poursuivant pour la vente aux enchères
+     * @param {number} prix - Prix d'adjudication
+     * @returns {number} - Montant des émoluments
+     */
+    calculerEmolumentsPoursuivant(prix) {
+        let emoluments = 0;
+        
+        if (prix <= 6500) {
+            emoluments = prix * this.params.encheres.emolumentsPoursuivant1 / 100;
+        } else if (prix <= 23500) {
+            emoluments = 6500 * this.params.encheres.emolumentsPoursuivant1 / 100;
+            emoluments += (prix - 6500) * this.params.encheres.emolumentsPoursuivant2 / 100;
+        } else if (prix <= 83500) {
+            emoluments = 6500 * this.params.encheres.emolumentsPoursuivant1 / 100;
+            emoluments += (23500 - 6500) * this.params.encheres.emolumentsPoursuivant2 / 100;
+            emoluments += (prix - 23500) * this.params.encheres.emolumentsPoursuivant3 / 100;
+        } else {
+            emoluments = 6500 * this.params.encheres.emolumentsPoursuivant1 / 100;
+            emoluments += (23500 - 6500) * this.params.encheres.emolumentsPoursuivant2 / 100;
+            emoluments += (83500 - 23500) * this.params.encheres.emolumentsPoursuivant3 / 100;
+            emoluments += (prix - 83500) * this.params.encheres.emolumentsPoursuivant4 / 100;
+        }
+        
+        return emoluments;
+    }
+
+    /**
+     * Calcule les honoraires d'avocat pour la vente aux enchères
+     * @param {number} emoluments - Émoluments du poursuivant
+     * @returns {number} - Montant des honoraires d'avocat
+     */
+    calculerHonorairesAvocat(emoluments) {
+        return emoluments * 
+            this.params.encheres.honorairesAvocatCoef * 
+            (1 + this.params.encheres.honorairesAvocatTVA / 100);
+    }
+
+    /**
+     * Calcule le montant des droits d'enregistrement pour la vente aux enchères
+     * @param {number} prix - Prix d'adjudication
+     * @returns {number} - Montant des droits d'enregistrement
+     */
+    calculerDroitsEnregistrement(prix) {
+        return prix * 
+            this.params.encheres.droitsEnregistrement / 100 * 
+            this.params.encheres.coefMutation;
+    }
+
+    /**
+     * Calcule le montant des frais bancaires
+     * @param {number} capitalEmprunte - Capital emprunté
+     * @returns {number} - Montant des frais bancaires
+     */
+    calculerFraisBancaires(capitalEmprunte) {
+        return this.params.communs.fraisBancairesDossier + 
+               this.params.communs.fraisBancairesCompte + 
+               (capitalEmprunte * this.params.communs.fraisGarantie / 100);
+    }
+
+    /**
+     * Calcule la mensualité du prêt
+     * @param {number} montantPret - Montant du prêt
+     * @param {number} taux - Taux d'intérêt annuel en %
+     * @param {number} dureeAnnees - Durée du prêt en années
+     * @returns {number} - Mensualité
+     */
+    calculerMensualite(montantPret, taux, dureeAnnees) {
+        const tauxMensuel = taux / 100 / 12;
+        const nombreMensualites = dureeAnnees * 12;
+        
+        if (tauxMensuel === 0) return montantPret / nombreMensualites;
+        
+        return (montantPret * tauxMensuel) / (1 - Math.pow(1 + tauxMensuel, -nombreMensualites));
+    }
+
+    /**
+     * Calcule le loyer mensuel brut en fonction du rendement souhaité
+     * @param {number} prixAchat - Prix d'achat du bien
+     * @param {number} rendementSouhaite - Rendement souhaité en %
+     * @param {number} surface - Surface en m²
+     * @returns {number} - Loyer mensuel brut
+     */
+    calculerLoyerBrut(prixAchat, rendementSouhaite, surface) {
+        // Loyer basé sur le rendement souhaité (prix d'achat * rendement annuel / 12 mois)
+        return (prixAchat * (rendementSouhaite / 100)) / 12;
+    }
+
+    /**
+     * Calcule le loyer mensuel net
+     * @param {number} loyerBrut - Loyer mensuel brut
+     * @param {number} vacance - Taux de vacance locative en %
+     * @returns {number} - Loyer mensuel net
+     */
+    calculerLoyerNet(loyerBrut, vacance) {
+        return loyerBrut * (1 - vacance / 100);
+    }
+
+    /**
+     * Calcule le montant des charges non récupérables
+     * @param {number} surface - Surface en m²
+     * @returns {number} - Montant mensuel des charges non récupérables
+     */
+    calculerChargesNonRecuperables(surface) {
+        // 30€/m²/an, divisé par 12 pour obtenir la valeur mensuelle
+        return (surface * 30) / 12;
+    }
+
+    /**
+     * Calcule le montant de l'entretien annuel
+     * @param {number} prixAchat - Prix d'achat
+     * @returns {number} - Montant mensuel de l'entretien
+     */
+    calculerEntretienMensuel(prixAchat) {
+        return (prixAchat * (this.params.communs.entretienAnnuel / 100)) / 12;
+    }
+
+    /**
+     * Calcule le cash-flow mensuel
+     * @param {number} loyerNet - Loyer mensuel net
+     * @param {number} mensualite - Mensualité du prêt
+     * @param {number} taxeFonciere - Montant annuel de la taxe foncière
+     * @param {number} chargesNonRecuperables - Charges non récupérables mensuelles
+     * @param {number} entretienMensuel - Coût d'entretien mensuel
+     * @param {number} assurancePNO - Coût annuel de l'assurance PNO
+     * @returns {number} - Cash-flow mensuel
+     */
+    calculerCashFlow(loyerNet, mensualite, taxeFonciere, chargesNonRecuperables, entretienMensuel, assurancePNO) {
+        return loyerNet - mensualite - (taxeFonciere / 12) - chargesNonRecuperables - entretienMensuel - (assurancePNO / 12);
+    }
+
+    /**
+     * Calcule l'impact fiscal
+     * @param {number} revenuFoncier - Revenu foncier annuel avant impôts
+     * @param {number} interetsEmprunt - Intérêts d'emprunt annuels
+     * @returns {number} - Impact fiscal annuel
+     */
+    calculerImpactFiscal(revenuFoncier, interetsEmprunt) {
+        // Si le revenu foncier est négatif et le déficit foncier est déductible
+        if (revenuFoncier < 0 && this.params.fiscalite.deficitFoncier) {
+            // Impact fiscal positif (économie d'impôt)
+            const tauxImposition = (this.params.fiscalite.tauxMarginalImpot + this.params.fiscalite.tauxPrelevementsSociaux) / 100;
+            return Math.abs(revenuFoncier) * tauxImposition;
+        } 
+        // Si le revenu foncier est positif
+        else if (revenuFoncier > 0) {
+            // Impact fiscal négatif (impôt à payer)
+            const tauxImposition = (this.params.fiscalite.tauxMarginalImpot + this.params.fiscalite.tauxPrelevementsSociaux) / 100;
+            return -revenuFoncier * tauxImposition;
+        }
+        
+        return 0;
+    }
+
+    /**
+     * Calcule le rendement net
+     * @param {number} loyerAnnuelNet - Loyer annuel net
+     * @param {number} chargesAnnuelles - Charges annuelles (taxe foncière, entretien, etc.)
+     * @param {number} impactFiscal - Impact fiscal annuel
+     * @param {number} prixTotal - Prix total de l'investissement
+     * @returns {number} - Rendement net en %
+     */
+    calculerRendementNet(loyerAnnuelNet, chargesAnnuelles, impactFiscal, prixTotal) {
+        const revenuNetApresImpot = loyerAnnuelNet - chargesAnnuelles + impactFiscal;
+        return (revenuNetApresImpot / prixTotal) * 100;
+    }
+
+    /**
+     * Calcule le tableau d'amortissement du prêt
+     * @param {number} montantPret - Montant du prêt
+     * @param {number} taux - Taux d'intérêt annuel en %
+     * @param {number} dureeAnnees - Durée du prêt en années
+     * @returns {Array} - Tableau d'amortissement
+     */
+    calculerTableauAmortissement(montantPret, taux, dureeAnnees) {
+        const tauxMensuel = taux / 100 / 12;
+        const nombreMensualites = dureeAnnees * 12;
+        const mensualite = this.calculerMensualite(montantPret, taux, dureeAnnees);
+        
+        let capitalRestant = montantPret;
+        const tableau = [];
+        
+        for (let i = 1; i <= nombreMensualites; i++) {
+            const interets = capitalRestant * tauxMensuel;
+            const amortissementCapital = mensualite - interets;
             
-            <div class="grid grid-2 mt-4">
-                <div class="results-card">
-                    <div class="results-header">
-                        <div class="flex justify-between items-center">
-                            <h3 class="card-title">
-                                <i class="fas fa-home mr-2"></i> Achat Classique
-                            </h3>
-                            <div class="tag tag-success">
-                                <i class="fas fa-chart-line mr-1"></i> <span id="classique-rentabilite">--</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="results-body">
-                        <div class="results-label">Surface optimale</div>
-                        <div class="results-value" id="classique-prix-max">--</div>
-                        
-                        <div class="accordion">
-                            <div class="accordion-header">
-                                <span>Détail des coûts</span>
-                                <i class="fas fa-chevron-down"></i>
-                            </div>
-                            <div class="accordion-body">
-                                <table class="comparison-table">
-                                    <tr>
-                                        <td>Prix d'achat</td>
-                                        <td class="highlight" id="classique-prix-achat">--</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Frais de notaire</td>
-                                        <td id="classique-frais-notaire">--</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Commission immobilière</td>
-                                        <td id="classique-commission">--</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Travaux</td>
-                                        <td id="classique-travaux">--</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Frais bancaires</td>
-                                        <td id="classique-frais-bancaires">--</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Coût total du projet</td>
-                                        <td class="highlight" id="classique-total">--</td>
-                                    </tr>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="results-footer">
-                        <div class="flex justify-between">
-                            <div>
-                                <div class="results-label">Mensualité</div>
-                                <div id="classique-mensualite">--</div>
-                            </div>
-                            <div>
-                                <div class="results-label">Loyer net</div>
-                                <div id="classique-loyer-net">--</div>
-                            </div>
-                            <div>
-                                <div class="results-label">Marge loyer-dette</div>
-                                <div id="classique-marge">--</div>
-                            </div>
-                            <div>
-                                <div class="results-label">Cash-flow</div>
-                                <div id="classique-cashflow">--</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="results-card">
-                    <div class="results-header">
-                        <div class="flex justify-between items-center">
-                            <h3 class="card-title">
-                                <i class="fas fa-gavel mr-2"></i> Vente aux Enchères
-                            </h3>
-                            <div class="tag tag-success">
-                                <i class="fas fa-chart-line mr-1"></i> <span id="encheres-rentabilite">--</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="results-body">
-                        <div class="results-label">Surface optimale</div>
-                        <div class="results-value" id="encheres-prix-max">--</div>
-                        
-                        <div class="accordion">
-                            <div class="accordion-header">
-                                <span>Détail des coûts</span>
-                                <i class="fas fa-chevron-down"></i>
-                            </div>
-                            <div class="accordion-body">
-                                <table class="comparison-table">
-                                    <tr>
-                                        <td>Prix d'adjudication</td>
-                                        <td class="highlight" id="encheres-prix-achat">--</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Droits d'enregistrement</td>
-                                        <td id="encheres-droits">--</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Émoluments du poursuivant</td>
-                                        <td id="encheres-emoluments">--</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Honoraires avocat</td>
-                                        <td id="encheres-honoraires">--</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Publicité foncière</td>
-                                        <td id="encheres-publicite">--</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Frais divers (fixes + avocat + suivi)</td>
-                                        <td id="encheres-frais-divers">--</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Travaux</td>
-                                        <td id="encheres-travaux">--</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Frais bancaires</td>
-                                        <td id="encheres-frais-bancaires">--</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Coût total du projet</td>
-                                        <td class="highlight" id="encheres-total">--</td>
-                                    </tr>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="results-footer">
-                        <div class="flex justify-between">
-                            <div>
-                                <div class="results-label">Mensualité</div>
-                                <div id="encheres-mensualite">--</div>
-                            </div>
-                            <div>
-                                <div class="results-label">Loyer net</div>
-                                <div id="encheres-loyer-net">--</div>
-                            </div>
-                            <div>
-                                <div class="results-label">Marge loyer-dette</div>
-                                <div id="encheres-marge">--</div>
-                            </div>
-                            <div>
-                                <div class="results-label">Cash-flow</div>
-                                <div id="encheres-cashflow">--</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            capitalRestant -= amortissementCapital;
             
-            <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg transition-all mt-4">
-                <div class="card-header">
-                    <div class="card-icon">
-                        <i class="fas fa-balance-scale"></i>
-                    </div>
-                    <h2 class="card-title">Comparatif des options</h2>
-                </div>
-                
-                <div class="comparison-header">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <strong>Achat classique vs Vente aux enchères</strong>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="comparison-table">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Critère</th>
-                                <th>Achat Classique</th>
-                                <th>Vente aux Enchères</th>
-                                <th>Différence</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Prix d'achat</td>
-                                <td id="comp-classique-prix">--</td>
-                                <td id="comp-encheres-prix">--</td>
-                                <td id="comp-prix-diff">--</td>
-                            </tr>
-                            <tr>
-                                <td>Budget total</td>
-                                <td id="comp-classique-total">--</td>
-                                <td id="comp-encheres-total">--</td>
-                                <td id="comp-total-diff">--</td>
-                            </tr>
-                            <tr>
-                                <td>Loyer mensuel</td>
-                                <td id="comp-classique-loyer">--</td>
-                                <td id="comp-encheres-loyer">--</td>
-                                <td id="comp-loyer-diff">--</td>
-                            </tr>
-                            <tr>
-                                <td>Rentabilité nette</td>
-                                <td id="comp-classique-rentabilite">--</td>
-                                <td id="comp-encheres-rentabilite">--</td>
-                                <td id="comp-rentabilite-diff">--</td>
-                            </tr>
-                            <tr>
-                                <td>Cash-flow mensuel</td>
-                                <td id="comp-classique-cashflow">--</td>
-                                <td id="comp-encheres-cashflow">--</td>
-                                <td id="comp-cashflow-diff">--</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <div class="mt-4">
-                    <div class="badge badge-primary mr-2">
-                        <i class="fas fa-home mr-1"></i> Achat Classique
-                    </div>
-                    <span id="classique-avantages">
-                        Points forts: Processus d'achat plus simple, délais plus courts, moins de risques juridiques
-                    </span>
-                </div>
-                
-                <div class="mt-4">
-                    <div class="badge badge-accent mr-2">
-                        <i class="fas fa-gavel mr-1"></i> Vente aux Enchères
-                    </div>
-                    <span id="encheres-avantages">
-                        Points forts: Prix d'achat potentiellement plus bas, absence de négociation, potentiel de valorisation supérieur
-                    </span>
-                </div>
-            </div>
+            tableau.push({
+                periode: i,
+                mensualite: mensualite,
+                interets: interets,
+                amortissementCapital: amortissementCapital,
+                capitalRestant: Math.max(0, capitalRestant) // Éviter les valeurs négatives dues aux arrondis
+            });
+        }
+        
+        return tableau;
+    }
 
-            <!-- Ajouté pour la sauvegarde des simulations -->
-            <div class="mt-8">
-                <div class="form-group">
-                    <label class="form-label" for="simulation-name">Nom de la simulation</label>
-                    <input type="text" id="simulation-name" class="form-input" placeholder="Ma simulation immobilière">
-                </div>
-                <button id="btn-save-simulation" class="btn btn-outline hidden">
-                    <i class="fas fa-save"></i> Sauvegarder la simulation
-                </button>
-            </div>
+    /**
+     * Calcule tous les paramètres pour une surface et un mode (classique/enchères) donnés
+     * @param {number} surface - Surface en m²
+     * @param {string} mode - Mode d'achat ("classique" ou "encheres")
+     * @returns {Object} - Résultats complets de la simulation
+     */
+    calculeTout(surface, mode) {
+        const apport = this.params.base.apport;
+        const taux = this.params.base.taux;
+        const duree = this.params.base.duree;
+        const rendementSouhaite = this.params.base.rendementMin;
+        const vacanceLocative = this.params.communs.vacanceLocative;
+        
+        // Prix d'achat (en fonction de la surface)
+        // Utiliser le prix au m² paramétré
+        const prixM2 = parseFloat(this.params.communs.prixM2);
+        const prixAchat = surface * prixM2;
+        
+        // Travaux (0,5% du prix d'achat)
+        const travaux = prixAchat * 0.005;
+        
+        // Frais spécifiques selon le mode d'achat
+        let fraisSpecifiques = 0;
+        let fraisDetails = {};
+        
+        if (mode === 'classique') {
+            const fraisNotaire = this.calculerFraisNotaireClassique(prixAchat);
+            const commission = prixAchat * this.params.classique.commissionImmo / 100;
+            fraisSpecifiques = fraisNotaire + commission;
+            fraisDetails = {
+                fraisNotaire,
+                commission
+            };
+        } else { // mode === 'encheres'
+            const droitsEnregistrement = this.calculerDroitsEnregistrement(prixAchat);
+            const emolumentsPoursuivant = this.calculerEmolumentsPoursuivant(prixAchat);
+            const honorairesAvocat = this.calculerHonorairesAvocat(emolumentsPoursuivant);
+            const publiciteFonciere = prixAchat * this.params.encheres.publiciteFonciereEncheres / 100;
+            const fraisDivers = this.params.encheres.fraisFixes + 
+                              this.params.encheres.avocatEnchere + 
+                              this.params.encheres.suiviDossier;
+            const caution = this.params.encheres.cautionRestituee ? 0 : 
+                          prixAchat * this.params.encheres.cautionPourcent / 100;
+            
+            fraisSpecifiques = droitsEnregistrement + emolumentsPoursuivant + 
+                             honorairesAvocat + publiciteFonciere + fraisDivers + caution;
+            
+            fraisDetails = {
+                droitsEnregistrement,
+                emolumentsPoursuivant,
+                honorairesAvocat,
+                publiciteFonciere,
+                fraisDivers,
+                caution
+            };
+        }
+        
+        // Coût hors frais bancaires
+        const coutHorsFraisB = prixAchat + fraisSpecifiques + travaux;
+        
+        // Calcul analytique de l'emprunt
+        const fraisDossier = this.params.communs.fraisBancairesDossier;
+        const fraisCompte = this.params.communs.fraisBancairesCompte;
+        const tauxGarantie = this.params.communs.fraisGarantie / 100;
+        
+        const emprunt = (coutHorsFraisB - apport + fraisDossier + fraisCompte) 
+                     / (1 - tauxGarantie);
+        
+        // Frais bancaires
+        const fraisBancaires = fraisDossier + fraisCompte + emprunt * tauxGarantie;
+        
+        // Coût total
+        const coutTotal = coutHorsFraisB + fraisBancaires;
+        
+        // Mensualité
+        const mensualite = this.calculerMensualite(emprunt, taux, duree);
+        
+        // Loyer (basé sur la valeur au m² du marché, non plus sur le rendement souhaité)
+        const loyerBrut = surface * this.params.communs.loyerM2;
+        const rendementBrut = (loyerBrut * 12) / prixAchat * 100;
+        const loyerNet = this.calculerLoyerNet(loyerBrut, vacanceLocative);
+        
+        // Taxe foncière (5% du loyer annuel brut)
+        const taxeFonciere = loyerBrut * 12 * 0.05;
+        
+        // Charges non récupérables (30€/m²/an)
+        const chargesCopro = surface * 30;
+        const chargesNonRecuperables = chargesCopro / 12; // Mensuel
+        
+        // Entretien
+        const entretienMensuel = this.calculerEntretienMensuel(prixAchat);
+        
+        // Assurance PNO
+        const assurancePNO = this.params.communs.assurancePNO;
+        
+        // Cash-flow
+        const cashFlow = this.calculerCashFlow(
+            loyerNet, mensualite, taxeFonciere, 
+            chargesNonRecuperables, entretienMensuel, assurancePNO
+        );
+        
+        // Calcul des intérêts pour la première année
+        const tableauAmortissement = this.calculerTableauAmortissement(emprunt, taux, duree);
+        const interetsPremierAnnee = tableauAmortissement.slice(0, 12).reduce((sum, m) => sum + m.interets, 0);
+        
+        // Revenu foncier avant impôt
+        const chargesDeductibles = taxeFonciere + assurancePNO + chargesCopro + (entretienMensuel * 12);
+        const revenuFoncier = (loyerNet * 12) - chargesDeductibles - interetsPremierAnnee;
+        
+        // Impact fiscal
+        const impactFiscal = this.calculerImpactFiscal(revenuFoncier, interetsPremierAnnee);
+        
+        // Rendement net
+        const rendementNet = this.calculerRendementNet(
+            loyerNet * 12, chargesDeductibles, impactFiscal, coutTotal
+        );
+        
+        // Construire le résultat
+        const resultat = {
+            surface,
+            prixAchat,
+            prixM2,
+            travaux,
+            fraisBancaires,
+            coutTotal,
+            emprunt,
+            mensualite,
+            loyerNet,
+            loyerBrut,
+            loyerM2: surface > 0 ? loyerBrut / surface : 0,
+            taxeFonciere,
+            chargesNonRecuperables: chargesCopro,
+            entretienAnnuel: entretienMensuel * 12,
+            assurancePNO,
+            interetsAnnee1: interetsPremierAnnee,
+            revenuFoncier,
+            impactFiscal,
+            cashFlow,
+            cashFlowAnnuel: cashFlow * 12,
+            rendementNet,
+            rendementBrut,
+            marge: loyerNet - mensualite,
+            tableauAmortissement
+        };
+        
+        // Ajouter les détails spécifiques selon le mode
+        if (mode === 'classique') {
+            resultat.fraisNotaire = fraisDetails.fraisNotaire;
+            resultat.commission = fraisDetails.commission;
+        } else {
+            resultat.droitsEnregistrement = fraisDetails.droitsEnregistrement;
+            resultat.emolumentsPoursuivant = fraisDetails.emolumentsPoursuivant;
+            resultat.honorairesAvocat = fraisDetails.honorairesAvocat;
+            resultat.publiciteFonciere = fraisDetails.publiciteFonciere;
+            resultat.fraisDivers = fraisDetails.fraisDivers;
+            resultat.caution = fraisDetails.caution;
+        }
+        
+        return resultat;
+    }
 
-            <!-- Ajouté pour l'historique des simulations -->
-            <div id="historique-container" class="mt-8 hidden">
-                <h2 class="text-xl font-bold mb-4">Historique des simulations</h2>
-                <div id="historique-list" class="grid gap-4">
-                    <!-- Les éléments d'historique seront générés ici -->
-                </div>
-            </div>
-        </div>
-    </div>
+    /**
+     * Cherche la surface maximale viable selon les contraintes
+     * @param {string} mode - Mode d'achat ("classique" ou "encheres")
+     * @param {number} pas - Pas d'incrémentation de la surface
+     * @returns {Object} - Résultats de la simulation pour la surface optimale
+     */
+    chercheSurfaceMax(mode, pas = 1) {
+        const SURFACE_MAX = this.params.base.surfaceMax || 100;
+        
+        // Commence à 1m² (ou au pas paramétré) pour tester les micro-studios
+        let surface = Math.max(1, pas);
+        let best = null;
+        
+        // Récupérer le seuil de cash-flow minimum
+        const seuilCF = Number(
+            document.getElementById('cashflow-min')?.value || 1
+        );
+        
+        while (surface <= SURFACE_MAX) {
+            const res = this.calculeTout(surface, mode);
+            
+            // Supprimer la condition de rendement, ne garder que le test de cash-flow
+            const margeOK = res.loyerNet >= res.mensualite + seuilCF;
+            
+            if (margeOK) {
+                best = res;          // on garde
+                surface += pas;      // on tente plus grand
+            } else {
+                break;               // premier échec → on stoppe
+            }
+        }
+        
+        return best; // null si aucune surface ne passe
+    }
 
-    <!-- Loading indicator -->
-    <div class="loading" style="display: none;">
-        <div class="loading-spinner"></div>
-    </div>
+    /**
+     * Calcule le prix maximum pour l'achat classique selon les critères
+     * @returns {Object} - Résultats de la simulation pour l'achat classique
+     */
+    simulerAchatClassique() {
+        const resultats = this.chercheSurfaceMax('classique');
+        
+        // Stocker les résultats
+        this.params.resultats.classique = resultats;
+        
+        return resultats;
+    }
 
-    <!-- Scripts -->
-    <script src="./immo-simulation.js"></script>
-    <script src="./simulation-interface.js"></script>
-    <script src="./debug-immo.js"></script>
+    /**
+     * Calcule le prix maximum pour la vente aux enchères selon les critères
+     * @returns {Object} - Résultats de la simulation pour la vente aux enchères
+     */
+    simulerVenteEncheres() {
+        const resultats = this.chercheSurfaceMax('encheres');
+        
+        // Stocker les résultats
+        this.params.resultats.encheres = resultats;
+        
+        return resultats;
+    }
+
+    /**
+     * Exécute la simulation complète
+     * @returns {Object} - Résultats de la simulation pour les deux modes d'achat
+     */
+    simuler() {
+        const resultatsClassique = this.simulerAchatClassique();
+        const resultatsEncheres = this.simulerVenteEncheres();
+        
+        return {
+            classique: resultatsClassique,
+            encheres: resultatsEncheres
+        };
+    }
+
+    /**
+     * Fournit les données pour les graphiques de comparaison
+     * @returns {Object} - Données formatées pour Chart.js
+     */
+    getComparisonChartData() {
+        if (!this.params.resultats.classique || !this.params.resultats.encheres) {
+            return null;
+        }
+
+        const resultats = this.params.resultats;
+        return {
+            labels: ['Prix d\'achat', 'Coût total', 'Rentabilité (%)', 'Cash-flow mensuel'],
+            datasets: [
+                {
+                    label: 'Achat Classique',
+                    data: [
+                        resultats.classique.prixAchat,
+                        resultats.classique.coutTotal,
+                        resultats.classique.rendementNet,
+                        resultats.classique.cashFlow
+                    ],
+                    backgroundColor: 'rgba(0, 255, 135, 0.2)',
+                    borderColor: 'rgba(0, 255, 135, 1)',
+                    borderWidth: 2,
+                    borderRadius: 5,
+                },
+                {
+                    label: 'Vente aux Enchères',
+                    data: [
+                        resultats.encheres.prixAchat,
+                        resultats.encheres.coutTotal,
+                        resultats.encheres.rendementNet,
+                        resultats.encheres.cashFlow
+                    ],
+                    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                    borderColor: 'rgba(245, 158, 11, 1)',
+                    borderWidth: 2,
+                    borderRadius: 5,
+                }
+            ]
+        };
+    }
+
+    /**
+     * Calcule les données d'amortissement sur la durée du prêt
+     * @returns {Object} - Données formatées pour Chart.js
+     */
+    getAmortissementData() {
+        if (!this.params.resultats.classique || !this.params.resultats.encheres) {
+            return null;
+        }
+
+        const resultats = this.params.resultats;
+        const duree = this.params.base.duree;
+        const labels = Array.from({length: duree}, (_, i) => `Année ${i+1}`);
+        
+        // Calcul des cash-flows cumulés sur la durée du prêt
+        const cashFlowsClassique = [];
+        const cashFlowsEncheres = [];
+        
+        let cumulClassique = 0;
+        let cumulEncheres = 0;
+        
+        for (let i = 0; i < duree; i++) {
+            // Cash-flow annuel
+            const annualClassique = resultats.classique.cashFlow * 12;
+            const annualEncheres = resultats.encheres.cashFlow * 12;
+            
+            cumulClassique += annualClassique;
+            cumulEncheres += annualEncheres;
+            
+            cashFlowsClassique.push(cumulClassique);
+            cashFlowsEncheres.push(cumulEncheres);
+        }
+        
+        return {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Cash-flow cumulé - Achat Classique',
+                    data: cashFlowsClassique,
+                    fill: true,
+                    backgroundColor: 'rgba(0, 255, 135, 0.1)',
+                    borderColor: 'rgba(0, 255, 135, 1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointBackgroundColor: 'rgba(0, 255, 135, 1)',
+                },
+                {
+                    label: 'Cash-flow cumulé - Vente aux Enchères',
+                    data: cashFlowsEncheres,
+                    fill: true,
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    borderColor: 'rgba(245, 158, 11, 1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointBackgroundColor: 'rgba(245, 158, 11, 1)',
+                }
+            ]
+        };
+    }
+
+    /**
+     * Calcule la répartition des coûts pour les graphiques en camembert
+     * @returns {Object} - Données formatées pour Chart.js
+     */
+    getCoutsPieChartData() {
+        if (!this.params.resultats.classique || !this.params.resultats.encheres) {
+            return null;
+        }
+        
+        const resultats = this.params.resultats;
+        
+        // Répartition des coûts pour l'achat classique
+        const classique = {
+            labels: ['Prix d\'achat', 'Frais de notaire', 'Commission', 'Travaux', 'Frais bancaires'],
+            datasets: [{
+                data: [
+                    resultats.classique.prixAchat,
+                    resultats.classique.fraisNotaire,
+                    resultats.classique.commission,
+                    resultats.classique.travaux,
+                    resultats.classique.fraisBancaires
+                ],
+                backgroundColor: [
+                    'rgba(0, 255, 135, 0.7)',
+                    'rgba(0, 200, 100, 0.7)',
+                    'rgba(0, 150, 80, 0.7)',
+                    'rgba(0, 100, 60, 0.7)',
+                    'rgba(0, 50, 40, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        };
+        
+        // Répartition des coûts pour la vente aux enchères
+        const encheres = {
+            labels: ['Prix d\'achat', 'Droits d\'enregistrement', 'Émoluments', 'Honoraires avocat', 'Travaux', 'Frais divers', 'Frais bancaires'],
+            datasets: [{
+                data: [
+                    resultats.encheres.prixAchat,
+                    resultats.encheres.droitsEnregistrement,
+                    resultats.encheres.emolumentsPoursuivant,
+                    resultats.encheres.honorairesAvocat,
+                    resultats.encheres.travaux,
+                    resultats.encheres.fraisDivers,
+                    resultats.encheres.fraisBancaires
+                ],
+                backgroundColor: [
+                    'rgba(245, 158, 11, 0.7)',
+                    'rgba(220, 140, 10, 0.7)',
+                    'rgba(200, 120, 10, 0.7)',
+                    'rgba(180, 100, 10, 0.7)',
+                    'rgba(160, 80, 10, 0.7)',
+                    'rgba(140, 60, 10, 0.7)',
+                    'rgba(120, 40, 10, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        };
+        
+        return {
+            classique: classique,
+            encheres: encheres
+        };
+    }
     
-    <!-- Script pour mettre à jour l'heure du marché -->
-    <script>
-        // Mise à jour de l'heure du marché
-        function updateMarketTime() {
-            const now = new Date();
-            const hours = now.getHours().toString().padStart(2, '0');
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            const seconds = now.getSeconds().toString().padStart(2, '0');
-            document.getElementById('marketTime').textContent = `${hours}:${minutes}:${seconds}`;
+    /**
+     * Calcule les données pour le graphique d'évolution de la valeur du bien
+     * @param {number} tauxAppreciation - Taux d'appréciation annuel en %
+     * @returns {Object} - Données formatées pour Chart.js
+     */
+    getEvolutionValeurData(tauxAppreciation = 2) {
+        if (!this.params.resultats.classique || !this.params.resultats.encheres) {
+            return null;
         }
         
-        // Mettre à jour l'heure toutes les secondes
-        setInterval(updateMarketTime, 1000);
-        updateMarketTime(); // Initialiser l'heure
-    </script>
-</body>
-</html>
+        const resultats = this.params.resultats;
+        const duree = this.params.base.duree;
+        const labels = Array.from({length: duree + 1}, (_, i) => i === 0 ? 'Achat' : `Année ${i}`);
+        
+        // Évolution de la valeur du bien
+        const valeursClassique = [resultats.classique.prixAchat];
+        const valeursEncheres = [resultats.encheres.prixAchat];
+        
+        // Évolution de la valeur patrimoniale (valeur du bien - capital restant dû)
+        const patrimoineClassique = [resultats.classique.prixAchat - resultats.classique.emprunt];
+        const patrimoineEncheres = [resultats.encheres.prixAchat - resultats.encheres.emprunt];
+        
+        let valeurClassique = resultats.classique.prixAchat;
+        let valeurEncheres = resultats.encheres.prixAchat;
+        
+        for (let i = 1; i <= duree; i++) {
+            // Appréciation de la valeur du bien
+            valeurClassique *= (1 + tauxAppreciation / 100);
+            valeurEncheres *= (1 + tauxAppreciation / 100);
+            
+            valeursClassique.push(valeurClassique);
+            valeursEncheres.push(valeurEncheres);
+            
+            // Capital restant dû à l'année i
+            const capitalRestantClassique = i * 12 < resultats.classique.tableauAmortissement.length 
+                ? resultats.classique.tableauAmortissement[i * 12 - 1].capitalRestant 
+                : 0;
+                
+            const capitalRestantEncheres = i * 12 < resultats.encheres.tableauAmortissement.length 
+                ? resultats.encheres.tableauAmortissement[i * 12 - 1].capitalRestant 
+                : 0;
+            
+            // Calcul de la valeur patrimoniale
+            patrimoineClassique.push(valeurClassique - capitalRestantClassique);
+            patrimoineEncheres.push(valeurEncheres - capitalRestantEncheres);
+        }
+        
+        return {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Valeur du bien - Achat Classique',
+                    data: valeursClassique,
+                    borderColor: 'rgba(0, 255, 135, 1)',
+                    backgroundColor: 'rgba(0, 255, 135, 0.05)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 2,
+                },
+                {
+                    label: 'Valeur du bien - Vente aux Enchères',
+                    data: valeursEncheres,
+                    borderColor: 'rgba(245, 158, 11, 1)',
+                    backgroundColor: 'rgba(245, 158, 11, 0.05)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 2,
+                },
+                {
+                    label: 'Patrimoine net - Achat Classique',
+                    data: patrimoineClassique,
+                    borderColor: 'rgba(0, 200, 100, 1)',
+                    backgroundColor: 'rgba(0, 200, 100, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1,
+                    pointRadius: 2,
+                },
+                {
+                    label: 'Patrimoine net - Vente aux Enchères',
+                    data: patrimoineEncheres,
+                    borderColor: 'rgba(220, 140, 10, 1)',
+                    backgroundColor: 'rgba(220, 140, 10, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1,
+                    pointRadius: 2,
+                }
+            ]
+        };
+    }
+}
+
+// Export pour la compatibilité avec différents environnements
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+    module.exports = SimulateurImmo;
+} else {
+    window.SimulateurImmo = SimulateurImmo;
+}
