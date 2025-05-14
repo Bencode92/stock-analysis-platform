@@ -398,6 +398,11 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('vacance-locative').value = simulation.params.communs.vacanceLocative;
         document.getElementById('travaux-m2').value = simulation.params.communs.travauxM2;
         
+        // Récupération du pourcentage d'apport minimum s'il existe
+        if (simulation.params.base.pourcentApportMin && document.getElementById('pourcent-apport')) {
+            document.getElementById('pourcent-apport').value = simulation.params.base.pourcentApportMin;
+        }
+        
         // Afficher les paramètres avancés
         advancedParams.classList.remove('hidden');
         btnAdvancedToggle.innerHTML = '<i class="fas fa-times"></i> Masquer les paramètres';
@@ -823,6 +828,9 @@ document.addEventListener('DOMContentLoaded', function() {
             surface: document.getElementById('surface').value,
             taux: document.getElementById('taux').value,
             duree: document.getElementById('duree').value,
+            
+            // Ajouter le paramètre d'apport minimum
+            pourcentApportMin: document.getElementById('pourcent-apport')?.value || 10,
             
             // Paramètres communs
             fraisBancairesDossier: document.getElementById('frais-bancaires-dossier').value,
