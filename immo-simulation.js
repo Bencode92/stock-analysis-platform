@@ -27,7 +27,7 @@ class SimulateurImmo {
                 fraisGarantie: 1.3709,        // % du capital emprunté
                 taxeFonciere: 0,              // % du prix (remplacé par 5% du loyer)
                 vacanceLocative: 8,           // % des loyers
-                loyerM2: 2.25,                // €/m²/mois
+                loyerM2: 12,                  // €/m²/mois
                 travauxM2: 10,                // €/m² (remplacé par 0.5% du prix)
                 entretienAnnuel: 0.5,         // % du prix d'achat
                 assurancePNO: 250,            // € par an
