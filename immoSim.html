@@ -983,6 +983,15 @@
                 
                 <!-- Champ caché pour compatibilité avec le code existant -->
                 <input type="hidden" id="rendement-min" value="0">
+                
+                <!-- Ajout du champ cash-flow minimum -->
+                <div id="cashflow-min-group" class="form-group" style="display: none;">
+                    <label class="form-label" for="cashflow-min">Cash-flow minimum</label>
+                    <div class="form-addon">
+                        <input type="number" id="cashflow-min" class="form-input" value="1" step="1">
+                        <span class="form-addon-text">€</span>
+                    </div>
+                </div>
             </div>
             
             <div class="flex justify-between items-center mt-4">
@@ -1523,6 +1532,25 @@
                     <span id="encheres-avantages">
                         Points forts: Prix d'achat potentiellement plus bas, absence de négociation, potentiel de valorisation supérieur
                     </span>
+                </div>
+            </div>
+
+            <!-- Ajouté pour la sauvegarde des simulations -->
+            <div class="mt-8">
+                <div class="form-group">
+                    <label class="form-label" for="simulation-name">Nom de la simulation</label>
+                    <input type="text" id="simulation-name" class="form-input" placeholder="Ma simulation immobilière">
+                </div>
+                <button id="btn-save-simulation" class="btn btn-outline hidden">
+                    <i class="fas fa-save"></i> Sauvegarder la simulation
+                </button>
+            </div>
+
+            <!-- Ajouté pour l'historique des simulations -->
+            <div id="historique-container" class="mt-8 hidden">
+                <h2 class="text-xl font-bold mb-4">Historique des simulations</h2>
+                <div id="historique-list" class="grid gap-4">
+                    <!-- Les éléments d'historique seront générés ici -->
                 </div>
             </div>
         </div>
