@@ -19,7 +19,8 @@ class SimulateurImmo {
                 duree: 20,                    // Durée du prêt
                 // objectif: 'cashflow',      // Objectif: cashflow ou rendement (supprimé)
                 // rendementMin: 5,           // Rendement minimum souhaité (supprimé)
-                surfaceMax: 100               // Surface maximale autorisée
+                surfaceMax: 100,              // Surface maximale autorisée
+                pourcentApportMin: 10         // Pourcentage d'apport minimum exigé (ajouté)
             },
             communs: {
                 fraisBancairesDossier: 2000,
@@ -108,11 +109,20 @@ class SimulateurImmo {
      * @param {number} eps    précision souhaitée (ex: 100 €)
      * @returns {Object|null} résultats complets pour le prix max trouvé
      */
-    cherchePrixMaxDicho(mode, Pmin = 0, Pmax = 3000000, eps = 100) {
-        let best = null;
-
+    cherchePrixMaxDicho(mode, Pmin = 0, Pmax = null, eps = 100) {
+        const apport = this.params.base.apport;
+        const pourcentApportMin = this.params.base.pourcentApportMin || 10;
+        
+        // Si Pmax n'est pas fourni, le calculer selon le ratio d'apport
+        if (Pmax === null) {
+            const ratio = pourcentApportMin / 100;
+            Pmax = Math.min(3000000, apport / ratio);
+        }
+        
         // Si la marge est déjà négative au plancher, rien n'est finançable
         if (this.calculeToutDepuisPrix(Pmin, mode).marge < 0) return null;
+
+        let best = null;
 
         while (Pmax - Pmin > eps) {
             const Pmid = (Pmin + Pmax) / 2;
@@ -152,10 +162,11 @@ class SimulateurImmo {
         this.params.base.surface = parseFloat(formData.surface) || 50;
         this.params.base.taux = parseFloat(formData.taux) || 3.5;
         this.params.base.duree = parseFloat(formData.duree) || 20;
-        // Paramètres supprimés
-        // this.params.base.objectif = formData.objectif || 'cashflow';
-        // this.params.base.rendementMin = parseFloat(formData.rendementMin) || 5;
-
+        
+        // Ajouter le chargement du pourcentage d'apport minimum
+        if (formData.pourcentApportMin !== undefined)
+            this.params.base.pourcentApportMin = parseFloat(formData.pourcentApportMin) || 10;
+        
         // Paramètres communs
         if (formData.fraisBancairesDossier !== undefined) 
             this.params.communs.fraisBancairesDossier = parseFloat(formData.fraisBancairesDossier);
@@ -662,12 +673,8 @@ class SimulateurImmo {
      * @returns {Object} - Résultats de la simulation pour l'achat classique
      */
     simulerAchatClassique() {
-        // Utilisation intelligente des bornes
-        const apport = this.params.base.apport;
-        const Pmin = Math.max(1000, apport * 1.1); // Prix minimum réaliste
-        const Pmax = Math.min(3000000, (apport / 0.1) * 2); // 2x capacité approximative
-        
-        const resultats = this.cherchePrixMaxDicho('classique', Pmin, Pmax);
+        // Utilisation de cherchePrixMaxDicho sans paramètres Pmin et Pmax
+        const resultats = this.cherchePrixMaxDicho('classique');
         
         // Stocker les résultats
         this.params.resultats.classique = resultats;
@@ -680,12 +687,8 @@ class SimulateurImmo {
      * @returns {Object} - Résultats de la simulation pour la vente aux enchères
      */
     simulerVenteEncheres() {
-        // Utilisation intelligente des bornes
-        const apport = this.params.base.apport;
-        const Pmin = Math.max(1000, apport * 1.1); // Prix minimum réaliste
-        const Pmax = Math.min(3000000, (apport / 0.1) * 2); // 2x capacité approximative
-        
-        const resultats = this.cherchePrixMaxDicho('encheres', Pmin, Pmax);
+        // Utilisation de cherchePrixMaxDicho sans paramètres Pmin et Pmax
+        const resultats = this.cherchePrixMaxDicho('encheres');
         
         // Stocker les résultats
         this.params.resultats.encheres = resultats;
