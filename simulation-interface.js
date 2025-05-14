@@ -3,9 +3,16 @@
  * 
  * Ce script gère l'interaction avec l'utilisateur, le rendu des résultats
  * et l'affichage dynamique des éléments d'interface.
+ * 
+ * Version 1.0 - Version initiale
+ * Version 1.1 - Corrections des coquilles et optimisations mineures
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Constantes globales
+    const TOAST_DURATION = 5000; // Durée d'affichage des toasts en millisecondes
+    const CHART_ANIMATION_DURATION = 2000; // Durée des animations de graphique
+
     // Initialiser le simulateur
     const simulateur = new SimulateurImmo();
 
@@ -64,6 +71,12 @@ document.addEventListener('DOMContentLoaded', function() {
             border-radius: 4px;
             font-size: 0.8rem;
             font-weight: 600;
+        }
+        
+        /* Ajout de style pour les conteneurs de graphiques en vue mobile */
+        .chart-container {
+            overflow-x: auto;
+            margin-bottom: 1rem;
         }
     `;
     document.head.appendChild(styleEl);
@@ -479,7 +492,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 300);
         });
         
-        // Disparaître après 5 secondes
+        // Disparaître après la durée définie dans la constante
         setTimeout(() => {
             if (toastContainer.contains(toast)) {
                 toast.classList.add('fade-out');
@@ -489,7 +502,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }, 300);
             }
-        }, 5000);
+        }, TOAST_DURATION);
     }
 
     /**
@@ -504,6 +517,10 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             document.querySelectorAll('.results-card').forEach(card => {
                 card.style.marginBottom = '2rem';
+            });
+            // Ajouter la classe chart-container aux conteneurs de graphiques
+            document.querySelectorAll('.chart-wrapper').forEach(wrapper => {
+                wrapper.classList.add('chart-container');
             });
         } else {
             document.querySelectorAll('.grid-2').forEach(grid => {
@@ -616,7 +633,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     },
                     animation: {
-                        duration: 2000,
+                        duration: CHART_ANIMATION_DURATION,
                         easing: 'easeOutQuart'
                     }
                 }
@@ -681,7 +698,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     },
                     animation: {
-                        duration: 2000,
+                        duration: CHART_ANIMATION_DURATION,
                         easing: 'easeOutQuart'
                     }
                 }
@@ -742,7 +759,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     },
                     animation: {
-                        duration: 2000,
+                        duration: CHART_ANIMATION_DURATION,
                         easing: 'easeOutQuart'
                     }
                 }
@@ -775,14 +792,18 @@ document.addEventListener('DOMContentLoaded', function() {
                                 label: function(context) {
                                     const label = context.label || '';
                                     const value = formaterMontant(context.raw);
-                                    const percentage = ((context.raw / context.chart._metasets[0].total) * 100).toFixed(1) + '%';
+                                    // Méthode compatible avec Chart.js v3 et v4
+                                    const total = context.chart.getDatasetMeta 
+                                        ? context.chart.getDatasetMeta(0).total 
+                                        : context.chart._metasets[0].total;
+                                    const percentage = ((context.raw / total) * 100).toFixed(1) + '%';
                                     return `${label}: ${value} (${percentage})`;
                                 }
                             }
                         }
                     },
                     animation: {
-                        duration: 2000,
+                        duration: CHART_ANIMATION_DURATION,
                         animateRotate: true,
                         animateScale: true
                     }
@@ -815,14 +836,18 @@ document.addEventListener('DOMContentLoaded', function() {
                                 label: function(context) {
                                     const label = context.label || '';
                                     const value = formaterMontant(context.raw);
-                                    const percentage = ((context.raw / context.chart._metasets[0].total) * 100).toFixed(1) + '%';
+                                    // Méthode compatible avec Chart.js v3 et v4
+                                    const total = context.chart.getDatasetMeta 
+                                        ? context.chart.getDatasetMeta(0).total 
+                                        : context.chart._metasets[0].total;
+                                    const percentage = ((context.raw / total) * 100).toFixed(1) + '%';
                                     return `${label}: ${value} (${percentage})`;
                                 }
                             }
                         }
                     },
                     animation: {
-                        duration: 2000,
+                        duration: CHART_ANIMATION_DURATION,
                         animateRotate: true,
                         animateScale: true
                     }
@@ -884,9 +909,9 @@ document.addEventListener('DOMContentLoaded', function() {
             droitsEnregistrement: document.getElementById('droits-enregistrement').value,
             coefMutation: document.getElementById('coef-mutation').value,
             emolumentsPoursuivant1: document.getElementById('emoluments-poursuivant-1').value,
-            emolementsPoursuivant2: document.getElementById('emoluments-poursuivant-2').value,
-            emolementsPoursuivant3: document.getElementById('emoluments-poursuivant-3').value,
-            emolementsPoursuivant4: document.getElementById('emoluments-poursuivant-4').value,
+            emolumentsPoursuivant2: document.getElementById('emoluments-poursuivant-2').value,
+            emolumentsPoursuivant3: document.getElementById('emoluments-poursuivant-3').value,
+            emolumentsPoursuivant4: document.getElementById('emoluments-poursuivant-4').value,
             honorairesAvocatCoef: document.getElementById('honoraires-avocat-coef').value,
             honorairesAvocatTVA: document.getElementById('honoraires-avocat-tva').value,
             publiciteFonciereEncheres: document.getElementById('publicite-fonciere-encheres').value,
