@@ -25,13 +25,13 @@ class SimulateurImmo {
                 fraisBancairesDossier: 2000,
                 fraisBancairesCompte: 710,
                 fraisGarantie: 1.3709,        // % du capital emprunté
-                taxeFonciere: 1,              // % du prix
+                taxeFonciere: 0,              // % du prix (remplacé par 5% du loyer)
                 vacanceLocative: 8,           // % des loyers
-                loyerM2: 12,                  // €/m²/mois
-                travauxM2: 400,               // €/m²
+                loyerM2: 2.25,                // €/m²/mois
+                travauxM2: 10,                // €/m² (remplacé par 0.5% du prix)
                 entretienAnnuel: 0.5,         // % du prix d'achat
                 assurancePNO: 250,            // € par an
-                chargesNonRecuperables: 10,   // % des loyers
+                chargesNonRecuperables: 0,    // Remplacé par un montant fixe
                 prixM2: 2000                  // Prix du marché immobilier en €/m²
             },
             classique: {
@@ -319,11 +319,12 @@ class SimulateurImmo {
 
     /**
      * Calcule le montant des charges non récupérables
-     * @param {number} loyerBrut - Loyer mensuel brut
+     * @param {number} surface - Surface en m²
      * @returns {number} - Montant mensuel des charges non récupérables
      */
-    calculerChargesNonRecuperables(loyerBrut) {
-        return loyerBrut * (this.params.communs.chargesNonRecuperables / 100);
+    calculerChargesNonRecuperables(surface) {
+        // 60€/m²/an, divisé par 12 pour obtenir la valeur mensuelle
+        return (surface * 60) / 12;
     }
 
     /**
@@ -430,15 +431,14 @@ class SimulateurImmo {
         const duree = this.params.base.duree;
         const loyerM2 = this.params.communs.loyerM2;
         const vacanceLocative = this.params.communs.vacanceLocative;
-        const travauxM2 = this.params.communs.travauxM2;
         
         // Prix d'achat (en fonction de la surface)
         // Utiliser le prix au m² paramétré
         const prixM2 = parseFloat(this.params.communs.prixM2);
         const prixAchat = surface * prixM2;
         
-        // Travaux
-        const travaux = surface * travauxM2;
+        // Travaux (0,5% du prix d'achat)
+        const travaux = prixAchat * 0.005;
         
         // Frais spécifiques selon le mode d'achat
         let fraisSpecifiques = 0;
@@ -500,11 +500,12 @@ class SimulateurImmo {
         const loyerBrut = surface * loyerM2;
         const loyerNet = this.calculerLoyerNet(surface, loyerM2, vacanceLocative);
         
-        // Taxe foncière
-        const taxeFonciere = prixAchat * this.params.communs.taxeFonciere / 100;
+        // Taxe foncière (5% du loyer annuel brut)
+        const taxeFonciere = loyerBrut * 12 * 0.05;
         
-        // Charges non récupérables
-        const chargesNonRecuperables = this.calculerChargesNonRecuperables(loyerBrut);
+        // Charges non récupérables (60€/m²/an)
+        const chargesCopro = surface * 60;
+        const chargesNonRecuperables = chargesCopro / 12; // Mensuel
         
         // Entretien
         const entretienMensuel = this.calculerEntretienMensuel(prixAchat);
@@ -523,7 +524,7 @@ class SimulateurImmo {
         const interetsPremierAnnee = tableauAmortissement.slice(0, 12).reduce((sum, m) => sum + m.interets, 0);
         
         // Revenu foncier avant impôt
-        const chargesDeductibles = taxeFonciere + assurancePNO + (chargesNonRecuperables * 12) + (entretienMensuel * 12);
+        const chargesDeductibles = taxeFonciere + assurancePNO + chargesCopro + (entretienMensuel * 12);
         const revenuFoncier = (loyerNet * 12) - chargesDeductibles - interetsPremierAnnee;
         
         // Impact fiscal
@@ -547,7 +548,7 @@ class SimulateurImmo {
             loyerNet,
             loyerBrut,
             taxeFonciere,
-            chargesNonRecuperables: chargesNonRecuperables * 12,
+            chargesNonRecuperables: chargesCopro,
             entretienAnnuel: entretienMensuel * 12,
             assurancePNO,
             interetsAnnee1: interetsPremierAnnee,
