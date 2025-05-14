@@ -4,8 +4,7 @@
  * Ce script contient toutes les fonctions de calcul nécessaires pour la simulation
  * d'investissement immobilier, comparant l'achat classique et la vente aux enchères.
  * 
- * Version 3.0 - Refactorisée pour calculer le prêt automatiquement et plafonner
- * la surface à 100m²
+ * Version 4.0 - Refactorisée pour calculer le prix maximum finançable
  */
 
 class SimulateurImmo {
@@ -17,8 +16,8 @@ class SimulateurImmo {
                 surface: 50,                  // Surface en m²
                 taux: 3.5,                    // Taux d'emprunt
                 duree: 20,                    // Durée du prêt
-                objectif: 'cashflow',         // Objectif: cashflow ou rendement
-                rendementMin: 5,              // Rendement minimum souhaité
+                // objectif: 'cashflow',      // Objectif: cashflow ou rendement (supprimé)
+                // rendementMin: 5,           // Rendement minimum souhaité (supprimé)
                 surfaceMax: 100               // Surface maximale autorisée
             },
             communs: {
@@ -76,6 +75,36 @@ class SimulateurImmo {
     }
 
     /**
+     * Cherche le prix maximum finançable
+     * @param {string} mode - Mode d'achat ("classique" ou "encheres")
+     * @param {number} step - Pas d'incrémentation du prix
+     * @returns {Object} - Résultats de la simulation
+     */
+    cherchePrixMax(mode, step = 1000) {
+        let P = step;
+        let best = null;
+        while (true) {
+            const res = this.calculeToutDepuisPrix(P, mode);
+            if (res.marge >= 0) {          // loyer net ≥ mensualité
+                best = res;
+                P += step;
+            } else break;
+        }
+        return best;
+    }
+
+    /**
+     * Calcule tous les paramètres à partir d'un prix d'achat
+     * @param {number} prixAchat - Prix d'achat du bien
+     * @param {string} mode - Mode d'achat ("classique" ou "encheres")
+     * @returns {Object} - Résultats de la simulation
+     */
+    calculeToutDepuisPrix(prixAchat, mode) {
+        const surface = prixAchat / this.params.communs.prixM2;
+        return this.calculeTout(surface, mode);   // réutilise le calcul existant
+    }
+
+    /**
      * Charge les paramètres depuis le formulaire
      * @param {Object} formData - Données du formulaire
      */
@@ -85,8 +114,9 @@ class SimulateurImmo {
         this.params.base.surface = parseFloat(formData.surface) || 50;
         this.params.base.taux = parseFloat(formData.taux) || 3.5;
         this.params.base.duree = parseFloat(formData.duree) || 20;
-        this.params.base.objectif = formData.objectif || 'cashflow';
-        this.params.base.rendementMin = parseFloat(formData.rendementMin) || 5;
+        // Paramètres supprimés
+        // this.params.base.objectif = formData.objectif || 'cashflow';
+        // this.params.base.rendementMin = parseFloat(formData.rendementMin) || 5;
 
         // Paramètres communs
         if (formData.fraisBancairesDossier !== undefined) 
@@ -439,7 +469,6 @@ class SimulateurImmo {
         const apport = this.params.base.apport;
         const taux = this.params.base.taux;
         const duree = this.params.base.duree;
-        const rendementSouhaite = this.params.base.rendementMin;
         const vacanceLocative = this.params.communs.vacanceLocative;
         
         // Prix d'achat (en fonction de la surface)
@@ -591,46 +620,11 @@ class SimulateurImmo {
     }
 
     /**
-     * Cherche la surface maximale viable selon les contraintes
-     * @param {string} mode - Mode d'achat ("classique" ou "encheres")
-     * @param {number} pas - Pas d'incrémentation de la surface
-     * @returns {Object} - Résultats de la simulation pour la surface optimale
-     */
-    chercheSurfaceMax(mode, pas = 1) {
-        const SURFACE_MAX = this.params.base.surfaceMax || 100;
-        
-        // Commence à 1m² (ou au pas paramétré) pour tester les micro-studios
-        let surface = Math.max(1, pas);
-        let best = null;
-        
-        // Récupérer le seuil de cash-flow minimum
-        const seuilCF = Number(
-            document.getElementById('cashflow-min')?.value || 1
-        );
-        
-        while (surface <= SURFACE_MAX) {
-            const res = this.calculeTout(surface, mode);
-            
-            // Supprimer la condition de rendement, ne garder que le test de cash-flow
-            const margeOK = res.loyerNet >= res.mensualite + seuilCF;
-            
-            if (margeOK) {
-                best = res;          // on garde
-                surface += pas;      // on tente plus grand
-            } else {
-                break;               // premier échec → on stoppe
-            }
-        }
-        
-        return best; // null si aucune surface ne passe
-    }
-
-    /**
      * Calcule le prix maximum pour l'achat classique selon les critères
      * @returns {Object} - Résultats de la simulation pour l'achat classique
      */
     simulerAchatClassique() {
-        const resultats = this.chercheSurfaceMax('classique');
+        const resultats = this.cherchePrixMax('classique');
         
         // Stocker les résultats
         this.params.resultats.classique = resultats;
@@ -643,7 +637,7 @@ class SimulateurImmo {
      * @returns {Object} - Résultats de la simulation pour la vente aux enchères
      */
     simulerVenteEncheres() {
-        const resultats = this.chercheSurfaceMax('encheres');
+        const resultats = this.cherchePrixMax('encheres');
         
         // Stocker les résultats
         this.params.resultats.encheres = resultats;
