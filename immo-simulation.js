@@ -8,6 +8,7 @@
  * Version 4.1 - Optimisation par recherche dichotomique
  * Version 4.2 - Optimisation de la recherche en commençant par le maximum théorique
  * Version 4.3 - Nouvelle méthode de recherche par surface décroissante
+ * Version 4.4 - Optimisation des performances et amélioration de l'architecture
  */
 
 class SimulateurImmo {
@@ -32,7 +33,8 @@ class SimulateurImmo {
                 taxeFonciere: 0,              // % du prix (remplacé par 5% du loyer)
                 vacanceLocative: 5,           // % des loyers (modifié de 8% à 5%)
                 loyerM2: 12,                  // €/m²/mois (valeur utilisée si calcul par rendement impossible)
-                travauxM2: 10,                // €/m² (remplacé par 0.5% du prix)
+                travauxM2: 400,               // €/m² (remplacé par 0.5% du prix par défaut)
+                useFixedTravauxPercentage: true, // Utiliser 0.5% du prix d'achat par défaut
                 entretienAnnuel: 0.5,         // % du prix d'achat
                 assurancePNO: 250,            // € par an
                 chargesNonRecuperables: 0,    // Remplacé par un montant fixe
@@ -77,9 +79,59 @@ class SimulateurImmo {
         
         // Historique des simulations pour comparaisons
         this.historiqueSimulations = [];
+        
+        // Mode debug (pour afficher les logs)
+        this.debug = false;
     }
 
     /**
+     * Valide les paramètres essentiels avant simulation
+     * @returns {Object} - Objet avec statut et message d'erreur si applicable
+     */
+    validerParametres() {
+        const { apport, taux, duree } = this.params.base;
+        const { prixM2, loyerM2 } = this.params.communs;
+        
+        if (!apport || apport <= 0) {
+            return { 
+                valide: false, 
+                message: "L'apport doit être supérieur à 0" 
+            };
+        }
+        
+        if (!taux || taux <= 0) {
+            return { 
+                valide: false, 
+                message: "Le taux d'emprunt doit être supérieur à 0" 
+            };
+        }
+        
+        if (!duree || duree <= 0) {
+            return { 
+                valide: false, 
+                message: "La durée du prêt doit être supérieure à 0" 
+            };
+        }
+        
+        if (!prixM2 || prixM2 <= 0) {
+            return { 
+                valide: false, 
+                message: "Le prix au m² doit être renseigné et supérieur à 0" 
+            };
+        }
+        
+        if (!loyerM2 || loyerM2 <= 0) {
+            return { 
+                valide: false, 
+                message: "Le loyer au m² doit être renseigné et supérieur à 0" 
+            };
+        }
+        
+        return { valide: true };
+    }
+
+    /**
+     * @deprecated depuis v4.4; sera supprimé en v5. Utiliser chercheSurfaceDesc() à la place.
      * Cherche le prix maximum finançable (méthode linéaire)
      * @param {string} mode - Mode d'achat ("classique" ou "encheres")
      * @param {number} step - Pas d'incrémentation du prix
@@ -87,24 +139,12 @@ class SimulateurImmo {
      * @returns {Object} - Résultats de la simulation
      */
     cherchePrixMaxStep(mode, step = 1000, maxPrice = 3000000) {
-        let best = null;
-        let margePositiveRencontree = false;
-        for (let P = step; P <= maxPrice; P += step) {
-            const res = this.calculeToutDepuisPrix(P, mode);
-
-            if (res.marge >= 0) {
-                // première marge positive rencontrée → on pourra commencer à mémoriser
-                margePositiveRencontree = true;
-                best = res;               // on garde le dernier viable
-            } else if (margePositiveRencontree) {
-                // on vient de dépasser le plafond viable
-                break;
-            }
-        }
-        return best;
+        if (this.debug) console.warn("Méthode obsolète: utiliser chercheSurfaceDesc() à la place.");
+        return this.chercheSurfaceDesc(mode, this.params.base.pasSurface || 1);
     }
     
     /**
+     * @deprecated depuis v4.4; sera supprimé en v5. Utiliser chercheSurfaceDesc() à la place.
      * Recherche dichotomique du prix maximum finançable
      * @param {string} mode   "classique" | "encheres"
      * @param {number} Pmin   borne basse (>= 0)
@@ -113,61 +153,112 @@ class SimulateurImmo {
      * @returns {Object|null} résultats complets pour le prix max trouvé
      */
     cherchePrixMaxDicho(mode, Pmin = 0, Pmax = null, eps = 100) {
-        const apport = this.params.base.apport;
-        const pourcentApportMin = this.params.base.pourcentApportMin || 10;
-        
-        // Si Pmax n'est pas fourni, le calculer selon le ratio d'apport
-        if (Pmax === null) {
-            const ratio = pourcentApportMin / 100;
-            Pmax = Math.min(3000000, apport / ratio);
-        }
-        
-        // Si la marge est déjà négative au plancher, rien n'est finançable
-        if (this.calculeToutDepuisPrix(Pmin, mode).marge < 0) return null;
-
-        let best = null;
-
-        while (Pmax - Pmin > eps) {
-            const Pmid = (Pmin + Pmax) / 2;
-            const res = this.calculeToutDepuisPrix(Pmid, mode);
-
-            if (res.marge >= 0) {         // Toujours viable : on peut monter
-                best = res;
-                Pmin = Pmid;
-            } else {                      // Plus viable : on doit baisser
-                Pmax = Pmid;
-            }
-            
-            // Option: arrêt précoce si on trouve presque exactement la solution
-            if (Math.abs(res.marge) < eps/10) return res;
-        }
-        return best;
+        if (this.debug) console.warn("Méthode obsolète: utiliser chercheSurfaceDesc() à la place.");
+        return this.chercheSurfaceDesc(mode, this.params.base.pasSurface || 1);
     }
 
     /**
+     * @deprecated depuis v4.4; sera supprimé en v5. Utiliser chercheSurfaceDesc() à la place.
      * Recherche le prix maximum finançable en commençant par la borne haute de l'apport
      * @param {string} mode   "classique" | "encheres"
      * @returns {Object|null} résultats complets pour le prix max trouvé
      */
     cherchePrixMaxApport(mode) {
-        const apport = this.params.base.apport;
-        const pourcentApportMin = this.params.base.pourcentApportMin || 10;
+        if (this.debug) console.warn("Méthode obsolète: utiliser chercheSurfaceDesc() à la place.");
+        return this.chercheSurfaceDesc(mode, this.params.base.pasSurface || 1);
+    }
+
+    /**
+     * Calcule les intérêts pour la première année sans générer le tableau complet
+     * @param {number} montantPret - Montant du prêt
+     * @param {number} taux - Taux d'intérêt annuel en %
+     * @param {number} dureeAnnees - Durée du prêt en années
+     * @returns {number} - Total des intérêts de la première année
+     */
+    calculerInteretsPremiereAnnee(montantPret, taux, dureeAnnees) {
+        const tauxMensuel = taux / 100 / 12;
+        const mensualite = this.calculerMensualite(montantPret, taux, dureeAnnees);
         
-        // Calculer le prix maximum théorique basé sur l'apport minimum requis
-        const ratio = pourcentApportMin / 100;
-        const prixMaxTheorique = Math.min(3000000, apport / ratio);
+        let capitalRestant = montantPret;
+        let interetsTotal = 0;
         
-        // Tester directement ce prix maximum
-        const resultat = this.calculeToutDepuisPrix(prixMaxTheorique, mode);
-        
-        // Vérifier si la marge (loyer net - mensualité) est positive
-        if (resultat.marge >= 0) {
-            return resultat; // Le prix maximum théorique est finançable
-        } else {
-            // Si ce n'est pas finançable, revenir à la recherche dichotomique
-            // pour trouver le prix maximum finançable
-            return this.cherchePrixMaxDicho(mode, 0, prixMaxTheorique);
+        for (let i = 1; i <= 12; i++) {
+            const interets = capitalRestant * tauxMensuel;
+            interetsTotal += interets;
+            const amortissementCapital = mensualite - interets;
+            capitalRestant -= amortissementCapital;
         }
+        
+        return interetsTotal;
+    }
+
+    /**
+     * Vérifie la viabilité d'une surface sans générer le tableau d'amortissement complet
+     * @param {number} surface - Surface en m²
+     * @param {string} mode - Mode d'achat
+     * @returns {boolean} - True si la marge est positive
+     */
+    calculerViabilite(surface, mode) {
+        // Code similaire à calculeTout mais sans générer le tableau d'amortissement complet
+        const apport = this.params.base.apport;
+        const taux = this.params.base.taux;
+        const duree = this.params.base.duree;
+        const vacanceLocative = this.params.communs.vacanceLocative;
+        
+        const prixM2 = parseFloat(this.params.communs.prixM2);
+        const prixAchat = surface * prixM2;
+        
+        // Travaux avec protection division par zéro
+        let travauxCoefficient;
+        if (this.params.communs.useFixedTravauxPercentage) {
+            travauxCoefficient = 0.005;
+        } else {
+            travauxCoefficient = prixM2 > 0 ? (this.params.communs.travauxM2 / prixM2) : 0.005;
+        }
+        const travaux = prixAchat * travauxCoefficient;
+        
+        // Frais spécifiques selon le mode (code simplifié)
+        let fraisSpecifiques = 0;
+        
+        if (mode === 'classique') {
+            const fraisNotaire = this.calculerFraisNotaireClassique(prixAchat);
+            const commission = prixAchat * this.params.classique.commissionImmo / 100;
+            fraisSpecifiques = fraisNotaire + commission;
+        } else {
+            const droitsEnregistrement = this.calculerDroitsEnregistrement(prixAchat);
+            const emolumentsPoursuivant = this.calculerEmolumentsPoursuivant(prixAchat);
+            const honorairesAvocat = this.calculerHonorairesAvocat(emolumentsPoursuivant);
+            const publiciteFonciere = prixAchat * this.params.encheres.publiciteFonciereEncheres / 100;
+            const fraisDivers = this.params.encheres.fraisFixes + 
+                            this.params.encheres.avocatEnchere + 
+                            this.params.encheres.suiviDossier;
+            const caution = this.params.encheres.cautionRestituee ? 0 : 
+                        prixAchat * this.params.encheres.cautionPourcent / 100;
+            
+            fraisSpecifiques = droitsEnregistrement + emolumentsPoursuivant + 
+                            honorairesAvocat + publiciteFonciere + fraisDivers + caution;
+        }
+        
+        // Coût hors frais bancaires
+        const coutHorsFraisB = prixAchat + fraisSpecifiques + travaux;
+        
+        // Calcul de l'emprunt
+        const fraisDossier = this.params.communs.fraisBancairesDossier;
+        const fraisCompte = this.params.communs.fraisBancairesCompte;
+        const tauxGarantie = this.params.communs.fraisGarantie / 100;
+        
+        const emprunt = (coutHorsFraisB - apport + fraisDossier + fraisCompte) 
+                    / (1 - tauxGarantie);
+        
+        // Mensualité
+        const mensualite = this.calculerMensualite(emprunt, taux, duree);
+        
+        // Loyer
+        const loyerBrut = surface * this.params.communs.loyerM2;
+        const loyerNet = this.calculerLoyerNet(loyerBrut, vacanceLocative);
+        
+        // Vérifier simplement si la marge est positive
+        return (loyerNet - mensualite) >= 0;
     }
 
     /**
@@ -189,8 +280,11 @@ class SimulateurImmo {
             const prixAchat = S * prixM2;
             if (prixAchat > prixMax) continue;  // dépassement du plafond financier
 
-            const res = this.calculeTout(S, mode);
-            if (res.marge >= 0) return res;  // on a trouvé la + grande surface viable
+            // Utiliser la vérification rapide de viabilité
+            if (this.calculerViabilite(S, mode)) {
+                // Une fois qu'on a trouvé une surface viable, on fait le calcul complet
+                return this.calculeTout(S, mode);
+            }
         }
         return null; // aucune solution autofinancée dans l'intervalle
     }
@@ -244,6 +338,8 @@ class SimulateurImmo {
             this.params.communs.loyerM2 = parseFloat(formData.loyerM2);
         if (formData.travauxM2 !== undefined) 
             this.params.communs.travauxM2 = parseFloat(formData.travauxM2);
+        if (formData.useFixedTravauxPercentage !== undefined)
+            this.params.communs.useFixedTravauxPercentage = formData.useFixedTravauxPercentage;
         if (formData.entretienAnnuel !== undefined)
             this.params.communs.entretienAnnuel = parseFloat(formData.entretienAnnuel);
         if (formData.assurancePNO !== undefined)
@@ -390,8 +486,8 @@ class SimulateurImmo {
         } else {
             emoluments = 6500 * this.params.encheres.emolumentsPoursuivant1 / 100;
             emoluments += (23500 - 6500) * this.params.encheres.emolumentsPoursuivant2 / 100;
-            emoluments += (83500 - 23500) * this.params.encheres.emolumentsPoursuivant3 / 100;
-            emoluments += (prix - 83500) * this.params.encheres.emolumentsPoursuivant4 / 100;
+            emoluments += (83500 - 23500) * this.params.encheres.emolementsPoursuivant3 / 100;
+            emoluments += (prix - 83500) * this.params.encheres.emolementsPoursuivant4 / 100;
         }
         
         return emoluments;
@@ -587,8 +683,15 @@ class SimulateurImmo {
         const prixM2 = parseFloat(this.params.communs.prixM2);
         const prixAchat = surface * prixM2;
         
-        // Travaux (0,5% du prix d'achat)
-        const travaux = prixAchat * 0.005;
+        // Travaux (0,5% du prix d'achat ou valeur paramétrable)
+        let travauxCoefficient;
+        if (this.params.communs.useFixedTravauxPercentage) {
+            travauxCoefficient = 0.005; // 0.5% du prix d'achat
+        } else {
+            // Protection contre division par zéro
+            travauxCoefficient = prixM2 > 0 ? (this.params.communs.travauxM2 / prixM2) : 0.005;
+        }
+        const travaux = prixAchat * travauxCoefficient;
         
         // Frais spécifiques selon le mode d'achat
         let fraisSpecifiques = 0;
@@ -771,6 +874,110 @@ class SimulateurImmo {
         return {
             classique: resultatsClassique,
             encheres: resultatsEncheres
+        };
+    }
+
+    /**
+     * @typedef {Object} DonneesAffichage
+     * @property {Object} resultats - Résultats bruts de la simulation
+     * @property {Object} resultats.classique - Résultats pour l'achat classique
+     * @property {Object} resultats.encheres - Résultats pour la vente aux enchères
+     * @property {Object} comparaison - Comparaison entre les deux modes
+     * @property {Object} graphiques - Données pour les graphiques
+     * @property {Object} avantages - Avantages de chaque mode
+     */
+
+    /**
+     * Prépare les données pour l'affichage
+     * @returns {DonneesAffichage|null} - Objet contenant toutes les données pour l'interface
+     */
+    preparerDonneesAffichage() {
+        // Si aucun résultat n'est disponible, retourner null
+        if (!this.params.resultats.classique || !this.params.resultats.encheres) {
+            return null;
+        }
+        
+        const classique = this.params.resultats.classique;
+        const encheres = this.params.resultats.encheres;
+        
+        // Préparer toutes les données nécessaires à l'affichage
+        return {
+            resultats: {
+                classique: classique,
+                encheres: encheres
+            },
+            comparaison: {
+                prixDiff: encheres.prixAchat - classique.prixAchat,
+                coutTotalDiff: encheres.coutTotal - classique.coutTotal,
+                loyerDiff: encheres.loyerBrut - classique.loyerBrut,
+                rentabiliteDiff: encheres.rendementNet - classique.rendementNet,
+                cashFlowDiff: encheres.cashFlow - classique.cashFlow
+            },
+            graphiques: {
+                comparaison: this.getComparisonChartData(),
+                amortissement: this.getAmortissementData(),
+                valeur: this.getEvolutionValeurData(2),
+                couts: this.getCoutsPieChartData()
+            },
+            avantages: this.determinerAvantages()
+        };
+    }
+
+    /**
+     * Détermine les avantages de chaque mode d'achat
+     * @returns {Object} - Objet contenant les avantages de chaque mode
+     */
+    determinerAvantages() {
+        if (!this.params.resultats.classique || !this.params.resultats.encheres) {
+            return null;
+        }
+        
+        const classique = this.params.resultats.classique;
+        const encheres = this.params.resultats.encheres;
+        
+        let avantagesClassique = [];
+        let avantagesEncheres = [];
+        
+        // Comparer les prix
+        if (classique.prixAchat > encheres.prixAchat) {
+            avantagesEncheres.push("Prix d'achat plus avantageux");
+        } else {
+            avantagesClassique.push("Prix d'achat plus avantageux");
+        }
+        
+        // Comparer les coûts totaux
+        if (classique.coutTotal > encheres.coutTotal) {
+            avantagesEncheres.push("Coût total inférieur");
+        } else {
+            avantagesClassique.push("Coût total inférieur");
+        }
+        
+        // Comparer les rendements
+        if (classique.rendementNet < encheres.rendementNet) {
+            avantagesEncheres.push("Meilleure rentabilité");
+        } else {
+            avantagesClassique.push("Meilleure rentabilité");
+        }
+        
+        // Comparer les cash-flows
+        if (classique.cashFlow < encheres.cashFlow) {
+            avantagesEncheres.push("Cash-flow mensuel supérieur");
+        } else {
+            avantagesClassique.push("Cash-flow mensuel supérieur");
+        }
+        
+        // Avantages fixes
+        avantagesClassique.push("Processus d'achat plus simple");
+        avantagesClassique.push("Risques juridiques limités");
+        avantagesClassique.push("Délais plus courts");
+        
+        avantagesEncheres.push("Potentiel de valorisation supérieur");
+        avantagesEncheres.push("Absence de négociation");
+        avantagesEncheres.push("Possibilité de trouver des biens sous-évalués");
+        
+        return {
+            classique: avantagesClassique,
+            encheres: avantagesEncheres
         };
     }
 
@@ -1043,4 +1250,43 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     module.exports = SimulateurImmo;
 } else {
     window.SimulateurImmo = SimulateurImmo;
+}
+
+// Tests unitaires simples (exécutés uniquement si NODE_ENV=test)
+if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test') {
+    // Wrapper de test simple
+    function runTest(name, testFn) {
+        try {
+            const result = testFn();
+            console.log(`✅ Test "${name}" réussi`);
+            return result;
+        } catch (error) {
+            console.error(`❌ Test "${name}" échoué:`, error);
+            return false;
+        }
+    }
+    
+    // Tests basiques
+    const simTest = new SimulateurImmo();
+    simTest.params.base.apport = 30000;
+    simTest.params.communs.prixM2 = 2000;
+    simTest.params.communs.loyerM2 = 12;
+    
+    runTest("Vérification de surface viable", () => {
+        const result = simTest.chercheSurfaceDesc('classique');
+        if (!result) throw new Error("Aucune surface viable trouvée");
+        return true;
+    });
+    
+    runTest("Vérification de marge positive", () => {
+        const result = simTest.chercheSurfaceDesc('classique');
+        if (!result || result.marge <= 0) throw new Error("Marge non positive");
+        return true;
+    });
+    
+    runTest("Vérification de rendement positif", () => {
+        const result = simTest.chercheSurfaceDesc('classique');
+        if (!result || result.rendementNet <= 0) throw new Error("Rendement non positif");
+        return true;
+    });
 }
