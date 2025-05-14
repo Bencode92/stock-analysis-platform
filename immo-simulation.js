@@ -6,6 +6,7 @@
  * 
  * Version 4.0 - Refactorisée pour calculer le prix maximum finançable
  * Version 4.1 - Optimisation par recherche dichotomique
+ * Version 4.2 - Optimisation de la recherche en commençant par le maximum théorique
  */
 
 class SimulateurImmo {
@@ -139,6 +140,32 @@ class SimulateurImmo {
             if (Math.abs(res.marge) < eps/10) return res;
         }
         return best;
+    }
+
+    /**
+     * Recherche le prix maximum finançable en commençant par la borne haute de l'apport
+     * @param {string} mode   "classique" | "encheres"
+     * @returns {Object|null} résultats complets pour le prix max trouvé
+     */
+    cherchePrixMaxApport(mode) {
+        const apport = this.params.base.apport;
+        const pourcentApportMin = this.params.base.pourcentApportMin || 10;
+        
+        // Calculer le prix maximum théorique basé sur l'apport minimum requis
+        const ratio = pourcentApportMin / 100;
+        const prixMaxTheorique = Math.min(3000000, apport / ratio);
+        
+        // Tester directement ce prix maximum
+        const resultat = this.calculeToutDepuisPrix(prixMaxTheorique, mode);
+        
+        // Vérifier si la marge (loyer net - mensualité) est positive
+        if (resultat.marge >= 0) {
+            return resultat; // Le prix maximum théorique est finançable
+        } else {
+            // Si ce n'est pas finançable, revenir à la recherche dichotomique
+            // pour trouver le prix maximum finançable
+            return this.cherchePrixMaxDicho(mode, 0, prixMaxTheorique);
+        }
     }
 
     /**
@@ -673,8 +700,8 @@ class SimulateurImmo {
      * @returns {Object} - Résultats de la simulation pour l'achat classique
      */
     simulerAchatClassique() {
-        // Utilisation de cherchePrixMaxDicho sans paramètres Pmin et Pmax
-        const resultats = this.cherchePrixMaxDicho('classique');
+        // Utilisation de cherchePrixMaxApport au lieu de cherchePrixMaxDicho
+        const resultats = this.cherchePrixMaxApport('classique');
         
         // Stocker les résultats
         this.params.resultats.classique = resultats;
@@ -687,8 +714,8 @@ class SimulateurImmo {
      * @returns {Object} - Résultats de la simulation pour la vente aux enchères
      */
     simulerVenteEncheres() {
-        // Utilisation de cherchePrixMaxDicho sans paramètres Pmin et Pmax
-        const resultats = this.cherchePrixMaxDicho('encheres');
+        // Utilisation de cherchePrixMaxApport au lieu de cherchePrixMaxDicho
+        const resultats = this.cherchePrixMaxApport('encheres');
         
         // Stocker les résultats
         this.params.resultats.encheres = resultats;
