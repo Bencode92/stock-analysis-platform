@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
         advancedParams.classList.toggle('hidden');
         advancedParams.classList.toggle('fade-in');
         btnAdvancedToggle.innerHTML = advancedParams.classList.contains('hidden') 
-            ? '<i class="fas fa-sliders-h"></i> Mode Avancé'
+            ? '<i class="fas fa-sliders-h"></i> Paramètres avancés'
             : '<i class="fas fa-times"></i> Masquer les paramètres';
     });
 
@@ -144,9 +144,14 @@ document.addEventListener('DOMContentLoaded', function() {
             document.querySelector('.loading').style.display = 'none';
             
             // Vérifier si des résultats ont été trouvés
-            if (!resultats.classique || !resultats.encheres) {
-                afficherToast('Aucune surface viable avec ces paramètres.', 'warning');
+            if (!resultats.classique && !resultats.encheres) {
+                afficherToast('À ces conditions de marché, même un micro-studio ne couvre pas ses charges. Augmentez le loyer, l\'apport ou réduisez le prix.', 'warning');
                 return;
+            }
+            
+            if (!resultats.classique || !resultats.encheres) {
+                const modeViable = resultats.classique ? 'achat classique' : 'vente aux enchères';
+                afficherToast(`Seul le mode ${modeViable} est viable avec ces paramètres.`, 'warning');
             }
             
             // Afficher les résultats avec animation
@@ -156,10 +161,30 @@ document.addEventListener('DOMContentLoaded', function() {
             // Ajouter la notification de surface calculée
             const notification = document.createElement('div');
             notification.className = 'info-message fade-in';
-            notification.innerHTML = `<i class="fas fa-ruler-combined"></i> Surface optimale calculée: <strong>${resultats.classique.surface} m²</strong> pour un rendement de <strong>${formData.rendementMin}%</strong>`;
+            
+            // Obtenir la surface et le seuil de cash-flow
+            const surface = resultats.classique ? resultats.classique.surface : (resultats.encheres ? resultats.encheres.surface : 0);
+            const seuilCF = parseFloat(document.getElementById('cashflow-min').value) || 1;
+            
+            // Calculer le ratio loyer/crédit
+            let ratioLoyerCredit = null;
+            if (resultats.classique) {
+                ratioLoyerCredit = (resultats.classique.loyerNet / resultats.classique.mensualite).toFixed(2);
+            } else if (resultats.encheres) {
+                ratioLoyerCredit = (resultats.encheres.loyerNet / resultats.encheres.mensualite).toFixed(2);
+            }
+            
+            // Message de notification mis à jour
+            if (ratioLoyerCredit) {
+                notification.innerHTML = `<i class="fas fa-ruler-combined"></i> Surface optimale calculée : <strong>${surface} m²</strong> (cash-flow ≥ ${seuilCF} €/mois) - Ratio loyer/crédit : <strong>${ratioLoyerCredit}</strong>`;
+            } else {
+                notification.innerHTML = `<i class="fas fa-ruler-combined"></i> Surface optimale calculée : <strong>${surface} m²</strong> (cash-flow ≥ ${seuilCF} €/mois)`;
+            }
             
             // Mettre à jour le champ caché de surface
-            document.getElementById('surface').value = resultats.classique.surface;
+            if (document.getElementById('surface')) {
+                document.getElementById('surface').value = surface;
+            }
             
             // Ajouter la notification avant les résultats
             resultsContainer.insertBefore(notification, resultsContainer.firstChild);
@@ -305,7 +330,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <p><strong>Loyer m²:</strong> ${simulation.params.communs.loyerM2} €/m²</p>
                             <p><strong>Vacance:</strong> ${simulation.params.communs.vacanceLocative}%</p>
                             <p><strong>Travaux:</strong> ${simulation.params.communs.travauxM2} €/m²</p>
-                            <p><strong>Rendement min:</strong> ${simulation.params.base.rendementMin}%</p>
+                            <p><strong>Prix au m²:</strong> ${simulation.params.communs.prixM2} €/m²</p>
                         </div>
                     </div>
                     
@@ -378,7 +403,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('surface').value = simulation.params.base.surface;
         document.getElementById('taux').value = simulation.params.base.taux;
         document.getElementById('duree').value = simulation.params.base.duree;
-        document.getElementById('rendement-min').value = simulation.params.base.rendementMin;
         
         // Paramètres communs
         document.getElementById('frais-bancaires-dossier').value = simulation.params.communs.fraisBancairesDossier;
@@ -388,6 +412,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('vacance-locative').value = simulation.params.communs.vacanceLocative;
         document.getElementById('loyer-m2').value = simulation.params.communs.loyerM2;
         document.getElementById('travaux-m2').value = simulation.params.communs.travauxM2;
+        document.getElementById('prix-m2-marche').value = simulation.params.communs.prixM2;
         
         // Afficher les paramètres avancés
         advancedParams.classList.remove('hidden');
@@ -498,12 +523,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const encheresPrixMax = document.getElementById('encheres-prix-max');
         
         if (classiquePrixMax && encheresPrixMax) {
-            const surfaceClassique = simulateur.params.resultats.classique.surface;
-            const surfaceEncheres = simulateur.params.resultats.encheres.surface;
+            const surfaceClassique = simulateur.params.resultats.classique ? simulateur.params.resultats.classique.surface : "--";
+            const surfaceEncheres = simulateur.params.resultats.encheres ? simulateur.params.resultats.encheres.surface : "--";
             
             // Afficher directement les surfaces
-            classiquePrixMax.textContent = surfaceClassique + " m²";
-            encheresPrixMax.textContent = surfaceEncheres + " m²";
+            classiquePrixMax.textContent = surfaceClassique != "--" ? surfaceClassique + " m²" : "--";
+            encheresPrixMax.textContent = surfaceEncheres != "--" ? surfaceEncheres + " m²" : "--";
         }
         
         // Animation des rentabilités
@@ -512,17 +537,21 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (classiqueRentabilite && encheresRentabilite) {
             // Récupérer les valeurs de rentabilité
-            const rentClassique = simulateur.params.resultats.classique.rendementNet;
-            const rentEncheres = simulateur.params.resultats.encheres.rendementNet;
+            const rentClassique = simulateur.params.resultats.classique ? simulateur.params.resultats.classique.rendementNet : null;
+            const rentEncheres = simulateur.params.resultats.encheres ? simulateur.params.resultats.encheres.rendementNet : null;
             
             // Animer les rentabilités
             setTimeout(() => {
-                classiqueRentabilite.textContent = formaterPourcentage(rentClassique);
-                encheresRentabilite.textContent = formaterPourcentage(rentEncheres);
+                classiqueRentabilite.textContent = rentClassique !== null ? formaterPourcentage(rentClassique) : "--";
+                encheresRentabilite.textContent = rentEncheres !== null ? formaterPourcentage(rentEncheres) : "--";
                 
                 // Mettre à jour les classes des badges selon le niveau de rentabilité
-                majClasseRentabilite(classiqueRentabilite.parentElement, rentClassique);
-                majClasseRentabilite(encheresRentabilite.parentElement, rentEncheres);
+                if (rentClassique !== null) {
+                    majClasseRentabilite(classiqueRentabilite.parentElement, rentClassique);
+                }
+                if (rentEncheres !== null) {
+                    majClasseRentabilite(encheresRentabilite.parentElement, rentEncheres);
+                }
             }, 500);
         }
     }
@@ -797,7 +826,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Créer les graphiques en camembert pour la répartition des coûts
-        if (ctxPieClassique && costPieData) {
+        if (ctxPieClassique && costPieData && costPieData.classique) {
             costPieChartClassique = new Chart(ctxPieClassique, {
                 type: 'doughnut',
                 data: costPieData.classique,
@@ -837,7 +866,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
-        if (ctxPieEncheres && costPieData) {
+        if (ctxPieEncheres && costPieData && costPieData.encheres) {
             costPieChartEncheres = new Chart(ctxPieEncheres, {
                 type: 'doughnut',
                 data: costPieData.encheres,
@@ -889,9 +918,9 @@ document.addEventListener('DOMContentLoaded', function() {
             surface: document.getElementById('surface').value,
             taux: document.getElementById('taux').value,
             duree: document.getElementById('duree').value,
-            // Forcer le mode rendement
-            objectif: 'rendement',
-            rendementMin: document.getElementById('rendement-min').value,
+            // Mode cash-flow uniquement
+            objectif: 'cashflow',
+            rendementMin: 0,
             
             // Paramètres communs
             fraisBancairesDossier: document.getElementById('frais-bancaires-dossier').value,
@@ -1002,163 +1031,173 @@ document.addEventListener('DOMContentLoaded', function() {
         const { classique, encheres } = resultats;
         
         // Vérifier si des résultats ont été trouvés
-        if (!classique || !encheres) {
-            afficherToast('Impossible de trouver une solution avec les paramètres actuels. Veuillez ajuster vos critères.', 'error');
+        if (!classique && !encheres) {
+            afficherToast('À ces conditions de marché, même un micro-studio ne couvre pas ses charges. Augmentez le loyer, l\'apport ou réduisez le prix.', 'error');
             return;
         }
         
         // Affichage des résultats pour l'achat classique
-        document.getElementById('classique-prix-max').textContent = classique.surface + " m²";
-        document.getElementById('classique-prix-achat').textContent = formaterMontant(classique.prixAchat);
-        document.getElementById('classique-frais-notaire').textContent = formaterMontant(classique.fraisNotaire);
-        document.getElementById('classique-commission').textContent = formaterMontant(classique.commission);
-        document.getElementById('classique-travaux').textContent = formaterMontant(classique.travaux);
-        document.getElementById('classique-frais-bancaires').textContent = formaterMontant(classique.fraisBancaires);
-        document.getElementById('classique-total').textContent = formaterMontant(classique.coutTotal);
-        document.getElementById('classique-emprunt').textContent = formaterMontant(classique.emprunt);
-        document.getElementById('classique-mensualite').textContent = formaterMontantMensuel(classique.mensualite);
-        document.getElementById('classique-loyer-net').textContent = formaterMontantMensuel(classique.loyerNet);
-        
-        const cashflowClassique = document.getElementById('classique-cashflow');
-        cashflowClassique.textContent = formaterMontantMensuel(classique.cashFlow);
-        cashflowClassique.className = getClasseValeur(classique.cashFlow);
-        
-        // Affichage de la marge loyer-dette
-        const margeClassique = document.getElementById('classique-marge');
-        if (margeClassique) {
-            margeClassique.textContent = formaterMontantMensuel(classique.marge);
-            margeClassique.className = getClasseValeur(classique.marge);
-        }
-        
-        document.getElementById('classique-rentabilite').textContent = formaterPourcentage(classique.rendementNet);
-        
-        // Affichage des données fiscales pour l'achat classique si les éléments existent
-        if (document.getElementById('classique-revenu-foncier')) {
-            document.getElementById('classique-revenu-foncier').textContent = formaterMontant(classique.revenuFoncier);
-            document.getElementById('classique-impact-fiscal').textContent = formaterMontant(classique.impactFiscal);
-            document.getElementById('classique-cashflow-apres-impot').textContent = formaterMontantMensuel(
-                classique.cashFlow + (classique.impactFiscal / 12)
+        if (classique) {
+            document.getElementById('classique-prix-max').textContent = classique.surface + " m²";
+            document.getElementById('classique-prix-achat').textContent = formaterMontant(classique.prixAchat);
+            document.getElementById('classique-frais-notaire').textContent = formaterMontant(classique.fraisNotaire);
+            document.getElementById('classique-commission').textContent = formaterMontant(classique.commission);
+            document.getElementById('classique-travaux').textContent = formaterMontant(classique.travaux);
+            document.getElementById('classique-frais-bancaires').textContent = formaterMontant(classique.fraisBancaires);
+            document.getElementById('classique-total').textContent = formaterMontant(classique.coutTotal);
+            document.getElementById('classique-mensualite').textContent = formaterMontantMensuel(classique.mensualite);
+            document.getElementById('classique-loyer-net').textContent = formaterMontantMensuel(classique.loyerNet);
+            
+            const cashflowClassique = document.getElementById('classique-cashflow');
+            cashflowClassique.textContent = formaterMontantMensuel(classique.cashFlow);
+            cashflowClassique.className = getClasseValeur(classique.cashFlow);
+            
+            // Affichage de la marge loyer-dette
+            const margeClassique = document.getElementById('classique-marge');
+            if (margeClassique) {
+                margeClassique.textContent = formaterMontantMensuel(classique.marge);
+                margeClassique.className = getClasseValeur(classique.marge);
+            }
+            
+            document.getElementById('classique-rentabilite').textContent = formaterPourcentage(classique.rendementNet);
+        } else {
+            // Masquer ou afficher message si non viable
+            document.querySelector('.results-card:first-child').style.opacity = '0.5';
+            document.querySelector('.results-card:first-child').style.filter = 'grayscale(100%)';
+            document.querySelector('.results-card:first-child').insertAdjacentHTML('afterbegin', 
+                '<div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;justify-content:center;align-items:center;background:rgba(0,0,0,0.7);z-index:10;border-radius:0.75rem;">' +
+                '<span style="color:white;font-weight:bold;text-align:center;">Non viable avec<br>ces paramètres</span>' +
+                '</div>'
             );
         }
         
         // Affichage des résultats pour la vente aux enchères
-        document.getElementById('encheres-prix-max').textContent = encheres.surface + " m²";
-        document.getElementById('encheres-prix-achat').textContent = formaterMontant(encheres.prixAchat);
-        document.getElementById('encheres-droits').textContent = formaterMontant(encheres.droitsEnregistrement);
-        document.getElementById('encheres-emoluments').textContent = formaterMontant(encheres.emolumentsPoursuivant);
-        document.getElementById('encheres-honoraires').textContent = formaterMontant(encheres.honorairesAvocat);
-        document.getElementById('encheres-publicite').textContent = formaterMontant(encheres.publiciteFonciere);
-        document.getElementById('encheres-frais-divers').textContent = formaterMontant(encheres.fraisDivers);
-        document.getElementById('encheres-travaux').textContent = formaterMontant(encheres.travaux);
-        document.getElementById('encheres-frais-bancaires').textContent = formaterMontant(encheres.fraisBancaires);
-        document.getElementById('encheres-total').textContent = formaterMontant(encheres.coutTotal);
-        document.getElementById('encheres-emprunt').textContent = formaterMontant(encheres.emprunt);
-        document.getElementById('encheres-mensualite').textContent = formaterMontantMensuel(encheres.mensualite);
-        document.getElementById('encheres-loyer-net').textContent = formaterMontantMensuel(encheres.loyerNet);
-        
-        const cashflowEncheres = document.getElementById('encheres-cashflow');
-        cashflowEncheres.textContent = formaterMontantMensuel(encheres.cashFlow);
-        cashflowEncheres.className = getClasseValeur(encheres.cashFlow);
-        
-        // Affichage de la marge loyer-dette
-        const margeEncheres = document.getElementById('encheres-marge');
-        if (margeEncheres) {
-            margeEncheres.textContent = formaterMontantMensuel(encheres.marge);
-            margeEncheres.className = getClasseValeur(encheres.marge);
-        }
-        
-        document.getElementById('encheres-rentabilite').textContent = formaterPourcentage(encheres.rendementNet);
-        
-        // Affichage des données fiscales pour les enchères si les éléments existent
-        if (document.getElementById('encheres-revenu-foncier')) {
-            document.getElementById('encheres-revenu-foncier').textContent = formaterMontant(encheres.revenuFoncier);
-            document.getElementById('encheres-impact-fiscal').textContent = formaterMontant(encheres.impactFiscal);
-            document.getElementById('encheres-cashflow-apres-impot').textContent = formaterMontantMensuel(
-                encheres.cashFlow + (encheres.impactFiscal / 12)
+        if (encheres) {
+            document.getElementById('encheres-prix-max').textContent = encheres.surface + " m²";
+            document.getElementById('encheres-prix-achat').textContent = formaterMontant(encheres.prixAchat);
+            document.getElementById('encheres-droits').textContent = formaterMontant(encheres.droitsEnregistrement);
+            document.getElementById('encheres-emoluments').textContent = formaterMontant(encheres.emolumentsPoursuivant);
+            document.getElementById('encheres-honoraires').textContent = formaterMontant(encheres.honorairesAvocat);
+            document.getElementById('encheres-publicite').textContent = formaterMontant(encheres.publiciteFonciere);
+            document.getElementById('encheres-frais-divers').textContent = formaterMontant(encheres.fraisDivers);
+            document.getElementById('encheres-travaux').textContent = formaterMontant(encheres.travaux);
+            document.getElementById('encheres-frais-bancaires').textContent = formaterMontant(encheres.fraisBancaires);
+            document.getElementById('encheres-total').textContent = formaterMontant(encheres.coutTotal);
+            document.getElementById('encheres-mensualite').textContent = formaterMontantMensuel(encheres.mensualite);
+            document.getElementById('encheres-loyer-net').textContent = formaterMontantMensuel(encheres.loyerNet);
+            
+            const cashflowEncheres = document.getElementById('encheres-cashflow');
+            cashflowEncheres.textContent = formaterMontantMensuel(encheres.cashFlow);
+            cashflowEncheres.className = getClasseValeur(encheres.cashFlow);
+            
+            // Affichage de la marge loyer-dette
+            const margeEncheres = document.getElementById('encheres-marge');
+            if (margeEncheres) {
+                margeEncheres.textContent = formaterMontantMensuel(encheres.marge);
+                margeEncheres.className = getClasseValeur(encheres.marge);
+            }
+            
+            document.getElementById('encheres-rentabilite').textContent = formaterPourcentage(encheres.rendementNet);
+        } else {
+            // Masquer ou afficher message si non viable
+            document.querySelector('.results-card:nth-child(2)').style.opacity = '0.5';
+            document.querySelector('.results-card:nth-child(2)').style.filter = 'grayscale(100%)';
+            document.querySelector('.results-card:nth-child(2)').insertAdjacentHTML('afterbegin', 
+                '<div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;justify-content:center;align-items:center;background:rgba(0,0,0,0.7);z-index:10;border-radius:0.75rem;">' +
+                '<span style="color:white;font-weight:bold;text-align:center;">Non viable avec<br>ces paramètres</span>' +
+                '</div>'
             );
         }
         
-        // Comparatif
-        document.getElementById('comp-classique-prix').textContent = formaterMontant(classique.prixAchat);
-        document.getElementById('comp-encheres-prix').textContent = formaterMontant(encheres.prixAchat);
-        
-        const diffPrix = encheres.prixAchat - classique.prixAchat;
-        const compPrixDiff = document.getElementById('comp-prix-diff');
-        compPrixDiff.textContent = formaterMontantAvecSigne(diffPrix);
-        compPrixDiff.className = diffPrix < 0 ? 'positive' : diffPrix > 0 ? 'negative' : '';
-        
-        document.getElementById('comp-classique-total').textContent = formaterMontant(classique.coutTotal);
-        document.getElementById('comp-encheres-total').textContent = formaterMontant(encheres.coutTotal);
-        
-        const diffTotal = encheres.coutTotal - classique.coutTotal;
-        const compTotalDiff = document.getElementById('comp-total-diff');
-        compTotalDiff.textContent = formaterMontantAvecSigne(diffTotal);
-        compTotalDiff.className = diffTotal < 0 ? 'positive' : diffTotal > 0 ? 'negative' : '';
-        
-        document.getElementById('comp-classique-loyer').textContent = formaterMontant(classique.loyerBrut);
-        document.getElementById('comp-encheres-loyer').textContent = formaterMontant(encheres.loyerBrut);
-        
-        const diffLoyer = encheres.loyerBrut - classique.loyerBrut;
-        const compLoyerDiff = document.getElementById('comp-loyer-diff');
-        compLoyerDiff.textContent = formaterMontantAvecSigne(diffLoyer);
-        compLoyerDiff.className = diffLoyer > 0 ? 'positive' : diffLoyer < 0 ? 'negative' : '';
-        
-        document.getElementById('comp-classique-rentabilite').textContent = formaterPourcentage(classique.rendementNet);
-        document.getElementById('comp-encheres-rentabilite').textContent = formaterPourcentage(encheres.rendementNet);
-        
-        const diffRentabilite = encheres.rendementNet - classique.rendementNet;
-        const compRentabiliteDiff = document.getElementById('comp-rentabilite-diff');
-        compRentabiliteDiff.textContent = formaterPourcentage(diffRentabilite, 2);
-        compRentabiliteDiff.className = diffRentabilite > 0 ? 'positive' : diffRentabilite < 0 ? 'negative' : '';
-        
-        document.getElementById('comp-classique-cashflow').textContent = formaterMontantAvecSigne(classique.cashFlow);
-        document.getElementById('comp-encheres-cashflow').textContent = formaterMontantAvecSigne(encheres.cashFlow);
-        
-        const diffCashflow = encheres.cashFlow - classique.cashFlow;
-        const compCashflowDiff = document.getElementById('comp-cashflow-diff');
-        compCashflowDiff.textContent = formaterMontantAvecSigne(diffCashflow);
-        compCashflowDiff.className = diffCashflow > 0 ? 'positive' : diffCashflow < 0 ? 'negative' : '';
+        // Comparatif (seulement si les deux options sont viables)
+        if (classique && encheres) {
+            document.getElementById('comp-classique-prix').textContent = formaterMontant(classique.prixAchat);
+            document.getElementById('comp-encheres-prix').textContent = formaterMontant(encheres.prixAchat);
+            
+            const diffPrix = encheres.prixAchat - classique.prixAchat;
+            const compPrixDiff = document.getElementById('comp-prix-diff');
+            compPrixDiff.textContent = formaterMontantAvecSigne(diffPrix);
+            compPrixDiff.className = diffPrix < 0 ? 'positive' : diffPrix > 0 ? 'negative' : '';
+            
+            document.getElementById('comp-classique-total').textContent = formaterMontant(classique.coutTotal);
+            document.getElementById('comp-encheres-total').textContent = formaterMontant(encheres.coutTotal);
+            
+            const diffTotal = encheres.coutTotal - classique.coutTotal;
+            const compTotalDiff = document.getElementById('comp-total-diff');
+            compTotalDiff.textContent = formaterMontantAvecSigne(diffTotal);
+            compTotalDiff.className = diffTotal < 0 ? 'positive' : diffTotal > 0 ? 'negative' : '';
+            
+            document.getElementById('comp-classique-loyer').textContent = formaterMontant(classique.loyerBrut);
+            document.getElementById('comp-encheres-loyer').textContent = formaterMontant(encheres.loyerBrut);
+            
+            const diffLoyer = encheres.loyerBrut - classique.loyerBrut;
+            const compLoyerDiff = document.getElementById('comp-loyer-diff');
+            compLoyerDiff.textContent = formaterMontantAvecSigne(diffLoyer);
+            compLoyerDiff.className = diffLoyer > 0 ? 'positive' : diffLoyer < 0 ? 'negative' : '';
+            
+            document.getElementById('comp-classique-rentabilite').textContent = formaterPourcentage(classique.rendementNet);
+            document.getElementById('comp-encheres-rentabilite').textContent = formaterPourcentage(encheres.rendementNet);
+            
+            const diffRentabilite = encheres.rendementNet - classique.rendementNet;
+            const compRentabiliteDiff = document.getElementById('comp-rentabilite-diff');
+            compRentabiliteDiff.textContent = formaterPourcentage(diffRentabilite, 2);
+            compRentabiliteDiff.className = diffRentabilite > 0 ? 'positive' : diffRentabilite < 0 ? 'negative' : '';
+            
+            document.getElementById('comp-classique-cashflow').textContent = formaterMontantAvecSigne(classique.cashFlow);
+            document.getElementById('comp-encheres-cashflow').textContent = formaterMontantAvecSigne(encheres.cashFlow);
+            
+            const diffCashflow = encheres.cashFlow - classique.cashFlow;
+            const compCashflowDiff = document.getElementById('comp-cashflow-diff');
+            compCashflowDiff.textContent = formaterMontantAvecSigne(diffCashflow);
+            compCashflowDiff.className = diffCashflow > 0 ? 'positive' : diffCashflow < 0 ? 'negative' : '';
+        } else {
+            // Si une seule option est viable, masquer ou adapter le tableau comparatif
+            document.querySelector('.comparison-table').innerHTML = '<p style="padding:1rem;text-align:center;">Comparaison impossible : une seule option viable</p>';
+        }
         
         // Mettre à jour les avantages en fonction des résultats réels
         let avantagesClassique = [];
         let avantagesEncheres = [];
         
-        // Comparer les prix
-        if (classique.prixAchat > encheres.prixAchat) {
-            avantagesEncheres.push("Prix d'achat plus avantageux");
-        } else {
-            avantagesClassique.push("Prix d'achat plus avantageux");
-        }
-        
-        // Comparer les coûts totaux
-        if (classique.coutTotal > encheres.coutTotal) {
-            avantagesEncheres.push("Coût total inférieur");
-        } else {
-            avantagesClassique.push("Coût total inférieur");
-        }
-        
-        // Comparer les rendements
-        if (classique.rendementNet < encheres.rendementNet) {
-            avantagesEncheres.push("Meilleure rentabilité");
-        } else {
-            avantagesClassique.push("Meilleure rentabilité");
-        }
-        
-        // Comparer les cash-flows
-        if (classique.cashFlow < encheres.cashFlow) {
-            avantagesEncheres.push("Cash-flow mensuel supérieur");
-        } else {
-            avantagesClassique.push("Cash-flow mensuel supérieur");
-        }
-        
         // Avantages fixes
         avantagesClassique.push("Processus d'achat plus simple");
-        avantagesClassique.push("Risques juridiques limités");
         avantagesClassique.push("Délais plus courts");
+        avantagesClassique.push("Risques juridiques limités");
         
         avantagesEncheres.push("Potentiel de valorisation supérieur");
         avantagesEncheres.push("Absence de négociation");
         avantagesEncheres.push("Possibilité de trouver des biens sous-évalués");
+        
+        // Comparer les options si les deux sont viables
+        if (classique && encheres) {
+            // Comparer les prix
+            if (classique.prixAchat > encheres.prixAchat) {
+                avantagesEncheres.push("Prix d'achat plus avantageux");
+            } else {
+                avantagesClassique.push("Prix d'achat plus avantageux");
+            }
+            
+            // Comparer les coûts totaux
+            if (classique.coutTotal > encheres.coutTotal) {
+                avantagesEncheres.push("Coût total inférieur");
+            } else {
+                avantagesClassique.push("Coût total inférieur");
+            }
+            
+            // Comparer les rendements
+            if (classique.rendementNet < encheres.rendementNet) {
+                avantagesEncheres.push("Meilleure rentabilité");
+            } else {
+                avantagesClassique.push("Meilleure rentabilité");
+            }
+            
+            // Comparer les cash-flows
+            if (classique.cashFlow < encheres.cashFlow) {
+                avantagesEncheres.push("Cash-flow mensuel supérieur");
+            } else {
+                avantagesClassique.push("Cash-flow mensuel supérieur");
+            }
+        }
         
         // Afficher les avantages
         document.getElementById('classique-avantages').textContent = "Points forts: " + avantagesClassique.join(", ");
