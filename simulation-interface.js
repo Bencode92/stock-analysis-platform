@@ -493,17 +493,29 @@ document.addEventListener('DOMContentLoaded', function() {
      * Anime les valeurs numériques des résultats
      */
     function animerResultats() {
-        // Animation des surfaces optimales
-        const classiquePrixMax = document.getElementById('classique-prix-max');
-        const encheresPrixMax = document.getElementById('encheres-prix-max');
-        
-        if (classiquePrixMax && encheresPrixMax) {
-            const surfaceClassique = simulateur.params.resultats.classique.surface;
-            const surfaceEncheres = simulateur.params.resultats.encheres.surface;
+        // Récupérer les valeurs
+        const classique = simulateur.params.resultats.classique;
+        const encheres = simulateur.params.resultats.encheres;
+
+        // Mise à jour des éléments d'affichage du budget et de la surface
+        if (classique && encheres) {
+            // Budget et surface pour l'achat classique
+            document.getElementById('classique-budget-max').textContent = formaterMontant(classique.prixAchat);
+            document.getElementById('classique-surface-max').textContent = classique.surface.toFixed(1) + " m²";
             
-            // Afficher directement les surfaces
-            classiquePrixMax.textContent = surfaceClassique + " m²";
-            encheresPrixMax.textContent = surfaceEncheres + " m²";
+            // Affichage du prix au m² final
+            const prixM2Classique = classique.prixAchat / classique.surface;
+            document.getElementById('classique-prix-m2-final').textContent = 
+                "Soit " + formaterMontant(prixM2Classique, 0) + "/m²";
+            
+            // Budget et surface pour la vente aux enchères
+            document.getElementById('encheres-budget-max').textContent = formaterMontant(encheres.prixAchat);
+            document.getElementById('encheres-surface-max').textContent = encheres.surface.toFixed(1) + " m²";
+            
+            // Affichage du prix au m² final pour les enchères
+            const prixM2Encheres = encheres.prixAchat / encheres.surface;
+            document.getElementById('encheres-prix-m2-final').textContent = 
+                "Soit " + formaterMontant(prixM2Encheres, 0) + "/m²";
         }
         
         // Animation des rentabilités
@@ -1008,7 +1020,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Affichage des résultats pour l'achat classique
-        document.getElementById('classique-prix-max').textContent = classique.surface + " m²";
+        // Nouveaux éléments pour budget et surface
+        document.getElementById('classique-budget-max').textContent = formaterMontant(classique.prixAchat);
+        document.getElementById('classique-surface-max').textContent = classique.surface.toFixed(1) + " m²";
+        
+        // Prix au m² final
+        const prixM2Classique = classique.prixAchat / classique.surface;
+        document.getElementById('classique-prix-m2-final').textContent = 
+            "Soit " + formaterMontant(prixM2Classique, 0) + "/m²";
+        
+        // Anciens éléments et détails
         document.getElementById('classique-prix-achat').textContent = formaterMontant(classique.prixAchat);
         document.getElementById('classique-frais-notaire').textContent = formaterMontant(classique.fraisNotaire);
         document.getElementById('classique-commission').textContent = formaterMontant(classique.commission);
@@ -1042,7 +1063,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Affichage des résultats pour la vente aux enchères
-        document.getElementById('encheres-prix-max').textContent = encheres.surface + " m²";
+        // Nouveaux éléments pour budget et surface
+        document.getElementById('encheres-budget-max').textContent = formaterMontant(encheres.prixAchat);
+        document.getElementById('encheres-surface-max').textContent = encheres.surface.toFixed(1) + " m²";
+        
+        // Prix au m² final pour enchères
+        const prixM2Encheres = encheres.prixAchat / encheres.surface;
+        document.getElementById('encheres-prix-m2-final').textContent = 
+            "Soit " + formaterMontant(prixM2Encheres, 0) + "/m²";
+        
+        // Anciens éléments et détails
         document.getElementById('encheres-prix-achat').textContent = formaterMontant(encheres.prixAchat);
         document.getElementById('encheres-droits').textContent = formaterMontant(encheres.droitsEnregistrement);
         document.getElementById('encheres-emoluments').textContent = formaterMontant(encheres.emolumentsPoursuivant);
