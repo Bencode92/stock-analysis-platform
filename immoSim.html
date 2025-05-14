@@ -875,6 +875,21 @@
             border-color: var(--primary-color) !important;
             box-shadow: 0 0 0 3px rgba(0, 255, 135, 0.2) !important;
         }
+        
+        /* Style pour l'info message */
+        .info-message {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background-color: rgba(0, 255, 135, 0.1);
+            border-radius: 0.5rem;
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .opacity-50 {
+            opacity: 0.5;
+        }
     </style>
 </head>
 <body>
@@ -973,6 +988,17 @@
             <div class="mode-info-content">
                 <h3>Mode 100% marché</h3>
                 <p>Ce simulateur fonctionne avec les données réelles du marché : prix d'achat au m² et loyer au m². Le prix maximum d'acquisition est déterminé uniquement par la marge positive (loyer ≥ mensualité).</p>
+            </div>
+        </div>
+        
+        <!-- Nouvelle bannière d'information sur les travaux -->
+        <div class="info-message mb-4 fade-in">
+            <div class="text-lg text-green-400 mr-3">
+                <i class="fas fa-lightbulb"></i>
+            </div>
+            <div>
+                <h4 class="font-medium mb-1">Comment sont calculés les travaux?</h4>
+                <p class="text-sm opacity-90">Par défaut, les travaux sont estimés à 0,5% du prix d'achat. Vous pouvez changer cette valeur dans les paramètres avancés, où vous avez le choix entre un montant fixe au m² ou un pourcentage du prix d'achat.</p>
             </div>
         </div>
         
@@ -1109,12 +1135,28 @@
                             </div>
                         </div>
                         
+                        <!-- Nouveau mode de calcul des travaux -->
+                        <div class="form-group">
+                            <label class="form-label">Mode de calcul des travaux</label>
+                            <div class="flex items-center">
+                                <label class="inline-flex items-center mr-4">
+                                    <input type="radio" name="travaux-mode" id="travaux-mode-percentage" value="percentage" checked class="mr-2">
+                                    <span>0,5% du prix d'achat</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="travaux-mode" id="travaux-mode-m2" value="m2" class="mr-2">
+                                    <span>Montant fixe au m²</span>
+                                </label>
+                            </div>
+                        </div>
+                        
                         <div class="form-group">
                             <label class="form-label" for="travaux-m2">Travaux au m²</label>
                             <div class="form-addon">
                                 <input type="number" id="travaux-m2" class="form-input" value="400" step="10">
                                 <span class="form-addon-text">€/m²</span>
                             </div>
+                            <span class="form-help">Utilisé uniquement si "Montant fixe au m²" est sélectionné</span>
                         </div>
                     </div>
                 </div>
