@@ -231,12 +231,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="historique-option">
                         <strong>Achat classique:</strong> 
                         ${formaterMontant(sim.resultats.classique.prixAchat)} 
-                        (${formaterPourcentage(sim.resultats.classique.rendementNet)})
+                        (${sim.resultats.classique.surface.toFixed(1)} m²)
                     </div>
                     <div class="historique-option">
                         <strong>Enchères:</strong> 
                         ${formaterMontant(sim.resultats.encheres.prixAchat)} 
-                        (${formaterPourcentage(sim.resultats.encheres.rendementNet)})
+                        (${sim.resultats.encheres.surface.toFixed(1)} m²)
                     </div>
                 </div>
                 <div class="historique-actions">
@@ -308,6 +308,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div>
                             <h4>Achat Classique</h4>
                             <p><strong>Prix d'achat:</strong> ${formaterMontant(simulation.resultats.classique.prixAchat)}</p>
+                            <p><strong>Surface:</strong> ${simulation.resultats.classique.surface.toFixed(1)} m²</p>
                             <p><strong>Coût total:</strong> ${formaterMontant(simulation.resultats.classique.coutTotal)}</p>
                             <p><strong>Emprunt:</strong> ${formaterMontant(simulation.resultats.classique.emprunt)}</p>
                             <p><strong>Mensualité:</strong> ${formaterMontantMensuel(simulation.resultats.classique.mensualite)}</p>
@@ -317,6 +318,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div>
                             <h4>Vente aux Enchères</h4>
                             <p><strong>Prix d'achat:</strong> ${formaterMontant(simulation.resultats.encheres.prixAchat)}</p>
+                            <p><strong>Surface:</strong> ${simulation.resultats.encheres.surface.toFixed(1)} m²</p>
                             <p><strong>Coût total:</strong> ${formaterMontant(simulation.resultats.encheres.coutTotal)}</p>
                             <p><strong>Emprunt:</strong> ${formaterMontant(simulation.resultats.encheres.emprunt)}</p>
                             <p><strong>Mensualité:</strong> ${formaterMontantMensuel(simulation.resultats.encheres.mensualite)}</p>
@@ -842,9 +844,9 @@ document.addEventListener('DOMContentLoaded', function() {
             droitsEnregistrement: document.getElementById('droits-enregistrement').value,
             coefMutation: document.getElementById('coef-mutation').value,
             emolumentsPoursuivant1: document.getElementById('emoluments-poursuivant-1').value,
-            emolumentsPoursuivant2: document.getElementById('emoluments-poursuivant-2').value,
-            emolumentsPoursuivant3: document.getElementById('emoluments-poursuivant-3').value,
-            emolumentsPoursuivant4: document.getElementById('emoluments-poursuivant-4').value,
+            emolementsPoursuivant2: document.getElementById('emoluments-poursuivant-2').value,
+            emolementsPoursuivant3: document.getElementById('emoluments-poursuivant-3').value,
+            emolementsPoursuivant4: document.getElementById('emoluments-poursuivant-4').value,
             honorairesAvocatCoef: document.getElementById('honoraires-avocat-coef').value,
             honorairesAvocatTVA: document.getElementById('honoraires-avocat-tva').value,
             publiciteFonciereEncheres: document.getElementById('publicite-fonciere-encheres').value,
@@ -945,6 +947,13 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('classique-budget-max').textContent = formaterMontant(classique.prixAchat);
         document.getElementById('classique-surface-max').textContent = classique.surface.toFixed(1) + " m²";
         
+        // Prix au m² final (si l'élément existe)
+        const prixM2Classique = classique.prixAchat / classique.surface;
+        if (document.getElementById('classique-prix-m2-final')) {
+            document.getElementById('classique-prix-m2-final').textContent = 
+                "Soit " + formaterMontant(prixM2Classique, 0) + "/m²";
+        }
+        
         // Anciens éléments et détails
         document.getElementById('classique-prix-achat').textContent = formaterMontant(classique.prixAchat);
         document.getElementById('classique-frais-notaire').textContent = formaterMontant(classique.fraisNotaire);
@@ -996,6 +1005,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Nouveaux éléments pour budget et surface
         document.getElementById('encheres-budget-max').textContent = formaterMontant(encheres.prixAchat);
         document.getElementById('encheres-surface-max').textContent = encheres.surface.toFixed(1) + " m²";
+        
+        // Prix au m² final pour enchères (si l'élément existe)
+        const prixM2Encheres = encheres.prixAchat / encheres.surface;
+        if (document.getElementById('encheres-prix-m2-final')) {
+            document.getElementById('encheres-prix-m2-final').textContent = 
+                "Soit " + formaterMontant(prixM2Encheres, 0) + "/m²";
+        }
         
         // Anciens éléments et détails
         document.getElementById('encheres-prix-achat').textContent = formaterMontant(encheres.prixAchat);
