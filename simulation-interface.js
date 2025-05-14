@@ -54,6 +54,17 @@ document.addEventListener('DOMContentLoaded', function() {
             border-radius: 0.5rem;
             border: 1px solid rgba(0, 255, 135, 0.3);
         }
+        
+        .optimization-badge {
+            display: inline-block;
+            margin-left: 0.5rem;
+            padding: 0.2rem 0.5rem;
+            background-color: rgba(139, 92, 246, 0.2);
+            color: #A78BFA;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
     `;
     document.head.appendChild(styleEl);
 
@@ -124,55 +135,57 @@ document.addEventListener('DOMContentLoaded', function() {
         // Afficher l'indicateur de chargement
         document.querySelector('.loading').style.display = 'flex';
         
-        // Délai artificiel pour montrer le chargement (à retirer en production)
-        setTimeout(() => {
-            // Récupérer les données du formulaire
-            const formData = collecterDonneesFormulaire();
-            
-            // Charger les paramètres dans le simulateur
-            simulateur.chargerParametres(formData);
-            
-            // Exécuter la simulation
-            const resultats = simulateur.simuler();
-            
-            // Masquer l'indicateur de chargement
-            document.querySelector('.loading').style.display = 'none';
-            
-            // Vérifier si des résultats ont été trouvés
-            if (!resultats.classique || !resultats.encheres) {
-                afficherToast('Aucun prix viable avec ces paramètres.', 'warning');
-                return;
-            }
-            
-            // Afficher les résultats avec animation
-            resultsContainer.classList.remove('hidden');
-            resultsContainer.classList.add('fade-in');
-            
-            // Ajouter la notification de prix maximum calculé
-            const notification = document.createElement('div');
-            notification.className = 'info-message fade-in';
-            notification.innerHTML = `<i class="fas fa-check-circle"></i> Calcul terminé : <strong>Prix maximum finançable</strong> déterminé par une marge positive entre loyer et mensualité`;
-            
-            // Mettre à jour le champ caché de surface
-            document.getElementById('surface').value = resultats.classique.surface;
-            
-            // Ajouter la notification avant les résultats
-            resultsContainer.insertBefore(notification, resultsContainer.firstChild);
-            
-            // Animer les valeurs numériques
-            afficherResultats(resultats);
-            
-            // Créer les graphiques
-            creerGraphiques();
-            
-            // Afficher le bouton de sauvegarde
-            if (btnSaveSimulation) {
-                btnSaveSimulation.classList.remove('hidden');
-            }
-            
-            // Défiler vers les résultats
-            resultsContainer.scrollIntoView({ behavior: 'smooth' });
-        }, 1000);
+        // Exécution immédiate (sans délai artificiel)
+        // Récupérer les données du formulaire
+        const formData = collecterDonneesFormulaire();
+        
+        // Charger les paramètres dans le simulateur
+        simulateur.chargerParametres(formData);
+        
+        // Exécuter la simulation
+        const resultats = simulateur.simuler();
+        
+        // Masquer l'indicateur de chargement
+        document.querySelector('.loading').style.display = 'none';
+        
+        // Vérifier si des résultats ont été trouvés
+        if (!resultats.classique || !resultats.encheres) {
+            afficherToast('Aucun prix viable avec ces paramètres.', 'warning');
+            return;
+        }
+        
+        // Afficher les résultats avec animation
+        resultsContainer.classList.remove('hidden');
+        resultsContainer.classList.add('fade-in');
+        
+        // Ajouter la notification de prix maximum calculé avec badge d'optimisation
+        const notification = document.createElement('div');
+        notification.className = 'info-message fade-in';
+        notification.innerHTML = `
+            <i class="fas fa-check-circle"></i> 
+            Calcul terminé : <strong>Prix maximum finançable</strong> déterminé par une marge positive entre loyer et mensualité
+            <span class="optimization-badge"><i class="fas fa-bolt"></i> Recherche dichotomique (ε = 100 €)</span>
+        `;
+        
+        // Mettre à jour le champ caché de surface
+        document.getElementById('surface').value = resultats.classique.surface;
+        
+        // Ajouter la notification avant les résultats
+        resultsContainer.insertBefore(notification, resultsContainer.firstChild);
+        
+        // Animer les valeurs numériques
+        afficherResultats(resultats);
+        
+        // Créer les graphiques
+        creerGraphiques();
+        
+        // Afficher le bouton de sauvegarde
+        if (btnSaveSimulation) {
+            btnSaveSimulation.classList.remove('hidden');
+        }
+        
+        // Défiler vers les résultats
+        resultsContainer.scrollIntoView({ behavior: 'smooth' });
     });
 
     // Sauvegarde d'une simulation
