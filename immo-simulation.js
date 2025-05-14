@@ -26,7 +26,7 @@ class SimulateurImmo {
                 fraisBancairesCompte: 710,
                 fraisGarantie: 1.3709,        // % du capital emprunté
                 taxeFonciere: 0,              // % du prix (remplacé par 5% du loyer)
-                vacanceLocative: 8,           // % des loyers
+                vacanceLocative: 5,           // % des loyers (modifié de 8% à 5%)
                 loyerM2: 12,                  // €/m²/mois (valeur utilisée si calcul par rendement impossible)
                 travauxM2: 10,                // €/m² (remplacé par 0.5% du prix)
                 entretienAnnuel: 0.5,         // % du prix d'achat
@@ -333,8 +333,8 @@ class SimulateurImmo {
      * @returns {number} - Montant mensuel des charges non récupérables
      */
     calculerChargesNonRecuperables(surface) {
-        // 60€/m²/an, divisé par 12 pour obtenir la valeur mensuelle
-        return (surface * 60) / 12;
+        // 30€/m²/an, divisé par 12 pour obtenir la valeur mensuelle
+        return (surface * 30) / 12;
     }
 
     /**
@@ -514,8 +514,8 @@ class SimulateurImmo {
         // Taxe foncière (5% du loyer annuel brut)
         const taxeFonciere = loyerBrut * 12 * 0.05;
         
-        // Charges non récupérables (60€/m²/an)
-        const chargesCopro = surface * 60;
+        // Charges non récupérables (30€/m²/an)
+        const chargesCopro = surface * 30;
         const chargesNonRecuperables = chargesCopro / 12; // Mensuel
         
         // Entretien
