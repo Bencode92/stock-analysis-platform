@@ -890,6 +890,240 @@
         .opacity-50 {
             opacity: 0.5;
         }
+        
+        /* Styles pour la section explicative du cash-flow */
+        .explanation-section h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .explanation-section p {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+        
+        .formula-box {
+            background-color: rgba(0, 255, 135, 0.1);
+            border: 1px solid rgba(0, 255, 135, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .formula-title {
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--primary-color);
+        }
+        
+        .formula-content {
+            padding-left: 0.5rem;
+        }
+        
+        .formula-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .step-number {
+            background-color: var(--primary-color);
+            color: var(--background-dark);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-right: 0.75rem;
+        }
+        
+        .formula-note {
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            padding-left: 2.25rem;
+            opacity: 0.8;
+            font-style: italic;
+        }
+        
+        .formula-equation {
+            font-family: monospace;
+            font-size: 1.1rem;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .formula-example {
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            opacity: 0.8;
+        }
+        
+        .terms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .term-card {
+            background-color: rgba(1, 42, 74, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .term-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-color: rgba(0, 255, 135, 0.3);
+        }
+        
+        .term-title {
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .term-definition {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .interpretation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .interpretation-card {
+            background-color: rgba(1, 42, 74, 0.5);
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .interpretation-card.positive {
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+        
+        .interpretation-card.neutral {
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+        
+        .interpretation-card.negative {
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+        
+        .interpretation-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .interpretation-card.positive .interpretation-icon {
+            color: #10B981;
+        }
+        
+        .interpretation-card.neutral .interpretation-icon {
+            color: #F59E0B;
+        }
+        
+        .interpretation-card.negative .interpretation-icon {
+            color: #EF4444;
+        }
+        
+        .interpretation-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .interpretation-text {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .advice-box {
+            background-color: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        
+        .advice-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #F59E0B;
+        }
+        
+        .text-primary-color {
+            color: var(--primary-color);
+        }
+        
+        /* Styles pour les infobulles */
+        .info-icon {
+            display: inline-flex;
+            margin-left: 0.5rem;
+            color: var(--primary-color);
+            font-size: 0.9rem;
+            cursor: help;
+            position: relative;
+        }
+        
+        .info-icon .tooltip-text {
+            visibility: hidden;
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 250px;
+            background-color: rgba(1, 42, 74, 0.95);
+            color: white;
+            text-align: center;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+        }
+        
+        .info-icon:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        /* Flèche en bas de l'infobulle */
+        .info-icon .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: rgba(1, 42, 74, 0.95) transparent transparent transparent;
+        }
+        
+        /* Style pour le bouton du guide */
+        .guide-button {
+            display: block;
+            margin: 0 auto;
+            margin-top: 1.5rem;
+        }
     </style>
 </head>
 <body>
@@ -1603,6 +1837,156 @@
                     </span>
                 </div>
             </div>
+            
+            <!-- Bouton pour afficher le guide explicatif -->
+            <button id="btn-guide-cashflow" class="btn btn-outline guide-button">
+                <i class="fas fa-question-circle"></i> Comprendre le cash-flow
+            </button>
+        </div>
+        
+        <!-- Guide explicatif du cash-flow (masqué par défaut) -->
+        <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg transition-all mt-4 hidden" id="cash-flow-explanation">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <h2 class="card-title">Comprendre le cash-flow immobilier</h2>
+            </div>
+            
+            <div class="explanation-content p-4">
+                <div class="explanation-section">
+                    <h3><i class="fas fa-question-circle text-primary-color mr-2"></i> Qu'est-ce que le cash-flow ?</h3>
+                    <p>Le cash-flow est la différence entre les revenus locatifs nets et l'ensemble des charges liées à votre investissement. C'est l'argent qui reste réellement dans votre poche chaque mois après avoir payé toutes les dépenses.</p>
+                    
+                    <div class="formula-box">
+                        <div class="formula-title">Comment calculer le cash-flow mensuel</div>
+                        <div class="formula-content">
+                            <div class="formula-step">
+                                <span class="step-number">1</span>
+                                <span class="step-text">Loyer brut - Vacance locative = <strong>Loyer net</strong></span>
+                            </div>
+                            <div class="formula-step">
+                                <span class="step-number">2</span>
+                                <span class="step-text">Loyer net - Mensualité du prêt - Charges = <strong>Cash-flow mensuel</strong></span>
+                            </div>
+                            <div class="formula-note">
+                                Les charges incluent : taxe foncière, assurance PNO, entretien, charges non récupérables
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="explanation-section mt-6">
+                    <h3><i class="fas fa-calculator text-primary-color mr-2"></i> Comprendre les différents termes</h3>
+                    
+                    <div class="terms-grid">
+                        <div class="term-card">
+                            <div class="term-title">Loyer brut</div>
+                            <div class="term-definition">Loyer total facturé au locataire avant déduction des charges et de la vacance locative.</div>
+                        </div>
+                        
+                        <div class="term-card">
+                            <div class="term-title">Vacance locative</div>
+                            <div class="term-definition">Provision pour les périodes sans locataire (généralement 5% des loyers). Pour un loyer de 1000€/mois, on prévoit 50€/mois de vacance.</div>
+                        </div>
+                        
+                        <div class="term-card">
+                            <div class="term-title">Loyer net</div>
+                            <div class="term-definition">Loyer brut moins la vacance locative. C'est le revenu sur lequel vous pouvez réellement compter.</div>
+                        </div>
+                        
+                        <div class="term-card">
+                            <div class="term-title">Mensualité</div>
+                            <div class="term-definition">Remboursement mensuel de votre prêt immobilier (capital + intérêts).</div>
+                        </div>
+                        
+                        <div class="term-card">
+                            <div class="term-title">Taxe foncière</div>
+                            <div class="term-definition">Impôt local annuel divisé par 12 pour obtenir le coût mensuel.</div>
+                        </div>
+                        
+                        <div class="term-card">
+                            <div class="term-title">Charges non récupérables</div>
+                            <div class="term-definition">Charges que vous ne pouvez pas refacturer au locataire (parties communes, certaines réparations...).</div>
+                        </div>
+                        
+                        <div class="term-card">
+                            <div class="term-title">Entretien</div>
+                            <div class="term-definition">Provision pour les travaux futurs, généralement calculée comme 0,5% du prix d'achat par an.</div>
+                        </div>
+                        
+                        <div class="term-card">
+                            <div class="term-title">Assurance PNO</div>
+                            <div class="term-definition">Assurance Propriétaire Non Occupant, obligatoire pour couvrir les risques liés au bien loué.</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="explanation-section mt-6">
+                    <h3><i class="fas fa-money-bill-wave text-primary-color mr-2"></i> Cash-flow mensuel vs annuel</h3>
+                    <p>Le cash-flow mensuel est utile pour évaluer l'impact sur votre budget au mois le mois, tandis que le cash-flow annuel donne une vision plus globale de la performance de votre investissement.</p>
+                    
+                    <div class="formula-box">
+                        <div class="formula-title">Du mensuel à l'annuel</div>
+                        <div class="formula-content">
+                            <div class="formula-equation">
+                                Cash-flow annuel = Cash-flow mensuel × 12
+                            </div>
+                            <div class="formula-example">
+                                Exemple : Un cash-flow de 100€/mois équivaut à 1 200€/an
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="explanation-section mt-6">
+                    <h3><i class="fas fa-file-invoice-dollar text-primary-color mr-2"></i> L'impact fiscal sur le cash-flow</h3>
+                    <p>L'imposition des revenus fonciers peut significativement affecter votre cash-flow réel. Le simulateur calcule cet impact en fonction du régime fiscal choisi.</p>
+                    
+                    <div class="formula-box">
+                        <div class="formula-title">Cash-flow après impôt</div>
+                        <div class="formula-content">
+                            <div class="formula-equation">
+                                Cash-flow après impôt = Cash-flow + (Impact fiscal ÷ 12)
+                            </div>
+                            <div class="formula-note">
+                                L'impact fiscal peut être positif (économie d'impôt) ou négatif (impôt à payer)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="explanation-section mt-6">
+                    <h3><i class="fas fa-chart-line text-primary-color mr-2"></i> Interpréter les résultats</h3>
+                    
+                    <div class="interpretation-grid">
+                        <div class="interpretation-card positive">
+                            <div class="interpretation-icon"><i class="fas fa-plus-circle"></i></div>
+                            <div class="interpretation-title">Cash-flow positif</div>
+                            <div class="interpretation-text">L'investissement génère plus de revenus que de charges. Il s'autofinance et vous procure un revenu complémentaire.</div>
+                        </div>
+                        
+                        <div class="interpretation-card neutral">
+                            <div class="interpretation-icon"><i class="fas fa-equals"></i></div>
+                            <div class="interpretation-title">Cash-flow nul</div>
+                            <div class="interpretation-text">L'investissement s'autofinance tout juste. Vous ne déboursez rien, mais ne percevez pas de revenu supplémentaire.</div>
+                        </div>
+                        
+                        <div class="interpretation-card negative">
+                            <div class="interpretation-icon"><i class="fas fa-minus-circle"></i></div>
+                            <div class="interpretation-title">Cash-flow négatif</div>
+                            <div class="interpretation-text">L'investissement ne s'autofinance pas complètement. Vous devez compléter chaque mois avec vos fonds personnels.</div>
+                        </div>
+                    </div>
+                    
+                    <div class="advice-box mt-4">
+                        <div class="advice-title"><i class="fas fa-lightbulb mr-2"></i> Conseil</div>
+                        <div class="advice-content">
+                            Un cash-flow légèrement négatif n'est pas forcément un mauvais investissement, surtout si vous visez une plus-value à la revente ou si le bien se valorise rapidement. Le simulateur vous permet justement de comparer les scénarios de revente.
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1631,6 +2015,26 @@
         // Mettre à jour l'heure toutes les secondes
         setInterval(updateMarketTime, 1000);
         updateMarketTime(); // Initialiser l'heure
+        
+        // Script pour l'affichage/masquage du guide explicatif du cash-flow
+        document.addEventListener('DOMContentLoaded', function() {
+            const btnGuideCashflow = document.getElementById('btn-guide-cashflow');
+            const cashFlowExplanation = document.getElementById('cash-flow-explanation');
+            
+            if (btnGuideCashflow && cashFlowExplanation) {
+                btnGuideCashflow.addEventListener('click', function() {
+                    cashFlowExplanation.classList.toggle('hidden');
+                    
+                    // Faire défiler jusqu'à la section si elle est visible
+                    if (!cashFlowExplanation.classList.contains('hidden')) {
+                        cashFlowExplanation.scrollIntoView({ behavior: 'smooth' });
+                        btnGuideCashflow.innerHTML = '<i class="fas fa-times-circle"></i> Masquer le guide';
+                    } else {
+                        btnGuideCashflow.innerHTML = '<i class="fas fa-question-circle"></i> Comprendre le cash-flow';
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>
