@@ -7,8 +7,9 @@
  * 3. Scénarios de sortie/revente
  * 4. Améliorations d'interface utilisateur
  * 5. Sélecteur de régime fiscal avancé avec interface en cartes
+ * 6. Comparaison et recommandation de régimes fiscaux
  * 
- * Version 1.0 - Mai 2025
+ * Version 1.1 - Mai 2025 - Ajout des fonctionnalités de recommandation fiscale
  */
 
 // Module principal d'extensions pour le simulateur immobilier
@@ -100,6 +101,11 @@ const ImmoExtensions = (function() {
             // Stocker les résultats
             this.params.resultats.classique = resultatsClassique;
             this.params.resultats.encheres = resultatsEncheres;
+            
+            // Déclencher un événement personnalisé pour signaler que la simulation est terminée
+            document.dispatchEvent(new CustomEvent('immo:simulation-complete', {
+                detail: { resultats: { classique: resultatsClassique, encheres: resultatsEncheres } }
+            }));
             
             return {
                 classique: resultatsClassique,
@@ -740,6 +746,53 @@ const ImmoExtensions = (function() {
                 background-size: 200% 100%;
                 animation: loading-shimmer 1.5s infinite;
                 pointer-events: none;
+            }
+            
+            /* Styles pour les badges recommandés */
+            .recommended-badge-classique,
+            .recommended-badge-encheres {
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                font-size: 0.65rem;
+                font-weight: 600;
+                padding: 0.25rem 0.5rem;
+                border-radius: 9999px;
+                color: white;
+                z-index: 5;
+            }
+            
+            .recommended-badge-classique {
+                background-color: rgba(16, 185, 129, 0.9);
+                box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+            }
+            
+            .recommended-badge-encheres {
+                background-color: rgba(245, 158, 11, 0.9);
+                box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+            }
+            
+            /* Animation de pulsation pour les badges */
+            @keyframes pulse-green {
+                0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+                70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+            }
+            
+            @keyframes pulse-yellow {
+                0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+                70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+            }
+            
+            /* Styles pour le conteneur d'info sur régimes optimaux */
+            #optimal-regimes-info {
+                margin-top: 1rem;
+                padding: 0.75rem;
+                border-radius: 0.5rem;
+                background-color: rgba(1, 42, 74, 0.5);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                font-size: 0.9rem;
             }
             
             @keyframes loading-shimmer {
@@ -1421,6 +1474,13 @@ const ImmoExtensions = (function() {
                 
                 // Ajouter l'affichage fiscal
                 mettreAJourAffichageFiscal();
+                
+                // Ajouter un bouton de comparaison des régimes fiscaux si le module existe
+                if (window.FiscalComparison && typeof window.FiscalComparison.addComparisonButton === 'function') {
+                    if (!document.getElementById('btn-compare-regimes')) {
+                        window.FiscalComparison.addComparisonButton(document.getElementById('results-container'));
+                    }
+                }
             };
         }
     }
@@ -1490,6 +1550,87 @@ const ImmoExtensions = (function() {
                 }
             });
         }
+        
+        // Écouteur pour la recommandation de régime fiscal
+        document.addEventListener('immo:simulation-complete', function(e) {
+            // Déterminer le régime optimal si le module FiscalComparison est disponible
+            if (window.FiscalComparison && simulateur) {
+                // Calculer tous les régimes
+                const comparisonResults = window.FiscalComparison.compareAllRegimes(simulateur);
+                
+                // Mettre à jour le visuel pour mettre en évidence le régime optimal pour chaque mode
+                mettreEnEvidenceRegimeOptimal(comparisonResults);
+                
+                // Ajouter un badge "Recommandé" à côté des cartes de régime optimal
+                if (comparisonResults.optimal.classique) {
+                    const classiqueCard = document.querySelector(`.regime-card[data-regime="${comparisonResults.optimal.classique}"]`);
+                    if (classiqueCard && !classiqueCard.querySelector('.recommended-badge-classique')) {
+                        const badge = document.createElement('div');
+                        badge.className = 'recommended-badge-classique';
+                        badge.innerHTML = '<i class="fas fa-home mr-1"></i> Recommandé';
+                        classiqueCard.appendChild(badge);
+                        classiqueCard.classList.add('shadow-green-400/20');
+                    }
+                }
+                
+                if (comparisonResults.optimal.encheres) {
+                    const encheresCard = document.querySelector(`.regime-card[data-regime="${comparisonResults.optimal.encheres}"]`);
+                    if (encheresCard && !encheresCard.querySelector('.recommended-badge-encheres')) {
+                        const badge = document.createElement('div');
+                        badge.className = 'recommended-badge-encheres';
+                        badge.innerHTML = '<i class="fas fa-gavel mr-1"></i> Recommandé';
+                        encheresCard.appendChild(badge);
+                        encheresCard.classList.add('shadow-yellow-400/20');
+                    }
+                }
+            }
+        });
+    }
+
+    // Fonction pour mettre en évidence le régime fiscal optimal
+    function mettreEnEvidenceRegimeOptimal(comparisonResults) {
+        if (!comparisonResults || !comparisonResults.optimal) return;
+        
+        // Créer ou mettre à jour le conteneur d'informations sur les régimes optimaux
+        let optimalInfoContainer = document.getElementById('optimal-regimes-info');
+        if (!optimalInfoContainer) {
+            optimalInfoContainer = document.createElement('div');
+            optimalInfoContainer.id = 'optimal-regimes-info';
+            optimalInfoContainer.className = 'mt-4 p-3 rounded-lg bg-blue-900/30 border border-blue-400/20';
+            
+            // Trouver un endroit approprié pour l'insérer
+            const regimeFiscalSection = document.querySelector('#regime-fiscal-cards');
+            if (regimeFiscalSection) {
+                regimeFiscalSection.parentNode.insertBefore(optimalInfoContainer, regimeFiscalSection.nextSibling);
+            }
+        }
+        
+        // Préparer le contenu informatif
+        optimalInfoContainer.innerHTML = `
+            <div class="flex flex-col md:flex-row gap-3">
+                <div class="flex-1 p-2 rounded-lg bg-green-900/20 border border-green-400/30">
+                    <h4 class="text-sm font-medium flex items-center text-green-400">
+                        <i class="fas fa-home mr-2"></i>
+                        Régime optimal pour l'achat classique
+                    </h4>
+                    <div class="mt-1 text-xs text-green-200">
+                        Le régime <strong>${comparisonResults.classique[comparisonResults.optimal.classique].label}</strong> 
+                        maximise votre cash-flow après impôt pour l'achat classique
+                    </div>
+                </div>
+                
+                <div class="flex-1 p-2 rounded-lg bg-yellow-900/20 border border-yellow-400/30">
+                    <h4 class="text-sm font-medium flex items-center text-yellow-400">
+                        <i class="fas fa-gavel mr-2"></i>
+                        Régime optimal pour la vente aux enchères
+                    </h4>
+                    <div class="mt-1 text-xs text-yellow-200">
+                        Le régime <strong>${comparisonResults.encheres[comparisonResults.optimal.encheres].label}</strong> 
+                        maximise votre cash-flow après impôt pour la vente aux enchères
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     // Affiche les résultats des scénarios de revente
