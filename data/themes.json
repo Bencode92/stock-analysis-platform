@@ -2,36 +2,6 @@
   "themes": {
     "weekly": {
       "macroeconomics": {
-        "monetary_policy": {
-          "count": 4,
-          "articles": [
-            "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges",
-            "S&P 500 Beats A Small Retreat As Trade Deals Draw Investor Focus While Fed Punts",
-            "Trump tariffs face major legal hurdle as federal trade court hears challenge",
-            "Citi CEO Fraser on Eco Data, Client Engagement, Fed"
-          ],
-          "keywords": {
-            "fed": {
-              "count": 2,
-              "examples": [
-                "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges",
-                "Citi CEO Fraser on Eco Data, Client Engagement, Fed"
-              ]
-            },
-            "central bank": {
-              "count": 1,
-              "examples": [
-                "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 25.0,
-            "neutral": 75.0,
-            "negative": 0.0
-          },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **4 articles** during the period, mainly through topics like: fed (2), central bank (1). Sentiment is mostly positive (25.0% vs 0.0% negative). Examples of articles: « Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges », « S&P 500 Beats A Small Retreat As Trade Deals Draw Investor Focus While Fed Punts », « Trump tariffs face major legal hurdle as federal trade court hears challenge »."
-        },
         "geopolitics": {
           "count": 4,
           "articles": [
@@ -63,16 +33,46 @@
           },
           "gpt_summary": "📰 The theme **geopolitics** was detected in **4 articles** during the period, mainly through topics like: war (3), china (1). Sentiment is mostly positive (50.0% vs 25.0% negative). Examples of articles: « Live Nasdaq Composite: Markets Rise as China Tariffs Do This », « Cross-Asset Volatilities Subside On De-Escalation Of Trade Tensions », « With Warren Buffett Stepping Down as CEO, Will Berkshire Hathaway Sell Apple Stock? »."
         },
-        "inflation": {
-          "count": 2,
+        "monetary_policy": {
+          "count": 3,
           "articles": [
+            "S&P 500 Beats A Small Retreat As Trade Deals Draw Investor Focus While Fed Punts",
+            "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says",
+            "Citi CEO Fraser on Eco Data, Client Engagement, Fed"
+          ],
+          "keywords": {
+            "central bank": {
+              "count": 1,
+              "examples": [
+                "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says"
+              ]
+            },
+            "fed": {
+              "count": 1,
+              "examples": [
+                "Citi CEO Fraser on Eco Data, Client Engagement, Fed"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 66.7,
+            "neutral": 33.3,
+            "negative": 0.0
+          },
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **3 articles** during the period, mainly through topics like: central bank (1), fed (1). Sentiment is mostly positive (66.7% vs 0.0% negative). Examples of articles: « S&P 500 Beats A Small Retreat As Trade Deals Draw Investor Focus While Fed Punts », « Trade uncertainty lowers growth, inflation in near term, ECB's Knot says », « Citi CEO Fraser on Eco Data, Client Engagement, Fed »."
+        },
+        "inflation": {
+          "count": 3,
+          "articles": [
+            "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says",
             "The full impact of tariffs on inflation hasn't hit the economy yet: Economist",
             "India's inflation rate slows to 3.16% in April, marking six straight months of decline"
           ],
           "keywords": {
             "inflation": {
-              "count": 2,
+              "count": 3,
               "examples": [
+                "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says",
                 "The full impact of tariffs on inflation hasn't hit the economy yet: Economist",
                 "India's inflation rate slows to 3.16% in April, marking six straight months of decline"
               ]
@@ -103,28 +103,57 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 50.0,
+            "positive": 66.7,
             "neutral": 0.0,
-            "negative": 50.0
+            "negative": 33.3
           },
-          "gpt_summary": "📰 The theme **inflation** was detected in **2 articles** during the period, mainly through topics like: inflation (2), price (1), CPI (1), interest rate (1), consumer price (1). Sentiment is mixed (50.0% positive, 50.0% negative). Examples of articles: « The full impact of tariffs on inflation hasn't hit the economy yet: Economist », « India's inflation rate slows to 3.16% in April, marking six straight months of decline »."
+          "gpt_summary": "📰 The theme **inflation** was detected in **3 articles** during the period, mainly through topics like: inflation (3), price (1), CPI (1), interest rate (1), consumer price (1). Sentiment is mostly positive (66.7% vs 33.3% negative). Examples of articles: « Trade uncertainty lowers growth, inflation in near term, ECB's Knot says », « The full impact of tariffs on inflation hasn't hit the economy yet: Economist », « India's inflation rate slows to 3.16% in April, marking six straight months of decline »."
+        },
+        "recession": {
+          "count": 2,
+          "articles": [
+            "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says",
+            "Apollo's Zelter on Recession, Dealmaking, Credit Cycle"
+          ],
+          "keywords": {
+            "growth": {
+              "count": 1,
+              "examples": [
+                "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says"
+              ]
+            },
+            "recession": {
+              "count": 1,
+              "examples": [
+                "Apollo's Zelter on Recession, Dealmaking, Credit Cycle"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 50.0,
+            "neutral": 50.0,
+            "negative": 0.0
+          },
+          "gpt_summary": "📰 The theme **recession** was detected in **2 articles** during the period, mainly through topics like: growth (1), recession (1). Sentiment is mostly positive (50.0% vs 0.0% negative). Examples of articles: « Trade uncertainty lowers growth, inflation in near term, ECB's Knot says », « Apollo's Zelter on Recession, Dealmaking, Credit Cycle »."
         }
       },
       "sectors": {
         "technology": {
-          "count": 5,
+          "count": 6,
           "articles": [
             "You can see AI everywhere — except in Big Tech's profits",
             "Samsung launches slimmest smartphone as races against rival Apple",
+            "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says",
             "India's inflation rate slows to 3.16% in April, marking six straight months of decline",
             "Nvidia hits $3.17 tn, closes in on Apple's m-cap after Saudi partnership: can it reshape tech rankings?",
             "Citi CEO Fraser on Eco Data, Client Engagement, Fed"
           ],
           "keywords": {
             "ai": {
-              "count": 1,
+              "count": 2,
               "examples": [
-                "You can see AI everywhere — except in Big Tech's profits"
+                "You can see AI everywhere — except in Big Tech's profits",
+                "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says"
               ]
             },
             "artificial intelligence": {
@@ -142,66 +171,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 60.0,
-            "neutral": 20.0,
-            "negative": 20.0
+            "positive": 66.7,
+            "neutral": 16.7,
+            "negative": 16.7
           },
-          "gpt_summary": "📰 The theme **technology** was detected in **5 articles** during the period, mainly through topics like: artificial intelligence (2), ai (1), data (1). Sentiment is mostly positive (60.0% vs 20.0% negative). Examples of articles: « You can see AI everywhere — except in Big Tech's profits », « Samsung launches slimmest smartphone as races against rival Apple », « India's inflation rate slows to 3.16% in April, marking six straight months of decline »."
-        },
-        "finance": {
-          "count": 3,
-          "articles": [
-            "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges",
-            "Japan PM Ishiba reiterates call to eliminate all tariffs with US",
-            "Powell Steers New Strategy for a World Where Very Low Rates Are No Sure Thing"
-          ],
-          "keywords": {
-            "banks": {
-              "count": 1,
-              "examples": [
-                "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges"
-              ]
-            },
-            "rates": {
-              "count": 1,
-              "examples": [
-                "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 100.0,
-            "negative": 0.0
-          },
-          "gpt_summary": "📰 The theme **finance** was detected in **3 articles** during the period, mainly through topics like: banks (1), rates (1). Sentiment is mixed (0.0% positive, 0.0% negative). Examples of articles: « Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges », « Japan PM Ishiba reiterates call to eliminate all tariffs with US », « Powell Steers New Strategy for a World Where Very Low Rates Are No Sure Thing »."
-        },
-        "industry": {
-          "count": 2,
-          "articles": [
-            "US manufacturing output falls in April on weak auto production",
-            "Trump tells Apple's CEO to stop expanding iPhone production in India"
-          ],
-          "keywords": {
-            "factory": {
-              "count": 1,
-              "examples": [
-                "US manufacturing output falls in April on weak auto production"
-              ]
-            },
-            "production": {
-              "count": 1,
-              "examples": [
-                "US manufacturing output falls in April on weak auto production"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 50.0,
-            "neutral": 50.0,
-            "negative": 0.0
-          },
-          "gpt_summary": "📰 The theme **industry** was detected in **2 articles** during the period, mainly through topics like: factory (1), production (1). Sentiment is mostly positive (50.0% vs 0.0% negative). Examples of articles: « US manufacturing output falls in April on weak auto production », « Trump tells Apple's CEO to stop expanding iPhone production in India »."
+          "gpt_summary": "📰 The theme **technology** was detected in **6 articles** during the period, mainly through topics like: ai (2), artificial intelligence (2), data (1). Sentiment is mostly positive (66.7% vs 16.7% negative). Examples of articles: « You can see AI everywhere — except in Big Tech's profits », « Samsung launches slimmest smartphone as races against rival Apple », « Trade uncertainty lowers growth, inflation in near term, ECB's Knot says »."
         },
         "transport": {
           "count": 2,
@@ -216,82 +190,56 @@
             "negative": 0.0
           },
           "gpt_summary": "📰 The theme **transport** was detected in **2 articles** during the period, mainly through topics like: . Sentiment is mostly positive (100.0% vs 0.0% negative). Examples of articles: « Smart Trackers Strategic Business Report 2024-2025 & 2030, Competitive Analysis of Apple, Chipolo doo, Cube Tracker, Jiobit, Kaltio, Lil Tracker, Pebblebee, Rope Innovation, Samsung, Shenzhen Coban », « These 4 Warren Buffett Stocks Make Up Over 57% of Berkshire Hathaway's $277 Billion Portfolio »."
-        }
-      },
-      "regions": {
-        "usa": {
-          "count": 7,
+        },
+        "industry": {
+          "count": 2,
           "articles": [
-            "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges",
-            "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
-            "With Trillions Coming Into the United States One Investment Says ‘Buy’",
-            "S&P 500 Beats A Small Retreat As Trade Deals Draw Investor Focus While Fed Punts",
-            "S&P 500 INDEX (SPX) Live: Broader Markets Rise on Bullish Trade Optimism",
-            "Trump tariffs face major legal hurdle as federal trade court hears challenge",
-            "Citi CEO Fraser on Eco Data, Client Engagement, Fed"
+            "Trump tells Apple's CEO to stop expanding iPhone production in India",
+            "Apple gets presidential pressure to migrate production"
+          ],
+          "keywords": {},
+          "sentiment_distribution": {
+            "positive": 0.0,
+            "neutral": 50.0,
+            "negative": 50.0
+          },
+          "gpt_summary": "📰 The theme **industry** was detected in **2 articles** during the period, mainly through topics like: . Sentiment is mostly negative (50.0% vs 0.0% positive). Examples of articles: « Trump tells Apple's CEO to stop expanding iPhone production in India », « Apple gets presidential pressure to migrate production »."
+        },
+        "consumer": {
+          "count": 1,
+          "articles": [
+            "US consumer finance watchdog proposes scrapping bad actor registry"
           ],
           "keywords": {
-            "fed": {
-              "count": 3,
-              "examples": [
-                "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges",
-                "S&P 500 INDEX (SPX) Live: Broader Markets Rise on Bullish Trade Optimism",
-                "Citi CEO Fraser on Eco Data, Client Engagement, Fed"
-              ]
-            },
-            "nasdaq": {
-              "count": 2,
-              "examples": [
-                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
-                "S&P 500 INDEX (SPX) Live: Broader Markets Rise on Bullish Trade Optimism"
-              ]
-            },
-            "dow jones": {
-              "count": 2,
-              "examples": [
-                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
-                "S&P 500 INDEX (SPX) Live: Broader Markets Rise on Bullish Trade Optimism"
-              ]
-            },
-            "america": {
-              "count": 2,
-              "examples": [
-                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
-                "With Trillions Coming Into the United States One Investment Says ‘Buy’"
-              ]
-            },
-            "washington": {
+            "consumer": {
               "count": 1,
               "examples": [
-                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This"
-              ]
-            },
-            "usa": {
-              "count": 1,
-              "examples": [
-                "With Trillions Coming Into the United States One Investment Says ‘Buy’"
-              ]
-            },
-            "united states": {
-              "count": 1,
-              "examples": [
-                "With Trillions Coming Into the United States One Investment Says ‘Buy’"
-              ]
-            },
-            "s&p": {
-              "count": 1,
-              "examples": [
-                "S&P 500 Beats A Small Retreat As Trade Deals Draw Investor Focus While Fed Punts"
+                "US consumer finance watchdog proposes scrapping bad actor registry"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 57.1,
-            "neutral": 42.9,
+            "positive": 0.0,
+            "neutral": 100.0,
             "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **usa** was detected in **7 articles** during the period, mainly through topics like: fed (3), nasdaq (2), dow jones (2), america (2), washington (1). Sentiment is mostly positive (57.1% vs 0.0% negative). Examples of articles: « Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges », « Live Nasdaq Composite: Markets Rise as China Tariffs Do This », « With Trillions Coming Into the United States One Investment Says ‘Buy’ »."
+          "gpt_summary": "📰 The theme **consumer** was detected in **1 articles** during the period, mainly through topics like: consumer (1). Sentiment is mixed (0.0% positive, 0.0% negative). Examples of articles: « US consumer finance watchdog proposes scrapping bad actor registry »."
         },
+        "finance": {
+          "count": 1,
+          "articles": [
+            "Japan PM Ishiba reiterates call to eliminate all tariffs with US"
+          ],
+          "keywords": {},
+          "sentiment_distribution": {
+            "positive": 0.0,
+            "neutral": 100.0,
+            "negative": 0.0
+          },
+          "gpt_summary": "📰 The theme **finance** was detected in **1 articles** during the period, mainly through topics like: . Sentiment is mixed (0.0% positive, 0.0% negative). Examples of articles: « Japan PM Ishiba reiterates call to eliminate all tariffs with US »."
+        }
+      },
+      "regions": {
         "asia": {
           "count": 6,
           "articles": [
@@ -337,11 +285,93 @@
           },
           "gpt_summary": "📰 The theme **asia** was detected in **6 articles** during the period, mainly through topics like: india (3), china (1), beijing (1), japan (1). Sentiment is mixed (33.3% positive, 16.7% negative). Examples of articles: « Live Nasdaq Composite: Markets Rise as China Tariffs Do This », « Japan PM Ishiba reiterates call to eliminate all tariffs with US », « India's inflation rate slows to 3.16% in April, marking six straight months of decline »."
         },
-        "global": {
-          "count": 2,
+        "usa": {
+          "count": 5,
           "articles": [
-            "Why Apple (AAPL) International Revenue Trends Deserve Your Attention",
-            "Powell Steers New Strategy for a World Where Very Low Rates Are No Sure Thing"
+            "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
+            "With Trillions Coming Into the United States One Investment Says ‘Buy’",
+            "S&P 500 Beats A Small Retreat As Trade Deals Draw Investor Focus While Fed Punts",
+            "S&P 500 INDEX (SPX) Live: Broader Markets Rise on Bullish Trade Optimism",
+            "Citi CEO Fraser on Eco Data, Client Engagement, Fed"
+          ],
+          "keywords": {
+            "nasdaq": {
+              "count": 2,
+              "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
+                "S&P 500 INDEX (SPX) Live: Broader Markets Rise on Bullish Trade Optimism"
+              ]
+            },
+            "dow jones": {
+              "count": 2,
+              "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
+                "S&P 500 INDEX (SPX) Live: Broader Markets Rise on Bullish Trade Optimism"
+              ]
+            },
+            "america": {
+              "count": 2,
+              "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
+                "With Trillions Coming Into the United States One Investment Says ‘Buy’"
+              ]
+            },
+            "washington": {
+              "count": 1,
+              "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This"
+              ]
+            },
+            "usa": {
+              "count": 1,
+              "examples": [
+                "With Trillions Coming Into the United States One Investment Says ‘Buy’"
+              ]
+            },
+            "united states": {
+              "count": 1,
+              "examples": [
+                "With Trillions Coming Into the United States One Investment Says ‘Buy’"
+              ]
+            },
+            "s&p": {
+              "count": 1,
+              "examples": [
+                "S&P 500 Beats A Small Retreat As Trade Deals Draw Investor Focus While Fed Punts"
+              ]
+            },
+            "fed": {
+              "count": 2,
+              "examples": [
+                "S&P 500 INDEX (SPX) Live: Broader Markets Rise on Bullish Trade Optimism",
+                "Citi CEO Fraser on Eco Data, Client Engagement, Fed"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 80.0,
+            "neutral": 20.0,
+            "negative": 0.0
+          },
+          "gpt_summary": "📰 The theme **usa** was detected in **5 articles** during the period, mainly through topics like: nasdaq (2), dow jones (2), america (2), fed (2), washington (1). Sentiment is mostly positive (80.0% vs 0.0% negative). Examples of articles: « Live Nasdaq Composite: Markets Rise as China Tariffs Do This », « With Trillions Coming Into the United States One Investment Says ‘Buy’ », « S&P 500 Beats A Small Retreat As Trade Deals Draw Investor Focus While Fed Punts »."
+        },
+        "europe": {
+          "count": 1,
+          "articles": [
+            "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says"
+          ],
+          "keywords": {},
+          "sentiment_distribution": {
+            "positive": 100.0,
+            "neutral": 0.0,
+            "negative": 0.0
+          },
+          "gpt_summary": "📰 The theme **europe** was detected in **1 articles** during the period, mainly through topics like: . Sentiment is mostly positive (100.0% vs 0.0% negative). Examples of articles: « Trade uncertainty lowers growth, inflation in near term, ECB's Knot says »."
+        },
+        "global": {
+          "count": 1,
+          "articles": [
+            "Why Apple (AAPL) International Revenue Trends Deserve Your Attention"
           ],
           "keywords": {
             "international": {
@@ -356,18 +386,17 @@
             "neutral": 100.0,
             "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **global** was detected in **2 articles** during the period, mainly through topics like: international (1). Sentiment is mixed (0.0% positive, 0.0% negative). Examples of articles: « Why Apple (AAPL) International Revenue Trends Deserve Your Attention », « Powell Steers New Strategy for a World Where Very Low Rates Are No Sure Thing »."
+          "gpt_summary": "📰 The theme **global** was detected in **1 articles** during the period, mainly through topics like: international (1). Sentiment is mixed (0.0% positive, 0.0% negative). Examples of articles: « Why Apple (AAPL) International Revenue Trends Deserve Your Attention »."
         }
       }
     },
     "monthly": {
       "macroeconomics": {
         "monetary_policy": {
-          "count": 20,
+          "count": 19,
           "articles": [
             "With inflation progress slow, Fed's Daly says rate cuts may need to wait",
             "Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing'",
-            "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges",
             "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk",
             "Federal Reserve reviewing confidential ratings for US big banks, WSJ reports",
             "U.S. senators announce bipartisan push to change how Fed watchdog selected",
@@ -375,11 +404,11 @@
             "S&P 500 Beats A Small Retreat As Trade Deals Draw Investor Focus While Fed Punts",
             "ECB consensus builds for June rate cut but no appetite for big move, sources say",
             "Markets see door wide open for more ECB rate cuts on tariff hit",
+            "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says",
             "ECB close to hitting inflation target, Kazimir says",
             "Denmark's central bank cuts key interest rate by 25 basis points",
             "April ECB Decision: Inflation Progress Permits An ECB Cut",
             "Singapore Gulf Bank names ex-Fed Reserve vice chair to newly-formed global advisory board",
-            "Trump tariffs face major legal hurdle as federal trade court hears challenge",
             "Brown: Once trust in the Fed is gone, it's near impossible to rebuild",
             "The Fed is ‘a goalkeeper",
             "Citi CEO Fraser on Eco Data, Client Engagement, Fed",
@@ -388,19 +417,19 @@
           ],
           "keywords": {
             "fed": {
-              "count": 12,
+              "count": 11,
               "examples": [
                 "With inflation progress slow, Fed's Daly says rate cuts may need to wait",
                 "Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing'",
-                "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges"
+                "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk"
               ]
             },
             "central bank": {
               "count": 8,
               "examples": [
                 "With inflation progress slow, Fed's Daly says rate cuts may need to wait",
-                "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges",
-                "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk"
+                "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk",
+                "ECB consensus builds for June rate cut but no appetite for big move, sources say"
               ]
             },
             "rate cut": {
@@ -419,11 +448,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 20.0,
-            "neutral": 40.0,
-            "negative": 40.0
+            "positive": 26.3,
+            "neutral": 31.6,
+            "negative": 42.1
           },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **20 articles** during the period, mainly through topics like: fed (12), central bank (8), rate cut (2), ecb (2). Sentiment is mixed (20.0% positive, 40.0% negative). Examples of articles: « With inflation progress slow, Fed's Daly says rate cuts may need to wait », « Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing' », « Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges »."
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **19 articles** during the period, mainly through topics like: fed (11), central bank (8), rate cut (2), ecb (2). Sentiment is mixed (26.3% positive, 42.1% negative). Examples of articles: « With inflation progress slow, Fed's Daly says rate cuts may need to wait », « Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing' », « Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk »."
         },
         "geopolitics": {
           "count": 17,
@@ -478,13 +507,14 @@
           "gpt_summary": "📰 The theme **geopolitics** was detected in **17 articles** during the period, mainly through topics like: war (8), china (7), tensions (1). Sentiment is mostly negative (52.9% vs 29.4% positive). Examples of articles: « Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk », « Warren Buffett Sees Right Through Trump’s Tariffs », « Why is Trump demanding Fed rate cuts? The economy could suffer a big blow from his trade wars, Citi says. »."
         },
         "inflation": {
-          "count": 13,
+          "count": 14,
           "articles": [
             "With inflation progress slow, Fed's Daly says rate cuts may need to wait",
             "Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing'",
             "Swiss National Bank ready to take rates below zero to tackle low inflation",
             "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk",
             "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports",
+            "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says",
             "ECB close to hitting inflation target, Kazimir says",
             "Denmark's central bank cuts key interest rate by 25 basis points",
             "April ECB Decision: Inflation Progress Permits An ECB Cut",
@@ -496,11 +526,11 @@
           ],
           "keywords": {
             "inflation": {
-              "count": 6,
+              "count": 7,
               "examples": [
                 "With inflation progress slow, Fed's Daly says rate cuts may need to wait",
                 "Swiss National Bank ready to take rates below zero to tackle low inflation",
-                "ECB close to hitting inflation target, Kazimir says"
+                "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says"
               ]
             },
             "interest rate": {
@@ -539,51 +569,54 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 38.5,
-            "neutral": 15.4,
-            "negative": 46.2
+            "positive": 42.9,
+            "neutral": 14.3,
+            "negative": 42.9
           },
-          "gpt_summary": "📰 The theme **inflation** was detected in **13 articles** during the period, mainly through topics like: inflation (6), interest rate (6), price (3), prices (1), CPI (1). Sentiment is mixed (38.5% positive, 46.2% negative). Examples of articles: « With inflation progress slow, Fed's Daly says rate cuts may need to wait », « Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing' », « Swiss National Bank ready to take rates below zero to tackle low inflation »."
+          "gpt_summary": "📰 The theme **inflation** was detected in **14 articles** during the period, mainly through topics like: inflation (7), interest rate (6), price (3), prices (1), CPI (1). Sentiment is mixed (42.9% positive, 42.9% negative). Examples of articles: « With inflation progress slow, Fed's Daly says rate cuts may need to wait », « Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing' », « Swiss National Bank ready to take rates below zero to tackle low inflation »."
         },
         "recession": {
-          "count": 8,
+          "count": 10,
           "articles": [
             "Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline",
             "Shares dither, oil skids as tariffs fan growth worries",
             "Americans are getting flashbacks to 2008 as tariffs stoke recession fears",
             "IMF slashes UK's growth forecast, points to U.S. tariffs and borrowing costs",
+            "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says",
             "IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries",
             "There is a 90% probability of recession if trade policies don't change, says Apollo's Torsten Slok",
             "IMF slashes 2025 U.S. growth forecast to 1.8%, citing trade tensions",
-            "Expect this to be a voluntary trade reset recession, says Apollo Global's Torsten Slok"
+            "Expect this to be a voluntary trade reset recession, says Apollo Global's Torsten Slok",
+            "Apollo's Zelter on Recession, Dealmaking, Credit Cycle"
           ],
           "keywords": {
             "growth": {
-              "count": 3,
+              "count": 4,
               "examples": [
                 "IMF slashes UK's growth forecast, points to U.S. tariffs and borrowing costs",
-                "IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries",
-                "IMF slashes 2025 U.S. growth forecast to 1.8%, citing trade tensions"
+                "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says",
+                "IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries"
               ]
             },
             "recession": {
-              "count": 1,
+              "count": 2,
               "examples": [
-                "There is a 90% probability of recession if trade policies don't change, says Apollo's Torsten Slok"
+                "There is a 90% probability of recession if trade policies don't change, says Apollo's Torsten Slok",
+                "Apollo's Zelter on Recession, Dealmaking, Credit Cycle"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 25.0,
-            "negative": 75.0
+            "positive": 10.0,
+            "neutral": 30.0,
+            "negative": 60.0
           },
-          "gpt_summary": "📰 The theme **recession** was detected in **8 articles** during the period, mainly through topics like: growth (3), recession (1). Sentiment is mostly negative (75.0% vs 0.0% positive). Examples of articles: « Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline », « Shares dither, oil skids as tariffs fan growth worries », « Americans are getting flashbacks to 2008 as tariffs stoke recession fears »."
+          "gpt_summary": "📰 The theme **recession** was detected in **10 articles** during the period, mainly through topics like: growth (4), recession (2). Sentiment is mostly negative (60.0% vs 10.0% positive). Examples of articles: « Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline », « Shares dither, oil skids as tariffs fan growth worries », « Americans are getting flashbacks to 2008 as tariffs stoke recession fears »."
         }
       },
       "sectors": {
         "technology": {
-          "count": 27,
+          "count": 28,
           "articles": [
             "With inflation progress slow, Fed's Daly says rate cuts may need to wait",
             "You can see AI everywhere — except in Big Tech's profits",
@@ -594,8 +627,8 @@
             "Exclusive: US pharma tariffs would raise US drug costs by $51 bln annually, report finds",
             "Italy agrees with US to oppose 'discriminatory' tech taxes",
             "Canada February retail sales fall 0.4%; seen up 0.7% in March",
+            "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says",
             "Explainer: What happens to Apple and Meta after the EU fine?",
-            "Apple and Meta fined €700 million by European Union for digital market breaches",
             "Live Nasdaq Composite: Markets Stand Still on Tariff and Tech Tussle",
             "CNBC Daily Open: Trump and Musk reassure investors, sending stocks higher",
             "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
@@ -611,7 +644,8 @@
             "Citi CEO Fraser on Eco Data, Client Engagement, Fed",
             "Firing Fed Chair Powell 'would be bad,' adviser says",
             "Apple vs. Dell Technologies: Which PC Maker Stock is a Better Buy?",
-            "Sustainability Investors Eye Defense Stocks as Geopolitical Tensions Rise"
+            "Sustainability Investors Eye Defense Stocks as Geopolitical Tensions Rise",
+            "Paul Meeks on tech earnings: Downbeat news ahead"
           ],
           "keywords": {
             "ai": {
@@ -630,79 +664,36 @@
               ]
             },
             "digital": {
-              "count": 4,
+              "count": 3,
               "examples": [
                 "Italy agrees with US to oppose 'discriminatory' tech taxes",
                 "Explainer: What happens to Apple and Meta after the EU fine?",
-                "Apple and Meta fined €700 million by European Union for digital market breaches"
-              ]
-            },
-            "data": {
-              "count": 4,
-              "examples": [
-                "Apple and Meta fined €700 million by European Union for digital market breaches",
-                "Live Nasdaq Composite: Markets Stand Still on Tariff and Tech Tussle",
-                "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week"
+                "Singapore Gulf Bank names ex-Fed Reserve vice chair to newly-formed global advisory board"
               ]
             },
             "tech": {
-              "count": 6,
+              "count": 7,
               "examples": [
                 "Live Nasdaq Composite: Markets Stand Still on Tariff and Tech Tussle",
                 "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
                 "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again"
               ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 40.7,
-            "neutral": 37.0,
-            "negative": 22.2
-          },
-          "gpt_summary": "📰 The theme **technology** was detected in **27 articles** during the period, mainly through topics like: ai (18), tech (6), digital (4), data (4), artificial intelligence (2). Sentiment is mixed (40.7% positive, 22.2% negative). Examples of articles: « With inflation progress slow, Fed's Daly says rate cuts may need to wait », « You can see AI everywhere — except in Big Tech's profits », « Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk »."
-        },
-        "finance": {
-          "count": 9,
-          "articles": [
-            "Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing'",
-            "Swiss National Bank ready to take rates below zero to tackle low inflation",
-            "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges",
-            "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk",
-            "Federal Reserve reviewing confidential ratings for US big banks, WSJ reports",
-            "I’ve hit every financial milestone, yet I feel empty – am I sacrificing real happiness for more digits?",
-            "Japan PM Ishiba reiterates call to eliminate all tariffs with US",
-            "Powell Steers New Strategy for a World Where Very Low Rates Are No Sure Thing",
-            "Trump Says He Knows More About Rates Than Fed's Powell"
-          ],
-          "keywords": {
-            "rates": {
-              "count": 4,
-              "examples": [
-                "Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing'",
-                "Swiss National Bank ready to take rates below zero to tackle low inflation",
-                "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges"
-              ]
             },
-            "banks": {
-              "count": 2,
+            "data": {
+              "count": 3,
               "examples": [
-                "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges",
-                "Federal Reserve reviewing confidential ratings for US big banks, WSJ reports"
-              ]
-            },
-            "financial": {
-              "count": 1,
-              "examples": [
-                "I’ve hit every financial milestone, yet I feel empty – am I sacrificing real happiness for more digits?"
+                "Live Nasdaq Composite: Markets Stand Still on Tariff and Tech Tussle",
+                "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
+                "Citi CEO Fraser on Eco Data, Client Engagement, Fed"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 11.1,
-            "neutral": 44.4,
-            "negative": 44.4
+            "positive": 46.4,
+            "neutral": 35.7,
+            "negative": 17.9
           },
-          "gpt_summary": "📰 The theme **finance** was detected in **9 articles** during the period, mainly through topics like: rates (4), banks (2), financial (1). Sentiment is mostly negative (44.4% vs 11.1% positive). Examples of articles: « Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing' », « Swiss National Bank ready to take rates below zero to tackle low inflation », « Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges »."
+          "gpt_summary": "📰 The theme **technology** was detected in **28 articles** during the period, mainly through topics like: ai (18), tech (7), digital (3), data (3), artificial intelligence (2). Sentiment is mostly positive (46.4% vs 17.9% negative). Examples of articles: « With inflation progress slow, Fed's Daly says rate cuts may need to wait », « You can see AI everywhere — except in Big Tech's profits », « Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk »."
         },
         "transport": {
           "count": 9,
@@ -740,59 +731,62 @@
           },
           "gpt_summary": "📰 The theme **transport** was detected in **9 articles** during the period, mainly through topics like: port (6), transport (1). Sentiment is mixed (33.3% positive, 33.3% negative). Examples of articles: « Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline », « Federal Reserve reviewing confidential ratings for US big banks, WSJ reports », « Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports »."
         },
-        "industry": {
-          "count": 5,
+        "finance": {
+          "count": 7,
           "articles": [
-            "US manufacturing output falls in April on weak auto production",
-            "French Industry Produced More Ahead of Tariffs",
-            "China's factory activity drops to a near two-year low in April as trade tariffs bite",
-            "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say",
-            "Trump tells Apple's CEO to stop expanding iPhone production in India"
+            "Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing'",
+            "Swiss National Bank ready to take rates below zero to tackle low inflation",
+            "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk",
+            "Federal Reserve reviewing confidential ratings for US big banks, WSJ reports",
+            "I’ve hit every financial milestone, yet I feel empty – am I sacrificing real happiness for more digits?",
+            "Japan PM Ishiba reiterates call to eliminate all tariffs with US",
+            "Trump Says He Knows More About Rates Than Fed's Powell"
           ],
           "keywords": {
-            "factory": {
+            "rates": {
+              "count": 3,
+              "examples": [
+                "Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing'",
+                "Swiss National Bank ready to take rates below zero to tackle low inflation",
+                "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk"
+              ]
+            },
+            "banks": {
               "count": 1,
               "examples": [
-                "US manufacturing output falls in April on weak auto production"
+                "Federal Reserve reviewing confidential ratings for US big banks, WSJ reports"
               ]
             },
-            "production": {
-              "count": 2,
-              "examples": [
-                "US manufacturing output falls in April on weak auto production",
-                "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say"
-              ]
-            },
-            "industrial": {
+            "financial": {
               "count": 1,
               "examples": [
-                "French Industry Produced More Ahead of Tariffs"
-              ]
-            },
-            "manufacturing": {
-              "count": 2,
-              "examples": [
-                "China's factory activity drops to a near two-year low in April as trade tariffs bite",
-                "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say"
+                "I’ve hit every financial milestone, yet I feel empty – am I sacrificing real happiness for more digits?"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 60.0,
-            "neutral": 20.0,
-            "negative": 20.0
+            "positive": 14.3,
+            "neutral": 28.6,
+            "negative": 57.1
           },
-          "gpt_summary": "📰 The theme **industry** was detected in **5 articles** during the period, mainly through topics like: production (2), manufacturing (2), factory (1), industrial (1). Sentiment is mostly positive (60.0% vs 20.0% negative). Examples of articles: « US manufacturing output falls in April on weak auto production », « French Industry Produced More Ahead of Tariffs », « China's factory activity drops to a near two-year low in April as trade tariffs bite »."
+          "gpt_summary": "📰 The theme **finance** was detected in **7 articles** during the period, mainly through topics like: rates (3), banks (1), financial (1). Sentiment is mostly negative (57.1% vs 14.3% positive). Examples of articles: « Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing' », « Swiss National Bank ready to take rates below zero to tackle low inflation », « Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk »."
         },
         "consumer": {
-          "count": 4,
+          "count": 5,
           "articles": [
             "Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline",
+            "US consumer finance watchdog proposes scrapping bad actor registry",
             "Apple clears Spotify update under new rules allowing purchases within apps",
             "Spotify submits app update to Apple with external link for purchases in US",
             "Canada February retail sales fall 0.4%; seen up 0.7% in March"
           ],
           "keywords": {
+            "consumer": {
+              "count": 1,
+              "examples": [
+                "US consumer finance watchdog proposes scrapping bad actor registry"
+              ]
+            },
             "purchase": {
               "count": 1,
               "examples": [
@@ -814,10 +808,47 @@
           },
           "sentiment_distribution": {
             "positive": 0.0,
-            "neutral": 50.0,
-            "negative": 50.0
+            "neutral": 60.0,
+            "negative": 40.0
           },
-          "gpt_summary": "📰 The theme **consumer** was detected in **4 articles** during the period, mainly through topics like: purchase (1), retail (1), sales (1). Sentiment is mostly negative (50.0% vs 0.0% positive). Examples of articles: « Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline », « Apple clears Spotify update under new rules allowing purchases within apps », « Spotify submits app update to Apple with external link for purchases in US »."
+          "gpt_summary": "📰 The theme **consumer** was detected in **5 articles** during the period, mainly through topics like: consumer (1), purchase (1), retail (1), sales (1). Sentiment is mostly negative (40.0% vs 0.0% positive). Examples of articles: « Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline », « US consumer finance watchdog proposes scrapping bad actor registry », « Apple clears Spotify update under new rules allowing purchases within apps »."
+        },
+        "industry": {
+          "count": 5,
+          "articles": [
+            "French Industry Produced More Ahead of Tariffs",
+            "China's factory activity drops to a near two-year low in April as trade tariffs bite",
+            "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say",
+            "Trump tells Apple's CEO to stop expanding iPhone production in India",
+            "Apple gets presidential pressure to migrate production"
+          ],
+          "keywords": {
+            "industrial": {
+              "count": 1,
+              "examples": [
+                "French Industry Produced More Ahead of Tariffs"
+              ]
+            },
+            "manufacturing": {
+              "count": 2,
+              "examples": [
+                "China's factory activity drops to a near two-year low in April as trade tariffs bite",
+                "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say"
+              ]
+            },
+            "production": {
+              "count": 1,
+              "examples": [
+                "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 40.0,
+            "neutral": 20.0,
+            "negative": 40.0
+          },
+          "gpt_summary": "📰 The theme **industry** was detected in **5 articles** during the period, mainly through topics like: manufacturing (2), industrial (1), production (1). Sentiment is mixed (40.0% positive, 40.0% negative). Examples of articles: « French Industry Produced More Ahead of Tariffs », « China's factory activity drops to a near two-year low in April as trade tariffs bite », « New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say »."
         },
         "defense": {
           "count": 3,
@@ -887,11 +918,10 @@
       },
       "regions": {
         "usa": {
-          "count": 26,
+          "count": 24,
           "articles": [
             "With inflation progress slow, Fed's Daly says rate cuts may need to wait",
             "Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing'",
-            "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges",
             "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk",
             "Federal Reserve reviewing confidential ratings for US big banks, WSJ reports",
             "U.S. senators announce bipartisan push to change how Fed watchdog selected",
@@ -909,7 +939,6 @@
             "S&P 500 INDEX (SPX) Live: Broader Markets Rise on Bullish Trade Optimism",
             "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again",
             "Singapore Gulf Bank names ex-Fed Reserve vice chair to newly-formed global advisory board",
-            "Trump tariffs face major legal hurdle as federal trade court hears challenge",
             "Brown: Once trust in the Fed is gone, it's near impossible to rebuild",
             "The Fed is ‘a goalkeeper",
             "Citi CEO Fraser on Eco Data, Client Engagement, Fed",
@@ -918,11 +947,11 @@
           ],
           "keywords": {
             "fed": {
-              "count": 17,
+              "count": 16,
               "examples": [
                 "With inflation progress slow, Fed's Daly says rate cuts may need to wait",
                 "Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing'",
-                "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges"
+                "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk"
               ]
             },
             "washington": {
@@ -977,11 +1006,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 26.9,
-            "neutral": 46.2,
-            "negative": 26.9
+            "positive": 29.2,
+            "neutral": 41.7,
+            "negative": 29.2
           },
-          "gpt_summary": "📰 The theme **usa** was detected in **26 articles** during the period, mainly through topics like: fed (17), nasdaq (7), dow jones (7), washington (5), america (3). Sentiment is mixed (26.9% positive, 26.9% negative). Examples of articles: « With inflation progress slow, Fed's Daly says rate cuts may need to wait », « Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing' », « Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges »."
+          "gpt_summary": "📰 The theme **usa** was detected in **24 articles** during the period, mainly through topics like: fed (16), nasdaq (7), dow jones (7), washington (5), america (3). Sentiment is mixed (29.2% positive, 29.2% negative). Examples of articles: « With inflation progress slow, Fed's Daly says rate cuts may need to wait », « Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing' », « Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk »."
         },
         "asia": {
           "count": 17,
@@ -1062,6 +1091,7 @@
             "Italy agrees with US to oppose 'discriminatory' tech taxes",
             "ECB consensus builds for June rate cut but no appetite for big move, sources say",
             "Markets see door wide open for more ECB rate cuts on tariff hit",
+            "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says",
             "ECB close to hitting inflation target, Kazimir says",
             "EU keeps options open as it readies response to expanding US tariffs",
             "Explainer: What happens to Apple and Meta after the EU fine?",
@@ -1069,8 +1099,7 @@
             "Meta, Apple fined 700 million euros for violating EU antitrust rules",
             "Apple fined $570 million and Meta $228 million for breaching EU law",
             "Apple fined $571 million and Meta $228 million for breaching European Union antitrust rules",
-            "April ECB Decision: Inflation Progress Permits An ECB Cut",
-            "Apple and Meta fined €700 million by European Union for digital market breaches"
+            "April ECB Decision: Inflation Progress Permits An ECB Cut"
           ],
           "keywords": {
             "italy": {
@@ -1080,7 +1109,7 @@
               ]
             },
             "europe": {
-              "count": 9,
+              "count": 8,
               "examples": [
                 "ECB consensus builds for June rate cut but no appetite for big move, sources say",
                 "Markets see door wide open for more ECB rate cuts on tariff hit",
@@ -1088,7 +1117,7 @@
               ]
             },
             "eu": {
-              "count": 10,
+              "count": 9,
               "examples": [
                 "ECB consensus builds for June rate cut but no appetite for big move, sources say",
                 "Markets see door wide open for more ECB rate cuts on tariff hit",
@@ -1103,7 +1132,7 @@
               ]
             },
             "european union": {
-              "count": 6,
+              "count": 5,
               "examples": [
                 "EU keeps options open as it readies response to expanding US tariffs",
                 "Explainer: What happens to Apple and Meta after the EU fine?",
@@ -1112,14 +1141,14 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 25.0,
+            "positive": 33.3,
             "neutral": 41.7,
-            "negative": 33.3
+            "negative": 25.0
           },
-          "gpt_summary": "📰 The theme **europe** was detected in **12 articles** during the period, mainly through topics like: eu (10), europe (9), european union (6), ecb (2), italy (1). Sentiment is mixed (25.0% positive, 33.3% negative). Examples of articles: « Italy agrees with US to oppose 'discriminatory' tech taxes », « ECB consensus builds for June rate cut but no appetite for big move, sources say », « Markets see door wide open for more ECB rate cuts on tariff hit »."
+          "gpt_summary": "📰 The theme **europe** was detected in **12 articles** during the period, mainly through topics like: eu (9), europe (8), european union (5), ecb (2), italy (1). Sentiment is mixed (33.3% positive, 25.0% negative). Examples of articles: « Italy agrees with US to oppose 'discriminatory' tech taxes », « ECB consensus builds for June rate cut but no appetite for big move, sources say », « Markets see door wide open for more ECB rate cuts on tariff hit »."
         },
         "global": {
-          "count": 8,
+          "count": 7,
           "articles": [
             "IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries",
             "Singapore Gulf Bank names ex-Fed Reserve vice chair to newly-formed global advisory board",
@@ -1127,7 +1156,6 @@
             "U.S. and global economies to sag and inflation rise, IMF says, if trade wars drag on in 2025",
             "Why Apple (AAPL) International Revenue Trends Deserve Your Attention",
             "Apple edges past expectations as world girds for tariff impact",
-            "Powell Steers New Strategy for a World Where Very Low Rates Are No Sure Thing",
             "Global Markets Are Mixed; U.S. Stock Futures Lower"
           ],
           "keywords": {
@@ -1148,11 +1176,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 37.5,
-            "neutral": 37.5,
-            "negative": 25.0
+            "positive": 42.9,
+            "neutral": 28.6,
+            "negative": 28.6
           },
-          "gpt_summary": "📰 The theme **global** was detected in **8 articles** during the period, mainly through topics like: global (4), international (2). Sentiment is mixed (37.5% positive, 25.0% negative). Examples of articles: « IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries », « Singapore Gulf Bank names ex-Fed Reserve vice chair to newly-formed global advisory board », « Expect this to be a voluntary trade reset recession, says Apollo Global's Torsten Slok »."
+          "gpt_summary": "📰 The theme **global** was detected in **7 articles** during the period, mainly through topics like: global (4), international (2). Sentiment is mixed (42.9% positive, 28.6% negative). Examples of articles: « IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries », « Singapore Gulf Bank names ex-Fed Reserve vice chair to newly-formed global advisory board », « Expect this to be a voluntary trade reset recession, says Apollo Global's Torsten Slok »."
         },
         "blocs": {
           "count": 2,
@@ -1207,11 +1235,10 @@
     "quarterly": {
       "macroeconomics": {
         "monetary_policy": {
-          "count": 20,
+          "count": 19,
           "articles": [
             "With inflation progress slow, Fed's Daly says rate cuts may need to wait",
             "Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing'",
-            "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges",
             "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk",
             "Federal Reserve reviewing confidential ratings for US big banks, WSJ reports",
             "U.S. senators announce bipartisan push to change how Fed watchdog selected",
@@ -1219,11 +1246,11 @@
             "S&P 500 Beats A Small Retreat As Trade Deals Draw Investor Focus While Fed Punts",
             "ECB consensus builds for June rate cut but no appetite for big move, sources say",
             "Markets see door wide open for more ECB rate cuts on tariff hit",
+            "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says",
             "ECB close to hitting inflation target, Kazimir says",
             "Denmark's central bank cuts key interest rate by 25 basis points",
             "April ECB Decision: Inflation Progress Permits An ECB Cut",
             "Singapore Gulf Bank names ex-Fed Reserve vice chair to newly-formed global advisory board",
-            "Trump tariffs face major legal hurdle as federal trade court hears challenge",
             "Brown: Once trust in the Fed is gone, it's near impossible to rebuild",
             "The Fed is ‘a goalkeeper",
             "Citi CEO Fraser on Eco Data, Client Engagement, Fed",
@@ -1232,19 +1259,19 @@
           ],
           "keywords": {
             "fed": {
-              "count": 12,
+              "count": 11,
               "examples": [
                 "With inflation progress slow, Fed's Daly says rate cuts may need to wait",
                 "Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing'",
-                "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges"
+                "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk"
               ]
             },
             "central bank": {
               "count": 8,
               "examples": [
                 "With inflation progress slow, Fed's Daly says rate cuts may need to wait",
-                "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges",
-                "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk"
+                "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk",
+                "ECB consensus builds for June rate cut but no appetite for big move, sources say"
               ]
             },
             "rate cut": {
@@ -1263,11 +1290,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 20.0,
-            "neutral": 40.0,
-            "negative": 40.0
+            "positive": 26.3,
+            "neutral": 31.6,
+            "negative": 42.1
           },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **20 articles** during the period, mainly through topics like: fed (12), central bank (8), rate cut (2), ecb (2). Sentiment is mixed (20.0% positive, 40.0% negative). Examples of articles: « With inflation progress slow, Fed's Daly says rate cuts may need to wait », « Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing' », « Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges »."
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **19 articles** during the period, mainly through topics like: fed (11), central bank (8), rate cut (2), ecb (2). Sentiment is mixed (26.3% positive, 42.1% negative). Examples of articles: « With inflation progress slow, Fed's Daly says rate cuts may need to wait », « Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing' », « Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk »."
         },
         "geopolitics": {
           "count": 17,
@@ -1322,13 +1349,14 @@
           "gpt_summary": "📰 The theme **geopolitics** was detected in **17 articles** during the period, mainly through topics like: war (8), china (7), tensions (1). Sentiment is mostly negative (52.9% vs 29.4% positive). Examples of articles: « Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk », « Warren Buffett Sees Right Through Trump’s Tariffs », « Why is Trump demanding Fed rate cuts? The economy could suffer a big blow from his trade wars, Citi says. »."
         },
         "inflation": {
-          "count": 13,
+          "count": 14,
           "articles": [
             "With inflation progress slow, Fed's Daly says rate cuts may need to wait",
             "Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing'",
             "Swiss National Bank ready to take rates below zero to tackle low inflation",
             "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk",
             "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports",
+            "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says",
             "ECB close to hitting inflation target, Kazimir says",
             "Denmark's central bank cuts key interest rate by 25 basis points",
             "April ECB Decision: Inflation Progress Permits An ECB Cut",
@@ -1340,11 +1368,11 @@
           ],
           "keywords": {
             "inflation": {
-              "count": 6,
+              "count": 7,
               "examples": [
                 "With inflation progress slow, Fed's Daly says rate cuts may need to wait",
                 "Swiss National Bank ready to take rates below zero to tackle low inflation",
-                "ECB close to hitting inflation target, Kazimir says"
+                "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says"
               ]
             },
             "interest rate": {
@@ -1383,51 +1411,54 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 38.5,
-            "neutral": 15.4,
-            "negative": 46.2
+            "positive": 42.9,
+            "neutral": 14.3,
+            "negative": 42.9
           },
-          "gpt_summary": "📰 The theme **inflation** was detected in **13 articles** during the period, mainly through topics like: inflation (6), interest rate (6), price (3), prices (1), CPI (1). Sentiment is mixed (38.5% positive, 46.2% negative). Examples of articles: « With inflation progress slow, Fed's Daly says rate cuts may need to wait », « Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing' », « Swiss National Bank ready to take rates below zero to tackle low inflation »."
+          "gpt_summary": "📰 The theme **inflation** was detected in **14 articles** during the period, mainly through topics like: inflation (7), interest rate (6), price (3), prices (1), CPI (1). Sentiment is mixed (42.9% positive, 42.9% negative). Examples of articles: « With inflation progress slow, Fed's Daly says rate cuts may need to wait », « Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing' », « Swiss National Bank ready to take rates below zero to tackle low inflation »."
         },
         "recession": {
-          "count": 8,
+          "count": 10,
           "articles": [
             "Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline",
             "Shares dither, oil skids as tariffs fan growth worries",
             "Americans are getting flashbacks to 2008 as tariffs stoke recession fears",
             "IMF slashes UK's growth forecast, points to U.S. tariffs and borrowing costs",
+            "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says",
             "IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries",
             "There is a 90% probability of recession if trade policies don't change, says Apollo's Torsten Slok",
             "IMF slashes 2025 U.S. growth forecast to 1.8%, citing trade tensions",
-            "Expect this to be a voluntary trade reset recession, says Apollo Global's Torsten Slok"
+            "Expect this to be a voluntary trade reset recession, says Apollo Global's Torsten Slok",
+            "Apollo's Zelter on Recession, Dealmaking, Credit Cycle"
           ],
           "keywords": {
             "growth": {
-              "count": 3,
+              "count": 4,
               "examples": [
                 "IMF slashes UK's growth forecast, points to U.S. tariffs and borrowing costs",
-                "IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries",
-                "IMF slashes 2025 U.S. growth forecast to 1.8%, citing trade tensions"
+                "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says",
+                "IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries"
               ]
             },
             "recession": {
-              "count": 1,
+              "count": 2,
               "examples": [
-                "There is a 90% probability of recession if trade policies don't change, says Apollo's Torsten Slok"
+                "There is a 90% probability of recession if trade policies don't change, says Apollo's Torsten Slok",
+                "Apollo's Zelter on Recession, Dealmaking, Credit Cycle"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 25.0,
-            "negative": 75.0
+            "positive": 10.0,
+            "neutral": 30.0,
+            "negative": 60.0
           },
-          "gpt_summary": "📰 The theme **recession** was detected in **8 articles** during the period, mainly through topics like: growth (3), recession (1). Sentiment is mostly negative (75.0% vs 0.0% positive). Examples of articles: « Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline », « Shares dither, oil skids as tariffs fan growth worries », « Americans are getting flashbacks to 2008 as tariffs stoke recession fears »."
+          "gpt_summary": "📰 The theme **recession** was detected in **10 articles** during the period, mainly through topics like: growth (4), recession (2). Sentiment is mostly negative (60.0% vs 10.0% positive). Examples of articles: « Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline », « Shares dither, oil skids as tariffs fan growth worries », « Americans are getting flashbacks to 2008 as tariffs stoke recession fears »."
         }
       },
       "sectors": {
         "technology": {
-          "count": 27,
+          "count": 28,
           "articles": [
             "With inflation progress slow, Fed's Daly says rate cuts may need to wait",
             "You can see AI everywhere — except in Big Tech's profits",
@@ -1438,8 +1469,8 @@
             "Exclusive: US pharma tariffs would raise US drug costs by $51 bln annually, report finds",
             "Italy agrees with US to oppose 'discriminatory' tech taxes",
             "Canada February retail sales fall 0.4%; seen up 0.7% in March",
+            "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says",
             "Explainer: What happens to Apple and Meta after the EU fine?",
-            "Apple and Meta fined €700 million by European Union for digital market breaches",
             "Live Nasdaq Composite: Markets Stand Still on Tariff and Tech Tussle",
             "CNBC Daily Open: Trump and Musk reassure investors, sending stocks higher",
             "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
@@ -1455,7 +1486,8 @@
             "Citi CEO Fraser on Eco Data, Client Engagement, Fed",
             "Firing Fed Chair Powell 'would be bad,' adviser says",
             "Apple vs. Dell Technologies: Which PC Maker Stock is a Better Buy?",
-            "Sustainability Investors Eye Defense Stocks as Geopolitical Tensions Rise"
+            "Sustainability Investors Eye Defense Stocks as Geopolitical Tensions Rise",
+            "Paul Meeks on tech earnings: Downbeat news ahead"
           ],
           "keywords": {
             "ai": {
@@ -1474,79 +1506,36 @@
               ]
             },
             "digital": {
-              "count": 4,
+              "count": 3,
               "examples": [
                 "Italy agrees with US to oppose 'discriminatory' tech taxes",
                 "Explainer: What happens to Apple and Meta after the EU fine?",
-                "Apple and Meta fined €700 million by European Union for digital market breaches"
-              ]
-            },
-            "data": {
-              "count": 4,
-              "examples": [
-                "Apple and Meta fined €700 million by European Union for digital market breaches",
-                "Live Nasdaq Composite: Markets Stand Still on Tariff and Tech Tussle",
-                "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week"
+                "Singapore Gulf Bank names ex-Fed Reserve vice chair to newly-formed global advisory board"
               ]
             },
             "tech": {
-              "count": 6,
+              "count": 7,
               "examples": [
                 "Live Nasdaq Composite: Markets Stand Still on Tariff and Tech Tussle",
                 "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
                 "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again"
               ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 40.7,
-            "neutral": 37.0,
-            "negative": 22.2
-          },
-          "gpt_summary": "📰 The theme **technology** was detected in **27 articles** during the period, mainly through topics like: ai (18), tech (6), digital (4), data (4), artificial intelligence (2). Sentiment is mixed (40.7% positive, 22.2% negative). Examples of articles: « With inflation progress slow, Fed's Daly says rate cuts may need to wait », « You can see AI everywhere — except in Big Tech's profits », « Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk »."
-        },
-        "finance": {
-          "count": 9,
-          "articles": [
-            "Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing'",
-            "Swiss National Bank ready to take rates below zero to tackle low inflation",
-            "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges",
-            "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk",
-            "Federal Reserve reviewing confidential ratings for US big banks, WSJ reports",
-            "I’ve hit every financial milestone, yet I feel empty – am I sacrificing real happiness for more digits?",
-            "Japan PM Ishiba reiterates call to eliminate all tariffs with US",
-            "Powell Steers New Strategy for a World Where Very Low Rates Are No Sure Thing",
-            "Trump Says He Knows More About Rates Than Fed's Powell"
-          ],
-          "keywords": {
-            "rates": {
-              "count": 4,
-              "examples": [
-                "Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing'",
-                "Swiss National Bank ready to take rates below zero to tackle low inflation",
-                "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges"
-              ]
             },
-            "banks": {
-              "count": 2,
+            "data": {
+              "count": 3,
               "examples": [
-                "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges",
-                "Federal Reserve reviewing confidential ratings for US big banks, WSJ reports"
-              ]
-            },
-            "financial": {
-              "count": 1,
-              "examples": [
-                "I’ve hit every financial milestone, yet I feel empty – am I sacrificing real happiness for more digits?"
+                "Live Nasdaq Composite: Markets Stand Still on Tariff and Tech Tussle",
+                "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
+                "Citi CEO Fraser on Eco Data, Client Engagement, Fed"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 11.1,
-            "neutral": 44.4,
-            "negative": 44.4
+            "positive": 46.4,
+            "neutral": 35.7,
+            "negative": 17.9
           },
-          "gpt_summary": "📰 The theme **finance** was detected in **9 articles** during the period, mainly through topics like: rates (4), banks (2), financial (1). Sentiment is mostly negative (44.4% vs 11.1% positive). Examples of articles: « Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing' », « Swiss National Bank ready to take rates below zero to tackle low inflation », « Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges »."
+          "gpt_summary": "📰 The theme **technology** was detected in **28 articles** during the period, mainly through topics like: ai (18), tech (7), digital (3), data (3), artificial intelligence (2). Sentiment is mostly positive (46.4% vs 17.9% negative). Examples of articles: « With inflation progress slow, Fed's Daly says rate cuts may need to wait », « You can see AI everywhere — except in Big Tech's profits », « Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk »."
         },
         "transport": {
           "count": 9,
@@ -1584,59 +1573,62 @@
           },
           "gpt_summary": "📰 The theme **transport** was detected in **9 articles** during the period, mainly through topics like: port (6), transport (1). Sentiment is mixed (33.3% positive, 33.3% negative). Examples of articles: « Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline », « Federal Reserve reviewing confidential ratings for US big banks, WSJ reports », « Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports »."
         },
-        "industry": {
-          "count": 5,
+        "finance": {
+          "count": 7,
           "articles": [
-            "US manufacturing output falls in April on weak auto production",
-            "French Industry Produced More Ahead of Tariffs",
-            "China's factory activity drops to a near two-year low in April as trade tariffs bite",
-            "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say",
-            "Trump tells Apple's CEO to stop expanding iPhone production in India"
+            "Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing'",
+            "Swiss National Bank ready to take rates below zero to tackle low inflation",
+            "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk",
+            "Federal Reserve reviewing confidential ratings for US big banks, WSJ reports",
+            "I’ve hit every financial milestone, yet I feel empty – am I sacrificing real happiness for more digits?",
+            "Japan PM Ishiba reiterates call to eliminate all tariffs with US",
+            "Trump Says He Knows More About Rates Than Fed's Powell"
           ],
           "keywords": {
-            "factory": {
+            "rates": {
+              "count": 3,
+              "examples": [
+                "Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing'",
+                "Swiss National Bank ready to take rates below zero to tackle low inflation",
+                "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk"
+              ]
+            },
+            "banks": {
               "count": 1,
               "examples": [
-                "US manufacturing output falls in April on weak auto production"
+                "Federal Reserve reviewing confidential ratings for US big banks, WSJ reports"
               ]
             },
-            "production": {
-              "count": 2,
-              "examples": [
-                "US manufacturing output falls in April on weak auto production",
-                "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say"
-              ]
-            },
-            "industrial": {
+            "financial": {
               "count": 1,
               "examples": [
-                "French Industry Produced More Ahead of Tariffs"
-              ]
-            },
-            "manufacturing": {
-              "count": 2,
-              "examples": [
-                "China's factory activity drops to a near two-year low in April as trade tariffs bite",
-                "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say"
+                "I’ve hit every financial milestone, yet I feel empty – am I sacrificing real happiness for more digits?"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 60.0,
-            "neutral": 20.0,
-            "negative": 20.0
+            "positive": 14.3,
+            "neutral": 28.6,
+            "negative": 57.1
           },
-          "gpt_summary": "📰 The theme **industry** was detected in **5 articles** during the period, mainly through topics like: production (2), manufacturing (2), factory (1), industrial (1). Sentiment is mostly positive (60.0% vs 20.0% negative). Examples of articles: « US manufacturing output falls in April on weak auto production », « French Industry Produced More Ahead of Tariffs », « China's factory activity drops to a near two-year low in April as trade tariffs bite »."
+          "gpt_summary": "📰 The theme **finance** was detected in **7 articles** during the period, mainly through topics like: rates (3), banks (1), financial (1). Sentiment is mostly negative (57.1% vs 14.3% positive). Examples of articles: « Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing' », « Swiss National Bank ready to take rates below zero to tackle low inflation », « Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk »."
         },
         "consumer": {
-          "count": 4,
+          "count": 5,
           "articles": [
             "Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline",
+            "US consumer finance watchdog proposes scrapping bad actor registry",
             "Apple clears Spotify update under new rules allowing purchases within apps",
             "Spotify submits app update to Apple with external link for purchases in US",
             "Canada February retail sales fall 0.4%; seen up 0.7% in March"
           ],
           "keywords": {
+            "consumer": {
+              "count": 1,
+              "examples": [
+                "US consumer finance watchdog proposes scrapping bad actor registry"
+              ]
+            },
             "purchase": {
               "count": 1,
               "examples": [
@@ -1658,10 +1650,47 @@
           },
           "sentiment_distribution": {
             "positive": 0.0,
-            "neutral": 50.0,
-            "negative": 50.0
+            "neutral": 60.0,
+            "negative": 40.0
           },
-          "gpt_summary": "📰 The theme **consumer** was detected in **4 articles** during the period, mainly through topics like: purchase (1), retail (1), sales (1). Sentiment is mostly negative (50.0% vs 0.0% positive). Examples of articles: « Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline », « Apple clears Spotify update under new rules allowing purchases within apps », « Spotify submits app update to Apple with external link for purchases in US »."
+          "gpt_summary": "📰 The theme **consumer** was detected in **5 articles** during the period, mainly through topics like: consumer (1), purchase (1), retail (1), sales (1). Sentiment is mostly negative (40.0% vs 0.0% positive). Examples of articles: « Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline », « US consumer finance watchdog proposes scrapping bad actor registry », « Apple clears Spotify update under new rules allowing purchases within apps »."
+        },
+        "industry": {
+          "count": 5,
+          "articles": [
+            "French Industry Produced More Ahead of Tariffs",
+            "China's factory activity drops to a near two-year low in April as trade tariffs bite",
+            "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say",
+            "Trump tells Apple's CEO to stop expanding iPhone production in India",
+            "Apple gets presidential pressure to migrate production"
+          ],
+          "keywords": {
+            "industrial": {
+              "count": 1,
+              "examples": [
+                "French Industry Produced More Ahead of Tariffs"
+              ]
+            },
+            "manufacturing": {
+              "count": 2,
+              "examples": [
+                "China's factory activity drops to a near two-year low in April as trade tariffs bite",
+                "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say"
+              ]
+            },
+            "production": {
+              "count": 1,
+              "examples": [
+                "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 40.0,
+            "neutral": 20.0,
+            "negative": 40.0
+          },
+          "gpt_summary": "📰 The theme **industry** was detected in **5 articles** during the period, mainly through topics like: manufacturing (2), industrial (1), production (1). Sentiment is mixed (40.0% positive, 40.0% negative). Examples of articles: « French Industry Produced More Ahead of Tariffs », « China's factory activity drops to a near two-year low in April as trade tariffs bite », « New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say »."
         },
         "defense": {
           "count": 3,
@@ -1731,11 +1760,10 @@
       },
       "regions": {
         "usa": {
-          "count": 26,
+          "count": 24,
           "articles": [
             "With inflation progress slow, Fed's Daly says rate cuts may need to wait",
             "Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing'",
-            "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges",
             "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk",
             "Federal Reserve reviewing confidential ratings for US big banks, WSJ reports",
             "U.S. senators announce bipartisan push to change how Fed watchdog selected",
@@ -1753,7 +1781,6 @@
             "S&P 500 INDEX (SPX) Live: Broader Markets Rise on Bullish Trade Optimism",
             "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again",
             "Singapore Gulf Bank names ex-Fed Reserve vice chair to newly-formed global advisory board",
-            "Trump tariffs face major legal hurdle as federal trade court hears challenge",
             "Brown: Once trust in the Fed is gone, it's near impossible to rebuild",
             "The Fed is ‘a goalkeeper",
             "Citi CEO Fraser on Eco Data, Client Engagement, Fed",
@@ -1762,11 +1789,11 @@
           ],
           "keywords": {
             "fed": {
-              "count": 17,
+              "count": 16,
               "examples": [
                 "With inflation progress slow, Fed's Daly says rate cuts may need to wait",
                 "Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing'",
-                "Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges"
+                "Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk"
               ]
             },
             "washington": {
@@ -1821,11 +1848,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 26.9,
-            "neutral": 46.2,
-            "negative": 26.9
+            "positive": 29.2,
+            "neutral": 41.7,
+            "negative": 29.2
           },
-          "gpt_summary": "📰 The theme **usa** was detected in **26 articles** during the period, mainly through topics like: fed (17), nasdaq (7), dow jones (7), washington (5), america (3). Sentiment is mixed (26.9% positive, 26.9% negative). Examples of articles: « With inflation progress slow, Fed's Daly says rate cuts may need to wait », « Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing' », « Fed's Powell cautions about higher long-term rates as 'supply shocks' provide policy challenges »."
+          "gpt_summary": "📰 The theme **usa** was detected in **24 articles** during the period, mainly through topics like: fed (16), nasdaq (7), dow jones (7), washington (5), america (3). Sentiment is mixed (29.2% positive, 29.2% negative). Examples of articles: « With inflation progress slow, Fed's Daly says rate cuts may need to wait », « Trump renews call for interest rate cut, says rates would be lower if Fed chief Powell 'understood what he was doing' », « Fed Doesn't Cut Interest Rates Again—Despite Trump's Demands—As It Warns Of Higher Unemployment Risk »."
         },
         "asia": {
           "count": 17,
@@ -1906,6 +1933,7 @@
             "Italy agrees with US to oppose 'discriminatory' tech taxes",
             "ECB consensus builds for June rate cut but no appetite for big move, sources say",
             "Markets see door wide open for more ECB rate cuts on tariff hit",
+            "Trade uncertainty lowers growth, inflation in near term, ECB's Knot says",
             "ECB close to hitting inflation target, Kazimir says",
             "EU keeps options open as it readies response to expanding US tariffs",
             "Explainer: What happens to Apple and Meta after the EU fine?",
@@ -1913,8 +1941,7 @@
             "Meta, Apple fined 700 million euros for violating EU antitrust rules",
             "Apple fined $570 million and Meta $228 million for breaching EU law",
             "Apple fined $571 million and Meta $228 million for breaching European Union antitrust rules",
-            "April ECB Decision: Inflation Progress Permits An ECB Cut",
-            "Apple and Meta fined €700 million by European Union for digital market breaches"
+            "April ECB Decision: Inflation Progress Permits An ECB Cut"
           ],
           "keywords": {
             "italy": {
@@ -1924,7 +1951,7 @@
               ]
             },
             "europe": {
-              "count": 9,
+              "count": 8,
               "examples": [
                 "ECB consensus builds for June rate cut but no appetite for big move, sources say",
                 "Markets see door wide open for more ECB rate cuts on tariff hit",
@@ -1932,7 +1959,7 @@
               ]
             },
             "eu": {
-              "count": 10,
+              "count": 9,
               "examples": [
                 "ECB consensus builds for June rate cut but no appetite for big move, sources say",
                 "Markets see door wide open for more ECB rate cuts on tariff hit",
@@ -1947,7 +1974,7 @@
               ]
             },
             "european union": {
-              "count": 6,
+              "count": 5,
               "examples": [
                 "EU keeps options open as it readies response to expanding US tariffs",
                 "Explainer: What happens to Apple and Meta after the EU fine?",
@@ -1956,14 +1983,14 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 25.0,
+            "positive": 33.3,
             "neutral": 41.7,
-            "negative": 33.3
+            "negative": 25.0
           },
-          "gpt_summary": "📰 The theme **europe** was detected in **12 articles** during the period, mainly through topics like: eu (10), europe (9), european union (6), ecb (2), italy (1). Sentiment is mixed (25.0% positive, 33.3% negative). Examples of articles: « Italy agrees with US to oppose 'discriminatory' tech taxes », « ECB consensus builds for June rate cut but no appetite for big move, sources say », « Markets see door wide open for more ECB rate cuts on tariff hit »."
+          "gpt_summary": "📰 The theme **europe** was detected in **12 articles** during the period, mainly through topics like: eu (9), europe (8), european union (5), ecb (2), italy (1). Sentiment is mixed (33.3% positive, 25.0% negative). Examples of articles: « Italy agrees with US to oppose 'discriminatory' tech taxes », « ECB consensus builds for June rate cut but no appetite for big move, sources say », « Markets see door wide open for more ECB rate cuts on tariff hit »."
         },
         "global": {
-          "count": 8,
+          "count": 7,
           "articles": [
             "IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries",
             "Singapore Gulf Bank names ex-Fed Reserve vice chair to newly-formed global advisory board",
@@ -1971,7 +1998,6 @@
             "U.S. and global economies to sag and inflation rise, IMF says, if trade wars drag on in 2025",
             "Why Apple (AAPL) International Revenue Trends Deserve Your Attention",
             "Apple edges past expectations as world girds for tariff impact",
-            "Powell Steers New Strategy for a World Where Very Low Rates Are No Sure Thing",
             "Global Markets Are Mixed; U.S. Stock Futures Lower"
           ],
           "keywords": {
@@ -1992,11 +2018,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 37.5,
-            "neutral": 37.5,
-            "negative": 25.0
+            "positive": 42.9,
+            "neutral": 28.6,
+            "negative": 28.6
           },
-          "gpt_summary": "📰 The theme **global** was detected in **8 articles** during the period, mainly through topics like: global (4), international (2). Sentiment is mixed (37.5% positive, 25.0% negative). Examples of articles: « IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries », « Singapore Gulf Bank names ex-Fed Reserve vice chair to newly-formed global advisory board », « Expect this to be a voluntary trade reset recession, says Apollo Global's Torsten Slok »."
+          "gpt_summary": "📰 The theme **global** was detected in **7 articles** during the period, mainly through topics like: global (4), international (2). Sentiment is mixed (42.9% positive, 28.6% negative). Examples of articles: « IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries », « Singapore Gulf Bank names ex-Fed Reserve vice chair to newly-formed global advisory board », « Expect this to be a voluntary trade reset recession, says Apollo Global's Torsten Slok »."
         },
         "blocs": {
           "count": 2,
@@ -2049,6 +2075,6 @@
       }
     }
   },
-  "lastUpdated": "2025-05-15T16:21:34.740492",
-  "analysisCount": 114
+  "lastUpdated": "2025-05-15T20:14:32.623990",
+  "analysisCount": 115
 }
