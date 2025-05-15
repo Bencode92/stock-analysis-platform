@@ -991,17 +991,6 @@
             </div>
         </div>
         
-        <!-- Bannière d'information sur les frais de gestion locative -->
-        <div class="info-message mb-4 fade-in">
-            <div class="text-lg text-green-400 mr-3">
-                <i class="fas fa-file-invoice-dollar"></i>
-            </div>
-            <div>
-                <h4 class="font-medium mb-1">Frais de gestion locative inclus</h4>
-                <p class="text-sm opacity-90">Les frais de gestion locative (5-8% du loyer) sont désormais pris en compte dans le calcul de rentabilité. Vous pouvez ajuster ce pourcentage dans les paramètres avancés.</p>
-            </div>
-        </div>
-        
         <!-- Nouvelle bannière d'information sur les travaux -->
         <div class="info-message mb-4 fade-in">
             <div class="text-lg text-green-400 mr-3">
@@ -1146,17 +1135,7 @@
                             </div>
                         </div>
                         
-                        <!-- Nouveau champ pour les frais de gestion locative -->
-                        <div class="form-group">
-                            <label class="form-label" for="frais-gestion-locative">Frais de gestion locative</label>
-                            <div class="form-addon">
-                                <input type="number" id="frais-gestion-locative" class="form-input" value="7" step="0.1" min="0" max="15">
-                                <span class="form-addon-text">%</span>
-                            </div>
-                            <span class="form-help">Honoraires d'agence immobilière (5-8% du loyer)</span>
-                        </div>
-                        
-                        <!-- Mode de calcul des travaux -->
+                        <!-- Nouveau mode de calcul des travaux -->
                         <div class="form-group">
                             <label class="form-label">Mode de calcul des travaux</label>
                             <div class="flex items-center">
@@ -1428,10 +1407,6 @@
                                         <td id="classique-frais-bancaires">--</td>
                                     </tr>
                                     <tr>
-                                        <td>Frais de gestion locative</td>
-                                        <td id="classique-frais-gestion">--</td>
-                                    </tr>
-                                    <tr>
                                         <td>Coût total du projet</td>
                                         <td class="highlight" id="classique-total">--</td>
                                     </tr>
@@ -1517,10 +1492,6 @@
                                     <tr>
                                         <td>Frais bancaires</td>
                                         <td id="encheres-frais-bancaires">--</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Frais de gestion locative</td>
-                                        <td id="encheres-frais-gestion">--</td>
                                     </tr>
                                     <tr>
                                         <td>Coût total du projet</td>
