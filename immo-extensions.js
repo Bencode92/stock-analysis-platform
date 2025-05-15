@@ -622,6 +622,59 @@ const ImmoExtensions = (function() {
                 color: rgba(255, 255, 255, 0.8);
             }
             
+            /* Styles pour les cartes de régime fiscal */
+            .regime-cards-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 1rem;
+            }
+            
+            .regime-card {
+                background-color: rgba(1, 42, 74, 0.7);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 0.75rem;
+                padding: 1rem;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                position: relative;
+                outline: none;
+            }
+            
+            .regime-card:hover {
+                border-color: var(--primary-color);
+                box-shadow: 0 5px 15px rgba(0, 255, 135, 0.1);
+                transform: translateY(-2px);
+            }
+            
+            .regime-card.active,
+            .regime-card[aria-checked="true"] {
+                border-color: var(--primary-color);
+                box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.3);
+                background-color: rgba(0, 255, 135, 0.1);
+            }
+            
+            .regime-card h4 {
+                font-size: 1.1rem;
+                font-weight: 600;
+                margin: 0.5rem 0;
+            }
+            
+            .regime-card p {
+                margin: 0;
+            }
+            
+            .regime-badge {
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                font-size: 0.65rem;
+                font-weight: 600;
+                padding: 0.15rem 0.4rem;
+                border-radius: 9999px;
+                background-color: rgba(255, 255, 255, 0.1);
+                color: rgba(255, 255, 255, 0.7);
+            }
+            
             @keyframes fadeIn {
                 from { opacity: 0; transform: translateY(10px); }
                 to { opacity: 1; transform: translateY(0); }
@@ -645,26 +698,162 @@ const ImmoExtensions = (function() {
 
     // Ajoute le sélecteur de régime fiscal
     function ajouterSelectionRegimeFiscal() {
-        // Vérifier si le conteneur existe et si le sélecteur n'est pas déjà présent
-        const paramsCommuns = document.getElementById('params-communs');
-        if (!paramsCommuns || document.getElementById('regime-fiscal')) return;
+        // Vérifier si le conteneur approprié existe
+        const advancedParams = document.getElementById('advanced-params');
+        if (!advancedParams || document.getElementById('regime-fiscal-cards')) return;
         
-        // Créer l'élément
-        const formGroup = document.createElement('div');
-        formGroup.className = 'form-group';
-        formGroup.innerHTML = `
-            <label class="form-label">Régime fiscal</label>
-            <select id="regime-fiscal" class="form-input">
-                <option value="micro-foncier">Micro-foncier (abattement 30%)</option>
-                <option value="reel-foncier">Régime réel foncier</option>
-                <option value="lmnp-micro">LMNP micro-BIC (abattement 50%)</option>
-                <option value="lmnp-reel">LMNP réel avec amortissements</option>
-            </select>
-            <span class="form-help">Impact direct sur la rentabilité après impôts</span>
+        // Créer une nouvelle section pour le régime fiscal
+        const sectionFiscale = document.createElement('div');
+        sectionFiscale.className = 'card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg transition-all mt-4';
+        sectionFiscale.id = 'fiscal-regime-card';
+        sectionFiscale.innerHTML = `
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                </div>
+                <h2 class="card-title">Régime fiscal</h2>
+            </div>
+            
+            <div class="card-body p-4">
+                <p class="mb-3">Choisissez un régime fiscal pour calculer l'impact sur votre investissement:</p>
+                
+                <div id="regime-fiscal-cards" class="regime-cards-grid mt-3">
+                    <!-- Régimes personnels -->
+                    <div class="regime-card" data-regime="micro-foncier" role="radio" tabindex="0" aria-checked="true">
+                        <i class="fas fa-home text-lg text-green-400"></i>
+                        <h4>Micro-foncier</h4>
+                        <p class="text-sm opacity-75">Abattement 30%</p>
+                        <span class="regime-badge">Déclar° 2044</span>
+                    </div>
+                    
+                    <div class="regime-card" data-regime="reel-foncier" role="radio" tabindex="0" aria-checked="false">
+                        <i class="fas fa-file-invoice-dollar text-lg text-blue-400"></i>
+                        <h4>Réel foncier</h4>
+                        <p class="text-sm opacity-75">Charges réelles</p>
+                        <span class="regime-badge">Déclar° 2044</span>
+                    </div>
+                    
+                    <div class="regime-card" data-regime="lmnp-micro" role="radio" tabindex="0" aria-checked="false">
+                        <i class="fas fa-couch text-lg text-yellow-400"></i>
+                        <h4>LMNP micro-BIC</h4>
+                        <p class="text-sm opacity-75">Abattement 50%</p>
+                        <span class="regime-badge">Déclar° 2042-C-PRO</span>
+                    </div>
+                    
+                    <div class="regime-card" data-regime="lmnp-reel" role="radio" tabindex="0" aria-checked="false">
+                        <i class="fas fa-calculator text-lg text-purple-400"></i>
+                        <h4>LMNP réel</h4>
+                        <p class="text-sm opacity-75">Charges + amort.</p>
+                        <span class="regime-badge">BIC</span>
+                    </div>
+                </div>
+                
+                <!-- Champ caché pour maintenir la compatibilité -->
+                <select id="regime-fiscal" class="form-input hidden">
+                    <option value="micro-foncier" selected>Micro-foncier (abattement 30%)</option>
+                    <option value="reel-foncier">Régime réel foncier</option>
+                    <option value="lmnp-micro">LMNP micro-BIC (abattement 50%)</option>
+                    <option value="lmnp-reel">LMNP réel avec amortissements</option>
+                </select>
+            </div>
         `;
         
-        // Ajouter à l'interface
-        paramsCommuns.appendChild(formGroup);
+        // Ajouter à la suite des paramètres avancés (après le conteneur)
+        advancedParams.parentNode.insertBefore(sectionFiscale, advancedParams.nextSibling);
+        
+        // Initialiser les écouteurs d'événements
+        initialiserEvenementsRegimeCards();
+    }
+
+    // Initialise les écouteurs d'événements pour les cartes de régime fiscal
+    function initialiserEvenementsRegimeCards() {
+        const regimeFiscalCards = document.getElementById('regime-fiscal-cards');
+        const regimeFiscalSelect = document.getElementById('regime-fiscal');
+        
+        if (!regimeFiscalCards || !simulateur) return;
+        
+        // Initialiser l'état actif selon la valeur actuelle
+        if (simulateur.params.fiscalite.regimeFiscal) {
+            const regimeActuel = simulateur.params.fiscalite.regimeFiscal;
+            const cardActive = regimeFiscalCards.querySelector(`.regime-card[data-regime="${regimeActuel}"]`);
+            if (cardActive) {
+                // Désactiver toutes les cartes
+                regimeFiscalCards.querySelectorAll('.regime-card').forEach(card => {
+                    card.classList.remove('active');
+                    card.setAttribute('aria-checked', 'false');
+                });
+                
+                // Activer la carte sélectionnée
+                cardActive.classList.add('active');
+                cardActive.setAttribute('aria-checked', 'true');
+            }
+        }
+        
+        // Gérer les clics sur les cartes
+        regimeFiscalCards.addEventListener('click', e => {
+            const card = e.target.closest('.regime-card');
+            if (!card) return;
+            
+            // Récupérer le régime sélectionné
+            const regimeSelectionne = card.dataset.regime;
+            
+            // Désactiver toutes les cartes
+            regimeFiscalCards.querySelectorAll('.regime-card').forEach(c => {
+                c.classList.remove('active');
+                c.setAttribute('aria-checked', 'false');
+            });
+            
+            // Activer la carte cliquée
+            card.classList.add('active');
+            card.setAttribute('aria-checked', 'true');
+            
+            // Mettre à jour le select caché
+            if (regimeFiscalSelect) {
+                regimeFiscalSelect.value = regimeSelectionne;
+            }
+            
+            // Mettre à jour le paramètre dans le simulateur
+            simulateur.params.fiscalite.regimeFiscal = regimeSelectionne;
+            
+            // Recalculer si des résultats existent déjà
+            if (simulateur.params.resultats.classique && simulateur.params.resultats.encheres) {
+                // Afficher un toast pour indiquer que le calcul est en cours
+                if (typeof window.afficherToast === 'function') {
+                    window.afficherToast("Calcul en cours avec le nouveau régime fiscal...", 'info');
+                }
+                
+                // Recalculer après une courte pause pour l'effet visuel
+                setTimeout(() => {
+                    // Recalculer avec le nouveau régime
+                    simulateur.params.resultats.classique = simulateur.calculeTout(
+                        simulateur.params.resultats.classique.surface, 'classique');
+                    simulateur.params.resultats.encheres = simulateur.calculeTout(
+                        simulateur.params.resultats.encheres.surface, 'encheres');
+                    
+                    // Mettre à jour l'affichage des résultats fiscaux
+                    mettreAJourAffichageFiscal();
+                    
+                    // Mettre à jour les indicateurs
+                    ajouterIndicateursVisuels(simulateur.params.resultats);
+                    
+                    // Afficher un message de confirmation
+                    if (typeof window.afficherToast === 'function') {
+                        window.afficherToast(`Régime fiscal mis à jour: ${card.querySelector('h4').textContent}`, 'success');
+                    }
+                }, 300);
+            }
+        });
+        
+        // Support clavier pour l'accessibilité
+        regimeFiscalCards.addEventListener('keydown', e => {
+            const card = e.target.closest('.regime-card');
+            if (!card) return;
+            
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                card.click();
+            }
+        });
     }
 
     // Ajoute la section pour les scénarios de revente
@@ -963,7 +1152,7 @@ const ImmoExtensions = (function() {
                 // Mettre à jour le paramètre
                 simulateur.params.fiscalite.regimeFiscal = this.value;
                 
-                // Si des résultats existent, recalculer avec le nouveau régime
+                // Si des résultats existent déjà, recalculer avec le nouveau régime
                 if (simulateur.params.resultats.classique && simulateur.params.resultats.encheres) {
                     // Recalculer pour les deux modes
                     simulateur.params.resultats.classique = simulateur.calculeTout(
