@@ -7,6 +7,7 @@
  * Version 1.0 - Version initiale
  * Version 1.1 - Corrections des coquilles et optimisations mineures
  * Version 1.2 - Refactorisation et améliorations de la gestion des résultats
+ * Version 1.3 - Ajout de la prise en compte des frais de gestion locative
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -420,6 +421,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div>
                             <p><strong>Loyer m²:</strong> ${simulation.params.communs.loyerM2} €/m²</p>
                             <p><strong>Vacance:</strong> ${simulation.params.communs.vacanceLocative}%</p>
+                            <p><strong>Frais de gestion:</strong> ${simulation.params.communs.fraisGestionLocative || 7}%</p>
                             <p><strong>Travaux:</strong> ${simulation.params.communs.travauxM2} €/m²</p>
                         </div>
                     </div>
@@ -505,6 +507,11 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('taxe-fonciere').value = simulation.params.communs.taxeFonciere;
         document.getElementById('vacance-locative').value = simulation.params.communs.vacanceLocative;
         document.getElementById('travaux-m2').value = simulation.params.communs.travauxM2;
+        
+        // Chargement des frais de gestion locative s'ils existent
+        if (simulation.params.communs.fraisGestionLocative !== undefined && document.getElementById('frais-gestion-locative')) {
+            document.getElementById('frais-gestion-locative').value = simulation.params.communs.fraisGestionLocative;
+        }
         
         // Récupération du pourcentage d'apport minimum s'il existe
         if (simulation.params.base.pourcentApportMin && document.getElementById('pourcent-apport')) {
@@ -977,6 +984,7 @@ document.addEventListener('DOMContentLoaded', function() {
             loyerM2: document.getElementById('loyer-m2').value,
             travauxM2: document.getElementById('travaux-m2').value,
             prixM2: document.getElementById('prix-m2-marche').value,
+            fraisGestionLocative: document.getElementById('frais-gestion-locative')?.value || 7,
             
             // Paramètres fiscaux (s'ils existent)
             tauxPrelevementsSociaux: document.getElementById('taux-prelevements-sociaux')?.value || 17.2,
@@ -1121,6 +1129,12 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('classique-mensualite').textContent = formaterMontantMensuel(classique.mensualite);
         document.getElementById('classique-loyer-net').textContent = formaterMontantMensuel(classique.loyerNet);
         
+        // Afficher les frais de gestion locative
+        if (document.getElementById('classique-frais-gestion')) {
+            document.getElementById('classique-frais-gestion').textContent = 
+                formaterMontantMensuel(classique.fraisGestionMensuels);
+        }
+        
         const cashflowClassique = document.getElementById('classique-cashflow');
         cashflowClassique.textContent = formaterMontantMensuel(classique.cashFlow);
         cashflowClassique.className = getClasseValeur(classique.cashFlow);
@@ -1182,6 +1196,12 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('encheres-total').textContent = formaterMontant(encheres.coutTotal);
         document.getElementById('encheres-mensualite').textContent = formaterMontantMensuel(encheres.mensualite);
         document.getElementById('encheres-loyer-net').textContent = formaterMontantMensuel(encheres.loyerNet);
+        
+        // Afficher les frais de gestion locative
+        if (document.getElementById('encheres-frais-gestion')) {
+            document.getElementById('encheres-frais-gestion').textContent = 
+                formaterMontantMensuel(encheres.fraisGestionMensuels);
+        }
         
         const cashflowEncheres = document.getElementById('encheres-cashflow');
         cashflowEncheres.textContent = formaterMontantMensuel(encheres.cashFlow);
