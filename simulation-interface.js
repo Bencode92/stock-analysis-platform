@@ -7,6 +7,7 @@
  * Version 1.0 - Version initiale
  * Version 1.1 - Corrections des coquilles et optimisations mineures
  * Version 1.2 - Refactorisation et améliorations de la gestion des résultats
+ * Version 1.3 - Ajout d'explications détaillées sur le cash-flow et amélioration de l'affichage du cash-flow annuel
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -85,6 +86,119 @@ document.addEventListener('DOMContentLoaded', function() {
         .chart-container {
             overflow-x: auto;
             margin-bottom: 1rem;
+        }
+        
+        /* Nouveaux styles pour l'affichage du cash-flow annuel */
+        .cashflow-container {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .cashflow-monthly {
+            font-weight: bold;
+        }
+        
+        .cashflow-annual {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 0.25rem;
+        }
+        
+        /* Style pour les infobulles */
+        .info-icon {
+            display: inline-flex;
+            margin-left: 0.5rem;
+            color: var(--primary-color);
+            font-size: 0.9rem;
+            cursor: help;
+            position: relative;
+        }
+        
+        .info-icon .tooltip-text {
+            visibility: hidden;
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 250px;
+            background-color: rgba(1, 42, 74, 0.95);
+            color: white;
+            text-align: center;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+        }
+        
+        .info-icon:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        /* Flèche en bas de l'infobulle */
+        .info-icon .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: rgba(1, 42, 74, 0.95) transparent transparent transparent;
+        }
+
+        /* Styles pour la section d'explication */
+        .cashflow-explanation {
+            background-color: rgba(0, 255, 135, 0.05);
+            border: 1px solid rgba(0, 255, 135, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .cashflow-explanation h3 {
+            font-size: 1.2rem;
+            color: var(--primary-color);
+            margin-bottom: 0.75rem;
+        }
+        
+        .cashflow-explanation p {
+            margin-bottom: 0.75rem;
+            line-height: 1.6;
+        }
+        
+        .cashflow-formula {
+            background-color: rgba(1, 42, 74, 0.5);
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-family: monospace;
+            margin: 0.75rem 0;
+        }
+        
+        .terms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+        
+        .term-card {
+            background-color: rgba(1, 42, 74, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+        }
+        
+        .term-title {
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-bottom: 0.3rem;
         }
     `;
     document.head.appendChild(styleEl);
@@ -433,7 +547,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             <p><strong>Coût total:</strong> ${formaterMontant(simulation.resultats.classique.coutTotal)}</p>
                             <p><strong>Emprunt:</strong> ${formaterMontant(simulation.resultats.classique.emprunt)}</p>
                             <p><strong>Mensualité:</strong> ${formaterMontantMensuel(simulation.resultats.classique.mensualite)}</p>
-                            <p><strong>Cash-flow:</strong> ${formaterMontantMensuel(simulation.resultats.classique.cashFlow)}</p>
+                            <p><strong>Cash-flow mensuel:</strong> ${formaterMontantMensuel(simulation.resultats.classique.cashFlow)}</p>
+                            <p><strong>Cash-flow annuel:</strong> ${formaterMontant(simulation.resultats.classique.cashFlow * 12)}/an</p>
                             <p><strong>Rentabilité:</strong> ${formaterPourcentage(simulation.resultats.classique.rendementNet)}</p>
                         </div>
                         <div>
@@ -443,7 +558,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             <p><strong>Coût total:</strong> ${formaterMontant(simulation.resultats.encheres.coutTotal)}</p>
                             <p><strong>Emprunt:</strong> ${formaterMontant(simulation.resultats.encheres.emprunt)}</p>
                             <p><strong>Mensualité:</strong> ${formaterMontantMensuel(simulation.resultats.encheres.mensualite)}</p>
-                            <p><strong>Cash-flow:</strong> ${formaterMontantMensuel(simulation.resultats.encheres.cashFlow)}</p>
+                            <p><strong>Cash-flow mensuel:</strong> ${formaterMontantMensuel(simulation.resultats.encheres.cashFlow)}</p>
+                            <p><strong>Cash-flow annuel:</strong> ${formaterMontant(simulation.resultats.encheres.cashFlow * 12)}/an</p>
                             <p><strong>Rentabilité:</strong> ${formaterPourcentage(simulation.resultats.encheres.rendementNet)}</p>
                         </div>
                     </div>
@@ -1050,6 +1166,15 @@ document.addEventListener('DOMContentLoaded', function() {
     function formaterMontantMensuel(montant) {
         return formaterMontant(montant) + '/mois';
     }
+    
+    /**
+     * Formate un montant annuel
+     * @param {number} montant - Montant à formater
+     * @returns {string} - Montant formaté
+     */
+    function formaterMontantAnnuel(montant) {
+        return formaterMontant(montant) + '/an';
+    }
 
     /**
      * Applique une classe positive ou négative selon la valeur
@@ -1087,6 +1212,172 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
+     * Ajoute une infobulle explicative à un élément
+     * @param {HTMLElement} element - L'élément auquel ajouter l'infobulle
+     * @param {string} texte - Le texte explicatif de l'infobulle
+     */
+    function ajouterInfobulle(element, texte) {
+        // Vérifier que l'élément existe
+        if (!element) return;
+        
+        // S'assurer que l'élément a une position relative ou absolute
+        const position = window.getComputedStyle(element).position;
+        if (position !== 'relative' && position !== 'absolute') {
+            element.style.position = 'relative';
+        }
+        
+        // Créer l'icône d'info
+        const infoIcon = document.createElement('span');
+        infoIcon.className = 'info-icon';
+        infoIcon.innerHTML = '<i class="fas fa-info-circle"></i>';
+        infoIcon.title = texte; // Fallback pour les navigateurs sans support des infobulles personnalisées
+        
+        // Créer le contenu de l'infobulle
+        const tooltipContent = document.createElement('span');
+        tooltipContent.className = 'tooltip-text';
+        tooltipContent.textContent = texte;
+        
+        // Ajouter l'infobulle à l'icône
+        infoIcon.appendChild(tooltipContent);
+        
+        // Ajouter l'icône à l'élément ou à son parent
+        if (element.tagName === 'LABEL') {
+            element.appendChild(infoIcon);
+        } else {
+            element.parentNode.appendChild(infoIcon);
+        }
+    }
+
+    /**
+     * Configure les infobulles explicatives sur les éléments importants
+     */
+    function ajouterInfobullesExplicatives() {
+        // Liste des éléments avec leurs explications
+        const infobulles = {
+            // Paramètres de base
+            'apport': "Somme que vous pouvez investir initialement. Il s'agit généralement de votre épargne personnelle.",
+            'prix-m2-marche': "Prix moyen au mètre carré dans le secteur où vous souhaitez investir. Ce prix détermine directement le budget maximum.",
+            'loyer-m2': "Loyer mensuel par mètre carré dans le secteur. Cette valeur permet de calculer vos revenus locatifs.",
+            'taux': "Taux d'intérêt annuel de votre crédit immobilier. Plus il est bas, plus votre mensualité sera faible.",
+            'duree': "Durée du prêt en années. Une durée plus longue diminue la mensualité mais augmente le coût total des intérêts.",
+            
+            // Résultats - Cash-flow
+            'classique-cashflow': "Le cash-flow est l'argent qui reste dans votre poche chaque mois après avoir payé toutes les charges. C'est un indicateur clé de la performance de votre investissement.",
+            'encheres-cashflow': "Le cash-flow est l'argent qui reste dans votre poche chaque mois après avoir payé toutes les charges. C'est un indicateur clé de la performance de votre investissement.",
+            
+            // Résultats - Rentabilité
+            'classique-rentabilite': "La rentabilité nette est le rapport entre le revenu net annuel et le coût total de l'investissement. Une bonne rentabilité est généralement supérieure à 7%.",
+            'encheres-rentabilite': "La rentabilité nette est le rapport entre le revenu net annuel et le coût total de l'investissement. Une bonne rentabilité est généralement supérieure à 7%."
+        };
+        
+        // Ajouter les infobulles aux éléments
+        for (const [id, texte] of Object.entries(infobulles)) {
+            const element = document.getElementById(id);
+            if (element) {
+                ajouterInfobulle(element, texte);
+            }
+        }
+        
+        // Ajouter des infobulles aux labels des champs
+        document.querySelectorAll('.form-label').forEach(label => {
+            const forAttr = label.getAttribute('for');
+            if (forAttr && infobulles[forAttr]) {
+                ajouterInfobulle(label, infobulles[forAttr]);
+            }
+        });
+    }
+
+    /**
+     * Ajoute un bloc d'explication sur le cash-flow après les résultats
+     */
+    function ajouterExplicationCashFlow() {
+        // Vérifier si le conteneur de résultats existe et est visible
+        if (!resultsContainer || resultsContainer.classList.contains('hidden')) return;
+        
+        // Vérifier si l'explication existe déjà
+        if (document.getElementById('cashflow-explanation')) return;
+        
+        // Créer le bloc d'explication
+        const explanation = document.createElement('div');
+        explanation.id = 'cashflow-explanation';
+        explanation.className = 'cashflow-explanation fade-in';
+        explanation.innerHTML = `
+            <h3><i class="fas fa-question-circle mr-2"></i> Comprendre le cash-flow</h3>
+            <p>Le cash-flow représente l'argent qui reste dans votre poche chaque mois après avoir payé toutes les charges liées à votre investissement immobilier. C'est un indicateur essentiel de la performance de votre investissement.</p>
+            
+            <div class="cashflow-formula">
+                <strong>Cash-flow mensuel</strong> = Loyer net - Mensualité - Taxe foncière/12 - Charges non récupérables - Entretien - Assurance PNO/12
+            </div>
+            
+            <p>Le cash-flow annuel est simplement le cash-flow mensuel multiplié par 12. Il permet d'avoir une vision plus globale de votre investissement sur une année complète.</p>
+            
+            <div class="terms-grid">
+                <div class="term-card">
+                    <div class="term-title">Cash-flow positif</div>
+                    <div class="term-definition">Votre investissement génère plus de revenus que de charges. Il s'autofinance et vous procure un revenu complémentaire.</div>
+                </div>
+                <div class="term-card">
+                    <div class="term-title">Cash-flow négatif</div>
+                    <div class="term-definition">Votre investissement ne s'autofinance pas complètement. Vous devez compléter chaque mois avec vos fonds personnels.</div>
+                </div>
+                <div class="term-card">
+                    <div class="term-title">Cash-flow après impôt</div>
+                    <div class="term-definition">Le cash-flow après prise en compte de l'impact fiscal (économie d'impôt ou impôt supplémentaire).</div>
+                </div>
+            </div>
+            
+            <p class="mt-2">Un cash-flow légèrement négatif n'est pas forcément un mauvais investissement, surtout si vous visez une plus-value à la revente ou si vous êtes dans une logique patrimoniale sur le long terme.</p>
+            
+            <button id="btn-hide-explanation" class="btn btn-sm btn-outline mt-2">Masquer cette explication</button>
+        `;
+        
+        // Ajouter le bloc après le conteneur de résultats
+        resultsContainer.insertAdjacentElement('afterend', explanation);
+        
+        // Ajouter un écouteur pour masquer l'explication
+        document.getElementById('btn-hide-explanation').addEventListener('click', function() {
+            explanation.classList.add('hidden');
+        });
+    }
+
+    /**
+     * Ajoute un bouton pour afficher/masquer les explications sur le cash-flow
+     */
+    function ajouterBoutonExplication() {
+        // Vérifier si le conteneur de résultats existe et est visible
+        if (!resultsContainer || resultsContainer.classList.contains('hidden')) return;
+        
+        // Vérifier si le bouton existe déjà
+        if (document.getElementById('btn-show-explanation')) return;
+        
+        // Créer le bouton
+        const button = document.createElement('button');
+        button.id = 'btn-show-explanation';
+        button.className = 'btn btn-outline mt-4 mb-4';
+        button.innerHTML = '<i class="fas fa-info-circle"></i> Comprendre le cash-flow';
+        button.style.display = 'block';
+        button.style.margin = '1rem auto';
+        
+        // Ajouter le bouton après le conteneur de résultats
+        resultsContainer.insertAdjacentElement('afterend', button);
+        
+        // Ajouter un écouteur pour afficher/masquer l'explication
+        button.addEventListener('click', function() {
+            const explanation = document.getElementById('cashflow-explanation');
+            if (!explanation) {
+                ajouterExplicationCashFlow();
+                this.innerHTML = '<i class="fas fa-times-circle"></i> Masquer l\'explication';
+            } else if (explanation.classList.contains('hidden')) {
+                explanation.classList.remove('hidden');
+                this.innerHTML = '<i class="fas fa-times-circle"></i> Masquer l\'explication';
+            } else {
+                explanation.classList.add('hidden');
+                this.innerHTML = '<i class="fas fa-info-circle"></i> Comprendre le cash-flow';
+            }
+        });
+    }
+
+    /**
      * Affiche les résultats de la simulation
      * @param {Object} resultats - Résultats de la simulation
      */
@@ -1121,9 +1412,30 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('classique-mensualite').textContent = formaterMontantMensuel(classique.mensualite);
         document.getElementById('classique-loyer-net').textContent = formaterMontantMensuel(classique.loyerNet);
         
+        // Cash-flow mensuel et annuel
         const cashflowClassique = document.getElementById('classique-cashflow');
-        cashflowClassique.textContent = formaterMontantMensuel(classique.cashFlow);
-        cashflowClassique.className = getClasseValeur(classique.cashFlow);
+        if (cashflowClassique) {
+            // Créer un conteneur pour le cash-flow mensuel et annuel
+            const cashflowContainer = document.createElement('div');
+            cashflowContainer.className = 'cashflow-container';
+            
+            // Cash-flow mensuel
+            const cashflowMensuel = document.createElement('div');
+            cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(classique.cashFlow);
+            cashflowMensuel.textContent = formaterMontantMensuel(classique.cashFlow);
+            
+            // Cash-flow annuel
+            const cashflowAnnuel = document.createElement('div');
+            cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(classique.cashFlow);
+            cashflowAnnuel.textContent = formaterMontantAnnuel(classique.cashFlow * 12);
+            
+            // Ajouter au conteneur
+            cashflowContainer.appendChild(cashflowMensuel);
+            cashflowContainer.appendChild(cashflowAnnuel);
+            
+            // Remplacer le contenu actuel
+            cashflowClassique.parentNode.replaceChild(cashflowContainer, cashflowClassique);
+        }
         
         // Affichage de la marge loyer-dette
         const margeClassique = document.getElementById('classique-marge');
@@ -1153,9 +1465,34 @@ document.addEventListener('DOMContentLoaded', function() {
         if (document.getElementById('classique-revenu-foncier')) {
             document.getElementById('classique-revenu-foncier').textContent = formaterMontant(classique.revenuFoncier);
             document.getElementById('classique-impact-fiscal').textContent = formaterMontant(classique.impactFiscal);
-            document.getElementById('classique-cashflow-apres-impot').textContent = formaterMontantMensuel(
-                classique.cashFlow + (classique.impactFiscal / 12)
-            );
+            
+            // Cash-flow après impôt mensuel et annuel
+            const cashflowApresImpotMensuel = classique.cashFlow + (classique.impactFiscal / 12);
+            const cashflowApresImpotAnnuel = cashflowApresImpotMensuel * 12;
+            
+            const cashflowApresImpot = document.getElementById('classique-cashflow-apres-impot');
+            if (cashflowApresImpot) {
+                // Créer un conteneur pour le cash-flow après impôt
+                const cashflowContainer = document.createElement('div');
+                cashflowContainer.className = 'cashflow-container';
+                
+                // Cash-flow mensuel après impôt
+                const cashflowMensuel = document.createElement('div');
+                cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(cashflowApresImpotMensuel);
+                cashflowMensuel.textContent = formaterMontantMensuel(cashflowApresImpotMensuel);
+                
+                // Cash-flow annuel après impôt
+                const cashflowAnnuel = document.createElement('div');
+                cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(cashflowApresImpotAnnuel);
+                cashflowAnnuel.textContent = formaterMontantAnnuel(cashflowApresImpotAnnuel);
+                
+                // Ajouter au conteneur
+                cashflowContainer.appendChild(cashflowMensuel);
+                cashflowContainer.appendChild(cashflowAnnuel);
+                
+                // Remplacer le contenu actuel
+                cashflowApresImpot.parentNode.replaceChild(cashflowContainer, cashflowApresImpot);
+            }
         }
         
         // Affichage des résultats pour la vente aux enchères
@@ -1183,9 +1520,30 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('encheres-mensualite').textContent = formaterMontantMensuel(encheres.mensualite);
         document.getElementById('encheres-loyer-net').textContent = formaterMontantMensuel(encheres.loyerNet);
         
+        // Cash-flow mensuel et annuel pour les enchères
         const cashflowEncheres = document.getElementById('encheres-cashflow');
-        cashflowEncheres.textContent = formaterMontantMensuel(encheres.cashFlow);
-        cashflowEncheres.className = getClasseValeur(encheres.cashFlow);
+        if (cashflowEncheres) {
+            // Créer un conteneur pour le cash-flow mensuel et annuel
+            const cashflowContainer = document.createElement('div');
+            cashflowContainer.className = 'cashflow-container';
+            
+            // Cash-flow mensuel
+            const cashflowMensuel = document.createElement('div');
+            cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(encheres.cashFlow);
+            cashflowMensuel.textContent = formaterMontantMensuel(encheres.cashFlow);
+            
+            // Cash-flow annuel
+            const cashflowAnnuel = document.createElement('div');
+            cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(encheres.cashFlow);
+            cashflowAnnuel.textContent = formaterMontantAnnuel(encheres.cashFlow * 12);
+            
+            // Ajouter au conteneur
+            cashflowContainer.appendChild(cashflowMensuel);
+            cashflowContainer.appendChild(cashflowAnnuel);
+            
+            // Remplacer le contenu actuel
+            cashflowEncheres.parentNode.replaceChild(cashflowContainer, cashflowEncheres);
+        }
         
         // Affichage de la marge loyer-dette
         const margeEncheres = document.getElementById('encheres-marge');
@@ -1198,9 +1556,34 @@ document.addEventListener('DOMContentLoaded', function() {
         if (document.getElementById('encheres-revenu-foncier')) {
             document.getElementById('encheres-revenu-foncier').textContent = formaterMontant(encheres.revenuFoncier);
             document.getElementById('encheres-impact-fiscal').textContent = formaterMontant(encheres.impactFiscal);
-            document.getElementById('encheres-cashflow-apres-impot').textContent = formaterMontantMensuel(
-                encheres.cashFlow + (encheres.impactFiscal / 12)
-            );
+            
+            // Cash-flow après impôt mensuel et annuel
+            const cashflowApresImpotMensuel = encheres.cashFlow + (encheres.impactFiscal / 12);
+            const cashflowApresImpotAnnuel = cashflowApresImpotMensuel * 12;
+            
+            const cashflowApresImpot = document.getElementById('encheres-cashflow-apres-impot');
+            if (cashflowApresImpot) {
+                // Créer un conteneur pour le cash-flow après impôt
+                const cashflowContainer = document.createElement('div');
+                cashflowContainer.className = 'cashflow-container';
+                
+                // Cash-flow mensuel après impôt
+                const cashflowMensuel = document.createElement('div');
+                cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(cashflowApresImpotMensuel);
+                cashflowMensuel.textContent = formaterMontantMensuel(cashflowApresImpotMensuel);
+                
+                // Cash-flow annuel après impôt
+                const cashflowAnnuel = document.createElement('div');
+                cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(cashflowApresImpotAnnuel);
+                cashflowAnnuel.textContent = formaterMontantAnnuel(cashflowApresImpotAnnuel);
+                
+                // Ajouter au conteneur
+                cashflowContainer.appendChild(cashflowMensuel);
+                cashflowContainer.appendChild(cashflowAnnuel);
+                
+                // Remplacer le contenu actuel
+                cashflowApresImpot.parentNode.replaceChild(cashflowContainer, cashflowApresImpot);
+            }
         }
         
         // Comparatif
@@ -1288,5 +1671,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Afficher les avantages
         document.getElementById('classique-avantages').textContent = "Points forts: " + avantagesClassique.join(", ");
         document.getElementById('encheres-avantages').textContent = "Points forts: " + avantagesEncheres.join(", ");
+        
+        // Ajouter les infobulles explicatives
+        setTimeout(ajouterInfobullesExplicatives, 500);
+        
+        // Ajouter le bouton d'explication
+        setTimeout(ajouterBoutonExplication, 500);
     }
 });
