@@ -1124,6 +1124,23 @@
             margin: 0 auto;
             margin-top: 1.5rem;
         }
+        
+        /* Style pour les options de mode de calcul */
+        .option-btn {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .option-btn:hover {
+            border-color: rgba(0, 255, 135, 0.3);
+            background-color: rgba(0, 255, 135, 0.05);
+        }
+
+        input[type="radio"]:checked + .option-btn {
+            border-color: var(--primary-color);
+            background-color: rgba(0, 255, 135, 0.1);
+            box-shadow: 0 0 10px rgba(0, 255, 135, 0.1);
+        }
     </style>
 </head>
 <body>
@@ -1220,8 +1237,8 @@
                 <i class="fas fa-info-circle"></i>
             </div>
             <div class="mode-info-content">
-                <h3>Mode 100% marché</h3>
-                <p>Ce simulateur fonctionne avec les données réelles du marché : prix d'achat au m² et loyer au m². Le prix maximum d'acquisition est déterminé uniquement par la marge positive (loyer ≥ mensualité).</p>
+                <h3>Mode 100% marché avec deux critères de calcul</h3>
+                <p>Ce simulateur fonctionne avec les données réelles du marché : prix d'achat au m² et loyer au m². Choisissez entre deux critères pour calculer votre surface maximale autofinancée : "Loyer ≥ Mensualité" ou "Cash-flow positif".</p>
             </div>
         </div>
         
@@ -1289,6 +1306,40 @@
                 <!-- Champs cachés pour compatibilité -->
                 <input type="hidden" id="surface" value="50">
                 <input type="hidden" id="montant-emprunt-max" value="150000">
+            </div>
+            
+            <!-- Nouveau : Mode de calcul -->
+            <div class="form-group mt-6 border-t border-gray-700 pt-4">
+                <label class="form-label">Mode de calcul</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="calculation-mode" id="mode-loyer-mensualite" value="loyer-mensualite" checked class="form-radio hidden">
+                        <div class="option-btn p-3 rounded-lg flex items-center">
+                            <i class="fas fa-check-circle text-lg text-green-400 mr-2"></i>
+                            <div>
+                                <span class="font-medium">Loyer ≥ Mensualité</span>
+                                <p class="text-sm opacity-75">Le loyer net couvre la mensualité du prêt</p>
+                            </div>
+                        </div>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="calculation-mode" id="mode-cashflow-positif" value="cashflow-positif" class="form-radio hidden">
+                        <div class="option-btn p-3 rounded-lg flex items-center">
+                            <i class="fas fa-coins text-lg text-green-400 mr-2"></i>
+                            <div>
+                                <span class="font-medium">Cash-flow positif</span>
+                                <p class="text-sm opacity-75">Toutes charges comprises (plus strict)</p>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+                <div class="form-help mt-2">
+                    <i class="fas fa-info-circle text-blue-400 mr-1"></i>
+                    <span class="text-sm text-gray-300">
+                        Mode "Loyer ≥ Mensualité" : Cherche la surface maximale où le loyer couvre au moins le prêt.<br>
+                        Mode "Cash-flow positif" : Cherche la surface maximale générant un bénéfice mensuel (loyer - mensualité - charges).
+                    </span>
+                </div>
             </div>
             
             <div class="flex justify-between items-center mt-4">
