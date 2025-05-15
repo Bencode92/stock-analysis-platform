@@ -113,6 +113,14 @@ const ImmoExtensions = (function() {
             interetsEmprunt = Number(interetsEmprunt) || 0;
             charges = Number(charges) || 0;
             
+            // Logging pour débogage
+            console.log("Calcul fiscal:", {
+                revenuFoncier, 
+                interetsEmprunt, 
+                charges, 
+                regimeFiscal
+            });
+            
             let revenusImposables = 0;
             let abattement = 0;
             let chargesDeduites = 0;
@@ -156,6 +164,16 @@ const ImmoExtensions = (function() {
             }
             
             const impot = this.calculerImpot(revenusImposables);
+            
+            // Log du résultat
+            console.log("Résultat fiscal:", {
+                revenuFoncier,
+                abattement,
+                chargesDeduites,
+                amortissement,
+                revenusImposables,
+                impot
+            });
             
             return {
                 revenuFoncier,
@@ -205,21 +223,35 @@ const ImmoExtensions = (function() {
             this.modeActuel = mode;
 
             try {
+                // Afficher le résultat original pour débogage
+                console.log(`Résultat original (${mode}):`, {
+                    loyerBrut: res.loyerBrut,
+                    loyerNet: res.loyerNet,
+                    loyerApresVacance: res.loyerApresVacance,
+                    loyerM2: res.loyerM2,
+                    surface: res.surface,
+                    cashFlow: res.cashFlow
+                });
+                
                 // Recalculer l'impact fiscal avec le régime choisi
                 const regime = this.params.fiscalite.regimeFiscal || 'micro-foncier';
                 
-                // Calculer les charges déductibles annuelles
+                // Calcul des charges déductibles annuelles
                 const charges = (res.taxeFonciere || 0) + 
                             (res.assurancePNO || 0) + 
                             (res.chargesNonRecuperables || 0) + 
                             (res.entretienAnnuel || 0);
                 
-                // S'assurer que les revenus et charges sont des nombres valides
-                const revenuAnnuel = (res.loyerApresVacance || 0) * 12;
+                // CORRECTION MAJEURE ICI: le revenu foncier est le loyer BRUT ANNUEL, pas les loyers nets
+                // C'est le loyer total AVANT déduction de la vacance et des charges
+                // Le simulateur l'a déjà calculé: c'est loyerBrut annualisé
+                const revenuAnnuel = (res.loyerBrut || 0) * 12;
+                
+                // Intérêts d'emprunt de la première année
                 const interets = res.interetsAnnee1 || 0;
                 
                 const fiscal = this.calculerImpactFiscalAvecRegime(
-                    revenuAnnuel,     // Revenus bruts après vacance
+                    revenuAnnuel,     // Revenus bruts AVANT vacance
                     interets,         // Intérêts de la première année
                     charges,          // Charges déductibles
                     regime            // Régime fiscal sélectionné
@@ -245,11 +277,21 @@ const ImmoExtensions = (function() {
                     res.cashFlow = 0;
                 }
                 
+                // Log des résultats fiscaux finaux
+                console.log(`Résultats fiscaux (${mode}):`, {
+                    revenuFoncier: fiscal.revenuFoncier,
+                    revenusImposables: fiscal.revenusImposables,
+                    impot: fiscal.impot,
+                    impactFiscal: res.impactFiscal,
+                    cashFlow: res.cashFlow,
+                    cashFlowApresImpot: res.cashFlow + (res.impactFiscal / 12)
+                });
+                
             } catch (e) {
                 console.error("Erreur dans le calcul fiscal:", e);
                 // En cas d'erreur, on crée un objet fiscal par défaut
                 res.fiscalDetail = {
-                    revenuFoncier: (res.loyerApresVacance || 0) * 12,
+                    revenuFoncier: (res.loyerBrut || 0) * 12,
                     revenusImposables: 0,
                     impot: 0
                 };
@@ -567,6 +609,17 @@ const ImmoExtensions = (function() {
                 font-size: 0.8rem;
                 font-weight: 600;
                 margin-left: 0.5rem;
+            }
+            
+            /* Ajout pour mettre en évidence les explications fiscales */
+            .fiscal-explanation {
+                background-color: rgba(0, 255, 135, 0.05);
+                border: 1px solid rgba(0, 255, 135, 0.1);
+                border-radius: 4px;
+                padding: 0.5rem;
+                margin-top: 0.5rem;
+                font-size: 0.85rem;
+                color: rgba(255, 255, 255, 0.8);
             }
             
             @keyframes fadeIn {
@@ -1114,6 +1167,28 @@ const ImmoExtensions = (function() {
         // Vérifier si les éléments DOM existent
         const fiscalInfo = document.getElementById(`${mode}-fiscal-info`);
         
+        // Créer une explanation basée sur le régime fiscal
+        let explanation = '';
+        switch(regimeLabel.split(' ')[0]) {
+            case 'Micro-foncier':
+                explanation = `Avec le régime micro-foncier, un abattement forfaitaire de 30% est appliqué sur les loyers bruts. 
+                Seuls 70% des revenus locatifs sont soumis à l'impôt sur le revenu et aux prélèvements sociaux.`;
+                break;
+            case 'Régime':
+                explanation = `Le régime réel permet de déduire toutes les charges réelles (intérêts d'emprunt, taxe foncière, etc.) 
+                des revenus locatifs. Il est généralement plus avantageux quand les charges dépassent 30% des loyers.`;
+                break;
+            case 'LMNP':
+                if (regimeLabel.includes('micro-BIC')) {
+                    explanation = `Le régime LMNP micro-BIC offre un abattement forfaitaire de 50% sur les loyers des locations meublées. 
+                    C'est souvent plus avantageux que le micro-foncier pour une location nue.`;
+                } else {
+                    explanation = `Le LMNP au réel permet de déduire l'amortissement du bien (généralement sur 20-30 ans), 
+                    ce qui réduit considérablement l'impôt, voire permet de ne pas en payer pendant plusieurs années.`;
+                }
+                break;
+        }
+        
         // Si l'élément n'existe pas, le créer
         if (!fiscalInfo) {
             // Trouver le conteneur de résultats
@@ -1129,6 +1204,9 @@ const ImmoExtensions = (function() {
                     Impact fiscal
                     <span class="fiscal-badge">${regimeLabel}</span>
                 </h4>
+                <div class="fiscal-explanation">
+                    ${explanation}
+                </div>
                 <table class="comparison-table">
                     <tr>
                         <td>Revenu foncier annuel</td>
@@ -1176,6 +1254,17 @@ const ImmoExtensions = (function() {
         } else {
             // Si l'élément existe, mettre à jour son contenu
             fiscalInfo.querySelector('h4 .fiscal-badge').textContent = regimeLabel;
+            
+            // Mettre à jour l'explication
+            const explanationElem = fiscalInfo.querySelector('.fiscal-explanation');
+            if (explanationElem) {
+                explanationElem.innerHTML = explanation;
+            } else {
+                const newExplanation = document.createElement('div');
+                newExplanation.className = 'fiscal-explanation';
+                newExplanation.innerHTML = explanation;
+                fiscalInfo.insertBefore(newExplanation, fiscalInfo.querySelector('table'));
+            }
             
             const table = fiscalInfo.querySelector('table');
             table.innerHTML = `
