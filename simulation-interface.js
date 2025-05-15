@@ -6,6 +6,7 @@
  * 
  * Version 1.0 - Version initiale
  * Version 1.1 - Corrections des coquilles et optimisations mineures
+ * Version 1.2 - Refactorisation et améliorations de la gestion des résultats
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -64,6 +65,11 @@ document.addEventListener('DOMContentLoaded', function() {
             border: 1px solid rgba(0, 255, 135, 0.3);
         }
         
+        .info-message.warning {
+            background-color: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        
         .optimization-badge {
             display: inline-block;
             margin-left: 0.5rem;
@@ -96,6 +102,148 @@ document.addEventListener('DOMContentLoaded', function() {
     let valuationChart = null;
     let costPieChartClassique = null;
     let costPieChartEncheres = null;
+
+    // Fonction modulaire pour afficher des notifications
+    function afficherNotification(message, type = 'info') {
+        if (!resultsContainer) return;
+        
+        const notification = document.createElement('div');
+        notification.className = `info-message fade-in ${type === 'warning' ? 'warning' : ''}`;
+        notification.innerHTML = message;
+        resultsContainer.insertBefore(notification, resultsContainer.firstChild);
+    }
+
+    // Fonction pour nettoyer les anciens messages
+    function nettoyerAnciensMesages() {
+        document.querySelectorAll('.info-message, .notification').forEach(el => el.remove());
+    }
+
+    // Fonction pour gérer l'affichage des résultats de la simulation
+    function afficherResultatsSimulation(resultats, pas) {
+        if (!resultsContainer) return;
+        
+        // Afficher le conteneur de résultats
+        resultsContainer.classList.remove('hidden');
+        resultsContainer.classList.add('fade-in');
+        
+        // Vérifier si les résultats contiennent des valeurs réelles
+        if (resultats.classique && resultats.classique.surface > 0 && 
+            resultats.encheres && resultats.encheres.surface > 0) {
+            
+            // Afficher la notification de réussite
+            afficherNotification(`
+                <i class="fas fa-check-circle"></i> 
+                Calcul terminé : <strong>Surface maximale autofinancée</strong> déterminée par une marge positive entre loyer et mensualité
+                <span class="optimization-badge"><i class="fas fa-ruler"></i> Recherche par surface décroissante (pas = ${pas} m²)</span>
+            `);
+            
+            // Mettre à jour le champ caché de surface
+            const surfaceField = document.getElementById('surface');
+            if (surfaceField) {
+                surfaceField.value = resultats.classique.surface;
+            }
+            
+        } else {
+            // Afficher un message si aucune valeur n'est trouvée
+            afficherNotification(`
+                <i class="fas fa-exclamation-triangle"></i> 
+                <strong>Attention:</strong> Aucune solution viable n'a été trouvée avec ces paramètres. Essayez d'augmenter l'apport ou le loyer au m².
+            `, 'warning');
+        }
+        
+        // Animer les valeurs numériques (vérifier que la fonction existe)
+        if (typeof window.afficherResultats === 'function') {
+            window.afficherResultats(resultats);
+        } else if (typeof afficherResultats === 'function') {
+            afficherResultats(resultats);
+        }
+        
+        // Créer les graphiques si la fonction existe
+        if (typeof window.creerGraphiques === 'function') {
+            window.creerGraphiques();
+        } else if (typeof creerGraphiques === 'function') {
+            creerGraphiques();
+        }
+        
+        // Afficher le bouton de sauvegarde s'il existe
+        if (btnSaveSimulation) {
+            btnSaveSimulation.classList.remove('hidden');
+        }
+        
+        // Défiler vers les résultats
+        resultsContainer.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Fonction principale pour lancer la simulation
+    function lancerSimulation() {
+        // Afficher l'indicateur de chargement
+        const loadingIndicator = document.querySelector('.loading');
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'flex';
+        }
+        
+        // Nettoyer les messages précédents
+        nettoyerAnciensMesages();
+        
+        // Vérifier que le simulateur existe
+        if (!window.simulateur) {
+            afficherNotification(`
+                <i class="fas fa-times-circle"></i> 
+                <strong>Erreur:</strong> Le moteur de simulation n'est pas disponible.
+            `, 'warning');
+            
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+            return;
+        }
+        
+        try {
+            // Récupérer les données du formulaire
+            const formData = collecterDonneesFormulaire();
+            
+            // Charger les paramètres dans le simulateur
+            simulateur.chargerParametres(formData);
+            
+            // Exécuter la simulation
+            const resultats = simulateur.simuler();
+            
+            // Masquer l'indicateur de chargement
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+            
+            // Vérifier si des résultats ont été trouvés
+            if (!resultats.classique && !resultats.encheres) {
+                if (typeof afficherToast === 'function') {
+                    afficherToast('Aucun prix viable avec ces paramètres.', 'warning');
+                }
+                return;
+            }
+            
+            // Récupérer le pas de recherche utilisé
+            const pasField = document.getElementById('pas-surface');
+            const pas = pasField ? pasField.value : 1;
+            
+            // Afficher les résultats
+            afficherResultatsSimulation(resultats, pas);
+            
+        } catch (error) {
+            // Gérer les erreurs éventuelles
+            console.error('Erreur lors de la simulation:', error);
+            
+            // Masquer l'indicateur de chargement
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+            
+            // Afficher un message d'erreur
+            afficherNotification(`
+                <i class="fas fa-exclamation-circle"></i> 
+                <strong>Erreur lors de la simulation:</strong> ${error.message || 'Une erreur inattendue est survenue.'}
+            `, 'warning');
+        }
+    }
 
     // Écouteurs d'événements
     // --------------------
@@ -146,65 +294,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Lancement de la simulation
-    btnSimulate.addEventListener('click', function() {
-        // Afficher l'indicateur de chargement
-        document.querySelector('.loading').style.display = 'flex';
-        
-        // Exécution immédiate (sans délai artificiel)
-        // Récupérer les données du formulaire
-        const formData = collecterDonneesFormulaire();
-        
-        // Charger les paramètres dans le simulateur
-        simulateur.chargerParametres(formData);
-        
-        // Exécuter la simulation
-        const resultats = simulateur.simuler();
-        
-        // Masquer l'indicateur de chargement
-        document.querySelector('.loading').style.display = 'none';
-        
-        // Vérifier si des résultats ont été trouvés
-        if (!resultats.classique || !resultats.encheres) {
-            afficherToast('Aucun prix viable avec ces paramètres.', 'warning');
-            return;
-        }
-        
-        // Afficher les résultats avec animation
-        resultsContainer.classList.remove('hidden');
-        resultsContainer.classList.add('fade-in');
-        
-        // Récupérer le pas de recherche utilisé
-        const pas = document.getElementById('pas-surface') ? document.getElementById('pas-surface').value : 1;
-        
-        // Ajouter la notification de prix maximum calculé avec badge d'optimisation
-        const notification = document.createElement('div');
-        notification.className = 'info-message fade-in';
-        notification.innerHTML = `
-            <i class="fas fa-check-circle"></i> 
-            Calcul terminé : <strong>Surface maximale autofinancée</strong> déterminée par une marge positive entre loyer et mensualité
-            <span class="optimization-badge"><i class="fas fa-ruler"></i> Recherche par surface décroissante (pas = ${pas} m²)</span>
-        `;
-        
-        // Mettre à jour le champ caché de surface
-        document.getElementById('surface').value = resultats.classique.surface;
-        
-        // Ajouter la notification avant les résultats
-        resultsContainer.insertBefore(notification, resultsContainer.firstChild);
-        
-        // Animer les valeurs numériques
-        afficherResultats(resultats);
-        
-        // Créer les graphiques
-        creerGraphiques();
-        
-        // Afficher le bouton de sauvegarde
-        if (btnSaveSimulation) {
-            btnSaveSimulation.classList.remove('hidden');
-        }
-        
-        // Défiler vers les résultats
-        resultsContainer.scrollIntoView({ behavior: 'smooth' });
-    });
+    btnSimulate.addEventListener('click', lancerSimulation);
 
     // Sauvegarde d'une simulation
     if (btnSaveSimulation) {
