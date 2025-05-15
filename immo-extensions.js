@@ -171,6 +171,46 @@ const ImmoExtensions = (function() {
             return prixAchat * partConstruction * tauxAmortissement;
         };
 
+        // NOUVEAU: Connecter les calculs fiscaux avec le régime sélectionné
+        const originalCalculeTout = SimulateurImmo.prototype.calculeTout;
+        SimulateurImmo.prototype.calculeTout = function(surface, mode) {
+            // Appeler la fonction originale d'abord
+            const res = originalCalculeTout.call(this, surface, mode);
+            
+            // Mémoriser le mode actuel pour d'autres calculs
+            this.modeActuel = mode;
+
+            // Recalculer l'impact fiscal avec le régime choisi
+            const regime = this.params.fiscalite.regimeFiscal || 'micro-foncier';
+            const charges = res.taxeFonciere + 
+                        res.assurancePNO + 
+                        res.chargesNonRecuperables + 
+                        res.entretienAnnuel;
+            
+            const fiscal = this.calculerImpactFiscalAvecRegime(
+                res.loyerApresVacance * 12,  // Revenus bruts après vacance
+                res.interetsAnnee1,          // Intérêts de la première année
+                charges,                     // Charges déductibles
+                regime                       // Régime fiscal sélectionné
+            );
+
+            // Remplacer l'impact fiscal calculé (positif = économie, négatif = impôt à payer)
+            res.impactFiscal = fiscal.impot * -1;
+            
+            // Recalculer la rentabilité nette
+            res.rendementNet = this.calculerRendementNet(
+                res.loyerApresVacance * 12,
+                charges,
+                res.impactFiscal,
+                res.coutTotal
+            );
+
+            // Stocker les détails pour l'affichage
+            res.fiscalDetail = fiscal;
+            
+            return res;
+        };
+
         // 3. Scénarios de sortie/revente
         SimulateurImmo.prototype.calculerScenarioRevente = function(investissement, nbAnnees, tauxAppreciationAnnuel) {
             const prixAchat = investissement.prixAchat;
@@ -444,6 +484,31 @@ const ImmoExtensions = (function() {
                 animation: fadeIn 0.3s ease-in-out;
             }
             
+            /* Styles pour la section fiscale */
+            .fiscal-info {
+                margin-top: 1.5rem;
+                padding-top: 1rem;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            
+            .fiscal-info h4 {
+                font-size: 1rem;
+                font-weight: 600;
+                margin-bottom: 0.75rem;
+                color: var(--primary-color);
+            }
+            
+            .fiscal-badge {
+                display: inline-block;
+                padding: 0.25rem 0.5rem;
+                background-color: rgba(0, 255, 135, 0.1);
+                color: var(--primary-color);
+                border-radius: 4px;
+                font-size: 0.8rem;
+                font-weight: 600;
+                margin-left: 0.5rem;
+            }
+            
             @keyframes fadeIn {
                 from { opacity: 0; transform: translateY(10px); }
                 to { opacity: 1; transform: translateY(0); }
@@ -558,6 +623,18 @@ const ImmoExtensions = (function() {
             }
         }
         
+        // Récupérer le régime fiscal actuel
+        const regimeFiscal = simulateur.params.fiscalite.regimeFiscal || 'micro-foncier';
+        let regimeLabel = '';
+        
+        switch(regimeFiscal) {
+            case 'micro-foncier': regimeLabel = 'Micro-foncier (abattement 30%)'; break;
+            case 'reel-foncier': regimeLabel = 'Régime réel foncier'; break;
+            case 'lmnp-micro': regimeLabel = 'LMNP micro-BIC (abattement 50%)'; break;
+            case 'lmnp-reel': regimeLabel = 'LMNP réel avec amortissements'; break;
+            default: regimeLabel = 'Micro-foncier';
+        }
+        
         // Remplir avec les paramètres actuels
         const params = resultats.params;
         recapContainer.innerHTML = `
@@ -586,6 +663,10 @@ const ImmoExtensions = (function() {
                 <div class="recap-item">
                     <span class="recap-label">Surface max calculée</span>
                     <span class="recap-value">${resultats.classique.surface.toFixed(1)} m²</span>
+                </div>
+                <div class="recap-item recap-item-regime">
+                    <span class="recap-label">Régime fiscal</span>
+                    <span class="recap-value">${regimeLabel}</span>
                 </div>
             </div>
         `;
@@ -687,6 +768,14 @@ const ImmoExtensions = (function() {
         }).format(montant);
     }
 
+    // Fonction pour formater un montant mensuel
+    function formaterMontantMensuel(montant) {
+        if (window.formaterMontantMensuel && typeof window.formaterMontantMensuel === 'function') {
+            return window.formaterMontantMensuel(montant);
+        }
+        return formaterMontant(montant) + '/mois';
+    }
+
     // Étend la fonction d'affichage des résultats
     function etendreAffichageResultats() {
         // Récupérer la fonction d'origine
@@ -701,6 +790,9 @@ const ImmoExtensions = (function() {
                 // Ajouter nos extensions
                 ajouterRecapHypotheses(resultats);
                 ajouterIndicateursVisuels(resultats);
+                
+                // Ajouter l'affichage fiscal
+                mettreAJourAffichageFiscal();
             };
         }
     }
@@ -737,9 +829,24 @@ const ImmoExtensions = (function() {
                 // Mettre à jour le paramètre
                 simulateur.params.fiscalite.regimeFiscal = this.value;
                 
-                // Si des résultats existent, mettre à jour l'affichage fiscal
-                if (simulateur.params.resultats.classique) {
+                // Si des résultats existent, recalculer avec le nouveau régime
+                if (simulateur.params.resultats.classique && simulateur.params.resultats.encheres) {
+                    // Recalculer pour les deux modes
+                    simulateur.params.resultats.classique = simulateur.calculeTout(
+                        simulateur.params.resultats.classique.surface, 'classique');
+                    simulateur.params.resultats.encheres = simulateur.calculeTout(
+                        simulateur.params.resultats.encheres.surface, 'encheres');
+                    
+                    // Mettre à jour l'affichage fiscal
                     mettreAJourAffichageFiscal();
+                    
+                    // Mettre à jour les indicateurs visuels
+                    ajouterIndicateursVisuels(simulateur.params.resultats);
+                    
+                    // Feedback visuel
+                    if (window.afficherToast && typeof window.afficherToast === 'function') {
+                        window.afficherToast(`Régime fiscal mis à jour : ${this.options[this.selectedIndex].text}`, 'success');
+                    }
                 }
             });
         }
@@ -853,8 +960,161 @@ const ImmoExtensions = (function() {
 
     // Met à jour l'affichage des informations fiscales
     function mettreAJourAffichageFiscal() {
-        // À implémenter selon les besoins
-        console.log("Mise à jour de l'affichage fiscal");
+        if (!simulateur || !simulateur.params.resultats) return;
+        
+        const resultats = {
+            classique: simulateur.params.resultats.classique,
+            encheres: simulateur.params.resultats.encheres
+        };
+        
+        if (!resultats.classique || !resultats.encheres) return;
+        
+        const regimeFiscal = simulateur.params.fiscalite.regimeFiscal || 'micro-foncier';
+        let regimeLabel = '';
+        
+        switch(regimeFiscal) {
+            case 'micro-foncier': regimeLabel = 'Micro-foncier (abattement 30%)'; break;
+            case 'reel-foncier': regimeLabel = 'Régime réel foncier'; break;
+            case 'lmnp-micro': regimeLabel = 'LMNP micro-BIC (abattement 50%)'; break;
+            case 'lmnp-reel': regimeLabel = 'LMNP réel avec amortissements'; break;
+            default: regimeLabel = 'Micro-foncier';
+        }
+        
+        // Mettre à jour les éléments fiscaux pour l'achat classique
+        mettreAJourElementsFiscauxParMode('classique', resultats.classique, regimeLabel);
+        
+        // Mettre à jour les éléments fiscaux pour la vente aux enchères
+        mettreAJourElementsFiscauxParMode('encheres', resultats.encheres, regimeLabel);
+        
+        // Mettre à jour le récapitulatif des hypothèses si présent
+        const recapContainer = document.getElementById('recap-hypotheses');
+        if (recapContainer) {
+            const regimeElement = recapContainer.querySelector('.recap-item-regime');
+            
+            if (regimeElement) {
+                regimeElement.querySelector('.recap-value').textContent = regimeLabel;
+            } else {
+                const newRegimeElement = document.createElement('div');
+                newRegimeElement.className = 'recap-item recap-item-regime';
+                newRegimeElement.innerHTML = `
+                    <span class="recap-label">Régime fiscal</span>
+                    <span class="recap-value">${regimeLabel}</span>
+                `;
+                recapContainer.querySelector('.recap-hypotheses-grid').appendChild(newRegimeElement);
+            }
+        }
+    }
+
+    // Fonction auxiliaire pour mettre à jour les éléments fiscaux par mode
+    function mettreAJourElementsFiscauxParMode(mode, resultats, regimeLabel) {
+        // Vérifier si les éléments DOM existent
+        const fiscalInfo = document.getElementById(`${mode}-fiscal-info`);
+        
+        // Si l'élément n'existe pas, le créer
+        if (!fiscalInfo) {
+            // Trouver le conteneur de résultats
+            const resultsCard = document.querySelector(`.results-card:has(#${mode}-budget-max) .results-body`);
+            if (!resultsCard) return;
+            
+            // Créer un nouveau div pour les informations fiscales
+            const fiscalDiv = document.createElement('div');
+            fiscalDiv.className = 'fiscal-info mt-4';
+            fiscalDiv.id = `${mode}-fiscal-info`;
+            fiscalDiv.innerHTML = `
+                <h4>
+                    Impact fiscal
+                    <span class="fiscal-badge">${regimeLabel}</span>
+                </h4>
+                <table class="comparison-table">
+                    <tr>
+                        <td>Revenu foncier annuel</td>
+                        <td>${formaterMontant(resultats.fiscalDetail?.revenuFoncier || 0)}</td>
+                    </tr>
+                    ${resultats.fiscalDetail?.abattement > 0 ? `
+                    <tr>
+                        <td>Abattement forfaitaire</td>
+                        <td>- ${formaterMontant(resultats.fiscalDetail.abattement)}</td>
+                    </tr>
+                    ` : ''}
+                    ${resultats.fiscalDetail?.chargesDeduites > 0 ? `
+                    <tr>
+                        <td>Charges déductibles</td>
+                        <td>- ${formaterMontant(resultats.fiscalDetail.chargesDeduites)}</td>
+                    </tr>
+                    ` : ''}
+                    ${resultats.fiscalDetail?.amortissement > 0 ? `
+                    <tr>
+                        <td>Amortissement</td>
+                        <td>- ${formaterMontant(resultats.fiscalDetail.amortissement)}</td>
+                    </tr>
+                    ` : ''}
+                    <tr>
+                        <td>Revenu imposable</td>
+                        <td id="${mode}-revenu-imposable">${formaterMontant(resultats.fiscalDetail?.revenusImposables || 0)}</td>
+                    </tr>
+                    <tr>
+                        <td>Impact fiscal annuel</td>
+                        <td id="${mode}-impact-fiscal" class="${resultats.impactFiscal >= 0 ? 'positive' : 'negative'}">
+                            ${formaterMontant(resultats.impactFiscal)}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Cash-flow après impôt</td>
+                        <td id="${mode}-cashflow-apres-impot" class="${(resultats.cashFlow + resultats.impactFiscal/12) >= 0 ? 'positive' : 'negative'}">
+                            ${formaterMontantMensuel(resultats.cashFlow + resultats.impactFiscal/12)}
+                        </td>
+                    </tr>
+                </table>
+            `;
+            
+            // Ajouter à la carte de résultats
+            resultsCard.appendChild(fiscalDiv);
+        } else {
+            // Si l'élément existe, mettre à jour son contenu
+            fiscalInfo.querySelector('h4 .fiscal-badge').textContent = regimeLabel;
+            
+            const table = fiscalInfo.querySelector('table');
+            table.innerHTML = `
+                <tr>
+                    <td>Revenu foncier annuel</td>
+                    <td>${formaterMontant(resultats.fiscalDetail?.revenuFoncier || 0)}</td>
+                </tr>
+                ${resultats.fiscalDetail?.abattement > 0 ? `
+                <tr>
+                    <td>Abattement forfaitaire</td>
+                    <td>- ${formaterMontant(resultats.fiscalDetail.abattement)}</td>
+                </tr>
+                ` : ''}
+                ${resultats.fiscalDetail?.chargesDeduites > 0 ? `
+                <tr>
+                    <td>Charges déductibles</td>
+                    <td>- ${formaterMontant(resultats.fiscalDetail.chargesDeduites)}</td>
+                </tr>
+                ` : ''}
+                ${resultats.fiscalDetail?.amortissement > 0 ? `
+                <tr>
+                    <td>Amortissement</td>
+                    <td>- ${formaterMontant(resultats.fiscalDetail.amortissement)}</td>
+                </tr>
+                ` : ''}
+                <tr>
+                    <td>Revenu imposable</td>
+                    <td id="${mode}-revenu-imposable">${formaterMontant(resultats.fiscalDetail?.revenusImposables || 0)}</td>
+                </tr>
+                <tr>
+                    <td>Impact fiscal annuel</td>
+                    <td id="${mode}-impact-fiscal" class="${resultats.impactFiscal >= 0 ? 'positive' : 'negative'}">
+                        ${formaterMontant(resultats.impactFiscal)}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Cash-flow après impôt</td>
+                    <td id="${mode}-cashflow-apres-impot" class="${(resultats.cashFlow + resultats.impactFiscal/12) >= 0 ? 'positive' : 'negative'}">
+                        ${formaterMontantMensuel(resultats.cashFlow + resultats.impactFiscal/12)}
+                    </td>
+                </tr>
+            `;
+        }
     }
 
     // Exposer les fonctions publiques
