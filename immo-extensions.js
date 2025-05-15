@@ -32,6 +32,11 @@ const ImmoExtensions = (function() {
         console.log("Initialisation des extensions du simulateur immobilier");
         simulateur = simulateurInstance;
 
+        // Initialiser le régime fiscal par défaut s'il n'existe pas
+        if (!simulateur.params.fiscalite.regimeFiscal) {
+            simulateur.params.fiscalite.regimeFiscal = 'micro-foncier';
+        }
+
         // Étendre le simulateur avec les nouvelles méthodes
         etendreSimulateur();
         
@@ -103,6 +108,11 @@ const ImmoExtensions = (function() {
 
         // 2. Calculs fiscaux avancés
         SimulateurImmo.prototype.calculerImpactFiscalAvecRegime = function(revenuFoncier, interetsEmprunt, charges, regimeFiscal) {
+            // S'assurer que toutes les valeurs sont des nombres valides
+            revenuFoncier = Number(revenuFoncier) || 0;
+            interetsEmprunt = Number(interetsEmprunt) || 0;
+            charges = Number(charges) || 0;
+            
             let revenusImposables = 0;
             let abattement = 0;
             let chargesDeduites = 0;
@@ -129,13 +139,20 @@ const ImmoExtensions = (function() {
                     
                 case 'lmnp-reel':
                     // Déduction des charges et amortissements
-                    amortissement = this.calculerAmortissementAnnuel(regimeFiscal);
+                    try {
+                        amortissement = this.calculerAmortissementAnnuel(regimeFiscal);
+                    } catch (e) {
+                        console.warn("Erreur dans le calcul d'amortissement:", e);
+                        amortissement = 0;
+                    }
                     chargesDeduites = interetsEmprunt + charges + amortissement;
                     revenusImposables = Math.max(0, revenuFoncier - chargesDeduites);
                     break;
                     
                 default:
-                    revenusImposables = revenuFoncier;
+                    // Micro-foncier par défaut
+                    abattement = revenuFoncier * 0.3;
+                    revenusImposables = Math.max(0, revenuFoncier - abattement);
             }
             
             const impot = this.calculerImpot(revenusImposables);
@@ -163,7 +180,14 @@ const ImmoExtensions = (function() {
         SimulateurImmo.prototype.calculerAmortissementAnnuel = function(regime) {
             if (regime !== 'lmnp-reel') return 0;
             
-            const prixAchat = this.params.resultats[this.modeActuel || 'classique'].prixAchat;
+            const modeActuel = this.modeActuel || 'classique';
+            
+            // Vérifier que les résultats existent
+            if (!this.params.resultats || !this.params.resultats[modeActuel]) {
+                return 0;
+            }
+            
+            const prixAchat = this.params.resultats[modeActuel].prixAchat || 0;
             const partTerrain = 0.15; // 15% pour le terrain (non amortissable)
             const partConstruction = 1 - partTerrain;
             const tauxAmortissement = 0.025; // 2.5% par an (40 ans)
@@ -180,42 +204,66 @@ const ImmoExtensions = (function() {
             // Mémoriser le mode actuel pour d'autres calculs
             this.modeActuel = mode;
 
-            // Recalculer l'impact fiscal avec le régime choisi
-            const regime = this.params.fiscalite.regimeFiscal || 'micro-foncier';
-            const charges = res.taxeFonciere + 
-                        res.assurancePNO + 
-                        res.chargesNonRecuperables + 
-                        res.entretienAnnuel;
-            
-            const fiscal = this.calculerImpactFiscalAvecRegime(
-                res.loyerApresVacance * 12,  // Revenus bruts après vacance
-                res.interetsAnnee1,          // Intérêts de la première année
-                charges,                     // Charges déductibles
-                regime                       // Régime fiscal sélectionné
-            );
+            try {
+                // Recalculer l'impact fiscal avec le régime choisi
+                const regime = this.params.fiscalite.regimeFiscal || 'micro-foncier';
+                
+                // Calculer les charges déductibles annuelles
+                const charges = (res.taxeFonciere || 0) + 
+                            (res.assurancePNO || 0) + 
+                            (res.chargesNonRecuperables || 0) + 
+                            (res.entretienAnnuel || 0);
+                
+                // S'assurer que les revenus et charges sont des nombres valides
+                const revenuAnnuel = (res.loyerApresVacance || 0) * 12;
+                const interets = res.interetsAnnee1 || 0;
+                
+                const fiscal = this.calculerImpactFiscalAvecRegime(
+                    revenuAnnuel,     // Revenus bruts après vacance
+                    interets,         // Intérêts de la première année
+                    charges,          // Charges déductibles
+                    regime            // Régime fiscal sélectionné
+                );
 
-            // Remplacer l'impact fiscal calculé (positif = économie, négatif = impôt à payer)
-            res.impactFiscal = fiscal.impot * -1;
-            
-            // Recalculer la rentabilité nette
-            res.rendementNet = this.calculerRendementNet(
-                res.loyerApresVacance * 12,
-                charges,
-                res.impactFiscal,
-                res.coutTotal
-            );
+                // Remplacer l'impact fiscal calculé (positif = économie, négatif = impôt à payer)
+                res.impactFiscal = -fiscal.impot; // Inverser le signe pour cohérence avec le reste du code
+                
+                // Recalculer la rentabilité nette
+                res.rendementNet = this.calculerRendementNet(
+                    revenuAnnuel,
+                    charges,
+                    res.impactFiscal,
+                    res.coutTotal || 1 // Éviter division par zéro
+                );
 
-            // Stocker les détails pour l'affichage
-            res.fiscalDetail = fiscal;
+                // Stocker les détails pour l'affichage
+                res.fiscalDetail = fiscal;
+                
+                // Vérifier que le cashflow est calculé correctement
+                if (typeof res.cashFlow !== 'number') {
+                    console.warn("CashFlow invalide:", res.cashFlow);
+                    res.cashFlow = 0;
+                }
+                
+            } catch (e) {
+                console.error("Erreur dans le calcul fiscal:", e);
+                // En cas d'erreur, on crée un objet fiscal par défaut
+                res.fiscalDetail = {
+                    revenuFoncier: (res.loyerApresVacance || 0) * 12,
+                    revenusImposables: 0,
+                    impot: 0
+                };
+                res.impactFiscal = 0;
+            }
             
             return res;
         };
 
         // 3. Scénarios de sortie/revente
         SimulateurImmo.prototype.calculerScenarioRevente = function(investissement, nbAnnees, tauxAppreciationAnnuel) {
-            const prixAchat = investissement.prixAchat;
-            const fraisAcquisition = investissement.coutTotal - prixAchat;
-            const cashFlowAnnuel = investissement.cashFlow * 12;
+            const prixAchat = investissement.prixAchat || 0;
+            const fraisAcquisition = (investissement.coutTotal || 0) - prixAchat;
+            const cashFlowAnnuel = (investissement.cashFlow || 0) * 12;
             
             // Calcul de la valeur future
             const facteurAppreciation = Math.pow(1 + tauxAppreciationAnnuel/100, nbAnnees);
@@ -257,17 +305,17 @@ const ImmoExtensions = (function() {
             const plusValueImposablePS = plusValueBrute * (1 - abattementPS/100);
             
             const tauxIR = 19; // Taux fixe d'imposition sur les plus-values immobilières
-            const tauxPS = this.params.fiscalite.tauxPrelevementsSociaux;
+            const tauxPS = this.params.fiscalite.tauxPrelevementsSociaux || 17.2;
             
             const impotPlusValueIR = plusValueImposableIR * (tauxIR/100);
             const impotPlusValuePS = plusValueImposablePS * (tauxPS/100);
             const impotPlusValueTotal = impotPlusValueIR + impotPlusValuePS;
             
             // Résultat net après impôt
-            const resultatNetApresImpot = valeurRevente - fraisRevente - impotPlusValueTotal - (investissement.coutTotal);
+            const resultatNetApresImpot = valeurRevente - fraisRevente - impotPlusValueTotal - (investissement.coutTotal || 0);
             
             // Calcul du TRI (approximation)
-            const fluxTresorerie = [-investissement.coutTotal];
+            const fluxTresorerie = [-(investissement.coutTotal || 0)];
             
             // Flux annuels
             for (let i = 1; i < nbAnnees; i++) {
@@ -278,7 +326,16 @@ const ImmoExtensions = (function() {
             fluxTresorerie.push(cashFlowAnnuel + valeurRevente - fraisRevente - impotPlusValueTotal);
             
             // Calcul simplifié du TRI
-            const tri = calculTRIApproximation(fluxTresorerie);
+            let tri;
+            try {
+                tri = calculTRIApproximation(fluxTresorerie);
+            } catch (e) {
+                console.error("Erreur dans le calcul du TRI:", e);
+                tri = 0;
+            }
+            
+            const multipleInvestissement = investissement.coutTotal !== 0 ? 
+                resultatNetApresImpot / investissement.coutTotal : 0;
             
             return {
                 prixAchat,
@@ -296,7 +353,7 @@ const ImmoExtensions = (function() {
                 },
                 resultatNet: resultatNetApresImpot,
                 tri: tri * 100, // En pourcentage
-                multipleInvestissement: resultatNetApresImpot / investissement.coutTotal,
+                multipleInvestissement: multipleInvestissement,
                 fluxTresorerie: fluxTresorerie
             };
         };
@@ -320,6 +377,9 @@ const ImmoExtensions = (function() {
             if (Math.abs(npv) < precision) {
                 return guess;
             }
+            
+            // Protection contre division par zéro
+            if (derivee === 0) return guess;
             
             // Mise à jour de l'estimation (méthode de Newton)
             guess = guess - npv / derivee;
@@ -687,32 +747,38 @@ const ImmoExtensions = (function() {
         containers.encheres.innerHTML = '';
         
         // Ajouter les indicateurs pour l'achat classique
+        const rendementClassique = isNaN(resultats.classique.rendementNet) ? 0 : resultats.classique.rendementNet;
+        const cashflowClassique = isNaN(resultats.classique.cashFlow) ? 0 : resultats.classique.cashFlow;
+        
         containers.classique.appendChild(
             creerIndicateur('Rentabilité', 
-                resultats.classique.rendementNet.toFixed(2) + '%', 
-                getClasseIndicateur(resultats.classique.rendementNet, SEUILS.rentabilite),
+                rendementClassique.toFixed(2) + '%', 
+                getClasseIndicateur(rendementClassique, SEUILS.rentabilite),
                 'chart-line')
         );
         
         containers.classique.appendChild(
             creerIndicateur('Cash-flow', 
-                formaterMontant(resultats.classique.cashFlow) + '/mois', 
-                getClasseIndicateur(resultats.classique.cashFlow, SEUILS.cashflow),
+                formaterMontant(cashflowClassique) + '/mois', 
+                getClasseIndicateur(cashflowClassique, SEUILS.cashflow),
                 'wallet')
         );
         
         // Ajouter les indicateurs pour la vente aux enchères
+        const rendementEncheres = isNaN(resultats.encheres.rendementNet) ? 0 : resultats.encheres.rendementNet;
+        const cashflowEncheres = isNaN(resultats.encheres.cashFlow) ? 0 : resultats.encheres.cashFlow;
+        
         containers.encheres.appendChild(
             creerIndicateur('Rentabilité', 
-                resultats.encheres.rendementNet.toFixed(2) + '%', 
-                getClasseIndicateur(resultats.encheres.rendementNet, SEUILS.rentabilite),
+                rendementEncheres.toFixed(2) + '%', 
+                getClasseIndicateur(rendementEncheres, SEUILS.rentabilite),
                 'chart-line')
         );
         
         containers.encheres.appendChild(
             creerIndicateur('Cash-flow', 
-                formaterMontant(resultats.encheres.cashFlow) + '/mois', 
-                getClasseIndicateur(resultats.encheres.cashFlow, SEUILS.cashflow),
+                formaterMontant(cashflowEncheres) + '/mois', 
+                getClasseIndicateur(cashflowEncheres, SEUILS.cashflow),
                 'wallet')
         );
     }
@@ -754,22 +820,37 @@ const ImmoExtensions = (function() {
 
     // Formate un montant en euros
     function formaterMontant(montant, decimales = 0) {
+        // Protection contre les NaN et valeurs non numériques
+        if (typeof montant !== 'number' || isNaN(montant)) {
+            montant = 0;
+        }
+        
         // Si la fonction existe déjà, l'utiliser
         if (window.formaterMontant && typeof window.formaterMontant === 'function') {
             return window.formaterMontant(montant, decimales);
         }
         
         // Sinon, utiliser notre propre implémentation
-        return new Intl.NumberFormat('fr-FR', {
-            style: 'currency',
-            currency: 'EUR',
-            minimumFractionDigits: decimales,
-            maximumFractionDigits: decimales
-        }).format(montant);
+        try {
+            return new Intl.NumberFormat('fr-FR', {
+                style: 'currency',
+                currency: 'EUR',
+                minimumFractionDigits: decimales,
+                maximumFractionDigits: decimales
+            }).format(montant);
+        } catch (e) {
+            // Fallback simple en cas d'erreur
+            return montant.toFixed(decimales) + ' €';
+        }
     }
 
     // Fonction pour formater un montant mensuel
     function formaterMontantMensuel(montant) {
+        // Protection contre les NaN et valeurs non numériques
+        if (typeof montant !== 'number' || isNaN(montant)) {
+            montant = 0;
+        }
+        
         if (window.formaterMontantMensuel && typeof window.formaterMontantMensuel === 'function') {
             return window.formaterMontantMensuel(montant);
         }
@@ -1007,6 +1088,29 @@ const ImmoExtensions = (function() {
 
     // Fonction auxiliaire pour mettre à jour les éléments fiscaux par mode
     function mettreAJourElementsFiscauxParMode(mode, resultats, regimeLabel) {
+        // S'assurer que les résultats sont valides
+        if (!resultats || !resultats.fiscalDetail) {
+            console.warn(`Données fiscales manquantes pour le mode ${mode}`);
+            return;
+        }
+        
+        // Sécuriser les données fiscales pour éviter les NaN
+        const fiscal = {
+            revenuFoncier: Number(resultats.fiscalDetail.revenuFoncier) || 0,
+            abattement: Number(resultats.fiscalDetail.abattement) || 0,
+            chargesDeduites: Number(resultats.fiscalDetail.chargesDeduites) || 0,
+            amortissement: Number(resultats.fiscalDetail.amortissement) || 0,
+            revenusImposables: Number(resultats.fiscalDetail.revenusImposables) || 0,
+            impot: Number(resultats.fiscalDetail.impot) || 0
+        };
+        
+        // Sécuriser l'impact fiscal
+        const impactFiscal = Number(resultats.impactFiscal) || 0;
+        
+        // Sécuriser le cashflow
+        const cashFlow = Number(resultats.cashFlow) || 0;
+        const cashFlowApresImpot = cashFlow + (impactFiscal / 12);
+        
         // Vérifier si les éléments DOM existent
         const fiscalInfo = document.getElementById(`${mode}-fiscal-info`);
         
@@ -1028,40 +1132,40 @@ const ImmoExtensions = (function() {
                 <table class="comparison-table">
                     <tr>
                         <td>Revenu foncier annuel</td>
-                        <td>${formaterMontant(resultats.fiscalDetail?.revenuFoncier || 0)}</td>
+                        <td>${formaterMontant(fiscal.revenuFoncier)}</td>
                     </tr>
-                    ${resultats.fiscalDetail?.abattement > 0 ? `
+                    ${fiscal.abattement > 0 ? `
                     <tr>
                         <td>Abattement forfaitaire</td>
-                        <td>- ${formaterMontant(resultats.fiscalDetail.abattement)}</td>
+                        <td>- ${formaterMontant(fiscal.abattement)}</td>
                     </tr>
                     ` : ''}
-                    ${resultats.fiscalDetail?.chargesDeduites > 0 ? `
+                    ${fiscal.chargesDeduites > 0 ? `
                     <tr>
                         <td>Charges déductibles</td>
-                        <td>- ${formaterMontant(resultats.fiscalDetail.chargesDeduites)}</td>
+                        <td>- ${formaterMontant(fiscal.chargesDeduites)}</td>
                     </tr>
                     ` : ''}
-                    ${resultats.fiscalDetail?.amortissement > 0 ? `
+                    ${fiscal.amortissement > 0 ? `
                     <tr>
                         <td>Amortissement</td>
-                        <td>- ${formaterMontant(resultats.fiscalDetail.amortissement)}</td>
+                        <td>- ${formaterMontant(fiscal.amortissement)}</td>
                     </tr>
                     ` : ''}
                     <tr>
                         <td>Revenu imposable</td>
-                        <td id="${mode}-revenu-imposable">${formaterMontant(resultats.fiscalDetail?.revenusImposables || 0)}</td>
+                        <td id="${mode}-revenu-imposable">${formaterMontant(fiscal.revenusImposables)}</td>
                     </tr>
                     <tr>
                         <td>Impact fiscal annuel</td>
-                        <td id="${mode}-impact-fiscal" class="${resultats.impactFiscal >= 0 ? 'positive' : 'negative'}">
-                            ${formaterMontant(resultats.impactFiscal)}
+                        <td id="${mode}-impact-fiscal" class="${impactFiscal >= 0 ? 'positive' : 'negative'}">
+                            ${formaterMontant(impactFiscal)}
                         </td>
                     </tr>
                     <tr>
                         <td>Cash-flow après impôt</td>
-                        <td id="${mode}-cashflow-apres-impot" class="${(resultats.cashFlow + resultats.impactFiscal/12) >= 0 ? 'positive' : 'negative'}">
-                            ${formaterMontantMensuel(resultats.cashFlow + resultats.impactFiscal/12)}
+                        <td id="${mode}-cashflow-apres-impot" class="${cashFlowApresImpot >= 0 ? 'positive' : 'negative'}">
+                            ${formaterMontantMensuel(cashFlowApresImpot)}
                         </td>
                     </tr>
                 </table>
@@ -1077,40 +1181,40 @@ const ImmoExtensions = (function() {
             table.innerHTML = `
                 <tr>
                     <td>Revenu foncier annuel</td>
-                    <td>${formaterMontant(resultats.fiscalDetail?.revenuFoncier || 0)}</td>
+                    <td>${formaterMontant(fiscal.revenuFoncier)}</td>
                 </tr>
-                ${resultats.fiscalDetail?.abattement > 0 ? `
+                ${fiscal.abattement > 0 ? `
                 <tr>
                     <td>Abattement forfaitaire</td>
-                    <td>- ${formaterMontant(resultats.fiscalDetail.abattement)}</td>
+                    <td>- ${formaterMontant(fiscal.abattement)}</td>
                 </tr>
                 ` : ''}
-                ${resultats.fiscalDetail?.chargesDeduites > 0 ? `
+                ${fiscal.chargesDeduites > 0 ? `
                 <tr>
                     <td>Charges déductibles</td>
-                    <td>- ${formaterMontant(resultats.fiscalDetail.chargesDeduites)}</td>
+                    <td>- ${formaterMontant(fiscal.chargesDeduites)}</td>
                 </tr>
                 ` : ''}
-                ${resultats.fiscalDetail?.amortissement > 0 ? `
+                ${fiscal.amortissement > 0 ? `
                 <tr>
                     <td>Amortissement</td>
-                    <td>- ${formaterMontant(resultats.fiscalDetail.amortissement)}</td>
+                    <td>- ${formaterMontant(fiscal.amortissement)}</td>
                 </tr>
                 ` : ''}
                 <tr>
                     <td>Revenu imposable</td>
-                    <td id="${mode}-revenu-imposable">${formaterMontant(resultats.fiscalDetail?.revenusImposables || 0)}</td>
+                    <td id="${mode}-revenu-imposable">${formaterMontant(fiscal.revenusImposables)}</td>
                 </tr>
                 <tr>
                     <td>Impact fiscal annuel</td>
-                    <td id="${mode}-impact-fiscal" class="${resultats.impactFiscal >= 0 ? 'positive' : 'negative'}">
-                        ${formaterMontant(resultats.impactFiscal)}
+                    <td id="${mode}-impact-fiscal" class="${impactFiscal >= 0 ? 'positive' : 'negative'}">
+                        ${formaterMontant(impactFiscal)}
                     </td>
                 </tr>
                 <tr>
                     <td>Cash-flow après impôt</td>
-                    <td id="${mode}-cashflow-apres-impot" class="${(resultats.cashFlow + resultats.impactFiscal/12) >= 0 ? 'positive' : 'negative'}">
-                        ${formaterMontantMensuel(resultats.cashFlow + resultats.impactFiscal/12)}
+                    <td id="${mode}-cashflow-apres-impot" class="${cashFlowApresImpot >= 0 ? 'positive' : 'negative'}">
+                        ${formaterMontantMensuel(cashFlowApresImpot)}
                     </td>
                 </tr>
             `;
