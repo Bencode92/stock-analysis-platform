@@ -36,6 +36,11 @@ const ImmoExtensions = (function() {
         if (!simulateur.params.fiscalite.regimeFiscal) {
             simulateur.params.fiscalite.regimeFiscal = 'micro-foncier';
         }
+        
+        // Initialiser le taux d'IS par défaut s'il n'existe pas
+        if (!simulateur.params.fiscalite.tauxIS) {
+            simulateur.params.fiscalite.tauxIS = 25; // 25% par défaut
+        }
 
         // Étendre le simulateur avec les nouvelles méthodes
         etendreSimulateur();
@@ -126,44 +131,84 @@ const ImmoExtensions = (function() {
             let chargesDeduites = 0;
             let amortissement = 0;
             
-            switch(regimeFiscal) {
+            // Calculer l'amortissement pour tous les régimes qui peuvent l'utiliser
+            try {
+                amortissement = this.calculerAmortissementAnnuel(regimeFiscal);
+            } catch (e) {
+                console.warn("Erreur dans le calcul d'amortissement:", e);
+                amortissement = 0;
+            }
+
+            // NOUVEAU BLOC SWITCH FOURNI PAR L'UTILISATEUR
+            switch (regimeFiscal) {
+                /* ------------------------------------------------------------------ */
                 case 'micro-foncier':
-                    // Abattement forfaitaire de 30%
-                    abattement = revenuFoncier * 0.3;
+                    // Abattement forfaitaire de 30 %
+                    // Revenu imposable = loyers bruts  –  30 %
+                    abattement        = revenuFoncier * 0.30;
                     revenusImposables = Math.max(0, revenuFoncier - abattement);
                     break;
-                    
+
+                /* ------------------------------------------------------------------ */
                 case 'reel-foncier':
                     // Déduction des intérêts et charges réelles
-                    chargesDeduites = interetsEmprunt + charges;
+                    // Revenu imposable = loyers bruts  –  (intérêts + charges)
+                    chargesDeduites   = interetsEmprunt + charges;
                     revenusImposables = Math.max(0, revenuFoncier - chargesDeduites);
                     break;
-                    
+
+                /* ------------------------------------------------------------------ */
                 case 'lmnp-micro':
-                    // Abattement forfaitaire de 50%
-                    abattement = revenuFoncier * 0.5;
+                    // Abattement forfaitaire de 50 % (micro-BIC)
+                    // Revenu imposable = loyers bruts  –  50 %
+                    abattement        = revenuFoncier * 0.50;
                     revenusImposables = Math.max(0, revenuFoncier - abattement);
                     break;
-                    
+
+                /* ------------------------------------------------------------------ */
                 case 'lmnp-reel':
-                    // Déduction des charges et amortissements
-                    try {
-                        amortissement = this.calculerAmortissementAnnuel(regimeFiscal);
-                    } catch (e) {
-                        console.warn("Erreur dans le calcul d'amortissement:", e);
-                        amortissement = 0;
-                    }
-                    chargesDeduites = interetsEmprunt + charges + amortissement;
+                case 'lmp-reel':
+                    // Déduction des charges réelles **et** des amortissements
+                    // Revenu imposable = loyers bruts  –  (intérêts + charges + amortissements)
+                    chargesDeduites   = interetsEmprunt + charges + amortissement;
                     revenusImposables = Math.max(0, revenuFoncier - chargesDeduites);
                     break;
+
+                /* ------------------------------------------------------------------ */
+                case 'sci-is':   // SCI, SAS ou SARL imposée à l'IS
+                case 'sas-is':
+                case 'sarl-is':
+                    // À l'IS, on calcule un **résultat fiscal société**
+                    const resultatIS = revenuFoncier - (interetsEmprunt + charges + amortissement);
                     
+                    // On utilise le taux d'IS paramétré dans le simulateur 
+                    const tauxIS = this.params.fiscalite.tauxIS / 100 || 0.25;
+                    const impotIS = Math.max(0, resultatIS) * tauxIS;
+                    
+                    // Retourner un format compatible avec le reste du code
+                    return {
+                        type: 'IS',
+                        revenuFoncier: revenuFoncier,
+                        resultatFiscalSociete: resultatIS,
+                        abattement: 0,
+                        chargesDeduites: interetsEmprunt + charges + amortissement,
+                        amortissement: amortissement,
+                        revenusImposables: Math.max(0, resultatIS),
+                        impot: impotIS,
+                        revenuNet: revenuFoncier - impotIS,
+                        tauxIS: tauxIS * 100
+                    };
+
+                /* ------------------------------------------------------------------ */
                 default:
-                    // Micro-foncier par défaut
-                    abattement = revenuFoncier * 0.3;
-                    revenusImposables = Math.max(0, revenuFoncier - abattement);
+                    // Par défaut on se contente du revenu foncier net
+                    revenusImposables = Math.max(0, revenuFoncier);
             }
             
-            const impot = this.calculerImpot(revenusImposables);
+            // Calcul de l'impôt (pour les régimes IR)
+            const baseIR = revenusImposables * (this.params.fiscalite.tauxMarginalImpot / 100);
+            const basePS = revenusImposables * (this.params.fiscalite.tauxPrelevementsSociaux / 100);
+            const impot = baseIR + basePS; // signe positif = impôt à payer
             
             // Log du résultat
             console.log("Résultat fiscal:", {
@@ -182,7 +227,8 @@ const ImmoExtensions = (function() {
                 amortissement,
                 revenusImposables,
                 impot,
-                revenuNet: revenuFoncier - impot
+                revenuNet: revenuFoncier - impot,
+                type: 'IR'
             };
         };
 
@@ -196,7 +242,7 @@ const ImmoExtensions = (function() {
         };
 
         SimulateurImmo.prototype.calculerAmortissementAnnuel = function(regime) {
-            if (regime !== 'lmnp-reel') return 0;
+            if (!regime.includes('reel') && !regime.endsWith('-is')) return 0;
             
             const modeActuel = this.modeActuel || 'classique';
             
@@ -675,6 +721,27 @@ const ImmoExtensions = (function() {
                 color: rgba(255, 255, 255, 0.7);
             }
             
+            /* Styles spécifiques pour les cartes de régime IS */
+            .regime-card-is {
+                background-color: rgba(47, 35, 74, 0.7);
+            }
+            
+            .regime-card-is.active,
+            .regime-card-is[aria-checked="true"] {
+                background-color: rgba(139, 92, 246, 0.15);
+                border-color: rgba(139, 92, 246, 0.8);
+                box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
+            }
+            
+            /* Style pour le champ de Taux d'IS */
+            #taux-is-container {
+                padding: 1rem;
+                margin-top: 1rem;
+                background-color: rgba(47, 35, 74, 0.3);
+                border-radius: 0.5rem;
+                border: 1px solid rgba(139, 92, 246, 0.2);
+            }
+            
             @keyframes fadeIn {
                 from { opacity: 0; transform: translateY(10px); }
                 to { opacity: 1; transform: translateY(0); }
@@ -746,6 +813,38 @@ const ImmoExtensions = (function() {
                         <p class="text-sm opacity-75">Charges + amort.</p>
                         <span class="regime-badge">BIC</span>
                     </div>
+                    
+                    <!-- Régimes sociétés -->
+                    <div class="regime-card regime-card-is" data-regime="sci-is" role="radio" tabindex="0" aria-checked="false">
+                        <i class="fas fa-building text-lg text-red-400"></i>
+                        <h4>SCI à l'IS</h4>
+                        <p class="text-sm opacity-75">Société civile</p>
+                        <span class="regime-badge">IS</span>
+                    </div>
+                    
+                    <div class="regime-card regime-card-is" data-regime="sas-is" role="radio" tabindex="0" aria-checked="false">
+                        <i class="fas fa-landmark text-lg text-indigo-400"></i>
+                        <h4>SAS</h4>
+                        <p class="text-sm opacity-75">Société par actions</p>
+                        <span class="regime-badge">IS</span>
+                    </div>
+                    
+                    <div class="regime-card regime-card-is" data-regime="sarl-is" role="radio" tabindex="0" aria-checked="false">
+                        <i class="fas fa-briefcase text-lg text-orange-400"></i>
+                        <h4>SARL</h4>
+                        <p class="text-sm opacity-75">Société à resp. limitée</p>
+                        <span class="regime-badge">IS</span>
+                    </div>
+                </div>
+                
+                <!-- Champ pour le taux d'IS (masqué par défaut) -->
+                <div id="taux-is-container" style="display: none;">
+                    <label class="form-label">Taux d'IS (sociétés)</label>
+                    <div class="form-addon">
+                        <input type="number" id="taux-is" class="form-input" value="25" min="15" max="33" step="0.1">
+                        <span class="form-addon-text">%</span>
+                    </div>
+                    <span class="form-help">Taux d'impôt sur les sociétés (utilisé pour SCI, SAS, SARL à l'IS)</span>
                 </div>
                 
                 <!-- Champ caché pour maintenir la compatibilité -->
@@ -754,6 +853,9 @@ const ImmoExtensions = (function() {
                     <option value="reel-foncier">Régime réel foncier</option>
                     <option value="lmnp-micro">LMNP micro-BIC (abattement 50%)</option>
                     <option value="lmnp-reel">LMNP réel avec amortissements</option>
+                    <option value="sci-is">SCI à l'IS</option>
+                    <option value="sas-is">SAS (IS)</option>
+                    <option value="sarl-is">SARL (IS)</option>
                 </select>
             </div>
         `;
@@ -769,6 +871,7 @@ const ImmoExtensions = (function() {
     function initialiserEvenementsRegimeCards() {
         const regimeFiscalCards = document.getElementById('regime-fiscal-cards');
         const regimeFiscalSelect = document.getElementById('regime-fiscal');
+        const tauxISContainer = document.getElementById('taux-is-container');
         
         if (!regimeFiscalCards || !simulateur) return;
         
@@ -786,6 +889,11 @@ const ImmoExtensions = (function() {
                 // Activer la carte sélectionnée
                 cardActive.classList.add('active');
                 cardActive.setAttribute('aria-checked', 'true');
+                
+                // Afficher/masquer le taux IS selon le régime
+                if (tauxISContainer) {
+                    tauxISContainer.style.display = regimeActuel.endsWith('-is') ? 'block' : 'none';
+                }
             }
         }
         
@@ -812,8 +920,21 @@ const ImmoExtensions = (function() {
                 regimeFiscalSelect.value = regimeSelectionne;
             }
             
+            // Afficher/masquer le taux IS selon le régime
+            if (tauxISContainer) {
+                tauxISContainer.style.display = regimeSelectionne.endsWith('-is') ? 'block' : 'none';
+            }
+            
             // Mettre à jour le paramètre dans le simulateur
             simulateur.params.fiscalite.regimeFiscal = regimeSelectionne;
+            
+            // Mettre à jour le taux d'IS si applicable
+            if (regimeSelectionne.endsWith('-is')) {
+                const tauxISInput = document.getElementById('taux-is');
+                if (tauxISInput) {
+                    simulateur.params.fiscalite.tauxIS = parseFloat(tauxISInput.value) || 25;
+                }
+            }
             
             // Recalculer si des résultats existent déjà
             if (simulateur.params.resultats.classique && simulateur.params.resultats.encheres) {
@@ -843,6 +964,40 @@ const ImmoExtensions = (function() {
                 }, 300);
             }
         });
+        
+        // Écouteur pour le champ de taux IS
+        const tauxISInput = document.getElementById('taux-is');
+        if (tauxISInput) {
+            tauxISInput.addEventListener('change', () => {
+                // Mettre à jour le taux d'IS dans le simulateur
+                simulateur.params.fiscalite.tauxIS = parseFloat(tauxISInput.value) || 25;
+                
+                // Recalculer si un régime IS est sélectionné et des résultats existent
+                const regimeActuel = simulateur.params.fiscalite.regimeFiscal;
+                if (regimeActuel && regimeActuel.endsWith('-is') && 
+                    simulateur.params.resultats.classique && simulateur.params.resultats.encheres) {
+                    // Afficher un toast
+                    if (typeof window.afficherToast === 'function') {
+                        window.afficherToast("Mise à jour du taux d'IS...", 'info');
+                    }
+                    
+                    // Recalculer
+                    setTimeout(() => {
+                        simulateur.params.resultats.classique = simulateur.calculeTout(
+                            simulateur.params.resultats.classique.surface, 'classique');
+                        simulateur.params.resultats.encheres = simulateur.calculeTout(
+                            simulateur.params.resultats.encheres.surface, 'encheres');
+                        
+                        mettreAJourAffichageFiscal();
+                        ajouterIndicateursVisuels(simulateur.params.resultats);
+                        
+                        if (typeof window.afficherToast === 'function') {
+                            window.afficherToast(`Taux d'IS mis à jour: ${tauxISInput.value}%`, 'success');
+                        }
+                    }, 300);
+                }
+            });
+        }
         
         // Support clavier pour l'accessibilité
         regimeFiscalCards.addEventListener('keydown', e => {
@@ -934,7 +1089,16 @@ const ImmoExtensions = (function() {
             case 'reel-foncier': regimeLabel = 'Régime réel foncier'; break;
             case 'lmnp-micro': regimeLabel = 'LMNP micro-BIC (abattement 50%)'; break;
             case 'lmnp-reel': regimeLabel = 'LMNP réel avec amortissements'; break;
+            case 'sci-is': regimeLabel = 'SCI à l\'IS'; break;
+            case 'sas-is': regimeLabel = 'SAS (IS)'; break;
+            case 'sarl-is': regimeLabel = 'SARL (IS)'; break;
             default: regimeLabel = 'Micro-foncier';
+        }
+        
+        // Afficher le taux d'IS pour les régimes concernés
+        let tauxISInfo = '';
+        if (regimeFiscal.endsWith('-is')) {
+            tauxISInfo = ` - Taux IS: ${simulateur.params.fiscalite.tauxIS || 25}%`;
         }
         
         // Remplir avec les paramètres actuels
@@ -968,7 +1132,7 @@ const ImmoExtensions = (function() {
                 </div>
                 <div class="recap-item recap-item-regime">
                     <span class="recap-label">Régime fiscal</span>
-                    <span class="recap-value">${regimeLabel}</span>
+                    <span class="recap-value">${regimeLabel}${tauxISInfo}</span>
                 </div>
             </div>
         `;
@@ -1152,6 +1316,22 @@ const ImmoExtensions = (function() {
                 // Mettre à jour le paramètre
                 simulateur.params.fiscalite.regimeFiscal = this.value;
                 
+                // Mettre à jour l'affichage des cartes si présentes
+                const cards = document.querySelectorAll('.regime-card');
+                if (cards.length > 0) {
+                    cards.forEach(card => {
+                        const isActive = card.dataset.regime === this.value;
+                        card.classList.toggle('active', isActive);
+                        card.setAttribute('aria-checked', isActive ? 'true' : 'false');
+                    });
+                }
+                
+                // Afficher/masquer le taux IS selon le régime
+                const tauxISContainer = document.getElementById('taux-is-container');
+                if (tauxISContainer) {
+                    tauxISContainer.style.display = this.value.endsWith('-is') ? 'block' : 'none';
+                }
+                
                 // Si des résultats existent déjà, recalculer avec le nouveau régime
                 if (simulateur.params.resultats.classique && simulateur.params.resultats.encheres) {
                     // Recalculer pour les deux modes
@@ -1300,6 +1480,9 @@ const ImmoExtensions = (function() {
             case 'reel-foncier': regimeLabel = 'Régime réel foncier'; break;
             case 'lmnp-micro': regimeLabel = 'LMNP micro-BIC (abattement 50%)'; break;
             case 'lmnp-reel': regimeLabel = 'LMNP réel avec amortissements'; break;
+            case 'sci-is': regimeLabel = `SCI à l'IS (${simulateur.params.fiscalite.tauxIS || 25}%)`; break;
+            case 'sas-is': regimeLabel = `SAS (IS ${simulateur.params.fiscalite.tauxIS || 25}%)`; break;
+            case 'sarl-is': regimeLabel = `SARL (IS ${simulateur.params.fiscalite.tauxIS || 25}%)`; break;
             default: regimeLabel = 'Micro-foncier';
         }
         
@@ -1343,7 +1526,9 @@ const ImmoExtensions = (function() {
             chargesDeduites: Number(resultats.fiscalDetail.chargesDeduites) || 0,
             amortissement: Number(resultats.fiscalDetail.amortissement) || 0,
             revenusImposables: Number(resultats.fiscalDetail.revenusImposables) || 0,
-            impot: Number(resultats.fiscalDetail.impot) || 0
+            impot: Number(resultats.fiscalDetail.impot) || 0,
+            type: resultats.fiscalDetail.type || 'IR',
+            tauxIS: resultats.fiscalDetail.tauxIS || (simulateur.params.fiscalite.tauxIS || 25)
         };
         
         // Sécuriser l'impact fiscal
@@ -1358,24 +1543,29 @@ const ImmoExtensions = (function() {
         
         // Créer une explanation basée sur le régime fiscal
         let explanation = '';
-        switch(regimeLabel.split(' ')[0]) {
-            case 'Micro-foncier':
-                explanation = `Avec le régime micro-foncier, un abattement forfaitaire de 30% est appliqué sur les loyers bruts. 
-                Seuls 70% des revenus locatifs sont soumis à l'impôt sur le revenu et aux prélèvements sociaux.`;
-                break;
-            case 'Régime':
-                explanation = `Le régime réel permet de déduire toutes les charges réelles (intérêts d'emprunt, taxe foncière, etc.) 
-                des revenus locatifs. Il est généralement plus avantageux quand les charges dépassent 30% des loyers.`;
-                break;
-            case 'LMNP':
-                if (regimeLabel.includes('micro-BIC')) {
-                    explanation = `Le régime LMNP micro-BIC offre un abattement forfaitaire de 50% sur les loyers des locations meublées. 
-                    C'est souvent plus avantageux que le micro-foncier pour une location nue.`;
-                } else {
-                    explanation = `Le LMNP au réel permet de déduire l'amortissement du bien (généralement sur 20-30 ans), 
-                    ce qui réduit considérablement l'impôt, voire permet de ne pas en payer pendant plusieurs années.`;
-                }
-                break;
+        if (fiscal.type === 'IS') {
+            explanation = `En régime d'imposition à l'IS (Impôt sur les Sociétés), le résultat fiscal de la société est taxé directement 
+                au taux d'IS de ${fiscal.tauxIS}%. Les amortissements sont déductibles, ce qui réduit l'assiette fiscale.`;
+        } else {
+            switch(regimeLabel.split(' ')[0]) {
+                case 'Micro-foncier':
+                    explanation = `Avec le régime micro-foncier, un abattement forfaitaire de 30% est appliqué sur les loyers bruts. 
+                    Seuls 70% des revenus locatifs sont soumis à l'impôt sur le revenu et aux prélèvements sociaux.`;
+                    break;
+                case 'Régime':
+                    explanation = `Le régime réel permet de déduire toutes les charges réelles (intérêts d'emprunt, taxe foncière, etc.) 
+                    des revenus locatifs. Il est généralement plus avantageux quand les charges dépassent 30% des loyers.`;
+                    break;
+                case 'LMNP':
+                    if (regimeLabel.includes('micro-BIC')) {
+                        explanation = `Le régime LMNP micro-BIC offre un abattement forfaitaire de 50% sur les loyers des locations meublées. 
+                        C'est souvent plus avantageux que le micro-foncier pour une location nue.`;
+                    } else {
+                        explanation = `Le LMNP au réel permet de déduire l'amortissement du bien (généralement sur 20-30 ans), 
+                        ce qui réduit considérablement l'impôt, voire permet de ne pas en payer pendant plusieurs années.`;
+                    }
+                    break;
+            }
         }
         
         // Si l'élément n'existe pas, le créer
@@ -1420,11 +1610,11 @@ const ImmoExtensions = (function() {
                     </tr>
                     ` : ''}
                     <tr>
-                        <td>Revenu imposable</td>
+                        <td>${fiscal.type === 'IS' ? 'Résultat fiscal société' : 'Revenu imposable'}</td>
                         <td id="${mode}-revenu-imposable">${formaterMontant(fiscal.revenusImposables)}</td>
                     </tr>
                     <tr>
-                        <td>Impact fiscal annuel</td>
+                        <td>${fiscal.type === 'IS' ? `Impôt société (${fiscal.tauxIS}%)` : 'Impact fiscal annuel'}</td>
                         <td id="${mode}-impact-fiscal" class="${impactFiscal >= 0 ? 'positive' : 'negative'}">
                             ${formaterMontant(impactFiscal)}
                         </td>
@@ -1480,11 +1670,11 @@ const ImmoExtensions = (function() {
                 </tr>
                 ` : ''}
                 <tr>
-                    <td>Revenu imposable</td>
+                    <td>${fiscal.type === 'IS' ? 'Résultat fiscal société' : 'Revenu imposable'}</td>
                     <td id="${mode}-revenu-imposable">${formaterMontant(fiscal.revenusImposables)}</td>
                 </tr>
                 <tr>
-                    <td>Impact fiscal annuel</td>
+                    <td>${fiscal.type === 'IS' ? `Impôt société (${fiscal.tauxIS}%)` : 'Impact fiscal annuel'}</td>
                     <td id="${mode}-impact-fiscal" class="${impactFiscal >= 0 ? 'positive' : 'negative'}">
                         ${formaterMontant(impactFiscal)}
                     </td>
