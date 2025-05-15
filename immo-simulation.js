@@ -12,6 +12,7 @@
  * Version 4.5 - Corrections des coquilles et optimisations mineures
  * Version 4.6 - Correction du ratio d'apport appliqué au coût total du projet
  * Version 4.7 - Correction de l'orthographe: "emolements" -> "emoluments"
+ * Version 4.8 - Ajout des frais de gestion locative (5-8% du loyer)
  */
 
 class SimulateurImmo {
@@ -22,7 +23,8 @@ class SimulateurImmo {
             surfaceMin: 20,               // Surface minimale par défaut (m²)
             pasSurface: 1,                // Pas de décrémentation pour la recherche
             chargesNonRecuperablesAnnuelles: 30, // €/m²/an
-            pourcentageTravauxDefaut: 0.005      // 0.5% du prix d'achat
+            pourcentageTravauxDefaut: 0.005,     // 0.5% du prix d'achat
+            fraisGestionLocativeDefaut: 7        // 7% du loyer par défaut
         };
         
         // Paramètres initialisés par défaut
@@ -51,7 +53,8 @@ class SimulateurImmo {
                 entretienAnnuel: 0.5,         // % du prix d'achat
                 assurancePNO: 250,            // € par an
                 chargesNonRecuperables: 0,    // Remplacé par un montant fixe
-                prixM2: 2000                  // Prix du marché immobilier en €/m²
+                prixM2: 2000,                 // Prix du marché immobilier en €/m²
+                fraisGestionLocative: 7       // % du loyer après vacance
             },
             classique: {
                 publiciteFonciere: 0.72,      // % du prix
@@ -217,6 +220,7 @@ class SimulateurImmo {
         const taux = this.params.base.taux;
         const duree = this.params.base.duree;
         const vacanceLocative = this.params.communs.vacanceLocative;
+        const fraisGestionLocative = this.params.communs.fraisGestionLocative;
         
         const prixM2 = parseFloat(this.params.communs.prixM2);
         const prixAchat = surface * prixM2;
@@ -266,9 +270,11 @@ class SimulateurImmo {
         // Mensualité
         const mensualite = this.calculerMensualite(emprunt, taux, duree);
         
-        // Loyer
+        // Loyer brut et calcul du loyer net avec frais de gestion
         const loyerBrut = surface * this.params.communs.loyerM2;
-        const loyerNet = this.calculerLoyerNet(loyerBrut, vacanceLocative);
+        const loyerApresVacance = loyerBrut * (1 - vacanceLocative / 100);
+        const fraisGestionMensuels = loyerApresVacance * (fraisGestionLocative / 100);
+        const loyerNet = loyerApresVacance - fraisGestionMensuels;
         
         // Vérifier simplement si la marge est positive
         return (loyerNet - mensualite) >= 0;
@@ -406,6 +412,8 @@ class SimulateurImmo {
             this.params.communs.chargesNonRecuperables = parseFloat(formData.chargesNonRecuperables);
         if (formData.prixM2 !== undefined)
             this.params.communs.prixM2 = parseFloat(formData.prixM2);
+        if (formData.fraisGestionLocative !== undefined) 
+            this.params.communs.fraisGestionLocative = parseFloat(formData.fraisGestionLocative);
 
         // Paramètres achat classique
         if (formData.publiciteFonciere !== undefined) 
@@ -545,7 +553,7 @@ class SimulateurImmo {
             emoluments = 6500 * this.params.encheres.emolumentsPoursuivant1 / 100;
             emoluments += (23500 - 6500) * this.params.encheres.emolumentsPoursuivant2 / 100;
             emoluments += (83500 - 23500) * this.params.encheres.emolumentsPoursuivant3 / 100;
-            emoluments += (prix - 83500) * this.params.encheres.emolumentsPoursuivant4 / 100;
+            emoluments += (prix - 83500) * this.params.encheres.emolementsPoursuivant4 / 100;
         }
         
         return emoluments;
@@ -625,10 +633,18 @@ class SimulateurImmo {
      * Calcule le loyer mensuel net
      * @param {number} loyerBrut - Loyer mensuel brut
      * @param {number} vacance - Taux de vacance locative en %
+     * @param {number|null} fraisGestion - Frais de gestion en % (optionnel)
      * @returns {number} - Loyer mensuel net
      */
-    calculerLoyerNet(loyerBrut, vacance) {
-        return loyerBrut * (1 - vacance / 100);
+    calculerLoyerNet(loyerBrut, vacance, fraisGestion = null) {
+        // Loyer après vacance locative
+        const loyerApresVacance = loyerBrut * (1 - vacance / 100);
+        
+        // Appliquer les frais de gestion locative s'ils sont définis
+        const tauxGestion = fraisGestion !== null ? 
+            fraisGestion : this.params.communs.fraisGestionLocative;
+        
+        return loyerApresVacance * (1 - tauxGestion / 100);
     }
 
     /**
@@ -744,6 +760,7 @@ class SimulateurImmo {
         const taux = this.params.base.taux;
         const duree = this.params.base.duree;
         const vacanceLocative = this.params.communs.vacanceLocative;
+        const fraisGestionLocative = this.params.communs.fraisGestionLocative;
         
         // Prix d'achat (en fonction de la surface)
         // Utiliser le prix au m² paramétré
@@ -816,10 +833,14 @@ class SimulateurImmo {
         // Mensualité
         const mensualite = this.calculerMensualite(emprunt, taux, duree);
         
-        // Loyer (basé sur la valeur au m² du marché, non plus sur le rendement souhaité)
+        // Loyer (basé sur la valeur au m² du marché)
         const loyerBrut = surface * this.params.communs.loyerM2;
         const rendementBrut = (loyerBrut * 12) / prixAchat * 100;
-        const loyerNet = this.calculerLoyerNet(loyerBrut, vacanceLocative);
+        
+        // Calcul du loyer net avec frais de gestion
+        const loyerApresVacance = loyerBrut * (1 - vacanceLocative / 100);
+        const fraisGestionMensuels = loyerApresVacance * (fraisGestionLocative / 100);
+        const loyerNet = loyerApresVacance - fraisGestionMensuels;
         
         // Taxe foncière (5% du loyer annuel brut)
         const taxeFonciere = loyerBrut * 12 * 0.05;
@@ -845,15 +866,15 @@ class SimulateurImmo {
         const interetsPremierAnnee = tableauAmortissement.slice(0, 12).reduce((sum, m) => sum + m.interets, 0);
         
         // Revenu foncier avant impôt
-        const chargesDeductibles = taxeFonciere + assurancePNO + chargesCopro + (entretienMensuel * 12);
-        const revenuFoncier = (loyerNet * 12) - chargesDeductibles - interetsPremierAnnee;
+        const chargesDeductibles = taxeFonciere + assurancePNO + chargesCopro + (entretienMensuel * 12) + (fraisGestionMensuels * 12);
+        const revenuFoncier = (loyerApresVacance * 12) - chargesDeductibles - interetsPremierAnnee;
         
         // Impact fiscal
         const impactFiscal = this.calculerImpactFiscal(revenuFoncier, interetsPremierAnnee);
         
         // Rendement net
         const rendementNet = this.calculerRendementNet(
-            loyerNet * 12, chargesDeductibles, impactFiscal, coutTotal
+            loyerApresVacance * 12, chargesDeductibles, impactFiscal, coutTotal
         );
         
         // Construire le résultat
@@ -868,6 +889,9 @@ class SimulateurImmo {
             mensualite,
             loyerNet,
             loyerBrut,
+            loyerApresVacance,
+            fraisGestionMensuels,
+            fraisGestionAnnuels: fraisGestionMensuels * 12,
             loyerM2: surface > 0 ? loyerBrut / surface : 0,
             taxeFonciere,
             chargesNonRecuperables: chargesCopro,
@@ -1165,21 +1189,23 @@ class SimulateurImmo {
         
         // Répartition des coûts pour l'achat classique
         const classique = {
-            labels: ['Prix d\'achat', 'Frais de notaire', 'Commission', 'Travaux', 'Frais bancaires'],
+            labels: ['Prix d\'achat', 'Frais de notaire', 'Commission', 'Travaux', 'Frais bancaires', 'Frais de gestion (annuels)'],
             datasets: [{
                 data: [
                     resultats.classique.prixAchat,
                     resultats.classique.fraisNotaire,
                     resultats.classique.commission,
                     resultats.classique.travaux,
-                    resultats.classique.fraisBancaires
+                    resultats.classique.fraisBancaires,
+                    resultats.classique.fraisGestionAnnuels
                 ],
                 backgroundColor: [
                     'rgba(0, 255, 135, 0.7)',
                     'rgba(0, 200, 100, 0.7)',
                     'rgba(0, 150, 80, 0.7)',
                     'rgba(0, 100, 60, 0.7)',
-                    'rgba(0, 50, 40, 0.7)'
+                    'rgba(0, 50, 40, 0.7)',
+                    'rgba(0, 180, 120, 0.7)'
                 ],
                 borderWidth: 1
             }]
@@ -1187,7 +1213,7 @@ class SimulateurImmo {
         
         // Répartition des coûts pour la vente aux enchères
         const encheres = {
-            labels: ['Prix d\'achat', 'Droits d\'enregistrement', 'Émoluments', 'Honoraires avocat', 'Travaux', 'Frais divers', 'Frais bancaires'],
+            labels: ['Prix d\'achat', 'Droits d\'enregistrement', 'Émoluments', 'Honoraires avocat', 'Travaux', 'Frais divers', 'Frais bancaires', 'Frais de gestion (annuels)'],
             datasets: [{
                 data: [
                     resultats.encheres.prixAchat,
@@ -1196,7 +1222,8 @@ class SimulateurImmo {
                     resultats.encheres.honorairesAvocat,
                     resultats.encheres.travaux,
                     resultats.encheres.fraisDivers,
-                    resultats.encheres.fraisBancaires
+                    resultats.encheres.fraisBancaires,
+                    resultats.encheres.fraisGestionAnnuels
                 ],
                 backgroundColor: [
                     'rgba(245, 158, 11, 0.7)',
@@ -1205,7 +1232,8 @@ class SimulateurImmo {
                     'rgba(180, 100, 10, 0.7)',
                     'rgba(160, 80, 10, 0.7)',
                     'rgba(140, 60, 10, 0.7)',
-                    'rgba(120, 40, 10, 0.7)'
+                    'rgba(120, 40, 10, 0.7)',
+                    'rgba(200, 160, 20, 0.7)'
                 ],
                 borderWidth: 1
             }]
