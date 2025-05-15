@@ -11,6 +11,7 @@
  * Version 4.4 - Optimisation des performances et amélioration de l'architecture
  * Version 4.5 - Corrections des coquilles et optimisations mineures
  * Version 4.6 - Correction du ratio d'apport appliqué au coût total du projet
+ * Version 4.7 - Correction de l'orthographe: "emolements" -> "emoluments"
  */
 
 class SimulateurImmo {
@@ -301,8 +302,8 @@ class SimulateurImmo {
                 fraisSpecifiques = fraisNotaire + commission;
             } else {
                 const droitsEnregistrement = this.calculerDroitsEnregistrement(prixAchat);
-                const emolumentsPoursuivant = this.calculerEmolementsPoursuivant(prixAchat);
-                const honorairesAvocat = this.calculerHonorairesAvocat(emolementsPoursuivant);
+                const emolumentsPoursuivant = this.calculerEmolumentsPoursuivant(prixAchat);
+                const honorairesAvocat = this.calculerHonorairesAvocat(emolumentsPoursuivant);
                 const publiciteFonciere = prixAchat * this.params.encheres.publiciteFonciereEncheres / 100;
                 const fraisDivers = this.params.encheres.fraisFixes + 
                                 this.params.encheres.avocatEnchere + 
@@ -310,7 +311,7 @@ class SimulateurImmo {
                 const caution = this.params.encheres.cautionRestituee ? 0 : 
                             prixAchat * this.params.encheres.cautionPourcent / 100;
                 
-                fraisSpecifiques = droitsEnregistrement + emolementsPoursuivant + 
+                fraisSpecifiques = droitsEnregistrement + emolumentsPoursuivant + 
                                 honorairesAvocat + publiciteFonciere + fraisDivers + caution;
             }
             
@@ -434,7 +435,7 @@ class SimulateurImmo {
         if (formData.emolumentsPoursuivant3 !== undefined) 
             this.params.encheres.emolumentsPoursuivant3 = parseFloat(formData.emolumentsPoursuivant3);
         if (formData.emolumentsPoursuivant4 !== undefined) 
-            this.params.encheres.emolumentsPoursuivant4 = parseFloat(formData.emolementsPoursuivant4);
+            this.params.encheres.emolementsPoursuivant4 = parseFloat(formData.emolementsPoursuivant4);
         if (formData.honorairesAvocatCoef !== undefined) 
             this.params.encheres.honorairesAvocatCoef = parseFloat(formData.honorairesAvocatCoef);
         if (formData.honorairesAvocatTVA !== undefined) 
@@ -528,7 +529,7 @@ class SimulateurImmo {
      * @param {number} prix - Prix d'adjudication
      * @returns {number} - Montant des émoluments
      */
-    calculerEmolementsPoursuivant(prix) {
+    calculerEmolumentsPoursuivant(prix) {
         let emoluments = 0;
         
         if (prix <= 6500) {
@@ -548,6 +549,15 @@ class SimulateurImmo {
         }
         
         return emoluments;
+    }
+
+    /**
+     * Alias pour maintenir la compatibilité avec le code existant
+     * @param {number} prix - Prix d'adjudication
+     * @returns {number} - Montant des émoluments
+     */
+    calculerEmolementsPoursuivant(prix) {
+        return this.calculerEmolumentsPoursuivant(prix);
     }
 
     /**
@@ -764,8 +774,8 @@ class SimulateurImmo {
             };
         } else { // mode === 'encheres'
             const droitsEnregistrement = this.calculerDroitsEnregistrement(prixAchat);
-            const emolementsPoursuivant = this.calculerEmolementsPoursuivant(prixAchat);
-            const honorairesAvocat = this.calculerHonorairesAvocat(emolementsPoursuivant);
+            const emolumentsPoursuivant = this.calculerEmolumentsPoursuivant(prixAchat);
+            const honorairesAvocat = this.calculerHonorairesAvocat(emolumentsPoursuivant);
             const publiciteFonciere = prixAchat * this.params.encheres.publiciteFonciereEncheres / 100;
             const fraisDivers = this.params.encheres.fraisFixes + 
                               this.params.encheres.avocatEnchere + 
@@ -773,12 +783,12 @@ class SimulateurImmo {
             const caution = this.params.encheres.cautionRestituee ? 0 : 
                           prixAchat * this.params.encheres.cautionPourcent / 100;
             
-            fraisSpecifiques = droitsEnregistrement + emolementsPoursuivant + 
+            fraisSpecifiques = droitsEnregistrement + emolumentsPoursuivant + 
                              honorairesAvocat + publiciteFonciere + fraisDivers + caution;
             
             fraisDetails = {
                 droitsEnregistrement,
-                emolementsPoursuivant,
+                emolumentsPoursuivant,
                 honorairesAvocat,
                 publiciteFonciere,
                 fraisDivers,
@@ -880,7 +890,7 @@ class SimulateurImmo {
             resultat.commission = fraisDetails.commission;
         } else {
             resultat.droitsEnregistrement = fraisDetails.droitsEnregistrement;
-            resultat.emolementsPoursuivant = fraisDetails.emolementsPoursuivant;
+            resultat.emolumentsPoursuivant = fraisDetails.emolumentsPoursuivant;
             resultat.honorairesAvocat = fraisDetails.honorairesAvocat;
             resultat.publiciteFonciere = fraisDetails.publiciteFonciere;
             resultat.fraisDivers = fraisDetails.fraisDivers;
@@ -1182,7 +1192,7 @@ class SimulateurImmo {
                 data: [
                     resultats.encheres.prixAchat,
                     resultats.encheres.droitsEnregistrement,
-                    resultats.encheres.emolementsPoursuivant,
+                    resultats.encheres.emolumentsPoursuivant,
                     resultats.encheres.honorairesAvocat,
                     resultats.encheres.travaux,
                     resultats.encheres.fraisDivers,
