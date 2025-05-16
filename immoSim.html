@@ -1129,6 +1129,7 @@
         .option-btn {
             border: 1px solid rgba(255, 255, 255, 0.1);
             transition: all 0.3s ease;
+            width: 100%;
         }
 
         .option-btn:hover {
@@ -1140,6 +1141,13 @@
             border-color: var(--primary-color);
             background-color: rgba(0, 255, 135, 0.1);
             box-shadow: 0 0 10px rgba(0, 255, 135, 0.1);
+        }
+        
+        /* Style amélioré pour l'option sélectionnée */
+        input[type="radio"]:checked + .option-btn {
+            border-color: var(--primary-color);
+            background-color: rgba(0, 255, 135, 0.1);
+            box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.3);
         }
     </style>
 </head>
@@ -1308,10 +1316,10 @@
                 <input type="hidden" id="montant-emprunt-max" value="150000">
             </div>
             
-            <!-- Nouveau : Mode de calcul -->
+            <!-- Nouveau : Mode de calcul (CHANGÉ DE HORIZONTAL À VERTICAL) -->
             <div class="form-group mt-6 border-t border-gray-700 pt-4">
                 <label class="form-label">Mode de calcul</label>
-                <div class="flex gap-4">
+                <div class="flex flex-col gap-4">
                     <label class="flex items-center cursor-pointer">
                         <input type="radio" name="calculation-mode" id="mode-loyer-mensualite" value="loyer-mensualite" checked class="form-radio hidden">
                         <div class="option-btn p-3 rounded-lg flex items-center">
