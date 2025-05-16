@@ -8,6 +8,7 @@
  * Version 1.1 - Corrections des coquilles et optimisations mineures
  * Version 1.2 - Refactorisation et améliorations de la gestion des résultats
  * Version 1.3 - Ajout d'explications détaillées sur le cash-flow et amélioration de l'affichage du cash-flow annuel
+ * Version 1.4 - Correction du problème du mode de calcul cash-flow positif et optimisation de l'interface
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -200,6 +201,16 @@ document.addEventListener('DOMContentLoaded', function() {
             font-weight: 600;
             margin-bottom: 0.3rem;
         }
+        
+        /* Amélioration pour les options de mode de calcul */
+        .flex-col {
+            flex-direction: column;
+        }
+        
+        .option-btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
     `;
     document.head.appendChild(styleEl);
 
@@ -244,10 +255,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (resultats.classique && resultats.classique.surface > 0 && 
             resultats.encheres && resultats.encheres.surface > 0) {
             
+            // Récupérer le mode de calcul
+            const calculationMode = document.querySelector('input[name="calculation-mode"]:checked')?.value || 'loyer-mensualite';
+            const modeLabel = calculationMode === 'loyer-mensualite' ? 'marge positive entre loyer et mensualité' : 'cash-flow positif (toutes charges comprises)';
+            
             // Afficher la notification de réussite
             afficherNotification(`
                 <i class="fas fa-check-circle"></i> 
-                Calcul terminé : <strong>Surface maximale autofinancée</strong> déterminée par une marge positive entre loyer et mensualité
+                Calcul terminé : <strong>Surface maximale autofinancée</strong> déterminée par une ${modeLabel}
                 <span class="optimization-badge"><i class="fas fa-ruler"></i> Recherche par surface décroissante (pas = ${pas} m²)</span>
             `);
             
@@ -429,6 +444,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Adapter l'interface selon l'appareil
     window.addEventListener('resize', adapterInterfaceSelonAppareil);
     window.addEventListener('DOMContentLoaded', adapterInterfaceSelonAppareil);
+    
+    // Initialiser le mode de calcul vertical si nécessaire
+    window.addEventListener('DOMContentLoaded', function() {
+        const calculationModeContainer = document.querySelector('.form-group .flex');
+        if (calculationModeContainer && !calculationModeContainer.classList.contains('flex-col')) {
+            calculationModeContainer.classList.add('flex-col');
+        }
+    });
 
     // Fonctions
     // --------------------
@@ -636,6 +659,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (simulation.params.base.pasSurface && document.getElementById('pas-surface')) {
             document.getElementById('pas-surface').value = simulation.params.base.pasSurface;
+        }
+        
+        // Récupération du mode de calcul s'il existe
+        if (simulation.params.base.calculationMode) {
+            const calculationMode = simulation.params.base.calculationMode;
+            const radioButton = document.querySelector(`input[name="calculation-mode"][value="${calculationMode}"]`);
+            if (radioButton) {
+                radioButton.checked = true;
+            }
         }
         
         // Afficher les paramètres avancés
@@ -1076,6 +1108,9 @@ document.addEventListener('DOMContentLoaded', function() {
             taux: document.getElementById('taux').value,
             duree: document.getElementById('duree').value,
             
+            // CORRECTION: Récupérer le mode de calcul
+            calculationMode: document.querySelector('input[name="calculation-mode"]:checked')?.value || 'loyer-mensualite',
+            
             // Ajouter le paramètre d'apport minimum
             pourcentApportMin: document.getElementById('pourcent-apport')?.value || 10,
             
@@ -1365,8 +1400,14 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function() {
             const explanation = document.getElementById('cashflow-explanation');
             if (!explanation) {
-                ajouterExplicationCashFlow();
-                this.innerHTML = '<i class="fas fa-times-circle"></i> Masquer l\'explication';
+                // SUPPRESSION: Ne pas générer dynamiquement l'explication
+                // Utiliser uniquement le panneau explicatif existant dans immoSim.html
+                const existingExplanation = document.getElementById('cash-flow-explanation');
+                if (existingExplanation) {
+                    existingExplanation.classList.remove('hidden');
+                    this.innerHTML = '<i class="fas fa-times-circle"></i> Masquer l\'explication';
+                    existingExplanation.scrollIntoView({ behavior: 'smooth' });
+                }
             } else if (explanation.classList.contains('hidden')) {
                 explanation.classList.remove('hidden');
                 this.innerHTML = '<i class="fas fa-times-circle"></i> Masquer l\'explication';
