@@ -12,6 +12,7 @@
  * Version 4.5 - Corrections des coquilles et optimisations mineures
  * Version 4.6 - Correction du ratio d'apport appliqué au coût total du projet
  * Version 4.7 - Correction de l'orthographe: "emolements" -> "emoluments"
+ * Version 4.8 - Ajout du support pour le mode "Cash-flow positif"
  */
 
 class SimulateurImmo {
@@ -37,7 +38,8 @@ class SimulateurImmo {
                 surfaceMax: 120,              // Surface maximale autorisée
                 surfaceMin: 20,               // Surface minimale autorisée (ajouté)
                 pourcentApportMin: 10,        // Pourcentage d'apport minimum exigé (ajouté)
-                apportCouvreFrais: false      // Nouveau: l'apport doit-il couvrir au moins les frais
+                apportCouvreFrais: false,     // Nouveau: l'apport doit-il couvrir au moins les frais
+                calculationMode: 'loyer-mensualite' // Mode de calcul: 'loyer-mensualite' ou 'cashflow-positif'
             },
             communs: {
                 fraisBancairesDossier: 2000,
@@ -270,8 +272,24 @@ class SimulateurImmo {
         const loyerBrut = surface * this.params.communs.loyerM2;
         const loyerNet = this.calculerLoyerNet(loyerBrut, vacanceLocative);
         
-        // Vérifier simplement si la marge est positive
-        return (loyerNet - mensualite) >= 0;
+        // Récupérer le mode de calcul sélectionné
+        const calculationMode = this.params.base.calculationMode || 'loyer-mensualite';
+        
+        if (calculationMode === 'loyer-mensualite') {
+            // Mode "Loyer ≥ Mensualité"
+            return (loyerNet - mensualite) >= 0;
+        } else {
+            // Mode "Cash-flow positif"
+            // Calculer les charges supplémentaires
+            const taxeFonciere = loyerBrut * 12 * 0.05 / 12; // Mensuel
+            const chargesNonRecuperables = surface * this.defaults.chargesNonRecuperablesAnnuelles / 12;
+            const entretienMensuel = prixAchat * (this.params.communs.entretienAnnuel / 100) / 12;
+            const assurancePNO = this.params.communs.assurancePNO / 12;
+            
+            // Calcul du cash-flow complet
+            const cashFlow = loyerNet - mensualite - taxeFonciere - chargesNonRecuperables - entretienMensuel - assurancePNO;
+            return cashFlow >= 0;
+        }
     }
 
     /**
@@ -364,6 +382,10 @@ class SimulateurImmo {
         this.params.base.surface = parseFloat(formData.surface) || 50;
         this.params.base.taux = parseFloat(formData.taux) || 3.5;
         this.params.base.duree = parseFloat(formData.duree) || 20;
+        
+        // Ajouter le mode de calcul aux paramètres
+        if (formData.calculationMode !== undefined)
+            this.params.base.calculationMode = formData.calculationMode || 'loyer-mensualite';
         
         // Ajouter le chargement du pourcentage d'apport minimum
         if (formData.pourcentApportMin !== undefined)
