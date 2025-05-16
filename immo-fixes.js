@@ -2,10 +2,9 @@
  * immo-fixes.js - Correctifs pour le simulateur d'investissement immobilier
  * 
  * Ce script contient les correctifs pour résoudre les problèmes d'affichage:
- * 1. Duplication des cartes de régime fiscal dans la section mode
- * 2. Suppression des boutons "Comprendre le cash-flow" en double
- * 3. Correction du centrage des onglets et sections
- * 4. Conversion du mode de calcul en système de cartes pour harmoniser l'UI
+ * 1. Suppression des boutons "Comprendre le cash-flow" en double
+ * 2. Correction du centrage des onglets et sections
+ * 3. Conversion du mode de calcul en système de cartes pour harmoniser l'UI
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -70,13 +69,50 @@ function ajouterStylesCentrage() {
             display: block;
         }
 
-        /* Assurer que les cartes de régime fiscal sont alignées */
-        .regime-cards-grid {
+        /* Styles pour les cartes du mode de calcul */
+        .calculation-cards-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 1rem;
             width: 100%;
             justify-content: center;
+            margin-top: 0.75rem;
+        }
+
+        .calculation-card {
+            background-color: rgba(1, 42, 74, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            outline: none;
+        }
+
+        .calculation-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 5px 15px rgba(0, 255, 135, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .calculation-card.active,
+        .calculation-card[aria-checked="true"] {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.3);
+            background-color: rgba(0, 255, 135, 0.1);
+        }
+
+        .calculation-card h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0.5rem 0;
+        }
+
+        .calculation-card p {
+            margin: 0;
+            font-size: 0.9rem;
+            opacity: 0.8;
         }
     `;
     document.head.appendChild(styleElement);
@@ -91,10 +127,7 @@ function appliquerCorrectifs() {
     // 1. Corriger la duplication des boutons "Comprendre le cash-flow"
     corrigerBoutonsCashFlow();
     
-    // 2. Dupliquer les cartes de régime fiscal dans la section mode
-    dupliquerCartesRegimeFiscal();
-    
-    // 3. Convertir le mode de calcul en système de cartes
+    // 2. Convertir le mode de calcul en système de cartes
     // Ajouter un délai pour s'assurer que le DOM est bien chargé
     setTimeout(convertirModeCalculEnCartes, 300);
     
@@ -117,54 +150,12 @@ function corrigerBoutonsCashFlow() {
 }
 
 /**
- * Duplique les cartes de régime fiscal dans la section mode
- */
-function dupliquerCartesRegimeFiscal() {
-    // Trouver la section de mode de calcul - sélecteur plus précis
-    const modeCalculSection = document.querySelector('.form-group[class*="border-t"]');
-    const regimeFiscalCards = document.getElementById('regime-fiscal-cards');
-    
-    // Vérifier si les éléments existent et si les cartes ne sont pas déjà dupliquées
-    if (modeCalculSection && regimeFiscalCards && !document.getElementById('mode-fiscal-cards')) {
-        // Créer un titre pour la section
-        const titreSection = document.createElement('h4');
-        titreSection.className = 'mt-4 mb-2';
-        titreSection.innerHTML = '<i class="fas fa-file-invoice-dollar mr-2"></i> Régime fiscal';
-        
-        // Cloner les cartes de régime fiscal
-        const fiscalCardsClone = regimeFiscalCards.cloneNode(true);
-        fiscalCardsClone.id = 'mode-fiscal-cards';
-        
-        // Créer un conteneur pour le tout
-        const conteneur = document.createElement('div');
-        conteneur.className = 'mt-4 pt-4 border-t border-gray-700';
-        conteneur.appendChild(titreSection);
-        conteneur.appendChild(fiscalCardsClone);
-        
-        // Ajouter après les options de mode de calcul
-        modeCalculSection.appendChild(conteneur);
-        
-        // Synchroniser les sélections entre les deux ensembles de cartes
-        initialiserSynchronisationCartes(fiscalCardsClone);
-        
-        console.log("Cartes de régime fiscal dupliquées dans la section mode");
-    } else {
-        console.log("Impossible de dupliquer les cartes ou déjà fait", {
-            modeCalculSection: !!modeCalculSection,
-            regimeFiscalCards: !!regimeFiscalCards,
-            modeCardsExist: !!document.getElementById('mode-fiscal-cards')
-        });
-    }
-}
-
-/**
  * Convertit le mode de calcul en système de cartes
- * Cette version utilise une approche plus directe
  */
 function convertirModeCalculEnCartes() {
     console.log("Tentative de conversion du mode de calcul en cartes");
     
-    // Approche plus directe pour trouver le mode de calcul
+    // Approche directe pour trouver le mode de calcul
     const calculationRadios = document.querySelectorAll('input[name="calculation-mode"]');
     if (!calculationRadios.length || document.getElementById('calculation-mode-cards')) {
         console.log("Pas de radio buttons trouvés ou déjà converti");
@@ -189,19 +180,19 @@ function convertirModeCalculEnCartes() {
     const newContent = `
         <label class="form-label">Mode de calcul</label>
         
-        <div id="calculation-mode-cards" class="regime-cards-grid mt-3">
+        <div id="calculation-mode-cards" class="calculation-cards-grid">
             <!-- Mode Loyer ≥ Mensualité -->
-            <div class="regime-card ${modeActif === 'loyer-mensualite' ? 'active' : ''}" data-mode="loyer-mensualite" role="radio" tabindex="0" aria-checked="${modeActif === 'loyer-mensualite' ? 'true' : 'false'}">
+            <div class="calculation-card ${modeActif === 'loyer-mensualite' ? 'active' : ''}" data-mode="loyer-mensualite" role="radio" tabindex="0" aria-checked="${modeActif === 'loyer-mensualite' ? 'true' : 'false'}">
                 <i class="fas fa-check-circle text-lg text-green-400"></i>
                 <h4>Loyer ≥ Mensualité</h4>
-                <p class="text-sm opacity-75">Le loyer net couvre la mensualité du prêt</p>
+                <p>Le loyer net couvre la mensualité du prêt</p>
             </div>
             
             <!-- Mode Cash-flow positif -->
-            <div class="regime-card ${modeActif === 'cashflow-positif' ? 'active' : ''}" data-mode="cashflow-positif" role="radio" tabindex="0" aria-checked="${modeActif === 'cashflow-positif' ? 'true' : 'false'}">
+            <div class="calculation-card ${modeActif === 'cashflow-positif' ? 'active' : ''}" data-mode="cashflow-positif" role="radio" tabindex="0" aria-checked="${modeActif === 'cashflow-positif' ? 'true' : 'false'}">
                 <i class="fas fa-coins text-lg text-yellow-400"></i>
                 <h4>Cash-flow positif</h4>
-                <p class="text-sm opacity-75">Toutes charges comprises (plus strict)</p>
+                <p>Toutes charges comprises (plus strict)</p>
             </div>
         </div>
         
@@ -235,13 +226,13 @@ function initialiserEvenementsModeCalculCartes() {
         return;
     }
     
-    calculationModeCards.querySelectorAll('.regime-card').forEach(card => {
+    calculationModeCards.querySelectorAll('.calculation-card').forEach(card => {
         card.addEventListener('click', function() {
             const mode = this.dataset.mode;
             console.log(`Carte de mode de calcul cliquée: ${mode}`);
             
             // Désactiver toutes les cartes
-            calculationModeCards.querySelectorAll('.regime-card').forEach(c => {
+            calculationModeCards.querySelectorAll('.calculation-card').forEach(c => {
                 c.classList.remove('active');
                 c.setAttribute('aria-checked', 'false');
             });
@@ -274,7 +265,7 @@ function initialiserEvenementsModeCalculCartes() {
     
     // Support clavier pour l'accessibilité
     calculationModeCards.addEventListener('keydown', e => {
-        const card = e.target.closest('.regime-card');
+        const card = e.target.closest('.calculation-card');
         if (!card) return;
         
         if (e.key === 'Enter' || e.key === ' ') {
@@ -284,48 +275,4 @@ function initialiserEvenementsModeCalculCartes() {
     });
     
     console.log("Écouteurs d'événements pour les cartes de mode de calcul initialisés");
-}
-
-/**
- * Initialise la synchronisation entre les deux ensembles de cartes
- */
-function initialiserSynchronisationCartes(cartesDupliquees) {
-    if (!cartesDupliquees) return;
-    
-    // Ajouter des événements de clic sur les cartes dupliquées
-    cartesDupliquees.querySelectorAll('.regime-card').forEach(card => {
-        card.addEventListener('click', function() {
-            const regime = this.dataset.regime;
-            
-            // Trouver la carte correspondante dans l'ensemble original
-            const carteOriginale = document.querySelector(`#regime-fiscal-cards .regime-card[data-regime="${regime}"]`);
-            if (carteOriginale) {
-                // Simuler un clic sur la carte originale
-                carteOriginale.click();
-                
-                // Mettre à jour l'apparence de toutes les cartes dupliquées
-                cartesDupliquees.querySelectorAll('.regime-card').forEach(c => {
-                    c.classList.remove('active');
-                    c.setAttribute('aria-checked', 'false');
-                });
-                
-                // Activer la carte cliquée
-                this.classList.add('active');
-                this.setAttribute('aria-checked', 'true');
-            }
-        });
-    });
-    
-    // Mettre à jour l'état initial des cartes dupliquées
-    const regimeActuel = window.simulateur?.params?.fiscalite?.regimeFiscal || 'micro-foncier';
-    const carteActive = cartesDupliquees.querySelector(`.regime-card[data-regime="${regimeActuel}"]`);
-    if (carteActive) {
-        cartesDupliquees.querySelectorAll('.regime-card').forEach(card => {
-            card.classList.remove('active');
-            card.setAttribute('aria-checked', 'false');
-        });
-        
-        carteActive.classList.add('active');
-        carteActive.setAttribute('aria-checked', 'true');
-    }
 }
