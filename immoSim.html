@@ -31,7 +31,7 @@
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 2rem 1rem;
+            padding: 1.5rem 1rem; /* Espacement réduit */
             margin-left: 60px; /* Ajouté pour tenir compte de la sidebar */
             margin-top: 70px; /* Ajouté pour tenir compte du header principal */
         }
@@ -281,7 +281,7 @@
             background-color: var(--card-background);
             border-radius: 12px;
             padding: 1.5rem;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem; /* Réduit de 2rem à 1.5rem */
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             backdrop-filter: blur(10px);
@@ -333,6 +333,7 @@
         
         .form-input {
             width: 100%;
+            height: 45px; /* Hauteur standardisée */
             padding: 0.75rem;
             border-radius: 0.5rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -370,6 +371,9 @@
             top: 50%;
             transform: translateY(-50%);
             color: rgba(255, 255, 255, 0.7);
+            width: 4rem; /* Largeur fixe pour alignement */
+            text-align: right;
+            font-weight: 500;
         }
         
         .btn {
@@ -416,9 +420,12 @@
         }
         
         .btn-primary {
-            background-color: var(--primary-color);
+            background-color: #00CC6A; /* Plus foncé que --primary-color */
             color: #011627;
             font-weight: 600;
+            text-align: center;
+            min-width: 180px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         
         .btn-primary:hover {
@@ -487,6 +494,10 @@
         
         .justify-between {
             justify-content: space-between;
+        }
+
+        .justify-center {
+            justify-content: center;
         }
         
         .items-center {
@@ -645,13 +656,13 @@
             overflow: hidden;
             margin-bottom: 2rem;
             background-color: var(--card-background);
-            transition: all 0.3s ease;
+            transition: all 0.4s ease;
             transform: translateY(0);
         }
         
         .results-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 0 10px rgba(0, 255, 135, 0.1);
             border-color: rgba(0, 255, 135, 0.3);
         }
         
@@ -1070,7 +1081,21 @@
             color: var(--primary-color);
         }
         
-        /* Styles pour les infobulles */
+        /* Styles améliorés pour l'UI */
+        .info-tooltip {
+            color: var(--primary-color);
+            font-size: 0.85rem;
+            cursor: help;
+            margin-left: 0.5rem;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+            position: relative;
+        }
+
+        .info-tooltip:hover {
+            opacity: 1;
+        }
+        
         .info-icon {
             display: inline-flex;
             margin-left: 0.5rem;
@@ -1121,8 +1146,8 @@
         /* Style pour le bouton du guide */
         .guide-button {
             display: block;
-            margin: 0 auto;
-            margin-top: 1.5rem;
+            margin: 1.5rem auto;
+            min-width: 220px;
         }
         
         /* Style pour les options de mode de calcul */
@@ -1140,14 +1165,23 @@
         input[type="radio"]:checked + .option-btn {
             border-color: var(--primary-color);
             background-color: rgba(0, 255, 135, 0.1);
-            box-shadow: 0 0 10px rgba(0, 255, 135, 0.1);
+            box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.3);
         }
         
-        /* Style amélioré pour l'option sélectionnée */
-        input[type="radio"]:checked + .option-btn {
-            border-color: var(--primary-color);
-            background-color: rgba(0, 255, 135, 0.1);
-            box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.3);
+        /* Bouton simuler centré */
+        .btn-simulate {
+            margin: 0 auto;
+            display: block;
+        }
+        
+        /* Amélioration des cartes de résultats */
+        .ml-3 {
+            margin-left: 0.75rem;
+        }
+        
+        /* Centre le bouton guide */
+        .text-center {
+            text-align: center;
         }
     </style>
 </head>
@@ -1272,7 +1306,10 @@
             
             <div class="grid grid-2">
                 <div class="form-group">
-                    <label class="form-label" for="apport">Apport disponible</label>
+                    <label class="form-label" for="apport">
+                        Apport disponible
+                        <i class="fas fa-info-circle info-tooltip" title="Somme que vous pouvez investir initialement"></i>
+                    </label>
                     <div class="form-addon">
                         <input type="number" id="apport" class="form-input" placeholder="20000" value="20000">
                         <span class="form-addon-text">€</span>
@@ -1280,7 +1317,10 @@
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label" for="prix-m2-marche">Prix au m² du marché</label>
+                    <label class="form-label" for="prix-m2-marche">
+                        Prix au m² du marché
+                        <i class="fas fa-info-circle info-tooltip" title="Prix moyen au mètre carré dans le secteur"></i>
+                    </label>
                     <div class="form-addon">
                         <input type="number" id="prix-m2-marche" class="form-input highlight-field" value="2000" step="50">
                         <span class="form-addon-text">€/m²</span>
@@ -1288,7 +1328,10 @@
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label" for="loyer-m2">Loyer au m² du marché</label>
+                    <label class="form-label" for="loyer-m2">
+                        Loyer au m² du marché
+                        <i class="fas fa-info-circle info-tooltip" title="Loyer mensuel par mètre carré dans le secteur"></i>
+                    </label>
                     <div class="form-addon">
                         <input type="number" id="loyer-m2" class="form-input highlight-field" value="12" step="0.1">
                         <span class="form-addon-text">€/m²/mois</span>
@@ -1296,7 +1339,10 @@
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label" for="taux">Taux d'emprunt</label>
+                    <label class="form-label" for="taux">
+                        Taux d'emprunt
+                        <i class="fas fa-info-circle info-tooltip" title="Taux d'intérêt annuel du crédit immobilier"></i>
+                    </label>
                     <div class="form-addon">
                         <input type="number" id="taux" class="form-input" placeholder="3.5" value="3.5" step="0.1">
                         <span class="form-addon-text">%</span>
@@ -1304,7 +1350,10 @@
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label" for="duree">Durée du prêt</label>
+                    <label class="form-label" for="duree">
+                        Durée du prêt
+                        <i class="fas fa-info-circle info-tooltip" title="Durée du prêt en années"></i>
+                    </label>
                     <div class="form-addon">
                         <input type="number" id="duree" class="form-input" placeholder="20" value="20">
                         <span class="form-addon-text">ans</span>
@@ -1316,45 +1365,42 @@
                 <input type="hidden" id="montant-emprunt-max" value="150000">
             </div>
             
-            <!-- Nouveau : Mode de calcul (CHANGÉ DE HORIZONTAL À VERTICAL) -->
+            <!-- Mode de calcul (version améliorée) -->
             <div class="form-group mt-6 border-t border-gray-700 pt-4">
                 <label class="form-label">Mode de calcul</label>
-                <div class="flex flex-col gap-4">
+                <div class="flex flex-col gap-3">
                     <label class="flex items-center cursor-pointer">
                         <input type="radio" name="calculation-mode" id="mode-loyer-mensualite" value="loyer-mensualite" checked class="form-radio hidden">
                         <div class="option-btn p-3 rounded-lg flex items-center">
-                            <i class="fas fa-check-circle text-lg text-green-400 mr-2"></i>
+                            <i class="fas fa-check-circle text-lg text-green-400 mr-3"></i>
                             <div>
                                 <span class="font-medium">Loyer ≥ Mensualité</span>
-                                <p class="text-sm opacity-75">Le loyer net couvre la mensualité du prêt</p>
+                                <p class="text-sm opacity-80 mt-1">Le loyer net couvre la mensualité du prêt</p>
                             </div>
                         </div>
                     </label>
                     <label class="flex items-center cursor-pointer">
                         <input type="radio" name="calculation-mode" id="mode-cashflow-positif" value="cashflow-positif" class="form-radio hidden">
                         <div class="option-btn p-3 rounded-lg flex items-center">
-                            <i class="fas fa-coins text-lg text-green-400 mr-2"></i>
+                            <i class="fas fa-coins text-lg text-green-400 mr-3"></i>
                             <div>
                                 <span class="font-medium">Cash-flow positif</span>
-                                <p class="text-sm opacity-75">Toutes charges comprises (plus strict)</p>
+                                <p class="text-sm opacity-80 mt-1">Toutes charges comprises (plus strict)</p>
                             </div>
                         </div>
                     </label>
                 </div>
-                <div class="form-help mt-2">
-                    <i class="fas fa-info-circle text-blue-400 mr-1"></i>
-                    <span class="text-sm text-gray-300">
-                        Mode "Loyer ≥ Mensualité" : Cherche la surface maximale où le loyer couvre au moins le prêt.<br>
-                        Mode "Cash-flow positif" : Cherche la surface maximale générant un bénéfice mensuel (loyer - mensualité - charges).
-                    </span>
+                <div class="text-sm text-blue-300 mt-2 pl-2">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Choisissez le critère qui déterminera la surface maximale que vous pourrez acquérir.
                 </div>
             </div>
             
-            <div class="flex justify-between items-center mt-4">
-                <button id="btn-simulate" class="btn btn-primary">
+            <div class="flex justify-center mt-4">
+                <button id="btn-simulate" class="btn btn-primary btn-simulate">
                     <i class="fas fa-calculator"></i> Simuler
                 </button>
-                <button id="btn-advanced-toggle" class="btn btn-outline">
+                <button id="btn-advanced-toggle" class="btn btn-outline ml-3">
                     <i class="fas fa-sliders-h"></i> Paramètres avancés
                 </button>
             </div>
@@ -1380,7 +1426,10 @@
                 <div class="tab-content active" id="params-communs">
                     <div class="grid grid-2">
                         <div class="form-group">
-                            <label class="form-label" for="frais-bancaires-dossier">Frais bancaires - dossier</label>
+                            <label class="form-label" for="frais-bancaires-dossier">
+                                Frais bancaires - dossier
+                                <i class="fas fa-info-circle info-tooltip" title="Frais de dossier facturés par la banque"></i>
+                            </label>
                             <div class="form-addon">
                                 <input type="number" id="frais-bancaires-dossier" class="form-input" value="2000">
                                 <span class="form-addon-text">€</span>
@@ -1388,7 +1437,10 @@
                         </div>
                         
                         <div class="form-group">
-                            <label class="form-label" for="frais-bancaires-compte">Frais bancaires - tenue de compte</label>
+                            <label class="form-label" for="frais-bancaires-compte">
+                                Frais bancaires - tenue de compte
+                                <i class="fas fa-info-circle info-tooltip" title="Frais pour la tenue de compte pendant la durée du prêt"></i>
+                            </label>
                             <div class="form-addon">
                                 <input type="number" id="frais-bancaires-compte" class="form-input" value="710">
                                 <span class="form-addon-text">€</span>
@@ -1396,7 +1448,10 @@
                         </div>
                         
                         <div class="form-group">
-                            <label class="form-label" for="frais-garantie">Frais de garantie (caution/PPD)</label>
+                            <label class="form-label" for="frais-garantie">
+                                Frais de garantie (caution/PPD)
+                                <i class="fas fa-info-circle info-tooltip" title="Garantie du prêt, généralement un pourcentage du capital emprunté"></i>
+                            </label>
                             <div class="form-addon">
                                 <input type="number" id="frais-garantie" class="form-input" value="1.3709" step="0.0001">
                                 <span class="form-addon-text">%</span>
@@ -1404,7 +1459,10 @@
                         </div>
                         
                         <div class="form-group">
-                            <label class="form-label" for="pourcent-apport">Apport minimum exigé</label>
+                            <label class="form-label" for="pourcent-apport">
+                                Apport minimum exigé
+                                <i class="fas fa-info-circle info-tooltip" title="Pourcentage d'apport généralement exigé par les banques"></i>
+                            </label>
                             <div class="form-addon">
                                 <input type="number" id="pourcent-apport" class="form-input" value="10" min="5" max="30" step="1">
                                 <span class="form-addon-text">%</span>
@@ -1413,7 +1471,10 @@
                         </div>
                         
                         <div class="form-group">
-                            <label class="form-label" for="taxe-fonciere">Taxe foncière</label>
+                            <label class="form-label" for="taxe-fonciere">
+                                Taxe foncière
+                                <i class="fas fa-info-circle info-tooltip" title="Impôt local annuel en pourcentage de la valeur"></i>
+                            </label>
                             <div class="form-addon">
                                 <input type="number" id="taxe-fonciere" class="form-input" value="1" step="0.1">
                                 <span class="form-addon-text">%</span>
@@ -1421,7 +1482,10 @@
                         </div>
                         
                         <div class="form-group">
-                            <label class="form-label" for="vacance-locative">Vacance locative</label>
+                            <label class="form-label" for="vacance-locative">
+                                Vacance locative
+                                <i class="fas fa-info-circle info-tooltip" title="Provision pour les périodes sans locataire"></i>
+                            </label>
                             <div class="form-addon">
                                 <input type="number" id="vacance-locative" class="form-input" value="5" step="1">
                                 <span class="form-addon-text">%</span>
@@ -1430,7 +1494,10 @@
                         
                         <!-- Nouveau mode de calcul des travaux -->
                         <div class="form-group">
-                            <label class="form-label">Mode de calcul des travaux</label>
+                            <label class="form-label">
+                                Mode de calcul des travaux
+                                <i class="fas fa-info-circle info-tooltip" title="Choisissez comment calculer les travaux"></i>
+                            </label>
                             <div class="flex items-center">
                                 <label class="inline-flex items-center mr-4">
                                     <input type="radio" name="travaux-mode" id="travaux-mode-percentage" value="percentage" checked class="mr-2">
@@ -1444,7 +1511,10 @@
                         </div>
                         
                         <div class="form-group">
-                            <label class="form-label" for="travaux-m2">Travaux au m²</label>
+                            <label class="form-label" for="travaux-m2">
+                                Travaux au m²
+                                <i class="fas fa-info-circle info-tooltip" title="Montant des travaux par m²"></i>
+                            </label>
                             <div class="form-addon">
                                 <input type="number" id="travaux-m2" class="form-input" value="400" step="10">
                                 <span class="form-addon-text">€/m²</span>
@@ -1511,7 +1581,10 @@
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label" for="commission-immo">Commission immobilière</label>
+                        <label class="form-label" for="commission-immo">
+                            Commission immobilière
+                            <i class="fas fa-info-circle info-tooltip" title="Commission de l'agence immobilière, généralement 5-6% du prix"></i>
+                        </label>
                         <div class="form-addon">
                             <input type="number" id="commission-immo" class="form-input" value="5" step="0.1">
                             <span class="form-addon-text">%</span>
@@ -1897,10 +1970,52 @@
                 </div>
             </div>
             
-            <!-- Bouton pour afficher le guide explicatif -->
-            <button id="btn-guide-cashflow" class="btn btn-outline guide-button">
-                <i class="fas fa-question-circle"></i> Comprendre le cash-flow
-            </button>
+            <!-- Guide explicatif (un seul bouton placé stratégiquement) -->
+            <div class="text-center mt-4">
+                <button id="btn-guide-cashflow" class="btn btn-outline guide-button">
+                    <i class="fas fa-info-circle"></i> Comprendre le cash-flow
+                </button>
+            </div>
+        </div>
+        
+        <!-- Projections de revente (dans un style amélioré) -->
+        <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg transition-all mt-4" id="scenarios-card">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h2 class="card-title">Projections de revente</h2>
+            </div>
+            
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">Horizon de sortie</label>
+                    <select id="horizon-revente" class="form-input">
+                        <option value="5">5 ans</option>
+                        <option value="10">10 ans</option>
+                        <option value="15">15 ans</option>
+                        <option value="20" selected>20 ans</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Appréciation annuelle</label>
+                    <div class="form-addon">
+                        <input type="number" id="appreciation-annuelle" class="form-input" value="2" step="0.1">
+                        <span class="form-addon-text">%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center">
+                <button id="btn-calculer-scenarios" class="btn btn-primary mt-3">
+                    <i class="fas fa-calculator"></i> Calculer les projections
+                </button>
+            </div>
+            
+            <div id="resultats-scenarios" class="mt-4" style="display: none;">
+                <!-- Les résultats seront affichés ici -->
+            </div>
         </div>
         
         <!-- Guide explicatif du cash-flow (masqué par défaut) -->
@@ -2089,7 +2204,7 @@
                         cashFlowExplanation.scrollIntoView({ behavior: 'smooth' });
                         btnGuideCashflow.innerHTML = '<i class="fas fa-times-circle"></i> Masquer le guide';
                     } else {
-                        btnGuideCashflow.innerHTML = '<i class="fas fa-question-circle"></i> Comprendre le cash-flow';
+                        btnGuideCashflow.innerHTML = '<i class="fas fa-info-circle"></i> Comprendre le cash-flow';
                     }
                 });
             }
