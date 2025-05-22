@@ -1,6 +1,6 @@
 /* === AMÉLIORATION CSS POUR IMMOSIM.HTML === */
 /* Version optimisée basée sur feedback technique */
-/* v1.2 - Améliorations section Mode de calcul */
+/* v1.3 - Fix duplication icônes d'information */
 
 :root {
     /* === SYSTÈME DE COULEURS COHÉRENT === */
@@ -37,6 +37,27 @@
     font-size: 0.95rem;
     color: rgba(255, 255, 255, 0.95); /* 🔥 Amélioré: Plus contrasté */
     transition: var(--transition);
+}
+
+/* 🔥 NOUVEAU: Fix pour éviter la duplication des icônes d'information */
+.form-label .info-tooltip:not(:first-of-type) {
+    display: none !important;
+}
+
+/* Alternative plus robuste */
+.form-label {
+    position: relative;
+}
+
+.form-label .info-tooltip {
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+/* Masquer les icônes dupliquées */
+.form-label .info-tooltip ~ .info-tooltip {
+    display: none !important;
 }
 
 .form-input {
@@ -633,20 +654,41 @@
 
 /* === 🔥 NOUVELLES AMÉLIORATIONS POST-INTÉGRATION === */
 
-/* Amélioration des tooltips d'information */
+/* 🔥 NOUVEAU: Amélioration des tooltips d'information + Fix duplication */
 .info-tooltip {
     color: var(--primary-color);
     font-size: 0.85rem;
     cursor: help;
     margin-left: 0.5rem;
     opacity: 0.8;
-    transition: opacity 0.2s;
+    transition: opacity 0.2s, transform 0.2s;
     position: relative;
+    display: inline-block;
 }
 
 .info-tooltip:hover {
     opacity: 1;
     transform: scale(1.1);
+}
+
+/* 🔥 FIX PRINCIPAL: Éviter la duplication des icônes */
+.form-label {
+    position: relative;
+    padding-right: 2rem; /* Espace pour l'icône */
+}
+
+/* Positionner la première icône de manière absolue */
+.form-label .info-tooltip:first-of-type {
+    position: absolute;
+    right: 0;
+    top: 0;
+    margin-left: 0;
+}
+
+/* Masquer complètement toutes les icônes suivantes */
+.form-label .info-tooltip:not(:first-of-type) {
+    display: none !important;
+    visibility: hidden !important;
 }
 
 /* Amélioration des checkboxes */
@@ -682,4 +724,21 @@ input[type="radio"] {
 /* Amélioration des états de focus pour les mode cards */
 .mode-option:focus-within .mode-card {
     box-shadow: 0 0 0 2px var(--primary-color);
+}
+
+/* 🔥 NOUVEAU: Nettoyage pour éviter les éléments orphelins */
+.form-group::after {
+    content: '';
+    display: table;
+    clear: both;
+}
+
+/* Assurer qu'une seule icône info est visible par label */
+.form-label > .info-tooltip ~ * {
+    position: relative;
+}
+
+/* Style de sécurité pour masquer les éléments dupliqués */
+[data-duplicate="true"] {
+    display: none !important;
 }
