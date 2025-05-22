@@ -24,49 +24,9 @@ class ImmoUIFixes {
         this.improveFormSpacing();
         this.enhanceVilleSelection();
         this.addAnimations();
-        this.fixExistingRadioButtons();
+        this.optimizePerformance();
         
         console.log('✅ Corrections d\'interface appliquées');
-    }
-    
-    /**
-     * Corrige la sélection du mode de calcul existant
-     */
-    fixExistingRadioButtons() {
-        // Corriger les boutons radio existants
-        const existingRadios = document.querySelectorAll('input[name="calculation-mode"]');
-        const existingLabels = document.querySelectorAll('label[for*="mode-"]');
-        
-        existingRadios.forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                // Retirer les styles de tous les labels
-                existingLabels.forEach(label => {
-                    const btn = label.querySelector('.option-btn');
-                    if (btn) {
-                        btn.style.backgroundColor = 'rgba(1, 42, 74, 0.5)';
-                        btn.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                        btn.style.color = 'rgba(255, 255, 255, 0.9)';
-                    }
-                });
-                
-                // Appliquer le style au label sélectionné
-                const selectedLabel = document.querySelector(`label[for="${e.target.id}"]`);
-                if (selectedLabel) {
-                    const btn = selectedLabel.querySelector('.option-btn');
-                    if (btn) {
-                        btn.style.backgroundColor = 'rgba(0, 255, 135, 0.15)';
-                        btn.style.borderColor = 'var(--primary-color)';
-                        btn.style.color = 'var(--primary-color)';
-                        btn.style.boxShadow = '0 0 0 2px rgba(0, 255, 135, 0.3)';
-                    }
-                }
-            });
-            
-            // Appliquer le style initial si le radio est coché
-            if (radio.checked) {
-                radio.dispatchEvent(new Event('change'));
-            }
-        });
     }
     
     /**
@@ -75,6 +35,12 @@ class ImmoUIFixes {
     fixCalculationModeSelection() {
         const calculationOptions = document.querySelectorAll('.calculation-option');
         const radioInputs = document.querySelectorAll('input[name="calculation-mode"]');
+        
+        if (calculationOptions.length === 0) {
+            console.log('ℹ️ Aucune option de calcul trouvée, application des corrections de base...');
+            this.applyBasicModeCalculationFixes();
+            return;
+        }
         
         // Gestion du clic sur les options
         calculationOptions.forEach(option => {
@@ -93,6 +59,12 @@ class ImmoUIFixes {
                     // Déclencher l'événement change pour la compatibilité
                     radio.dispatchEvent(new Event('change', { bubbles: true }));
                 }
+                
+                // Animation de feedback
+                option.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    option.style.transform = '';
+                }, 150);
             });
         });
         
@@ -111,6 +83,62 @@ class ImmoUIFixes {
     }
     
     /**
+     * Applique des corrections de base pour le mode de calcul si les nouveaux styles ne sont pas présents
+     */
+    applyBasicModeCalculationFixes() {
+        // Rechercher les éléments du mode de calcul existant
+        const modeRadios = document.querySelectorAll('input[name="calculation-mode"]');
+        
+        if (modeRadios.length > 0) {
+            modeRadios.forEach(radio => {
+                const parent = radio.closest('label') || radio.parentElement;
+                if (parent) {
+                    // Améliorer l'espacement et l'affichage
+                    parent.style.display = 'block';
+                    parent.style.marginBottom = '1rem';
+                    parent.style.padding = '1rem';
+                    parent.style.borderRadius = '0.5rem';
+                    parent.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+                    parent.style.backgroundColor = 'rgba(1, 42, 74, 0.3)';
+                    parent.style.cursor = 'pointer';
+                    parent.style.transition = 'all 0.3s ease';
+                    
+                    // Événements hover
+                    parent.addEventListener('mouseenter', () => {
+                        parent.style.borderColor = 'rgba(0, 255, 135, 0.3)';
+                        parent.style.backgroundColor = 'rgba(0, 255, 135, 0.05)';
+                    });
+                    
+                    parent.addEventListener('mouseleave', () => {
+                        if (!radio.checked) {
+                            parent.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                            parent.style.backgroundColor = 'rgba(1, 42, 74, 0.3)';
+                        }
+                    });
+                    
+                    // État sélectionné
+                    radio.addEventListener('change', () => {
+                        // Réinitialiser tous les parents
+                        modeRadios.forEach(r => {
+                            const p = r.closest('label') || r.parentElement;
+                            if (p && !r.checked) {
+                                p.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                p.style.backgroundColor = 'rgba(1, 42, 74, 0.3)';
+                            }
+                        });
+                        
+                        // Appliquer le style sélectionné
+                        if (radio.checked) {
+                            parent.style.borderColor = 'var(--primary-color)';
+                            parent.style.backgroundColor = 'rgba(0, 255, 135, 0.1)';
+                        }
+                    });
+                }
+            });
+        }
+    }
+    
+    /**
      * Améliore l'espacement des formulaires
      */
     improveFormSpacing() {
@@ -118,44 +146,25 @@ class ImmoUIFixes {
         const formGroups = document.querySelectorAll('.form-group');
         formGroups.forEach(group => {
             group.classList.add('improved-spacing');
+            // Assurer un espacement minimum
+            if (!group.style.marginBottom || parseInt(group.style.marginBottom) < 24) {
+                group.style.marginBottom = '2rem';
+            }
         });
         
         // Améliorer l'affichage des tooltips
-        const tooltips = document.querySelectorAll('.info-tooltip');
+        const tooltips = document.querySelectorAll('.info-tooltip, [title]');
         tooltips.forEach(tooltip => {
-            tooltip.addEventListener('mouseenter', this.showTooltip);
-            tooltip.addEventListener('mouseleave', this.hideTooltip);
+            tooltip.addEventListener('mouseenter', (e) => this.showTooltip(e));
+            tooltip.addEventListener('mouseleave', (e) => this.hideTooltip(e));
         });
         
-        // Corriger l'espacement des éléments qui se chevauchent
-        this.fixOverlappingElements();
-    }
-    
-    /**
-     * Corrige les éléments qui se chevauchent
-     */
-    fixOverlappingElements() {
-        // Corriger le mode de calcul existant
-        const existingModeSection = document.querySelector('.flex.flex-col.gap-3');
-        if (existingModeSection) {
-            existingModeSection.style.gap = '1rem';
-            
-            const modeOptions = existingModeSection.querySelectorAll('.flex.items-center.cursor-pointer');
-            modeOptions.forEach(option => {
-                option.style.padding = '1rem';
-                option.style.marginBottom = '0.5rem';
-                option.style.border = '1px solid rgba(255, 255, 255, 0.1)';
-                option.style.borderRadius = '0.5rem';
-                option.style.minHeight = '80px';
-                option.style.alignItems = 'flex-start';
-            });
-        }
-        
-        // Améliorer l'espacement des descriptions
-        const descriptions = document.querySelectorAll('.text-sm.opacity-80');
-        descriptions.forEach(desc => {
-            desc.style.lineHeight = '1.4';
-            desc.style.marginTop = '0.5rem';
+        // Améliorer l'espacement des cartes
+        const cards = document.querySelectorAll('.card');
+        cards.forEach(card => {
+            if (!card.style.marginBottom || parseInt(card.style.marginBottom) < 32) {
+                card.style.marginBottom = '2rem';
+            }
         });
     }
     
@@ -168,17 +177,28 @@ class ImmoUIFixes {
         
         // Améliorer l'affichage de la recherche de ville
         if (villeSearch) {
+            const container = villeSearch.closest('.search-container');
+            
             villeSearch.addEventListener('focus', () => {
-                const container = villeSearch.closest('.search-container');
                 if (container) {
                     container.classList.add('focused');
                 }
             });
             
             villeSearch.addEventListener('blur', () => {
-                const container = villeSearch.closest('.search-container');
                 if (container) {
                     container.classList.remove('focused');
+                }
+            });
+            
+            // Améliorer l'accessibilité
+            villeSearch.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    villeSearch.blur();
+                    const suggestions = document.getElementById('ville-suggestions');
+                    if (suggestions) {
+                        suggestions.style.display = 'none';
+                    }
                 }
             });
         }
@@ -191,6 +211,14 @@ class ImmoUIFixes {
                 setTimeout(() => {
                     btn.style.transform = '';
                 }, 150);
+            });
+            
+            // Améliorer l'accessibilité
+            btn.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    btn.click();
+                }
             });
         });
     }
@@ -209,28 +237,55 @@ class ImmoUIFixes {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     entry.target.classList.add('fade-in-up');
+                    // Observer une seule fois
+                    observer.unobserve(entry.target);
                 }
             });
         }, observerOptions);
         
-        // Observer les cartes et sections
-        const elementsToAnimate = document.querySelectorAll('.card, .ville-info-selected');
-        elementsToAnimate.forEach(el => observer.observe(el));
+        // Observer les cartes et sections importantes
+        const elementsToAnimate = document.querySelectorAll('.card, .ville-info-selected, .results-card');
+        elementsToAnimate.forEach(el => {
+            if (el.getBoundingClientRect().top > window.innerHeight) {
+                observer.observe(el);
+            } else {
+                // Déjà visible, animer immédiatement
+                el.classList.add('fade-in-up');
+            }
+        });
     }
     
     /**
      * Affiche un tooltip amélioré
      */
     showTooltip(e) {
-        const tooltip = e.target;
-        const rect = tooltip.getBoundingClientRect();
+        const element = e.target;
+        const tooltipText = element.getAttribute('title') || 
+                           element.getAttribute('data-tooltip') ||
+                           element.querySelector('[title]')?.getAttribute('title');
         
-        // Créer un tooltip personnalisé si nécessaire
-        if (!tooltip.querySelector('.custom-tooltip')) {
+        if (!tooltipText) return;
+        
+        // Supprimer l'attribut title pour éviter le tooltip natif
+        if (element.hasAttribute('title')) {
+            element.setAttribute('data-original-title', element.getAttribute('title'));
+            element.removeAttribute('title');
+        }
+        
+        // Créer un tooltip personnalisé
+        if (!element.querySelector('.custom-tooltip')) {
             const customTooltip = document.createElement('div');
             customTooltip.className = 'custom-tooltip';
-            customTooltip.textContent = tooltip.getAttribute('title') || tooltip.getAttribute('data-tooltip');
-            tooltip.appendChild(customTooltip);
+            customTooltip.textContent = tooltipText;
+            
+            // Positionner le tooltip
+            element.style.position = 'relative';
+            element.appendChild(customTooltip);
+            
+            // Animation d'apparition
+            setTimeout(() => {
+                customTooltip.style.opacity = '1';
+            }, 10);
         }
     }
     
@@ -238,9 +293,23 @@ class ImmoUIFixes {
      * Cache un tooltip
      */
     hideTooltip(e) {
-        const customTooltip = e.target.querySelector('.custom-tooltip');
+        const element = e.target;
+        const customTooltip = element.querySelector('.custom-tooltip');
+        
         if (customTooltip) {
-            customTooltip.remove();
+            customTooltip.style.opacity = '0';
+            setTimeout(() => {
+                if (customTooltip.parentNode) {
+                    customTooltip.remove();
+                }
+            }, 200);
+        }
+        
+        // Restaurer l'attribut title original
+        const originalTitle = element.getAttribute('data-original-title');
+        if (originalTitle) {
+            element.setAttribute('title', originalTitle);
+            element.removeAttribute('data-original-title');
         }
     }
     
@@ -256,6 +325,9 @@ class ImmoUIFixes {
                 this.adjustLayoutForScreen();
             }, 250);
         });
+        
+        // Ajustement initial
+        this.adjustLayoutForScreen();
     }
     
     /**
@@ -263,65 +335,148 @@ class ImmoUIFixes {
      */
     adjustLayoutForScreen() {
         const isMobile = window.innerWidth < 768;
+        const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
         const container = document.querySelector('.container');
         
         if (container) {
+            // Supprimer toutes les classes de layout
+            container.classList.remove('mobile-layout', 'tablet-layout', 'desktop-layout');
+            
+            // Ajouter la classe appropriée
             if (isMobile) {
                 container.classList.add('mobile-layout');
+            } else if (isTablet) {
+                container.classList.add('tablet-layout');
             } else {
-                container.classList.remove('mobile-layout');
+                container.classList.add('desktop-layout');
             }
+        }
+        
+        // Ajuster les grids pour mobile
+        if (isMobile) {
+            const grids = document.querySelectorAll('.grid-2');
+            grids.forEach(grid => {
+                grid.style.gridTemplateColumns = '1fr';
+                grid.style.gap = '1rem';
+            });
         }
     }
     
     /**
-     * Corrige les problèmes spécifiques d'affichage
+     * Ajoute des améliorations d'accessibilité
      */
-    fixSpecificDisplayIssues() {
-        // Corriger les problèmes de z-index
-        const sidebar = document.querySelector('.sidebar');
-        const header = document.querySelector('.main-header');
-        const suggestions = document.querySelector('.ville-suggestions');
+    enhanceAccessibility() {
+        // Améliorer la navigation au clavier
+        const interactiveElements = document.querySelectorAll('button, input, select, textarea, [tabindex]');
         
-        if (sidebar) sidebar.style.zIndex = '100';
-        if (header) header.style.zIndex = '50';
-        if (suggestions) suggestions.style.zIndex = '1000';
-        
-        // Corriger la largeur des conteneurs
-        const modeInfoBanner = document.querySelector('.mode-info-banner');
-        if (modeInfoBanner) {
-            modeInfoBanner.style.marginBottom = '2rem';
-        }
-        
-        // Améliorer la lisibilité
-        const descriptions = document.querySelectorAll('.calculation-description, .text-sm.opacity-80');
-        descriptions.forEach(desc => {
-            desc.style.wordWrap = 'break-word';
-            desc.style.hyphens = 'auto';
+        interactiveElements.forEach(element => {
+            // Assurer que les éléments focusables ont un outline visible
+            element.addEventListener('focus', () => {
+                if (!element.style.outline || element.style.outline === 'none') {
+                    element.style.outline = '2px solid var(--primary-color)';
+                    element.style.outlineOffset = '2px';
+                }
+            });
+            
+            element.addEventListener('blur', () => {
+                if (element.style.outline === '2px solid var(--primary-color)') {
+                    element.style.outline = '';
+                    element.style.outlineOffset = '';
+                }
+            });
         });
+        
+        // Améliorer les labels et descriptions
+        const inputs = document.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            if (!input.getAttribute('aria-label') && !input.getAttribute('aria-labelledby')) {
+                const label = document.querySelector(`label[for="${input.id}"]`);
+                if (label) {
+                    input.setAttribute('aria-labelledby', label.id || `label-${input.id}`);
+                    if (!label.id) {
+                        label.id = `label-${input.id}`;
+                    }
+                }
+            }
+        });
+    }
+    
+    /**
+     * Gestion des états de chargement
+     */
+    addLoadingStates() {
+        const simulateButton = document.getElementById('btn-simulate');
+        
+        if (simulateButton) {
+            // Sauvegarder le texte original
+            const originalText = simulateButton.innerHTML;
+            
+            simulateButton.addEventListener('click', () => {
+                // État de chargement
+                simulateButton.classList.add('loading-state');
+                simulateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calcul en cours...';
+                simulateButton.disabled = true;
+                
+                // Réinitialiser après un délai (sera remplacé par la vraie logique)
+                setTimeout(() => {
+                    simulateButton.classList.remove('loading-state');
+                    simulateButton.innerHTML = originalText;
+                    simulateButton.disabled = false;
+                }, 2000);
+            });
+        }
     }
 }
 
 // Initialisation automatique
 document.addEventListener('DOMContentLoaded', () => {
     window.immoUIFixes = new ImmoUIFixes();
-    
-    // Appliquer aussi les corrections spécifiques
-    if (window.immoUIFixes) {
-        window.immoUIFixes.fixSpecificDisplayIssues();
-        window.immoUIFixes.optimizePerformance();
-    }
 });
+
+// Initialisation immédiate si le DOM est déjà chargé
+if (document.readyState !== 'loading') {
+    window.immoUIFixes = new ImmoUIFixes();
+}
 
 // Export pour compatibilité
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ImmoUIFixes;
 }
 
-// Fonction utilitaire pour forcer la correction
-window.forceUIFix = function() {
-    if (window.immoUIFixes) {
-        window.immoUIFixes.applyFixes();
-        console.log('🔧 Corrections d\'interface forcées');
+// Fonctions utilitaires globales
+window.ImmoUIUtils = {
+    /**
+     * Force le recalcul du layout
+     */
+    recalculateLayout() {
+        if (window.immoUIFixes) {
+            window.immoUIFixes.adjustLayoutForScreen();
+        }
+    },
+    
+    /**
+     * Réinitialise les animations
+     */
+    resetAnimations() {
+        const animatedElements = document.querySelectorAll('.fade-in-up');
+        animatedElements.forEach(el => {
+            el.classList.remove('fade-in-up');
+            setTimeout(() => el.classList.add('fade-in-up'), 100);
+        });
+    },
+    
+    /**
+     * Active le mode debug pour voir les corrections appliquées
+     */
+    debugMode(enable = true) {
+        if (enable) {
+            document.documentElement.style.setProperty('--debug-border', '1px solid red');
+            console.log('🐛 Mode debug activé - bordures rouges sur les éléments corrigés');
+        } else {
+            document.documentElement.style.removeProperty('--debug-border');
+            console.log('🐛 Mode debug désactivé');
+        }
     }
 };
+
+console.log('🚀 ImmoUIFixes initialisé avec succès');
