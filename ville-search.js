@@ -31,17 +31,12 @@ class VilleSearchManager {
             const response = await fetch('./data/villes-data.json');
             
             if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
+                throw new Error(`Erreur HTTP: ${response.status}`);
             }
             
             this.villesData = await response.json();
-            console.log('✅ Données des villes chargées: Base de données complète');
+            console.log('✅ Données des villes chargées:', this.villesData.meta || 'Base de données complète');
             console.log(`🏠 ${this.villesData.villes.length} villes disponibles`);
-            
-            // Debug : afficher quelques villes pour vérifier
-            console.log('📍 Exemples de villes chargées:', 
-                this.villesData.villes.slice(0, 5).map(v => v.nom)
-            );
             
         } catch (error) {
             console.warn('⚠️ Erreur lors du chargement des données des villes:', error.message);
@@ -111,20 +106,10 @@ class VilleSearchManager {
                             "T4": {prix_m2: 3226, loyer_m2: 13.40},
                             "T5": {prix_m2: 3000, loyer_m2: 13.40}
                         }
-                    },
-                    {
-                        nom: "Saint-Cloud",
-                        departement: "92",
-                        pieces: {
-                            "T1": {prix_m2: 6792, loyer_m2: 29.6},
-                            "T2": {prix_m2: 6552, loyer_m2: 29.6},
-                            "T3": {prix_m2: 5828, loyer_m2: 26.21},
-                            "T4": {prix_m2: 5146, loyer_m2: 26.21}
-                        }
                     }
                 ],
                 meta: {
-                    total_villes: 7,
+                    total_villes: 6,
                     note: "Données de test - Erreur de chargement du fichier principal : " + error.message
                 }
             };
@@ -165,15 +150,6 @@ class VilleSearchManager {
         console.log('✅ Événements initialisés');
     }
     
-    // ✅ AMÉLIORATION : Fonction de normalisation des chaînes
-    normalizeString(str) {
-        return str.toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '') // Enlever les accents
-            .replace(/[^a-z0-9\s-]/g, '') // Garder uniquement lettres, chiffres, espaces et tirets
-            .trim();
-    }
-    
     handleSearch(searchTerm) {
         const suggestions = document.getElementById('ville-suggestions');
         
@@ -182,40 +158,15 @@ class VilleSearchManager {
             return;
         }
         
-        if (!this.villesData || !this.villesData.villes) {
-            console.warn('⚠️ Données de villes non disponibles pour la recherche');
-            return;
-        }
-        
-        console.log('🔍 Recherche pour:', searchTerm, 'dans', this.villesData.villes.length, 'villes');
-        
-        // ✅ AMÉLIORATION : Recherche avec normalisation
-        const normalizedSearch = this.normalizeString(searchTerm);
-        
-        const matches = this.villesData.villes.filter(ville => {
-            const normalizedNom = this.normalizeString(ville.nom);
-            const match = normalizedNom.includes(normalizedSearch);
-            
-            // Debug pour voir ce qui est comparé
-            if (normalizedSearch.includes('saint') && normalizedNom.includes('saint')) {
-                console.log('🏛️ Comparaison:', {
-                    original: ville.nom,
-                    normalized: normalizedNom,
-                    search: normalizedSearch,
-                    match: match
-                });
-            }
-            
-            return match;
-        });
-        
-        console.log('✅ Résultats trouvés:', matches.length, matches.map(v => v.nom));
+        // Recherche dans les données
+        const matches = this.villesData.villes.filter(ville =>
+            ville.nom.toLowerCase().includes(searchTerm.toLowerCase())
+        );
         
         if (matches.length > 0) {
             this.displaySuggestions(matches.slice(0, 8)); // Limiter à 8 résultats
             suggestions.style.display = 'block';
         } else {
-            console.log('❌ Aucune ville trouvée pour:', searchTerm);
             suggestions.style.display = 'none';
         }
     }
@@ -439,3 +390,107 @@ class VilleSearchManager {
             meta: this.villesData.meta || null,
             selected_ville: this.selectedVille?.nom || null,
             selected_piece: this.selectedPiece || null,
+            manual_mode: this.manualMode
+        };
+    }
+}
+
+// === INTÉGRATION AVEC LE SIMULATEUR EXISTANT ===
+
+// Modifier la fonction de simulation existante
+function integrateWithExistingSimulator() {
+    // Attendre que le DOM soit chargé
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', integrateWithExistingSimulator);
+        return;
+    }
+    
+    // Vérifier si le bouton de simulation existe
+    const btnSimulate = document.getElementById('btn-simulate');
+    if (!btnSimulate) {
+        console.warn('⚠️ Bouton de simulation non trouvé');
+        return;
+    }
+    
+    // Sauvegarder la fonction de simulation originale si elle existe
+    const originalSimulateFunction = window.simuler || function() {
+        console.log('🔄 Fonction de simulation par défaut appelée');
+    };
+    
+    // Créer une nouvelle fonction de simulation qui intègre les données de ville
+    window.simulerAvecVilleData = function() {
+        console.log('🚀 Lancement de la simulation avec données de ville...');
+        
+        const villeData = window.villeSearchManager?.getSelectedVilleData();
+        
+        if (villeData) {
+            console.log('🏙️ Simulation avec données de ville:', villeData);
+            
+            // Afficher les informations dans les résultats
+            const resultsSection = document.getElementById('results');
+            if (resultsSection && !resultsSection.classList.contains('hidden')) {
+                // Ajouter info sur la ville utilisée
+                let villeInfo = document.getElementById('ville-used-info');
+                if (!villeInfo) {
+                    villeInfo = document.createElement('div');
+                    villeInfo.id = 'ville-used-info';
+                    villeInfo.className = 'info-message mb-4';
+                    villeInfo.innerHTML = `
+                        <div class="text-lg text-green-400 mr-3">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-medium mb-1">Simulation basée sur les données de ${villeData.ville}</h4>
+                            <p class="text-sm opacity-90">Type: ${villeData.piece} • Prix: ${villeData.prix_m2}€/m² • Loyer: ${villeData.loyer_m2}€/m²/mois</p>
+                        </div>
+                    `;
+                    resultsSection.insertBefore(villeInfo, resultsSection.firstChild);
+                }
+            }
+        } else {
+            console.log('📝 Simulation avec données manuelles');
+        }
+        
+        // Appeler la fonction de simulation originale
+        return originalSimulateFunction();
+    };
+    
+    // Remplacer la fonction de simulation
+    window.simuler = window.simulerAvecVilleData;
+    
+    console.log('✅ Intégration avec le simulateur existant terminée');
+}
+
+// === INITIALISATION ===
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🏠 Initialisation du système de recherche de ville...');
+    
+    // Initialiser le gestionnaire de recherche
+    window.villeSearchManager = new VilleSearchManager();
+    
+    // Intégrer avec le simulateur existant
+    integrateWithExistingSimulator();
+    
+    console.log('✅ Système de recherche de ville initialisé');
+});
+
+// === EXPORT POUR COMPATIBILITÉ ===
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { VilleSearchManager };
+}
+
+// === FONCTIONS UTILITAIRES ===
+
+// Fonction pour debug - afficher les stats
+window.showVilleStats = function() {
+    if (window.villeSearchManager) {
+        console.table(window.villeSearchManager.getStats());
+    }
+};
+
+// Fonction pour forcer la mise à jour des données
+window.refreshVilleData = function() {
+    if (window.villeSearchManager) {
+        window.villeSearchManager.loadVillesData();
+    }
+};
