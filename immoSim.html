@@ -1183,6 +1183,115 @@
         .text-center {
             text-align: center;
         }
+
+        /* === NOUVEAUX STYLES POUR LA RECHERCHE DE VILLE === */
+        .search-container {
+            position: relative;
+        }
+
+        .ville-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: rgba(1, 42, 74, 0.95);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            border-radius: 0.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .ville-suggestion {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.2s;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .ville-suggestion:hover {
+            background-color: rgba(0, 255, 135, 0.1);
+        }
+
+        .ville-suggestion:last-child {
+            border-bottom: none;
+        }
+
+        .ville-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ville-nom {
+            font-weight: 600;
+            color: white;
+        }
+
+        .ville-dept {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .ville-types-info {
+            text-align: right;
+            font-size: 0.85rem;
+        }
+
+        .ville-types-count {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .ville-info-selected {
+            background-color: rgba(0, 255, 135, 0.1);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .piece-selector {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+
+        .piece-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background-color: transparent;
+            color: white;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .piece-btn.active {
+            background-color: var(--primary-color);
+            color: var(--background-dark);
+            border-color: var(--primary-color);
+        }
+
+        .piece-btn:hover:not(.active) {
+            background-color: rgba(0, 255, 135, 0.1);
+            border-color: rgba(0, 255, 135, 0.3);
+        }
+
+        .ville-search-enhanced {
+            background-color: rgba(0, 255, 135, 0.1) !important;
+            border-color: var(--primary-color) !important;
+        }
+
+        .manual-mode .form-input {
+            background-color: rgba(1, 42, 74, 0.6) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
     </style>
 </head>
 <body>
@@ -1270,17 +1379,17 @@
     <div class="container">
         <div class="page-title">
             <h1>Simulateur d'Investissement Immobilier</h1>
-            <div class="subtitle">Comparez achat classique et vente aux enchères</div>
+            <div class="subtitle">Comparez achat classique et vente aux enchères avec vos données réelles</div>
         </div>
 
         <!-- Banner explicative du mode 100% marché -->
         <div class="mode-info-banner fade-in">
             <div class="mode-info-icon">
-                <i class="fas fa-info-circle"></i>
+                <i class="fas fa-database"></i>
             </div>
             <div class="mode-info-content">
-                <h3>Mode 100% marché avec deux critères de calcul</h3>
-                <p>Ce simulateur fonctionne avec les données réelles du marché : prix d'achat au m² et loyer au m². Choisissez entre deux critères pour calculer votre surface maximale autofinancée : "Loyer ≥ Mensualité" ou "Cash-flow positif".</p>
+                <h3>Mode 100% marché avec base de données réelle</h3>
+                <p>Ce simulateur utilise une base de données de plus de 1000 villes françaises avec prix réels au m² et loyers. Recherchez votre ville pour obtenir des estimations précises ou saisissez vos propres données.</p>
             </div>
         </div>
         
@@ -1305,6 +1414,45 @@
             </div>
             
             <div class="grid grid-2">
+                <!-- NOUVEAU: Recherche de ville -->
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label class="form-label" for="ville-search">
+                        Rechercher une ville
+                        <i class="fas fa-info-circle info-tooltip" title="Tapez le nom de votre ville pour auto-remplir les prix et loyers"></i>
+                    </label>
+                    <div class="search-container">
+                        <input type="text" id="ville-search" class="form-input" placeholder="Ex: Lyon, Paris, Marseille..." autocomplete="off">
+                        <div id="ville-suggestions" class="ville-suggestions" style="display: none;"></div>
+                    </div>
+                    
+                    <!-- Informations ville sélectionnée -->
+                    <div id="ville-selected-info" class="ville-info-selected" style="display: none;">
+                        <h4 style="margin: 0 0 0.5rem 0; color: var(--primary-color);">
+                            <i class="fas fa-map-marker-alt"></i> <span id="ville-nom"></span>
+                        </h4>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <span>Département: <strong id="ville-dept"></strong></span>
+                            <span style="color: var(--primary-color);">Types disponibles: <strong id="ville-types"></strong></span>
+                        </div>
+                        
+                        <!-- Sélecteur de type de logement -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">Type de logement</label>
+                            <div id="piece-selector" class="piece-selector">
+                                <!-- Les boutons seront générés dynamiquement -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Option "Autre ville" -->
+                    <div style="margin-top: 1rem;">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" id="autre-ville-checkbox" style="margin-right: 0.5rem;">
+                            <span>Ma ville n'est pas dans la liste (saisie manuelle)</span>
+                        </label>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label" for="apport">
                         Apport disponible
@@ -2176,6 +2324,8 @@
     <script src="./immo-extensions.js"></script>
     <!-- Fixes pour les problèmes d'affichage -->
     <script src="./immo-fixes.js"></script>
+    <!-- NOUVEAU: Script pour la recherche de ville -->
+    <script src="./ville-search.js"></script>
     
     <!-- Script pour mettre à jour l'heure du marché -->
     <script>
