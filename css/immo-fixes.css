@@ -223,78 +223,115 @@
     }
 }
 
-/* Style pour les champs mis en évidence par la recherche de ville */
-.ville-search-enhanced {
-    background-color: rgba(0, 255, 135, 0.1) !important;
-    border-color: var(--primary-color) !important;
-    box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2) !important;
-}
-
-/* Corrections spécifiques pour le mode de calcul existant */
-.flex.flex-col.gap-3 .flex.items-center.cursor-pointer {
-    padding: 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+/* Custom tooltip styles */
+.custom-tooltip {
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(1, 42, 74, 0.95);
+    color: white;
+    padding: 0.5rem;
     border-radius: 0.5rem;
-    transition: all 0.3s ease;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    z-index: 1000;
+    border: 1px solid rgba(0, 255, 135, 0.3);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
 }
 
-.flex.flex-col.gap-3 .flex.items-center.cursor-pointer:hover {
-    background-color: rgba(0, 255, 135, 0.05);
-    border-color: rgba(0, 255, 135, 0.3);
+.custom-tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: rgba(1, 42, 74, 0.95) transparent transparent transparent;
 }
 
-/* Amélioration de la mise en page pour éviter les chevauchements */
-.grid.grid-2 {
-    gap: 1.5rem;
-}
-
-.grid.grid-2 .form-group {
-    min-height: 80px;
-}
-
-/* Style pour les boutons radio améliorés */
-input[type="radio"]:checked + .option-btn {
-    background-color: rgba(0, 255, 135, 0.15);
+/* Corrections spécifiques pour les checkboxes et radio buttons */
+input[type="radio"]:checked + .option-btn,
+input[type="checkbox"]:checked + .option-btn {
     border-color: var(--primary-color);
-    color: var(--primary-color);
-}
-
-.option-btn {
-    transition: all 0.3s ease;
-    padding: 1rem;
-    border-radius: 0.5rem;
-}
-
-.option-btn:hover {
     background-color: rgba(0, 255, 135, 0.1);
+    box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.3);
 }
 
-/* Correction pour les textes qui se chevauchent */
-.form-label {
-    margin-bottom: 0.75rem !important;
-    font-weight: 500;
-}
-
-.form-help {
-    margin-top: 0.5rem;
-    font-size: 0.85rem;
-    line-height: 1.4;
-}
-
-/* Amélioration des tooltips */
-.info-tooltip:hover {
-    color: var(--primary-color);
-}
-
-/* Style pour les résultats cachés */
-.hidden {
-    display: none !important;
-}
-
-/* Bouton simuler centré et mis en évidence */
+/* Amélioration des boutons */
 .btn-simulate {
-    margin: 2rem auto 0 auto;
+    margin: 2rem auto 0;
     display: block;
-    position: relative;
-    z-index: 1;
+    min-width: 200px;
+}
+
+/* Correction pour la section "Ma ville n'est pas dans la liste" */
+.search-container + div {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Amélioration des layouts sur mobile */
+@media (max-width: 1024px) {
+    .container {
+        padding: 1rem 0.5rem;
+    }
+    
+    .card {
+        padding: 1rem;
+    }
+    
+    .grid-2 {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
+
+/* Correction pour le focus des éléments interactifs */
+.search-container.focused .form-input {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 255, 135, 0.2);
+}
+
+/* Style pour les éléments en état de chargement */
+.loading-state {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.loading-state::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid var(--primary-color);
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Correction pour les boutons en layout mobile */
+.mobile-layout .piece-selector {
+    justify-content: center;
+}
+
+.mobile-layout .calculation-mode-container {
+    gap: 0.75rem;
+}
+
+.mobile-layout .calculation-option {
+    padding: 1rem;
 }
