@@ -6,6 +6,10 @@
     <title>ImmoSim - Simulateur d'Investissement Immobilier</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    
+    <!-- 🆕 CSS AMÉLIORÉ INTÉGRÉ -->
+    <link rel="stylesheet" href="css/immo-enhanced.css">
+    
     <style>
         :root {
             --primary-color: #00FF87;
@@ -357,11 +361,11 @@
             color: rgba(255, 255, 255, 0.6);
         }
         
-        .form-addon {
+        .form-input-wrapper {
             position: relative;
         }
         
-        .form-addon .form-input {
+        .form-input-wrapper .form-input {
             padding-right: 3rem;
         }
         
@@ -1458,7 +1462,7 @@
                         Apport disponible
                         <i class="fas fa-info-circle info-tooltip" title="Somme que vous pouvez investir initialement"></i>
                     </label>
-                    <div class="form-addon">
+                    <div class="form-input-wrapper">
                         <input type="number" id="apport" class="form-input" placeholder="20000" value="20000">
                         <span class="form-addon-text">€</span>
                     </div>
@@ -1469,7 +1473,7 @@
                         Prix au m² du marché
                         <i class="fas fa-info-circle info-tooltip" title="Prix moyen au mètre carré dans le secteur"></i>
                     </label>
-                    <div class="form-addon">
+                    <div class="form-input-wrapper">
                         <input type="number" id="prix-m2-marche" class="form-input highlight-field" value="2000" step="50">
                         <span class="form-addon-text">€/m²</span>
                     </div>
@@ -1480,7 +1484,7 @@
                         Loyer au m² du marché
                         <i class="fas fa-info-circle info-tooltip" title="Loyer mensuel par mètre carré dans le secteur"></i>
                     </label>
-                    <div class="form-addon">
+                    <div class="form-input-wrapper">
                         <input type="number" id="loyer-m2" class="form-input highlight-field" value="12" step="0.1">
                         <span class="form-addon-text">€/m²/mois</span>
                     </div>
@@ -1491,7 +1495,7 @@
                         Taux d'emprunt
                         <i class="fas fa-info-circle info-tooltip" title="Taux d'intérêt annuel du crédit immobilier"></i>
                     </label>
-                    <div class="form-addon">
+                    <div class="form-input-wrapper">
                         <input type="number" id="taux" class="form-input" placeholder="3.5" value="3.5" step="0.1">
                         <span class="form-addon-text">%</span>
                     </div>
@@ -1502,7 +1506,7 @@
                         Durée du prêt
                         <i class="fas fa-info-circle info-tooltip" title="Durée du prêt en années"></i>
                     </label>
-                    <div class="form-addon">
+                    <div class="form-input-wrapper">
                         <input type="number" id="duree" class="form-input" placeholder="20" value="20">
                         <span class="form-addon-text">ans</span>
                     </div>
@@ -1514,26 +1518,31 @@
             </div>
             
             <!-- Mode de calcul (version améliorée) -->
-            <div class="form-group mt-6 border-t border-gray-700 pt-4">
+            <div class="form-group">
                 <label class="form-label">Mode de calcul</label>
-                <div class="flex flex-col gap-3">
-                    <label class="flex items-center cursor-pointer">
-                        <input type="radio" name="calculation-mode" id="mode-loyer-mensualite" value="loyer-mensualite" checked class="form-radio hidden">
-                        <div class="option-btn p-3 rounded-lg flex items-center">
-                            <i class="fas fa-check-circle text-lg text-green-400 mr-3"></i>
-                            <div>
-                                <span class="font-medium">Loyer ≥ Mensualité</span>
-                                <p class="text-sm opacity-80 mt-1">Le loyer net couvre la mensualité du prêt</p>
+                <div class="calculation-mode-container">
+                    <label class="mode-option">
+                        <input type="radio" name="calculation-mode" id="mode-loyer-mensualite" value="loyer-mensualite" checked>
+                        <div class="mode-card">
+                            <div class="mode-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="mode-content">
+                                <h4>Loyer ≥ Mensualité</h4>
+                                <p>Le loyer net couvre la mensualité du prêt</p>
                             </div>
                         </div>
                     </label>
-                    <label class="flex items-center cursor-pointer">
-                        <input type="radio" name="calculation-mode" id="mode-cashflow-positif" value="cashflow-positif" class="form-radio hidden">
-                        <div class="option-btn p-3 rounded-lg flex items-center">
-                            <i class="fas fa-coins text-lg text-green-400 mr-3"></i>
-                            <div>
-                                <span class="font-medium">Cash-flow positif</span>
-                                <p class="text-sm opacity-80 mt-1">Toutes charges comprises (plus strict)</p>
+                    
+                    <label class="mode-option">
+                        <input type="radio" name="calculation-mode" id="mode-cashflow-positif" value="cashflow-positif">
+                        <div class="mode-card">
+                            <div class="mode-icon">
+                                <i class="fas fa-coins"></i>
+                            </div>
+                            <div class="mode-content">
+                                <h4>Cash-flow positif</h4>
+                                <p>Toutes charges comprises (plus strict)</p>
                             </div>
                         </div>
                     </label>
@@ -1578,7 +1587,7 @@
                                 Frais bancaires - dossier
                                 <i class="fas fa-info-circle info-tooltip" title="Frais de dossier facturés par la banque"></i>
                             </label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="frais-bancaires-dossier" class="form-input" value="2000">
                                 <span class="form-addon-text">€</span>
                             </div>
@@ -1589,7 +1598,7 @@
                                 Frais bancaires - tenue de compte
                                 <i class="fas fa-info-circle info-tooltip" title="Frais pour la tenue de compte pendant la durée du prêt"></i>
                             </label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="frais-bancaires-compte" class="form-input" value="710">
                                 <span class="form-addon-text">€</span>
                             </div>
@@ -1600,7 +1609,7 @@
                                 Frais de garantie (caution/PPD)
                                 <i class="fas fa-info-circle info-tooltip" title="Garantie du prêt, généralement un pourcentage du capital emprunté"></i>
                             </label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="frais-garantie" class="form-input" value="1.3709" step="0.0001">
                                 <span class="form-addon-text">%</span>
                             </div>
@@ -1611,7 +1620,7 @@
                                 Apport minimum exigé
                                 <i class="fas fa-info-circle info-tooltip" title="Pourcentage d'apport généralement exigé par les banques"></i>
                             </label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="pourcent-apport" class="form-input" value="10" min="5" max="30" step="1">
                                 <span class="form-addon-text">%</span>
                             </div>
@@ -1623,7 +1632,7 @@
                                 Taxe foncière
                                 <i class="fas fa-info-circle info-tooltip" title="Impôt local annuel en pourcentage de la valeur"></i>
                             </label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="taxe-fonciere" class="form-input" value="1" step="0.1">
                                 <span class="form-addon-text">%</span>
                             </div>
@@ -1634,7 +1643,7 @@
                                 Vacance locative
                                 <i class="fas fa-info-circle info-tooltip" title="Provision pour les périodes sans locataire"></i>
                             </label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="vacance-locative" class="form-input" value="5" step="1">
                                 <span class="form-addon-text">%</span>
                             </div>
@@ -1663,7 +1672,7 @@
                                 Travaux au m²
                                 <i class="fas fa-info-circle info-tooltip" title="Montant des travaux par m²"></i>
                             </label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="travaux-m2" class="form-input" value="400" step="10">
                                 <span class="form-addon-text">€/m²</span>
                             </div>
@@ -1681,7 +1690,7 @@
                     <div class="grid grid-3">
                         <div class="form-group">
                             <label class="form-label" for="publicite-fonciere">Publicité foncière</label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="publicite-fonciere" class="form-input" value="0.72" step="0.01">
                                 <span class="form-addon-text">%</span>
                             </div>
@@ -1689,7 +1698,7 @@
                         
                         <div class="form-group">
                             <label class="form-label" for="droits-mutation">Droits de mutation</label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="droits-mutation" class="form-input" value="5.81" step="0.01">
                                 <span class="form-addon-text">%</span>
                             </div>
@@ -1697,7 +1706,7 @@
                         
                         <div class="form-group">
                             <label class="form-label" for="securite-immobiliere">Sécurité immobilière</label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="securite-immobiliere" class="form-input" value="0.10" step="0.01">
                                 <span class="form-addon-text">%</span>
                             </div>
@@ -1705,7 +1714,7 @@
                         
                         <div class="form-group">
                             <label class="form-label" for="emoluments-vente">Émoluments / frais de vente</label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="emoluments-vente" class="form-input" value="1.12" step="0.01">
                                 <span class="form-addon-text">%</span>
                             </div>
@@ -1713,7 +1722,7 @@
                         
                         <div class="form-group">
                             <label class="form-label" for="formalites">Formalités</label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="formalites" class="form-input" value="0.28" step="0.01">
                                 <span class="form-addon-text">%</span>
                             </div>
@@ -1721,7 +1730,7 @@
                         
                         <div class="form-group">
                             <label class="form-label" for="debours">Débours</label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="debours" class="form-input" value="0.13" step="0.01">
                                 <span class="form-addon-text">%</span>
                             </div>
@@ -1733,7 +1742,7 @@
                             Commission immobilière
                             <i class="fas fa-info-circle info-tooltip" title="Commission de l'agence immobilière, généralement 5-6% du prix"></i>
                         </label>
-                        <div class="form-addon">
+                        <div class="form-input-wrapper">
                             <input type="number" id="commission-immo" class="form-input" value="5" step="0.1">
                             <span class="form-addon-text">%</span>
                         </div>
@@ -1745,7 +1754,7 @@
                     <div class="grid grid-2">
                         <div class="form-group">
                             <label class="form-label" for="droits-enregistrement">Droits d'enregistrement</label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="droits-enregistrement" class="form-input" value="5.70" step="0.01">
                                 <span class="form-addon-text">%</span>
                             </div>
@@ -1753,7 +1762,7 @@
                         
                         <div class="form-group">
                             <label class="form-label" for="coef-mutation">Coefficient de mutation</label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="coef-mutation" class="form-input" value="2.37" step="0.01">
                                 <span class="form-addon-text">coef</span>
                             </div>
@@ -1766,7 +1775,7 @@
                         <div class="grid grid-2">
                             <div class="form-group">
                                 <label class="form-label" for="emoluments-poursuivant-1">0 à 6 500 €</label>
-                                <div class="form-addon">
+                                <div class="form-input-wrapper">
                                     <input type="number" id="emoluments-poursuivant-1" class="form-input" value="7" step="0.1">
                                     <span class="form-addon-text">%</span>
                                 </div>
@@ -1774,7 +1783,7 @@
                             
                             <div class="form-group">
                                 <label class="form-label" for="emoluments-poursuivant-2">6 500 à 23 500 €</label>
-                                <div class="form-addon">
+                                <div class="form-input-wrapper">
                                     <input type="number" id="emoluments-poursuivant-2" class="form-input" value="3" step="0.1">
                                     <span class="form-addon-text">%</span>
                                 </div>
@@ -1782,7 +1791,7 @@
                             
                             <div class="form-group">
                                 <label class="form-label" for="emoluments-poursuivant-3">23 500 à 83 500 €</label>
-                                <div class="form-addon">
+                                <div class="form-input-wrapper">
                                     <input type="number" id="emoluments-poursuivant-3" class="form-input" value="2" step="0.1">
                                     <span class="form-addon-text">%</span>
                                 </div>
@@ -1790,7 +1799,7 @@
                             
                             <div class="form-group">
                                 <label class="form-label" for="emoluments-poursuivant-4">Au-delà de 83 500 €</label>
-                                <div class="form-addon">
+                                <div class="form-input-wrapper">
                                     <input type="number" id="emoluments-poursuivant-4" class="form-input" value="1" step="0.1">
                                     <span class="form-addon-text">%</span>
                                 </div>
@@ -1801,7 +1810,7 @@
                     <div class="grid grid-2">
                         <div class="form-group">
                             <label class="form-label" for="honoraires-avocat-coef">Honoraires avocat (coef)</label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="honoraires-avocat-coef" class="form-input" value="0.25" step="0.01">
                                 <span class="form-addon-text">x</span>
                             </div>
@@ -1809,7 +1818,7 @@
                         
                         <div class="form-group">
                             <label class="form-label" for="honoraires-avocat-tva">TVA honoraires avocat</label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="honoraires-avocat-tva" class="form-input" value="20" step="1">
                                 <span class="form-addon-text">%</span>
                             </div>
@@ -1817,7 +1826,7 @@
                         
                         <div class="form-group">
                             <label class="form-label" for="publicite-fonciere-encheres">Publicité foncière</label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="publicite-fonciere-encheres" class="form-input" value="0.10" step="0.01">
                                 <span class="form-addon-text">%</span>
                             </div>
@@ -1825,7 +1834,7 @@
                         
                         <div class="form-group">
                             <label class="form-label" for="frais-fixes">Frais fixes administratifs</label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="frais-fixes" class="form-input" value="50">
                                 <span class="form-addon-text">€</span>
                             </div>
@@ -1833,7 +1842,7 @@
                         
                         <div class="form-group">
                             <label class="form-label" for="avocat-enchere">Avocat - porter l'enchère</label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="avocat-enchere" class="form-input" value="300">
                                 <span class="form-addon-text">€</span>
                             </div>
@@ -1841,7 +1850,7 @@
                         
                         <div class="form-group">
                             <label class="form-label" for="suivi-dossier">Suivi de dossier</label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="suivi-dossier" class="form-input" value="1200">
                                 <span class="form-addon-text">€</span>
                             </div>
@@ -1849,7 +1858,7 @@
                         
                         <div class="form-group">
                             <label class="form-label" for="caution-pourcent">Caution (% mise à prix)</label>
-                            <div class="form-addon">
+                            <div class="form-input-wrapper">
                                 <input type="number" id="caution-pourcent" class="form-input" value="5" step="1">
                                 <span class="form-addon-text">%</span>
                             </div>
@@ -2148,7 +2157,7 @@
                 
                 <div class="form-group">
                     <label class="form-label">Appréciation annuelle</label>
-                    <div class="form-addon">
+                    <div class="form-input-wrapper">
                         <input type="number" id="appreciation-annuelle" class="form-input" value="2" step="0.1">
                         <span class="form-addon-text">%</span>
                     </div>
