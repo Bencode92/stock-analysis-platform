@@ -27,15 +27,16 @@ class VilleSearchManager {
         try {
             console.log('📊 Chargement des données des villes...');
             
-            // Tentative de chargement du fichier JSON
-            const response = await fetch('./villes-data.json');
+            // ✅ CORRECTION : Chemin vers le dossier data/
+            const response = await fetch('./data/villes-data.json');
             
             if (!response.ok) {
                 throw new Error(`Erreur HTTP: ${response.status}`);
             }
             
             this.villesData = await response.json();
-            console.log('✅ Données des villes chargées:', this.villesData.meta || 'Pas de métadonnées');
+            console.log('✅ Données des villes chargées:', this.villesData.meta || 'Base de données complète');
+            console.log(`🏠 ${this.villesData.villes.length} villes disponibles`);
             
         } catch (error) {
             console.warn('⚠️ Erreur lors du chargement des données des villes:', error.message);
@@ -109,7 +110,7 @@ class VilleSearchManager {
                 ],
                 meta: {
                     total_villes: 6,
-                    note: "Données de test - Veuillez ajouter le fichier villes-data.json pour utiliser la base complète"
+                    note: "Données de test - Erreur de chargement du fichier principal : " + error.message
                 }
             };
         }
