@@ -1188,7 +1188,7 @@
             text-align: center;
         }
 
-        /* === NOUVEAUX STYLES POUR LA RECHERCHE DE VILLE === */
+        /* === STYLES POUR LA RECHERCHE DE VILLE - CORRIGÉS === */
         .search-container {
             position: relative;
         }
@@ -1292,9 +1292,159 @@
             border-color: var(--primary-color) !important;
         }
 
+        /* 🎯 FIX PRINCIPAL : Bouton de réinitialisation (X) */
+        .ville-clear-btn {
+            position: absolute !important;
+            right: 15px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            background: rgba(239, 68, 68, 0.2) !important;
+            border: 1px solid rgba(239, 68, 68, 0.4) !important;
+            border-radius: 50% !important;
+            width: 28px !important;
+            height: 28px !important;
+            color: #EF4444 !important;
+            cursor: pointer !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 12px !important;
+            transition: all 0.2s ease !important;
+            z-index: 10 !important;
+            opacity: 0.8 !important;
+        }
+
+        .ville-clear-btn:hover {
+            background: rgba(239, 68, 68, 0.3) !important;
+            border-color: rgba(239, 68, 68, 0.6) !important;
+            opacity: 1 !important;
+            transform: translateY(-50%) scale(1.1) !important;
+        }
+
+        .ville-clear-btn i {
+            pointer-events: none;
+        }
+
+        /* Mode manuel - désactive les styles de recherche */
         .manual-mode .form-input {
             background-color: rgba(1, 42, 74, 0.6) !important;
             border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .manual-mode .ville-clear-btn {
+            display: none !important;
+        }
+
+        /* Animation fade-in pour les éléments qui apparaissent */
+        .fade-in {
+            animation: fadeInAnimation 0.5s ease-in-out;
+        }
+
+        @keyframes fadeInAnimation {
+            from { 
+                opacity: 0; 
+                transform: translateY(-10px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+
+        /* Style pour les suggestions en surbrillance */
+        .city-suggestion-highlight {
+            color: var(--primary-color) !important;
+            font-weight: 600 !important;
+            background-color: rgba(0, 255, 135, 0.1);
+            padding: 0 0.25rem;
+            border-radius: 0.25rem;
+        }
+
+        /* Zone tag pour afficher la zone de la ville */
+        .city-zone-tag {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #10B981;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        /* 🔧 AMÉLIORATION : Mode calcul avec icônes */
+        .calculation-mode-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .mode-option {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .mode-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .mode-card {
+            background-color: rgba(1, 42, 74, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            height: 100%;
+        }
+
+        .mode-card:hover {
+            border-color: rgba(0, 255, 135, 0.3);
+            background-color: rgba(0, 255, 135, 0.05);
+        }
+
+        .mode-option input[type="radio"]:checked + .mode-card {
+            border-color: var(--primary-color);
+            background-color: rgba(0, 255, 135, 0.1);
+            box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.3);
+        }
+
+        .mode-icon {
+            background-color: rgba(0, 255, 135, 0.15);
+            color: var(--primary-color);
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .mode-content h4 {
+            margin: 0 0 0.25rem 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .mode-content p {
+            margin: 0;
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.4;
+        }
+
+        /* Responsive pour le mode de calcul */
+        @media (max-width: 768px) {
+            .calculation-mode-container {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
