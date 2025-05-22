@@ -1,5 +1,6 @@
 /* === AMÉLIORATION CSS POUR IMMOSIM.HTML === */
 /* Version optimisée basée sur feedback technique */
+/* v1.2 - Améliorations section Mode de calcul */
 
 :root {
     /* === SYSTÈME DE COULEURS COHÉRENT === */
@@ -34,7 +35,7 @@
     margin-bottom: calc(var(--spacing-unit) * 0.5);
     font-weight: 600;
     font-size: 0.95rem;
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(255, 255, 255, 0.95); /* 🔥 Amélioré: Plus contrasté */
     transition: var(--transition);
 }
 
@@ -63,11 +64,13 @@
         rgba(1, 42, 74, 0.9) 100%);
 }
 
+/* 🔥 NOUVEAU: Amélioration de l'état hover */
 .form-input:hover:not(:focus) {
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(0, 255, 135, 0.4);
     background: linear-gradient(135deg, 
-        rgba(1, 42, 74, 0.65) 0%, 
+        rgba(0, 255, 135, 0.05) 0%, 
         rgba(1, 42, 74, 0.85) 100%);
+    transform: translateY(-1px);
 }
 
 /* === WRAPPER POUR INPUTS AVEC ADDONS === */
@@ -81,19 +84,31 @@
     padding-right: 4rem;
 }
 
+/* 🔥 AMÉLIORÉ: Addons plus visibles */
 .form-addon-text {
     position: absolute;
     right: 1rem;
     top: 50%;
     transform: translateY(-50%);
     color: var(--primary-color);
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-weight: 700; /* Plus épais */
+    font-size: 0.85rem; /* Légèrement plus petit */
+    letter-spacing: 0.5px; /* Espacement des lettres */
     background: linear-gradient(90deg, var(--primary-color), var(--primary-dark));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     pointer-events: none;
+    text-shadow: 0 0 10px rgba(0, 255, 135, 0.3); /* Glow effect */
+}
+
+/* 🔥 AMÉLIORÉ: Form help plus lisible */
+.form-help {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.75); /* Plus visible */
+    line-height: 1.4;
 }
 
 /* === RECHERCHE DE VILLE AMÉLIORÉE === */
@@ -213,7 +228,7 @@
 .calculation-mode-container {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.25rem; /* 🔥 AMÉLIORÉ: Plus d'espace */
     margin: 2rem 0;
 }
 
@@ -226,8 +241,10 @@
     display: none;
 }
 
+/* 🔥 NOUVEAU: Cards perfectionnées */
 .mode-card {
-    padding: 1.5rem;
+    min-height: 120px; /* Hauteur uniforme */
+    padding: 1.75rem; /* Plus de padding */
     border: 2px solid rgba(255, 255, 255, 0.1);
     border-radius: var(--border-radius);
     background: linear-gradient(135deg, 
@@ -235,8 +252,10 @@
         rgba(1, 42, 74, 0.5) 100%);
     transition: var(--transition);
     display: flex;
-    align-items: center;
+    align-items: flex-start; /* Alignement en haut */
     gap: 1rem;
+    position: relative;
+    overflow: hidden;
 }
 
 .mode-card:hover {
@@ -248,31 +267,77 @@
     box-shadow: var(--shadow-medium);
 }
 
+/* 🔥 AMÉLIORÉ: État sélectionné plus visible */
 .mode-option input:checked + .mode-card {
     border-color: var(--primary-color);
     background: linear-gradient(135deg, 
-        rgba(0, 255, 135, 0.1) 0%, 
-        rgba(1, 42, 74, 0.6) 100%);
-    box-shadow: 0 0 0 4px rgba(0, 255, 135, 0.2);
+        rgba(0, 255, 135, 0.15) 0%, 
+        rgba(1, 42, 74, 0.7) 100%);
+    box-shadow: 0 0 0 3px rgba(0, 255, 135, 0.2),
+                0 8px 25px rgba(0, 255, 135, 0.15);
+    transform: translateY(-1px);
+    animation: selectPulse 0.3s ease-out;
 }
 
-.mode-icon {
-    font-size: 1.5rem;
+/* 🔥 NOUVEAU: Animation de sélection */
+@keyframes selectPulse {
+    0% { transform: scale(1) translateY(-1px); }
+    50% { transform: scale(1.02) translateY(-1px); }
+    100% { transform: scale(1) translateY(-1px); }
+}
+
+/* 🔥 NOUVEAU: Indicateur de sélection */
+.mode-option input:checked + .mode-card::after {
+    content: "✓";
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-size: 1.2rem;
     color: var(--primary-color);
-    min-width: 2rem;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
+}
+
+/* 🔥 AMÉLIORÉ: Icônes différenciées */
+.mode-icon {
+    font-size: 1.75rem; /* Plus grandes */
+    min-width: 2.5rem;
+    margin-top: 0.25rem; /* Légèrement décalées vers le haut */
+    transition: var(--transition);
+}
+
+/* Couleurs spécifiques pour chaque mode */
+.mode-option:first-child .mode-icon {
+    color: #10B981; /* Vert pour "Loyer ≥ Mensualité" */
+}
+
+.mode-option:last-child .mode-icon {
+    color: #F59E0B; /* Orange pour "Cash-flow positif" */
+}
+
+.mode-option input:checked + .mode-card .mode-icon {
+    color: var(--primary-color);
+    transform: scale(1.1);
+}
+
+/* 🔥 AMÉLIORÉ: Contenu des cards */
+.mode-content {
+    flex: 1; /* Prendre tout l'espace disponible */
 }
 
 .mode-content h4 {
     margin: 0 0 0.5rem 0;
-    font-weight: 600;
+    font-weight: 700; /* Plus épais */
+    font-size: 1.15rem; /* Légèrement plus grand */
     color: white;
+    letter-spacing: -0.01em; /* Légèrement plus serré */
 }
 
 .mode-content p {
     margin: 0;
-    font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.8);
-    line-height: 1.4;
+    font-size: 0.9rem; /* Taille optimisée */
+    color: rgba(255, 255, 255, 0.9); /* Plus visible */
+    line-height: 1.4; /* Meilleur interlignage */
 }
 
 /* === BOUTONS AMÉLIORÉS === */
@@ -427,6 +492,16 @@
         font-size: 16px; /* Évite le zoom iOS */
     }
     
+    /* 🔥 AMÉLIORÉ: Responsive pour les wrappers */
+    .form-input-wrapper {
+        position: relative;
+    }
+    
+    .form-addon-text {
+        font-size: 0.8rem;
+        right: 0.75rem;
+    }
+    
     .piece-selector {
         flex-direction: column;
     }
@@ -436,9 +511,38 @@
         justify-content: center;
     }
     
+    /* 🔥 NOUVEAU: Mode cards optimisé mobile */
+    .calculation-mode-container {
+        gap: 1rem;
+    }
+    
     .mode-card {
-        flex-direction: column;
-        text-align: center;
+        min-height: auto;
+        padding: 1.25rem;
+        flex-direction: row; /* Garder horizontal sur mobile */
+        text-align: left;
+        align-items: center; /* Centrer sur mobile */
+    }
+    
+    .mode-icon {
+        font-size: 1.5rem;
+        margin-top: 0;
+        min-width: 2rem;
+    }
+    
+    .mode-content h4 {
+        font-size: 1.05rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .mode-content p {
+        font-size: 0.85rem;
+    }
+    
+    /* 🔥 NOUVEAU: Optimisation mobile pour la grille */
+    .grid-2 {
+        grid-template-columns: 1fr;
+        gap: 1rem;
     }
 }
 
@@ -525,4 +629,57 @@
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
     }
+}
+
+/* === 🔥 NOUVELLES AMÉLIORATIONS POST-INTÉGRATION === */
+
+/* Amélioration des tooltips d'information */
+.info-tooltip {
+    color: var(--primary-color);
+    font-size: 0.85rem;
+    cursor: help;
+    margin-left: 0.5rem;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    position: relative;
+}
+
+.info-tooltip:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* Amélioration des checkboxes */
+input[type="checkbox"] {
+    accent-color: var(--primary-color);
+    transform: scale(1.2);
+}
+
+/* Amélioration des sélecteurs de radio */
+input[type="radio"] {
+    accent-color: var(--primary-color);
+}
+
+/* Scrollbar personnalisée pour les suggestions */
+.ville-suggestions::-webkit-scrollbar {
+    width: 6px;
+}
+
+.ville-suggestions::-webkit-scrollbar-track {
+    background: rgba(1, 42, 74, 0.3);
+    border-radius: 3px;
+}
+
+.ville-suggestions::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 3px;
+}
+
+.ville-suggestions::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dark);
+}
+
+/* Amélioration des états de focus pour les mode cards */
+.mode-option:focus-within .mode-card {
+    box-shadow: 0 0 0 2px var(--primary-color);
 }
