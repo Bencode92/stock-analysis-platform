@@ -106,10 +106,20 @@ class VilleSearchManager {
                             "T4": {prix_m2: 3226, loyer_m2: 13.40},
                             "T5": {prix_m2: 3000, loyer_m2: 13.40}
                         }
+                    },
+                    {
+                        nom: "Saint-Cloud",
+                        departement: "92",
+                        pieces: {
+                            "T1": {prix_m2: 6792, loyer_m2: 29.6},
+                            "T2": {prix_m2: 6552, loyer_m2: 29.6},
+                            "T3": {prix_m2: 5828, loyer_m2: 26.21},
+                            "T4": {prix_m2: 5146, loyer_m2: 26.21}
+                        }
                     }
                 ],
                 meta: {
-                    total_villes: 6,
+                    total_villes: 7,
                     note: "Données de test - Erreur de chargement du fichier principal : " + error.message
                 }
             };
@@ -128,9 +138,19 @@ class VilleSearchManager {
         
         console.log('🔗 Initialisation des événements...');
         
-        // Recherche de ville
+        // ✅ AMÉLIORATION : Gestion des événements améliorée
         villeSearch.addEventListener('input', (e) => {
-            this.handleSearch(e.target.value);
+            this.handleSearchInput(e.target.value);
+        });
+        
+        // ✅ NOUVEAU : Focus pour permettre une nouvelle recherche
+        villeSearch.addEventListener('focus', (e) => {
+            this.handleSearchFocus(e.target);
+        });
+        
+        // ✅ NOUVEAU : Gestion des touches spéciales
+        villeSearch.addEventListener('keydown', (e) => {
+            this.handleKeyDown(e);
         });
         
         // Masquer suggestions si clic ailleurs
@@ -147,7 +167,169 @@ class VilleSearchManager {
             });
         }
         
+        // ✅ NOUVEAU : Ajouter bouton de réinitialisation
+        this.addClearButton();
+        
         console.log('✅ Événements initialisés');
+    }
+    
+    // ✅ NOUVEAU : Ajouter un bouton X pour vider la recherche
+    addClearButton() {
+        const villeSearch = document.getElementById('ville-search');
+        const searchContainer = villeSearch.closest('.search-container');
+        
+        if (!searchContainer) return;
+        
+        // Créer le bouton de réinitialisation
+        const clearButton = document.createElement('button');
+        clearButton.type = 'button';
+        clearButton.className = 'ville-clear-btn';
+        clearButton.innerHTML = '<i class="fas fa-times"></i>';
+        clearButton.title = 'Effacer la sélection pour rechercher une nouvelle ville';
+        clearButton.style.display = 'none';
+        
+        // Styles du bouton
+        Object.assign(clearButton.style, {
+            position: 'absolute',
+            right: '15px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '50%',
+            width: '30px',
+            height: '30px',
+            color: 'rgba(255, 255, 255, 0.7)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '12px',
+            transition: 'all 0.2s ease',
+            zIndex: '10'
+        });
+        
+        // Événements du bouton
+        clearButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.clearSelection();
+        });
+        
+        clearButton.addEventListener('mouseenter', () => {
+            clearButton.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+            clearButton.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+            clearButton.style.color = '#EF4444';
+        });
+        
+        clearButton.addEventListener('mouseleave', () => {
+            clearButton.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+            clearButton.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            clearButton.style.color = 'rgba(255, 255, 255, 0.7)';
+        });
+        
+        // Positionner le container
+        searchContainer.style.position = 'relative';
+        searchContainer.appendChild(clearButton);
+        
+        this.clearButton = clearButton;
+    }
+    
+    // ✅ NOUVEAU : Gestion du focus
+    handleSearchFocus(input) {
+        if (this.selectedVille && !this.manualMode) {
+            // Sélectionner tout le texte pour faciliter le remplacement
+            input.select();
+            
+            if (this.clearButton) {
+                this.clearButton.style.display = 'flex';
+            }
+        }
+    }
+    
+    // ✅ NOUVEAU : Gestion des touches spéciales
+    handleKeyDown(e) {
+        if (e.key === 'Escape') {
+            document.getElementById('ville-suggestions').style.display = 'none';
+        } else if ((e.key === 'Delete' || e.key === 'Backspace') && this.selectedVille) {
+            // Si on efface et qu'une ville est sélectionnée, réinitialiser après un court délai
+            setTimeout(() => {
+                if (e.target.value.length === 0) {
+                    this.resetSelection();
+                }
+            }, 10);
+        }
+    }
+    
+    // ✅ AMÉLIORATION : Nouvelle fonction pour gérer l'input
+    handleSearchInput(searchTerm) {
+        // Gérer le bouton de réinitialisation
+        if (this.clearButton) {
+            this.clearButton.style.display = searchTerm.length > 0 ? 'flex' : 'none';
+        }
+        
+        // Si on tape quelque chose de différent de la ville sélectionnée, réinitialiser
+        if (this.selectedVille && searchTerm !== this.selectedVille.nom) {
+            this.resetSelection();
+        }
+        
+        this.handleSearch(searchTerm);
+    }
+    
+    // ✅ NOUVEAU : Réinitialiser sans vider le champ
+    resetSelection() {
+        this.selectedVille = null;
+        
+        const villeInfo = document.getElementById('ville-selected-info');
+        if (villeInfo) {
+            villeInfo.style.display = 'none';
+        }
+        
+        const villeSearch = document.getElementById('ville-search');
+        if (villeSearch) {
+            villeSearch.classList.remove('ville-search-enhanced');
+        }
+        
+        // Réinitialiser les styles des champs prix
+        this.resetPriceFieldsStyles();
+    }
+    
+    // ✅ NOUVEAU : Vider complètement la sélection
+    clearSelection() {
+        console.log('🧹 Réinitialisation de la recherche de ville');
+        
+        const villeSearch = document.getElementById('ville-search');
+        const suggestions = document.getElementById('ville-suggestions');
+        
+        if (villeSearch) {
+            villeSearch.value = '';
+            villeSearch.classList.remove('ville-search-enhanced');
+            villeSearch.focus();
+        }
+        
+        if (suggestions) {
+            suggestions.style.display = 'none';
+        }
+        
+        if (this.clearButton) {
+            this.clearButton.style.display = 'none';
+        }
+        
+        this.resetSelection();
+    }
+    
+    // ✅ NOUVEAU : Réinitialiser les styles des champs prix
+    resetPriceFieldsStyles() {
+        const prixM2Input = document.getElementById('prix-m2-marche');
+        const loyerM2Input = document.getElementById('loyer-m2');
+        
+        if (prixM2Input) {
+            prixM2Input.classList.remove('ville-search-enhanced');
+        }
+        
+        if (loyerM2Input) {
+            loyerM2Input.classList.remove('ville-search-enhanced');
+        }
     }
     
     handleSearch(searchTerm) {
@@ -221,6 +403,11 @@ class VilleSearchManager {
         
         // Masquer les suggestions
         document.getElementById('ville-suggestions').style.display = 'none';
+        
+        // Afficher le bouton de réinitialisation
+        if (this.clearButton) {
+            this.clearButton.style.display = 'flex';
+        }
         
         // Afficher les infos de la ville
         this.displayVilleInfo(ville);
@@ -341,6 +528,11 @@ class VilleSearchManager {
             
             if (villeInfo) villeInfo.style.display = 'none';
             if (container) container.classList.add('manual-mode');
+            
+            // Masquer le bouton en mode manuel
+            if (this.clearButton) {
+                this.clearButton.style.display = 'none';
+            }
             
             this.selectedVille = null;
             
