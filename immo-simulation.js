@@ -46,7 +46,7 @@ class SimulateurImmo {
                 fraisBancairesCompte: 150,
                 fraisGarantie: 1.3709,        // % du capital emprunté
                 taxeFonciere: 0,              // % du prix (remplacé par 5% du loyer)
-                vacanceLocative: 5,           // % des loyers (modifié de 8% à 5%)
+                vacanceLocative: 0,           // % des loyers (modifié de 8% à 5%)
                 loyerM2: 12,                  // €/m²/mois (valeur utilisée si calcul par rendement impossible)
                 travauxM2: 400,               // €/m² (remplacé par 0.5% du prix par défaut)
                 useFixedTravauxPercentage: true, // Utiliser 0.5% du prix d'achat par défaut
