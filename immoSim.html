@@ -9,6 +9,9 @@
     
     <!-- 🎯 CSS CONSOLIDÉ - ARCHITECTURE PROPRE -->
     <link rel="stylesheet" href="css/immo-enhanced.css">
+    
+    <!-- Chart.js pour les graphiques -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 </head>
 <body>
     <!-- Sidebar de navigation verticale -->
@@ -119,6 +122,9 @@
                 <p class="text-sm opacity-90">Par défaut, les travaux sont estimés à 0,5% du prix d'achat. Vous pouvez changer cette valeur dans les paramètres avancés, où vous avez le choix entre un montant fixe au m² ou un pourcentage du prix d'achat.</p>
             </div>
         </div>
+        
+        <!-- Conteneur pour les messages de résultat -->
+        <div id="simulation-status" style="display: none;"></div>
         
         <!-- Inputs de base -->
         <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg hover:shadow-blue-500/5 transition-all">
@@ -756,6 +762,16 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+            
+            <!-- Conteneurs pour les graphiques -->
+            <div class="grid grid-2 mt-6">
+                <div class="card">
+                    <canvas id="chart-comparison" height="300"></canvas>
+                </div>
+                <div class="card">
+                    <canvas id="chart-cashflow" height="300"></canvas>
                 </div>
             </div>
             
