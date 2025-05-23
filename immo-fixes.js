@@ -5,13 +5,15 @@
  * 1. Suppression des boutons "Comprendre le cash-flow" en double
  * 2. Correction du centrage des onglets et sections
  * 3. Conversion du mode de calcul en système de cartes pour harmoniser l'UI
+ * 4. Optimisation de l'interface pour une meilleure expérience utilisateur
  */
 
 document.addEventListener('DOMContentLoaded', function() {
     // S'assurer que le DOM est chargé
     
-    // 1. Ajouter les styles CSS pour le centrage
+    // 1. Ajouter les styles CSS pour le centrage et l'optimisation
     ajouterStylesCentrage();
+    ajouterStylesOptimisation();
     
     // 2. Attendre que le simulateur et l'interface soient chargés
     const checkComponents = setInterval(function() {
@@ -20,6 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // 3. Appliquer les correctifs après un court délai
             setTimeout(appliquerCorrectifs, 500);
+            setTimeout(appliquerOptimisations, 600);
         }
     }, 100);
     
@@ -119,6 +122,201 @@ function ajouterStylesCentrage() {
 }
 
 /**
+ * Ajoute les styles CSS pour optimiser l'interface
+ */
+function ajouterStylesOptimisation() {
+    const styleElement = document.createElement('style');
+    styleElement.id = 'immo-optimization-styles';
+    styleElement.innerHTML = `
+        /* === OPTIMISATIONS D'INTERFACE === */
+        
+        /* Titre plus compact */
+        .page-title h1 {
+            font-size: 1.75rem !important;
+            margin-bottom: 0.5rem !important;
+        }
+        
+        .page-title .subtitle {
+            font-size: 0.95rem !important;
+        }
+        
+        /* Bannière d'info compacte */
+        .mode-info-banner {
+            padding: 0.75rem 1rem !important;
+            margin-bottom: 1.5rem !important;
+        }
+        
+        .mode-info-icon {
+            width: 32px !important;
+            height: 32px !important;
+            font-size: 1rem !important;
+        }
+        
+        .mode-info-content h3 {
+            font-size: 0.95rem !important;
+            margin-bottom: 0.25rem !important;
+        }
+        
+        .mode-info-content p {
+            font-size: 0.875rem !important;
+            line-height: 1.4 !important;
+        }
+        
+        /* Formulaires compacts */
+        .form-group {
+            margin-bottom: 1.25rem !important;
+        }
+        
+        .form-label {
+            font-size: 0.875rem !important;
+            margin-bottom: 0.5rem !important;
+        }
+        
+        /* Masquer les infobulles redondantes */
+        .form-label .info-tooltip:not(:first-of-type) {
+            display: none !important;
+        }
+        
+        .form-input {
+            padding: 0.625rem 0.875rem !important;
+            font-size: 0.95rem !important;
+            min-height: 38px !important;
+        }
+        
+        /* Sélecteur de ville optimisé */
+        .ville-info-selected {
+            padding: 1rem !important;
+            margin-top: 0.5rem !important;
+        }
+        
+        .ville-info-selected h4 {
+            font-size: 1rem !important;
+            margin-bottom: 0.5rem !important;
+        }
+        
+        /* Boutons de type de logement */
+        .piece-selector {
+            gap: 0.5rem !important;
+            margin-top: 0.75rem !important;
+        }
+        
+        .piece-btn {
+            padding: 0.5rem 0.75rem !important;
+            font-size: 0.875rem !important;
+            flex: 1 !important;
+        }
+        
+        /* Mode de calcul compact */
+        .calculation-mode-container {
+            gap: 0.75rem !important;
+            margin-bottom: 1rem !important;
+        }
+        
+        .mode-card {
+            padding: 0.875rem !important;
+            min-height: auto !important;
+        }
+        
+        .mode-icon {
+            width: 32px !important;
+            height: 32px !important;
+            font-size: 1rem !important;
+            margin-bottom: 0.5rem !important;
+        }
+        
+        .mode-content h4 {
+            font-size: 0.95rem !important;
+        }
+        
+        .mode-content p {
+            font-size: 0.8rem !important;
+        }
+        
+        /* Boutons optimisés */
+        .btn {
+            padding: 0.625rem 1.25rem !important;
+            font-size: 0.95rem !important;
+        }
+        
+        .btn-simulate {
+            padding: 0.75rem 1.5rem !important;
+            font-size: 1rem !important;
+        }
+        
+        /* Espacement des cartes */
+        .card {
+            margin-bottom: 1.5rem !important;
+        }
+        
+        .card-header {
+            padding: 1rem 1.25rem !important;
+        }
+        
+        .card > div:not(.card-header) {
+            padding: 1.25rem !important;
+        }
+        
+        /* Grille optimisée */
+        .grid {
+            gap: 1rem !important;
+            padding: 0 !important;
+        }
+        
+        /* Message d'info compact */
+        .info-message {
+            padding: 0.75rem 1rem !important;
+            margin-bottom: 1rem !important;
+            font-size: 0.875rem !important;
+        }
+        
+        /* Masquer les éléments redondants */
+        .form-help {
+            font-size: 0.75rem !important;
+            margin-top: 0.25rem !important;
+        }
+        
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .container {
+                margin-left: 0 !important;
+                margin-top: 60px !important;
+                padding: 1rem !important;
+            }
+            
+            .page-title h1 {
+                font-size: 1.5rem !important;
+            }
+            
+            .grid-2 {
+                grid-template-columns: 1fr !important;
+            }
+            
+            .calculation-mode-container {
+                grid-template-columns: 1fr !important;
+            }
+        }
+        
+        /* Animations subtiles */
+        .form-input {
+            transition: all 0.2s ease !important;
+        }
+        
+        .form-input:focus {
+            transform: translateY(-1px);
+        }
+        
+        .piece-btn, .mode-card {
+            transition: all 0.2s ease !important;
+        }
+        
+        .piece-btn:hover, .mode-card:hover {
+            transform: translateY(-1px);
+        }
+    `;
+    document.head.appendChild(styleElement);
+}
+
+/**
  * Applique les correctifs pour l'interface
  */
 function appliquerCorrectifs() {
@@ -132,6 +330,36 @@ function appliquerCorrectifs() {
     setTimeout(convertirModeCalculEnCartes, 300);
     
     console.log("Correctifs appliqués avec succès");
+}
+
+/**
+ * Applique les optimisations d'interface
+ */
+function appliquerOptimisations() {
+    console.log("Application des optimisations d'interface");
+    
+    // 1. Supprimer les infobulles redondantes
+    nettoyerInfobullesRedondantes();
+    
+    // 2. Ajuster la hauteur des champs
+    ajusterHauteurChamps();
+    
+    // 3. Optimiser l'espacement
+    optimiserEspacement();
+    
+    // 4. Améliorer la bannière d'info
+    ameliorerBanniere();
+    
+    // 5. Améliorer le sélecteur de ville
+    ameliorerSelecteurVille();
+    
+    // 6. Nettoyer les messages d'info redondants
+    nettoyerMessagesRedondants();
+    
+    // 7. Optimiser pour mobile
+    optimiserPourMobile();
+    
+    console.log("Optimisations appliquées avec succès");
 }
 
 /**
@@ -276,3 +504,118 @@ function initialiserEvenementsModeCalculCartes() {
     
     console.log("Écouteurs d'événements pour les cartes de mode de calcul initialisés");
 }
+
+/**
+ * Nettoie les infobulles redondantes
+ */
+function nettoyerInfobullesRedondantes() {
+    const labels = document.querySelectorAll('.form-label');
+    labels.forEach(label => {
+        const tooltips = label.querySelectorAll('.info-tooltip');
+        if (tooltips.length > 1) {
+            // Garder seulement la première infobulle
+            for (let i = 1; i < tooltips.length; i++) {
+                tooltips[i].remove();
+            }
+        }
+    });
+    console.log("Infobulles redondantes supprimées");
+}
+
+/**
+ * Ajuste la hauteur des champs
+ */
+function ajusterHauteurChamps() {
+    const inputs = document.querySelectorAll('.form-input');
+    inputs.forEach(input => {
+        input.style.minHeight = '38px';
+    });
+}
+
+/**
+ * Optimise l'espacement
+ */
+function optimiserEspacement() {
+    // Réduire l'espacement entre les form-groups
+    const formGroups = document.querySelectorAll('.form-group');
+    formGroups.forEach(group => {
+        if (!group.style.marginBottom || group.style.marginBottom === '1.5rem') {
+            group.style.marginBottom = '1.25rem';
+        }
+    });
+}
+
+/**
+ * Améliore la bannière d'info
+ */
+function ameliorerBanniere() {
+    const banner = document.querySelector('.mode-info-banner');
+    if (banner) {
+        banner.style.padding = '0.75rem 1rem';
+        
+        const icon = banner.querySelector('.mode-info-icon');
+        if (icon) {
+            icon.style.width = '32px';
+            icon.style.height = '32px';
+        }
+    }
+}
+
+/**
+ * Améliore le sélecteur de ville
+ */
+function ameliorerSelecteurVille() {
+    const villeSelectedInfo = document.getElementById('ville-selected-info');
+    if (villeSelectedInfo) {
+        villeSelectedInfo.style.marginTop = '0.5rem';
+        villeSelectedInfo.style.padding = '1rem';
+    }
+}
+
+/**
+ * Nettoie les messages redondants
+ */
+function nettoyerMessagesRedondants() {
+    const infoMessages = document.querySelectorAll('.info-message');
+    const uniqueMessages = new Set();
+    
+    infoMessages.forEach(msg => {
+        const content = msg.textContent.trim();
+        if (uniqueMessages.has(content)) {
+            msg.remove();
+        } else {
+            uniqueMessages.add(content);
+        }
+    });
+}
+
+/**
+ * Optimise pour mobile
+ */
+function optimiserPourMobile() {
+    if (window.innerWidth <= 768) {
+        // Ajuster la grille
+        const grids = document.querySelectorAll('.grid-2');
+        grids.forEach(grid => {
+            grid.style.gridTemplateColumns = '1fr';
+            grid.style.gap = '0.75rem';
+        });
+        
+        // Ajuster les marges du conteneur
+        const container = document.querySelector('.container');
+        if (container) {
+            container.style.marginLeft = '0';
+            container.style.marginTop = '60px';
+            container.style.padding = '1rem';
+        }
+    }
+}
+
+// Réappliquer les optimisations lors du redimensionnement
+let resizeTimeout;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        optimiserPourMobile();
+    }, 250);
+});
