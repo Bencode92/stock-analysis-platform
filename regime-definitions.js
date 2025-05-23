@@ -20,24 +20,32 @@
     
     // Créer le conteneur de définition
     function createDefinitionContainer() {
-        // Chercher la section des régimes fiscaux
-        const regimeSection = document.querySelector('.card-title:contains("régime fiscal")') ||
-                             document.querySelector('h2:contains("régime fiscal")') ||
-                             document.querySelector('[class*="regime"]');
-        
-        const targetElement = regimeSection?.closest('.card') || 
-                            document.querySelector('#regimes-fiscaux-container') ||
-                            document.querySelector('.card:has(.regime-card)');
+        // Chercher la section des régimes fiscaux en utilisant des sélecteurs valides
+        let targetElement = document.querySelector('#regimes-fiscaux-container');
         
         if (!targetElement) {
-            console.error('Section régimes non trouvée, tentative après les résultats');
-            const resultsSection = document.getElementById('results') || 
-                                 document.querySelector('.card').parentElement;
-            if (resultsSection) {
-                targetElement = resultsSection;
-            } else {
-                return;
+            // Chercher les cartes avec le titre contenant "régime fiscal"
+            const allCards = document.querySelectorAll('.card');
+            for (const card of allCards) {
+                const title = card.querySelector('.card-title, h2, h3');
+                if (title && title.textContent.toLowerCase().includes('régime fiscal')) {
+                    targetElement = card;
+                    break;
+                }
             }
+        }
+        
+        if (!targetElement) {
+            // Chercher après les paramètres avancés
+            targetElement = document.getElementById('advanced-params');
+            if (targetElement) {
+                targetElement = targetElement.parentElement;
+            }
+        }
+        
+        if (!targetElement) {
+            console.error('Section régimes non trouvée');
+            return;
         }
         
         definitionContainer = document.createElement('div');
