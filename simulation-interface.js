@@ -11,6 +11,7 @@
  * Version 1.4 - Correction du problème du mode de calcul cash-flow positif et optimisation de l'interface
  * Version 1.5 - Correction du conflit CSS avec les cartes de mode de calcul
  * Version 1.6 - Amélioration de l'affichage des résultats (messages de succès/échec)
+ * Version 1.7 - Correction de la duplication des icônes info lors de simulations multiples
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -1274,6 +1275,23 @@ document.addEventListener('DOMContentLoaded', function() {
         // Vérifier que l'élément existe
         if (!element) return;
         
+        // CORRECTION: Vérifier si une infobulle existe déjà pour cet élément
+        let existingIcon;
+        if (element.tagName === 'LABEL') {
+            existingIcon = element.querySelector('.info-icon');
+        } else {
+            existingIcon = element.parentNode?.querySelector('.info-icon');
+        }
+        
+        if (existingIcon) {
+            // Si une icône existe déjà, simplement mettre à jour le texte si nécessaire
+            const existingTooltip = existingIcon.querySelector('.tooltip-text');
+            if (existingTooltip && existingTooltip.textContent !== texte) {
+                existingTooltip.textContent = texte;
+            }
+            return;
+        }
+        
         // S'assurer que l'élément a une position relative ou absolute
         const position = window.getComputedStyle(element).position;
         if (position !== 'relative' && position !== 'absolute') {
@@ -1306,6 +1324,11 @@ document.addEventListener('DOMContentLoaded', function() {
      * Configure les infobulles explicatives sur les éléments importants
      */
     function ajouterInfobullesExplicatives() {
+        // CORRECTION: Vérifier si les infobulles ont déjà été ajoutées
+        if (document.body.dataset.infobullesAjoutees === 'true') {
+            return;
+        }
+        
         // Liste des éléments avec leurs explications
         const infobulles = {
             // Paramètres de base
@@ -1335,10 +1358,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Ajouter des infobulles aux labels des champs
         document.querySelectorAll('.form-label').forEach(label => {
             const forAttr = label.getAttribute('for');
-            if (forAttr && infobulles[forAttr]) {
+            if (forAttr && infobulles[forAttr] && !label.querySelector('.info-icon')) {
                 ajouterInfobulle(label, infobulles[forAttr]);
             }
         });
+        
+        // Marquer que les infobulles ont été ajoutées
+        document.body.dataset.infobullesAjoutees = 'true';
     }
 
     /**
