@@ -10,6 +10,7 @@
  * Version 1.3 - Ajout d'explications détaillées sur le cash-flow et amélioration de l'affichage du cash-flow annuel
  * Version 1.4 - Correction du problème du mode de calcul cash-flow positif et optimisation de l'interface
  * Version 1.5 - Correction du conflit CSS avec les cartes de mode de calcul
+ * Version 1.6 - Amélioration de l'affichage des résultats (messages de succès/échec)
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -252,39 +253,56 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Fonction pour gérer l'affichage des résultats de la simulation
     function afficherResultatsSimulation(resultats, pas) {
-        if (!resultsContainer) return;
+        const statusDiv = document.getElementById('simulation-status');
+        
+        // Si aucun résultat viable n'est trouvé
+        if (!resultats.classique && !resultats.encheres) {
+            if (statusDiv) {
+                statusDiv.innerHTML = `
+                    <div class="no-results-card">
+                        <div class="no-results-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h3>Aucune solution viable trouvée</h3>
+                        <p>Avec vos paramètres actuels, aucun investissement ne permet d'atteindre vos objectifs.</p>
+                        <div class="suggestions">
+                            <h4>Suggestions pour améliorer votre simulation :</h4>
+                            <ul>
+                                <li><i class="fas fa-plus-circle"></i> Augmenter votre apport</li>
+                                <li><i class="fas fa-percentage"></i> Vérifier le taux d'emprunt</li>
+                                <li><i class="fas fa-home"></i> Explorer d'autres villes</li>
+                                <li><i class="fas fa-sliders-h"></i> Ajuster vos critères dans les paramètres avancés</li>
+                            </ul>
+                        </div>
+                        <button class="btn btn-primary" onclick="location.reload()">
+                            <i class="fas fa-redo"></i> Nouvelle simulation
+                        </button>
+                    </div>
+                `;
+                statusDiv.style.display = 'block';
+                // Masquer les résultats si aucune solution
+                if (resultsContainer) {
+                    resultsContainer.classList.add('hidden');
+                }
+            }
+            return;
+        }
+        
+        // Si des résultats sont trouvés, masquer le statusDiv et afficher directement les résultats
+        if (statusDiv) {
+            statusDiv.style.display = 'none';
+        }
         
         // Afficher le conteneur de résultats
-        resultsContainer.classList.remove('hidden');
-        resultsContainer.classList.add('fade-in');
+        if (resultsContainer) {
+            resultsContainer.classList.remove('hidden');
+            resultsContainer.classList.add('fade-in');
+        }
         
-        // Vérifier si les résultats contiennent des valeurs réelles
-        if (resultats.classique && resultats.classique.surface > 0 && 
-            resultats.encheres && resultats.encheres.surface > 0) {
-            
-            // Récupérer le mode de calcul
-            const calculationMode = document.querySelector('input[name="calculation-mode"]:checked')?.value || 'loyer-mensualite';
-            const modeLabel = calculationMode === 'loyer-mensualite' ? 'marge positive entre loyer et mensualité' : 'cash-flow positif (toutes charges comprises)';
-            
-            // Afficher la notification de réussite
-            afficherNotification(`
-                <i class="fas fa-check-circle"></i> 
-                Calcul terminé : <strong>Surface maximale autofinancée</strong> déterminée par une ${modeLabel}
-                <span class="optimization-badge"><i class="fas fa-ruler"></i> Recherche par surface décroissante (pas = ${pas} m²)</span>
-            `);
-            
-            // Mettre à jour le champ caché de surface
-            const surfaceField = document.getElementById('surface');
-            if (surfaceField) {
-                surfaceField.value = resultats.classique.surface;
-            }
-            
-        } else {
-            // Afficher un message si aucune valeur n'est trouvée
-            afficherNotification(`
-                <i class="fas fa-exclamation-triangle"></i> 
-                <strong>Attention:</strong> Aucune solution viable n'a été trouvée avec ces paramètres. Essayez d'augmenter l'apport ou le loyer au m².
-            `, 'warning');
+        // Mettre à jour le champ caché de surface
+        const surfaceField = document.getElementById('surface');
+        if (surfaceField && resultats.classique) {
+            surfaceField.value = resultats.classique.surface;
         }
         
         // Animer les valeurs numériques (vérifier que la fonction existe)
@@ -307,7 +325,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Défiler vers les résultats
-        resultsContainer.scrollIntoView({ behavior: 'smooth' });
+        if (resultsContainer) {
+            resultsContainer.scrollIntoView({ behavior: 'smooth' });
+        }
     }
 
     // Fonction principale pour lancer la simulation
