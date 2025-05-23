@@ -1,0 +1,344 @@
+/* === STYLES RÉGIMES FISCAUX === */
+
+/* Grille des régimes */
+.regimes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+/* Cartes de régime */
+.regime-card {
+    background: rgba(23, 42, 69, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.regime-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, transparent, rgba(0, 217, 255, 0.1));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.regime-card:hover::before {
+    opacity: 1;
+}
+
+.regime-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(0, 217, 255, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 217, 255, 0.2);
+}
+
+.regime-card.selected {
+    background: linear-gradient(135deg, rgba(0, 217, 255, 0.15), rgba(0, 191, 165, 0.1));
+    border-color: #00D9FF;
+    box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+}
+
+/* Header de la carte */
+.regime-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.regime-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(0, 217, 255, 0.2), rgba(0, 191, 165, 0.15));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: #00D9FF;
+    margin: 0 auto 1rem;
+}
+
+.regime-card.selected .regime-icon {
+    background: linear-gradient(135deg, #00D9FF, #00BFA5);
+    color: #0A192F;
+}
+
+.regime-date {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+}
+
+.regime-name {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: var(--text-primary);
+}
+
+.regime-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0 0 0.5rem 0;
+}
+
+.regime-plafond {
+    font-size: 0.75rem;
+    color: var(--primary-color);
+    margin-top: 0.5rem;
+    font-weight: 500;
+}
+
+/* Panneau d'information */
+.regime-info-panel {
+    background: linear-gradient(135deg, rgba(23, 42, 69, 0.95), rgba(30, 48, 80, 0.95));
+    border: 1px solid rgba(0, 217, 255, 0.2);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-top: 2rem;
+    position: relative;
+}
+
+.regime-info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.regime-info-header h3 {
+    font-size: 1.5rem;
+    margin: 0;
+    color: var(--primary-color);
+}
+
+.regime-info-close {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.regime-info-close:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #EF4444;
+}
+
+/* Détails du régime */
+.regime-details {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.regime-section {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.regime-section h4 {
+    font-size: 1.1rem;
+    margin: 0 0 1rem 0;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.regime-section h4 i {
+    color: var(--primary-color);
+}
+
+.regime-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.regime-section li {
+    padding: 0.5rem 0;
+    color: var(--text-secondary);
+    padding-left: 1.5rem;
+    position: relative;
+}
+
+.regime-section li::before {
+    content: '•';
+    position: absolute;
+    left: 0.5rem;
+    color: var(--primary-color);
+}
+
+/* Termes avec définitions */
+.definition-term {
+    color: var(--primary-color);
+    cursor: help;
+    border-bottom: 1px dashed var(--primary-color);
+    transition: all 0.2s ease;
+}
+
+.definition-term:hover {
+    color: var(--primary-light);
+    border-bottom-style: solid;
+}
+
+/* Tooltip des définitions */
+.regime-tooltip {
+    position: fixed;
+    background: rgba(10, 25, 47, 0.98);
+    border: 1px solid var(--primary-color);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 217, 255, 0.3);
+    max-width: 400px;
+    z-index: 10000;
+    display: none;
+    backdrop-filter: blur(15px);
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+
+.regime-tooltip.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.tooltip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tooltip-header h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--primary-color);
+}
+
+.tooltip-close {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.25rem;
+    font-size: 1rem;
+    transition: color 0.2s ease;
+}
+
+.tooltip-close:hover {
+    color: #EF4444;
+}
+
+.tooltip-body {
+    padding: 1.5rem;
+}
+
+.tooltip-body p {
+    margin: 0 0 1rem 0;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.tooltip-example {
+    background: rgba(0, 217, 255, 0.1);
+    border-left: 3px solid var(--primary-color);
+    padding: 1rem;
+    margin: 1rem 0;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.tooltip-conditions {
+    margin-top: 1rem;
+}
+
+.tooltip-conditions ul {
+    margin: 0.5rem 0 0 0;
+    padding-left: 1.5rem;
+}
+
+.tooltip-conditions li {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    padding: 0.25rem 0;
+}
+
+.tooltip-terms {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* Animations */
+@keyframes slideInRegime {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.regime-card {
+    animation: slideInRegime 0.5s ease-out forwards;
+    opacity: 0;
+}
+
+.regime-card:nth-child(1) { animation-delay: 0.05s; }
+.regime-card:nth-child(2) { animation-delay: 0.1s; }
+.regime-card:nth-child(3) { animation-delay: 0.15s; }
+.regime-card:nth-child(4) { animation-delay: 0.2s; }
+.regime-card:nth-child(5) { animation-delay: 0.25s; }
+.regime-card:nth-child(6) { animation-delay: 0.3s; }
+.regime-card:nth-child(7) { animation-delay: 0.35s; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .regimes-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .regime-tooltip {
+        max-width: calc(100vw - 2rem);
+        left: 1rem !important;
+        right: 1rem !important;
+    }
+    
+    .regime-info-panel {
+        padding: 1.5rem;
+    }
+}
