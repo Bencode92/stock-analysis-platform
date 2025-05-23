@@ -1,0 +1,91 @@
+/* CSS pour le tableau comparatif détaillé */
+
+.tableau-comparatif-detaille {
+    width: 100%;
+    border-collapse: collapse;
+    background: #2a2f3e;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.tableau-comparatif-detaille th {
+    background: #1f2937;
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85em;
+    letter-spacing: 0.5px;
+    color: #9ca3af;
+}
+
+.tableau-comparatif-detaille td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #3a3f4e;
+}
+
+.tableau-comparatif-detaille tr:last-child td {
+    border-bottom: none;
+}
+
+.tableau-comparatif-detaille .category-header {
+    background: #374151;
+    font-weight: 600;
+    color: #f59e0b;
+}
+
+.tableau-comparatif-detaille .label {
+    color: #d1d5db;
+}
+
+.tableau-comparatif-detaille .value {
+    text-align: right;
+    font-weight: 500;
+}
+
+.tableau-comparatif-detaille .positive {
+    color: #00ff87;
+}
+
+.tableau-comparatif-detaille .negative {
+    color: #ff6b6b;
+}
+
+.tableau-comparatif-detaille .neutral {
+    color: #f59e0b;
+}
+
+.tableau-comparatif-detaille .difference {
+    text-align: right;
+    font-weight: 600;
+}
+
+.tableau-comparatif-detaille .subtotal {
+    background: #1f2937;
+    font-weight: 600;
+}
+
+.tableau-comparatif-detaille .total {
+    background: #111827;
+    font-weight: 700;
+    font-size: 1.1em;
+}
+
+.tableau-comparatif-detaille .final-cashflow {
+    background: linear-gradient(90deg, #1f2937 0%, #111827 100%);
+    font-weight: 700;
+    font-size: 1.2em;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .tableau-comparatif-detaille {
+        font-size: 0.85em;
+    }
+    
+    .tableau-comparatif-detaille td, 
+    .tableau-comparatif-detaille th {
+        padding: 8px;
+    }
+}
