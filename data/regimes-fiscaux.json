@@ -1,277 +1,116 @@
-{
-  "regimes": [
+detailed_data = [
     {
-      "id": "micro-foncier",
-      "nom": "Micro-foncier",
-      "dateEffet": "Déclar° 2044",
-      "icone": "fa-home",
-      "couleur": "#00D9FF",
-      "description": "Abattement 30%",
-      "plafond": 15000,
-      "definition": "Le régime micro-foncier est un régime fiscal simplifié pour les propriétaires qui louent des biens nus (non meublés) et perçoivent moins de 15 000 € de loyers bruts par an, tous biens et foyers confondus. Il permet de bénéficier d'un abattement automatique de 30 % sur les loyers déclarés, sans avoir à détailler ses charges. Ce régime est incompatible avec certains dispositifs fiscaux comme le Pinel ou le Malraux.",
-      "exemple": "Si vous percevez 10 000 € de loyers dans l'année, vous ne serez imposé que sur 7 000 €, même si vos charges réelles dépassent 3 000 €.",
-      "comparaison": "Très simple, mais moins intéressant si vos charges dépassent 30 % des loyers. Le régime réel est alors préférable.",
-      "avantages": [
-        "Simplicité de déclaration (formulaire 2042 uniquement)",
-        "Pas besoin de comptabilité ni de justificatifs",
-        "Automatisme de l'abattement fiscal"
-      ],
-      "inconvenients": [
-        "Plafond de 15 000 € pour l'ensemble du foyer",
-        "Pas adapté si vous avez des charges élevées",
-        "Incompatible avec les dispositifs fiscaux type Pinel, Malraux, etc."
-      ],
-      "conditions": [
-        "Revenus locatifs < 15 000€/an",
-        "Location nue uniquement",
-        "Pas de déficit foncier possible"
-      ],
-      "calcul": {
-        "abattement": 0.3,
-        "deficitDeductible": false
-      }
+        "nom": "Micro-foncier",
+        "definition": "Le régime micro-foncier est un régime fiscal simplifié pour les propriétaires qui louent des biens nus (non meublés) et perçoivent moins de 15 000 € de loyers bruts par an, tous biens et foyers confondus. Il permet de bénéficier d’un abattement automatique de 30 % sur les loyers déclarés, sans avoir à détailler ses charges. Ce régime est incompatible avec certains dispositifs fiscaux comme le Pinel ou le Malraux.",
+        "exemple": "Si vous percevez 10 000 € de loyers dans l’année, vous ne serez imposé que sur 7 000 €, même si vos charges réelles dépassent 3 000 €.",
+        "comparaison": "Très simple, mais moins intéressant si vos charges dépassent 30 % des loyers. Le régime réel est alors préférable.",
+        "avantages": [
+            "Simplicité de déclaration (formulaire 2042 uniquement)",
+            "Pas besoin de comptabilité ni de justificatifs",
+            "Automatisme de l’abattement fiscal"
+        ],
+        "inconvenients": [
+            "Plafond de 15 000 € pour l’ensemble du foyer",
+            "Pas adapté si vous avez des charges élevées",
+            "Incompatible avec les dispositifs fiscaux type Pinel, Malraux, etc."
+        ]
     },
     {
-      "id": "reel-foncier",
-      "nom": "Réel foncier",
-      "dateEffet": "Déclar° 2044",
-      "icone": "fa-calculator",
-      "couleur": "#00BFA5",
-      "description": "Charges réelles",
-      "definition": "Le régime réel permet de déduire toutes les charges réellement engagées (travaux, intérêts d'emprunt, taxe foncière, etc.) pour calculer le revenu imposable sur les loyers de biens loués vides.",
-      "exemple": "Vous percevez 15 000 € de loyers par an et avez 7 000 € de charges. Vous ne serez imposé que sur 8 000 €.",
-      "comparaison": "Plus intéressant que le micro-foncier si vos charges dépassent 30 % des loyers, mais demande plus de rigueur.",
-      "avantages": [
-        "Optimisation fiscale via déduction des charges réelles",
-        "Possibilité de créer un déficit foncier",
-        "Intéressant en cas de travaux ou de charges importantes"
-      ],
-      "inconvenients": [
-        "Gestion plus complexe (déclaration 2044, justificatifs)",
-        "Nécessite un suivi comptable plus rigoureux",
-        "Pas automatique : il faut opter pour ce régime"
-      ],
-      "conditions": [
-        "Tous revenus locatifs",
-        "Comptabilité détaillée requise",
-        "Conservation 3 ans après déficit"
-      ],
-      "calcul": {
-        "abattement": 0,
-        "deficitDeductible": true,
-        "plafondDeficit": 10700
-      }
+        "nom": "Réel foncier",
+        "definition": "Le régime réel permet de déduire toutes les charges réellement engagées (travaux, intérêts d’emprunt, taxe foncière, etc.) pour calculer le revenu imposable sur les loyers de biens loués vides.",
+        "exemple": "Vous percevez 15 000 € de loyers par an et avez 7 000 € de charges. Vous ne serez imposé que sur 8 000 €.",
+        "comparaison": "Plus intéressant que le micro-foncier si vos charges dépassent 30 % des loyers, mais demande plus de rigueur.",
+        "avantages": [
+            "Optimisation fiscale via déduction des charges réelles",
+            "Possibilité de créer un déficit foncier",
+            "Intéressant en cas de travaux ou de charges importantes"
+        ],
+        "inconvenients": [
+            "Gestion plus complexe (déclaration 2044, justificatifs)",
+            "Nécessite un suivi comptable plus rigoureux",
+            "Pas automatique : il faut opter pour ce régime"
+        ]
     },
     {
-      "id": "lmnp-micro-bic",
-      "nom": "LMNP micro-BIC",
-      "dateEffet": "Déclar° 2042-C-PRO",
-      "icone": "fa-bed",
-      "couleur": "#FFB300",
-      "description": "Abattement 50%",
-      "plafond": 77700,
-      "definition": "Le LMNP micro-BIC est un régime simplifié pour les particuliers qui louent un bien meublé. Les recettes sont imposées dans la catégorie des BIC, avec un abattement automatique de 50 %.",
-      "conditions_statut": "Recettes < 23 000 €/an ET inférieures à 50 % des revenus globaux du foyer.",
-      "exemple": "Vous percevez 9 000 € de loyers. Vous serez imposé sur 4 500 €, sans prise en compte des charges.",
-      "comparaison": "Simple à gérer, mais moins optimisé que le régime réel si vous avez des charges ou amortissements.",
-      "avantages": [
-        "Simplicité administrative",
-        "Pas besoin de comptabilité complexe",
-        "Abattement forfaitaire de 50 %"
-      ],
-      "inconvenients": [
-        "Pas de déduction des charges réelles",
-        "Moins avantageux si vous avez investi dans le bien (travaux, mobilier)",
-        "Soumis à des plafonds stricts pour rester en LMNP"
-      ],
-      "conditions": [
-        "Location meublée < 77 700€/an",
-        "< 23 000€ pour le tourisme (71%)",
-        "Pas d'amortissement possible"
-      ],
-      "calcul": {
-        "abattement": 0.5,
-        "abattementTourisme": 0.71,
-        "deficitDeductible": false
-      }
+        "nom": "LMNP micro-BIC",
+        "definition": "Le LMNP micro-BIC est un régime simplifié pour les particuliers qui louent un bien meublé. Les recettes sont imposées dans la catégorie des BIC, avec un abattement automatique de 50 %.",
+        "conditions_statut": "Recettes < 23 000 €/an ET inférieures à 50 % des revenus globaux du foyer.",
+        "exemple": "Vous percevez 9 000 € de loyers. Vous serez imposé sur 4 500 €, sans prise en compte des charges.",
+        "comparaison": "Simple à gérer, mais moins optimisé que le régime réel si vous avez des charges ou amortissements.",
+        "avantages": [
+            "Simplicité administrative",
+            "Pas besoin de comptabilité complexe",
+            "Abattement forfaitaire de 50 %"
+        ],
+        "inconvenients": [
+            "Pas de déduction des charges réelles",
+            "Moins avantageux si vous avez investi dans le bien (travaux, mobilier)",
+            "Soumis à des plafonds stricts pour rester en LMNP"
+        ]
     },
     {
-      "id": "lmnp-reel",
-      "nom": "LMNP réel",
-      "dateEffet": "BIC",
-      "icone": "fa-building",
-      "couleur": "#9C27B0",
-      "description": "Charges + amort.",
-      "definition": "Le régime réel LMNP permet de déduire toutes les charges et d'amortir le bien, le mobilier et les frais. Il est très efficace pour réduire voire annuler l'imposition sur les loyers issus d'une location meublée.",
-      "conditions_statut": "Recettes < 23 000 €/an ET inférieures à 50 % des revenus globaux du foyer.",
-      "exemple": "Vous percevez 12 000 € de loyers, 4 000 € de charges et 6 000 € d'amortissements. Votre revenu imposable est de seulement 2 000 €.",
-      "comparaison": "Très avantageux fiscalement, surtout en début d'investissement, mais nécessite une comptabilité complète.",
-      "avantages": [
-        "Amortissement du bien = réduction importante d'impôt",
-        "Optimisation sur plusieurs années",
-        "Déduction de toutes les charges réelles"
-      ],
-      "inconvenients": [
-        "Obligation de tenir une comptabilité complète",
-        "Coût éventuel d'un expert-comptable",
-        "Plus complexe à gérer que le micro-BIC"
-      ],
-      "conditions": [
-        "Location meublée professionnelle",
-        "Comptabilité complète",
-        "Adhésion CGA recommandée"
-      ],
-      "calcul": {
-        "abattement": 0,
-        "amortissement": true,
-        "deficitReportable": true
-      }
+        "nom": "LMNP réel",
+        "definition": "Le régime réel LMNP permet de déduire toutes les charges et d’amortir le bien, le mobilier et les frais. Il est très efficace pour réduire voire annuler l’imposition sur les loyers issus d’une location meublée.",
+        "conditions_statut": "Recettes < 23 000 €/an ET inférieures à 50 % des revenus globaux du foyer.",
+        "exemple": "Vous percevez 12 000 € de loyers, 4 000 € de charges et 6 000 € d’amortissements. Votre revenu imposable est de seulement 2 000 €.",
+        "comparaison": "Très avantageux fiscalement, surtout en début d’investissement, mais nécessite une comptabilité complète.",
+        "avantages": [
+            "Amortissement du bien = réduction importante d’impôt",
+            "Optimisation sur plusieurs années",
+            "Déduction de toutes les charges réelles"
+        ],
+        "inconvenients": [
+            "Obligation de tenir une comptabilité complète",
+            "Coût éventuel d’un expert-comptable",
+            "Plus complexe à gérer que le micro-BIC"
+        ]
     },
     {
-      "id": "sci-is",
-      "nom": "SCI à l'IS",
-      "dateEffet": "IS",
-      "icone": "fa-landmark",
-      "couleur": "#3F51B5",
-      "description": "Société civile",
-      "definition": "La SCI à l'IS permet de détenir un ou plusieurs biens à plusieurs associés. Elle permet l'amortissement des biens et un pilotage plus professionnel, mais la fiscalité à la revente est moins favorable (plus-value sur valeur nette comptable).",
-      "exemple": "Une SCI perçoit 40 000 € de loyers. Après charges et amortissements, le bénéfice est de 10 000 €, soumis à l'IS. Si les bénéfices sont distribués, ils sont ensuite imposés chez les associés.",
-      "comparaison": "Structure efficace pour capitaliser/reinvestir, mais moins souple pour sortir les bénéfices sans surimposition.",
-      "avantages": [
-        "Amortissement fiscal des biens",
-        "Bonne structuration pour gérer plusieurs biens ou associés",
-        "Utile pour transmettre ou réinvestir"
-      ],
-      "inconvenients": [
-        "Plus-value à la revente moins avantageuse qu'en nom propre",
-        "Comptabilité obligatoire",
-        "Double imposition possible en cas de distribution"
-      ],
-      "conditions": [
-        "Constitution d'une SCI",
-        "Option irrévocable pour l'IS",
-        "Comptabilité d'entreprise"
-      ],
-      "calcul": {
-        "tauxIS": 0.15,
-        "tauxISPlein": 0.25,
-        "seuilTauxReduit": 42500
-      }
+        "nom": "SCI à l'IS",
+        "definition": "La SCI à l’IS permet de détenir un ou plusieurs biens à plusieurs associés. Elle permet l’amortissement des biens et un pilotage plus professionnel, mais la fiscalité à la revente est moins favorable (plus-value sur valeur nette comptable).",
+        "exemple": "Une SCI perçoit 40 000 € de loyers. Après charges et amortissements, le bénéfice est de 10 000 €, soumis à l’IS. Si les bénéfices sont distribués, ils sont ensuite imposés chez les associés.",
+        "comparaison": "Structure efficace pour capitaliser/reinvestir, mais moins souple pour sortir les bénéfices sans surimposition.",
+        "avantages": [
+            "Amortissement fiscal des biens",
+            "Bonne structuration pour gérer plusieurs biens ou associés",
+            "Utile pour transmettre ou réinvestir"
+        ],
+        "inconvenients": [
+            "Plus-value à la revente moins avantageuse qu’en nom propre",
+            "Comptabilité obligatoire",
+            "Double imposition possible en cas de distribution"
+        ]
     },
     {
-      "id": "sas",
-      "nom": "SAS",
-      "dateEffet": "IS",
-      "icone": "fa-chart-line",
-      "couleur": "#00BCD4",
-      "description": "Société par actions",
-      "definition": "La SAS est une société par actions très flexible utilisée pour des projets immobiliers professionnels. La rémunération du dirigeant est soumise aux cotisations sociales. Elle permet de faire entrer facilement des investisseurs.",
-      "exemple": "Des associés créent une SAS pour investir dans plusieurs immeubles, avec possibilité d'accueillir des actionnaires externes.",
-      "comparaison": "Structure adaptée aux projets ambitieux ou nécessitant des levées de fonds, mais plus lourde à gérer.",
-      "avantages": [
-        "Grande souplesse statutaire",
-        "Attractive pour les investisseurs",
-        "Séparation claire entre pouvoirs et répartition des profits"
-      ],
-      "inconvenients": [
-        "Cotisations sociales sur la rémunération du dirigeant",
-        "Comptabilité lourde",
-        "Moins adaptée pour des petits projets ou en famille"
-      ],
-      "conditions": [
-        "Capital minimum 1€",
-        "Président obligatoire",
-        "Charges sociales élevées"
-      ]
+        "nom": "SAS",
+        "definition": "La SAS est une société par actions très flexible utilisée pour des projets immobiliers professionnels. La rémunération du dirigeant est soumise aux cotisations sociales. Elle permet de faire entrer facilement des investisseurs.",
+        "exemple": "Des associés créent une SAS pour investir dans plusieurs immeubles, avec possibilité d’accueillir des actionnaires externes.",
+        "comparaison": "Structure adaptée aux projets ambitieux ou nécessitant des levées de fonds, mais plus lourde à gérer.",
+        "avantages": [
+            "Grande souplesse statutaire",
+            "Attractive pour les investisseurs",
+            "Séparation claire entre pouvoirs et répartition des profits"
+        ],
+        "inconvenients": [
+            "Cotisations sociales sur la rémunération du dirigeant",
+            "Comptabilité lourde",
+            "Moins adaptée pour des petits projets ou en famille"
+        ]
     },
     {
-      "id": "sarl",
-      "nom": "SARL",
-      "dateEffet": "IS",
-      "icone": "fa-users",
-      "couleur": "#4CAF50",
-      "description": "Société à resp. limitée",
-      "definition": "La SARL est une société classique utilisée pour gérer un patrimoine immobilier. En version SARL de famille, elle peut opter pour l'impôt sur le revenu. Elle est souvent choisie pour des projets en couple ou en famille.",
-      "exemple": "Un couple crée une SARL pour acheter un bien. En optant pour le régime IR (SARL de famille), ils peuvent imputer le résultat sur leur déclaration personnelle.",
-      "comparaison": "Moins souple que la SAS, mais plus sécurisante pour les projets familiaux. La SARL de famille permet une imposition à l'IR sur option.",
-      "avantages": [
-        "Protection du patrimoine personnel",
-        "Possible option pour l'IR (SARL de famille)",
-        "Encadrement juridique rassurant"
-      ],
-      "inconvenients": [
-        "Moins flexible que la SAS",
-        "Gestion administrative obligatoire",
-        "Changement de régime fiscal difficile une fois fixé"
-      ],
-      "conditions": [
-        "1 à 100 associés",
-        "Capital minimum 1€",
-        "Statuts encadrés"
-      ]
+        "nom": "SARL",
+        "definition": "La SARL est une société classique utilisée pour gérer un patrimoine immobilier. En version SARL de famille, elle peut opter pour l’impôt sur le revenu. Elle est souvent choisie pour des projets en couple ou en famille.",
+        "exemple": "Un couple crée une SARL pour acheter un bien. En optant pour le régime IR (SARL de famille), ils peuvent imputer le résultat sur leur déclaration personnelle.",
+        "comparaison": "Moins souple que la SAS, mais plus sécurisante pour les projets familiaux. La SARL de famille permet une imposition à l’IR sur option.",
+        "avantages": [
+            "Protection du patrimoine personnel",
+            "Possible option pour l’IR (SARL de famille)",
+            "Encadrement juridique rassurant"
+        ],
+        "inconvenients": [
+            "Moins flexible que la SAS",
+            "Gestion administrative obligatoire",
+            "Changement de régime fiscal difficile une fois fixé"
+        ]
     }
-  ],
-  "definitions": {
-    "ACRE": {
-      "titre": "Aide à la Création ou à la Reprise d'Entreprise",
-      "description": "L'ACRE est une exonération partielle ou totale de certaines cotisations sociales pendant la première année d'activité, visant à faciliter la création ou la reprise d'entreprise en France.",
-      "exemple": "Un créateur d'entreprise bénéficie de l'ACRE et voit ses cotisations sociales réduites de 80% pendant sa première année d'activité.",
-      "termes": ["création d'entreprise", "cotisations sociales", "exonération", "URSSAF"],
-      "conditions": [
-        "Être créateur ou repreneur d'entreprise",
-        "Demande dans les 45 jours suivant la création",
-        "Ne pas avoir bénéficié de l'ACRE dans les 3 dernières années"
-      ]
-    },
-    "BIC": {
-      "titre": "Bénéfices Industriels et Commerciaux",
-      "description": "Catégorie de revenus comprenant les bénéfices réalisés par les personnes physiques qui exercent une activité commerciale, industrielle ou artisanale.",
-      "categories": ["Location meublée", "Commerce", "Artisanat", "Prestations de services"]
-    },
-    "IS": {
-      "titre": "Impôt sur les Sociétés",
-      "description": "Impôt sur les bénéfices des sociétés de capitaux. Taux normal de 25%, taux réduit de 15% jusqu'à 42 500€ de bénéfices pour les PME.",
-      "avantages": ["Déduction totale des charges", "Report des déficits", "Optimisation de la rémunération"]
-    },
-    "CGA": {
-      "titre": "Centre de Gestion Agréé",
-      "description": "Organisme ayant pour mission d'apporter une assistance en matière de gestion aux entreprises. L'adhésion évite la majoration de 25% du bénéfice imposable.",
-      "cout": "Environ 150 à 300€/an"
-    },
-    "TNS": {
-      "titre": "Travailleur Non Salarié",
-      "description": "Statut social des gérants majoritaires de SARL, entrepreneurs individuels. Charges sociales généralement plus faibles que le régime général.",
-      "cotisations": "Environ 45% du revenu net"
-    },
-    "déficit foncier": {
-      "titre": "Déficit foncier",
-      "description": "Situation où les charges déductibles dépassent les revenus fonciers, permettant de réduire le revenu global imposable jusqu'à 10 700€ par an.",
-      "conditions": ["Régime réel uniquement", "Conservation du bien 3 ans après déficit", "Hors intérêts d'emprunt"],
-      "exemple": "Loyers: 8 000€, charges: 15 000€ = déficit de 7 000€ déductible de vos autres revenus."
-    },
-    "amortissement": {
-      "titre": "Amortissement comptable",
-      "description": "Déduction comptable annuelle correspondant à la perte de valeur théorique du bien et du mobilier, applicable uniquement en LMNP réel et sociétés à l'IS.",
-      "calcul": "Généralement 2 à 4% du prix du bien par an, mobilier sur 5-10 ans",
-      "exemple": "Bien de 200 000€ = 6 000€ d'amortissement/an sur 33 ans"
-    },
-    "micro-foncier": {
-      "titre": "Régime micro-foncier",
-      "description": "Régime simplifié avec abattement forfaitaire de 30% sur les revenus locatifs bruts, sans justificatifs de charges.",
-      "conditions": ["Revenus < 15 000€/an", "Location nue uniquement", "Pas de dispositif fiscal"],
-      "comparaison": "Avantageux si charges réelles < 30% des loyers"
-    },
-    "location meublée": {
-      "titre": "Location meublée",
-      "description": "Location d'un logement équipé du mobilier nécessaire à la vie courante. Relève des BIC et permet l'amortissement comptable.",
-      "liste_mobilier": ["Literie complète", "Table et chaises", "Équipements de cuisine", "Rangements"],
-      "avantages": ["Loyers plus élevés", "Régime fiscal avantageux", "Amortissement possible"]
-    },
-    "vacance locative": {
-      "titre": "Vacance locative",
-      "description": "Période pendant laquelle le bien n'est pas loué. Provision généralement estimée à 5% des loyers annuels pour anticiper ces périodes.",
-      "exemple": "Loyer de 1000€/mois = provision de 50€/mois pour vacance",
-      "conseil": "Plus élevée en zone tendue ou pour des biens atypiques"
-    }
-  }
-}
+]
