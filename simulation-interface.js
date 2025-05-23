@@ -9,6 +9,7 @@
  * Version 1.2 - Refactorisation et améliorations de la gestion des résultats
  * Version 1.3 - Ajout d'explications détaillées sur le cash-flow et amélioration de l'affichage du cash-flow annuel
  * Version 1.4 - Correction du problème du mode de calcul cash-flow positif et optimisation de l'interface
+ * Version 1.5 - Correction du conflit CSS avec les cartes de mode de calcul
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -201,16 +202,6 @@ document.addEventListener('DOMContentLoaded', function() {
             font-weight: 600;
             margin-bottom: 0.3rem;
         }
-        
-        /* Amélioration pour les options de mode de calcul */
-        .flex-col {
-            flex-direction: column;
-        }
-        
-        .option-btn {
-            width: 100%;
-            margin-bottom: 0.5rem;
-        }
     `;
     document.head.appendChild(styleEl);
 
@@ -227,6 +218,22 @@ document.addEventListener('DOMContentLoaded', function() {
     let valuationChart = null;
     let costPieChartClassique = null;
     let costPieChartEncheres = null;
+
+    // === CORRECTION DU CONFLIT CSS ===
+    // Les cartes de mode de calcul sont gérées entièrement par CSS
+    // via input:checked + .mode-card
+    // Aucune manipulation de classes nécessaire en JavaScript
+    
+    // Écouteur pour les changements de mode de calcul (logique métier uniquement)
+    const calculationModeInputs = document.querySelectorAll('input[name="calculation-mode"]');
+    calculationModeInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            if (this.checked) {
+                console.log('Mode de calcul sélectionné:', this.value);
+                // Logique métier uniquement, pas de modification de styles
+            }
+        });
+    });
 
     // Fonction modulaire pour afficher des notifications
     function afficherNotification(message, type = 'info') {
@@ -444,14 +451,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Adapter l'interface selon l'appareil
     window.addEventListener('resize', adapterInterfaceSelonAppareil);
     window.addEventListener('DOMContentLoaded', adapterInterfaceSelonAppareil);
-    
-    // Initialiser le mode de calcul vertical si nécessaire
-    window.addEventListener('DOMContentLoaded', function() {
-        const calculationModeContainer = document.querySelector('.form-group .flex');
-        if (calculationModeContainer && !calculationModeContainer.classList.contains('flex-col')) {
-            calculationModeContainer.classList.add('flex-col');
-        }
-    });
 
     // Fonctions
     // --------------------
