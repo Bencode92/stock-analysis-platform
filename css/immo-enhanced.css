@@ -592,7 +592,7 @@ body {
     box-shadow: 0 4px 12px rgba(0, 217, 255, 0.3);
 }
 
-/* === MODE DE CALCUL === */
+/* === MODE DE CALCUL AMÉLIORÉ === */
 .calculation-mode-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -600,58 +600,169 @@ body {
     margin-bottom: var(--spacing-xl);
 }
 
+.mode-option {
+    position: relative;
+}
+
 .mode-option input[type="radio"] {
-    display: none;
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .mode-card {
-    background: rgba(255, 255, 255, 0.02);
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: var(--spacing-xl);
+    position: relative;
     cursor: pointer;
-    transition: var(--transition-normal);
-    text-align: center;
+    border-radius: 20px;
+    padding: 2rem;
+    background: rgba(23, 42, 69, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+/* Effet de gradient animé au survol */
+.mode-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, transparent, rgba(0, 217, 255, 0.1));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.mode-card:hover::before {
+    opacity: 1;
 }
 
 .mode-card:hover {
+    transform: translateY(-5px);
     border-color: rgba(0, 217, 255, 0.3);
-    background: rgba(0, 217, 255, 0.05);
-    transform: translateY(-3px);
+    box-shadow: 0 10px 40px rgba(0, 217, 255, 0.2),
+                0 0 0 1px rgba(0, 217, 255, 0.1);
 }
 
+/* État sélectionné */
 .mode-option input:checked + .mode-card {
-    border-color: var(--primary-color);
-    background: rgba(0, 217, 255, 0.1);
-    box-shadow: 0 6px 24px rgba(0, 217, 255, 0.25);
+    background: linear-gradient(135deg, rgba(0, 217, 255, 0.15), rgba(0, 191, 165, 0.1));
+    border-color: #00D9FF;
+    box-shadow: 0 0 30px rgba(0, 217, 255, 0.3),
+                inset 0 0 20px rgba(0, 217, 255, 0.05);
 }
 
+.mode-option input:checked + .mode-card::after {
+    content: '';
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 24px;
+    height: 24px;
+    background: linear-gradient(135deg, #00D9FF, #00BFA5);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 217, 255, 0.5);
+    animation: pulseCheck 2s infinite;
+}
+
+@keyframes pulseCheck {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* Icône principale améliorée */
 .mode-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(0, 217, 255, 0.2), rgba(0, 191, 165, 0.15));
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto var(--spacing-lg);
-    color: #0A192F;
-    font-size: 1.25rem;
-    box-shadow: 0 4px 12px rgba(0, 217, 255, 0.3);
+    font-size: 1.5rem;
+    color: #00D9FF;
+    box-shadow: 0 8px 24px rgba(0, 217, 255, 0.25);
+    transition: all 0.3s ease;
 }
 
+.mode-card:hover .mode-icon {
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: 0 12px 32px rgba(0, 217, 255, 0.35);
+}
+
+.mode-option input:checked + .mode-card .mode-icon {
+    background: linear-gradient(135deg, #00D9FF, #00BFA5);
+    color: #0A192F;
+}
+
+/* Textes améliorés */
 .mode-content h4 {
-    font-size: 1.1rem;
+    font-size: 1.25rem;
     font-weight: 600;
-    margin: 0 0 var(--spacing-sm) 0;
+    margin: 0 0 0.75rem 0;
     color: var(--text-primary);
+    transition: color 0.3s ease;
+}
+
+.mode-option input:checked + .mode-card .mode-content h4 {
+    color: #00D9FF;
 }
 
 .mode-content p {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    line-height: 1.6;
     margin: 0;
-    line-height: 1.4;
+    transition: color 0.3s ease;
+}
+
+.mode-card:hover .mode-content p {
+    color: var(--text-secondary);
+}
+
+/* Badge pour indiquer le mode plus strict */
+.mode-badge {
+    display: inline-block;
+    background: rgba(255, 179, 0, 0.2);
+    color: #FFB300;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: 1rem;
+    border: 1px solid rgba(255, 179, 0, 0.3);
+}
+
+/* Animation d'entrée pour les cartes */
+.mode-card {
+    animation: slideInMode 0.5s ease-out forwards;
+    opacity: 0;
+}
+
+.mode-option:nth-child(1) .mode-card {
+    animation-delay: 0.1s;
+}
+
+.mode-option:nth-child(2) .mode-card {
+    animation-delay: 0.2s;
+}
+
+@keyframes slideInMode {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* === BOUTONS === */
