@@ -5,8 +5,9 @@
  * 1. Suppression des boutons "Comprendre le cash-flow" en double
  * 2. Correction du centrage des onglets et sections
  * 3. Optimisation de l'interface pour une meilleure expérience utilisateur
+ * 4. Correction du bug de duplication des unités (€, €/m², etc.)
  * 
- * Version 2.0 - Suppression de la conversion du mode de calcul (déjà géré par CSS)
+ * Version 2.1 - Ajout du fix pour la duplication des unités
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -24,6 +25,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // 3. Appliquer les correctifs après un court délai
             setTimeout(appliquerCorrectifs, 500);
             setTimeout(appliquerOptimisations, 600);
+            
+            // 4. Initialiser le fix pour les unités
+            initializeUnits();
         }
     }, 100);
     
@@ -445,3 +449,139 @@ window.addEventListener('resize', () => {
         optimiserPourMobile();
     }, 250);
 });
+
+// === FIX POUR LE BUG DE DUPLICATION DES UNITÉS ===
+
+/**
+ * Nettoie tous les doublons d'unités et d'icônes
+ */
+function cleanupDuplicateUnits() {
+    // Nettoyer tous les form-addon-text en double
+    document.querySelectorAll('.form-input-wrapper').forEach(wrapper => {
+        const addons = wrapper.querySelectorAll('.form-addon-text');
+        // Garder seulement le premier, supprimer les autres
+        if (addons.length > 1) {
+            for (let i = 1; i < addons.length; i++) {
+                addons[i].remove();
+            }
+        }
+    });
+    
+    // Nettoyer les info-tooltips en double (icônes "i")
+    document.querySelectorAll('.form-label').forEach(label => {
+        const tooltips = label.querySelectorAll('.info-tooltip');
+        if (tooltips.length > 1) {
+            for (let i = 1; i < tooltips.length; i++) {
+                tooltips[i].remove();
+            }
+        }
+    });
+}
+
+/**
+ * Initialise les unités proprement
+ */
+function initializeUnits() {
+    // D'abord nettoyer les doublons existants
+    cleanupDuplicateUnits();
+    
+    // Map des unités pour chaque champ
+    const unitsMap = {
+        'apport': '€',
+        'prix-m2-marche': '€/m²',
+        'loyer-m2': '€/m²/mois',
+        'taux': '%',
+        'duree': 'ans',
+        'taxe-fonciere': '%',
+        'vacance-locative': '%',
+        'travaux-m2': '€/m²',
+        'frais-bancaires-dossier': '€',
+        'frais-bancaires-compte': '€',
+        'frais-garantie': '%',
+        'entretienAnnuel': '%',
+        'assurancePNO': '€',
+        'chargesNonRecuperables': '€/m²/an'
+    };
+    
+    // Vérifier que chaque input a bien son unité
+    Object.entries(unitsMap).forEach(([inputId, unit]) => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            const wrapper = input.closest('.form-input-wrapper');
+            if (wrapper && !wrapper.querySelector('.form-addon-text')) {
+                // Créer l'élément unité seulement s'il n'existe pas
+                const unitElement = document.createElement('span');
+                unitElement.className = 'form-addon-text';
+                unitElement.textContent = unit;
+                wrapper.appendChild(unitElement);
+            }
+        }
+    });
+}
+
+// Modifier la fonction simuler pour nettoyer avant chaque simulation
+const originalSimuler = window.simuler;
+window.simuler = function() {
+    console.log('🧹 Nettoyage des unités avant simulation');
+    // Nettoyer les unités en double avant la simulation
+    cleanupDuplicateUnits();
+    
+    // Appeler la fonction originale
+    if (originalSimuler) {
+        return originalSimuler.apply(this, arguments);
+    }
+};
+
+// Observer les changements dans le DOM pour nettoyer automatiquement
+const observer = new MutationObserver(function(mutations) {
+    let shouldClean = false;
+    mutations.forEach(function(mutation) {
+        if (mutation.addedNodes.length > 0) {
+            mutation.addedNodes.forEach(node => {
+                if (node.nodeType === 1 && node.classList && 
+                    (node.classList.contains('form-addon-text') || 
+                     node.classList.contains('info-tooltip'))) {
+                    shouldClean = true;
+                }
+            });
+        }
+    });
+    
+    if (shouldClean) {
+        setTimeout(cleanupDuplicateUnits, 100);
+    }
+});
+
+// Observer le formulaire principal
+setTimeout(() => {
+    const container = document.querySelector('.container');
+    if (container) {
+        observer.observe(container, {
+            childList: true,
+            subtree: true
+        });
+    }
+}, 1000);
+
+// Fonction utilitaire pour réinitialiser complètement l'interface
+window.resetInterface = function() {
+    console.log('🔄 Réinitialisation complète de l\'interface');
+    
+    // Nettoyer tous les doublons
+    cleanupDuplicateUnits();
+    
+    // Réinitialiser les tooltips
+    document.querySelectorAll('.info-tooltip').forEach(tooltip => {
+        // S'assurer qu'il n'y a qu'une seule icône "i"
+        if (!tooltip.querySelector('i.fa-info-circle')) {
+            tooltip.innerHTML = '<i class="fas fa-info-circle"></i>';
+        }
+    });
+    
+    // Réinitialiser les positions CSS si nécessaire
+    document.querySelectorAll('.form-input-wrapper').forEach(wrapper => {
+        wrapper.style.position = 'relative';
+    });
+    
+    console.log('✅ Interface réinitialisée');
+};
