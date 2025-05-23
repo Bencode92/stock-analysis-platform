@@ -7,8 +7,46 @@
  * 3. Optimisation de l'interface pour une meilleure expérience utilisateur
  * 4. Correction du bug de duplication des unités (€, €/m², etc.)
  * 
- * Version 2.1 - Ajout du fix pour la duplication des unités
+ * Version 2.2 - Fix complet pour la duplication des unités
  */
+
+// === FIX IMMÉDIAT AU CHARGEMENT ===
+(function() {
+    console.log('🚀 Application immédiate du fix de duplication');
+    
+    // Fonction pour nettoyer immédiatement
+    function cleanupImmediate() {
+        // Nettoyer les form-addon-text en double
+        document.querySelectorAll('.form-input-wrapper').forEach(wrapper => {
+            const addons = wrapper.querySelectorAll('.form-addon-text');
+            if (addons.length > 1) {
+                console.log(`🧹 Suppression de ${addons.length - 1} doublons dans`, wrapper);
+                for (let i = 1; i < addons.length; i++) {
+                    addons[i].remove();
+                }
+            }
+        });
+        
+        // Nettoyer les info-tooltips en double
+        document.querySelectorAll('.form-label').forEach(label => {
+            const tooltips = label.querySelectorAll('.info-tooltip, i.fas.fa-info-circle');
+            if (tooltips.length > 1) {
+                console.log(`🧹 Suppression de ${tooltips.length - 1} infobulles en double`);
+                for (let i = 1; i < tooltips.length; i++) {
+                    tooltips[i].remove();
+                }
+            }
+        });
+    }
+    
+    // Nettoyer immédiatement
+    cleanupImmediate();
+    
+    // Nettoyer encore après un court délai
+    setTimeout(cleanupImmediate, 100);
+    setTimeout(cleanupImmediate, 500);
+    setTimeout(cleanupImmediate, 1000);
+})();
 
 document.addEventListener('DOMContentLoaded', function() {
     // S'assurer que le DOM est chargé
@@ -16,6 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 1. Ajouter les styles CSS pour le centrage et l'optimisation
     ajouterStylesCentrage();
     ajouterStylesOptimisation();
+    ajouterStylesAntiDuplication();
     
     // 2. Attendre que le simulateur et l'interface soient chargés
     const checkComponents = setInterval(function() {
@@ -26,8 +65,8 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(appliquerCorrectifs, 500);
             setTimeout(appliquerOptimisations, 600);
             
-            // 4. Initialiser le fix pour les unités
-            initializeUnits();
+            // 4. Initialiser le fix pour les unités avec plus d'agressivité
+            initializeUnitsProtection();
         }
     }, 100);
     
@@ -37,6 +76,50 @@ document.addEventListener('DOMContentLoaded', function() {
         console.warn("Délai d'attente dépassé pour l'application des correctifs");
     }, 5000);
 });
+
+/**
+ * Ajoute des styles pour empêcher visuellement les doublons
+ */
+function ajouterStylesAntiDuplication() {
+    const styleElement = document.createElement('style');
+    styleElement.id = 'anti-duplication-styles';
+    styleElement.innerHTML = `
+        /* Masquer les doublons visuellement comme protection supplémentaire */
+        .form-input-wrapper .form-addon-text:not(:first-of-type) {
+            display: none !important;
+        }
+        
+        .form-label .info-tooltip:not(:first-of-type),
+        .form-label i.fa-info-circle:not(:first-of-type) {
+            display: none !important;
+        }
+        
+        /* S'assurer que les unités sont bien positionnées */
+        .form-input-wrapper {
+            position: relative !important;
+        }
+        
+        .form-addon-text {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            opacity: 0.7;
+            background: transparent;
+            padding: 0 4px;
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.7);
+            z-index: 1;
+        }
+        
+        /* Fix pour les icônes info */
+        .info-tooltip i {
+            pointer-events: none;
+        }
+    `;
+    document.head.appendChild(styleElement);
+}
 
 /**
  * Ajoute les styles CSS pour corriger le centrage
@@ -450,10 +533,10 @@ window.addEventListener('resize', () => {
     }, 250);
 });
 
-// === FIX POUR LE BUG DE DUPLICATION DES UNITÉS ===
+// === FIX RENFORCÉ POUR LE BUG DE DUPLICATION DES UNITÉS ===
 
 /**
- * Nettoie tous les doublons d'unités et d'icônes
+ * Nettoie tous les doublons d'unités et d'icônes de manière agressive
  */
 function cleanupDuplicateUnits() {
     // Nettoyer tous les form-addon-text en double
@@ -461,6 +544,7 @@ function cleanupDuplicateUnits() {
         const addons = wrapper.querySelectorAll('.form-addon-text');
         // Garder seulement le premier, supprimer les autres
         if (addons.length > 1) {
+            console.log(`🧹 Nettoyage de ${addons.length - 1} unités en double`);
             for (let i = 1; i < addons.length; i++) {
                 addons[i].remove();
             }
@@ -475,56 +559,146 @@ function cleanupDuplicateUnits() {
                 tooltips[i].remove();
             }
         }
-    });
-}
-
-/**
- * Initialise les unités proprement
- */
-function initializeUnits() {
-    // D'abord nettoyer les doublons existants
-    cleanupDuplicateUnits();
-    
-    // Map des unités pour chaque champ
-    const unitsMap = {
-        'apport': '€',
-        'prix-m2-marche': '€/m²',
-        'loyer-m2': '€/m²/mois',
-        'taux': '%',
-        'duree': 'ans',
-        'taxe-fonciere': '%',
-        'vacance-locative': '%',
-        'travaux-m2': '€/m²',
-        'frais-bancaires-dossier': '€',
-        'frais-bancaires-compte': '€',
-        'frais-garantie': '%',
-        'entretienAnnuel': '%',
-        'assurancePNO': '€',
-        'chargesNonRecuperables': '€/m²/an'
-    };
-    
-    // Vérifier que chaque input a bien son unité
-    Object.entries(unitsMap).forEach(([inputId, unit]) => {
-        const input = document.getElementById(inputId);
-        if (input) {
-            const wrapper = input.closest('.form-input-wrapper');
-            if (wrapper && !wrapper.querySelector('.form-addon-text')) {
-                // Créer l'élément unité seulement s'il n'existe pas
-                const unitElement = document.createElement('span');
-                unitElement.className = 'form-addon-text';
-                unitElement.textContent = unit;
-                wrapper.appendChild(unitElement);
+        
+        // Nettoyer aussi les icônes orphelines
+        const icons = label.querySelectorAll('i.fa-info-circle');
+        if (icons.length > 1) {
+            for (let i = 1; i < icons.length; i++) {
+                icons[i].remove();
             }
         }
     });
 }
 
+/**
+ * Protection complète contre les duplications
+ */
+function initializeUnitsProtection() {
+    console.log('🛡️ Initialisation de la protection anti-duplication');
+    
+    // Nettoyer immédiatement
+    cleanupDuplicateUnits();
+    
+    // Remplacer toutes les fonctions qui pourraient ajouter des unités
+    protectAgainstDuplication();
+    
+    // Observer les changements dans le DOM
+    setupMutationObserver();
+    
+    // Nettoyer périodiquement
+    setInterval(cleanupDuplicateUnits, 2000);
+}
+
+/**
+ * Protège contre l'ajout de doublons en interceptant les méthodes DOM
+ */
+function protectAgainstDuplication() {
+    // Sauvegarder les méthodes originales
+    const originalAppendChild = Element.prototype.appendChild;
+    const originalInsertBefore = Element.prototype.insertBefore;
+    const originalInsertAdjacentHTML = Element.prototype.insertAdjacentHTML;
+    
+    // Remplacer appendChild
+    Element.prototype.appendChild = function(child) {
+        if (child && child.classList) {
+            // Vérifier si c'est une unité
+            if (child.classList.contains('form-addon-text')) {
+                const existing = this.querySelector('.form-addon-text');
+                if (existing) {
+                    console.log('⚡ Blocage d\'ajout d\'unité en double');
+                    return existing;
+                }
+            }
+            // Vérifier si c'est une infobulle
+            if (child.classList.contains('info-tooltip')) {
+                const existing = this.querySelector('.info-tooltip');
+                if (existing) {
+                    console.log('⚡ Blocage d\'ajout d\'infobulle en double');
+                    return existing;
+                }
+            }
+        }
+        return originalAppendChild.call(this, child);
+    };
+    
+    // Remplacer insertBefore
+    Element.prototype.insertBefore = function(newNode, referenceNode) {
+        if (newNode && newNode.classList) {
+            if (newNode.classList.contains('form-addon-text')) {
+                const existing = this.querySelector('.form-addon-text');
+                if (existing) {
+                    console.log('⚡ Blocage d\'insertion d\'unité en double');
+                    return existing;
+                }
+            }
+            if (newNode.classList.contains('info-tooltip')) {
+                const existing = this.querySelector('.info-tooltip');
+                if (existing) {
+                    console.log('⚡ Blocage d\'insertion d\'infobulle en double');
+                    return existing;
+                }
+            }
+        }
+        return originalInsertBefore.call(this, newNode, referenceNode);
+    };
+}
+
+/**
+ * Configure un observateur de mutations plus agressif
+ */
+function setupMutationObserver() {
+    const observer = new MutationObserver(function(mutations) {
+        let shouldClean = false;
+        
+        mutations.forEach(function(mutation) {
+            // Vérifier les nœuds ajoutés
+            if (mutation.addedNodes.length > 0) {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === 1) { // Element node
+                        // Vérifier si c'est un élément problématique
+                        if (node.classList && (
+                            node.classList.contains('form-addon-text') || 
+                            node.classList.contains('info-tooltip'))) {
+                            shouldClean = true;
+                        }
+                        // Vérifier aussi les enfants
+                        if (node.querySelectorAll) {
+                            const problematicElements = node.querySelectorAll('.form-addon-text, .info-tooltip');
+                            if (problematicElements.length > 0) {
+                                shouldClean = true;
+                            }
+                        }
+                    }
+                });
+            }
+        });
+        
+        if (shouldClean) {
+            console.log('🔍 Duplication détectée, nettoyage...');
+            setTimeout(cleanupDuplicateUnits, 50);
+        }
+    });
+    
+    // Observer tout le document
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: false,
+        characterData: false
+    });
+    
+    console.log('👁️ Observateur de mutations actif');
+}
+
 // Modifier la fonction simuler pour nettoyer avant chaque simulation
 const originalSimuler = window.simuler;
 window.simuler = function() {
-    console.log('🧹 Nettoyage des unités avant simulation');
-    // Nettoyer les unités en double avant la simulation
+    console.log('🧹 Nettoyage préventif avant simulation');
+    
+    // Triple nettoyage pour être sûr
     cleanupDuplicateUnits();
+    setTimeout(cleanupDuplicateUnits, 10);
+    setTimeout(cleanupDuplicateUnits, 100);
     
     // Appeler la fonction originale
     if (originalSimuler) {
@@ -532,56 +706,21 @@ window.simuler = function() {
     }
 };
 
-// Observer les changements dans le DOM pour nettoyer automatiquement
-const observer = new MutationObserver(function(mutations) {
-    let shouldClean = false;
-    mutations.forEach(function(mutation) {
-        if (mutation.addedNodes.length > 0) {
-            mutation.addedNodes.forEach(node => {
-                if (node.nodeType === 1 && node.classList && 
-                    (node.classList.contains('form-addon-text') || 
-                     node.classList.contains('info-tooltip'))) {
-                    shouldClean = true;
-                }
-            });
-        }
-    });
-    
-    if (shouldClean) {
-        setTimeout(cleanupDuplicateUnits, 100);
-    }
-});
-
-// Observer le formulaire principal
-setTimeout(() => {
-    const container = document.querySelector('.container');
-    if (container) {
-        observer.observe(container, {
-            childList: true,
-            subtree: true
-        });
-    }
-}, 1000);
-
-// Fonction utilitaire pour réinitialiser complètement l'interface
+// Fonction utilitaire globale pour réinitialiser
 window.resetInterface = function() {
     console.log('🔄 Réinitialisation complète de l\'interface');
     
-    // Nettoyer tous les doublons
-    cleanupDuplicateUnits();
-    
-    // Réinitialiser les tooltips
-    document.querySelectorAll('.info-tooltip').forEach(tooltip => {
-        // S'assurer qu'il n'y a qu'une seule icône "i"
-        if (!tooltip.querySelector('i.fa-info-circle')) {
-            tooltip.innerHTML = '<i class="fas fa-info-circle"></i>';
-        }
-    });
-    
-    // Réinitialiser les positions CSS si nécessaire
-    document.querySelectorAll('.form-input-wrapper').forEach(wrapper => {
-        wrapper.style.position = 'relative';
-    });
+    // Nettoyage intensif
+    for (let i = 0; i < 5; i++) {
+        setTimeout(cleanupDuplicateUnits, i * 100);
+    }
     
     console.log('✅ Interface réinitialisée');
 };
+
+// Nettoyer immédiatement au chargement
+cleanupDuplicateUnits();
+setTimeout(cleanupDuplicateUnits, 100);
+setTimeout(cleanupDuplicateUnits, 500);
+setTimeout(cleanupDuplicateUnits, 1000);
+setTimeout(cleanupDuplicateUnits, 2000);
