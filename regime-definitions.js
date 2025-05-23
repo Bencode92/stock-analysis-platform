@@ -50,49 +50,46 @@
         
         definitionContainer = document.createElement('div');
         definitionContainer.id = 'regime-definition-display';
-        definitionContainer.className = 'card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg transition-all mt-4 hidden';
+        definitionContainer.className = 'regime-definition-container hidden';
         definitionContainer.innerHTML = `
-            <div class="card-header">
-                <div class="card-icon">
+            <div class="regime-def-header">
+                <div class="regime-def-icon">
                     <i class="fas fa-book-open"></i>
                 </div>
-                <h3 id="regime-nom" class="card-title"></h3>
-                <button class="btn-close" onclick="window.hideRegimeDefinition()">
+                <h3 id="regime-nom" class="regime-def-title"></h3>
+                <button class="regime-def-close" onclick="window.hideRegimeDefinition()">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             
-            <div class="card-body p-6">
-                <p id="regime-definition" class="text-lg mb-4 text-gray-300"></p>
+            <div class="regime-def-body">
+                <p id="regime-definition" class="regime-def-text"></p>
                 
-                <div id="regime-exemple" class="bg-blue-900/20 border border-blue-400/20 rounded-lg p-4 mb-4 hidden">
-                    <h4 class="flex items-center text-blue-400 mb-2">
-                        <i class="fas fa-lightbulb mr-2"></i> Exemple pratique
-                    </h4>
-                    <p id="exemple-text" class="text-gray-300"></p>
+                <div id="regime-exemple" class="regime-exemple hidden">
+                    <div class="regime-exemple-icon">
+                        <i class="fas fa-lightbulb"></i>
+                    </div>
+                    <div class="regime-exemple-content">
+                        <h4>💡Exemple pratique</h4>
+                        <p id="exemple-text"></p>
+                    </div>
                 </div>
                 
-                <div class="grid grid-2 gap-4 mb-4">
-                    <div id="regime-avantages" class="hidden">
-                        <h4 class="flex items-center text-green-400 mb-2">
-                            <i class="fas fa-check-circle mr-2"></i> Avantages
-                        </h4>
-                        <ul id="avantages-list" class="list-disc list-inside text-gray-300"></ul>
+                <div class="regime-lists">
+                    <div id="regime-avantages" class="regime-list avantages hidden">
+                        <h4>✅Avantages</h4>
+                        <ul id="avantages-list"></ul>
                     </div>
                     
-                    <div id="regime-inconvenients" class="hidden">
-                        <h4 class="flex items-center text-red-400 mb-2">
-                            <i class="fas fa-times-circle mr-2"></i> Inconvénients
-                        </h4>
-                        <ul id="inconvenients-list" class="list-disc list-inside text-gray-300"></ul>
+                    <div id="regime-inconvenients" class="regime-list inconvenients hidden">
+                        <h4>⚠️Inconvénients</h4>
+                        <ul id="inconvenients-list"></ul>
                     </div>
                 </div>
                 
-                <div id="regime-comparaison" class="bg-purple-900/20 border border-purple-400/20 rounded-lg p-4 hidden">
-                    <h4 class="flex items-center text-purple-400 mb-2">
-                        <i class="fas fa-balance-scale mr-2"></i> Comparaison
-                    </h4>
-                    <p id="comparaison-text" class="text-gray-300"></p>
+                <div id="regime-comparaison" class="regime-comparaison hidden">
+                    <h4>⚖️Comparaison</h4>
+                    <p id="comparaison-text"></p>
                 </div>
             </div>
         `;
@@ -123,35 +120,224 @@
             }
             
             .regime-card.selected {
-                border-color: var(--primary-color, #00ff87);
-                box-shadow: 0 0 20px rgba(0, 255, 135, 0.3);
+                border-color: #00ff87;
+                box-shadow: 0 0 30px rgba(0, 255, 135, 0.4);
+                background: rgba(0, 255, 135, 0.05);
             }
             
-            .btn-close {
-                background: none;
-                border: none;
-                color: rgba(255, 255, 255, 0.5);
+            .regime-definition-container {
+                margin-top: 2rem;
+                background: rgba(30, 41, 59, 0.5);
+                backdrop-filter: blur(12px);
+                border: 1px solid rgba(59, 130, 246, 0.1);
+                border-radius: 20px;
+                overflow: hidden;
+                animation: slideDown 0.4s ease-out;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            }
+            
+            .regime-def-header {
+                display: flex;
+                align-items: center;
+                padding: 1.5rem 2rem;
+                background: rgba(59, 130, 246, 0.1);
+                border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+                position: relative;
+            }
+            
+            .regime-def-icon {
+                width: 50px;
+                height: 50px;
+                background: linear-gradient(135deg, #3b82f6, #1e40af);
+                border-radius: 15px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.5rem;
+                color: white;
+                margin-right: 1.5rem;
+                box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+            }
+            
+            .regime-def-title {
+                font-size: 1.75rem;
+                font-weight: 700;
+                color: #fff;
+                margin: 0;
+                flex: 1;
+            }
+            
+            .regime-def-close {
+                position: absolute;
+                top: 1.5rem;
+                right: 1.5rem;
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
                 cursor: pointer;
-                font-size: 1.2rem;
-                transition: color 0.2s;
+                color: rgba(255, 255, 255, 0.6);
+                transition: all 0.3s;
             }
             
-            .btn-close:hover {
+            .regime-def-close:hover {
+                background: rgba(239, 68, 68, 0.2);
+                border-color: rgba(239, 68, 68, 0.5);
+                color: #ef4444;
+                transform: rotate(90deg);
+            }
+            
+            .regime-def-body {
+                padding: 2rem;
+            }
+            
+            .regime-def-text {
+                font-size: 1.125rem;
+                line-height: 1.8;
                 color: rgba(255, 255, 255, 0.9);
+                margin-bottom: 2rem;
+                font-weight: 300;
             }
             
-            #regime-definition-display {
-                animation: slideDown 0.3s ease-out;
+            .regime-exemple {
+                background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(251, 191, 36, 0.05));
+                border: 1px solid rgba(251, 191, 36, 0.3);
+                border-radius: 15px;
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+                display: flex;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+            
+            .regime-exemple-icon {
+                width: 40px;
+                height: 40px;
+                background: rgba(251, 191, 36, 0.2);
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.25rem;
+                color: #fbbf24;
+                flex-shrink: 0;
+            }
+            
+            .regime-exemple-content h4 {
+                color: #fbbf24;
+                margin: 0 0 0.5rem 0;
+                font-size: 1.125rem;
+                font-weight: 600;
+            }
+            
+            .regime-exemple-content p {
+                color: rgba(255, 255, 255, 0.8);
+                margin: 0;
+                line-height: 1.6;
+            }
+            
+            .regime-lists {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 2rem;
+                margin-bottom: 2rem;
+            }
+            
+            .regime-list h4 {
+                font-size: 1.125rem;
+                font-weight: 600;
+                margin-bottom: 1rem;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            
+            .regime-list.avantages h4 {
+                color: #10b981;
+            }
+            
+            .regime-list.inconvenients h4 {
+                color: #f59e0b;
+            }
+            
+            .regime-list ul {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            
+            .regime-list li {
+                padding: 0.75rem 0;
+                padding-left: 1.5rem;
+                position: relative;
+                color: rgba(255, 255, 255, 0.8);
+                line-height: 1.6;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            }
+            
+            .regime-list li:last-child {
+                border-bottom: none;
+            }
+            
+            .regime-list li::before {
+                content: "•";
+                position: absolute;
+                left: 0;
+                font-weight: bold;
+                font-size: 1.25rem;
+            }
+            
+            .regime-list.avantages li::before {
+                color: #10b981;
+            }
+            
+            .regime-list.inconvenients li::before {
+                color: #f59e0b;
+            }
+            
+            .regime-comparaison {
+                background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
+                border: 1px solid rgba(139, 92, 246, 0.3);
+                border-radius: 15px;
+                padding: 1.5rem;
+            }
+            
+            .regime-comparaison h4 {
+                color: #a78bfa;
+                margin: 0 0 1rem 0;
+                font-size: 1.125rem;
+                font-weight: 600;
+            }
+            
+            .regime-comparaison p {
+                color: rgba(255, 255, 255, 0.8);
+                margin: 0;
+                line-height: 1.6;
             }
             
             @keyframes slideDown {
                 from {
                     opacity: 0;
-                    transform: translateY(-20px);
+                    transform: translateY(-30px);
                 }
                 to {
                     opacity: 1;
                     transform: translateY(0);
+                }
+            }
+            
+            @media (max-width: 768px) {
+                .regime-lists {
+                    grid-template-columns: 1fr;
+                    gap: 1.5rem;
+                }
+                
+                .regime-def-body {
+                    padding: 1.5rem;
                 }
             }
         `;
