@@ -42,8 +42,8 @@ class SimulateurImmo {
                 calculationMode: 'loyer-mensualite' // Mode de calcul: 'loyer-mensualite' ou 'cashflow-positif'
             },
             communs: {
-                fraisBancairesDossier: 2000,
-                fraisBancairesCompte: 710,
+                fraisBancairesDossier: 900,
+                fraisBancairesCompte: 150,
                 fraisGarantie: 1.3709,        // % du capital emprunté
                 taxeFonciere: 0,              // % du prix (remplacé par 5% du loyer)
                 vacanceLocative: 5,           // % des loyers (modifié de 8% à 5%)
@@ -62,7 +62,7 @@ class SimulateurImmo {
                 emolumentsVente: 1.12,        // % du prix
                 formalites: 0.28,             // % du prix
                 debours: 0.13,                // % du prix
-                commissionImmo: 5             // % du prix
+                commissionImmo: 4             // % du prix
             },
             encheres: {
                 droitsEnregistrement: 5.70,   // % du prix
