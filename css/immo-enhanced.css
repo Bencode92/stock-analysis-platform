@@ -897,25 +897,25 @@ input:checked + .slider:before {
     border-collapse: separate;
     border-spacing: 0;
     background: rgba(15, 23, 42, 0.6);
-    border-radius: 12px;
+    border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     margin-top: var(--spacing-lg);
     font-size: 0.95rem;
 }
 
 .comparison-table thead {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(99, 102, 241, 0.15));
-    border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(99, 102, 241, 0.2));
+    border-bottom: 2px solid rgba(59, 130, 246, 0.4);
 }
 
 .comparison-table th {
-    padding: 1.25rem;
-    font-weight: 600;
+    padding: 1.5rem 1.25rem;
+    font-weight: 700;
     font-size: 0.875rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: rgba(255, 255, 255, 0.9);
+    letter-spacing: 0.08em;
+    color: #FFFFFF;
     text-align: left;
 }
 
@@ -932,9 +932,10 @@ input:checked + .slider:before {
 
 /* Cellules standards */
 .comparison-table td {
-    padding: 0.875rem 1.25rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    color: rgba(255, 255, 255, 0.85);
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.95rem;
 }
 
 /* Alignement des montants */
@@ -944,79 +945,92 @@ input:checked + .slider:before {
     text-align: right;
     font-family: 'Inter', monospace;
     font-variant-numeric: tabular-nums;
-    font-weight: 500;
+    font-weight: 600;
+    font-size: 1rem;
 }
 
 /* Lignes de catégorie */
 .category-row td {
-    background: linear-gradient(90deg, rgba(59, 130, 246, 0.1), transparent);
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.15), transparent);
     border-left: 4px solid #3B82F6;
-    padding: 0.875rem 1.25rem;
-    font-weight: 600;
-    font-size: 0.8125rem;
+    padding: 1rem 1.25rem;
+    font-weight: 700;
+    font-size: 0.85rem;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #93BBFB;
+    letter-spacing: 0.12em;
+    color: #60A5FA;
 }
 
 .category-row td i {
     margin-right: 0.75rem;
-    opacity: 0.8;
+    opacity: 0.9;
+    font-size: 1rem;
 }
 
 /* Lignes alternées */
 .comparison-table tbody tr:not(.category-row):not(.subtotal-row):not(.total-row):nth-child(even) {
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 0.015);
 }
 
 /* Hover effects */
 .comparison-table tbody tr:not(.category-row):hover {
-    background: rgba(59, 130, 246, 0.05);
+    background: rgba(59, 130, 246, 0.08);
     transition: background 0.2s ease;
+    cursor: pointer;
 }
 
 /* Première colonne (labels) */
 .comparison-table td:first-child {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.comparison-table td:first-child span {
+    display: inline-block;
 }
 
 /* Info tooltips améliorés */
-.info-tooltip {
-    color: rgba(147, 197, 253, 0.4);
-    font-size: 0.75rem;
+.info-tooltip,
+.fa-info-circle,
+.fa-question-circle {
+    color: rgba(147, 197, 253, 0.5);
+    font-size: 0.8rem;
     margin-left: 0.5rem;
     cursor: help;
     transition: all 0.2s ease;
 }
 
-.comparison-table tr:hover .info-tooltip {
+.comparison-table tr:hover .info-tooltip,
+.comparison-table tr:hover .fa-info-circle,
+.comparison-table tr:hover .fa-question-circle {
     color: #60A5FA;
-    transform: scale(1.1);
+    transform: scale(1.2);
 }
 
 /* Lignes de sous-total */
 .subtotal-row {
-    background: rgba(59, 130, 246, 0.05);
-    border-top: 1px solid rgba(59, 130, 246, 0.2);
-    border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+    background: rgba(59, 130, 246, 0.08);
+    border-top: 1px solid rgba(59, 130, 246, 0.3);
+    border-bottom: 1px solid rgba(59, 130, 246, 0.3);
 }
 
 .subtotal-row td {
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.95);
+    font-weight: 700;
+    color: #FFFFFF;
+    padding: 1.125rem 1.25rem;
 }
 
 /* Lignes de total */
 .total-row {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
-    border-top: 2px solid rgba(16, 185, 129, 0.3);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.1));
+    border-top: 2px solid rgba(16, 185, 129, 0.4);
 }
 
 .total-row td {
-    padding: 1.125rem 1.25rem;
+    padding: 1.25rem 1.25rem;
     font-weight: 700;
-    font-size: 1.0625rem;
+    font-size: 1.125rem;
     color: #FFFFFF;
 }
 
@@ -1027,49 +1041,89 @@ input:checked + .slider:before {
 
 /* Colonne différence avec couleurs */
 .comparison-table td:last-child {
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 1rem;
 }
 
 /* Classes pour différences (appliquées via JS) */
 .diff-positive {
     color: #10B981 !important;
-}
-
-.diff-positive::before {
-    content: "▲ ";
-    font-size: 0.75rem;
-    margin-right: 0.25rem;
+    font-weight: 700;
 }
 
 .diff-negative {
     color: #F59E0B !important;
-}
-
-.diff-negative::before {
-    content: "▼ ";
-    font-size: 0.75rem;
-    margin-right: 0.25rem;
+    font-weight: 700;
 }
 
 .diff-neutral {
-    color: rgba(255, 255, 255, 0.5) !important;
+    color: rgba(255, 255, 255, 0.4) !important;
+    font-weight: 500;
 }
 
 /* Highlight des valeurs importantes */
 .comparison-table td.highlight {
     color: var(--primary-color);
-    font-weight: 600;
+    font-weight: 700;
 }
 
 /* Animation de mise en évidence */
 @keyframes highlight-row {
     0% { background: rgba(59, 130, 246, 0.1); }
-    50% { background: rgba(59, 130, 246, 0.2); }
+    50% { background: rgba(59, 130, 246, 0.25); }
     100% { background: rgba(59, 130, 246, 0.1); }
 }
 
 .highlight-best {
     animation: highlight-row 2s ease-in-out;
+}
+
+/* Barres visuelles de cash-flow */
+.cashflow-visual-container {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 12px;
+}
+
+.cashflow-bar {
+    position: relative;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.cashflow-bar-fill {
+    position: absolute;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    transition: width 1s ease-out;
+    border-radius: 8px;
+}
+
+.cashflow-bar-fill.positive {
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.3), rgba(16, 185, 129, 0.6));
+    border: 1px solid rgba(16, 185, 129, 0.5);
+}
+
+.cashflow-bar-fill.negative {
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.3), rgba(245, 158, 11, 0.6));
+    border: 1px solid rgba(245, 158, 11, 0.5);
+}
+
+.cashflow-bar-label {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.cashflow-bar-value {
+    font-weight: 700;
+    font-size: 1.125rem;
 }
 
 /* === ONGLETS === */
@@ -1437,7 +1491,9 @@ input:checked + .slider:before {
         padding: 0.625rem 0.75rem;
     }
     
-    .info-tooltip {
+    .info-tooltip,
+    .fa-info-circle,
+    .fa-question-circle {
         display: none;
     }
 }
