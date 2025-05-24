@@ -891,33 +891,185 @@ input:checked + .slider:before {
     transform: translateX(24px);
 }
 
-/* === TABLEAUX === */
+/* === TABLEAU COMPARATIF AMÉLIORÉ === */
 .comparison-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     margin-top: var(--spacing-lg);
     font-size: 0.95rem;
 }
 
-.comparison-table th, 
-.comparison-table td {
-    padding: var(--spacing-md) var(--spacing-lg);
-    text-align: left;
-    border-bottom: 1px solid var(--border-color);
+.comparison-table thead {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(99, 102, 241, 0.15));
+    border-bottom: 2px solid rgba(59, 130, 246, 0.3);
 }
 
 .comparison-table th {
-    background-color: var(--bg-secondary);
+    padding: 1.25rem;
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.875rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--text-label);
+    color: rgba(255, 255, 255, 0.9);
+    text-align: left;
 }
 
+.comparison-table th:nth-child(2),
+.comparison-table th:nth-child(3) {
+    text-align: right;
+    color: #60A5FA;
+}
+
+.comparison-table th:last-child {
+    text-align: right;
+    color: #FCD34D;
+}
+
+/* Cellules standards */
+.comparison-table td {
+    padding: 0.875rem 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* Alignement des montants */
+.comparison-table td:nth-child(2),
+.comparison-table td:nth-child(3),
+.comparison-table td:nth-child(4) {
+    text-align: right;
+    font-family: 'Inter', monospace;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+}
+
+/* Lignes de catégorie */
+.category-row td {
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.1), transparent);
+    border-left: 4px solid #3B82F6;
+    padding: 0.875rem 1.25rem;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #93BBFB;
+}
+
+.category-row td i {
+    margin-right: 0.75rem;
+    opacity: 0.8;
+}
+
+/* Lignes alternées */
+.comparison-table tbody tr:not(.category-row):not(.subtotal-row):not(.total-row):nth-child(even) {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Hover effects */
+.comparison-table tbody tr:not(.category-row):hover {
+    background: rgba(59, 130, 246, 0.05);
+    transition: background 0.2s ease;
+}
+
+/* Première colonne (labels) */
+.comparison-table td:first-child {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9375rem;
+}
+
+/* Info tooltips améliorés */
+.info-tooltip {
+    color: rgba(147, 197, 253, 0.4);
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+    cursor: help;
+    transition: all 0.2s ease;
+}
+
+.comparison-table tr:hover .info-tooltip {
+    color: #60A5FA;
+    transform: scale(1.1);
+}
+
+/* Lignes de sous-total */
+.subtotal-row {
+    background: rgba(59, 130, 246, 0.05);
+    border-top: 1px solid rgba(59, 130, 246, 0.2);
+    border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.subtotal-row td {
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+/* Lignes de total */
+.total-row {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
+    border-top: 2px solid rgba(16, 185, 129, 0.3);
+}
+
+.total-row td {
+    padding: 1.125rem 1.25rem;
+    font-weight: 700;
+    font-size: 1.0625rem;
+    color: #FFFFFF;
+}
+
+.total-row td:first-child i {
+    color: #10B981;
+    margin-right: 0.5rem;
+}
+
+/* Colonne différence avec couleurs */
+.comparison-table td:last-child {
+    font-weight: 600;
+}
+
+/* Classes pour différences (appliquées via JS) */
+.diff-positive {
+    color: #10B981 !important;
+}
+
+.diff-positive::before {
+    content: "▲ ";
+    font-size: 0.75rem;
+    margin-right: 0.25rem;
+}
+
+.diff-negative {
+    color: #F59E0B !important;
+}
+
+.diff-negative::before {
+    content: "▼ ";
+    font-size: 0.75rem;
+    margin-right: 0.25rem;
+}
+
+.diff-neutral {
+    color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Highlight des valeurs importantes */
 .comparison-table td.highlight {
     color: var(--primary-color);
     font-weight: 600;
+}
+
+/* Animation de mise en évidence */
+@keyframes highlight-row {
+    0% { background: rgba(59, 130, 246, 0.1); }
+    50% { background: rgba(59, 130, 246, 0.2); }
+    100% { background: rgba(59, 130, 246, 0.1); }
+}
+
+.highlight-best {
+    animation: highlight-row 2s ease-in-out;
 }
 
 /* === ONGLETS === */
@@ -1273,6 +1425,20 @@ input:checked + .slider:before {
     
     .piece-btn {
         min-width: 70px;
+    }
+    
+    /* Tableau responsive */
+    .comparison-table {
+        font-size: 0.875rem;
+    }
+    
+    .comparison-table th,
+    .comparison-table td {
+        padding: 0.625rem 0.75rem;
+    }
+    
+    .info-tooltip {
+        display: none;
     }
 }
 
