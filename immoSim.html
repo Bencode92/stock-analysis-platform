@@ -10,7 +10,6 @@
     <!-- 🎯 CSS CONSOLIDÉ - ARCHITECTURE PROPRE -->
     <link rel="stylesheet" href="css/immo-enhanced.css">
     <link rel="stylesheet" href="css/regimes-fiscaux.css">
-    <link rel="stylesheet" href="css/cashflow-table.css">
     
     <!-- Chart.js pour les graphiques -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
@@ -795,9 +794,49 @@
                     </div>
                 </div>
                 
-                <!-- Tableau comparatif détaillé -->
-                <div id="tableau-comparatif-container">
-                    <!-- Le tableau sera généré dynamiquement ici -->
+                <div class="comparison-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Critère</th>
+                                <th>Achat Classique</th>
+                                <th>Vente aux Enchères</th>
+                                <th>Différence</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Prix d'achat</td>
+                                <td id="comp-classique-prix">--</td>
+                                <td id="comp-encheres-prix">--</td>
+                                <td id="comp-prix-diff">--</td>
+                            </tr>
+                            <tr>
+                                <td>Budget total</td>
+                                <td id="comp-classique-total">--</td>
+                                <td id="comp-encheres-total">--</td>
+                                <td id="comp-total-diff">--</td>
+                            </tr>
+                            <tr>
+                                <td>Loyer mensuel</td>
+                                <td id="comp-classique-loyer">--</td>
+                                <td id="comp-encheres-loyer">--</td>
+                                <td id="comp-loyer-diff">--</td>
+                            </tr>
+                            <tr>
+                                <td>Rentabilité nette</td>
+                                <td id="comp-classique-rentabilite">--</td>
+                                <td id="comp-encheres-rentabilite">--</td>
+                                <td id="comp-rentabilite-diff">--</td>
+                            </tr>
+                            <tr>
+                                <td>Cash-flow mensuel</td>
+                                <td id="comp-classique-cashflow">--</td>
+                                <td id="comp-encheres-cashflow">--</td>
+                                <td id="comp-cashflow-diff">--</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
                 
                 <div class="mt-4">
@@ -978,9 +1017,6 @@
     
     <!-- Gestionnaire des définitions fiscales (uniquement) -->
     <script src="./regime-definitions.js"></script>
-    
-    <!-- Nouveau script pour le tableau détaillé -->
-    <script src="./cashflow-detailed-table.js"></script>
 
     <!-- Script pour l'heure -->
     <script>
