@@ -1,0 +1,253 @@
+/* Amélioration des summary cards */
+.comparison-summary {
+    margin: 2rem 0;
+}
+
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.summary-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.summary-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+.summary-card.winner {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.summary-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 1rem;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 255, 135, 0.3);
+}
+
+.summary-card h3 {
+    font-size: 1rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 0.5rem;
+}
+
+.summary-card .summary-mode {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 0.25rem;
+}
+
+.summary-card .summary-gain {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #10B981;
+}
+
+.summary-card .summary-amount {
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #10B981, #00FF87);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.25rem;
+}
+
+.summary-card .summary-surface {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #3B82F6;
+}
+
+.summary-card .summary-desc {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Amélioration du tableau comparatif */
+.comparison-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 2rem;
+}
+
+.comparison-table thead th {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.comparison-table tbody tr {
+    transition: background 0.2s ease;
+}
+
+.comparison-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.comparison-table td {
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    vertical-align: middle;
+}
+
+.comparison-table td:first-child {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 500;
+}
+
+.comparison-table td:first-child i {
+    width: 20px;
+    text-align: center;
+}
+
+/* Lignes de catégories */
+.category-row td {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 1rem;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Lignes de sous-total */
+.subtotal-row {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.subtotal-row td {
+    font-weight: 600;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Lignes de total */
+.total-row {
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.02) 100%);
+}
+
+.total-row td {
+    padding: 1.25rem 1rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+/* Coloration des différences */
+.comparison-table td:last-child {
+    font-weight: 600;
+}
+
+.comparison-table td:last-child:contains('+') {
+    color: #10B981;
+}
+
+.comparison-table td:last-child:contains('-') {
+    color: #EF4444;
+}
+
+/* Barres visuelles de cash-flow */
+.cashflow-visual-container {
+    margin: 3rem 0;
+    padding: 2rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+}
+
+.cashflow-bar {
+    height: 60px;
+    margin: 1rem 0;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.cashflow-bar-fill {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 1.5rem;
+    color: white;
+    font-weight: 600;
+    transition: width 1s ease;
+    position: relative;
+}
+
+.cashflow-bar-fill.positive {
+    background: linear-gradient(90deg, #10B981, #00FF87);
+}
+
+.cashflow-bar-fill.negative {
+    background: linear-gradient(90deg, #EF4444, #F87171);
+}
+
+.cashflow-bar-label {
+    position: absolute;
+    left: 1.5rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+}
+
+.cashflow-bar-value {
+    position: absolute;
+    right: 1.5rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+/* Animation des éléments */
+.fade-in-up {
+    animation: fadeInUp 0.6s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .summary-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .comparison-table {
+        font-size: 0.875rem;
+    }
+    
+    .comparison-table td {
+        padding: 0.5rem;
+    }
+}
