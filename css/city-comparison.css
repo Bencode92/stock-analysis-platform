@@ -1,0 +1,393 @@
+/**
+ * city-comparison.css - Styles pour le comparateur multi-villes
+ * Intégration avec le design ImmoSim
+ */
+
+/* Bouton comparateur */
+#btn-compare-cities {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+#btn-compare-cities:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+#btn-compare-cities i {
+    margin-right: 0.5rem;
+}
+
+/* Panel principal */
+#city-comparison-panel {
+    margin-top: 2rem;
+    animation: fadeIn 0.5s ease-out;
+}
+
+#city-comparison-panel.hidden {
+    display: none;
+}
+
+/* Header du panel */
+.comparison-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.comparison-panel-header h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #00ff87;
+    margin: 0;
+}
+
+.comparison-panel-header p {
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0.25rem 0 0 0;
+}
+
+/* Recherche multi-villes */
+.multi-city-search-container {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+#multi-city-search {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    color: white;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+#multi-city-search:focus {
+    outline: none;
+    border-color: #667eea;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+#multi-city-search::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Suggestions multi-villes */
+#multi-city-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #1a1d3a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    margin-top: 0.5rem;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+#multi-city-suggestions .ville-suggestion {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#multi-city-suggestions .ville-suggestion:hover {
+    background: rgba(102, 126, 234, 0.2);
+}
+
+/* Chips des villes */
+.city-chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.city-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: rgba(102, 126, 234, 0.2);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 2rem;
+    color: #a5b4fc;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+.city-chip:hover {
+    background: rgba(102, 126, 234, 0.3);
+    border-color: rgba(102, 126, 234, 0.5);
+}
+
+.remove-chip {
+    margin-left: 0.5rem;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.5);
+    transition: color 0.2s ease;
+}
+
+.remove-chip:hover {
+    color: #ef4444;
+}
+
+/* Options de comparaison */
+.comparison-options {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.comparison-options label {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.875rem;
+}
+
+#comparison-piece-type {
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.375rem;
+    color: white;
+    cursor: pointer;
+}
+
+/* Bouton lancer comparaison */
+#btn-launch-comparison {
+    width: 100%;
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, #00ff87 0%, #00d4ff 100%);
+    color: #0a0b1e;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 255, 135, 0.3);
+}
+
+#btn-launch-comparison:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 255, 135, 0.4);
+}
+
+#btn-launch-comparison:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Résultats de comparaison */
+.comparison-results {
+    animation: fadeIn 0.5s ease-out;
+}
+
+.comparison-results h3 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #00ff87;
+    margin-bottom: 2rem;
+}
+
+/* Cartes de résultat */
+.result-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.result-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+.result-card.winner {
+    background: linear-gradient(135deg, rgba(0, 255, 135, 0.1) 0%, rgba(0, 212, 255, 0.1) 100%);
+    border: 2px solid rgba(0, 255, 135, 0.3);
+    box-shadow: 0 0 30px rgba(0, 255, 135, 0.2);
+}
+
+.result-card h4 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: white;
+    margin: 0 0 0.5rem 0;
+}
+
+.result-card .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-primary {
+    background: rgba(0, 255, 135, 0.2);
+    color: #00ff87;
+    border: 1px solid rgba(0, 255, 135, 0.3);
+}
+
+.badge-accent {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* Grille de stats */
+.result-card .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+
+.result-card .grid > div {
+    text-align: center;
+}
+
+.result-card .grid p:first-child {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.result-card .grid p:last-child {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0.25rem 0 0 0;
+}
+
+/* Table de comparaison */
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.comparison-table th {
+    text-align: left;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.comparison-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.comparison-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.5s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .comparison-panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .comparison-options {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .result-card .grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .comparison-table {
+        font-size: 0.875rem;
+    }
+    
+    .comparison-table th,
+    .comparison-table td {
+        padding: 0.5rem;
+    }
+}
+
+/* Scrollbar personnalisée */
+#multi-city-suggestions::-webkit-scrollbar {
+    width: 8px;
+}
+
+#multi-city-suggestions::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+#multi-city-suggestions::-webkit-scrollbar-thumb {
+    background: rgba(102, 126, 234, 0.3);
+    border-radius: 4px;
+}
+
+#multi-city-suggestions::-webkit-scrollbar-thumb:hover {
+    background: rgba(102, 126, 234, 0.5);
+}
+
+/* Info message spécifique comparateur */
+.comparison-results .info-message {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.comparison-results .info-message i {
+    color: #3b82f6;
+}
