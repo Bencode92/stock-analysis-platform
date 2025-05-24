@@ -10,6 +10,7 @@
     <!-- 🎯 CSS CONSOLIDÉ - ARCHITECTURE PROPRE -->
     <link rel="stylesheet" href="css/immo-enhanced.css">
     <link rel="stylesheet" href="css/regimes-fiscaux.css">
+    <link rel="stylesheet" href="css/immo-comparison-enhanced.css">
     
     <!-- Chart.js pour les graphiques -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
@@ -790,22 +791,28 @@
                 <!-- Résumé visuel -->
                 <div class="comparison-summary">
                     <div class="summary-cards">
-                        <div class="summary-card winner" id="summary-winner">
-                            <div class="summary-icon">🏆</div>
+                        <div class="summary-card winner fade-in-up" id="summary-winner">
+                            <div class="summary-icon">
+                                <i class="fas fa-trophy"></i>
+                            </div>
                             <h3>Meilleure option</h3>
                             <p class="summary-mode">--</p>
                             <p class="summary-gain">--</p>
                         </div>
                         
-                        <div class="summary-card">
-                            <div class="summary-icon">💰</div>
+                        <div class="summary-card fade-in-up" style="animation-delay: 0.1s;">
+                            <div class="summary-icon">
+                                <i class="fas fa-piggy-bank"></i>
+                            </div>
                             <h3>Économie totale</h3>
                             <p class="summary-amount">--</p>
                             <p class="summary-desc">sur le coût total</p>
                         </div>
                         
-                        <div class="summary-card">
-                            <div class="summary-icon">🏠</div>
+                        <div class="summary-card fade-in-up" style="animation-delay: 0.2s;">
+                            <div class="summary-icon">
+                                <i class="fas fa-home"></i>
+                            </div>
                             <h3>Surface supplémentaire</h3>
                             <p class="summary-surface">--</p>
                             <p class="summary-desc">avec les enchères</p>
@@ -839,16 +846,16 @@
                         <tbody>
                             <!-- COÛTS D'ACQUISITION -->
                             <tr class="category-row">
-                                <td colspan="4"><strong><i class="fas fa-chart-bar text-blue-400"></i> COÛTS D'ACQUISITION</strong></td>
+                                <td colspan="4"><i class="fas fa-chart-bar"></i> COÛTS D'ACQUISITION</td>
                             </tr>
                             <tr>
-                                <td>Prix d'achat</td>
+                                <td><span>Prix d'achat</span></td>
                                 <td id="comp-classique-prix">--</td>
                                 <td id="comp-encheres-prix">--</td>
                                 <td id="comp-prix-diff">--</td>
                             </tr>
                             <tr>
-                                <td>Frais de notaire / Droits
+                                <td><span>Frais de notaire / Droits</span>
                                     <i class="fas fa-question-circle info-tooltip" 
                                        data-tooltip="Frais obligatoires pour officialiser l'achat"></i>
                                 </td>
@@ -857,7 +864,7 @@
                                 <td id="comp-frais-diff">--</td>
                             </tr>
                             <tr>
-                                <td>Commission / Honoraires avocat
+                                <td><span>Commission / Honoraires avocat</span>
                                     <i class="fas fa-question-circle info-tooltip" 
                                        data-tooltip="Frais d'agence (classique) ou d'avocat (enchères)"></i>
                                 </td>
@@ -866,13 +873,13 @@
                                 <td id="comp-commission-diff">--</td>
                             </tr>
                             <tr>
-                                <td>Travaux de rénovation</td>
+                                <td><span>Travaux de rénovation</span></td>
                                 <td id="comp-classique-travaux">--</td>
                                 <td id="comp-encheres-travaux">--</td>
                                 <td id="comp-travaux-diff">--</td>
                             </tr>
                             <tr>
-                                <td>Frais bancaires</td>
+                                <td><span>Frais bancaires</span></td>
                                 <td id="comp-classique-frais-bancaires">--</td>
                                 <td id="comp-encheres-frais-bancaires">--</td>
                                 <td id="comp-frais-bancaires-diff">--</td>
@@ -886,22 +893,22 @@
                             
                             <!-- FINANCEMENT -->
                             <tr class="category-row">
-                                <td colspan="4"><strong><i class="fas fa-university text-green-400"></i> FINANCEMENT</strong></td>
+                                <td colspan="4"><i class="fas fa-university"></i> FINANCEMENT</td>
                             </tr>
                             <tr>
-                                <td>Votre apport personnel</td>
+                                <td><span>Votre apport personnel</span></td>
                                 <td id="comp-classique-apport">--</td>
                                 <td id="comp-encheres-apport">--</td>
                                 <td id="comp-apport-diff">--</td>
                             </tr>
                             <tr>
-                                <td>Montant emprunté</td>
+                                <td><span>Montant emprunté</span></td>
                                 <td id="comp-classique-emprunt">--</td>
                                 <td id="comp-encheres-emprunt">--</td>
                                 <td id="comp-emprunt-diff">--</td>
                             </tr>
                             <tr>
-                                <td>Remboursement mensuel
+                                <td><span>Remboursement mensuel</span>
                                     <i class="fas fa-question-circle info-tooltip" 
                                        data-tooltip="Montant à rembourser chaque mois à la banque"></i>
                                 </td>
@@ -912,22 +919,22 @@
                             
                             <!-- REVENUS -->
                             <tr class="category-row">
-                                <td colspan="4"><strong><i class="fas fa-coins text-yellow-400"></i> REVENUS LOCATIFS</strong></td>
+                                <td colspan="4"><i class="fas fa-coins"></i> REVENUS LOCATIFS</td>
                             </tr>
                             <tr>
-                                <td>Surface que vous pouvez acheter</td>
+                                <td><span>Surface que vous pouvez acheter</span></td>
                                 <td id="comp-classique-surface">--</td>
                                 <td id="comp-encheres-surface">--</td>
                                 <td id="comp-surface-diff">--</td>
                             </tr>
                             <tr>
-                                <td>Loyer mensuel (avant charges)</td>
+                                <td><span>Loyer mensuel (avant charges)</span></td>
                                 <td id="comp-classique-loyer">--</td>
                                 <td id="comp-encheres-loyer">--</td>
                                 <td id="comp-loyer-diff">--</td>
                             </tr>
                             <tr>
-                                <td>Provision logement vide
+                                <td><span>Provision logement vide</span>
                                     <i class="fas fa-question-circle info-tooltip" 
                                        data-tooltip="Argent mis de côté pour les périodes sans locataire"></i>
                                 </td>
@@ -944,34 +951,34 @@
                             
                             <!-- CHARGES MENSUELLES -->
                             <tr class="category-row">
-                                <td colspan="4"><strong><i class="fas fa-chart-line text-red-400"></i> VOS DÉPENSES MENSUELLES</strong></td>
+                                <td colspan="4"><i class="fas fa-chart-line"></i> VOS DÉPENSES MENSUELLES</td>
                             </tr>
                             <tr>
-                                <td>Remboursement du prêt</td>
+                                <td><span>Remboursement du prêt</span></td>
                                 <td id="comp-classique-mensualite2">--</td>
                                 <td id="comp-encheres-mensualite2">--</td>
                                 <td id="comp-mensualite2-diff">--</td>
                             </tr>
                             <tr>
-                                <td>Taxe foncière (par mois)</td>
+                                <td><span>Taxe foncière (par mois)</span></td>
                                 <td id="comp-classique-taxe">--</td>
                                 <td id="comp-encheres-taxe">--</td>
                                 <td id="comp-taxe-diff">--</td>
                             </tr>
                             <tr>
-                                <td>Charges de copropriété</td>
+                                <td><span>Charges de copropriété</span></td>
                                 <td id="comp-classique-charges">--</td>
                                 <td id="comp-encheres-charges">--</td>
                                 <td id="comp-charges-diff">--</td>
                             </tr>
                             <tr>
-                                <td>Budget entretien</td>
+                                <td><span>Budget entretien</span></td>
                                 <td id="comp-classique-entretien">--</td>
                                 <td id="comp-encheres-entretien">--</td>
                                 <td id="comp-entretien-diff">--</td>
                             </tr>
                             <tr>
-                                <td>Assurance propriétaire</td>
+                                <td><span>Assurance propriétaire</span></td>
                                 <td id="comp-classique-assurance">--</td>
                                 <td id="comp-encheres-assurance">--</td>
                                 <td id="comp-assurance-diff">--</td>
@@ -985,19 +992,19 @@
                             
                             <!-- RÉSULTATS -->
                             <tr class="total-row">
-                                <td><strong><i class="fas fa-money-bill-wave text-green-400"></i> Argent restant chaque mois</strong></td>
+                                <td><i class="fas fa-money-bill-wave mr-2"></i><strong>Argent restant chaque mois</strong></td>
                                 <td id="comp-classique-cashflow"><strong>--</strong></td>
                                 <td id="comp-encheres-cashflow"><strong>--</strong></td>
                                 <td id="comp-cashflow-diff"><strong>--</strong></td>
                             </tr>
                             <tr class="total-row">
-                                <td><strong><i class="fas fa-coins text-yellow-400"></i> Gain annuel</strong></td>
+                                <td><i class="fas fa-coins mr-2"></i><strong>Gain annuel</strong></td>
                                 <td id="comp-classique-cashflow-annuel"><strong>--</strong></td>
                                 <td id="comp-encheres-cashflow-annuel"><strong>--</strong></td>
                                 <td id="comp-cashflow-annuel-diff"><strong>--</strong></td>
                             </tr>
                             <tr>
-                                <td><i class="fas fa-chart-line text-blue-400"></i> Rendement de votre investissement</td>
+                                <td><i class="fas fa-chart-line mr-2"></i>Rendement de votre investissement</td>
                                 <td id="comp-classique-rentabilite">--</td>
                                 <td id="comp-encheres-rentabilite">--</td>
                                 <td id="comp-rentabilite-diff">--</td>
@@ -1007,7 +1014,7 @@
                 </div>
                 
                 <!-- Barres visuelles -->
-                <div id="cashflow-visual-container"></div>
+                <div id="cashflow-visual-container" class="cashflow-visual-container"></div>
                 
                 <div class="mt-4">
                     <div class="badge badge-primary mr-2">
