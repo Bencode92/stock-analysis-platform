@@ -778,18 +778,50 @@
                 </div>
             </div>
             
+            <!-- NOUVEAU TABLEAU COMPARATIF DÉTAILLÉ -->
             <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg transition-all mt-4">
                 <div class="card-header">
                     <div class="card-icon">
                         <i class="fas fa-balance-scale"></i>
                     </div>
-                    <h2 class="card-title">Comparatif des options</h2>
+                    <h2 class="card-title">Comparatif détaillé des options</h2>
+                </div>
+                
+                <!-- Résumé visuel -->
+                <div class="comparison-summary">
+                    <div class="summary-cards">
+                        <div class="summary-card winner" id="summary-winner">
+                            <div class="summary-icon">🏆</div>
+                            <h3>Meilleure option</h3>
+                            <p class="summary-mode">--</p>
+                            <p class="summary-gain">--</p>
+                        </div>
+                        
+                        <div class="summary-card">
+                            <div class="summary-icon">💰</div>
+                            <h3>Économie totale</h3>
+                            <p class="summary-amount">--</p>
+                            <p class="summary-desc">sur le coût total</p>
+                        </div>
+                        
+                        <div class="summary-card">
+                            <div class="summary-icon">🏠</div>
+                            <h3>Surface supplémentaire</h3>
+                            <p class="summary-surface">--</p>
+                            <p class="summary-desc">avec les enchères</p>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-explanation">
+                        <i class="fas fa-lightbulb"></i>
+                        <p><strong>En résumé :</strong> <span id="summary-text">Simulation en attente...</span></p>
+                    </div>
                 </div>
                 
                 <div class="comparison-header">
                     <div class="flex justify-between items-center">
                         <div>
-                            <strong>Achat classique vs Vente aux enchères</strong>
+                            <strong>Détail complet de la comparaison</strong>
                         </div>
                     </div>
                 </div>
@@ -805,6 +837,10 @@
                             </tr>
                         </thead>
                         <tbody>
+                            <!-- COÛTS D'ACQUISITION -->
+                            <tr class="category-row">
+                                <td colspan="4"><strong>📊 COÛTS D'ACQUISITION</strong></td>
+                            </tr>
                             <tr>
                                 <td>Prix d'achat</td>
                                 <td id="comp-classique-prix">--</td>
@@ -812,32 +848,166 @@
                                 <td id="comp-prix-diff">--</td>
                             </tr>
                             <tr>
-                                <td>Budget total</td>
-                                <td id="comp-classique-total">--</td>
-                                <td id="comp-encheres-total">--</td>
-                                <td id="comp-total-diff">--</td>
+                                <td>Frais de notaire / Droits
+                                    <i class="fas fa-question-circle info-tooltip" 
+                                       data-tooltip="Frais obligatoires pour officialiser l'achat"></i>
+                                </td>
+                                <td id="comp-classique-frais-notaire">--</td>
+                                <td id="comp-encheres-droits">--</td>
+                                <td id="comp-frais-diff">--</td>
                             </tr>
                             <tr>
-                                <td>Loyer mensuel</td>
+                                <td>Commission / Honoraires avocat
+                                    <i class="fas fa-question-circle info-tooltip" 
+                                       data-tooltip="Frais d'agence (classique) ou d'avocat (enchères)"></i>
+                                </td>
+                                <td id="comp-classique-commission">--</td>
+                                <td id="comp-encheres-honoraires">--</td>
+                                <td id="comp-commission-diff">--</td>
+                            </tr>
+                            <tr>
+                                <td>Travaux de rénovation</td>
+                                <td id="comp-classique-travaux">--</td>
+                                <td id="comp-encheres-travaux">--</td>
+                                <td id="comp-travaux-diff">--</td>
+                            </tr>
+                            <tr>
+                                <td>Frais bancaires</td>
+                                <td id="comp-classique-frais-bancaires">--</td>
+                                <td id="comp-encheres-frais-bancaires">--</td>
+                                <td id="comp-frais-bancaires-diff">--</td>
+                            </tr>
+                            <tr class="subtotal-row">
+                                <td><strong>Budget total nécessaire</strong></td>
+                                <td id="comp-classique-total"><strong>--</strong></td>
+                                <td id="comp-encheres-total"><strong>--</strong></td>
+                                <td id="comp-total-diff"><strong>--</strong></td>
+                            </tr>
+                            
+                            <!-- FINANCEMENT -->
+                            <tr class="category-row">
+                                <td colspan="4"><strong>🏦 FINANCEMENT</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Votre apport personnel</td>
+                                <td id="comp-classique-apport">--</td>
+                                <td id="comp-encheres-apport">--</td>
+                                <td id="comp-apport-diff">--</td>
+                            </tr>
+                            <tr>
+                                <td>Montant emprunté</td>
+                                <td id="comp-classique-emprunt">--</td>
+                                <td id="comp-encheres-emprunt">--</td>
+                                <td id="comp-emprunt-diff">--</td>
+                            </tr>
+                            <tr>
+                                <td>Remboursement mensuel
+                                    <i class="fas fa-question-circle info-tooltip" 
+                                       data-tooltip="Montant à rembourser chaque mois à la banque"></i>
+                                </td>
+                                <td id="comp-classique-mensualite">--</td>
+                                <td id="comp-encheres-mensualite">--</td>
+                                <td id="comp-mensualite-diff">--</td>
+                            </tr>
+                            
+                            <!-- REVENUS -->
+                            <tr class="category-row">
+                                <td colspan="4"><strong>💰 REVENUS LOCATIFS</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Surface que vous pouvez acheter</td>
+                                <td id="comp-classique-surface">--</td>
+                                <td id="comp-encheres-surface">--</td>
+                                <td id="comp-surface-diff">--</td>
+                            </tr>
+                            <tr>
+                                <td>Loyer mensuel (avant charges)</td>
                                 <td id="comp-classique-loyer">--</td>
                                 <td id="comp-encheres-loyer">--</td>
                                 <td id="comp-loyer-diff">--</td>
                             </tr>
                             <tr>
-                                <td>Rentabilité nette</td>
+                                <td>Provision logement vide
+                                    <i class="fas fa-question-circle info-tooltip" 
+                                       data-tooltip="Argent mis de côté pour les périodes sans locataire"></i>
+                                </td>
+                                <td id="comp-classique-vacance">--</td>
+                                <td id="comp-encheres-vacance">--</td>
+                                <td id="comp-vacance-diff">--</td>
+                            </tr>
+                            <tr class="subtotal-row">
+                                <td><strong>Loyer net mensuel</strong></td>
+                                <td id="comp-classique-loyer-net"><strong>--</strong></td>
+                                <td id="comp-encheres-loyer-net"><strong>--</strong></td>
+                                <td id="comp-loyer-net-diff"><strong>--</strong></td>
+                            </tr>
+                            
+                            <!-- CHARGES MENSUELLES -->
+                            <tr class="category-row">
+                                <td colspan="4"><strong>📉 VOS DÉPENSES MENSUELLES</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Remboursement du prêt</td>
+                                <td id="comp-classique-mensualite2">--</td>
+                                <td id="comp-encheres-mensualite2">--</td>
+                                <td id="comp-mensualite2-diff">--</td>
+                            </tr>
+                            <tr>
+                                <td>Taxe foncière (par mois)</td>
+                                <td id="comp-classique-taxe">--</td>
+                                <td id="comp-encheres-taxe">--</td>
+                                <td id="comp-taxe-diff">--</td>
+                            </tr>
+                            <tr>
+                                <td>Charges de copropriété</td>
+                                <td id="comp-classique-charges">--</td>
+                                <td id="comp-encheres-charges">--</td>
+                                <td id="comp-charges-diff">--</td>
+                            </tr>
+                            <tr>
+                                <td>Budget entretien</td>
+                                <td id="comp-classique-entretien">--</td>
+                                <td id="comp-encheres-entretien">--</td>
+                                <td id="comp-entretien-diff">--</td>
+                            </tr>
+                            <tr>
+                                <td>Assurance propriétaire</td>
+                                <td id="comp-classique-assurance">--</td>
+                                <td id="comp-encheres-assurance">--</td>
+                                <td id="comp-assurance-diff">--</td>
+                            </tr>
+                            <tr class="subtotal-row">
+                                <td><strong>Total de vos dépenses</strong></td>
+                                <td id="comp-classique-total-charges"><strong>--</strong></td>
+                                <td id="comp-encheres-total-charges"><strong>--</strong></td>
+                                <td id="comp-total-charges-diff"><strong>--</strong></td>
+                            </tr>
+                            
+                            <!-- RÉSULTATS -->
+                            <tr class="total-row">
+                                <td><strong>💵 Argent restant chaque mois</strong></td>
+                                <td id="comp-classique-cashflow"><strong>--</strong></td>
+                                <td id="comp-encheres-cashflow"><strong>--</strong></td>
+                                <td id="comp-cashflow-diff"><strong>--</strong></td>
+                            </tr>
+                            <tr class="total-row">
+                                <td><strong>💰 Gain annuel</strong></td>
+                                <td id="comp-classique-cashflow-annuel"><strong>--</strong></td>
+                                <td id="comp-encheres-cashflow-annuel"><strong>--</strong></td>
+                                <td id="comp-cashflow-annuel-diff"><strong>--</strong></td>
+                            </tr>
+                            <tr>
+                                <td>📈 Rendement de votre investissement</td>
                                 <td id="comp-classique-rentabilite">--</td>
                                 <td id="comp-encheres-rentabilite">--</td>
                                 <td id="comp-rentabilite-diff">--</td>
                             </tr>
-                            <tr>
-                                <td>Cash-flow mensuel</td>
-                                <td id="comp-classique-cashflow">--</td>
-                                <td id="comp-encheres-cashflow">--</td>
-                                <td id="comp-cashflow-diff">--</td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
+                
+                <!-- Barres visuelles -->
+                <div id="cashflow-visual-container"></div>
                 
                 <div class="mt-4">
                     <div class="badge badge-primary mr-2">
