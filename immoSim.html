@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="css/immo-enhanced.css">
     <link rel="stylesheet" href="css/regimes-fiscaux.css">
     <link rel="stylesheet" href="css/immo-comparison-enhanced.css">
+    <link rel="stylesheet" href="css/city-comparison.css">
     
     <!-- Chart.js pour les graphiques -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
@@ -279,6 +280,9 @@
                 </button>
                 <button id="btn-advanced-toggle" class="btn btn-outline ml-3">
                     <i class="fas fa-sliders-h"></i> Paramètres avancés
+                </button>
+                <button id="btn-compare-cities" class="btn btn-accent ml-3">
+                    <i class="fas fa-city"></i> Comparer plusieurs villes
                 </button>
             </div>
         </div>
@@ -594,6 +598,58 @@
                                 <span class="form-help">Si non cochée, la caution est incluse dans le coût total</span>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Panel de comparaison multi-villes -->
+        <div id="city-comparison-panel" class="hidden fade-in">
+            <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg transition-all">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-city"></i>
+                    </div>
+                    <h2 class="card-title">Comparateur multi-villes</h2>
+                    <button class="close-panel" onclick="document.getElementById('city-comparison-panel').classList.add('hidden')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="comparison-content">
+                    <div class="comparison-info">
+                        <p>Comparez jusqu'à 10 villes pour trouver la meilleure opportunité d'investissement selon vos critères actuels.</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Rechercher des villes à comparer</label>
+                        <div class="search-container">
+                            <input type="text" id="multi-city-search" class="form-input" placeholder="Tapez le nom d'une ville...">
+                            <div id="multi-city-suggestions" class="ville-suggestions" style="display: none;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="selected-cities">
+                        <div class="selected-cities-header">
+                            <h4>Villes sélectionnées (<span id="city-count">0</span>/10)</h4>
+                            <select id="comparison-piece-type" class="form-input" style="width: auto;">
+                                <option value="T3">T3 uniquement</option>
+                                <option value="T2">T2 uniquement</option>
+                                <option value="T1">T1 uniquement</option>
+                                <option value="T4">T4 uniquement</option>
+                                <option value="T5">T5 uniquement</option>
+                                <option value="all">Tous les types</option>
+                            </select>
+                        </div>
+                        <div id="city-chips" class="city-chips">
+                            <!-- Les chips des villes seront ajoutées ici -->
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <button id="btn-launch-comparison" class="btn btn-primary" disabled>
+                            <i class="fas fa-rocket"></i> Lancer la comparaison
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1194,6 +1250,9 @@
     
     <!-- Gestionnaire des définitions fiscales (uniquement) -->
     <script src="./regime-definitions.js"></script>
+    
+    <!-- Comparateur multi-villes -->
+    <script src="./city-comparison.js"></script>
 
     <!-- Script pour l'heure -->
     <script>
