@@ -6,7 +6,7 @@
 
 class CityComparator {
     constructor(simulateur) {
-        this.simulateur = simulateur;
+        this.simulateur = simulateur || window.simulateur || new window.SimulateurImmo();
         this.selectedCities = new Map();
         this.maxCities = 10;
         this.villesData = null;
@@ -250,7 +250,11 @@ class CityComparator {
             apport: parseFloat(document.getElementById('apport')?.value) || 20000,
             taux: parseFloat(document.getElementById('taux')?.value) || 3.5,
             duree: parseFloat(document.getElementById('duree')?.value) || 20,
-            calculationMode: document.querySelector('input[name="calculation-mode"]:checked')?.value || 'loyer-mensualite'
+            calculationMode: document.querySelector('input[name="calculation-mode"]:checked')?.value || 'loyer-mensualite',
+            
+            // Prix et loyer par défaut si non renseignés
+            prixM2: parseFloat(document.getElementById('prix-m2-marche')?.value) || 2000,
+            loyerM2: parseFloat(document.getElementById('loyer-m2')?.value) || 12
         };
         
         // Charger tous les paramètres avancés si disponibles
@@ -276,41 +280,98 @@ class CityComparator {
             btnLaunch.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calcul en cours...';
         }
         
-        const results = [];
-        const pieceType = document.getElementById('comparison-piece-type')?.value || 'T3';
-        const params = this.collectCurrentParams();
-        
-        // Charger les paramètres dans le simulateur
-        this.simulateur.chargerParametres(params);
-        
-        for (const [nom, ville] of this.selectedCities) {
-            const types = pieceType === 'all' ? Object.keys(ville.pieces) : [pieceType];
+        try {
+            const results = [];
+            const pieceType = document.getElementById('comparison-piece-type')?.value || 'T3';
+            const params = this.collectCurrentParams();
             
-            for (const type of types) {
-                if (!ville.pieces[type]) continue;
+            // Vérifier que le simulateur existe
+            if (!this.simulateur) {
+                console.error('❌ Simulateur non initialisé');
+                throw new Error('Simulateur non disponible');
+            }
+            
+            // Charger les paramètres dans le simulateur
+            this.simulateur.chargerParametres(params);
+            
+            console.log('📊 Paramètres chargés:', params);
+            console.log('🏙️ Villes à comparer:', this.selectedCities.size);
+            
+            for (const [nom, ville] of this.selectedCities) {
+                const types = pieceType === 'all' ? Object.keys(ville.pieces) : [pieceType];
                 
-                const result = await this.simulateForCity(ville, type);
-                if (result) {
-                    results.push({
-                        ville: nom,
-                        type: type,
-                        departement: ville.departement,
-                        ...result
-                    });
+                for (const type of types) {
+                    if (!ville.pieces[type]) continue;
+                    
+                    try {
+                        const result = await this.simulateForCity(ville, type);
+                        if (result) {
+                            results.push({
+                                ville: nom,
+                                type: type,
+                                departement: ville.departement,
+                                ...result
+                            });
+                        }
+                    } catch (err) {
+                        console.error(`Erreur simulation ${nom} ${type}:`, err);
+                    }
                 }
             }
+            
+            // Trier par loyer net annuel décroissant
+            results.sort((a, b) => b.loyerNetAnnuel - a.loyerNetAnnuel);
+            
+            console.log('✅ Résultats obtenus:', results.length);
+            
+            // Afficher les résultats
+            this.displayResults(results);
+            
+        } catch (error) {
+            console.error('❌ Erreur lors de la comparaison:', error);
+            const container = document.getElementById('comparison-results-container') || this.createResultsContainer();
+            container.innerHTML = `
+                <div class="comparison-results">
+                    <div class="info-message" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">
+                        <div class="text-lg text-red-400 mr-3">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-medium mb-1">Erreur lors de la simulation</h4>
+                            <p class="text-sm opacity-90">${error.message || 'Une erreur inattendue s\'est produite'}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } finally {
+            if (btnLaunch) {
+                btnLaunch.disabled = false;
+                btnLaunch.innerHTML = '<i class="fas fa-rocket"></i> Lancer la comparaison';
+            }
+        }
+    }
+    
+    createResultsContainer() {
+        // Vérifier si le conteneur existe déjà
+        let container = document.getElementById('comparison-results-container');
+        if (container) return container;
+        
+        // Créer le conteneur juste après le panel de comparaison
+        container = document.createElement('div');
+        container.id = 'comparison-results-container';
+        container.className = 'mt-4';
+        
+        // L'insérer après le panel de comparaison
+        const panel = document.getElementById('city-comparison-panel');
+        if (panel && panel.parentNode) {
+            panel.parentNode.insertBefore(container, panel.nextSibling);
+        } else {
+            // Fallback si le panel n'est pas trouvé
+            const parent = document.querySelector('.container');
+            if (parent) parent.appendChild(container);
         }
         
-        // Trier par loyer net annuel décroissant
-        results.sort((a, b) => b.loyerNetAnnuel - a.loyerNetAnnuel);
-        
-        // Afficher les résultats
-        this.displayResults(results);
-        
-        if (btnLaunch) {
-            btnLaunch.disabled = false;
-            btnLaunch.innerHTML = '<i class="fas fa-rocket"></i> Lancer la comparaison';
-        }
+        return container;
     }
     
     async simulateForCity(ville, type) {
@@ -334,7 +395,10 @@ class CityComparator {
             let best = null;
             let mode = '';
             
-            if (!classique && !encheres) return null;
+            if (!classique && !encheres) {
+                console.warn(`⚠️ Aucune solution viable pour ${ville.nom} ${type}`);
+                return null;
+            }
             
             if (!classique) {
                 best = encheres;
@@ -378,21 +442,14 @@ class CityComparator {
     }
     
     displayResults(results) {
-        const resultsContainer = document.getElementById('comparison-results-container');
-        if (!resultsContainer) {
-            // Créer le conteneur s'il n'existe pas
-            const container = document.createElement('div');
-            container.id = 'comparison-results-container';
-            container.className = 'mt-6';
-            document.getElementById('results')?.appendChild(container) || 
-            document.querySelector('.container')?.appendChild(container);
-        }
-        
-        const container = document.getElementById('comparison-results-container');
+        const container = document.getElementById('comparison-results-container') || this.createResultsContainer();
         
         if (!results || results.length === 0) {
             container.innerHTML = `
                 <div class="comparison-results">
+                    <button class="close-panel" onclick="document.getElementById('comparison-results-container').innerHTML = ''; document.getElementById('comparison-results-container').style.display = 'none';" style="position: absolute; top: 1rem; right: 1rem;">
+                        <i class="fas fa-times"></i>
+                    </button>
                     <div class="info-message">
                         <div class="text-lg text-yellow-400 mr-3">
                             <i class="fas fa-exclamation-circle"></i>
@@ -404,123 +461,140 @@ class CityComparator {
                     </div>
                 </div>
             `;
+            container.style.display = 'block';
             return;
         }
         
         const top3 = results.slice(0, 3);
         
         container.innerHTML = `
-            <div class="comparison-results">
-                <h3>🏆 Top 3 des meilleures opportunités</h3>
-                
-                <div class="city-results-grid">
-                    ${top3.map((r, i) => `
-                        <div class="result-card ${i === 0 ? 'winner' : ''} fade-in-up" style="animation-delay: ${i * 0.1}s;">
-                            <h4>
-                                <i class="fas fa-map-marker-alt"></i>
-                                ${r.ville} - ${r.type}
-                            </h4>
-                            <p class="text-sm" style="color: var(--text-muted); margin-bottom: 1rem;">
-                                Département ${r.departement}
-                            </p>
-                            
-                            <span class="badge ${r.mode === 'encheres' ? 'badge-accent' : 'badge-primary'}">
-                                ${r.mode === 'encheres' ? '⚖️ Enchères' : '🏠 Classique'}
-                            </span>
-                            
-                            <div class="stats-grid">
-                                <div class="stat-item">
-                                    <p class="stat-value">${Math.round(r.loyerNetMensuel)}€</p>
-                                    <p class="stat-label">Loyer net/mois</p>
-                                </div>
-                                <div class="stat-item">
-                                    <p class="stat-value ${r.cashFlow >= 0 ? 'positive' : 'negative'}">
-                                        ${r.cashFlow >= 0 ? '+' : ''}${Math.round(r.cashFlow)}€
-                                    </p>
-                                    <p class="stat-label">Cash-flow</p>
-                                </div>
-                                <div class="stat-item">
-                                    <p class="stat-value">${r.surface.toFixed(0)}m²</p>
-                                    <p class="stat-label">Surface</p>
-                                </div>
-                                <div class="stat-item">
-                                    <p class="stat-value">${r.rendement.toFixed(2)}%</p>
-                                    <p class="stat-label">Rendement</p>
-                                </div>
-                            </div>
-                            
-                            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--text-muted);">
-                                    <span>Prix: ${(r.prixAchat/1000).toFixed(0)}k€</span>
-                                    <span>${r.prixM2}€/m²</span>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
+            <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg transition-all" style="position: relative;">
+                <button class="close-panel" onclick="document.getElementById('comparison-results-container').innerHTML = ''; document.getElementById('comparison-results-container').style.display = 'none';">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <h2 class="card-title">Résultats de la comparaison</h2>
                 </div>
                 
-                ${results.length > 3 ? `
-                    <div class="comparison-summary-table" style="margin-top: 2rem;">
-                        <details>
-                            <summary style="cursor: pointer; color: var(--primary-color); margin-bottom: 1rem;">
-                                <i class="fas fa-chevron-down mr-2"></i>
-                                Voir tous les résultats (${results.length} simulations)
-                            </summary>
-                            <table class="comparison-table">
-                                <thead>
-                                    <tr>
-                                        <th>Ville</th>
-                                        <th>Type</th>
-                                        <th>Mode</th>
-                                        <th>Loyer net/mois</th>
-                                        <th>Cash-flow</th>
-                                        <th>Rendement</th>
-                                        <th>Prix</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${results.slice(3).map((r, idx) => `
+                <div class="comparison-results">
+                    <h3 style="text-align: center; margin-bottom: 2rem;">🏆 Top 3 des meilleures opportunités</h3>
+                    
+                    <div class="city-results-grid">
+                        ${top3.map((r, i) => `
+                            <div class="result-card ${i === 0 ? 'winner' : ''} fade-in-up" style="animation-delay: ${i * 0.1}s;">
+                                <h4>
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    ${r.ville} - ${r.type}
+                                </h4>
+                                <p class="text-sm" style="color: var(--text-muted); margin-bottom: 1rem;">
+                                    Département ${r.departement}
+                                </p>
+                                
+                                <span class="badge ${r.mode === 'encheres' ? 'badge-accent' : 'badge-primary'}">
+                                    ${r.mode === 'encheres' ? '⚖️ Enchères' : '🏠 Classique'}
+                                </span>
+                                
+                                <div class="stats-grid">
+                                    <div class="stat-item">
+                                        <p class="stat-value">${Math.round(r.loyerNetMensuel)}€</p>
+                                        <p class="stat-label">Loyer net/mois</p>
+                                    </div>
+                                    <div class="stat-item">
+                                        <p class="stat-value ${r.cashFlow >= 0 ? 'positive' : 'negative'}">
+                                            ${r.cashFlow >= 0 ? '+' : ''}${Math.round(r.cashFlow)}€
+                                        </p>
+                                        <p class="stat-label">Cash-flow</p>
+                                    </div>
+                                    <div class="stat-item">
+                                        <p class="stat-value">${r.surface.toFixed(0)}m²</p>
+                                        <p class="stat-label">Surface</p>
+                                    </div>
+                                    <div class="stat-item">
+                                        <p class="stat-value">${r.rendement.toFixed(2)}%</p>
+                                        <p class="stat-label">Rendement</p>
+                                    </div>
+                                </div>
+                                
+                                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--text-muted);">
+                                        <span>Prix: ${(r.prixAchat/1000).toFixed(0)}k€</span>
+                                        <span>${r.prixM2}€/m²</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    ${results.length > 3 ? `
+                        <div class="comparison-summary-table" style="margin-top: 2rem;">
+                            <details>
+                                <summary style="cursor: pointer; color: var(--primary-color); margin-bottom: 1rem;">
+                                    <i class="fas fa-chevron-down mr-2"></i>
+                                    Voir tous les résultats (${results.length} simulations)
+                                </summary>
+                                <table class="comparison-table">
+                                    <thead>
                                         <tr>
-                                            <td class="city-name-cell">${r.ville}</td>
-                                            <td>${r.type}</td>
-                                            <td>
-                                                <span class="badge ${r.mode === 'encheres' ? 'badge-accent' : 'badge-primary'}" style="font-size: 0.75rem;">
-                                                    ${r.mode === 'encheres' ? 'Enchères' : 'Classique'}
-                                                </span>
-                                            </td>
-                                            <td style="text-align: right; font-weight: 600;">${Math.round(r.loyerNetMensuel)}€</td>
-                                            <td style="text-align: right; font-weight: 600;" class="${r.cashFlow >= 0 ? 'positive' : 'negative'}">
-                                                ${r.cashFlow >= 0 ? '+' : ''}${Math.round(r.cashFlow)}€
-                                            </td>
-                                            <td style="text-align: right;">${r.rendement.toFixed(2)}%</td>
-                                            <td style="text-align: right;">${(r.prixAchat/1000).toFixed(0)}k€</td>
+                                            <th>Ville</th>
+                                            <th>Type</th>
+                                            <th>Mode</th>
+                                            <th>Loyer net/mois</th>
+                                            <th>Cash-flow</th>
+                                            <th>Rendement</th>
+                                            <th>Prix</th>
                                         </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </details>
-                    </div>
-                ` : ''}
-                
-                <div class="comparison-results info-message" style="margin-top: 2rem;">
-                    <div class="text-lg text-blue-400 mr-3">
-                        <i class="fas fa-info-circle"></i>
-                    </div>
-                    <div>
-                        <h4 class="font-medium mb-1">Paramètres utilisés</h4>
-                        <p class="text-sm opacity-90">
-                            Apport: ${this.formatMontant(this.simulateur.params.base.apport)} • 
-                            Taux: ${this.simulateur.params.base.taux}% • 
-                            Durée: ${this.simulateur.params.base.duree} ans • 
-                            Mode: ${this.simulateur.params.base.calculationMode === 'cashflow-positif' ? 'Cash-flow positif' : 'Loyer ≥ Mensualité'}
-                        </p>
+                                    </thead>
+                                    <tbody>
+                                        ${results.slice(3).map((r, idx) => `
+                                            <tr>
+                                                <td class="city-name-cell">${r.ville}</td>
+                                                <td>${r.type}</td>
+                                                <td>
+                                                    <span class="badge ${r.mode === 'encheres' ? 'badge-accent' : 'badge-primary'}" style="font-size: 0.75rem;">
+                                                        ${r.mode === 'encheres' ? 'Enchères' : 'Classique'}
+                                                    </span>
+                                                </td>
+                                                <td style="text-align: right; font-weight: 600;">${Math.round(r.loyerNetMensuel)}€</td>
+                                                <td style="text-align: right; font-weight: 600;" class="${r.cashFlow >= 0 ? 'positive' : 'negative'}">
+                                                    ${r.cashFlow >= 0 ? '+' : ''}${Math.round(r.cashFlow)}€
+                                                </td>
+                                                <td style="text-align: right;">${r.rendement.toFixed(2)}%</td>
+                                                <td style="text-align: right;">${(r.prixAchat/1000).toFixed(0)}k€</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </details>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="info-message" style="margin-top: 2rem;">
+                        <div class="text-lg text-blue-400 mr-3">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-medium mb-1">Paramètres utilisés</h4>
+                            <p class="text-sm opacity-90">
+                                Apport: ${this.formatMontant(this.simulateur.params.base.apport)} • 
+                                Taux: ${this.simulateur.params.base.taux}% • 
+                                Durée: ${this.simulateur.params.base.duree} ans • 
+                                Mode: ${this.simulateur.params.base.calculationMode === 'cashflow-positif' ? 'Cash-flow positif' : 'Loyer ≥ Mensualité'}
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
         `;
         
-        // Scroll vers les résultats
-        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        container.style.display = 'block';
+        
+        // Scroll vers les résultats (avec un petit décalage)
+        setTimeout(() => {
+            container.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+        }, 100);
     }
     
     formatMontant(montant) {
@@ -537,7 +611,13 @@ class CityComparator {
 document.addEventListener('DOMContentLoaded', () => {
     // Attendre que le simulateur soit chargé
     const initComparator = () => {
-        if (window.simulateur) {
+        if (window.SimulateurImmo) {
+            // Créer une instance du simulateur si elle n'existe pas
+            if (!window.simulateur) {
+                window.simulateur = new window.SimulateurImmo();
+                console.log('✅ Instance SimulateurImmo créée');
+            }
+            
             window.cityComparator = new CityComparator(window.simulateur);
             console.log('✅ Comparateur multi-villes initialisé');
         } else {
