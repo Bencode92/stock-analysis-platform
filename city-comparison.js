@@ -327,18 +327,22 @@ class CityComparator {
     }
     
     collectCurrentParams() {
+        // Paramètres de base
         const formData = {
             apport: parseFloat(document.getElementById('apport')?.value) || 20000,
             taux: parseFloat(document.getElementById('taux')?.value) || 3.5,
             duree: parseFloat(document.getElementById('duree')?.value) || 20,
             calculationMode: document.querySelector('input[name="calculation-mode"]:checked')?.value || 'loyer-mensualite',
             
+            // NOUVEAU: Paramètres critiques manquants
+            pourcentApportMin: parseFloat(document.getElementById('pourcent-apport')?.value) || 10,
+            
             // Prix et loyer par défaut si non renseignés
             prixM2: parseFloat(document.getElementById('prix-m2-marche')?.value) || 2000,
             loyerM2: parseFloat(document.getElementById('loyer-m2')?.value) || 12
         };
         
-        // Charger tous les paramètres avancés si disponibles
+        // Paramètres communs avancés COMPLETS
         const advancedParams = {
             fraisBancairesDossier: parseFloat(document.getElementById('frais-bancaires-dossier')?.value) || 900,
             fraisBancairesCompte: parseFloat(document.getElementById('frais-bancaires-compte')?.value) || 150,
@@ -346,10 +350,49 @@ class CityComparator {
             taxeFonciere: parseFloat(document.getElementById('taxe-fonciere')?.value) || 0,
             vacanceLocative: parseFloat(document.getElementById('vacance-locative')?.value) || 0,
             travauxM2: parseFloat(document.getElementById('travaux-m2')?.value) || 400,
-            useFixedTravauxPercentage: document.getElementById('travaux-mode-percentage')?.checked ?? true
+            useFixedTravauxPercentage: document.getElementById('travaux-mode-percentage')?.checked ?? true,
+            
+            // NOUVEAU: Paramètres manquants
+            entretienAnnuel: parseFloat(document.getElementById('entretien-annuel')?.value) || 0.5,
+            assurancePNO: parseFloat(document.getElementById('assurance-pno')?.value) || 250
         };
         
-        return { ...formData, ...advancedParams };
+        // NOUVEAU: Paramètres achat classique
+        const classiqueParams = {
+            publiciteFonciere: parseFloat(document.getElementById('publicite-fonciere')?.value) || 0.72,
+            droitsMutation: parseFloat(document.getElementById('droits-mutation')?.value) || 5.81,
+            securiteImmobiliere: parseFloat(document.getElementById('securite-immobiliere')?.value) || 0.10,
+            emolumentsVente: parseFloat(document.getElementById('emoluments-vente')?.value) || 1.12,
+            formalites: parseFloat(document.getElementById('formalites')?.value) || 0.28,
+            debours: parseFloat(document.getElementById('debours')?.value) || 0.13,
+            commissionImmo: parseFloat(document.getElementById('commission-immo')?.value) || 4
+        };
+        
+        // NOUVEAU: Paramètres vente aux enchères
+        const encheresParams = {
+            droitsEnregistrement: parseFloat(document.getElementById('droits-enregistrement')?.value) || 5.70,
+            coefMutation: parseFloat(document.getElementById('coef-mutation')?.value) || 2.37,
+            emolumentsPoursuivant1: parseFloat(document.getElementById('emoluments-poursuivant-1')?.value) || 7,
+            emolumentsPoursuivant2: parseFloat(document.getElementById('emoluments-poursuivant-2')?.value) || 3,
+            emolumentsPoursuivant3: parseFloat(document.getElementById('emoluments-poursuivant-3')?.value) || 2,
+            emolumentsPoursuivant4: parseFloat(document.getElementById('emoluments-poursuivant-4')?.value) || 1,
+            honorairesAvocatCoef: parseFloat(document.getElementById('honoraires-avocat-coef')?.value) || 0.25,
+            honorairesAvocatTVA: parseFloat(document.getElementById('honoraires-avocat-tva')?.value) || 20,
+            publiciteFonciereEncheres: parseFloat(document.getElementById('publicite-fonciere-encheres')?.value) || 0.10,
+            fraisFixes: parseFloat(document.getElementById('frais-fixes')?.value) || 50,
+            avocatEnchere: parseFloat(document.getElementById('avocat-enchere')?.value) || 300,
+            suiviDossier: parseFloat(document.getElementById('suivi-dossier')?.value) || 1200,
+            cautionPourcent: parseFloat(document.getElementById('caution-pourcent')?.value) || 5,
+            cautionRestituee: document.getElementById('caution-restituee')?.checked ?? true
+        };
+        
+        // Fusionner tous les paramètres
+        return { 
+            ...formData, 
+            ...advancedParams,
+            ...classiqueParams,
+            ...encheresParams
+        };
     }
     
     async runComparison() {
@@ -703,6 +746,11 @@ class CityComparator {
             // Simuler pour les deux modes
             const classique = this.simulateur.chercheSurfaceDesc('classique');
             const encheres = this.simulateur.chercheSurfaceDesc('encheres');
+            
+            // NOUVEAU: Afficher les détails de debug
+            console.log(`📊 ${ville.nom} - ${type}:`);
+            console.log(`  Classique: surface=${classique?.surface.toFixed(1)}m², cashFlow=${classique?.cashFlow.toFixed(0)}€`);
+            console.log(`  Enchères: surface=${encheres?.surface.toFixed(1)}m², cashFlow=${encheres?.cashFlow.toFixed(0)}€`);
             
             // Choisir le meilleur selon le cash-flow
             let best = null;
