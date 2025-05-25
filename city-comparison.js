@@ -486,60 +486,63 @@ class CityComparator {
     async calculateOptimalInvestment(ville, type, pieceData, targetCashflow) {
         const originalPrixM2 = this.simulateur.params.communs.prixM2;
         const originalLoyerM2 = this.simulateur.params.communs.loyerM2;
-        // Sauvegarder le mode de calcul original
-        const originalMode = this.simulateur.params.base.calculationMode;
         
         this.simulateur.params.communs.prixM2 = pieceData.prix_m2;
         this.simulateur.params.communs.loyerM2 = pieceData.loyer_m2;
-        // CORRECTION: Forcer le mode cashflow-positif pour le mode objectif
-        this.simulateur.params.base.calculationMode = 'cashflow-positif';
         
         try {
-            let surfaceMin = 10, surfaceMax = 200;
-            let bestResult = null;
+            // Utiliser la nouvelle méthode chercheSurfaceObjectifCashflow pour les deux modes
+            const resultClassique = this.simulateur.chercheSurfaceObjectifCashflow('classique', targetCashflow);
+            const resultEncheres = this.simulateur.chercheSurfaceObjectifCashflow('encheres', targetCashflow);
             
-            while (surfaceMax - surfaceMin > 0.5) {
-                const surface = (surfaceMin + surfaceMax) / 2;
-                
-                const resultClassique = this.simulateur.calculeTout(surface, 'classique');
-                const resultEncheres = this.simulateur.calculeTout(surface, 'encheres');
-                
-                const result = resultEncheres.cashFlow > resultClassique.cashFlow ? resultEncheres : resultClassique;
-                const mode = resultEncheres.cashFlow > resultClassique.cashFlow ? 'encheres' : 'classique';
-                
-                if (Math.abs(result.cashFlow - targetCashflow) < 10) {
-                    bestResult = {
-                        ville: ville.nom,
-                        departement: ville.departement,
-                        type: type,
-                        mode: mode,
-                        surface: Math.round(surface),
-                        prixAchat: result.prixAchat,
-                        coutTotal: result.coutTotal,
-                        apportNecessaire: result.coutTotal * 0.1,
-                        apportTotal: result.coutTotal * 0.1 * this.numberOfProperties,
-                        mensualite: result.mensualite,
-                        loyerNet: result.loyerNet,
-                        cashFlow: result.cashFlow,
-                        rendement: result.rendementNet
-                    };
-                    break;
-                }
-                
-                if (result.cashFlow < targetCashflow) {
-                    surfaceMin = surface;
+            // Déterminer le meilleur mode et résultat
+            let bestResult = null;
+            let mode = '';
+            
+            if (!resultClassique && !resultEncheres) {
+                return null; // Aucune solution trouvée
+            }
+            
+            if (!resultClassique) {
+                bestResult = resultEncheres;
+                mode = 'encheres';
+            } else if (!resultEncheres) {
+                bestResult = resultClassique;
+                mode = 'classique';
+            } else {
+                // Comparer les cash-flows (ils devraient être proches du target)
+                // On choisit celui avec le meilleur rendement ou la plus petite surface
+                if (resultEncheres.rendementNet > resultClassique.rendementNet) {
+                    bestResult = resultEncheres;
+                    mode = 'encheres';
                 } else {
-                    surfaceMax = surface;
+                    bestResult = resultClassique;
+                    mode = 'classique';
                 }
             }
             
-            return bestResult;
+            if (!bestResult) return null;
+            
+            // Construire le résultat formaté
+            return {
+                ville: ville.nom,
+                departement: ville.departement,
+                type: type,
+                mode: mode,
+                surface: Math.round(bestResult.surface),
+                prixAchat: bestResult.prixAchat,
+                coutTotal: bestResult.coutTotal,
+                apportNecessaire: bestResult.coutTotal * 0.1,
+                apportTotal: bestResult.coutTotal * 0.1 * this.numberOfProperties,
+                mensualite: bestResult.mensualite,
+                loyerNet: bestResult.loyerNet,
+                cashFlow: bestResult.cashFlow,
+                rendement: bestResult.rendementNet
+            };
             
         } finally {
             this.simulateur.params.communs.prixM2 = originalPrixM2;
             this.simulateur.params.communs.loyerM2 = originalLoyerM2;
-            // Restaurer le mode de calcul original
-            this.simulateur.params.base.calculationMode = originalMode;
         }
     }
     
