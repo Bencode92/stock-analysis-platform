@@ -1,7 +1,7 @@
 /**
  * city-comparison.js - Comparateur multi-villes pour l'investissement immobilier
  * Permet de comparer jusqu'à 10 villes simultanément
- * Utilise les données de villes-data.json
+ * Inclut le mode objectif de cash-flow
  */
 
 class CityComparator {
@@ -10,6 +10,12 @@ class CityComparator {
         this.selectedCities = new Map();
         this.maxCities = 10;
         this.villesData = null;
+        
+        // Mode objectif cash-flow
+        this.targetMode = false;
+        this.targetCashflow = 1000;
+        this.numberOfProperties = 1;
+        
         this.init();
     }
     
@@ -95,8 +101,83 @@ class CityComparator {
                 // Réinitialiser la recherche
                 document.getElementById('multi-city-search').value = '';
                 this.hideSuggestions();
+                this.addTargetModeUI();
             }
         }
+    }
+    
+    addTargetModeUI() {
+        // Vérifier si déjà ajouté
+        if (document.getElementById('target-mode-section')) return;
+        
+        const comparisonInfo = document.querySelector('#city-comparison-panel .comparison-info');
+        if (!comparisonInfo) return;
+        
+        const targetSection = document.createElement('div');
+        targetSection.id = 'target-mode-section';
+        targetSection.className = 'target-mode-section mt-4 p-4 bg-black/30 rounded-lg';
+        targetSection.innerHTML = `
+            <div class="flex items-center justify-between mb-3">
+                <label class="flex items-center cursor-pointer">
+                    <input type="checkbox" id="target-mode-toggle" class="mr-3">
+                    <span class="font-medium">Mode objectif de cash-flow</span>
+                </label>
+                <span class="badge badge-primary">Nouveau</span>
+            </div>
+            
+            <div id="target-mode-options" class="hidden mt-4 space-y-3">
+                <div class="grid grid-2 gap-4">
+                    <div class="form-group">
+                        <label class="form-label text-sm">Cash-flow mensuel souhaité</label>
+                        <div class="form-input-wrapper">
+                            <input type="number" id="target-cashflow-input" class="form-input" value="1000" step="100">
+                            <span class="form-addon-text">€/mois</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label text-sm">Nombre de biens</label>
+                        <select id="target-properties-count" class="form-input">
+                            <option value="1">1 bien</option>
+                            <option value="2">2 biens</option>
+                            <option value="3">3 biens</option>
+                            <option value="4">4 biens</option>
+                            <option value="5">5 biens</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="info-message text-sm">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Le système calculera la surface nécessaire dans chaque ville pour atteindre ${this.targetCashflow}€/mois.
+                </div>
+            </div>
+        `;
+        
+        comparisonInfo.insertAdjacentElement('afterend', targetSection);
+        
+        // Événements
+        document.getElementById('target-mode-toggle').addEventListener('change', (e) => {
+            this.targetMode = e.target.checked;
+            document.getElementById('target-mode-options').classList.toggle('hidden', !this.targetMode);
+            
+            const btnLaunch = document.getElementById('btn-launch-comparison');
+            if (btnLaunch) {
+                btnLaunch.innerHTML = this.targetMode 
+                    ? '<i class="fas fa-bullseye"></i> Calculer investissement nécessaire'
+                    : '<i class="fas fa-rocket"></i> Lancer la comparaison';
+            }
+        });
+        
+        document.getElementById('target-cashflow-input').addEventListener('input', (e) => {
+            this.targetCashflow = parseFloat(e.target.value) || 0;
+            document.querySelector('#target-mode-options .info-message').innerHTML = 
+                `<i class="fas fa-info-circle mr-2"></i>Le système calculera la surface nécessaire dans chaque ville pour atteindre ${this.targetCashflow}€/mois.`;
+        });
+        
+        document.getElementById('target-properties-count').addEventListener('change', (e) => {
+            this.numberOfProperties = parseInt(e.target.value);
+        });
     }
     
     handleSearch(searchTerm) {
@@ -272,6 +353,14 @@ class CityComparator {
     }
     
     async runComparison() {
+        if (this.targetMode) {
+            await this.runTargetModeComparison();
+        } else {
+            await this.runNormalComparison();
+        }
+    }
+    
+    async runNormalComparison() {
         console.log('🚀 Lancement de la comparaison multi-villes...');
         
         const btnLaunch = document.getElementById('btn-launch-comparison');
@@ -349,6 +438,221 @@ class CityComparator {
                 btnLaunch.innerHTML = '<i class="fas fa-rocket"></i> Lancer la comparaison';
             }
         }
+    }
+    
+    async runTargetModeComparison() {
+        console.log('🎯 Mode objectif cash-flow activé');
+        
+        const btnLaunch = document.getElementById('btn-launch-comparison');
+        if (btnLaunch) {
+            btnLaunch.disabled = true;
+            btnLaunch.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calcul en cours...';
+        }
+        
+        try {
+            const results = [];
+            const targetPerProperty = this.targetCashflow / this.numberOfProperties;
+            const params = this.collectCurrentParams();
+            const pieceType = document.getElementById('comparison-piece-type')?.value || 'T3';
+            
+            this.simulateur.chargerParametres(params);
+            
+            for (const [nom, ville] of this.selectedCities) {
+                const types = pieceType === 'all' ? Object.keys(ville.pieces) : [pieceType];
+                
+                for (const type of types) {
+                    if (!ville.pieces[type]) continue;
+                    
+                    const result = await this.calculateOptimalInvestment(ville, type, ville.pieces[type], targetPerProperty);
+                    if (result) {
+                        results.push(result);
+                    }
+                }
+            }
+            
+            // Trier par apport nécessaire
+            results.sort((a, b) => a.apportTotal - b.apportTotal);
+            
+            this.displayTargetResults(results);
+            
+        } finally {
+            if (btnLaunch) {
+                btnLaunch.disabled = false;
+                btnLaunch.innerHTML = '<i class="fas fa-bullseye"></i> Calculer investissement nécessaire';
+            }
+        }
+    }
+    
+    async calculateOptimalInvestment(ville, type, pieceData, targetCashflow) {
+        const originalPrixM2 = this.simulateur.params.communs.prixM2;
+        const originalLoyerM2 = this.simulateur.params.communs.loyerM2;
+        
+        this.simulateur.params.communs.prixM2 = pieceData.prix_m2;
+        this.simulateur.params.communs.loyerM2 = pieceData.loyer_m2;
+        
+        try {
+            let surfaceMin = 10, surfaceMax = 200;
+            let bestResult = null;
+            
+            while (surfaceMax - surfaceMin > 0.5) {
+                const surface = (surfaceMin + surfaceMax) / 2;
+                
+                const resultClassique = this.simulateur.calculeTout(surface, 'classique');
+                const resultEncheres = this.simulateur.calculeTout(surface, 'encheres');
+                
+                const result = resultEncheres.cashFlow > resultClassique.cashFlow ? resultEncheres : resultClassique;
+                const mode = resultEncheres.cashFlow > resultClassique.cashFlow ? 'encheres' : 'classique';
+                
+                if (Math.abs(result.cashFlow - targetCashflow) < 10) {
+                    bestResult = {
+                        ville: ville.nom,
+                        departement: ville.departement,
+                        type: type,
+                        mode: mode,
+                        surface: Math.round(surface),
+                        prixAchat: result.prixAchat,
+                        coutTotal: result.coutTotal,
+                        apportNecessaire: result.coutTotal * 0.1,
+                        apportTotal: result.coutTotal * 0.1 * this.numberOfProperties,
+                        mensualite: result.mensualite,
+                        loyerNet: result.loyerNet,
+                        cashFlow: result.cashFlow,
+                        rendement: result.rendementNet
+                    };
+                    break;
+                }
+                
+                if (result.cashFlow < targetCashflow) {
+                    surfaceMin = surface;
+                } else {
+                    surfaceMax = surface;
+                }
+            }
+            
+            return bestResult;
+            
+        } finally {
+            this.simulateur.params.communs.prixM2 = originalPrixM2;
+            this.simulateur.params.communs.loyerM2 = originalLoyerM2;
+        }
+    }
+    
+    displayTargetResults(results) {
+        const container = document.getElementById('comparison-results-container') || this.createResultsContainer();
+        
+        if (results.length === 0) {
+            container.innerHTML = `
+                <div class="comparison-results">
+                    <div class="info-message">
+                        <i class="fas fa-exclamation-circle text-yellow-400 mr-3"></i>
+                        <div>
+                            <h4>Aucune solution trouvée</h4>
+                            <p class="text-sm opacity-90">L'objectif de ${this.targetCashflow}€/mois ne peut être atteint avec les villes sélectionnées.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.style.display = 'block';
+            return;
+        }
+        
+        container.innerHTML = `
+            <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-bullseye"></i>
+                    </div>
+                    <h2 class="card-title">Investissement nécessaire pour ${this.targetCashflow}€/mois</h2>
+                </div>
+                
+                <div class="comparison-results">
+                    <div class="mb-4 text-center">
+                        <span class="badge badge-primary">Stratégie : ${this.numberOfProperties} bien${this.numberOfProperties > 1 ? 's' : ''}</span>
+                        <span class="ml-2 text-sm opacity-70">Objectif par bien : ${Math.round(this.targetCashflow / this.numberOfProperties)}€/mois</span>
+                    </div>
+                    
+                    <div class="city-results-grid">
+                        ${results.slice(0, 3).map((r, i) => `
+                            <div class="result-card ${i === 0 ? 'winner' : ''} fade-in-up" style="animation-delay: ${i * 0.1}s;">
+                                <h4>
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    ${r.ville} - ${r.type}
+                                </h4>
+                                <p class="text-sm opacity-70 mb-2">Département ${r.departement}</p>
+                                
+                                <span class="badge ${r.mode === 'encheres' ? 'badge-accent' : 'badge-primary'}">
+                                    ${r.mode === 'encheres' ? '⚖️ Enchères' : '🏠 Classique'}
+                                </span>
+                                
+                                <div class="stats-grid mt-3">
+                                    <div class="stat-item">
+                                        <p class="stat-value">${this.formatMontant(r.apportTotal)}</p>
+                                        <p class="stat-label">Apport total</p>
+                                    </div>
+                                    <div class="stat-item">
+                                        <p class="stat-value">${r.surface * this.numberOfProperties}m²</p>
+                                        <p class="stat-label">Surface totale</p>
+                                    </div>
+                                    <div class="stat-item">
+                                        <p class="stat-value">+${Math.round(r.cashFlow)}€</p>
+                                        <p class="stat-label">Cash-flow/bien</p>
+                                    </div>
+                                    <div class="stat-item">
+                                        <p class="stat-value">${r.rendement.toFixed(1)}%</p>
+                                        <p class="stat-label">Rendement</p>
+                                    </div>
+                                </div>
+                                
+                                <details class="mt-3">
+                                    <summary class="cursor-pointer text-primary-color text-sm">
+                                        <i class="fas fa-info-circle mr-1"></i>Détails par bien
+                                    </summary>
+                                    <div class="mt-2 p-2 bg-black/30 rounded text-sm">
+                                        <div>Surface : ${r.surface}m²</div>
+                                        <div>Prix : ${this.formatMontant(r.prixAchat)}</div>
+                                        <div>Apport : ${this.formatMontant(r.apportNecessaire)}</div>
+                                        <div>Mensualité : ${this.formatMontant(r.mensualite)}</div>
+                                    </div>
+                                </details>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    ${results.length > 3 ? `
+                        <details class="mt-4">
+                            <summary class="cursor-pointer text-primary-color">
+                                <i class="fas fa-chevron-down mr-2"></i>Voir toutes les options
+                            </summary>
+                            <table class="comparison-table mt-2">
+                                <thead>
+                                    <tr>
+                                        <th>Ville</th>
+                                        <th>Type</th>
+                                        <th>Apport total</th>
+                                        <th>Surface/bien</th>
+                                        <th>Cash-flow</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${results.slice(3).map(r => `
+                                        <tr>
+                                            <td>${r.ville}</td>
+                                            <td>${r.type}</td>
+                                            <td>${this.formatMontant(r.apportTotal)}</td>
+                                            <td>${r.surface}m²</td>
+                                            <td class="text-green-400">+${Math.round(r.cashFlow)}€</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </details>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        
+        container.style.display = 'block';
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     
     createResultsContainer() {
