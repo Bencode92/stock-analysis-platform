@@ -486,9 +486,13 @@ class CityComparator {
     async calculateOptimalInvestment(ville, type, pieceData, targetCashflow) {
         const originalPrixM2 = this.simulateur.params.communs.prixM2;
         const originalLoyerM2 = this.simulateur.params.communs.loyerM2;
+        // Sauvegarder le mode de calcul original
+        const originalMode = this.simulateur.params.base.calculationMode;
         
         this.simulateur.params.communs.prixM2 = pieceData.prix_m2;
         this.simulateur.params.communs.loyerM2 = pieceData.loyer_m2;
+        // CORRECTION: Forcer le mode cashflow-positif pour le mode objectif
+        this.simulateur.params.base.calculationMode = 'cashflow-positif';
         
         try {
             let surfaceMin = 10, surfaceMax = 200;
@@ -534,6 +538,8 @@ class CityComparator {
         } finally {
             this.simulateur.params.communs.prixM2 = originalPrixM2;
             this.simulateur.params.communs.loyerM2 = originalLoyerM2;
+            // Restaurer le mode de calcul original
+            this.simulateur.params.base.calculationMode = originalMode;
         }
     }
     
