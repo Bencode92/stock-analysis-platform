@@ -13,6 +13,7 @@
  * Version 4.6 - Correction du ratio d'apport appliqué au coût total du projet
  * Version 4.7 - Correction de l'orthographe: "emolements" -> "emoluments"
  * Version 4.8 - Ajout du support pour le mode "Cash-flow positif"
+ * Version 4.9 - Ajout de chercheSurfaceObjectifCashflow pour le mode objectif
  */
 
 class SimulateurImmo {
@@ -359,6 +360,40 @@ class SimulateurImmo {
             }
         }
         return null; // aucune solution autofinancée dans l'intervalle
+    }
+
+    /**
+     * Recherche la plus petite surface donnant au moins targetCF
+     * de cash-flow (cash-flow complet, pas seulement marge loyer-mensualité).
+     *
+     * @param {"classique"|"encheres"} mode
+     * @param {number} targetCF cash-flow mensuel cible (≥ 0)
+     * @param {number} eps précision m2 (défaut : 0.5 m2)
+     * @returns {Object|null} résultats complets ou null si impossible
+     */
+    chercheSurfaceObjectifCashflow(mode, targetCF, eps = 0.5) {
+        const Smin = this.params.base.surfaceMin ?? this.defaults.surfaceMin;
+        const Smax = this.params.base.surfaceMax ?? this.defaults.surfaceMax;
+        
+        // Vérifier d'abord si même la surface max ne suffit pas
+        const maxRes = this.calculeTout(Smax, mode);
+        if (maxRes.cashFlow < targetCF) return null;
+        
+        let lo = Smin, hi = Smax, best = null;
+        
+        while (hi - lo > eps) {
+            const S = (lo + hi) / 2;
+            const res = this.calculeTout(S, mode);
+            
+            if (res.cashFlow >= targetCF) {
+                best = res; // on a une solution suffisante ; on peut tenter plus petit
+                hi = S;
+            } else {
+                lo = S;
+            }
+        }
+        
+        return best;
     }
 
     /**
