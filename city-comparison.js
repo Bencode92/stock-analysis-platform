@@ -73,20 +73,20 @@ class CityComparator {
             this.villesData = {
                 villes: [
                     {
-                        nom: \"Lyon\",
-                        departement: \"69\",
+                        nom: "Lyon",
+                        departement: "69",
                         pieces: {
-                            \"T1\": {prix_m2: 6912, loyer_m2: 19.18},
-                            \"T2\": {prix_m2: 4567, loyer_m2: 17.92},
-                            \"T3\": {prix_m2: 3970, loyer_m2: 14.50}
+                            "T1": {prix_m2: 6912, loyer_m2: 19.18},
+                            "T2": {prix_m2: 4567, loyer_m2: 17.92},
+                            "T3": {prix_m2: 3970, loyer_m2: 14.50}
                         }
                     },
                     {
-                        nom: \"Paris 10e Arrondissement\",
-                        departement: \"75\",
+                        nom: "Paris 10e Arrondissement",
+                        departement: "75",
                         pieces: {
-                            \"T1\": {prix_m2: 11945, loyer_m2: 32.08},
-                            \"T2\": {prix_m2: 9315, loyer_m2: 32.08}
+                            "T1": {prix_m2: 11945, loyer_m2: 32.08},
+                            "T2": {prix_m2: 9315, loyer_m2: 32.08}
                         }
                     }
                 ]
@@ -125,45 +125,45 @@ class CityComparator {
         targetSection.id = 'target-mode-section';
         targetSection.className = 'target-mode-section mt-4 p-4 bg-black/30 rounded-lg';
         targetSection.innerHTML = `
-            <div class=\"flex items-center justify-between mb-3\">
-                <label class=\"flex items-center cursor-pointer\">
-                    <input type=\"checkbox\" id=\"target-mode-toggle\" class=\"mr-3\">
-                    <span class=\"font-medium\">Mode objectif de cash-flow</span>
+            <div class="flex items-center justify-between mb-3">
+                <label class="flex items-center cursor-pointer">
+                    <input type="checkbox" id="target-mode-toggle" class="mr-3">
+                    <span class="font-medium">Mode objectif de cash-flow</span>
                 </label>
-                <span class=\"badge badge-primary\">Nouveau</span>
+                <span class="badge badge-primary">Nouveau</span>
             </div>
             
-            <div class=\"text-sm text-gray-400 mb-3\">
-                <i class=\"fas fa-info-circle mr-1\"></i>
-                <span id=\"mode-description\">
+            <div class="text-sm text-gray-400 mb-3">
+                <i class="fas fa-info-circle mr-1"></i>
+                <span id="mode-description">
                     Quand cette option est décochée, l'outil privilégie le revenu locatif net le plus élevé.
                 </span>
             </div>
             
-            <div id=\"target-mode-options\" class=\"hidden mt-4 space-y-3\">
-                <div class=\"grid grid-2 gap-4\">
-                    <div class=\"form-group\">
-                        <label class=\"form-label text-sm\">Cash-flow mensuel souhaité</label>
-                        <div class=\"form-input-wrapper\">
-                            <input type=\"number\" id=\"target-cashflow-input\" class=\"form-input\" value=\"1000\" step=\"100\">
-                            <span class=\"form-addon-text\">€/mois</span>
+            <div id="target-mode-options" class="hidden mt-4 space-y-3">
+                <div class="grid grid-2 gap-4">
+                    <div class="form-group">
+                        <label class="form-label text-sm">Cash-flow mensuel souhaité</label>
+                        <div class="form-input-wrapper">
+                            <input type="number" id="target-cashflow-input" class="form-input" value="1000" step="100">
+                            <span class="form-addon-text">€/mois</span>
                         </div>
                     </div>
                     
-                    <div class=\"form-group\">
-                        <label class=\"form-label text-sm\">Nombre de biens</label>
-                        <select id=\"target-properties-count\" class=\"form-input\">
-                            <option value=\"1\">1 bien</option>
-                            <option value=\"2\">2 biens</option>
-                            <option value=\"3\">3 biens</option>
-                            <option value=\"4\">4 biens</option>
-                            <option value=\"5\">5 biens</option>
+                    <div class="form-group">
+                        <label class="form-label text-sm">Nombre de biens</label>
+                        <select id="target-properties-count" class="form-input">
+                            <option value="1">1 bien</option>
+                            <option value="2">2 biens</option>
+                            <option value="3">3 biens</option>
+                            <option value="4">4 biens</option>
+                            <option value="5">5 biens</option>
                         </select>
                     </div>
                 </div>
                 
-                <div class=\"info-message text-sm\">
-                    <i class=\"fas fa-info-circle mr-2\"></i>
+                <div class="info-message text-sm">
+                    <i class="fas fa-info-circle mr-2"></i>
                     Le système calculera la surface nécessaire dans chaque ville pour atteindre ${this.targetCashflow}€/mois.
                 </div>
             </div>
@@ -179,23 +179,23 @@ class CityComparator {
             // Mise à jour de la description
             const description = document.getElementById('mode-description');
             if (this.targetMode) {
-                description.innerHTML = '<i class=\"fas fa-info-circle mr-1\"></i>Mode activé : l\\'outil privilégie le cash-flow mensuel le plus élevé.';
+                description.innerHTML = '<i class="fas fa-info-circle mr-1"></i>Mode activé : l\'outil privilégie le cash-flow mensuel le plus élevé.';
             } else {
-                description.innerHTML = '<i class=\"fas fa-info-circle mr-1\"></i>Mode désactivé : l\\'outil privilégie le revenu locatif net le plus élevé.';
+                description.innerHTML = '<i class="fas fa-info-circle mr-1"></i>Mode désactivé : l\'outil privilégie le revenu locatif net le plus élevé.';
             }
             
             const btnLaunch = document.getElementById('btn-launch-comparison');
             if (btnLaunch) {
                 btnLaunch.innerHTML = this.targetMode 
-                    ? '<i class=\"fas fa-bullseye\"></i> Calculer investissement nécessaire'
-                    : '<i class=\"fas fa-rocket\"></i> Lancer la comparaison';
+                    ? '<i class="fas fa-bullseye"></i> Calculer investissement nécessaire'
+                    : '<i class="fas fa-rocket"></i> Lancer la comparaison';
             }
         });
         
         document.getElementById('target-cashflow-input').addEventListener('input', (e) => {
             this.targetCashflow = parseFloat(e.target.value) || 0;
             document.querySelector('#target-mode-options .info-message').innerHTML = 
-                `<i class=\"fas fa-info-circle mr-2\"></i>Le système calculera la surface nécessaire dans chaque ville pour atteindre ${this.targetCashflow}€/mois.`;
+                `<i class="fas fa-info-circle mr-2"></i>Le système calculera la surface nécessaire dans chaque ville pour atteindre ${this.targetCashflow}€/mois.`;
         });
         
         document.getElementById('target-properties-count').addEventListener('change', (e) => {
@@ -223,9 +223,9 @@ class CityComparator {
         
         if (villes.length === 0) {
             container.innerHTML = `
-                <div class=\"ville-suggestion\" style=\"opacity: 0.6; cursor: default;\">
-                    <div class=\"ville-info\">
-                        <div class=\"ville-nom\">Aucun résultat trouvé</div>
+                <div class="ville-suggestion" style="opacity: 0.6; cursor: default;">
+                    <div class="ville-info">
+                        <div class="ville-nom">Aucun résultat trouvé</div>
                     </div>
                 </div>
             `;
@@ -240,14 +240,14 @@ class CityComparator {
             const maxPrice = Math.max(...prices);
             
             return `
-                <div class=\"ville-suggestion\" data-ville='${JSON.stringify(ville).replace(/'/g, '&apos;')}'>
-                    <div class=\"ville-info\">
-                        <div class=\"ville-nom\">${ville.nom}</div>
-                        <div class=\"ville-dept\">Département ${ville.departement}</div>
+                <div class="ville-suggestion" data-ville='${JSON.stringify(ville).replace(/'/g, '&apos;')}'>
+                    <div class="ville-info">
+                        <div class="ville-nom">${ville.nom}</div>
+                        <div class="ville-dept">Département ${ville.departement}</div>
                     </div>
-                    <div class=\"ville-types-info\">
-                        <div class=\"ville-types-count\">${types.length} types</div>
-                        <div style=\"color: rgba(255,255,255,0.7); font-size: 0.85rem;\">
+                    <div class="ville-types-info">
+                        <div class="ville-types-count">${types.length} types</div>
+                        <div style="color: rgba(255,255,255,0.7); font-size: 0.85rem;">
                             ${minPrice.toLocaleString()}€ - ${maxPrice.toLocaleString()}€/m²
                         </div>
                     </div>
@@ -261,7 +261,7 @@ class CityComparator {
         container.querySelectorAll('.ville-suggestion').forEach(el => {
             if (!el.textContent.includes('Aucun résultat')) {
                 el.addEventListener('click', () => {
-                    const ville = JSON.parse(el.dataset.ville.replace(/&apos;/g, \"'\"));
+                    const ville = JSON.parse(el.dataset.ville.replace(/&apos;/g, "'"));
                     this.addCity(ville);
                 });
             }
@@ -287,8 +287,8 @@ class CityComparator {
             const toast = document.createElement('div');
             toast.className = 'toast toast-warning';
             toast.innerHTML = `
-                <div class=\"toast-icon\"><i class=\"fas fa-exclamation-triangle\"></i></div>
-                <div class=\"toast-content\">Maximum ${this.maxCities} villes peuvent être comparées</div>
+                <div class="toast-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="toast-content">Maximum ${this.maxCities} villes peuvent être comparées</div>
             `;
             document.getElementById('toast-container')?.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
@@ -323,17 +323,17 @@ class CityComparator {
         if (container) {
             if (this.selectedCities.size === 0) {
                 container.innerHTML = `
-                    <div class=\"empty-state\" style=\"width: 100%; text-align: center; padding: 2rem; opacity: 0.5;\">
-                        <i class=\"fas fa-city\" style=\"font-size: 2rem; margin-bottom: 0.5rem;\"></i>
-                        <p style=\"margin: 0;\">Aucune ville sélectionnée</p>
+                    <div class="empty-state" style="width: 100%; text-align: center; padding: 2rem; opacity: 0.5;">
+                        <i class="fas fa-city" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                        <p style="margin: 0;">Aucune ville sélectionnée</p>
                     </div>
                 `;
             } else {
                 container.innerHTML = Array.from(this.selectedCities.entries()).map(([nom, ville]) => `
-                    <div class=\"city-chip\">
+                    <div class="city-chip">
                         ${nom}
-                        <span class=\"remove-chip\" data-city=\"${nom}\">
-                            <i class=\"fas fa-times\"></i>
+                        <span class="remove-chip" data-city="${nom}">
+                            <i class="fas fa-times"></i>
                         </span>
                     </div>
                 `).join('');
@@ -423,7 +423,7 @@ class CityComparator {
             apport: parseFloat(document.getElementById('apport')?.value) || 20000,
             taux: parseFloat(document.getElementById('taux')?.value) || 3.5,
             duree: parseFloat(document.getElementById('duree')?.value) || 20,
-            calculationMode: document.querySelector('input[name=\"calculation-mode\"]:checked')?.value || 'loyer-mensualite',
+            calculationMode: document.querySelector('input[name="calculation-mode"]:checked')?.value || 'loyer-mensualite',
             pourcentApportMin: parseFloat(document.getElementById('pourcent-apport')?.value) || 10,
             prixM2: parseFloat(document.getElementById('prix-m2-marche')?.value) || 2000,
             loyerM2: parseFloat(document.getElementById('loyer-m2')?.value) || 12
@@ -494,7 +494,7 @@ class CityComparator {
         const btnLaunch = document.getElementById('btn-launch-comparison');
         if (btnLaunch) {
             btnLaunch.disabled = true;
-            btnLaunch.innerHTML = '<i class=\"fas fa-spinner fa-spin\"></i> Calcul en cours...';
+            btnLaunch.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calcul en cours...';
         }
         
         try {
@@ -554,14 +554,14 @@ class CityComparator {
             console.error('❌ Erreur lors de la comparaison:', error);
             const container = document.getElementById('comparison-results-container') || this.createResultsContainer();
             container.innerHTML = `
-                <div class=\"comparison-results\">
-                    <div class=\"info-message\" style=\"background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);\">
-                        <div class=\"text-lg text-red-400 mr-3\">
-                            <i class=\"fas fa-exclamation-triangle\"></i>
+                <div class="comparison-results">
+                    <div class="info-message" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">
+                        <div class="text-lg text-red-400 mr-3">
+                            <i class="fas fa-exclamation-triangle"></i>
                         </div>
                         <div>
-                            <h4 class=\"font-medium mb-1\">Erreur lors de la simulation</h4>
-                            <p class=\"text-sm opacity-90\">${error.message || 'Une erreur inattendue s\\'est produite'}</p>
+                            <h4 class="font-medium mb-1">Erreur lors de la simulation</h4>
+                            <p class="text-sm opacity-90">${error.message || 'Une erreur inattendue s\'est produite'}</p>
                         </div>
                     </div>
                 </div>
@@ -569,7 +569,7 @@ class CityComparator {
         } finally {
             if (btnLaunch) {
                 btnLaunch.disabled = false;
-                btnLaunch.innerHTML = '<i class=\"fas fa-rocket\"></i> Lancer la comparaison';
+                btnLaunch.innerHTML = '<i class="fas fa-rocket"></i> Lancer la comparaison';
             }
         }
     }
@@ -580,7 +580,7 @@ class CityComparator {
         const btnLaunch = document.getElementById('btn-launch-comparison');
         if (btnLaunch) {
             btnLaunch.disabled = true;
-            btnLaunch.innerHTML = '<i class=\"fas fa-spinner fa-spin\"></i> Calcul en cours...';
+            btnLaunch.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calcul en cours...';
         }
         
         try {
@@ -612,7 +612,7 @@ class CityComparator {
         } finally {
             if (btnLaunch) {
                 btnLaunch.disabled = false;
-                btnLaunch.innerHTML = '<i class=\"fas fa-bullseye\"></i> Calculer investissement nécessaire';
+                btnLaunch.innerHTML = '<i class="fas fa-bullseye"></i> Calculer investissement nécessaire';
             }
         }
     }
@@ -685,12 +685,12 @@ class CityComparator {
         
         if (results.length === 0) {
             container.innerHTML = `
-                <div class=\"comparison-results\">
-                    <div class=\"info-message\">
-                        <i class=\"fas fa-exclamation-circle text-yellow-400 mr-3\"></i>
+                <div class="comparison-results">
+                    <div class="info-message">
+                        <i class="fas fa-exclamation-circle text-yellow-400 mr-3"></i>
                         <div>
                             <h4>Aucune solution trouvée</h4>
-                            <p class=\"text-sm opacity-90\">L'objectif de ${this.targetCashflow}€/mois ne peut être atteint avec les villes sélectionnées.</p>
+                            <p class="text-sm opacity-90">L'objectif de ${this.targetCashflow}€/mois ne peut être atteint avec les villes sélectionnées.</p>
                         </div>
                     </div>
                 </div>
@@ -700,57 +700,57 @@ class CityComparator {
         }
         
         container.innerHTML = `
-            <div class=\"card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg\">
-                <div class=\"card-header\">
-                    <div class=\"card-icon\">
-                        <i class=\"fas fa-bullseye\"></i>
+            <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-bullseye"></i>
                     </div>
-                    <h2 class=\"card-title\">Investissement nécessaire pour ${this.targetCashflow}€/mois</h2>
+                    <h2 class="card-title">Investissement nécessaire pour ${this.targetCashflow}€/mois</h2>
                 </div>
                 
-                <div class=\"comparison-results\">
-                    <div class=\"mb-4 text-center\">
-                        <span class=\"badge badge-primary\">Stratégie : ${this.numberOfProperties} bien${this.numberOfProperties > 1 ? 's' : ''}</span>
-                        <span class=\"ml-2 text-sm opacity-70\">Objectif par bien : ${Math.round(this.targetCashflow / this.numberOfProperties)}€/mois</span>
+                <div class="comparison-results">
+                    <div class="mb-4 text-center">
+                        <span class="badge badge-primary">Stratégie : ${this.numberOfProperties} bien${this.numberOfProperties > 1 ? 's' : ''}</span>
+                        <span class="ml-2 text-sm opacity-70">Objectif par bien : ${Math.round(this.targetCashflow / this.numberOfProperties)}€/mois</span>
                     </div>
                     
-                    <div class=\"city-results-grid\">
+                    <div class="city-results-grid">
                         ${results.slice(0, 3).map((r, i) => `
-                            <div class=\"result-card ${i === 0 ? 'winner' : ''} fade-in-up\" style=\"animation-delay: ${i * 0.1}s;\">
+                            <div class="result-card ${i === 0 ? 'winner' : ''} fade-in-up" style="animation-delay: ${i * 0.1}s;">
                                 <h4>
-                                    <i class=\"fas fa-map-marker-alt\"></i>
+                                    <i class="fas fa-map-marker-alt"></i>
                                     ${r.ville} - ${r.type}
                                 </h4>
-                                <p class=\"text-sm opacity-70 mb-2\">Département ${r.departement}</p>
+                                <p class="text-sm opacity-70 mb-2">Département ${r.departement}</p>
                                 
-                                <span class=\"badge ${r.mode === 'encheres' ? 'badge-accent' : 'badge-primary'}\">
+                                <span class="badge ${r.mode === 'encheres' ? 'badge-accent' : 'badge-primary'}">
                                     ${r.mode === 'encheres' ? '⚖️ Enchères' : '🏠 Classique'}
                                 </span>
                                 
-                                <div class=\"stats-grid mt-3\">
-                                    <div class=\"stat-item\">
-                                        <p class=\"stat-value\">${this.formatMontant(r.apportTotal)}</p>
-                                        <p class=\"stat-label\">Apport total</p>
+                                <div class="stats-grid mt-3">
+                                    <div class="stat-item">
+                                        <p class="stat-value">${this.formatMontant(r.apportTotal)}</p>
+                                        <p class="stat-label">Apport total</p>
                                     </div>
-                                    <div class=\"stat-item\">
-                                        <p class=\"stat-value\">${r.surface * this.numberOfProperties}m²</p>
-                                        <p class=\"stat-label\">Surface totale</p>
+                                    <div class="stat-item">
+                                        <p class="stat-value">${r.surface * this.numberOfProperties}m²</p>
+                                        <p class="stat-label">Surface totale</p>
                                     </div>
-                                    <div class=\"stat-item\">
-                                        <p class=\"stat-value\">+${Math.round(r.cashFlow)}€</p>
-                                        <p class=\"stat-label\">Cash-flow/bien</p>
+                                    <div class="stat-item">
+                                        <p class="stat-value">+${Math.round(r.cashFlow)}€</p>
+                                        <p class="stat-label">Cash-flow/bien</p>
                                     </div>
-                                    <div class=\"stat-item\">
-                                        <p class=\"stat-value\">${r.rendement.toFixed(1)}%</p>
-                                        <p class=\"stat-label\">Rendement</p>
+                                    <div class="stat-item">
+                                        <p class="stat-value">${r.rendement.toFixed(1)}%</p>
+                                        <p class="stat-label">Rendement</p>
                                     </div>
                                 </div>
                                 
-                                <details class=\"mt-3\">
-                                    <summary class=\"cursor-pointer text-primary-color text-sm\">
-                                        <i class=\"fas fa-info-circle mr-1\"></i>Détails par bien
+                                <details class="mt-3">
+                                    <summary class="cursor-pointer text-primary-color text-sm">
+                                        <i class="fas fa-info-circle mr-1"></i>Détails par bien
                                     </summary>
-                                    <div class=\"mt-2 p-2 bg-black/30 rounded text-sm\">
+                                    <div class="mt-2 p-2 bg-black/30 rounded text-sm">
                                         <div>Surface : ${r.surface}m²</div>
                                         <div>Prix : ${this.formatMontant(r.prixAchat)}</div>
                                         <div>Apport : ${this.formatMontant(r.apportNecessaire)}</div>
@@ -762,11 +762,11 @@ class CityComparator {
                     </div>
                     
                     ${results.length > 3 ? `
-                        <details class=\"mt-4\">
-                            <summary class=\"cursor-pointer text-primary-color\">
-                                <i class=\"fas fa-chevron-down mr-2\"></i>Voir toutes les options
+                        <details class="mt-4">
+                            <summary class="cursor-pointer text-primary-color">
+                                <i class="fas fa-chevron-down mr-2"></i>Voir toutes les options
                             </summary>
-                            <table class=\"comparison-table mt-2\">
+                            <table class="comparison-table mt-2">
                                 <thead>
                                     <tr>
                                         <th>Ville</th>
@@ -783,7 +783,7 @@ class CityComparator {
                                             <td>${r.type}</td>
                                             <td>${this.formatMontant(r.apportTotal)}</td>
                                             <td>${r.surface}m²</td>
-                                            <td class=\"text-green-400\">+${Math.round(r.cashFlow)}€</td>
+                                            <td class="text-green-400">+${Math.round(r.cashFlow)}€</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -920,17 +920,17 @@ class CityComparator {
         
         if (!results || results.length === 0) {
             container.innerHTML = `
-                <div class=\"comparison-results\">
-                    <button class=\"close-panel\" onclick=\"document.getElementById('comparison-results-container').innerHTML = ''; document.getElementById('comparison-results-container').style.display = 'none';\" style=\"position: absolute; top: 1rem; right: 1rem;\">
-                        <i class=\"fas fa-times\"></i>
+                <div class="comparison-results">
+                    <button class="close-panel" onclick="document.getElementById('comparison-results-container').innerHTML = ''; document.getElementById('comparison-results-container').style.display = 'none';" style="position: absolute; top: 1rem; right: 1rem;">
+                        <i class="fas fa-times"></i>
                     </button>
-                    <div class=\"info-message\">
-                        <div class=\"text-lg text-yellow-400 mr-3\">
-                            <i class=\"fas fa-exclamation-circle\"></i>
+                    <div class="info-message">
+                        <div class="text-lg text-yellow-400 mr-3">
+                            <i class="fas fa-exclamation-circle"></i>
                         </div>
                         <div>
-                            <h4 class=\"font-medium mb-1\">Aucun résultat trouvé</h4>
-                            <p class=\"text-sm opacity-90\">Vérifiez vos paramètres ou essayez d'autres villes.</p>
+                            <h4 class="font-medium mb-1">Aucun résultat trouvé</h4>
+                            <p class="text-sm opacity-90">Vérifiez vos paramètres ou essayez d'autres villes.</p>
                         </div>
                     </div>
                 </div>
@@ -943,64 +943,64 @@ class CityComparator {
         const optimiseCashFlow = document.getElementById('target-mode-toggle')?.checked ?? false;
         
         container.innerHTML = `
-            <div class=\"card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg transition-all\" style=\"position: relative;\">
-                <button class=\"close-panel\" onclick=\"document.getElementById('comparison-results-container').innerHTML = ''; document.getElementById('comparison-results-container').style.display = 'none';\">
-                    <i class=\"fas fa-times\"></i>
+            <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg transition-all" style="position: relative;">
+                <button class="close-panel" onclick="document.getElementById('comparison-results-container').innerHTML = ''; document.getElementById('comparison-results-container').style.display = 'none';">
+                    <i class="fas fa-times"></i>
                 </button>
-                <div class=\"card-header\">
-                    <div class=\"card-icon\">
-                        <i class=\"fas fa-trophy\"></i>
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-trophy"></i>
                     </div>
-                    <h2 class=\"card-title\">Résultats de la comparaison</h2>
+                    <h2 class="card-title">Résultats de la comparaison</h2>
                 </div>
                 
-                <div class=\"comparison-results\">
-                    <h3 style=\"text-align: center; margin-bottom: 1rem;\">
+                <div class="comparison-results">
+                    <h3 style="text-align: center; margin-bottom: 1rem;">
                         🏆 Top 3 des meilleures opportunités
                     </h3>
-                    <p style=\"text-align: center; margin-bottom: 2rem; color: var(--text-muted);\">
-                        <i class=\"fas fa-info-circle mr-1\"></i>
+                    <p style="text-align: center; margin-bottom: 2rem; color: var(--text-muted);">
+                        <i class="fas fa-info-circle mr-1"></i>
                         Classement par : <strong>${optimiseCashFlow ? 'Cash-flow mensuel' : 'Loyer net mensuel'}</strong>
                     </p>
                     
-                    <div class=\"city-results-grid\">
+                    <div class="city-results-grid">
                         ${top3.map((r, i) => `
-                            <div class=\"result-card ${i === 0 ? 'winner' : ''} fade-in-up\" style=\"animation-delay: ${i * 0.1}s;\">
+                            <div class="result-card ${i === 0 ? 'winner' : ''} fade-in-up" style="animation-delay: ${i * 0.1}s;">
                                 <h4>
-                                    <i class=\"fas fa-map-marker-alt\"></i>
+                                    <i class="fas fa-map-marker-alt"></i>
                                     ${r.ville} - ${r.type}
                                 </h4>
-                                <p class=\"text-sm\" style=\"color: var(--text-muted); margin-bottom: 1rem;\">
+                                <p class="text-sm" style="color: var(--text-muted); margin-bottom: 1rem;">
                                     Département ${r.departement}
                                 </p>
                                 
-                                <span class=\"badge ${r.mode === 'encheres' ? 'badge-accent' : 'badge-primary'}\">
+                                <span class="badge ${r.mode === 'encheres' ? 'badge-accent' : 'badge-primary'}">
                                     ${r.mode === 'encheres' ? '⚖️ Enchères' : '🏠 Classique'}
                                 </span>
                                 
-                                <div class=\"stats-grid\">
-                                    <div class=\"stat-item ${!optimiseCashFlow ? 'highlight' : ''}\">
-                                        <p class=\"stat-value\">${Math.round(r.loyerNetMensuel)}€</p>
-                                        <p class=\"stat-label\">Loyer net/mois</p>
+                                <div class="stats-grid">
+                                    <div class="stat-item ${!optimiseCashFlow ? 'highlight' : ''}">
+                                        <p class="stat-value">${Math.round(r.loyerNetMensuel)}€</p>
+                                        <p class="stat-label">Loyer net/mois</p>
                                     </div>
-                                    <div class=\"stat-item ${optimiseCashFlow ? 'highlight' : ''} ${r.cashFlow >= 0 ? 'positive' : 'negative'}\">
-                                        <p class=\"stat-value\">
+                                    <div class="stat-item ${optimiseCashFlow ? 'highlight' : ''} ${r.cashFlow >= 0 ? 'positive' : 'negative'}">
+                                        <p class="stat-value">
                                             ${r.cashFlow >= 0 ? '+' : ''}${Math.round(r.cashFlow)}€
                                         </p>
-                                        <p class=\"stat-label\">Cash-flow</p>
+                                        <p class="stat-label">Cash-flow</p>
                                     </div>
-                                    <div class=\"stat-item\">
-                                        <p class=\"stat-value\">${r.surface.toFixed(0)}m²</p>
-                                        <p class=\"stat-label\">Surface</p>
+                                    <div class="stat-item">
+                                        <p class="stat-value">${r.surface.toFixed(0)}m²</p>
+                                        <p class="stat-label">Surface</p>
                                     </div>
-                                    <div class=\"stat-item\">
-                                        <p class=\"stat-value\">${r.rendement.toFixed(2)}%</p>
-                                        <p class=\"stat-label\">Rendement</p>
+                                    <div class="stat-item">
+                                        <p class="stat-value">${r.rendement.toFixed(2)}%</p>
+                                        <p class="stat-label">Rendement</p>
                                     </div>
                                 </div>
                                 
-                                <div style=\"margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);\">
-                                    <div style=\"display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--text-muted);\">
+                                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--text-muted);">
                                         <span>Prix: ${(r.prixAchat/1000).toFixed(0)}k€</span>
                                         <span>${r.prixM2}€/m²</span>
                                     </div>
@@ -1010,20 +1010,20 @@ class CityComparator {
                     </div>
                     
                     ${results.length > 3 ? `
-                        <div class=\"comparison-summary-table\" style=\"margin-top: 2rem;\">
+                        <div class="comparison-summary-table" style="margin-top: 2rem;">
                             <details>
-                                <summary style=\"cursor: pointer; color: var(--primary-color); margin-bottom: 1rem;\">
-                                    <i class=\"fas fa-chevron-down mr-2\"></i>
+                                <summary style="cursor: pointer; color: var(--primary-color); margin-bottom: 1rem;">
+                                    <i class="fas fa-chevron-down mr-2"></i>
                                     Voir tous les résultats (${results.length} simulations)
                                 </summary>
-                                <table class=\"comparison-table\">
+                                <table class="comparison-table">
                                     <thead>
                                         <tr>
                                             <th>Ville</th>
                                             <th>Type</th>
                                             <th>Mode</th>
-                                            <th ${!optimiseCashFlow ? 'class=\"highlight\"' : ''}>Loyer net/mois</th>
-                                            <th ${optimiseCashFlow ? 'class=\"highlight\"' : ''}>Cash-flow</th>
+                                            <th ${!optimiseCashFlow ? 'class="highlight"' : ''}>Loyer net/mois</th>
+                                            <th ${optimiseCashFlow ? 'class="highlight"' : ''}>Cash-flow</th>
                                             <th>Rendement</th>
                                             <th>Prix</th>
                                         </tr>
@@ -1031,19 +1031,19 @@ class CityComparator {
                                     <tbody>
                                         ${results.slice(3).map((r, idx) => `
                                             <tr>
-                                                <td class=\"city-name-cell\">${r.ville}</td>
+                                                <td class="city-name-cell">${r.ville}</td>
                                                 <td>${r.type}</td>
                                                 <td>
-                                                    <span class=\"badge ${r.mode === 'encheres' ? 'badge-accent' : 'badge-primary'}\" style=\"font-size: 0.75rem;\">
+                                                    <span class="badge ${r.mode === 'encheres' ? 'badge-accent' : 'badge-primary'}" style="font-size: 0.75rem;">
                                                         ${r.mode === 'encheres' ? 'Enchères' : 'Classique'}
                                                     </span>
                                                 </td>
-                                                <td style=\"text-align: right; font-weight: 600;\" ${!optimiseCashFlow ? 'class=\"highlight\"' : ''}>${Math.round(r.loyerNetMensuel)}€</td>
-                                                <td style=\"text-align: right; font-weight: 600;\" class=\"${r.cashFlow >= 0 ? 'positive' : 'negative'} ${optimiseCashFlow ? 'highlight' : ''}\">
+                                                <td style="text-align: right; font-weight: 600;" ${!optimiseCashFlow ? 'class="highlight"' : ''}>${Math.round(r.loyerNetMensuel)}€</td>
+                                                <td style="text-align: right; font-weight: 600;" class="${r.cashFlow >= 0 ? 'positive' : 'negative'} ${optimiseCashFlow ? 'highlight' : ''}">
                                                     ${r.cashFlow >= 0 ? '+' : ''}${Math.round(r.cashFlow)}€
                                                 </td>
-                                                <td style=\"text-align: right;\">${r.rendement.toFixed(2)}%</td>
-                                                <td style=\"text-align: right;\">${(r.prixAchat/1000).toFixed(0)}k€</td>
+                                                <td style="text-align: right;">${r.rendement.toFixed(2)}%</td>
+                                                <td style="text-align: right;">${(r.prixAchat/1000).toFixed(0)}k€</td>
                                             </tr>
                                         `).join('')}
                                     </tbody>
@@ -1052,20 +1052,20 @@ class CityComparator {
                         </div>
                     ` : ''}
                     
-                    <div class=\"info-message\" style=\"margin-top: 2rem;\">
-                        <div class=\"text-lg text-blue-400 mr-3\">
-                            <i class=\"fas fa-info-circle\"></i>
+                    <div class="info-message" style="margin-top: 2rem;">
+                        <div class="text-lg text-blue-400 mr-3">
+                            <i class="fas fa-info-circle"></i>
                         </div>
                         <div>
-                            <h4 class=\"font-medium mb-1\">Paramètres utilisés</h4>
-                            <p class=\"text-sm opacity-90\">
+                            <h4 class="font-medium mb-1">Paramètres utilisés</h4>
+                            <p class="text-sm opacity-90">
                                 Apport: ${this.formatMontant(this.simulateur.params.base.apport)} • 
                                 Taux: ${this.simulateur.params.base.taux}% • 
                                 Durée: ${this.simulateur.params.base.duree} ans • 
                                 Mode: ${this.simulateur.params.base.calculationMode === 'cashflow-positif' ? 'Cash-flow positif' : 'Loyer ≥ Mensualité'}
                             </p>
-                            <p class=\"text-sm opacity-70 mt-1\">
-                                <i class=\"fas fa-filter mr-1\"></i>
+                            <p class="text-sm opacity-70 mt-1">
+                                <i class="fas fa-filter mr-1"></i>
                                 Critère de sélection : <strong>${optimiseCashFlow ? 'Cash-flow maximal' : 'Loyer net maximal'}</strong>
                             </p>
                         </div>
