@@ -12,6 +12,7 @@
  * Version 1.5 - Correction du conflit CSS avec les cartes de mode de calcul
  * Version 1.6 - Amélioration de l'affichage des résultats (messages de succès/échec)
  * Version 1.7 - Ajout du tableau comparatif détaillé avec barres visuelles
+ * Version 1.8 - Correction de la duplication des icônes info lors de simulations multiples
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -1274,6 +1275,16 @@ document.addEventListener('DOMContentLoaded', function() {
     function ajouterInfobulle(element, texte) {
         // Vérifier que l'élément existe
         if (!element) return;
+        
+        // CORRECTION: Vérifier si une infobulle existe déjà
+        const existingIcon = element.querySelector('.info-icon') || 
+                            element.parentNode?.querySelector('.info-icon');
+        if (existingIcon) {
+            // Mettre à jour le texte si nécessaire
+            const tooltipText = existingIcon.querySelector('.tooltip-text');
+            if (tooltipText) tooltipText.textContent = texte;
+            return; // Ne pas ajouter une nouvelle icône
+        }
         
         // S'assurer que l'élément a une position relative ou absolute
         const position = window.getComputedStyle(element).position;
