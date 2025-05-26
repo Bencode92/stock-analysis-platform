@@ -3,7 +3,7 @@
  * Permet de comparer jusqu'à 10 villes simultanément
  * Inclut le mode objectif de cash-flow
  * 
- * v2.1 - Correction du critère de sélection selon le mode
+ * v2.2 - Synchronisation forcée des paramètres au lancement
  */
 
 class CityComparator {
@@ -105,11 +105,8 @@ class CityComparator {
                 this.hideSuggestions();
                 this.addTargetModeUI();
                 
-                // Synchroniser les paramètres au moment de l'ouverture
-                console.log('🔄 Synchronisation des paramètres avec le simulateur principal');
-                if (window.simulateur && window.simulateur.params) {
-                    console.log('📊 Paramètres actuels du simulateur:', window.simulateur.params);
-                }
+                // PAS de synchronisation ici - elle sera faite au lancement
+                console.log('📋 Panel ouvert - synchronisation différée au lancement');
             }
         }
     }
@@ -350,71 +347,22 @@ class CityComparator {
     }
     
     /**
-     * Utilisation des paramètres du simulateur principal
-     * au lieu de collecter depuis le DOM
+     * MODIFICATION: Toujours forcer la collecte depuis le DOM
      */
     collectCurrentParams() {
-        // Vérifier d'abord si le simulateur principal existe et a des paramètres
-        if (window.simulateur && window.simulateur.params) {
-            console.log('✅ Utilisation des paramètres du simulateur principal');
-            
-            // Récupérer TOUS les paramètres directement du simulateur
-            const params = {
-                // Paramètres de base
-                apport: window.simulateur.params.base.apport,
-                taux: window.simulateur.params.base.taux,
-                duree: window.simulateur.params.base.duree,
-                calculationMode: window.simulateur.params.base.calculationMode || 'loyer-mensualite',
-                pourcentApportMin: window.simulateur.params.base.pourcentApportMin || 10,
-                
-                // Paramètres communs
-                prixM2: window.simulateur.params.communs.prixM2,
-                loyerM2: window.simulateur.params.communs.loyerM2,
-                fraisBancairesDossier: window.simulateur.params.communs.fraisBancairesDossier,
-                fraisBancairesCompte: window.simulateur.params.communs.fraisBancairesCompte,
-                fraisGarantie: window.simulateur.params.communs.fraisGarantie,
-                taxeFonciere: window.simulateur.params.communs.taxeFonciere,
-                vacanceLocative: window.simulateur.params.communs.vacanceLocative,
-                travauxM2: window.simulateur.params.communs.travauxM2,
-                useFixedTravauxPercentage: window.simulateur.params.communs.useFixedTravauxPercentage,
-                entretienAnnuel: window.simulateur.params.communs.entretienAnnuel,
-                assurancePNO: window.simulateur.params.communs.assurancePNO,
-                
-                // Paramètres achat classique
-                publiciteFonciere: window.simulateur.params.classique.publiciteFonciere,
-                droitsMutation: window.simulateur.params.classique.droitsMutation,
-                securiteImmobiliere: window.simulateur.params.classique.securiteImmobiliere,
-                emolumentsVente: window.simulateur.params.classique.emolumentsVente,
-                formalites: window.simulateur.params.classique.formalites,
-                debours: window.simulateur.params.classique.debours,
-                commissionImmo: window.simulateur.params.classique.commissionImmo,
-                
-                // Paramètres vente aux enchères
-                droitsEnregistrement: window.simulateur.params.encheres.droitsEnregistrement,
-                coefMutation: window.simulateur.params.encheres.coefMutation,
-                emolumentsPoursuivant1: window.simulateur.params.encheres.emolumentsPoursuivant1,
-                emolumentsPoursuivant2: window.simulateur.params.encheres.emolumentsPoursuivant2,
-                emolumentsPoursuivant3: window.simulateur.params.encheres.emolumentsPoursuivant3,
-                emolumentsPoursuivant4: window.simulateur.params.encheres.emolumentsPoursuivant4,
-                honorairesAvocatCoef: window.simulateur.params.encheres.honorairesAvocatCoef,
-                honorairesAvocatTVA: window.simulateur.params.encheres.honorairesAvocatTVA,
-                publiciteFonciereEncheres: window.simulateur.params.encheres.publiciteFonciereEncheres,
-                fraisFixes: window.simulateur.params.encheres.fraisFixes,
-                avocatEnchere: window.simulateur.params.encheres.avocatEnchere,
-                suiviDossier: window.simulateur.params.encheres.suiviDossier,
-                cautionPourcent: window.simulateur.params.encheres.cautionPourcent,
-                cautionRestituee: window.simulateur.params.encheres.cautionRestituee
-            };
-            
-            console.log('📊 Paramètres synchronisés:', params);
-            return params;
+        console.log('🔄 Collecte forcée des paramètres depuis le formulaire...');
+        
+        // TOUJOURS collecter depuis le DOM pour avoir les dernières valeurs
+        const params = this.collectParamsFromDOM();
+        
+        // Mettre à jour le simulateur principal avec ces valeurs
+        if (window.simulateur) {
+            window.simulateur.chargerParametres(params);
+            console.log('✅ Simulateur mis à jour avec les paramètres actuels');
         }
         
-        // FALLBACK: Si pas de simulateur principal, collecter depuis le DOM
-        console.log('⚠️ Simulateur principal non trouvé, collecte depuis le DOM');
-        
-        // Code de fallback pour collecter depuis le DOM (identique à avant)
-        return this.collectParamsFromDOM();
+        console.log('📊 Paramètres collectés:', params);
+        return params;
     }
     
     collectParamsFromDOM() {
@@ -481,6 +429,12 @@ class CityComparator {
     }
     
     async runComparison() {
+        // IMPORTANT: Forcer la synchronisation des paramètres ICI
+        console.log('🚀 Synchronisation forcée des paramètres avant comparaison...');
+        
+        // Collecter et charger les paramètres actuels
+        const currentParams = this.collectCurrentParams();
+        
         if (this.targetMode) {
             await this.runTargetModeComparison();
         } else {
@@ -500,7 +454,8 @@ class CityComparator {
         try {
             const results = [];
             const pieceType = document.getElementById('comparison-piece-type')?.value || 'T3';
-            const params = this.collectCurrentParams();
+            
+            // Les paramètres ont déjà été synchronisés dans runComparison()
             
             // Vérifier que le simulateur existe
             if (!this.simulateur) {
@@ -508,10 +463,6 @@ class CityComparator {
                 throw new Error('Simulateur non disponible');
             }
             
-            // Charger les paramètres dans le simulateur
-            this.simulateur.chargerParametres(params);
-            
-            console.log('📊 Paramètres chargés:', params);
             console.log('🏙️ Villes à comparer:', this.selectedCities.size);
             console.log('🎯 Mode objectif cash-flow:', this.targetMode ? 'Activé' : 'Désactivé (privilégie le loyer net)');
             
@@ -586,10 +537,9 @@ class CityComparator {
         try {
             const results = [];
             const targetPerProperty = this.targetCashflow / this.numberOfProperties;
-            const params = this.collectCurrentParams();
             const pieceType = document.getElementById('comparison-piece-type')?.value || 'T3';
             
-            this.simulateur.chargerParametres(params);
+            // Les paramètres ont déjà été synchronisés dans runComparison()
             
             for (const [nom, ville] of this.selectedCities) {
                 const types = pieceType === 'all' ? Object.keys(ville.pieces) : [pieceType];
