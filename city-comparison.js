@@ -3,7 +3,7 @@
  * Permet de comparer jusqu'à 10 villes simultanément
  * Inclut le mode objectif de cash-flow
  * 
- * v2.2 - Synchronisation forcée des paramètres au lancement
+ * v2.3 - Fix définitif de la synchronisation des paramètres
  */
 
 class CityComparator {
@@ -347,25 +347,11 @@ class CityComparator {
     }
     
     /**
-     * MODIFICATION: Toujours forcer la collecte depuis le DOM
+     * TOUJOURS collecter depuis le DOM pour avoir les dernières valeurs
      */
     collectCurrentParams() {
         console.log('🔄 Collecte forcée des paramètres depuis le formulaire...');
         
-        // TOUJOURS collecter depuis le DOM pour avoir les dernières valeurs
-        const params = this.collectParamsFromDOM();
-        
-        // Mettre à jour le simulateur principal avec ces valeurs
-        if (window.simulateur) {
-            window.simulateur.chargerParametres(params);
-            console.log('✅ Simulateur mis à jour avec les paramètres actuels');
-        }
-        
-        console.log('📊 Paramètres collectés:', params);
-        return params;
-    }
-    
-    collectParamsFromDOM() {
         // Paramètres de base
         const formData = {
             apport: parseFloat(document.getElementById('apport')?.value) || 20000,
@@ -420,12 +406,15 @@ class CityComparator {
         };
         
         // Fusionner tous les paramètres
-        return { 
+        const allParams = { 
             ...formData, 
             ...advancedParams,
             ...classiqueParams,
             ...encheresParams
         };
+        
+        console.log('📊 Paramètres collectés:', allParams);
+        return allParams;
     }
     
     async runComparison() {
@@ -434,6 +423,12 @@ class CityComparator {
         
         // Collecter et charger les paramètres actuels
         const currentParams = this.collectCurrentParams();
+        
+        // Mettre à jour le simulateur principal
+        if (this.simulateur) {
+            this.simulateur.chargerParametres(currentParams);
+            console.log('✅ Simulateur mis à jour avec les paramètres actuels');
+        }
         
         if (this.targetMode) {
             await this.runTargetModeComparison();
