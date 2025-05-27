@@ -68,8 +68,8 @@ class CityRadar {
         radarSection.style.display = 'block';
         radarSection.innerHTML = `
             <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg">
-                <div class="card-header" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);">
-                    <div class="card-icon" style="background: linear-gradient(135deg, #6366f1 0%, #ec4899 100%);">
+                <div class="card-header" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);">
                         <i class="fas fa-chart-radar"></i>
                     </div>
                     <h2 class="card-title">🎯 Radar des villes - Analyse nationale</h2>
@@ -217,7 +217,7 @@ class CityRadar {
             <style>
                 .animated-gradient-border {
                     position: relative;
-                    background: linear-gradient(45deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #667eea 100%);
+                    background: linear-gradient(45deg, #667eea 0%, #764ba2 25%, #3b82f6 50%, #4facfe 75%, #667eea 100%);
                     background-size: 200% 200%;
                     animation: gradient-animation 5s ease infinite;
                     padding: 2px;
@@ -1070,9 +1070,9 @@ class CityRadar {
         const rankEmojis = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
         const gradients = [
             'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            'linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%)',
             'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-            'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+            'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
             'linear-gradient(135deg, #30cfd0 0%, #330867 100%)'
         ];
         
