@@ -65,31 +65,29 @@
             <div class="regime-def-body">
                 <p id="regime-definition" class="regime-def-text"></p>
                 
-                <div id="regime-exemple" class="regime-exemple hidden">
-                    <div class="regime-exemple-icon">
-                        <i class="fas fa-lightbulb"></i>
-                    </div>
-                    <div class="regime-exemple-content">
-                        <h4>💡Exemple pratique</h4>
-                        <p id="exemple-text"></p>
-                    </div>
+                <div id="regime-conditions" class="regime-list conditions hidden">
+                    <h4>📋 Conditions d'éligibilité</h4>
+                    <ul id="conditions-list"></ul>
                 </div>
                 
-                <div class="regime-lists">
-                    <div id="regime-avantages" class="regime-list avantages hidden">
-                        <h4>✅Avantages</h4>
-                        <ul id="avantages-list"></ul>
-                    </div>
-                    
-                    <div id="regime-inconvenients" class="regime-list inconvenients hidden">
-                        <h4>⚠️Inconvénients</h4>
-                        <ul id="inconvenients-list"></ul>
-                    </div>
+                <div id="regime-modalites" class="regime-list modalites hidden">
+                    <h4>⚙️ Modalités d'application</h4>
+                    <ul id="modalites-list"></ul>
                 </div>
                 
-                <div id="regime-comparaison" class="regime-comparaison hidden">
-                    <h4>⚖️Comparaison</h4>
-                    <p id="comparaison-text"></p>
+                <div id="regime-specificites" class="regime-list specificites hidden">
+                    <h4>🔧 Spécificités fiscales</h4>
+                    <ul id="specificites-list"></ul>
+                </div>
+                
+                <div id="regime-deficit" class="regime-deficit hidden">
+                    <h4>📊 Déficit foncier</h4>
+                    <div id="deficit-content"></div>
+                </div>
+                
+                <div id="regime-calcul" class="regime-calcul hidden">
+                    <h4>🧮 Calcul fiscal</h4>
+                    <div id="calcul-content"></div>
                 </div>
             </div>
         `;
@@ -203,48 +201,12 @@
                 font-weight: 300;
             }
             
-            .regime-exemple {
-                background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(251, 191, 36, 0.05));
-                border: 1px solid rgba(251, 191, 36, 0.3);
-                border-radius: 15px;
+            .regime-list {
+                background: rgba(255, 255, 255, 0.02);
+                border: 1px solid rgba(255, 255, 255, 0.05);
+                border-radius: 12px;
                 padding: 1.5rem;
-                margin-bottom: 2rem;
-                display: flex;
-                gap: 1rem;
-                align-items: flex-start;
-            }
-            
-            .regime-exemple-icon {
-                width: 40px;
-                height: 40px;
-                background: rgba(251, 191, 36, 0.2);
-                border-radius: 10px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 1.25rem;
-                color: #fbbf24;
-                flex-shrink: 0;
-            }
-            
-            .regime-exemple-content h4 {
-                color: #fbbf24;
-                margin: 0 0 0.5rem 0;
-                font-size: 1.125rem;
-                font-weight: 600;
-            }
-            
-            .regime-exemple-content p {
-                color: rgba(255, 255, 255, 0.8);
-                margin: 0;
-                line-height: 1.6;
-            }
-            
-            .regime-lists {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 2rem;
-                margin-bottom: 2rem;
+                margin-bottom: 1.5rem;
             }
             
             .regime-list h4 {
@@ -254,14 +216,7 @@
                 display: flex;
                 align-items: center;
                 gap: 0.5rem;
-            }
-            
-            .regime-list.avantages h4 {
-                color: #10b981;
-            }
-            
-            .regime-list.inconvenients h4 {
-                color: #f59e0b;
+                color: #a78bfa;
             }
             
             .regime-list ul {
@@ -289,34 +244,34 @@
                 left: 0;
                 font-weight: bold;
                 font-size: 1.25rem;
+                color: #a78bfa;
             }
             
-            .regime-list.avantages li::before {
-                color: #10b981;
-            }
-            
-            .regime-list.inconvenients li::before {
-                color: #f59e0b;
-            }
-            
-            .regime-comparaison {
+            .regime-deficit, .regime-calcul {
                 background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
                 border: 1px solid rgba(139, 92, 246, 0.3);
                 border-radius: 15px;
                 padding: 1.5rem;
+                margin-bottom: 1.5rem;
             }
             
-            .regime-comparaison h4 {
+            .regime-deficit h4, .regime-calcul h4 {
                 color: #a78bfa;
                 margin: 0 0 1rem 0;
                 font-size: 1.125rem;
                 font-weight: 600;
             }
             
-            .regime-comparaison p {
+            .regime-deficit p, .regime-calcul p {
                 color: rgba(255, 255, 255, 0.8);
-                margin: 0;
+                margin: 0.5rem 0;
                 line-height: 1.6;
+            }
+            
+            #deficit-content p, #calcul-content p {
+                margin: 0.75rem 0;
+                padding-left: 1rem;
+                border-left: 2px solid rgba(139, 92, 246, 0.3);
             }
             
             @keyframes slideDown {
@@ -331,11 +286,6 @@
             }
             
             @media (max-width: 768px) {
-                .regime-lists {
-                    grid-template-columns: 1fr;
-                    gap: 1.5rem;
-                }
-                
                 .regime-def-body {
                     padding: 1.5rem;
                 }
@@ -348,19 +298,8 @@
     function showRegimeDefinition(regimeName) {
         if (!regimesData || !definitionContainer) return;
         
-        // Mapper les noms affichés aux noms dans le JSON
-        const nameMapping = {
-            'Micro-foncier': 'Micro-foncier',
-            'Réel foncier': 'Réel foncier',
-            'LMNP micro-BIC': 'LMNP micro-BIC',
-            'LMNP réel': 'LMNP réel',
-            'SCI à l\'IS': 'SCI à l\'IS',
-            'SAS': 'SAS',
-            'SARL': 'SARL'
-        };
-        
-        const mappedName = nameMapping[regimeName] || regimeName;
-        const regime = regimesData.find(r => r.nom === mappedName);
+        // Trouver le régime par son nom ou ID
+        const regime = regimesData.find(r => r.nom === regimeName || r.id === regimeName);
         
         if (!regime) {
             console.warn('Régime non trouvé:', regimeName);
@@ -369,46 +308,83 @@
         
         currentRegime = regime;
         
-        // Remplir les données
+        // Remplir les données de base
         document.getElementById('regime-nom').textContent = regime.nom;
-        document.getElementById('regime-definition').textContent = regime.definition;
+        document.getElementById('regime-definition').textContent = regime.description;
         
-        // Exemple
-        const exempleEl = document.getElementById('regime-exemple');
-        if (regime.exemple) {
-            exempleEl.classList.remove('hidden');
-            document.getElementById('exemple-text').textContent = regime.exemple;
+        // Conditions d'éligibilité
+        const conditionsEl = document.getElementById('regime-conditions');
+        if (regime.conditions_eligibilite?.length) {
+            conditionsEl.classList.remove('hidden');
+            document.getElementById('conditions-list').innerHTML = 
+                regime.conditions_eligibilite.map(c => `<li>${c}</li>`).join('');
+        } else if (regime.conditions_application?.length) {
+            conditionsEl.classList.remove('hidden');
+            document.querySelector('#regime-conditions h4').textContent = '📋 Conditions d\'application';
+            document.getElementById('conditions-list').innerHTML = 
+                regime.conditions_application.map(c => `<li>${c}</li>`).join('');
         } else {
-            exempleEl.classList.add('hidden');
+            conditionsEl.classList.add('hidden');
         }
         
-        // Avantages
-        const avantagesEl = document.getElementById('regime-avantages');
-        if (regime.avantages?.length) {
-            avantagesEl.classList.remove('hidden');
-            document.getElementById('avantages-list').innerHTML = 
-                regime.avantages.map(a => `<li>${a}</li>`).join('');
+        // Modalités d'application
+        const modalitesEl = document.getElementById('regime-modalites');
+        if (regime.modalites_application?.length) {
+            modalitesEl.classList.remove('hidden');
+            document.getElementById('modalites-list').innerHTML = 
+                regime.modalites_application.map(m => `<li>${m}</li>`).join('');
         } else {
-            avantagesEl.classList.add('hidden');
+            modalitesEl.classList.add('hidden');
         }
         
-        // Inconvénients
-        const inconvenientsEl = document.getElementById('regime-inconvenients');
-        if (regime.inconvenients?.length) {
-            inconvenientsEl.classList.remove('hidden');
-            document.getElementById('inconvenients-list').innerHTML = 
-                regime.inconvenients.map(i => `<li>${i}</li>`).join('');
+        // Spécificités fiscales
+        const specificitesEl = document.getElementById('regime-specificites');
+        if (regime.specifites_fiscales?.length) {
+            specificitesEl.classList.remove('hidden');
+            document.getElementById('specificites-list').innerHTML = 
+                regime.specifites_fiscales.map(s => `<li>${s}</li>`).join('');
         } else {
-            inconvenientsEl.classList.add('hidden');
+            specificitesEl.classList.add('hidden');
         }
         
-        // Comparaison
-        const comparaisonEl = document.getElementById('regime-comparaison');
-        if (regime.comparaison) {
-            comparaisonEl.classList.remove('hidden');
-            document.getElementById('comparaison-text').textContent = regime.comparaison;
+        // Déficit foncier
+        const deficitEl = document.getElementById('regime-deficit');
+        if (regime.deficit_foncier) {
+            deficitEl.classList.remove('hidden');
+            let deficitContent = '';
+            for (const [key, value] of Object.entries(regime.deficit_foncier)) {
+                const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                deficitContent += `<p><strong>${label}:</strong> ${value}</p>`;
+            }
+            document.getElementById('deficit-content').innerHTML = deficitContent;
         } else {
-            comparaisonEl.classList.add('hidden');
+            deficitEl.classList.add('hidden');
+        }
+        
+        // Calcul fiscal
+        const calculEl = document.getElementById('regime-calcul');
+        if (regime.calcul) {
+            calculEl.classList.remove('hidden');
+            let calculContent = '<p>';
+            if (regime.calcul.abattement !== undefined) {
+                calculContent += `<strong>Abattement:</strong> ${regime.calcul.abattement * 100}%<br>`;
+            }
+            if (regime.calcul.deficitDeductible !== undefined) {
+                calculContent += `<strong>Déficit déductible:</strong> ${regime.calcul.deficitDeductible ? 'Oui' : 'Non'}<br>`;
+            }
+            if (regime.calcul.plafondDeficit !== undefined) {
+                calculContent += `<strong>Plafond déficit:</strong> ${regime.calcul.plafondDeficit.toLocaleString()} €<br>`;
+            }
+            if (regime.calcul.amortissement !== undefined) {
+                calculContent += `<strong>Amortissement possible:</strong> ${regime.calcul.amortissement ? 'Oui' : 'Non'}<br>`;
+            }
+            if (regime.calcul.reportable !== undefined) {
+                calculContent += `<strong>Déficit reportable:</strong> ${regime.calcul.reportable ? 'Oui' : 'Non'}`;
+            }
+            calculContent += '</p>';
+            document.getElementById('calcul-content').innerHTML = calculContent;
+        } else {
+            calculEl.classList.add('hidden');
         }
         
         // Afficher avec animation
@@ -435,41 +411,18 @@
             const regimeCard = e.target.closest('.regime-card');
             if (!regimeCard) return;
             
-            // Extraire le nom du régime depuis le h4 ou le contenu
-            const nameElement = regimeCard.querySelector('h4') || 
-                               regimeCard.querySelector('.regime-name') ||
-                               regimeCard.querySelector('[class*="name"]');
+            // Extraire l'ID du régime depuis l'attribut data-regime
+            const regimeId = regimeCard.getAttribute('data-regime');
             
-            if (!nameElement) {
-                // Chercher dans tout le contenu de la carte
-                const cardText = regimeCard.textContent;
-                const regimes = [
-                    'Micro-foncier',
-                    'Réel foncier',
-                    'LMNP micro-BIC',
-                    'LMNP réel',
-                    'SCI à l\'IS',
-                    'SAS',
-                    'SARL'
-                ];
-                
-                for (const regime of regimes) {
-                    if (cardText.includes(regime)) {
-                        selectRegimeCard(regimeCard, regime);
-                        showRegimeDefinition(regime);
-                        return;
-                    }
-                }
-            } else {
-                const regimeName = nameElement.textContent.trim();
-                selectRegimeCard(regimeCard, regimeName);
-                showRegimeDefinition(regimeName);
+            if (regimeId) {
+                selectRegimeCard(regimeCard, regimeId);
+                showRegimeDefinition(regimeId);
             }
         });
     }
     
     // Sélectionner visuellement une carte
-    function selectRegimeCard(card, regimeName) {
+    function selectRegimeCard(card, regimeId) {
         // Retirer la sélection précédente
         document.querySelectorAll('.regime-card.selected').forEach(el => {
             el.classList.remove('selected');
@@ -480,7 +433,7 @@
         
         // Émettre un événement pour le simulateur
         window.dispatchEvent(new CustomEvent('regimeSelected', {
-            detail: { regime: regimeName, data: currentRegime }
+            detail: { regime: regimeId, data: currentRegime }
         }));
     }
     
