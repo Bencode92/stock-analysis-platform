@@ -3,7 +3,7 @@
  * Permet de comparer jusqu'à 10 villes simultanément
  * Inclut le mode objectif de cash-flow
  * 
- * v2.3 - Correction complète de la synchronisation des paramètres
+ * v2.4 - Synchronisation complète des paramètres à chaque simulation de ville
  */
 
 class CityComparator {
@@ -568,9 +568,14 @@ class CityComparator {
     }
     
     async calculateOptimalInvestment(ville, type, pieceData, targetCashflow) {
-        const originalPrixM2 = this.simulateur.params.communs.prixM2;
-        const originalLoyerM2 = this.simulateur.params.communs.loyerM2;
+        // Synchroniser les paramètres actuels du formulaire avant chaque calcul
+        const freshParams = this.collectParamsFromDOM();
+        this.simulateur.chargerParametres(freshParams);
         
+        // Sauvegarder l'état complet
+        const originalParams = JSON.parse(JSON.stringify(this.simulateur.params));
+        
+        // Appliquer uniquement les prix/loyers de la ville
         this.simulateur.params.communs.prixM2 = pieceData.prix_m2;
         this.simulateur.params.communs.loyerM2 = pieceData.loyer_m2;
         
@@ -625,8 +630,8 @@ class CityComparator {
             };
             
         } finally {
-            this.simulateur.params.communs.prixM2 = originalPrixM2;
-            this.simulateur.params.communs.loyerM2 = originalLoyerM2;
+            // Restaurer l'état complet
+            this.simulateur.params = JSON.parse(JSON.stringify(originalParams));
         }
     }
     
@@ -772,17 +777,20 @@ class CityComparator {
     }
     
     /**
-     * MODIFICATION PRINCIPALE: Choix du critère selon le mode
+     * MODIFICATION PRINCIPALE: Synchronisation complète avant chaque simulation
      */
     async simulateForCity(ville, type) {
         const pieceData = ville.pieces[type];
         if (!pieceData) return null;
         
-        // Sauvegarder les paramètres actuels
-        const originalPrixM2 = this.simulateur.params.communs.prixM2;
-        const originalLoyerM2 = this.simulateur.params.communs.loyerM2;
+        // 1. Synchroniser TOUS les paramètres actuels du formulaire
+        const freshParams = this.collectParamsFromDOM();
+        this.simulateur.chargerParametres(freshParams);
         
-        // Mettre à jour avec les données de la ville
+        // 2. Sauvegarder l'état complet du simulateur
+        const originalParams = JSON.parse(JSON.stringify(this.simulateur.params));
+        
+        // 3. Appliquer SEULEMENT les données spécifiques à la ville
         this.simulateur.params.communs.prixM2 = pieceData.prix_m2;
         this.simulateur.params.communs.loyerM2 = pieceData.loyer_m2;
         
@@ -859,9 +867,8 @@ class CityComparator {
             };
             
         } finally {
-            // Restaurer les paramètres originaux
-            this.simulateur.params.communs.prixM2 = originalPrixM2;
-            this.simulateur.params.communs.loyerM2 = originalLoyerM2;
+            // 4. Restaurer l'état original complet
+            this.simulateur.params = JSON.parse(JSON.stringify(originalParams));
         }
     }
     
