@@ -1,0 +1,289 @@
+/* city-radar.css - Styles pour le module Radar des villes */
+
+/* Conteneur principal */
+#city-radar-container {
+    margin-top: 2rem;
+}
+
+/* Sections de filtres */
+.filter-section {
+    padding: 1.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.filter-section h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Options radio et checkbox */
+.filter-options {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.radio-option,
+.type-option {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.radio-option input[type="radio"] {
+    margin-right: 0.5rem;
+}
+
+.radio-option:hover span {
+    color: var(--primary-color);
+}
+
+/* Sélecteur de types */
+.type-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
+.type-option {
+    position: relative;
+}
+
+.type-option input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+}
+
+.type-card {
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.type-option input[type="checkbox"]:checked + .type-card {
+    background: rgba(0, 255, 135, 0.1);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 20px rgba(0, 255, 135, 0.2);
+}
+
+.type-name {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.surface-control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    font-size: 0.9rem;
+}
+
+.surface-input {
+    width: 60px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 0.25rem;
+    text-align: center;
+    color: white;
+}
+
+.surface-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* Options de tri */
+.sort-options {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.sort-options .radio-option span {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Chips de sélection */
+.selected-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.dept-chip,
+.city-chip {
+    background: rgba(0, 255, 135, 0.2);
+    border: 1px solid var(--primary-color);
+    border-radius: 20px;
+    padding: 0.25rem 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.dept-chip .remove,
+.city-chip .remove {
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.6);
+    transition: color 0.2s;
+}
+
+.dept-chip .remove:hover,
+.city-chip .remove:hover {
+    color: #ff4444;
+}
+
+/* Tableau de résultats */
+.radar-results-table {
+    overflow-x: auto;
+    margin-top: 1rem;
+}
+
+.radar-results-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.radar-results-table th,
+.radar-results-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.radar-results-table th {
+    background: rgba(0, 255, 135, 0.1);
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.radar-results-table tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.winner-row {
+    background: linear-gradient(90deg, 
+        rgba(0, 255, 135, 0.1) 0%,
+        rgba(0, 255, 135, 0.05) 100%);
+    font-weight: 600;
+}
+
+.rank-cell {
+    font-size: 1.2rem;
+    text-align: center;
+}
+
+.dept-badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.125rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+}
+
+/* Highlight des colonnes selon le critère */
+.highlight-primary {
+    background: rgba(0, 255, 135, 0.1);
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.highlight-secondary {
+    opacity: 0.7;
+}
+
+/* Animations */
+@keyframes radarScan {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.btn-primary i.fa-satellite-dish {
+    animation: radarScan 2s linear infinite;
+}
+
+.btn-primary:disabled i.fa-satellite-dish {
+    animation: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .filter-options {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .sort-options {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .type-selector {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .radar-results-table {
+        font-size: 0.875rem;
+    }
+    
+    .radar-results-table th,
+    .radar-results-table td {
+        padding: 0.5rem;
+    }
+}
+
+/* Intégration avec le thème existant */
+#btn-city-radar {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+#btn-city-radar::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #f59e0b, #fbbf24, #f59e0b);
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: -1;
+}
+
+#btn-city-radar:hover::before {
+    opacity: 1;
+}
+
+#btn-city-radar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(245, 158, 11, 0.3);
+}
