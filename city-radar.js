@@ -1,6 +1,6 @@
 /**
  * city-radar.js - Module de comparaison intelligente des villes
- * Version 2.3 - Correction affichage des surfaces par défaut
+ * Version 2.4 - Amélioration de la visibilité du bouton et des surfaces
  */
 
 class CityRadar {
@@ -124,7 +124,7 @@ class CityRadar {
     }
     
     async init() {
-        console.log('🎯 Initialisation du Radar des villes v2.3...');
+        console.log('🎯 Initialisation du Radar des villes v2.4...');
         await this.loadData();
         this.createInterface();
         this.initEvents();
@@ -241,12 +241,12 @@ class CityRadar {
                                         <span class="type-name">T1</span>
                                         <div class="type-icon">🏠</div>
                                     </div>
-                                    <div class="surface-control">
+                                    <div class="surface-display">
                                         <input type="number" class="surface-input" 
                                                id="surface-T1" 
                                                value="${this.defaultSurfaces.T1}" 
                                                min="10" max="200">
-                                        <span class="surface-unit">m²</span>
+                                        <span class="surface-unit-integrated">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -257,12 +257,12 @@ class CityRadar {
                                         <span class="type-name">T2</span>
                                         <div class="type-icon">🏘️</div>
                                     </div>
-                                    <div class="surface-control">
+                                    <div class="surface-display">
                                         <input type="number" class="surface-input" 
                                                id="surface-T2" 
                                                value="${this.defaultSurfaces.T2}" 
                                                min="10" max="200">
-                                        <span class="surface-unit">m²</span>
+                                        <span class="surface-unit-integrated">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -273,12 +273,12 @@ class CityRadar {
                                         <span class="type-name">T3</span>
                                         <div class="type-icon">🏡</div>
                                     </div>
-                                    <div class="surface-control">
+                                    <div class="surface-display">
                                         <input type="number" class="surface-input" 
                                                id="surface-T3" 
                                                value="${this.defaultSurfaces.T3}" 
                                                min="10" max="200">
-                                        <span class="surface-unit">m²</span>
+                                        <span class="surface-unit-integrated">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -289,12 +289,12 @@ class CityRadar {
                                         <span class="type-name">T4</span>
                                         <div class="type-icon">🏚️</div>
                                     </div>
-                                    <div class="surface-control">
+                                    <div class="surface-display">
                                         <input type="number" class="surface-input" 
                                                id="surface-T4" 
                                                value="${this.defaultSurfaces.T4}" 
                                                min="10" max="200">
-                                        <span class="surface-unit">m²</span>
+                                        <span class="surface-unit-integrated">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -305,12 +305,12 @@ class CityRadar {
                                         <span class="type-name">T5</span>
                                         <div class="type-icon">🏛️</div>
                                     </div>
-                                    <div class="surface-control">
+                                    <div class="surface-display">
                                         <input type="number" class="surface-input" 
                                                id="surface-T5" 
                                                value="${this.defaultSurfaces.T5}" 
                                                min="10" max="200">
-                                        <span class="surface-unit">m²</span>
+                                        <span class="surface-unit-integrated">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -366,7 +366,7 @@ class CityRadar {
                                 </select>
                             </div>
                             <div class="control-item">
-                                <button id="btn-launch-radar" class="btn btn-primary btn-glow">
+                                <button id="btn-launch-radar" class="btn btn-warning btn-glow-orange">
                                     <i class="fas fa-satellite-dish"></i>
                                     <span>Lancer l'analyse</span>
                                 </button>
@@ -584,23 +584,37 @@ class CityRadar {
                     opacity: 0.7;
                 }
                 
-                .surface-control {
+                .surface-display {
+                    position: relative;
                     display: flex;
                     align-items: center;
-                    gap: 0.5rem;
+                    background: rgba(17, 24, 39, 0.9);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 8px;
+                    padding: 0.375rem 0.625rem;
+                    overflow: hidden;
                 }
                 
                 .surface-input {
-                    width: 60px;
-                    padding: 0.25rem 0.5rem;
-                    background: rgba(17, 24, 39, 0.9);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 6px;
-                    text-align: center;
+                    width: 45px;
+                    background: transparent;
+                    border: none;
+                    text-align: right;
                     color: white !important;
-                    font-weight: 500;
+                    font-weight: 600;
+                    font-size: 1rem;
                     -webkit-text-fill-color: white !important;
                     opacity: 1 !important;
+                    padding: 0;
+                    margin: 0;
+                }
+                
+                .surface-unit-integrated {
+                    color: white;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    margin-left: 4px;
+                    user-select: none;
                 }
                 
                 .surface-input::-webkit-inner-spin-button,
@@ -611,15 +625,11 @@ class CityRadar {
                 
                 .surface-input:focus {
                     outline: none;
-                    border-color: var(--primary-color);
-                    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-                    background: rgba(17, 24, 39, 0.95);
                 }
                 
-                .surface-unit {
-                    color: rgba(255, 255, 255, 0.7);
-                    font-size: 0.875rem;
-                    font-weight: 400;
+                .surface-display:hover {
+                    border-color: var(--primary-color);
+                    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
                 }
                 
                 .sort-options-grid {
@@ -691,35 +701,46 @@ class CityRadar {
                     color: white;
                 }
                 
-                .btn-glow {
+                .btn-glow-orange {
                     position: relative;
                     overflow: hidden;
                     padding: 1rem 2rem;
                     font-size: 1.125rem;
                     font-weight: 600;
-                    background: var(--primary-gradient);
-                    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+                    background: linear-gradient(135deg, #f59e0b 0%, #dc2626 100%);
+                    box-shadow: 0 4px 20px rgba(245, 158, 11, 0.5);
                     transition: all 0.3s ease;
+                    border: none;
+                    color: white;
+                    border-radius: 8px;
+                    cursor: pointer;
                 }
                 
-                .btn-glow:hover {
+                .btn-glow-orange:hover {
                     transform: translateY(-2px);
-                    box-shadow: 0 6px 30px rgba(99, 102, 241, 0.6);
+                    box-shadow: 0 6px 30px rgba(245, 158, 11, 0.7);
+                    background: linear-gradient(135deg, #fbbf24 0%, #ef4444 100%);
                 }
                 
-                .btn-glow::before {
+                .btn-glow-orange::before {
                     content: '';
                     position: absolute;
                     top: 0;
                     left: -100%;
                     width: 100%;
                     height: 100%;
-                    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+                    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
                     transition: left 0.5s;
                 }
                 
-                .btn-glow:hover::before {
+                .btn-glow-orange:hover::before {
                     left: 100%;
+                }
+                
+                .btn-glow-orange:disabled {
+                    opacity: 0.7;
+                    cursor: not-allowed;
+                    transform: none;
                 }
                 
                 .selected-chips {
