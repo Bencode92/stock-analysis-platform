@@ -1,135 +1,198 @@
 [
-        {
-            "id": "micro-foncier",
-            "nom": "Micro-foncier",
-            "description": "Régime simplifié avec abattement automatique de 30% sur les loyers bruts.",
-            "calcul": {
-                "abattement": 0.3,
-                "deficitDeductible": false
-            },
-            "conditions_eligibilite": [
-                "Revenus fonciers bruts annuels (hors charges) inférieurs à 15 000 €",
-                "Location nue (non meublée)",
-                "Aucun bien soumis à un régime fiscal particulier (Pinel, Malraux, Périssol, etc.)",
-                "Non-option pour le régime réel antérieurement (sauf renonciation formelle)"
+    {
+        "id": "micro-foncier",
+        "nom": "Micro-foncier",
+        "description": "Régime simplifié avec abattement automatique de 30% sur les loyers bruts.",
+        "calcul": {
+            "abattement": 0.3,
+            "deficitDeductible": false
+        },
+        "resume_simplifie": {
+            "c_est_quoi": "Un régime très simple pour ceux qui louent un ou plusieurs logements vides et qui touchent moins de 15 000 € de loyers par an.",
+            "comment_ca_marche": "Tu déclares le montant total de tes loyers. L'administration enlève automatiquement 30 % pour couvrir les frais. Tu es imposé sur le reste, sans justificatif.",
+            "a_retenir": [
+                "Aucune comptabilité à faire",
+                "Idéal si tu n'as pas de gros travaux",
+                "Pas adapté si tu as beaucoup de charges"
             ]
         },
-        {
-            "id": "reel-foncier",
-            "nom": "Réel foncier",
-            "description": "Permet la déduction des charges réelles et la création d’un déficit foncier.",
-            "calcul": {
-                "deficitDeductible": true,
-                "plafondDeficit": 10700,
-                "reportable": true
-            },
-            "conditions_application": [
-                "Applicable de plein droit si revenus fonciers bruts > 15 000 € ou sur option",
-                "Location nue (non meublée)"
-            ],
-            "deficit_foncier": {
-                "imputation_revenu_global": "Déduction plafonnée à 10 700 € par an sur le revenu global (hors intérêts d’emprunt)",
-                "report_solde": "Solde non imputé reportable sur les revenus fonciers des 10 années suivantes",
-                "condition_maintien_location": "Location obligatoire jusqu’au 31 décembre de la 3e année suivant l’imputation"
-            }
+        "conditions_eligibilite": [
+            "Revenus fonciers bruts annuels (hors charges) inférieurs à 15 000 €",
+            "Location nue (non meublée)",
+            "Aucun bien soumis à un régime fiscal particulier (Pinel, Malraux, Périssol, etc.)",
+            "Non-option pour le régime réel antérieurement (sauf renonciation formelle)"
+        ]
+    },
+    {
+        "id": "reel-foncier",
+        "nom": "Réel foncier",
+        "description": "Permet la déduction des charges réelles et la création d'un déficit foncier.",
+        "calcul": {
+            "deficitDeductible": true,
+            "plafondDeficit": 10700,
+            "reportable": true
         },
-        {
-            "id": "lmnp-micro-bic",
-            "nom": "LMNP micro-BIC",
-            "description": "Régime simplifié avec abattement de 50% pour locations meublées.",
-            "calcul": {
-                "abattement": 0.5,
-                "deficitDeductible": false
-            },
-            "conditions_eligibilite": [
-                "Statut LMNP avec immatriculation (SIRET)",
-                "Recettes locatives < 23 000 € ou < 50% des revenus du foyer",
-                "Recettes totales < 77 700 €",
-                "Location meublée effective"
-            ],
-            "specifites_fiscales": [
-                "Abattement forfaitaire de 50% (30% pour meublé de tourisme non classé)",
-                "Pas de déduction des charges réelles ni d'amortissement"
+        "resume_simplifie": {
+            "c_est_quoi": "Si tu as beaucoup de frais (travaux, intérêts, etc.), ce régime te permet de les déduire pour payer moins d'impôts.",
+            "comment_ca_marche": "Tu déclares tous tes loyers et toutes tes dépenses réelles. Tu paies des impôts uniquement sur la différence, voire pas du tout si tu es en déficit.",
+            "a_retenir": [
+                "Utile pour optimiser si tu fais des travaux",
+                "Nécessite une comptabilité rigoureuse",
+                "Permet de réduire ton impôt voire de créer un déficit"
             ]
         },
-        {
-            "id": "lmnp-reel",
-            "nom": "LMNP réel",
-            "description": "Régime permettant l’amortissement du bien et la déduction des charges réelles.",
-            "calcul": {
-                "amortissement": true,
-                "deficitDeductible": false
-            },
-            "conditions_eligibilite": [
-                "Statut LMNP avec immatriculation (numéro SIRET)",
-                "Recettes locatives < 23 000 € ou < 50% des revenus du foyer fiscal",
-                "Location meublée effective"
-            ],
-            "modalites_application": [
-                "Régime réel obligatoire si recettes > 77 700 €, optionnel en dessous",
-                "Déduction des charges réelles (intérêts, travaux, assurances...)",
-                "Amortissement : 20-30 ans pour le bien, 5-10 ans pour le mobilier",
-                "Amortissement non générateur de déficit mais reportable indéfiniment",
-                "Comptabilité conforme obligatoire ; expert-comptable recommandé"
-            ]
-        },
-        {
-            "id": "sci-is",
-            "nom": "SCI à l’IS",
-            "description": "SCI soumise à l'impôt sur les sociétés avec amortissement possible mais double imposition.",
-            "calcul": {
-                "amortissement": true,
-                "deficitDeductible": false
-            },
-            "conditions_eligibilite": [
-                "Option irrévocable pour l’IS ou activité commerciale (ex : location meublée)",
-                "Inéligible au régime micro-foncier"
-            ],
-            "modalites_application": [
-                "Bénéfices imposés à 25% ou 15% selon seuils PME",
-                "Amortissement du bien sur 30 ans",
-                "Double imposition : IS + IR sur dividendes",
-                "Plus-value calculée sur VNC, sans abattement",
-                "Sortie de l’IS impossible sans taxation latente"
-            ]
-        },
-        {
-            "id": "sas",
-            "nom": "SAS",
-            "description": "Structure soumise à l’IS, adaptée aux projets collectifs mais inadaptée au LMNP.",
-            "calcul": {
-                "amortissement": true,
-                "deficitDeductible": false
-            },
-            "conditions_eligibilite": [
-                "IS par défaut",
-                "Option pour l’IR possible uniquement 5 ans sous conditions strictes"
-            ],
-            "modalites_application": [
-                "Aucune éligibilité au régime LMNP, micro-BIC ou micro-foncier",
-                "Tous les déficits restent en société",
-                "Double imposition : IS + IR sur dividendes",
-                "Adaptée à l’introduction d’investisseurs ou projets à grande échelle"
-            ]
-        },
-        {
-            "id": "sarl-famille",
-            "nom": "SARL / SARL de famille",
-            "description": "SARL classique à l’IS ou à l’IR pour les SARL de famille en location meublée.",
-            "calcul": {
-                "amortissement": true,
-                "deficitDeductible": false
-            },
-            "conditions_eligibilite": [
-                "SARL de famille : associés parents jusqu’au 2e degré, conjoints ou PACS",
-                "Option IR possible uniquement en SARL de famille pour location meublée",
-                "Option irrévocable si non exercée dès la création ou avant l'exercice 1"
-            ],
-            "modalites_application": [
-                "SARL classique = IS par défaut",
-                "SARL de famille = IR sans limite pour location meublée",
-                "Pas de déficit foncier personnel",
-                "Perte du caractère familial = retour automatique à l’IS"
-            ]
+        "conditions_application": [
+            "Applicable de plein droit si revenus fonciers bruts > 15 000 € ou sur option",
+            "Location nue (non meublée)"
+        ],
+        "deficit_foncier": {
+            "imputation_revenu_global": "Déduction plafonnée à 10 700 € par an sur le revenu global (hors intérêts d'emprunt)",
+            "report_solde": "Solde non imputé reportable sur les revenus fonciers des 10 années suivantes",
+            "condition_maintien_location": "Location obligatoire jusqu'au 31 décembre de la 3e année suivant l'imputation"
         }
-    ]
+    },
+    {
+        "id": "lmnp-micro-bic",
+        "nom": "LMNP micro-BIC",
+        "description": "Régime simplifié avec abattement de 50% pour locations meublées.",
+        "calcul": {
+            "abattement": 0.5,
+            "deficitDeductible": false
+        },
+        "resume_simplifie": {
+            "c_est_quoi": "Si tu loues un logement meublé et gagnes moins de 77 700 €, ce régime est simple et automatique.",
+            "comment_ca_marche": "Tu déclares tes loyers. L'État enlève 50 % pour les frais. Tu es imposé sur le reste, sans comptabilité.",
+            "a_retenir": [
+                "Très simple et avantageux si tu as peu de frais",
+                "Pas de déduction des dépenses réelles",
+                "Pas d'amortissement possible"
+            ]
+        },
+        "conditions_eligibilite": [
+            "Statut LMNP avec immatriculation (SIRET)",
+            "Recettes locatives < 23 000 € ou < 50% des revenus du foyer",
+            "Recettes totales < 77 700 €",
+            "Location meublée effective"
+        ],
+        "specifites_fiscales": [
+            "Abattement forfaitaire de 50% (30% pour meublé de tourisme non classé)",
+            "Pas de déduction des charges réelles ni d'amortissement"
+        ]
+    },
+    {
+        "id": "lmnp-reel",
+        "nom": "LMNP réel",
+        "description": "Régime permettant l'amortissement du bien et la déduction des charges réelles.",
+        "calcul": {
+            "amortissement": true,
+            "deficitDeductible": false
+        },
+        "resume_simplifie": {
+            "c_est_quoi": "Si tu fais de la location meublée et que tu as des frais ou veux amortir ton bien, ce régime est souvent le plus avantageux.",
+            "comment_ca_marche": "Tu déclares toutes tes charges et tu peux amortir ton bien et ton mobilier. Cela réduit fortement ton revenu imposable.",
+            "a_retenir": [
+                "Rend la fiscalité très avantageuse",
+                "Demande une comptabilité complète",
+                "Pas de déficit possible mais amortissement reportable"
+            ]
+        },
+        "conditions_eligibilite": [
+            "Statut LMNP avec immatriculation (numéro SIRET)",
+            "Recettes locatives < 23 000 € ou < 50% des revenus du foyer fiscal",
+            "Location meublée effective"
+        ],
+        "modalites_application": [
+            "Régime réel obligatoire si recettes > 77 700 €, optionnel en dessous",
+            "Déduction des charges réelles (intérêts, travaux, assurances...)",
+            "Amortissement : 20-30 ans pour le bien, 5-10 ans pour le mobilier",
+            "Amortissement non générateur de déficit mais reportable indéfiniment",
+            "Comptabilité conforme obligatoire ; expert-comptable recommandé"
+        ]
+    },
+    {
+        "id": "sci-is",
+        "nom": "SCI à l'IS",
+        "description": "SCI soumise à l'impôt sur les sociétés avec amortissement possible mais double imposition.",
+        "calcul": {
+            "amortissement": true,
+            "deficitDeductible": false
+        },
+        "resume_simplifie": {
+            "c_est_quoi": "Une société pour gérer des biens immobiliers, avec des règles fiscales d'entreprise. Tu peux amortir le bien, mais attention à la double imposition.",
+            "comment_ca_marche": "Les loyers sont taxés comme une entreprise. Tu peux déduire toutes les charges et amortir le bien, mais tu paieras des impôts quand tu touches les dividendes.",
+            "a_retenir": [
+                "Avantageux à court terme grâce à l'amortissement",
+                "Double imposition à la revente ou en cas de distribution",
+                "Pas de régime micro ni de fiscalité de particulier"
+            ]
+        },
+        "conditions_eligibilite": [
+            "Option irrévocable pour l'IS ou activité commerciale (ex : location meublée)",
+            "Inéligible au régime micro-foncier"
+        ],
+        "modalites_application": [
+            "Bénéfices imposés à 25% ou 15% selon seuils PME",
+            "Amortissement du bien sur 30 ans",
+            "Double imposition : IS + IR sur dividendes",
+            "Plus-value calculée sur VNC, sans abattement",
+            "Sortie de l'IS impossible sans taxation latente"
+        ]
+    },
+    {
+        "id": "sas",
+        "nom": "SAS",
+        "description": "Structure soumise à l'IS, adaptée aux projets collectifs mais inadaptée au LMNP.",
+        "calcul": {
+            "amortissement": true,
+            "deficitDeductible": false
+        },
+        "resume_simplifie": {
+            "c_est_quoi": "Une société souvent utilisée pour de gros projets ou pour faire entrer des investisseurs. C'est imposé comme une entreprise.",
+            "comment_ca_marche": "Tu paies l'impôt sur les bénéfices dans la société, et encore un impôt si tu retires des dividendes. Pas de régime simplifié comme le micro-BIC.",
+            "a_retenir": [
+                "Adaptée aux projets pro ou avec plusieurs associés",
+                "Fiscalité lourde pour un particulier",
+                "Pas de régime LMNP ni de micro-foncier"
+            ]
+        },
+        "conditions_eligibilite": [
+            "IS par défaut",
+            "Option pour l'IR possible uniquement 5 ans sous conditions strictes"
+        ],
+        "modalites_application": [
+            "Aucune éligibilité au régime LMNP, micro-BIC ou micro-foncier",
+            "Tous les déficits restent en société",
+            "Double imposition : IS + IR sur dividendes",
+            "Adaptée à l'introduction d'investisseurs ou projets à grande échelle"
+        ]
+    },
+    {
+        "id": "sarl-famille",
+        "nom": "SARL / SARL de famille",
+        "description": "SARL classique à l'IS ou à l'IR pour les SARL de famille en location meublée.",
+        "calcul": {
+            "amortissement": true,
+            "deficitDeductible": false
+        },
+        "resume_simplifie": {
+            "c_est_quoi": "Une SARL classique ou familiale, souvent utilisée pour louer en meublé entre membres d'une même famille.",
+            "comment_ca_marche": "En famille, tu peux choisir d'être imposé à l'IR (comme un particulier) pour profiter du régime LMNP. Sinon, c'est l'IS classique.",
+            "a_retenir": [
+                "Permet le LMNP à l'IR si c'est une SARL de famille",
+                "Retour à l'IS si un associé non familial entre",
+                "Pas de déficit foncier personnel possible"
+            ]
+        },
+        "conditions_eligibilite": [
+            "SARL de famille : associés parents jusqu'au 2e degré, conjoints ou PACS",
+            "Option IR possible uniquement en SARL de famille pour location meublée",
+            "Option irrévocable si non exercée dès la création ou avant l'exercice 1"
+        ],
+        "modalites_application": [
+            "SARL classique = IS par défaut",
+            "SARL de famille = IR sans limite pour location meublée",
+            "Pas de déficit foncier personnel",
+            "Perte du caractère familial = retour automatique à l'IS"
+        ]
+    }
+]
