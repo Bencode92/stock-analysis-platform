@@ -3,7 +3,7 @@
  * Permet de comparer jusqu'à 10 villes simultanément
  * Inclut le mode objectif de cash-flow
  * 
- * v2.4 - Correction DOM et ajout fallback pour méthode manquante
+ * v2.3 - Correction complète de la synchronisation des paramètres
  */
 
 class CityComparator {
@@ -159,10 +159,9 @@ class CityComparator {
                     </div>
                 </div>
                 
-                <!-- CORRECTION: La div info-message est maintenant DANS target-mode-options -->
                 <div class="info-message text-sm">
                     <i class="fas fa-info-circle mr-2"></i>
-                    <span class="info-message-text">Le système calculera la surface nécessaire dans chaque ville pour atteindre 1000€/mois.</span>
+                    Le système calculera la surface nécessaire dans chaque ville pour atteindre ${this.targetCashflow}€/mois.
                 </div>
             </div>
         `;
@@ -192,11 +191,8 @@ class CityComparator {
         
         document.getElementById('target-cashflow-input').addEventListener('input', (e) => {
             this.targetCashflow = parseFloat(e.target.value) || 0;
-            // CORRECTION: Utilisation du bon sélecteur
-            const infoText = document.querySelector('#target-mode-options .info-message-text');
-            if (infoText) {
-                infoText.textContent = `Le système calculera la surface nécessaire dans chaque ville pour atteindre ${this.targetCashflow}€/mois.`;
-            }
+            document.querySelector('#target-mode-options .info-message').innerHTML = 
+                `<i class="fas fa-info-circle mr-2"></i>Le système calculera la surface nécessaire dans chaque ville pour atteindre ${this.targetCashflow}€/mois.`;
         });
         
         document.getElementById('target-properties-count').addEventListener('change', (e) => {
@@ -579,133 +575,59 @@ class CityComparator {
         this.simulateur.params.communs.loyerM2 = pieceData.loyer_m2;
         
         try {
-            // Vérifier si la méthode existe
-            if (typeof this.simulateur.chercheSurfaceObjectifCashflow === 'function') {
-                // Utiliser la nouvelle méthode chercheSurfaceObjectifCashflow pour les deux modes
-                const resultClassique = this.simulateur.chercheSurfaceObjectifCashflow('classique', targetCashflow);
-                const resultEncheres = this.simulateur.chercheSurfaceObjectifCashflow('encheres', targetCashflow);
-                
-                // Déterminer le meilleur mode et résultat
-                let bestResult = null;
-                let mode = '';
-                
-                if (!resultClassique && !resultEncheres) {
-                    return null; // Aucune solution trouvée
-                }
-                
-                if (!resultClassique) {
+            // Utiliser la nouvelle méthode chercheSurfaceObjectifCashflow pour les deux modes
+            const resultClassique = this.simulateur.chercheSurfaceObjectifCashflow('classique', targetCashflow);
+            const resultEncheres = this.simulateur.chercheSurfaceObjectifCashflow('encheres', targetCashflow);
+            
+            // Déterminer le meilleur mode et résultat
+            let bestResult = null;
+            let mode = '';
+            
+            if (!resultClassique && !resultEncheres) {
+                return null; // Aucune solution trouvée
+            }
+            
+            if (!resultClassique) {
+                bestResult = resultEncheres;
+                mode = 'encheres';
+            } else if (!resultEncheres) {
+                bestResult = resultClassique;
+                mode = 'classique';
+            } else {
+                // Comparer les cash-flows (ils devraient être proches du target)
+                // On choisit celui avec le meilleur rendement ou la plus petite surface
+                if (resultEncheres.rendementNet > resultClassique.rendementNet) {
                     bestResult = resultEncheres;
                     mode = 'encheres';
-                } else if (!resultEncheres) {
+                } else {
                     bestResult = resultClassique;
                     mode = 'classique';
-                } else {
-                    // Comparer les rendements (puisque les cash-flows sont similaires)
-                    if (resultEncheres.rendementNet > resultClassique.rendementNet) {
-                        bestResult = resultEncheres;
-                        mode = 'encheres';
-                    } else {
-                        bestResult = resultClassique;
-                        mode = 'classique';
-                    }
                 }
-                
-                if (!bestResult) return null;
-                
-                // Construire le résultat formaté
-                return {
-                    ville: ville.nom,
-                    departement: ville.departement,
-                    type: type,
-                    mode: mode,
-                    surface: Math.round(bestResult.surface),
-                    prixAchat: bestResult.prixAchat,
-                    coutTotal: bestResult.coutTotal,
-                    apportNecessaire: bestResult.coutTotal * 0.1,
-                    apportTotal: bestResult.coutTotal * 0.1 * this.numberOfProperties,
-                    mensualite: bestResult.mensualite,
-                    loyerNet: bestResult.loyerNet,
-                    cashFlow: bestResult.cashFlow,
-                    rendement: bestResult.rendementNet
-                };
-            } else {
-                // FALLBACK: Si la méthode n'existe pas, utiliser une recherche manuelle
-                console.warn('Méthode chercheSurfaceObjectifCashflow non disponible, utilisation du fallback');
-                return this.calculateOptimalInvestmentManual(ville, type, pieceData, targetCashflow);
             }
+            
+            if (!bestResult) return null;
+            
+            // Construire le résultat formaté
+            return {
+                ville: ville.nom,
+                departement: ville.departement,
+                type: type,
+                mode: mode,
+                surface: Math.round(bestResult.surface),
+                prixAchat: bestResult.prixAchat,
+                coutTotal: bestResult.coutTotal,
+                apportNecessaire: bestResult.coutTotal * 0.1,
+                apportTotal: bestResult.coutTotal * 0.1 * this.numberOfProperties,
+                mensualite: bestResult.mensualite,
+                loyerNet: bestResult.loyerNet,
+                cashFlow: bestResult.cashFlow,
+                rendement: bestResult.rendementNet
+            };
             
         } finally {
             this.simulateur.params.communs.prixM2 = originalPrixM2;
             this.simulateur.params.communs.loyerM2 = originalLoyerM2;
         }
-    }
-    
-    // Nouvelle méthode fallback
-    calculateOptimalInvestmentManual(ville, type, pieceData, targetCashflow) {
-        const surfaceMin = 20;
-        const surfaceMax = 120;
-        let bestResult = null;
-        let bestMode = '';
-        let bestSurface = surfaceMax;
-        
-        // Recherche binaire manuelle
-        for (const mode of ['classique', 'encheres']) {
-            let low = surfaceMin;
-            let high = surfaceMax;
-            let found = false;
-            
-            while (high - low > 0.5) {
-                const mid = (low + high) / 2;
-                const result = this.simulateur.calculeTout(mid, mode);
-                
-                if (result && result.cashFlow >= targetCashflow) {
-                    // On peut atteindre l'objectif avec cette surface
-                    high = mid;
-                    found = true;
-                    
-                    // Garder le meilleur résultat (plus petite surface ou meilleur rendement)
-                    if (!bestResult || mid < bestSurface || 
-                        (mid === bestSurface && result.rendementNet > bestResult.rendementNet)) {
-                        bestResult = result;
-                        bestMode = mode;
-                        bestSurface = mid;
-                    }
-                } else {
-                    low = mid;
-                }
-            }
-            
-            // Si on a trouvé une solution, prendre la surface finale
-            if (found) {
-                const finalResult = this.simulateur.calculeTout(Math.ceil(high), mode);
-                if (finalResult && finalResult.cashFlow >= targetCashflow) {
-                    if (!bestResult || finalResult.surface < bestSurface ||
-                        (finalResult.surface === bestSurface && finalResult.rendementNet > bestResult.rendementNet)) {
-                        bestResult = finalResult;
-                        bestMode = mode;
-                        bestSurface = finalResult.surface;
-                    }
-                }
-            }
-        }
-        
-        if (!bestResult) return null;
-        
-        return {
-            ville: ville.nom,
-            departement: ville.departement,
-            type: type,
-            mode: bestMode,
-            surface: Math.round(bestResult.surface),
-            prixAchat: bestResult.prixAchat,
-            coutTotal: bestResult.coutTotal,
-            apportNecessaire: bestResult.coutTotal * 0.1,
-            apportTotal: bestResult.coutTotal * 0.1 * this.numberOfProperties,
-            mensualite: bestResult.mensualite,
-            loyerNet: bestResult.loyerNet,
-            cashFlow: bestResult.cashFlow,
-            rendement: bestResult.rendementNet
-        };
     }
     
     displayTargetResults(results) {
