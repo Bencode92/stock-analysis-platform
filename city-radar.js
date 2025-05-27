@@ -1,6 +1,6 @@
 /**
  * city-radar.js - Module de comparaison intelligente des villes
- * Version 2.1 - Interface clarifiée avec meilleure sélection départements
+ * Version 2.2 - Surfaces visibles et modifiables dans les cartes
  */
 
 class CityRadar {
@@ -25,12 +25,12 @@ class CityRadar {
         
         // Liste des départements français
         this.departmentsList = {
-          '01': 'Ain', '02': 'Aisne', '03': 'Allier', '04': 'Alpes-de-Haute-Provence',
+              '01': 'Ain', '02': 'Aisne', '03': 'Allier', '04': 'Alpes-de-Haute-Provence',
     '05': 'Hautes-Alpes', '06': 'Alpes-Maritimes', '07': 'Ardèche', '08': 'Ardennes',
     '09': 'Ariège', '10': 'Aube', '11': 'Aude', '12': 'Aveyron',
     '13': 'Bouches-du-Rhône', '14': 'Calvados', '15': 'Cantal', '16': 'Charente',
-    '17': 'Charente-Maritime', '18': 'Cher', '19': 'Corrèze', '21': "Côte-d'Or",
-    '22': "Côtes-d'Armor", '23': 'Creuse', '24': 'Dordogne', '25': 'Doubs',
+    '17': 'Charente-Maritime', '18': 'Cher', '19': 'Corrèze', '21': \"Côte-d'Or\",
+    '22': \"Côtes-d'Armor\", '23': 'Creuse', '24': 'Dordogne', '25': 'Doubs',
     '26': 'Drôme', '27': 'Eure', '28': 'Eure-et-Loir', '29': 'Finistère',
     '30': 'Gard', '31': 'Haute-Garonne', '32': 'Gers', '33': 'Gironde',
     '34': 'Hérault', '35': 'Ille-et-Vilaine', '36': 'Indre', '37': 'Indre-et-Loire',
@@ -48,12 +48,12 @@ class CityRadar {
     '82': 'Tarn-et-Garonne', '83': 'Var', '84': 'Vaucluse', '85': 'Vendée',
     '86': 'Vienne', '87': 'Haute-Vienne', '88': 'Vosges', '89': 'Yonne',
     '90': 'Territoire de Belfort', '91': 'Essonne', '92': 'Hauts-de-Seine', '93': 'Seine-Saint-Denis',
-    '94': 'Val-de-Marne', '95': "Val-d'Oise"
+    '94': 'Val-de-Marne', '95': \"Val-d'Oise\"
         };
     }
     
     async init() {
-        console.log('🎯 Initialisation du Radar des villes v2.1...');
+        console.log('🎯 Initialisation du Radar des villes v2.2...');
         await this.loadData();
         this.createInterface();
         this.initEvents();
@@ -160,7 +160,7 @@ class CityRadar {
                         </div>
                     </div>
                     
-                    <!-- Types de biens -->
+                    <!-- Types de biens avec surfaces visibles -->
                     <div class=\"filter-section mt-4\">
                         <h3><i class=\"fas fa-home\"></i> Types de biens à analyser</h3>
                         <div class=\"type-selector-grid\">
@@ -173,11 +173,14 @@ class CityRadar {
                                             <span class=\"type-name\">${type}</span>
                                             <div class=\"type-icon\">${this.getTypeIcon(type)}</div>
                                         </div>
-                                        <div class=\"surface-control\">
-                                            <input type=\"number\" class=\"surface-input\" 
+                                        <div class=\"surface-input-container\">
+                                            <input type=\"number\" 
+                                                   class=\"surface-input-large\" 
                                                    id=\"surface-${type}\" 
                                                    value=\"${this.defaultSurfaces[type]}\" 
-                                                   min=\"10\" max=\"200\">
+                                                   min=\"10\" 
+                                                   max=\"200\"
+                                                   step=\"5\">
                                             <span class=\"surface-unit\">m²</span>
                                         </div>
                                     </div>
@@ -357,6 +360,11 @@ class CityRadar {
                     background: rgba(96, 165, 250, 0.1);
                 }
                 
+                .dept-suggestion.selected {
+                    background: rgba(96, 165, 250, 0.15);
+                    border-left: 3px solid rgb(96, 165, 250);
+                }
+                
                 .dept-number {
                     font-weight: 600;
                     color: rgb(96, 165, 250);
@@ -372,7 +380,7 @@ class CityRadar {
                     color: rgba(147, 197, 253, 0.7);
                 }
                 
-                /* Types de biens plus clairs */
+                /* Types de biens avec input de surface visible */
                 .type-selector-grid {
                     display: grid;
                     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -385,7 +393,7 @@ class CityRadar {
                     cursor: pointer;
                 }
                 
-                .type-option-card input {
+                .type-option-card input[type=\"checkbox\"] {
                     position: absolute;
                     opacity: 0;
                 }
@@ -396,6 +404,9 @@ class CityRadar {
                     border: 1px solid rgba(147, 197, 253, 0.2);
                     border-radius: 12px;
                     transition: all 0.3s ease;
+                    height: 100%;
+                    display: flex;
+                    flex-direction: column;
                 }
                 
                 .type-option-card:hover .type-card-content {
@@ -413,7 +424,7 @@ class CityRadar {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    margin-bottom: 0.75rem;
+                    margin-bottom: 1rem;
                 }
                 
                 .type-name {
@@ -426,30 +437,56 @@ class CityRadar {
                     opacity: 0.6;
                 }
                 
-                .surface-control {
+                /* Input de surface large et centré */
+                .surface-input-container {
                     display: flex;
                     align-items: center;
-                    gap: 0.5rem;
+                    justify-content: center;
+                    gap: 0.25rem;
+                    margin-top: auto;
                 }
                 
-                .surface-input {
-                    width: 70px;
-                    padding: 0.375rem 0.5rem;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(147, 197, 253, 0.2);
-                    border-radius: 6px;
+                .surface-input-large {
+                    width: 80px;
+                    padding: 0.5rem;
+                    background: rgba(255, 255, 255, 0.08);
+                    border: 1px solid rgba(147, 197, 253, 0.3);
+                    border-radius: 8px;
                     text-align: center;
                     color: rgba(255, 255, 255, 0.9);
+                    font-size: 1.125rem;
+                    font-weight: 600;
+                    transition: all 0.2s ease;
                 }
                 
-                .surface-input:focus {
+                .surface-input-large:hover {
+                    background: rgba(255, 255, 255, 0.1);
+                    border-color: rgba(147, 197, 253, 0.4);
+                }
+                
+                .surface-input-large:focus {
+                    background: rgba(255, 255, 255, 0.12);
                     border-color: rgb(96, 165, 250);
                     outline: none;
+                    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+                }
+                
+                /* Chrome, Safari, Edge, Opera */
+                .surface-input-large::-webkit-outer-spin-button,
+                .surface-input-large::-webkit-inner-spin-button {
+                    -webkit-appearance: none;
+                    margin: 0;
+                }
+                
+                /* Firefox */
+                .surface-input-large[type=number] {
+                    -moz-appearance: textfield;
                 }
                 
                 .surface-unit {
-                    color: rgba(147, 197, 253, 0.7);
-                    font-size: 0.875rem;
+                    color: rgba(147, 197, 253, 0.8);
+                    font-size: 1rem;
+                    font-weight: 500;
                 }
                 
                 /* Options de tri plus claires */
@@ -786,8 +823,8 @@ class CityRadar {
             cb.addEventListener('change', () => this.updateSelectedTypes());
         });
         
-        // Surfaces
-        document.querySelectorAll('.surface-input').forEach(input => {
+        // Surfaces - Utiliser la classe correcte
+        document.querySelectorAll('.surface-input-large').forEach(input => {
             input.addEventListener('input', (e) => {
                 const type = e.target.id.replace('surface-', '');
                 this.customSurfaces[type] = parseInt(e.target.value) || this.defaultSurfaces[type];
