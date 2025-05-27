@@ -1,6 +1,6 @@
 /**
  * city-radar.js - Module de comparaison intelligente des villes
- * Version 2.2 - Correction affichage des surfaces par défaut
+ * Version 2.3 - Correction affichage des surfaces par défaut
  */
 
 class CityRadar {
@@ -124,7 +124,7 @@ class CityRadar {
     }
     
     async init() {
-        console.log('🎯 Initialisation du Radar des villes v2.2...');
+        console.log('🎯 Initialisation du Radar des villes v2.3...');
         await this.loadData();
         this.createInterface();
         this.initEvents();
@@ -244,7 +244,7 @@ class CityRadar {
                                     <div class="surface-control">
                                         <input type="number" class="surface-input" 
                                                id="surface-T1" 
-                                               value="30" 
+                                               value="${this.defaultSurfaces.T1}" 
                                                min="10" max="200">
                                         <span>m²</span>
                                     </div>
@@ -260,7 +260,7 @@ class CityRadar {
                                     <div class="surface-control">
                                         <input type="number" class="surface-input" 
                                                id="surface-T2" 
-                                               value="45" 
+                                               value="${this.defaultSurfaces.T2}" 
                                                min="10" max="200">
                                         <span>m²</span>
                                     </div>
@@ -276,7 +276,7 @@ class CityRadar {
                                     <div class="surface-control">
                                         <input type="number" class="surface-input" 
                                                id="surface-T3" 
-                                               value="65" 
+                                               value="${this.defaultSurfaces.T3}" 
                                                min="10" max="200">
                                         <span>m²</span>
                                     </div>
@@ -292,7 +292,7 @@ class CityRadar {
                                     <div class="surface-control">
                                         <input type="number" class="surface-input" 
                                                id="surface-T4" 
-                                               value="85" 
+                                               value="${this.defaultSurfaces.T4}" 
                                                min="10" max="200">
                                         <span>m²</span>
                                     </div>
@@ -308,7 +308,7 @@ class CityRadar {
                                     <div class="surface-control">
                                         <input type="number" class="surface-input" 
                                                id="surface-T5" 
-                                               value="105" 
+                                               value="${this.defaultSurfaces.T5}" 
                                                min="10" max="200">
                                         <span>m²</span>
                                     </div>
@@ -826,6 +826,18 @@ class CityRadar {
                 }
             </style>
         `;
+        
+        // Forcer l'affichage des valeurs par défaut après un court délai
+        setTimeout(() => {
+            Object.entries(this.defaultSurfaces).forEach(([type, value]) => {
+                const input = document.getElementById(`surface-${type}`);
+                if (input) {
+                    input.value = value;
+                    // Force le navigateur à afficher la valeur
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            });
+        }, 100);
     }
     
     getTypeIcon(type) {
