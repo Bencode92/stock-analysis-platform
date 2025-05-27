@@ -225,9 +225,13 @@ class CityRadar {
                 }
                 
                 .animated-gradient-border > * {
-                    background: var(--card-bg);
+                    background: rgba(17, 24, 39, 0.95); /* Fond sombre pour meilleur contraste */
                     border-radius: 10px;
                     padding: 1.5rem;
+                }
+                
+                .filter-section {
+                    background: rgba(17, 24, 39, 0.95) !important; /* Fond sombre pour toutes les sections */
                 }
                 
                 @keyframes gradient-animation {
@@ -259,7 +263,7 @@ class CityRadar {
                     align-items: center;
                     gap: 0.5rem;
                     padding: 1.5rem;
-                    background: rgba(255, 255, 255, 0.05);
+                    background: rgba(31, 41, 55, 0.8); /* Fond plus sombre */
                     border: 2px solid rgba(255, 255, 255, 0.1);
                     border-radius: 12px;
                     transition: all 0.3s ease;
@@ -275,19 +279,24 @@ class CityRadar {
                 
                 .geo-tab .tab-content i {
                     font-size: 2rem;
-                    opacity: 0.8;
+                    opacity: 0.9;
                 }
                 
                 .enhanced-input {
-                    background: rgba(255, 255, 255, 0.05);
+                    background: rgba(31, 41, 55, 0.8); /* Fond plus sombre */
                     border: 2px solid rgba(255, 255, 255, 0.1);
                     padding: 0.75rem 1rem;
                     font-size: 1rem;
                     transition: all 0.3s ease;
+                    color: white;
+                }
+                
+                .enhanced-input::placeholder {
+                    color: rgba(255, 255, 255, 0.5);
                 }
                 
                 .enhanced-input:focus {
-                    background: rgba(255, 255, 255, 0.08);
+                    background: rgba(31, 41, 55, 0.9);
                     border-color: var(--primary-color);
                     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
                 }
@@ -311,14 +320,14 @@ class CityRadar {
                 
                 .type-card-content {
                     padding: 1rem;
-                    background: rgba(255, 255, 255, 0.05);
+                    background: rgba(31, 41, 55, 0.8); /* Fond plus sombre */
                     border: 2px solid rgba(255, 255, 255, 0.1);
                     border-radius: 12px;
                     transition: all 0.3s ease;
                 }
                 
                 .type-option-card input:checked + .type-card-content {
-                    background: rgba(99, 102, 241, 0.1);
+                    background: rgba(99, 102, 241, 0.2);
                     border-color: var(--primary-color);
                     transform: translateY(-2px);
                 }
@@ -337,7 +346,7 @@ class CityRadar {
                 
                 .type-icon {
                     font-size: 1.5rem;
-                    opacity: 0.5;
+                    opacity: 0.7;
                 }
                 
                 .surface-control {
@@ -349,10 +358,11 @@ class CityRadar {
                 .surface-input {
                     width: 60px;
                     padding: 0.25rem 0.5rem;
-                    background: rgba(255, 255, 255, 0.1);
+                    background: rgba(17, 24, 39, 0.9);
                     border: 1px solid rgba(255, 255, 255, 0.2);
                     border-radius: 6px;
                     text-align: center;
+                    color: white;
                 }
                 
                 .sort-options-grid {
@@ -378,7 +388,7 @@ class CityRadar {
                     align-items: center;
                     gap: 0.5rem;
                     padding: 1.5rem;
-                    background: rgba(255, 255, 255, 0.05);
+                    background: rgba(31, 41, 55, 0.8); /* Fond plus sombre */
                     border: 2px solid rgba(255, 255, 255, 0.1);
                     border-radius: 12px;
                     transition: all 0.3s ease;
@@ -392,7 +402,7 @@ class CityRadar {
                 }
                 
                 .control-section {
-                    background: rgba(255, 255, 255, 0.03);
+                    background: rgba(17, 24, 39, 0.95); /* Fond plus sombre */
                     border-radius: 12px;
                     padding: 1.5rem;
                     margin-top: 2rem;
@@ -416,11 +426,12 @@ class CityRadar {
                 }
                 
                 .enhanced-select {
-                    background: rgba(255, 255, 255, 0.05);
+                    background: rgba(31, 41, 55, 0.8); /* Fond plus sombre */
                     border: 2px solid rgba(255, 255, 255, 0.1);
                     padding: 0.75rem 1rem;
                     border-radius: 8px;
                     width: 100%;
+                    color: white;
                 }
                 
                 .btn-glow {
@@ -500,7 +511,7 @@ class CityRadar {
                 }
                 
                 .result-card-enhanced {
-                    background: rgba(255, 255, 255, 0.05);
+                    background: rgba(31, 41, 55, 0.8);
                     border: 1px solid rgba(255, 255, 255, 0.1);
                     border-radius: 12px;
                     padding: 1.5rem;
@@ -510,7 +521,7 @@ class CityRadar {
                 }
                 
                 .result-card-enhanced:hover {
-                    background: rgba(255, 255, 255, 0.08);
+                    background: rgba(31, 41, 55, 0.9);
                     transform: translateY(-2px);
                     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
                 }
@@ -548,7 +559,7 @@ class CityRadar {
                 .metric-item {
                     text-align: center;
                     padding: 0.75rem;
-                    background: rgba(255, 255, 255, 0.03);
+                    background: rgba(17, 24, 39, 0.6);
                     border-radius: 8px;
                 }
                 
