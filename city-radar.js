@@ -1,6 +1,7 @@
 /**
  * city-radar.js - Module de comparaison intelligente des villes
  * Analyse et compare les opportunités d'investissement locatif
+ * Version intégrée dans immoSim.html
  */
 
 class CityRadar {
@@ -25,7 +26,7 @@ class CityRadar {
         // Critère de tri actuel
         this.sortCriteria = 'rentabilite'; // 'loyer', 'prix', 'rentabilite'
         
-        this.init();
+        // Pas d'init automatique, attendre l'appel explicite
     }
     
     async init() {
@@ -34,13 +35,13 @@ class CityRadar {
         // Charger les données
         await this.loadData();
         
-        // Créer l'interface si elle n'existe pas
-        if (!document.getElementById('city-radar-container')) {
-            this.createInterface();
-        }
+        // Créer l'interface
+        this.createInterface();
         
         // Initialiser les événements
         this.initEvents();
+        
+        console.log('✅ Radar des villes prêt');
     }
     
     async loadData() {
@@ -48,32 +49,51 @@ class CityRadar {
             // Utiliser les données existantes si disponibles
             if (window.villeSearchManager?.villesData) {
                 this.villesData = window.villeSearchManager.villesData;
+                console.log('✅ Données récupérées depuis villeSearchManager');
             } else {
                 const response = await fetch('./data/villes-data.json');
                 this.villesData = await response.json();
+                console.log('✅ Données chargées depuis le fichier');
             }
-            console.log('✅ Données chargées:', this.villesData.villes.length, 'villes');
+            console.log('📊 Total:', this.villesData.villes.length, 'villes disponibles');
         } catch (error) {
             console.error('❌ Erreur chargement données:', error);
+            // Données de test minimales
+            this.villesData = {
+                villes: [
+                    {
+                        nom: "Lyon",
+                        departement: "69",
+                        pieces: {
+                            "T1": {prix_m2: 6912, loyer_m2: 19.18},
+                            "T2": {prix_m2: 4567, loyer_m2: 17.92},
+                            "T3": {prix_m2: 3970, loyer_m2: 14.50}
+                        }
+                    }
+                ]
+            };
         }
     }
     
     createInterface() {
-        // Créer le conteneur principal après le bouton
-        const btnRadar = document.getElementById('btn-city-radar');
-        if (!btnRadar) return;
+        // Vérifier si le conteneur existe déjà
+        if (document.getElementById('city-radar-container')) {
+            console.log('⚠️ Interface radar déjà créée');
+            return;
+        }
         
+        // Créer le conteneur principal
         const container = document.createElement('div');
         container.id = 'city-radar-container';
-        container.className = 'hidden fade-in';
+        container.className = 'hidden fade-in mt-4';
         container.innerHTML = `
             <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg">
                 <div class="card-header">
                     <div class="card-icon">
-                        <i class="fas fa-radar"></i>
+                        <i class="fas fa-chart-radar"></i>
                     </div>
-                    <h2 class="card-title">Radar des villes - Comparateur intelligent</h2>
-                    <button class="close-panel" onclick="document.getElementById('city-radar-container').classList.add('hidden')">
+                    <h2 class="card-title">Radar des villes - Analyse comparative</h2>
+                    <button class="close-panel" id="close-radar-panel">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -91,29 +111,22 @@ class CityRadar {
                                 <input type="radio" name="geo-filter" value="departments">
                                 <span>Par départements</span>
                             </label>
-                            <label class="radio-option">
-                                <input type="radio" name="geo-filter" value="cities">
-                                <span>Villes spécifiques</span>
-                            </label>
                         </div>
                         
                         <!-- Sélecteur départements (caché par défaut) -->
                         <div id="dept-selector" class="mt-3 hidden">
-                            <input type="text" id="dept-search" class="form-input" placeholder="Tapez un numéro de département...">
+                            <input type="text" id="dept-search" class="form-input" placeholder="Ex: 69, 75, 13...">
                             <div id="selected-depts" class="selected-chips mt-2"></div>
-                        </div>
-                        
-                        <!-- Sélecteur villes (caché par défaut) -->
-                        <div id="city-selector" class="mt-3 hidden">
-                            <input type="text" id="city-search" class="form-input" placeholder="Rechercher une ville...">
-                            <div id="city-suggestions" class="ville-suggestions"></div>
-                            <div id="selected-cities" class="selected-chips mt-2"></div>
+                            <div class="text-sm text-blue-300 mt-2">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Séparez par des virgules pour plusieurs départements
+                            </div>
                         </div>
                     </div>
                     
                     <!-- Types de biens -->
                     <div class="filter-section mt-4">
-                        <h3><i class="fas fa-home"></i> Types de biens</h3>
+                        <h3><i class="fas fa-home"></i> Types de biens à analyser</h3>
                         <div class="type-selector">
                             ${['T1', 'T2', 'T3', 'T4', 'T5'].map(type => `
                                 <label class="type-option">
@@ -150,6 +163,19 @@ class CityRadar {
                         </div>
                     </div>
                     
+                    <!-- Nombre de résultats -->
+                    <div class="filter-section mt-4">
+                        <h3><i class="fas fa-list-ol"></i> Nombre de résultats</h3>
+                        <div class="form-group">
+                            <select id="top-count" class="form-input" style="width: auto;">
+                                <option value="10" selected>Top 10</option>
+                                <option value="20">Top 20</option>
+                                <option value="50">Top 50</option>
+                                <option value="100">Top 100</option>
+                            </select>
+                        </div>
+                    </div>
+                    
                     <!-- Bouton de lancement -->
                     <div class="text-center mt-4">
                         <button id="btn-launch-radar" class="btn btn-primary">
@@ -163,25 +189,32 @@ class CityRadar {
             </div>
         `;
         
-        // Insérer après le panel de comparaison existant
-        const comparisonPanel = document.getElementById('city-comparison-panel');
-        if (comparisonPanel && comparisonPanel.parentNode) {
-            comparisonPanel.parentNode.insertBefore(container, comparisonPanel.nextSibling);
+        // Trouver où insérer le conteneur
+        const insertPoint = document.getElementById('city-comparison-panel') || 
+                          document.getElementById('advanced-params') ||
+                          document.querySelector('.card');
+        
+        if (insertPoint && insertPoint.parentNode) {
+            insertPoint.parentNode.insertBefore(container, insertPoint.nextSibling);
         } else {
             document.querySelector('.container').appendChild(container);
         }
     }
     
     initEvents() {
-        // Bouton d'ouverture
-        const btnRadar = document.getElementById('btn-city-radar');
-        if (btnRadar) {
-            btnRadar.addEventListener('click', () => this.togglePanel());
-        }
+        // Bouton de fermeture
+        document.getElementById('close-radar-panel')?.addEventListener('click', () => {
+            document.getElementById('city-radar-container').classList.add('hidden');
+        });
         
         // Filtres géographiques
         document.querySelectorAll('input[name="geo-filter"]').forEach(radio => {
             radio.addEventListener('change', (e) => this.handleGeoFilterChange(e.target.value));
+        });
+        
+        // Gestion des départements
+        document.getElementById('dept-search')?.addEventListener('input', (e) => {
+            this.handleDepartmentInput(e.target.value);
         });
         
         // Types de biens
@@ -204,6 +237,11 @@ class CityRadar {
             });
         });
         
+        // Nombre de résultats
+        document.getElementById('top-count')?.addEventListener('change', (e) => {
+            this.topCount = parseInt(e.target.value);
+        });
+        
         // Bouton d'analyse
         document.getElementById('btn-launch-radar')?.addEventListener('click', () => this.runAnalysis());
     }
@@ -212,25 +250,52 @@ class CityRadar {
         const container = document.getElementById('city-radar-container');
         if (container) {
             container.classList.toggle('hidden');
+            if (!container.classList.contains('hidden')) {
+                // Scroll vers le radar
+                setTimeout(() => {
+                    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
         }
     }
     
     handleGeoFilterChange(value) {
-        // Masquer tous les sélecteurs
-        document.getElementById('dept-selector').classList.add('hidden');
-        document.getElementById('city-selector').classList.add('hidden');
+        const deptSelector = document.getElementById('dept-selector');
         
-        // Afficher le sélecteur approprié
         if (value === 'departments') {
-            document.getElementById('dept-selector').classList.remove('hidden');
-        } else if (value === 'cities') {
-            document.getElementById('city-selector').classList.remove('hidden');
+            deptSelector.classList.remove('hidden');
+        } else {
+            deptSelector.classList.add('hidden');
+            this.selectedDepartments.clear();
+            this.updateDepartmentDisplay();
         }
+    }
+    
+    handleDepartmentInput(value) {
+        // Parse les départements (séparés par virgules)
+        const depts = value.split(',').map(d => d.trim()).filter(d => d.length > 0);
         
-        // Réinitialiser les sélections
         this.selectedDepartments.clear();
-        document.getElementById('selected-depts').innerHTML = '';
-        document.getElementById('selected-cities').innerHTML = '';
+        depts.forEach(dept => {
+            if (/^\d{1,3}$/.test(dept)) {
+                this.selectedDepartments.add(dept.padStart(2, '0'));
+            }
+        });
+        
+        this.updateDepartmentDisplay();
+    }
+    
+    updateDepartmentDisplay() {
+        const container = document.getElementById('selected-depts');
+        if (!container) return;
+        
+        if (this.selectedDepartments.size === 0) {
+            container.innerHTML = '<span class="text-sm opacity-50">Aucun département sélectionné</span>';
+        } else {
+            container.innerHTML = Array.from(this.selectedDepartments).map(dept => `
+                <span class="chip">${dept}</span>
+            `).join('');
+        }
     }
     
     updateSelectedTypes() {
@@ -248,6 +313,8 @@ class CityRadar {
         try {
             // Filtrer les villes selon les critères
             const filteredCities = this.filterCities();
+            
+            console.log(`🔍 Analyse de ${filteredCities.length} villes...`);
             
             // Calculer les métriques pour chaque combinaison ville/type
             const results = [];
@@ -278,9 +345,14 @@ class CityRadar {
             // Trier selon le critère sélectionné
             this.sortResults(results);
             
-            // Afficher les résultats (top 10)
+            console.log(`✅ ${results.length} résultats trouvés`);
+            
+            // Afficher les résultats
             this.displayResults(results.slice(0, this.topCount));
             
+        } catch (error) {
+            console.error('❌ Erreur analyse:', error);
+            this.showError('Une erreur est survenue pendant l\'analyse');
         } finally {
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-satellite-dish"></i> Lancer l\'analyse';
@@ -288,15 +360,15 @@ class CityRadar {
     }
     
     filterCities() {
-        const geoFilter = document.querySelector('input[name="geo-filter"]:checked').value;
+        const geoFilter = document.querySelector('input[name="geo-filter"]:checked')?.value || 'all';
         
         if (geoFilter === 'all') {
             return this.villesData.villes;
         } else if (geoFilter === 'departments' && this.selectedDepartments.size > 0) {
-            return this.villesData.villes.filter(v => this.selectedDepartments.has(v.departement));
-        } else if (geoFilter === 'cities') {
-            // À implémenter avec la liste des villes sélectionnées
-            return this.villesData.villes;
+            return this.villesData.villes.filter(v => 
+                this.selectedDepartments.has(v.departement) || 
+                this.selectedDepartments.has(v.departement.padStart(2, '0'))
+            );
         }
         
         return this.villesData.villes;
@@ -325,8 +397,13 @@ class CityRadar {
         if (results.length === 0) {
             container.innerHTML = `
                 <div class="info-message">
-                    <i class="fas fa-info-circle"></i>
-                    <span>Aucun résultat trouvé avec ces critères.</span>
+                    <div class="text-lg text-yellow-400 mr-3">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-medium mb-1">Aucun résultat trouvé</h4>
+                        <p class="text-sm opacity-90">Essayez de modifier vos critères de recherche.</p>
+                    </div>
                 </div>
             `;
             return;
@@ -347,35 +424,39 @@ class CityRadar {
                 <table class="comparison-table">
                     <thead>
                         <tr>
-                            <th>Rang</th>
+                            <th style="width: 60px;">Rang</th>
                             <th>Ville</th>
-                            <th>Type</th>
-                            <th>Surface</th>
-                            <th>Loyer estimé</th>
-                            <th>Prix estimé</th>
-                            <th>Rentabilité</th>
+                            <th style="width: 60px;">Type</th>
+                            <th style="width: 80px;">Surface</th>
+                            <th style="width: 120px;">Loyer/mois</th>
+                            <th style="width: 140px;">Prix total</th>
+                            <th style="width: 100px;">Rentabilité</th>
+                            <th style="width: 100px;">Prix/m²</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${results.map((r, i) => `
-                            <tr class="${i === 0 ? 'winner-row' : ''}">
-                                <td class="rank-cell">
+                            <tr class="${i === 0 ? 'winner-row' : ''} ${i < 3 ? 'top-row' : ''}">
+                                <td class="rank-cell text-center">
                                     ${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
                                 </td>
                                 <td>
                                     <strong>${r.ville}</strong>
                                     <span class="dept-badge">${r.departement}</span>
                                 </td>
-                                <td>${r.type}</td>
-                                <td>${r.surface} m²</td>
-                                <td class="highlight-${this.sortCriteria === 'loyer' ? 'primary' : 'secondary'}">
-                                    ${Math.round(r.loyerMensuel)} €/mois
+                                <td class="text-center">${r.type}</td>
+                                <td class="text-center">${r.surface} m²</td>
+                                <td class="text-right ${this.sortCriteria === 'loyer' ? 'highlight' : ''}">
+                                    <strong>${Math.round(r.loyerMensuel).toLocaleString()} €</strong>
                                 </td>
-                                <td class="highlight-${this.sortCriteria === 'prix' ? 'primary' : 'secondary'}">
+                                <td class="text-right ${this.sortCriteria === 'prix' ? 'highlight' : ''}">
                                     ${Math.round(r.prixTotal).toLocaleString()} €
                                 </td>
-                                <td class="highlight-${this.sortCriteria === 'rentabilite' ? 'primary' : 'secondary'}">
+                                <td class="text-right ${this.sortCriteria === 'rentabilite' ? 'highlight' : ''}">
                                     <strong>${r.rentabilite.toFixed(2)}%</strong>
+                                </td>
+                                <td class="text-right text-sm opacity-75">
+                                    ${r.prixM2.toLocaleString()} €/m²
                                 </td>
                             </tr>
                         `).join('')}
@@ -383,32 +464,82 @@ class CityRadar {
                 </table>
             </div>
             
-            <div class="mt-4 text-center">
-                <button class="btn btn-outline" onclick="window.cityRadar.exportResults()">
-                    <i class="fas fa-download"></i> Exporter les résultats
-                </button>
+            <div class="info-message mt-4">
+                <div class="text-lg text-blue-400 mr-3">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div>
+                    <p class="text-sm opacity-90">
+                        Rentabilité brute calculée sur la base des loyers et prix moyens au m². 
+                        Pour une analyse complète avec cash-flow, utilisez le simulateur principal.
+                    </p>
+                </div>
             </div>
         `;
+        
+        // Scroll vers les résultats
+        setTimeout(() => {
+            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
     }
     
-    exportResults() {
-        // À implémenter : export CSV/Excel
-        console.log('Export des résultats...');
+    showError(message) {
+        const container = document.getElementById('radar-results');
+        if (container) {
+            container.classList.remove('hidden');
+            container.innerHTML = `
+                <div class="info-message" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">
+                    <div class="text-lg text-red-400 mr-3">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-medium mb-1">Erreur</h4>
+                        <p class="text-sm opacity-90">${message}</p>
+                    </div>
+                </div>
+            `;
+        }
     }
 }
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', () => {
-    // Ajouter le bouton Radar dans l'interface existante
-    const btnCompare = document.getElementById('btn-compare-cities');
-    if (btnCompare) {
-        const btnRadar = document.createElement('button');
-        btnRadar.id = 'btn-city-radar';
-        btnRadar.className = 'btn btn-accent ml-3';
-        btnRadar.innerHTML = '<i class="fas fa-radar"></i> Radar des villes';
-        btnCompare.parentNode.insertBefore(btnRadar, btnCompare.nextSibling);
-    }
+    console.log('🚀 Chargement du module Radar...');
     
-    // Initialiser le module
-    window.cityRadar = new CityRadar();
+    // Attendre un peu pour que les autres modules soient chargés
+    setTimeout(() => {
+        // Vérifier si le bouton existe déjà dans immoSim.html
+        let btnRadar = document.getElementById('btn-radar-cities');
+        
+        if (!btnRadar) {
+            console.log('⚠️ Bouton radar non trouvé, création automatique...');
+            
+            // Trouver le bouton de comparaison pour ajouter le radar après
+            const btnCompare = document.getElementById('btn-compare-cities');
+            if (btnCompare && btnCompare.parentNode) {
+                btnRadar = document.createElement('button');
+                btnRadar.id = 'btn-radar-cities';
+                btnRadar.className = 'btn btn-warning ml-3';
+                btnRadar.innerHTML = '<i class="fas fa-chart-radar"></i> Radar des villes';
+                btnCompare.parentNode.insertBefore(btnRadar, btnCompare.nextSibling);
+            }
+        }
+        
+        if (btnRadar) {
+            // Créer l'instance du radar
+            window.cityRadar = new CityRadar();
+            
+            // Initialiser au clic sur le bouton
+            btnRadar.addEventListener('click', async () => {
+                if (!window.cityRadar.villesData) {
+                    await window.cityRadar.init();
+                }
+                window.cityRadar.togglePanel();
+            });
+            
+            console.log('✅ Module Radar prêt');
+        } else {
+            console.error('❌ Impossible de créer le bouton Radar');
+        }
+    }, 1000);
 });
