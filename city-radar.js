@@ -1,6 +1,6 @@
 /**
  * city-radar.js - Module de comparaison intelligente des villes
- * Version 2.2 - Surfaces visibles et modifiables dans les cartes
+ * Version 2.1 - Interface clarifiée avec meilleure sélection départements
  */
 
 class CityRadar {
@@ -25,7 +25,7 @@ class CityRadar {
         
         // Liste des départements français
         this.departmentsList = {
-              '01': 'Ain', '02': 'Aisne', '03': 'Allier', '04': 'Alpes-de-Haute-Provence',
+          '01': 'Ain', '02': 'Aisne', '03': 'Allier', '04': 'Alpes-de-Haute-Provence',
     '05': 'Hautes-Alpes', '06': 'Alpes-Maritimes', '07': 'Ardèche', '08': 'Ardennes',
     '09': 'Ariège', '10': 'Aube', '11': 'Aude', '12': 'Aveyron',
     '13': 'Bouches-du-Rhône', '14': 'Calvados', '15': 'Cantal', '16': 'Charente',
@@ -53,7 +53,7 @@ class CityRadar {
     }
     
     async init() {
-        console.log('🎯 Initialisation du Radar des villes v2.2...');
+        console.log('🎯 Initialisation du Radar des villes v2.1...');
         await this.loadData();
         this.createInterface();
         this.initEvents();
@@ -160,7 +160,7 @@ class CityRadar {
                         </div>
                     </div>
                     
-                    <!-- Types de biens avec surfaces visibles -->
+                    <!-- Types de biens -->
                     <div class=\"filter-section mt-4\">
                         <h3><i class=\"fas fa-home\"></i> Types de biens à analyser</h3>
                         <div class=\"type-selector-grid\">
@@ -173,14 +173,11 @@ class CityRadar {
                                             <span class=\"type-name\">${type}</span>
                                             <div class=\"type-icon\">${this.getTypeIcon(type)}</div>
                                         </div>
-                                        <div class=\"surface-input-container\">
-                                            <input type=\"number\" 
-                                                   class=\"surface-input-large\" 
+                                        <div class=\"surface-control\">
+                                            <input type=\"number\" class=\"surface-input\" 
                                                    id=\"surface-${type}\" 
                                                    value=\"${this.defaultSurfaces[type]}\" 
-                                                   min=\"10\" 
-                                                   max=\"200\"
-                                                   step=\"5\">
+                                                   min=\"10\" max=\"200\">
                                             <span class=\"surface-unit\">m²</span>
                                         </div>
                                     </div>
@@ -360,11 +357,6 @@ class CityRadar {
                     background: rgba(96, 165, 250, 0.1);
                 }
                 
-                .dept-suggestion.selected {
-                    background: rgba(96, 165, 250, 0.15);
-                    border-left: 3px solid rgb(96, 165, 250);
-                }
-                
                 .dept-number {
                     font-weight: 600;
                     color: rgb(96, 165, 250);
@@ -380,7 +372,7 @@ class CityRadar {
                     color: rgba(147, 197, 253, 0.7);
                 }
                 
-                /* Types de biens avec input de surface visible */
+                /* Types de biens plus clairs */
                 .type-selector-grid {
                     display: grid;
                     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -393,7 +385,7 @@ class CityRadar {
                     cursor: pointer;
                 }
                 
-                .type-option-card input[type=\"checkbox\"] {
+                .type-option-card input {
                     position: absolute;
                     opacity: 0;
                 }
@@ -404,9 +396,6 @@ class CityRadar {
                     border: 1px solid rgba(147, 197, 253, 0.2);
                     border-radius: 12px;
                     transition: all 0.3s ease;
-                    height: 100%;
-                    display: flex;
-                    flex-direction: column;
                 }
                 
                 .type-option-card:hover .type-card-content {
@@ -424,7 +413,7 @@ class CityRadar {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    margin-bottom: 1rem;
+                    margin-bottom: 0.75rem;
                 }
                 
                 .type-name {
@@ -437,56 +426,30 @@ class CityRadar {
                     opacity: 0.6;
                 }
                 
-                /* Input de surface large et centré */
-                .surface-input-container {
+                .surface-control {
                     display: flex;
                     align-items: center;
-                    justify-content: center;
-                    gap: 0.25rem;
-                    margin-top: auto;
+                    gap: 0.5rem;
                 }
                 
-                .surface-input-large {
-                    width: 80px;
-                    padding: 0.5rem;
-                    background: rgba(255, 255, 255, 0.08);
-                    border: 1px solid rgba(147, 197, 253, 0.3);
-                    border-radius: 8px;
+                .surface-input {
+                    width: 70px;
+                    padding: 0.375rem 0.5rem;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(147, 197, 253, 0.2);
+                    border-radius: 6px;
                     text-align: center;
                     color: rgba(255, 255, 255, 0.9);
-                    font-size: 1.125rem;
-                    font-weight: 600;
-                    transition: all 0.2s ease;
                 }
                 
-                .surface-input-large:hover {
-                    background: rgba(255, 255, 255, 0.1);
-                    border-color: rgba(147, 197, 253, 0.4);
-                }
-                
-                .surface-input-large:focus {
-                    background: rgba(255, 255, 255, 0.12);
+                .surface-input:focus {
                     border-color: rgb(96, 165, 250);
                     outline: none;
-                    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
-                }
-                
-                /* Chrome, Safari, Edge, Opera */
-                .surface-input-large::-webkit-outer-spin-button,
-                .surface-input-large::-webkit-inner-spin-button {
-                    -webkit-appearance: none;
-                    margin: 0;
-                }
-                
-                /* Firefox */
-                .surface-input-large[type=number] {
-                    -moz-appearance: textfield;
                 }
                 
                 .surface-unit {
-                    color: rgba(147, 197, 253, 0.8);
-                    font-size: 1rem;
-                    font-weight: 500;
+                    color: rgba(147, 197, 253, 0.7);
+                    font-size: 0.875rem;
                 }
                 
                 /* Options de tri plus claires */
@@ -823,8 +786,8 @@ class CityRadar {
             cb.addEventListener('change', () => this.updateSelectedTypes());
         });
         
-        // Surfaces - Utiliser la classe correcte
-        document.querySelectorAll('.surface-input-large').forEach(input => {
+        // Surfaces
+        document.querySelectorAll('.surface-input').forEach(input => {
             input.addEventListener('input', (e) => {
                 const type = e.target.id.replace('surface-', '');
                 this.customSurfaces[type] = parseInt(e.target.value) || this.defaultSurfaces[type];
@@ -1104,7 +1067,7 @@ class CityRadar {
     async runAnalysis() {
         const btn = document.getElementById('btn-launch-radar');
         btn.disabled = true;
-        btn.innerHTML = '<i class=\"fas fa-satellite-dish\"></i> <span>Lancer l\'analyse</span>';
+        btn.innerHTML = '<i class=\"fas fa-spinner fa-spin\"></i> <span>Analyse en cours...</span>';
         
         try {
             const filteredCities = this.filterCities();
