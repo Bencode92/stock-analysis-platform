@@ -1,6 +1,6 @@
 /**
  * city-radar.js - Module de comparaison intelligente des villes
- * Version 2.4 - Amélioration de la visibilité du bouton et des surfaces
+ * Version 2.5 - Design amélioré avec gradients et espacements optimisés
  */
 
 class CityRadar {
@@ -124,7 +124,7 @@ class CityRadar {
     }
     
     async init() {
-        console.log('🎯 Initialisation du Radar des villes v2.4...');
+        console.log('🎯 Initialisation du Radar des villes v2.5...');
         await this.loadData();
         this.createInterface();
         this.initEvents();
@@ -246,7 +246,7 @@ class CityRadar {
                                                id="surface-T1" 
                                                value="${this.defaultSurfaces.T1}" 
                                                min="10" max="200">
-                                        <span class="surface-unit-integrated">m²</span>
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -262,7 +262,7 @@ class CityRadar {
                                                id="surface-T2" 
                                                value="${this.defaultSurfaces.T2}" 
                                                min="10" max="200">
-                                        <span class="surface-unit-integrated">m²</span>
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -278,7 +278,7 @@ class CityRadar {
                                                id="surface-T3" 
                                                value="${this.defaultSurfaces.T3}" 
                                                min="10" max="200">
-                                        <span class="surface-unit-integrated">m²</span>
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -294,7 +294,7 @@ class CityRadar {
                                                id="surface-T4" 
                                                value="${this.defaultSurfaces.T4}" 
                                                min="10" max="200">
-                                        <span class="surface-unit-integrated">m²</span>
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -310,7 +310,7 @@ class CityRadar {
                                                id="surface-T5" 
                                                value="${this.defaultSurfaces.T5}" 
                                                min="10" max="200">
-                                        <span class="surface-unit-integrated">m²</span>
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -555,44 +555,53 @@ class CityRadar {
                 
                 .type-card-content {
                     padding: 1rem;
-                    background: rgba(31, 41, 55, 0.8);
+                    background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(41, 51, 65, 0.95) 100%);
                     border: 2px solid rgba(255, 255, 255, 0.1);
-                    border-radius: 12px;
+                    border-radius: 16px;
                     transition: all 0.3s ease;
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                    backdrop-filter: blur(10px);
                 }
                 
                 .type-option-card input:checked + .type-card-content {
-                    background: rgba(99, 102, 241, 0.2);
+                    background: linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(59, 130, 246, 0.3) 100%);
                     border-color: var(--primary-color);
-                    transform: translateY(-2px);
+                    transform: translateY(-3px) scale(1.02);
+                    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
                 }
                 
                 .type-header {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    margin-bottom: 0.5rem;
+                    margin-bottom: 0.75rem;
                 }
                 
                 .type-name {
                     font-size: 1.25rem;
-                    font-weight: 600;
+                    font-weight: 700;
+                    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.8) 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
                 }
                 
                 .type-icon {
-                    font-size: 1.5rem;
-                    opacity: 0.7;
+                    font-size: 1.75rem;
+                    opacity: 0.8;
+                    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
                 }
                 
                 .surface-display {
                     position: relative;
                     display: flex;
                     align-items: center;
-                    background: rgba(17, 24, 39, 0.9);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 8px;
-                    padding: 0.375rem 0.625rem;
+                    background: linear-gradient(135deg, rgba(17, 24, 39, 0.98) 0%, rgba(7, 14, 29, 0.98) 100%);
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    border-radius: 10px;
+                    padding: 0.5rem 0.75rem;
                     overflow: hidden;
+                    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
                 }
                 
                 .surface-input {
@@ -600,21 +609,23 @@ class CityRadar {
                     background: transparent;
                     border: none;
                     text-align: right;
-                    color: white !important;
-                    font-weight: 600;
-                    font-size: 1rem;
-                    -webkit-text-fill-color: white !important;
+                    color: #fff !important;
+                    font-weight: 700;
+                    font-size: 1.1rem;
+                    -webkit-text-fill-color: #fff !important;
                     opacity: 1 !important;
                     padding: 0;
                     margin: 0;
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
                 }
                 
-                .surface-unit-integrated {
-                    color: white;
+                .surface-unit {
+                    color: rgba(255, 255, 255, 0.9);
                     font-size: 1rem;
                     font-weight: 600;
-                    margin-left: 4px;
+                    margin-left: 8px;
                     user-select: none;
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
                 }
                 
                 .surface-input::-webkit-inner-spin-button,
@@ -629,7 +640,12 @@ class CityRadar {
                 
                 .surface-display:hover {
                     border-color: var(--primary-color);
-                    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+                    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2), inset 0 2px 4px rgba(0, 0, 0, 0.3);
+                }
+                
+                .type-option-card:hover .type-card-content {
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
                 }
                 
                 .sort-options-grid {
