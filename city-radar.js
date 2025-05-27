@@ -237,80 +237,65 @@ class CityRadar {
                             <label class="type-option-card">
                                 <input type="checkbox" value="T1">
                                 <div class="type-card-content">
-                                    <div class="type-icon">🏠</div>
-                                    <div class="type-info-row">
-                                        <span class="type-name">T1</span>
-                                        <div class="surface-display">
-                                            <input type="number" class="surface-input" 
-                                                   id="surface-T1" 
-                                                   value="${this.defaultSurfaces.T1}" 
-                                                   min="10" max="200">
-                                            <span class="surface-unit">m²</span>
-                                        </div>
+                                    <div class="type-icon">T1</div>
+                                    <div class="surface-display">
+                                        <input type="number" class="surface-input" 
+                                               id="surface-T1" 
+                                               value="${this.defaultSurfaces.T1}" 
+                                               min="10" max="200">
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
                             <label class="type-option-card">
                                 <input type="checkbox" value="T2" checked>
                                 <div class="type-card-content">
-                                    <div class="type-icon">🏘️</div>
-                                    <div class="type-info-row">
-                                        <span class="type-name">T2</span>
-                                        <div class="surface-display">
-                                            <input type="number" class="surface-input" 
-                                                   id="surface-T2" 
-                                                   value="${this.defaultSurfaces.T2}" 
-                                                   min="10" max="200">
-                                            <span class="surface-unit">m²</span>
-                                        </div>
+                                    <div class="type-icon">T2</div>
+                                    <div class="surface-display">
+                                        <input type="number" class="surface-input" 
+                                               id="surface-T2" 
+                                               value="${this.defaultSurfaces.T2}" 
+                                               min="10" max="200">
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
                             <label class="type-option-card">
                                 <input type="checkbox" value="T3" checked>
                                 <div class="type-card-content">
-                                    <div class="type-icon">🏡</div>
-                                    <div class="type-info-row">
-                                        <span class="type-name">T3</span>
-                                        <div class="surface-display">
-                                            <input type="number" class="surface-input" 
-                                                   id="surface-T3" 
-                                                   value="${this.defaultSurfaces.T3}" 
-                                                   min="10" max="200">
-                                            <span class="surface-unit">m²</span>
-                                        </div>
+                                    <div class="type-icon">T3</div>
+                                    <div class="surface-display">
+                                        <input type="number" class="surface-input" 
+                                               id="surface-T3" 
+                                               value="${this.defaultSurfaces.T3}" 
+                                               min="10" max="200">
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
                             <label class="type-option-card">
                                 <input type="checkbox" value="T4">
                                 <div class="type-card-content">
-                                    <div class="type-icon">🏚️</div>
-                                    <div class="type-info-row">
-                                        <span class="type-name">T4</span>
-                                        <div class="surface-display">
-                                            <input type="number" class="surface-input" 
-                                                   id="surface-T4" 
-                                                   value="${this.defaultSurfaces.T4}" 
-                                                   min="10" max="200">
-                                            <span class="surface-unit">m²</span>
-                                        </div>
+                                    <div class="type-icon">T4</div>
+                                    <div class="surface-display">
+                                        <input type="number" class="surface-input" 
+                                               id="surface-T4" 
+                                               value="${this.defaultSurfaces.T4}" 
+                                               min="10" max="200">
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
                             <label class="type-option-card">
                                 <input type="checkbox" value="T5">
                                 <div class="type-card-content">
-                                    <div class="type-icon">🏛️</div>
-                                    <div class="type-info-row">
-                                        <span class="type-name">T5</span>
-                                        <div class="surface-display">
-                                            <input type="number" class="surface-input" 
-                                                   id="surface-T5" 
-                                                   value="${this.defaultSurfaces.T5}" 
-                                                   min="10" max="200">
-                                            <span class="surface-unit">m²</span>
-                                        </div>
+                                    <div class="type-icon">T5</div>
+                                    <div class="surface-display">
+                                        <input type="number" class="surface-input" 
+                                               id="surface-T5" 
+                                               value="${this.defaultSurfaces.T5}" 
+                                               min="10" max="200">
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -564,6 +549,7 @@ class CityRadar {
                     display: flex;
                     flex-direction: column;
                     gap: 0.75rem;
+                    align-items: center;
                 }
                 
                 .type-option-card input:checked + .type-card-content {
@@ -575,25 +561,12 @@ class CityRadar {
                 
                 .type-icon {
                     font-size: 2rem;
-                    text-align: center;
-                    opacity: 0.9;
-                    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-                }
-                
-                .type-info-row {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    width: 100%;
-                }
-                
-                .type-name {
-                    font-size: 1.25rem;
                     font-weight: 700;
                     background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.8) 100%);
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
                     background-clip: text;
+                    user-select: none;
                 }
                 
                 .surface-display {
