@@ -242,12 +242,11 @@ class CityRadar {
                                         <div class="type-icon">🏠</div>
                                     </div>
                                     <div class="surface-display">
-                                        <span class="surface-prefix">m</span>
                                         <input type="number" class="surface-input" 
                                                id="surface-T1" 
                                                value="${this.defaultSurfaces.T1}" 
                                                min="10" max="200">
-                                        <span class="surface-unit">²</span>
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -259,12 +258,11 @@ class CityRadar {
                                         <div class="type-icon">🏘️</div>
                                     </div>
                                     <div class="surface-display">
-                                        <span class="surface-prefix">m</span>
                                         <input type="number" class="surface-input" 
                                                id="surface-T2" 
                                                value="${this.defaultSurfaces.T2}" 
                                                min="10" max="200">
-                                        <span class="surface-unit">²</span>
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -276,12 +274,11 @@ class CityRadar {
                                         <div class="type-icon">🏡</div>
                                     </div>
                                     <div class="surface-display">
-                                        <span class="surface-prefix">m</span>
                                         <input type="number" class="surface-input" 
                                                id="surface-T3" 
                                                value="${this.defaultSurfaces.T3}" 
                                                min="10" max="200">
-                                        <span class="surface-unit">²</span>
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -293,12 +290,11 @@ class CityRadar {
                                         <div class="type-icon">🏚️</div>
                                     </div>
                                     <div class="surface-display">
-                                        <span class="surface-prefix">m</span>
                                         <input type="number" class="surface-input" 
                                                id="surface-T4" 
                                                value="${this.defaultSurfaces.T4}" 
                                                min="10" max="200">
-                                        <span class="surface-unit">²</span>
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -310,12 +306,11 @@ class CityRadar {
                                         <div class="type-icon">🏛️</div>
                                     </div>
                                     <div class="surface-display">
-                                        <span class="surface-prefix">m</span>
                                         <input type="number" class="surface-input" 
                                                id="surface-T5" 
                                                value="${this.defaultSurfaces.T5}" 
                                                min="10" max="200">
-                                        <span class="surface-unit">²</span>
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -602,24 +597,17 @@ class CityRadar {
                     display: flex;
                     align-items: baseline;
                     justify-content: center;
+                    gap: 0.25rem;
                     background: linear-gradient(135deg, rgba(17, 24, 39, 0.98) 0%, rgba(7, 14, 29, 0.98) 100%);
                     border: 1px solid rgba(255, 255, 255, 0.15);
                     border-radius: 10px;
-                    padding: 0.5rem 0.75rem;
+                    padding: 0.5rem 1rem;
                     overflow: hidden;
                     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
                 }
                 
-                .surface-prefix {
-                    color: rgba(255, 255, 255, 0.9);
-                    font-size: 1rem;
-                    font-weight: 600;
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-                    user-select: none;
-                }
-                
                 .surface-input {
-                    width: 55px;
+                    width: 45px;
                     background: transparent;
                     border: none;
                     text-align: center;
@@ -635,12 +623,11 @@ class CityRadar {
                 
                 .surface-unit {
                     color: rgba(255, 255, 255, 0.9);
-                    font-size: 1rem;
+                    font-size: 0.95rem;
                     font-weight: 600;
                     user-select: none;
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-                    position: relative;
-                    top: -0.125em;
+                    margin-left: 0.125rem;
                 }
                 
                 .surface-input::-webkit-inner-spin-button,
