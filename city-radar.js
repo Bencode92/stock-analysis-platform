@@ -1,6 +1,6 @@
 /**
  * city-radar.js - Module de comparaison intelligente des villes
- * Version 2.1 - Interface améliorée avec sélection par départements claire
+ * Version 2.2 - Correction affichage des surfaces par défaut
  */
 
 class CityRadar {
@@ -110,6 +110,7 @@ class CityRadar {
             '95': "Val-d'Oise"
         };
         
+        // Surfaces par défaut pour chaque type de logement
         this.defaultSurfaces = {
             T1: 30,
             T2: 45,
@@ -123,7 +124,7 @@ class CityRadar {
     }
     
     async init() {
-        console.log('🎯 Initialisation du Radar des villes v2.1...');
+        console.log('🎯 Initialisation du Radar des villes v2.2...');
         await this.loadData();
         this.createInterface();
         this.initEvents();
@@ -233,25 +234,86 @@ class CityRadar {
                     <div class="filter-section mt-4">
                         <h3><i class="fas fa-home"></i> Types de biens à analyser</h3>
                         <div class="type-selector-grid">
-                            ${['T1', 'T2', 'T3', 'T4', 'T5'].map(type => `
-                                <label class="type-option-card">
-                                    <input type="checkbox" value="${type}" 
-                                           ${['T2', 'T3'].includes(type) ? 'checked' : ''}>
-                                    <div class="type-card-content">
-                                        <div class="type-header">
-                                            <span class="type-name">${type}</span>
-                                            <div class="type-icon">${this.getTypeIcon(type)}</div>
-                                        </div>
-                                        <div class="surface-control">
-                                            <input type="number" class="surface-input" 
-                                                   id="surface-${type}" 
-                                                   value="${this.defaultSurfaces[type]}" 
-                                                   min="10" max="200">
-                                            <span>m²</span>
-                                        </div>
+                            <label class="type-option-card">
+                                <input type="checkbox" value="T1">
+                                <div class="type-card-content">
+                                    <div class="type-header">
+                                        <span class="type-name">T1</span>
+                                        <div class="type-icon">🏠</div>
                                     </div>
-                                </label>
-                            `).join('')}
+                                    <div class="surface-control">
+                                        <input type="number" class="surface-input" 
+                                               id="surface-T1" 
+                                               value="30" 
+                                               min="10" max="200">
+                                        <span>m²</span>
+                                    </div>
+                                </div>
+                            </label>
+                            <label class="type-option-card">
+                                <input type="checkbox" value="T2" checked>
+                                <div class="type-card-content">
+                                    <div class="type-header">
+                                        <span class="type-name">T2</span>
+                                        <div class="type-icon">🏘️</div>
+                                    </div>
+                                    <div class="surface-control">
+                                        <input type="number" class="surface-input" 
+                                               id="surface-T2" 
+                                               value="45" 
+                                               min="10" max="200">
+                                        <span>m²</span>
+                                    </div>
+                                </div>
+                            </label>
+                            <label class="type-option-card">
+                                <input type="checkbox" value="T3" checked>
+                                <div class="type-card-content">
+                                    <div class="type-header">
+                                        <span class="type-name">T3</span>
+                                        <div class="type-icon">🏡</div>
+                                    </div>
+                                    <div class="surface-control">
+                                        <input type="number" class="surface-input" 
+                                               id="surface-T3" 
+                                               value="65" 
+                                               min="10" max="200">
+                                        <span>m²</span>
+                                    </div>
+                                </div>
+                            </label>
+                            <label class="type-option-card">
+                                <input type="checkbox" value="T4">
+                                <div class="type-card-content">
+                                    <div class="type-header">
+                                        <span class="type-name">T4</span>
+                                        <div class="type-icon">🏚️</div>
+                                    </div>
+                                    <div class="surface-control">
+                                        <input type="number" class="surface-input" 
+                                               id="surface-T4" 
+                                               value="85" 
+                                               min="10" max="200">
+                                        <span>m²</span>
+                                    </div>
+                                </div>
+                            </label>
+                            <label class="type-option-card">
+                                <input type="checkbox" value="T5">
+                                <div class="type-card-content">
+                                    <div class="type-header">
+                                        <span class="type-name">T5</span>
+                                        <div class="type-icon">🏛️</div>
+                                    </div>
+                                    <div class="surface-control">
+                                        <input type="number" class="surface-input" 
+                                               id="surface-T5" 
+                                               value="105" 
+                                               min="10" max="200">
+                                        <span>m²</span>
+                                    </div>
+                                </div>
+                            </label>
                         </div>
                     </div>
                     
