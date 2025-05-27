@@ -246,7 +246,7 @@ class CityRadar {
                                                id="surface-T1" 
                                                value="${this.defaultSurfaces.T1}" 
                                                min="10" max="200">
-                                        <span>m²</span>
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -262,7 +262,7 @@ class CityRadar {
                                                id="surface-T2" 
                                                value="${this.defaultSurfaces.T2}" 
                                                min="10" max="200">
-                                        <span>m²</span>
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -278,7 +278,7 @@ class CityRadar {
                                                id="surface-T3" 
                                                value="${this.defaultSurfaces.T3}" 
                                                min="10" max="200">
-                                        <span>m²</span>
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -294,7 +294,7 @@ class CityRadar {
                                                id="surface-T4" 
                                                value="${this.defaultSurfaces.T4}" 
                                                min="10" max="200">
-                                        <span>m²</span>
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -310,7 +310,7 @@ class CityRadar {
                                                id="surface-T5" 
                                                value="${this.defaultSurfaces.T5}" 
                                                min="10" max="200">
-                                        <span>m²</span>
+                                        <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
                             </label>
@@ -597,7 +597,29 @@ class CityRadar {
                     border: 1px solid rgba(255, 255, 255, 0.2);
                     border-radius: 6px;
                     text-align: center;
-                    color: white;
+                    color: white !important;
+                    font-weight: 500;
+                    -webkit-text-fill-color: white !important;
+                    opacity: 1 !important;
+                }
+                
+                .surface-input::-webkit-inner-spin-button,
+                .surface-input::-webkit-outer-spin-button {
+                    -webkit-appearance: none;
+                    margin: 0;
+                }
+                
+                .surface-input:focus {
+                    outline: none;
+                    border-color: var(--primary-color);
+                    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+                    background: rgba(17, 24, 39, 0.95);
+                }
+                
+                .surface-unit {
+                    color: rgba(255, 255, 255, 0.7);
+                    font-size: 0.875rem;
+                    font-weight: 400;
                 }
                 
                 .sort-options-grid {
@@ -834,6 +856,8 @@ class CityRadar {
                 if (input) {
                     input.value = value;
                     // Force le navigateur à afficher la valeur
+                    input.style.color = 'white';
+                    input.style.webkitTextFillColor = 'white';
                     input.dispatchEvent(new Event('input', { bubbles: true }));
                 }
             });
