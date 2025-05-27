@@ -590,20 +590,21 @@ class CityRadar {
                     background: linear-gradient(135deg, rgba(17, 24, 39, 0.98) 0%, rgba(7, 14, 29, 0.98) 100%);
                     border: 1px solid rgba(255, 255, 255, 0.15);
                     border-radius: 8px;
-                    padding: 0.375rem 0.625rem;
+                    padding: 0.5rem 0.75rem;
                     box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
                     display: flex;
                     align-items: center;
+                    flex: 1;
                 }
                 
                 .surface-input {
-                    width: 50px;
+                    width: 100%;
                     background: transparent;
                     border: none;
                     text-align: center;
                     color: #fff !important;
                     font-weight: 700;
-                    font-size: 1rem;
+                    font-size: 1.1rem;
                     -webkit-text-fill-color: #fff !important;
                     opacity: 1 !important;
                     padding: 0;
@@ -617,6 +618,7 @@ class CityRadar {
                     font-weight: 600;
                     user-select: none;
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    margin-right: 0.5rem;
                 }
                 
                 .surface-input::-webkit-inner-spin-button,
