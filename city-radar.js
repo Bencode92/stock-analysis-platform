@@ -238,11 +238,13 @@ class CityRadar {
                                 <input type="checkbox" value="T1">
                                 <div class="type-card-content">
                                     <div class="type-icon">T1</div>
-                                    <div class="surface-display">
-                                        <input type="number" class="surface-input" 
-                                               id="surface-T1" 
-                                               value="${this.defaultSurfaces.T1}" 
-                                               min="10" max="200">
+                                    <div class="type-bottom-row">
+                                        <div class="surface-input-wrapper">
+                                            <input type="number" class="surface-input" 
+                                                   id="surface-T1" 
+                                                   value="${this.defaultSurfaces.T1}" 
+                                                   min="10" max="200">
+                                        </div>
                                         <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
@@ -251,11 +253,13 @@ class CityRadar {
                                 <input type="checkbox" value="T2" checked>
                                 <div class="type-card-content">
                                     <div class="type-icon">T2</div>
-                                    <div class="surface-display">
-                                        <input type="number" class="surface-input" 
-                                               id="surface-T2" 
-                                               value="${this.defaultSurfaces.T2}" 
-                                               min="10" max="200">
+                                    <div class="type-bottom-row">
+                                        <div class="surface-input-wrapper">
+                                            <input type="number" class="surface-input" 
+                                                   id="surface-T2" 
+                                                   value="${this.defaultSurfaces.T2}" 
+                                                   min="10" max="200">
+                                        </div>
                                         <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
@@ -264,11 +268,13 @@ class CityRadar {
                                 <input type="checkbox" value="T3" checked>
                                 <div class="type-card-content">
                                     <div class="type-icon">T3</div>
-                                    <div class="surface-display">
-                                        <input type="number" class="surface-input" 
-                                               id="surface-T3" 
-                                               value="${this.defaultSurfaces.T3}" 
-                                               min="10" max="200">
+                                    <div class="type-bottom-row">
+                                        <div class="surface-input-wrapper">
+                                            <input type="number" class="surface-input" 
+                                                   id="surface-T3" 
+                                                   value="${this.defaultSurfaces.T3}" 
+                                                   min="10" max="200">
+                                        </div>
                                         <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
@@ -277,11 +283,13 @@ class CityRadar {
                                 <input type="checkbox" value="T4">
                                 <div class="type-card-content">
                                     <div class="type-icon">T4</div>
-                                    <div class="surface-display">
-                                        <input type="number" class="surface-input" 
-                                               id="surface-T4" 
-                                               value="${this.defaultSurfaces.T4}" 
-                                               min="10" max="200">
+                                    <div class="type-bottom-row">
+                                        <div class="surface-input-wrapper">
+                                            <input type="number" class="surface-input" 
+                                                   id="surface-T4" 
+                                                   value="${this.defaultSurfaces.T4}" 
+                                                   min="10" max="200">
+                                        </div>
                                         <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
@@ -290,11 +298,13 @@ class CityRadar {
                                 <input type="checkbox" value="T5">
                                 <div class="type-card-content">
                                     <div class="type-icon">T5</div>
-                                    <div class="surface-display">
-                                        <input type="number" class="surface-input" 
-                                               id="surface-T5" 
-                                               value="${this.defaultSurfaces.T5}" 
-                                               min="10" max="200">
+                                    <div class="type-bottom-row">
+                                        <div class="surface-input-wrapper">
+                                            <input type="number" class="surface-input" 
+                                                   id="surface-T5" 
+                                                   value="${this.defaultSurfaces.T5}" 
+                                                   min="10" max="200">
+                                        </div>
                                         <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
@@ -548,8 +558,7 @@ class CityRadar {
                     backdrop-filter: blur(10px);
                     display: flex;
                     flex-direction: column;
-                    gap: 0.75rem;
-                    align-items: center;
+                    gap: 1rem;
                 }
                 
                 .type-option-card input:checked + .type-card-content {
@@ -567,21 +576,28 @@ class CityRadar {
                     -webkit-text-fill-color: transparent;
                     background-clip: text;
                     user-select: none;
+                    text-align: center;
                 }
                 
-                .surface-display {
+                .type-bottom-row {
                     display: flex;
-                    align-items: baseline;
-                    gap: 0.125rem;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 0.75rem;
+                }
+                
+                .surface-input-wrapper {
                     background: linear-gradient(135deg, rgba(17, 24, 39, 0.98) 0%, rgba(7, 14, 29, 0.98) 100%);
                     border: 1px solid rgba(255, 255, 255, 0.15);
                     border-radius: 8px;
                     padding: 0.375rem 0.625rem;
                     box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+                    display: flex;
+                    align-items: center;
                 }
                 
                 .surface-input {
-                    width: 40px;
+                    width: 50px;
                     background: transparent;
                     border: none;
                     text-align: center;
@@ -597,7 +613,7 @@ class CityRadar {
                 
                 .surface-unit {
                     color: rgba(255, 255, 255, 0.9);
-                    font-size: 0.875rem;
+                    font-size: 1rem;
                     font-weight: 600;
                     user-select: none;
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -613,7 +629,7 @@ class CityRadar {
                     outline: none;
                 }
                 
-                .surface-display:hover {
+                .surface-input-wrapper:hover {
                     border-color: var(--primary-color);
                     box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15), inset 0 1px 3px rgba(0, 0, 0, 0.3);
                 }
