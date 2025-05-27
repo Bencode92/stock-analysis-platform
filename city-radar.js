@@ -1104,7 +1104,7 @@ class CityRadar {
     async runAnalysis() {
         const btn = document.getElementById('btn-launch-radar');
         btn.disabled = true;
-        btn.innerHTML = '<i class=\"fas fa-spinner fa-spin\"></i> <span>Analyse en cours...</span>';
+        btn.innerHTML = '<i class=\"fas fa-satellite-dish\"></i> <span>Lancer l\'analyse</span>';
         
         try {
             const filteredCities = this.filterCities();
