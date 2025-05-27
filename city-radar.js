@@ -1,6 +1,6 @@
 /**
  * city-radar.js - Module de comparaison intelligente des villes
- * Version 2.0 - Interface améliorée avec sélection par villes
+ * Version 2.1 - Interface améliorée avec sélection par départements claire
  */
 
 class CityRadar {
@@ -11,6 +11,104 @@ class CityRadar {
         this.selectedTypes = new Set(['T2', 'T3']);
         this.topCount = 10;
         this.filterMode = 'all'; // all, departments, cities
+        
+        // Liste complète des départements français
+        this.departements = {
+            '01': 'Ain',
+            '02': 'Aisne',
+            '03': 'Allier',
+            '04': 'Alpes-de-Haute-Provence',
+            '05': 'Hautes-Alpes',
+            '06': 'Alpes-Maritimes',
+            '07': 'Ardèche',
+            '08': 'Ardennes',
+            '09': 'Ariège',
+            '10': 'Aube',
+            '11': 'Aude',
+            '12': 'Aveyron',
+            '13': 'Bouches-du-Rhône',
+            '14': 'Calvados',
+            '15': 'Cantal',
+            '16': 'Charente',
+            '17': 'Charente-Maritime',
+            '18': 'Cher',
+            '19': 'Corrèze',
+            '21': "Côte-d'Or",
+            '22': "Côtes-d'Armor",
+            '23': 'Creuse',
+            '24': 'Dordogne',
+            '25': 'Doubs',
+            '26': 'Drôme',
+            '27': 'Eure',
+            '28': 'Eure-et-Loir',
+            '29': 'Finistère',
+            '30': 'Gard',
+            '31': 'Haute-Garonne',
+            '32': 'Gers',
+            '33': 'Gironde',
+            '34': 'Hérault',
+            '35': 'Ille-et-Vilaine',
+            '36': 'Indre',
+            '37': 'Indre-et-Loire',
+            '38': 'Isère',
+            '39': 'Jura',
+            '40': 'Landes',
+            '41': 'Loir-et-Cher',
+            '42': 'Loire',
+            '43': 'Haute-Loire',
+            '44': 'Loire-Atlantique',
+            '45': 'Loiret',
+            '46': 'Lot',
+            '47': 'Lot-et-Garonne',
+            '48': 'Lozère',
+            '49': 'Maine-et-Loire',
+            '50': 'Manche',
+            '51': 'Marne',
+            '52': 'Haute-Marne',
+            '53': 'Mayenne',
+            '54': 'Meurthe-et-Moselle',
+            '55': 'Meuse',
+            '56': 'Morbihan',
+            '57': 'Moselle',
+            '58': 'Nièvre',
+            '59': 'Nord',
+            '60': 'Oise',
+            '61': 'Orne',
+            '62': 'Pas-de-Calais',
+            '63': 'Puy-de-Dôme',
+            '64': 'Pyrénées-Atlantiques',
+            '65': 'Hautes-Pyrénées',
+            '66': 'Pyrénées-Orientales',
+            '67': 'Bas-Rhin',
+            '68': 'Haut-Rhin',
+            '69': 'Rhône',
+            '70': 'Haute-Saône',
+            '71': 'Saône-et-Loire',
+            '72': 'Sarthe',
+            '73': 'Savoie',
+            '74': 'Haute-Savoie',
+            '75': 'Paris',
+            '76': 'Seine-Maritime',
+            '77': 'Seine-et-Marne',
+            '78': 'Yvelines',
+            '79': 'Deux-Sèvres',
+            '80': 'Somme',
+            '81': 'Tarn',
+            '82': 'Tarn-et-Garonne',
+            '83': 'Var',
+            '84': 'Vaucluse',
+            '85': 'Vendée',
+            '86': 'Vienne',
+            '87': 'Haute-Vienne',
+            '88': 'Vosges',
+            '89': 'Yonne',
+            '90': 'Territoire de Belfort',
+            '91': 'Essonne',
+            '92': 'Hauts-de-Seine',
+            '93': 'Seine-Saint-Denis',
+            '94': 'Val-de-Marne',
+            '95': "Val-d'Oise"
+        };
         
         this.defaultSurfaces = {
             T1: 30,
@@ -25,7 +123,7 @@ class CityRadar {
     }
     
     async init() {
-        console.log('🎯 Initialisation du Radar des villes v2.0...');
+        console.log('🎯 Initialisation du Radar des villes v2.1...');
         await this.loadData();
         this.createInterface();
         this.initEvents();
@@ -106,11 +204,16 @@ class CityRadar {
                             </label>
                         </div>
                         
-                        <!-- Sélecteur de départements -->
+                        <!-- Sélecteur de départements amélioré -->
                         <div id="dept-selector" class="mt-3 hidden fade-in">
-                            <input type="text" id="dept-search" class="form-input enhanced-input" 
-                                   placeholder="Ex: 69, 75, 13 (séparés par virgules)">
-                            <div id="selected-depts" class="selected-chips mt-2"></div>
+                            <div class="search-container">
+                                <input type="text" id="dept-search" class="form-input enhanced-input" 
+                                       placeholder="Rechercher un département par nom ou numéro..." autocomplete="off">
+                                <div id="dept-suggestions" class="dept-suggestions" style="display: none;"></div>
+                            </div>
+                            <div id="selected-depts" class="selected-chips mt-2">
+                                <span class="text-sm opacity-50">Aucun département sélectionné</span>
+                            </div>
                         </div>
                         
                         <!-- Sélecteur de villes -->
@@ -225,13 +328,13 @@ class CityRadar {
                 }
                 
                 .animated-gradient-border > * {
-                    background: rgba(17, 24, 39, 0.95); /* Fond sombre pour meilleur contraste */
+                    background: rgba(17, 24, 39, 0.95);
                     border-radius: 10px;
                     padding: 1.5rem;
                 }
                 
                 .filter-section {
-                    background: rgba(17, 24, 39, 0.95) !important; /* Fond sombre pour toutes les sections */
+                    background: rgba(17, 24, 39, 0.95) !important;
                 }
                 
                 @keyframes gradient-animation {
@@ -263,7 +366,7 @@ class CityRadar {
                     align-items: center;
                     gap: 0.5rem;
                     padding: 1.5rem;
-                    background: rgba(31, 41, 55, 0.8); /* Fond plus sombre */
+                    background: rgba(31, 41, 55, 0.8);
                     border: 2px solid rgba(255, 255, 255, 0.1);
                     border-radius: 12px;
                     transition: all 0.3s ease;
@@ -283,7 +386,7 @@ class CityRadar {
                 }
                 
                 .enhanced-input {
-                    background: rgba(31, 41, 55, 0.8); /* Fond plus sombre */
+                    background: rgba(31, 41, 55, 0.8);
                     border: 2px solid rgba(255, 255, 255, 0.1);
                     padding: 0.75rem 1rem;
                     font-size: 1rem;
@@ -299,6 +402,76 @@ class CityRadar {
                     background: rgba(31, 41, 55, 0.9);
                     border-color: var(--primary-color);
                     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+                }
+                
+                .dept-suggestions {
+                    position: absolute;
+                    top: 100%;
+                    left: 0;
+                    right: 0;
+                    margin-top: 0.5rem;
+                    background: rgba(17, 24, 39, 0.98);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: 8px;
+                    max-height: 300px;
+                    overflow-y: auto;
+                    z-index: 100;
+                    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+                }
+                
+                .dept-suggestion {
+                    padding: 0.75rem 1rem;
+                    cursor: pointer;
+                    transition: background 0.2s;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                
+                .dept-suggestion:hover {
+                    background: rgba(99, 102, 241, 0.2);
+                }
+                
+                .dept-code {
+                    font-weight: 600;
+                    color: var(--primary-color);
+                    font-size: 1.1rem;
+                    min-width: 40px;
+                }
+                
+                .dept-name {
+                    flex: 1;
+                    margin-left: 1rem;
+                }
+                
+                .dept-chip {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    padding: 0.5rem 1rem;
+                    background: rgba(99, 102, 241, 0.2);
+                    border: 1px solid rgba(99, 102, 241, 0.4);
+                    border-radius: 20px;
+                    font-size: 0.875rem;
+                    animation: chip-in 0.3s ease;
+                    margin: 0.25rem;
+                }
+                
+                .dept-chip .dept-chip-code {
+                    font-weight: 600;
+                    color: var(--primary-color);
+                }
+                
+                .dept-chip .remove-chip {
+                    cursor: pointer;
+                    color: rgba(255, 255, 255, 0.6);
+                    transition: color 0.2s;
+                    margin-left: 0.5rem;
+                }
+                
+                .dept-chip .remove-chip:hover {
+                    color: #ef4444;
                 }
                 
                 .type-selector-grid {
@@ -320,7 +493,7 @@ class CityRadar {
                 
                 .type-card-content {
                     padding: 1rem;
-                    background: rgba(31, 41, 55, 0.8); /* Fond plus sombre */
+                    background: rgba(31, 41, 55, 0.8);
                     border: 2px solid rgba(255, 255, 255, 0.1);
                     border-radius: 12px;
                     transition: all 0.3s ease;
@@ -388,7 +561,7 @@ class CityRadar {
                     align-items: center;
                     gap: 0.5rem;
                     padding: 1.5rem;
-                    background: rgba(31, 41, 55, 0.8); /* Fond plus sombre */
+                    background: rgba(31, 41, 55, 0.8);
                     border: 2px solid rgba(255, 255, 255, 0.1);
                     border-radius: 12px;
                     transition: all 0.3s ease;
@@ -402,7 +575,7 @@ class CityRadar {
                 }
                 
                 .control-section {
-                    background: rgba(17, 24, 39, 0.95); /* Fond plus sombre */
+                    background: rgba(17, 24, 39, 0.95);
                     border-radius: 12px;
                     padding: 1.5rem;
                     margin-top: 2rem;
@@ -426,7 +599,7 @@ class CityRadar {
                 }
                 
                 .enhanced-select {
-                    background: rgba(31, 41, 55, 0.8); /* Fond plus sombre */
+                    background: rgba(31, 41, 55, 0.8);
                     border: 2px solid rgba(255, 255, 255, 0.1);
                     padding: 0.75rem 1rem;
                     border-radius: 8px;
@@ -579,6 +752,16 @@ class CityRadar {
                     background: var(--primary-gradient);
                     transform: scale(1.05);
                 }
+                
+                .dept-badge {
+                    display: inline-block;
+                    padding: 0.25rem 0.75rem;
+                    background: rgba(99, 102, 241, 0.1);
+                    border: 1px solid rgba(99, 102, 241, 0.3);
+                    border-radius: 12px;
+                    font-size: 0.75rem;
+                    margin-left: 0.5rem;
+                }
             </style>
         `;
     }
@@ -649,9 +832,21 @@ class CityRadar {
             radio.addEventListener('change', (e) => this.handleGeoFilterChange(e.target.value));
         });
         
-        // Départements
-        document.getElementById('dept-search')?.addEventListener('input', (e) => {
-            this.handleDepartmentInput(e.target.value);
+        // Recherche de départements
+        const deptSearch = document.getElementById('dept-search');
+        if (deptSearch) {
+            deptSearch.addEventListener('input', (e) => this.handleDepartmentSearch(e.target.value));
+            deptSearch.addEventListener('focus', () => this.showDepartmentSuggestions());
+        }
+        
+        // Masquer suggestions au clic ailleurs
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#dept-search') && !e.target.closest('#dept-suggestions')) {
+                this.hideDepartmentSuggestions();
+            }
+            if (!e.target.closest('#city-search') && !e.target.closest('#city-suggestions')) {
+                this.hideCitySuggestions();
+            }
         });
         
         // Recherche de villes
@@ -660,13 +855,6 @@ class CityRadar {
             citySearch.addEventListener('input', (e) => this.handleCitySearch(e.target.value));
             citySearch.addEventListener('focus', () => this.showCitySuggestions());
         }
-        
-        // Masquer suggestions au clic ailleurs
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('#city-search') && !e.target.closest('#city-suggestions')) {
-                this.hideCitySuggestions();
-            }
-        });
         
         // Types
         document.querySelectorAll('.type-option-card input[type="checkbox"]').forEach(cb => {
@@ -734,17 +922,114 @@ class CityRadar {
         });
     }
     
-    handleDepartmentInput(value) {
-        const depts = value.split(',').map(d => d.trim()).filter(d => d.length > 0);
+    handleDepartmentSearch(searchTerm) {
+        if (!searchTerm || searchTerm.length < 1) {
+            this.hideDepartmentSuggestions();
+            return;
+        }
         
-        this.selectedDepartments.clear();
-        depts.forEach(dept => {
-            if (/^\d{1,3}$/.test(dept)) {
-                this.selectedDepartments.add(dept.padStart(2, '0'));
+        const matches = [];
+        
+        // Rechercher par numéro ou nom
+        for (const [code, name] of Object.entries(this.departements)) {
+            if (code.includes(searchTerm) || 
+                name.toLowerCase().includes(searchTerm.toLowerCase())) {
+                matches.push({ code, name });
+            }
+        }
+        
+        this.displayDepartmentSuggestions(matches.slice(0, 10));
+    }
+    
+    displayDepartmentSuggestions(departments) {
+        const container = document.getElementById('dept-suggestions');
+        if (!container) return;
+        
+        if (departments.length === 0) {
+            container.innerHTML = `
+                <div class="dept-suggestion" style="opacity: 0.6; cursor: default;">
+                    <div>Aucun département trouvé</div>
+                </div>
+            `;
+            container.style.display = 'block';
+            return;
+        }
+        
+        container.innerHTML = departments.map(dept => `
+            <div class="dept-suggestion" data-code="${dept.code}">
+                <span class="dept-code">${dept.code}</span>
+                <span class="dept-name">${dept.name}</span>
+            </div>
+        `).join('');
+        
+        container.style.display = 'block';
+        
+        // Attacher les événements
+        container.querySelectorAll('.dept-suggestion').forEach(el => {
+            if (!el.textContent.includes('Aucun département')) {
+                el.addEventListener('click', () => {
+                    this.addDepartment(el.dataset.code);
+                });
             }
         });
+    }
+    
+    showDepartmentSuggestions() {
+        const searchInput = document.getElementById('dept-search');
+        if (searchInput && searchInput.value.length >= 1) {
+            this.handleDepartmentSearch(searchInput.value);
+        }
+    }
+    
+    hideDepartmentSuggestions() {
+        const container = document.getElementById('dept-suggestions');
+        if (container) container.style.display = 'none';
+    }
+    
+    addDepartment(code) {
+        if (this.selectedDepartments.size >= 10) {
+            alert('Maximum 10 départements peuvent être sélectionnés');
+            return;
+        }
         
+        this.selectedDepartments.add(code);
         this.updateDepartmentDisplay();
+        
+        // Réinitialiser la recherche
+        document.getElementById('dept-search').value = '';
+        this.hideDepartmentSuggestions();
+    }
+    
+    removeDepartment(code) {
+        this.selectedDepartments.delete(code);
+        this.updateDepartmentDisplay();
+    }
+    
+    updateDepartmentDisplay() {
+        const container = document.getElementById('selected-depts');
+        if (!container) return;
+        
+        if (this.selectedDepartments.size === 0) {
+            container.innerHTML = '<span class="text-sm opacity-50">Aucun département sélectionné</span>';
+        } else {
+            container.innerHTML = Array.from(this.selectedDepartments).map(code => `
+                <div class="dept-chip">
+                    <span class="dept-chip-code">${code}</span>
+                    <span>${this.departements[code] || 'Inconnu'}</span>
+                    <span class="remove-chip" data-code="${code}">
+                        <i class="fas fa-times"></i>
+                    </span>
+                </div>
+            `).join('');
+            
+            // Attacher les événements
+            container.querySelectorAll('.remove-chip').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.removeDepartment(el.dataset.code);
+                });
+            });
+        }
     }
     
     handleCitySearch(searchTerm) {
@@ -841,19 +1126,6 @@ class CityRadar {
     removeCity(cityName) {
         this.selectedCities.delete(cityName);
         this.updateCityDisplay();
-    }
-    
-    updateDepartmentDisplay() {
-        const container = document.getElementById('selected-depts');
-        if (!container) return;
-        
-        if (this.selectedDepartments.size === 0) {
-            container.innerHTML = '<span class="text-sm opacity-50">Aucun département sélectionné</span>';
-        } else {
-            container.innerHTML = Array.from(this.selectedDepartments).map(dept => 
-                `<span class="chip">${dept}</span>`
-            ).join('');
-        }
     }
     
     updateCityDisplay() {
@@ -1055,7 +1327,7 @@ class CityRadar {
                                         <td class="text-center">${i + 6}</td>
                                         <td>
                                             <strong>${r.ville}</strong>
-                                            <span class="dept-badge">${r.departement}</span>
+                                            <span class="dept-badge">${r.departement} - ${this.departements[r.departement] || ''}</span>
                                         </td>
                                         <td class="text-center">${r.type}</td>
                                         <td class="text-right">
@@ -1100,7 +1372,7 @@ class CityRadar {
                         </h4>
                         <div style="margin-top: 0.5rem;">
                             <span class="badge badge-primary">${result.type}</span>
-                            <span class="dept-badge">Dép. ${result.departement}</span>
+                            <span class="dept-badge">Dép. ${result.departement} - ${this.departements[result.departement] || ''}</span>
                         </div>
                     </div>
                 </div>
