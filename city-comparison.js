@@ -1,9 +1,8 @@
 /**
  * city-comparison.js - Comparateur multi-villes pour l'investissement immobilier
  * Permet de comparer jusqu'à 10 villes simultanément
- * Inclut le mode objectif de cash-flow
  * 
- * v2.4 - Synchronisation complète des paramètres à chaque simulation de ville
+ * v2.5 - Version simplifiée sans mode objectif
  */
 
 class CityComparator {
@@ -12,11 +11,6 @@ class CityComparator {
         this.selectedCities = new Map();
         this.maxCities = 10;
         this.villesData = null;
-        
-        // Mode objectif cash-flow
-        this.targetMode = false;
-        this.targetCashflow = 1000;
-        this.numberOfProperties = 1;
         
         this.init();
     }
@@ -103,101 +97,10 @@ class CityComparator {
                 // Réinitialiser la recherche
                 document.getElementById('multi-city-search').value = '';
                 this.hideSuggestions();
-                this.addTargetModeUI();
                 
-                // PAS de synchronisation ici - elle sera faite au lancement
                 console.log('📋 Panel ouvert - synchronisation différée au lancement');
             }
         }
-    }
-    
-    addTargetModeUI() {
-        // Vérifier si déjà ajouté
-        if (document.getElementById('target-mode-section')) return;
-        
-        const comparisonInfo = document.querySelector('#city-comparison-panel .comparison-info');
-        if (!comparisonInfo) return;
-        
-        const targetSection = document.createElement('div');
-        targetSection.id = 'target-mode-section';
-        targetSection.className = 'target-mode-section mt-4 p-4 bg-black/30 rounded-lg';
-        targetSection.innerHTML = `
-            <div class="flex items-center justify-between mb-3">
-                <label class="flex items-center cursor-pointer">
-                    <input type="checkbox" id="target-mode-toggle" class="mr-3">
-                    <span class="font-medium">Mode objectif de cash-flow</span>
-                </label>
-                <span class="badge badge-primary">Nouveau</span>
-            </div>
-            
-            <div class="text-sm text-gray-400 mb-3">
-                <i class="fas fa-info-circle mr-1"></i>
-                <span id="mode-description">
-                    Quand cette option est décochée, l'outil privilégie le revenu locatif net le plus élevé.
-                </span>
-            </div>
-            
-            <div id="target-mode-options" class="hidden mt-4 space-y-3">
-                <div class="grid grid-2 gap-4">
-                    <div class="form-group">
-                        <label class="form-label text-sm">Cash-flow mensuel souhaité</label>
-                        <div class="form-input-wrapper">
-                            <input type="number" id="target-cashflow-input" class="form-input" value="1000" step="100">
-                            <span class="form-addon-text">€/mois</span>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label text-sm">Nombre de biens</label>
-                        <select id="target-properties-count" class="form-input">
-                            <option value="1">1 bien</option>
-                            <option value="2">2 biens</option>
-                            <option value="3">3 biens</option>
-                            <option value="4">4 biens</option>
-                            <option value="5">5 biens</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="info-message text-sm">
-                    <i class="fas fa-info-circle mr-2"></i>
-                    Le système calculera la surface nécessaire dans chaque ville pour atteindre ${this.targetCashflow}€/mois.
-                </div>
-            </div>
-        `;
-        
-        comparisonInfo.insertAdjacentElement('afterend', targetSection);
-        
-        // Événements
-        document.getElementById('target-mode-toggle').addEventListener('change', (e) => {
-            this.targetMode = e.target.checked;
-            document.getElementById('target-mode-options').classList.toggle('hidden', !this.targetMode);
-            
-            // Mise à jour de la description
-            const description = document.getElementById('mode-description');
-            if (this.targetMode) {
-                description.innerHTML = '<i class="fas fa-info-circle mr-1"></i>Mode activé : l\'outil privilégie le cash-flow mensuel le plus élevé.';
-            } else {
-                description.innerHTML = '<i class="fas fa-info-circle mr-1"></i>Mode désactivé : l\'outil privilégie le revenu locatif net le plus élevé.';
-            }
-            
-            const btnLaunch = document.getElementById('btn-launch-comparison');
-            if (btnLaunch) {
-                btnLaunch.innerHTML = this.targetMode 
-                    ? '<i class="fas fa-bullseye"></i> Calculer investissement nécessaire'
-                    : '<i class="fas fa-rocket"></i> Lancer la comparaison';
-            }
-        });
-        
-        document.getElementById('target-cashflow-input').addEventListener('input', (e) => {
-            this.targetCashflow = parseFloat(e.target.value) || 0;
-            document.querySelector('#target-mode-options .info-message').innerHTML = 
-                `<i class="fas fa-info-circle mr-2"></i>Le système calculera la surface nécessaire dans chaque ville pour atteindre ${this.targetCashflow}€/mois.`;
-        });
-        
-        document.getElementById('target-properties-count').addEventListener('change', (e) => {
-            this.numberOfProperties = parseInt(e.target.value);
-        });
     }
     
     handleSearch(searchTerm) {
@@ -435,11 +338,8 @@ class CityComparator {
         // Collecter et charger les paramètres actuels
         const currentParams = this.collectCurrentParams();
         
-        if (this.targetMode) {
-            await this.runTargetModeComparison();
-        } else {
-            await this.runNormalComparison();
-        }
+        // Lancer directement la comparaison normale
+        await this.runNormalComparison();
     }
     
     async runNormalComparison() {
@@ -464,7 +364,6 @@ class CityComparator {
             }
             
             console.log('🏙️ Villes à comparer:', this.selectedCities.size);
-            console.log('🎯 Mode objectif cash-flow:', this.targetMode ? 'Activé' : 'Désactivé (privilégie le loyer net)');
             
             for (const [nom, ville] of this.selectedCities) {
                 const types = pieceType === 'all' ? Object.keys(ville.pieces) : [pieceType];
@@ -488,15 +387,11 @@ class CityComparator {
                 }
             }
             
-            // Tri selon le mode choisi
-            const optimiseCashFlow = document.getElementById('target-mode-toggle')?.checked ?? false;
-            results.sort((a, b) => 
-                optimiseCashFlow ? b.cashFlow - a.cashFlow 
-                                 : b.loyerNetMensuel - a.loyerNetMensuel
-            );
+            // Tri par loyer net mensuel (critère principal)
+            results.sort((a, b) => b.loyerNetMensuel - a.loyerNetMensuel);
             
             console.log('✅ Résultats obtenus:', results.length);
-            console.log('📊 Critère de tri:', optimiseCashFlow ? 'Cash-flow' : 'Loyer net');
+            console.log('📊 Critère de tri: Loyer net');
             
             // Afficher les résultats
             this.displayResults(results);
@@ -523,234 +418,6 @@ class CityComparator {
                 btnLaunch.innerHTML = '<i class="fas fa-rocket"></i> Lancer la comparaison';
             }
         }
-    }
-    
-    async runTargetModeComparison() {
-        console.log('🎯 Mode objectif cash-flow activé');
-        
-        const btnLaunch = document.getElementById('btn-launch-comparison');
-        if (btnLaunch) {
-            btnLaunch.disabled = true;
-            btnLaunch.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calcul en cours...';
-        }
-        
-        try {
-            const results = [];
-            const targetPerProperty = this.targetCashflow / this.numberOfProperties;
-            const pieceType = document.getElementById('comparison-piece-type')?.value || 'T3';
-            
-            // Les paramètres ont déjà été synchronisés dans runComparison()
-            
-            for (const [nom, ville] of this.selectedCities) {
-                const types = pieceType === 'all' ? Object.keys(ville.pieces) : [pieceType];
-                
-                for (const type of types) {
-                    if (!ville.pieces[type]) continue;
-                    
-                    const result = await this.calculateOptimalInvestment(ville, type, ville.pieces[type], targetPerProperty);
-                    if (result) {
-                        results.push(result);
-                    }
-                }
-            }
-            
-            // Trier par apport nécessaire
-            results.sort((a, b) => a.apportTotal - b.apportTotal);
-            
-            this.displayTargetResults(results);
-            
-        } finally {
-            if (btnLaunch) {
-                btnLaunch.disabled = false;
-                btnLaunch.innerHTML = '<i class="fas fa-bullseye"></i> Calculer investissement nécessaire';
-            }
-        }
-    }
-    
-    async calculateOptimalInvestment(ville, type, pieceData, targetCashflow) {
-        // Synchroniser les paramètres actuels du formulaire avant chaque calcul
-        const freshParams = this.collectParamsFromDOM();
-        this.simulateur.chargerParametres(freshParams);
-        
-        // Sauvegarder l'état complet
-        const originalParams = JSON.parse(JSON.stringify(this.simulateur.params));
-        
-        // Appliquer uniquement les prix/loyers de la ville
-        this.simulateur.params.communs.prixM2 = pieceData.prix_m2;
-        this.simulateur.params.communs.loyerM2 = pieceData.loyer_m2;
-        
-        try {
-            // Utiliser la nouvelle méthode chercheSurfaceObjectifCashflow pour les deux modes
-            const resultClassique = this.simulateur.chercheSurfaceObjectifCashflow('classique', targetCashflow);
-            const resultEncheres = this.simulateur.chercheSurfaceObjectifCashflow('encheres', targetCashflow);
-            
-            // Déterminer le meilleur mode et résultat
-            let bestResult = null;
-            let mode = '';
-            
-            if (!resultClassique && !resultEncheres) {
-                return null; // Aucune solution trouvée
-            }
-            
-            if (!resultClassique) {
-                bestResult = resultEncheres;
-                mode = 'encheres';
-            } else if (!resultEncheres) {
-                bestResult = resultClassique;
-                mode = 'classique';
-            } else {
-                // Comparer les cash-flows (ils devraient être proches du target)
-                // On choisit celui avec le meilleur rendement ou la plus petite surface
-                if (resultEncheres.rendementNet > resultClassique.rendementNet) {
-                    bestResult = resultEncheres;
-                    mode = 'encheres';
-                } else {
-                    bestResult = resultClassique;
-                    mode = 'classique';
-                }
-            }
-            
-            if (!bestResult) return null;
-            
-            // Construire le résultat formaté
-            return {
-                ville: ville.nom,
-                departement: ville.departement,
-                type: type,
-                mode: mode,
-                surface: Math.round(bestResult.surface),
-                prixAchat: bestResult.prixAchat,
-                coutTotal: bestResult.coutTotal,
-                apportNecessaire: bestResult.coutTotal * 0.1,
-                apportTotal: bestResult.coutTotal * 0.1 * this.numberOfProperties,
-                mensualite: bestResult.mensualite,
-                loyerNet: bestResult.loyerNet,
-                cashFlow: bestResult.cashFlow,
-                rendement: bestResult.rendementNet
-            };
-            
-        } finally {
-            // Restaurer l'état complet
-            this.simulateur.params = JSON.parse(JSON.stringify(originalParams));
-        }
-    }
-    
-    displayTargetResults(results) {
-        const container = document.getElementById('comparison-results-container') || this.createResultsContainer();
-        
-        if (results.length === 0) {
-            container.innerHTML = `
-                <div class="comparison-results">
-                    <div class="info-message">
-                        <i class="fas fa-exclamation-circle text-yellow-400 mr-3"></i>
-                        <div>
-                            <h4>Aucune solution trouvée</h4>
-                            <p class="text-sm opacity-90">L'objectif de ${this.targetCashflow}€/mois ne peut être atteint avec les villes sélectionnées.</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-            container.style.display = 'block';
-            return;
-        }
-        
-        container.innerHTML = `
-            <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg">
-                <div class="card-header">
-                    <div class="card-icon">
-                        <i class="fas fa-bullseye"></i>
-                    </div>
-                    <h2 class="card-title">Investissement nécessaire pour ${this.targetCashflow}€/mois</h2>
-                </div>
-                
-                <div class="comparison-results">
-                    <div class="mb-4 text-center">
-                        <span class="badge badge-primary">Stratégie : ${this.numberOfProperties} bien${this.numberOfProperties > 1 ? 's' : ''}</span>
-                        <span class="ml-2 text-sm opacity-70">Objectif par bien : ${Math.round(this.targetCashflow / this.numberOfProperties)}€/mois</span>
-                    </div>
-                    
-                    <div class="city-results-grid">
-                        ${results.slice(0, 3).map((r, i) => `
-                            <div class="result-card ${i === 0 ? 'winner' : ''} fade-in-up" style="animation-delay: ${i * 0.1}s;">
-                                <h4>
-                                    <i class="fas fa-map-marker-alt"></i>
-                                    ${r.ville} - ${r.type}
-                                </h4>
-                                <p class="text-sm opacity-70 mb-2">Département ${r.departement}</p>
-                                
-                                <span class="badge ${r.mode === 'encheres' ? 'badge-accent' : 'badge-primary'}">
-                                    ${r.mode === 'encheres' ? '⚖️ Enchères' : '🏠 Classique'}
-                                </span>
-                                
-                                <div class="stats-grid mt-3">
-                                    <div class="stat-item">
-                                        <p class="stat-value">${this.formatMontant(r.apportTotal)}</p>
-                                        <p class="stat-label">Apport total</p>
-                                    </div>
-                                    <div class="stat-item">
-                                        <p class="stat-value">${r.surface * this.numberOfProperties}m²</p>
-                                        <p class="stat-label">Surface totale</p>
-                                    </div>
-                                    <div class="stat-item">
-                                        <p class="stat-value">+${Math.round(r.cashFlow)}€</p>
-                                        <p class="stat-label">Cash-flow/bien</p>
-                                    </div>
-                                    <div class="stat-item">
-                                        <p class="stat-value">${r.rendement.toFixed(1)}%</p>
-                                        <p class="stat-label">Rendement</p>
-                                    </div>
-                                </div>
-                                
-                                <details class="mt-3">
-                                    <summary class="cursor-pointer text-primary-color text-sm">
-                                        <i class="fas fa-info-circle mr-1"></i>Détails par bien
-                                    </summary>
-                                    <div class="mt-2 p-2 bg-black/30 rounded text-sm">
-                                        <div>Surface : ${r.surface}m²</div>
-                                        <div>Prix : ${this.formatMontant(r.prixAchat)}</div>
-                                        <div>Apport : ${this.formatMontant(r.apportNecessaire)}</div>
-                                        <div>Mensualité : ${this.formatMontant(r.mensualite)}</div>
-                                    </div>
-                                </details>
-                            </div>
-                        `).join('')}
-                    </div>
-                    
-                    ${results.length > 3 ? `
-                        <details class="mt-4">
-                            <summary class="cursor-pointer text-primary-color">
-                                <i class="fas fa-chevron-down mr-2"></i>Voir toutes les options
-                            </summary>
-                            <table class="comparison-table mt-2">
-                                <thead>
-                                    <tr>
-                                        <th>Ville</th>
-                                        <th>Type</th>
-                                        <th>Apport total</th>
-                                        <th>Surface/bien</th>
-                                        <th>Cash-flow</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${results.slice(3).map(r => `
-                                        <tr>
-                                            <td>${r.ville}</td>
-                                            <td>${r.type}</td>
-                                            <td>${this.formatMontant(r.apportTotal)}</td>
-                                            <td>${r.surface}m²</td>
-                                            <td class="text-green-400">+${Math.round(r.cashFlow)}€</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </details>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-        
-        container.style.display = 'block';
-        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     
     createResultsContainer() {
@@ -795,9 +462,6 @@ class CityComparator {
         this.simulateur.params.communs.loyerM2 = pieceData.loyer_m2;
         
         try {
-            // Déterminer le critère de sélection
-            const optimiseCashFlow = document.getElementById('target-mode-toggle')?.checked ?? false;
-            
             // Simuler pour les deux modes
             const classique = this.simulateur.chercheSurfaceDesc('classique');
             const encheres = this.simulateur.chercheSurfaceDesc('encheres');
@@ -807,9 +471,8 @@ class CityComparator {
             console.log(`  Prix/m²: ${pieceData.prix_m2}€, Loyer/m²: ${pieceData.loyer_m2}€`);
             console.log(`  Classique: ${classique ? `surface=${classique.surface.toFixed(1)}m², loyer=${classique.loyerNet.toFixed(0)}€, cashFlow=${classique.cashFlow.toFixed(0)}€` : 'Aucune solution'}`);
             console.log(`  Enchères: ${encheres ? `surface=${encheres.surface.toFixed(1)}m², loyer=${encheres.loyerNet.toFixed(0)}€, cashFlow=${encheres.cashFlow.toFixed(0)}€` : 'Aucune solution'}`);
-            console.log(`  Critère: ${optimiseCashFlow ? 'Cash-flow' : 'Loyer net'}`);
             
-            // Sélection du meilleur selon le critère
+            // Sélection du meilleur selon le loyer net
             let best = null;
             let mode = '';
             
@@ -825,28 +488,15 @@ class CityComparator {
                 best = classique;
                 mode = 'classique';
             } else {
-                // MODIFICATION: Choix selon le critère
-                if (optimiseCashFlow) {
-                    // Mode cash-flow : on garde le meilleur cash-flow
-                    if (encheres.cashFlow > classique.cashFlow) {
-                        best = encheres;
-                        mode = 'encheres';
-                    } else {
-                        best = classique;
-                        mode = 'classique';
-                    }
-                    console.log(`  ✅ Sélectionné (cash-flow): ${mode} avec ${best.cashFlow.toFixed(0)}€/mois`);
+                // On garde le meilleur loyer net
+                if (encheres.loyerNet > classique.loyerNet) {
+                    best = encheres;
+                    mode = 'encheres';
                 } else {
-                    // Mode loyer : on garde le meilleur loyer net
-                    if (encheres.loyerNet > classique.loyerNet) {
-                        best = encheres;
-                        mode = 'encheres';
-                    } else {
-                        best = classique;
-                        mode = 'classique';
-                    }
-                    console.log(`  ✅ Sélectionné (loyer): ${mode} avec ${best.loyerNet.toFixed(0)}€/mois`);
+                    best = classique;
+                    mode = 'classique';
                 }
+                console.log(`  ✅ Sélectionné: ${mode} avec ${best.loyerNet.toFixed(0)}€/mois de loyer net`);
             }
             
             if (!best) return null;
@@ -897,7 +547,6 @@ class CityComparator {
         }
         
         const top3 = results.slice(0, 3);
-        const optimiseCashFlow = document.getElementById('target-mode-toggle')?.checked ?? false;
         
         container.innerHTML = `
             <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg transition-all" style="position: relative;">
@@ -917,7 +566,7 @@ class CityComparator {
                     </h3>
                     <p style="text-align: center; margin-bottom: 2rem; color: var(--text-muted);">
                         <i class="fas fa-info-circle mr-1"></i>
-                        Classement par : <strong>${optimiseCashFlow ? 'Cash-flow mensuel' : 'Loyer net mensuel'}</strong>
+                        Classement par loyer net mensuel le plus élevé
                     </p>
                     
                     <div class="city-results-grid">
@@ -936,11 +585,11 @@ class CityComparator {
                                 </span>
                                 
                                 <div class="stats-grid">
-                                    <div class="stat-item ${!optimiseCashFlow ? 'highlight' : ''}">
+                                    <div class="stat-item highlight">
                                         <p class="stat-value">${Math.round(r.loyerNetMensuel)}€</p>
                                         <p class="stat-label">Loyer net/mois</p>
                                     </div>
-                                    <div class="stat-item ${optimiseCashFlow ? 'highlight' : ''} ${r.cashFlow >= 0 ? 'positive' : 'negative'}">
+                                    <div class="stat-item ${r.cashFlow >= 0 ? 'positive' : 'negative'}">
                                         <p class="stat-value">
                                             ${r.cashFlow >= 0 ? '+' : ''}${Math.round(r.cashFlow)}€
                                         </p>
@@ -979,8 +628,8 @@ class CityComparator {
                                             <th>Ville</th>
                                             <th>Type</th>
                                             <th>Mode</th>
-                                            <th ${!optimiseCashFlow ? 'class="highlight"' : ''}>Loyer net/mois</th>
-                                            <th ${optimiseCashFlow ? 'class="highlight"' : ''}>Cash-flow</th>
+                                            <th class="highlight">Loyer net/mois</th>
+                                            <th>Cash-flow</th>
                                             <th>Rendement</th>
                                             <th>Prix</th>
                                         </tr>
@@ -995,8 +644,8 @@ class CityComparator {
                                                         ${r.mode === 'encheres' ? 'Enchères' : 'Classique'}
                                                     </span>
                                                 </td>
-                                                <td style="text-align: right; font-weight: 600;" ${!optimiseCashFlow ? 'class="highlight"' : ''}>${Math.round(r.loyerNetMensuel)}€</td>
-                                                <td style="text-align: right; font-weight: 600;" class="${r.cashFlow >= 0 ? 'positive' : 'negative'} ${optimiseCashFlow ? 'highlight' : ''}">
+                                                <td style="text-align: right; font-weight: 600;" class="highlight">${Math.round(r.loyerNetMensuel)}€</td>
+                                                <td style="text-align: right; font-weight: 600;" class="${r.cashFlow >= 0 ? 'positive' : 'negative'}">
                                                     ${r.cashFlow >= 0 ? '+' : ''}${Math.round(r.cashFlow)}€
                                                 </td>
                                                 <td style="text-align: right;">${r.rendement.toFixed(2)}%</td>
@@ -1020,10 +669,6 @@ class CityComparator {
                                 Taux: ${this.simulateur.params.base.taux}% • 
                                 Durée: ${this.simulateur.params.base.duree} ans • 
                                 Mode: ${this.simulateur.params.base.calculationMode === 'cashflow-positif' ? 'Cash-flow positif' : 'Loyer ≥ Mensualité'}
-                            </p>
-                            <p class="text-sm opacity-70 mt-1">
-                                <i class="fas fa-filter mr-1"></i>
-                                Critère de sélection : <strong>${optimiseCashFlow ? 'Cash-flow maximal' : 'Loyer net maximal'}</strong>
                             </p>
                         </div>
                     </div>
