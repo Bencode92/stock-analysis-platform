@@ -1246,5 +1246,43 @@
         setInterval(updateTime, 1000);
         updateTime(); // Appel initial
     </script>
+    
+    <!-- FIX pour le problème du Radar des villes -->
+    <script>
+        // Fix pour le problème du bouton retour du radar
+        document.addEventListener('click', function(e) {
+            // Détecter le clic sur le bouton de fermeture du radar
+            if (e.target.id === 'btn-back-to-simulator' || 
+                e.target.closest('#btn-back-to-simulator')) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Solution: recharger la page pour restaurer l'état initial
+                window.location.reload();
+            }
+        });
+        
+        // Alternative: fix plus propre en écoutant la création du radar
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.addedNodes.length) {
+                    mutation.addedNodes.forEach(function(node) {
+                        if (node.id === 'radar-section') {
+                            // Stocker l'état original des éléments
+                            window.originalDisplayStates = new Map();
+                            document.querySelectorAll('.card, .info-message, .mode-info-banner').forEach(el => {
+                                window.originalDisplayStates.set(el, window.getComputedStyle(el).display);
+                            });
+                        }
+                    });
+                }
+            });
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    </script>
 </body>
 </html>
