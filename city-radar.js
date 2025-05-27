@@ -371,7 +371,7 @@ class CityRadar {
                                 </select>
                             </div>
                             <div class="control-item">
-                                <button id="btn-launch-radar" class="btn btn-warning btn-glow-orange">
+                                <button id="btn-launch-radar" class="btn btn-warning btn-glow-purple">
                                     <i class="fas fa-satellite-dish"></i>
                                     <span>Lancer l'analyse</span>
                                 </button>
@@ -732,14 +732,14 @@ class CityRadar {
                     color: white;
                 }
                 
-                .btn-glow-orange {
+                .btn-glow-purple {
                     position: relative;
                     overflow: hidden;
                     padding: 1rem 2rem;
                     font-size: 1.125rem;
                     font-weight: 600;
-                    background: linear-gradient(135deg, #f59e0b 0%, #dc2626 100%);
-                    box-shadow: 0 4px 20px rgba(245, 158, 11, 0.5);
+                    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+                    box-shadow: 0 4px 20px rgba(147, 51, 234, 0.5);
                     transition: all 0.3s ease;
                     border: none;
                     color: white;
@@ -747,13 +747,13 @@ class CityRadar {
                     cursor: pointer;
                 }
                 
-                .btn-glow-orange:hover {
+                .btn-glow-purple:hover {
                     transform: translateY(-2px);
-                    box-shadow: 0 6px 30px rgba(245, 158, 11, 0.7);
-                    background: linear-gradient(135deg, #fbbf24 0%, #ef4444 100%);
+                    box-shadow: 0 6px 30px rgba(147, 51, 234, 0.7);
+                    background: linear-gradient(135deg, #a855f7 0%, #8b5cf6 100%);
                 }
                 
-                .btn-glow-orange::before {
+                .btn-glow-purple::before {
                     content: '';
                     position: absolute;
                     top: 0;
@@ -764,11 +764,11 @@ class CityRadar {
                     transition: left 0.5s;
                 }
                 
-                .btn-glow-orange:hover::before {
+                .btn-glow-purple:hover::before {
                     left: 100%;
                 }
                 
-                .btn-glow-orange:disabled {
+                .btn-glow-purple:disabled {
                     opacity: 0.7;
                     cursor: not-allowed;
                     transform: none;
