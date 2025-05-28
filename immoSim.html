@@ -20,16 +20,11 @@
     <style>
         /* Style pour la section sources des données */
         .data-sources-footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
             background: linear-gradient(to bottom, rgba(10, 15, 30, 0.95), rgba(10, 15, 30, 0.98));
             backdrop-filter: blur(10px);
             border-top: 1px solid rgba(0, 191, 255, 0.2);
-            padding: 1rem 2rem;
-            z-index: 100;
-            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+            padding: 2rem;
+            margin-top: 4rem;
         }
         
         .data-sources-content {
@@ -43,7 +38,7 @@
             gap: 0.75rem;
             color: #00bfff;
             font-weight: 600;
-            margin-bottom: 0.5rem;
+            margin-bottom: 1rem;
             font-size: 0.9rem;
         }
         
@@ -53,6 +48,7 @@
             justify-content: space-between;
             gap: 2rem;
             flex-wrap: wrap;
+            margin-bottom: 1rem;
         }
         
         .data-source-item {
@@ -60,9 +56,17 @@
             align-items: center;
             gap: 0.5rem;
             background: rgba(0, 191, 255, 0.1);
-            padding: 0.5rem 1rem;
+            padding: 0.75rem 1.25rem;
             border-radius: 8px;
             border: 1px solid rgba(0, 191, 255, 0.2);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .data-source-item:hover {
+            background: rgba(0, 191, 255, 0.2);
+            border-color: rgba(0, 191, 255, 0.4);
+            transform: translateY(-2px);
         }
         
         .data-source-item .icon {
@@ -93,9 +97,38 @@
             color: #22c55e;
         }
         
-        /* Ajuster le padding du container pour éviter que le contenu soit caché */
+        /* Body et HTML pour footer en bas */
+        html {
+            height: 100%;
+        }
+        
+        body {
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
         .container {
-            padding-bottom: 120px;
+            flex: 1;
+            padding-bottom: 2rem;
+        }
+        
+        /* Style pour SMARTFLOW en bleu */
+        .logo-container a {
+            color: #00bfff !important;
+        }
+        
+        /* Style pour marché ouvert en bleu avec rond */
+        .market-status {
+            color: #00bfff !important;
+        }
+        
+        .market-status span {
+            color: #00bfff !important;
+        }
+        
+        .market-status .market-time {
+            color: #00bfff !important;
         }
     </style>
 </head>
@@ -170,9 +203,9 @@
         </div>
         <div class="header-right">
             <div class="market-status">
-                <div class="market-indicator green"></div>
+                <div class="pulse-dot"></div>
                 <span>Marché ouvert</span>
-                <span class="market-time" id="marketTime" style="color: #22c55e;">11:09:16</span>
+                <span class="market-time" id="marketTime">11:09:16</span>
             </div>
         </div>
     </header>
@@ -191,17 +224,6 @@
             <div class="mode-info-content">
                 <h3>Mode 100% marché avec base de données réelle</h3>
                 <p>Ce simulateur utilise une base de données de plus de 1000 villes françaises avec prix réels au m² et loyers. Recherchez votre ville pour obtenir des estimations précises ou saisissez vos propres données.</p>
-            </div>
-        </div>
-        
-        <!-- Nouvelle bannière d'information sur les travaux -->
-        <div class="info-message mb-4 fade-in">
-            <div class="text-lg text-green-400 mr-3">
-                <i class="fas fa-lightbulb"></i>
-            </div>
-            <div>
-                <h4 class="font-medium mb-1">Comment sont calculés les travaux?</h4>
-                <p class="text-sm opacity-90">Par défaut, les travaux sont estimés à 0,5% du prix d'achat. Vous pouvez changer cette valeur dans les paramètres avancés, où vous avez le choix entre un montant fixe au m² ou un pourcentage du prix d'achat.</p>
             </div>
         </div>
         
@@ -1289,7 +1311,7 @@
         </div>
     </div>
     
-    <!-- Sources des données (Footer fixe) -->
+    <!-- Sources des données (Footer normal en bas de page) -->
     <footer class="data-sources-footer">
         <div class="data-sources-content">
             <div class="data-sources-header">
@@ -1298,20 +1320,20 @@
             </div>
             
             <div class="data-sources-info">
-                <div class="data-source-item">
+                <a href="https://explore.data.gouv.fr/fr/immobilier?onglet=carte&filtre=tous" target="_blank" rel="noopener" class="data-source-item">
                     <i class="fas fa-home icon"></i>
                     <span class="data-source-text">Prix immobiliers</span>
                     <span class="source-date">DVF - Demandes de Valeurs Foncières</span>
                     <i class="fas fa-external-link-alt icon" style="margin-left: 0.5rem;"></i>
                     <span class="source-date">Mise à jour : Octobre 2024</span>
-                </div>
+                </a>
                 
-                <div class="data-source-item">
+                <a href="https://www.data.gouv.fr/fr/datasets/carte-des-loyers-indicateurs-de-loyers-dannonce-par-commune-en-2024/" target="_blank" rel="noopener" class="data-source-item">
                     <i class="fas fa-coins icon"></i>
                     <span class="data-source-text">Loyers</span>
                     <span class="source-date">Indicateurs de loyers d'annonce par commune 2024</span>
                     <i class="fas fa-external-link-alt icon" style="margin-left: 0.5rem;"></i>
-                </div>
+                </a>
             </div>
             
             <div class="data-sources-footer-note">
