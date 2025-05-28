@@ -13,7 +13,6 @@
  * Version 1.6 - Amélioration de l'affichage des résultats (messages de succès/échec)
  * Version 1.7 - Ajout du tableau comparatif détaillé avec barres visuelles
  * Version 1.8 - Correction de la duplication des icônes info lors de simulations multiples
- * Version 1.9 - Amélioration affichage cash-flow avec décomposition avant/après impôt
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -205,82 +204,6 @@ document.addEventListener('DOMContentLoaded', function() {
             color: var(--primary-color);
             font-weight: 600;
             margin-bottom: 0.3rem;
-        }
-        
-        /* NOUVEAUX STYLES POUR LA DÉCOMPOSITION DU CASH-FLOW */
-        .cashflow-detail-section {
-            background: rgba(0, 191, 255, 0.05);
-            border: 1px solid rgba(0, 191, 255, 0.2);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-top: 0.75rem;
-        }
-        
-        .cashflow-breakdown {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            margin: 0.75rem 0;
-        }
-        
-        .cashflow-line {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .cashflow-line:last-child {
-            border-bottom: none;
-        }
-        
-        .cashflow-line.subtotal {
-            border-top: 1px solid rgba(0, 191, 255, 0.3);
-            padding-top: 0.75rem;
-            margin-top: 0.5rem;
-            font-weight: 600;
-        }
-        
-        .cashflow-line.total {
-            border-top: 2px solid rgba(0, 191, 255, 0.5);
-            padding-top: 0.75rem;
-            margin-top: 0.5rem;
-            font-weight: 700;
-            font-size: 1.1rem;
-        }
-        
-        .cashflow-label {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: rgba(255, 255, 255, 0.8);
-        }
-        
-        .cashflow-value {
-            font-weight: 600;
-        }
-        
-        .fiscal-impact-box {
-            background: rgba(239, 68, 68, 0.05);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            border-radius: 6px;
-            padding: 0.75rem;
-            margin: 0.75rem 0;
-        }
-        
-        .fiscal-impact-title {
-            font-weight: 600;
-            color: #ef4444;
-            margin-bottom: 0.5rem;
-        }
-        
-        .fiscal-detail {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9rem;
-            margin: 0.25rem 0;
-            color: rgba(255, 255, 255, 0.7);
         }
     `;
     document.head.appendChild(styleEl);
@@ -1561,101 +1484,29 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('classique-mensualite').textContent = formaterMontantMensuel(classique.mensualite);
         document.getElementById('classique-loyer-net').textContent = formaterMontantMensuel(classique.loyerNet);
         
-        // NOUVELLE LOGIQUE POUR L'AFFICHAGE DU CASH-FLOW AVEC DÉCOMPOSITION
+        // Cash-flow mensuel et annuel
         const cashflowClassique = document.getElementById('classique-cashflow');
         if (cashflowClassique) {
-            // Créer la section de décomposition du cash-flow
-            const cashflowSection = document.createElement('div');
-            cashflowSection.className = 'cashflow-detail-section';
+            // Créer un conteneur pour le cash-flow mensuel et annuel
+            const cashflowContainer = document.createElement('div');
+            cashflowContainer.className = 'cashflow-container';
             
-            // Calculer les charges mensuelles
-            const chargesMensuelles = (classique.taxeFonciere + classique.chargesNonRecuperables + 
-                                     classique.entretienAnnuel + classique.assurancePNO) / 12;
+            // Cash-flow mensuel
+            const cashflowMensuel = document.createElement('div');
+            cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(classique.cashFlow);
+            cashflowMensuel.textContent = formaterMontantMensuel(classique.cashFlow);
             
-            // Contenu de la décomposition
-            cashflowSection.innerHTML = `
-                <h4 style="margin: 0 0 0.75rem 0; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7;">
-                    Analyse des flux mensuels
-                </h4>
-                
-                <div class="cashflow-breakdown">
-                    <div class="cashflow-line">
-                        <div class="cashflow-label">
-                            💰 Loyer net perçu
-                        </div>
-                        <div class="cashflow-value positive">
-                            ${formaterMontant(classique.loyerNet)}
-                        </div>
-                    </div>
-                    
-                    <div class="cashflow-line">
-                        <div class="cashflow-label">
-                            🏦 Mensualité crédit
-                        </div>
-                        <div class="cashflow-value negative">
-                            -${formaterMontant(classique.mensualite)}
-                        </div>
-                    </div>
-                    
-                    <div class="cashflow-line">
-                        <div class="cashflow-label">
-                            📊 Charges mensuelles
-                            <small style="opacity: 0.7; font-size: 0.8rem; margin-left: 0.5rem;">
-                                (taxes, entretien, assurance)
-                            </small>
-                        </div>
-                        <div class="cashflow-value negative">
-                            -${formaterMontant(chargesMensuelles)}
-                        </div>
-                    </div>
-                    
-                    <div class="cashflow-line subtotal">
-                        <div class="cashflow-label">
-                            📈 Cash-flow AVANT impôt
-                        </div>
-                        <div class="cashflow-value ${getClasseValeur(classique.cashFlow)}">
-                            ${formaterMontant(classique.cashFlow)}
-                        </div>
-                    </div>
-                </div>
-                
-                ${classique.impactFiscal ? `
-                    <div class="fiscal-impact-box">
-                        <div class="fiscal-impact-title">
-                            Impact fiscal (régime ${classique.regimeFiscal || 'micro-foncier'})
-                        </div>
-                        <div class="fiscal-detail">
-                            <span>Revenu imposable annuel:</span>
-                            <span>${formaterMontant(classique.revenuFoncier || 0)}</span>
-                        </div>
-                        <div class="fiscal-detail">
-                            <span>Impôt annuel:</span>
-                            <span>${formaterMontant(classique.impactFiscal || 0)}</span>
-                        </div>
-                        <div class="fiscal-detail" style="font-weight: 600; color: #ef4444;">
-                            <span>Impact mensuel:</span>
-                            <span>${formaterMontant((classique.impactFiscal || 0) / 12)}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="cashflow-breakdown">
-                        <div class="cashflow-line total">
-                            <div class="cashflow-label">
-                                💸 Cash-flow APRÈS impôt
-                            </div>
-                            <div class="cashflow-value ${getClasseValeur(classique.cashFlow + (classique.impactFiscal || 0) / 12)}">
-                                ${formaterMontant(classique.cashFlow + (classique.impactFiscal || 0) / 12)}/mois
-                                <div style="font-size: 0.9rem; opacity: 0.8; margin-top: 0.25rem;">
-                                    ${formaterMontant((classique.cashFlow + (classique.impactFiscal || 0) / 12) * 12)}/an
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                ` : ''}
-            `;
+            // Cash-flow annuel
+            const cashflowAnnuel = document.createElement('div');
+            cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(classique.cashFlow);
+            cashflowAnnuel.textContent = formaterMontantAnnuel(classique.cashFlow * 12);
             
-            // Remplacer l'ancien affichage par la nouvelle section
-            cashflowClassique.parentNode.replaceChild(cashflowSection, cashflowClassique);
+            // Ajouter au conteneur
+            cashflowContainer.appendChild(cashflowMensuel);
+            cashflowContainer.appendChild(cashflowAnnuel);
+            
+            // Remplacer le contenu actuel
+            cashflowClassique.parentNode.replaceChild(cashflowContainer, cashflowClassique);
         }
         
         // Affichage de la marge loyer-dette
@@ -1680,6 +1531,40 @@ document.addEventListener('DOMContentLoaded', function() {
             // Mettre à jour les classes des badges selon le niveau de rentabilité
             majClasseRentabilite(classiqueRentabilite.parentElement, rentClassique);
             majClasseRentabilite(encheresRentabilite.parentElement, rentEncheres);
+        }
+        
+        // Affichage des données fiscales pour l'achat classique si les éléments existent
+        if (document.getElementById('classique-revenu-foncier')) {
+            document.getElementById('classique-revenu-foncier').textContent = formaterMontant(classique.revenuFoncier);
+            document.getElementById('classique-impact-fiscal').textContent = formaterMontant(classique.impactFiscal);
+            
+            // Cash-flow après impôt mensuel et annuel
+            const cashflowApresImpotMensuel = classique.cashFlow + (classique.impactFiscal / 12);
+            const cashflowApresImpotAnnuel = cashflowApresImpotMensuel * 12;
+            
+            const cashflowApresImpot = document.getElementById('classique-cashflow-apres-impot');
+            if (cashflowApresImpot) {
+                // Créer un conteneur pour le cash-flow après impôt
+                const cashflowContainer = document.createElement('div');
+                cashflowContainer.className = 'cashflow-container';
+                
+                // Cash-flow mensuel après impôt
+                const cashflowMensuel = document.createElement('div');
+                cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(cashflowApresImpotMensuel);
+                cashflowMensuel.textContent = formaterMontantMensuel(cashflowApresImpotMensuel);
+                
+                // Cash-flow annuel après impôt
+                const cashflowAnnuel = document.createElement('div');
+                cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(cashflowApresImpotAnnuel);
+                cashflowAnnuel.textContent = formaterMontantAnnuel(cashflowApresImpotAnnuel);
+                
+                // Ajouter au conteneur
+                cashflowContainer.appendChild(cashflowMensuel);
+                cashflowContainer.appendChild(cashflowAnnuel);
+                
+                // Remplacer le contenu actuel
+                cashflowApresImpot.parentNode.replaceChild(cashflowContainer, cashflowApresImpot);
+            }
         }
         
         // Affichage des résultats pour la vente aux enchères
@@ -1707,101 +1592,29 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('encheres-mensualite').textContent = formaterMontantMensuel(encheres.mensualite);
         document.getElementById('encheres-loyer-net').textContent = formaterMontantMensuel(encheres.loyerNet);
         
-        // NOUVELLE LOGIQUE POUR L'AFFICHAGE DU CASH-FLOW ENCHÈRES
+        // Cash-flow mensuel et annuel pour les enchères
         const cashflowEncheres = document.getElementById('encheres-cashflow');
         if (cashflowEncheres) {
-            // Créer la section de décomposition du cash-flow
-            const cashflowSection = document.createElement('div');
-            cashflowSection.className = 'cashflow-detail-section';
+            // Créer un conteneur pour le cash-flow mensuel et annuel
+            const cashflowContainer = document.createElement('div');
+            cashflowContainer.className = 'cashflow-container';
             
-            // Calculer les charges mensuelles
-            const chargesMensuelles = (encheres.taxeFonciere + encheres.chargesNonRecuperables + 
-                                     encheres.entretienAnnuel + encheres.assurancePNO) / 12;
+            // Cash-flow mensuel
+            const cashflowMensuel = document.createElement('div');
+            cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(encheres.cashFlow);
+            cashflowMensuel.textContent = formaterMontantMensuel(encheres.cashFlow);
             
-            // Contenu de la décomposition
-            cashflowSection.innerHTML = `
-                <h4 style="margin: 0 0 0.75rem 0; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7;">
-                    Analyse des flux mensuels
-                </h4>
-                
-                <div class="cashflow-breakdown">
-                    <div class="cashflow-line">
-                        <div class="cashflow-label">
-                            💰 Loyer net perçu
-                        </div>
-                        <div class="cashflow-value positive">
-                            ${formaterMontant(encheres.loyerNet)}
-                        </div>
-                    </div>
-                    
-                    <div class="cashflow-line">
-                        <div class="cashflow-label">
-                            🏦 Mensualité crédit
-                        </div>
-                        <div class="cashflow-value negative">
-                            -${formaterMontant(encheres.mensualite)}
-                        </div>
-                    </div>
-                    
-                    <div class="cashflow-line">
-                        <div class="cashflow-label">
-                            📊 Charges mensuelles
-                            <small style="opacity: 0.7; font-size: 0.8rem; margin-left: 0.5rem;">
-                                (taxes, entretien, assurance)
-                            </small>
-                        </div>
-                        <div class="cashflow-value negative">
-                            -${formaterMontant(chargesMensuelles)}
-                        </div>
-                    </div>
-                    
-                    <div class="cashflow-line subtotal">
-                        <div class="cashflow-label">
-                            📈 Cash-flow AVANT impôt
-                        </div>
-                        <div class="cashflow-value ${getClasseValeur(encheres.cashFlow)}">
-                            ${formaterMontant(encheres.cashFlow)}
-                        </div>
-                    </div>
-                </div>
-                
-                ${encheres.impactFiscal ? `
-                    <div class="fiscal-impact-box">
-                        <div class="fiscal-impact-title">
-                            Impact fiscal (régime ${encheres.regimeFiscal || 'micro-foncier'})
-                        </div>
-                        <div class="fiscal-detail">
-                            <span>Revenu imposable annuel:</span>
-                            <span>${formaterMontant(encheres.revenuFoncier || 0)}</span>
-                        </div>
-                        <div class="fiscal-detail">
-                            <span>Impôt annuel:</span>
-                            <span>${formaterMontant(encheres.impactFiscal || 0)}</span>
-                        </div>
-                        <div class="fiscal-detail" style="font-weight: 600; color: #ef4444;">
-                            <span>Impact mensuel:</span>
-                            <span>${formaterMontant((encheres.impactFiscal || 0) / 12)}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="cashflow-breakdown">
-                        <div class="cashflow-line total">
-                            <div class="cashflow-label">
-                                💸 Cash-flow APRÈS impôt
-                            </div>
-                            <div class="cashflow-value ${getClasseValeur(encheres.cashFlow + (encheres.impactFiscal || 0) / 12)}">
-                                ${formaterMontant(encheres.cashFlow + (encheres.impactFiscal || 0) / 12)}/mois
-                                <div style="font-size: 0.9rem; opacity: 0.8; margin-top: 0.25rem;">
-                                    ${formaterMontant((encheres.cashFlow + (encheres.impactFiscal || 0) / 12) * 12)}/an
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                ` : ''}
-            `;
+            // Cash-flow annuel
+            const cashflowAnnuel = document.createElement('div');
+            cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(encheres.cashFlow);
+            cashflowAnnuel.textContent = formaterMontantAnnuel(encheres.cashFlow * 12);
             
-            // Remplacer l'ancien affichage par la nouvelle section
-            cashflowEncheres.parentNode.replaceChild(cashflowSection, cashflowEncheres);
+            // Ajouter au conteneur
+            cashflowContainer.appendChild(cashflowMensuel);
+            cashflowContainer.appendChild(cashflowAnnuel);
+            
+            // Remplacer le contenu actuel
+            cashflowEncheres.parentNode.replaceChild(cashflowContainer, cashflowEncheres);
         }
         
         // Affichage de la marge loyer-dette
@@ -1809,6 +1622,40 @@ document.addEventListener('DOMContentLoaded', function() {
         if (margeEncheres) {
             margeEncheres.textContent = formaterMontantMensuel(encheres.marge);
             margeEncheres.className = getClasseValeur(encheres.marge);
+        }
+        
+        // Affichage des données fiscales pour les enchères si les éléments existent
+        if (document.getElementById('encheres-revenu-foncier')) {
+            document.getElementById('encheres-revenu-foncier').textContent = formaterMontant(encheres.revenuFoncier);
+            document.getElementById('encheres-impact-fiscal').textContent = formaterMontant(encheres.impactFiscal);
+            
+            // Cash-flow après impôt mensuel et annuel
+            const cashflowApresImpotMensuel = encheres.cashFlow + (encheres.impactFiscal / 12);
+            const cashflowApresImpotAnnuel = cashflowApresImpotMensuel * 12;
+            
+            const cashflowApresImpot = document.getElementById('encheres-cashflow-apres-impot');
+            if (cashflowApresImpot) {
+                // Créer un conteneur pour le cash-flow après impôt
+                const cashflowContainer = document.createElement('div');
+                cashflowContainer.className = 'cashflow-container';
+                
+                // Cash-flow mensuel après impôt
+                const cashflowMensuel = document.createElement('div');
+                cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(cashflowApresImpotMensuel);
+                cashflowMensuel.textContent = formaterMontantMensuel(cashflowApresImpotMensuel);
+                
+                // Cash-flow annuel après impôt
+                const cashflowAnnuel = document.createElement('div');
+                cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(cashflowApresImpotAnnuel);
+                cashflowAnnuel.textContent = formaterMontantAnnuel(cashflowApresImpotAnnuel);
+                
+                // Ajouter au conteneur
+                cashflowContainer.appendChild(cashflowMensuel);
+                cashflowContainer.appendChild(cashflowAnnuel);
+                
+                // Remplacer le contenu actuel
+                cashflowApresImpot.parentNode.replaceChild(cashflowContainer, cashflowApresImpot);
+            }
         }
         
         // Comparatif
