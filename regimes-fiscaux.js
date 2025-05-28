@@ -22,8 +22,60 @@ class RegimesFiscauxManager {
         try {
             const response = await fetch('./data/regimes-fiscaux.json');
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            this.regimesData = await response.json();
-            console.log('✅ Données des régimes fiscaux chargées');
+            const rawData = await response.json();
+            
+            // Adapter la structure: le JSON est un tableau direct, pas un objet avec propriétés
+            this.regimesData = {
+                regimes: rawData,
+                definitions: {} // Pas de définitions dans le JSON actuel
+            };
+            
+            // Ajouter des couleurs et icônes par défaut
+            this.regimesData.regimes.forEach(regime => {
+                if (!regime.couleur) {
+                    switch(regime.id) {
+                        case 'micro-foncier':
+                            regime.couleur = '#10b981';
+                            regime.icone = 'fa-home';
+                            break;
+                        case 'reel-foncier':
+                            regime.couleur = '#3b82f6';
+                            regime.icone = 'fa-calculator';
+                            break;
+                        case 'lmnp-micro-bic':
+                            regime.couleur = '#f59e0b';
+                            regime.icone = 'fa-bed';
+                            break;
+                        case 'lmnp-reel':
+                            regime.couleur = '#8b5cf6';
+                            regime.icone = 'fa-chart-line';
+                            break;
+                        case 'sci-is':
+                            regime.couleur = '#ef4444';
+                            regime.icone = 'fa-building';
+                            break;
+                        case 'sas':
+                            regime.couleur = '#14b8a6';
+                            regime.icone = 'fa-briefcase';
+                            break;
+                        case 'sarl-famille':
+                            regime.couleur = '#ec4899';
+                            regime.icone = 'fa-users';
+                            break;
+                        default:
+                            regime.couleur = '#6b7280';
+                            regime.icone = 'fa-file-invoice-dollar';
+                    }
+                }
+                
+                // Corriger l'orthographe si nécessaire
+                if (regime.specifites_fiscales && !regime.specificites_fiscales) {
+                    regime.specificites_fiscales = regime.specifites_fiscales;
+                    delete regime.specifites_fiscales;
+                }
+            });
+            
+            console.log('✅ Données des régimes fiscaux chargées:', this.regimesData.regimes.length, 'régimes');
         } catch (error) {
             console.error('❌ Erreur lors du chargement des régimes fiscaux:', error);
             // Données de fallback
@@ -33,7 +85,8 @@ class RegimesFiscauxManager {
                         id: "micro-foncier",
                         nom: "Micro-foncier",
                         description: "Abattement 30%",
-                        icone: "fa-home"
+                        icone: "fa-home",
+                        couleur: "#10b981"
                     }
                 ],
                 definitions: {}
@@ -96,6 +149,9 @@ class RegimesFiscauxManager {
     }
 
     createRegimeCard(regime) {
+        // Extraire la description courte du résumé simplifié si disponible
+        const shortDesc = regime.resume_simplifie?.c_est_quoi?.substring(0, 100) + '...' || regime.description;
+        
         return `
             <div class="regime-card ${regime.id === this.selectedRegime ? 'selected' : ''}" 
                  data-regime="${regime.id}"
@@ -107,7 +163,7 @@ class RegimesFiscauxManager {
                     ${regime.dateEffet ? `<span class="regime-date">${regime.dateEffet}</span>` : ''}
                 </div>
                 <h4 class="regime-name">${regime.nom}</h4>
-                <p class="regime-desc">${regime.description}</p>
+                <p class="regime-desc">${shortDesc}</p>
                 ${regime.plafond ? `<div class="regime-plafond">Plafond: ${this.formatMontant(regime.plafond)}</div>` : ''}
             </div>
         `;
@@ -150,32 +206,82 @@ class RegimesFiscauxManager {
         
         let content = '<div class="regime-details">';
         
-        if (regime.avantages) {
-            content += '<div class="regime-section"><h4><i class="fas fa-check-circle"></i> Avantages</h4><ul>';
-            regime.avantages.forEach(avantage => {
-                content += `<li>${avantage}</li>`;
-            });
-            content += '</ul></div>';
+        // Résumé simplifié
+        if (regime.resume_simplifie) {
+            content += '<div class="regime-section"><h4><i class="fas fa-lightbulb"></i> En résumé</h4>';
+            content += `<p>${regime.resume_simplifie.c_est_quoi}</p>`;
+            content += `<p><strong>Comment ça marche :</strong> ${regime.resume_simplifie.comment_ca_marche}</p>`;
+            if (regime.resume_simplifie.a_retenir) {
+                content += '<p><strong>À retenir :</strong></p><ul>';
+                regime.resume_simplifie.a_retenir.forEach(point => {
+                    content += `<li>${point}</li>`;
+                });
+                content += '</ul>';
+            }
+            content += '</div>';
         }
         
-        if (regime.conditions) {
-            content += '<div class="regime-section"><h4><i class="fas fa-info-circle"></i> Conditions</h4><ul>';
-            regime.conditions.forEach(condition => {
+        // Conditions
+        if (regime.conditions_eligibilite?.length) {
+            content += '<div class="regime-section"><h4><i class="fas fa-check-circle"></i> Conditions d\'éligibilité</h4><ul>';
+            regime.conditions_eligibilite.forEach(condition => {
+                content += `<li>${condition}</li>`;
+            });
+            content += '</ul></div>';
+        } else if (regime.conditions_application?.length) {
+            content += '<div class="regime-section"><h4><i class="fas fa-info-circle"></i> Conditions d\'application</h4><ul>';
+            regime.conditions_application.forEach(condition => {
                 content += `<li>${condition}</li>`;
             });
             content += '</ul></div>';
         }
         
+        // Modalités d'application
+        if (regime.modalites_application?.length) {
+            content += '<div class="regime-section"><h4><i class="fas fa-cogs"></i> Modalités d\'application</h4><ul>';
+            regime.modalites_application.forEach(modalite => {
+                content += `<li>${modalite}</li>`;
+            });
+            content += '</ul></div>';
+        }
+        
+        // Spécificités fiscales
+        if (regime.specificites_fiscales?.length || regime.specifites_fiscales?.length) {
+            const specs = regime.specificites_fiscales || regime.specifites_fiscales;
+            content += '<div class="regime-section"><h4><i class="fas fa-star"></i> Spécificités fiscales</h4><ul>';
+            specs.forEach(spec => {
+                content += `<li>${spec}</li>`;
+            });
+            content += '</ul></div>';
+        }
+        
+        // Déficit foncier
+        if (regime.deficit_foncier) {
+            content += '<div class="regime-section"><h4><i class="fas fa-chart-line"></i> Déficit foncier</h4><ul>';
+            for (const [key, value] of Object.entries(regime.deficit_foncier)) {
+                content += `<li><strong>${this.formatKey(key)}:</strong> ${value}</li>`;
+            }
+            content += '</ul></div>';
+        }
+        
+        // Calcul fiscal
         if (regime.calcul) {
             content += '<div class="regime-section"><h4><i class="fas fa-calculator"></i> Calcul fiscal</h4><ul>';
             if (regime.calcul.abattement > 0) {
                 content += `<li>Abattement forfaitaire: ${regime.calcul.abattement * 100}%</li>`;
             }
-            if (regime.calcul.deficitDeductible) {
-                content += `<li>Déficit déductible${regime.calcul.plafondDeficit ? ` jusqu'à ${this.formatMontant(regime.calcul.plafondDeficit)}` : ''}</li>`;
+            if (regime.calcul.deficitDeductible !== undefined) {
+                content += `<li>Déficit déductible: ${regime.calcul.deficitDeductible ? 'Oui' : 'Non'}`;
+                if (regime.calcul.plafondDeficit) {
+                    content += ` (plafond: ${this.formatMontant(regime.calcul.plafondDeficit)})`;
+                }
+                content += '</li>';
             }
             if (regime.calcul.amortissement) {
                 content += `<li>Amortissement du bien possible</li>`;
+            }
+            if (regime.calcul.reportable) {
+                content += `<li>Déficit reportable sur 10 ans</li>`;
             }
             content += '</ul></div>';
         }
@@ -347,6 +453,14 @@ class RegimesFiscauxManager {
             minimumFractionDigits: 0,
             maximumFractionDigits: 0
         }).format(montant);
+    }
+
+    formatKey(key) {
+        return key.replace(/_/g, ' ')
+                  .replace(/\b\w/g, l => l.toUpperCase())
+                  .replace('Imputation Revenu Global', 'Imputation sur le revenu global')
+                  .replace('Report Solde', 'Report du solde')
+                  .replace('Condition Maintien Location', 'Condition de maintien en location');
     }
 
     getSelectedRegime() {
