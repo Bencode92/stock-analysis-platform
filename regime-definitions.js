@@ -12,8 +12,7 @@
             const response = await fetch('./data/regimes-fiscaux.json');
             regimesData = await response.json();
             console.log('✅ Définitions des régimes fiscaux chargées:', regimesData.length, 'régimes');
-            console.log('IDs disponibles:', regimesData.map(r => r.id));
-            attachClickEvents(); // Attacher après chargement
+            attachClickEvents();
         } catch (error) {
             console.error('❌ Erreur chargement définitions:', error);
         }
@@ -21,31 +20,16 @@
     
     // Créer le conteneur de définition
     function createDefinitionContainer() {
-        // Chercher la section des régimes fiscaux en utilisant des sélecteurs valides
         let targetElement = document.querySelector('#regimes-fiscaux-container');
         
         if (!targetElement) {
-            // Chercher les cartes avec le titre contenant "régime fiscal"
-            const allCards = document.querySelectorAll('.card');
-            for (const card of allCards) {
-                const title = card.querySelector('.card-title, h2, h3');
-                if (title && title.textContent.toLowerCase().includes('régime fiscal')) {
-                    targetElement = card;
-                    break;
-                }
-            }
-        }
-        
-        if (!targetElement) {
-            // Chercher après les paramètres avancés
-            targetElement = document.getElementById('advanced-params');
-            if (targetElement) {
-                targetElement = targetElement.parentElement;
-            }
-        }
-        
-        if (!targetElement) {
             console.error('Section régimes non trouvée');
+            return;
+        }
+        
+        // Vérifier si le conteneur existe déjà
+        definitionContainer = document.getElementById('regime-definition-display');
+        if (definitionContainer) {
             return;
         }
         
@@ -98,37 +82,17 @@
             </div>
         `;
         
-        // Insérer après la section des régimes
-        if (targetElement.id === 'regimes-fiscaux-container') {
-            targetElement.appendChild(definitionContainer);
-        } else {
-            targetElement.insertAdjacentElement('afterend', definitionContainer);
-        }
-        
-        // Ajouter les styles CSS
+        targetElement.appendChild(definitionContainer);
         addStyles();
     }
     
-    // Ajouter les styles CSS nécessaires
+    // Ajouter les styles CSS
     function addStyles() {
+        if (document.getElementById('regime-definitions-styles')) return;
+        
         const style = document.createElement('style');
+        style.id = 'regime-definitions-styles';
         style.textContent = `
-            .regime-card {
-                cursor: pointer;
-                transition: all 0.3s ease;
-            }
-            
-            .regime-card:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 10px 30px rgba(0, 255, 135, 0.2);
-            }
-            
-            .regime-card.selected {
-                border-color: #00ff87;
-                box-shadow: 0 0 30px rgba(0, 255, 135, 0.4);
-                background: rgba(0, 255, 135, 0.05);
-            }
-            
             .regime-definition-container {
                 margin-top: 2rem;
                 background: rgba(30, 41, 59, 0.5);
@@ -268,18 +232,6 @@
                 font-weight: 600;
             }
             
-            .regime-deficit p, .regime-calcul p {
-                color: rgba(255, 255, 255, 0.8);
-                margin: 0.5rem 0;
-                line-height: 1.6;
-            }
-            
-            #deficit-content p, #calcul-content p {
-                margin: 0.75rem 0;
-                padding-left: 1rem;
-                border-left: 2px solid rgba(139, 92, 246, 0.3);
-            }
-            
             #resume-content {
                 color: rgba(255, 255, 255, 0.9);
             }
@@ -287,10 +239,6 @@
             #resume-content p {
                 margin: 1rem 0;
                 line-height: 1.7;
-            }
-            
-            #resume-content p:first-child {
-                margin-top: 0;
             }
             
             #resume-content strong {
@@ -311,34 +259,26 @@
                     transform: translateY(0);
                 }
             }
-            
-            @media (max-width: 768px) {
-                .regime-def-body {
-                    padding: 1.5rem;
-                }
-            }
         `;
         document.head.appendChild(style);
     }
     
     // Afficher la définition
     function showRegimeDefinition(regimeId) {
-        if (!regimesData || !definitionContainer) return;
+        if (!regimesData || !definitionContainer) {
+            console.error('Données ou conteneur non disponibles');
+            return;
+        }
         
-        console.log('🔍 Recherche du régime:', regimeId);
-        
-        // Trouver le régime par son ID
         const regime = regimesData.find(r => r.id === regimeId);
-        
         if (!regime) {
             console.warn('Régime non trouvé:', regimeId);
             return;
         }
         
-        console.log('✅ Régime trouvé:', regime.nom);
         currentRegime = regime;
         
-        // Remplir les données de base
+        // Remplir les données
         document.getElementById('regime-nom').textContent = regime.nom;
         document.getElementById('regime-definition').textContent = regime.description;
         
@@ -371,7 +311,7 @@
             resumeEl.classList.add('hidden');
         }
         
-        // Conditions d'éligibilité
+        // Conditions
         const conditionsEl = document.getElementById('regime-conditions');
         if (regime.conditions_eligibilite?.length) {
             conditionsEl.classList.remove('hidden');
@@ -387,7 +327,7 @@
             conditionsEl.classList.add('hidden');
         }
         
-        // Modalités d'application
+        // Modalités
         const modalitesEl = document.getElementById('regime-modalites');
         if (regime.modalites_application?.length) {
             modalitesEl.classList.remove('hidden');
@@ -397,7 +337,7 @@
             modalitesEl.classList.add('hidden');
         }
         
-        // Spécificités fiscales (correction de l'orthographe)
+        // Spécificités
         const specificitesEl = document.getElementById('regime-specificites');
         const specs = regime.specificites_fiscales || regime.specifites_fiscales;
         if (specs?.length) {
@@ -414,12 +354,7 @@
             deficitEl.classList.remove('hidden');
             let deficitContent = '';
             for (const [key, value] of Object.entries(regime.deficit_foncier)) {
-                const label = key
-                    .replace(/_/g, ' ')
-                    .replace(/\b\w/g, l => l.toUpperCase())
-                    .replace('Imputation Revenu Global', 'Imputation sur le revenu global')
-                    .replace('Report Solde', 'Report du solde')
-                    .replace('Condition Maintien Location', 'Condition de maintien en location');
+                const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                 deficitContent += `<p><strong>${label}:</strong> ${value}</p>`;
             }
             document.getElementById('deficit-content').innerHTML = deficitContent;
@@ -450,12 +385,12 @@
                 calculContent += `<p><strong>Déficit reportable:</strong> ${regime.calcul.reportable ? 'Oui' : 'Non'}</p>`;
             }
             
-            document.getElementById('calcul-content').innerHTML = calculContent;
+            document.getElementById('calcul-content').innerHTML = calculContent || '<p>Aucune information de calcul disponible</p>';
         } else {
             calculEl.classList.add('hidden');
         }
         
-        // Afficher avec animation
+        // Afficher
         definitionContainer.classList.remove('hidden');
         definitionContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
@@ -465,39 +400,19 @@
         if (definitionContainer) {
             definitionContainer.classList.add('hidden');
         }
-        document.querySelectorAll('.regime-card.selected').forEach(el => {
-            el.classList.remove('selected');
-        });
-        currentRegime = null;
     };
     
-    // Attacher les événements aux cartes
+    // Exposer la fonction globalement
+    window.showRegimeDefinition = showRegimeDefinition;
+    
+    // Écouter les événements
     function attachClickEvents() {
-        // Les cartes sont créées par regimes-fiscaux.js avec onclick
-        // Ici on écoute l'événement personnalisé de sélection
         window.addEventListener('regimeFiscalChange', (event) => {
             const regimeId = event.detail.regimeId;
-            console.log('📌 Événement regimeFiscalChange reçu:', regimeId);
             if (regimeId) {
                 showRegimeDefinition(regimeId);
             }
         });
-    }
-    
-    // Sélectionner visuellement une carte
-    function selectRegimeCard(card, regimeId) {
-        // Retirer la sélection précédente
-        document.querySelectorAll('.regime-card.selected').forEach(el => {
-            el.classList.remove('selected');
-        });
-        
-        // Ajouter la sélection
-        card.classList.add('selected');
-        
-        // Émettre un événement pour le simulateur
-        window.dispatchEvent(new CustomEvent('regimeSelected', {
-            detail: { regime: regimeId, data: currentRegime }
-        }));
     }
     
     // Initialisation
@@ -512,7 +427,6 @@
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
-        // Attendre un peu que les autres scripts aient fini
-        setTimeout(init, 500);
+        setTimeout(init, 1000);
     }
 })();
