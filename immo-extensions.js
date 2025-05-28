@@ -1693,89 +1693,34 @@ const ImmoExtensions = (function() {
         const cashFlowApresImpotMensuel = (Number(resultats.cashFlow) || 0) + ((Number(resultats.impactFiscal) || 0) / 12);
         const cashFlowApresImpotAnnuel = cashFlowApresImpotMensuel * 12;
 
-        // Chercher la carte de résultats appropriée
-        const resultsCard = document.querySelector(`.results-card:has(#${mode}-budget-max)`);
-        if (resultsCard) {
-            // Chercher tous les éléments qui pourraient contenir le cash-flow
-            // Stratégie 1: Chercher par texte "CASH-FLOW"
-            const allElements = resultsCard.querySelectorAll('*');
-            let cashflowFound = false;
-            
-            allElements.forEach(element => {
-                // Chercher les labels qui contiennent "CASH-FLOW"
-                if (element.textContent === 'CASH-FLOW' && !element.querySelector('*')) {
-                    // C'est probablement un label, chercher la valeur associée
-                    const parent = element.parentElement;
-                    if (parent) {
-                        // Chercher la valeur dans les éléments suivants
-                        const siblings = Array.from(parent.parentElement.children);
-                        const labelIndex = siblings.indexOf(parent);
-                        
-                        // La valeur est généralement dans la ligne suivante
-                        if (labelIndex !== -1 && siblings[labelIndex + 1]) {
-                            const valueContainer = siblings[labelIndex + 1];
-                            // Mettre à jour la valeur mensuelle
-                            const monthlyValue = valueContainer.querySelector('*:first-child') || valueContainer;
-                            if (monthlyValue) {
-                                monthlyValue.textContent = `${cashFlowApresImpotMensuel >= 0 ? '+' : ''}${Math.round(cashFlowApresImpotMensuel)} €/mois`;
-                                monthlyValue.className = monthlyValue.className.replace(/positive|negative/g, '') + 
-                                                       ' ' + (cashFlowApresImpotMensuel >= 0 ? 'positive' : 'negative');
-                                cashflowFound = true;
-                            }
-                            
-                            // Mettre à jour la valeur annuelle si elle existe
-                            const annualValue = valueContainer.querySelector('*:last-child');
-                            if (annualValue && annualValue !== monthlyValue) {
-                                annualValue.textContent = `${cashFlowApresImpotAnnuel >= 0 ? '+' : ''}${Math.round(cashFlowApresImpotAnnuel).toLocaleString('fr-FR')} €/an`;
-                            }
-                        }
-                    }
-                }
+        // Méthode simple et directe : utiliser l'ID existant pour le cash-flow
+        const cashflowElement = document.getElementById(`${mode}-cashflow`);
+        if (cashflowElement) {
+            // Mettre à jour la valeur mensuelle
+            cashflowElement.textContent = `${cashFlowApresImpotMensuel >= 0 ? '' : ''}${Math.round(cashFlowApresImpotMensuel)} €/mois`;
+            cashflowElement.className = cashFlowApresImpotMensuel >= 0 ? 'positive' : 'negative';
+        }
+
+        // Mettre à jour le cash-flow annuel dans le tableau comparatif si présent
+        const cashflowAnnuelElement = document.getElementById(`comp-${mode}-cashflow-annuel`);
+        if (cashflowAnnuelElement) {
+            const strongElement = cashflowAnnuelElement.querySelector('strong') || cashflowAnnuelElement;
+            strongElement.textContent = formaterMontant(cashFlowApresImpotAnnuel);
+        }
+
+        // Alternative : chercher dans la structure connue des résultats
+        const resultsFooter = document.querySelector(`.results-card:has(#${mode}-budget-max) .results-footer`);
+        if (resultsFooter && !cashflowElement) {
+            const cashflowContainer = Array.from(resultsFooter.querySelectorAll('div')).find(div => {
+                const label = div.querySelector('.results-label');
+                return label && label.textContent === 'Cash-flow';
             });
             
-            // Stratégie 2: Chercher par structure connue (financial-item)
-            if (!cashflowFound) {
-                const financialItems = resultsCard.querySelectorAll('.financial-item');
-                financialItems.forEach(item => {
-                    const label = item.querySelector('.financial-label');
-                    if (label && label.textContent.includes('CASH-FLOW')) {
-                        const value = item.querySelector('.financial-value');
-                        if (value) {
-                            value.textContent = `${cashFlowApresImpotMensuel >= 0 ? '+' : ''}${Math.round(cashFlowApresImpotMensuel)} €/mois`;
-                            value.className = 'financial-value ' + (cashFlowApresImpotMensuel >= 0 ? 'positive' : 'negative');
-                            cashflowFound = true;
-                            
-                            // Valeur annuelle
-                            const annual = item.querySelector('.annual-value');
-                            if (annual) {
-                                annual.textContent = `${cashFlowApresImpotAnnuel >= 0 ? '+' : ''}${Math.round(cashFlowApresImpotAnnuel).toLocaleString('fr-FR')} €/an`;
-                            }
-                        }
-                    }
-                });
-            }
-            
-            // Stratégie 3: Chercher par pattern de texte
-            if (!cashflowFound) {
-                const textNodes = [];
-                const walk = (node) => {
-                    if (node.nodeType === 3 && node.textContent.includes('€/mois')) {
-                        textNodes.push(node);
-                    }
-                    for (let child of node.childNodes) {
-                        walk(child);
-                    }
-                };
-                walk(resultsCard);
-                
-                // Trouver le dernier élément qui contient "€/mois" (généralement le cash-flow)
-                if (textNodes.length >= 4) {
-                    const cashflowNode = textNodes[textNodes.length - 2]; // Avant-dernier pour le mensuel
-                    if (cashflowNode.parentElement) {
-                        cashflowNode.parentElement.textContent = `${cashFlowApresImpotMensuel >= 0 ? '+' : ''}${Math.round(cashFlowApresImpotMensuel)} €/mois`;
-                        cashflowNode.parentElement.className = cashflowNode.parentElement.className.replace(/positive|negative/g, '') + 
-                                                               ' ' + (cashFlowApresImpotMensuel >= 0 ? 'positive' : 'negative');
-                    }
+            if (cashflowContainer) {
+                const valueDiv = cashflowContainer.querySelector('div:not(.results-label)');
+                if (valueDiv) {
+                    valueDiv.textContent = `${cashFlowApresImpotMensuel >= 0 ? '' : ''}${Math.round(cashFlowApresImpotMensuel)} €/mois`;
+                    valueDiv.className = cashFlowApresImpotMensuel >= 0 ? 'positive' : 'negative';
                 }
             }
         }
