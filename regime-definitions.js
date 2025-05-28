@@ -65,6 +65,11 @@
             <div class="regime-def-body">
                 <p id="regime-definition" class="regime-def-text"></p>
                 
+                <div id="regime-resume" class="regime-list resume hidden">
+                    <h4>💡 En résumé</h4>
+                    <div id="resume-content"></div>
+                </div>
+                
                 <div id="regime-conditions" class="regime-list conditions hidden">
                     <h4>📋 Conditions d'éligibilité</h4>
                     <ul id="conditions-list"></ul>
@@ -274,6 +279,27 @@
                 border-left: 2px solid rgba(139, 92, 246, 0.3);
             }
             
+            #resume-content {
+                color: rgba(255, 255, 255, 0.9);
+            }
+            
+            #resume-content p {
+                margin: 1rem 0;
+                line-height: 1.7;
+            }
+            
+            #resume-content p:first-child {
+                margin-top: 0;
+            }
+            
+            #resume-content strong {
+                color: #a78bfa;
+                display: block;
+                margin-top: 1.5rem;
+                margin-bottom: 0.5rem;
+                font-size: 1.05rem;
+            }
+            
             @keyframes slideDown {
                 from {
                     opacity: 0;
@@ -312,6 +338,31 @@
         document.getElementById('regime-nom').textContent = regime.nom;
         document.getElementById('regime-definition').textContent = regime.description;
         
+        // Résumé simplifié
+        const resumeEl = document.getElementById('regime-resume');
+        if (regime.resume_simplifie) {
+            resumeEl.classList.remove('hidden');
+            let resumeContent = '<p>' + regime.resume_simplifie.c_est_quoi + '</p>';
+            
+            if (regime.resume_simplifie.comment_ca_marche) {
+                resumeContent += '<strong>Comment ça marche ?</strong>';
+                resumeContent += '<p>' + regime.resume_simplifie.comment_ca_marche + '</p>';
+            }
+            
+            if (regime.resume_simplifie.a_retenir?.length) {
+                resumeContent += '<strong>À retenir :</strong>';
+                resumeContent += '<ul>';
+                regime.resume_simplifie.a_retenir.forEach(point => {
+                    resumeContent += `<li>${point}</li>`;
+                });
+                resumeContent += '</ul>';
+            }
+            
+            document.getElementById('resume-content').innerHTML = resumeContent;
+        } else {
+            resumeEl.classList.add('hidden');
+        }
+        
         // Conditions d'éligibilité
         const conditionsEl = document.getElementById('regime-conditions');
         if (regime.conditions_eligibilite?.length) {
@@ -337,12 +388,13 @@
             modalitesEl.classList.add('hidden');
         }
         
-        // Spécificités fiscales
+        // Spécificités fiscales (correction de l'orthographe)
         const specificitesEl = document.getElementById('regime-specificites');
-        if (regime.specifites_fiscales?.length) {
+        const specs = regime.specificites_fiscales || regime.specifites_fiscales;
+        if (specs?.length) {
             specificitesEl.classList.remove('hidden');
             document.getElementById('specificites-list').innerHTML = 
-                regime.specifites_fiscales.map(s => `<li>${s}</li>`).join('');
+                specs.map(s => `<li>${s}</li>`).join('');
         } else {
             specificitesEl.classList.add('hidden');
         }
