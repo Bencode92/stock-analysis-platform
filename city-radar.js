@@ -891,65 +891,29 @@ class CityRadar {
     }
     
     hideAllSections() {
-        // Masquer toutes les cartes et sections
-        document.querySelectorAll('.card').forEach(card => {
-            if (!card.closest('#radar-section')) {
-                card.style.display = 'none';
-            }
-        });
-        
-        // Masquer les autres panneaux spécifiques
-        ['advanced-params', 'city-comparison-panel', 'results', 'comparison-results-container', 
-         'scenarios-card', 'cash-flow-explanation'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
-        });
-        
-        // Masquer les bannières
-        document.querySelectorAll('.info-message, .mode-info-banner').forEach(el => {
-            el.style.display = 'none';
-        });
-        
-        // AJOUT : Masquer spécifiquement le bouton "Comprendre le cash-flow"
-        const btnGuideCashflow = document.getElementById('btn-guide-cashflow');
-        if (btnGuideCashflow) {
-            btnGuideCashflow.style.display = 'none';
+        // Cacher TOUT le contenu du container principal sauf le radar
+        const container = document.querySelector('.container');
+        if (container) {
+            // Sauvegarder le titre si présent
+            const title = container.querySelector('.page-title');
+            
+            // Masquer tous les enfants du container
+            Array.from(container.children).forEach(child => {
+                if (child.id !== 'radar-section') {
+                    child.style.display = 'none';
+                }
+            });
         }
         
-        // AJOUT : Masquer aussi tout élément contenant le guide
-        const guideSections = document.querySelectorAll('.guide-button, .cash-flow-guide');
-        guideSections.forEach(el => {
+        // Masquer aussi tout élément flottant ou modal
+        document.querySelectorAll('.modal, .toast, .popup').forEach(el => {
             el.style.display = 'none';
         });
     }
     
     showSimulatorSections() {
-        // Réafficher les sections principales du simulateur
-        document.querySelectorAll('.card').forEach(card => {
-            if (!card.closest('#radar-section') && 
-                !card.closest('#advanced-params') && 
-                !card.closest('#city-comparison-panel') &&
-                !card.closest('#results')) {
-                card.style.display = 'block';
-            }
-        });
-        
-        // Réafficher les bannières
-        document.querySelectorAll('.info-message, .mode-info-banner').forEach(el => {
-            if (!el.closest('#radar-section')) {
-                el.style.display = '';
-            }
-        });
-        
-        // AJOUT : Réafficher le bouton "Comprendre le cash-flow"
-        const btnGuideCashflow = document.getElementById('btn-guide-cashflow');
-        if (btnGuideCashflow) {
-            btnGuideCashflow.style.display = '';
-        }
-        
-        // Masquer la section radar
-        const radarSection = document.getElementById('radar-section');
-        if (radarSection) radarSection.style.display = 'none';
+        // Solution simple : recharger la page pour retrouver l'état initial
+        window.location.reload();
     }
     
     initEvents() {
