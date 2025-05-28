@@ -1,0 +1,496 @@
+<!-- Section Sources des données à ajouter après la section des paramètres de base -->
+<div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg transition-all mt-4" id="data-sources-card">
+    <div class="card-header">
+        <div class="card-icon">
+            <i class="fas fa-database"></i>
+        </div>
+        <h2 class="card-title">Sources des données</h2>
+    </div>
+    
+    <div class="sources-content">
+        <div class="data-source-items">
+            <div class="source-item">
+                <div class="source-icon">
+                    <i class="fas fa-home"></i>
+                </div>
+                <div class="source-details">
+                    <h4>Prix immobiliers</h4>
+                    <a href="https://explore.data.gouv.fr/fr/immobilier?onglet=carte&filtre=tous" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       class="source-link">
+                        DVF - Demandes de Valeurs Foncières
+                        <i class="fas fa-external-link-alt"></i>
+                    </a>
+                </div>
+                <div class="source-update">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Mise à jour :</span>
+                    <strong>Octobre 2024</strong>
+                </div>
+            </div>
+            
+            <div class="source-item">
+                <div class="source-icon">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <div class="source-details">
+                    <h4>Loyers</h4>
+                    <a href="https://www.data.gouv.fr/fr/datasets/carte-des-loyers-indicateurs-de-loyers-dannonce-par-commune-en-2024/" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       class="source-link">
+                        Indicateurs de loyers d'annonce par commune 2024
+                        <i class="fas fa-external-link-alt"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="sources-license">
+            <i class="fas fa-info-circle"></i>
+            <span>Données ouvertes sous licence Etalab 2.0 - Ministère de l'Économie et des Finances & Ministère de la Transition écologique</span>
+        </div>
+        
+        <div class="data-disclaimer">
+            <i class="fas fa-info-circle"></i>
+            <span>Ces données ont été retraitées et agrégées à partir de sources publiques. Leur interprétation relève de notre seule responsabilité.</span>
+        </div>
+    </div>
+</div>
+
+<!-- Section Régimes fiscaux à ajouter après les résultats -->
+<div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg transition-all mt-4 hidden" id="fiscal-regimes-card">
+    <div class="card-header">
+        <div class="card-icon">
+            <i class="fas fa-balance-scale"></i>
+        </div>
+        <h2 class="card-title">Choisissez un régime fiscal pour calculer l'impact sur votre investissement</h2>
+    </div>
+    
+    <div class="fiscal-regimes-grid">
+        <!-- Régimes pour particuliers -->
+        <div class="regime-category">
+            <h3 class="category-title">
+                <i class="fas fa-user"></i>
+                Régimes pour particuliers
+            </h3>
+            <div class="regime-options">
+                <label class="regime-card">
+                    <input type="radio" name="regime-fiscal" value="micro-foncier" checked>
+                    <div class="regime-content">
+                        <div class="regime-icon">
+                            <i class="fas fa-home"></i>
+                        </div>
+                        <h4>Micro-foncier</h4>
+                        <p class="regime-subtitle">Déclar' 2044</p>
+                        <p class="regime-detail">Abattement 30%</p>
+                    </div>
+                </label>
+                
+                <label class="regime-card">
+                    <input type="radio" name="regime-fiscal" value="reel-foncier">
+                    <div class="regime-content">
+                        <div class="regime-icon">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                        </div>
+                        <h4>Réel foncier</h4>
+                        <p class="regime-subtitle">Déclar' 2044</p>
+                        <p class="regime-detail">Charges réelles</p>
+                    </div>
+                </label>
+                
+                <label class="regime-card">
+                    <input type="radio" name="regime-fiscal" value="lmnp-micro">
+                    <div class="regime-content">
+                        <div class="regime-icon">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                        <h4>LMNP micro-BIC</h4>
+                        <p class="regime-subtitle">Déclar' 2042-C-PRO</p>
+                        <p class="regime-detail">Abattement 50%</p>
+                    </div>
+                </label>
+                
+                <label class="regime-card">
+                    <input type="radio" name="regime-fiscal" value="lmnp-reel">
+                    <div class="regime-content">
+                        <div class="regime-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h4>LMNP réel</h4>
+                        <p class="regime-subtitle">BIC</p>
+                        <p class="regime-detail">Charges + amort.</p>
+                    </div>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Régimes IS -->
+        <div class="regime-category">
+            <h3 class="category-title">
+                <i class="fas fa-building"></i>
+                Régimes à l'IS
+            </h3>
+            <div class="regime-options">
+                <label class="regime-card">
+                    <input type="radio" name="regime-fiscal" value="sci-is">
+                    <div class="regime-content">
+                        <div class="regime-icon">
+                            <i class="fas fa-landmark"></i>
+                        </div>
+                        <h4>SCI à l'IS</h4>
+                        <p class="regime-subtitle">IS</p>
+                        <p class="regime-detail">Société civile</p>
+                    </div>
+                </label>
+                
+                <label class="regime-card">
+                    <input type="radio" name="regime-fiscal" value="sas">
+                    <div class="regime-content">
+                        <div class="regime-icon">
+                            <i class="fas fa-university"></i>
+                        </div>
+                        <h4>SAS</h4>
+                        <p class="regime-subtitle">IS</p>
+                        <p class="regime-detail">Société par actions</p>
+                    </div>
+                </label>
+                
+                <label class="regime-card">
+                    <input type="radio" name="regime-fiscal" value="sarl">
+                    <div class="regime-content">
+                        <div class="regime-icon">
+                            <i class="fas fa-briefcase"></i>
+                        </div>
+                        <h4>SARL</h4>
+                        <p class="regime-subtitle">IS</p>
+                        <p class="regime-detail">Société à resp. limitée</p>
+                    </div>
+                </label>
+            </div>
+        </div>
+    </div>
+    
+    <div class="fiscal-impact-results mt-4 hidden" id="fiscal-impact-results">
+        <!-- Les résultats fiscaux seront affichés ici -->
+    </div>
+</div>
+
+<!-- Amélioration de la section Projections de revente existante -->
+<style>
+/* Styles pour les sources de données */
+.sources-content {
+    padding: 1.5rem;
+}
+
+.data-source-items {
+    display: grid;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.source-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba(31, 41, 55, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.source-item:hover {
+    background: rgba(31, 41, 55, 0.8);
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.2);
+}
+
+.source-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--primary-gradient);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.source-icon i {
+    font-size: 1.5rem;
+    color: white;
+}
+
+.source-details {
+    flex: 1;
+}
+
+.source-details h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.source-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.source-link:hover {
+    color: var(--accent-color);
+    text-decoration: underline;
+}
+
+.source-update {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 20px;
+    font-size: 0.875rem;
+}
+
+.source-update i {
+    color: var(--primary-color);
+}
+
+.sources-license {
+    text-align: center;
+    padding: 1rem;
+    background: rgba(17, 24, 39, 0.6);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 1rem;
+}
+
+.sources-license i {
+    color: var(--accent-color);
+    margin-right: 0.5rem;
+}
+
+.data-disclaimer {
+    padding: 0.75rem 1rem;
+    background: rgba(59, 130, 246, 0.05);
+    border-left: 3px solid var(--primary-color);
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.data-disclaimer i {
+    color: var(--primary-color);
+    margin-right: 0.5rem;
+}
+
+/* Styles pour les régimes fiscaux */
+.fiscal-regimes-grid {
+    padding: 1.5rem;
+}
+
+.regime-category {
+    margin-bottom: 2rem;
+}
+
+.category-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.regime-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.regime-card {
+    position: relative;
+    cursor: pointer;
+}
+
+.regime-card input {
+    position: absolute;
+    opacity: 0;
+}
+
+.regime-content {
+    padding: 1.5rem;
+    background: rgba(31, 41, 55, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.regime-card input:checked + .regime-content {
+    background: var(--primary-gradient);
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+}
+
+.regime-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+}
+
+.regime-icon i {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+}
+
+.regime-card input:checked + .regime-content .regime-icon {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.regime-card input:checked + .regime-content .regime-icon i {
+    color: white;
+}
+
+.regime-content h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.regime-subtitle {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.regime-detail {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--accent-color);
+}
+
+.regime-card input:checked + .regime-content .regime-detail {
+    color: white;
+}
+
+/* Amélioration de la section projections existante */
+#scenarios-card {
+    border: 2px solid rgba(99, 102, 241, 0.3);
+}
+
+#scenarios-card .card-header {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+}
+
+#scenarios-card .card-icon {
+    background: var(--primary-gradient);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .data-source-items {
+        grid-template-columns: 1fr;
+    }
+    
+    .source-item {
+        flex-wrap: wrap;
+        text-align: center;
+    }
+    
+    .source-update {
+        width: 100%;
+        justify-content: center;
+        margin-top: 0.5rem;
+    }
+    
+    .regime-options {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<!-- Script pour gérer les régimes fiscaux -->
+<script>
+// Afficher la section fiscale après la simulation
+document.addEventListener('DOMContentLoaded', () => {
+    const btnSimulate = document.getElementById('btn-simulate');
+    const fiscalCard = document.getElementById('fiscal-regimes-card');
+    
+    if (btnSimulate) {
+        const originalClick = btnSimulate.onclick;
+        btnSimulate.onclick = function() {
+            if (originalClick) originalClick.call(this);
+            
+            // Afficher la section fiscale après la simulation
+            setTimeout(() => {
+                if (!document.getElementById('results').classList.contains('hidden')) {
+                    fiscalCard.classList.remove('hidden');
+                    fiscalCard.classList.add('fade-in');
+                }
+            }, 1000);
+        };
+    }
+    
+    // Gérer la sélection des régimes fiscaux
+    document.querySelectorAll('input[name="regime-fiscal"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const regime = e.target.value;
+            console.log('Régime fiscal sélectionné:', regime);
+            // Ici vous pouvez ajouter la logique pour calculer l'impact fiscal
+            calculateFiscalImpact(regime);
+        });
+    });
+});
+
+function calculateFiscalImpact(regime) {
+    // Placeholder pour le calcul de l'impact fiscal
+    const resultsDiv = document.getElementById('fiscal-impact-results');
+    resultsDiv.classList.remove('hidden');
+    resultsDiv.innerHTML = `
+        <div class="info-message">
+            <div class="text-lg text-blue-400 mr-3">
+                <i class="fas fa-calculator"></i>
+            </div>
+            <div>
+                <h4 class="font-medium mb-1">Calcul de l'impact fiscal - ${regime}</h4>
+                <p class="text-sm opacity-90">Cette fonctionnalité sera bientôt disponible...</p>
+            </div>
+        </div>
+    `;
+}
+
+// Améliorer l'animation des sections projections
+const scenariosCard = document.getElementById('scenarios-card');
+if (scenariosCard) {
+    scenariosCard.style.animation = 'pulse-border 3s ease-in-out infinite';
+}
+
+// CSS animation pour pulse-border
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes pulse-border {
+        0%, 100% { border-color: rgba(99, 102, 241, 0.3); }
+        50% { border-color: rgba(99, 102, 241, 0.6); }
+    }
+`;
+document.head.appendChild(style);
+</script>
