@@ -118,17 +118,24 @@
             color: #00bfff !important;
         }
         
-        /* Style pour marché ouvert en bleu avec rond */
+        /* Style pour marché ouvert - texte normal, heure en bleu */
         .market-status {
-            color: #00bfff !important;
+            color: rgba(255, 255, 255, 0.9);
+            margin-right: 1rem; /* Décaler un peu vers la gauche */
         }
         
-        .market-status span {
-            color: #00bfff !important;
+        .market-status span:first-child {
+            color: rgba(255, 255, 255, 0.9);
         }
         
         .market-status .market-time {
             color: #00bfff !important;
+            font-weight: 500;
+        }
+        
+        /* Pulse dot reste en bleu */
+        .market-status .pulse-dot {
+            background: #00bfff;
         }
     </style>
 </head>
