@@ -2,6 +2,61 @@
   "themes": {
     "weekly": {
       "macroeconomics": {
+        "inflation": {
+          "count": 2,
+          "articles": [
+            "Fed's Williams calls for strong response if inflation deviates from target",
+            "China's Xiaomi claims new phone chip rivals Apple at a cheaper price"
+          ],
+          "keywords": {
+            "inflation": {
+              "count": 1,
+              "examples": [
+                "Fed's Williams calls for strong response if inflation deviates from target"
+              ]
+            },
+            "price": {
+              "count": 1,
+              "examples": [
+                "China's Xiaomi claims new phone chip rivals Apple at a cheaper price"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 100.0,
+            "neutral": 0.0,
+            "negative": 0.0
+          },
+          "gpt_summary": "📰 The theme **inflation** was detected in **2 articles** during the period, mainly through topics like: inflation (1), price (1). Sentiment is mostly positive (100.0% vs 0.0% negative). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « China's Xiaomi claims new phone chip rivals Apple at a cheaper price »."
+        },
+        "monetary_policy": {
+          "count": 2,
+          "articles": [
+            "Fed's Williams calls for strong response if inflation deviates from target",
+            "Fed's Cook: April market volatility will help hone financial stability assessment"
+          ],
+          "keywords": {
+            "fed": {
+              "count": 2,
+              "examples": [
+                "Fed's Williams calls for strong response if inflation deviates from target",
+                "Fed's Cook: April market volatility will help hone financial stability assessment"
+              ]
+            },
+            "central bank": {
+              "count": 1,
+              "examples": [
+                "Fed's Williams calls for strong response if inflation deviates from target"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 50.0,
+            "neutral": 50.0,
+            "negative": 0.0
+          },
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **2 articles** during the period, mainly through topics like: fed (2), central bank (1). Sentiment is mostly positive (50.0% vs 0.0% negative). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « Fed's Cook: April market volatility will help hone financial stability assessment »."
+        },
         "geopolitics": {
           "count": 2,
           "articles": [
@@ -24,26 +79,6 @@
           },
           "gpt_summary": "📰 The theme **geopolitics** was detected in **2 articles** during the period, mainly through topics like: china (2). Sentiment is mixed (50.0% positive, 50.0% negative). Examples of articles: « Major China-listed Apple suppliers including Luxshare, Goertek fall after Trump's tariff threats », « China's Xiaomi claims new phone chip rivals Apple at a cheaper price »."
         },
-        "monetary_policy": {
-          "count": 1,
-          "articles": [
-            "Fed's Cook: April market volatility will help hone financial stability assessment"
-          ],
-          "keywords": {
-            "fed": {
-              "count": 1,
-              "examples": [
-                "Fed's Cook: April market volatility will help hone financial stability assessment"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 100.0,
-            "negative": 0.0
-          },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **1 articles** during the period, mainly through topics like: fed (1). Sentiment is mixed (0.0% positive, 0.0% negative). Examples of articles: « Fed's Cook: April market volatility will help hone financial stability assessment »."
-        },
         "recession": {
           "count": 1,
           "articles": [
@@ -56,34 +91,15 @@
             "negative": 100.0
           },
           "gpt_summary": "📰 The theme **recession** was detected in **1 articles** during the period, mainly through topics like: . Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « EU Crisis Averted. Same Time Next Week? »."
-        },
-        "inflation": {
-          "count": 1,
-          "articles": [
-            "China's Xiaomi claims new phone chip rivals Apple at a cheaper price"
-          ],
-          "keywords": {
-            "price": {
-              "count": 1,
-              "examples": [
-                "China's Xiaomi claims new phone chip rivals Apple at a cheaper price"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 100.0,
-            "neutral": 0.0,
-            "negative": 0.0
-          },
-          "gpt_summary": "📰 The theme **inflation** was detected in **1 articles** during the period, mainly through topics like: price (1). Sentiment is mostly positive (100.0% vs 0.0% negative). Examples of articles: « China's Xiaomi claims new phone chip rivals Apple at a cheaper price »."
         }
       },
       "sectors": {
         "technology": {
-          "count": 5,
+          "count": 6,
           "articles": [
             "Apple has been the worst Big Tech stock lately. Here's why investors are missing the big picture.",
             "Sportradar Group AG's Financial Performance in the Sports Data Sector",
+            "CNBC Daily Open: European nations and companies reposition themselves in response to Trump tariffs",
             "CNBC Daily Open: Europe is already responding to Trump tariffs",
             "S&P 500 Gains and Losses Today: Deckers Outdoor, Ross Stores Stocks Fall as Firms Withhold Outlooks",
             "China's Xiaomi claims new phone chip rivals Apple at a cheaper price"
@@ -111,11 +127,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 40.0,
-            "neutral": 20.0,
-            "negative": 40.0
+            "positive": 33.3,
+            "neutral": 33.3,
+            "negative": 33.3
           },
-          "gpt_summary": "📰 The theme **technology** was detected in **5 articles** during the period, mainly through topics like: ai (3), tech (1), data (1). Sentiment is mixed (40.0% positive, 40.0% negative). Examples of articles: « Apple has been the worst Big Tech stock lately. Here's why investors are missing the big picture. », « Sportradar Group AG's Financial Performance in the Sports Data Sector », « CNBC Daily Open: Europe is already responding to Trump tariffs »."
+          "gpt_summary": "📰 The theme **technology** was detected in **6 articles** during the period, mainly through topics like: ai (3), tech (1), data (1). Sentiment is mixed (33.3% positive, 33.3% negative). Examples of articles: « Apple has been the worst Big Tech stock lately. Here's why investors are missing the big picture. », « Sportradar Group AG's Financial Performance in the Sports Data Sector », « CNBC Daily Open: European nations and companies reposition themselves in response to Trump tariffs »."
         },
         "transport": {
           "count": 4,
@@ -204,8 +220,9 @@
       },
       "regions": {
         "usa": {
-          "count": 5,
+          "count": 6,
           "articles": [
+            "Fed's Williams calls for strong response if inflation deviates from target",
             "Fed's Cook: April market volatility will help hone financial stability assessment",
             "US stocks vs European stocks: does Jim Cramer support ‘sell America' trade?",
             "S&P 500 INDEX (SPX) Live: Markets Retreat After Tariff Tricks Resurface",
@@ -214,11 +231,11 @@
           ],
           "keywords": {
             "fed": {
-              "count": 3,
+              "count": 4,
               "examples": [
+                "Fed's Williams calls for strong response if inflation deviates from target",
                 "Fed's Cook: April market volatility will help hone financial stability assessment",
-                "S&P 500 INDEX (SPX) Live: Markets Retreat After Tariff Tricks Resurface",
-                "S&P 500 (NYSEARCA: SPY) Live: Markets Under Pressure Amid Consumer Weariness"
+                "S&P 500 INDEX (SPX) Live: Markets Retreat After Tariff Tricks Resurface"
               ]
             },
             "usa": {
@@ -243,51 +260,53 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 20.0,
-            "neutral": 20.0,
-            "negative": 60.0
+            "positive": 33.3,
+            "neutral": 16.7,
+            "negative": 50.0
           },
-          "gpt_summary": "📰 The theme **usa** was detected in **5 articles** during the period, mainly through topics like: fed (3), nasdaq (2), dow jones (2), usa (1). Sentiment is mostly negative (60.0% vs 20.0% positive). Examples of articles: « Fed's Cook: April market volatility will help hone financial stability assessment », « US stocks vs European stocks: does Jim Cramer support ‘sell America' trade? », « S&P 500 INDEX (SPX) Live: Markets Retreat After Tariff Tricks Resurface »."
+          "gpt_summary": "📰 The theme **usa** was detected in **6 articles** during the period, mainly through topics like: fed (4), nasdaq (2), dow jones (2), usa (1). Sentiment is mixed (33.3% positive, 50.0% negative). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « Fed's Cook: April market volatility will help hone financial stability assessment », « US stocks vs European stocks: does Jim Cramer support ‘sell America' trade? »."
         },
         "europe": {
-          "count": 4,
+          "count": 5,
           "articles": [
             "US stocks vs European stocks: does Jim Cramer support ‘sell America' trade?",
             "The EU's top exports, most vulnerable to Trump's new tariffs",
+            "CNBC Daily Open: European nations and companies reposition themselves in response to Trump tariffs",
             "CNBC Daily Open: Europe is already responding to Trump tariffs",
             "EU Crisis Averted. Same Time Next Week?"
           ],
           "keywords": {
             "europe": {
-              "count": 4,
+              "count": 5,
               "examples": [
                 "US stocks vs European stocks: does Jim Cramer support ‘sell America' trade?",
                 "The EU's top exports, most vulnerable to Trump's new tariffs",
-                "CNBC Daily Open: Europe is already responding to Trump tariffs"
+                "CNBC Daily Open: European nations and companies reposition themselves in response to Trump tariffs"
               ]
             },
             "eu": {
-              "count": 4,
+              "count": 5,
               "examples": [
                 "US stocks vs European stocks: does Jim Cramer support ‘sell America' trade?",
                 "The EU's top exports, most vulnerable to Trump's new tariffs",
-                "CNBC Daily Open: Europe is already responding to Trump tariffs"
+                "CNBC Daily Open: European nations and companies reposition themselves in response to Trump tariffs"
               ]
             },
             "european union": {
-              "count": 2,
+              "count": 3,
               "examples": [
                 "The EU's top exports, most vulnerable to Trump's new tariffs",
+                "CNBC Daily Open: European nations and companies reposition themselves in response to Trump tariffs",
                 "CNBC Daily Open: Europe is already responding to Trump tariffs"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 25.0,
-            "neutral": 25.0,
-            "negative": 50.0
+            "positive": 20.0,
+            "neutral": 40.0,
+            "negative": 40.0
           },
-          "gpt_summary": "📰 The theme **europe** was detected in **4 articles** during the period, mainly through topics like: europe (4), eu (4), european union (2). Sentiment is mostly negative (50.0% vs 25.0% positive). Examples of articles: « US stocks vs European stocks: does Jim Cramer support ‘sell America' trade? », « The EU's top exports, most vulnerable to Trump's new tariffs », « CNBC Daily Open: Europe is already responding to Trump tariffs »."
+          "gpt_summary": "📰 The theme **europe** was detected in **5 articles** during the period, mainly through topics like: europe (5), eu (5), european union (3). Sentiment is mixed (20.0% positive, 40.0% negative). Examples of articles: « US stocks vs European stocks: does Jim Cramer support ‘sell America' trade? », « The EU's top exports, most vulnerable to Trump's new tariffs », « CNBC Daily Open: European nations and companies reposition themselves in response to Trump tariffs »."
         },
         "asia": {
           "count": 2,
@@ -379,8 +398,9 @@
           "gpt_summary": "📰 The theme **geopolitics** was detected in **15 articles** during the period, mainly through topics like: china (7), war (5), russia (1). Sentiment is mixed (46.7% positive, 33.3% negative). Examples of articles: « Fed's Bostic says he's 'leaning' toward just one rate cut this year », « Atlanta Fed President Bostic: Leaning towards one rate cut this year », « Live Nasdaq Composite: Markets Rise as China Tariffs Do This »."
         },
         "recession": {
-          "count": 8,
+          "count": 9,
           "articles": [
+            "Recession or stagflation? Why the Fed may have to choose between the two",
             "How the US can avoid a recession",
             "Candy giant Ferrero adds American twists to Nutella, Ferrero Rocher to fuel U.S. growth",
             "EU Crisis Averted. Same Time Next Week?",
@@ -407,37 +427,39 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 50.0,
-            "neutral": 25.0,
-            "negative": 25.0
+            "positive": 44.4,
+            "neutral": 22.2,
+            "negative": 33.3
           },
-          "gpt_summary": "📰 The theme **recession** was detected in **8 articles** during the period, mainly through topics like: growth (3), recession (1). Sentiment is mostly positive (50.0% vs 25.0% negative). Examples of articles: « How the US can avoid a recession », « Candy giant Ferrero adds American twists to Nutella, Ferrero Rocher to fuel U.S. growth », « EU Crisis Averted. Same Time Next Week? »."
+          "gpt_summary": "📰 The theme **recession** was detected in **9 articles** during the period, mainly through topics like: growth (3), recession (1). Sentiment is mixed (44.4% positive, 33.3% negative). Examples of articles: « Recession or stagflation? Why the Fed may have to choose between the two », « How the US can avoid a recession », « Candy giant Ferrero adds American twists to Nutella, Ferrero Rocher to fuel U.S. growth »."
         },
         "monetary_policy": {
-          "count": 6,
+          "count": 8,
           "articles": [
+            "Fed's Williams calls for strong response if inflation deviates from target",
             "Fed's Bostic says he's 'leaning' toward just one rate cut this year",
             "US Federal Reserve aims to trim staff by 10% in coming years",
             "Federal Reserve will reduce staff by 10% in coming years, Powell memo says",
             "Fed's Cook: April market volatility will help hone financial stability assessment",
             "Atlanta Fed President Bostic: Leaning towards one rate cut this year",
+            "Recession or stagflation? Why the Fed may have to choose between the two",
             "ECB's de Guindos optimistic about continued rate cuts in Presse interview"
           ],
           "keywords": {
             "fed": {
-              "count": 3,
+              "count": 5,
               "examples": [
+                "Fed's Williams calls for strong response if inflation deviates from target",
                 "US Federal Reserve aims to trim staff by 10% in coming years",
-                "Fed's Cook: April market volatility will help hone financial stability assessment",
-                "Atlanta Fed President Bostic: Leaning towards one rate cut this year"
+                "Fed's Cook: April market volatility will help hone financial stability assessment"
               ]
             },
             "central bank": {
-              "count": 3,
+              "count": 5,
               "examples": [
+                "Fed's Williams calls for strong response if inflation deviates from target",
                 "US Federal Reserve aims to trim staff by 10% in coming years",
-                "Federal Reserve will reduce staff by 10% in coming years, Powell memo says",
-                "ECB's de Guindos optimistic about continued rate cuts in Presse interview"
+                "Federal Reserve will reduce staff by 10% in coming years, Powell memo says"
               ]
             },
             "rate cut": {
@@ -448,15 +470,16 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 50.0,
+            "positive": 12.5,
+            "neutral": 37.5,
             "negative": 50.0
           },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **6 articles** during the period, mainly through topics like: fed (3), central bank (3), rate cut (1). Sentiment is mostly negative (50.0% vs 0.0% positive). Examples of articles: « Fed's Bostic says he's 'leaning' toward just one rate cut this year », « US Federal Reserve aims to trim staff by 10% in coming years », « Federal Reserve will reduce staff by 10% in coming years, Powell memo says »."
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **8 articles** during the period, mainly through topics like: fed (5), central bank (5), rate cut (1). Sentiment is mostly negative (50.0% vs 12.5% positive). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « Fed's Bostic says he's 'leaning' toward just one rate cut this year », « US Federal Reserve aims to trim staff by 10% in coming years »."
         },
         "inflation": {
-          "count": 5,
+          "count": 6,
           "articles": [
+            "Fed's Williams calls for strong response if inflation deviates from target",
             "Treasury yields soar on hope a recession will be avoided after temporary China-U.S. deal",
             "10-year Treasury yield jumps after stronger-than-expected jobs report",
             "China's Xiaomi claims new phone chip rivals Apple at a cheaper price",
@@ -464,6 +487,13 @@
             "Don't \"Rule Out Bonds:\" What Rising Yields Means for Outlook"
           ],
           "keywords": {
+            "inflation": {
+              "count": 2,
+              "examples": [
+                "Fed's Williams calls for strong response if inflation deviates from target",
+                "May RBA Meeting: Dovish Stance Surprises Markets With Growth And Inflation Outlook"
+              ]
+            },
             "yield": {
               "count": 3,
               "examples": [
@@ -485,25 +515,19 @@
               "examples": [
                 "China's Xiaomi claims new phone chip rivals Apple at a cheaper price"
               ]
-            },
-            "inflation": {
-              "count": 1,
-              "examples": [
-                "May RBA Meeting: Dovish Stance Surprises Markets With Growth And Inflation Outlook"
-              ]
             }
           },
           "sentiment_distribution": {
-            "positive": 80.0,
-            "neutral": 20.0,
+            "positive": 83.3,
+            "neutral": 16.7,
             "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **inflation** was detected in **5 articles** during the period, mainly through topics like: yield (3), yields (3), price (1), inflation (1). Sentiment is mostly positive (80.0% vs 0.0% negative). Examples of articles: « Treasury yields soar on hope a recession will be avoided after temporary China-U.S. deal », « 10-year Treasury yield jumps after stronger-than-expected jobs report », « China's Xiaomi claims new phone chip rivals Apple at a cheaper price »."
+          "gpt_summary": "📰 The theme **inflation** was detected in **6 articles** during the period, mainly through topics like: yield (3), yields (3), inflation (2), price (1). Sentiment is mostly positive (83.3% vs 0.0% negative). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « Treasury yields soar on hope a recession will be avoided after temporary China-U.S. deal », « 10-year Treasury yield jumps after stronger-than-expected jobs report »."
         }
       },
       "sectors": {
         "technology": {
-          "count": 23,
+          "count": 24,
           "articles": [
             "US Federal Reserve aims to trim staff by 10% in coming years",
             "Apple has been the worst Big Tech stock lately. Here's why investors are missing the big picture.",
@@ -518,6 +542,7 @@
             "Sportradar Group AG's Financial Performance in the Sports Data Sector",
             "Trump says U.S. reached breakthrough trade deal with Britain",
             "RBC sets up new AI team for capital markets unit",
+            "CNBC Daily Open: European nations and companies reposition themselves in response to Trump tariffs",
             "CNBC Daily Open: Europe is already responding to Trump tariffs",
             "S&P 500 Gains and Losses Today: Deckers Outdoor, Ross Stores Stocks Fall as Firms Withhold Outlooks",
             "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows",
@@ -570,11 +595,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 43.5,
-            "neutral": 30.4,
-            "negative": 26.1
+            "positive": 41.7,
+            "neutral": 33.3,
+            "negative": 25.0
           },
-          "gpt_summary": "📰 The theme **technology** was detected in **23 articles** during the period, mainly through topics like: ai (16), artificial intelligence (6), tech (4), data (3), digital (1). Sentiment is mixed (43.5% positive, 26.1% negative). Examples of articles: « US Federal Reserve aims to trim staff by 10% in coming years », « Apple has been the worst Big Tech stock lately. Here's why investors are missing the big picture. », « You can see AI everywhere — except in Big Tech's profits »."
+          "gpt_summary": "📰 The theme **technology** was detected in **24 articles** during the period, mainly through topics like: ai (16), artificial intelligence (6), tech (4), data (3), digital (1). Sentiment is mixed (41.7% positive, 25.0% negative). Examples of articles: « US Federal Reserve aims to trim staff by 10% in coming years », « Apple has been the worst Big Tech stock lately. Here's why investors are missing the big picture. », « You can see AI everywhere — except in Big Tech's profits »."
         },
         "transport": {
           "count": 11,
@@ -774,13 +799,15 @@
       },
       "regions": {
         "usa": {
-          "count": 15,
+          "count": 17,
           "articles": [
+            "Fed's Williams calls for strong response if inflation deviates from target",
             "Fed's Bostic says he's 'leaning' toward just one rate cut this year",
             "US Federal Reserve aims to trim staff by 10% in coming years",
             "Federal Reserve will reduce staff by 10% in coming years, Powell memo says",
             "Fed's Cook: April market volatility will help hone financial stability assessment",
             "Atlanta Fed President Bostic: Leaning towards one rate cut this year",
+            "Recession or stagflation? Why the Fed may have to choose between the two",
             "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
             "US stocks vs European stocks: does Jim Cramer support ‘sell America' trade?",
             "S&P 500 INDEX (SPX) Live: Markets Retreat After Tariff Tricks Resurface",
@@ -793,20 +820,20 @@
             "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again"
           ],
           "keywords": {
+            "fed": {
+              "count": 11,
+              "examples": [
+                "Fed's Williams calls for strong response if inflation deviates from target",
+                "US Federal Reserve aims to trim staff by 10% in coming years",
+                "Fed's Cook: April market volatility will help hone financial stability assessment"
+              ]
+            },
             "america": {
               "count": 3,
               "examples": [
                 "Fed's Bostic says he's 'leaning' toward just one rate cut this year",
                 "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
                 "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again"
-              ]
-            },
-            "fed": {
-              "count": 9,
-              "examples": [
-                "US Federal Reserve aims to trim staff by 10% in coming years",
-                "Fed's Cook: April market volatility will help hone financial stability assessment",
-                "Atlanta Fed President Bostic: Leaning towards one rate cut this year"
               ]
             },
             "nasdaq": {
@@ -839,11 +866,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 33.3,
-            "neutral": 13.3,
-            "negative": 53.3
+            "positive": 35.3,
+            "neutral": 11.8,
+            "negative": 52.9
           },
-          "gpt_summary": "📰 The theme **usa** was detected in **15 articles** during the period, mainly through topics like: fed (9), nasdaq (7), dow jones (7), america (3), washington (1). Sentiment is mixed (33.3% positive, 53.3% negative). Examples of articles: « Fed's Bostic says he's 'leaning' toward just one rate cut this year », « US Federal Reserve aims to trim staff by 10% in coming years », « Federal Reserve will reduce staff by 10% in coming years, Powell memo says »."
+          "gpt_summary": "📰 The theme **usa** was detected in **17 articles** during the period, mainly through topics like: fed (11), nasdaq (7), dow jones (7), america (3), washington (1). Sentiment is mixed (35.3% positive, 52.9% negative). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « Fed's Bostic says he's 'leaning' toward just one rate cut this year », « US Federal Reserve aims to trim staff by 10% in coming years »."
         },
         "asia": {
           "count": 11,
@@ -891,20 +918,21 @@
           "gpt_summary": "📰 The theme **asia** was detected in **11 articles** during the period, mainly through topics like: china (8), india (2), beijing (1). Sentiment is mostly positive (63.6% vs 18.2% negative). Examples of articles: « Live Nasdaq Composite: Markets Rise as China Tariffs Do This », « Treasury yields soar on hope a recession will be avoided after temporary China-U.S. deal », « Investors cheer US-China tariff truce, but cautious over a final deal »."
         },
         "europe": {
-          "count": 8,
+          "count": 9,
           "articles": [
             "US stocks vs European stocks: does Jim Cramer support ‘sell America' trade?",
             "EU's von der Leyen: Big push on capital markets union expected before the summer",
             "ECB's de Guindos optimistic about continued rate cuts in Presse interview",
             "The EU's top exports, most vulnerable to Trump's new tariffs",
             "Epic Games' Fortnite back up on Apple app store in US, Epic gamestore in EU",
+            "CNBC Daily Open: European nations and companies reposition themselves in response to Trump tariffs",
             "Hong Kong DIY watch brand sets sights on Europe amid Trump tariffs",
             "CNBC Daily Open: Europe is already responding to Trump tariffs",
             "EU Crisis Averted. Same Time Next Week?"
           ],
           "keywords": {
             "europe": {
-              "count": 7,
+              "count": 8,
               "examples": [
                 "US stocks vs European stocks: does Jim Cramer support ‘sell America' trade?",
                 "EU's von der Leyen: Big push on capital markets union expected before the summer",
@@ -912,7 +940,7 @@
               ]
             },
             "eu": {
-              "count": 7,
+              "count": 8,
               "examples": [
                 "US stocks vs European stocks: does Jim Cramer support ‘sell America' trade?",
                 "EU's von der Leyen: Big push on capital markets union expected before the summer",
@@ -920,7 +948,7 @@
               ]
             },
             "european union": {
-              "count": 4,
+              "count": 5,
               "examples": [
                 "EU's von der Leyen: Big push on capital markets union expected before the summer",
                 "The EU's top exports, most vulnerable to Trump's new tariffs",
@@ -929,11 +957,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 25.0,
-            "neutral": 37.5,
-            "negative": 37.5
+            "positive": 22.2,
+            "neutral": 44.4,
+            "negative": 33.3
           },
-          "gpt_summary": "📰 The theme **europe** was detected in **8 articles** during the period, mainly through topics like: europe (7), eu (7), european union (4). Sentiment is mixed (25.0% positive, 37.5% negative). Examples of articles: « US stocks vs European stocks: does Jim Cramer support ‘sell America' trade? », « EU's von der Leyen: Big push on capital markets union expected before the summer », « ECB's de Guindos optimistic about continued rate cuts in Presse interview »."
+          "gpt_summary": "📰 The theme **europe** was detected in **9 articles** during the period, mainly through topics like: europe (8), eu (8), european union (5). Sentiment is mixed (22.2% positive, 33.3% negative). Examples of articles: « US stocks vs European stocks: does Jim Cramer support ‘sell America' trade? », « EU's von der Leyen: Big push on capital markets union expected before the summer », « ECB's de Guindos optimistic about continued rate cuts in Presse interview »."
         },
         "global": {
           "count": 5,
@@ -1020,8 +1048,9 @@
           "gpt_summary": "📰 The theme **geopolitics** was detected in **15 articles** during the period, mainly through topics like: china (7), war (5), russia (1). Sentiment is mixed (46.7% positive, 33.3% negative). Examples of articles: « Fed's Bostic says he's 'leaning' toward just one rate cut this year », « Atlanta Fed President Bostic: Leaning towards one rate cut this year », « Live Nasdaq Composite: Markets Rise as China Tariffs Do This »."
         },
         "recession": {
-          "count": 8,
+          "count": 9,
           "articles": [
+            "Recession or stagflation? Why the Fed may have to choose between the two",
             "How the US can avoid a recession",
             "Candy giant Ferrero adds American twists to Nutella, Ferrero Rocher to fuel U.S. growth",
             "EU Crisis Averted. Same Time Next Week?",
@@ -1048,37 +1077,39 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 50.0,
-            "neutral": 25.0,
-            "negative": 25.0
+            "positive": 44.4,
+            "neutral": 22.2,
+            "negative": 33.3
           },
-          "gpt_summary": "📰 The theme **recession** was detected in **8 articles** during the period, mainly through topics like: growth (3), recession (1). Sentiment is mostly positive (50.0% vs 25.0% negative). Examples of articles: « How the US can avoid a recession », « Candy giant Ferrero adds American twists to Nutella, Ferrero Rocher to fuel U.S. growth », « EU Crisis Averted. Same Time Next Week? »."
+          "gpt_summary": "📰 The theme **recession** was detected in **9 articles** during the period, mainly through topics like: growth (3), recession (1). Sentiment is mixed (44.4% positive, 33.3% negative). Examples of articles: « Recession or stagflation? Why the Fed may have to choose between the two », « How the US can avoid a recession », « Candy giant Ferrero adds American twists to Nutella, Ferrero Rocher to fuel U.S. growth »."
         },
         "monetary_policy": {
-          "count": 6,
+          "count": 8,
           "articles": [
+            "Fed's Williams calls for strong response if inflation deviates from target",
             "Fed's Bostic says he's 'leaning' toward just one rate cut this year",
             "US Federal Reserve aims to trim staff by 10% in coming years",
             "Federal Reserve will reduce staff by 10% in coming years, Powell memo says",
             "Fed's Cook: April market volatility will help hone financial stability assessment",
             "Atlanta Fed President Bostic: Leaning towards one rate cut this year",
+            "Recession or stagflation? Why the Fed may have to choose between the two",
             "ECB's de Guindos optimistic about continued rate cuts in Presse interview"
           ],
           "keywords": {
             "fed": {
-              "count": 3,
+              "count": 5,
               "examples": [
+                "Fed's Williams calls for strong response if inflation deviates from target",
                 "US Federal Reserve aims to trim staff by 10% in coming years",
-                "Fed's Cook: April market volatility will help hone financial stability assessment",
-                "Atlanta Fed President Bostic: Leaning towards one rate cut this year"
+                "Fed's Cook: April market volatility will help hone financial stability assessment"
               ]
             },
             "central bank": {
-              "count": 3,
+              "count": 5,
               "examples": [
+                "Fed's Williams calls for strong response if inflation deviates from target",
                 "US Federal Reserve aims to trim staff by 10% in coming years",
-                "Federal Reserve will reduce staff by 10% in coming years, Powell memo says",
-                "ECB's de Guindos optimistic about continued rate cuts in Presse interview"
+                "Federal Reserve will reduce staff by 10% in coming years, Powell memo says"
               ]
             },
             "rate cut": {
@@ -1089,15 +1120,16 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 50.0,
+            "positive": 12.5,
+            "neutral": 37.5,
             "negative": 50.0
           },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **6 articles** during the period, mainly through topics like: fed (3), central bank (3), rate cut (1). Sentiment is mostly negative (50.0% vs 0.0% positive). Examples of articles: « Fed's Bostic says he's 'leaning' toward just one rate cut this year », « US Federal Reserve aims to trim staff by 10% in coming years », « Federal Reserve will reduce staff by 10% in coming years, Powell memo says »."
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **8 articles** during the period, mainly through topics like: fed (5), central bank (5), rate cut (1). Sentiment is mostly negative (50.0% vs 12.5% positive). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « Fed's Bostic says he's 'leaning' toward just one rate cut this year », « US Federal Reserve aims to trim staff by 10% in coming years »."
         },
         "inflation": {
-          "count": 5,
+          "count": 6,
           "articles": [
+            "Fed's Williams calls for strong response if inflation deviates from target",
             "Treasury yields soar on hope a recession will be avoided after temporary China-U.S. deal",
             "10-year Treasury yield jumps after stronger-than-expected jobs report",
             "China's Xiaomi claims new phone chip rivals Apple at a cheaper price",
@@ -1105,6 +1137,13 @@
             "Don't \"Rule Out Bonds:\" What Rising Yields Means for Outlook"
           ],
           "keywords": {
+            "inflation": {
+              "count": 2,
+              "examples": [
+                "Fed's Williams calls for strong response if inflation deviates from target",
+                "May RBA Meeting: Dovish Stance Surprises Markets With Growth And Inflation Outlook"
+              ]
+            },
             "yield": {
               "count": 3,
               "examples": [
@@ -1126,25 +1165,19 @@
               "examples": [
                 "China's Xiaomi claims new phone chip rivals Apple at a cheaper price"
               ]
-            },
-            "inflation": {
-              "count": 1,
-              "examples": [
-                "May RBA Meeting: Dovish Stance Surprises Markets With Growth And Inflation Outlook"
-              ]
             }
           },
           "sentiment_distribution": {
-            "positive": 80.0,
-            "neutral": 20.0,
+            "positive": 83.3,
+            "neutral": 16.7,
             "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **inflation** was detected in **5 articles** during the period, mainly through topics like: yield (3), yields (3), price (1), inflation (1). Sentiment is mostly positive (80.0% vs 0.0% negative). Examples of articles: « Treasury yields soar on hope a recession will be avoided after temporary China-U.S. deal », « 10-year Treasury yield jumps after stronger-than-expected jobs report », « China's Xiaomi claims new phone chip rivals Apple at a cheaper price »."
+          "gpt_summary": "📰 The theme **inflation** was detected in **6 articles** during the period, mainly through topics like: yield (3), yields (3), inflation (2), price (1). Sentiment is mostly positive (83.3% vs 0.0% negative). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « Treasury yields soar on hope a recession will be avoided after temporary China-U.S. deal », « 10-year Treasury yield jumps after stronger-than-expected jobs report »."
         }
       },
       "sectors": {
         "technology": {
-          "count": 23,
+          "count": 24,
           "articles": [
             "US Federal Reserve aims to trim staff by 10% in coming years",
             "Apple has been the worst Big Tech stock lately. Here's why investors are missing the big picture.",
@@ -1159,6 +1192,7 @@
             "Sportradar Group AG's Financial Performance in the Sports Data Sector",
             "Trump says U.S. reached breakthrough trade deal with Britain",
             "RBC sets up new AI team for capital markets unit",
+            "CNBC Daily Open: European nations and companies reposition themselves in response to Trump tariffs",
             "CNBC Daily Open: Europe is already responding to Trump tariffs",
             "S&P 500 Gains and Losses Today: Deckers Outdoor, Ross Stores Stocks Fall as Firms Withhold Outlooks",
             "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows",
@@ -1211,11 +1245,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 43.5,
-            "neutral": 30.4,
-            "negative": 26.1
+            "positive": 41.7,
+            "neutral": 33.3,
+            "negative": 25.0
           },
-          "gpt_summary": "📰 The theme **technology** was detected in **23 articles** during the period, mainly through topics like: ai (16), artificial intelligence (6), tech (4), data (3), digital (1). Sentiment is mixed (43.5% positive, 26.1% negative). Examples of articles: « US Federal Reserve aims to trim staff by 10% in coming years », « Apple has been the worst Big Tech stock lately. Here's why investors are missing the big picture. », « You can see AI everywhere — except in Big Tech's profits »."
+          "gpt_summary": "📰 The theme **technology** was detected in **24 articles** during the period, mainly through topics like: ai (16), artificial intelligence (6), tech (4), data (3), digital (1). Sentiment is mixed (41.7% positive, 25.0% negative). Examples of articles: « US Federal Reserve aims to trim staff by 10% in coming years », « Apple has been the worst Big Tech stock lately. Here's why investors are missing the big picture. », « You can see AI everywhere — except in Big Tech's profits »."
         },
         "transport": {
           "count": 11,
@@ -1340,6 +1374,33 @@
           },
           "gpt_summary": "📰 The theme **consumer** was detected in **5 articles** during the period, mainly through topics like: consumer (2), sales (2), retail (1), spending (1). Sentiment is mixed (20.0% positive, 40.0% negative). Examples of articles: « Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline », « US consumer watchdog asks court to scrap medical debt regulation », « Spotify submits app update to Apple with external link for purchases in US »."
         },
+        "industry": {
+          "count": 2,
+          "articles": [
+            "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say",
+            "IBM joins Apple, Nvidia with pledge to invest $150B in US for computer manufacturing"
+          ],
+          "keywords": {
+            "manufacturing": {
+              "count": 1,
+              "examples": [
+                "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say"
+              ]
+            },
+            "production": {
+              "count": 1,
+              "examples": [
+                "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 50.0,
+            "neutral": 50.0,
+            "negative": 0.0
+          },
+          "gpt_summary": "📰 The theme **industry** was detected in **2 articles** during the period, mainly through topics like: manufacturing (1), production (1). Sentiment is mostly positive (50.0% vs 0.0% negative). Examples of articles: « New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say », « IBM joins Apple, Nvidia with pledge to invest $150B in US for computer manufacturing »."
+        },
         "healthcare": {
           "count": 1,
           "articles": [
@@ -1359,32 +1420,6 @@
             "negative": 0.0
           },
           "gpt_summary": "📰 The theme **healthcare** was detected in **1 articles** during the period, mainly through topics like: medical (1). Sentiment is mixed (0.0% positive, 0.0% negative). Examples of articles: « US consumer watchdog asks court to scrap medical debt regulation »."
-        },
-        "industry": {
-          "count": 1,
-          "articles": [
-            "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say"
-          ],
-          "keywords": {
-            "manufacturing": {
-              "count": 1,
-              "examples": [
-                "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say"
-              ]
-            },
-            "production": {
-              "count": 1,
-              "examples": [
-                "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 100.0,
-            "neutral": 0.0,
-            "negative": 0.0
-          },
-          "gpt_summary": "📰 The theme **industry** was detected in **1 articles** during the period, mainly through topics like: manufacturing (1), production (1). Sentiment is mostly positive (100.0% vs 0.0% negative). Examples of articles: « New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say »."
         },
         "energy": {
           "count": 1,
@@ -1415,13 +1450,15 @@
       },
       "regions": {
         "usa": {
-          "count": 15,
+          "count": 17,
           "articles": [
+            "Fed's Williams calls for strong response if inflation deviates from target",
             "Fed's Bostic says he's 'leaning' toward just one rate cut this year",
             "US Federal Reserve aims to trim staff by 10% in coming years",
             "Federal Reserve will reduce staff by 10% in coming years, Powell memo says",
             "Fed's Cook: April market volatility will help hone financial stability assessment",
             "Atlanta Fed President Bostic: Leaning towards one rate cut this year",
+            "Recession or stagflation? Why the Fed may have to choose between the two",
             "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
             "US stocks vs European stocks: does Jim Cramer support ‘sell America' trade?",
             "S&P 500 INDEX (SPX) Live: Markets Retreat After Tariff Tricks Resurface",
@@ -1434,20 +1471,20 @@
             "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again"
           ],
           "keywords": {
+            "fed": {
+              "count": 11,
+              "examples": [
+                "Fed's Williams calls for strong response if inflation deviates from target",
+                "US Federal Reserve aims to trim staff by 10% in coming years",
+                "Fed's Cook: April market volatility will help hone financial stability assessment"
+              ]
+            },
             "america": {
               "count": 3,
               "examples": [
                 "Fed's Bostic says he's 'leaning' toward just one rate cut this year",
                 "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
                 "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again"
-              ]
-            },
-            "fed": {
-              "count": 9,
-              "examples": [
-                "US Federal Reserve aims to trim staff by 10% in coming years",
-                "Fed's Cook: April market volatility will help hone financial stability assessment",
-                "Atlanta Fed President Bostic: Leaning towards one rate cut this year"
               ]
             },
             "nasdaq": {
@@ -1480,11 +1517,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 33.3,
-            "neutral": 13.3,
-            "negative": 53.3
+            "positive": 35.3,
+            "neutral": 11.8,
+            "negative": 52.9
           },
-          "gpt_summary": "📰 The theme **usa** was detected in **15 articles** during the period, mainly through topics like: fed (9), nasdaq (7), dow jones (7), america (3), washington (1). Sentiment is mixed (33.3% positive, 53.3% negative). Examples of articles: « Fed's Bostic says he's 'leaning' toward just one rate cut this year », « US Federal Reserve aims to trim staff by 10% in coming years », « Federal Reserve will reduce staff by 10% in coming years, Powell memo says »."
+          "gpt_summary": "📰 The theme **usa** was detected in **17 articles** during the period, mainly through topics like: fed (11), nasdaq (7), dow jones (7), america (3), washington (1). Sentiment is mixed (35.3% positive, 52.9% negative). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « Fed's Bostic says he's 'leaning' toward just one rate cut this year », « US Federal Reserve aims to trim staff by 10% in coming years »."
         },
         "asia": {
           "count": 11,
@@ -1532,20 +1569,21 @@
           "gpt_summary": "📰 The theme **asia** was detected in **11 articles** during the period, mainly through topics like: china (8), india (2), beijing (1). Sentiment is mostly positive (63.6% vs 18.2% negative). Examples of articles: « Live Nasdaq Composite: Markets Rise as China Tariffs Do This », « Treasury yields soar on hope a recession will be avoided after temporary China-U.S. deal », « Investors cheer US-China tariff truce, but cautious over a final deal »."
         },
         "europe": {
-          "count": 8,
+          "count": 9,
           "articles": [
             "US stocks vs European stocks: does Jim Cramer support ‘sell America' trade?",
             "EU's von der Leyen: Big push on capital markets union expected before the summer",
             "ECB's de Guindos optimistic about continued rate cuts in Presse interview",
             "The EU's top exports, most vulnerable to Trump's new tariffs",
             "Epic Games' Fortnite back up on Apple app store in US, Epic gamestore in EU",
+            "CNBC Daily Open: European nations and companies reposition themselves in response to Trump tariffs",
             "Hong Kong DIY watch brand sets sights on Europe amid Trump tariffs",
             "CNBC Daily Open: Europe is already responding to Trump tariffs",
             "EU Crisis Averted. Same Time Next Week?"
           ],
           "keywords": {
             "europe": {
-              "count": 7,
+              "count": 8,
               "examples": [
                 "US stocks vs European stocks: does Jim Cramer support ‘sell America' trade?",
                 "EU's von der Leyen: Big push on capital markets union expected before the summer",
@@ -1553,7 +1591,7 @@
               ]
             },
             "eu": {
-              "count": 7,
+              "count": 8,
               "examples": [
                 "US stocks vs European stocks: does Jim Cramer support ‘sell America' trade?",
                 "EU's von der Leyen: Big push on capital markets union expected before the summer",
@@ -1561,7 +1599,7 @@
               ]
             },
             "european union": {
-              "count": 4,
+              "count": 5,
               "examples": [
                 "EU's von der Leyen: Big push on capital markets union expected before the summer",
                 "The EU's top exports, most vulnerable to Trump's new tariffs",
@@ -1570,11 +1608,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 25.0,
-            "neutral": 37.5,
-            "negative": 37.5
+            "positive": 22.2,
+            "neutral": 44.4,
+            "negative": 33.3
           },
-          "gpt_summary": "📰 The theme **europe** was detected in **8 articles** during the period, mainly through topics like: europe (7), eu (7), european union (4). Sentiment is mixed (25.0% positive, 37.5% negative). Examples of articles: « US stocks vs European stocks: does Jim Cramer support ‘sell America' trade? », « EU's von der Leyen: Big push on capital markets union expected before the summer », « ECB's de Guindos optimistic about continued rate cuts in Presse interview »."
+          "gpt_summary": "📰 The theme **europe** was detected in **9 articles** during the period, mainly through topics like: europe (8), eu (8), european union (5). Sentiment is mixed (22.2% positive, 33.3% negative). Examples of articles: « US stocks vs European stocks: does Jim Cramer support ‘sell America' trade? », « EU's von der Leyen: Big push on capital markets union expected before the summer », « ECB's de Guindos optimistic about continued rate cuts in Presse interview »."
         },
         "global": {
           "count": 5,
@@ -1609,6 +1647,6 @@
       }
     }
   },
-  "lastUpdated": "2025-05-28T01:21:10.684228",
-  "analysisCount": 94
+  "lastUpdated": "2025-05-28T04:17:58.949752",
+  "analysisCount": 98
 }
