@@ -347,137 +347,243 @@ const ImmoExtensions = (function() {
             return res;
         };
 
-        // 3. Scénarios de sortie/revente
+        // 3. Scénarios de sortie/revente CORRIGÉS
         SimulateurImmo.prototype.calculerScenarioRevente = function(investissement, nbAnnees, tauxAppreciationAnnuel) {
             const prixAchat = investissement.prixAchat || 0;
-            const fraisAcquisition = (investissement.coutTotal || 0) - prixAchat;
-            const cashFlowAnnuel = (investissement.cashFlow || 0) * 12;
+            const coutTotal = investissement.coutTotal || 0;
+            const fraisAcquisition = coutTotal - prixAchat;
+            const apportInitial = this.params.base.apport || 0;
+            const montantEmprunte = coutTotal - apportInitial;
+            const cashFlowMensuel = (investissement.cashFlow || 0);
+            const cashFlowAnnuel = cashFlowMensuel * 12;
             
-            // Calcul de la valeur future
+            // Calcul de la valeur future (sur le prix du bien uniquement)
             const facteurAppreciation = Math.pow(1 + tauxAppreciationAnnuel/100, nbAnnees);
             const valeurRevente = prixAchat * facteurAppreciation;
             
-            // Coûts de revente (7% en moyenne)
-            const tauxFraisRevente = 7;
+            // Frais de revente (10%)
+            const tauxFraisRevente = 10;
             const fraisRevente = valeurRevente * (tauxFraisRevente/100);
             
-            // Plus-value brute
-            const plusValueBrute = valeurRevente - prixAchat;
+            // MAJORATION DU PRIX D'ACQUISITION (règles fiscales françaises)
+            // 1. Frais d'acquisition : max(frais réels, 7.5% forfaitaire)
+            const fraisAcquisitionFiscaux = Math.max(fraisAcquisition, prixAchat * 0.075);
             
-            // Calcul de la fiscalité sur plus-value
-            // Abattement pour durée de détention (IR: 6% par an de la 6e à la 21e année, exonération après 22 ans)
-            // (PS: 1.65% par an de la 6e à la 21e, puis 9% par an, exonération après 30 ans)
+            // 2. Travaux : forfait 15% si détention >= 5 ans (on suppose pas de travaux réels justifiés)
+            const travauxForfaitaires = nbAnnees >= 5 ? prixAchat * 0.15 : 0;
+            
+            // Prix d'acquisition majoré pour le calcul fiscal
+            const prixAcquisitionMajore = prixAchat + fraisAcquisitionFiscaux + travauxForfaitaires;
+            
+            // Plus-value brute FISCALE (base imposable)
+            const plusValueBrute = Math.max(0, valeurRevente - prixAcquisitionMajore);
+            
+            // ABATTEMENTS CORRECTS
             let abattementIR = 0;
             let abattementPS = 0;
             
-            if (nbAnnees >= 6) {
-                // IR
-                if (nbAnnees >= 22) {
-                    abattementIR = 100;
-                } else {
-                    abattementIR = Math.min((nbAnnees - 5) * 6, 96);
-                }
-                
-                // PS
-                if (nbAnnees >= 30) {
-                    abattementPS = 100;
-                } else if (nbAnnees >= 22) {
-                    abattementPS = 34 + (nbAnnees - 21) * 9;
-                } else {
-                    abattementPS = Math.min((nbAnnees - 5) * 1.65, 26.4);
-                }
+            if (nbAnnees <= 5) {
+                abattementIR = 0;
+                abattementPS = 0;
+            } else if (nbAnnees <= 21) {
+                abattementIR = (nbAnnees - 5) * 6; // 6% par an
+                abattementPS = (nbAnnees - 5) * 1.65; // 1.65% par an
+            } else if (nbAnnees === 22) {
+                abattementIR = 100; // Exonération totale IR
+                abattementPS = 28; // 26.4% + 1.6%
+            } else if (nbAnnees <= 30) {
+                abattementIR = 100;
+                abattementPS = Math.min(28 + (nbAnnees - 22) * 9, 100);
+            } else {
+                abattementIR = 100;
+                abattementPS = 100;
             }
             
             // Calcul de l'impôt sur la plus-value
             const plusValueImposableIR = plusValueBrute * (1 - abattementIR/100);
             const plusValueImposablePS = plusValueBrute * (1 - abattementPS/100);
             
-            const tauxIR = 19; // Taux fixe d'imposition sur les plus-values immobilières
-            const tauxPS = this.params.fiscalite.tauxPrelevementsSociaux || 17.2;
+            const tauxIR = 19;
+            const tauxPS = 17.2;
             
-            const impotPlusValueIR = plusValueImposableIR * (tauxIR/100);
-            const impotPlusValuePS = plusValueImposablePS * (tauxPS/100);
-            const impotPlusValueTotal = impotPlusValueIR + impotPlusValuePS;
+            let impotPlusValueIR = plusValueImposableIR * (tauxIR/100);
+            let impotPlusValuePS = plusValueImposablePS * (tauxPS/100);
             
-            // Résultat net après impôt
-            const resultatNetApresImpot = valeurRevente - fraisRevente - impotPlusValueTotal - (investissement.coutTotal || 0);
+            // SURTAXE sur plus-values importantes (sur PV imposable IR)
+            let surtaxe = 0;
+            if (plusValueImposableIR > 50000) {
+                if (plusValueImposableIR <= 60000) {
+                    surtaxe = (plusValueImposableIR - 50000) * 0.02;
+                } else if (plusValueImposableIR <= 100000) {
+                    surtaxe = 200 + (plusValueImposableIR - 60000) * 0.03;
+                } else if (plusValueImposableIR <= 110000) {
+                    surtaxe = 1400 + (plusValueImposableIR - 100000) * 0.04;
+                } else if (plusValueImposableIR <= 150000) {
+                    surtaxe = 1800 + (plusValueImposableIR - 110000) * 0.05;
+                } else {
+                    surtaxe = 3800 + (plusValueImposableIR - 150000) * 0.06;
+                }
+            }
             
-            // Calcul du TRI (approximation)
-            const fluxTresorerie = [-(investissement.coutTotal || 0)];
+            const impotPlusValueTotal = impotPlusValueIR + impotPlusValuePS + surtaxe;
             
-            // Flux annuels
+            // Capital restant dû
+            const capitalRestantDu = calculerCapitalRestantDu(
+                montantEmprunte,
+                this.params.base.taux / 100,
+                this.params.base.duree * 12,
+                nbAnnees * 12
+            );
+            
+            // Frais de remboursement anticipé (2% du capital restant dû, plafonné à 6 mois d'intérêts)
+            const tauxMensuel = (this.params.base.taux / 100) / 12;
+            const fraRemboursementAnticipe = Math.min(
+                capitalRestantDu * 0.02,
+                capitalRestantDu * tauxMensuel * 6
+            );
+            
+            // Cash-flows cumulés sur la période
+            const cashFlowsCumules = cashFlowAnnuel * nbAnnees;
+            
+            // Valeur nette après revente
+            const valeurNetteRevente = valeurRevente - fraisRevente - impotPlusValueTotal - capitalRestantDu - fraRemboursementAnticipe;
+            
+            // Gain total = valeur nette + cash-flows cumulés - apport initial
+            const gainTotal = valeurNetteRevente + cashFlowsCumules - apportInitial;
+            
+            // Multiple sur apport (incluant les cash-flows)
+            const multipleInvestissement = apportInitial > 0 ? 
+                (apportInitial + gainTotal) / apportInitial : 0;
+            
+            // Calcul du TRI
+            const fluxTresorerie = [];
+            fluxTresorerie.push(-apportInitial);
+            
             for (let i = 1; i < nbAnnees; i++) {
                 fluxTresorerie.push(cashFlowAnnuel);
             }
             
-            // Dernier flux inclut la revente
-            fluxTresorerie.push(cashFlowAnnuel + valeurRevente - fraisRevente - impotPlusValueTotal);
+            // Dernier flux : cash-flow + produit net de cession
+            fluxTresorerie.push(cashFlowAnnuel + valeurNetteRevente);
             
-            // Calcul simplifié du TRI
             let tri;
             try {
-                tri = calculTRIApproximation(fluxTresorerie);
+                tri = calculTRINewtonRaphson(fluxTresorerie);
             } catch (e) {
-                console.error("Erreur dans le calcul du TRI:", e);
+                console.error("Erreur TRI:", e);
                 tri = 0;
             }
-            
-            const multipleInvestissement = investissement.coutTotal !== 0 ? 
-                resultatNetApresImpot / investissement.coutTotal : 0;
             
             return {
                 prixAchat,
                 valeurRevente,
+                prixAcquisitionMajore,
                 plusValueBrute,
+                plusValueBruteSansMajoration: valeurRevente - prixAchat, // Pour info
                 fraisRevente,
                 impotPlusValue: {
                     ir: impotPlusValueIR,
                     ps: impotPlusValuePS,
+                    surtaxe: surtaxe,
                     total: impotPlusValueTotal
                 },
                 abattements: {
                     ir: abattementIR,
                     ps: abattementPS
                 },
-                resultatNet: resultatNetApresImpot,
-                tri: tri * 100, // En pourcentage
-                multipleInvestissement: multipleInvestissement,
-                fluxTresorerie: fluxTresorerie
+                capitalRestantDu,
+                fraRemboursementAnticipe,
+                valeurNetteRevente,
+                cashFlowsCumules,
+                gainTotal,
+                resultatNet: gainTotal, // compatibilité
+                tri: tri * 100,
+                multipleInvestissement,
+                fluxTresorerie
             };
         };
     }
 
-    // Fonction utilitaire pour calculer le TRI
-    function calculTRIApproximation(flux) {
-        let guess = 0.1; // Estimation initiale à 10%
-        const precision = 0.0001;
+    // Fonction pour calculer le capital restant dû
+    function calculerCapitalRestantDu(montantEmprunte, tauxAnnuel, dureeEnMois, moisEcoules) {
+        if (montantEmprunte <= 0 || moisEcoules >= dureeEnMois) return 0;
+        
+        const tauxMensuel = tauxAnnuel / 12;
+        const mensualite = (montantEmprunte * tauxMensuel) / (1 - Math.pow(1 + tauxMensuel, -dureeEnMois));
+        
+        let capitalRestant = montantEmprunte;
+        for (let i = 0; i < moisEcoules && i < dureeEnMois; i++) {
+            const interets = capitalRestant * tauxMensuel;
+            const principal = mensualite - interets;
+            capitalRestant -= principal;
+            if (capitalRestant < 0) capitalRestant = 0;
+        }
+        
+        return capitalRestant;
+    }
+
+    // Calcul du TRI amélioré
+    function calculTRINewtonRaphson(flux) {
+        // Vérifier qu'il y a au moins un flux positif et un négatif
+        const hasPositive = flux.some(f => f > 0);
+        const hasNegative = flux.some(f => f < 0);
+        
+        if (!hasPositive || !hasNegative) {
+            return 0; // Pas de TRI calculable
+        }
+        
+        let tri = 0.1; // 10% initial
+        const precision = 0.00001;
         const maxIterations = 100;
         
         for (let i = 0; i < maxIterations; i++) {
-            let npv = 0;
+            let van = 0;
             let derivee = 0;
             
             for (let j = 0; j < flux.length; j++) {
-                npv += flux[j] / Math.pow(1 + guess, j);
-                derivee -= j * flux[j] / Math.pow(1 + guess, j + 1);
+                const diviseur = Math.pow(1 + tri, j);
+                van += flux[j] / diviseur;
+                
+                if (j > 0) {
+                    derivee -= (j * flux[j]) / Math.pow(1 + tri, j + 1);
+                }
             }
             
-            if (Math.abs(npv) < precision) {
-                return guess;
+            if (Math.abs(van) < precision) {
+                return tri;
             }
             
-            // Protection contre division par zéro
-            if (derivee === 0) return guess;
+            if (Math.abs(derivee) < 0.0001) {
+                // Dérivée trop petite, essayer une autre approche
+                tri = tri > 0 ? tri * 0.5 : -0.1;
+                continue;
+            }
             
-            // Mise à jour de l'estimation (méthode de Newton)
-            guess = guess - npv / derivee;
+            // Newton-Raphson avec amortissement
+            const delta = van / derivee;
+            const nouveauTri = tri - delta * 0.7; // Facteur d'amortissement
             
-            // Vérification que guess reste dans des limites raisonnables
-            if (guess < -0.99) guess = -0.99;
-            if (guess > 100) guess = 100;
+            // Limites pour éviter la divergence
+            if (nouveauTri < -0.99) {
+                tri = -0.99;
+            } else if (nouveauTri > 10) {
+                tri = 10;
+            } else {
+                tri = nouveauTri;
+            }
+            
+            // Si on oscille, réduire le pas
+            if (i > 20 && Math.abs(delta) > 1) {
+                tri = 0.1 * Math.random() - 0.05; // Redémarrer avec une valeur aléatoire
+            }
         }
         
-        return guess; // Retourner la meilleure approximation trouvée
+        return tri;
+    }
+
+    // Fonction utilitaire pour calculer le TRI (ancienne version - gardée pour compatibilité)
+    function calculTRIApproximation(flux) {
+        return calculTRINewtonRaphson(flux);
     }
 
     // Ajoute les styles CSS nécessaires
@@ -1355,15 +1461,16 @@ const ImmoExtensions = (function() {
         }
     }
 
-    // Affiche les résultats des scénarios de revente
+    // Affiche les résultats des scénarios de revente MISE À JOUR
     function afficherResultatsScenarios(resultatsClassique, resultatsEncheres, horizon) {
         const container = document.getElementById('resultats-scenarios');
         if (!container) return;
         
-        // Afficher le conteneur
         container.style.display = 'block';
         
-        // Formater les résultats
+        // Helper pour formater les pourcentages
+        const formatPct = (val) => val ? `${val.toFixed(1)}%` : '0%';
+        
         container.innerHTML = `
             <div class="scenario-header">
                 <div class="scenario-title">Résultats à ${horizon} ans</div>
@@ -1371,93 +1478,106 @@ const ImmoExtensions = (function() {
             </div>
             
             <div class="grid grid-2">
-                <div class="results-card">
-                    <div class="results-header">
-                        <h3 class="card-title"><i class="fas fa-home mr-2"></i> Achat Classique</h3>
+                ${['Classique', 'Enchères'].map((mode, idx) => {
+                    const res = idx === 0 ? resultatsClassique : resultatsEncheres;
+                    const icon = idx === 0 ? 'home' : 'gavel';
+                    const title = idx === 0 ? 'Achat Classique' : 'Vente aux Enchères';
+                    
+                    return `
+                    <div class="results-card">
+                        <div class="results-header">
+                            <h3 class="card-title"><i class="fas fa-${icon} mr-2"></i> ${title}</h3>
+                        </div>
+                        <div class="results-body">
+                            <table class="comparison-table">
+                                <tr>
+                                    <td>Prix d'achat initial</td>
+                                    <td>${formaterMontant(res.prixAchat)}</td>
+                                </tr>
+                                <tr>
+                                    <td>Valeur de revente estimée</td>
+                                    <td class="highlight">${formaterMontant(res.valeurRevente)}</td>
+                                </tr>
+                                <tr>
+                                    <td>Plus-value brute (sans majoration)</td>
+                                    <td>${formaterMontant(res.plusValueBruteSansMajoration)}</td>
+                                </tr>
+                                <tr class="border-t border-gray-600">
+                                    <td colspan="2" class="text-sm text-blue-400">Calcul fiscal de la plus-value</td>
+                                </tr>
+                                <tr>
+                                    <td class="pl-4">Prix d'acquisition majoré</td>
+                                    <td>${formaterMontant(res.prixAcquisitionMajore)}</td>
+                                </tr>
+                                <tr>
+                                    <td class="pl-4">Plus-value imposable</td>
+                                    <td>${formaterMontant(res.plusValueBrute)}</td>
+                                </tr>
+                                <tr>
+                                    <td class="pl-4">Abattements (IR: ${formatPct(res.abattements.ir)}, PS: ${formatPct(res.abattements.ps)})</td>
+                                    <td>${res.abattements.ir >= 100 ? 'Exonéré IR' : 'Partiel'}</td>
+                                </tr>
+                                <tr>
+                                    <td class="pl-4">Impôt total plus-value</td>
+                                    <td>${formaterMontant(res.impotPlusValue.total)}</td>
+                                </tr>
+                                ${res.impotPlusValue.surtaxe > 0 ? `
+                                <tr>
+                                    <td class="pl-6">dont surtaxe</td>
+                                    <td>${formaterMontant(res.impotPlusValue.surtaxe)}</td>
+                                </tr>
+                                ` : ''}
+                                <tr class="border-t border-gray-600">
+                                    <td>Frais de revente (10%)</td>
+                                    <td>${formaterMontant(res.fraisRevente)}</td>
+                                </tr>
+                                <tr>
+                                    <td>Capital restant dû</td>
+                                    <td>${formaterMontant(res.capitalRestantDu)}</td>
+                                </tr>
+                                <tr>
+                                    <td>Indemnités remb. anticipé</td>
+                                    <td>${formaterMontant(res.fraRemboursementAnticipe)}</td>
+                                </tr>
+                                <tr class="border-t border-gray-600">
+                                    <td>Cash-flows cumulés (${horizon} ans)</td>
+                                    <td class="positive">${formaterMontant(res.cashFlowsCumules)}</td>
+                                </tr>
+                                <tr>
+                                    <td>Gain total net</td>
+                                    <td class="highlight ${res.gainTotal >= 0 ? 'positive' : 'negative'}">
+                                        ${formaterMontant(res.gainTotal)}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>TRI (Taux de Rendement Interne)</td>
+                                    <td class="highlight">${res.tri.toFixed(2)}%</td>
+                                </tr>
+                                <tr>
+                                    <td>Multiple sur apport (${formaterMontant(simulateur.params.base.apport || 20000)})</td>
+                                    <td>${res.multipleInvestissement.toFixed(2)}x</td>
+                                </tr>
+                            </table>
+                        </div>
                     </div>
-                    <div class="results-body">
-                        <table class="comparison-table">
-                            <tr>
-                                <td>Prix d'achat initial</td>
-                                <td>${formaterMontant(resultatsClassique.prixAchat)}</td>
-                            </tr>
-                            <tr>
-                                <td>Valeur de revente estimée</td>
-                                <td class="highlight">${formaterMontant(resultatsClassique.valeurRevente)}</td>
-                            </tr>
-                            <tr>
-                                <td>Plus-value brute</td>
-                                <td>${formaterMontant(resultatsClassique.plusValueBrute)}</td>
-                            </tr>
-                            <tr>
-                                <td>Frais de revente</td>
-                                <td>${formaterMontant(resultatsClassique.fraisRevente)}</td>
-                            </tr>
-                            <tr>
-                                <td>Impôt sur la plus-value</td>
-                                <td>${formaterMontant(resultatsClassique.impotPlusValue.total)}</td>
-                            </tr>
-                            <tr>
-                                <td>Résultat net</td>
-                                <td class="highlight">${formaterMontant(resultatsClassique.resultatNet)}</td>
-                            </tr>
-                            <tr>
-                                <td>TRI (Taux de Rendement Interne)</td>
-                                <td class="highlight">${resultatsClassique.tri.toFixed(2)}%</td>
-                            </tr>
-                            <tr>
-                                <td>Multiple d'investissement</td>
-                                <td>${resultatsClassique.multipleInvestissement.toFixed(2)}x</td>
-                            </tr>
-                        </table>
-                    </div>
+                    `;
+                }).join('')}
+            </div>
+            
+            <div class="info-message mt-4">
+                <div class="text-lg text-blue-400 mr-3">
+                    <i class="fas fa-info-circle"></i>
                 </div>
-                
-                <div class="results-card">
-                    <div class="results-header">
-                        <h3 class="card-title"><i class="fas fa-gavel mr-2"></i> Vente aux Enchères</h3>
-                    </div>
-                    <div class="results-body">
-                        <table class="comparison-table">
-                            <tr>
-                                <td>Prix d'achat initial</td>
-                                <td>${formaterMontant(resultatsEncheres.prixAchat)}</td>
-                            </tr>
-                            <tr>
-                                <td>Valeur de revente estimée</td>
-                                <td class="highlight">${formaterMontant(resultatsEncheres.valeurRevente)}</td>
-                            </tr>
-                            <tr>
-                                <td>Plus-value brute</td>
-                                <td>${formaterMontant(resultatsEncheres.plusValueBrute)}</td>
-                            </tr>
-                            <tr>
-                                <td>Frais de revente</td>
-                                <td>${formaterMontant(resultatsEncheres.fraisRevente)}</td>
-                            </tr>
-                            <tr>
-                                <td>Impôt sur la plus-value</td>
-                                <td>${formaterMontant(resultatsEncheres.impotPlusValue.total)}</td>
-                            </tr>
-                            <tr>
-                                <td>Résultat net</td>
-                                <td class="highlight">${formaterMontant(resultatsEncheres.resultatNet)}</td>
-                            </tr>
-                            <tr>
-                                <td>TRI (Taux de Rendement Interne)</td>
-                                <td class="highlight">${resultatsEncheres.tri.toFixed(2)}%</td>
-                            </tr>
-                            <tr>
-                                <td>Multiple d'investissement</td>
-                                <td>${resultatsEncheres.multipleInvestissement.toFixed(2)}x</td>
-                            </tr>
-                        </table>
-                    </div>
+                <div>
+                    <h4 class="font-medium mb-1">Calcul fiscal conforme</h4>
+                    <p class="text-sm opacity-90">
+                        Prix d'acquisition majoré = Prix + frais notaire (7.5%) + travaux (15% après 5 ans)<br>
+                        Abattements corrects selon durée de détention (exonération IR à 22 ans, PS à 30 ans)
+                    </p>
                 </div>
             </div>
         `;
         
-        // Faire défiler vers les résultats
         container.scrollIntoView({ behavior: 'smooth' });
     }
 
