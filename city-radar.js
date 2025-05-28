@@ -239,12 +239,10 @@ class CityRadar {
                                 <div class="type-card-content">
                                     <div class="type-icon">T1</div>
                                     <div class="type-bottom-row">
-                                        <div class="surface-input-wrapper">
-                                            <input type="number" class="surface-input" 
-                                                   id="surface-T1" 
-                                                   value="${this.defaultSurfaces.T1}" 
-                                                   min="10" max="200">
-                                        </div>
+                                        <input type="number" class="surface-input" 
+                                               id="surface-T1" 
+                                               value="${this.defaultSurfaces.T1}" 
+                                               min="10" max="200">
                                         <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
@@ -254,12 +252,10 @@ class CityRadar {
                                 <div class="type-card-content">
                                     <div class="type-icon">T2</div>
                                     <div class="type-bottom-row">
-                                        <div class="surface-input-wrapper">
-                                            <input type="number" class="surface-input" 
-                                                   id="surface-T2" 
-                                                   value="${this.defaultSurfaces.T2}" 
-                                                   min="10" max="200">
-                                        </div>
+                                        <input type="number" class="surface-input" 
+                                               id="surface-T2" 
+                                               value="${this.defaultSurfaces.T2}" 
+                                               min="10" max="200">
                                         <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
@@ -269,12 +265,10 @@ class CityRadar {
                                 <div class="type-card-content">
                                     <div class="type-icon">T3</div>
                                     <div class="type-bottom-row">
-                                        <div class="surface-input-wrapper">
-                                            <input type="number" class="surface-input" 
-                                                   id="surface-T3" 
-                                                   value="${this.defaultSurfaces.T3}" 
-                                                   min="10" max="200">
-                                        </div>
+                                        <input type="number" class="surface-input" 
+                                               id="surface-T3" 
+                                               value="${this.defaultSurfaces.T3}" 
+                                               min="10" max="200">
                                         <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
@@ -284,12 +278,10 @@ class CityRadar {
                                 <div class="type-card-content">
                                     <div class="type-icon">T4</div>
                                     <div class="type-bottom-row">
-                                        <div class="surface-input-wrapper">
-                                            <input type="number" class="surface-input" 
-                                                   id="surface-T4" 
-                                                   value="${this.defaultSurfaces.T4}" 
-                                                   min="10" max="200">
-                                        </div>
+                                        <input type="number" class="surface-input" 
+                                               id="surface-T4" 
+                                               value="${this.defaultSurfaces.T4}" 
+                                               min="10" max="200">
                                         <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
@@ -299,12 +291,10 @@ class CityRadar {
                                 <div class="type-card-content">
                                     <div class="type-icon">T5</div>
                                     <div class="type-bottom-row">
-                                        <div class="surface-input-wrapper">
-                                            <input type="number" class="surface-input" 
-                                                   id="surface-T5" 
-                                                   value="${this.defaultSurfaces.T5}" 
-                                                   min="10" max="200">
-                                        </div>
+                                        <input type="number" class="surface-input" 
+                                               id="surface-T5" 
+                                               value="${this.defaultSurfaces.T5}" 
+                                               min="10" max="200">
                                         <span class="surface-unit">m²</span>
                                     </div>
                                 </div>
@@ -543,9 +533,10 @@ class CityRadar {
                     cursor: pointer;
                 }
                 
-                .type-option-card input {
+                .type-option-card input[type="checkbox"] {
                     position: absolute;
                     opacity: 0;
+                    z-index: -1;
                 }
                 
                 .type-card-content {
@@ -583,25 +574,19 @@ class CityRadar {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    gap: 0.75rem;
-                }
-                
-                .surface-input-wrapper {
+                    gap: 0.5rem;
                     background: linear-gradient(135deg, rgba(17, 24, 39, 0.98) 0%, rgba(7, 14, 29, 0.98) 100%);
                     border: 1px solid rgba(255, 255, 255, 0.15);
                     border-radius: 8px;
-                    padding: 0.5rem 0.75rem;
+                    padding: 0.375rem 0.75rem;
                     box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
-                    display: flex;
-                    align-items: center;
-                    flex: 1;
                 }
                 
                 .surface-input {
-                    width: 100%;
+                    width: 60px;
                     background: transparent;
                     border: none;
-                    text-align: center;
+                    text-align: right;
                     color: #fff !important;
                     font-weight: 700;
                     font-size: 1.1rem;
@@ -610,6 +595,7 @@ class CityRadar {
                     padding: 0;
                     margin: 0;
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    outline: none;
                 }
                 
                 .surface-unit {
@@ -618,7 +604,6 @@ class CityRadar {
                     font-weight: 600;
                     user-select: none;
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-                    margin-right: 0.5rem;
                 }
                 
                 .surface-input::-webkit-inner-spin-button,
@@ -631,7 +616,7 @@ class CityRadar {
                     outline: none;
                 }
                 
-                .surface-input-wrapper:hover {
+                .type-bottom-row:hover {
                     border-color: var(--primary-color);
                     box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15), inset 0 1px 3px rgba(0, 0, 0, 0.3);
                 }
@@ -989,11 +974,22 @@ class CityRadar {
             cb.addEventListener('change', () => this.updateSelectedTypes());
         });
         
-        // Surfaces
+        // Surfaces - événement sur clic pour empêcher la propagation
         document.querySelectorAll('.surface-input').forEach(input => {
+            input.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+            
             input.addEventListener('input', (e) => {
                 const type = e.target.id.replace('surface-', '');
                 this.customSurfaces[type] = parseInt(e.target.value) || this.defaultSurfaces[type];
+            });
+        });
+        
+        // Empêcher la propagation du clic sur type-bottom-row
+        document.querySelectorAll('.type-bottom-row').forEach(row => {
+            row.addEventListener('click', (e) => {
+                e.stopPropagation();
             });
         });
         
