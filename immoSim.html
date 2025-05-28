@@ -16,6 +16,88 @@
     
     <!-- Chart.js pour les graphiques -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    
+    <style>
+        /* Style pour la section sources des données */
+        .data-sources-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to bottom, rgba(10, 15, 30, 0.95), rgba(10, 15, 30, 0.98));
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0, 191, 255, 0.2);
+            padding: 1rem 2rem;
+            z-index: 100;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .data-sources-content {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .data-sources-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: #00bfff;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .data-sources-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .data-source-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(0, 191, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 191, 255, 0.2);
+        }
+        
+        .data-source-item .icon {
+            color: #00bfff;
+        }
+        
+        .data-source-text {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.85rem;
+        }
+        
+        .source-date {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+        
+        .data-sources-footer-note {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.75rem;
+        }
+        
+        .data-sources-footer-note .icon {
+            color: #22c55e;
+        }
+        
+        /* Ajuster le padding du container pour éviter que le contenu soit caché */
+        .container {
+            padding-bottom: 120px;
+        }
+    </style>
 </head>
 <body>
     <!-- Sidebar de navigation verticale -->
@@ -1206,6 +1288,42 @@
             </div>
         </div>
     </div>
+    
+    <!-- Sources des données (Footer fixe) -->
+    <footer class="data-sources-footer">
+        <div class="data-sources-content">
+            <div class="data-sources-header">
+                <i class="fas fa-database"></i>
+                <span>Sources des données</span>
+            </div>
+            
+            <div class="data-sources-info">
+                <div class="data-source-item">
+                    <i class="fas fa-home icon"></i>
+                    <span class="data-source-text">Prix immobiliers</span>
+                    <span class="source-date">DVF - Demandes de Valeurs Foncières</span>
+                    <i class="fas fa-external-link-alt icon" style="margin-left: 0.5rem;"></i>
+                    <span class="source-date">Mise à jour : Octobre 2024</span>
+                </div>
+                
+                <div class="data-source-item">
+                    <i class="fas fa-coins icon"></i>
+                    <span class="data-source-text">Loyers</span>
+                    <span class="source-date">Indicateurs de loyers d'annonce par commune 2024</span>
+                    <i class="fas fa-external-link-alt icon" style="margin-left: 0.5rem;"></i>
+                </div>
+            </div>
+            
+            <div class="data-sources-footer-note">
+                <i class="fas fa-check-circle icon"></i>
+                <span>Données ouvertes sous licence Etalab 2.0 - Ministère de l'Économie et des Finances & Ministère de la Transition écologique</span>
+            </div>
+            <div class="data-sources-footer-note">
+                <i class="fas fa-info-circle icon" style="color: #3b82f6;"></i>
+                <span>Ces données ont été retraitées et agrégées à partir de sources publiques. Leur interprétation relève de notre seule responsabilité.</span>
+            </div>
+        </div>
+    </footer>
 
     <!-- 🚀 SCRIPTS JAVASCRIPT - Architecture modulaire -->
     <script src="./ville-search.js"></script>
