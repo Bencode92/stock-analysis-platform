@@ -320,18 +320,61 @@
         document.head.appendChild(style);
     }
     
+    // Fonction de normalisation pour la recherche flexible
+    function normalizeRegimeName(name) {
+        return name
+            .toLowerCase()
+            .replace(/[\s-_]+/g, '-')  // Remplacer espaces, tirets, underscores par tiret unique
+            .replace(/[^a-z0-9-]/g, '') // Supprimer caractères spéciaux
+            .replace(/-+/g, '-')        // Remplacer multiples tirets par un seul
+            .trim();
+    }
+    
+    // Table de correspondance pour les variantes connues
+    const regimeAliases = {
+        'lmnp-micro-bic': ['lmnp-micro', 'lmnp-micro-bic', 'lmnp-micro'],
+        'sci-is': ['sci-is', 'sci'],
+        'sas': ['sas-is', 'sas'],
+        'sarl-famille': ['sarl-is', 'sarl', 'sarl-famille']
+    };
+    
     // Afficher la définition
     function showRegimeDefinition(regimeName) {
         if (!regimesData || !definitionContainer) return;
         
-        // Trouver le régime par son nom ou ID
-        const regime = regimesData.find(r => r.nom === regimeName || r.id === regimeName);
+        console.log('🔍 Recherche du régime:', regimeName);
+        
+        // Normaliser le nom recherché
+        const normalizedSearch = normalizeRegimeName(regimeName);
+        
+        // Recherche du régime avec normalisation et aliases
+        const regime = regimesData.find(r => {
+            // Normaliser l'ID et le nom du régime
+            const normalizedId = normalizeRegimeName(r.id);
+            const normalizedNom = normalizeRegimeName(r.nom);
+            
+            // Vérification directe
+            if (normalizedId === normalizedSearch || normalizedNom === normalizedSearch) {
+                return true;
+            }
+            
+            // Vérification des aliases
+            for (const [jsonId, aliases] of Object.entries(regimeAliases)) {
+                if (r.id === jsonId && aliases.some(alias => normalizeRegimeName(alias) === normalizedSearch)) {
+                    return true;
+                }
+            }
+            
+            return false;
+        });
         
         if (!regime) {
             console.warn('Régime non trouvé:', regimeName);
+            console.log('Régimes disponibles:', regimesData.map(r => r.id));
             return;
         }
         
+        console.log('✅ Régime trouvé:', regime.nom);
         currentRegime = regime;
         
         // Remplir les données de base
