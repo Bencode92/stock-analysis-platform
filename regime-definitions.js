@@ -20,88 +20,67 @@
     
     // Créer le conteneur de définition
     function createDefinitionContainer() {
-        // Chercher la section des régimes fiscaux en utilisant des sélecteurs valides
-        let targetElement = document.querySelector('#regimes-fiscaux-container');
+        // Vérifier si la carte des projections existe
+        const projectionsCard = document.getElementById('scenarios-card');
         
-        if (!targetElement) {
-            // Chercher les cartes avec le titre contenant "régime fiscal"
-            const allCards = document.querySelectorAll('.card');
-            for (const card of allCards) {
-                const title = card.querySelector('.card-title, h2, h3');
-                if (title && title.textContent.toLowerCase().includes('régime fiscal')) {
-                    targetElement = card;
-                    break;
-                }
-            }
-        }
-        
-        if (!targetElement) {
-            // Chercher après les paramètres avancés
-            targetElement = document.getElementById('advanced-params');
-            if (targetElement) {
-                targetElement = targetElement.parentElement;
-            }
-        }
-        
-        if (!targetElement) {
-            console.error('Section régimes non trouvée');
-            return;
-        }
-        
-        definitionContainer = document.createElement('div');
-        definitionContainer.id = 'regime-definition-display';
-        definitionContainer.className = 'regime-definition-container hidden';
-        definitionContainer.innerHTML = `
-            <div class="regime-def-header">
-                <div class="regime-def-icon">
-                    <i class="fas fa-book-open"></i>
+        if (projectionsCard) {
+            // Insérer AVANT les projections
+            definitionContainer = document.createElement('div');
+            definitionContainer.id = 'regime-definition-display';
+            definitionContainer.className = 'regime-definition-container hidden';
+            definitionContainer.innerHTML = `
+                <div class="regime-def-header">
+                    <div class="regime-def-icon">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                    <h3 id="regime-nom" class="regime-def-title"></h3>
+                    <button class="regime-def-close" onclick="window.hideRegimeDefinition()">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
-                <h3 id="regime-nom" class="regime-def-title"></h3>
-                <button class="regime-def-close" onclick="window.hideRegimeDefinition()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
+                
+                <div class="regime-def-body">
+                    <p id="regime-definition" class="regime-def-text"></p>
+                    
+                    <div id="regime-resume" class="regime-list resume hidden">
+                        <h4>💡 En résumé</h4>
+                        <div id="resume-content"></div>
+                    </div>
+                    
+                    <div id="regime-conditions" class="regime-list conditions hidden">
+                        <h4>📋 Conditions d'éligibilité</h4>
+                        <ul id="conditions-list"></ul>
+                    </div>
+                    
+                    <div id="regime-modalites" class="regime-list modalites hidden">
+                        <h4>⚙️ Modalités d'application</h4>
+                        <ul id="modalites-list"></ul>
+                    </div>
+                    
+                    <div id="regime-specificites" class="regime-list specificites hidden">
+                        <h4>🔧 Spécificités fiscales</h4>
+                        <ul id="specificites-list"></ul>
+                    </div>
+                    
+                    <div id="regime-deficit" class="regime-deficit hidden">
+                        <h4>📊 Déficit foncier</h4>
+                        <div id="deficit-content"></div>
+                    </div>
+                    
+                    <div id="regime-calcul" class="regime-calcul hidden">
+                        <h4>🧮 Calcul fiscal</h4>
+                        <div id="calcul-content"></div>
+                    </div>
+                </div>
+            `;
             
-            <div class="regime-def-body">
-                <p id="regime-definition" class="regime-def-text"></p>
-                
-                <div id="regime-resume" class="regime-list resume hidden">
-                    <h4>💡 En résumé</h4>
-                    <div id="resume-content"></div>
-                </div>
-                
-                <div id="regime-conditions" class="regime-list conditions hidden">
-                    <h4>📋 Conditions d'éligibilité</h4>
-                    <ul id="conditions-list"></ul>
-                </div>
-                
-                <div id="regime-modalites" class="regime-list modalites hidden">
-                    <h4>⚙️ Modalités d'application</h4>
-                    <ul id="modalites-list"></ul>
-                </div>
-                
-                <div id="regime-specificites" class="regime-list specificites hidden">
-                    <h4>🔧 Spécificités fiscales</h4>
-                    <ul id="specificites-list"></ul>
-                </div>
-                
-                <div id="regime-deficit" class="regime-deficit hidden">
-                    <h4>📊 Déficit foncier</h4>
-                    <div id="deficit-content"></div>
-                </div>
-                
-                <div id="regime-calcul" class="regime-calcul hidden">
-                    <h4>🧮 Calcul fiscal</h4>
-                    <div id="calcul-content"></div>
-                </div>
-            </div>
-        `;
-        
-        // Insérer après la section des régimes
-        if (targetElement.id === 'regimes-fiscaux-container') {
-            targetElement.appendChild(definitionContainer);
+            projectionsCard.insertAdjacentElement('beforebegin', definitionContainer);
+            console.log('✅ Régimes fiscaux insérés avant les projections');
         } else {
-            targetElement.insertAdjacentElement('afterend', definitionContainer);
+            // Si les projections n'existent pas encore, attendre
+            console.log('⏳ Projections non trouvées, nouvelle tentative dans 500ms');
+            setTimeout(() => createDefinitionContainer(), 500);
+            return;
         }
         
         // Ajouter les styles CSS
