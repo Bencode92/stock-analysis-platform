@@ -20,11 +20,11 @@
     
     // Créer le conteneur de définition
     function createDefinitionContainer() {
-        // Vérifier si la carte des projections existe
-        const projectionsCard = document.getElementById('scenarios-card');
+        // Chercher la section des cartes de régimes fiscaux créée par immo-extensions.js
+        const fiscalRegimeCard = document.getElementById('fiscal-regime-card');
         
-        if (projectionsCard) {
-            // Insérer AVANT les projections
+        if (fiscalRegimeCard) {
+            // Insérer APRÈS la section des régimes fiscaux
             definitionContainer = document.createElement('div');
             definitionContainer.id = 'regime-definition-display';
             definitionContainer.className = 'regime-definition-container hidden';
@@ -74,11 +74,12 @@
                 </div>
             `;
             
-            projectionsCard.insertAdjacentElement('beforebegin', definitionContainer);
-            console.log('✅ Régimes fiscaux insérés avant les projections');
+            // Insérer après la carte de régime fiscal
+            fiscalRegimeCard.insertAdjacentElement('afterend', definitionContainer);
+            console.log('✅ Définitions insérées après la section des régimes fiscaux');
         } else {
-            // Si les projections n'existent pas encore, attendre
-            console.log('⏳ Projections non trouvées, nouvelle tentative dans 500ms');
+            // Si fiscal-regime-card n'existe pas encore, attendre qu'il soit créé
+            console.log('⏳ Section régimes fiscaux non trouvée, nouvelle tentative dans 500ms');
             setTimeout(() => createDefinitionContainer(), 500);
             return;
         }
@@ -524,6 +525,6 @@
         document.addEventListener('DOMContentLoaded', init);
     } else {
         // Attendre un peu que les autres scripts aient fini
-        setTimeout(init, 500);
+        setTimeout(init, 1000); // Augmenté à 1000ms pour s'assurer que immo-extensions.js a créé les cartes
     }
 })();
