@@ -909,6 +909,18 @@ class CityRadar {
         document.querySelectorAll('.info-message, .mode-info-banner').forEach(el => {
             el.style.display = 'none';
         });
+        
+        // AJOUT : Masquer spécifiquement le bouton "Comprendre le cash-flow"
+        const btnGuideCashflow = document.getElementById('btn-guide-cashflow');
+        if (btnGuideCashflow) {
+            btnGuideCashflow.style.display = 'none';
+        }
+        
+        // AJOUT : Masquer aussi tout élément contenant le guide
+        const guideSections = document.querySelectorAll('.guide-button, .cash-flow-guide');
+        guideSections.forEach(el => {
+            el.style.display = 'none';
+        });
     }
     
     showSimulatorSections() {
@@ -928,6 +940,12 @@ class CityRadar {
                 el.style.display = '';
             }
         });
+        
+        // AJOUT : Réafficher le bouton "Comprendre le cash-flow"
+        const btnGuideCashflow = document.getElementById('btn-guide-cashflow');
+        if (btnGuideCashflow) {
+            btnGuideCashflow.style.display = '';
+        }
         
         // Masquer la section radar
         const radarSection = document.getElementById('radar-section');
