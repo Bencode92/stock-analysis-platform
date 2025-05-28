@@ -11,8 +11,8 @@
         try {
             const response = await fetch('./data/regimes-fiscaux.json');
             regimesData = await response.json();
-            console.log('✅ Définitions des régimes fiscaux chargées:', regimesData.length, 'régimes');
-            attachClickEvents();
+            console.log('✅ Définitions des régimes fiscaux chargées');
+            attachClickEvents(); // Attacher après chargement
         } catch (error) {
             console.error('❌ Erreur chargement définitions:', error);
         }
@@ -20,16 +20,31 @@
     
     // Créer le conteneur de définition
     function createDefinitionContainer() {
+        // Chercher la section des régimes fiscaux en utilisant des sélecteurs valides
         let targetElement = document.querySelector('#regimes-fiscaux-container');
         
         if (!targetElement) {
-            console.error('Section régimes non trouvée');
-            return;
+            // Chercher les cartes avec le titre contenant "régime fiscal"
+            const allCards = document.querySelectorAll('.card');
+            for (const card of allCards) {
+                const title = card.querySelector('.card-title, h2, h3');
+                if (title && title.textContent.toLowerCase().includes('régime fiscal')) {
+                    targetElement = card;
+                    break;
+                }
+            }
         }
         
-        // Vérifier si le conteneur existe déjà
-        definitionContainer = document.getElementById('regime-definition-display');
-        if (definitionContainer) {
+        if (!targetElement) {
+            // Chercher après les paramètres avancés
+            targetElement = document.getElementById('advanced-params');
+            if (targetElement) {
+                targetElement = targetElement.parentElement;
+            }
+        }
+        
+        if (!targetElement) {
+            console.error('Section régimes non trouvée');
             return;
         }
         
@@ -82,17 +97,37 @@
             </div>
         `;
         
-        targetElement.appendChild(definitionContainer);
+        // Insérer après la section des régimes
+        if (targetElement.id === 'regimes-fiscaux-container') {
+            targetElement.appendChild(definitionContainer);
+        } else {
+            targetElement.insertAdjacentElement('afterend', definitionContainer);
+        }
+        
+        // Ajouter les styles CSS
         addStyles();
     }
     
-    // Ajouter les styles CSS
+    // Ajouter les styles CSS nécessaires
     function addStyles() {
-        if (document.getElementById('regime-definitions-styles')) return;
-        
         const style = document.createElement('style');
-        style.id = 'regime-definitions-styles';
         style.textContent = `
+            .regime-card {
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            
+            .regime-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 30px rgba(0, 255, 135, 0.2);
+            }
+            
+            .regime-card.selected {
+                border-color: #00ff87;
+                box-shadow: 0 0 30px rgba(0, 255, 135, 0.4);
+                background: rgba(0, 255, 135, 0.05);
+            }
+            
             .regime-definition-container {
                 margin-top: 2rem;
                 background: rgba(30, 41, 59, 0.5);
@@ -232,6 +267,18 @@
                 font-weight: 600;
             }
             
+            .regime-deficit p, .regime-calcul p {
+                color: rgba(255, 255, 255, 0.8);
+                margin: 0.5rem 0;
+                line-height: 1.6;
+            }
+            
+            #deficit-content p, #calcul-content p {
+                margin: 0.75rem 0;
+                padding-left: 1rem;
+                border-left: 2px solid rgba(139, 92, 246, 0.3);
+            }
+            
             #resume-content {
                 color: rgba(255, 255, 255, 0.9);
             }
@@ -239,6 +286,10 @@
             #resume-content p {
                 margin: 1rem 0;
                 line-height: 1.7;
+            }
+            
+            #resume-content p:first-child {
+                margin-top: 0;
             }
             
             #resume-content strong {
@@ -259,26 +310,31 @@
                     transform: translateY(0);
                 }
             }
+            
+            @media (max-width: 768px) {
+                .regime-def-body {
+                    padding: 1.5rem;
+                }
+            }
         `;
         document.head.appendChild(style);
     }
     
     // Afficher la définition
-    function showRegimeDefinition(regimeId) {
-        if (!regimesData || !definitionContainer) {
-            console.error('Données ou conteneur non disponibles');
-            return;
-        }
+    function showRegimeDefinition(regimeName) {
+        if (!regimesData || !definitionContainer) return;
         
-        const regime = regimesData.find(r => r.id === regimeId);
+        // Trouver le régime par son nom ou ID
+        const regime = regimesData.find(r => r.nom === regimeName || r.id === regimeName);
+        
         if (!regime) {
-            console.warn('Régime non trouvé:', regimeId);
+            console.warn('Régime non trouvé:', regimeName);
             return;
         }
         
         currentRegime = regime;
         
-        // Remplir les données
+        // Remplir les données de base
         document.getElementById('regime-nom').textContent = regime.nom;
         document.getElementById('regime-definition').textContent = regime.description;
         
@@ -286,11 +342,7 @@
         const resumeEl = document.getElementById('regime-resume');
         if (regime.resume_simplifie) {
             resumeEl.classList.remove('hidden');
-            let resumeContent = '';
-            
-            if (regime.resume_simplifie.c_est_quoi) {
-                resumeContent += '<p>' + regime.resume_simplifie.c_est_quoi + '</p>';
-            }
+            let resumeContent = '<p>' + regime.resume_simplifie.c_est_quoi + '</p>';
             
             if (regime.resume_simplifie.comment_ca_marche) {
                 resumeContent += '<strong>Comment ça marche ?</strong>';
@@ -311,23 +363,22 @@
             resumeEl.classList.add('hidden');
         }
         
-        // Conditions
+        // Conditions d'éligibilité
         const conditionsEl = document.getElementById('regime-conditions');
         if (regime.conditions_eligibilite?.length) {
             conditionsEl.classList.remove('hidden');
-            document.querySelector('#regime-conditions h4').innerHTML = '📋 Conditions d\'éligibilité';
             document.getElementById('conditions-list').innerHTML = 
                 regime.conditions_eligibilite.map(c => `<li>${c}</li>`).join('');
         } else if (regime.conditions_application?.length) {
             conditionsEl.classList.remove('hidden');
-            document.querySelector('#regime-conditions h4').innerHTML = '📋 Conditions d\'application';
+            document.querySelector('#regime-conditions h4').textContent = '📋 Conditions d\'application';
             document.getElementById('conditions-list').innerHTML = 
                 regime.conditions_application.map(c => `<li>${c}</li>`).join('');
         } else {
             conditionsEl.classList.add('hidden');
         }
         
-        // Modalités
+        // Modalités d'application
         const modalitesEl = document.getElementById('regime-modalites');
         if (regime.modalites_application?.length) {
             modalitesEl.classList.remove('hidden');
@@ -337,7 +388,7 @@
             modalitesEl.classList.add('hidden');
         }
         
-        // Spécificités
+        // Spécificités fiscales (correction de l'orthographe)
         const specificitesEl = document.getElementById('regime-specificites');
         const specs = regime.specificites_fiscales || regime.specifites_fiscales;
         if (specs?.length) {
@@ -366,31 +417,29 @@
         const calculEl = document.getElementById('regime-calcul');
         if (regime.calcul) {
             calculEl.classList.remove('hidden');
-            let calculContent = '';
-            
-            if (regime.calcul.abattement !== undefined && regime.calcul.abattement > 0) {
-                calculContent += `<p><strong>Abattement:</strong> ${regime.calcul.abattement * 100}%</p>`;
+            let calculContent = '<p>';
+            if (regime.calcul.abattement !== undefined) {
+                calculContent += `<strong>Abattement:</strong> ${regime.calcul.abattement * 100}%<br>`;
             }
             if (regime.calcul.deficitDeductible !== undefined) {
-                calculContent += `<p><strong>Déficit déductible:</strong> ${regime.calcul.deficitDeductible ? 'Oui' : 'Non'}`;
-                if (regime.calcul.plafondDeficit) {
-                    calculContent += ` (plafond: ${regime.calcul.plafondDeficit.toLocaleString()} €)`;
-                }
-                calculContent += '</p>';
+                calculContent += `<strong>Déficit déductible:</strong> ${regime.calcul.deficitDeductible ? 'Oui' : 'Non'}<br>`;
+            }
+            if (regime.calcul.plafondDeficit !== undefined) {
+                calculContent += `<strong>Plafond déficit:</strong> ${regime.calcul.plafondDeficit.toLocaleString()} €<br>`;
             }
             if (regime.calcul.amortissement !== undefined) {
-                calculContent += `<p><strong>Amortissement possible:</strong> ${regime.calcul.amortissement ? 'Oui' : 'Non'}</p>`;
+                calculContent += `<strong>Amortissement possible:</strong> ${regime.calcul.amortissement ? 'Oui' : 'Non'}<br>`;
             }
             if (regime.calcul.reportable !== undefined) {
-                calculContent += `<p><strong>Déficit reportable:</strong> ${regime.calcul.reportable ? 'Oui' : 'Non'}</p>`;
+                calculContent += `<strong>Déficit reportable:</strong> ${regime.calcul.reportable ? 'Oui' : 'Non'}`;
             }
-            
-            document.getElementById('calcul-content').innerHTML = calculContent || '<p>Aucune information de calcul disponible</p>';
+            calculContent += '</p>';
+            document.getElementById('calcul-content').innerHTML = calculContent;
         } else {
             calculEl.classList.add('hidden');
         }
         
-        // Afficher
+        // Afficher avec animation
         definitionContainer.classList.remove('hidden');
         definitionContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
@@ -400,19 +449,44 @@
         if (definitionContainer) {
             definitionContainer.classList.add('hidden');
         }
+        document.querySelectorAll('.regime-card.selected').forEach(el => {
+            el.classList.remove('selected');
+        });
+        currentRegime = null;
     };
     
-    // Exposer la fonction globalement
-    window.showRegimeDefinition = showRegimeDefinition;
-    
-    // Écouter les événements
+    // Attacher les événements aux cartes
     function attachClickEvents() {
-        window.addEventListener('regimeFiscalChange', (event) => {
-            const regimeId = event.detail.regimeId;
+        // Utiliser la délégation d'événements sur le document
+        document.addEventListener('click', (e) => {
+            // Chercher si on a cliqué sur une carte de régime
+            const regimeCard = e.target.closest('.regime-card');
+            if (!regimeCard) return;
+            
+            // Extraire l'ID du régime depuis l'attribut data-regime
+            const regimeId = regimeCard.getAttribute('data-regime');
+            
             if (regimeId) {
+                selectRegimeCard(regimeCard, regimeId);
                 showRegimeDefinition(regimeId);
             }
         });
+    }
+    
+    // Sélectionner visuellement une carte
+    function selectRegimeCard(card, regimeId) {
+        // Retirer la sélection précédente
+        document.querySelectorAll('.regime-card.selected').forEach(el => {
+            el.classList.remove('selected');
+        });
+        
+        // Ajouter la sélection
+        card.classList.add('selected');
+        
+        // Émettre un événement pour le simulateur
+        window.dispatchEvent(new CustomEvent('regimeSelected', {
+            detail: { regime: regimeId, data: currentRegime }
+        }));
     }
     
     // Initialisation
@@ -427,6 +501,7 @@
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
-        setTimeout(init, 1000);
+        // Attendre un peu que les autres scripts aient fini
+        setTimeout(init, 500);
     }
 })();
