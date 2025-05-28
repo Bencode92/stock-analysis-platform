@@ -11,7 +11,8 @@
         try {
             const response = await fetch('./data/regimes-fiscaux.json');
             regimesData = await response.json();
-            console.log('✅ Définitions des régimes fiscaux chargées');
+            console.log('✅ Définitions des régimes fiscaux chargées:', regimesData.length, 'régimes');
+            console.log('IDs disponibles:', regimesData.map(r => r.id));
             attachClickEvents(); // Attacher après chargement
         } catch (error) {
             console.error('❌ Erreur chargement définitions:', error);
@@ -321,17 +322,20 @@
     }
     
     // Afficher la définition
-    function showRegimeDefinition(regimeName) {
+    function showRegimeDefinition(regimeId) {
         if (!regimesData || !definitionContainer) return;
         
-        // Trouver le régime par son nom ou ID
-        const regime = regimesData.find(r => r.nom === regimeName || r.id === regimeName);
+        console.log('🔍 Recherche du régime:', regimeId);
+        
+        // Trouver le régime par son ID
+        const regime = regimesData.find(r => r.id === regimeId);
         
         if (!regime) {
-            console.warn('Régime non trouvé:', regimeName);
+            console.warn('Régime non trouvé:', regimeId);
             return;
         }
         
+        console.log('✅ Régime trouvé:', regime.nom);
         currentRegime = regime;
         
         // Remplir les données de base
@@ -342,7 +346,11 @@
         const resumeEl = document.getElementById('regime-resume');
         if (regime.resume_simplifie) {
             resumeEl.classList.remove('hidden');
-            let resumeContent = '<p>' + regime.resume_simplifie.c_est_quoi + '</p>';
+            let resumeContent = '';
+            
+            if (regime.resume_simplifie.c_est_quoi) {
+                resumeContent += '<p>' + regime.resume_simplifie.c_est_quoi + '</p>';
+            }
             
             if (regime.resume_simplifie.comment_ca_marche) {
                 resumeContent += '<strong>Comment ça marche ?</strong>';
@@ -367,11 +375,12 @@
         const conditionsEl = document.getElementById('regime-conditions');
         if (regime.conditions_eligibilite?.length) {
             conditionsEl.classList.remove('hidden');
+            document.querySelector('#regime-conditions h4').innerHTML = '📋 Conditions d\'éligibilité';
             document.getElementById('conditions-list').innerHTML = 
                 regime.conditions_eligibilite.map(c => `<li>${c}</li>`).join('');
         } else if (regime.conditions_application?.length) {
             conditionsEl.classList.remove('hidden');
-            document.querySelector('#regime-conditions h4').textContent = '📋 Conditions d\'application';
+            document.querySelector('#regime-conditions h4').innerHTML = '📋 Conditions d\'application';
             document.getElementById('conditions-list').innerHTML = 
                 regime.conditions_application.map(c => `<li>${c}</li>`).join('');
         } else {
@@ -405,7 +414,12 @@
             deficitEl.classList.remove('hidden');
             let deficitContent = '';
             for (const [key, value] of Object.entries(regime.deficit_foncier)) {
-                const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                const label = key
+                    .replace(/_/g, ' ')
+                    .replace(/\b\w/g, l => l.toUpperCase())
+                    .replace('Imputation Revenu Global', 'Imputation sur le revenu global')
+                    .replace('Report Solde', 'Report du solde')
+                    .replace('Condition Maintien Location', 'Condition de maintien en location');
                 deficitContent += `<p><strong>${label}:</strong> ${value}</p>`;
             }
             document.getElementById('deficit-content').innerHTML = deficitContent;
@@ -417,23 +431,25 @@
         const calculEl = document.getElementById('regime-calcul');
         if (regime.calcul) {
             calculEl.classList.remove('hidden');
-            let calculContent = '<p>';
-            if (regime.calcul.abattement !== undefined) {
-                calculContent += `<strong>Abattement:</strong> ${regime.calcul.abattement * 100}%<br>`;
+            let calculContent = '';
+            
+            if (regime.calcul.abattement !== undefined && regime.calcul.abattement > 0) {
+                calculContent += `<p><strong>Abattement:</strong> ${regime.calcul.abattement * 100}%</p>`;
             }
             if (regime.calcul.deficitDeductible !== undefined) {
-                calculContent += `<strong>Déficit déductible:</strong> ${regime.calcul.deficitDeductible ? 'Oui' : 'Non'}<br>`;
-            }
-            if (regime.calcul.plafondDeficit !== undefined) {
-                calculContent += `<strong>Plafond déficit:</strong> ${regime.calcul.plafondDeficit.toLocaleString()} €<br>`;
+                calculContent += `<p><strong>Déficit déductible:</strong> ${regime.calcul.deficitDeductible ? 'Oui' : 'Non'}`;
+                if (regime.calcul.plafondDeficit) {
+                    calculContent += ` (plafond: ${regime.calcul.plafondDeficit.toLocaleString()} €)`;
+                }
+                calculContent += '</p>';
             }
             if (regime.calcul.amortissement !== undefined) {
-                calculContent += `<strong>Amortissement possible:</strong> ${regime.calcul.amortissement ? 'Oui' : 'Non'}<br>`;
+                calculContent += `<p><strong>Amortissement possible:</strong> ${regime.calcul.amortissement ? 'Oui' : 'Non'}</p>`;
             }
             if (regime.calcul.reportable !== undefined) {
-                calculContent += `<strong>Déficit reportable:</strong> ${regime.calcul.reportable ? 'Oui' : 'Non'}`;
+                calculContent += `<p><strong>Déficit reportable:</strong> ${regime.calcul.reportable ? 'Oui' : 'Non'}</p>`;
             }
-            calculContent += '</p>';
+            
             document.getElementById('calcul-content').innerHTML = calculContent;
         } else {
             calculEl.classList.add('hidden');
@@ -457,17 +473,12 @@
     
     // Attacher les événements aux cartes
     function attachClickEvents() {
-        // Utiliser la délégation d'événements sur le document
-        document.addEventListener('click', (e) => {
-            // Chercher si on a cliqué sur une carte de régime
-            const regimeCard = e.target.closest('.regime-card');
-            if (!regimeCard) return;
-            
-            // Extraire l'ID du régime depuis l'attribut data-regime
-            const regimeId = regimeCard.getAttribute('data-regime');
-            
+        // Les cartes sont créées par regimes-fiscaux.js avec onclick
+        // Ici on écoute l'événement personnalisé de sélection
+        window.addEventListener('regimeFiscalChange', (event) => {
+            const regimeId = event.detail.regimeId;
+            console.log('📌 Événement regimeFiscalChange reçu:', regimeId);
             if (regimeId) {
-                selectRegimeCard(regimeCard, regimeId);
                 showRegimeDefinition(regimeId);
             }
         });
