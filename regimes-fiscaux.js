@@ -154,8 +154,7 @@ class RegimesFiscauxManager {
         
         return `
             <div class="regime-card ${regime.id === this.selectedRegime ? 'selected' : ''}" 
-                 data-regime="${regime.id}"
-                 onclick="window.regimesFiscaux.selectRegime('${regime.id}')">
+                 data-regime="${regime.id}">
                 <div class="regime-card-header">
                     <div class="regime-icon" style="background: ${regime.couleur ? `linear-gradient(135deg, ${regime.couleur}, ${regime.couleur}88)` : ''}">
                         <i class="fas ${regime.icone || 'fa-file-invoice-dollar'}"></i>
@@ -301,8 +300,18 @@ class RegimesFiscauxManager {
     }
 
     attachEventListeners() {
-        // Gestion des termes cliquables avec définitions
+        // Utiliser la délégation d'événements pour gérer les clics sur les cartes
         document.addEventListener('click', (e) => {
+            // Vérifier si on a cliqué sur une carte de régime
+            const regimeCard = e.target.closest('.regime-card');
+            if (regimeCard) {
+                const regimeId = regimeCard.dataset.regime;
+                if (regimeId) {
+                    this.selectRegime(regimeId);
+                }
+                return;
+            }
+            
             // Fermer le tooltip si on clique ailleurs
             if (!e.target.closest('.definition-term') && !e.target.closest('.regime-tooltip')) {
                 this.hideTooltip();
