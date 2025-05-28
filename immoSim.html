@@ -16,6 +16,152 @@
     
     <!-- Chart.js pour les graphiques -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    
+    <!-- Styles pour les sources de données -->
+    <style>
+        /* Styles pour les sources de données - MODIFIÉ POUR ÊTRE FIXE */
+        .data-sources-footer {
+            position: relative; /* Changé de sticky à relative */
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.98) 0%, rgba(7, 14, 29, 0.98) 100%);
+            border-top: 2px solid rgba(99, 102, 241, 0.3);
+            margin-top: 6rem; /* Augmenté pour plus d'espace */
+            margin-left: -1.5rem;
+            margin-right: -1.5rem;
+            margin-bottom: -1.5rem;
+            padding: 1.5rem;
+            border-radius: 0 0 12px 12px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .sources-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .sources-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .sources-header i {
+            font-size: 1.25rem;
+        }
+        
+        .sources-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .source-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: rgba(31, 41, 55, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .source-item:hover {
+            background: rgba(31, 41, 55, 0.8);
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .source-item i:first-child {
+            color: var(--primary-color);
+            font-size: 1.125rem;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .source-item a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s ease;
+        }
+        
+        .source-item a:hover {
+            color: #a5b4fc;
+            text-decoration: underline;
+        }
+        
+        .source-item a i {
+            font-size: 0.75rem;
+            opacity: 0.7;
+        }
+        
+        .source-date {
+            margin-left: auto;
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.5);
+            font-style: italic;
+        }
+        
+        .sources-license {
+            text-align: center;
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.6);
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            line-height: 1.6;
+        }
+        
+        .sources-license i {
+            margin-right: 0.5rem;
+            color: var(--accent-color);
+        }
+        
+        .data-disclaimer {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: rgba(59, 130, 246, 0.05);
+            border-left: 3px solid var(--primary-color);
+            font-style: italic;
+            opacity: 0.8;
+            border-radius: 4px;
+        }
+        
+        .data-disclaimer i {
+            margin-right: 0.5rem;
+            color: var(--primary-color);
+        }
+        
+        @media (max-width: 768px) {
+            .sources-content {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .source-item {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            
+            .source-date {
+                margin-left: 0;
+                width: 100%;
+                font-size: 0.75rem;
+            }
+            
+            .data-sources-footer {
+                padding: 1rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Sidebar de navigation verticale -->
@@ -1206,6 +1352,48 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer avec sources de données - POSITION FIXE AU LIEU DE STICKY -->
+        <div class="data-sources-footer">
+            <div class="sources-container">
+                <div class="sources-header">
+                    <i class="fas fa-database"></i>
+                    <span>Sources des données</span>
+                </div>
+                <div class="sources-content">
+                    <div class="source-item">
+                        <i class="fas fa-home"></i>
+                        <span>Prix immobiliers</span>
+                        <a href="https://explore.data.gouv.fr/fr/immobilier?onglet=carte&filtre=tous" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            DVF - Demandes de Valeurs Foncières
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                        <span class="source-date">Mise à jour : Octobre 2024</span>
+                    </div>
+                    <div class="source-item">
+                        <i class="fas fa-coins"></i>
+                        <span>Loyers</span>
+                        <a href="https://www.data.gouv.fr/fr/datasets/carte-des-loyers-indicateurs-de-loyers-dannonce-par-commune-en-2024/" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            Indicateurs de loyers d'annonce par commune 2024
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="sources-license">
+                    <i class="fas fa-info-circle"></i>
+                    Données ouvertes sous licence Etalab 2.0 - Ministère de l'Économie et des Finances & Ministère de la Transition écologique
+                </div>
+                <div class="data-disclaimer">
+                    <i class="fas fa-info-circle"></i>
+                    <small>Ces données ont été retraitées et agrégées à partir de sources publiques. 
+                    Leur interprétation relève de notre seule responsabilité.</small>
                 </div>
             </div>
         </div>
