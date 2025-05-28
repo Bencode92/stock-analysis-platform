@@ -396,6 +396,11 @@ class CityRadar {
                                 <i class="fas fa-info-circle"></i>
                                 Données ouvertes sous licence Etalab 2.0 - Ministère de l'Économie et des Finances & Ministère de la Transition écologique
                             </div>
+                            <div class="data-disclaimer">
+                                <i class="fas fa-info-circle"></i>
+                                <small>Ces données ont été retraitées et agrégées à partir de sources publiques. 
+                                Leur interprétation relève de notre seule responsabilité.</small>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1004,6 +1009,21 @@ class CityRadar {
                 .sources-license i {
                     margin-right: 0.5rem;
                     color: var(--accent-color);
+                }
+                
+                .data-disclaimer {
+                    margin-top: 1rem;
+                    padding: 0.75rem;
+                    background: rgba(59, 130, 246, 0.05);
+                    border-left: 3px solid var(--primary-color);
+                    font-style: italic;
+                    opacity: 0.8;
+                    border-radius: 4px;
+                }
+                
+                .data-disclaimer i {
+                    margin-right: 0.5rem;
+                    color: var(--primary-color);
                 }
                 
                 @media (max-width: 768px) {
