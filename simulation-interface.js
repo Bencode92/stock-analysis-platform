@@ -1877,74 +1877,98 @@ if (classique.impotFiscal !== undefined && encheres.impotFiscal !== undefined) {
 }
     }
     
-    // RÉSULTATS FINAUX
-    // Priorité 1: Utiliser cashFlowApresImpot si disponible
-    if (classique.cashFlowApresImpot !== undefined && encheres.cashFlowApresImpot !== undefined) {
-        document.getElementById('comp-classique-cashflow').textContent = formaterMontantAvecSigne(classique.cashFlowApresImpot);
-        document.getElementById('comp-encheres-cashflow').textContent = formaterMontantAvecSigne(encheres.cashFlowApresImpot);
-        majDifference('comp-cashflow-diff', encheres.cashFlowApresImpot - classique.cashFlowApresImpot);
+// RÉSULTATS FINAUX
+// Récupérer l'apport total nécessaire pour chaque mode
+const apportClassique = classique.coutTotal - classique.emprunt;
+const apportEncheres = encheres.coutTotal - encheres.emprunt;
+
+// Variables pour stocker les cash-flows
+let cashflowClassiqueFinal = 0;
+let cashflowEncheresFinal = 0;
+
+// Priorité 1: Utiliser cashFlowApresImpot si disponible
+if (classique.cashFlowApresImpot !== undefined && encheres.cashFlowApresImpot !== undefined) {
+    cashflowClassiqueFinal = classique.cashFlowApresImpot;
+    cashflowEncheresFinal = encheres.cashFlowApresImpot;
+    
+    document.getElementById('comp-classique-cashflow').textContent = formaterMontantAvecSigne(classique.cashFlowApresImpot);
+    document.getElementById('comp-encheres-cashflow').textContent = formaterMontantAvecSigne(encheres.cashFlowApresImpot);
+    majDifference('comp-cashflow-diff', encheres.cashFlowApresImpot - classique.cashFlowApresImpot);
+    
+    document.getElementById('comp-classique-cashflow-annuel').textContent = formaterMontantAvecSigne(classique.cashFlowApresImpot * 12);
+    document.getElementById('comp-encheres-cashflow-annuel').textContent = formaterMontantAvecSigne(encheres.cashFlowApresImpot * 12);
+    majDifference('comp-cashflow-annuel-diff', (encheres.cashFlowApresImpot - classique.cashFlowApresImpot) * 12);
+}
+// Priorité 2: Récupérer depuis le DOM
+else {
+    const cashflowClassiqueElement = document.querySelector('#classique-cashflow .cashflow-monthly') || 
+                                    document.querySelector('.cashflow-container .cashflow-monthly');
+    const cashflowEncheresElement = document.querySelector('#encheres-cashflow .cashflow-monthly') || 
+                                   document.querySelector('.results-card:nth-child(2) .cashflow-container .cashflow-monthly');
+    
+    if (cashflowClassiqueElement && cashflowEncheresElement) {
+        document.getElementById('comp-classique-cashflow').textContent = cashflowClassiqueElement.textContent.replace('/mois', '');
+        document.getElementById('comp-encheres-cashflow').textContent = cashflowEncheresElement.textContent.replace('/mois', '');
         
-        document.getElementById('comp-classique-cashflow-annuel').textContent = formaterMontantAvecSigne(classique.cashFlowApresImpot * 12);
-        document.getElementById('comp-encheres-cashflow-annuel').textContent = formaterMontantAvecSigne(encheres.cashFlowApresImpot * 12);
-        majDifference('comp-cashflow-annuel-diff', (encheres.cashFlowApresImpot - classique.cashFlowApresImpot) * 12);
-    }
-    // Priorité 2: Récupérer depuis le DOM
-    else {
-        const cashflowClassiqueElement = document.querySelector('#classique-cashflow .cashflow-monthly') || 
-                                        document.querySelector('.cashflow-container .cashflow-monthly');
-        const cashflowEncheresElement = document.querySelector('#encheres-cashflow .cashflow-monthly') || 
-                                       document.querySelector('.results-card:nth-child(2) .cashflow-container .cashflow-monthly');
+        const cashflowClassiqueAnnuelElement = document.querySelector('#classique-cashflow .cashflow-annual') || 
+                                               document.querySelector('.cashflow-container .cashflow-annual');
+        const cashflowEncheresAnnuelElement = document.querySelector('#encheres-cashflow .cashflow-annual') || 
+                                              document.querySelector('.results-card:nth-child(2) .cashflow-container .cashflow-annual');
         
-        if (cashflowClassiqueElement && cashflowEncheresElement) {
-            document.getElementById('comp-classique-cashflow').textContent = cashflowClassiqueElement.textContent.replace('/mois', '');
-            document.getElementById('comp-encheres-cashflow').textContent = cashflowEncheresElement.textContent.replace('/mois', '');
-            
-            const cashflowClassiqueAnnuelElement = document.querySelector('#classique-cashflow .cashflow-annual') || 
-                                                   document.querySelector('.cashflow-container .cashflow-annual');
-            const cashflowEncheresAnnuelElement = document.querySelector('#encheres-cashflow .cashflow-annual') || 
-                                                  document.querySelector('.results-card:nth-child(2) .cashflow-container .cashflow-annual');
-            
-            if (cashflowClassiqueAnnuelElement && cashflowEncheresAnnuelElement) {
-                document.getElementById('comp-classique-cashflow-annuel').textContent = cashflowClassiqueAnnuelElement.textContent.replace('/an', '');
-                document.getElementById('comp-encheres-cashflow-annuel').textContent = cashflowEncheresAnnuelElement.textContent.replace('/an', '');
+        if (cashflowClassiqueAnnuelElement && cashflowEncheresAnnuelElement) {
+            document.getElementById('comp-classique-cashflow-annuel').textContent = cashflowClassiqueAnnuelElement.textContent.replace('/an', '');
+            document.getElementById('comp-encheres-cashflow-annuel').textContent = cashflowEncheresAnnuelElement.textContent.replace('/an', '');
+        }
+        
+        const extractMontant = (text) => {
+            const match = text.match(/(-?\d[\d\s]*(?:,\d+)?)\s*€/);
+            if (match) {
+                return parseFloat(match[1].replace(/\s/g, '').replace(',', '.'));
             }
-            
-            const extractMontant = (text) => {
-                const match = text.match(/(-?\d[\d\s]*(?:,\d+)?)\s*€/);
-                if (match) {
-                    return parseFloat(match[1].replace(/\s/g, '').replace(',', '.'));
-                }
-                return 0;
-            };
-            
-            const cashflowClassiqueValue = extractMontant(cashflowClassiqueElement.textContent);
-            const cashflowEncheresValue = extractMontant(cashflowEncheresElement.textContent);
-            const cashflowDiff = cashflowEncheresValue - cashflowClassiqueValue;
-            
-            majDifference('comp-cashflow-diff', cashflowDiff);
-            majDifference('comp-cashflow-annuel-diff', cashflowDiff * 12);
-        }
-        // Priorité 3: Fallback sur cashFlow simple
-        else {
-            document.getElementById('comp-classique-cashflow').textContent = formaterMontantAvecSigne(classique.cashFlow);
-            document.getElementById('comp-encheres-cashflow').textContent = formaterMontantAvecSigne(encheres.cashFlow);
-            majDifference('comp-cashflow-diff', encheres.cashFlow - classique.cashFlow);
-            
-            document.getElementById('comp-classique-cashflow-annuel').textContent = formaterMontantAvecSigne(classique.cashFlow * 12);
-            document.getElementById('comp-encheres-cashflow-annuel').textContent = formaterMontantAvecSigne(encheres.cashFlow * 12);
-            majDifference('comp-cashflow-annuel-diff', (encheres.cashFlow - classique.cashFlow) * 12);
-        }
+            return 0;
+        };
+        
+        cashflowClassiqueFinal = extractMontant(cashflowClassiqueElement.textContent);
+        cashflowEncheresFinal = extractMontant(cashflowEncheresElement.textContent);
+        const cashflowDiff = cashflowEncheresFinal - cashflowClassiqueFinal;
+        
+        majDifference('comp-cashflow-diff', cashflowDiff);
+        majDifference('comp-cashflow-annuel-diff', cashflowDiff * 12);
     }
-    
-    document.getElementById('comp-classique-rentabilite').textContent = formaterPourcentage(classique.rendementNet);
-    document.getElementById('comp-encheres-rentabilite').textContent = formaterPourcentage(encheres.rendementNet);
-    majDifference('comp-rentabilite-diff', encheres.rendementNet - classique.rendementNet, true);
-    
-    // Générer le résumé lisible
-    genererResumeLisible(classique, encheres);
-    
-    // Ajouter les barres visuelles
-    ajouterBarresVisuelles(classique, encheres);
+    // Priorité 3: Fallback sur cashFlow simple
+    else {
+        cashflowClassiqueFinal = classique.cashFlow;
+        cashflowEncheresFinal = encheres.cashFlow;
+        
+        document.getElementById('comp-classique-cashflow').textContent = formaterMontantAvecSigne(classique.cashFlow);
+        document.getElementById('comp-encheres-cashflow').textContent = formaterMontantAvecSigne(encheres.cashFlow);
+        majDifference('comp-cashflow-diff', encheres.cashFlow - classique.cashFlow);
+        
+        document.getElementById('comp-classique-cashflow-annuel').textContent = formaterMontantAvecSigne(classique.cashFlow * 12);
+        document.getElementById('comp-encheres-cashflow-annuel').textContent = formaterMontantAvecSigne(encheres.cashFlow * 12);
+        majDifference('comp-cashflow-annuel-diff', (encheres.cashFlow - classique.cashFlow) * 12);
+    }
+}
+
+// CALCUL DU RENDEMENT BASÉ SUR L'APPORT RÉEL DE CHAQUE MODE
+const rendementClassique = apportClassique > 0 ? (cashflowClassiqueFinal * 12 / apportClassique) * 100 : 0;
+const rendementEncheres = apportEncheres > 0 ? (cashflowEncheresFinal * 12 / apportEncheres) * 100 : 0;
+
+document.getElementById('comp-classique-rentabilite').textContent = formaterPourcentage(rendementClassique);
+document.getElementById('comp-encheres-rentabilite').textContent = formaterPourcentage(rendementEncheres);
+majDifference('comp-rentabilite-diff', rendementEncheres - rendementClassique, true);
+
+// Mettre à jour aussi les badges de rendement en haut des cartes
+const classiqueRendEl = document.getElementById('classique-rentabilite');
+const encheresRendEl = document.getElementById('encheres-rentabilite');
+if (classiqueRendEl) classiqueRendEl.textContent = rendementClassique.toFixed(2) + '%';
+if (encheresRendEl) encheresRendEl.textContent = rendementEncheres.toFixed(2) + '%';
+
+// Générer le résumé lisible
+genererResumeLisible(classique, encheres);
+
+// Ajouter les barres visuelles
+ajouterBarresVisuelles(classique, encheres);
 }
 
     /**
