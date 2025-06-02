@@ -1950,9 +1950,14 @@ else {
     }
 }
 
-// CALCUL DU RENDEMENT BASÉ SUR L'APPORT RÉEL DE CHAQUE MODE
-const rendementClassique = apportClassique > 0 ? (cashflowClassiqueFinal * 12 / apportClassique) * 100 : 0;
-const rendementEncheres = apportEncheres > 0 ? (cashflowEncheresFinal * 12 / apportEncheres) * 100 : 0;
+// CALCUL DU RENDEMENT BASÉ SUR L'APPORT INITIAL PARAMÉTRÉ
+// Récupérer l'apport depuis le formulaire ou le simulateur
+const apportInitial = parseFloat(document.getElementById('apport')?.value) || 
+                     window.simulateur?.params.base.apport || 
+                     20000;
+
+const rendementClassique = apportInitial > 0 ? (cashflowClassiqueFinal * 12 / apportInitial) * 100 : 0;
+const rendementEncheres = apportInitial > 0 ? (cashflowEncheresFinal * 12 / apportInitial) * 100 : 0;
 
 document.getElementById('comp-classique-rentabilite').textContent = formaterPourcentage(rendementClassique);
 document.getElementById('comp-encheres-rentabilite').textContent = formaterPourcentage(rendementEncheres);
@@ -1969,8 +1974,7 @@ genererResumeLisible(classique, encheres);
 
 // Ajouter les barres visuelles
 ajouterBarresVisuelles(classique, encheres);
-}
-
+    
     /**
      * Met à jour un élément de différence avec la bonne classe CSS
      */
