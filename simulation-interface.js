@@ -797,6 +797,328 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
+     * Crée et affiche les graphiques de comparaison
+     */
+    function creerGraphiques() {
+        // Détruire les graphiques existants
+        if (comparisonChart) comparisonChart.destroy();
+        if (cashflowChart) cashflowChart.destroy();
+        if (valuationChart) valuationChart.destroy();
+        if (costPieChartClassique) costPieChartClassique.destroy();
+        if (costPieChartEncheres) costPieChartEncheres.destroy();
+        
+        // Récupérer les contextes
+        const ctxComparison = document.getElementById('chart-comparison')?.getContext('2d');
+        const ctxCashflow = document.getElementById('chart-cashflow')?.getContext('2d');
+        const ctxValuation = document.getElementById('chart-valuation')?.getContext('2d');
+        const ctxPieClassique = document.getElementById('chart-pie-classique')?.getContext('2d');
+        const ctxPieEncheres = document.getElementById('chart-pie-encheres')?.getContext('2d');
+        
+        // Configuration commune des graphiques
+        Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
+        Chart.defaults.font.family = 'Inter';
+        
+        // Récupérer les données
+        const comparisonData = simulateur.getComparisonChartData();
+        const cashflowData = simulateur.getAmortissementData();
+        const valuationData = simulateur.getEvolutionValeurData(2); // 2% d'appréciation annuelle
+        const costPieData = simulateur.getCoutsPieChartData();
+        
+        // Créer le graphique de comparaison
+        if (ctxComparison && comparisonData) {
+            comparisonChart = new Chart(ctxComparison, {
+                type: 'bar',
+                data: comparisonData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Comparaison des options',
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        if (context.datasetIndex === 0 || context.datasetIndex === 1) {
+                                            // Pour les prix et coûts, formater en euros
+                                            if (context.dataIndex <= 1) {
+                                                label += formaterMontant(context.parsed.y);
+                                            }
+                                            // Pour la rentabilité, formater en pourcentage
+                                            else if (context.dataIndex === 2) {
+                                                label += formaterPourcentage(context.parsed.y);
+                                            }
+                                            // Pour le cash-flow, formater en euros par mois
+                                            else {
+                                                label += formaterMontantMensuel(context.parsed.y);
+                                            }
+                                        }
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    // Formater les valeurs en fonction de l'axe
+                                    if (value >= 1000) {
+                                        return value / 1000 + 'k€';
+                                    }
+                                    return value + '€';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: CHART_ANIMATION_DURATION,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+        
+        // Créer le graphique d'évolution du cash-flow
+        if (ctxCashflow && cashflowData) {
+            cashflowChart = new Chart(ctxCashflow, {
+                type: 'line',
+                data: cashflowData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Évolution du cash-flow sur la durée du prêt',
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += formaterMontant(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return value / 1000 + 'k€';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: CHART_ANIMATION_DURATION,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+        
+        // Créer le graphique d'évolution de la valeur du bien
+        if (ctxValuation && valuationData) {
+            valuationChart = new Chart(ctxValuation, {
+                type: 'line',
+                data: valuationData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Évolution de la valeur patrimoniale',
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += formaterMontant(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return value / 1000 + 'k€';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: CHART_ANIMATION_DURATION,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+        
+        // Créer les graphiques en camembert pour la répartition des coûts
+        if (ctxPieClassique && costPieData) {
+            costPieChartClassique = new Chart(ctxPieClassique, {
+                type: 'doughnut',
+                data: costPieData.classique,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Répartition des coûts - Achat Classique',
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = formaterMontant(context.raw);
+                                    // Méthode compatible avec Chart.js v3 et v4
+                                    const total = context.chart.getDatasetMeta 
+                                        ? context.chart.getDatasetMeta(0).total 
+                                        : context.chart._metasets[0].total;
+                                    const percentage = ((context.raw / total) * 100).toFixed(1) + '%';
+                                    return `${label}: ${value} (${percentage})`;
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: CHART_ANIMATION_DURATION,
+                        animateRotate: true,
+                        animateScale: true
+                    }
+                }
+            });
+        }
+        
+        if (ctxPieEncheres && costPieData) {
+            costPieChartEncheres = new Chart(ctxPieEncheres, {
+                type: 'doughnut',
+                data: costPieData.encheres,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Répartition des coûts - Vente aux Enchères',
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = formaterMontant(context.raw);
+                                    // Méthode compatible avec Chart.js v3 et v4
+                                    const total = context.chart.getDatasetMeta 
+                                        ? context.chart.getDatasetMeta(0).total 
+                                        : context.chart._metasets[0].total;
+                                    const percentage = ((context.raw / total) * 100).toFixed(1) + '%';
+                                    return `${label}: ${value} (${percentage})`;
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: CHART_ANIMATION_DURATION,
+                        animateRotate: true,
+                        animateScale: true
+                    }
+                }
+            });
+        }
+    }
+
+    /**
      * Récupère toutes les valeurs du formulaire
      * @returns {Object} - Données du formulaire
      */
@@ -1539,13 +1861,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // RÉSULTATS FINAUX - SYNCHRONISATION AVEC LES VALEURS AFFICHÉES
         // Récupérer les valeurs déjà calculées avec impact fiscal depuis le DOM
-        const cashflowClassique = resultats.classique.cashFlow;
-const cashflowEncheres = resultats.encheres.cashFlow;
-
-if (cashflowClassique !== undefined && cashflowEncheres !== undefined) {
-    // Utiliser directement les valeurs calculées (qui incluent l'impact fiscal)
-    document.getElementById('comp-classique-cashflow').innerHTML = '<strong>' + formatMontant(cashflowClassique) + '</strong>';
-    document.getElementById('comp-encheres-cashflow').innerHTML = '<strong>' + formatMontant(cashflowEncheres) + '</strong>';
+        const cashflowClassiqueElement = document.querySelector('#classique-cashflow .cashflow-monthly') || 
+                                        document.querySelector('.cashflow-container .cashflow-monthly');
+        const cashflowEncheresElement = document.querySelector('#encheres-cashflow .cashflow-monthly') || 
+                                       document.querySelector('.results-card:nth-child(2) .cashflow-container .cashflow-monthly');
+        
+        if (cashflowClassiqueElement && cashflowEncheresElement) {
+            // Utiliser directement les valeurs affichées (qui incluent l'impact fiscal)
+            document.getElementById('comp-classique-cashflow').textContent = cashflowClassiqueElement.textContent.replace('/mois', '');
+            document.getElementById('comp-encheres-cashflow').textContent = cashflowEncheresElement.textContent.replace('/mois', '');
             
             // Récupérer aussi les valeurs annuelles
             const cashflowClassiqueAnnuelElement = document.querySelector('#classique-cashflow .cashflow-annual') || 
