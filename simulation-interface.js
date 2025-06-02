@@ -1660,7 +1660,6 @@ function afficherResultats(resultats) {
             cashflowApresImpot.parentNode.replaceChild(cashflowContainer, cashflowApresImpot);
         }
     }
-}
         
         // Comparatif
         document.getElementById('comp-classique-prix').textContent = formaterMontant(classique.prixAchat);
