@@ -1450,214 +1450,217 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    /**
-     * Affiche les résultats de la simulation
-     * @param {Object} resultats - Résultats de la simulation
-     */
-    function afficherResultats(resultats) {
-        const { classique, encheres } = resultats;
+/**
+ * Affiche les résultats de la simulation
+ * @param {Object} resultats - Résultats de la simulation
+ */
+function afficherResultats(resultats) {
+    const { classique, encheres } = resultats;
+    
+    // Vérifier si des résultats ont été trouvés
+    if (!classique || !encheres) {
+        afficherToast('Impossible de trouver une solution avec les paramètres actuels. Veuillez ajuster vos critères.', 'error');
+        return;
+    }
+    
+    // Affichage des résultats pour l'achat classique
+    // Nouveaux éléments pour budget et surface
+    document.getElementById('classique-budget-max').textContent = formaterMontant(classique.prixAchat);
+    document.getElementById('classique-surface-max').textContent = classique.surface.toFixed(1) + " m²";
+    
+    // Prix au m² final (si l'élément existe)
+    const prixM2Classique = classique.prixAchat / classique.surface;
+    if (document.getElementById('classique-prix-m2-final')) {
+        document.getElementById('classique-prix-m2-final').textContent = 
+            "Soit " + formaterMontant(prixM2Classique, 0) + "/m²";
+    }
+    
+    // Anciens éléments et détails
+    document.getElementById('classique-prix-achat').textContent = formaterMontant(classique.prixAchat);
+    document.getElementById('classique-frais-notaire').textContent = formaterMontant(classique.fraisNotaire);
+    document.getElementById('classique-commission').textContent = formaterMontant(classique.commission);
+    document.getElementById('classique-travaux').textContent = formaterMontant(classique.travaux);
+    document.getElementById('classique-frais-bancaires').textContent = formaterMontant(classique.fraisBancaires);
+    document.getElementById('classique-total').textContent = formaterMontant(classique.coutTotal);
+    document.getElementById('classique-mensualite').textContent = formaterMontantMensuel(classique.mensualite);
+    document.getElementById('classique-loyer-net').textContent = formaterMontantMensuel(classique.loyerNet);
+    
+    // Cash-flow mensuel et annuel
+    const cashflowClassique = document.getElementById('classique-cashflow');
+    if (cashflowClassique) {
+        // Créer un conteneur pour le cash-flow mensuel et annuel
+        const cashflowContainer = document.createElement('div');
+        cashflowContainer.className = 'cashflow-container';
+        cashflowContainer.id = cashflowClassique.id || 'classique-cashflow';  // ← AJOUT IMPORTANT
         
-        // Vérifier si des résultats ont été trouvés
-        if (!classique || !encheres) {
-            afficherToast('Impossible de trouver une solution avec les paramètres actuels. Veuillez ajuster vos critères.', 'error');
-            return;
-        }
+        // Cash-flow mensuel
+        const cashflowMensuel = document.createElement('div');
+        cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(classique.cashFlow);
+        cashflowMensuel.textContent = formaterMontantMensuel(classique.cashFlow);
         
-        // Affichage des résultats pour l'achat classique
-        // Nouveaux éléments pour budget et surface
-        document.getElementById('classique-budget-max').textContent = formaterMontant(classique.prixAchat);
-        document.getElementById('classique-surface-max').textContent = classique.surface.toFixed(1) + " m²";
+        // Cash-flow annuel
+        const cashflowAnnuel = document.createElement('div');
+        cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(classique.cashFlow);
+        cashflowAnnuel.textContent = formaterMontantAnnuel(classique.cashFlow * 12);
         
-        // Prix au m² final (si l'élément existe)
-        const prixM2Classique = classique.prixAchat / classique.surface;
-        if (document.getElementById('classique-prix-m2-final')) {
-            document.getElementById('classique-prix-m2-final').textContent = 
-                "Soit " + formaterMontant(prixM2Classique, 0) + "/m²";
-        }
+        // Ajouter au conteneur
+        cashflowContainer.appendChild(cashflowMensuel);
+        cashflowContainer.appendChild(cashflowAnnuel);
         
-        // Anciens éléments et détails
-        document.getElementById('classique-prix-achat').textContent = formaterMontant(classique.prixAchat);
-        document.getElementById('classique-frais-notaire').textContent = formaterMontant(classique.fraisNotaire);
-        document.getElementById('classique-commission').textContent = formaterMontant(classique.commission);
-        document.getElementById('classique-travaux').textContent = formaterMontant(classique.travaux);
-        document.getElementById('classique-frais-bancaires').textContent = formaterMontant(classique.fraisBancaires);
-        document.getElementById('classique-total').textContent = formaterMontant(classique.coutTotal);
-        document.getElementById('classique-mensualite').textContent = formaterMontantMensuel(classique.mensualite);
-        document.getElementById('classique-loyer-net').textContent = formaterMontantMensuel(classique.loyerNet);
+        // Remplacer le contenu actuel
+        cashflowClassique.parentNode.replaceChild(cashflowContainer, cashflowClassique);
+    }
+    
+    // Affichage de la marge loyer-dette
+    const margeClassique = document.getElementById('classique-marge');
+    if (margeClassique) {
+        margeClassique.textContent = formaterMontantMensuel(classique.marge);
+        margeClassique.className = getClasseValeur(classique.marge);
+    }
+    
+    // Animation des rentabilités
+    const classiqueRentabilite = document.getElementById('classique-rentabilite');
+    const encheresRentabilite = document.getElementById('encheres-rentabilite');
+    
+    if (classiqueRentabilite && encheresRentabilite) {
+        // Récupérer les valeurs de rentabilité
+        const rentClassique = classique.rendementNet;
+        const rentEncheres = encheres.rendementNet;
         
-        // Cash-flow mensuel et annuel
-        const cashflowClassique = document.getElementById('classique-cashflow');
-        if (cashflowClassique) {
-            // Créer un conteneur pour le cash-flow mensuel et annuel
+        classiqueRentabilite.textContent = formaterPourcentage(rentClassique);
+        encheresRentabilite.textContent = formaterPourcentage(rentEncheres);
+        
+        // Mettre à jour les classes des badges selon le niveau de rentabilité
+        majClasseRentabilite(classiqueRentabilite.parentElement, rentClassique);
+        majClasseRentabilite(encheresRentabilite.parentElement, rentEncheres);
+    }
+    
+    // Affichage des données fiscales pour l'achat classique si les éléments existent
+    if (document.getElementById('classique-revenu-foncier')) {
+        document.getElementById('classique-revenu-foncier').textContent = formaterMontant(classique.revenuFoncier);
+        document.getElementById('classique-impact-fiscal').textContent = formaterMontant(classique.impactFiscal);
+        
+        // Cash-flow après impôt mensuel et annuel
+        const cashflowApresImpotMensuel = classique.cashFlow + (classique.impactFiscal / 12);
+        const cashflowApresImpotAnnuel = cashflowApresImpotMensuel * 12;
+        
+        const cashflowApresImpot = document.getElementById('classique-cashflow-apres-impot');
+        if (cashflowApresImpot) {
+            // Créer un conteneur pour le cash-flow après impôt
             const cashflowContainer = document.createElement('div');
             cashflowContainer.className = 'cashflow-container';
             
-            // Cash-flow mensuel
+            // Cash-flow mensuel après impôt
             const cashflowMensuel = document.createElement('div');
-            cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(classique.cashFlow);
-            cashflowMensuel.textContent = formaterMontantMensuel(classique.cashFlow);
+            cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(cashflowApresImpotMensuel);
+            cashflowMensuel.textContent = formaterMontantMensuel(cashflowApresImpotMensuel);
             
-            // Cash-flow annuel
+            // Cash-flow annuel après impôt
             const cashflowAnnuel = document.createElement('div');
-            cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(classique.cashFlow);
-            cashflowAnnuel.textContent = formaterMontantAnnuel(classique.cashFlow * 12);
+            cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(cashflowApresImpotAnnuel);
+            cashflowAnnuel.textContent = formaterMontantAnnuel(cashflowApresImpotAnnuel);
             
             // Ajouter au conteneur
             cashflowContainer.appendChild(cashflowMensuel);
             cashflowContainer.appendChild(cashflowAnnuel);
             
             // Remplacer le contenu actuel
-            cashflowClassique.parentNode.replaceChild(cashflowContainer, cashflowClassique);
+            cashflowApresImpot.parentNode.replaceChild(cashflowContainer, cashflowApresImpot);
         }
+    }
+    
+    // Affichage des résultats pour la vente aux enchères
+    // Nouveaux éléments pour budget et surface
+    document.getElementById('encheres-budget-max').textContent = formaterMontant(encheres.prixAchat);
+    document.getElementById('encheres-surface-max').textContent = encheres.surface.toFixed(1) + " m²";
+    
+    // Prix au m² final pour enchères (si l'élément existe)
+    const prixM2Encheres = encheres.prixAchat / encheres.surface;
+    if (document.getElementById('encheres-prix-m2-final')) {
+        document.getElementById('encheres-prix-m2-final').textContent = 
+            "Soit " + formaterMontant(prixM2Encheres, 0) + "/m²";
+    }
+    
+    // Anciens éléments et détails
+    document.getElementById('encheres-prix-achat').textContent = formaterMontant(encheres.prixAchat);
+    document.getElementById('encheres-droits').textContent = formaterMontant(encheres.droitsEnregistrement);
+    document.getElementById('encheres-emoluments').textContent = formaterMontant(encheres.emolumentsPoursuivant);
+    document.getElementById('encheres-honoraires').textContent = formaterMontant(encheres.honorairesAvocat);
+    document.getElementById('encheres-publicite').textContent = formaterMontant(encheres.publiciteFonciere);
+    document.getElementById('encheres-frais-divers').textContent = formaterMontant(encheres.fraisDivers);
+    document.getElementById('encheres-travaux').textContent = formaterMontant(encheres.travaux);
+    document.getElementById('encheres-frais-bancaires').textContent = formaterMontant(encheres.fraisBancaires);
+    document.getElementById('encheres-total').textContent = formaterMontant(encheres.coutTotal);
+    document.getElementById('encheres-mensualite').textContent = formaterMontantMensuel(encheres.mensualite);
+    document.getElementById('encheres-loyer-net').textContent = formaterMontantMensuel(encheres.loyerNet);
+    
+    // Cash-flow mensuel et annuel pour les enchères
+    const cashflowEncheres = document.getElementById('encheres-cashflow');
+    if (cashflowEncheres) {
+        // Créer un conteneur pour le cash-flow mensuel et annuel
+        const cashflowContainer = document.createElement('div');
+        cashflowContainer.className = 'cashflow-container';
+        cashflowContainer.id = cashflowEncheres.id || 'encheres-cashflow';    // ← AJOUT IMPORTANT
         
-        // Affichage de la marge loyer-dette
-        const margeClassique = document.getElementById('classique-marge');
-        if (margeClassique) {
-            margeClassique.textContent = formaterMontantMensuel(classique.marge);
-            margeClassique.className = getClasseValeur(classique.marge);
-        }
+        // Cash-flow mensuel
+        const cashflowMensuel = document.createElement('div');
+        cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(encheres.cashFlow);
+        cashflowMensuel.textContent = formaterMontantMensuel(encheres.cashFlow);
         
-        // Animation des rentabilités
-        const classiqueRentabilite = document.getElementById('classique-rentabilite');
-        const encheresRentabilite = document.getElementById('encheres-rentabilite');
+        // Cash-flow annuel
+        const cashflowAnnuel = document.createElement('div');
+        cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(encheres.cashFlow);
+        cashflowAnnuel.textContent = formaterMontantAnnuel(encheres.cashFlow * 12);
         
-        if (classiqueRentabilite && encheresRentabilite) {
-            // Récupérer les valeurs de rentabilité
-            const rentClassique = classique.rendementNet;
-            const rentEncheres = encheres.rendementNet;
-            
-            classiqueRentabilite.textContent = formaterPourcentage(rentClassique);
-            encheresRentabilite.textContent = formaterPourcentage(rentEncheres);
-            
-            // Mettre à jour les classes des badges selon le niveau de rentabilité
-            majClasseRentabilite(classiqueRentabilite.parentElement, rentClassique);
-            majClasseRentabilite(encheresRentabilite.parentElement, rentEncheres);
-        }
+        // Ajouter au conteneur
+        cashflowContainer.appendChild(cashflowMensuel);
+        cashflowContainer.appendChild(cashflowAnnuel);
         
-        // Affichage des données fiscales pour l'achat classique si les éléments existent
-        if (document.getElementById('classique-revenu-foncier')) {
-            document.getElementById('classique-revenu-foncier').textContent = formaterMontant(classique.revenuFoncier);
-            document.getElementById('classique-impact-fiscal').textContent = formaterMontant(classique.impactFiscal);
-            
-            // Cash-flow après impôt mensuel et annuel
-            const cashflowApresImpotMensuel = classique.cashFlow + (classique.impactFiscal / 12);
-            const cashflowApresImpotAnnuel = cashflowApresImpotMensuel * 12;
-            
-            const cashflowApresImpot = document.getElementById('classique-cashflow-apres-impot');
-            if (cashflowApresImpot) {
-                // Créer un conteneur pour le cash-flow après impôt
-                const cashflowContainer = document.createElement('div');
-                cashflowContainer.className = 'cashflow-container';
-                
-                // Cash-flow mensuel après impôt
-                const cashflowMensuel = document.createElement('div');
-                cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(cashflowApresImpotMensuel);
-                cashflowMensuel.textContent = formaterMontantMensuel(cashflowApresImpotMensuel);
-                
-                // Cash-flow annuel après impôt
-                const cashflowAnnuel = document.createElement('div');
-                cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(cashflowApresImpotAnnuel);
-                cashflowAnnuel.textContent = formaterMontantAnnuel(cashflowApresImpotAnnuel);
-                
-                // Ajouter au conteneur
-                cashflowContainer.appendChild(cashflowMensuel);
-                cashflowContainer.appendChild(cashflowAnnuel);
-                
-                // Remplacer le contenu actuel
-                cashflowApresImpot.parentNode.replaceChild(cashflowContainer, cashflowApresImpot);
-            }
-        }
+        // Remplacer le contenu actuel
+        cashflowEncheres.parentNode.replaceChild(cashflowContainer, cashflowEncheres);
+    }
+    
+    // Affichage de la marge loyer-dette
+    const margeEncheres = document.getElementById('encheres-marge');
+    if (margeEncheres) {
+        margeEncheres.textContent = formaterMontantMensuel(encheres.marge);
+        margeEncheres.className = getClasseValeur(encheres.marge);
+    }
+    
+    // Affichage des données fiscales pour les enchères si les éléments existent
+    if (document.getElementById('encheres-revenu-foncier')) {
+        document.getElementById('encheres-revenu-foncier').textContent = formaterMontant(encheres.revenuFoncier);
+        document.getElementById('encheres-impact-fiscal').textContent = formaterMontant(encheres.impactFiscal);
         
-        // Affichage des résultats pour la vente aux enchères
-        // Nouveaux éléments pour budget et surface
-        document.getElementById('encheres-budget-max').textContent = formaterMontant(encheres.prixAchat);
-        document.getElementById('encheres-surface-max').textContent = encheres.surface.toFixed(1) + " m²";
+        // Cash-flow après impôt mensuel et annuel
+        const cashflowApresImpotMensuel = encheres.cashFlow + (encheres.impactFiscal / 12);
+        const cashflowApresImpotAnnuel = cashflowApresImpotMensuel * 12;
         
-        // Prix au m² final pour enchères (si l'élément existe)
-        const prixM2Encheres = encheres.prixAchat / encheres.surface;
-        if (document.getElementById('encheres-prix-m2-final')) {
-            document.getElementById('encheres-prix-m2-final').textContent = 
-                "Soit " + formaterMontant(prixM2Encheres, 0) + "/m²";
-        }
-        
-        // Anciens éléments et détails
-        document.getElementById('encheres-prix-achat').textContent = formaterMontant(encheres.prixAchat);
-        document.getElementById('encheres-droits').textContent = formaterMontant(encheres.droitsEnregistrement);
-        document.getElementById('encheres-emoluments').textContent = formaterMontant(encheres.emolumentsPoursuivant);
-        document.getElementById('encheres-honoraires').textContent = formaterMontant(encheres.honorairesAvocat);
-        document.getElementById('encheres-publicite').textContent = formaterMontant(encheres.publiciteFonciere);
-        document.getElementById('encheres-frais-divers').textContent = formaterMontant(encheres.fraisDivers);
-        document.getElementById('encheres-travaux').textContent = formaterMontant(encheres.travaux);
-        document.getElementById('encheres-frais-bancaires').textContent = formaterMontant(encheres.fraisBancaires);
-        document.getElementById('encheres-total').textContent = formaterMontant(encheres.coutTotal);
-        document.getElementById('encheres-mensualite').textContent = formaterMontantMensuel(encheres.mensualite);
-        document.getElementById('encheres-loyer-net').textContent = formaterMontantMensuel(encheres.loyerNet);
-        
-        // Cash-flow mensuel et annuel pour les enchères
-        const cashflowEncheres = document.getElementById('encheres-cashflow');
-        if (cashflowEncheres) {
-            // Créer un conteneur pour le cash-flow mensuel et annuel
+        const cashflowApresImpot = document.getElementById('encheres-cashflow-apres-impot');
+        if (cashflowApresImpot) {
+            // Créer un conteneur pour le cash-flow après impôt
             const cashflowContainer = document.createElement('div');
             cashflowContainer.className = 'cashflow-container';
             
-            // Cash-flow mensuel
+            // Cash-flow mensuel après impôt
             const cashflowMensuel = document.createElement('div');
-            cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(encheres.cashFlow);
-            cashflowMensuel.textContent = formaterMontantMensuel(encheres.cashFlow);
+            cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(cashflowApresImpotMensuel);
+            cashflowMensuel.textContent = formaterMontantMensuel(cashflowApresImpotMensuel);
             
-            // Cash-flow annuel
+            // Cash-flow annuel après impôt
             const cashflowAnnuel = document.createElement('div');
-            cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(encheres.cashFlow);
-            cashflowAnnuel.textContent = formaterMontantAnnuel(encheres.cashFlow * 12);
+            cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(cashflowApresImpotAnnuel);
+            cashflowAnnuel.textContent = formaterMontantAnnuel(cashflowApresImpotAnnuel);
             
             // Ajouter au conteneur
             cashflowContainer.appendChild(cashflowMensuel);
             cashflowContainer.appendChild(cashflowAnnuel);
             
             // Remplacer le contenu actuel
-            cashflowEncheres.parentNode.replaceChild(cashflowContainer, cashflowEncheres);
+            cashflowApresImpot.parentNode.replaceChild(cashflowContainer, cashflowApresImpot);
         }
-        
-        // Affichage de la marge loyer-dette
-        const margeEncheres = document.getElementById('encheres-marge');
-        if (margeEncheres) {
-            margeEncheres.textContent = formaterMontantMensuel(encheres.marge);
-            margeEncheres.className = getClasseValeur(encheres.marge);
-        }
-        
-        // Affichage des données fiscales pour les enchères si les éléments existent
-        if (document.getElementById('encheres-revenu-foncier')) {
-            document.getElementById('encheres-revenu-foncier').textContent = formaterMontant(encheres.revenuFoncier);
-            document.getElementById('encheres-impact-fiscal').textContent = formaterMontant(encheres.impactFiscal);
-            
-            // Cash-flow après impôt mensuel et annuel
-            const cashflowApresImpotMensuel = encheres.cashFlow + (encheres.impactFiscal / 12);
-            const cashflowApresImpotAnnuel = cashflowApresImpotMensuel * 12;
-            
-            const cashflowApresImpot = document.getElementById('encheres-cashflow-apres-impot');
-            if (cashflowApresImpot) {
-                // Créer un conteneur pour le cash-flow après impôt
-                const cashflowContainer = document.createElement('div');
-                cashflowContainer.className = 'cashflow-container';
-                
-                // Cash-flow mensuel après impôt
-                const cashflowMensuel = document.createElement('div');
-                cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(cashflowApresImpotMensuel);
-                cashflowMensuel.textContent = formaterMontantMensuel(cashflowApresImpotMensuel);
-                
-                // Cash-flow annuel après impôt
-                const cashflowAnnuel = document.createElement('div');
-                cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(cashflowApresImpotAnnuel);
-                cashflowAnnuel.textContent = formaterMontantAnnuel(cashflowApresImpotAnnuel);
-                
-                // Ajouter au conteneur
-                cashflowContainer.appendChild(cashflowMensuel);
-                cashflowContainer.appendChild(cashflowAnnuel);
-                
-                // Remplacer le contenu actuel
-                cashflowApresImpot.parentNode.replaceChild(cashflowContainer, cashflowApresImpot);
-            }
-        }
+    }
+}
         
         // Comparatif
         document.getElementById('comp-classique-prix').textContent = formaterMontant(classique.prixAchat);
