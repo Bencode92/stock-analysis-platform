@@ -1974,6 +1974,7 @@ genererResumeLisible(classique, encheres);
 
 // Ajouter les barres visuelles
 ajouterBarresVisuelles(classique, encheres);
+    }
     
     /**
      * Met à jour un élément de différence avec la bonne classe CSS
