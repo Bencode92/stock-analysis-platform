@@ -14,24 +14,115 @@
 const ImmoExtensions = (function() {
     // Référence au simulateur principal
     let simulateur = null;
-
+    
     // Configuration des seuils pour les indicateurs visuels
     const SEUILS = {
         rentabilite: {
             bon: 7,    // >7% = bon
-            moyen: 4    // 4-7% = moyen, <4% = mauvais
+            moyen: 4   // 4-7% = moyen, <4% = mauvais
         },
         cashflow: {
-            bon: 200,   // >200€ = bon
-            moyen: 50    // 50-200€ = moyen, <50€ = mauvais
+            bon: 200,  // >200€ = bon
+            moyen: 50  // 50-200€ = moyen, <50€ = mauvais
         }
     };
+    
+    // ===============================================================
+    // HELPER CALCUL PLUS-VALUE 2025
+    // ===============================================================
+    
+    /**
+     * Helper générique – Calcul de la plus-value (règles 2025)
+     */
+    function calculerImpotPlusValueSelonRegime({
+        regime,
+        prixAchat,
+        valeurRevente,
+        fraisAcq,
+        nbAnnees,
+        amortissementAnnuel,
+        tauxIS = 25,
+        exonerationType = null
+    }) {
+        // Exonérations totales
+        if (exonerationType === 'main_residence') {
+            return { impot: 0, baseImposable: {}, detail: { reason: 'Résidence principale'} };
+        }
 
+        // RÉGIMES PERSONNES PHYSIQUES & LMNP
+        if (['micro-foncier','reel-foncier','lmnp-micro','lmnp-reel'].includes(regime)) {
+            const fraisMajores = Math.max(fraisAcq, prixAchat * 0.075);
+            const travauxMajores = nbAnnees >= 5 ? prixAchat * 0.15 : 0;
+
+            let prixMajore = prixAchat + fraisMajores + travauxMajores;
+
+            // Réforme 2025 : ré-intégration amortissements LMNP réel
+            if (regime === 'lmnp-reel') {
+                prixMajore -= amortissementAnnuel * nbAnnees;
+            }
+
+            const pvBrute = Math.max(0, valeurRevente - prixMajore);
+
+            // Abattements de durée – IR & PS
+            const abattIR = nbAnnees <= 5 ? 0
+                           : nbAnnees <= 21 ? (nbAnnees - 5) * 6
+                           : nbAnnees === 22 ? 100 : 100;
+
+            const abattPS = nbAnnees <= 5 ? 0
+                           : nbAnnees <= 21 ? (nbAnnees - 5) * 1.65
+                           : nbAnnees === 22 ? 28
+                           : nbAnnees <= 30 ? Math.min(28 + (nbAnnees - 22) * 9, 100)
+                           : 100;
+
+            const baseIR = pvBrute * (1 - abattIR / 100);
+            const basePS = pvBrute * (1 - abattPS / 100);
+
+            // Surtaxe 2025 avec décote officielle
+            let surtaxe = 0;
+            if (baseIR > 50_000) {
+                surtaxe = Math.min(
+                    baseIR * 0.06 - Math.max(0, baseIR - 150_000) * 0.04,
+                    baseIR * 0.06
+                );
+            }
+
+            return {
+                impot: baseIR * 0.19 + basePS * 0.172 + surtaxe,
+                baseImposable: { IR: baseIR, PS: basePS },
+                detail: { pvBrute, prixMajore, abattIR, abattPS, surtaxe }
+            };
+        }
+
+        // RÉGIMES IS
+        if (regime.endsWith('-is')) {
+            // Valeur comptable : terrain ≈ 20% non amortissable
+            const valeurTerrain = prixAchat * 0.20;
+            const amortCumule = amortissementAnnuel * nbAnnees;
+            const valeurComptable = Math.max(valeurTerrain, prixAchat - amortCumule);
+
+            const baseIS = Math.max(0, valeurRevente - valeurComptable);
+
+            // Barème 15% jusqu'à 42 500€, puis 25%
+            const impotIS = baseIS <= 42_500
+                ? baseIS * 0.15
+                : 42_500 * 0.15 + (baseIS - 42_500) * 0.25;
+
+            return {
+                impot: impotIS,
+                baseImposable: { IS: baseIS },
+                detail: { valeurComptable, amortCumule }
+            };
+        }
+
+        // Par défaut
+        return { impot: 0, baseImposable: {}, detail: {} };
+    }
+    
     // Initialisation du module
     function initialiser(simulateurInstance) {
         console.log("Initialisation des extensions du simulateur immobilier");
         simulateur = simulateurInstance;
-
+        
         // Initialiser le régime fiscal par défaut s'il n'existe pas
         if (!simulateur.params.fiscalite.regimeFiscal) {
             simulateur.params.fiscalite.regimeFiscal = 'micro-foncier';
@@ -41,7 +132,7 @@ const ImmoExtensions = (function() {
         if (!simulateur.params.fiscalite.tauxIS) {
             simulateur.params.fiscalite.tauxIS = 25; // 25% par défaut
         }
-
+        
         // Étendre le simulateur avec les nouvelles méthodes
         etendreSimulateur();
         
@@ -60,8 +151,8 @@ const ImmoExtensions = (function() {
         console.log("Extensions du simulateur initialisées avec succès");
         return true;
     }
-
-    // Étend le simulateur avec de nouvelles méthodes
+    
+    // Étend le simulateur avec les nouvelles méthodes
     function etendreSimulateur() {
         if (!simulateur) return;
 
@@ -241,8 +332,150 @@ const ImmoExtensions = (function() {
             return revenuImposable * (tauxMarginal + tauxPS);
         };
 
+        // ===============================================================
+        // MÉTHODE CALCULER SCÉNARIO REVENTE 2025
+        // ===============================================================
+        SimulateurImmo.prototype.calculerScenarioRevente = function(investissement, nbAnnees, tauxAppreciationAnnuel) {
+            const prixAchat = investissement.prixAchat || 0;
+            const coutTotal = investissement.coutTotal || 0;
+            const fraisAcquisition = coutTotal - prixAchat;
+            const apportInitial = this.params.base.apport || 0;
+            const montantEmprunte = coutTotal - apportInitial;
+            const cashFlowMensuel = (investissement.cashFlow || 0);
+            const cashFlowAnnuel = cashFlowMensuel * 12;
+            
+            // Récupérer le régime fiscal actuel
+            const regime = this.params.fiscalite?.regimeFiscal || 
+                           document.querySelector('input[name="regime-fiscal"]:checked')?.value || 
+                           'reel-foncier';
+            const tauxIS = this.params.fiscalite?.tauxIS || 25;
+            
+            // Calcul de la valeur future
+            const facteurAppreciation = Math.pow(1 + tauxAppreciationAnnuel/100, nbAnnees);
+            const valeurRevente = prixAchat * facteurAppreciation;
+            
+            // Frais de revente (10%)
+            const tauxFraisRevente = 10;
+            const fraisRevente = valeurRevente * (tauxFraisRevente/100);
+            
+            // Calcul plus-value via helper 2025
+            const amortissementAnnuel = this.calculerAmortissementAnnuel(regime);
+            
+            const resPV = calculerImpotPlusValueSelonRegime({
+                regime,
+                prixAchat,
+                valeurRevente,
+                fraisAcq: fraisAcquisition,
+                nbAnnees,
+                amortissementAnnuel,
+                tauxIS
+            });
+
+            const impotPlusValueTotal = resPV.impot;
+            
+            // Extraction des détails
+            const plusValueBrute = resPV.detail.pvBrute || Math.max(0, valeurRevente - prixAchat - fraisAcquisition);
+            const prixAcquisitionMajore = resPV.detail.prixMajore || prixAchat + fraisAcquisition;
+            const abattementIR = resPV.detail.abattIR || 0;
+            const abattementPS = resPV.detail.abattPS || 0;
+            const surtaxe = resPV.detail.surtaxe || 0;
+            
+            // Calcul des impôts détaillés
+            let impotPlusValueIR = 0;
+            let impotPlusValuePS = 0;
+            
+            if (regime.endsWith('-is')) {
+                impotPlusValueIR = impotPlusValueTotal;
+                impotPlusValuePS = 0;
+            } else {
+                const baseIR = resPV.baseImposable.IR || 0;
+                const basePS = resPV.baseImposable.PS || 0;
+                impotPlusValueIR = baseIR * 0.19;
+                impotPlusValuePS = basePS * 0.172;
+            }
+            
+            // Capital restant dû
+            const capitalRestantDu = calculerCapitalRestantDu(
+                montantEmprunte,
+                this.params.base.taux / 100,
+                this.params.base.duree * 12,
+                nbAnnees * 12
+            );
+            
+            // Frais de remboursement anticipé
+            const tauxMensuel = (this.params.base.taux / 100) / 12;
+            const fraRemboursementAnticipe = Math.min(
+                capitalRestantDu * 0.02,
+                capitalRestantDu * tauxMensuel * 6
+            );
+            
+            // Cash-flows cumulés
+            const cashFlowsCumules = cashFlowAnnuel * nbAnnees;
+            
+            // Valeur nette après revente
+            const valeurNetteRevente = valeurRevente - fraisRevente - impotPlusValueTotal - capitalRestantDu - fraRemboursementAnticipe;
+            
+            // Gain total
+            const gainTotal = valeurNetteRevente + cashFlowsCumules - apportInitial;
+            
+            // Multiple sur apport
+            const multipleInvestissement = apportInitial > 0 ? 
+                (apportInitial + gainTotal) / apportInitial : 0;
+            
+            // Calcul du TRI
+            const fluxTresorerie = [];
+            fluxTresorerie.push(-apportInitial);
+            
+            for (let i = 1; i < nbAnnees; i++) {
+                fluxTresorerie.push(cashFlowAnnuel);
+            }
+            
+            fluxTresorerie.push(cashFlowAnnuel + valeurNetteRevente);
+            
+            let tri;
+            try {
+                tri = calculTRINewtonRaphson(fluxTresorerie);
+            } catch (e) {
+                console.error("Erreur TRI:", e);
+                tri = 0;
+            }
+            
+            return {
+                prixAchat,
+                valeurRevente,
+                prixAcquisitionMajore,
+                plusValueBrute,
+                plusValueBruteSansMajoration: valeurRevente - prixAchat,
+                fraisRevente,
+                impotPlusValue: {
+                    ir: impotPlusValueIR,
+                    ps: impotPlusValuePS,
+                    surtaxe: surtaxe,
+                    total: impotPlusValueTotal
+                },
+                abattements: {
+                    ir: abattementIR,
+                    ps: abattementPS
+                },
+                capitalRestantDu,
+                fraRemboursementAnticipe,
+                valeurNetteRevente,
+                cashFlowsCumules,
+                gainTotal,
+                resultatNet: gainTotal,
+                tri: tri * 100,
+                multipleInvestissement,
+                fluxTresorerie,
+                regime,
+                detailPlusValue: resPV
+            };
+        };
+        
+        // ===============================================================
+        // MÉTHODE CALCULER AMORTISSEMENT ANNUEL
+        // ===============================================================
         SimulateurImmo.prototype.calculerAmortissementAnnuel = function(regime) {
-            if (!regime.includes('reel') && !regime.endsWith('-is')) return 0;
+            if (!['lmnp-reel', 'sci-is'].includes(regime)) return 0;
             
             const modeActuel = this.modeActuel || 'classique';
             
@@ -346,165 +579,13 @@ const ImmoExtensions = (function() {
             
             return res;
         };
-
-        // 3. Scénarios de sortie/revente CORRIGÉS
-        SimulateurImmo.prototype.calculerScenarioRevente = function(investissement, nbAnnees, tauxAppreciationAnnuel) {
-            const prixAchat = investissement.prixAchat || 0;
-            const coutTotal = investissement.coutTotal || 0;
-            const fraisAcquisition = coutTotal - prixAchat;
-            const apportInitial = this.params.base.apport || 0;
-            const montantEmprunte = coutTotal - apportInitial;
-            const cashFlowMensuel = (investissement.cashFlow || 0);
-            const cashFlowAnnuel = cashFlowMensuel * 12;
-            
-            // Calcul de la valeur future (sur le prix du bien uniquement)
-            const facteurAppreciation = Math.pow(1 + tauxAppreciationAnnuel/100, nbAnnees);
-            const valeurRevente = prixAchat * facteurAppreciation;
-            
-            // Frais de revente (10%)
-            const tauxFraisRevente = 10;
-            const fraisRevente = valeurRevente * (tauxFraisRevente/100);
-            
-            // MAJORATION DU PRIX D'ACQUISITION (règles fiscales françaises)
-            // 1. Frais d'acquisition : max(frais réels, 7.5% forfaitaire)
-            const fraisAcquisitionFiscaux = Math.max(fraisAcquisition, prixAchat * 0.075);
-            
-            // 2. Travaux : forfait 15% si détention >= 5 ans (on suppose pas de travaux réels justifiés)
-            const travauxForfaitaires = nbAnnees >= 5 ? prixAchat * 0.15 : 0;
-            
-            // Prix d'acquisition majoré pour le calcul fiscal
-            const prixAcquisitionMajore = prixAchat + fraisAcquisitionFiscaux + travauxForfaitaires;
-            
-            // Plus-value brute FISCALE (base imposable)
-            const plusValueBrute = Math.max(0, valeurRevente - prixAcquisitionMajore);
-            
-            // ABATTEMENTS CORRECTS
-            let abattementIR = 0;
-            let abattementPS = 0;
-            
-            if (nbAnnees <= 5) {
-                abattementIR = 0;
-                abattementPS = 0;
-            } else if (nbAnnees <= 21) {
-                abattementIR = (nbAnnees - 5) * 6; // 6% par an
-                abattementPS = (nbAnnees - 5) * 1.65; // 1.65% par an
-            } else if (nbAnnees === 22) {
-                abattementIR = 100; // Exonération totale IR
-                abattementPS = 28; // 26.4% + 1.6%
-            } else if (nbAnnees <= 30) {
-                abattementIR = 100;
-                abattementPS = Math.min(28 + (nbAnnees - 22) * 9, 100);
-            } else {
-                abattementIR = 100;
-                abattementPS = 100;
-            }
-            
-            // Calcul de l'impôt sur la plus-value
-            const plusValueImposableIR = plusValueBrute * (1 - abattementIR/100);
-            const plusValueImposablePS = plusValueBrute * (1 - abattementPS/100);
-            
-            const tauxIR = 19;
-            const tauxPS = 17.2;
-            
-            let impotPlusValueIR = plusValueImposableIR * (tauxIR/100);
-            let impotPlusValuePS = plusValueImposablePS * (tauxPS/100);
-            
-            // SURTAXE sur plus-values importantes (sur PV imposable IR)
-            let surtaxe = 0;
-            if (plusValueImposableIR > 50000) {
-                if (plusValueImposableIR <= 60000) {
-                    surtaxe = (plusValueImposableIR - 50000) * 0.02;
-                } else if (plusValueImposableIR <= 100000) {
-                    surtaxe = 200 + (plusValueImposableIR - 60000) * 0.03;
-                } else if (plusValueImposableIR <= 110000) {
-                    surtaxe = 1400 + (plusValueImposableIR - 100000) * 0.04;
-                } else if (plusValueImposableIR <= 150000) {
-                    surtaxe = 1800 + (plusValueImposableIR - 110000) * 0.05;
-                } else {
-                    surtaxe = 3800 + (plusValueImposableIR - 150000) * 0.06;
-                }
-            }
-            
-            const impotPlusValueTotal = impotPlusValueIR + impotPlusValuePS + surtaxe;
-            
-            // Capital restant dû
-            const capitalRestantDu = calculerCapitalRestantDu(
-                montantEmprunte,
-                this.params.base.taux / 100,
-                this.params.base.duree * 12,
-                nbAnnees * 12
-            );
-            
-            // Frais de remboursement anticipé (2% du capital restant dû, plafonné à 6 mois d'intérêts)
-            const tauxMensuel = (this.params.base.taux / 100) / 12;
-            const fraRemboursementAnticipe = Math.min(
-                capitalRestantDu * 0.02,
-                capitalRestantDu * tauxMensuel * 6
-            );
-            
-            // Cash-flows cumulés sur la période
-            const cashFlowsCumules = cashFlowAnnuel * nbAnnees;
-            
-            // Valeur nette après revente
-            const valeurNetteRevente = valeurRevente - fraisRevente - impotPlusValueTotal - capitalRestantDu - fraRemboursementAnticipe;
-            
-            // Gain total = valeur nette + cash-flows cumulés - apport initial
-            const gainTotal = valeurNetteRevente + cashFlowsCumules - apportInitial;
-            
-            // Multiple sur apport (incluant les cash-flows)
-            const multipleInvestissement = apportInitial > 0 ? 
-                (apportInitial + gainTotal) / apportInitial : 0;
-            
-            // Calcul du TRI
-            const fluxTresorerie = [];
-            fluxTresorerie.push(-apportInitial);
-            
-            for (let i = 1; i < nbAnnees; i++) {
-                fluxTresorerie.push(cashFlowAnnuel);
-            }
-            
-            // Dernier flux : cash-flow + produit net de cession
-            fluxTresorerie.push(cashFlowAnnuel + valeurNetteRevente);
-            
-            let tri;
-            try {
-                tri = calculTRINewtonRaphson(fluxTresorerie);
-            } catch (e) {
-                console.error("Erreur TRI:", e);
-                tri = 0;
-            }
-            
-            return {
-                prixAchat,
-                valeurRevente,
-                prixAcquisitionMajore,
-                plusValueBrute,
-                plusValueBruteSansMajoration: valeurRevente - prixAchat, // Pour info
-                fraisRevente,
-                impotPlusValue: {
-                    ir: impotPlusValueIR,
-                    ps: impotPlusValuePS,
-                    surtaxe: surtaxe,
-                    total: impotPlusValueTotal
-                },
-                abattements: {
-                    ir: abattementIR,
-                    ps: abattementPS
-                },
-                capitalRestantDu,
-                fraRemboursementAnticipe,
-                valeurNetteRevente,
-                cashFlowsCumules,
-                gainTotal,
-                resultatNet: gainTotal, // compatibilité
-                tri: tri * 100,
-                multipleInvestissement,
-                fluxTresorerie
-            };
-        };
     }
-
-    // Fonction pour calculer le capital restant dû
+    
+    // ===============================================================
+    // FONCTIONS UTILITAIRES POUR CAPITAL ET TRI
+    // ===============================================================
+    
+    // Calcule le capital restant dû
     function calculerCapitalRestantDu(montantEmprunte, tauxAnnuel, dureeEnMois, moisEcoules) {
         if (montantEmprunte <= 0 || moisEcoules >= dureeEnMois) return 0;
         
@@ -522,17 +603,16 @@ const ImmoExtensions = (function() {
         return capitalRestant;
     }
 
-    // Calcul du TRI amélioré
+    // Calcul du TRI avec Newton-Raphson
     function calculTRINewtonRaphson(flux) {
-        // Vérifier qu'il y a au moins un flux positif et un négatif
         const hasPositive = flux.some(f => f > 0);
         const hasNegative = flux.some(f => f < 0);
         
         if (!hasPositive || !hasNegative) {
-            return 0; // Pas de TRI calculable
+            return 0;
         }
         
-        let tri = 0.1; // 10% initial
+        let tri = 0.1;
         const precision = 0.00001;
         const maxIterations = 100;
         
@@ -554,16 +634,13 @@ const ImmoExtensions = (function() {
             }
             
             if (Math.abs(derivee) < 0.0001) {
-                // Dérivée trop petite, essayer une autre approche
                 tri = tri > 0 ? tri * 0.5 : -0.1;
                 continue;
             }
             
-            // Newton-Raphson avec amortissement
             const delta = van / derivee;
-            const nouveauTri = tri - delta * 0.7; // Facteur d'amortissement
+            const nouveauTri = tri - delta * 0.7;
             
-            // Limites pour éviter la divergence
             if (nouveauTri < -0.99) {
                 tri = -0.99;
             } else if (nouveauTri > 10) {
@@ -572,16 +649,15 @@ const ImmoExtensions = (function() {
                 tri = nouveauTri;
             }
             
-            // Si on oscille, réduire le pas
             if (i > 20 && Math.abs(delta) > 1) {
-                tri = 0.1 * Math.random() - 0.05; // Redémarrer avec une valeur aléatoire
+                tri = 0.1 * Math.random() - 0.05;
             }
         }
         
         return tri;
     }
 
-    // Fonction utilitaire pour calculer le TRI (ancienne version - gardée pour compatibilité)
+    // Alias pour compatibilité
     function calculTRIApproximation(flux) {
         return calculTRINewtonRaphson(flux);
     }
@@ -1523,7 +1599,7 @@ const ImmoExtensions = (function() {
                                 </tr>
                                 ${res.impotPlusValue.surtaxe > 0 ? `
                                 <tr>
-                                    <td class="pl-6">dont surtaxe</td>
+                                    <td class="pl-6">dont surtaxe 2025</td>
                                     <td>${formaterMontant(res.impotPlusValue.surtaxe)}</td>
                                 </tr>
                                 ` : ''}
@@ -1569,10 +1645,15 @@ const ImmoExtensions = (function() {
                     <i class="fas fa-info-circle"></i>
                 </div>
                 <div>
-                    <h4 class="font-medium mb-1">Calcul fiscal conforme</h4>
+                    <h4 class="font-medium mb-1">Calcul fiscal 2025 conforme</h4>
                     <p class="text-sm opacity-90">
+                        ${resultatsClassique.regime === 'lmnp-reel' ? 
+                            'LMNP réel : réintégration des amortissements<br>' : ''}
+                        ${resultatsClassique.regime.endsWith('-is') ? 
+                            'Régime IS : barème progressif (15%/25%)<br>' : ''}
                         Prix d'acquisition majoré = Prix + frais notaire (7.5%) + travaux (15% après 5 ans)<br>
-                        Abattements corrects selon durée de détention (exonération IR à 22 ans, PS à 30 ans)
+                        Abattements selon durée de détention (exonération IR à 22 ans, PS à 30 ans)<br>
+                        Surtaxe 2025 avec décote progressive au-delà de 50k€
                     </p>
                 </div>
             </div>
