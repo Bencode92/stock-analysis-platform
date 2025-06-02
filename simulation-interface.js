@@ -1622,4 +1622,6 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
     }
+  // Exposer la fonction pour les extensions
+    window.remplirTableauComparatifDetaille = remplirTableauComparatifDetaille;
 });
