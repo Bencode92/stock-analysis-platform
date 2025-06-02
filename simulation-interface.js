@@ -1539,15 +1539,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // RÉSULTATS FINAUX - SYNCHRONISATION AVEC LES VALEURS AFFICHÉES
         // Récupérer les valeurs déjà calculées avec impact fiscal depuis le DOM
-        const cashflowClassiqueElement = document.querySelector('#classique-cashflow .cashflow-monthly') || 
-                                        document.querySelector('.cashflow-container .cashflow-monthly');
-        const cashflowEncheresElement = document.querySelector('#encheres-cashflow .cashflow-monthly') || 
-                                       document.querySelector('.results-card:nth-child(2) .cashflow-container .cashflow-monthly');
-        
-        if (cashflowClassiqueElement && cashflowEncheresElement) {
-            // Utiliser directement les valeurs affichées (qui incluent l'impact fiscal)
-            document.getElementById('comp-classique-cashflow').textContent = cashflowClassiqueElement.textContent.replace('/mois', '');
-            document.getElementById('comp-encheres-cashflow').textContent = cashflowEncheresElement.textContent.replace('/mois', '');
+        const cashflowClassique = resultats.classique.cashFlow;
+const cashflowEncheres = resultats.encheres.cashFlow;
+
+if (cashflowClassique !== undefined && cashflowEncheres !== undefined) {
+    // Utiliser directement les valeurs calculées (qui incluent l'impact fiscal)
+    document.getElementById('comp-classique-cashflow').innerHTML = '<strong>' + formatMontant(cashflowClassique) + '</strong>';
+    document.getElementById('comp-encheres-cashflow').innerHTML = '<strong>' + formatMontant(cashflowEncheres) + '</strong>';
             
             // Récupérer aussi les valeurs annuelles
             const cashflowClassiqueAnnuelElement = document.querySelector('#classique-cashflow .cashflow-annual') || 
