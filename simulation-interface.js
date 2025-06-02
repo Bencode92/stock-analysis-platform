@@ -1867,14 +1867,14 @@ function remplirTableauComparatifDetaille(classique, encheres) {
         document.getElementById('comp-encheres-cashflow-avant').textContent = formaterMontantAvecSigne(encheres.cashFlow);
         majDifference('comp-cashflow-avant-diff', encheres.cashFlow - classique.cashFlow);
         
-        // Impôt mensuel
-        if (classique.impot !== undefined && encheres.impot !== undefined) {
-            const impotMensuelClassique = classique.impot / 12;
-            const impotMensuelEncheres = encheres.impot / 12;
-            document.getElementById('comp-classique-impot-mensuel').textContent = formaterMontant(-impotMensuelClassique);
-            document.getElementById('comp-encheres-impot-mensuel').textContent = formaterMontant(-impotMensuelEncheres);
-            majDifference('comp-impot-mensuel-diff', -(impotMensuelEncheres - impotMensuelClassique));
-        }
+  // Impôt mensuel
+if (classique.impotFiscal !== undefined && encheres.impotFiscal !== undefined) {
+    const impotMensuelClassique = Math.abs(classique.impotFiscal) / 12;
+    const impotMensuelEncheres = Math.abs(encheres.impotFiscal) / 12;
+    document.getElementById('comp-classique-impot-mensuel').textContent = formaterMontant(-impotMensuelClassique);
+    document.getElementById('comp-encheres-impot-mensuel').textContent = formaterMontant(-impotMensuelEncheres);
+    majDifference('comp-impot-mensuel-diff', -(impotMensuelEncheres - impotMensuelClassique));
+}
     }
     
     // RÉSULTATS FINAUX
