@@ -414,7 +414,8 @@ class QuestionManager {
         const select = document.createElement('select');
         select.id = question.id;
         select.name = question.id;
-        select.className = 'bg-blue-900 bg-opacity-50 border border-gray-700 text-white rounded-lg py-3 px-4 appearance-none w-full focus:outline-none focus:ring-2 focus:ring-green-400';
+        // Ajout de pr-10 pour laisser de la place à la flèche
+        select.className = 'bg-blue-900 bg-opacity-50 border border-gray-700 text-white rounded-lg py-3 px-4 pr-10 appearance-none w-full focus:outline-none focus:ring-2 focus:ring-green-400';
         
         // Option par défaut
         const defaultOption = document.createElement('option');
@@ -433,17 +434,13 @@ class QuestionManager {
             select.appendChild(optionElement);
         });
         
-        // Ajouter une icône pour le dropdown
-        const selectWrapper = document.createElement('div');
-        selectWrapper.className = 'relative';
-        selectWrapper.innerHTML = `
-            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-green-400">
-                <i class="fas fa-chevron-down"></i>
-            </div>
-        `;
+        // Flèche FontAwesome centrée verticalement
+        const arrow = document.createElement('div');
+        arrow.className = 'pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 flex items-center';
+        arrow.innerHTML = '<i class="fas fa-chevron-down text-green-400"></i>';
         
         container.appendChild(select);
-        container.appendChild(selectWrapper);
+        container.appendChild(arrow);
         
         return container;
     }
