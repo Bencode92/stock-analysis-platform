@@ -370,6 +370,7 @@
             overflow: hidden;
             border: 1px solid rgba(255, 255, 255, 0.1);
             z-index: 10; /* Réduit de 30 à 10 pour éviter les conflits */
+            cursor: pointer; /* Curseur explicite */
         }
         
         .option-btn:hover {
@@ -384,6 +385,7 @@
             box-shadow: 0 0 10px rgba(0, 255, 135, 0.2);
         }
         
+        /* FIX: La coche ne doit pas bloquer les clics */
         .option-btn.selected::after {
             content: '\f00c';
             font-family: 'Font Awesome 5 Free';
@@ -392,6 +394,15 @@
             top: 10px;
             right: 10px;
             color: var(--primary-color);
+            pointer-events: none; /* IMPORTANT: La coche n'intercepte pas les clics */
+        }
+        
+        /* S'assurer que le label est cliquable sur toute sa surface */
+        .option-btn label {
+            cursor: pointer;
+            display: block;
+            width: 100%;
+            height: 100%;
         }
         
         /* FIX ERGONOMIQUE: Navigation buttons avec z-index très élevé et isolation */
