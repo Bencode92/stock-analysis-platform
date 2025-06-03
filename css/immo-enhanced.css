@@ -1586,44 +1586,47 @@ body.light-mode {
 }
 
 /* ======================================= */
-/* === MASQUER LES BADGES DE CASH-FLOW === */
+/* === MASQUER LES BADGES DE RENDEMENT ET CASH-FLOW DANS LES RÉSULTATS === */
 /* ======================================= */
 
-/* Masquer tous les badges dans les résultats de simulation */
-.results-card .badge,
-.results-card .tag,
-/* Cibler spécifiquement les badges avec des styles inline rouges */
-.results-card [style*="background-color: rgba(239, 68, 68"],
-.results-card [style*="background: rgba(239, 68, 68"],
-.results-card [style*="color: #EF4444"],
-.results-card [style*="color: #F59E0B"],
-/* Cibler les badges dans le header des résultats */
-.results-header .badge,
+/* Masquer spécifiquement les badges dans l'en-tête des cartes de résultats */
 .results-header .tag,
-/* Cibler les badges dans le footer des résultats */
-.results-footer .badge,
-.results-footer .tag {
+.results-header .badge,
+.results-header .flex.justify-between.items-center > div:last-child,
+.results-header .flex.justify-between.items-center > .tag-success,
+.results-header [id*="rentabilite"],
+.results-header [id*="cashflow"] {
     display: none !important;
 }
 
-/* Masquer spécifiquement les icônes et badges de cash-flow négatif */
-.results-card .fa-chart-line:not(:first-child),
-.results-card .fa-coins:not(:first-child),
-.results-card span[style*="background-color: rgba(239, 68, 68"],
-.results-card span[style*="color: #EF4444"] {
+/* Masquer les éléments contenant les icônes chart-line (rendement) */
+.results-header div:has(> .fa-chart-line),
+.results-header div:has(> .fa-arrow-down),
+.results-header span:has(> .fa-chart-line),
+.results-header span:has(> .fa-arrow-down) {
     display: none !important;
 }
 
-/* Alternative: Si vous voulez garder les badges mais les rendre neutres */
-/*
-.results-body .badge,
-.results-footer .badge {
-    background-color: rgba(148, 163, 184, 0.1) !important;
-    color: var(--text-muted) !important;
-    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+/* Masquer par ID spécifique */
+#classique-rentabilite,
+#encheres-rentabilite,
+#classique-cashflow,
+#encheres-cashflow,
+.results-card span[id$="-rentabilite"],
+.results-card span[id$="-cashflow"] {
+    display: none !important;
 }
 
-.negative {
-    color: var(--text-muted) !important;
+/* Masquer les badges avec styles inline rouges spécifiquement dans results-header */
+.results-header [style*="background-color: rgba(239, 68, 68"],
+.results-header [style*="background: rgba(239, 68, 68"],
+.results-header [style*="background-color: rgba(220, 38, 38"],
+.results-header [style*="background: rgba(220, 38, 38"] {
+    display: none !important;
 }
-*/
+
+/* Cibler plus largement toute div contenant les badges dans le header */
+.results-header > div > div:has(.tag),
+.results-header > div > div:has(.badge) {
+    display: none !important;
+}
