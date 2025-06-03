@@ -1604,3 +1604,114 @@ button[class*="cash-flow"],
 .guide-button { 
     display: none !important; 
 }
+
+/* ======================================= */
+/* === MASQUER LE STATUT MARCHÉ ET L'HEURE === */
+/* ======================================= */
+.market-status {
+    display: none !important;
+}
+
+/* ======================================= */
+/* === OPTIMISATION HEADER POUR PETITS ÉCRANS === */
+/* ======================================= */
+/* Réduction progressive selon la taille d'écran */
+@media (max-width: 1600px) {
+    .main-nav {
+        gap: 0.25rem;
+    }
+    
+    .main-nav a {
+        font-size: 0.85rem;
+        padding: 0 0.75rem;
+    }
+}
+
+@media (max-width: 1400px) {
+    .main-nav a {
+        font-size: 0.8rem;
+        padding: 0 0.6rem;
+    }
+    
+    /* Abréviations pour gagner de la place */
+    .main-nav a[href*="simulation"]:not([href*="immoSim"]) {
+        font-size: 0;
+    }
+    .main-nav a[href*="simulation"]:not([href*="immoSim"])::after {
+        content: "Simul.";
+        font-size: 0.8rem;
+    }
+    
+    .main-nav a[href*="guide-placements"] {
+        font-size: 0;
+    }
+    .main-nav a[href*="guide-placements"]::after {
+        content: "Guide";
+        font-size: 0.8rem;
+    }
+    
+    .main-nav a[href*="types-entreprise"] {
+        font-size: 0;
+    }
+    .main-nav a[href*="types-entreprise"]::after {
+        content: "Entreprises";
+        font-size: 0.8rem;
+    }
+    
+    .main-nav a[href*="immoSim"] {
+        font-size: 0;
+    }
+    .main-nav a[href*="immoSim"]::after {
+        content: "Immo";
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 1280px) {
+    /* Header plus compact */
+    .main-header {
+        padding: 0 1rem;
+    }
+    
+    /* Logo plus petit */
+    .logo-container {
+        font-size: 1rem;
+        margin-right: 1.5rem;
+    }
+    
+    /* Navigation super compacte */
+    .main-nav {
+        gap: 0.1rem;
+    }
+    
+    .main-nav a {
+        font-size: 0.75rem;
+        padding: 0 0.5rem;
+    }
+}
+
+/* Option alternative : masquer les liens secondaires */
+@media (max-width: 1200px) {
+    /* Masquer Guide, Types d'entreprise (moins essentiels) */
+    .main-nav a[href*="guide-placements"],
+    .main-nav a[href*="types-entreprise"] {
+        display: none;
+    }
+}
+
+/* Ultra compact pour très petits écrans */
+@media (max-width: 1024px) {
+    /* Garder seulement l'essentiel */
+    .main-nav a:nth-child(n+7) {
+        display: none;
+    }
+    
+    /* Indicateur "..." pour montrer qu'il y a plus */
+    .main-nav::after {
+        content: "...";
+        color: rgba(255, 255, 255, 0.5);
+        padding: 0 0.5rem;
+        display: flex;
+        align-items: center;
+    }
+}
