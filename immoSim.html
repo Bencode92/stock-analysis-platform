@@ -751,136 +751,175 @@
             </div>
         </div>
         
-<!-- Le conteneur des régimes fiscaux sera inséré ici dynamiquement -->
-
-<!-- Résultats (masqués par défaut) -->
-<div id="results" class="hidden">
-    <h2 class="mt-8">Résultats de la simulation</h2>
-
-    <div class="grid grid-2 mt-4">
-        <!-- ===== ACHAT CLASSIQUE ===== -->
-        <div class="results-card">
-            <div class="results-header">
-                <div class="flex justify-between items-center">
-                    <h3 class="card-title">
-                        <i class="fas fa-home mr-2"></i> Achat Classique
-                    </h3>
-                    <!-- ▼ rentabilité sans badge -->
-                    <span id="classique-rentabilite" class="rentabilite-value">--</span>
-                </div>
-            </div>
-
-            <div class="results-body">
-                <div class="results-label">Prix d'acquisition max</div>
-                <div class="results-value" id="classique-budget-max">--</div>
-
-                <div class="results-label">Surface correspondante</div>
-                <div class="results-value" id="classique-surface-max">--</div>
-
-                <div class="accordion">
-                    <div class="accordion-header">
-                        <span>Détail des coûts</span>
-                        <i class="fas fa-chevron-down"></i>
+        <!-- Le conteneur des régimes fiscaux sera inséré ici dynamiquement -->
+        
+        <!-- Résultats (masqués par défaut) -->
+        <div id="results" class="hidden">
+            <h2 class="mt-8">Résultats de la simulation</h2>
+            
+            <div class="grid grid-2 mt-4">
+                <div class="results-card">
+                    <div class="results-header">
+                        <div class="flex justify-between items-center">
+                            <h3 class="card-title">
+                                <i class="fas fa-home mr-2"></i> Achat Classique
+                            </h3>
+                            <div class="tag tag-success">
+                                <i class="fas fa-chart-line mr-1"></i> <span id="classique-rentabilite">--</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="accordion-body">
-                        <table class="comparison-table">
-                            <tr><td>Prix d'achat</td><td class="highlight" id="classique-prix-achat">--</td></tr>
-                            <tr><td>Frais de notaire</td><td id="classique-frais-notaire">--</td></tr>
-                            <tr><td>Commission immobilière</td><td id="classique-commission">--</td></tr>
-                            <tr><td>Travaux</td><td id="classique-travaux">--</td></tr>
-                            <tr><td>Frais bancaires</td><td id="classique-frais-bancaires">--</td></tr>
-                            <tr><td>Coût total du projet</td><td class="highlight" id="classique-total">--</td></tr>
-                        </table>
+                    <div class="results-body">
+                        <div class="results-label">Prix d'acquisition max</div>
+                        <div class="results-value" id="classique-budget-max">--</div>
+                        
+                        <div class="results-label">Surface correspondante</div>
+                        <div class="results-value" id="classique-surface-max">--</div>
+                        
+                        <div class="accordion">
+                            <div class="accordion-header">
+                                <span>Détail des coûts</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div class="accordion-body">
+                                <table class="comparison-table">
+                                    <tr>
+                                        <td>Prix d'achat</td>
+                                        <td class="highlight" id="classique-prix-achat">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Frais de notaire</td>
+                                        <td id="classique-frais-notaire">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Commission immobilière</td>
+                                        <td id="classique-commission">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Travaux</td>
+                                        <td id="classique-travaux">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Frais bancaires</td>
+                                        <td id="classique-frais-bancaires">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Coût total du projet</td>
+                                        <td class="highlight" id="classique-total">--</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-
-            <div class="results-footer">
-                <div class="flex justify-between">
-                    <div>
-                        <div class="results-label">Mensualité</div>
-                        <div id="classique-mensualite">--</div>
-                    </div>
-                    <div>
-                        <div class="results-label">Loyer net</div>
-                        <div id="classique-loyer-net">--</div>
-                    </div>
-                    <div>
-                        <div class="results-label">Marge loyer-dette</div>
-                        <div id="classique-marge">--</div>
-                    </div>
-                    <div>
-                        <div class="results-label">Cash-flow</div>
-                        <div id="classique-cashflow">--</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== VENTE AUX ENCHÈRES ===== -->
-        <div class="results-card">
-            <div class="results-header">
-                <div class="flex justify-between items-center">
-                    <h3 class="card-title">
-                        <i class="fas fa-gavel mr-2"></i> Vente aux Enchères
-                    </h3>
-                    <!-- ▼ rentabilité sans badge -->
-                    <span id="encheres-rentabilite" class="rentabilite-value">--</span>
-                </div>
-            </div>
-
-            <div class="results-body">
-                <div class="results-label">Prix d'acquisition max</div>
-                <div class="results-value" id="encheres-budget-max">--</div>
-
-                <div class="results-label">Surface correspondante</div>
-                <div class="results-value" id="encheres-surface-max">--</div>
-
-                <div class="accordion">
-                    <div class="accordion-header">
-                        <span>Détail des coûts</span>
-                        <i class="fas fa-chevron-down"></i>
-                    </div>
-                    <div class="accordion-body">
-                        <table class="comparison-table">
-                            <tr><td>Prix d'adjudication</td><td class="highlight" id="encheres-prix-achat">--</td></tr>
-                            <tr><td>Droits d'enregistrement</td><td id="encheres-droits">--</td></tr>
-                            <tr><td>Émoluments du poursuivant</td><td id="encheres-emoluments">--</td></tr>
-                            <tr><td>Honoraires avocat</td><td id="encheres-honoraires">--</td></tr>
-                            <tr><td>Publicité foncière</td><td id="encheres-publicite">--</td></tr>
-                            <tr><td>Frais divers (fixes + avocat + suivi)</td><td id="encheres-frais-divers">--</td></tr>
-                            <tr><td>Travaux</td><td id="encheres-travaux">--</td></tr>
-                            <tr><td>Frais bancaires</td><td id="encheres-frais-bancaires">--</td></tr>
-                            <tr><td>Coût total du projet</td><td class="highlight" id="encheres-total">--</td></tr>
-                        </table>
+                    <div class="results-footer">
+                        <div class="flex justify-between">
+                            <div>
+                                <div class="results-label">Mensualité</div>
+                                <div id="classique-mensualite">--</div>
+                            </div>
+                            <div>
+                                <div class="results-label">Loyer net</div>
+                                <div id="classique-loyer-net">--</div>
+                            </div>
+                            <div>
+                                <div class="results-label">Marge loyer-dette</div>
+                                <div id="classique-marge">--</div>
+                            </div>
+                            <div>
+                                <div class="results-label">Cash-flow</div>
+                                <div id="classique-cashflow">--</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <div class="results-footer">
-                <div class="flex justify-between">
-                    <div>
-                        <div class="results-label">Mensualité</div>
-                        <div id="encheres-mensualite">--</div>
+                
+                <div class="results-card">
+                    <div class="results-header">
+                        <div class="flex justify-between items-center">
+                            <h3 class="card-title">
+                                <i class="fas fa-gavel mr-2"></i> Vente aux Enchères
+                            </h3>
+                            <div class="tag tag-success">
+                                <i class="fas fa-chart-line mr-1"></i> <span id="encheres-rentabilite">--</span>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <div class="results-label">Loyer net</div>
-                        <div id="encheres-loyer-net">--</div>
+                    <div class="results-body">
+                        <div class="results-label">Prix d'acquisition max</div>
+                        <div class="results-value" id="encheres-budget-max">--</div>
+                        
+                        <div class="results-label">Surface correspondante</div>
+                        <div class="results-value" id="encheres-surface-max">--</div>
+                        
+                        <div class="accordion">
+                            <div class="accordion-header">
+                                <span>Détail des coûts</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div class="accordion-body">
+                                <table class="comparison-table">
+                                    <tr>
+                                        <td>Prix d'adjudication</td>
+                                        <td class="highlight" id="encheres-prix-achat">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Droits d'enregistrement</td>
+                                        <td id="encheres-droits">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Émoluments du poursuivant</td>
+                                        <td id="encheres-emoluments">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Honoraires avocat</td>
+                                        <td id="encheres-honoraires">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Publicité foncière</td>
+                                        <td id="encheres-publicite">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Frais divers (fixes + avocat + suivi)</td>
+                                        <td id="encheres-frais-divers">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Travaux</td>
+                                        <td id="encheres-travaux">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Frais bancaires</td>
+                                        <td id="encheres-frais-bancaires">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Coût total du projet</td>
+                                        <td class="highlight" id="encheres-total">--</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <div class="results-label">Marge loyer-dette</div>
-                        <div id="encheres-marge">--</div>
-                    </div>
-                    <div>
-                        <div class="results-label">Cash-flow</div>
-                        <div id="encheres-cashflow">--</div>
+                    <div class="results-footer">
+                        <div class="flex justify-between">
+                            <div>
+                                <div class="results-label">Mensualité</div>
+                                <div id="encheres-mensualite">--</div>
+                            </div>
+                            <div>
+                                <div class="results-label">Loyer net</div>
+                                <div id="encheres-loyer-net">--</div>
+                            </div>
+                            <div>
+                                <div class="results-label">Marge loyer-dette</div>
+                                <div id="encheres-marge">--</div>
+                            </div>
+                            <div>
+                                <div class="results-label">Cash-flow</div>
+                                <div id="encheres-cashflow">--</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
-
             
             <!-- Conteneurs pour les graphiques - SUPPRIMÉS -->
             <!-- Les graphiques de comparaison et de cash-flow ont été retirés comme demandé -->
