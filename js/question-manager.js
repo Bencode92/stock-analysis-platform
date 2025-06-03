@@ -338,12 +338,15 @@ class QuestionManager {
      */
     createRadioOptions(question) {
         const container = document.createElement('div');
-        container.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+        container.className = 'grid grid-cols-1 md:grid-cols-2 gap-4 options-grid';
         
         question.options.forEach(option => {
             const optionDiv = document.createElement('div');
             optionDiv.className = 'option-btn p-4 rounded-lg cursor-pointer flex items-center';
             optionDiv.dataset.questionId = question.id;
+            
+            // ID unique en combinant question.id et option.id
+            const uniqueId = `${question.id}-${option.id}`;
             
             // Vérifier si cette option est sélectionnée
             const isSelected = this.answers[question.id] === option.id;
@@ -352,8 +355,8 @@ class QuestionManager {
             }
             
             optionDiv.innerHTML = `
-                <input type="radio" name="${question.id}" id="${option.id}" value="${option.id}" class="hidden" ${isSelected ? 'checked' : ''}>
-                <label for="${option.id}" class="flex items-center cursor-pointer w-full">
+                <input type="radio" name="${question.id}" id="${uniqueId}" value="${option.id}" class="hidden" ${isSelected ? 'checked' : ''}>
+                <label for="${uniqueId}" class="flex items-center cursor-pointer w-full">
                     ${option.icon ? `<i class="fas ${option.icon} text-2xl text-green-400 mr-3"></i>` : ''}
                     <div>
                         <span class="font-medium">${option.label}</span>
@@ -373,12 +376,15 @@ class QuestionManager {
      */
     createCheckboxOptions(question) {
         const container = document.createElement('div');
-        container.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+        container.className = 'grid grid-cols-1 md:grid-cols-2 gap-4 options-grid';
         
         question.options.forEach(option => {
             const optionDiv = document.createElement('div');
             optionDiv.className = 'option-btn p-4 rounded-lg cursor-pointer flex items-center';
             optionDiv.dataset.questionId = question.id;
+            
+            // ID unique
+            const uniqueId = `${question.id}-${option.id}`;
             
             // Vérifier si cette option est sélectionnée
             const selectedOptions = this.answers[question.id] || [];
@@ -388,8 +394,8 @@ class QuestionManager {
             }
             
             optionDiv.innerHTML = `
-                <input type="checkbox" name="${question.id}" id="${option.id}" value="${option.id}" class="hidden" ${isSelected ? 'checked' : ''}>
-                <label for="${option.id}" class="flex items-center cursor-pointer w-full">
+                <input type="checkbox" name="${question.id}" id="${uniqueId}" value="${option.id}" class="hidden" ${isSelected ? 'checked' : ''}>
+                <label for="${uniqueId}" class="flex items-center cursor-pointer w-full">
                     ${option.icon ? `<i class="fas ${option.icon} text-2xl text-green-400 mr-3"></i>` : ''}
                     <div>
                         <span class="font-medium">${option.label}</span>
