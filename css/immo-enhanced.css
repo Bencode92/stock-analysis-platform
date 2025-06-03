@@ -1584,3 +1584,46 @@ body.light-mode {
 .transition-all {
     /* Styles maintenant gérés par les nouvelles classes */
 }
+
+/* ======================================= */
+/* === MASQUER LES BADGES DE CASH-FLOW === */
+/* ======================================= */
+
+/* Masquer tous les badges dans les résultats de simulation */
+.results-card .badge,
+.results-card .tag,
+/* Cibler spécifiquement les badges avec des styles inline rouges */
+.results-card [style*="background-color: rgba(239, 68, 68"],
+.results-card [style*="background: rgba(239, 68, 68"],
+.results-card [style*="color: #EF4444"],
+.results-card [style*="color: #F59E0B"],
+/* Cibler les badges dans le header des résultats */
+.results-header .badge,
+.results-header .tag,
+/* Cibler les badges dans le footer des résultats */
+.results-footer .badge,
+.results-footer .tag {
+    display: none !important;
+}
+
+/* Masquer spécifiquement les icônes et badges de cash-flow négatif */
+.results-card .fa-chart-line:not(:first-child),
+.results-card .fa-coins:not(:first-child),
+.results-card span[style*="background-color: rgba(239, 68, 68"],
+.results-card span[style*="color: #EF4444"] {
+    display: none !important;
+}
+
+/* Alternative: Si vous voulez garder les badges mais les rendre neutres */
+/*
+.results-body .badge,
+.results-footer .badge {
+    background-color: rgba(148, 163, 184, 0.1) !important;
+    color: var(--text-muted) !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+}
+
+.negative {
+    color: var(--text-muted) !important;
+}
+*/
