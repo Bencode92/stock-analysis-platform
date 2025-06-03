@@ -354,6 +354,8 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             transition: all 0.3s ease;
             margin-bottom: 20px;
+            /* Éviter l'overflow qui peut bloquer les boutons */
+            overflow: visible;
         }
         
         .question-card:hover {
@@ -367,7 +369,7 @@
             position: relative;
             overflow: hidden;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 30; /* Ajout d'un z-index élevé */
+            z-index: 10; /* Réduit de 30 à 10 pour éviter les conflits */
         }
         
         .option-btn:hover {
@@ -390,6 +392,33 @@
             top: 10px;
             right: 10px;
             color: var(--primary-color);
+        }
+        
+        /* FIX ERGONOMIQUE: Navigation buttons avec z-index très élevé et isolation */
+        .question-card > div:last-child {
+            /* Container de navigation avec isolation */
+            position: relative;
+            z-index: 50;
+            background-color: rgba(1, 42, 74, 0.8);
+            margin: -6px -24px -24px -24px; /* Marges négatives pour sortir du padding */
+            padding: 20px 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0 0 12px 12px;
+        }
+        
+        /* Buttons de navigation toujours au-dessus */
+        .prev-btn,
+        .next-btn {
+            position: relative !important;
+            z-index: 200 !important;
+            cursor: pointer !important;
+            /* S'assurer que les boutons sont interactifs */
+            pointer-events: auto !important;
+        }
+        
+        /* Container des options avec margin pour éviter le chevauchement */
+        .grid.grid-cols-1.md\\:grid-cols-2 {
+            margin-bottom: 2rem; /* Espace entre les options et les boutons */
         }
         
         /* Onglets horizontaux améliorés */
