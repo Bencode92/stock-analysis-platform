@@ -405,16 +405,14 @@
             height: 100%;
         }
         
-        /* FIX ERGONOMIQUE: Navigation buttons avec z-index très élevé et isolation */
+        /* FIX ERGONOMIQUE: Navigation buttons avec padding réduit */
         .question-card > div:last-child {
-            /* Container de navigation avec isolation */
+            /* Container de navigation sans marges négatives excessives */
             position: relative;
             z-index: 50;
-            background-color: rgba(1, 42, 74, 0.8);
-            margin: -6px -24px -24px -24px; /* Marges négatives pour sortir du padding */
-            padding: 20px 24px;
+            margin-top: 3rem; /* Espace entre le contenu et les boutons */
+            padding-top: 1.5rem;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 0 0 12px 12px;
         }
         
         /* Buttons de navigation toujours au-dessus */
@@ -429,7 +427,19 @@
         
         /* Container des options avec margin pour éviter le chevauchement */
         .grid.grid-cols-1.md\\:grid-cols-2 {
-            margin-bottom: 2rem; /* Espace entre les options et les boutons */
+            margin-bottom: 1rem; /* Espace entre les options et les boutons */
+        }
+        
+        /* FIX: Select dropdown avec icône correctement alignée */
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300FF87' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.5em 1.5em;
+            padding-right: 3rem;
         }
         
         /* Onglets horizontaux améliorés */
