@@ -1586,79 +1586,11 @@ body.light-mode {
 }
 
 /* ======================================= */
-/* === MASQUER COMPLETEMENT IMPACT FISCAL ET CASH-FLOW APRÈS IMPÔT === */
+/* === MASQUER LES BULLES ROUGES (Solution simple de l'expert) === */
 /* ======================================= */
-
-/* Masquer les sections Impact fiscal dans les accordéons */
-.accordion:has(.accordion-header:contains("Impact fiscal")) {
-    display: none !important;
-}
-
-/* Masquer spécifiquement l'accordéon Impact fiscal par son contenu */
-.accordion-header {
-    position: relative;
-}
-
-/* Cibler et masquer l'accordéon complet si son header contient "Impact fiscal" */
-.accordion:has(span:contains("Impact fiscal")),
-.accordion:has(.accordion-header > span:first-child:contains("Impact fiscal")) {
-    display: none !important;
-}
-
-/* Masquer la 5ème div dans results-footer (Cash-flow après impôt) */
-.results-footer > .flex > div:nth-child(5) {
-    display: none !important;
-}
-
-/* Alternative : masquer par contenu textuel */
-.results-footer div:has(.results-label:contains("Cash-flow après impôt")) {
-    display: none !important;
-}
-
-/* Masquer dans les cartes de résumé */
-.summary-card:has(h3:contains("Cash-flow après impôt")) {
-    display: none !important;
-}
-
-/* Masquer les lignes du tableau comparatif */
-.comparison-table tr:has(td:first-child:contains("Cash-flow après impôt")),
-.comparison-table tr:has(td:first-child:contains("Gain annuel après impôts")) {
-    display: none !important;
-}
-
-/* Masquer tous les badges rouges restants */
-.badge[style*="background-color: rgba(239, 68, 68"],
-.badge[style*="background: rgba(239, 68, 68"],
-.tag[style*="background-color: rgba(239, 68, 68"],
-.tag[style*="background: rgba(239, 68, 68"],
-span[style*="color: #EF4444"],
-span[style*="color: #F59E0B"] {
-    display: none !important;
-}
-
-/* Force supplémentaire pour les éléments avec ID */
-#classique-cashflow-apres-impot,
-#encheres-cashflow-apres-impot,
-#comp-cashflow-annuel-diff,
-#classique-impact-fiscal,
-#encheres-impact-fiscal {
-    display: none !important;
-}
-
-/* Masquer les éléments par leur contenu de façon plus robuste */
-[id*="cashflow-apres"],
-[id*="impact-fiscal"],
-[class*="cashflow-apres"],
-[class*="impact-fiscal"] {
-    display: none !important;
-}
-
-/* Ajustement du layout après suppression */
-.results-footer > .flex {
-    grid-template-columns: repeat(4, 1fr) !important;
-}
-
-/* CSS spécifique pour cibler par JavaScript si nécessaire */
-.hide-fiscal-elements {
-    display: none !important;
+.classique-indicateurs,
+.encheres-indicateurs,
+.indicateur-bon,
+.indicateur-mauvais { 
+    display: none !important; 
 }
