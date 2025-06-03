@@ -361,12 +361,13 @@
             border-color: rgba(0, 255, 135, 0.3);
         }
         
-        /* Option buttons */
+        /* Option buttons - Z-index élevé pour rester cliquables */
         .option-btn {
             transition: all 0.2s ease;
             position: relative;
             overflow: hidden;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 30; /* Ajout d'un z-index élevé */
         }
         
         .option-btn:hover {
@@ -597,7 +598,7 @@
             transform: translateX(24px);
         }
         
-        /* Tooltip d'info sur le mode expert */
+        /* CORRECTION ERGONOMIQUE: Tooltip d'info sur le mode expert */
         .tooltip {
             position: relative;
             display: inline-block;
@@ -613,7 +614,7 @@
             border-radius: 6px;
             padding: 10px;
             position: absolute;
-            z-index: 1;
+            z-index: 20; /* Z-index réduit (était 1) */
             bottom: 125%;
             left: 50%;
             transform: translateX(-50%);
@@ -622,11 +623,21 @@
             font-size: 0.75rem;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: none; /* IMPORTANT: Les tooltips ne bloquent pas les clics */
         }
         
         .tooltip:hover .tooltip-text {
             visibility: visible;
             opacity: 1;
+        }
+        
+        /* Boutons de navigation avec z-index élevé pour rester cliquables */
+        .nav-button,
+        .btn-next,
+        .btn-previous,
+        button[type="submit"] {
+            position: relative;
+            z-index: 100 !important;
         }
         
         /* Styles pour les boutons d'optimisation */
@@ -928,6 +939,43 @@
                 clearInterval(interval);
             }
         };
+    });
+    </script>
+    
+    <!-- PATCH ERGONOMIQUE: Script pour fermer automatiquement les tooltips -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Fermer les tooltips au clic extérieur
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.tooltip')) {
+                document.querySelectorAll('.tooltip-text').forEach(tt => {
+                    tt.style.visibility = 'hidden';
+                    tt.style.opacity = '0';
+                });
+            }
+        });
+        
+        // Fermer les tooltips au scroll pour améliorer l'ergonomie
+        let scrollTimeout;
+        window.addEventListener('scroll', function() {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                document.querySelectorAll('.tooltip-text').forEach(tt => {
+                    tt.style.visibility = 'hidden';
+                    tt.style.opacity = '0';
+                });
+            }, 100);
+        });
+        
+        // Sur mobile, fermer les tooltips au toucher
+        document.addEventListener('touchstart', (e) => {
+            if (!e.target.closest('.tooltip')) {
+                document.querySelectorAll('.tooltip-text').forEach(tt => {
+                    tt.style.visibility = 'hidden';
+                    tt.style.opacity = '0';
+                });
+            }
+        });
     });
     </script>
 </body>
