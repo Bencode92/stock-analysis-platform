@@ -41,7 +41,7 @@ const legalStatuses = {
         ],
         disadvantages: [
             "Plafonds de chiffre d'affaires limités (BIC vente: 188 700€, BIC service/BNC: 77 700€ en 2025)",
-            "Responsabilité personnelle illimitée",
+            "Protection sociale minimale comparée au régime général",
             "Déductions fiscales limitées (abattement forfaitaire)",
             "Crédibilité parfois limitée auprès des partenaires",
             "Non éligible à certains dispositifs (BSPCE, CIR...)"
@@ -52,12 +52,12 @@ const legalStatuses = {
             "Test d'un concept avant structure plus formelle",
             "Activités secondaires ou complémentaires"
         ],
-        casConseille: 'Début d\\\'activité, test',
+        casConseille: 'Début d\\'activité, test',
         casDeconseille: 'Développement ambitieux',
         transmission: 'Non',
         plafondCA: '188 700 € (vente/hébergement) ou 77 700 € (services/libérales)',
         key_metrics: {
-            patrimony_protection: 1,
+            patrimony_protection: 3,
             administrative_simplicity: 5,
             taxation_optimization: 4,
             social_charges: 4,
@@ -100,11 +100,11 @@ const legalStatuses = {
             "Liberté de gestion totale"
         ],
         disadvantages: [
-            "Responsabilité illimitée sur les biens personnels",
+            "Protection sociale minimale comparée au régime général",
             "Crédibilité parfois limitée auprès des partenaires",
             "Difficultés pour lever des fonds",
-            "Protection sociale minimale",
-            "Revente de l'entreprise plus complexe"
+            "Transmission de l'entreprise plus complexe",
+            "Responsabilité personnelle sur dettes professionnelles antérieures à 2022"
         ],
         suitable_for: [
             "Activités à faible risque",
@@ -117,7 +117,7 @@ const legalStatuses = {
         transmission: 'Non',
         plafondCA: 'Aucun plafond',
         key_metrics: {
-            patrimony_protection: 1,
+            patrimony_protection: 3,
             administrative_simplicity: 5,
             taxation_optimization: 3,
             social_charges: 3,
@@ -140,7 +140,7 @@ const legalStatuses = {
         responsabilite: 'Limitée aux apports',
         fiscalite: 'IR ou IS',
         fiscaliteOption: 'Oui',
-        regimeSocial: 'TNS ou Assimilé salarié',
+        regimeSocial: 'TNS (gérant associé unique)',
         protectionPatrimoine: 'Oui',
         chargesSociales: 'Sur rémunération',
         fiscal: 'Dividendes possibles',
@@ -162,7 +162,7 @@ const legalStatuses = {
         disadvantages: [
             "Formalités de création et fonctionnement",
             "Coûts de création et de gestion",
-            "Charges sociales plus élevées si gérant majoritaire",
+            "Charges sociales TNS sur la rémunération",
             "Contraintes comptables importantes",
             "Formalisme juridique à respecter",
             "Moins de souplesse que la SASU"
@@ -200,7 +200,7 @@ const legalStatuses = {
         capital: '1€ minimum',
         responsabilite: 'Limitée aux apports',
         fiscalite: 'IS',
-        fiscaliteOption: 'Non',
+        fiscaliteOption: 'IR option 5 ans (conditions)',
         regimeSocial: 'Assimilé salarié',
         protectionPatrimoine: 'Oui',
         chargesSociales: 'Sur rémunération',
@@ -224,7 +224,7 @@ const legalStatuses = {
         disadvantages: [
             "Coûts de création et de gestion élevés",
             "Formalisme juridique important",
-            "Imposition obligatoire à l'IS (sauf option temporaire)",
+            "Imposition à l'IS (sauf option IR temporaire)",
             "Comptabilité plus complexe",
             "Charges sociales élevées (assimilé salarié)",
             "Coût des assemblées générales annuelles"
@@ -325,7 +325,7 @@ const legalStatuses = {
         capital: '1€ minimum',
         responsabilite: 'Limitée aux apports',
         fiscalite: 'IS (IR option 5 ans)',
-        fiscaliteOption: 'Oui',
+        fiscaliteOption: 'IR option 5 ans (< 50 salariés, CA < 10M€, société < 5 ans)',
         regimeSocial: 'Assimilé salarié',
         protectionPatrimoine: 'Oui',
         chargesSociales: 'Sur rémunération',
@@ -349,7 +349,7 @@ const legalStatuses = {
         disadvantages: [
             "Coûts de création et de fonctionnement élevés",
             "Commissaire aux comptes obligatoire dans certains cas",
-            "Imposition obligatoire à l'IS",
+            "Imposition à l'IS (sauf option IR temporaire)",
             "Structure complexe pour de petits projets",
             "Charges sociales élevées pour le président",
             "Coûts administratifs récurrents"
@@ -513,7 +513,7 @@ const legalStatuses = {
         responsabilite: 'Indéfinie',
         fiscalite: 'IR (IS option)',
         fiscaliteOption: 'Oui',
-        regimeSocial: 'TNS ou assimilé salarié',
+        regimeSocial: 'TNS si rémunéré (gérant)',
         protectionPatrimoine: 'Non',
         chargesSociales: 'Selon statut',
         fiscal: 'Non concerné',
@@ -814,8 +814,8 @@ window.exclusionFilters = exclusionFilters;
         SCA: 2
     },
     patrimony_protection: {
-        EI: 1,
-        MICRO: 1,
+        EI: 3,
+        MICRO: 3,
         EURL: 4,
         SASU: 5,
         SARL: 4,
@@ -2430,286 +2430,4 @@ class RecommendationEngine {
         // Créer le contenu des résultats
         let resultsHTML = `
             <div class="results-container">
-                <div class="text-center mb-10">
-                    <h2 class="text-3xl font-bold mb-3">Votre statut juridique recommandé</h2>
-                    <p class="text-lg text-gray-300">Basé sur vos réponses, voici les formes juridiques les plus adaptées à votre projet</p>
-                </div>
-                
-                <div class="recommendation-cards">
-        `;
-        
-        // Carte pour chaque recommandation
-        recommendations.forEach((recommendation, index) => {
-            const status = recommendation.status;
-            const isMainRecommendation = index === 0;
-            
-            resultsHTML += `
-                <div class="recommendation-card ${isMainRecommendation ? 'main-recommendation' : ''} bg-opacity-60 bg-blue-900 rounded-xl overflow-hidden mb-8 border ${isMainRecommendation ? 'border-green-400' : 'border-gray-700'}">
-                    <!-- En-tête -->
-                    <div class="p-6 flex items-center border-b border-gray-700 ${isMainRecommendation ? 'bg-green-900 bg-opacity-30' : ''}">
-                        <div class="h-16 w-16 rounded-full bg-opacity-30 ${isMainRecommendation ? 'bg-green-800' : 'bg-blue-800'} flex items-center justify-center text-3xl mr-5">
-                            <i class="fas ${status.logo || 'fa-building'} ${isMainRecommendation ? 'text-green-400' : 'text-gray-300'}"></i>
-                        </div>
-                        <div class="flex-grow">
-                            <div class="flex justify-between items-center">
-                                <h3 class="text-2xl font-bold">${status.name}</h3>
-                                <div class="score-badge ${isMainRecommendation ? 'bg-green-500 text-gray-900' : 'bg-blue-700'} px-3 py-1 rounded-full text-sm font-medium">
-                                    Score: ${recommendation.score}/100
-                                </div>
-                            </div>
-                            <p class="text-gray-400 mt-1">
-                                ${isMainRecommendation ? 'Recommandation principale' : `Alternative ${index}`}
-                            </p>
-                        </div>
-                    </div>
-                    
-                    <!-- Contenu -->
-                    <div class="p-6">
-                        <p class="mb-5">${status.description}</p>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <!-- Forces -->
-                            <div>
-                                <h4 class="font-semibold mb-2 flex items-center text-green-400">
-                                    <i class="fas fa-check-circle mr-2"></i> Points forts
-                                </h4>
-                                <ul class="space-y-2">
-                                    ${recommendation.strengths.map(strength => `
-                                        <li class="flex items-start">
-                                            <i class="fas fa-plus-circle text-green-400 mt-1 mr-2"></i>
-                                            <span>${strength}</span>
-                                        </li>
-                                    `).join('')}
-                                </ul>
-                            </div>
-                            
-                            <!-- Faiblesses -->
-                            <div>
-                                <h4 class="font-semibold mb-2 flex items-center text-red-400">
-                                    <i class="fas fa-exclamation-circle mr-2"></i> Points d'attention
-                                </h4>
-                                <ul class="space-y-2">
-                                    ${recommendation.weaknesses.map(weakness => `
-                                        <li class="flex items-start">
-                                            <i class="fas fa-minus-circle text-red-400 mt-1 mr-2"></i>
-                                            <span>${weakness}</span>
-                                        </li>
-                                    `).join('')}
-                                </ul>
-                            </div>
-                        </div>
-                        
-                        <!-- Boutons d'action -->
-                        <div class="mt-6 flex justify-end">
-                            <button class="details-btn bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg mr-3" data-status-id="${status.shortName}">
-                                <i class="fas fa-info-circle mr-2"></i> Plus de détails
-                            </button>
-                            ${isMainRecommendation ? `
-                                <button class="download-btn bg-green-500 hover:bg-green-400 text-gray-900 font-medium px-4 py-2 rounded-lg">
-                                    <i class="fas fa-file-download mr-2"></i> Télécharger le PDF
-                                </button>
-                            ` : ''}
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        // Ajouter les stratégies contextuelles pour la recommandation principale
-        if (recommendations.length > 0) {
-            resultsHTML += this.renderContextualStrategies(recommendations[0].id);
-        }
-        
-        // Afficher les incompatibilités
-        resultsHTML += this.displayIncompatibilities(this.incompatibles);
-        
-        // Fermer les conteneurs
-        resultsHTML += `
-                </div>
-                
-                <div class="text-center mt-10">
-                    <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
-                        <i class="fas fa-redo mr-2"></i> Refaire le test
-                    </button>
-                    <button id="compare-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-medium px-6 py-3 rounded-lg ml-4">
-                        <i class="fas fa-balance-scale mr-2"></i> Comparer les statuts
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        // Injecter le HTML dans le conteneur
-        resultsContainer.innerHTML = resultsHTML;
-        
-        // Attacher les événements
-        document.getElementById('restart-btn').addEventListener('click', () => {
-            location.reload();
-        });
-        
-        document.getElementById('compare-btn').addEventListener('click', () => {
-            alert('Fonctionnalité de comparaison à implémenter');
-        });
-        
-        // Événements pour les boutons de détails
-        document.querySelectorAll('.details-btn').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const statusId = btn.dataset.statusId;
-                const recommendationObject = recommendations.find(r => r.status.shortName === statusId);
-                if (recommendationObject) {
-                    this.showStatusDetails(recommendationObject);
-                }
-            });
-        });
-        
-        // Événement pour le bouton de téléchargement PDF
-        const downloadBtn = document.querySelector('.download-btn');
-        if (downloadBtn) {
-            downloadBtn.addEventListener('click', () => {
-                alert('Fonctionnalité de téléchargement PDF à implémenter');
-            });
-        }
-    }
-    
-    /**
-     * Affiche les statuts juridiques incompatibles avec suggestions alternatives
-     * @param {Array} incompatibles - Liste des statuts incompatibles
-     * @returns {string} - HTML pour l'affichage des incompatibilités
-     */
-    displayIncompatibilities(incompatibles) {
-        if (!incompatibles || incompatibles.length === 0) return '';
-        
-        let html = `
-            <div class="mt-8 mb-6">
-                <h3 class="text-xl font-bold text-red-400 mb-4 flex items-center">
-                    <i class="fas fa-exclamation-triangle mr-2"></i> 
-                    Formes juridiques incompatibles avec votre profil
-                </h3>
-                <div class="bg-blue-900 bg-opacity-20 p-4 rounded-xl">
-                    <p class="mb-4">Les structures suivantes présentent des incompatibilités avec vos critères :</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        `;
-        
-        // Regrouper les incompatibilités par forme juridique
-        const incompatibilitiesByForm = {};
-        
-        incompatibles.forEach(inc => {
-            if (!incompatibilitiesByForm[inc.id]) {
-                incompatibilitiesByForm[inc.id] = {
-                    form: inc.status,
-                    reasons: [],
-                    suggestions: []
-                };
-            }
-            
-            // Ajouter la raison si nouvelle
-            if (!incompatibilitiesByForm[inc.id].reasons.some(r => r === inc.reason)) {
-                incompatibilitiesByForm[inc.id].reasons.push(inc.reason);
-            }
-            
-            // Ajouter la suggestion si nouvelle et non déjà présente
-            if (inc.suggestion && !incompatibilitiesByForm[inc.id].suggestions.some(
-                s => s.explanation === inc.suggestion.explanation
-            )) {
-                incompatibilitiesByForm[inc.id].suggestions.push(inc.suggestion);
-            }
-        });
-        
-        // Générer le HTML pour chaque forme incompatible
-        Object.values(incompatibilitiesByForm).forEach(item => {
-            html += `
-                <div class="bg-red-900 bg-opacity-20 p-4 rounded-lg border border-red-800">
-                    <h4 class="font-semibold text-red-400 mb-2">${item.form.name}</h4>
-                    <ul class="text-sm">
-            `;
-            
-            item.reasons.forEach(reason => {
-                html += `<li class="mb-1 flex items-start">
-                    <i class="fas fa-times text-red-400 mr-2 mt-1"></i>
-                    <span>${reason}</span>
-                </li>`;
-            });
-            
-            // Ajouter les suggestions alternatives
-            if (item.suggestions.length > 0) {
-                html += `<li class="mt-3 pt-2 border-t border-red-800"></li>`;
-                
-                item.suggestions.forEach(suggestion => {
-                    html += `
-                        <li class="mt-2 flex items-start">
-                            <i class="fas fa-lightbulb text-yellow-400 mr-2 mt-1"></i>
-                            <span><strong>Alternative :</strong> ${suggestion.explanation}</span>
-                        </li>
-                    `;
-                });
-            }
-            
-            html += `
-                    </ul>
-                </div>
-            `;
-        });
-        
-        html += `
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        return html;
-    }
-}
-
-/**
- * Crée et retourne un moteur de recommandation à la demande (lazy loading)
- * @returns {Promise<RecommendationEngine>} - Une promesse résolvant vers un instance du moteur
- */
-window.loadRecommendationEngine = async function() {
-    return new Promise((resolve, reject) => {
-        try {
-            // Attendre que les statuts juridiques soient chargés si nécessaire
-            if (window.legalStatuses) {
-                const engine = new RecommendationEngine();
-                resolve(engine);
-            } else {
-                // Attendre l'événement de chargement
-                const handler = () => {
-                    try {
-                        const engine = new RecommendationEngine();
-                        resolve(engine);
-                    } catch (e) {
-                        reject(e);
-                    } finally {
-                        document.removeEventListener('legalStatusesLoaded', handler);
-                    }
-                };
-                
-                document.addEventListener('legalStatusesLoaded', handler);
-                
-                // Timeout de sécurité
-                setTimeout(() => {
-                    if (!window.legalStatuses) {
-                        document.removeEventListener('legalStatusesLoaded', handler);
-                        reject(new Error("Timeout: Les données juridiques n'ont pas pu être chargées dans le délai imparti"));
-                    }
-                }, 10000);
-            }
-        } catch (e) {
-            reject(e);
-        }
-    });
-};
-
-// Définir l'instance directement disponible
-try {
-    window.recommendationEngine = new RecommendationEngine();
-    
-    // Notifier que l'engin est prêt
-    document.dispatchEvent(new CustomEvent('recommendationEngineReady'));
-    console.log("Objet recommendationEngine créé et disponible globalement");
-} catch (e) {
-    console.error("Impossible de créer recommendationEngine directement:", e);
-    console.log("Vous pouvez utiliser window.loadRecommendationEngine() à la place");
-}
-
-// Notification de fin de chargement du script
-console.log("Chargement du recommendation-engine.js terminé");
+                <div class="text-center mb-10"
