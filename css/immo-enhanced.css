@@ -1586,35 +1586,41 @@ body.light-mode {
 }
 
 /* ======================================= */
-/* === MASQUER LES BADGES SPÉCIFIQUES DANS LES RÉSULTATS === */
+/* === MASQUER LES BADGES DANS LA SECTION CASH-FLOW APRÈS IMPÔT === */
 /* ======================================= */
 
-/* Masquer spécifiquement les badges de la ligne "Cash-flow après impôt" */
-.summary-card:has(h3:contains("Cash-flow après impôt")) .badge,
-.summary-card h3:contains("Cash-flow après impôt") ~ p > span[style*="background-color"],
-.summary-card h3:contains("Cash-flow après impôt") ~ div .badge,
-/* Cibler par le texte du titre */
-h3:contains("Cash-flow après impôt") ~ * .badge,
-h3:contains("Cash-flow après impôt") ~ * span[style*="background-color: rgba(239"],
-h3:contains("Cash-flow après impôt") ~ * span[style*="background-color: rgba(220"],
-/* Cibler plus largement les badges rouges après "Cash-flow après impôt" */
-.summary-card div:has(> i.fa-chart-line),
-.summary-card div:has(> i.fa-arrow-down),
-.summary-card span[style*="color: #EF4444"],
-.summary-card span[style*="color: #F59E0B"] {
+/* Masquer les badges rouges dans la section résumé des résultats */
+.comparison-summary .summary-card p > span[style*="background-color: rgba(239, 68, 68"],
+.comparison-summary .summary-card p > span[style*="background: rgba(239, 68, 68"],
+.comparison-summary .summary-card p > span[style*="background-color: rgba(220, 38, 38"],
+.comparison-summary .summary-card p > span[style*="background: rgba(220, 38, 38"],
+.comparison-summary .summary-card p > span.badge,
+.comparison-summary .summary-card p > span.tag,
+/* Cibler par les couleurs rouges */
+.summary-card p > span[style*="color: #EF4444"],
+.summary-card p > span[style*="color: #F59E0B"],
+/* Cibler tous les éléments inline avec background rouge */
+.summary-card span[style*="background"][style*="239, 68, 68"],
+.summary-card span[style*="background"][style*="220, 38, 38"],
+/* Cibler les icônes et leurs conteneurs */
+.summary-card span > i.fa-chart-line,
+.summary-card span > i.fa-arrow-down,
+.summary-card p > i.fa-chart-line,
+.summary-card p > i.fa-arrow-down {
     display: none !important;
 }
 
-/* Alternative: masquer tous les badges qui contiennent % ou €/mois dans cette section */
-.summary-card span:contains("%"),
-.summary-card span:contains("€/mois") {
+/* Masquer spécifiquement dans la carte "Cash-flow après impôt" */
+.summary-card:nth-child(3) p > span,
+.summary-card:nth-child(3) p > .badge,
+.summary-card:nth-child(3) p > .tag {
     display: none !important;
 }
 
-/* Si les badges ont des classes spécifiques */
-.cashflow-badge,
-.rendement-badge,
-.summary-card .negative-badge,
-.summary-card .badge-danger {
+/* Si les badges ont des IDs ou classes spécifiques */
+#summary-cashflow-badge,
+#summary-rendement-badge,
+.cashflow-impot-badge,
+.rendement-impot-badge {
     display: none !important;
 }
