@@ -15,11 +15,58 @@ class QuestionManager {
         this.timeEstimate = document.getElementById('time-estimate');
         this.progressStepsContainer = document.getElementById('progress-steps-container');
         
+        // Références aux boutons de navigation sticky
+        this.prevBtn = document.getElementById('prev-btn');
+        this.nextBtn = document.getElementById('next-btn');
+        this.initNavigationEvents();
+        
         // Initialiser les questions par section
         this.initSectionQuestions();
         
         // Initialiser les événements
         this.initEvents();
+    }
+
+    /**
+     * Initialiser les événements de navigation sticky
+     */
+    initNavigationEvents() {
+        if (this.prevBtn) {
+            this.prevBtn.addEventListener('click', () => this.goToPreviousQuestion());
+        }
+        
+        if (this.nextBtn) {
+            this.nextBtn.addEventListener('click', () => {
+                if (this.validateCurrentQuestion()) {
+                    this.saveCurrentAnswer();
+                    this.goToNextQuestion();
+                } else {
+                    alert('Veuillez répondre à la question avant de continuer.');
+                }
+            });
+        }
+    }
+
+    /**
+     * Mettre à jour l'état des boutons de navigation
+     */
+    updateNavigationButtons() {
+        // Bouton précédent
+        const isFirstQuestion = this.isQuickStart ? 
+            this.currentQuestionIndex === 0 : 
+            (this.currentSectionIndex === 0 && this.currentSectionQuestionIndex === 0);
+        
+        this.prevBtn.disabled = isFirstQuestion;
+        
+        // Bouton suivant
+        const isLastQuestion = this.isQuickStart ? 
+            this.currentQuestionIndex === this.filteredQuestions.length - 1 :
+            (this.currentSectionIndex === window.sections.length - 1 && 
+             this.currentSectionQuestionIndex === this.sectionQuestions[window.sections[this.currentSectionIndex].id].length - 1);
+        
+        this.nextBtn.innerHTML = isLastQuestion ? 
+            '<i class="fas fa-check mr-2"></i>Voir les résultats' : 
+            'Suivant<i class="fas fa-arrow-right ml-2"></i>';
     }
 
     /**
@@ -177,6 +224,9 @@ class QuestionManager {
         // Mettre à jour la barre de progression
         this.updateProgressBar();
         
+        // Mettre à jour l'état des boutons
+        this.updateNavigationButtons();
+        
         // Informer le glossaire qu'une nouvelle question a été ajoutée
         setTimeout(() => {
             console.log("Question injectée, notification du glossaire");
@@ -296,44 +346,9 @@ class QuestionManager {
             body.appendChild(additionalControls);
         }
         
-        // Boutons de navigation
-        const navigation = document.createElement('div');
-        navigation.className = 'flex justify-between mt-8';
-        
-        // Bouton précédent
-        const prevButton = document.createElement('button');
-        prevButton.className = 'prev-btn bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition';
-        prevButton.innerHTML = '<i class="fas fa-arrow-left mr-2"></i>Précédent';
-        
-        // Déterminer si le bouton doit être désactivé (au lieu de masqué)
-        let isPrevDisabled = false;
-        
-        if (this.isQuickStart) {
-            isPrevDisabled = this.currentQuestionIndex === 0;
-        } else {
-            // Vérifier si nous sommes à la première question de la première section
-            isPrevDisabled = (this.currentSectionIndex === 0 && this.currentSectionQuestionIndex === 0);
-        }
-        
-        // Appliquer l'état désactivé
-        prevButton.disabled = isPrevDisabled;
-        if (isPrevDisabled) {
-            prevButton.classList.add('opacity-50', 'cursor-not-allowed');
-            prevButton.classList.remove('hover:bg-gray-600');
-        }
-        
-        // Bouton suivant
-        const nextButton = document.createElement('button');
-        nextButton.className = 'next-btn bg-green-500 hover:bg-green-400 text-gray-900 font-medium py-2 px-4 rounded-lg transition ml-auto';
-        nextButton.innerHTML = 'Suivant<i class="fas fa-arrow-right ml-2"></i>';
-        
-        navigation.appendChild(prevButton);
-        navigation.appendChild(nextButton);
-        
-        // Assembler la carte
+        // Assembler la carte (sans les boutons de navigation)
         card.appendChild(header);
         card.appendChild(body);
-        card.appendChild(navigation);
         
         return card;
     }
@@ -657,25 +672,7 @@ class QuestionManager {
      * Attacher les événements pour une question
      */
     attachQuestionEvents(question) {
-        // Navigation
-        const prevBtn = document.querySelector('.prev-btn');
-        const nextBtn = document.querySelector('.next-btn');
-        
-        if (prevBtn) {
-            prevBtn.addEventListener('click', () => this.goToPreviousQuestion());
-        }
-        
-        if (nextBtn) {
-            nextBtn.addEventListener('click', () => {
-                if (this.validateCurrentQuestion()) {
-                    this.saveCurrentAnswer();
-                    this.goToNextQuestion();
-                } else {
-                    // Afficher un message d'erreur pour les champs obligatoires
-                    alert('Veuillez répondre à la question avant de continuer.');
-                }
-            });
-        }
+        // Les événements de navigation sont maintenant gérés par les boutons sticky
         
         // Événements spécifiques au type de question
         switch (question.type) {
@@ -1015,6 +1012,9 @@ class QuestionManager {
                 this.renderCurrentQuestion();
             }
         }
+        
+        // Mettre à jour l'état des boutons
+        this.updateNavigationButtons();
     }
 
     /**
@@ -1051,14 +1051,20 @@ class QuestionManager {
             }
         }
         
-        // Faire défiler la page vers le haut
-        window.scrollTo(0, 0);
+        // Mettre à jour l'état des boutons
+        this.updateNavigationButtons();
+        
+        // NE PAS faire défiler la page vers le haut
+        // window.scrollTo(0, 0); -- SUPPRIMÉ
     }
 
     /**
      * Afficher les résultats
      */
     showResults() {
+        // Cacher la navigation sticky
+        document.getElementById('navigation-wrapper').style.display = 'none';
+        
         // Rediriger vers la page de résultats
         this.questionContainer.innerHTML = `
             <div class="bg-green-900 bg-opacity-20 p-8 rounded-xl text-center">
