@@ -1037,7 +1037,89 @@ const scoringRules = [
     },
     criteria: 'patrimony_protection'
 },
-    
+        {
+        id: 'unlimited_liability_penalty',
+        description: 'Responsabilité illimitée pénalisée si protection essentielle ou activité à risque',
+        condition: answers =>
+            answers.patrimony_protection === 'essential' ||
+            answers.high_professional_risk === 'yes',
+        apply: (statusId, score) => {
+            if (['EI', 'MICRO', 'SNC'].includes(statusId)) {
+                return score - 2;        // forte pénalité
+            }
+            if (statusId === 'SCA') {
+                return score - 1;        // commandité SCA : pénalité modérée
+            }
+            return score;
+        },
+        criteria: 'patrimony_protection'
+    },
+    {
+        id: 'ei_2022_partial_shield',
+        description: "Entreprise individuelle (réforme 2022) : séparation patrimoine pro/perso",
+        condition: () => true, // toujours évaluée
+        apply: (statusId, score) => {
+            if (statusId === 'EI') {
+                return score + 0.5;
+            }
+            return score;
+        },
+        criteria: 'patrimony_protection'
+    },
+    {
+        id: 'collaborating_spouse_shared_risk',
+        description: 'Conjoint collaborateur : accroît le risque sur les formes illimitées',
+        condition: answers => answers.collaborating_spouse === 'yes',
+        apply: (statusId, score) => {
+            if (['EI', 'MICRO', 'SNC'].includes(statusId)) {
+                return score - 0.5;
+            }
+            return score;
+        },
+        criteria: 'patrimony_protection'
+    },
+    {
+        id: 'sci_real_estate_shield',
+        description: "Immobilier sans caution bancaire : la SCI isole le bien",
+        condition: answers =>
+            answers.activity_type === 'immobilier' &&
+            answers.bank_guarantee !== 'yes',
+        apply: (statusId, score) => {
+            if (statusId === 'SCI') {
+                return score + 1;
+            }
+            return score;
+        },
+        criteria: 'patrimony_protection'
+    },
+    {
+        id: 'eurl_majority_penalty',
+        description: 'Associé ≥ 75 % + caution perso : pénalité EURL / SARL',
+        condition: answers =>
+            parseFloat(answers.capital_percentage || 0) >= 75 &&
+            answers.bank_guarantee === 'yes',
+        apply: (statusId, score) => {
+            if (['EURL', 'SARL'].includes(statusId)) {
+                return score - 0.5;
+            }
+            return score;
+        },
+        criteria: 'patrimony_protection'
+    },
+    {
+        id: 'multiple_housing_units_bonus',
+        description: 'Portefeuille immo (> 120 k€ CA) : bonus SCI pour cantonnement',
+        condition: answers =>
+            answers.activity_type === 'immobilier' &&
+            parseFloat(answers.projected_revenue || 0) > 120_000,
+        apply: (statusId, score) => {
+            if (statusId === 'SCI') {
+                return score + 1;
+            }
+            return score;
+        },
+        criteria: 'patrimony_protection'
+    },
     
     // Règles pour la simplicité administrative
         {
@@ -1151,6 +1233,150 @@ const scoringRules = [
         },
         criteria: 'administrative_simplicity'
     },
+  {
+    id: 'vat_regime_micro_bonus',
+    description: 'Franchise en base de TVA : bonus pour MICRO',
+    condition: answers => answers.vat_regime === 'franchise',
+    apply: (statusId, score) =>
+      statusId === 'MICRO' ? score + 1 : score,
+    criteria: 'administrative_simplicity',
+  },
+  {
+    id: 'vat_regime_real_penalty_micro',
+    description: 'Régime réel de TVA sur MICRO ou EI : lourdeur déclarative',
+    condition: answers => answers.vat_regime !== 'franchise',
+    apply: (statusId, score) =>
+      ['MICRO', 'EI'].includes(statusId) ? score - 1 : score,
+    criteria: 'administrative_simplicity',
+  },
+  {
+    id: 'solo_project_bonus_solo_status',
+    description: 'Projet solo : bonus EI/MICRO/EURL/SASU, malus statuts collectifs',
+    condition: answers => answers.team_structure === 'solo',
+    apply: (statusId, score) => {
+      if (['EI', 'MICRO', 'EURL', 'SASU'].includes(statusId)) return score + 0.5;
+      if (
+        ['SNC', 'SCI', 'SARL', 'SAS', 'SA', 'SELARL', 'SELAS', 'SCA'].includes(
+          statusId,
+        )
+      )
+        return score - 0.5;
+      return score;
+    },
+    criteria: 'administrative_simplicity',
+  },
+  {
+    id: 'associate_number_complexity',
+    description: 'Plus de 10 associés : pénalité croissante',
+    condition: answers =>
+      parseInt(answers.associates_number ?? 0, 10) > 10,
+    apply: (statusId, score) => {
+      if (['SARL', 'SAS', 'SCI'].includes(statusId)) return score - 1;
+      if (['SA', 'SCA'].includes(statusId)) return score - 2;
+      return score;
+    },
+    criteria: 'administrative_simplicity',
+  },
+
+  {
+    id: 'integration_fiscale_penalty',
+    description: 'Intégration fiscale de groupe : complexité supplémentaire',
+    condition: answers => answers.tax_integration === 'yes',
+    apply: (statusId, score) =>
+      ['SAS', 'SARL', 'SA', 'SELAS', 'SELARL'].includes(statusId)
+        ? score - 1
+        : score,
+    criteria: 'administrative_simplicity',
+  },
+  {
+    id: 'holding_structure_penalty',
+    description: 'Holding de tête : pénalité de simplicité (sauf SCI)',
+    condition: answers => answers.holding_company === 'yes',
+    apply: (statusId, score) =>
+      statusId !== 'SCI' ? score - 0.5 : score,
+    criteria: 'administrative_simplicity',
+  },
+  {
+    id: 'sca_sa_capital_penalty',
+    description: 'Capital disponible < 37 000 € : pénalité SA et SCA',
+    condition: answers =>
+      parseFloat(answers.available_capital ?? 0) < 37_000,
+    apply: (statusId, score) =>
+      ['SA', 'SCA'].includes(statusId) ? score - 2 : score,
+    criteria: 'administrative_simplicity',
+  },
+  {
+    id: 'low_revenue_complex_structure_penalty_v2',
+    description: 'CA < 50 k€ : pénalite SAS / SA / SARL / SEL* / SCA',
+    condition: answers =>
+      parseFloat(answers.projected_revenue ?? 0) < 50_000,
+    apply: (statusId, score) =>
+      ['SAS', 'SA', 'SARL', 'SELARL', 'SELAS', 'SCA'].includes(statusId)
+        ? score - 1
+        : score,
+    criteria: 'administrative_simplicity',
+  },
+    {
+    id: 'vat_franchise_micro_bonus',
+    description: 'Franchise de TVA : formalités ultra-légères pour EI / MICRO',
+    condition: answers => answers.vat_regime === 'franchise',
+    apply: (statusId, score) => {
+        if (['EI', 'MICRO'].includes(statusId)) {
+            return score + 0.5;   // ✔ tenue de TVA évitée
+        }
+        return score;
+    },
+    criteria: 'administrative_simplicity'
+},
+{
+    id: 'vat_real_micro_penalty',
+    description: 'Régime réel / simplifié TVA : surcharge pour EI / MICRO',
+    condition: answers =>
+        answers.vat_regime === 'real' || answers.vat_regime === 'simplified',
+    apply: (statusId, score) => {
+        if (['EI', 'MICRO'].includes(statusId)) {
+            return score - 0.5;   // ✘ déclarations TVA mensuelles / CA12
+        }
+        return score;
+    },
+    criteria: 'administrative_simplicity'
+},
+{
+    id: 'outsourced_complex_accounting_bonus',
+    description: 'Comptabilité externalisée : neutralise la complexité des SAS / SA / SARL',
+    condition: answers => answers.accounting_complexity === 'outsourced',
+    apply: (statusId, score) => {
+        if (['SAS', 'SA', 'SARL', 'SELARL', 'SELAS'].includes(statusId)) {
+            return score + 0.5;   // ✔ cabinet comptable prend tout en charge
+        }
+        return score;
+    },
+    criteria: 'administrative_simplicity'
+},
+{
+    id: 'progressive_contribution_bonus',
+    description: 'Apports progressifs : statuts souples sur la libération de capital',
+    condition: answers => answers.progressive_contribution === 'yes',
+    apply: (statusId, score) => {
+        if (['SAS', 'SARL', 'SA', 'SELARL', 'SELAS'].includes(statusId)) {
+            return score + 0.25;  // ✔ libération fractionnée autorisée
+        }
+        return score;
+    },
+    criteria: 'administrative_simplicity'
+},
+{
+    id: 'vat_exempt_activity_penalty_complex_structures',
+    description: 'Activité exonérée de TVA : inutilement lourd pour SAS / SA',
+    condition: answers => answers.vat_regime === 'exempt',
+    apply: (statusId, score) => {
+        if (['SAS', 'SA'].includes(statusId)) {
+            return score - 0.25;  // ✘ formalisme société + factures sans TVA
+        }
+        return score;
+    },
+    criteria: 'administrative_simplicity'
+}
     
     // Règles pour l'optimisation fiscale
     {
