@@ -392,7 +392,8 @@ const questions = [
             { id: "mixed", label: "Mixte", icon: "fa-store-alt" },
             { id: "bnc", label: "BNC (professions libérales)", icon: "fa-user-md" },
             { id: "craft", label: "Artisanat", icon: "fa-hammer" },
-            { id: "agricultural", label: "Agricole", icon: "fa-tractor" }
+            { id: "agricultural", label: "Agricole", icon: "fa-tractor" },
+            { id: "immobilier", label: "Immobilier", icon: "fa-building" }
         ]
     },
     {
