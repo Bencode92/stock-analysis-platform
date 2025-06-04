@@ -1448,37 +1448,83 @@ class RecommendationEngine {
         
         // Dictionnaire des alternatives pour chaque cas d'incompatibilité
         this.alternativeSuggestions = {
-            'MICRO': {
-                'ca-depasse-seuil': {
-                    alternatives: ['EURL', 'SASU'], 
-                    explanation: "Optez pour une EURL ou SASU permettant des volumes d'activité plus importants"
-                },
-                'ordre-professionnel': {
-                    alternatives: ['SELARL', 'SELAS'],
-                    explanation: "Choisissez une structure adaptée aux professions réglementées comme une SELARL ou SELAS"
-                },
-                'fundraising': {
-                    alternatives: ['SAS', 'SASU'],
-                    explanation: "Pour lever des fonds, privilégiez une SAS ou SASU qui facilitent l'entrée d'investisseurs"
-                }
-            },
-            'EI': {
-                'protection-patrimoine': {
-                    alternatives: ['EURL', 'SASU'],
-                    explanation: "Privilégiez une EURL ou SASU qui offrent une meilleure protection patrimoniale"
-                },
-                'levee-fonds': {
-                    alternatives: ['SASU', 'SAS'],
-                    explanation: "Pour lever des fonds, une SASU ou SAS est beaucoup plus adaptée"
-                }
-            },
-            'SNC': {
-                'risque-eleve': {
-                    alternatives: ['SARL', 'SAS'],
-                    explanation: "Pour limiter les risques personnels, préférez une SARL ou SAS avec responsabilité limitée"
-                }
-            }
-        };
+    'MICRO': {
+        'ca-depasse-seuil': {
+            alternatives: ['EURL', 'SASU'],
+            explanation: "Optez pour une EURL ou SASU pour gérer un chiffre d'affaires plus élevé."
+        },
+        'ordre-professionnel': {
+            alternatives: ['SELARL', 'SELAS'],
+            explanation: "Pour une profession réglementée, passez en SELARL ou SELAS."
+        },
+        'fundraising': {
+            alternatives: ['SAS', 'SASU'],
+            explanation: "Pour lever des fonds, une SAS ou SASU est plus adaptée."
+        }
+    },
+
+    'EI': {
+        'protection-patrimoine': {
+            alternatives: ['EURL', 'SASU'],
+            explanation: "Choisissez EURL ou SASU pour isoler votre patrimoine personnel."
+        },
+        'levee-fonds': {
+            alternatives: ['SASU', 'SAS'],
+            explanation: "Pour accueillir des investisseurs, préférez SASU ou SAS."
+        }
+    },
+
+    'SNC': {
+        'risque-eleve': {
+            alternatives: ['SARL', 'SAS'],
+            explanation: "Limitez la responsabilité des associés avec une SARL ou une SAS."
+        }
+    },
+
+    'SELARL': {
+        'fundraising': {
+            alternatives: ['SELAS', 'SAS'],
+            explanation: "Pour ouvrir le capital, basculez en SELAS ou en SAS."
+        },
+        'besoin-flexibilite-gouvernance': {
+            alternatives: ['SELAS', 'SAS'],
+            explanation: "Pour plus de souplesse de gouvernance, privilégiez SELAS ou SAS."
+        }
+    },
+
+    'SELAS': {
+        'non-reglemente': {
+            alternatives: ['SAS', 'SARL'],
+            explanation: "Sans contrainte d'ordre, une SAS ou SARL est plus simple."
+        },
+        'regime-social-non-souhaite': {
+            alternatives: ['SAS', 'SARL'],
+            explanation: "Si vous refusez le régime assimilé salarié, envisagez SAS ou SARL."
+        }
+    },
+
+    'SCA': {
+        'capital-insuffisant': {
+            alternatives: ['SAS', 'SA'],
+            explanation: "Avec moins de 37 000 € de capital, optez pour SAS ou SA."
+        },
+        'petit-projet': {
+            alternatives: ['SAS', 'SARL'],
+            explanation: "Pour un petit projet, SAS ou SARL sont plus légères."
+        }
+    },
+
+    'SCI': {
+        'hors-immobilier': {
+            alternatives: ['SARL', 'SAS'],
+            explanation: "Hors activités immobilières, préférez SARL ou SAS."
+        },
+        'simplicite-comptable': {
+            alternatives: ['EURL', 'SARL'],
+            explanation: "Pour moins de formalités, choisissez EURL ou SARL."
+        }
+    }
+};
         console.log("RecommendationEngine initialisé avec succès");
     }
 
