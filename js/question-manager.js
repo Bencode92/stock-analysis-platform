@@ -305,17 +305,22 @@ class QuestionManager {
         prevButton.className = 'prev-btn bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition';
         prevButton.innerHTML = '<i class="fas fa-arrow-left mr-2"></i>Précédent';
         
-        // Déterminer si on doit afficher le bouton précédent
-        let showPrevButton = false;
+        // Déterminer si le bouton doit être désactivé (au lieu de masqué)
+        let isPrevDisabled = false;
         
         if (this.isQuickStart) {
-            showPrevButton = this.currentQuestionIndex > 0;
+            isPrevDisabled = this.currentQuestionIndex === 0;
         } else {
             // Vérifier si nous sommes à la première question de la première section
-            showPrevButton = !(this.currentSectionIndex === 0 && this.currentSectionQuestionIndex === 0);
+            isPrevDisabled = (this.currentSectionIndex === 0 && this.currentSectionQuestionIndex === 0);
         }
         
-        prevButton.style.display = showPrevButton ? 'block' : 'none';
+        // Appliquer l'état désactivé
+        prevButton.disabled = isPrevDisabled;
+        if (isPrevDisabled) {
+            prevButton.classList.add('opacity-50', 'cursor-not-allowed');
+            prevButton.classList.remove('hover:bg-gray-600');
+        }
         
         // Bouton suivant
         const nextButton = document.createElement('button');
