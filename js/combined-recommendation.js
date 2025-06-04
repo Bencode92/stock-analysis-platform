@@ -1704,10 +1704,10 @@ applySpecificFilters() {
     }
     
     // 7. SCI : exclusivement pour activités immobilières
-    if (this.answers.activity_sector && 
-        !['immobilier', 'civil'].includes(this.answers.activity_sector)) {
-        this.excludeStatus('SCI', 'SCI réservée aux activités civiles immobilières');
-    }
+ if (this.answers.activity_type && 
+    this.answers.activity_type !== 'immobilier') {
+    this.excludeStatus('SCI', 'SCI réservée aux activités civiles immobilières');
+}
     
     // 8. Risque professionnel élevé → éviter responsabilité illimitée
     if (this.answers.high_professional_risk === 'yes') {
