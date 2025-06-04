@@ -417,25 +417,24 @@
         }
         
         /* NOUVELLE SOLUTION: Navigation sticky */
-        .sticky-navigation {
+        .navigation-wrapper {
             position: sticky;
             bottom: 0;
-            background: linear-gradient(to top, var(--background-dark) 0%, var(--background-dark) 70%, transparent 100%);
-            padding: 20px 0 10px;
-            margin-top: -40px; /* Chevauche légèrement le contenu */
-            z-index: 40;
+            background: linear-gradient(to top, 
+                rgba(13, 27, 42, 1) 0%, 
+                rgba(13, 27, 42, 0.95) 60%, 
+                transparent 100%);
+            padding: 2rem 0 1rem;
+            z-index: 10;
         }
-        
-        .sticky-navigation-inner {
-            background-color: rgba(1, 42, 74, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 16px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
+
+        #question-container {
+            padding-bottom: 6rem;
+        }
+
+        .navigation-wrapper button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
         
         /* Ajustement mobile */
@@ -861,6 +860,18 @@
                 <!-- Les sections seront injectées ici -->
             </div>
             
+            <!-- Navigation sticky -->
+            <div id="navigation-wrapper" class="navigation-wrapper" role="navigation" aria-label="Navigation du questionnaire">
+                <div class="flex justify-between max-w-4xl mx-auto px-4">
+                    <button id="prev-btn" class="prev-btn bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition">
+                        <i class="fas fa-arrow-left mr-2"></i>Précédent
+                    </button>
+                    <button id="next-btn" class="next-btn bg-green-500 hover:bg-green-400 text-gray-900 font-medium py-2 px-4 rounded-lg transition">
+                        Suivant<i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+            
             <!-- Résultats du simulateur -->
             <div id="results-container" class="max-w-4xl mx-auto mb-12" style="display: none;">
                 <!-- Les résultats seront injectés ici -->
@@ -912,7 +923,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.0.0/dist/chartjs-plugin-annotation.min.js"></script>
     
     <script src="js/question-data.js?v=20250429_1" defer></script>
-    <script src="js/question-manager.js?v=20250604_1" defer></script>
+    <script src="js/question-manager.js?v=20250604_2" defer></script>
     <script src="js/app.js?v=20250513_4" defer></script>
     <!-- Script du glossaire juridique interactif -->
     <script src="js/glossary.js?v=20250430_1" defer></script>
