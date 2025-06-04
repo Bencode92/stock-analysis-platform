@@ -993,6 +993,51 @@ const scoringRules = [
         },
         criteria: 'patrimony_protection'
     },
+    {
+    id: 'risk_aversion_liability_shift',
+    description: 'Appétence au risque faible : privilégier la responsabilité limitée',
+    condition: answers =>
+        answers.risk_appetite !== undefined &&
+        answers.risk_appetite <= 2,
+    apply: (statusId, score) => {
+        if (['EI', 'MICRO', 'SNC'].includes(statusId)) {
+            return score - 0.5;            // responsabilité illimitée
+        }
+        if (['SASU', 'SAS', 'SARL', 'EURL', 'SA', 'SCI'].includes(statusId)) {
+            return score + 0.5;            // responsabilité limitée
+        }
+        return score;
+    },
+    criteria: 'patrimony_protection'
+},
+{
+    id: 'bank_guarantee_liability_penalty',
+    description: 'Caution bancaire personnelle : pénalise EI / MICRO',
+    condition: answers => answers.bank_guarantee === 'yes',
+    apply: (statusId, score) => {
+        if (['EI', 'MICRO'].includes(statusId)) {
+            return score - 0.5;            // plus exposé
+        }
+        if (['SASU', 'SAS', 'SARL', 'EURL', 'SA'].includes(statusId)) {
+            return score + 0.25;           // structure protectrice
+        }
+        return score;
+    },
+    criteria: 'patrimony_protection'
+},
+{
+    id: 'holding_asset_separation_bonus',
+    description: 'Holding de tête : bonus pour dissocier patrimoine et opérationnel',
+    condition: answers => answers.holding_company === 'yes',
+    apply: (statusId, score) => {
+        if (['SAS', 'SARL', 'SA'].includes(statusId)) {
+            return score + 0.5;
+        }
+        return score;
+    },
+    criteria: 'patrimony_protection'
+},
+    
     
     // Règles pour la simplicité administrative
         {
