@@ -364,7 +364,7 @@
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.1);
             transition: all 0.3s ease;
-            margin-bottom: 20px;
+            margin-bottom: 80px; /* Espace pour la navigation sticky */
             /* Éviter l'overflow qui peut bloquer les boutons */
             overflow: visible;
         }
@@ -416,14 +416,37 @@
             height: 100%;
         }
         
-        /* FIX ERGONOMIQUE: Navigation buttons avec padding réduit */
-        .question-card > div:last-child {
-            /* Container de navigation sans marges négatives excessives */
-            position: relative;
-            z-index: 50;
-            margin-top: 3rem; /* Espace entre le contenu et les boutons */
-            padding-top: 1.5rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        /* NOUVELLE SOLUTION: Navigation sticky */
+        .sticky-navigation {
+            position: sticky;
+            bottom: 0;
+            background: linear-gradient(to top, var(--background-dark) 0%, var(--background-dark) 70%, transparent 100%);
+            padding: 20px 0 10px;
+            margin-top: -40px; /* Chevauche légèrement le contenu */
+            z-index: 40;
+        }
+        
+        .sticky-navigation-inner {
+            background-color: rgba(1, 42, 74, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Ajustement mobile */
+        @media (max-width: 640px) {
+            .sticky-navigation-inner {
+                padding: 12px 16px;
+            }
+            
+            .question-card {
+                margin-bottom: 100px;
+            }
         }
         
         /* Buttons de navigation toujours au-dessus */
@@ -889,7 +912,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.0.0/dist/chartjs-plugin-annotation.min.js"></script>
     
     <script src="js/question-data.js?v=20250429_1" defer></script>
-    <script src="js/question-manager.js?v=20250429_1" defer></script>
+    <script src="js/question-manager.js?v=20250604_1" defer></script>
     <script src="js/app.js?v=20250513_4" defer></script>
     <!-- Script du glossaire juridique interactif -->
     <script src="js/glossary.js?v=20250430_1" defer></script>
