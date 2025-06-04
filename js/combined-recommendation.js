@@ -1425,7 +1425,66 @@ const scoringRules = [
             return score;
         },
         criteria: 'administrative_simplicity'
-    }
+    },
+    {
+    id: 'multiple_partners_bonus_collective',
+    description: 'Plusieurs associés : bonus pour statuts pensés pour la gestion collective',
+    condition: answers =>
+        ['family', 'associates', 'investors'].includes(answers.team_structure) &&
+        parseInt(answers.associates_number || 2, 10) >= 2,
+    apply: (statusId, score) => {
+        if (['SARL', 'SNC', 'SCI'].includes(statusId)) {
+            return score + 0.75;      // ✔ collectif facilité
+        }
+        if (['SASU', 'EURL', 'EI'].includes(statusId)) {
+            return score - 0.75;      // ✘ statuts solo par défaut
+        }
+        return score;
+    },
+    criteria: 'governance_flexibility',
+},
+{
+    id: 'solo_project_penalty_multi_partner_statutes',
+    description: 'Projet solo : pénalise statuts qui exigent ≥ 2 associés',
+    condition: answers => answers.team_structure === 'solo',
+    apply: (statusId, score) => {
+        if (['SNC', 'SCI', 'SARL'].includes(statusId)) {
+            return score - 1;
+        }
+        return score;
+    },
+    criteria: 'governance_flexibility',
+},
+{
+    id: 'flexible_statutes_bonus',
+    description: 'Gouvernance sur-mesure : bonus SAS / SASU / SELAS / SCA',
+    condition: answers =>
+        answers.governance_complexity === 'complex' ||
+        answers.governance_complexity === 'moderate',
+    apply: (statusId, score) => {
+        if (['SAS', 'SASU', 'SELAS', 'SCA'].includes(statusId)) {
+            return score + 1;          // ✔ statuts ultra-flexibles
+        }
+        if (['SARL', 'SNC', 'SCI', 'EI', 'MICRO'].includes(statusId)) {
+            return score - 0.5;        // ✘ rigidité statutaire
+        }
+        return score;
+    },
+    criteria: 'governance_flexibility',
+},
+{
+    id: 'simple_governance_penalty_flexible_statutes',
+    description: 'Gouvernance très simple souhaitée : SAS / SCA moins pertinentes',
+    condition: answers => answers.governance_complexity === 'simple',
+    apply: (statusId, score) => {
+        if (['SAS', 'SCA'].includes(statusId)) {
+            return score - 0.5;
+        }
+        return score;
+    },
+    criteria: 'governance_flexibility',
+}
+    
 ];
 window.scoringRules = scoringRules;
 
