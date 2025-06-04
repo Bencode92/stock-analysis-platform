@@ -1409,6 +1409,23 @@ const scoringRules = [
         },
         criteria: 'governance_flexibility'
     },
+     // Règle pour l'activité immobilière
+        {
+        id: 'immobilier_activity_sci_mega_bonus',
+        description: 'Activité immobilière : SCI fortement recommandée',
+        condition: answers => answers.activity_type === 'immobilier',
+        apply: (statusId, score) => {
+            if (statusId === 'SCI') {
+                return score + 3; // Bonus fort
+            }
+            // Pénaliser légèrement les autres formes pour l'immobilier
+            if (['MICRO', 'EI'].includes(statusId)) {
+                return score - 1;
+            }
+            return score;
+        },
+        criteria: 'administrative_simplicity'
+    }
 ];
 window.scoringRules = scoringRules;
 
