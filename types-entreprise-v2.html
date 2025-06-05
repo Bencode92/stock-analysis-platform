@@ -459,7 +459,7 @@
         }
         
         /* Container des options avec margin pour éviter le chevauchement */
-        .grid.grid-cols-1.md\\:grid-cols-2 {
+        .grid.grid-cols-1.md\:grid-cols-2 {
             margin-bottom: 1rem; /* Espace entre les options et les boutons */
         }
         
@@ -732,6 +732,13 @@
         .optimize-button i {
             margin-right: 0.5rem;
         }
+        
+        /* --- FIX: empêcher les pseudo-éléments de bloquer les clics --- */
+        .option-btn::before,
+        .option-btn::after {
+            pointer-events: none !important;
+        }
+        /* ---------------------------------------------------------------- */
     </style>
 </head>
 <body class="dark">
