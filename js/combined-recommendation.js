@@ -1093,18 +1093,14 @@ const scoringRules = [
         criteria: 'patrimony_protection'
     },
     {
-        id: 'eurl_majority_penalty',
-        description: 'Associé ≥ 75 % + caution perso : pénalité EURL / SARL',
-        condition: answers =>
-            parseFloat(answers.capital_percentage || 0) >= 75 &&
-            answers.bank_guarantee === 'yes',
-        apply: (statusId, score) => {
-            if (['EURL', 'SARL'].includes(statusId)) {
-                return score - 0.5;
-            }
-            return score;
-        },
-        criteria: 'patrimony_protection'
+       id: 'eurl_majority_penalty',
+    description: 'Associé ≥ 75 % + caution perso : pénalité EURL / SARL',
+    condition: answers =>
+        parseFloat(answers.capital_percentage || 0) >= 75 &&
+        answers.bank_guarantee === 'yes',
+    apply: (statusId, score) =>
+        ['EURL', 'SARL'].includes(statusId) ? score - 0.5 : score,
+    criteria: 'patrimony_protection'
     },
     {
         id: 'multiple_housing_units_bonus',
@@ -2071,16 +2067,17 @@ applySpecificFilters() {
     /* ------------------------------------------------------------------
      * 2. CA prévisionnel > seuil micro → MICRO exclue
      * ------------------------------------------------------------------ */
-    if (this.answers.projected_revenue) {
-        let microThreshold = this.thresholds2025.micro.bic_service;       // par défaut
-        if (this.answers.activity_type === 'bic_sales') microThreshold = this.thresholds2025.micro.bic_sales;
-        if (this.answers.activity_type === 'bnc')        microThreshold = this.thresholds2025.micro.bnc;
+if (this.answers.projected_revenue) {
+    const revenue = parseFloat(this.answers.projected_revenue || 0);
+    let microThreshold = this.thresholds2025.micro.bic_service;       // par défaut
+    if (this.answers.activity_type === 'bic_sales') microThreshold = this.thresholds2025.micro.bic_sales;
+    if (this.answers.activity_type === 'bnc')        microThreshold = this.thresholds2025.micro.bnc;
 
-        if (revenue > microThreshold) {
-            this.excludeStatus('MICRO',
-                `CA prévisionnel (${revenue.toLocaleString()} €) > seuil micro (${microThreshold.toLocaleString()} €)`);
-        }
+    if (revenue > microThreshold) {
+        this.excludeStatus('MICRO',
+            `CA prévisionnel (${revenue.toLocaleString()} €) > seuil micro (${microThreshold.toLocaleString()} €)`);
     }
+}
 
     /* ------------------------------------------------------------------
      * 3. Besoin de lever des fonds (tout montant) → EI / MICRO / SNC exclues
