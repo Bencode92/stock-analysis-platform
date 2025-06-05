@@ -1376,7 +1376,7 @@ const scoringRules = [
         return score;
     },
     criteria: 'administrative_simplicity'
-}
+},
     
     // Règles pour l'optimisation fiscale
     {
