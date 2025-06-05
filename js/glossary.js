@@ -2,7 +2,7 @@
  * TradePulse - Glossaire juridique interactif
  * Ce script charge les termes juridiques depuis le JSON et les met en évidence
  * dans le contenu de la page, affichant leur définition en cliquant.
- * Version corrigée : utilise la délégation d'événements pour éviter les conflits de clics
+ * Version corrigée : un seul listener global pour éviter les race conditions
  */
 
 // Configuration globale
@@ -41,25 +41,24 @@ class LegalGlossary {
         this.loadTerms();
     }
 
-    // NOUVELLE MÉTHODE : Délégation d'événements pour éviter les listeners multiples
+    // CORRIGÉE : Un seul listener global pour éviter les race conditions
     initEventDelegation() {
-        // Un seul listener global pour tous les termes
+        // UN SEUL listener qui gère tout
         document.addEventListener('click', (e) => {
-            const el = e.target.closest('.glossary-term');
-            if (!el) return;  // pas cliqué sur un terme
+            const term = e.target.closest('.glossary-term');
             
-            e.stopPropagation();  // empêche la fermeture immédiate de la bulle
-            this.showDefinition(el.dataset.termId, el);
-        });
-        
-        // Listener pour fermer la bulle active lors d'un clic en dehors
-        document.addEventListener('click', (e) => {
-            if (this.activeTooltip && 
-                !this.activeTooltip.contains(e.target) && 
-                !e.target.closest('.glossary-term')) {
+            if (term) {
+                // --- On a cliqué sur un terme --------------------
+                e.stopPropagation();                     // Empêche la fermeture immédiate
+                this.showDefinition(term.dataset.termId, term);
+                return;                                  // On sort : pas de fermeture
+            }
+            
+            // --- Sinon : clic n'importe où ailleurs ------------
+            if (this.activeTooltip && !this.activeTooltip.contains(e.target)) {
                 this.closeActiveTooltip();
             }
-        });
+        }, { passive: true }); // passive = petit bonus perf
     }
 
     // Injecter les styles CSS directement dans la page
@@ -369,13 +368,18 @@ class LegalGlossary {
         return pattern;
     }
 
-    // MODIFIÉE : Met en évidence les termes SANS addEventListener individuel
+    // MODIFIÉE : Met en évidence les termes avec marquage des nœuds traités
     highlightTermsInNode(textNode) {
         const text = textNode.nodeValue;
         const parent = textNode.parentNode;
         
-        // Si le parent est déjà un terme de glossaire, ne pas le traiter à nouveau
+        // Si le parent est déjà un terme de glossaire ou déjà traité, ne pas le traiter à nouveau
         if (parent.classList && parent.classList.contains('glossary-term')) {
+            return;
+        }
+        
+        // Vérifier si le nœud a déjà été traité
+        if (parent.dataset && parent.dataset.glossaryProcessed) {
             return;
         }
         
@@ -432,6 +436,8 @@ class LegalGlossary {
         // Remplacer le nœud de texte par le fragment uniquement si des modifications ont été apportées
         if (currentPosition > 0) {
             parent.replaceChild(fragment, textNode);
+            // Marquer le parent comme traité
+            parent.dataset.glossaryProcessed = '1';
         }
     }
     
@@ -440,7 +446,7 @@ class LegalGlossary {
         return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     }
 
-    // MODIFIÉE : Affiche la définition sans ajouter de nouveaux listeners sur document
+    // Affiche la définition d'un terme
     showDefinition(termId, element) {
         // Fermer la bulle active si elle existe
         this.closeActiveTooltip();
@@ -498,7 +504,6 @@ class LegalGlossary {
         
         // Enregistrer la bulle active
         this.activeTooltip = tooltip;
-        // PAS de nouveau addEventListener sur document - géré par initEventDelegation
     }
 
     // Génère le contenu HTML de la bulle d'information
@@ -585,22 +590,21 @@ class LegalGlossary {
         }, 0);
     }
 
-    // MODIFIÉE : Ferme la bulle sans gérer d'event listeners
+    // CORRIGÉE : Ferme la bulle avec copie locale pour éviter les race conditions
     closeActiveTooltip() {
-        if (this.activeTooltip) {
-            // Animation de fermeture
-            this.activeTooltip.style.opacity = '0';
-            this.activeTooltip.style.transform = 'translateY(10px)';
-            
-            // Supprimer après l'animation
-            setTimeout(() => {
-                if (this.activeTooltip && this.activeTooltip.parentNode) {
-                    this.activeTooltip.parentNode.removeChild(this.activeTooltip);
-                }
-                this.activeTooltip = null;
-            }, this.config.animationDuration);
-            // PAS de removeEventListener ici - tout est géré par la délégation
-        }
+        if (!this.activeTooltip) return;
+        
+        const tooltip = this.activeTooltip;     // copie locale
+        this.activeTooltip = null;              // on "libère" tout de suite
+        
+        // Animation de fermeture
+        tooltip.style.opacity = '0';
+        tooltip.style.transform = 'translateY(10px)';
+        
+        // Supprimer après l'animation
+        setTimeout(() => {
+            tooltip.remove();
+        }, this.config.animationDuration);
     }
 }
 
