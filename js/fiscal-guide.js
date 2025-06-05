@@ -14,9 +14,40 @@ document.addEventListener('DOMContentLoaded', function() {
         initFiscalSimulator();
     }
     
-    // Ajouter les styles personnalisés pour le simulateur
-    addCustomStyles();
-    
+// Ajouter les styles personnalisés pour le simulateur
+function addCustomStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+        /* Centrage du conteneur du simulateur fiscal */
+        #fiscal-simulator {
+            max-width: 980px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Centre la grille interne */
+        #fiscal-simulator .grid {
+            justify-content: center;
+        }
+
+        /* Centre le bloc d'options */
+        #sim-options-container {
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* Si besoin, centrer aussi le conteneur global */
+        #tab-content-container {
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+addCustomStyles();
+
 });
 
 function setupSectorOptions() {
