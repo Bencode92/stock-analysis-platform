@@ -1795,80 +1795,158 @@ class RecommendationEngine {
         
         // Dictionnaire des alternatives pour chaque cas d'incompatibilité
         this.alternativeSuggestions = {
-    'MICRO': {
+    MICRO: {
         'ca-depasse-seuil': {
             alternatives: ['EURL', 'SASU'],
-            explanation: "Optez pour une EURL ou SASU pour gérer un chiffre d'affaires plus élevé."
+            explanation: 'Optez pour une EURL ou une SASU pour gérer un chiffre d’affaires plus élevé.'
         },
         'ordre-professionnel': {
             alternatives: ['SELARL', 'SELAS'],
-            explanation: "Pour une profession réglementée, passez en SELARL ou SELAS."
+            explanation: 'Pour une profession réglementée, passez en SELARL ou SELAS.'
         },
-        'fundraising': {
+        fundraising: {
             alternatives: ['SAS', 'SASU'],
-            explanation: "Pour lever des fonds, une SAS ou SASU est plus adaptée."
+            explanation: 'Pour lever des fonds, une SAS ou SASU est plus adaptée.'
         }
     },
 
-    'EI': {
+    EI: {
         'protection-patrimoine': {
             alternatives: ['EURL', 'SASU'],
-            explanation: "Choisissez EURL ou SASU pour isoler votre patrimoine personnel."
+            explanation: 'Choisissez EURL ou SASU pour isoler votre patrimoine personnel.'
         },
         'levee-fonds': {
             alternatives: ['SASU', 'SAS'],
-            explanation: "Pour accueillir des investisseurs, préférez SASU ou SAS."
+            explanation: 'Pour accueillir des investisseurs, préférez SASU ou SAS.'
         }
     },
 
-    'SNC': {
-        'risque-eleve': {
+    /* ---------- ENTREPRISE UNIPERSONNELLE & DÉRIVÉS ---------- */
+    EURL: {
+        'ouverture-capital': {
             alternatives: ['SARL', 'SAS'],
-            explanation: "Limitez la responsabilité des associés avec une SARL ou une SAS."
-        }
-    },
-
-    'SELARL': {
-        'fundraising': {
-            alternatives: ['SELAS', 'SAS'],
-            explanation: "Pour ouvrir le capital, basculez en SELAS ou en SAS."
+            explanation: 'Si vous souhaitez faire entrer de nouveaux associés, transformez l’EURL en SARL ou SAS.'
         },
-        'besoin-flexibilite-gouvernance': {
-            alternatives: ['SELAS', 'SAS'],
-            explanation: "Pour plus de souplesse de gouvernance, privilégiez SELAS ou SAS."
-        }
-    },
-
-    'SELAS': {
-        'non-reglemente': {
-            alternatives: ['SAS', 'SARL'],
-            explanation: "Sans contrainte d'ordre, une SAS ou SARL est plus simple."
+        'regime-social-tns-indesirable': {
+            alternatives: ['SASU', 'SAS'],
+            explanation: 'Pour bénéficier du régime assimilé salarié, passez en SASU ou SAS.'
         },
-        'regime-social-non-souhaite': {
-            alternatives: ['SAS', 'SARL'],
-            explanation: "Si vous refusez le régime assimilé salarié, envisagez SAS ou SARL."
-        }
-    },
-
-    'SCA': {
-        'capital-insuffisant': {
+        fundraising: {
             alternatives: ['SAS', 'SA'],
-            explanation: "Avec moins de 37 000 € de capital, optez pour SAS ou SA."
+            explanation: 'Pour de vraies levées de fonds, une SAS ou SA est plus appropriée.'
+        }
+    },
+
+    SASU: {
+        'associe-unique-veut-sassocier': {
+            alternatives: ['SAS', 'SARL'],
+            explanation: 'À l’arrivée d’un deuxième associé, transformez en SAS ou SARL.'
+        },
+        'charges-sociales-elevees': {
+            alternatives: ['EURL', 'MICRO'],
+            explanation: 'Pour alléger les cotisations, envisagez EURL ou régime micro.'
+        },
+        'imposition-is-non-voulu': {
+            alternatives: ['EURL', 'EI'],
+            explanation: 'Pour être imposé à l’IR de plein droit, optez plutôt pour EURL ou EI.'
+        }
+    },
+
+    /* ---------- FORMES CLASSIQUES MULTI-ASSOCIÉS ---------- */
+    SARL: {
+        'gouvernance-rigide': {
+            alternatives: ['SAS', 'SA'],
+            explanation: 'Pour plus de souplesse statutaire, migrez vers SAS ou SA.'
+        },
+        'levee-fonds': {
+            alternatives: ['SAS', 'SA'],
+            explanation: 'Les investisseurs préfèrent généralement la SAS ou la SA.'
+        },
+        'regime-social-tns-indesirable': {
+            alternatives: ['SAS', 'SA'],
+            explanation: 'Pour le président assimilé salarié, basculez en SAS ou SA.'
+        }
+    },
+
+    SAS: {
+        'associe-unique': {
+            alternatives: ['SASU', 'EURL'],
+            explanation: 'S’il ne reste qu’un associé, passez en SASU (ou EURL si vous voulez l’IR).'
         },
         'petit-projet': {
-            alternatives: ['SAS', 'SARL'],
-            explanation: "Pour un petit projet, SAS ou SARL sont plus légères."
+            alternatives: ['EI', 'MICRO', 'EURL'],
+            explanation: 'Pour une très petite activité, les régimes simplifiés sont moins coûteux.'
+        },
+        'activite-reglementee': {
+            alternatives: ['SELARL', 'SELAS'],
+            explanation: 'Pour les professions réglementées, préférez SELARL ou SELAS.'
         }
     },
 
-    'SCI': {
-        'hors-immobilier': {
+    SA: {
+        'capital-insuffisant': {
+            alternatives: ['SAS', 'SARL'],
+            explanation: 'Si vous n’atteignez pas 37 000 € de capital, choisissez SAS ou SARL.'
+        },
+        'nombre-associes-insuffisant': {
+            alternatives: ['SAS', 'SARL'],
+            explanation: 'Avec moins de 2 (ou 7 si cotée) actionnaires, tournez-vous vers SAS ou SARL.'
+        },
+        'souplesse-gouvernance-voulue': {
+            alternatives: ['SAS'],
+            explanation: 'La SAS offre une grande liberté statutaire par rapport à la SA.'
+        }
+    },
+
+    /* ---------- FORMES SPÉCIFIQUES ---------- */
+    SNC: {
+        'risque-eleve': {
             alternatives: ['SARL', 'SAS'],
-            explanation: "Hors activités immobilières, préférez SARL ou SAS."
+            explanation: 'Limitez la responsabilité des associés avec une SARL ou une SAS.'
+        }
+    },
+
+    SCI: {
+        'hors-immobilier': {
+            alternatives: ['SARL', 'SAS', 'EURL', 'SASU'],
+            explanation: 'Pour toute activité commerciale, remplacez la SCI par une SARL, SAS, EURL ou SASU selon le nombre d’associés.'
         },
         'simplicite-comptable': {
             alternatives: ['EURL', 'SARL'],
-            explanation: "Pour moins de formalités, choisissez EURL ou SARL."
+            explanation: 'Pour alléger les obligations comptables, optez pour EURL ou SARL.'
+        }
+    },
+
+    SELARL: {
+        fundraising: {
+            alternatives: ['SELAS', 'SAS'],
+            explanation: 'Pour ouvrir le capital, basculez en SELAS ou en SAS.'
+        },
+        'besoin-flexibilite-gouvernance': {
+            alternatives: ['SELAS', 'SAS'],
+            explanation: 'Pour plus de souplesse de gouvernance, privilégiez SELAS ou SAS.'
+        }
+    },
+
+    SELAS: {
+        'non-reglemente': {
+            alternatives: ['SAS', 'SARL'],
+            explanation: 'Sans contrainte d’ordre, une SAS ou SARL est plus simple.'
+        },
+        'regime-social-non-souhaite': {
+            alternatives: ['SAS', 'SARL'],
+            explanation: 'Si vous refusez le régime assimilé salarié, envisagez SAS ou SARL.'
+        }
+    },
+
+    SCA: {
+        'capital-insuffisant': {
+            alternatives: ['SAS', 'SA'],
+            explanation: 'Avec moins de 37 000 € de capital, optez pour SAS ou SA.'
+        },
+        'petit-projet': {
+            alternatives: ['SAS', 'SARL'],
+            explanation: 'Pour un petit projet, SAS ou SARL sont plus légères.'
         }
     }
 };
