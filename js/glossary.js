@@ -2,6 +2,7 @@
  * TradePulse - Glossaire juridique interactif
  * Ce script charge les termes juridiques depuis le JSON et les met en évidence
  * dans le contenu de la page, affichant leur définition en cliquant.
+ * Version corrigée : utilise la délégation d'événements pour éviter les conflits de clics
  */
 
 // Configuration globale
@@ -36,7 +37,29 @@ class LegalGlossary {
         this.isLoading = false;
         this.isLoaded = false;
         this.injectStyles();
+        this.initEventDelegation(); // Initialiser la délégation d'événements
         this.loadTerms();
+    }
+
+    // NOUVELLE MÉTHODE : Délégation d'événements pour éviter les listeners multiples
+    initEventDelegation() {
+        // Un seul listener global pour tous les termes
+        document.addEventListener('click', (e) => {
+            const el = e.target.closest('.glossary-term');
+            if (!el) return;  // pas cliqué sur un terme
+            
+            e.stopPropagation();  // empêche la fermeture immédiate de la bulle
+            this.showDefinition(el.dataset.termId, el);
+        });
+        
+        // Listener pour fermer la bulle active lors d'un clic en dehors
+        document.addEventListener('click', (e) => {
+            if (this.activeTooltip && 
+                !this.activeTooltip.contains(e.target) && 
+                !e.target.closest('.glossary-term')) {
+                this.closeActiveTooltip();
+            }
+        });
     }
 
     // Injecter les styles CSS directement dans la page
@@ -346,7 +369,7 @@ class LegalGlossary {
         return pattern;
     }
 
-    // MODIFIÉE : Met en évidence les termes dans un nœud de texte avec amélioration pour les accents
+    // MODIFIÉE : Met en évidence les termes SANS addEventListener individuel
     highlightTermsInNode(textNode) {
         const text = textNode.nodeValue;
         const parent = textNode.parentNode;
@@ -385,18 +408,12 @@ class LegalGlossary {
                 // Récupérer le texte original (avec les accents) du match
                 const originalMatch = text.substring(match.index, match.index + match[0].length);
                 
-                // Créer un élément pour le terme surligné
+                // Créer un élément pour le terme surligné SANS addEventListener
                 const termElement = document.createElement('span');
                 termElement.className = 'glossary-term';
                 termElement.textContent = originalMatch;
                 termElement.dataset.termId = termId;
-                
-                // Ajouter un gestionnaire de clic pour afficher la définition
-                termElement.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.showDefinition(termId, termElement);
-                });
+                // PAS d'addEventListener ici - la délégation d'événements s'en charge
                 
                 fragment.appendChild(termElement);
                 
@@ -423,7 +440,7 @@ class LegalGlossary {
         return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     }
 
-    // Affiche la définition d'un terme
+    // MODIFIÉE : Affiche la définition sans ajouter de nouveaux listeners sur document
     showDefinition(termId, element) {
         // Fermer la bulle active si elle existe
         this.closeActiveTooltip();
@@ -481,13 +498,7 @@ class LegalGlossary {
         
         // Enregistrer la bulle active
         this.activeTooltip = tooltip;
-        
-        // Fermer la bulle lors d'un clic en dehors
-        document.addEventListener('click', this.handleDocumentClick = (e) => {
-            if (!tooltip.contains(e.target) && e.target !== element) {
-                this.closeActiveTooltip();
-            }
-        });
+        // PAS de nouveau addEventListener sur document - géré par initEventDelegation
     }
 
     // Génère le contenu HTML de la bulle d'information
@@ -574,7 +585,7 @@ class LegalGlossary {
         }, 0);
     }
 
-    // Ferme la bulle d'information active
+    // MODIFIÉE : Ferme la bulle sans gérer d'event listeners
     closeActiveTooltip() {
         if (this.activeTooltip) {
             // Animation de fermeture
@@ -588,12 +599,7 @@ class LegalGlossary {
                 }
                 this.activeTooltip = null;
             }, this.config.animationDuration);
-            
-            // Supprimer le gestionnaire de clic sur le document
-            if (this.handleDocumentClick) {
-                document.removeEventListener('click', this.handleDocumentClick);
-                this.handleDocumentClick = null;
-            }
+            // PAS de removeEventListener ici - tout est géré par la délégation
         }
     }
 }
