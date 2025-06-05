@@ -3738,11 +3738,6 @@ if (answers.team_structure === 'investors' &&
                             <button class="details-btn bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg mr-3" data-status-id="${status.shortName}">
                                 <i class="fas fa-info-circle mr-2"></i> Plus de détails
                             </button>
-                            ${isMainRecommendation ? `
-                                <button class="download-btn bg-green-500 hover:bg-green-400 text-gray-900 font-medium px-4 py-2 rounded-lg">
-                                    <i class="fas fa-file-download mr-2"></i> Télécharger le PDF
-                                </button>
-                            ` : ''}
                         </div>
                     </div>
                 </div>
