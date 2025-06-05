@@ -2060,83 +2060,134 @@ class RecommendationEngine {
      * Appliquer les filtres d'exclusion spécifiques (cas particuliers)
      */
 applySpecificFilters() {
-    // 1. Activité relevant d'un ordre → Micro-entreprise & SNC exclues
+/* ------------------------------------------------------------------
+     * 1. Activité relevant d’un ordre professionnel
+     * ------------------------------------------------------------------ */
     if (this.answers.professional_order === 'yes') {
-        this.excludeStatuses(['MICRO', 'SNC'], "Activité relevant d'un ordre professionnel");
+        this.excludeStatuses(['MICRO', 'SNC'],
+            "Activité relevant d'un ordre professionnel – MICRO & SNC exclues");
     }
-    
-    // 2. Structure solo → EI & EURL/MICRO conservées, autres exclues
-    if (this.answers.team_structure === 'solo') {
-        Object.keys(this.filteredStatuses).forEach(statusId => {
-            if (!['EI', 'EIRL', 'MICRO', 'EURL', 'SASU'].includes(statusId)) {
-                this.excludeStatus(statusId, "Structure solo - un seul associé");
-            }
-        });
-    }
-    
-    // 3. CA > seuils micro → Micro exclue
+
+    /* ------------------------------------------------------------------
+     * 2. CA prévisionnel > seuil micro → MICRO exclue
+     * ------------------------------------------------------------------ */
     if (this.answers.projected_revenue) {
-        const revenue = parseFloat(this.answers.projected_revenue);
-        let microThreshold = this.thresholds2025.micro.bic_service; // Par défaut
-        
-        // Déterminer le seuil applicable selon l'activité
-        if (this.answers.activity_type === 'bic_sales') {
-            microThreshold = this.thresholds2025.micro.bic_sales;
-        } else if (this.answers.activity_type === 'bnc') {
-            microThreshold = this.thresholds2025.micro.bnc;
-        }
-        
+        let microThreshold = this.thresholds2025.micro.bic_service;       // par défaut
+        if (this.answers.activity_type === 'bic_sales') microThreshold = this.thresholds2025.micro.bic_sales;
+        if (this.answers.activity_type === 'bnc')        microThreshold = this.thresholds2025.micro.bnc;
+
         if (revenue > microThreshold) {
-            this.excludeStatus('MICRO', `CA prévisionnel (${revenue}€) supérieur au seuil micro (${microThreshold}€)`);
+            this.excludeStatus('MICRO',
+                `CA prévisionnel (${revenue.toLocaleString()} €) > seuil micro (${microThreshold.toLocaleString()} €)`);
         }
     }
-    
-    // 4. Levée de fonds → EI/MICRO/SNC exclues
+
+    /* ------------------------------------------------------------------
+     * 3. Besoin de lever des fonds (tout montant) → EI / MICRO / SNC exclues
+     * ------------------------------------------------------------------ */
     if (this.answers.fundraising === 'yes') {
-        this.excludeStatuses(['EI', 'MICRO', 'SNC'], "Besoin de lever des fonds");
+        this.excludeStatuses(['EI', 'MICRO', 'SNC'],
+            'Levée de fonds envisagée – statuts peu attractifs exclus');
     }
-    
-    // 5. SEL réservées aux professions libérales réglementées
+
+    /* ------------------------------------------------------------------
+     * 4. SEL réservées aux professions libérales réglementées
+     * ------------------------------------------------------------------ */
     const isLiberal = this.answers.activity_sector === 'liberal';
-    const hasOrder = this.answers.professional_order === 'yes' || 
-                     this.answers.regulated_profession === 'yes';
+    const hasOrder  = this.answers.professional_order === 'yes' ||
+                      this.answers.regulated_profession === 'yes';
     if (!hasOrder && !isLiberal) {
-        this.excludeStatuses(['SELARL', 'SELAS'], 
-            'Statut réservé aux professions libérales réglementées');
+        this.excludeStatuses(['SELARL', 'SELAS'],
+            'SEL réservées aux professions libérales réglementées');
     }
-    
-    // 6. SCA : capital minimum 37 000€
-    const capital = parseFloat(this.answers.available_capital || '0');
-    if (capital < 37000) {
-        this.excludeStatus('SCA', 'Capital insuffisant (minimum 37 000€ requis)');
+
+    /* ------------------------------------------------------------------
+     * 5. SCI réservée aux activités civiles immobilières
+     * ------------------------------------------------------------------ */
+    if (this.answers.activity_type && this.answers.activity_type !== 'immobilier') {
+        this.excludeStatus('SCI',
+            'SCI réservée aux activités civiles immobilières');
     }
-    
-    // 7. SCI : exclusivement pour activités immobilières
- if (this.answers.activity_type && 
-    this.answers.activity_type !== 'immobilier') {
-    this.excludeStatus('SCI', 'SCI réservée aux activités civiles immobilières');
-}
-    
-    // 8. Risque professionnel élevé → éviter responsabilité illimitée
+
+    /* ------------------------------------------------------------------
+     * 6. Risque professionnel élevé → éviter responsabilité illimitée
+     * ------------------------------------------------------------------ */
     if (this.answers.high_professional_risk === 'yes') {
-        this.excludeStatuses(['EI', 'MICRO'], 
+        this.excludeStatuses(['EI', 'MICRO', 'SNC'],
             'Responsabilité illimitée incompatible avec risque professionnel élevé');
     }
-    
-    // 9. Régime social souhaité
+
+    /* ------------------------------------------------------------------
+     * 7. Régime social souhaité
+     * ------------------------------------------------------------------ */
     if (this.answers.social_regime === 'assimilated_employee') {
-        this.excludeStatuses(['EI', 'MICRO', 'EURL', 'SARL', 'SNC'], 
-            'Régime assimilé salarié souhaité - statuts TNS exclus');
+        this.excludeStatuses(['EI', 'MICRO', 'EURL', 'SARL', 'SNC'],
+            'Régime assimilé salarié souhaité – statuts TNS exclus');
     } else if (this.answers.social_regime === 'tns') {
-        this.excludeStatuses(['SAS', 'SASU', 'SA', 'SELAS'], 
-            'Régime TNS souhaité - statuts assimilé salarié exclus');
+        this.excludeStatuses(['SAS', 'SASU', 'SA', 'SELAS'],
+            'Régime TNS souhaité – statuts assimilé salarié exclus');
     }
-    
-    // 10. Protection du patrimoine essentielle
+
+    /* ------------------------------------------------------------------
+     * 8. Protection du patrimoine essentielle
+     * ------------------------------------------------------------------ */
     if (this.answers.patrimony_protection === 'essential') {
-        this.excludeStatuses(['SNC'], 
-            'Protection patrimoniale essentielle - responsabilité solidaire exclue');
+        this.excludeStatuses(['SNC'],
+            'Protection patrimoniale essentielle – responsabilité solidaire exclue');
     }
+
+    /* ------------------------------------------------------------------
+     * 9. Nombre d’associés & statuts unipersonnels / pluripersonnels
+     * ------------------------------------------------------------------ */
+    if (teamSolo) {
+        this.excludeStatuses(
+            ['SARL', 'SAS', 'SA', 'SNC', 'SCI', 'SELARL', 'SELAS', 'SCA'],
+            'Un seul associé – statuts pluripersonnels exclus');
+    } else { // >1 associé
+        this.excludeStatuses(
+            ['EI', 'MICRO', 'EURL', 'SASU'],
+            'Plusieurs associés – statuts unipersonnels exclus');
+    }
+
+    if (nbAssoc > 100) this.excludeStatus('SARL', 'SARL limitée à 100 associés');
+    if (nbAssoc < 2)   this.excludeStatus('SA',   'SA requiert au moins 2 associés');
+    if (nbAssoc < 4)   this.excludeStatus('SCA',  'SCA requiert au moins 4 associés');
+
+    /* ------------------------------------------------------------------
+     * 10. Capital social minimum (SA & SCA)
+     * ------------------------------------------------------------------ */
+    if (capital < 37_000) {
+        this.excludeStatuses(['SA', 'SCA'],
+            'Capital insuffisant (minimum légal : 37 000 €)');
+    }
+
+    /* ------------------------------------------------------------------
+     * 11. Levée de fonds ≥ 1 M€ → éviter SARL / SNC
+     * ------------------------------------------------------------------ */
+    if (this.answers.fundraising === 'yes' &&
+        parseFloat(this.answers.fundraising_amount || '0') >= 1_000_000) {
+        this.excludeStatuses(['SARL', 'SNC'],
+            'Levée de fonds importante – privilégier SAS ou SA');
+    }
+
+    /* ------------------------------------------------------------------
+     * 12. Activité agricole → proposer statuts agricoles dédiés
+     * ------------------------------------------------------------------ */
+    if (this.answers.activity_type === 'agricultural') {
+        this.excludeStatuses(
+            ['EI', 'MICRO', 'EURL', 'SASU', 'SARL', 'SAS', 'SA',
+             'SNC', 'SCI', 'SELARL', 'SELAS', 'SCA'],
+            'Activité agricole – choisir EARL, GAEC ou SCEA');
+    }
+
+    /* ------------------------------------------------------------------
+     * 13. Ordres pros interdisant SAS / SASU (CNB, CNO, etc.)
+     * ------------------------------------------------------------------ */
+    if (['cnb', 'cno'].includes(this.answers.order_type)) {
+        this.excludeStatuses(['SAS', 'SASU'],
+            'Ordre professionnel incompatible avec SAS / SASU');
+    }
+
 }
     
     /**
