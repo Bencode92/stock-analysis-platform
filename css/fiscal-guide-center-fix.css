@@ -1,0 +1,59 @@
+/* Fix pour centrer le contenu du guide fiscal */
+
+/* Réduire la marge gauche du contenu principal */
+.main-content {
+    margin-left: 60px; /* Garder uniquement l'espace de la sidebar */
+    padding: 20px 10px; /* Réduire le padding latéral */
+}
+
+/* Ajuster le container du guide fiscal */
+#fiscal-guide-container {
+    max-width: 1200px !important; /* Augmenter la largeur max */
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+/* Ajuster les sections de simulation */
+.simulation-section {
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+/* Optimiser l'espace pour les filtres */
+.fiscal-filters-section {
+    padding: 15px;
+    margin: 0 auto 20px;
+}
+
+/* Ajuster la grille des graphiques */
+.fiscal-charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 20px;
+    margin: 0 auto;
+}
+
+/* Pour les écrans moyens */
+@media (max-width: 1400px) {
+    .main-content {
+        padding: 20px 5px;
+    }
+    
+    #fiscal-guide-container {
+        max-width: 100%;
+        padding: 0 10px;
+    }
+}
+
+/* Pour mobile */
+@media (max-width: 768px) {
+    .main-content {
+        margin-left: 60px;
+        padding: 15px 5px;
+    }
+    
+    .fiscal-charts-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+}
