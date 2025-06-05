@@ -978,18 +978,6 @@ const questions = [
         required: false
     },
     {
-        id: "multi_year_projection",
-        sectionId: "advanced",
-        title: "Projection pluriannuelle",
-        description: "Souhaitez-vous une projection sur 3 ans ?",
-        type: "radio",
-        required: false,
-        options: [
-            { id: "yes", label: "Oui", icon: "fa-check-circle" },
-            { id: "no", label: "Non", icon: "fa-times-circle" }
-        ]
-    },
-    {
         id: "tax_optimization",
         sectionId: "advanced",
         title: "Optimisation fiscale",
