@@ -787,18 +787,6 @@ const questions = [
         ]
     },
     {
-        id: "arce_eligibility",
-        sectionId: "aids",
-        title: "Éligibilité ARCE",
-        description: "Êtes-vous éligible à l'Aide à la Reprise ou Création d'Entreprise (ARCE) ?",
-        type: "radio",
-        required: true,
-        options: [
-            { id: "yes", label: "Oui", icon: "fa-check-circle" },
-            { id: "no", label: "Non", icon: "fa-times-circle" }
-        ]
-    },
-    {
         id: "cumulative_devices",
         sectionId: "aids",
         title: "Cumul de dispositifs",
