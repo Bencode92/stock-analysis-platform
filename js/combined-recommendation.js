@@ -2133,57 +2133,65 @@ if (this.answers.projected_revenue) {
             'Protection patrimoniale essentielle – responsabilité solidaire exclue');
     }
 
-    /* ------------------------------------------------------------------
-     * 9. Nombre d’associés & statuts unipersonnels / pluripersonnels
-     * ------------------------------------------------------------------ */
-    if (teamSolo) {
-        this.excludeStatuses(
-            ['SARL', 'SAS', 'SA', 'SNC', 'SCI', 'SELARL', 'SELAS', 'SCA'],
-            'Un seul associé – statuts pluripersonnels exclus');
-    } else { // >1 associé
-        this.excludeStatuses(
-            ['EI', 'MICRO', 'EURL', 'SASU'],
-            'Plusieurs associés – statuts unipersonnels exclus');
-    }
+// ─── Données dérivées ──────────────────────────────────────────────
+const teamSolo = this.answers.team_structure === 'solo';
+const nbAssoc = parseInt(this.answers.associates_number || 1, 10); // défaut : 1
+const capital = parseFloat(this.answers.available_capital || 0);   // défaut : 0
 
+/* ------------------------------------------------------------------
+ * 9. Nombre d'associés & statuts unipersonnels / pluripersonnels
+ * ------------------------------------------------------------------ */
+if (teamSolo) {
+    this.excludeStatuses(
+        ['SARL', 'SAS', 'SA', 'SNC', 'SCI', 'SELARL', 'SELAS', 'SCA'],
+        'Un seul associé – statuts pluripersonnels exclus'
+    );
+} else {
+    // ≥ 2 associés
+    this.excludeStatuses(
+        ['EI', 'MICRO', 'EURL', 'SASU'],
+        'Plusieurs associés – statuts unipersonnels exclus'
+    );
+    
     if (nbAssoc > 100) this.excludeStatus('SARL', 'SARL limitée à 100 associés');
-    if (nbAssoc < 2)   this.excludeStatus('SA',   'SA requiert au moins 2 associés');
-    if (nbAssoc < 4)   this.excludeStatus('SCA',  'SCA requiert au moins 4 associés');
+    if (nbAssoc < 2)   this.excludeStatus('SA', 'SA requiert au moins 2 actionnaires');
+    if (nbAssoc < 4)   this.excludeStatus('SCA', 'SCA requiert au moins 4 associés');
+}  // <-- L'accolade fermante du else doit être ici
 
-    /* ------------------------------------------------------------------
-     * 10. Capital social minimum (SA & SCA)
-     * ------------------------------------------------------------------ */
-    if (capital < 37_000) {
-        this.excludeStatuses(['SA', 'SCA'],
-            'Capital insuffisant (minimum légal : 37 000 €)');
-    }
+/* ------------------------------------------------------------------
+ * 10. Capital social minimum (SA & SCA)
+ * ------------------------------------------------------------------ */
+if (capital < 37_000) {
+    this.excludeStatuses(['SA', 'SCA'],
+        'Capital insuffisant (minimum légal : 37 000 €)');
+}
 
-    /* ------------------------------------------------------------------
-     * 11. Levée de fonds ≥ 1 M€ → éviter SARL / SNC
-     * ------------------------------------------------------------------ */
-    if (this.answers.fundraising === 'yes' &&
-        parseFloat(this.answers.fundraising_amount || '0') >= 1_000_000) {
-        this.excludeStatuses(['SARL', 'SNC'],
-            'Levée de fonds importante – privilégier SAS ou SA');
-    }
+/* ------------------------------------------------------------------
+ * 11. Levée de fonds ≥ 1 M€ → éviter SARL / SNC
+ * ------------------------------------------------------------------ */
+if (this.answers.fundraising === 'yes' &&
+    parseFloat(this.answers.fundraising_amount || '0') >= 1_000_000) {
+    this.excludeStatuses(['SARL', 'SNC'],
+        'Levée de fonds importante – privilégier SAS ou SA');
+}
 
-    /* ------------------------------------------------------------------
-     * 12. Activité agricole → proposer statuts agricoles dédiés
-     * ------------------------------------------------------------------ */
-    if (this.answers.activity_type === 'agricultural') {
-        this.excludeStatuses(
-            ['EI', 'MICRO', 'EURL', 'SASU', 'SARL', 'SAS', 'SA',
-             'SNC', 'SCI', 'SELARL', 'SELAS', 'SCA'],
-            'Activité agricole – choisir EARL, GAEC ou SCEA');
-    }
+/* ------------------------------------------------------------------
+ * 12. Activité agricole → proposer statuts agricoles dédiés
+ * ------------------------------------------------------------------ */
+if (this.answers.activity_type === 'agricultural') {
+    this.excludeStatuses(
+        ['EI', 'MICRO', 'EURL', 'SASU', 'SARL', 'SAS', 'SA',
+         'SNC', 'SCI', 'SELARL', 'SELAS', 'SCA'],
+        'Activité agricole – choisir EARL, GAEC ou SCEA');
+}
 
-    /* ------------------------------------------------------------------
-     * 13. Ordres pros interdisant SAS / SASU (CNB, CNO, etc.)
-     * ------------------------------------------------------------------ */
-    if (['cnb', 'cno'].includes(this.answers.order_type)) {
-        this.excludeStatuses(['SAS', 'SASU'],
-            'Ordre professionnel incompatible avec SAS / SASU');
-    }
+/* ------------------------------------------------------------------
+ * 13. Ordres pros interdisant SAS / SASU (CNB, CNO, etc.)
+ * ------------------------------------------------------------------ */
+if (['cnb', 'cno'].includes(this.answers.order_type)) {
+    this.excludeStatuses(['SAS', 'SASU'],
+        'Ordre professionnel incompatible avec SAS / SASU');
+}
 
 }
     
