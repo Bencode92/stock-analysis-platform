@@ -51,11 +51,8 @@ class QuestionManager {
      * Mettre à jour l'état des boutons de navigation
      */
     updateNavigationButtons() {
-        // Bouton précédent
-        const isFirstQuestion = this.isQuickStart ? 
-            this.currentQuestionIndex === 0 : 
-            (this.currentSectionIndex === 0 && this.currentSectionQuestionIndex === 0);
-        
+        // Bouton précédent - utiliser la nouvelle méthode
+        const isFirstQuestion = this.getPreviousVisibleQuestion() === null;
         this.prevBtn.disabled = isFirstQuestion;
         
         // Bouton suivant
@@ -169,16 +166,37 @@ class QuestionManager {
      * Calculer le pourcentage de progression
      */
     calculateProgress() {
-        const questionsToUse = this.isQuickStart ? this.filteredQuestions : window.questions;
-        // Amélioration: Éviter NaN en vérifiant si questionsToUse.length est valide
-        const totalQuestions = questionsToUse ? questionsToUse.length : 1;
-        return (this.currentQuestionIndex / totalQuestions) * 100;
+        if (this.isQuickStart) {
+            const totalQuestions = this.filteredQuestions.length;
+            return (this.currentQuestionIndex / totalQuestions) * 100;
+        } else {
+            // Calculer le nombre total de questions visibles
+            let totalQuestions = 0;
+            let questionsBeforeCurrent = 0;
+            
+            window.sections.forEach((section, sectionIndex) => {
+                const sectionQuestions = this.sectionQuestions[section.id] || [];
+                
+                sectionQuestions.forEach((question, questionIndex) => {
+                    if (!question.showIf || this.shouldShowQuestion(question)) {
+                        totalQuestions++;
+                        
+                        if (sectionIndex < this.currentSectionIndex || 
+                            (sectionIndex === this.currentSectionIndex && questionIndex <= this.currentSectionQuestionIndex)) {
+                            questionsBeforeCurrent++;
+                        }
+                    }
+                });
+            });
+            
+            return totalQuestions > 0 ? (questionsBeforeCurrent / totalQuestions) * 100 : 0;
+        }
     }
 
     /**
      * Rendre la question courante
      */
-    renderCurrentQuestion() {
+    renderCurrentQuestion(direction = 'next') {
         // Déterminer la question à afficher
         let questionToRender;
         
@@ -206,8 +224,12 @@ class QuestionManager {
         
         // Vérifier si la question doit être affichée en fonction des réponses précédentes
         if (questionToRender.showIf && !this.shouldShowQuestion(questionToRender)) {
-            // Passer à la question suivante
-            this.goToNextQuestion();
+            // Sauter dans la bonne direction
+            if (direction === 'next') {
+                this.goToNextQuestion();
+            } else {
+                this.goToPreviousQuestion();
+            }
             return;
         }
         
@@ -251,6 +273,50 @@ class QuestionManager {
         }
         
         return true;
+    }
+
+    /**
+     * Méthode pour vérifier s'il y a une question visible précédente
+     */
+    getPreviousVisibleQuestion() {
+        if (this.isQuickStart) {
+            // Mode Quick Start
+            for (let i = this.currentQuestionIndex - 1; i >= 0; i--) {
+                const question = this.filteredQuestions[i];
+                if (!question.showIf || this.shouldShowQuestion(question)) {
+                    return question;
+                }
+            }
+            return null;
+        } else {
+            // Mode normal - parcourir en arrière
+            let sectionIndex = this.currentSectionIndex;
+            let questionIndex = this.currentSectionQuestionIndex - 1;
+            
+            while (sectionIndex >= 0) {
+                const sectionId = window.sections[sectionIndex].id;
+                const sectionQuestions = this.sectionQuestions[sectionId] || [];
+                
+                if (questionIndex < 0) {
+                    sectionIndex--;
+                    if (sectionIndex >= 0) {
+                        const prevSectionId = window.sections[sectionIndex].id;
+                        const prevSectionQuestions = this.sectionQuestions[prevSectionId] || [];
+                        questionIndex = prevSectionQuestions.length - 1;
+                    }
+                    continue;
+                }
+                
+                const question = sectionQuestions[questionIndex];
+                if (question && (!question.showIf || this.shouldShowQuestion(question))) {
+                    return question;
+                }
+                
+                questionIndex--;
+            }
+            
+            return null;
+        }
     }
 
     /**
@@ -991,7 +1057,7 @@ class QuestionManager {
         if (this.isQuickStart) {
             if (this.currentQuestionIndex > 0) {
                 this.currentQuestionIndex--;
-                this.renderCurrentQuestion();
+                this.renderCurrentQuestion('prev'); // Passer la direction
             }
         } else {
             // Mode navigation par section
@@ -1001,14 +1067,16 @@ class QuestionManager {
             if (this.currentSectionQuestionIndex > 0) {
                 // Revenir à la question précédente dans la même section
                 this.currentSectionQuestionIndex--;
-                this.renderCurrentQuestion();
+                this.currentQuestionIndex--; // Maintenir l'index global
+                this.renderCurrentQuestion('prev'); // Passer la direction
             } else if (this.currentSectionIndex > 0) {
                 // Revenir à la dernière question de la section précédente
                 this.currentSectionIndex--;
                 const prevSectionId = window.sections[this.currentSectionIndex].id;
                 const prevSectionQuestions = this.sectionQuestions[prevSectionId] || [];
                 this.currentSectionQuestionIndex = prevSectionQuestions.length - 1;
-                this.renderCurrentQuestion();
+                this.currentQuestionIndex--; // Maintenir l'index global
+                this.renderCurrentQuestion('prev'); // Passer la direction
             }
         }
         
@@ -1023,7 +1091,7 @@ class QuestionManager {
         if (this.isQuickStart) {
             if (this.currentQuestionIndex < this.filteredQuestions.length - 1) {
                 this.currentQuestionIndex++;
-                this.renderCurrentQuestion();
+                this.renderCurrentQuestion('next'); // Passer la direction
             } else {
                 this.showResults();
             }
@@ -1035,12 +1103,14 @@ class QuestionManager {
             if (this.currentSectionQuestionIndex < sectionQuestions.length - 1) {
                 // Passer à la question suivante dans la même section
                 this.currentSectionQuestionIndex++;
-                this.renderCurrentQuestion();
+                this.currentQuestionIndex++; // Maintenir l'index global
+                this.renderCurrentQuestion('next'); // Passer la direction
             } else if (this.currentSectionIndex < window.sections.length - 1) {
                 // Passer à la première question de la section suivante
                 this.currentSectionIndex++;
                 this.currentSectionQuestionIndex = 0;
-                this.renderCurrentQuestion();
+                this.currentQuestionIndex++; // Maintenir l'index global
+                this.renderCurrentQuestion('next'); // Passer la direction
                 
                 // Mettre à jour les étapes de progression
                 this.renderProgressSteps();
