@@ -2687,7 +2687,6 @@ else if (statusId === 'SCA') {
     description: "Les actions de commanditaires se transmettent facilement sans perte de contrôle des commandités.",
     icon: "fa-handshake",
   });
-}
         }
         
         // Stratégies basées sur les priorités utilisateur
