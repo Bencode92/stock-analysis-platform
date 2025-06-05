@@ -730,18 +730,17 @@ class QuestionManager {
 
     /**
      * Attacher les événements pour une question de type checkbox
+     * CORRECTION: Utilisation de l'événement 'change' sur les checkboxes au lieu du 'click' sur l'option
      */
     attachCheckboxEvents(question) {
-        const options = document.querySelectorAll(`.option-btn[data-question-id="${question.id}"]`);
+        const checkboxes = document.querySelectorAll(
+            `input[name="${question.id}"][type="checkbox"]`
+        );
         
-        options.forEach(option => {
-            option.addEventListener('click', () => {
-                // Basculer la sélection de l'option
-                option.classList.toggle('selected');
-                
-                // Basculer la case à cocher
-                const checkbox = option.querySelector('input[type="checkbox"]');
-                checkbox.checked = !checkbox.checked;
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                const optionDiv = checkbox.closest('.option-btn');
+                optionDiv.classList.toggle('selected', checkbox.checked);
             });
         });
     }
