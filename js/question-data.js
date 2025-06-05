@@ -956,7 +956,7 @@ const questions = [
         id: "real_expenses_rate",
         sectionId: "advanced",
         title: "Projection micro vs réel",
-        description: "Quel est votre taux de frais réels (pour comparer avec l'abattement forfaitaire du régime micro) ?",
+       description: "Quel est votre taux de frais réels ? (À comparer avec l'abattement forfaitaire du régime micro-entreprise)",
         type: "slider",
         min: 0,
         max: 100,
