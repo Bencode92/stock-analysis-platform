@@ -2,7 +2,7 @@
  * TradePulse - Glossaire juridique interactif
  * Ce script charge les termes juridiques depuis le JSON et les met en évidence
  * dans le contenu de la page, affichant leur définition en cliquant.
- * Version corrigée : un seul listener global pour éviter les race conditions
+ * Version corrigée : gestion des mutations DOM avec plus de 2 réponses
  */
 
 // Configuration globale
@@ -34,6 +34,7 @@ class LegalGlossary {
         this.config = config;
         this.terms = {};
         this.activeTooltip = null;
+        this.lastOpeningEvent = null; // Pour tracker l'événement d'ouverture
         this.isLoading = false;
         this.isLoaded = false;
         this.injectStyles();
@@ -41,24 +42,27 @@ class LegalGlossary {
         this.loadTerms();
     }
 
-    // CORRIGÉE : Un seul listener global pour éviter les race conditions
+    // CORRIGÉE : Un seul listener global en phase de capture
     initEventDelegation() {
-        // UN SEUL listener qui gère tout
+        // UN SEUL listener qui gère tout, en phase de CAPTURE
         document.addEventListener('click', (e) => {
-            const term = e.target.closest('.glossary-term');
+            const termEl = e.target.closest('.glossary-term');
             
-            if (term) {
-                // --- On a cliqué sur un terme --------------------
-                e.stopPropagation();                     // Empêche la fermeture immédiate
-                this.showDefinition(term.dataset.termId, term);
-                return;                                  // On sort : pas de fermeture
+            if (termEl) {
+                // On vient d'ouvrir → on se souvient de l'évènement qui a ouvert
+                this.lastOpeningEvent = e;
+                this.showDefinition(termEl.dataset.termId, termEl);
+                return; // on ne passe PAS à la partie "fermeture"
             }
             
-            // --- Sinon : clic n'importe où ailleurs ------------
+            // On ignore le même évènement qui vient juste d'ouvrir la bulle
+            if (this.lastOpeningEvent === e) return;
+            
+            // Tout autre clic ferme la bulle, même si le DOM a été rerendu
             if (this.activeTooltip && !this.activeTooltip.contains(e.target)) {
                 this.closeActiveTooltip();
             }
-        }, { passive: true }); // passive = petit bonus perf
+        }, true); // true = listener en phase de capture
     }
 
     // Injecter les styles CSS directement dans la page
@@ -95,7 +99,7 @@ class LegalGlossary {
             
             .glossary-tooltip {
                 position: absolute;
-                z-index: 1000;
+                z-index: 99999; /* Z-index très élevé */
                 max-width: ${this.config.maxTooltipWidth};
                 background-color: rgba(1, 42, 74, 0.95);
                 color: #fff;
@@ -107,6 +111,7 @@ class LegalGlossary {
                 font-size: 14px;
                 line-height: 1.5;
                 animation: glossary-pulse 2s infinite;
+                pointer-events: auto;
             }
             
             @keyframes glossary-pulse {
@@ -379,7 +384,7 @@ class LegalGlossary {
         }
         
         // Vérifier si le nœud a déjà été traité
-        if (parent.dataset && parent.dataset.glossaryProcessed) {
+        if (parent.dataset && parent.dataset.glossaryDone) {
             return;
         }
         
@@ -436,8 +441,8 @@ class LegalGlossary {
         // Remplacer le nœud de texte par le fragment uniquement si des modifications ont été apportées
         if (currentPosition > 0) {
             parent.replaceChild(fragment, textNode);
-            // Marquer le parent comme traité
-            parent.dataset.glossaryProcessed = '1';
+            // Marquer le parent comme traité avec le nouveau nom
+            parent.dataset.glossaryDone = '1';
         }
     }
     
@@ -458,7 +463,7 @@ class LegalGlossary {
         const tooltip = document.createElement('div');
         tooltip.className = 'glossary-tooltip';
         tooltip.style.position = 'absolute';
-        tooltip.style.zIndex = '1000';
+        tooltip.style.zIndex = '99999';
         tooltip.style.maxWidth = this.config.maxTooltipWidth;
         tooltip.style.backgroundColor = 'rgba(1, 42, 74, 0.95)';
         tooltip.style.color = '#fff';
@@ -596,6 +601,7 @@ class LegalGlossary {
         
         const tooltip = this.activeTooltip;     // copie locale
         this.activeTooltip = null;              // on "libère" tout de suite
+        this.lastOpeningEvent = null;           // reset l'événement d'ouverture
         
         // Animation de fermeture
         tooltip.style.opacity = '0';
