@@ -1059,5 +1059,103 @@
         });
     });
     </script>
+    
+    <!-- Fix pour permettre de retirer les priorités facilement -->
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Vérifier périodiquement les slots remplis et ajouter le bouton de suppression
+        setInterval(() => {
+            document.querySelectorAll('.priority-slot[data-option-id]').forEach(slot => {
+                if (!slot.querySelector('.quick-remove')) {
+                    const removeBtn = document.createElement('span');
+                    removeBtn.className = 'quick-remove';
+                    removeBtn.innerHTML = ' ❌';
+                    removeBtn.style.cursor = 'pointer';
+                    removeBtn.style.marginLeft = '8px';
+                    removeBtn.style.fontSize = '16px';
+                    removeBtn.title = 'Cliquez pour retirer cette priorité';
+                    
+                    // Style pour le hover
+                    removeBtn.addEventListener('mouseenter', () => {
+                        removeBtn.style.transform = 'scale(1.2)';
+                    });
+                    removeBtn.addEventListener('mouseleave', () => {
+                        removeBtn.style.transform = 'scale(1)';
+                    });
+                    
+                    // Ajouter l'événement de clic
+                    removeBtn.addEventListener('click', (e) => {
+                        e.stopPropagation(); // Empêcher la propagation du clic
+                        
+                        // Récupérer les données nécessaires
+                        const optionId = slot.dataset.optionId;
+                        const rank = slot.dataset.rank;
+                        
+                        // Trouver la question correspondante
+                        const questionManager = window.questionManager || window.app?.questionManager;
+                        if (!questionManager) return;
+                        
+                        const currentQuestion = window.questions?.find(q => q.type === 'drag_and_drop');
+                        if (!currentQuestion) return;
+                        
+                        const option = currentQuestion.options.find(opt => opt.id === optionId);
+                        if (!option) return;
+                        
+                        // Réinitialiser le slot
+                        const labels = {
+                            '1': 'Priorité principale',
+                            '2': 'Seconde priorité',
+                            '3': 'Troisième priorité'
+                        };
+                        
+                        slot.innerHTML = `
+                            <span class="text-gray-500">${labels[rank]}</span>
+                            <div class="ml-auto bg-gray-800 text-gray-400 rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">${rank}</div>
+                        `;
+                        slot.className = 'priority-slot p-4 rounded-lg border-2 border-dashed border-gray-600 min-h-16 flex items-center';
+                        delete slot.dataset.optionId;
+                        
+                        // Rajouter l'option dans la liste disponible
+                        const availableList = document.getElementById('available-options');
+                        if (availableList) {
+                            const optionDiv = document.createElement('div');
+                            optionDiv.className = 'option-btn p-3 rounded-lg cursor-move flex items-center draggable';
+                            optionDiv.dataset.optionId = option.id;
+                            
+                            optionDiv.innerHTML = `
+                                <i class="fas ${option.icon} text-xl text-green-400 mr-3"></i>
+                                <span>${option.label}</span>
+                                <i class="fas fa-grip-lines ml-auto text-gray-500"></i>
+                            `;
+                            
+                            // Réattacher l'événement de clic pour cette option
+                            optionDiv.addEventListener('click', () => {
+                                const emptySlot = Array.from(document.querySelectorAll('.priority-slot')).find(s => !s.dataset.optionId);
+                                
+                                if (emptySlot) {
+                                    // Mettre à jour le slot
+                                    emptySlot.dataset.optionId = option.id;
+                                    emptySlot.className = 'priority-slot p-4 rounded-lg border-2 border-green-500 bg-blue-900 bg-opacity-30 min-h-16 flex items-center';
+                                    emptySlot.innerHTML = `
+                                        <i class="fas ${option.icon} text-xl text-green-400 mr-3"></i>
+                                        <span>${option.label}</span>
+                                        <div class="ml-auto bg-green-900 text-green-400 rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">${emptySlot.dataset.rank}</div>
+                                    `;
+                                    
+                                    // Supprimer l'option de la liste disponible
+                                    optionDiv.remove();
+                                }
+                            });
+                            
+                            availableList.appendChild(optionDiv);
+                        }
+                    });
+                    
+                    slot.appendChild(removeBtn);
+                }
+            });
+        }, 500); // Vérifier toutes les 500ms
+    });
+    </script>
 </body>
 </html>
