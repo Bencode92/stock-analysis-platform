@@ -3753,31 +3753,38 @@ if (answers.team_structure === 'investors' &&
         resultsHTML += this.displayIncompatibilities(this.incompatibles);
         
         // Fermer les conteneurs
-        resultsHTML += `
-                </div>
-                
-                <div class="text-center mt-10">
-                    <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
-                        <i class="fas fa-redo mr-2"></i> Refaire le test
-                    </button>
-                    <button id="compare-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-medium px-6 py-3 rounded-lg ml-4">
-                        <i class="fas fa-balance-scale mr-2"></i> Comparer les statuts
-                    </button>
-                </div>
-            </div>
-        `;
+resultsHTML += `
+        </div>
         
-        // Injecter le HTML dans le conteneur
-        resultsContainer.innerHTML = resultsHTML;
-        
-        // Attacher les événements
-        document.getElementById('restart-btn').addEventListener('click', () => {
-            location.reload();
-        });
-        
-        document.getElementById('compare-btn').addEventListener('click', () => {
-            alert('Fonctionnalité de comparaison à implémenter');
-        });
+        <div class="text-center mt-10">
+            <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
+                <i class="fas fa-redo mr-2"></i> Refaire le test
+            </button>
+            <button id="compare-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-medium px-6 py-3 rounded-lg ml-4">
+                <i class="fas fa-balance-scale mr-2"></i> Comparer les statuts
+            </button>
+        </div>
+    </div>
+`;
+
+// Injecter le HTML dans le conteneur
+resultsContainer.innerHTML = resultsHTML;
+
+// Attacher les événements
+document.getElementById('restart-btn').addEventListener('click', () => {
+    location.reload();
+});
+
+document.getElementById('compare-btn').addEventListener('click', () => {
+    // Trouver et cliquer sur l'onglet "Comparatif des statuts"
+    const tabItems = document.querySelectorAll('.tab-item');
+    tabItems.forEach((tab) => {
+        if (tab.textContent.trim() === 'Comparatif des statuts') {
+            tab.click();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    });
+});
         
         // Événements pour les boutons de détails
         document.querySelectorAll('.details-btn').forEach((btn) => {
