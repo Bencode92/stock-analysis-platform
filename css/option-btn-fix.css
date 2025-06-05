@@ -1,0 +1,73 @@
+/* =====================================================
+   FIX: Problème de clic sur les cartes de réponse
+   -----------------------------------------------------
+   Problème: Les pseudo-éléments (::before/::after) des cartes
+   interceptent les clics, empêchant la sélection sauf dans
+   certains coins (typiquement en haut à droite)
+   ===================================================== */
+
+/* Désactiver les événements sur TOUS les pseudo-éléments des cartes */
+.option-btn::before,
+.option-btn::after,
+.option-card::before,
+.option-card::after,
+.question-option::before,
+.question-option::after {
+  pointer-events: none !important;
+}
+
+/* S'assurer que les cartes elles-mêmes sont bien cliquables */
+.option-btn {
+  position: relative;
+  z-index: 40;
+  cursor: pointer !important;
+}
+
+/* Gestion des z-index pour éviter les conflits avec la navigation sticky */
+#navigation-wrapper {
+  z-index: 30;
+}
+
+/* S'assurer que les inputs radio/checkbox sont bien accessibles */
+.option-btn input[type="radio"],
+.option-btn input[type="checkbox"] {
+  pointer-events: none; /* Les inputs cachés ne doivent pas interférer */
+}
+
+/* S'assurer que les labels sont cliquables sur toute leur surface */
+.option-btn label {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* Fix supplémentaire pour les effets de hover/glow */
+.option-btn:hover::before,
+.option-btn:hover::after,
+.option-btn.selected::before,
+.option-btn.selected::after {
+  pointer-events: none !important;
+}
+
+/* Fix pour les grilles de cartes avec plusieurs colonnes */
+.options-grid {
+  position: relative;
+  z-index: 35;
+}
+
+/* S'assurer que les icônes et textes ne bloquent pas les clics */
+.option-btn i,
+.option-btn span,
+.option-btn p,
+.option-btn div {
+  pointer-events: none;
+}
+
+/* Exception pour les éléments interactifs à l'intérieur */
+.option-btn button,
+.option-btn a,
+.option-btn .interactive {
+  pointer-events: auto;
+}
