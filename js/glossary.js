@@ -34,7 +34,7 @@ class LegalGlossary {
         this.config = config;
         this.terms = {};
         this.activeTooltip = null;
-        this.lastOpeningEvent = null; // Pour tracker l'événement d'ouverture
+        this.lastOpeningTime = null; // Pour tracker le timestamp d'ouverture
         this.isLoading = false;
         this.isLoaded = false;
         this.injectStyles();
@@ -42,27 +42,32 @@ class LegalGlossary {
         this.loadTerms();
     }
 
-    // CORRIGÉE : Un seul listener global en phase de capture
+    // CORRIGÉE : Un seul listener global en phase de capture avec timestamp
     initEventDelegation() {
-        // UN SEUL listener qui gère tout, en phase de CAPTURE
         document.addEventListener('click', (e) => {
-            const termEl = e.target.closest('.glossary-term');
-            
-            if (termEl) {
-                // On vient d'ouvrir → on se souvient de l'évènement qui a ouvert
-                this.lastOpeningEvent = e;
-                this.showDefinition(termEl.dataset.termId, termEl);
-                return; // on ne passe PAS à la partie "fermeture"
+            /* ① Si le click arrive moins de 80 ms après l'ouverture,
+               on considère que c'est le « double-click » synthétique du label ➜ on l'ignore. */
+            if (this.lastOpeningTime && Date.now() - this.lastOpeningTime < 80) {
+                return;
             }
-            
-            // On ignore le même évènement qui vient juste d'ouvrir la bulle
-            if (this.lastOpeningEvent === e) return;
-            
-            // Tout autre clic ferme la bulle, même si le DOM a été rerendu
-            if (this.activeTooltip && !this.activeTooltip.contains(e.target)) {
+
+            const termEl = e.target.closest('.glossary-term');
+            if (termEl) {
+                /* ② On mémorise simplement l'instant d'ouverture,
+                   ce qui est plus fiable qu'un objet Event. */
+                this.lastOpeningTime = Date.now();
+                this.showDefinition(termEl.dataset.termId, termEl);
+                return;
+            }
+
+            /* ③ On ferme seulement si le clic est vraiment extérieur à la bulle
+               (les clics sur inputs/labels ne ferment plus). */
+            if (this.activeTooltip &&
+                !this.activeTooltip.contains(e.target) &&
+                !e.target.closest('.glossary-term')) {
                 this.closeActiveTooltip();
             }
-        }, true); // true = listener en phase de capture
+        }, true); // listener en capture
     }
 
     // Injecter les styles CSS directement dans la page
@@ -601,7 +606,7 @@ class LegalGlossary {
         
         const tooltip = this.activeTooltip;     // copie locale
         this.activeTooltip = null;              // on "libère" tout de suite
-        this.lastOpeningEvent = null;           // reset l'événement d'ouverture
+        this.lastOpeningTime = null;            // reset le timestamp d'ouverture
         
         // Animation de fermeture
         tooltip.style.opacity = '0';
