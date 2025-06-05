@@ -2056,6 +2056,11 @@ class RecommendationEngine {
      * Appliquer les filtres d'exclusion spécifiques (cas particuliers)
      */
 applySpecificFilters() {
+    // ─── Données dérivées ──────────────────────────────────────────────
+const teamSolo = this.answers.team_structure === 'solo';
+const nbAssoc = parseInt(this.answers.associates_number || 1, 10); // défaut : 1
+const capital = parseFloat(this.answers.available_capital || 0);   // défaut : 0
+    const revenue = parseFloat(this.answers.projected_revenue || 0);
 /* ------------------------------------------------------------------
      * 1. Activité relevant d’un ordre professionnel
      * ------------------------------------------------------------------ */
@@ -2068,7 +2073,6 @@ applySpecificFilters() {
      * 2. CA prévisionnel > seuil micro → MICRO exclue
      * ------------------------------------------------------------------ */
 if (this.answers.projected_revenue) {
-    const revenue = parseFloat(this.answers.projected_revenue || 0);
     let microThreshold = this.thresholds2025.micro.bic_service;       // par défaut
     if (this.answers.activity_type === 'bic_sales') microThreshold = this.thresholds2025.micro.bic_sales;
     if (this.answers.activity_type === 'bnc')        microThreshold = this.thresholds2025.micro.bnc;
@@ -2090,9 +2094,9 @@ if (this.answers.projected_revenue) {
     /* ------------------------------------------------------------------
      * 4. SEL réservées aux professions libérales réglementées
      * ------------------------------------------------------------------ */
-    const isLiberal = this.answers.activity_sector === 'liberal';
-    const hasOrder  = this.answers.professional_order === 'yes' ||
-                      this.answers.regulated_profession === 'yes';
+ const isLiberal = this.answers.activity_type === 'bnc';
+const hasOrder = this.answers.professional_order === 'yes' ||
+                 this.answers.regulated_activity === 'yes';
     if (!hasOrder && !isLiberal) {
         this.excludeStatuses(['SELARL', 'SELAS'],
             'SEL réservées aux professions libérales réglementées');
@@ -2132,11 +2136,6 @@ if (this.answers.projected_revenue) {
         this.excludeStatuses(['SNC'],
             'Protection patrimoniale essentielle – responsabilité solidaire exclue');
     }
-
-// ─── Données dérivées ──────────────────────────────────────────────
-const teamSolo = this.answers.team_structure === 'solo';
-const nbAssoc = parseInt(this.answers.associates_number || 1, 10); // défaut : 1
-const capital = parseFloat(this.answers.available_capital || 0);   // défaut : 0
 
 /* ------------------------------------------------------------------
  * 9. Nombre d'associés & statuts unipersonnels / pluripersonnels
