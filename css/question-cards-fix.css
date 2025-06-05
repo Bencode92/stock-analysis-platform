@@ -1,0 +1,32 @@
+/* Fix pour les problèmes de clic sur les cartes de questions */
+
+/* Désactive l'interception des clics par les pseudo-éléments */
+.option-btn::before,
+.option-btn::after {
+    pointer-events: none !important;
+}
+
+/* Assure que les cartes sont bien positionnées */
+.option-btn {
+    position: relative;
+    z-index: 40;
+}
+
+/* Navigation sticky sous les cartes */
+#navigation-wrapper {
+    z-index: 30;
+}
+
+/* Améliore la zone cliquable */
+.option-btn label {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+/* Fix pour les inputs cachés qui peuvent parfois bloquer */
+.option-btn input[type="radio"],
+.option-btn input[type="checkbox"] {
+    pointer-events: none;
+}
