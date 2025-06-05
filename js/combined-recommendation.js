@@ -2498,56 +2498,196 @@ applySpecificFilters() {
         const strategies = [];
         
         // Stratégies spécifiques par forme juridique
-        if (statusId === 'MICRO') {
-            strategies.push({
-                title: "Optimisation de la trésorerie",
-                description: "Profitez de l'absence de TVA sous le seuil de franchise pour améliorer votre trésorerie.",
-                icon: "fa-coins"
-            });
-            
-            if (this.answers.tax_bracket === 'non_taxable' || this.answers.tax_bracket === 'bracket_11') {
-                strategies.push({
-                    title: "Option versement libératoire",
-                    description: "Avec votre TMI faible, le versement libératoire de l'impôt est très avantageux.",
-                    icon: "fa-percent"
-                });
-            }
-            
-            strategies.push({
-                title: "Surveillance des seuils",
-                description: `Suivez votre CA pour ne pas dépasser les seuils (${this.thresholds2025.micro.bic_sales}€/vente, ${this.thresholds2025.micro.bic_service}€/services).`,
-                icon: "fa-chart-line"
-            });
-        } 
-        else if (statusId === 'EURL') {
-            if (this.answers.tax_bracket === 'bracket_41' || this.answers.tax_bracket === 'bracket_45') {
-                strategies.push({
-                    title: "Option IS recommandée",
-                    description: "Avec votre TMI élevée, l'IS avec taux réduit à 15% est fiscal-optimisant.",
-                    icon: "fa-balance-scale"
-                });
-            }
-            
-            strategies.push({
-                title: "Charges déductibles",
-                description: "Optimisez vos charges réelles déductibles, contrairement au forfait micro-entreprise.",
-                icon: "fa-receipt"
-            });
-        }
-        else if (statusId === 'SASU' || statusId === 'SAS') {
-            strategies.push({
-                title: "Optimisation salaire/dividendes",
-                description: "Répartissez judicieusement entre salaire et dividendes selon votre TMI et vos besoins de trésorerie.",
-                icon: "fa-percentage"
-            });
-            
-            if (this.answers.fundraising === 'yes') {
-                strategies.push({
-                    title: "Préparation à la levée de fonds",
-                    description: "Préparez une documentation adaptée et des statuts optimisés pour les investisseurs.",
-                    icon: "fa-hand-holding-usd"
-                });
-            }
+// ─────────────────────────────────────────────────────────────────────────────
+// MICRO-ENTREPRENEUR
+// ─────────────────────────────────────────────────────────────────────────────
+if (statusId === 'MICRO') {
+  strategies.push({
+    title: "Optimisation de la trésorerie",
+    description: "Profitez de l'absence de TVA sous le seuil de franchise pour améliorer votre trésorerie.",
+    icon: "fa-coins",
+  });
+
+  if (this.answers.tax_bracket === 'non_taxable' || this.answers.tax_bracket === 'bracket_11') {
+    strategies.push({
+      title: "Option versement libératoire",
+      description: "Avec votre TMI faible, le versement libératoire de l'impôt est très avantageux.",
+      icon: "fa-percent",
+    });
+  }
+
+  strategies.push({
+    title: "Surveillance des seuils",
+    description: `Suivez votre CA pour ne pas dépasser les seuils (${this.thresholds2025.micro.bic_sales} € ventes, ${this.thresholds2025.micro.bic_service} € services).`,
+    icon: "fa-chart-line",
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EURL
+// ─────────────────────────────────────────────────────────────────────────────
+else if (statusId === 'EURL') {
+  if (this.answers.tax_bracket === 'bracket_41' || this.answers.tax_bracket === 'bracket_45') {
+    strategies.push({
+      title: "Option IS recommandée",
+      description: "Avec votre TMI élevée, l'IS avec taux réduit à 15 % est fiscal-optimisant.",
+      icon: "fa-balance-scale",
+    });
+  }
+
+  strategies.push({
+    title: "Charges déductibles",
+    description: "Optimisez vos charges réelles déductibles, contrairement au forfait micro-entreprise.",
+    icon: "fa-receipt",
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SASU / SAS
+// ─────────────────────────────────────────────────────────────────────────────
+else if (statusId === 'SASU' || statusId === 'SAS') {
+  strategies.push({
+    title: "Optimisation salaire/dividendes",
+    description: "Répartissez judicieusement entre salaire et dividendes selon votre TMI et vos besoins de trésorerie.",
+    icon: "fa-percentage",
+  });
+
+  if (this.answers.fundraising === 'yes') {
+    strategies.push({
+      title: "Préparation à la levée de fonds",
+      description: "Préparez une documentation adaptée et des statuts optimisés pour les investisseurs.",
+      icon: "fa-hand-holding-usd",
+    });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EI (entreprise individuelle)
+// ─────────────────────────────────────────────────────────────────────────────
+else if (statusId === 'EI') {
+  strategies.push({
+    title: "Choix entre micro et réel",
+    description: "Comparez vos charges réelles au forfait micro ; basculez vers le régime réel si vos charges dépassent ~34 % du CA.",
+    icon: "fa-exchange-alt",
+  });
+  strategies.push({
+    title: "Prévoyance & retraite",
+    description: "Souscrivez un contrat Madelin pour déduire vos cotisations et sécuriser votre protection sociale.",
+    icon: "fa-shield-alt",
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SARL
+// ─────────────────────────────────────────────────────────────────────────────
+else if (statusId === 'SARL') {
+  strategies.push({
+    title: "Statut du gérant",
+    description: "Gérant majoritaire : cotisations TNS moins élevées ; minoritaire : assimilation salariée avec meilleure couverture.",
+    icon: "fa-user-tie",
+  });
+  strategies.push({
+    title: "Dividendes vs rémunération",
+    description: "Calibrez la quote-part de dividendes pour limiter les cotisations tout en profitant de l’abattement de 40 %.",
+    icon: "fa-hand-holding-usd",
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SA
+// ─────────────────────────────────────────────────────────────────────────────
+else if (statusId === 'SA') {
+  strategies.push({
+    title: "Renforcer la crédibilité",
+    description: "La SA rassure grands comptes et investisseurs, idéale pour viser les marchés internationaux.",
+    icon: "fa-building",
+  });
+  strategies.push({
+    title: "Rémunération en actions",
+    description: "Mettez en place stock-options ou BSPCE pour attirer les talents et différer la charge fiscale.",
+    icon: "fa-gift",
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SNC
+// ─────────────────────────────────────────────────────────────────────────────
+else if (statusId === 'SNC') {
+  strategies.push({
+    title: "Pacte d’associés solide",
+    description: "Responsabilité illimitée : verrouillez clauses de solidarité et procédures de sortie.",
+    icon: "fa-file-contract",
+  });
+  strategies.push({
+    title: "Option pour l’IS",
+    description: "En cas de bénéfices importants, l’IS peut limiter votre imposition personnelle.",
+    icon: "fa-balance-scale",
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCI
+// ─────────────────────────────────────────────────────────────────────────────
+else if (statusId === 'SCI') {
+  strategies.push({
+    title: "Amortissement ou déficit foncier",
+    description: "À l’IS : amortissez l’immeuble ; à l’IR : profitez du déficit foncier pour réduire l’impôt.",
+    icon: "fa-warehouse",
+  });
+  strategies.push({
+    title: "Transmission patrimoniale",
+    description: "Démembrez les parts (nue-propriété/usufruit) pour alléger les droits de succession.",
+    icon: "fa-seedling",
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SELARL
+// ─────────────────────────────────────────────────────────────────────────────
+else if (statusId === 'SELARL') {
+  strategies.push({
+    title: "Statut TNS",
+    description: "Le gérant reste Travailleur Non Salarié : charges sociales plus légères qu’en SELAS.",
+    icon: "fa-user-md",
+  });
+  strategies.push({
+    title: "Intéressement des associés",
+    description: "Mettez en place PEE ou PERCO pour défiscaliser une partie des rémunérations.",
+    icon: "fa-chart-pie",
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SELAS
+// ─────────────────────────────────────────────────────────────────────────────
+else if (statusId === 'SELAS') {
+  strategies.push({
+    title: "Protection sociale premium",
+    description: "Le président assimilé salarié bénéficie du régime général et d’une prévoyance haut de gamme.",
+    icon: "fa-heartbeat",
+  });
+  strategies.push({
+    title: "Pack d’associés & gouvernance",
+    description: "Rédigez un pacte d’actionnaires définissant droits préférentiels et clauses de sortie.",
+    icon: "fa-users-cog",
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCA
+// ─────────────────────────────────────────────────────────────────────────────
+else if (statusId === 'SCA') {
+  strategies.push({
+    title: "Séparation pouvoirs & capitaux",
+    description: "Commandités dirigent, commanditaires financent : idéal pour lever des fonds tout en gardant le contrôle.",
+    icon: "fa-sitemap",
+  });
+  strategies.push({
+    title: "Transmission progressive",
+    description: "Les actions de commanditaires se transmettent facilement sans perte de contrôle des commandités.",
+    icon: "fa-handshake",
+  });
+}
         }
         
         // Stratégies basées sur les priorités utilisateur
