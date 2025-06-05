@@ -1,43 +1,58 @@
-// PATCH: Correction de la méthode createSelectOptions
-// Rechercher la ligne ~520 dans question-manager.js et remplacer toute la méthode createSelectOptions par :
+// Patch pour corriger les problèmes de clic sur les cartes
+// À inclure après question-manager.js
 
-/**
- * Créer un sélecteur pour une question de type select
- */
-createSelectOptions(question) {
-    const container = document.createElement('div');
-    container.className = 'relative';
-    
-    const select = document.createElement('select');
-    select.id = question.id;
-    select.name = question.id;
-    select.className = 'bg-blue-900 bg-opacity-50 border border-gray-700 text-white rounded-lg py-3 px-4 appearance-none w-full focus:outline-none focus:ring-2 focus:ring-green-400';
-    
-    // Option par défaut
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.textContent = 'Sélectionnez une option';
-    defaultOption.disabled = true;
-    defaultOption.selected = !this.answers[question.id];
-    select.appendChild(defaultOption);
-    
-    // Autres options
-    question.options.forEach(option => {
-        const optionElement = document.createElement('option');
-        optionElement.value = option.id;
-        optionElement.textContent = option.label;
-        optionElement.selected = this.answers[question.id] === option.id;
-        select.appendChild(optionElement);
-    });
-    
-    // Ajouter le select dans le container
-    container.appendChild(select);
-    
-    // Ajouter l'icône de la flèche DANS le même container
-    const arrowIcon = document.createElement('div');
-    arrowIcon.className = 'pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-green-400';
-    arrowIcon.innerHTML = '<i class="fas fa-chevron-down"></i>';
-    container.appendChild(arrowIcon);
-    
-    return container;
-}
+(function() {
+    // Override de la méthode attachRadioEvents
+    if (window.QuestionManager) {
+        const originalAttachRadioEvents = window.QuestionManager.prototype.attachRadioEvents;
+        
+        window.QuestionManager.prototype.attachRadioEvents = function(question) {
+            const options = document.querySelectorAll(`.option-btn[data-question-id="${question.id}"]`);
+            
+            options.forEach(option => {
+                // Supprimer les anciens listeners pour éviter les doublons
+                const newOption = option.cloneNode(true);
+                option.parentNode.replaceChild(newOption, option);
+                
+                // Attacher un seul listener avec capture
+                newOption.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Désélectionner toutes les options
+                    document.querySelectorAll(`.option-btn[data-question-id="${question.id}"]`)
+                        .forEach(opt => opt.classList.remove('selected'));
+                    
+                    // Sélectionner l'option cliquée
+                    newOption.classList.add('selected');
+                    
+                    // Cocher la case radio
+                    const radio = newOption.querySelector('input[type="radio"]');
+                    if (radio) {
+                        radio.checked = true;
+                        
+                        // Déclencher l'événement change
+                        radio.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                    
+                    // Gérer les contrôles additionnels
+                    if (question.additionalControls) {
+                        question.additionalControls.forEach(control => {
+                            if (control.showIf) {
+                                const controlElement = document.getElementById(control.id);
+                                if (controlElement) {
+                                    const parentDiv = controlElement.parentNode.parentNode;
+                                    parentDiv.style.display = radio.value === control.showIf ? 'block' : 'none';
+                                }
+                            }
+                        });
+                    }
+                }, true); // Utiliser la capture
+            });
+        };
+        
+        // Améliorer aussi createRadioOptions pour s'assurer que data-question-id est bien défini
+        const originalCreateRadioOptions = window.QuestionManager.prototype.createRadioOptions;
+        
+        window.QuestionManager.prototype.createRadioOptions = function(question) {
+            const container = originalCreateRadioOptions.call(this
