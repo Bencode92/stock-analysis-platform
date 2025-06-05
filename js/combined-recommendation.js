@@ -3124,81 +3124,444 @@ else if (statusId === 'SCA') {
         if (answers.tax_bracket) {
             const tmiValue = tmiMap[answers.tax_bracket] || '';
             
-            if ((statusId === 'SASU' || statusId === 'SAS') && 
-                (answers.tax_bracket === 'bracket_41' || answers.tax_bracket === 'bracket_45')) {
-                explanations.push({
-                    title: "Optimisation fiscale avec votre TMI élevée",
-                    explanation: `Avec votre tranche marginale d'imposition à ${tmiValue}, ce statut vous permet de bénéficier de l'IS au taux réduit de 15% jusqu'à 42 500€ de bénéfices au lieu d'une imposition directe à l'IR.`
-                });
-            } else if ((statusId === 'MICRO') && 
-                    (answers.tax_bracket === 'non_taxable' || answers.tax_bracket === 'bracket_11')) {
-                explanations.push({
-                    title: "Régime fiscal simplifié adapté à votre TMI",
-                    explanation: `Avec votre tranche marginale d'imposition ${tmiValue}, la micro-entreprise vous permet de bénéficier d'un abattement forfaitaire avantageux.`
-                });
-            } else if (statusId === 'EURL') {
-                explanations.push({
-                    title: "Flexibilité fiscale adaptée à votre situation",
-                    explanation: `L'EURL vous permet de choisir entre l'IR et l'IS selon ce qui est le plus avantageux pour votre TMI de ${tmiValue}.`
-                });
-            }
-        }
+
+    // SASU / SAS ------------------------------------------------
+    if ((statusId === 'SASU' || statusId === 'SAS') &&
+        (answers.tax_bracket === 'bracket_41' || answers.tax_bracket === 'bracket_45')) {
+        explanations.push({
+            title: "Optimisation fiscale avec votre TMI élevée",
+            explanation: `Avec votre tranche marginale d'imposition à ${tmiValue}, la société est soumise à l'IS : 15 % jusqu'à 42 500 € de bénéfices puis 25 %.`
+        });
+    } else if ((statusId === 'SASU' || statusId === 'SAS')) {
+        explanations.push({
+            title: "IS et dividendes modulables",
+            explanation: `L'IS à 15 % / 25 % dissocie fiscalité pro et perso ; avec votre TMI de ${tmiValue}, vous pourrez ajuster votre rémunération (salaire / dividendes).`
+        });
+    }
+
+    // SARL -------------------------------------------------------
+    else if (statusId === 'SARL' &&
+            (answers.tax_bracket === 'bracket_11' || answers.tax_bracket === 'bracket_30')) {
+        explanations.push({
+            title: "Option IR temporaire intéressante",
+            explanation: `La SARL peut opter pour l'IR 5 ans ; avec votre TMI de ${tmiValue}, cela peut réduire l'imposition avant passage automatique à l’IS.`
+        });
+    } else if (statusId === 'SARL') {
+        explanations.push({
+            title: "IS plus doux que votre TMI",
+            explanation: `Avec une TMI de ${tmiValue}, l'IS (15 % puis 25 %) allège la pression fiscale par rapport à une transparence IR.`
+        });
+    }
+
+    // SA ---------------------------------------------------------
+    else if (statusId === 'SA') {
+        explanations.push({
+            title: "IS obligatoire pour la SA",
+            explanation: `La SA paie l'IS (15 % puis 25 %). Avec votre TMI de ${tmiValue}, la fiscalité société limite l’impact sur vos revenus personnels.`
+        });
+    }
+
+    // SELARL -----------------------------------------------------
+    else if (statusId === 'SELARL') {
+        explanations.push({
+            title: "IS & professions libérales",
+            explanation: `La SELARL est soumise à l'IS ; votre TMI de ${tmiValue} reste donc sans effet direct sur les bénéfices de la société.`
+        });
+    }
+
+    // SELAS ------------------------------------------------------
+    else if (statusId === 'SELAS') {
+        explanations.push({
+            title: "IS + dividendes pour SELAS",
+            explanation: `IS à 15 % / 25 %. Avec votre TMI de ${tmiValue}, vous pourrez arbitrer salaire/dividendes pour optimiser la fiscalité personnelle.`
+        });
+    }
+
+    // SCA --------------------------------------------------------
+    else if (statusId === 'SCA') {
+        explanations.push({
+            title: "IS et montages financiers",
+            explanation: `La SCA relève aussi de l'IS (15 % / 25 %). Avec une TMI ${tmiValue}, cette structure commandite/commanditaire peut réduire la charge fiscale dans les LBO.`
+        });
+    }
+
+    // SNC --------------------------------------------------------
+    else if (statusId === 'SNC') {
+        explanations.push({
+            title: "Transparence fiscale (IR) ou option IS",
+            explanation: `Par défaut, les bénéfices de la SNC sont taxés à votre TMI de ${tmiValue}. Si elle est élevée, une option IS limitera l’imposition à 15 % / 25 %.`
+        });
+    }
+
+    // SCI --------------------------------------------------------
+    else if (statusId === 'SCI') {
+        explanations.push({
+            title: "Choix IR foncier ou IS",
+            explanation: `La SCI est transparente (IR foncier à ${tmiValue}) ou peut opter pour l'IS (15 % / 25 %) avec amortissement de l’immeuble.`
+        });
+    }
+
+    /* =============== ENTREPRISES INDIVIDUELLES ================ */
+
+    // EI ---------------------------------------------------------
+    else if (statusId === 'EI') {
+        explanations.push({
+            title: "Imposition directe à l'IR",
+            explanation: `Les bénéfices d'une EI s’ajoutent à vos autres revenus et sont taxés à votre TMI de ${tmiValue}. Si celle-ci est élevée, une structure à l’IS (EURL / SASU) peut être plus avantageuse.`
+        });
+    }
+
+    // MICRO ------------------------------------------------------
+    else if (statusId === 'MICRO' &&
+            (answers.tax_bracket === 'non_taxable' || answers.tax_bracket === 'bracket_11')) {
+        explanations.push({
+            title: "Régime micro + faible TMI",
+            explanation: `Avec une TMI de ${tmiValue}, l’abattement forfaitaire (71 % ventes / 50 % services / 34 % BNC) minimise la base imposable.`
+        });
+    } else if (statusId === 'MICRO') {
+        explanations.push({
+            title: "Micro : simplicité mais double prélèvement",
+            explanation: `À TMI ${tmiValue}, l’imposition calculée sur le chiffre d’affaires peut coûter plus cher qu’un régime réel (EURL / SASU) si vous avez beaucoup de charges.`
+        });
+    }
+
+    // EURL -------------------------------------------------------
+    else if (statusId === 'EURL') {
+        explanations.push({
+            title: "Choix IR ou IS selon votre TMI",
+            explanation: `Par défaut à l'IR (TMI ${tmiValue}), l’EURL peut opter pour l'IS (15 % / 25 %) ; un arbitrage pertinent si votre TMI dépasse 30 %.`
+        });
+    }
+}
         
         // 2. PROTECTION DU PATRIMOINE
-        if (answers.patrimony_protection === 'essential' && 
-            (statusId === 'SASU' || statusId === 'SAS' || statusId === 'SARL' || statusId === 'EURL')) {
-            explanations.push({
-                title: "Protection optimale de votre patrimoine personnel",
-                explanation: "Ce statut répond parfaitement à votre besoin essentiel de protéger votre patrimoine personnel, avec une responsabilité strictement limitée à vos apports."
-            });
-        }
-        
-        // 3. RÉGIME SOCIAL
-        if (answers.social_regime === 'assimilated_employee' && 
-            (statusId === 'SASU' || statusId === 'SAS')) {
-            explanations.push({
-                title: "Régime social d'assimilé salarié correspondant à vos préférences",
-                explanation: "Ce statut vous permet de bénéficier du régime général de la sécurité sociale (assimilé salarié), avec une meilleure protection sociale, comme vous l'avez souhaité."
-            });
-        } else if (answers.social_regime === 'tns' && 
-                (statusId === 'MICRO' || statusId === 'EI' || statusId === 'EURL')) {
-            explanations.push({
-                title: "Régime TNS correspondant à vos préférences",
-                explanation: "Ce statut vous permet de bénéficier du régime social des indépendants que vous avez indiqué préférer, avec généralement des cotisations sociales plus avantageuses."
-            });
-        }
+
+//* ------------------------------------------------------------------
+ * PRIORITÉ : ESSENTIEL
+ * -----------------------------------------------------------------*/
+if (answers.patrimony_protection === 'essential' &&
+    (statusId === 'SASU' || statusId === 'SAS'  || statusId === 'SARL' || statusId === 'EURL' ||
+     statusId === 'SA'   || statusId === 'SELARL' || statusId === 'SELAS' || statusId === 'SCA')) {
+
+    explanations.push({
+        title: "Protection optimale de votre patrimoine personnel",
+        explanation: "Ce statut répond parfaitement à votre besoin essentiel de protéger vos biens privés ; la responsabilité est strictement limitée à vos apports."
+    });
+}
+
+if (answers.patrimony_protection === 'essential' &&
+    (statusId === 'EI' || statusId === 'MICRO' || statusId === 'SNC' || statusId === 'SCI')) {
+
+    explanations.push({
+        title: "Attention : responsabilité illimitée",
+        explanation: "Vous souhaitez une protection « Essentielle », mais ce statut n’isole pas votre patrimoine personnel. Envisagez plutôt une SASU, EURL ou SARL."
+    });
+}
+
+/* ------------------------------------------------------------------
+ * PRIORITÉ : IMPORTANT
+ * -----------------------------------------------------------------*/
+if (answers.patrimony_protection === 'important' &&
+    (statusId === 'SASU' || statusId === 'SAS'  || statusId === 'SARL' || statusId === 'EURL' ||
+     statusId === 'SA'   || statusId === 'SELARL' || statusId === 'SELAS' || statusId === 'SCA')) {
+
+    explanations.push({
+        title: "Responsabilité limitée conforme à vos attentes",
+        explanation: "Vos biens personnels sont séparés du risque professionnel ; prudence néanmoins avec les cautions bancaires éventuelles."
+    });
+}
+
+if (answers.patrimony_protection === 'important' &&
+    (statusId === 'EI' || statusId === 'MICRO' || statusId === 'SNC' || statusId === 'SCI')) {
+
+    explanations.push({
+        title: "Responsabilité potentiellement illimitée",
+        explanation: "Le statut choisi n’offre pas la protection souhaitée (« Importante »). Sécurisez-vous via assurances RC Pro ou envisagez une forme sociétaire à responsabilité limitée."
+    });
+}
+
+/* ------------------------------------------------------------------
+ * PRIORITÉ : SECONDAIRE
+ * -----------------------------------------------------------------*/
+if (answers.patrimony_protection === 'secondary' &&
+    (statusId === 'SASU' || statusId === 'SAS'  || statusId === 'SARL' || statusId === 'EURL' ||
+     statusId === 'SA'   || statusId === 'SELARL' || statusId === 'SELAS' || statusId === 'SCA')) {
+
+    explanations.push({
+        title: "Protection automatique (bonus)",
+        explanation: "Même si la protection n’est pas votre priorité, la responsabilité est déjà limitée avec ce statut."
+    });
+}
+
+if (answers.patrimony_protection === 'secondary' &&
+    (statusId === 'EI' || statusId === 'MICRO' || statusId === 'SNC' || statusId === 'SCI')) {
+
+    explanations.push({
+        title: "Responsabilité illimitée assumée",
+        explanation: "Votre priorité de protection est faible ; le choix d’un statut à responsabilité illimitée reste cohérent si vous acceptez le risque."
+    });
+}
+
+/* ----------------------------------------------------------------
+ * 3-A. Vous avez choisi le régime « Assimilé salarié »
+ * ----------------------------------------------------------------*/
+if (answers.social_regime === 'assimilated_employee' &&
+    (statusId === 'SASU' || statusId === 'SAS' || statusId === 'SA' || statusId === 'SELAS')) {
+
+    explanations.push({
+        title: "Régime social d'assimilé salarié correspondant à vos préférences",
+        explanation: "Ce statut vous rattache au régime général de la Sécurité sociale ; vous bénéficiez d’une protection complète (maladie, retraite, prévoyance) comme souhaité."
+    });
+}
+
+/* ----------------------------------------------------------------
+ * 3-B. Vous avez choisi le régime « Travailleur non salarié » (TNS)
+ * ----------------------------------------------------------------*/
+if (answers.social_regime === 'tns' &&
+    (statusId === 'MICRO' || statusId === 'EI'  || statusId === 'EURL' || statusId === 'SARL' ||
+     statusId === 'SELARL' || statusId === 'SNC' || statusId === 'SCI' || statusId === 'SCA')) {
+
+    explanations.push({
+        title: "Régime TNS correspondant à vos préférences",
+        explanation: "Le statut sélectionné relève du régime social des indépendants (TNS) ; vous profitez de cotisations plus faibles, avec une protection sociale adaptée à votre activité."
+    });
+}
+
+/* ----------------------------------------------------------------
+ * 3-C. Vous avez choisi l’option « Mixte / Flexible »
+ *      (combiner TNS et assimilé salarié au fil du temps)
+ * ----------------------------------------------------------------*/
+if (answers.social_regime === 'mixed' &&
+    (statusId === 'SASU' || statusId === 'SAS' || statusId === 'EURL' || statusId === 'SARL' ||
+     statusId === 'SELAS' || statusId === 'SELARL')) {
+
+    explanations.push({
+        title: "Régime social flexible compatible avec votre choix",
+        explanation: "Ces formes juridiques permettent de passer de TNS à assimilé salarié (ou inversement) en fonction de la gouvernance ou du niveau de participation, offrant la souplesse recherchée."
+    });
+}
         
         // 4. VOLUME D'ACTIVITÉ
-        if (answers.projected_revenue) {
-            const revenue = parseFloat(answers.projected_revenue);
-            if (statusId === 'MICRO' && revenue < 77000) {
-                explanations.push({
-                    title: "Compatible avec votre volume d'activité prévisionnel",
-                    explanation: `Avec un CA prévisionnel de ${revenue}€, vous restez sous les seuils de la micro-entreprise tout en bénéficiant de sa simplicité administrative.`
-                });
-            } else if ((statusId === 'SASU' || statusId === 'SAS') && revenue > 80000) {
-                explanations.push({
-                    title: "Structure adaptée à votre volume d'activité",
-                    explanation: `Avec un CA prévisionnel de ${revenue}€, cette forme juridique offre le cadre adapté pour gérer et développer votre activité sur le long terme.`
-                });
-            }
-        }
+if (answers.projected_revenue) {
+    const revenue = parseFloat(answers.projected_revenue);   // valeur réutilisée partout
+
+    /* ---------- MICRO-ENTREPRISE --------------------------------- */
+    if (statusId === 'MICRO' && revenue <= 77_700) {
+        explanations.push({
+            title: "Compatible avec votre volume d'activité prévisionnel",
+            explanation: `Avec un CA prévisionnel de ${revenue.toLocaleString()} €, vous restez sous le seuil de 77 700 € (services/BNC) et profitez de la simplicité micro.`
+        });
+    } else if (statusId === 'MICRO' && revenue <= 188_700) {
+        explanations.push({
+            title: "Seuil micro-BIC vente non dépassé",
+            explanation: `Votre CA prévu (${revenue.toLocaleString()} €) reste inférieur au plafond de 188 700 € (ventes). Le régime micro reste possible, mais surveillez la marge pour éviter la sortie forcée.`
+        });
+    } else if (statusId === 'MICRO') {
+        explanations.push({
+            title: "Dépassement des seuils micro-entreprise",
+            explanation: `Avec ${revenue.toLocaleString()} € de CA prévu, vous dépassez les plafonds micro. Une forme sociétaire (EURL, SASU…) sera plus adaptée.`
+        });
+    }
+
+    /* ---------- EI ---------------------------------------------- */
+    else if (statusId === 'EI' && revenue < 100_000) {
+        explanations.push({
+            title: "EI adaptée à un CA modéré",
+            explanation: `Un CA de ${revenue.toLocaleString()} € reste gérable en Entreprise Individuelle ; pensez au réel simplifié pour récupérer la TVA et déduire vos charges.`
+        });
+    } else if (statusId === 'EI') {
+        explanations.push({
+            title: "Envisagez une forme sociétaire pour ce niveau de CA",
+            explanation: `Avec ${revenue.toLocaleString()} € prévus, passer en société (EURL, SASU…) facilitera la séparation patrimoine pro/perso et l’optimisation fiscale.`
+        });
+    }
+
+    /* ---------- EURL / SARL ------------------------------------- */
+    else if (statusId === 'EURL' || statusId === 'SARL') {
+        explanations.push({
+            title: "Structure robuste pour votre volume d'activité",
+            explanation: `La (E)SARL gère sans contrainte particulière un CA de ${revenue.toLocaleString()} € et vous permet d'ajuster salaire et dividendes au fil de la croissance.`
+        });
+    }
+
+    /* ---------- SASU / SAS -------------------------------------- */
+    else if ((statusId === 'SASU' || statusId === 'SAS') && revenue > 80_000) {
+        explanations.push({
+            title: "Structure adaptée à un CA élevé",
+            explanation: `Avec un CA prévisionnel de ${revenue.toLocaleString()} €, la souplesse capitalistique de la SAS(U) facilite votre développement et d'éventuelles levées de fonds.`
+        });
+    } else if (statusId === 'SASU' || statusId === 'SAS') {
+        explanations.push({
+            title: "Cadre évolutif pour un CA intermédiaire",
+            explanation: `La SAS(U) demeure pertinente pour ${revenue.toLocaleString()} € de CA, tout en prévoyant déjà la montée en puissance (investisseurs, BSPCE…).`
+        });
+    }
+
+    /* ---------- SA ---------------------------------------------- */
+    else if (statusId === 'SA') {
+        explanations.push({
+            title: "SA : dimension « grande entreprise »",
+            explanation: `Un CA prévisionnel de ${revenue.toLocaleString()} € justifie la lourdeur administrative de la SA et ouvre l'accès aux marchés de capitaux.`
+        });
+    }
+
+    /* ---------- SNC --------------------------------------------- */
+    else if (statusId === 'SNC') {
+        explanations.push({
+            title: "SNC et volume d'affaires",
+            explanation: `Avec ${revenue.toLocaleString()} € prévus, la SNC supporte techniquement ce chiffre mais expose chaque associé à une responsabilité illimitée.`
+        });
+    }
+
+    /* ---------- SCI --------------------------------------------- */
+    else if (statusId === 'SCI') {
+        explanations.push({
+            title: "SCI : chiffre d'affaires immobilier",
+            explanation: `La SCI n’est pas plafonnée en CA, mais assurez-vous que les ${revenue.toLocaleString()} € correspondent bien à des loyers ou cessions immobilières.`
+        });
+    }
+
+    /* ---------- SELARL / SELAS ---------------------------------- */
+    else if (statusId === 'SELARL' || statusId === 'SELAS') {
+        explanations.push({
+            title: "Volume d'activité compatible avec votre SEL",
+            explanation: `Un CA de ${revenue.toLocaleString()} € est courant pour une société d'exercice libéral ; anticipez néanmoins le plafonnement retraite/prévoyance de votre profession.`
+        });
+    }
+
+    /* ---------- SCA --------------------------------------------- */
+    else if (statusId === 'SCA') {
+        explanations.push({
+            title: "SCA : structure taillée pour un CA conséquent",
+            explanation: `Avec ${revenue.toLocaleString()} €, la Commandite par Actions facilite les montages financiers (LBO) et l'entrée d'investisseurs commanditaires.`
+        });
+    }
+}
         
         // 5. LEVÉE DE FONDS
-        if (answers.fundraising === 'yes' && (statusId === 'SASU' || statusId === 'SAS')) {
-            explanations.push({
-                title: "Structure optimale pour vos besoins de financement",
-                explanation: "Ce statut facilite les levées de fonds futures grâce à ses actions et sa structure flexible, parfaitement adapté à votre besoin de financement externe."
-            });
+if (answers.fundraising === 'yes') {
+
+    // SASU ----------------------------------------------------------
+    if (statusId === 'SASU') {
+        explanations.push({
+            title: "Structure optimale pour vos besoins de financement",
+            explanation: "La SASU peut rapidement s’ouvrir à d’autres actionnaires ; sa souplesse statutaire et le capital variable facilitent les levées de fonds."
+        });
+    }
+
+    // SAS -----------------------------------------------------------
+    if (statusId === 'SAS') {
+        explanations.push({
+            title: "Cadre idéal pour accueillir des investisseurs",
+            explanation: "La SAS émet facilement de nouvelles actions, BSPCE ou obligations convertibles : c’est la forme de société la plus prisée par les fonds et business angels."
+        });
+    }
+
+    // SA ------------------------------------------------------------
+    if (statusId === 'SA') {
+        explanations.push({
+            title: "SA : accès élargi aux capitaux",
+            explanation: "Avec son directoire ou conseil d’administration, la SA peut lever des montants importants, voire s’introduire en bourse. Parfait pour un financement externe ambitieux."
+        });
+    }
+
+    // SCA -----------------------------------------------------------
+    if (statusId === 'SCA') {
+        explanations.push({
+            title: "SCA : structure dédiée aux investisseurs commanditaires",
+            explanation: "Les commanditaires participent au capital sans être impliqués dans la gestion, ce qui attire les fonds pour des opérations type LBO."
+        });
+    }
+
+    // SARL / EURL ---------------------------------------------------
+    if (statusId === 'SARL' || statusId === 'EURL') {
+        explanations.push({
+            title: "Levées de fonds possibles mais plus encadrées",
+            explanation: "La cession ou création de parts sociales est plus rigide qu’en SAS ; envisagez de transformer en SAS pour faciliter l’entrée de nouveaux investisseurs."
+        });
+    }
+
+    // SELARL / SELAS -----------------------------------------------
+    if (statusId === 'SELARL' || statusId === 'SELAS') {
+        explanations.push({
+            title: "Financement limité au cercle de professionnels",
+            explanation: "Les investisseurs doivent appartenir à la même profession réglementée ; lever des fonds reste possible, mais le périmètre est restreint."
+        });
+    }
+
+    // SCI -----------------------------------------------------------
+    if (statusId === 'SCI') {
+        explanations.push({
+            title: "Ouverture de capital immobilière maîtrisée",
+            explanation: "La SCI peut accueillir de nouveaux associés, mais les investisseurs recherchent souvent la liquidité d’une SAS immobilière."
+        });
+    }
+
+    // EI / MICRO ----------------------------------------------------
+    if (statusId === 'EI' || statusId === 'MICRO') {
+        explanations.push({
+            title: "Structure peu adaptée à une levée de fonds",
+            explanation: "En entreprise individuelle (micro comprise), il n’y a pas de capital social ni d’actions ; les investisseurs préfèrent entrer au capital d’une société (SASU, SAS…)."
+        });
+    }
+
+    // SNC -----------------------------------------------------------
+    if (statusId === 'SNC') {
+        explanations.push({
+            title: "Levée de fonds difficile en SNC",
+            explanation: "La responsabilité illimitée et solidaire décourage la plupart des investisseurs externes. Préférez une SAS pour faciliter l’entrée de capitaux."
+        });
+    }
         }
-        
         // 6. GOUVERNANCE
-        if (answers.team_structure === 'investors' && (statusId === 'SAS' || statusId === 'SASU')) {
-            explanations.push({
-                title: "Gouvernance adaptée à votre structure avec investisseurs",
-                explanation: "Cette forme juridique offre la flexibilité nécessaire pour accueillir des investisseurs et structurer la gouvernance selon vos besoins spécifiques."
-            });
-        }
+/* ----------------------------------------------------------------
+ * TEAM STRUCTURE : SOLO  (entrepreneur individuel)
+ * ----------------------------------------------------------------*/
+if (answers.team_structure === 'solo' &&
+    (statusId === 'EI'   || statusId === 'MICRO' || statusId === 'EURL' || statusId === 'SASU')) {
+
+    explanations.push({
+        title: "Gouvernance simplifiée pour entrepreneur solo",
+        explanation: "Ce statut est parfaitement adapté à une gestion unipersonnelle : formalités légères, prise de décision rapide et aucun formalisme d’assemblée générale."
+    });
+}
+
+/* ----------------------------------------------------------------
+ * TEAM STRUCTURE : FAMILLE
+ * ----------------------------------------------------------------*/
+if (answers.team_structure === 'family' &&
+    (statusId === 'SARL' || statusId === 'SCI'   || statusId === 'SNC'  || statusId === 'SELARL')) {
+
+    explanations.push({
+        title: "Cadre juridique propice à un projet familial",
+        explanation: "Ce statut permet de répartir les parts entre membres de la famille tout en préservant un mode de gouvernance simple et des règles de transmission adaptées."
+    });
+}
+
+/* ----------------------------------------------------------------
+ * TEAM STRUCTURE : ASSOCIÉS  (sans investisseurs extérieurs)
+ * ----------------------------------------------------------------*/
+if (answers.team_structure === 'associates' &&
+    (statusId === 'SARL' || statusId === 'SAS'  || statusId === 'SNC'  || statusId === 'SCI'  ||
+     statusId === 'SELARL' || statusId === 'SELAS' || statusId === 'SCA' || statusId === 'SA')) {
+
+    explanations.push({
+        title: "Gouvernance adaptée à un groupe d'associés",
+        explanation: "Cette forme sociétaire prévoit des règles claires de décision collective (AG, pacte, clauses d’agrément) et répartit les pouvoirs selon les parts détenues."
+    });
+}
+
+/* ----------------------------------------------------------------
+ * TEAM STRUCTURE : AVEC INVESTISSEURS
+ * ----------------------------------------------------------------*/
+if (answers.team_structure === 'investors' &&
+    (statusId === 'SAS'  || statusId === 'SASU' || statusId === 'SA'  || statusId === 'SCA')) {
+
+    explanations.push({
+        title: "Gouvernance idéale pour accueillir des investisseurs",
+        explanation: "Ce statut offre une grande souplesse pour émettre de nouvelles actions, organiser des droits différenciés (BSPCE, actions de préférence) et adapter la gouvernance aux exigences des fonds."
+    });
+}
         
         // Ajouter des explications génériques si nécessaire
         if (explanations.length < 3) {
