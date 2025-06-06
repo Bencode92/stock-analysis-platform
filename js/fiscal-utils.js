@@ -1,5 +1,5 @@
 // fiscal-utils.js - Utilitaires pour les calculs fiscaux
-// Version 1.1 - Mai 2025 - Mise à jour des taux 2025
+// Version 1.2 - Fix optimisation ratio
 
 const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS = 2,9%
 
@@ -25,13 +25,18 @@ class FiscalUtils {
         return Math.round(impot);
     }
     
-    // Optimisation du ratio rémunération/dividendes
+    // Optimisation du ratio rémunération/dividendes - VERSION CORRIGÉE
     static optimiserRatioRemuneration(params, simulationFunc) {
-        let meilleurRatio = 0.5;
+        // UTILISER les paramètres min/max passés
+        const ratioMin = params.ratioMin ?? 0;
+        const ratioMax = params.ratioMax ?? 1;
+        const favoriserDividendes = params.favoriserDividendes || false;
+        
+        let meilleurRatio = favoriserDividendes ? ratioMin : (ratioMin + ratioMax) / 2;
         let meilleurNet = 0;
         
-        // Tester différents ratios de 0% à 100% par pas de 5%
-        for(let ratio = 0.0; ratio <= 1.0; ratio += 0.05) {
+        // Tester différents ratios entre ratioMin et ratioMax
+        for(let ratio = ratioMin; ratio <= ratioMax + 1e-9; ratio += 0.05) {
             const paramsTest = {...params, tauxRemuneration: ratio};
             const resultat = simulationFunc(paramsTest);
             
@@ -42,9 +47,10 @@ class FiscalUtils {
         }
         
         // Affiner autour du meilleur résultat
-        for(let ratio = Math.max(0.01, meilleurRatio-0.04); 
-            ratio <= Math.min(0.99, meilleurRatio+0.04); 
-            ratio += 0.01) {
+        const deb = Math.max(ratioMin, meilleurRatio - 0.04);
+        const fin = Math.min(ratioMax, meilleurRatio + 0.04);
+        
+        for(let ratio = deb; ratio <= fin + 1e-9; ratio += 0.01) {
             const paramsTest = {...params, tauxRemuneration: ratio};
             const resultat = simulationFunc(paramsTest);
             
@@ -91,13 +97,16 @@ class FiscalUtils {
         return Math.round(partA + partB);
     }
     
-    // Calcul des charges salariales
-    static calculChargesSalariales(remuneration) {
-        // Taux moyens 2025 - peuvent varier selon secteur, allègements et part des charges plafonnées
+    // Calcul des charges salariales - TAUX CORRIGÉS pour SASU
+    static calculChargesSalariales(remuneration, options = {}) {
+        const { secteur = "Tous", taille = "<50" } = options;
+        
+        // Taux réels 2025 pour assimilé salarié
+        // Total ~77% (22% salariales + 55% patronales)
         return {
-            patronales: Math.round(remuneration * 0.45),
+            patronales: Math.round(remuneration * 0.55), // Corrigé de 0.45 à 0.55
             salariales: Math.round(remuneration * 0.22),
-            total: Math.round(remuneration * 0.67)
+            total: Math.round(remuneration * 0.77)       // Corrigé de 0.67 à 0.77
         };
     }
     
@@ -118,8 +127,14 @@ class FiscalUtils {
     
     // Création de données pour le graphique d'optimisation
     static genererDonneesGraphiqueOptimisation(params, simulationFunc) {
+        const ratioMin = params.ratioMin ?? 0;
+        const ratioMax = params.ratioMax ?? 1;
         const donnees = [];
-        for(let ratio = 0.05; ratio <= 1; ratio += 0.05) {
+        
+        // Générer les données entre ratioMin et ratioMax
+        const step = (ratioMax - ratioMin) / 20; // 20 points
+        
+        for(let ratio = ratioMin; ratio <= ratioMax + 1e-9; ratio += step) {
             const paramsTest = {...params, tauxRemuneration: ratio};
             const resultat = simulationFunc(paramsTest);
             donnees.push({
@@ -140,6 +155,6 @@ window.FiscalUtils = FiscalUtils;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module FiscalUtils chargé et disponible globalement");
+    console.log("Module FiscalUtils chargé (v1.2 avec fix optimisation)");
     document.dispatchEvent(new CustomEvent('fiscalUtilsReady'));
 });
