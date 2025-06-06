@@ -487,6 +487,22 @@ function updateSimulatorInterface() {
         // Par défaut, sélectionner le filtre "all" pour afficher tous les statuts
         statusFilter.value = "all";
         statusFilter.dispatchEvent(new Event('change'));
+        
+        // --- PATCH alignement à gauche -----------------------------
+        requestAnimationFrame(() => {
+            const grid = document.querySelector('#fiscal-simulator .grid');
+            if (grid) {
+                grid.classList.remove('justify-center');
+                grid.classList.add('justify-start');
+            }
+            
+            const options = document.getElementById('sim-options-container');
+            if (options) {
+                options.style.margin = '0';
+                options.classList.remove('mx-auto', 'ml-auto', 'mr-auto');
+            }
+        });
+        // ------------------------------------------------------------
     }
 }
 
