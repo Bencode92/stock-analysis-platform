@@ -739,6 +739,349 @@
             pointer-events: none !important;
         }
         /* ---------------------------------------------------------------- */
+
+        /* NOUVEAUX STYLES POUR LE GUIDE FISCAL */
+        /* Container principal du guide fiscal */
+        .fiscal-guide-container {
+            background: linear-gradient(135deg, rgba(1, 42, 74, 0.95) 0%, rgba(1, 22, 39, 0.95) 100%);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Section Statuts à comparer */
+        .status-selector {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(0, 255, 135, 0.2);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .status-selector:hover {
+            border-color: rgba(0, 255, 135, 0.4);
+            box-shadow: 0 0 20px rgba(0, 255, 135, 0.1);
+        }
+
+        .status-selector label {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            display: block;
+        }
+
+        .status-dropdown {
+            width: 100%;
+            background: rgba(1, 42, 74, 0.8);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .status-dropdown:hover {
+            background: rgba(1, 42, 74, 0.9);
+            border-color: var(--primary-color);
+        }
+
+        .status-dropdown:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 255, 135, 0.2);
+        }
+
+        /* Section Fonctionnalités */
+        .features-section {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .features-title {
+            color: var(--primary-color);
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .features-title::before {
+            content: '⚡';
+            margin-right: 0.5rem;
+            font-size: 1.5rem;
+        }
+
+        /* Grille des fonctionnalités */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.25rem;
+        }
+
+        /* Feature Card améliorée */
+        .feature-card {
+            background: rgba(1, 42, 74, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.25rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 135, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .feature-card:hover::before {
+            left: 100%;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(0, 255, 135, 0.2);
+            box-shadow: 0 10px 25px rgba(0, 255, 135, 0.1);
+        }
+
+        /* Checkbox personnalisé */
+        .feature-toggle {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-checkbox {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            margin-right: 1rem;
+        }
+
+        .feature-checkbox input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .feature-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: 0.4s;
+            border-radius: 26px;
+        }
+
+        .feature-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #fff;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .feature-slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .feature-slider:before {
+            transform: translateX(24px);
+        }
+
+        /* Labels des features */
+        .feature-label {
+            font-size: 1rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .feature-icon {
+            margin-right: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+        .feature-badge {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(236, 72, 153, 0.2);
+            color: #EC4899;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-left: 0.5rem;
+        }
+
+        /* Description des features */
+        .feature-description {
+            margin-top: 0.75rem;
+            padding-left: 4rem;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.5;
+        }
+
+        /* Tooltips améliorés */
+        .feature-info {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            background: rgba(0, 255, 135, 0.2);
+            border-radius: 50%;
+            margin-left: 0.5rem;
+            cursor: help;
+            position: relative;
+        }
+
+        .feature-info:hover {
+            background: rgba(0, 255, 135, 0.3);
+        }
+
+        .feature-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(1, 22, 39, 0.98);
+            color: #fff;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            width: 250px;
+            margin-bottom: 0.5rem;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            z-index: 1000;
+        }
+
+        .feature-info:hover .feature-tooltip {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(-5px);
+        }
+
+        .feature-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: rgba(0, 255, 135, 0.3);
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .feature-card {
+            animation: slideIn 0.5s ease backwards;
+        }
+
+        .feature-card:nth-child(1) { animation-delay: 0.1s; }
+        .feature-card:nth-child(2) { animation-delay: 0.2s; }
+        .feature-card:nth-child(3) { animation-delay: 0.3s; }
+        .feature-card:nth-child(4) { animation-delay: 0.4s; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .feature-description {
+                padding-left: 0;
+                margin-top: 1rem;
+            }
+            
+            .feature-tooltip {
+                width: 200px;
+                font-size: 0.8rem;
+            }
+        }
+
+        /* États actifs et hover */
+        .feature-card.active {
+            background: rgba(0, 255, 135, 0.05);
+            border-color: rgba(0, 255, 135, 0.3);
+        }
+
+        /* Bouton de réinitialisation */
+        .reset-button {
+            margin-top: 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.8);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .reset-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-1px);
+        }
+
+        /* Animation ripple */
+        @keyframes ripple {
+            to {
+                transform: translate(-50%, -50%) scale(4);
+                opacity: 0;
+            }
+        }
+        
+        /* Animation pulse pour les sélections */
+        @keyframes pulseSelection {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .feature-tooltip.show-mobile {
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
     </style>
 </head>
 <body class="dark">
@@ -1157,5 +1500,51 @@
         }, 500); // Vérifier toutes les 500ms
     });
     </script>
-</body>
-</html>
+
+    <!-- NOUVEAU SCRIPT: Animation des toggles avec effet ripple -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Observer les changements DOM pour les nouveaux éléments du guide fiscal
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.addedNodes.length) {
+                    // Animation des toggles avec effet ripple
+                    const toggles = document.querySelectorAll('.feature-checkbox input');
+                    
+                    toggles.forEach(toggle => {
+                        if (!toggle.hasAttribute('data-animated')) {
+                            toggle.setAttribute('data-animated', 'true');
+                            
+                            toggle.addEventListener('change', function(e) {
+                                const card = this.closest('.feature-card');
+                                if (!card) return;
+                                
+                                // Effet ripple
+                                const ripple = document.createElement('div');
+                                ripple.style.cssText = `
+                                    position: absolute;
+                                    border-radius: 50%;
+                                    background: rgba(0, 255, 135, 0.3);
+                                    width: 100px;
+                                    height: 100px;
+                                    top: 50%;
+                                    left: 50%;
+                                    transform: translate(-50%, -50%) scale(0);
+                                    animation: ripple 0.6s ease-out;
+                                `;
+                                
+                                card.appendChild(ripple);
+                                setTimeout(() => ripple.remove(), 600);
+                                
+                                // Toggle de la classe active
+                                if (this.checked) {
+                                    card.classList.add('active');
+                                } else {
+                                    card.classList.remove('active');
+                                }
+                                
+                                // Animation de feedback
+                                card.style.transform = 'scale(1.02)';
+                                setTimeout(() => {
+                                    card.style.transform = '';
+                                }, 200);
