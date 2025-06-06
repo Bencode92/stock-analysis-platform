@@ -1688,6 +1688,11 @@ function setupAccordion() {
     
     // Vider le conteneur actuel
     accordionContainer.innerHTML = '';
+        // Ajouter le fond
+    accordionContainer.style.background = 'rgba(1, 42, 74, 0.4)';
+    accordionContainer.style.padding = '2rem';
+    accordionContainer.style.borderRadius = '12px';
+    accordionContainer.style.border = '1px solid rgba(0, 255, 135, 0.1)';
     
     // Récupérer la liste des statuts depuis legalStatuses si disponible, sinon utiliser une liste par défaut
     let statuts = [];
