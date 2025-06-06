@@ -453,30 +453,43 @@ function initUIEvents() {
                     }, 100);
                 }
             },
-            'Barèmes 2025': {
+            'Glossaire': {
                 content: () => {
                     return `
                         <div class="max-w-4xl mx-auto mb-12">
-                            <h2 class="text-2xl font-bold mb-4">Barèmes fiscaux et sociaux 2025</h2>
-                            <p class="mb-4">Retrouvez les barèmes à jour pour l'année 2025.</p>
-                            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
-                                <p class="text-center">Contenu des barèmes 2025 en cours de chargement...</p>
+                            <h2 class="text-2xl font-bold mb-4">Glossaire juridique et fiscal</h2>
+                            <p class="mb-6">Retrouvez les définitions des termes juridiques et fiscaux utilisés dans le simulateur.</p>
+                            
+                            <!-- Recherche -->
+                            <div class="mb-6">
+                                <input type="text" id="glossary-search" 
+                                    class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-400" 
+                                    placeholder="Rechercher un terme...">
+                            </div>
+                            
+                            <!-- Conteneur du glossaire -->
+                            <div id="glossary-container" class="bg-blue-900 bg-opacity-30 p-6 rounded-lg">
+                                <div class="text-center p-4">
+                                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-400 mb-2"></div>
+                                    <p>Chargement du glossaire...</p>
+                                </div>
                             </div>
                         </div>
                     `;
-                }
-            },
-            'Historique': {
-                content: () => {
-                    return `
-                        <div class="max-w-4xl mx-auto mb-12">
-                            <h2 class="text-2xl font-bold mb-4">Historique de vos simulations</h2>
-                            <p class="mb-4">Retrouvez ici l'historique de vos précédentes simulations.</p>
-                            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
-                                <p class="text-center">Aucune simulation enregistrée pour le moment.</p>
-                            </div>
-                        </div>
-                    `;
+                },
+                onLoad: () => {
+                    // Initialiser le glossaire
+                    if (typeof window.initGlossary === 'function') {
+                        window.initGlossary();
+                    } else {
+                        console.log("Chargement du script glossary.js...");
+                        const scriptExists = document.querySelector('script[src*="glossary.js"]');
+                        if (!scriptExists) {
+                            const script = document.createElement('script');
+                            script.src = 'js/glossary.js?v=20250430_1';
+                            document.body.appendChild(script);
+                        }
+                    }
                 }
             }
         };
@@ -512,6 +525,7 @@ function initUIEvents() {
             const progressStepsContainer = document.getElementById('progress-steps-container');
             const questionContainer = document.getElementById('question-container');
             const resultsContainer = document.getElementById('results-container');
+            const navigationWrapper = document.getElementById('navigation-wrapper');
             
             if (tabName !== 'Simulateur') {
                 if (progressInfo) progressInfo.style.display = 'none';
@@ -519,6 +533,8 @@ function initUIEvents() {
                 if (progressStepsContainer) progressStepsContainer.style.display = 'none';
                 if (questionContainer) questionContainer.style.display = 'none';
                 if (resultsContainer) resultsContainer.style.display = 'none';
+                // Masquer les boutons de navigation Suivant/Précédent
+                if (navigationWrapper) navigationWrapper.style.display = 'none';
                 
                 // Afficher le contenu de l'onglet
                 tabContentContainer.innerHTML = tabContents[tabName].content();
@@ -582,6 +598,8 @@ function initUIEvents() {
                 if (progressBarContainer) progressBarContainer.style.display = 'block';
                 if (progressStepsContainer) progressStepsContainer.style.display = 'flex';
                 if (questionContainer) questionContainer.style.display = 'block';
+                // Afficher les boutons de navigation Suivant/Précédent
+                if (navigationWrapper) navigationWrapper.style.display = 'block';
                 // Ne pas afficher les résultats automatiquement, ils seront affichés quand nécessaire
             }
             
