@@ -170,7 +170,7 @@ function updateSimulatorInterface() {
     if (formContainer) {
         // Ajouter une nouvelle ligne pour les options de simulation
         const optionsRow = document.createElement('div');
-        optionsRow.className = 'col-span-1 md:col-span-2 mb-4';
+       optionsRow.className = 'col-span-1 md:col-span-2 mb-4 !ml-0 !mr-0';
         optionsRow.id = 'sim-options-container';
         optionsRow.innerHTML = `
             <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
