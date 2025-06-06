@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 2.0 - Mai 2025 - Étendu avec tous les statuts juridiques
+// Version 2.1 - Fix calcul charges employeur dans résultat entreprise
 
 // Classe pour les simulations fiscales des différents statuts juridiques
 class SimulationsFiscales {
@@ -148,11 +148,11 @@ class SimulationsFiscales {
         
         // Calcul de la rémunération du gérant
         const remuneration = Math.round(resultatEntreprise * tauxRemuneration);
-        const resultatApresRemuneration = resultatEntreprise - remuneration;
         
         // Simulation selon le régime d'imposition
         if (!optionIS) {
             // Régime IR (transparence fiscale)
+            const resultatApresRemuneration = resultatEntreprise - remuneration;
             
             // Utiliser la fonction utilitaire pour calculer les cotisations TNS
             let cotisationsSociales;
@@ -207,6 +207,10 @@ class SimulationsFiscales {
                 const tauxCotisationsTNS = 0.45;
                 cotisationsSociales = Math.round(remuneration * tauxCotisationsTNS);
             }
+            
+            // FIX: pour un TNS, les cotisations sont déductibles
+            const coutRemunerationEntreprise = remuneration + cotisationsSociales;
+            const resultatApresRemuneration = resultatEntreprise - coutRemunerationEntreprise;
             
             // Calcul de l'impôt sur le revenu sur la rémunération
             const remunerationNetteSociale = remuneration - cotisationsSociales;
@@ -296,7 +300,6 @@ class SimulationsFiscales {
         
         // Calcul de la rémunération du président
         const remuneration = Math.round(resultatEntreprise * tauxRemuneration);
-        const resultatApresRemuneration = resultatEntreprise - remuneration;
         
         // Calcul des charges sociales avec paramètres sectoriels
         let chargesPatronales, chargesSalariales;
@@ -311,6 +314,9 @@ class SimulationsFiscales {
         }
         
         const coutTotalEmployeur = remuneration + chargesPatronales;
+        // FIX: on déduit le coût total employeur
+        const resultatApresRemuneration = resultatEntreprise - coutTotalEmployeur;
+        
         const salaireNet = remuneration - chargesSalariales;
         
         // Calcul de l'impôt sur le revenu
@@ -405,11 +411,11 @@ class SimulationsFiscales {
         
         // Calcul de la rémunération du gérant
         const remuneration = Math.round(resultatEntreprise * tauxRemuneration);
-        const resultatApresRemuneration = resultatEntreprise - remuneration;
         
         // Régime social différent selon que le gérant est majoritaire ou non
         let cotisationsSociales = 0;
         let salaireNet = 0;
+        let resultatApresRemuneration = 0;
         
         if (gerantMajoritaire) {
             // Gérant majoritaire = TNS
@@ -420,6 +426,9 @@ class SimulationsFiscales {
                 cotisationsSociales = Math.round(remuneration * 0.45);
             }
             salaireNet = remuneration - cotisationsSociales;
+            // FIX: pour un TNS, les cotisations sont déductibles
+            const coutRemunerationEntreprise = remuneration + cotisationsSociales;
+            resultatApresRemuneration = resultatEntreprise - coutRemunerationEntreprise;
         } else {
             // Gérant minoritaire = assimilé salarié
             let chargesPatronales, chargesSalariales;
@@ -435,6 +444,9 @@ class SimulationsFiscales {
                 cotisationsSociales = chargesPatronales + chargesSalariales;
             }
             salaireNet = remuneration - chargesSalariales;
+            // FIX: on déduit le coût total employeur
+            const coutTotalEmployeur = remuneration + chargesPatronales;
+            resultatApresRemuneration = resultatEntreprise - coutTotalEmployeur;
         }
         
         // Calcul de l'impôt sur le revenu
@@ -837,7 +849,7 @@ window.SimulationsFiscales = SimulationsFiscales;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé et disponible globalement");
+    console.log("Module SimulationsFiscales chargé (v2.1 avec fix coût employeur)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady'));
 });
