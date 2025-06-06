@@ -18,28 +18,28 @@ document.addEventListener('DOMContentLoaded', function() {
 function addCustomStyles() {
     const style = document.createElement('style');
     style.textContent = `
-        /* Centrage du conteneur du simulateur fiscal */
+        /* Conteneur du simulateur fiscal */
         #fiscal-simulator {
             max-width: 980px;
-            margin-left: auto;
+            margin-left: 0;
             margin-right: auto;
         }
 
-        /* Centre la grille interne */
+        /* Grille alignée à gauche */
         #fiscal-simulator .grid {
-            justify-content: center;
+            justify-content: flex-start !important;
         }
 
-        /* Centre le bloc d'options */
+        /* Options sans centrage automatique */
         #sim-options-container {
-            margin-left: auto;
-            margin-right: auto;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
         }
         
-        /* Si besoin, centrer aussi le conteneur global */
+        /* Conteneur global */
         #tab-content-container {
             max-width: 1200px;
-            margin-left: auto;
+            margin-left: 0;
             margin-right: auto;
         }
     `;
@@ -47,6 +47,7 @@ function addCustomStyles() {
 }
 
 addCustomStyles();
+
 
 });
 
