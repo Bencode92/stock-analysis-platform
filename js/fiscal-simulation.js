@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 2.1 - Fix calcul charges employeur dans résultat entreprise
+// Version 2.2 - Fix dividendes négatifs et garde-fous fiscaux
 
 // Classe pour les simulations fiscales des différents statuts juridiques
 class SimulationsFiscales {
@@ -231,33 +231,37 @@ class SimulationsFiscales {
             } else {
                 // Fallback
                 const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
-                is = Math.round(resultatApresRemuneration * tauxIS);
+                is = Math.round(Math.max(0, resultatApresRemuneration) * tauxIS);
             }
             
             // Résultat après IS
             const resultatApresIS = resultatApresRemuneration - is;
             
-            // Distribution de dividendes (simplifié - 100% du résultat après IS)
-            const dividendes = resultatApresIS;
+            // FIX: Distribution de dividendes uniquement si résultat positif
+            const dividendes = Math.max(0, resultatApresIS);
             
             // Cotisations TNS sur dividendes > 10% du capital social
-            let cotTNSDiv;
-            if (window.FiscalUtils) {
-                cotTNSDiv = window.FiscalUtils.cotTNSDividendes(dividendes, capitalSocial);
-            } else {
-                // Fallback
-                const baseTNSDiv = Math.max(0, dividendes - 0.10 * capitalSocial);
-                cotTNSDiv = Math.round(baseTNSDiv * 0.45); // Taux moyen 45% (barème TNS)
+            let cotTNSDiv = 0;
+            if (dividendes > 0) {
+                if (window.FiscalUtils) {
+                    cotTNSDiv = window.FiscalUtils.cotTNSDividendes(dividendes, capitalSocial);
+                } else {
+                    // Fallback
+                    const baseTNSDiv = Math.max(0, dividendes - 0.10 * capitalSocial);
+                    cotTNSDiv = Math.round(baseTNSDiv * 0.45); // Taux moyen 45% (barème TNS)
+                }
             }
             
             // Calcul du PFU sur les dividendes
-            let prelevementForfaitaire;
-            if (window.FiscalUtils) {
-                prelevementForfaitaire = window.FiscalUtils.calculPFU(dividendes);
-            } else {
-                // Fallback
-                const tauxPFU = 0.30;
-                prelevementForfaitaire = Math.round(dividendes * tauxPFU);
+            let prelevementForfaitaire = 0;
+            if (dividendes > 0) {
+                if (window.FiscalUtils) {
+                    prelevementForfaitaire = window.FiscalUtils.calculPFU(dividendes);
+                } else {
+                    // Fallback
+                    const tauxPFU = 0.30;
+                    prelevementForfaitaire = Math.round(dividendes * tauxPFU);
+                }
             }
             
             // Dividendes nets après PFU et cotisations TNS
@@ -286,7 +290,8 @@ class SimulationsFiscales {
                 prelevementForfaitaire: prelevementForfaitaire,
                 dividendesNets: dividendesNets,
                 revenuNetTotal: revenuNetTotal,
-                ratioNetCA: (revenuNetTotal / ca) * 100
+                ratioNetCA: (revenuNetTotal / ca) * 100,
+                resultatEntreprise: resultatEntreprise
             };
         }
     }
@@ -339,23 +344,25 @@ class SimulationsFiscales {
         } else {
             // Fallback
             const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
-            is = Math.round(resultatApresRemuneration * tauxIS);
+            is = Math.round(Math.max(0, resultatApresRemuneration) * tauxIS);
         }
         
         // Résultat après IS
         const resultatApresIS = resultatApresRemuneration - is;
         
-        // Distribution de dividendes
-        const dividendes = resultatApresIS;
+        // FIX: Distribution de dividendes uniquement si résultat positif
+        const dividendes = Math.max(0, resultatApresIS);
         
         // Calcul du PFU sur les dividendes
-        let prelevementForfaitaire;
-        if (window.FiscalUtils) {
-            prelevementForfaitaire = window.FiscalUtils.calculPFU(dividendes);
-        } else {
-            // Fallback
-            const tauxPFU = 0.30;
-            prelevementForfaitaire = Math.round(dividendes * tauxPFU);
+        let prelevementForfaitaire = 0;
+        if (dividendes > 0) {
+            if (window.FiscalUtils) {
+                prelevementForfaitaire = window.FiscalUtils.calculPFU(dividendes);
+            } else {
+                // Fallback
+                const tauxPFU = 0.30;
+                prelevementForfaitaire = Math.round(dividendes * tauxPFU);
+            }
         }
         
         // Dividendes nets après PFU
@@ -469,22 +476,23 @@ class SimulationsFiscales {
         } else {
             // Fallback
             const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
-            is = Math.round(resultatApresRemuneration * tauxIS);
+            is = Math.round(Math.max(0, resultatApresRemuneration) * tauxIS);
         }
         
         // Résultat après IS
         const resultatApresIS = resultatApresRemuneration - is;
         
-        // Distribution de dividendes
+        // FIX: Distribution de dividendes uniquement si résultat positif
+        const dividendesBruts = Math.max(0, resultatApresIS);
+        
         // Pour le gérant, on considère qu'il reçoit des dividendes proportionnels à ses parts sociales
         // Si gérant majoritaire, on estime qu'il détient 51% minimum des parts
         const partGerant = gerantMajoritaire ? 0.51 : (1 / nbAssocies);
-        const dividendesBruts = resultatApresIS;
         const dividendesGerant = Math.round(dividendesBruts * partGerant);
         
         // Cotisations TNS sur dividendes > 10% du capital social pour gérant majoritaire
         let cotTNSDiv = 0;
-        if (gerantMajoritaire) {
+        if (gerantMajoritaire && dividendesGerant > 0) {
             if (window.FiscalUtils) {
                 cotTNSDiv = window.FiscalUtils.cotTNSDividendes(dividendesGerant, capitalSocial);
             } else {
@@ -495,13 +503,15 @@ class SimulationsFiscales {
         }
         
         // Calcul du PFU sur les dividendes
-        let prelevementForfaitaire;
-        if (window.FiscalUtils) {
-            prelevementForfaitaire = window.FiscalUtils.calculPFU(dividendesGerant);
-        } else {
-            // Fallback
-            const tauxPFU = 0.30;
-            prelevementForfaitaire = Math.round(dividendesGerant * tauxPFU);
+        let prelevementForfaitaire = 0;
+        if (dividendesGerant > 0) {
+            if (window.FiscalUtils) {
+                prelevementForfaitaire = window.FiscalUtils.calculPFU(dividendesGerant);
+            } else {
+                // Fallback
+                const tauxPFU = 0.30;
+                prelevementForfaitaire = Math.round(dividendesGerant * tauxPFU);
+            }
         }
         
         // Dividendes nets après PFU et cotisations TNS
@@ -527,6 +537,7 @@ class SimulationsFiscales {
             resultatApresIS: resultatApresIS,
             dividendesBruts: dividendesBruts,
             dividendesGerant: dividendesGerant,
+            dividendes: dividendesGerant,
             cotTNSDiv: cotTNSDiv,
             prelevementForfaitaire: prelevementForfaitaire,
             dividendesNets: dividendesNets,
@@ -553,7 +564,7 @@ class SimulationsFiscales {
         
         // Ajuster les dividendes pour le président (qui ne possède qu'une partie des actions)
         const dividendesPresident = Math.round(resultSASU.dividendes * partPresident);
-        const prelevementForfaitaire = Math.round(dividendesPresident * 0.30);
+        const prelevementForfaitaire = dividendesPresident > 0 ? Math.round(dividendesPresident * 0.30) : 0;
         const dividendesNets = dividendesPresident - prelevementForfaitaire;
         
         // Recalculer le revenu net total
@@ -563,6 +574,7 @@ class SimulationsFiscales {
             ...resultSASU,
             typeEntreprise: 'SAS',
             dividendesPresident: dividendesPresident,
+            dividendes: dividendesPresident,
             prelevementForfaitaire: prelevementForfaitaire,
             dividendesNets: dividendesNets,
             revenuNetTotal: revenuNetTotal,
@@ -596,7 +608,7 @@ class SimulationsFiscales {
         const is = resultSAS.is + Math.round(coutCAC * 0.25); // Impact sur l'IS
         
         // Recalculer les dividendes nets
-        const dividendesNets = resultSAS.dividendesNets - Math.round(coutCAC * 0.75 * params.partPDG || 0.3);
+        const dividendesNets = Math.max(0, resultSAS.dividendesNets - Math.round(coutCAC * 0.75 * params.partPDG || 0.3));
         
         // Recalculer le revenu net total
         const revenuNetTotal = resultSAS.salaireNetApresIR + dividendesNets;
@@ -708,18 +720,18 @@ class SimulationsFiscales {
             
             // Prélèvements sociaux (17.2% pour 2025)
             const tauxPrelevementsSociaux = 0.172;
-            const prelevementsSociaux = Math.round(resultatFiscalAssocie * tauxPrelevementsSociaux);
+            const prelevementsSociaux = Math.round(Math.max(0, resultatFiscalAssocie) * tauxPrelevementsSociaux);
             
             // Impôt sur le revenu
             let impotRevenu;
             if (modeExpert && window.FiscalUtils) {
-                impotRevenu = window.FiscalUtils.calculateProgressiveIR(resultatFiscalAssocie);
+                impotRevenu = window.FiscalUtils.calculateProgressiveIR(Math.max(0, resultatFiscalAssocie));
             } else {
-                impotRevenu = Math.round(resultatFiscalAssocie * (tmiActuel / 100));
+                impotRevenu = Math.round(Math.max(0, resultatFiscalAssocie) * (tmiActuel / 100));
             }
             
             // Revenu net après impôt et prélèvements sociaux
-            const revenuNetApresImpot = resultatFiscalAssocie - impotRevenu - prelevementsSociaux;
+            const revenuNetApresImpot = Math.max(0, resultatFiscalAssocie - impotRevenu - prelevementsSociaux);
             
             return {
                 compatible: true,
@@ -748,24 +760,26 @@ class SimulationsFiscales {
             } else {
                 // Fallback
                 const tauxIS = resultatApresAmortissement <= 42500 ? 0.15 : 0.25;
-                is = Math.round(resultatApresAmortissement * tauxIS);
+                is = Math.round(Math.max(0, resultatApresAmortissement) * tauxIS);
             }
             
             // Résultat après IS
             const resultatApresIS = resultatApresAmortissement - is;
             
-            // Distribution de dividendes (100% du résultat après IS)
-            const dividendesBruts = resultatApresIS;
+            // FIX: Distribution de dividendes uniquement si résultat positif
+            const dividendesBruts = Math.max(0, resultatApresIS);
             const dividendesAssocie = Math.round(dividendesBruts * partAssociePrincipal);
             
             // Calcul du PFU sur les dividendes
-            let prelevementForfaitaire;
-            if (window.FiscalUtils) {
-                prelevementForfaitaire = window.FiscalUtils.calculPFU(dividendesAssocie);
-            } else {
-                // Fallback
-                const tauxPFU = 0.30;
-                prelevementForfaitaire = Math.round(dividendesAssocie * tauxPFU);
+            let prelevementForfaitaire = 0;
+            if (dividendesAssocie > 0) {
+                if (window.FiscalUtils) {
+                    prelevementForfaitaire = window.FiscalUtils.calculPFU(dividendesAssocie);
+                } else {
+                    // Fallback
+                    const tauxPFU = 0.30;
+                    prelevementForfaitaire = Math.round(dividendesAssocie * tauxPFU);
+                }
             }
             
             // Dividendes nets après PFU
@@ -794,6 +808,7 @@ class SimulationsFiscales {
                 resultatApresIS: resultatApresIS,
                 dividendesBruts: dividendesBruts,
                 dividendesAssocie: dividendesAssocie,
+                dividendes: dividendesAssocie,
                 prelevementForfaitaire: prelevementForfaitaire,
                 dividendesNets: dividendesNets,
                 revenuNetApresImpot: dividendesNets,
@@ -811,7 +826,11 @@ class SimulationsFiscales {
     // Je conserve le code existant pour éviter un fichier trop long
     static simulerSELARL(params) {
         // Similaire à SARL mais pour professions libérales
-        return this.simulerSARL({...params, typeEntreprise: 'SELARL'});
+        const result = this.simulerSARL({...params, typeEntreprise: 'SELARL'});
+        if (result.compatible) {
+            result.typeEntreprise = 'SELARL';
+        }
+        return result;
     }
 
     static simulerSELAS(params) {
@@ -849,7 +868,7 @@ window.SimulationsFiscales = SimulationsFiscales;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v2.1 avec fix coût employeur)");
+    console.log("Module SimulationsFiscales chargé (v2.2 avec fix dividendes négatifs)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady'));
 });
