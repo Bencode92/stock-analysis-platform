@@ -1,11 +1,14 @@
 // fiscal-utils.js - Utilitaires pour les calculs fiscaux
-// Version 1.2 - Fix optimisation ratio
+// Version 1.3 - Fix IS négatif et garde-fous fiscaux
 
 const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS = 2,9%
 
 class FiscalUtils {
     // Calcul d'IR par tranches progressives
     static calculateProgressiveIR(revenuImposable) {
+        // Garde-fou: pas d'IR négatif
+        if (revenuImposable <= 0) return 0;
+        
         const tranches = [
             { max: 11497, taux: 0   },  // Mise à jour barème 2025
             { max: 29315, taux: 0.11},
@@ -73,6 +76,9 @@ class FiscalUtils {
     
     // Calcul des cotisations TNS avec barème progressif
     static calculCotisationsTNS(rem) {
+        // Garde-fou: pas de cotisations négatives
+        if (rem <= 0) return 0;
+        
         const PASS = 47100;              // Plafond annuel SS 2025
         const trancheA = Math.min(rem, PASS) * 0.28;   // maladie + vieillesse de base
         const trancheB = Math.max(0, rem - PASS) * 0.17;
@@ -83,12 +89,18 @@ class FiscalUtils {
     
     // Calcul des cotisations TNS sur bénéfice brut (formule fermée)
     static cotisationsTNSSurBenefice(beneficeBrut) {
+        // Garde-fou: pas de cotisations négatives
+        if (beneficeBrut <= 0) return 0;
+        
         const tauxGlobal = 0.45;
         return Math.round(beneficeBrut * tauxGlobal / (1 + tauxGlobal));
     }
     
     // Calcul des cotisations TNS sur dividendes
     static cotTNSDividendes(dividendes, capitalSocial) {
+        // Garde-fou: pas de cotisations négatives
+        if (dividendes <= 0) return 0;
+        
         // Calcul précis avec les tranches 2025
         const PASS = 47100;
         const base = Math.max(0, dividendes - 0.10 * capitalSocial);
@@ -99,6 +111,15 @@ class FiscalUtils {
     
     // Calcul des charges salariales - TAUX CORRIGÉS pour SASU
     static calculChargesSalariales(remuneration, options = {}) {
+        // Garde-fou: pas de charges négatives
+        if (remuneration <= 0) {
+            return {
+                patronales: 0,
+                salariales: 0,
+                total: 0
+            };
+        }
+        
         const { secteur = "Tous", taille = "<50" } = options;
         
         // Taux réels 2025 pour assimilé salarié
@@ -112,11 +133,17 @@ class FiscalUtils {
     
     // Calcul PFU sur dividendes
     static calculPFU(dividendes) {
+        // Garde-fou: pas de PFU négatif
+        if (dividendes <= 0) return 0;
+        
         return Math.round(dividendes * 0.30);
     }
     
     // Calcul IS selon tranches avec paramètres additionnels
     static calculIS(resultat, params = {}) {
+        // FIX CRITIQUE: Pas d'IS négatif si déficit
+        if (resultat <= 0) return 0;
+        
         const seuil = 42500;
         const okTauxReduit = resultat <= seuil 
             && (params.ca ?? Infinity) < 10000000
@@ -155,6 +182,6 @@ window.FiscalUtils = FiscalUtils;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module FiscalUtils chargé (v1.2 avec fix optimisation)");
+    console.log("Module FiscalUtils chargé (v1.3 avec garde-fous fiscaux)");
     document.dispatchEvent(new CustomEvent('fiscalUtilsReady'));
 });
