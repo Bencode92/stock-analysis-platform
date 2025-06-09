@@ -212,7 +212,7 @@ function updateSimulatorInterface() {
                     </div>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="sim-options">
+<div class="grid grid-cols-1 gap-4" id="sim-options">
                     <div>
                         <label class="block text-gray-300 mb-2">Statuts à comparer</label>
                         <select id="sim-status-filter" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
