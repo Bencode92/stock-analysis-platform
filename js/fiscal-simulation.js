@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 2.4 - Corrections calculs IR micro et cotisations TNS EURL
+// Version 2.5 - Fix calcul IR progressif pour micro-entreprise
 
 // Constantes pour les taux de charges sociales
 const TAUX_CHARGES = {
@@ -107,14 +107,42 @@ class SimulationsFiscales {
         
         // Calcul de l'impôt sur le revenu
         let impotRevenu;
+        let tmiReel = 0; // TMI réel basé sur le revenu imposable
         
         if (versementLiberatoire) {
             // Calcul avec versement libératoire
             impotRevenu = Math.round(ca * tauxVFL[typeEffectif]);
         } else {
-            // CORRECTION 1: Pour la micro, utiliser TOUJOURS le TMI simple
-            // car le revenu imposable est déjà après abattement forfaitaire
-            impotRevenu = Math.round(revenuImposable * (tmiActuel / 100));
+            // CORRECTION: Toujours utiliser le calcul progressif pour la micro
+            if (window.FiscalUtils && window.FiscalUtils.calculateProgressiveIR) {
+                impotRevenu = window.FiscalUtils.calculateProgressiveIR(revenuImposable);
+            } else {
+                // Fallback: calcul progressif manuel si FiscalUtils n'est pas disponible
+                const tranches = [
+                    { max: 11497, taux: 0 },
+                    { max: 29315, taux: 0.11 },
+                    { max: 83823, taux: 0.30 },
+                    { max: 180294, taux: 0.41 },
+                    { max: Infinity, taux: 0.45 }
+                ];
+                
+                impotRevenu = 0;
+                let min = 0;
+                
+                for (const t of tranches) {
+                    const taxable = Math.max(0, Math.min(revenuImposable - min, t.max - min));
+                    impotRevenu += taxable * t.taux;
+                    
+                    // Déterminer le TMI réel
+                    if (revenuImposable > min && revenuImposable <= t.max) {
+                        tmiReel = t.taux * 100;
+                    }
+                    
+                    min = t.max;
+                }
+                
+                impotRevenu = Math.round(impotRevenu);
+            }
         }
         
         // Calcul du revenu net après impôt
@@ -133,7 +161,8 @@ class SimulationsFiscales {
             ratioNetCA: (revenuNetApresImpot / ca) * 100,
             versementLiberatoire: versementLiberatoire,
             modeExpert: modeExpert,
-            tmiActuel: tmiActuel
+            tmiActuel: tmiActuel,
+            tmiReel: tmiReel // TMI réel basé sur le calcul progressif
         };
     }
     
@@ -944,7 +973,7 @@ window.ajusterRemuneration = ajusterRemuneration;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v2.4 avec corrections IR micro et TNS EURL)");
+    console.log("Module SimulationsFiscales chargé (v2.5 avec calcul IR progressif pour micro)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady'));
 });
