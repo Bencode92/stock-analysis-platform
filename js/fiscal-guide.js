@@ -2064,24 +2064,31 @@ if (statutId === 'micro') {
     }
     
     // Statuts à l'IR - informations spécifiques
-    else if (statutId === 'micro') {
-        const typeMicro = result.sim.typeMicro || 'BIC_SERVICE';
+else if (statutId === 'micro') {
+    const typeMicro = result.sim.typeMicro || 'BIC_SERVICE';
+    const versementLiberatoire = result.sim.versementLiberatoire || false;
+    
+    detailContent += `
+            <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Abattement forfaitaire :</strong> ${
+                typeMicro === 'BIC_VENTE' ? '71%' :
+                typeMicro === 'BIC_SERVICE' ? '50%' :
+                '34%'
+            } du CA</li>`;
+    
+    if (versementLiberatoire) {
         detailContent += `
-                <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Abattement forfaitaire :</strong> ${
-                    typeMicro === 'BIC_VENTE' ? '71%' :
-                    typeMicro === 'BIC_SERVICE' ? '50%' :
-                    '34%'
-                } du CA</li>`;
-        
-        if (result.sim.versementLiberatoire) {
-            detailContent += `
-                <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Versement libératoire :</strong> ${
-                    typeMicro === 'BIC_VENTE' ? '1%' :
-                    typeMicro === 'BIC_SERVICE' ? '1.7%' :
-                    '2.2%'
-                } du CA</li>`;
-        }
+            <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Versement libératoire :</strong> ${
+                typeMicro === 'BIC_VENTE' ? '1%' :
+                typeMicro === 'BIC_SERVICE' ? '1.7%' :
+                '2.2%'
+            } du CA (remplace l'IR progressif)</li>`;
+        // NE PAS afficher le TMI quand VFL activé
+    } else {
+        // Afficher le TMI seulement si pas de VFL
+        detailContent += `
+            <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>TMI effectif :</strong> ${tmiEffectifFinal}% (tranche atteinte)</li>`;
     }
+}
     else if (statutId === 'sci') {
         detailContent += `
                 <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Régime fiscal :</strong> Revenus fonciers (IR)</li>
