@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 2.5 - Fix calcul IR progressif pour micro-entreprise
+// Version 2.6 - Fix calcul SCI avec CSG déductible et barème progressif IR
 
 // Constantes pour les taux de charges sociales
 const TAUX_CHARGES = {
@@ -781,11 +781,12 @@ class SimulationsFiscales {
             tmiActuel = 30,
             optionIS = false,
             partAssociePrincipal = 0.5,
+            nombreAssocies = 2, // NOUVEAU: paramètre pour clarifier
             modeExpert = false,
-            typeLocation = "nue", // Nouveau: 'nue' ou 'meublee'
-            valeurBien = 300000,  // Nouveau: valeur du bien immobilier
-            tauxAmortissement = 0.02, // Nouveau: taux d'amortissement annuel
-            dureeDetention = 15    // Nouveau: durée de détention prévue
+            typeLocation = "nue",
+            valeurBien = 300000,
+            tauxAmortissement = 0.02,
+            dureeDetention = 15
         } = params;
         
         // Pour une SCI, on travaille avec des revenus locatifs plutôt qu'un CA
@@ -793,7 +794,7 @@ class SimulationsFiscales {
         
         // Location meublée = obligatoire IS si >10% du CA
         const locationMeublee = typeLocation === "meublee";
-        const isObligatoire = locationMeublee; // La location meublée en SCI => IS obligatoire
+        const isObligatoire = locationMeublee;
         
         // Choix du régime fiscal
         const optionISEffective = optionIS || isObligatoire;
@@ -813,7 +814,7 @@ class SimulationsFiscales {
             "Attention: La location meublée en SCI à l'IR peut être requalifiée en activité commerciale. L'option IS est généralement obligatoire." : "";
         
         // Avantage fiscal amortissement
-        const avantageAmortissement = optionISEffective ? Math.round(amortissementAnnuel * 0.25) : 0; // 25% = taux IS moyen
+        const avantageAmortissement = optionISEffective ? Math.round(amortissementAnnuel * 0.25) : 0;
         
         if (!optionISEffective) {
             // Régime IR par défaut - Revenus fonciers pour les associés
@@ -822,12 +823,59 @@ class SimulationsFiscales {
             const tauxPrelevementsSociaux = 0.172;
             const prelevementsSociaux = Math.round(Math.max(0, resultatFiscalAssocie) * tauxPrelevementsSociaux);
             
-            // Impôt sur le revenu
+            // CORRECTION: Calculer la CSG déductible (6.8%)
+            const tauxCSGDeductible = 0.068;
+            const csgDeductible = Math.round(resultatFiscalAssocie * tauxCSGDeductible);
+            
+            // CORRECTION: Base imposable après déduction CSG
+            const baseImposableIR = Math.max(0, resultatFiscalAssocie - csgDeductible);
+            
+            // CORRECTION: Toujours utiliser le calcul progressif pour l'IR
             let impotRevenu;
-            if (modeExpert && window.FiscalUtils) {
-                impotRevenu = window.FiscalUtils.calculateProgressiveIR(Math.max(0, resultatFiscalAssocie));
+            let tmiEffectif = 0;
+            
+            if (window.FiscalUtils && window.FiscalUtils.calculateProgressiveIR) {
+                impotRevenu = window.FiscalUtils.calculateProgressiveIR(baseImposableIR);
+                // Déterminer la TMI effective basée sur le barème 2025
+                const tranches = [
+                    { max: 11497, taux: 0 },
+                    { max: 26037, taux: 11 },
+                    { max: 74545, taux: 30 },
+                    { max: 160336, taux: 41 },
+                    { max: Infinity, taux: 45 }
+                ];
+                for (const t of tranches) {
+                    if (baseImposableIR <= t.max) {
+                        tmiEffectif = t.taux;
+                        break;
+                    }
+                }
             } else {
-                impotRevenu = Math.round(Math.max(0, resultatFiscalAssocie) * (tmiActuel / 100));
+                // Fallback: calcul progressif manuel avec barème 2025
+                const tranches = [
+                    { max: 11497, taux: 0 },
+                    { max: 26037, taux: 0.11 },
+                    { max: 74545, taux: 0.30 },
+                    { max: 160336, taux: 0.41 },
+                    { max: Infinity, taux: 0.45 }
+                ];
+                
+                impotRevenu = 0;
+                let min = 0;
+                
+                for (const t of tranches) {
+                    if (baseImposableIR > min) {
+                        const taxable = Math.max(0, Math.min(baseImposableIR - min, t.max - min));
+                        impotRevenu += taxable * t.taux;
+                        
+                        if (baseImposableIR > min && baseImposableIR <= t.max && tmiEffectif === 0) {
+                            tmiEffectif = t.taux * 100;
+                        }
+                    }
+                    min = t.max;
+                }
+                
+                impotRevenu = Math.round(impotRevenu);
             }
             
             // Revenu net après impôt et prélèvements sociaux
@@ -842,13 +890,19 @@ class SimulationsFiscales {
                 chargesDeductibles: chargesDeductibles,
                 resultatFiscal: resultatFiscal,
                 resultatFiscalAssocie: resultatFiscalAssocie,
+                partAssociePrincipal: partAssociePrincipal,
+                nombreAssocies: nombreAssocies,
                 prelevementsSociaux: prelevementsSociaux,
+                csgDeductible: csgDeductible,
+                baseImposableIR: baseImposableIR,
+                tmiEffectif: tmiEffectif,
                 impotRevenu: impotRevenu,
                 revenuNetApresImpot: revenuNetApresImpot,
                 revenuNetTotal: revenuNetApresImpot,
                 ratioNetCA: (revenuNetApresImpot / ca) * 100,
                 amortissementPossible: false,
-                avertissementMeublee: avertissementMeublee
+                avertissementMeublee: avertissementMeublee,
+                modeExpert: true // Toujours en mode expert pour SCI
             };
         } else {
             // Option IS (généralement défavorable pour location nue, mais intéressant pour meublée)
@@ -917,7 +971,9 @@ class SimulationsFiscales {
                 avantageAmortissement: avantageAmortissement,
                 economieAmortissementDuree: economieAmortissementDuree,
                 amortissementPossible: true,
-                infoLocationMeublee: infoLocationMeublee
+                infoLocationMeublee: infoLocationMeublee,
+                partAssociePrincipal: partAssociePrincipal,
+                nombreAssocies: nombreAssocies
             };
         }
     }
@@ -973,7 +1029,7 @@ window.ajusterRemuneration = ajusterRemuneration;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v2.5 avec calcul IR progressif pour micro)");
+    console.log("Module SimulationsFiscales chargé (v2.6 avec fix SCI - CSG déductible et barème progressif)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady'));
 });
