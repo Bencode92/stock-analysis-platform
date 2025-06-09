@@ -245,54 +245,54 @@ function updateSimulatorInterface() {
   <div class="flex items-center flex-wrap md:flex-nowrap gap-x-6 gap-y-2">
 
     <!-- Mode expert (activé par défaut, input caché) -->
-    <label class="flex items-center">
-      <input type="hidden" id="sim-expert-mode" checked>
-      <i class="fas fa-chart-line text-pink-400 mr-1"></i>
-      <span class="text-sm">Mode expert</span>
+<div class="flex flex-col">
+  <label class="flex items-center">
+    <input type="hidden" id="sim-expert-mode" checked>
+    <i class="fas fa-chart-line text-pink-400 mr-1"></i>
+    <span class="text-sm">Mode expert</span>
+  </label>
+  <span class="info-tooltip mt-1">
+    <i class="fas fa-question-circle text-gray-400"></i>
+    <span class="tooltiptext">
+      Calcul par tranches progressives d'IR
+      plutôt que le TMI simple.
+    </span>
+  </span>
+</div>
 
-      <!-- Tooltip conservé -->
-      <span class="info-tooltip ml-2">
-        <i class="fas fa-question-circle text-gray-400"></i>
-        <span class="tooltiptext">
-          Calcul par tranches progressives d'IR
-          plutôt que le TMI simple.
-        </span>
-      </span>
-    </label>
+<!-- Ratio optimal -->
+<div class="flex flex-col">
+  <label class="flex items-center">
+    <input type="checkbox" id="use-optimal-ratio"
+           class="mr-2 h-4 w-4" checked>
+    <i class="fas fa-magic text-purple-400 mr-1"></i>
+    <span class="text-sm">Ratio optimal</span>
+  </label>
+  <span class="info-tooltip mt-1">
+    <i class="fas fa-question-circle text-gray-400"></i>
+    <span class="tooltiptext">
+      Optimise le ratio entre rémunération et dividendes
+      pour maximiser le revenu net.
+    </span>
+  </span>
+</div>
 
-    <!-- Ratio optimal -->
-    <label class="flex items-center">
-      <input type="checkbox" id="use-optimal-ratio"
-             class="mr-2 h-4 w-4" checked>
-      <i class="fas fa-magic text-purple-400 mr-1"></i>
-      <span class="text-sm">Ratio optimal</span>
-
-      <span class="info-tooltip ml-2">
-        <i class="fas fa-question-circle text-gray-400"></i>
-        <span class="tooltiptext">
-          Optimise le ratio entre rémunération et dividendes
-          pour maximiser le revenu net.
-        </span>
-      </span>
-    </label>
-
-    <!-- Gérant minoritaire -->
-    <label class="flex items-center">
-      <input type="checkbox" id="sarl-gerant-minoritaire"
-             class="mr-2 h-4 w-4">
-      <i class="fas fa-users text-blue-400 mr-1"></i>
-      <span class="text-sm">Gérant min.</span>
-
-      <span class="info-tooltip ml-2">
-        <i class="fas fa-question-circle text-gray-400"></i>
-        <span class="tooltiptext">
-          Le gérant détient moins de 50&nbsp;% des parts sociales
-          (assimilé salarié).
-        </span>
-      </span>
-    </label>
-
-  </div>
+<!-- Gérant minoritaire -->
+<div class="flex flex-col">
+  <label class="flex items-center">
+    <input type="checkbox" id="sarl-gerant-minoritaire"
+           class="mr-2 h-4 w-4">
+    <i class="fas fa-users text-blue-400 mr-1"></i>
+    <span class="text-sm">Gérant min.</span>
+  </label>
+  <span class="info-tooltip mt-1">
+    <i class="fas fa-question-circle text-gray-400"></i>
+    <span class="tooltiptext">
+      Le gérant détient moins de 50&nbsp;% des parts sociales
+      (assimilé salarié).
+    </span>
+  </span>
+</div>
 </div>
                 
                 <!-- Ajouter le sélecteur de type d'activité pour micro-entreprise -->
