@@ -247,7 +247,7 @@ function updateSimulatorInterface() {
       <span class="info-tooltip ml-2">
         <i class="fas fa-question-circle text-gray-400"></i>
         <span class="tooltiptext">
-          Le mode expert utilise le calcul par tranches progressives d'IR
+          Calcul par tranches progressives d'IR
           plutôt que le TMI simple.
         </span>
       </span>
@@ -263,7 +263,7 @@ function updateSimulatorInterface() {
       <span class="info-tooltip ml-2">
         <i class="fas fa-question-circle text-gray-400"></i>
         <span class="tooltiptext">
-          Optimise automatiquement le ratio entre rémunération et dividendes
+          Optimise le ratio entre rémunération et dividendes
           pour maximiser le revenu net.
         </span>
       </span>
