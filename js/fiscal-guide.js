@@ -229,55 +229,78 @@ function updateSimulatorInterface() {
     <div class="status-info-message mb-4">
         <i class="fas fa-info-circle mr-2"></i> Par défaut, tous les statuts juridiques sont inclus dans la simulation. Utilisez les filtres ci-dessous pour comparer des groupes spécifiques.
     </div>
-    
-    <div class="mb-4">
-        <label class="block text-gray-300 mb-2">Fonctionnalités activées</label>
-        <div class="flex flex-wrap gap-3">
-            <div class="flex items-center">
-                <input type="hidden" id="sim-expert-mode" checked>
-                <span class="bg-pink-900 bg-opacity-20 px-3 py-1 rounded-md text-pink-300 font-medium text-sm">
-                    <i class="fas fa-chart-line mr-1"></i>Mode expert
-                </span>
-                <span class="info-tooltip ml-2">
-                    <i class="fas fa-question-circle text-gray-400"></i>
-                    <span class="tooltiptext">Le mode expert utilise le calcul par tranches progressives d'IR plutôt que le TMI simple.</span>
-                </span>
-            </div>
-            
-            <div class="flex items-center">
-                <input type="checkbox" id="use-optimal-ratio" class="mr-2 h-4 w-4" checked>
-                <span class="bg-purple-900 bg-opacity-20 px-3 py-1 rounded-md text-purple-300 font-medium text-sm">
-                    <i class="fas fa-magic mr-1"></i>Ratio optimal
-                </span>
-                <span class="info-tooltip ml-2">
-                    <i class="fas fa-question-circle text-gray-400"></i>
-                    <span class="tooltiptext">Optimise automatiquement le ratio entre rémunération et dividendes pour maximiser le revenu net.</span>
-                </span>
-            </div>
-            
-            <div class="flex items-center">
-                <input type="checkbox" id="use-avg-charge-rate" class="mr-2 h-4 w-4" checked>
-                <span class="bg-amber-900 bg-opacity-20 px-3 py-1 rounded-md text-amber-300 font-medium text-sm">
-                    <i class="fas fa-percentage mr-1"></i>Frais réels
-                </span>
-                <span class="info-tooltip ml-2">
-                    <i class="fas fa-question-circle text-gray-400"></i>
-                    <span class="tooltiptext">Utilise le taux de charge pour calculer les frais déductibles réels plutôt qu'un taux de marge fixe.</span>
-                </span>
-            </div>
-            
-            <div class="flex items-center">
-                <input type="checkbox" id="sarl-gerant-minoritaire" class="mr-2 h-4 w-4">
-                <span class="bg-blue-900 bg-opacity-20 px-3 py-1 rounded-md text-blue-300 font-medium text-sm">
-                    <i class="fas fa-users mr-1"></i>Gérant min.
-                </span>
-                <span class="info-tooltip ml-2">
-                    <i class="fas fa-question-circle text-gray-400"></i>
-                    <span class="tooltiptext">Le gérant détient moins de 50% des parts sociales (assimilé salarié).</span>
-                </span>
-            </div>
-        </div>
-    </div>
+<div class="mb-4">
+  <label class="block text-gray-300 mb-2">Fonctionnalités activées</label>
+
+  <!-- FLEX : wrap sur mobile / nowrap dès md -->
+  <div class="flex items-center flex-wrap md:flex-nowrap gap-x-6 gap-y-2">
+
+    <!-- Mode expert (activé par défaut, input caché) -->
+    <label class="flex items-center">
+      <input type="hidden" id="sim-expert-mode" checked>
+      <i class="fas fa-chart-line text-pink-400 mr-1"></i>
+      <span class="text-sm">Mode expert</span>
+
+      <!-- Tooltip conservé -->
+      <span class="info-tooltip ml-2">
+        <i class="fas fa-question-circle text-gray-400"></i>
+        <span class="tooltiptext">
+          Le mode expert utilise le calcul par tranches progressives d'IR
+          plutôt que le TMI simple.
+        </span>
+      </span>
+    </label>
+
+    <!-- Ratio optimal -->
+    <label class="flex items-center">
+      <input type="checkbox" id="use-optimal-ratio"
+             class="mr-2 h-4 w-4" checked>
+      <i class="fas fa-magic text-purple-400 mr-1"></i>
+      <span class="text-sm">Ratio optimal</span>
+
+      <span class="info-tooltip ml-2">
+        <i class="fas fa-question-circle text-gray-400"></i>
+        <span class="tooltiptext">
+          Optimise automatiquement le ratio entre rémunération et dividendes
+          pour maximiser le revenu net.
+        </span>
+      </span>
+    </label>
+
+    <!-- Frais réels -->
+    <label class="flex items-center">
+      <input type="checkbox" id="use-avg-charge-rate"
+             class="mr-2 h-4 w-4" checked>
+      <i class="fas fa-percentage text-amber-400 mr-1"></i>
+      <span class="text-sm">Frais réels</span>
+
+      <span class="info-tooltip ml-2">
+        <i class="fas fa-question-circle text-gray-400"></i>
+        <span class="tooltiptext">
+          Utilise le taux de charge pour calculer les frais déductibles réels
+          plutôt qu'un taux de marge fixe.
+        </span>
+      </span>
+    </label>
+
+    <!-- Gérant minoritaire -->
+    <label class="flex items-center">
+      <input type="checkbox" id="sarl-gerant-minoritaire"
+             class="mr-2 h-4 w-4">
+      <i class="fas fa-users text-blue-400 mr-1"></i>
+      <span class="text-sm">Gérant min.</span>
+
+      <span class="info-tooltip ml-2">
+        <i class="fas fa-question-circle text-gray-400"></i>
+        <span class="tooltiptext">
+          Le gérant détient moins de 50&nbsp;% des parts sociales
+          (assimilé salarié).
+        </span>
+      </span>
+    </label>
+
+  </div>
+</div>
                 
                 <!-- Ajouter le sélecteur de type d'activité pour micro-entreprise -->
                 <div class="mt-4">
