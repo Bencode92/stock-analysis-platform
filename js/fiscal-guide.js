@@ -588,6 +588,7 @@ function runComparison() {
     
     // Tableau pour stocker les résultats de simulation
     const resultats = [];
+    window.currentSimulationResults = resultats;
     
     // Association icônes pour les statuts
     const statutIcons = {
