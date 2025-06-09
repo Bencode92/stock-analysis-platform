@@ -269,22 +269,6 @@ function updateSimulatorInterface() {
       </span>
     </label>
 
-    <!-- Frais réels -->
-    <label class="flex items-center">
-      <input type="checkbox" id="use-avg-charge-rate"
-             class="mr-2 h-4 w-4" checked>
-      <i class="fas fa-percentage text-amber-400 mr-1"></i>
-      <span class="text-sm">Frais réels</span>
-
-      <span class="info-tooltip ml-2">
-        <i class="fas fa-question-circle text-gray-400"></i>
-        <span class="tooltiptext">
-          Utilise le taux de charge pour calculer les frais déductibles réels
-          plutôt qu'un taux de marge fixe.
-        </span>
-      </span>
-    </label>
-
     <!-- Gérant minoritaire -->
     <label class="flex items-center">
       <input type="checkbox" id="sarl-gerant-minoritaire"
