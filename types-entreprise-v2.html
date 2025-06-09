@@ -1082,6 +1082,71 @@
             opacity: 1 !important;
             visibility: visible !important;
         }
+
+        /* Styles pour le modal de détail */
+        .detail-modal {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .detail-content {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Assurer que le modal est au-dessus de tout */
+        .detail-modal {
+            z-index: 2000 !important;
+        }
+
+        /* Styles pour les tableaux de détail */
+        .detail-table {
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .detail-table td {
+            padding: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .detail-table td:first-child {
+            width: 60%;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .detail-table td:last-child {
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .detail-category {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #00FF87;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(0, 255, 135, 0.3);
+        }
     </style>
 </head>
 <body class="dark">
