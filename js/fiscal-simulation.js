@@ -1,5 +1,50 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 2.2 - Fix dividendes négatifs et garde-fous fiscaux
+// Version 2.3 - Ajout des garde-fous pour éviter les déficits impossibles
+
+// Constantes pour les taux de charges sociales
+const TAUX_CHARGES = {
+    TNS: 0.45,                    // Taux global TNS (gérant majoritaire)
+    SALARIAL: 0.22,              // Charges salariales assimilé salarié
+    PATRONAL_BASE: 0.45,         // Charges patronales base (PME)
+    PATRONAL_MOYEN: 0.55,        // Charges patronales moyennes
+    PATRONAL_MAX: 0.65           // Charges patronales max (grandes entreprises)
+};
+
+// Fonction utilitaire pour calculer le salaire brut maximum possible
+function calculerSalaireBrutMax(resultatDisponible, tauxChargesPatronales = TAUX_CHARGES.PATRONAL_MOYEN) {
+    return resultatDisponible / (1 + tauxChargesPatronales);
+}
+
+// Fonction pour ajuster la rémunération selon les contraintes
+function ajusterRemuneration(remunerationSouhaitee, resultatDisponible, estAssimileSalarie = true) {
+    if (!estAssimileSalarie) {
+        // Pour un TNS, les charges sont déduites du net, pas ajoutées au brut
+        return {
+            remuneration: Math.min(remunerationSouhaitee, resultatDisponible),
+            ajustee: remunerationSouhaitee > resultatDisponible,
+            remunerationInitiale: remunerationSouhaitee,
+            message: remunerationSouhaitee > resultatDisponible 
+                ? `Rémunération ajustée pour respecter le résultat disponible`
+                : null
+        };
+    }
+    
+    // Pour un assimilé salarié, on doit tenir compte des charges patronales
+    const tauxChargesPatronales = TAUX_CHARGES.PATRONAL_MOYEN;
+    const salaireBrutMax = calculerSalaireBrutMax(resultatDisponible, tauxChargesPatronales);
+    
+    const remunerationAjustee = Math.min(remunerationSouhaitee, salaireBrutMax);
+    
+    return {
+        remuneration: Math.round(remunerationAjustee),
+        ajustee: remunerationSouhaitee > salaireBrutMax,
+        remunerationInitiale: Math.round(remunerationSouhaitee),
+        salaireBrutMax: Math.round(salaireBrutMax),
+        message: remunerationSouhaitee > salaireBrutMax 
+            ? `Rémunération ajustée de ${Math.round(remunerationSouhaitee)}€ à ${Math.round(remunerationAjustee)}€ pour respecter le résultat disponible`
+            : null
+    };
+}
 
 // Classe pour les simulations fiscales des différents statuts juridiques
 class SimulationsFiscales {
@@ -105,8 +150,7 @@ class SimulationsFiscales {
             cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(beneficeAvantCotisations);
         } else {
             // Fallback si l'utilitaire n'est pas disponible
-            const tauxCotisationsTNS = 0.45;
-            cotisationsSociales = Math.round(beneficeAvantCotisations * tauxCotisationsTNS);
+            cotisationsSociales = Math.round(beneficeAvantCotisations * TAUX_CHARGES.TNS);
         }
         
         // Bénéfice après cotisations sociales
@@ -160,8 +204,7 @@ class SimulationsFiscales {
                 cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(remuneration);
             } else {
                 // Fallback si l'utilitaire n'est pas disponible
-                const tauxCotisationsTNS = 0.45;
-                cotisationsSociales = Math.round(remuneration * tauxCotisationsTNS);
+                cotisationsSociales = Math.round(remuneration * TAUX_CHARGES.TNS);
             }
             
             // Bénéfice imposable (remuneration + résultat après rémunération)
@@ -204,8 +247,7 @@ class SimulationsFiscales {
                 cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(remuneration);
             } else {
                 // Fallback si l'utilitaire n'est pas disponible
-                const tauxCotisationsTNS = 0.45;
-                cotisationsSociales = Math.round(remuneration * tauxCotisationsTNS);
+                cotisationsSociales = Math.round(remuneration * TAUX_CHARGES.TNS);
             }
             
             // FIX: pour un TNS, les cotisations sont déductibles
@@ -296,15 +338,19 @@ class SimulationsFiscales {
         }
     }
     
-    // SASU
+    // SASU avec garde-fous
     static simulerSASU(params) {
         const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, tmiActuel = 30, modeExpert = false, secteur = "Tous", taille = "<50" } = params;
         
         // Calcul du résultat de l'entreprise
         const resultatEntreprise = Math.round(ca * tauxMarge);
         
-        // Calcul de la rémunération du président
-        const remuneration = Math.round(resultatEntreprise * tauxRemuneration);
+        // Calcul de la rémunération souhaitée
+        const remunerationSouhaitee = Math.round(resultatEntreprise * tauxRemuneration);
+        
+        // NOUVEAU: Ajuster la rémunération selon les contraintes
+        const ajustement = ajusterRemuneration(remunerationSouhaitee, resultatEntreprise, true);
+        const remuneration = ajustement.remuneration;
         
         // Calcul des charges sociales avec paramètres sectoriels
         let chargesPatronales, chargesSalariales;
@@ -314,8 +360,8 @@ class SimulationsFiscales {
             chargesSalariales = charges.salariales;
         } else {
             // Fallback si l'utilitaire n'est pas disponible
-            chargesPatronales = Math.round(remuneration * 0.45); // taux moyen 2025
-            chargesSalariales = Math.round(remuneration * 0.22);
+            chargesPatronales = Math.round(remuneration * TAUX_CHARGES.PATRONAL_MOYEN);
+            chargesSalariales = Math.round(remuneration * TAUX_CHARGES.SALARIAL);
         }
         
         const coutTotalEmployeur = remuneration + chargesPatronales;
@@ -378,6 +424,8 @@ class SimulationsFiscales {
             tauxMarge: tauxMarge * 100 + '%',
             resultatEntreprise: resultatEntreprise,
             remuneration: remuneration,
+            remunerationAjustee: ajustement.ajustee,
+            messageAjustement: ajustement.message,
             chargesPatronales: chargesPatronales,
             coutTotalEmployeur: coutTotalEmployeur,
             chargesSalariales: chargesSalariales,
@@ -398,7 +446,7 @@ class SimulationsFiscales {
         };
     }
 
-    // SARL (nouveau)
+    // SARL avec garde-fous pour gérant minoritaire
     static simulerSARL(params) {
         const { 
             ca, 
@@ -416,21 +464,26 @@ class SimulationsFiscales {
         // Calcul du résultat de l'entreprise (simplifié - CA * taux de marge)
         const resultatEntreprise = Math.round(ca * tauxMarge);
         
-        // Calcul de la rémunération du gérant
-        const remuneration = Math.round(resultatEntreprise * tauxRemuneration);
+        // Calcul de la rémunération souhaitée
+        const remunerationSouhaitee = Math.round(resultatEntreprise * tauxRemuneration);
         
         // Régime social différent selon que le gérant est majoritaire ou non
         let cotisationsSociales = 0;
         let salaireNet = 0;
         let resultatApresRemuneration = 0;
+        let remuneration = remunerationSouhaitee;
+        let ajustement = null;
         
         if (gerantMajoritaire) {
             // Gérant majoritaire = TNS
+            ajustement = ajusterRemuneration(remunerationSouhaitee, resultatEntreprise, false);
+            remuneration = ajustement.remuneration;
+            
             if (window.FiscalUtils) {
                 cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(remuneration);
             } else {
                 // Fallback
-                cotisationsSociales = Math.round(remuneration * 0.45);
+                cotisationsSociales = Math.round(remuneration * TAUX_CHARGES.TNS);
             }
             salaireNet = remuneration - cotisationsSociales;
             // FIX: pour un TNS, les cotisations sont déductibles
@@ -438,6 +491,9 @@ class SimulationsFiscales {
             resultatApresRemuneration = resultatEntreprise - coutRemunerationEntreprise;
         } else {
             // Gérant minoritaire = assimilé salarié
+            ajustement = ajusterRemuneration(remunerationSouhaitee, resultatEntreprise, true);
+            remuneration = ajustement.remuneration;
+            
             let chargesPatronales, chargesSalariales;
             if (window.FiscalUtils) {
                 const charges = window.FiscalUtils.calculChargesSalariales(remuneration, { secteur, taille });
@@ -446,8 +502,8 @@ class SimulationsFiscales {
                 cotisationsSociales = chargesPatronales + chargesSalariales;
             } else {
                 // Fallback
-                chargesPatronales = Math.round(remuneration * 0.45); // taux moyen 2025
-                chargesSalariales = Math.round(remuneration * 0.22);
+                chargesPatronales = Math.round(remuneration * TAUX_CHARGES.PATRONAL_MOYEN);
+                chargesSalariales = Math.round(remuneration * TAUX_CHARGES.SALARIAL);
                 cotisationsSociales = chargesPatronales + chargesSalariales;
             }
             salaireNet = remuneration - chargesSalariales;
@@ -498,7 +554,7 @@ class SimulationsFiscales {
             } else {
                 // Fallback
                 const baseTNSDiv = Math.max(0, dividendesGerant - 0.10 * capitalSocial);
-                cotTNSDiv = Math.round(baseTNSDiv * 0.45); // Taux moyen 45% (barème TNS)
+                cotTNSDiv = Math.round(baseTNSDiv * TAUX_CHARGES.TNS);
             }
         }
         
@@ -527,6 +583,8 @@ class SimulationsFiscales {
             tauxMarge: tauxMarge * 100 + '%',
             resultatEntreprise: resultatEntreprise,
             remuneration: remuneration,
+            remunerationAjustee: ajustement ? ajustement.ajustee : false,
+            messageAjustement: ajustement ? ajustement.message : null,
             cotisationsSociales: cotisationsSociales,
             salaireNet: salaireNet,
             impotRevenu: impotRevenu,
@@ -549,13 +607,13 @@ class SimulationsFiscales {
         };
     }
 
-    // SAS (nouveau) - méthode simplifiée pour éviter le code trop long
+    // SAS avec garde-fous
     static simulerSAS(params) {
         // La SAS est similaire à la SASU mais avec plusieurs associés
         // On réutilise le code de la SASU mais on ajuste la part des dividendes
         const { partPresident = 0.5, nbAssocies = 2 } = params;
         
-        // Simuler comme une SASU
+        // Simuler comme une SASU avec garde-fous
         const resultSASU = this.simulerSASU(params);
         
         if (!resultSASU.compatible) {
@@ -582,11 +640,9 @@ class SimulationsFiscales {
         };
     }
 
-    // Méthodes pour les autres statuts juridiques - pour économiser de l'espace
-    // Ces méthodes peuvent aussi être mises à jour pour utiliser les utilitaires
+    // SA avec garde-fous complets
     static simulerSA(params) {
-        // Réutiliser le code existant
-        const { capitalInvesti = 37000 } = params;
+        const { capitalInvesti = 37000, partPDG = 0.3 } = params;
         
         // Vérifier si le capital minimum est respecté
         if (capitalInvesti < 37000) {
@@ -596,7 +652,7 @@ class SimulationsFiscales {
             };
         }
         
-        // Simuler comme une SAS avec des coûts supplémentaires
+        // Simuler comme une SAS avec garde-fous intégrés
         const resultSAS = this.simulerSAS(params);
         
         if (!resultSAS.compatible) {
@@ -605,12 +661,22 @@ class SimulationsFiscales {
         
         // Ajouter le coût du CAC
         const coutCAC = 5000;
-        const is = resultSAS.is + Math.round(coutCAC * 0.25); // Impact sur l'IS
         
-        // Recalculer les dividendes nets
-        const dividendesNets = Math.max(0, resultSAS.dividendesNets - Math.round(coutCAC * 0.75 * params.partPDG || 0.3));
+        // Le coût du CAC réduit le résultat imposable
+        const resultatApresCAC = Math.max(0, resultSAS.resultatApresRemuneration - coutCAC);
         
-        // Recalculer le revenu net total
+        // Recalculer l'IS
+        let is;
+        if (window.FiscalUtils) {
+            is = window.FiscalUtils.calculIS(resultatApresCAC);
+        } else {
+            const tauxIS = resultatApresCAC <= 42500 ? 0.15 : 0.25;
+            is = Math.round(resultatApresCAC * tauxIS);
+        }
+        
+        const resultatApresIS = Math.max(0, resultatApresCAC - is);
+        const dividendesNets = Math.max(0, resultatApresIS * 0.70 * partPDG); // 30% PFU
+        
         const revenuNetTotal = resultSAS.salaireNetApresIR + dividendesNets;
         
         return {
@@ -640,7 +706,7 @@ class SimulationsFiscales {
             cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(beneficeAssociePrincipal);
         } else {
             // Fallback
-            cotisationsSociales = Math.round(beneficeAssociePrincipal * 0.45);
+            cotisationsSociales = Math.round(beneficeAssociePrincipal * TAUX_CHARGES.TNS);
         }
         
         // Bénéfice après cotisations sociales
@@ -866,9 +932,14 @@ class SimulationsFiscales {
 // Exposer la classe au niveau global
 window.SimulationsFiscales = SimulationsFiscales;
 
+// Exposer les utilitaires
+window.TAUX_CHARGES = TAUX_CHARGES;
+window.calculerSalaireBrutMax = calculerSalaireBrutMax;
+window.ajusterRemuneration = ajusterRemuneration;
+
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v2.2 avec fix dividendes négatifs)");
+    console.log("Module SimulationsFiscales chargé (v2.3 avec garde-fous et ajustements automatiques)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady'));
 });
