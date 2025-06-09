@@ -2045,7 +2045,7 @@ if (statutId === 'micro') {
                     statutId === 'micro' ? '12.3% à 24.6% selon activité' :
                     statutId === 'sasu' || statutId === 'sas' || statutId === 'sa' || statutId === 'selas' ? '≈77% (22% salariales + 55% patronales)' :
                     statutId === 'sci' ? '17.2% (prélèvements sociaux sur revenus fonciers)' :
-                    '≈45% (TNS)'
+                    '≈30% (TNS)'
                 }</li>`;
     
     // Statuts à l'IS uniquement
@@ -2059,7 +2059,7 @@ if (statutId === 'micro') {
         // Cotisations TNS sur dividendes pour certains statuts
         if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl') {
             detailContent += `
-                <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Cotisations TNS sur dividendes :</strong> 45% sur la part > 10% du capital social</li>`;
+                <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Cotisations TNS sur dividendes :</strong> 30% sur la part > 10% du capital social</li>`;
         }
     }
     
