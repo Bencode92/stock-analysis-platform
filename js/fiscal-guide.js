@@ -1387,8 +1387,10 @@ function showCalculationDetails(statutId, simulationResults) {
                 </tr>
             </table>
         `;
-    } else if (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa') {
-        // Cas des structures avec dirigeant assimilé salarié (SASU, SAS, etc.)
+    } else if (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa' || statutId === 'selas') {
+        // Cas des structures avec dirigeant assimilé salarié (SASU, SAS, SA, SELAS)
+        const hasDividendes = result.sim.dividendes && result.sim.dividendes > 0;
+        
         detailContent = `
             <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - ${result.statut}</h2>
             
@@ -1440,6 +1442,7 @@ function showCalculationDetails(statutId, simulationResults) {
                 </tr>
             </table>
             
+            ${hasDividendes ? `
             <div class="detail-category">Dividendes</div>
             <table class="detail-table">
                 <tr>
@@ -1467,6 +1470,21 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>${formatter.format(result.sim.dividendesNets)}</td>
                 </tr>
             </table>
+            ` : `
+            <div class="detail-category">Dividendes</div>
+            <div class="mt-2 p-4 bg-blue-900 bg-opacity-30 rounded-lg">
+                <p class="text-sm">
+                    <i class="fas fa-info-circle text-blue-400 mr-2"></i>
+                    <strong>Aucune distribution de dividendes</strong> - 100% du résultat est versé en rémunération.
+                </p>
+                ${result.sim.resultatApresRemuneration < 0 ? `
+                <p class="text-sm mt-2 text-orange-400">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    Note : Le résultat après rémunération est négatif (${formatter.format(result.sim.resultatApresRemuneration)}), 
+                    ce qui indique que les charges sociales et la rémunération dépassent le résultat disponible.
+                </p>` : ''}
+            </div>
+            `}
             
             <div class="detail-category">Résultat final</div>
             <table class="detail-table">
@@ -1474,10 +1492,11 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>Salaire net après IR</td>
                     <td>${formatter.format(result.sim.salaireNetApresIR)}</td>
                 </tr>
+                ${hasDividendes ? `
                 <tr>
                     <td>+ Dividendes nets</td>
                     <td>${formatter.format(result.sim.dividendesNets)}</td>
-                </tr>
+                </tr>` : ''}
                 <tr>
                     <td><strong>= Revenu net total</strong></td>
                     <td><strong>${formatter.format(result.sim.revenuNetTotal)}</strong></td>
@@ -1488,8 +1507,10 @@ function showCalculationDetails(statutId, simulationResults) {
                 </tr>
             </table>
         `;
-    } else if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl') {
+    } else if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl' || statutId === 'sca') {
         // Cas des structures à l'IS avec un gérant TNS
+        const hasDividendes = result.sim.dividendes && result.sim.dividendes > 0;
+        
         detailContent = `
             <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - ${result.statut}</h2>
             
@@ -1538,6 +1559,7 @@ function showCalculationDetails(statutId, simulationResults) {
                 </tr>
             </table>
             
+            ${hasDividendes ? `
             <div class="detail-category">Dividendes</div>
             <table class="detail-table">
                 <tr>
@@ -1570,6 +1592,21 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>${formatter.format(result.sim.dividendesNets)}</td>
                 </tr>
             </table>
+            ` : `
+            <div class="detail-category">Dividendes</div>
+            <div class="mt-2 p-4 bg-blue-900 bg-opacity-30 rounded-lg">
+                <p class="text-sm">
+                    <i class="fas fa-info-circle text-blue-400 mr-2"></i>
+                    <strong>Aucune distribution de dividendes</strong> - 100% du résultat est versé en rémunération.
+                </p>
+                ${result.sim.resultatApresRemuneration < 0 ? `
+                <p class="text-sm mt-2 text-orange-400">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    Note : Le résultat après rémunération est négatif (${formatter.format(result.sim.resultatApresRemuneration)}), 
+                    ce qui indique que les cotisations TNS et la rémunération dépassent le résultat disponible.
+                </p>` : ''}
+            </div>
+            `}
             
             <div class="detail-category">Résultat final</div>
             <table class="detail-table">
@@ -1577,10 +1614,11 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>Revenu net après IR</td>
                     <td>${formatter.format(result.sim.revenuNetSalaire)}</td>
                 </tr>
+                ${hasDividendes ? `
                 <tr>
                     <td>+ Dividendes nets</td>
                     <td>${formatter.format(result.sim.dividendesNets)}</td>
-                </tr>
+                </tr>` : ''}
                 <tr>
                     <td><strong>= Revenu net total</strong></td>
                     <td><strong>${formatter.format(result.sim.revenuNetTotal)}</strong></td>
@@ -1661,7 +1699,7 @@ function showCalculationDetails(statutId, simulationResults) {
             </table>
         `;
     } else {
-        // Cas par défaut
+        // Cas par défaut (SCI et autres)
         detailContent = `
             <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - ${result.statut}</h2>
             
