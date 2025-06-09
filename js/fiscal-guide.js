@@ -1255,16 +1255,7 @@ function runComparison() {
 }
 
 
-// Fonction utilitaire pour calculer le TMI effectif - À ajouter en haut du fichier fiscal-guide.js
-function getTMI(revenu) {
-    if (revenu <= 11497) return 0;
-    if (revenu <= 26037) return 11;
-    if (revenu <= 74545) return 30;
-    if (revenu <= 160336) return 41;
-    return 45;
-}
-
-// Fonction showCalculationDetails modifiée
+// Fonction améliorée pour afficher le détail des calculs avec pourcentages
 function showCalculationDetails(statutId, simulationResults) {
     // Supprimer tout modal existant
     const existingModal = document.querySelector('.detail-modal');
@@ -1307,9 +1298,6 @@ function showCalculationDetails(statutId, simulationResults) {
         padding: 20px;
     `;
     
-    // Variable pour stocker le TMI effectif (sera calculé dans chaque branche)
-    let tmiEffectif = 0;
-    
     // Adapter l'affichage en fonction du statut juridique
     let detailContent = '';
     
@@ -1332,10 +1320,6 @@ function showCalculationDetails(statutId, simulationResults) {
             'BNC': 2.2
         };
         
-        // NOUVEAU : Calculer le TMI effectif
-        const revenuImposable = result.sim.revenuImposable || 0;
-        tmiEffectif = getTMI(revenuImposable);
-        
         detailContent = `
             <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - Micro-entreprise</h2>
             
@@ -1351,7 +1335,7 @@ function showCalculationDetails(statutId, simulationResults) {
                 </tr>
                 <tr>
                     <td>Abattement forfaitaire (${formatPercent(tauxAbattement[typeMicro])})</td>
-                    <td>${formatter.format(result.sim.ca * tauxAbattement[typeMicro] / 100)}</td>
+                    <td>${result.sim.abattement}</td>
                 </tr>
                 <tr>
                     <td>Versement libératoire${result.sim.versementLiberatoire ? ' ('+formatPercent(tauxVFL[typeMicro])+')' : ''}</td>
@@ -1390,11 +1374,7 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>${formatter.format(result.sim.revenuImposable)}</td>
                 </tr>
                 <tr>
-                    <td>Tranche marginale d'imposition atteinte</td>
-                    <td>${tmiEffectif}%</td>
-                </tr>
-                <tr>
-                    <td>Impôt sur le revenu${result.sim.modeExpert ? ' (calcul progressif)' : ' (TMI: '+tmiEffectif+'%)'}</td>
+                    <td>Impôt sur le revenu${result.sim.modeExpert ? ' (calcul progressif)' : ' (TMI '+formatPercent(result.sim.tmiActuel || 30)+')'}</td>
                     <td>${formatter.format(result.sim.impotRevenu)}</td>
                 </tr>
             </table>
@@ -1435,13 +1415,10 @@ function showCalculationDetails(statutId, simulationResults) {
         // Cas des structures avec dirigeant assimilé salarié
         const hasDividendes = result.sim.dividendes && result.sim.dividendes > 0;
         
-        // NOUVEAU : Calculer le TMI effectif sur le salaire net
-        tmiEffectif = getTMI(result.sim.salaireNet || 0);
-        
         // Calcul des taux
         const tauxChargesPatronales = (result.sim.chargesPatronales / result.sim.remuneration * 100) || 55;
         const tauxChargesSalariales = (result.sim.chargesSalariales / result.sim.remuneration * 100) || 22;
-        const tauxIR = result.sim.modeExpert ? `progressif, TMI: ${tmiEffectif}%` : `${tmiEffectif}%`;
+        const tauxIR = result.sim.modeExpert ? 'progressif' : formatPercent(result.sim.tmiActuel || 30);
         const tauxIS = result.sim.resultatApresRemuneration <= 42500 ? 15 : 25;
         
         detailContent = `
@@ -1564,12 +1541,9 @@ function showCalculationDetails(statutId, simulationResults) {
         // Cas des structures à l'IS avec un gérant TNS
         const hasDividendes = result.sim.dividendes && result.sim.dividendes > 0;
         
-        // NOUVEAU : Calculer le TMI effectif
-        tmiEffectif = getTMI(result.sim.remunerationNetteSociale || 0);
-        
         // Calcul des taux
         const tauxCotisationsTNS = (result.sim.cotisationsSociales / result.sim.remuneration * 100) || 45;
-        const tauxIR = result.sim.modeExpert ? `progressif, TMI: ${tmiEffectif}%` : `${tmiEffectif}%`;
+        const tauxIR = result.sim.modeExpert ? 'progressif' : formatPercent(result.sim.tmiActuel || 30);
         const tauxIS = result.sim.resultatApresRemuneration <= 42500 ? 15 : 25;
         const tauxCotTNSDiv = 45; // Cotisations TNS sur dividendes > 10% capital
         
@@ -1688,11 +1662,7 @@ function showCalculationDetails(statutId, simulationResults) {
     } else if (statutId === 'ei' || statutId === 'eurl' || statutId === 'snc') {
         // Cas des entreprises à l'IR
         const tauxCotisationsTNS = 45;
-        
-        // NOUVEAU : Calculer le TMI effectif
-        const revenuImposable = result.sim.beneficeImposable || result.sim.beneficeApresCotisations || 0;
-        tmiEffectif = getTMI(revenuImposable);
-        const tauxIR = result.sim.modeExpert ? `progressif, TMI: ${tmiEffectif}%` : `TMI: ${tmiEffectif}%`;
+        const tauxIR = result.sim.modeExpert ? 'progressif' : formatPercent(result.sim.tmiActuel || 30);
         
         detailContent = `
             <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - ${result.statut}</h2>
@@ -1764,10 +1734,7 @@ function showCalculationDetails(statutId, simulationResults) {
     } else if (statutId === 'sci') {
         // Cas particulier de la SCI
         const tauxPrelevementsSociaux = 17.2;
-        
-        // NOUVEAU : Calculer le TMI effectif
-        tmiEffectif = getTMI(result.sim.resultatFiscalAssocie || 0);
-        const tauxIR = result.sim.modeExpert ? `progressif, TMI: ${tmiEffectif}%` : `TMI: ${tmiEffectif}%`;
+        const tauxIR = result.sim.modeExpert ? 'progressif' : formatPercent(result.sim.tmiActuel || 30);
         
         detailContent = `
             <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - SCI</h2>
@@ -1842,9 +1809,7 @@ function showCalculationDetails(statutId, simulationResults) {
             </table>
         `;
     } else {
-        // Cas par défaut - calculer un TMI générique
-        tmiEffectif = getTMI(result.net || 0);
-        
+        // Cas par défaut
         detailContent = `
             <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - ${result.statut}</h2>
             
@@ -1878,7 +1843,7 @@ function showCalculationDetails(statutId, simulationResults) {
         `;
     }
     
-    // Ajouter une section récapitulative des taux utilisés - MODIFIÉE
+    // Ajouter une section récapitulative des taux utilisés
     detailContent += `
         <div class="detail-category mt-6">Récapitulatif des taux utilisés</div>
         <div class="mt-2 p-4 bg-green-900 bg-opacity-20 rounded-lg text-sm">
@@ -1892,8 +1857,7 @@ function showCalculationDetails(statutId, simulationResults) {
                 <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>PFU sur dividendes :</strong> 30% (17.2% prélèvements sociaux + 12.8% IR)</li>
                 ${statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl' ? 
                 '<li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Cotisations TNS sur dividendes :</strong> 45% sur la part > 10% du capital social</li>' : ''}
-                <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>TMI effectif :</strong> ${tmiEffectif}% (tranche atteinte)</li>
-                <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>TMI paramétré :</strong> ${result.sim.tmiActuel || 30}% (pour comparaison)</li>
+                <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>TMI utilisé :</strong> ${result.sim.tmiActuel || 30}%</li>
             </ul>
         </div>
     `;
@@ -1934,6 +1898,7 @@ function showCalculationDetails(statutId, simulationResults) {
             modal.remove();
         }
     });
+}
 
 // Configurer l'accordéon pour les sections d'informations fiscales
 function setupAccordion() {
