@@ -18,30 +18,32 @@ document.addEventListener('DOMContentLoaded', function() {
 function addCustomStyles() {
     const style = document.createElement('style');
     style.textContent = `
-        /* Conteneur du simulateur fiscal */
-        #fiscal-simulator {
-            max-width: 980px;
-            margin-left: 0;
-            margin-right: auto;
-        }
+/* Conteneur du simulateur fiscal */
+#fiscal-simulator {
+    max-width: 980px;
+    margin-left: 0;
+    margin-right: auto;
+}
 
-        /* Grille alignée à gauche */
-        #fiscal-simulator .grid {
-            justify-content: flex-start !important;
-        }
+/* Grille alignée à gauche */
+#fiscal-simulator .grid {
+    justify-content: flex-start !important;
+    justify-items: start !important;
+}
 
-        /* Options sans centrage automatique */
-        #sim-options-container {
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-        }
-        
-        /* Conteneur global */
-        #tab-content-container {
-            max-width: 1200px;
-            margin-left: 0;
-            margin-right: auto;
-        }
+/* Options sans centrage automatique */
+#sim-options-container {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    grid-column: 1 / -1; /* Force le bloc à occuper toute la largeur */
+}
+
+/* Conteneur global */
+#tab-content-container {
+    max-width: 1200px;
+    margin-left: 0;
+    margin-right: auto;
+}
     `;
     document.head.appendChild(style);
 }
@@ -171,7 +173,7 @@ function updateSimulatorInterface() {
     if (formContainer) {
         // Ajouter une nouvelle ligne pour les options de simulation
         const optionsRow = document.createElement('div');
-       optionsRow.className = 'col-span-1 md:col-span-2 mb-4 !ml-0 !mr-0';
+   optionsRow.className = 'col-span-full md:col-start-1 w-full mb-4 !ml-0 !mr-0';
         optionsRow.id = 'sim-options-container';
         optionsRow.innerHTML = `
             <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
