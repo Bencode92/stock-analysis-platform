@@ -44,7 +44,14 @@ function addCustomStyles() {
     margin-left: 0;
     margin-right: auto;
 }
-    `;
+/* — Tooltips plus compacts — */
+            .tooltiptext {
+                font-size: 0.75rem;      /* 12 px */
+                line-height: 1rem;       /* 16 px */
+                padding: 0.4rem 0.6rem;  /* réduit le carré blanc */
+                max-width: 220px;        /* évite les bulles trop larges */
+            }
+        `;
     document.head.appendChild(style);
 }
 
