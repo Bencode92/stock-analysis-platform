@@ -296,50 +296,55 @@ function initUIEvents() {
                             <p class="mb-6">Ce guide présente les principales informations fiscales à connaître pour chaque forme juridique, avec un simulateur simplifié.</p>
                             
                             <!-- Simulateur simplifié -->
-                            <div id="fiscal-simulator" class="max-w-4xl mx-auto bg-blue-900 bg-opacity-30 p-6 rounded-xl">
-                                <h2 class="text-2xl font-bold text-green-400 mb-4">Simulation rapide par statut juridique</h2>
-                                
-                                <!-- Formulaire de saisie -->
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                    <div>
-                                        <label class="block text-gray-300 mb-2">Chiffre d'affaires annuel</label>
-                                        <div class="relative">
-                                            <input type="number" id="sim-ca" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white" value="50000">
-                                            <span class="absolute right-3 top-2 text-gray-400">€</span>
+                            <div id="fiscal-simulator" class="max-w-4xl mx-auto">
+                                <div class="bg-blue-900 bg-opacity-40 p-6 rounded-xl border border-green-400 border-opacity-20">
+                                    <h2 class="text-2xl font-bold mb-6 text-green-400">
+                                        <i class="fas fa-calculator mr-2"></i>Simulation rapide par statut juridique
+                                    </h2>
+                                    
+                                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-x-12 md:gap-y-8 lg:gap-x-16">
+                                        <!-- Chiffre d'affaires -->
+                                        <div class="flex flex-col space-y-2 min-w-[260px]">
+                                            <label for="sim-ca" class="text-gray-200 font-medium">
+                                                <i class="fas fa-euro-sign mr-2 text-green-400"></i>Chiffre d'affaires annuel
+                                            </label>
+                                            <div class="relative">
+                                                <input id="sim-ca" type="number" value="100000"
+                                                       class="peer w-full bg-blue-800/20 border border-blue-600 rounded-lg py-3 pl-6 pr-14 text-xl tracking-wide focus:outline-none focus:ring-2 focus:ring-green-400/60">
+                                                <span class="absolute inset-y-0 right-4 flex items-center text-gray-300 peer-focus:text-green-300">€</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Taux de marge -->
+                                        <div class="flex flex-col space-y-2 min-w-[260px]">
+                                            <label for="sim-marge" class="text-gray-200 font-medium">
+                                                <i class="fas fa-percentage mr-2 text-amber-400"></i>Taux de marge (%)
+                                            </label>
+                                            <div class="relative">
+                                                <input id="sim-marge" type="number" value="30" min="0" max="100"
+                                                       class="peer w-full bg-blue-800/20 border border-blue-600 rounded-lg py-3 pl-6 pr-14 text-xl tracking-wide focus:outline-none focus:ring-2 focus:ring-green-400/60">
+                                                <span class="absolute inset-y-0 right-4 flex items-center text-gray-300 peer-focus:text-green-300">%</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Répartition salaire -->
+                                        <div class="flex flex-col space-y-2 min-w-[260px]">
+                                            <label for="sim-salaire" class="text-gray-200 font-medium">
+                                                <i class="fas fa-coins mr-2 text-purple-400"></i>Répartition salaire (%)
+                                            </label>
+                                            <div class="relative">
+                                                <input id="sim-salaire" type="number" value="70" min="0" max="100"
+                                                       class="peer w-full bg-blue-800/20 border border-blue-600 rounded-lg py-3 pl-6 pr-14 text-xl tracking-wide focus:outline-none focus:ring-2 focus:ring-green-400/60">
+                                                <span class="absolute inset-y-0 right-4 flex items-center text-gray-300 peer-focus:text-green-300">%</span>
+                                            </div>
                                         </div>
                                     </div>
                                     
-                                    <div>
-                                        <label class="block text-gray-300 mb-2">Taux de marge (%)</label>
-                                        <div class="relative">
-                                            <input type="number" id="sim-marge" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white" value="30" min="0" max="100">
-                                            <span class="absolute right-3 top-2 text-gray-400">%</span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div>
-                                        <label class="block text-gray-300 mb-2">Répartition salaire (%)</label>
-                                        <div class="relative">
-                                            <input type="number" id="sim-salaire" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white" value="70" min="0" max="100">
-                                            <span class="absolute right-3 top-2 text-gray-400">%</span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div>
-                                        <label class="block text-gray-300 mb-2">Votre TMI actuelle (%)</label>
-                                        <div class="relative">
-                                            <select id="sim-tmi" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
-                                                <option value="0">Non imposable</option>
-                                                <option value="11">11%</option>
-                                                <option value="30" selected>30%</option>
-                                                <option value="41">41%</option>
-                                                <option value="45">45%</option>
-                                            </select>
-                                        </div>
-                                    </div>
+                                    <!-- TMI caché -->
+                                    <input type="hidden" id="sim-tmi" value="30">
                                 </div>
                                 
-                                <div class="flex justify-center mb-6">
+                                <div class="flex justify-center mb-6 mt-6">
                                     <button id="sim-compare-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-medium py-3 px-6 rounded-lg transition">
                                         <i class="fas fa-calculator mr-2"></i> Comparer les statuts
                                     </button>
