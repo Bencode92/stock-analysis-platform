@@ -1,5 +1,5 @@
 // fiscal-utils.js - Utilitaires pour les calculs fiscaux
-// Version 1.3 - Fix IS négatif et garde-fous fiscaux
+// Version 1.4 - Correction formule cotisations TNS
 
 const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS = 2,9%
 
@@ -87,13 +87,15 @@ class FiscalUtils {
         return Math.round(trancheA + trancheB + csg + crds);
     }
     
-    // Calcul des cotisations TNS sur bénéfice brut (formule fermée)
+    // Calcul des cotisations TNS sur bénéfice brut - CORRECTION: formule simplifiée
     static cotisationsTNSSurBenefice(beneficeBrut) {
         // Garde-fou: pas de cotisations négatives
         if (beneficeBrut <= 0) return 0;
         
+        // CORRECTION: Calcul simple et direct - 45% du bénéfice
+        // Plus de formule étrange avec division par (1 + tauxGlobal)
         const tauxGlobal = 0.45;
-        return Math.round(beneficeBrut * tauxGlobal / (1 + tauxGlobal));
+        return Math.round(beneficeBrut * tauxGlobal);
     }
     
     // Calcul des cotisations TNS sur dividendes
@@ -182,6 +184,6 @@ window.FiscalUtils = FiscalUtils;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module FiscalUtils chargé (v1.3 avec garde-fous fiscaux)");
+    console.log("Module FiscalUtils chargé (v1.4 avec correction formule cotisations TNS)");
     document.dispatchEvent(new CustomEvent('fiscalUtilsReady'));
 });
