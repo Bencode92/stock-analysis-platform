@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 2.3 - Ajout des garde-fous pour éviter les déficits impossibles
+// Version 2.4 - Corrections calculs IR micro et cotisations TNS EURL
 
 // Constantes pour les taux de charges sociales
 const TAUX_CHARGES = {
@@ -74,7 +74,7 @@ class SimulationsFiscales {
             'BNC': 0.246 // 24.6% (mise à jour 2025)
         };
         
-        // Taux de versement libératoire de l'IR
+        // Taux de versement fiscal libératoire (VFL)
         const tauxVFL = {
             'BIC_VENTE': 0.01, // 1%
             'BIC_SERVICE': 0.017, // 1.7%
@@ -111,11 +111,9 @@ class SimulationsFiscales {
         if (versementLiberatoire) {
             // Calcul avec versement libératoire
             impotRevenu = Math.round(ca * tauxVFL[typeEffectif]);
-        } else if (modeExpert && window.FiscalUtils) {
-            // Utiliser le calcul progressif si le mode expert est activé
-            impotRevenu = window.FiscalUtils.calculateProgressiveIR(revenuImposable);
         } else {
-            // Utiliser le calcul simplifié (TMI)
+            // CORRECTION 1: Pour la micro, utiliser TOUJOURS le TMI simple
+            // car le revenu imposable est déjà après abattement forfaitaire
             impotRevenu = Math.round(revenuImposable * (tmiActuel / 100));
         }
         
@@ -133,7 +131,9 @@ class SimulationsFiscales {
             impotRevenu: impotRevenu,
             revenuNetApresImpot: revenuNetApresImpot,
             ratioNetCA: (revenuNetApresImpot / ca) * 100,
-            versementLiberatoire: versementLiberatoire
+            versementLiberatoire: versementLiberatoire,
+            modeExpert: modeExpert,
+            tmiActuel: tmiActuel
         };
     }
     
@@ -147,7 +147,7 @@ class SimulationsFiscales {
         // Utiliser la fonction utilitaire pour calculer les cotisations TNS
         let cotisationsSociales;
         if (window.FiscalUtils) {
-            cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(beneficeAvantCotisations);
+            cotisationsSociales = window.FiscalUtils.cotisationsTNSSurBenefice(beneficeAvantCotisations);
         } else {
             // Fallback si l'utilitaire n'est pas disponible
             cotisationsSociales = Math.round(beneficeAvantCotisations * TAUX_CHARGES.TNS);
@@ -196,19 +196,21 @@ class SimulationsFiscales {
         // Simulation selon le régime d'imposition
         if (!optionIS) {
             // Régime IR (transparence fiscale)
-            const resultatApresRemuneration = resultatEntreprise - remuneration;
             
-            // Utiliser la fonction utilitaire pour calculer les cotisations TNS
+            // CORRECTION 2: Pour l'EURL IR, les cotisations TNS se calculent sur le bénéfice total
+            // et non pas seulement sur la rémunération prélevée
+            const baseCalculTNS = resultatEntreprise; // Base = totalité du bénéfice
+            
             let cotisationsSociales;
             if (window.FiscalUtils) {
-                cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(remuneration);
+                cotisationsSociales = window.FiscalUtils.cotisationsTNSSurBenefice(baseCalculTNS);
             } else {
                 // Fallback si l'utilitaire n'est pas disponible
-                cotisationsSociales = Math.round(remuneration * TAUX_CHARGES.TNS);
+                cotisationsSociales = Math.round(baseCalculTNS * TAUX_CHARGES.TNS);
             }
             
-            // Bénéfice imposable (remuneration + résultat après rémunération)
-            const beneficeImposable = remuneration - cotisationsSociales + resultatApresRemuneration;
+            // Le bénéfice imposable est le résultat après déduction des cotisations sociales
+            const beneficeImposable = resultatEntreprise - cotisationsSociales;
             
             // Calcul de l'impôt sur le revenu
             let impotRevenu;
@@ -230,13 +232,14 @@ class SimulationsFiscales {
                 tauxMarge: tauxMarge * 100 + '%',
                 resultatAvantRemuneration: resultatEntreprise,
                 remuneration: remuneration,
-                resultatApresRemuneration: resultatApresRemuneration,
+                resultatApresRemuneration: 0, // Pas de distinction en IR
                 cotisationsSociales: cotisationsSociales,
                 beneficeImposable: beneficeImposable,
                 impotRevenu: impotRevenu,
                 revenuNetApresImpot: revenuNetApresImpot,
                 revenuNetTotal: revenuNetApresImpot,
-                ratioNetCA: (revenuNetApresImpot / ca) * 100
+                ratioNetCA: (revenuNetApresImpot / ca) * 100,
+                baseCalculTNS: baseCalculTNS
             };
         } else {
             // Régime IS
@@ -442,7 +445,8 @@ class SimulationsFiscales {
             revenuNetTotal: revenuNetTotal,
             ratioNetCA: (revenuNetTotal / ca) * 100,
             secteur: secteur,
-            taille: taille
+            taille: taille,
+            message: ajustement.message
         };
     }
 
@@ -603,7 +607,8 @@ class SimulationsFiscales {
             ratioNetCA: (revenuNetTotal / ca) * 100,
             gerantMajoritaire: gerantMajoritaire,
             secteur: secteur,
-            taille: taille
+            taille: taille,
+            message: ajustement ? ajustement.message : null
         };
     }
 
@@ -939,7 +944,7 @@ window.ajusterRemuneration = ajusterRemuneration;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v2.3 avec garde-fous et ajustements automatiques)");
+    console.log("Module SimulationsFiscales chargé (v2.4 avec corrections IR micro et TNS EURL)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady'));
 });
