@@ -1,9 +1,9 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 2.6 - Fix calcul SCI avec CSG déductible et barème progressif IR
+// Version 2.7 - Fix taux TNS : 30% du brut (≈45% du net)
 
 // Constantes pour les taux de charges sociales
 const TAUX_CHARGES = {
-    TNS: 0.45,                    // Taux global TNS (gérant majoritaire)
+    TNS: 0.30,                   // CORRIGÉ: TNS = 30% du BRUT (≈45% du net)
     SALARIAL: 0.22,              // Charges salariales assimilé salarié
     PATRONAL_BASE: 0.45,         // Charges patronales base (PME)
     PATRONAL_MOYEN: 0.55,        // Charges patronales moyennes
@@ -322,7 +322,7 @@ class SimulationsFiscales {
                 } else {
                     // Fallback
                     const baseTNSDiv = Math.max(0, dividendes - 0.10 * capitalSocial);
-                    cotTNSDiv = Math.round(baseTNSDiv * 0.45); // Taux moyen 45% (barème TNS)
+                    cotTNSDiv = Math.round(baseTNSDiv * TAUX_CHARGES.TNS); // Utilise le taux corrigé
                 }
             }
             
@@ -1029,7 +1029,7 @@ window.ajusterRemuneration = ajusterRemuneration;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v2.6 avec fix SCI - CSG déductible et barème progressif)");
+    console.log("Module SimulationsFiscales chargé (v2.7 avec fix taux TNS: 30% du brut)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady'));
 });
