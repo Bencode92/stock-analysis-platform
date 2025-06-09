@@ -230,42 +230,51 @@ function updateSimulatorInterface() {
         <i class="fas fa-info-circle mr-2"></i> Par défaut, tous les statuts juridiques sont inclus dans la simulation. Utilisez les filtres ci-dessous pour comparer des groupes spécifiques.
     </div>
     
-    <div class="flex flex-col md:flex-row gap-4 items-start md:items-center mb-4">
-        <div class="flex-1">
-            <label class="block text-gray-300 mb-2">Statuts à comparer</label>
-            <select id="sim-status-filter" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
-                <option value="common">Statuts courants (5)</option>
-                <option value="all" selected>Tous les statuts (13)</option>
-                <option value="is_only">IS uniquement</option>
-                <option value="ir_only">IR uniquement</option>
-                <option value="commercial">Statuts commerciaux</option>
-                <option value="liberal">Professions libérales</option>
-                <option value="custom">Personnalisé</option>
-            </select>
-        </div>
-        
-        <div class="flex-1">
-            <label class="block text-gray-300 mb-2">Fonctionnalités activées</label>
-            <div class="flex gap-4">
-                <label class="flex items-center">
-                    <input type="hidden" id="sim-expert-mode" checked>
-                    <span class="text-sm"><i class="fas fa-chart-line mr-1 text-pink-400"></i>Mode expert</span>
-                </label>
-                
-                <label class="flex items-center">
-                    <input type="checkbox" id="use-optimal-ratio" class="mr-1" checked>
-                    <span class="text-sm"><i class="fas fa-magic mr-1 text-purple-400"></i>Ratio optimal</span>
-                </label>
-                
-                <label class="flex items-center">
-                    <input type="checkbox" id="use-avg-charge-rate" class="mr-1" checked>
-                    <span class="text-sm"><i class="fas fa-percentage mr-1 text-amber-400"></i>Frais réels</span>
-                </label>
-                
-                <label class="flex items-center">
-                    <input type="checkbox" id="sarl-gerant-minoritaire" class="mr-1">
-                    <span class="text-sm"><i class="fas fa-users mr-1 text-blue-400"></i>Gérant min.</span>
-                </label>
+    <div class="mb-4">
+        <label class="block text-gray-300 mb-2">Fonctionnalités activées</label>
+        <div class="flex flex-wrap gap-3">
+            <div class="flex items-center">
+                <input type="hidden" id="sim-expert-mode" checked>
+                <span class="bg-pink-900 bg-opacity-20 px-3 py-1 rounded-md text-pink-300 font-medium text-sm">
+                    <i class="fas fa-chart-line mr-1"></i>Mode expert
+                </span>
+                <span class="info-tooltip ml-2">
+                    <i class="fas fa-question-circle text-gray-400"></i>
+                    <span class="tooltiptext">Le mode expert utilise le calcul par tranches progressives d'IR plutôt que le TMI simple.</span>
+                </span>
+            </div>
+            
+            <div class="flex items-center">
+                <input type="checkbox" id="use-optimal-ratio" class="mr-2 h-4 w-4" checked>
+                <span class="bg-purple-900 bg-opacity-20 px-3 py-1 rounded-md text-purple-300 font-medium text-sm">
+                    <i class="fas fa-magic mr-1"></i>Ratio optimal
+                </span>
+                <span class="info-tooltip ml-2">
+                    <i class="fas fa-question-circle text-gray-400"></i>
+                    <span class="tooltiptext">Optimise automatiquement le ratio entre rémunération et dividendes pour maximiser le revenu net.</span>
+                </span>
+            </div>
+            
+            <div class="flex items-center">
+                <input type="checkbox" id="use-avg-charge-rate" class="mr-2 h-4 w-4" checked>
+                <span class="bg-amber-900 bg-opacity-20 px-3 py-1 rounded-md text-amber-300 font-medium text-sm">
+                    <i class="fas fa-percentage mr-1"></i>Frais réels
+                </span>
+                <span class="info-tooltip ml-2">
+                    <i class="fas fa-question-circle text-gray-400"></i>
+                    <span class="tooltiptext">Utilise le taux de charge pour calculer les frais déductibles réels plutôt qu'un taux de marge fixe.</span>
+                </span>
+            </div>
+            
+            <div class="flex items-center">
+                <input type="checkbox" id="sarl-gerant-minoritaire" class="mr-2 h-4 w-4">
+                <span class="bg-blue-900 bg-opacity-20 px-3 py-1 rounded-md text-blue-300 font-medium text-sm">
+                    <i class="fas fa-users mr-1"></i>Gérant min.
+                </span>
+                <span class="info-tooltip ml-2">
+                    <i class="fas fa-question-circle text-gray-400"></i>
+                    <span class="tooltiptext">Le gérant détient moins de 50% des parts sociales (assimilé salarié).</span>
+                </span>
             </div>
         </div>
     </div>
