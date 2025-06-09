@@ -1,5 +1,5 @@
 // fiscal-utils.js - Utilitaires pour les calculs fiscaux
-// Version 1.4 - Correction formule cotisations TNS
+// Version 1.5 - Harmonisation taux TNS à 30% du brut
 
 const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS = 2,9%
 
@@ -74,17 +74,10 @@ class FiscalUtils {
         };
     }
     
-    // Calcul des cotisations TNS avec barème progressif
+    // Calcul des cotisations TNS : approximation 30 % du BRUT
     static calculCotisationsTNS(rem) {
-        // Garde-fou: pas de cotisations négatives
-        if (rem <= 0) return 0;
-        
-        const PASS = 47100;              // Plafond annuel SS 2025
-        const trancheA = Math.min(rem, PASS) * 0.28;   // maladie + vieillesse de base
-        const trancheB = Math.max(0, rem - PASS) * 0.17;
-        const csg = rem * 0.092;
-        const crds = rem * 0.005;
-        return Math.round(trancheA + trancheB + csg + crds);
+        if (rem <= 0) return 0;          // garde-fou
+        return Math.round(rem * 0.30);   // ≈ 45 % du NET
     }
     
     // Calcul des cotisations TNS sur bénéfice brut - CORRECTION: formule simplifiée
@@ -92,8 +85,7 @@ class FiscalUtils {
         // Garde-fou: pas de cotisations négatives
         if (beneficeBrut <= 0) return 0;
         
-        // CORRECTION: Calcul simple et direct - 45% du bénéfice
-        // Plus de formule étrange avec division par (1 + tauxGlobal)
+        // TNS ≈ 30 % du bénéfice brut (≈ 45 % du net)
         const tauxGlobal = 0.30;
         return Math.round(beneficeBrut * tauxGlobal);
     }
@@ -184,6 +176,6 @@ window.FiscalUtils = FiscalUtils;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module FiscalUtils chargé (v1.4 avec correction formule cotisations TNS)");
+    console.log("Module FiscalUtils chargé (v1.5 - Taux TNS harmonisé à 30% du brut)");
     document.dispatchEvent(new CustomEvent('fiscalUtilsReady'));
 });
