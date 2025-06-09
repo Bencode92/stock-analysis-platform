@@ -183,61 +183,52 @@ function updateSimulatorInterface() {
    optionsRow.className = 'col-span-full md:col-start-1 w-full mb-4 !ml-0 !mr-0';
         optionsRow.id = 'sim-options-container';
         optionsRow.innerHTML = `
-            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
-                <h3 class="font-medium mb-3 text-green-400">Options de simulation</h3>
-                
-                <!-- Message d'information sur les statuts -->
-                <div class="status-info-message mb-4">
-                    <i class="fas fa-info-circle mr-2"></i> Par défaut, tous les statuts juridiques sont inclus dans la simulation. Utilisez les filtres ci-dessous pour comparer des groupes spécifiques.
-                </div>
-                
-                <!-- Filtres de statuts avec boutons visuels -->
-                <div class="mb-4">
-                    <label class="block text-gray-300 mb-2">Filtres rapides</label>
-                    <div class="flex flex-wrap gap-2" id="status-filter-buttons">
-                        <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="common">
-                            <i class="fas fa-star mr-1"></i> Recommandés
-                        </button>
-                        <button class="status-filter-btn px-3 py-2 rounded-md bg-green-500 text-gray-900 font-medium" data-filter="all">
-                            <i class="fas fa-list mr-1"></i> Tous
-                        </button>
-                        <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="is_only">
-                            <i class="fas fa-building mr-1"></i> IS uniquement
-                        </button>
-                        <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="ir_only">
-                            <i class="fas fa-user mr-1"></i> IR uniquement
-                        </button>
-                        <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="commercial">
-                            <i class="fas fa-store mr-1"></i> Commercial
-                        </button>
-                        <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="liberal">
-                            <i class="fas fa-briefcase-medical mr-1"></i> Libéral
-                        </button>
-                        <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="custom">
-                            <i class="fas fa-sliders-h mr-1"></i> Personnalisé
-                        </button>
-                    </div>
-                </div>
-                
-<div class="grid grid-cols-1 gap-4" id="sim-options">
-                    <div>
-                        <label class="block text-gray-300 mb-2">Statuts à comparer</label>
-                        <select id="sim-status-filter" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
-                            <option value="common">Statuts courants (5)</option>
-                            <option value="all" selected>Tous les statuts (13)</option>
-                            <option value="is_only">IS uniquement</option>
-                            <option value="ir_only">IR uniquement</option>
-                            <option value="commercial">Statuts commerciaux</option>
-                            <option value="liberal">Professions libérales</option>
-                            <option value="custom">Personnalisé</option>
-                        </select>
-                    </div>
 <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
     <h3 class="font-medium mb-3 text-green-400">Options de simulation</h3>
     
-    <div class="status-info-message mb-4">
-        <i class="fas fa-info-circle mr-2"></i> Par défaut, tous les statuts juridiques sont inclus dans la simulation. Utilisez les filtres ci-dessous pour comparer des groupes spécifiques.
+    <!-- Filtres de statuts avec boutons visuels -->
+    <div class="mb-4">
+        <label class="block text-gray-300 mb-2">Filtres rapides</label>
+        <div class="flex flex-wrap gap-2" id="status-filter-buttons">
+            <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="common">
+                <i class="fas fa-star mr-1"></i> Recommandés
+            </button>
+            <button class="status-filter-btn px-3 py-2 rounded-md bg-green-500 text-gray-900 font-medium" data-filter="all">
+                <i class="fas fa-list mr-1"></i> Tous
+            </button>
+            <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="is_only">
+                <i class="fas fa-building mr-1"></i> IS uniquement
+            </button>
+            <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="ir_only">
+                <i class="fas fa-user mr-1"></i> IR uniquement
+            </button>
+            <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="commercial">
+                <i class="fas fa-store mr-1"></i> Commercial
+            </button>
+            <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="liberal">
+                <i class="fas fa-briefcase-medical mr-1"></i> Libéral
+            </button>
+            <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="custom">
+                <i class="fas fa-sliders-h mr-1"></i> Personnalisé
+            </button>
+        </div>
     </div>
+    
+    <div class="grid grid-cols-1 gap-4" id="sim-options">
+        <div>
+            <label class="block text-gray-300 mb-2">Statuts à comparer</label>
+            <select id="sim-status-filter" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
+                <option value="common">Statuts courants (5)</option>
+                <option value="all" selected>Tous les statuts (13)</option>
+                <option value="is_only">IS uniquement</option>
+                <option value="ir_only">IR uniquement</option>
+                <option value="commercial">Statuts commerciaux</option>
+                <option value="liberal">Professions libérales</option>
+                <option value="custom">Personnalisé</option>
+            </select>
+        </div>
+    </div>
+</div>
 <div class="mb-4">
   <label class="block text-gray-300 mb-2">Fonctionnalités activées</label>
 
