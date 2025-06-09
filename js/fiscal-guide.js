@@ -1726,7 +1726,7 @@ if (statutId === 'micro') {
         `;
     } else if (statutId === 'ei' || statutId === 'eurl' || statutId === 'snc') {
         // Cas des entreprises à l'IR
-        const tauxCotisationsTNS = 45;
+        const tauxCotisationsTNS = 30;
         const revenuImposable = result.sim.beneficeImposable || result.sim.beneficeApresCotisations || 0;
         
         // NOUVEAU : Calculer le TMI effectif
@@ -2285,7 +2285,7 @@ function getStatutFiscalInfo(statutId) {
         `,
         'EI': `
             <p class="mb-2"><strong>Régime fiscal :</strong> IR, imposition sur le bénéfice</p>
-            <p class="mb-2"><strong>Cotisations sociales :</strong> ~45% du bénéfice</p>
+            <p class="mb-2"><strong>Cotisations sociales :</strong> ~30% du bénéfice</p>
             <p class="mb-2"><strong>Avantages :</strong> Simplicité de gestion, frais réels déductibles</p>
             <p class="mb-2"><strong>Inconvénients :</strong> Pas de distinction entre patrimoine privé/pro</p>
         `,
@@ -2293,7 +2293,7 @@ function getStatutFiscalInfo(statutId) {
             <p class="mb-2"><strong>Régimes fiscaux possibles :</strong> IR par défaut ou option IS</p>
             <p class="mb-2"><strong>IR :</strong> Imposition sur la totalité du bénéfice</p>
             <p class="mb-2"><strong>IS :</strong> Impôt sur les sociétés + PFU sur dividendes</p>
-            <p class="mb-2"><strong>Cotisations sociales :</strong> Environ 45% de la rémunération du gérant (TNS)</p>
+            <p class="mb-2"><strong>Cotisations sociales :</strong> Environ 30% de la rémunération du gérant (TNS)</p>
             <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
         `,
         'SASU': `
