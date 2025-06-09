@@ -1309,79 +1309,99 @@ function showCalculationDetails(statutId, simulationResults) {
     // Adapter l'affichage en fonction du statut juridique
     let detailContent = '';
     
-    if (statutId === 'micro') {
-        // Récupérer le type de micro et les taux associés
-        const typeMicro = result.sim.typeMicro || 'BIC_SERVICE';
-        const revenuImposable = result.sim.revenuImposable || 0;
+if (statutId === 'micro') {
+    // Récupérer le type de micro et les taux associés
+    const typeMicro = result.sim.typeMicro || 'BIC_SERVICE';
+    const revenuImposable = result.sim.revenuImposable || 0;
+    const versementLiberatoire = result.sim.versementLiberatoire || false;
+    
+    // NOUVEAU : Calculer le TMI effectif SEULEMENT si pas de versement libératoire
+    const tmiEffectif = versementLiberatoire ? null : getTMI(revenuImposable);
+    
+    const tauxCotisations = {
+        'BIC_VENTE': 12.3,
+        'BIC_SERVICE': 21.2,
+        'BNC': 24.6
+    };
+    const tauxAbattement = {
+        'BIC_VENTE': 71,
+        'BIC_SERVICE': 50,
+        'BNC': 34
+    };
+    const tauxVFL = {
+        'BIC_VENTE': 1,
+        'BIC_SERVICE': 1.7,
+        'BNC': 2.2
+    };
+    
+    detailContent = `
+        <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - Micro-entreprise</h2>
         
-        // NOUVEAU : Calculer le TMI effectif
-        const tmiEffectif = getTMI(revenuImposable);
+        <div class="detail-category">Données de base</div>
+        <table class="detail-table">
+            <tr>
+                <td>Chiffre d'affaires</td>
+                <td>${formatter.format(result.sim.ca)}</td>
+            </tr>
+            <tr>
+                <td>Type de micro-entreprise</td>
+                <td>${result.sim.typeMicro || 'BIC'}</td>
+            </tr>
+            <tr>
+                <td>Abattement forfaitaire (${formatPercent(tauxAbattement[typeMicro])})</td>
+                <td>${formatter.format(result.sim.ca * tauxAbattement[typeMicro] / 100)}</td>
+            </tr>
+            <tr>
+                <td>Versement libératoire de l'IR</td>
+                <td>${versementLiberatoire ? 
+                    `<span class="text-green-400">Activé (${formatPercent(tauxVFL[typeMicro])} du CA)</span>` : 
+                    '<span class="text-gray-400">Non activé</span>'}</td>
+            </tr>
+        </table>
         
-        const tauxCotisations = {
-            'BIC_VENTE': 12.3,
-            'BIC_SERVICE': 21.2,
-            'BNC': 24.6
-        };
-        const tauxAbattement = {
-            'BIC_VENTE': 71,
-            'BIC_SERVICE': 50,
-            'BNC': 34
-        };
-        const tauxVFL = {
-            'BIC_VENTE': 1,
-            'BIC_SERVICE': 1.7,
-            'BNC': 2.2
-        };
+        <div class="detail-category">Charges sociales</div>
+        <table class="detail-table">
+            <tr>
+                <td>Base de calcul</td>
+                <td>${formatter.format(result.sim.ca)}</td>
+            </tr>
+            <tr>
+                <td>Taux de cotisations sociales</td>
+                <td>${formatPercent(tauxCotisations[typeMicro])}</td>
+            </tr>
+            <tr>
+                <td>Montant des cotisations sociales</td>
+                <td>${formatter.format(result.sim.cotisationsSociales)}</td>
+            </tr>
+            ${result.sim.cfp ? `<tr>
+                <td>Contribution à la Formation Professionnelle (0.1% à 0.3%)</td>
+                <td>${formatter.format(result.sim.cfp)}</td>
+            </tr>` : ''}
+            ${result.sim.cfe ? `<tr>
+                <td>Cotisation Foncière des Entreprises (forfait)</td>
+                <td>${formatter.format(result.sim.cfe)}</td>
+            </tr>` : ''}
+        </table>
         
-        detailContent = `
-            <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - Micro-entreprise</h2>
-            
-            <div class="detail-category">Données de base</div>
-            <table class="detail-table">
+        <div class="detail-category">Impôt sur le revenu</div>
+        <table class="detail-table">
+            ${versementLiberatoire ? `
                 <tr>
-                    <td>Chiffre d'affaires</td>
-                    <td>${formatter.format(result.sim.ca)}</td>
+                    <td>Versement libératoire de l'IR</td>
+                    <td>${formatPercent(tauxVFL[typeMicro])} du CA</td>
                 </tr>
                 <tr>
-                    <td>Type de micro-entreprise</td>
-                    <td>${result.sim.typeMicro || 'BIC'}</td>
+                    <td>Montant du versement libératoire</td>
+                    <td>${formatter.format(result.sim.impotRevenu)}</td>
                 </tr>
                 <tr>
-                    <td>Abattement forfaitaire (${formatPercent(tauxAbattement[typeMicro])})</td>
-                    <td>${result.sim.abattement}</td>
+                    <td colspan="2" class="text-xs text-gray-400 italic">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Avec le versement libératoire, l'IR est définitivement réglé. 
+                        Le barème progressif ne s'applique pas.
+                    </td>
                 </tr>
-                <tr>
-                    <td>Versement libératoire${result.sim.versementLiberatoire ? ' ('+formatPercent(tauxVFL[typeMicro])+')' : ''}</td>
-                    <td>${result.sim.versementLiberatoire ? 'Activé' : 'Désactivé'}</td>
-                </tr>
-            </table>
-            
-            <div class="detail-category">Charges sociales</div>
-            <table class="detail-table">
-                <tr>
-                    <td>Base de calcul</td>
-                    <td>${formatter.format(result.sim.ca)}</td>
-                </tr>
-                <tr>
-                    <td>Taux de cotisations sociales</td>
-                    <td>${formatPercent(tauxCotisations[typeMicro])}</td>
-                </tr>
-                <tr>
-                    <td>Montant des cotisations sociales (${formatPercent(tauxCotisations[typeMicro])} du CA)</td>
-                    <td>${formatter.format(result.sim.cotisationsSociales)}</td>
-                </tr>
-                ${result.sim.cfp ? `<tr>
-                    <td>Contribution à la Formation Professionnelle (0.1% à 0.3%)</td>
-                    <td>${formatter.format(result.sim.cfp)}</td>
-                </tr>` : ''}
-                ${result.sim.cfe ? `<tr>
-                    <td>Cotisation Foncière des Entreprises (forfait)</td>
-                    <td>${formatter.format(result.sim.cfe)}</td>
-                </tr>` : ''}
-            </table>
-            
-            <div class="detail-category">Impôt sur le revenu</div>
-            <table class="detail-table">
+            ` : `
                 <tr>
                     <td>Revenu imposable après abattement (${formatPercent(100-tauxAbattement[typeMicro])} du CA)</td>
                     <td>${formatter.format(result.sim.revenuImposable)}</td>
@@ -1391,43 +1411,65 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>${tmiEffectif}%</td>
                 </tr>
                 <tr>
-                    <td>Impôt sur le revenu${result.sim.modeExpert ? ' (calcul progressif, TMI: '+tmiEffectif+'%)' : ' (TMI: '+tmiEffectif+'%)'}</td>
+                    <td>Impôt sur le revenu${result.sim.modeExpert ? ' (calcul progressif)' : ' (TMI appliquée)'}</td>
                     <td>${formatter.format(result.sim.impotRevenu)}</td>
                 </tr>
-            </table>
-            
-            <div class="detail-category">Résultat final</div>
-            <table class="detail-table">
-                <tr>
-                    <td>Chiffre d'affaires</td>
-                    <td>${formatter.format(result.sim.ca)}</td>
-                </tr>
-                <tr>
-                    <td>- Cotisations sociales (${formatPercent(tauxCotisations[typeMicro])})</td>
-                    <td>${formatter.format(result.sim.cotisationsSociales)}</td>
-                </tr>
-                ${result.sim.cfp ? `<tr>
-                    <td>- CFP</td>
-                    <td>${formatter.format(result.sim.cfp)}</td>
-                </tr>` : ''}
-                ${result.sim.cfe ? `<tr>
-                    <td>- CFE</td>
-                    <td>${formatter.format(result.sim.cfe)}</td>
-                </tr>` : ''}
-                <tr>
-                    <td>- Impôt sur le revenu</td>
-                    <td>${formatter.format(result.sim.impotRevenu)}</td>
-                </tr>
-                <tr>
-                    <td><strong>= Revenu net en poche</strong></td>
-                    <td><strong>${formatter.format(result.sim.revenuNetApresImpot)}</strong></td>
-                </tr>
-                <tr>
-                    <td>Ratio Net/CA</td>
-                    <td>${formatPercent(result.sim.ratioNetCA)}</td>
-                </tr>
-            </table>
-        `;
+            `}
+        </table>
+        
+        ${versementLiberatoire ? `
+        <div class="mt-4 p-3 bg-green-900 bg-opacity-20 rounded-lg text-sm border-l-4 border-green-400">
+            <p><i class="fas fa-check-circle text-green-400 mr-2"></i>
+            <strong>Versement libératoire activé :</strong> L'impôt est payé en même temps que les cotisations sociales, 
+            au taux de ${formatPercent(tauxVFL[typeMicro])} du CA. Le revenu après abattement (${formatter.format(revenuImposable)}) 
+            n'est pas soumis au barème progressif de l'IR.</p>
+        </div>
+        ` : ''}
+        
+        <div class="detail-category">Résultat final</div>
+        <table class="detail-table">
+            <tr>
+                <td>Chiffre d'affaires</td>
+                <td>${formatter.format(result.sim.ca)}</td>
+            </tr>
+            <tr>
+                <td>- Cotisations sociales (${formatPercent(tauxCotisations[typeMicro])})</td>
+                <td>${formatter.format(result.sim.cotisationsSociales)}</td>
+            </tr>
+            ${result.sim.cfp ? `<tr>
+                <td>- CFP</td>
+                <td>${formatter.format(result.sim.cfp)}</td>
+            </tr>` : ''}
+            ${result.sim.cfe ? `<tr>
+                <td>- CFE</td>
+                <td>${formatter.format(result.sim.cfe)}</td>
+            </tr>` : ''}
+            <tr>
+                <td>- ${versementLiberatoire ? 'Versement libératoire' : 'Impôt sur le revenu'}</td>
+                <td>${formatter.format(result.sim.impotRevenu)}</td>
+            </tr>
+            <tr>
+                <td><strong>= Revenu net en poche</strong></td>
+                <td><strong>${formatter.format(result.sim.revenuNetApresImpot)}</strong></td>
+            </tr>
+            <tr>
+                <td>Ratio Net/CA</td>
+                <td>${formatPercent(result.sim.ratioNetCA)}</td>
+            </tr>
+        </table>
+        
+        ${versementLiberatoire ? `
+        <div class="mt-4 p-3 bg-blue-900 bg-opacity-20 rounded-lg text-xs">
+            <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
+            <strong>Conditions du versement libératoire (2025) :</strong></p>
+            <ul class="mt-1 ml-6 space-y-1">
+                <li>• Revenu fiscal de référence N-2 < 27 478 € par part</li>
+                <li>• Option à exercer lors de la création ou avant le 31/12 pour l'année suivante</li>
+                <li>• Irrévocable pour l'année en cours</li>
+            </ul>
+        </div>
+        ` : ''}
+    `;
     } else if (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa' || statutId === 'selas') {
         // Cas des structures avec dirigeant assimilé salarié
         const hasDividendes = result.sim.dividendes && result.sim.dividendes > 0;
