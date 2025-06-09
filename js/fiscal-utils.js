@@ -94,7 +94,7 @@ class FiscalUtils {
         
         // CORRECTION: Calcul simple et direct - 45% du bénéfice
         // Plus de formule étrange avec division par (1 + tauxGlobal)
-        const tauxGlobal = 0.45;
+        const tauxGlobal = 0.30;
         return Math.round(beneficeBrut * tauxGlobal);
     }
     
