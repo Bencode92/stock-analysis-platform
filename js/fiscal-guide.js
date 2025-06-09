@@ -1608,9 +1608,9 @@ if (statutId === 'micro') {
         const tmiEffectif = getTMI(remunerationNetteSociale);
         
         // Calcul des taux
-        const tauxCotisationsTNS = (result.sim.cotisationsSociales / result.sim.remuneration * 100) || 45;
+        const tauxCotisationsTNS = (result.sim.cotisationsSociales / result.sim.remuneration * 100) || 30;
         const tauxIS = result.sim.resultatApresRemuneration <= 42500 ? 15 : 25;
-        const tauxCotTNSDiv = 45; // Cotisations TNS sur dividendes > 10% capital
+        const tauxCotTNSDiv = 30; // Cotisations TNS sur dividendes > 10% capital
         
         detailContent = `
             <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - ${result.statut}</h2>
