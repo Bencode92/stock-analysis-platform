@@ -1253,8 +1253,14 @@ function runComparison() {
     });
 }
 
-// Fonction pour afficher le détail des calculs
+// Fonction pour afficher le détail des calculs (VERSION MODAL OVERLAY)
 function showCalculationDetails(statutId, simulationResults) {
+    // Supprimer tout modal existant
+    const existingModal = document.querySelector('.detail-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
     // Trouver les résultats pour ce statut
     const result = simulationResults.find(r => r.statutId === statutId);
     if (!result) return;
@@ -1267,9 +1273,23 @@ function showCalculationDetails(statutId, simulationResults) {
         maximumFractionDigits: 0
     });
     
-    // Créer le modal
+    // Créer le modal avec les bons styles
     const modal = document.createElement('div');
     modal.className = 'detail-modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.8);
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow-y: auto;
+        padding: 20px;
+    `;
     
     // Adapter l'affichage en fonction du statut juridique
     let detailContent = '';
@@ -1674,24 +1694,40 @@ function showCalculationDetails(statutId, simulationResults) {
         `;
     }
     
-    modal.innerHTML = `
-        <div class="detail-content">
-            <span class="close-modal"><i class="fas fa-times"></i></span>
+    // Créer le conteneur du contenu avec les bons styles
+    const contentWrapper = document.createElement('div');
+    contentWrapper.style.cssText = `
+        background-color: #012a4a;
+        border-radius: 12px;
+        max-width: 800px;
+        max-height: 90vh;
+        overflow-y: auto;
+        position: relative;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(0, 255, 135, 0.3);
+    `;
+    
+    contentWrapper.innerHTML = `
+        <div class="detail-content" style="padding: 2rem;">
+            <span class="close-modal" style="position: absolute; top: 1rem; right: 1rem; cursor: pointer; font-size: 1.5rem; color: #00FF87;">
+                <i class="fas fa-times"></i>
+            </span>
             ${detailContent}
         </div>
     `;
     
+    modal.appendChild(contentWrapper);
     document.body.appendChild(modal);
     
     // Ajouter un gestionnaire d'événement pour fermer le modal
     modal.querySelector('.close-modal').addEventListener('click', function() {
-        document.body.removeChild(modal);
+        modal.remove();
     });
     
     // Fermer le modal en cliquant en dehors du contenu
     modal.addEventListener('click', function(event) {
         if (event.target === modal) {
-            document.body.removeChild(modal);
+            modal.remove();
         }
     });
 }
