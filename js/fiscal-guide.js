@@ -553,7 +553,6 @@ function runComparison() {
     const ca = parseFloat(document.getElementById('sim-ca').value) || 50000;
     const marge = parseFloat(document.getElementById('sim-marge').value) / 100 || 0.3;
     const ratioSalaire = parseFloat(document.getElementById('sim-salaire').value) / 100 || 0.7;
-    const tmi = parseFloat(document.getElementById('sim-tmi').value) || 30;
     
     // Récupérer les options sectorielles actuelles
     const secteurSelect = document.querySelector('#secteur-select, [id$="secteur-select"]');
