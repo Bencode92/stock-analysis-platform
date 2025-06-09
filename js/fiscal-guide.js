@@ -1254,7 +1254,8 @@ function runComparison() {
     });
 }
 
-// Fonction pour afficher le détail des calculs (VERSION MODAL OVERLAY)
+
+// Fonction améliorée pour afficher le détail des calculs avec pourcentages
 function showCalculationDetails(statutId, simulationResults) {
     // Supprimer tout modal existant
     const existingModal = document.querySelector('.detail-modal');
@@ -1274,7 +1275,12 @@ function showCalculationDetails(statutId, simulationResults) {
         maximumFractionDigits: 0
     });
     
-    // Créer le modal avec les bons styles
+    // Formatter les pourcentages
+    const formatPercent = (value, decimals = 1) => {
+        return `${value.toFixed(decimals)}%`;
+    };
+    
+    // Créer le modal
     const modal = document.createElement('div');
     modal.className = 'detail-modal';
     modal.style.cssText = `
@@ -1296,6 +1302,24 @@ function showCalculationDetails(statutId, simulationResults) {
     let detailContent = '';
     
     if (statutId === 'micro') {
+        // Récupérer le type de micro et les taux associés
+        const typeMicro = result.sim.typeMicro || 'BIC_SERVICE';
+        const tauxCotisations = {
+            'BIC_VENTE': 12.3,
+            'BIC_SERVICE': 21.2,
+            'BNC': 24.6
+        };
+        const tauxAbattement = {
+            'BIC_VENTE': 71,
+            'BIC_SERVICE': 50,
+            'BNC': 34
+        };
+        const tauxVFL = {
+            'BIC_VENTE': 1,
+            'BIC_SERVICE': 1.7,
+            'BNC': 2.2
+        };
+        
         detailContent = `
             <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - Micro-entreprise</h2>
             
@@ -1310,11 +1334,11 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>${result.sim.typeMicro || 'BIC'}</td>
                 </tr>
                 <tr>
-                    <td>Abattement forfaitaire</td>
+                    <td>Abattement forfaitaire (${formatPercent(tauxAbattement[typeMicro])})</td>
                     <td>${result.sim.abattement}</td>
                 </tr>
                 <tr>
-                    <td>Versement libératoire</td>
+                    <td>Versement libératoire${result.sim.versementLiberatoire ? ' ('+formatPercent(tauxVFL[typeMicro])+')' : ''}</td>
                     <td>${result.sim.versementLiberatoire ? 'Activé' : 'Désactivé'}</td>
                 </tr>
             </table>
@@ -1327,30 +1351,30 @@ function showCalculationDetails(statutId, simulationResults) {
                 </tr>
                 <tr>
                     <td>Taux de cotisations sociales</td>
-                    <td>${(result.sim.cotisationsSociales / result.sim.ca * 100).toFixed(1)}%</td>
+                    <td>${formatPercent(tauxCotisations[typeMicro])}</td>
                 </tr>
                 <tr>
-                    <td>Montant des cotisations sociales</td>
+                    <td>Montant des cotisations sociales (${formatPercent(tauxCotisations[typeMicro])} du CA)</td>
                     <td>${formatter.format(result.sim.cotisationsSociales)}</td>
                 </tr>
-                <tr>
-                    <td>Contribution à la Formation Professionnelle (CFP)</td>
-                    <td>${formatter.format(result.sim.cfp || 0)}</td>
-                </tr>
-                <tr>
-                    <td>Cotisation Foncière des Entreprises (CFE)</td>
-                    <td>${formatter.format(result.sim.cfe || 0)}</td>
-                </tr>
+                ${result.sim.cfp ? `<tr>
+                    <td>Contribution à la Formation Professionnelle (0.1% à 0.3%)</td>
+                    <td>${formatter.format(result.sim.cfp)}</td>
+                </tr>` : ''}
+                ${result.sim.cfe ? `<tr>
+                    <td>Cotisation Foncière des Entreprises (forfait)</td>
+                    <td>${formatter.format(result.sim.cfe)}</td>
+                </tr>` : ''}
             </table>
             
             <div class="detail-category">Impôt sur le revenu</div>
             <table class="detail-table">
                 <tr>
-                    <td>Revenu imposable après abattement</td>
+                    <td>Revenu imposable après abattement (${formatPercent(100-tauxAbattement[typeMicro])} du CA)</td>
                     <td>${formatter.format(result.sim.revenuImposable)}</td>
                 </tr>
                 <tr>
-                    <td>Impôt sur le revenu</td>
+                    <td>Impôt sur le revenu${result.sim.modeExpert ? ' (calcul progressif)' : ' (TMI '+formatPercent(result.sim.tmiActuel || 30)+')'}</td>
                     <td>${formatter.format(result.sim.impotRevenu)}</td>
                 </tr>
             </table>
@@ -1362,17 +1386,17 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>${formatter.format(result.sim.ca)}</td>
                 </tr>
                 <tr>
-                    <td>- Cotisations sociales</td>
+                    <td>- Cotisations sociales (${formatPercent(tauxCotisations[typeMicro])})</td>
                     <td>${formatter.format(result.sim.cotisationsSociales)}</td>
                 </tr>
-                <tr>
+                ${result.sim.cfp ? `<tr>
                     <td>- CFP</td>
-                    <td>${formatter.format(result.sim.cfp || 0)}</td>
-                </tr>
-                <tr>
+                    <td>${formatter.format(result.sim.cfp)}</td>
+                </tr>` : ''}
+                ${result.sim.cfe ? `<tr>
                     <td>- CFE</td>
-                    <td>${formatter.format(result.sim.cfe || 0)}</td>
-                </tr>
+                    <td>${formatter.format(result.sim.cfe)}</td>
+                </tr>` : ''}
                 <tr>
                     <td>- Impôt sur le revenu</td>
                     <td>${formatter.format(result.sim.impotRevenu)}</td>
@@ -1383,13 +1407,19 @@ function showCalculationDetails(statutId, simulationResults) {
                 </tr>
                 <tr>
                     <td>Ratio Net/CA</td>
-                    <td>${result.sim.ratioNetCA.toFixed(1)}%</td>
+                    <td>${formatPercent(result.sim.ratioNetCA)}</td>
                 </tr>
             </table>
         `;
     } else if (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa' || statutId === 'selas') {
-        // Cas des structures avec dirigeant assimilé salarié (SASU, SAS, SA, SELAS)
+        // Cas des structures avec dirigeant assimilé salarié
         const hasDividendes = result.sim.dividendes && result.sim.dividendes > 0;
+        
+        // Calcul des taux
+        const tauxChargesPatronales = (result.sim.chargesPatronales / result.sim.remuneration * 100) || 55;
+        const tauxChargesSalariales = (result.sim.chargesSalariales / result.sim.remuneration * 100) || 22;
+        const tauxIR = result.sim.modeExpert ? 'progressif' : formatPercent(result.sim.tmiActuel || 30);
+        const tauxIS = result.sim.resultatApresRemuneration <= 42500 ? 15 : 25;
         
         detailContent = `
             <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - ${result.statut}</h2>
@@ -1401,12 +1431,12 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>${formatter.format(result.sim.ca)}</td>
                 </tr>
                 <tr>
-                    <td>Résultat de l'entreprise (marge)</td>
+                    <td>Résultat de l'entreprise (marge ${formatPercent((result.sim.resultatEntreprise/result.sim.ca)*100)})</td>
                     <td>${formatter.format(result.sim.resultatEntreprise)}</td>
                 </tr>
                 <tr>
                     <td>Ratio rémunération/dividendes ${result.sim.ratioOptimise ? '(optimisé)' : '(manuel)'}</td>
-                    <td>${result.sim.ratioOptimise ? (result.sim.ratioOptimise * 100).toFixed(0) : (result.ratioEffectif * 100).toFixed(0)}% / ${result.sim.ratioOptimise ? (100 - result.sim.ratioOptimise * 100).toFixed(0) : (100 - result.ratioEffectif * 100).toFixed(0)}%</td>
+                    <td>${formatPercent(result.sim.ratioOptimise ? result.sim.ratioOptimise * 100 : result.ratioEffectif * 100)} / ${formatPercent(result.sim.ratioOptimise ? (100 - result.sim.ratioOptimise * 100) : (100 - result.ratioEffectif * 100))}</td>
                 </tr>
             </table>
             
@@ -1417,11 +1447,11 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>${formatter.format(result.sim.remuneration)}</td>
                 </tr>
                 <tr>
-                    <td>Charges patronales</td>
+                    <td>Charges patronales (≈${formatPercent(tauxChargesPatronales)})</td>
                     <td>${formatter.format(result.sim.chargesPatronales)}</td>
                 </tr>
                 <tr>
-                    <td>Charges salariales</td>
+                    <td>Charges salariales (≈${formatPercent(tauxChargesSalariales)})</td>
                     <td>${formatter.format(result.sim.chargesSalariales)}</td>
                 </tr>
                 <tr>
@@ -1433,7 +1463,7 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>${formatter.format(result.sim.salaireNet)}</td>
                 </tr>
                 <tr>
-                    <td>Impôt sur le revenu</td>
+                    <td>Impôt sur le revenu (${tauxIR})</td>
                     <td>${formatter.format(result.sim.impotRevenu)}</td>
                 </tr>
                 <tr>
@@ -1450,7 +1480,7 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>${formatter.format(result.sim.resultatApresRemuneration)}</td>
                 </tr>
                 <tr>
-                    <td>Impôt sur les sociétés</td>
+                    <td>Impôt sur les sociétés (${formatPercent(tauxIS)})</td>
                     <td>${formatter.format(result.sim.is)}</td>
                 </tr>
                 <tr>
@@ -1503,13 +1533,19 @@ function showCalculationDetails(statutId, simulationResults) {
                 </tr>
                 <tr>
                     <td>Ratio Net/CA</td>
-                    <td>${result.sim.ratioNetCA.toFixed(1)}%</td>
+                    <td>${formatPercent(result.sim.ratioNetCA)}</td>
                 </tr>
             </table>
         `;
     } else if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl' || statutId === 'sca') {
         // Cas des structures à l'IS avec un gérant TNS
         const hasDividendes = result.sim.dividendes && result.sim.dividendes > 0;
+        
+        // Calcul des taux
+        const tauxCotisationsTNS = (result.sim.cotisationsSociales / result.sim.remuneration * 100) || 45;
+        const tauxIR = result.sim.modeExpert ? 'progressif' : formatPercent(result.sim.tmiActuel || 30);
+        const tauxIS = result.sim.resultatApresRemuneration <= 42500 ? 15 : 25;
+        const tauxCotTNSDiv = 45; // Cotisations TNS sur dividendes > 10% capital
         
         detailContent = `
             <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - ${result.statut}</h2>
@@ -1521,12 +1557,12 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>${formatter.format(result.sim.ca)}</td>
                 </tr>
                 <tr>
-                    <td>Résultat de l'entreprise</td>
+                    <td>Résultat de l'entreprise (marge ${formatPercent((result.sim.resultatAvantRemuneration || result.sim.resultatEntreprise)/result.sim.ca*100)})</td>
                     <td>${formatter.format(result.sim.resultatAvantRemuneration || result.sim.resultatEntreprise)}</td>
                 </tr>
                 <tr>
                     <td>Ratio rémunération/dividendes ${result.sim.ratioOptimise ? '(optimisé)' : '(manuel)'}</td>
-                    <td>${result.sim.ratioOptimise ? (result.sim.ratioOptimise * 100).toFixed(0) : (result.ratioEffectif * 100).toFixed(0)}% / ${result.sim.ratioOptimise ? (100 - result.sim.ratioOptimise * 100).toFixed(0) : (100 - result.ratioEffectif * 100).toFixed(0)}%</td>
+                    <td>${formatPercent(result.sim.ratioOptimise ? result.sim.ratioOptimise * 100 : result.ratioEffectif * 100)} / ${formatPercent(result.sim.ratioOptimise ? (100 - result.sim.ratioOptimise * 100) : (100 - result.ratioEffectif * 100))}</td>
                 </tr>
                 ${statutId === 'sarl' ? `
                 <tr>
@@ -1542,7 +1578,7 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>${formatter.format(result.sim.remuneration)}</td>
                 </tr>
                 <tr>
-                    <td>Cotisations sociales TNS</td>
+                    <td>Cotisations sociales TNS (≈${formatPercent(tauxCotisationsTNS)})</td>
                     <td>${formatter.format(result.sim.cotisationsSociales)}</td>
                 </tr>
                 <tr>
@@ -1550,7 +1586,7 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>${formatter.format(result.sim.remunerationNetteSociale)}</td>
                 </tr>
                 <tr>
-                    <td>Impôt sur le revenu</td>
+                    <td>Impôt sur le revenu (${tauxIR})</td>
                     <td>${formatter.format(result.sim.impotRevenu)}</td>
                 </tr>
                 <tr>
@@ -1567,7 +1603,7 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>${formatter.format(result.sim.resultatApresRemuneration)}</td>
                 </tr>
                 <tr>
-                    <td>Impôt sur les sociétés</td>
+                    <td>Impôt sur les sociétés (${formatPercent(tauxIS)})</td>
                     <td>${formatter.format(result.sim.is)}</td>
                 </tr>
                 <tr>
@@ -1580,7 +1616,7 @@ function showCalculationDetails(statutId, simulationResults) {
                 </tr>
                 ${result.sim.cotTNSDiv ? `
                 <tr>
-                    <td>Cotisations TNS sur dividendes > 10% du capital</td>
+                    <td>Cotisations TNS sur dividendes > 10% du capital (${formatPercent(tauxCotTNSDiv)})</td>
                     <td>${formatter.format(result.sim.cotTNSDiv)}</td>
                 </tr>` : ''}
                 <tr>
@@ -1599,12 +1635,6 @@ function showCalculationDetails(statutId, simulationResults) {
                     <i class="fas fa-info-circle text-blue-400 mr-2"></i>
                     <strong>Aucune distribution de dividendes</strong> - 100% du résultat est versé en rémunération.
                 </p>
-                ${result.sim.resultatApresRemuneration < 0 ? `
-                <p class="text-sm mt-2 text-orange-400">
-                    <i class="fas fa-exclamation-triangle mr-2"></i>
-                    Note : Le résultat après rémunération est négatif (${formatter.format(result.sim.resultatApresRemuneration)}), 
-                    ce qui indique que les cotisations TNS et la rémunération dépassent le résultat disponible.
-                </p>` : ''}
             </div>
             `}
             
@@ -1625,12 +1655,15 @@ function showCalculationDetails(statutId, simulationResults) {
                 </tr>
                 <tr>
                     <td>Ratio Net/CA</td>
-                    <td>${result.sim.ratioNetCA.toFixed(1)}%</td>
+                    <td>${formatPercent(result.sim.ratioNetCA)}</td>
                 </tr>
             </table>
         `;
     } else if (statutId === 'ei' || statutId === 'eurl' || statutId === 'snc') {
         // Cas des entreprises à l'IR
+        const tauxCotisationsTNS = 45;
+        const tauxIR = result.sim.modeExpert ? 'progressif' : formatPercent(result.sim.tmiActuel || 30);
+        
         detailContent = `
             <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - ${result.statut}</h2>
             
@@ -1641,7 +1674,7 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>${formatter.format(result.sim.ca)}</td>
                 </tr>
                 <tr>
-                    <td>Bénéfice avant cotisations</td>
+                    <td>Bénéfice avant cotisations (marge ${formatPercent((result.sim.beneficeAvantCotisations || result.brut)/result.sim.ca*100)})</td>
                     <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
                 </tr>
             </table>
@@ -1654,7 +1687,7 @@ function showCalculationDetails(statutId, simulationResults) {
                 </tr>
                 <tr>
                     <td>Taux de cotisations sociales TNS</td>
-                    <td>~45%</td>
+                    <td>≈${formatPercent(tauxCotisationsTNS)}</td>
                 </tr>
                 <tr>
                     <td>Montant des cotisations sociales</td>
@@ -1669,7 +1702,7 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>${formatter.format(result.sim.beneficeApresCotisations || result.sim.beneficeImposable)}</td>
                 </tr>
                 <tr>
-                    <td>Impôt sur le revenu</td>
+                    <td>Impôt sur le revenu (${tauxIR})</td>
                     <td>${formatter.format(result.sim.impotRevenu)}</td>
                 </tr>
             </table>
@@ -1681,7 +1714,7 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
                 </tr>
                 <tr>
-                    <td>- Cotisations sociales</td>
+                    <td>- Cotisations sociales (${formatPercent(tauxCotisationsTNS)})</td>
                     <td>${formatter.format(result.sim.cotisationsSociales)}</td>
                 </tr>
                 <tr>
@@ -1694,12 +1727,89 @@ function showCalculationDetails(statutId, simulationResults) {
                 </tr>
                 <tr>
                     <td>Ratio Net/CA</td>
-                    <td>${result.sim.ratioNetCA.toFixed(1)}%</td>
+                    <td>${formatPercent(result.sim.ratioNetCA)}</td>
+                </tr>
+            </table>
+        `;
+    } else if (statutId === 'sci') {
+        // Cas particulier de la SCI
+        const tauxPrelevementsSociaux = 17.2;
+        const tauxIR = result.sim.modeExpert ? 'progressif' : formatPercent(result.sim.tmiActuel || 30);
+        
+        detailContent = `
+            <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - SCI</h2>
+            
+            <div class="detail-category">Données de base</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Revenus locatifs</td>
+                    <td>${formatter.format(result.sim.ca || result.sim.revenuLocatif)}</td>
+                </tr>
+                ${result.sim.chargesDeductibles ? `
+                <tr>
+                    <td>Charges déductibles</td>
+                    <td>${formatter.format(result.sim.chargesDeductibles)}</td>
+                </tr>` : ''}
+                <tr>
+                    <td>Résultat fiscal</td>
+                    <td>${formatter.format(result.sim.resultatFiscalAssocie)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Prélèvements sociaux</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Base de calcul</td>
+                    <td>${formatter.format(result.sim.resultatFiscalAssocie)}</td>
+                </tr>
+                <tr>
+                    <td>Taux de prélèvements sociaux</td>
+                    <td>${formatPercent(tauxPrelevementsSociaux)}</td>
+                </tr>
+                <tr>
+                    <td>Montant des prélèvements sociaux</td>
+                    <td>${formatter.format(result.sim.prelevementsSociaux || 0)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Impôt sur le revenu</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Revenus fonciers imposables</td>
+                    <td>${formatter.format(result.sim.resultatFiscalAssocie)}</td>
+                </tr>
+                <tr>
+                    <td>Impôt sur le revenu (${tauxIR})</td>
+                    <td>${formatter.format(result.sim.impotRevenu)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Résultat final</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Résultat fiscal</td>
+                    <td>${formatter.format(result.sim.resultatFiscalAssocie)}</td>
+                </tr>
+                <tr>
+                    <td>- Prélèvements sociaux (${formatPercent(tauxPrelevementsSociaux)})</td>
+                    <td>${formatter.format(result.sim.prelevementsSociaux || 0)}</td>
+                </tr>
+                <tr>
+                    <td>- Impôt sur le revenu</td>
+                    <td>${formatter.format(result.sim.impotRevenu)}</td>
+                </tr>
+                <tr>
+                    <td><strong>= Revenu net en poche</strong></td>
+                    <td><strong>${formatter.format(result.sim.revenuNetApresImpot)}</strong></td>
+                </tr>
+                <tr>
+                    <td>Ratio Net/Revenus locatifs</td>
+                    <td>${formatPercent((result.sim.revenuNetApresImpot / (result.sim.ca || result.sim.revenuLocatif)) * 100)}</td>
                 </tr>
             </table>
         `;
     } else {
-        // Cas par défaut (SCI et autres)
+        // Cas par défaut
         detailContent = `
             <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - ${result.statut}</h2>
             
@@ -1723,7 +1833,7 @@ function showCalculationDetails(statutId, simulationResults) {
                 </tr>
                 <tr>
                     <td>Ratio Net/CA</td>
-                    <td>${(result.score || 0).toFixed(1)}%</td>
+                    <td>${formatPercent((result.score || 0))}</td>
                 </tr>
             </table>
             
@@ -1733,7 +1843,26 @@ function showCalculationDetails(statutId, simulationResults) {
         `;
     }
     
-    // Créer le conteneur du contenu avec les bons styles
+    // Ajouter une section récapitulative des taux utilisés
+    detailContent += `
+        <div class="detail-category mt-6">Récapitulatif des taux utilisés</div>
+        <div class="mt-2 p-4 bg-green-900 bg-opacity-20 rounded-lg text-sm">
+            <ul class="space-y-1">
+                <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Charges sociales :</strong> ${
+                    statutId === 'micro' ? '12.3% à 24.6% selon activité' :
+                    statutId === 'sasu' || statutId === 'sas' ? '≈77% (22% salariales + 55% patronales)' :
+                    '≈45% (TNS)'
+                }</li>
+                <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>IS :</strong> 15% jusqu'à 42 500€, puis 25%</li>
+                <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>PFU sur dividendes :</strong> 30% (17.2% prélèvements sociaux + 12.8% IR)</li>
+                ${statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl' ? 
+                '<li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Cotisations TNS sur dividendes :</strong> 45% sur la part > 10% du capital social</li>' : ''}
+                <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>TMI utilisé :</strong> ${result.sim.tmiActuel || 30}%</li>
+            </ul>
+        </div>
+    `;
+    
+    // Créer le conteneur du contenu
     const contentWrapper = document.createElement('div');
     contentWrapper.style.cssText = `
         background-color: #012a4a;
