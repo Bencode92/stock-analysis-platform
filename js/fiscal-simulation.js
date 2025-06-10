@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 3.0 - Version nettoyée avec gestion unifiée des associés
+// Version 3.1 - Ajout optimisation PFU vs barème progressif pour dividendes
 
 // Constantes pour les taux de charges sociales
 const TAUX_CHARGES = {
@@ -48,8 +48,8 @@ function ajusterRemuneration(remunerationSouhaitee, resultatDisponible, tauxChar
     return remunerationSouhaitee;
 }
 
-// NOUVEAU : Helper pour calculer les dividendes IS de manière unifiée
-function calculerDividendesIS(resultatApresIS, partAssocie, capitalDetenu, isTNS = false, isGerantMajoritaire = false) {
+// MODIFIÉ : Helper pour calculer les dividendes IS avec optimisation fiscale
+function calculerDividendesIS(resultatApresIS, partAssocie, capitalDetenu, isTNS = false, isGerantMajoritaire = false, tmiActuel = 30) {
     const dividendesBrutsSociete = Math.max(0, resultatApresIS);
     const dividendesBrutsAssocie = Math.floor(dividendesBrutsSociete * partAssocie);
     
@@ -63,12 +63,21 @@ function calculerDividendesIS(resultatApresIS, partAssocie, capitalDetenu, isTNS
         }
     }
     
+    // NOUVEAU : Choix optimal entre PFU et barème progressif
     let prelevementForfaitaire = 0;
+    let methodeDividendes = '';
+    let economieMethode = 0;
+    
     if (dividendesBrutsAssocie > 0) {
-        if (window.FiscalUtils) {
-            prelevementForfaitaire = window.FiscalUtils.calculPFU(dividendesBrutsAssocie);
+        if (window.FiscalUtils && window.FiscalUtils.choisirFiscaliteDividendes) {
+            const divTax = window.FiscalUtils.choisirFiscaliteDividendes(dividendesBrutsAssocie, tmiActuel);
+            prelevementForfaitaire = divTax.total;
+            methodeDividendes = divTax.methode;
+            economieMethode = divTax.economie;
         } else {
+            // Fallback au PFU si FiscalUtils pas disponible
             prelevementForfaitaire = Math.floor(dividendesBrutsAssocie * 0.30);
+            methodeDividendes = 'PFU';
         }
     }
     
@@ -80,7 +89,9 @@ function calculerDividendesIS(resultatApresIS, partAssocie, capitalDetenu, isTNS
         cotTNSDiv,
         prelevementForfaitaire,
         dividendesNets,
-        capitalDetenu
+        capitalDetenu,
+        methodeDividendes,     // NOUVEAU
+        economieMethode        // NOUVEAU
     };
 }
 
@@ -404,13 +415,14 @@ class SimulationsFiscales {
             
             const resultatApresIS = resultatApresRemuneration - is;
             
-            // Utiliser le helper pour les dividendes
+            // MODIFIÉ : Utiliser le helper avec le TMI
             const dividendesInfo = calculerDividendesIS(
                 resultatApresIS, 
                 1, // EURL = 1 associé
                 capitalSocial,
                 true, // TNS
-                true  // Toujours majoritaire en EURL
+                true,  // Toujours majoritaire en EURL
+                tmiActuel // AJOUT du TMI
             );
             
             const revenuNetSalaire = remunerationNetteSociale - impotRevenu;
@@ -438,6 +450,9 @@ class SimulationsFiscales {
                 ratioNetCA: (revenuNetTotal / ca) * 100,
                 resultatEntreprise: resultatEntreprise,
                 ratioEffectif: ratioEffectif,
+                // NOUVEAU : Ajout des infos d'optimisation
+                methodeDividendes: dividendesInfo.methodeDividendes,
+                economieMethode: dividendesInfo.economieMethode,
                 // Infos associés
                 nbAssocies: 1,
                 partAssocie: 1,
@@ -496,13 +511,14 @@ class SimulationsFiscales {
         
         const resultatApresIS = resultatApresRemuneration - is;
         
-        // Utiliser le helper pour les dividendes (pas de cotisations TNS pour SASU)
+        // MODIFIÉ : Utiliser le helper avec le TMI
         const dividendesInfo = calculerDividendesIS(
             resultatApresIS,
             1, // SASU = 1 associé
             0, // Pas de capital minimum significatif
             false, // Pas TNS
-            false  // Pas de gérant majoritaire
+            false,  // Pas de gérant majoritaire
+            tmiActuel // AJOUT du TMI
         );
         
         const revenuNetTotal = salaireNetApresIR + dividendesInfo.dividendesNets;
@@ -533,6 +549,9 @@ class SimulationsFiscales {
             taille: taille,
             ratioEffectif: ratioEffectif,
             modeExpert: modeExpert,
+            // NOUVEAU : Ajout des infos d'optimisation
+            methodeDividendes: dividendesInfo.methodeDividendes,
+            economieMethode: dividendesInfo.economieMethode,
             // Infos associés
             nbAssocies: 1,
             partAssocie: 1,
@@ -633,14 +652,15 @@ class SimulationsFiscales {
         
         const resultatApresIS = resultatApresRemuneration - is;
         
-        // Utiliser le helper pour les dividendes avec la quote-part
+        // MODIFIÉ : Utiliser le helper avec le TMI
         const capitalDetenu = capitalSocial * partAssocie;
         const dividendesInfo = calculerDividendesIS(
             resultatApresIS,
             partAssocie,
             capitalDetenu,
             gerantMajoritaire, // TNS si gérant majoritaire
-            gerantMajoritaire  // Cotisations sur dividendes si majoritaire
+            gerantMajoritaire,  // Cotisations sur dividendes si majoritaire
+            tmiActuel // AJOUT du TMI
         );
         
         const revenuNetTotal = salaireNetApresIR + dividendesInfo.dividendesNets;
@@ -674,6 +694,10 @@ class SimulationsFiscales {
             revenuNetTotal: revenuNetTotal,
             ratioNetCA: (revenuNetTotal / ca) * 100,
             
+            // NOUVEAU : Ajout des infos d'optimisation
+            methodeDividendes: dividendesInfo.methodeDividendes,
+            economieMethode: dividendesInfo.economieMethode,
+            
             // Informations sur les associés
             nbAssocies: nbAssocies,
             partAssocie: partAssocie,
@@ -696,7 +720,8 @@ class SimulationsFiscales {
         const { 
             nbAssocies = normalizedParams.nbAssocies,
             partAssocie = normalizedParams.partAssocie,
-            partAssociePct = normalizedParams.partAssociePct
+            partAssociePct = normalizedParams.partAssociePct,
+            tmiActuel = 30
         } = normalizedParams;
         
         // Simuler comme une SASU
@@ -706,13 +731,14 @@ class SimulationsFiscales {
             return resultSASU;
         }
         
-        // Utiliser le helper pour recalculer les dividendes avec la quote-part
+        // MODIFIÉ : Utiliser le helper avec le TMI
         const dividendesInfo = calculerDividendesIS(
             resultSASU.resultatApresIS,
             partAssocie,
             0, // Pas de capital minimum significatif
             false, // Pas TNS
-            false  // Pas de gérant majoritaire
+            false,  // Pas de gérant majoritaire
+            tmiActuel // AJOUT du TMI
         );
         
         // Recalculer le revenu net total
@@ -731,6 +757,10 @@ class SimulationsFiscales {
             revenuNetTotal: revenuNetTotal,
             ratioNetCA: (revenuNetTotal / normalizedParams.ca) * 100,
             
+            // NOUVEAU : Ajout des infos d'optimisation
+            methodeDividendes: dividendesInfo.methodeDividendes,
+            economieMethode: dividendesInfo.economieMethode,
+            
             // Informations sur les associés
             nbAssocies: nbAssocies,
             partAssocie: partAssocie,
@@ -742,7 +772,7 @@ class SimulationsFiscales {
     static simulerSA(params) {
         // Normaliser les paramètres
         const normalizedParams = this.normalizeAssociatesParams(params, 'sa');
-        const { capitalInvesti = 37000, partAssocie = normalizedParams.partAssocie } = normalizedParams;
+        const { capitalInvesti = 37000, partAssocie = normalizedParams.partAssocie, tmiActuel = 30 } = normalizedParams;
         
         // Vérifier si le capital minimum est respecté
         if (capitalInvesti < 37000) {
@@ -774,13 +804,14 @@ class SimulationsFiscales {
         
         const resultatApresIS = Math.max(0, resultatApresCAC - is);
         
-        // Utiliser le helper pour les dividendes
+        // MODIFIÉ : Utiliser le helper avec le TMI
         const dividendesInfo = calculerDividendesIS(
             resultatApresIS,
             partAssocie,
             capitalInvesti * partAssocie,
             false,
-            false
+            false,
+            tmiActuel // AJOUT du TMI
         );
         
         const revenuNetTotal = resultSAS.salaireNetApresIR + dividendesInfo.dividendesNets;
@@ -793,6 +824,10 @@ class SimulationsFiscales {
             dividendesNets: dividendesInfo.dividendesNets,
             revenuNetTotal: revenuNetTotal,
             ratioNetCA: (revenuNetTotal / normalizedParams.ca) * 100,
+            
+            // NOUVEAU : Ajout des infos d'optimisation
+            methodeDividendes: dividendesInfo.methodeDividendes,
+            economieMethode: dividendesInfo.economieMethode,
             
             // S'assurer que les infos d'associés sont présentes
             nbAssocies: normalizedParams.nbAssocies,
@@ -1027,13 +1062,14 @@ class SimulationsFiscales {
             // Résultat après IS
             const resultatApresIS = resultatApresAmortissement - is;
             
-            // Utiliser le helper pour les dividendes
+            // MODIFIÉ : Utiliser le helper avec le TMI
             const dividendesInfo = calculerDividendesIS(
                 resultatApresIS,
                 partAssocie,
                 0, // Pas de capital significatif en SCI
                 false,
-                false
+                false,
+                tmiActuel // AJOUT du TMI
             );
             
             // Message explicatif si meublée
@@ -1071,6 +1107,10 @@ class SimulationsFiscales {
                 infoLocationMeublee: infoLocationMeublee,
                 partAssociePrincipal: partAssocie, // Pour compatibilité
                 nombreAssocies: nbAssocies, // Pour compatibilité
+                
+                // NOUVEAU : Ajout des infos d'optimisation
+                methodeDividendes: dividendesInfo.methodeDividendes,
+                economieMethode: dividendesInfo.economieMethode,
                 
                 // Infos standardisées
                 nbAssocies: nbAssocies,
@@ -1141,12 +1181,12 @@ window.STATUTS_ASSOCIATES_CONFIG = STATUTS_ASSOCIATES_CONFIG;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v3.0 - Gestion unifiée des associés)");
+    console.log("Module SimulationsFiscales chargé (v3.1 - Optimisation PFU vs barème progressif)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady', {
         detail: {
-            version: '3.0',
-            features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG']
+            version: '3.1',
+            features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG', 'optimisationFiscaleDividendes']
         }
     }));
 });
