@@ -10,6 +10,9 @@ const TAUX_CHARGES = {
     PATRONAL_MAX: 0.65           // Charges patronales max (grandes entreprises)
 };
 
+// Portion de la CSG/CRDS TNS qui n'est PAS déductible du tout (≈ 2,4 %)
+const TAUX_CSG_NON_DEDUCTIBLE = 0.024;
+
 // Configuration des statuts pour la gestion des associés
 const STATUTS_ASSOCIATES_CONFIG = {
     // Statuts strictement unipersonnels (maxAssociates = 1)
@@ -312,8 +315,11 @@ class SimulationsFiscales {
             cotisationsSociales = Math.round(beneficeAvantCotisations * TAUX_CHARGES.TNS);
         }
         
-        // Bénéfice après cotisations sociales
-        const beneficeApresCotisations = beneficeAvantCotisations - cotisationsSociales;
+        // Portion de CSG non déductible que l'on doit ré-ajouter
+        const csgNonDeductible = Math.round(beneficeAvantCotisations * TAUX_CSG_NON_DEDUCTIBLE);
+        
+        // Bénéfice fiscal réellement imposable (= on ne déduit PAS cette CSG)
+        const beneficeApresCotisations = beneficeAvantCotisations - cotisationsSociales + csgNonDeductible;
         
         // NOUVEAU : Calcul automatique de la TMI
         const tmiReel = window.FiscalUtils 
@@ -338,7 +344,9 @@ class SimulationsFiscales {
             tauxMarge: tauxMarge * 100 + '%',
             beneficeAvantCotisations: beneficeAvantCotisations,
             cotisationsSociales: cotisationsSociales,
+            csgNonDeductible: csgNonDeductible, // <-- pour le détail
             beneficeApresCotisations: beneficeApresCotisations,
+            beneficeImposable: beneficeApresCotisations, // Ajout pour compatibilité
             impotRevenu: impotRevenu,
             revenuNetApresImpot: revenuNetApresImpot,
             ratioNetCA: (revenuNetApresImpot / ca) * 100,
@@ -371,7 +379,11 @@ class SimulationsFiscales {
                 cotisationsSociales = Math.round(baseCalculTNS * TAUX_CHARGES.TNS);
             }
             
-            const beneficeImposable = resultatEntreprise - cotisationsSociales;
+            // Portion de CSG non déductible 
+            const csgNonDeductible = Math.round(resultatEntreprise * TAUX_CSG_NON_DEDUCTIBLE);
+            
+            // Bénéfice imposable avec CSG non déductible
+            const beneficeImposable = resultatEntreprise - cotisationsSociales + csgNonDeductible;
             
             // NOUVEAU : Calcul automatique de la TMI
             const tmiReel = window.FiscalUtils 
@@ -396,6 +408,7 @@ class SimulationsFiscales {
                 remuneration: resultatEntreprise,
                 resultatApresRemuneration: 0,
                 cotisationsSociales: cotisationsSociales,
+                csgNonDeductible: csgNonDeductible, // <-- pour le détail
                 beneficeImposable: beneficeImposable,
                 impotRevenu: impotRevenu,
                 revenuNetApresImpot: revenuNetApresImpot,
