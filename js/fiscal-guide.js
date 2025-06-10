@@ -1982,112 +1982,119 @@ ${statutId === 'sasu' ? `
             </tr>
         </table>
     `;
-    } else if (statutId === 'ei' || statutId === 'eurl' || statutId === 'snc') {
-        // Cas des entreprises à l'IR
-        const tauxCotisationsTNS = 30;
-        const revenuImposable = result.sim.beneficeImposable || result.sim.beneficeApresCotisations || 0;
+} else if (statutId === 'ei' || statutId === 'eurl' || statutId === 'snc') {
+    // Cas des entreprises à l'IR
+    const tauxCotisationsTNS = 30;
+    const revenuImposable = result.sim.beneficeImposable || result.sim.beneficeApresCotisations || 0;
+    
+    // NOUVEAU : Calculer le TMI effectif
+    const tmiEffectif = getTMI(revenuImposable);
+    
+    detailContent = `
+        <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - ${result.statut}</h2>
         
-        // NOUVEAU : Calculer le TMI effectif
-        const tmiEffectif = getTMI(revenuImposable);
+        <div class="detail-category">Données de base</div>
+        <table class="detail-table">
+            <tr>
+                <td>Chiffre d'affaires</td>
+                <td>${formatter.format(result.sim.ca)}</td>
+            </tr>
+            <tr>
+                <td>Bénéfice avant cotisations (marge ${formatPercent((result.sim.beneficeAvantCotisations || result.brut)/result.sim.ca*100)})</td>
+                <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
+            </tr>
+        </table>
         
-        detailContent = `
-            <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - ${result.statut}</h2>
-            
-            <div class="detail-category">Données de base</div>
-            <table class="detail-table">
-                <tr>
-                    <td>Chiffre d'affaires</td>
-                    <td>${formatter.format(result.sim.ca)}</td>
-                </tr>
-                <tr>
-                    <td>Bénéfice avant cotisations (marge ${formatPercent((result.sim.beneficeAvantCotisations || result.brut)/result.sim.ca*100)})</td>
-                    <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
-                </tr>
-            </table>
-            
-            ${/* NOUVEAU: Section associés pour SNC */ ''}
-            ${statutId === 'snc' && STATUTS_MULTI_ASSOCIES[statutId] && result.sim.nbAssocies > 1 ? `
-            <div class="detail-category">Répartition entre associés</div>
-            <table class="detail-table">
-                <tr>
-                    <td colspan="2" class="text-center text-sm text-green-400">
-                        Simulation pour <strong>1 associé détenant ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}</strong>
-                        (société à ${result.sim.nbAssocies} associés)
-                    </td>
-                </tr>
-                <tr>
-                    <td>Nombre total d'associés</td>
-                    <td>${result.sim.nbAssocies}</td>
-                </tr>
-                <tr>
-                    <td>Part de l'associé simulé</td>
-                    <td>${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}</td>
-                </tr>
-                <tr>
-                    <td>Quote-part du bénéfice</td>
-                    <td>${formatter.format(result.sim.beneficeAssociePrincipal || (result.sim.beneficeAvantCotisations * (result.sim.partAssocie || 1)))}</td>
-                </tr>
-            </table>
-            
-            <div class="mt-3 p-3 bg-gray-800 bg-opacity-50 rounded-lg text-xs text-gray-400">
-                <p><i class="fas fa-balance-scale mr-1"></i> 
-                <strong>Transparence fiscale :</strong> Chaque associé déclare sa quote-part 
-                du résultat fiscal dans sa déclaration personnelle.</p>
-            </div>
+        ${/* NOUVEAU: Section associés pour SNC */ ''}
+        ${statutId === 'snc' && STATUTS_MULTI_ASSOCIES[statutId] && result.sim.nbAssocies > 1 ? `
+        <div class="detail-category">Répartition entre associés</div>
+        <table class="detail-table">
+            <tr>
+                <td colspan="2" class="text-center text-sm text-green-400">
+                    Simulation pour <strong>1 associé détenant ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}</strong>
+                    (société à ${result.sim.nbAssocies} associés)
+                </td>
+            </tr>
+            <tr>
+                <td>Nombre total d'associés</td>
+                <td>${result.sim.nbAssocies}</td>
+            </tr>
+            <tr>
+                <td>Part de l'associé simulé</td>
+                <td>${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}</td>
+            </tr>
+            <tr>
+                <td>Quote-part du bénéfice</td>
+                <td>${formatter.format(result.sim.beneficeAssociePrincipal || (result.sim.beneficeAvantCotisations * (result.sim.partAssocie || 1)))}</td>
+            </tr>
+        </table>
+        
+        <div class="mt-3 p-3 bg-gray-800 bg-opacity-50 rounded-lg text-xs text-gray-400">
+            <p><i class="fas fa-balance-scale mr-1"></i> 
+            <strong>Transparence fiscale :</strong> Chaque associé déclare sa quote-part 
+            du résultat fiscal dans sa déclaration personnelle.</p>
+        </div>
+        ` : ''}
+        
+        <div class="detail-category">Charges sociales</div>
+        <table class="detail-table">
+            <tr>
+                <td>Base de calcul</td>
+                <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
+            </tr>
+            <tr>
+                <td>Taux de cotisations sociales TNS</td>
+                <td>≈${formatPercent(tauxCotisationsTNS)}</td>
+            </tr>
+            <tr>
+                <td>Montant des cotisations sociales</td>
+                <td>${formatter.format(result.sim.cotisationsSociales)}</td>
+            </tr>
+            ${result.sim.csgNonDeductible ? `
+            <tr>
+                <td>dont CSG non déductible (2,4%)</td>
+                <td>${formatter.format(result.sim.csgNonDeductible)}</td>
+            </tr>
             ` : ''}
-            
-            <div class="detail-category">Charges sociales</div>
-            <table class="detail-table">
-                <tr>
-                    <td>Base de calcul</td>
-                    <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
-                </tr>
-                <tr>
-                    <td>Taux de cotisations sociales TNS</td>
-                    <td>≈${formatPercent(tauxCotisationsTNS)}</td>
-                </tr>
-                <tr>
-                    <td>Montant des cotisations sociales</td>
-                    <td>${formatter.format(result.sim.cotisationsSociales)}</td>
-                </tr>
-            </table>
-            
-            <div class="detail-category">Impôt sur le revenu</div>
-            <table class="detail-table">
-                <tr>
-                    <td>Bénéfice après cotisations</td>
-                    <td>${formatter.format(result.sim.beneficeApresCotisations || result.sim.beneficeImposable)}</td>
-                </tr>
-                <tr>
-                    <td>Impôt sur le revenu (${result.sim.modeExpert ? 'progressif, TMI: '+tmiEffectif+'%' : 'TMI: '+tmiEffectif+'%'})</td>
-                    <td>${formatter.format(result.sim.impotRevenu)}</td>
-                </tr>
-            </table>
-            
-            <div class="detail-category">Résultat final</div>
-            <table class="detail-table">
-                <tr>
-                    <td>Bénéfice avant cotisations</td>
-                    <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
-                </tr>
-                <tr>
-                    <td>- Cotisations sociales (${formatPercent(tauxCotisationsTNS)})</td>
-                    <td>${formatter.format(result.sim.cotisationsSociales)}</td>
-                </tr>
-                <tr>
-                    <td>- Impôt sur le revenu</td>
-                    <td>${formatter.format(result.sim.impotRevenu)}</td>
-                </tr>
-                <tr>
-                    <td><strong>= Revenu net en poche</strong></td>
-                    <td><strong>${formatter.format(result.sim.revenuNetApresImpot)}</strong></td>
-                </tr>
-                <tr>
-                    <td>Ratio Net/CA</td>
-                    <td>${formatPercent(result.sim.ratioNetCA)}</td>
-                </tr>
-            </table>
-        `;
+        </table>
+        
+        <div class="detail-category">Impôt sur le revenu</div>
+        <table class="detail-table">
+            <tr>
+                <td>Bénéfice après cotisations</td>
+                <td>${formatter.format(result.sim.beneficeApresCotisations || result.sim.beneficeImposable)}</td>
+            </tr>
+            <tr>
+                <td>Impôt sur le revenu (${result.sim.modeExpert ? 'progressif, TMI: '+tmiEffectif+'%' : 'TMI: '+tmiEffectif+'%'})</td>
+                <td>${formatter.format(result.sim.impotRevenu)}</td>
+            </tr>
+        </table>
+        
+        <div class="detail-category">Résultat final</div>
+        <table class="detail-table">
+            <tr>
+                <td>Bénéfice avant cotisations</td>
+                <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
+            </tr>
+            <tr>
+                <td>- Cotisations sociales (${formatPercent(tauxCotisationsTNS)})</td>
+                <td>${formatter.format(result.sim.cotisationsSociales)}</td>
+            </tr>
+            <tr>
+                <td>- Impôt sur le revenu</td>
+                <td>${formatter.format(result.sim.impotRevenu)}</td>
+            </tr>
+            <tr>
+                <td><strong>= Revenu net en poche</strong></td>
+                <td><strong>${formatter.format(result.sim.revenuNetApresImpot)}</strong></td>
+            </tr>
+            <tr>
+                <td>Ratio Net/CA</td>
+                <td>${formatPercent(result.sim.ratioNetCA)}</td>
+            </tr>
+        </table>
+    `;
+
     } else if (statutId === 'sci') {
         // Cas particulier de la SCI
         const tauxPrelevementsSociaux = 17.2;
