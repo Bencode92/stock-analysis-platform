@@ -1553,7 +1553,7 @@ if (statutId === 'micro') {
         </tr>
         <tr>
             <td>Part de l'associé simulé</td>
-            <td>${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%</td>
+            <td>${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}</td>
         </tr>
         ${result.sim.dividendes > 0 ? `
         <tr>
@@ -1739,7 +1739,7 @@ if (statutId === 'micro') {
                 </tr>
                 <tr>
                     <td>Part de l'associé simulé</td>
-                    <td>${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%</td>
+                    <td>${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}</td>
                 </tr>
                 ${result.sim.dividendes > 0 ? `
                 <tr>
@@ -1906,7 +1906,7 @@ if (statutId === 'micro') {
                 </tr>
                 <tr>
                     <td>Part de l'associé simulé</td>
-                    <td>${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%</td>
+                    <td>${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}</td>
                 </tr>
                 <tr>
                     <td>Quote-part du bénéfice</td>
@@ -2058,7 +2058,7 @@ if (statutId === 'micro') {
                 </tr>
                 <tr>
                     <td>Part de l'associé simulé</td>
-                    <td>${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%</td>
+                    <td>${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}</td>
                 </tr>
                 <tr>
                     <td>Quote-part du résultat fiscal</td>
