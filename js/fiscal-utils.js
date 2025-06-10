@@ -1,5 +1,5 @@
 // fiscal-utils.js - Utilitaires pour les calculs fiscaux
-// Version 1.5 - Harmonisation taux TNS à 30% du brut
+// Version 1.6 - Ajout optimisation PFU vs barème progressif
 
 const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS = 2,9%
 
@@ -133,6 +133,58 @@ class FiscalUtils {
         return Math.round(dividendes * 0.30);
     }
     
+    // NOUVEAU: Choix optimal entre PFU et barème progressif pour dividendes
+    static choisirFiscaliteDividendes(dividendes, tmi) {
+        // Garde-fou
+        if (dividendes <= 0) return { 
+            methode: 'PFU', 
+            impotIR: 0, 
+            prevSoc: 0, 
+            total: 0,
+            economie: 0
+        };
+        
+        // Calcul PFU : 12,8% IR + 17,2% PS = 30%
+        const impotPFU = Math.round(dividendes * 0.128);
+        const prevSocPFU = Math.round(dividendes * 0.172);
+        const totalPFU = impotPFU + prevSocPFU;
+        
+        // Calcul barème progressif : abattement 40% puis IR au TMI + 17,2% PS
+        const baseIR = dividendes * 0.60; // Après abattement de 40%
+        const impotProgressif = Math.round(baseIR * (tmi / 100));
+        const prevSocProg = Math.round(dividendes * 0.172);
+        const totalProgressif = impotProgressif + prevSocProg;
+        
+        // Retourner la méthode la plus avantageuse
+        if (totalPFU <= totalProgressif) {
+            return {
+                methode: 'PFU',
+                impotIR: impotPFU,
+                prevSoc: prevSocPFU,
+                total: totalPFU,
+                economie: totalProgressif - totalPFU,
+                details: {
+                    tauxEffectif: (totalPFU / dividendes * 100).toFixed(1),
+                    baseImposable: dividendes
+                }
+            };
+        } else {
+            return {
+                methode: 'PROGRESSIF',
+                impotIR: impotProgressif,
+                prevSoc: prevSocProg,
+                total: totalProgressif,
+                economie: totalPFU - totalProgressif,
+                abattement: Math.round(dividendes * 0.40),
+                details: {
+                    tauxEffectif: (totalProgressif / dividendes * 100).toFixed(1),
+                    baseImposable: baseIR,
+                    tmiApplique: tmi
+                }
+            };
+        }
+    }
+    
     // Calcul IS selon tranches avec paramètres additionnels
     static calculIS(resultat, params = {}) {
         // FIX CRITIQUE: Pas d'IS négatif si déficit
@@ -176,6 +228,6 @@ window.FiscalUtils = FiscalUtils;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module FiscalUtils chargé (v1.5 - Taux TNS harmonisé à 30% du brut)");
+    console.log("Module FiscalUtils chargé (v1.6 - Optimisation PFU vs barème progressif)");
     document.dispatchEvent(new CustomEvent('fiscalUtilsReady'));
 });
