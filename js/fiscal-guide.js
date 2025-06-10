@@ -1142,14 +1142,15 @@ function runComparison() {
     const tableHeader = document.querySelector('#sim-results thead tr');
     if (tableHeader) {
         tableHeader.innerHTML = `
-            <th class="px-4 py-3 rounded-tl-lg">Statut</th>
-            <th class="px-4 py-3">Rémunération brute</th>
-            <th class="px-4 py-3">Charges sociales</th>
-            <th class="px-4 py-3">Impôts</th>
-            <th class="px-4 py-3">Dividendes nets</th>
-            <th class="px-4 py-3">Ratio optimal</th>
-            <th class="px-4 py-3 rounded-tr-lg">Net en poche</th>
-        `;
+        <th class="px-4 py-3 rounded-tl-lg">Statut</th>
+        <th class="px-4 py-3">Rémunération brute</th>
+        <th class="px-4 py-3">Charges sociales</th>
+        <th class="px-4 py-3">Impôts</th>
+        <th class="px-4 py-3">Dividendes nets</th>
+        <th class="px-4 py-3">Méthode fiscale</th>
+        <th class="px-4 py-3">Ratio optimal</th>
+        <th class="px-4 py-3 rounded-tr-lg">Net en poche</th>
+    `;
     }
     
     // Afficher les résultats dans le tableau
