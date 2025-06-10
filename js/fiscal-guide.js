@@ -1543,7 +1543,7 @@ if (statutId === 'micro') {
     <table class="detail-table">
         <tr>
             <td colspan="2" class="text-center text-sm text-green-400">
-                Simulation pour <strong>1 associé détenant ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%</strong>
+                Simulation pour <strong>1 associé détenant ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}</strong>
                 (société à ${result.sim.nbAssocies} associés)
             </td>
         </tr>
@@ -1729,7 +1729,7 @@ if (statutId === 'micro') {
             <table class="detail-table">
                 <tr>
                     <td colspan="2" class="text-center text-sm text-green-400">
-                        Simulation pour <strong>1 associé détenant ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%</strong>
+                        Simulation pour <strong>1 associé détenant ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}</strong>
                         (société à ${result.sim.nbAssocies} associés)
                     </td>
                 </tr>
@@ -1896,7 +1896,7 @@ if (statutId === 'micro') {
             <table class="detail-table">
                 <tr>
                     <td colspan="2" class="text-center text-sm text-green-400">
-                        Simulation pour <strong>1 associé détenant ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%</strong>
+                        Simulation pour <strong>1 associé détenant ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}</strong>
                         (société à ${result.sim.nbAssocies} associés)
                     </td>
                 </tr>
@@ -2052,7 +2052,7 @@ if (statutId === 'micro') {
             <table class="detail-table">
                 <tr>
                     <td colspan="2" class="text-center text-sm text-green-400">
-                        Simulation pour <strong>1 associé détenant ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%</strong>
+                        Simulation pour <strong>1 associé détenant ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}</strong>
                         (SCI à ${result.sim.nbAssocies} associés)
                     </td>
                 </tr>
