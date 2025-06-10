@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 3.1 - Ajout optimisation PFU vs barème progressif pour dividendes
+// Version 3.2 - Calcul automatique TMI et optimisation PFU vs barème progressif
 
 // Constantes pour les taux de charges sociales
 const TAUX_CHARGES = {
@@ -48,8 +48,29 @@ function ajusterRemuneration(remunerationSouhaitee, resultatDisponible, tauxChar
     return remunerationSouhaitee;
 }
 
+// -------------------------------------------------------
+// NOUVEAU: Fallback local si la librairie externe n'est pas chargée
+function choisirFiscaliteDividendesLocal(divBruts, tmiPct = 30) {
+    const pfu = divBruts * 0.30;                     // PFU 30 %
+    const prog = divBruts * 0.60 * (tmiPct/100)      // IR progressif après abattement 40%
+                 + divBruts * 0.172;                 // Prélèvements sociaux
+    return (prog < pfu)
+        ? { total: Math.round(prog), methode:'PROGRESSIF', economie: Math.round(pfu-prog) }
+        : { total: Math.round(pfu),  methode:'PFU',        economie:0 };
+}
+
+// Fallback local pour calculer la TMI
+function calculerTMI(revenuImposable) {
+    if (revenuImposable <= 11497) return 0;
+    if (revenuImposable <= 26037) return 11;
+    if (revenuImposable <= 74545) return 30;
+    if (revenuImposable <= 160336) return 41;
+    return 45;
+}
+// -------------------------------------------------------
+
 // MODIFIÉ : Helper pour calculer les dividendes IS avec optimisation fiscale
-function calculerDividendesIS(resultatApresIS, partAssocie, capitalDetenu, isTNS = false, isGerantMajoritaire = false, tmiActuel = 30) {
+function calculerDividendesIS(resultatApresIS, partAssocie, capitalDetenu, isTNS = false, isGerantMajoritaire = false, tmiActuel = 30, revenuImposable = 0) {
     const dividendesBrutsSociete = Math.max(0, resultatApresIS);
     const dividendesBrutsAssocie = Math.floor(dividendesBrutsSociete * partAssocie);
     
@@ -63,22 +84,22 @@ function calculerDividendesIS(resultatApresIS, partAssocie, capitalDetenu, isTNS
         }
     }
     
-    // NOUVEAU : Choix optimal entre PFU et barème progressif
+    // NOUVEAU : Choix optimal entre PFU et barème progressif avec fallback
     let prelevementForfaitaire = 0;
     let methodeDividendes = '';
     let economieMethode = 0;
     
     if (dividendesBrutsAssocie > 0) {
-        if (window.FiscalUtils && window.FiscalUtils.choisirFiscaliteDividendes) {
-            const divTax = window.FiscalUtils.choisirFiscaliteDividendes(dividendesBrutsAssocie, tmiActuel);
-            prelevementForfaitaire = divTax.total;
-            methodeDividendes = divTax.methode;
-            economieMethode = divTax.economie;
+        let divTax;
+        if (window.FiscalUtils?.choisirFiscaliteDividendes) {
+            divTax = window.FiscalUtils.choisirFiscaliteDividendes(
+                dividendesBrutsAssocie, tmiActuel, revenuImposable);
         } else {
-            // Fallback au PFU si FiscalUtils pas disponible
-            prelevementForfaitaire = Math.floor(dividendesBrutsAssocie * 0.30);
-            methodeDividendes = 'PFU';
+            divTax = choisirFiscaliteDividendesLocal(dividendesBrutsAssocie, tmiActuel);
         }
+        prelevementForfaitaire = divTax.total;
+        methodeDividendes = divTax.methode;
+        economieMethode = divTax.economie;
     }
     
     const dividendesNets = dividendesBrutsAssocie - prelevementForfaitaire - cotTNSDiv;
@@ -159,7 +180,7 @@ class SimulationsFiscales {
     static simulerMicroEntreprise(params) {
         // Normaliser les paramètres
         const normalizedParams = this.normalizeAssociatesParams(params, 'micro');
-        const { ca, typeMicro = 'BIC', tmiActuel = 30, modeExpert = false, versementLiberatoire = false } = normalizedParams;
+        const { ca, typeMicro = 'BIC', modeExpert = false, versementLiberatoire = false } = normalizedParams;
         
         // Utiliser les plafonds depuis legalStatuses si disponible
         const plafonds = {
@@ -213,9 +234,13 @@ class SimulationsFiscales {
         // Calcul du revenu imposable après abattement
         const revenuImposable = Math.round(ca * (1 - abattements[typeEffectif]));
         
+        // NOUVEAU : Calcul automatique de la TMI
+        const tmiReel = window.FiscalUtils 
+            ? window.FiscalUtils.getTMI(revenuImposable)
+            : calculerTMI(revenuImposable);
+        
         // Calcul de l'impôt sur le revenu
         let impotRevenu;
-        let tmiReel = 0;
         
         if (versementLiberatoire) {
             impotRevenu = Math.round(ca * tauxVFL[typeEffectif]);
@@ -239,11 +264,6 @@ class SimulationsFiscales {
                 for (const t of tranches) {
                     const taxable = Math.max(0, Math.min(revenuImposable - min, t.max - min));
                     impotRevenu += taxable * t.taux;
-                    
-                    if (revenuImposable > min && revenuImposable <= t.max) {
-                        tmiReel = t.taux * 100;
-                    }
-                    
                     min = t.max;
                 }
                 
@@ -267,7 +287,6 @@ class SimulationsFiscales {
             ratioNetCA: (revenuNetApresImpot / ca) * 100,
             versementLiberatoire: versementLiberatoire,
             modeExpert: modeExpert,
-            tmiActuel: tmiActuel,
             tmiReel: tmiReel,
             // Infos associés (toujours 1 pour micro)
             nbAssocies: 1,
@@ -280,7 +299,7 @@ class SimulationsFiscales {
     static simulerEI(params) {
         // Normaliser les paramètres
         const normalizedParams = this.normalizeAssociatesParams(params, 'ei');
-        const { ca, tauxMarge = 0.3, tmiActuel = 30, modeExpert = false } = normalizedParams;
+        const { ca, tauxMarge = 0.3, modeExpert = false } = normalizedParams;
         
         // Calcul du bénéfice avant cotisations
         const beneficeAvantCotisations = Math.round(ca * tauxMarge);
@@ -296,12 +315,17 @@ class SimulationsFiscales {
         // Bénéfice après cotisations sociales
         const beneficeApresCotisations = beneficeAvantCotisations - cotisationsSociales;
         
+        // NOUVEAU : Calcul automatique de la TMI
+        const tmiReel = window.FiscalUtils 
+            ? window.FiscalUtils.getTMI(beneficeApresCotisations)
+            : calculerTMI(beneficeApresCotisations);
+        
         // Calcul de l'impôt sur le revenu
         let impotRevenu;
         if (modeExpert && window.FiscalUtils) {
             impotRevenu = window.FiscalUtils.calculateProgressiveIR(beneficeApresCotisations);
         } else {
-            impotRevenu = Math.round(beneficeApresCotisations * (tmiActuel / 100));
+            impotRevenu = Math.round(beneficeApresCotisations * (tmiReel / 100));
         }
         
         // Calcul du revenu net après impôt
@@ -318,6 +342,7 @@ class SimulationsFiscales {
             impotRevenu: impotRevenu,
             revenuNetApresImpot: revenuNetApresImpot,
             ratioNetCA: (revenuNetApresImpot / ca) * 100,
+            tmiReel: tmiReel,
             // Infos associés (toujours 1 pour EI)
             nbAssocies: 1,
             partAssocie: 1,
@@ -329,7 +354,7 @@ class SimulationsFiscales {
     static simulerEURL(params) {
         // Normaliser les paramètres
         const normalizedParams = this.normalizeAssociatesParams(params, 'eurl');
-        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, optionIS = false, tmiActuel = 30, modeExpert = false, capitalSocial = 1 } = normalizedParams;
+        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, optionIS = false, modeExpert = false, capitalSocial = 1 } = normalizedParams;
         
         // Calcul du résultat de l'entreprise
         const resultatEntreprise = Math.round(ca * tauxMarge);
@@ -348,11 +373,16 @@ class SimulationsFiscales {
             
             const beneficeImposable = resultatEntreprise - cotisationsSociales;
             
+            // NOUVEAU : Calcul automatique de la TMI
+            const tmiReel = window.FiscalUtils 
+                ? window.FiscalUtils.getTMI(beneficeImposable)
+                : calculerTMI(beneficeImposable);
+            
             let impotRevenu;
             if (modeExpert && window.FiscalUtils) {
                 impotRevenu = window.FiscalUtils.calculateProgressiveIR(beneficeImposable);
             } else {
-                impotRevenu = Math.round(beneficeImposable * (tmiActuel / 100));
+                impotRevenu = Math.round(beneficeImposable * (tmiReel / 100));
             }
             
             const revenuNetApresImpot = beneficeImposable - impotRevenu;
@@ -372,6 +402,7 @@ class SimulationsFiscales {
                 revenuNetTotal: revenuNetApresImpot,
                 ratioNetCA: (revenuNetApresImpot / ca) * 100,
                 baseCalculTNS: baseCalculTNS,
+                tmiReel: tmiReel,
                 // Infos associés
                 nbAssocies: 1,
                 partAssocie: 1,
@@ -398,11 +429,16 @@ class SimulationsFiscales {
             
             const remunerationNetteSociale = remuneration - cotisationsSociales;
             
+            // NOUVEAU : Calcul automatique de la TMI
+            const tmiReel = window.FiscalUtils 
+                ? window.FiscalUtils.getTMI(remunerationNetteSociale)
+                : calculerTMI(remunerationNetteSociale);
+            
             let impotRevenu;
             if (modeExpert && window.FiscalUtils) {
                 impotRevenu = window.FiscalUtils.calculateProgressiveIR(remunerationNetteSociale);
             } else {
-                impotRevenu = Math.round(remunerationNetteSociale * (tmiActuel / 100));
+                impotRevenu = Math.round(remunerationNetteSociale * (tmiReel / 100));
             }
             
             let is;
@@ -415,14 +451,15 @@ class SimulationsFiscales {
             
             const resultatApresIS = resultatApresRemuneration - is;
             
-            // MODIFIÉ : Utiliser le helper avec le TMI
+            // MODIFIÉ : Utiliser le helper avec le TMI calculé et le revenu imposable
             const dividendesInfo = calculerDividendesIS(
                 resultatApresIS, 
                 1, // EURL = 1 associé
                 capitalSocial,
                 true, // TNS
                 true,  // Toujours majoritaire en EURL
-                tmiActuel // AJOUT du TMI
+                tmiReel, // TMI calculé
+                remunerationNetteSociale // Revenu imposable
             );
             
             const revenuNetSalaire = remunerationNetteSociale - impotRevenu;
@@ -450,6 +487,7 @@ class SimulationsFiscales {
                 ratioNetCA: (revenuNetTotal / ca) * 100,
                 resultatEntreprise: resultatEntreprise,
                 ratioEffectif: ratioEffectif,
+                tmiReel: tmiReel,
                 // NOUVEAU : Ajout des infos d'optimisation
                 methodeDividendes: dividendesInfo.methodeDividendes,
                 economieMethode: dividendesInfo.economieMethode,
@@ -465,7 +503,7 @@ class SimulationsFiscales {
     static simulerSASU(params) {
         // Normaliser les paramètres
         const normalizedParams = this.normalizeAssociatesParams(params, 'sasu');
-        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, tmiActuel = 30, modeExpert = false, secteur = "Tous", taille = "<50" } = normalizedParams;
+        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, modeExpert = false, secteur = "Tous", taille = "<50" } = normalizedParams;
         
         // Calcul du résultat de l'entreprise
         const resultatEntreprise = Math.round(ca * tauxMarge);
@@ -492,11 +530,16 @@ class SimulationsFiscales {
         
         const salaireNet = remuneration - chargesSalariales;
         
+        // NOUVEAU : Calcul automatique de la TMI
+        const tmiReel = window.FiscalUtils 
+            ? window.FiscalUtils.getTMI(salaireNet)
+            : calculerTMI(salaireNet);
+        
         let impotRevenu;
         if (modeExpert && window.FiscalUtils) {
             impotRevenu = window.FiscalUtils.calculateProgressiveIR(salaireNet);
         } else {
-            impotRevenu = Math.round(salaireNet * (tmiActuel / 100));
+            impotRevenu = Math.round(salaireNet * (tmiReel / 100));
         }
         
         const salaireNetApresIR = salaireNet - impotRevenu;
@@ -511,14 +554,15 @@ class SimulationsFiscales {
         
         const resultatApresIS = resultatApresRemuneration - is;
         
-        // MODIFIÉ : Utiliser le helper avec le TMI
+        // MODIFIÉ : Utiliser le helper avec le TMI calculé
         const dividendesInfo = calculerDividendesIS(
             resultatApresIS,
             1, // SASU = 1 associé
             0, // Pas de capital minimum significatif
             false, // Pas TNS
             false,  // Pas de gérant majoritaire
-            tmiActuel // AJOUT du TMI
+            tmiReel, // TMI calculé
+            salaireNet // Revenu imposable
         );
         
         const revenuNetTotal = salaireNetApresIR + dividendesInfo.dividendesNets;
@@ -549,6 +593,7 @@ class SimulationsFiscales {
             taille: taille,
             ratioEffectif: ratioEffectif,
             modeExpert: modeExpert,
+            tmiReel: tmiReel,
             // NOUVEAU : Ajout des infos d'optimisation
             methodeDividendes: dividendesInfo.methodeDividendes,
             economieMethode: dividendesInfo.economieMethode,
@@ -568,7 +613,6 @@ class SimulationsFiscales {
             ca, 
             tauxMarge = 0.3, 
             tauxRemuneration = 0.7, 
-            tmiActuel = 30,
             gerantMajoritaire = true,
             nbAssocies = normalizedParams.nbAssocies,
             partAssocie = normalizedParams.partAssocie,
@@ -588,6 +632,7 @@ class SimulationsFiscales {
         let resultatApresRemuneration = 0;
         let remuneration = 0;
         let ratioEffectif = 0;
+        let remunerationNetteSociale = 0;
         
         if (gerantMajoritaire) {
             // Gérant majoritaire = TNS
@@ -603,6 +648,7 @@ class SimulationsFiscales {
                 cotisationsSociales = Math.round(remuneration * TAUX_CHARGES.TNS);
             }
             salaireNet = remuneration - cotisationsSociales;
+            remunerationNetteSociale = salaireNet;
             const coutRemunerationEntreprise = remuneration + cotisationsSociales;
             resultatApresRemuneration = resultatEntreprise - coutRemunerationEntreprise;
             ratioEffectif = coutRemunerationEntreprise / resultatEntreprise;
@@ -626,17 +672,23 @@ class SimulationsFiscales {
                 cotisationsSociales = chargesPatronales + chargesSalariales;
             }
             salaireNet = remuneration - chargesSalariales;
+            remunerationNetteSociale = salaireNet;
             const coutTotalEmployeur = remuneration + chargesPatronales;
             resultatApresRemuneration = resultatEntreprise - coutTotalEmployeur;
             ratioEffectif = coutTotalEmployeur / resultatEntreprise;
         }
+        
+        // NOUVEAU : Calcul automatique de la TMI
+        const tmiReel = window.FiscalUtils 
+            ? window.FiscalUtils.getTMI(salaireNet)
+            : calculerTMI(salaireNet);
         
         // Calcul de l'impôt sur le revenu
         let impotRevenu;
         if (modeExpert && window.FiscalUtils) {
             impotRevenu = window.FiscalUtils.calculateProgressiveIR(salaireNet);
         } else {
-            impotRevenu = Math.round(salaireNet * (tmiActuel / 100));
+            impotRevenu = Math.round(salaireNet * (tmiReel / 100));
         }
         
         const salaireNetApresIR = salaireNet - impotRevenu;
@@ -652,7 +704,7 @@ class SimulationsFiscales {
         
         const resultatApresIS = resultatApresRemuneration - is;
         
-        // MODIFIÉ : Utiliser le helper avec le TMI
+        // MODIFIÉ : Utiliser le helper avec le TMI calculé
         const capitalDetenu = capitalSocial * partAssocie;
         const dividendesInfo = calculerDividendesIS(
             resultatApresIS,
@@ -660,11 +712,11 @@ class SimulationsFiscales {
             capitalDetenu,
             gerantMajoritaire, // TNS si gérant majoritaire
             gerantMajoritaire,  // Cotisations sur dividendes si majoritaire
-            tmiActuel // AJOUT du TMI
+            tmiReel, // TMI calculé
+            salaireNet // Revenu imposable
         );
         
         const revenuNetTotal = salaireNetApresIR + dividendesInfo.dividendesNets;
-        const remunerationNetteSociale = salaireNet;
         
         return {
             compatible: true,
@@ -693,6 +745,7 @@ class SimulationsFiscales {
             dividendesNets: dividendesInfo.dividendesNets,
             revenuNetTotal: revenuNetTotal,
             ratioNetCA: (revenuNetTotal / ca) * 100,
+            tmiReel: tmiReel,
             
             // NOUVEAU : Ajout des infos d'optimisation
             methodeDividendes: dividendesInfo.methodeDividendes,
@@ -720,8 +773,7 @@ class SimulationsFiscales {
         const { 
             nbAssocies = normalizedParams.nbAssocies,
             partAssocie = normalizedParams.partAssocie,
-            partAssociePct = normalizedParams.partAssociePct,
-            tmiActuel = 30
+            partAssociePct = normalizedParams.partAssociePct
         } = normalizedParams;
         
         // Simuler comme une SASU
@@ -731,14 +783,15 @@ class SimulationsFiscales {
             return resultSASU;
         }
         
-        // MODIFIÉ : Utiliser le helper avec le TMI
+        // MODIFIÉ : Utiliser le helper avec le TMI calculé de SASU
         const dividendesInfo = calculerDividendesIS(
             resultSASU.resultatApresIS,
             partAssocie,
             0, // Pas de capital minimum significatif
             false, // Pas TNS
             false,  // Pas de gérant majoritaire
-            tmiActuel // AJOUT du TMI
+            resultSASU.tmiReel, // TMI calculé par SASU
+            resultSASU.salaireNet // Revenu imposable
         );
         
         // Recalculer le revenu net total
@@ -772,7 +825,7 @@ class SimulationsFiscales {
     static simulerSA(params) {
         // Normaliser les paramètres
         const normalizedParams = this.normalizeAssociatesParams(params, 'sa');
-        const { capitalInvesti = 37000, partAssocie = normalizedParams.partAssocie, tmiActuel = 30 } = normalizedParams;
+        const { capitalInvesti = 37000, partAssocie = normalizedParams.partAssocie } = normalizedParams;
         
         // Vérifier si le capital minimum est respecté
         if (capitalInvesti < 37000) {
@@ -804,14 +857,15 @@ class SimulationsFiscales {
         
         const resultatApresIS = Math.max(0, resultatApresCAC - is);
         
-        // MODIFIÉ : Utiliser le helper avec le TMI
+        // MODIFIÉ : Utiliser le helper avec le TMI calculé de SAS
         const dividendesInfo = calculerDividendesIS(
             resultatApresIS,
             partAssocie,
             capitalInvesti * partAssocie,
             false,
             false,
-            tmiActuel // AJOUT du TMI
+            resultSAS.tmiReel, // TMI calculé par SAS
+            resultSAS.salaireNet // Revenu imposable
         );
         
         const revenuNetTotal = resultSAS.salaireNetApresIR + dividendesInfo.dividendesNets;
@@ -844,7 +898,6 @@ class SimulationsFiscales {
         const { 
             ca, 
             tauxMarge = 0.3, 
-            tmiActuel = 30, 
             nbAssocies = normalizedParams.nbAssocies,
             partAssocie = normalizedParams.partAssocie,
             partAssociePct = normalizedParams.partAssociePct,
@@ -871,12 +924,17 @@ class SimulationsFiscales {
         // Bénéfice après cotisations sociales
         const beneficeApresCotisations = beneficeAssociePrincipal - cotisationsSociales;
         
+        // NOUVEAU : Calcul automatique de la TMI
+        const tmiReel = window.FiscalUtils 
+            ? window.FiscalUtils.getTMI(beneficeApresCotisations)
+            : calculerTMI(beneficeApresCotisations);
+        
         // Impôt sur le revenu
         let impotRevenu;
         if (modeExpert && window.FiscalUtils) {
             impotRevenu = window.FiscalUtils.calculateProgressiveIR(beneficeApresCotisations);
         } else {
-            impotRevenu = Math.round(beneficeApresCotisations * (tmiActuel / 100));
+            impotRevenu = Math.round(beneficeApresCotisations * (tmiReel / 100));
         }
         
         // Revenu net après impôt
@@ -899,6 +957,7 @@ class SimulationsFiscales {
             revenuNetApresImpot: revenuNetApresImpot,
             revenuNetTotal: revenuNetApresImpot,
             ratioNetCA: (revenuNetApresImpot / ca) * 100,
+            tmiReel: tmiReel,
             
             // Informations sur les associés
             nbAssocies: nbAssocies,
@@ -915,7 +974,6 @@ class SimulationsFiscales {
         const { 
             revenuLocatif = 50000,
             chargesDeductibles = 10000,
-            tmiActuel = 30,
             optionIS = false,
             partAssocie = normalizedParams.partAssocie,
             nbAssocies = normalizedParams.nbAssocies,
@@ -968,26 +1026,16 @@ class SimulationsFiscales {
             // Base imposable après déduction CSG
             const baseImposableIR = Math.max(0, resultatFiscalAssocie - csgDeductible);
             
+            // NOUVEAU : Calcul automatique de la TMI
+            const tmiReel = window.FiscalUtils 
+                ? window.FiscalUtils.getTMI(baseImposableIR)
+                : calculerTMI(baseImposableIR);
+            
             // Toujours utiliser le calcul progressif pour l'IR
             let impotRevenu;
-            let tmiEffectif = 0;
             
             if (window.FiscalUtils && window.FiscalUtils.calculateProgressiveIR) {
                 impotRevenu = window.FiscalUtils.calculateProgressiveIR(baseImposableIR);
-                // Déterminer la TMI effective
-                const tranches = [
-                    { max: 11497, taux: 0 },
-                    { max: 26037, taux: 11 },
-                    { max: 74545, taux: 30 },
-                    { max: 160336, taux: 41 },
-                    { max: Infinity, taux: 45 }
-                ];
-                for (const t of tranches) {
-                    if (baseImposableIR <= t.max) {
-                        tmiEffectif = t.taux;
-                        break;
-                    }
-                }
             } else {
                 // Fallback: calcul progressif manuel
                 const tranches = [
@@ -1005,10 +1053,6 @@ class SimulationsFiscales {
                     if (baseImposableIR > min) {
                         const taxable = Math.max(0, Math.min(baseImposableIR - min, t.max - min));
                         impotRevenu += taxable * t.taux;
-                        
-                        if (baseImposableIR > min && baseImposableIR <= t.max && tmiEffectif === 0) {
-                            tmiEffectif = t.taux * 100;
-                        }
                     }
                     min = t.max;
                 }
@@ -1033,7 +1077,7 @@ class SimulationsFiscales {
                 prelevementsSociaux: prelevementsSociaux,
                 csgDeductible: csgDeductible,
                 baseImposableIR: baseImposableIR,
-                tmiEffectif: tmiEffectif,
+                tmiReel: tmiReel,
                 impotRevenu: impotRevenu,
                 revenuNetApresImpot: revenuNetApresImpot,
                 revenuNetTotal: revenuNetApresImpot,
@@ -1062,14 +1106,22 @@ class SimulationsFiscales {
             // Résultat après IS
             const resultatApresIS = resultatApresAmortissement - is;
             
-            // MODIFIÉ : Utiliser le helper avec le TMI
+            // Pour la SCI à l'IS, on considère un revenu imposable basé sur les dividendes
+            // Le TMI sera calculé à partir de ce montant
+            const revenuImposableEstime = Math.floor(resultatApresIS * partAssocie);
+            const tmiReel = window.FiscalUtils 
+                ? window.FiscalUtils.getTMI(revenuImposableEstime)
+                : calculerTMI(revenuImposableEstime);
+            
+            // MODIFIÉ : Utiliser le helper avec le TMI calculé
             const dividendesInfo = calculerDividendesIS(
                 resultatApresIS,
                 partAssocie,
                 0, // Pas de capital significatif en SCI
                 false,
                 false,
-                tmiActuel // AJOUT du TMI
+                tmiReel, // TMI calculé
+                revenuImposableEstime // Revenu imposable estimé
             );
             
             // Message explicatif si meublée
@@ -1107,6 +1159,7 @@ class SimulationsFiscales {
                 infoLocationMeublee: infoLocationMeublee,
                 partAssociePrincipal: partAssocie, // Pour compatibilité
                 nombreAssocies: nbAssocies, // Pour compatibilité
+                tmiReel: tmiReel,
                 
                 // NOUVEAU : Ajout des infos d'optimisation
                 methodeDividendes: dividendesInfo.methodeDividendes,
@@ -1181,12 +1234,12 @@ window.STATUTS_ASSOCIATES_CONFIG = STATUTS_ASSOCIATES_CONFIG;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v3.1 - Optimisation PFU vs barème progressif)");
+    console.log("Module SimulationsFiscales chargé (v3.2 - Calcul automatique TMI et optimisation PFU vs barème progressif)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady', {
         detail: {
-            version: '3.1',
-            features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG', 'optimisationFiscaleDividendes']
+            version: '3.2',
+            features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG', 'optimisationFiscaleDividendes', 'calculTMIAutomatique']
         }
     }));
 });
