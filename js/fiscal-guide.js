@@ -536,6 +536,9 @@ function runComparison() {
     const marge = parseFloat(document.getElementById('sim-marge').value) / 100 || 0.3;
     const ratioSalaire = parseFloat(document.getElementById('sim-salaire').value) / 100 || 0.7;
     const tmi = parseFloat(document.getElementById('sim-tmi').value) || 30;
+    const nbAssocies = parseInt(document.getElementById('sim-nb-associes')?.value) || 1;
+    const partAssociePct = parseFloat(document.getElementById('sim-part-associe')?.value) || 100;
+    const partAssocie = partAssociePct / 100;
     
     // Récupérer les options sectorielles actuelles
     const secteurSelect = document.querySelector('#secteur-select, [id$="secteur-select"]');
@@ -567,6 +570,10 @@ function runComparison() {
         gerantMajoritaire: gerantMajoritaire,
         secteur: window.sectorOptions?.secteur, // Ajouter ces paramètres
         taille: window.sectorOptions?.taille
+        nbAssocies: nbAssocies,
+        partAssocie: partAssocie,
+        partAssociePrincipal: partAssocie,  // Pour compatibilité
+        partAssociePct: partAssociePct
     };
 
     
