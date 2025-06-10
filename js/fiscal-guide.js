@@ -569,7 +569,7 @@ function runComparison() {
         modeExpert: modeExpert,
         gerantMajoritaire: gerantMajoritaire,
         secteur: window.sectorOptions?.secteur, // Ajouter ces paramètres
-        taille: window.sectorOptions?.taille
+        taille: window.sectorOptions?.taille,
         nbAssocies: nbAssocies,
         partAssocie: partAssocie,
         partAssociePrincipal: partAssocie,  // Pour compatibilité
