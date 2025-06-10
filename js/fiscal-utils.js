@@ -1,5 +1,5 @@
 // fiscal-utils.js - Utilitaires pour les calculs fiscaux
-// Version 1.6 - Ajout optimisation PFU vs barème progressif
+// Version 1.7 - Calcul automatique TMI et optimisation PFU vs barème progressif
 
 const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS = 2,9%
 
@@ -26,6 +26,21 @@ class FiscalUtils {
         }
         
         return Math.round(impot);
+    }
+    
+    // NOUVEAU: Détermine la tranche marginale d'imposition (barème 2025)
+    static getTMI(revenuImposable) {
+        const BAREME = [
+            { max: 11497,  taux: 0  },
+            { max: 26037,  taux: 11 },
+            { max: 74545,  taux: 30 },
+            { max: 160336, taux: 41 },
+            { max: Infinity, taux: 45 }
+        ];
+        for (const tr of BAREME) {
+            if (revenuImposable <= tr.max) return tr.taux;
+        }
+        return 45;      // Sécurité
     }
     
     // Optimisation du ratio rémunération/dividendes - VERSION CORRIGÉE
@@ -133,8 +148,8 @@ class FiscalUtils {
         return Math.round(dividendes * 0.30);
     }
     
-    // NOUVEAU: Choix optimal entre PFU et barème progressif pour dividendes
-    static choisirFiscaliteDividendes(dividendes, tmi) {
+    // MODIFIÉ: Choix optimal entre PFU et barème progressif pour dividendes
+    static choisirFiscaliteDividendes(dividendes, tmi = null, revenuImposable = 0) {
         // Garde-fou
         if (dividendes <= 0) return { 
             methode: 'PFU', 
@@ -143,6 +158,11 @@ class FiscalUtils {
             total: 0,
             economie: 0
         };
+        
+        // Si aucun TMI fourni, on le déduit du revenu imposable global
+        if (tmi === null || isNaN(tmi)) {
+            tmi = FiscalUtils.getTMI(revenuImposable);
+        }
         
         // Calcul PFU : 12,8% IR + 17,2% PS = 30%
         const impotPFU = Math.round(dividendes * 0.128);
@@ -228,6 +248,6 @@ window.FiscalUtils = FiscalUtils;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module FiscalUtils chargé (v1.6 - Optimisation PFU vs barème progressif)");
+    console.log("Module FiscalUtils chargé (v1.7 - Calcul automatique TMI et optimisation PFU vs barème progressif)");
     document.dispatchEvent(new CustomEvent('fiscalUtilsReady'));
 });
