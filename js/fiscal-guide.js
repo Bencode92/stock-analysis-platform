@@ -553,7 +553,7 @@ function runComparison() {
     }
     
     // Récupérer les options avancées
-   const modeExpert = document.getElementById('sim-expert-mode') ? true : false;
+  const modeExpert = true; // Toujours activer le mode expert pour des calculs précis
     const useOptimalRatio = document.getElementById('use-optimal-ratio') && document.getElementById('use-optimal-ratio').checked;
     const useAvgChargeRate = document.getElementById('use-avg-charge-rate') && document.getElementById('use-avg-charge-rate').checked;
     const versementLiberatoire = document.getElementById('micro-vfl') && document.getElementById('micro-vfl').checked;
