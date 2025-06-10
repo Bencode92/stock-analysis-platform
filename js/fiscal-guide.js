@@ -1181,27 +1181,37 @@ function runComparison() {
         }
         
         // Format avec dividendes et optimisation
-        row.innerHTML = `
-            <td class="px-4 py-3 font-medium">
-                ${isTopResult ? '<i class="fas fa-star text-yellow-400 mr-2"></i>' : ''}
-                ${statutIcons[res.statutId] || ''} ${res.statut} ${regimeBadges[res.statutId] || ''}
-            </td>
-            <td class="px-4 py-3">${res.brut === '-' ? '-' : formatter.format(res.brut)}</td>
-            <td class="px-4 py-3">${res.charges === '-' ? '-' : formatter.format(res.charges)}</td>
-            <td class="px-4 py-3">${res.impots === '-' ? '-' : formatter.format(res.impots)}</td>
-            <td class="px-4 py-3">${res.dividendesNets ? formatter.format(res.dividendesNets) : '-'}</td>
-            <td class="px-4 py-3">${optimisationValue}</td>
-            <td class="px-4 py-3">
-                <span class="net-value ${isTopResult ? 'top' : ''} cursor-pointer show-detail-btn" data-statut="${res.statutId}">
-                    ${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}
-                </span>
-                ${isTopResult ? 
-                '<div class="text-xs text-green-400 mt-1"><i class="fas fa-check-circle mr-1"></i>Optimal pour ce CA</div>' : ''}
-                <div class="text-xs text-blue-400 mt-1"><i class="fas fa-info-circle mr-1"></i>Cliquez pour détails</div>
-            </td>
-        `;
-        
-        resultsBody.appendChild(row);
+row.innerHTML = `
+    <td class="px-4 py-3 font-medium">
+        ${isTopResult ? '<i class="fas fa-star text-yellow-400 mr-2"></i>' : ''}
+        ${statutIcons[res.statutId] || ''} ${res.statut} ${regimeBadges[res.statutId] || ''}
+    </td>
+    <td class="px-4 py-3">${res.brut === '-' ? '-' : formatter.format(res.brut)}</td>
+    <td class="px-4 py-3">${res.charges === '-' ? '-' : formatter.format(res.charges)}</td>
+    <td class="px-4 py-3">${res.impots === '-' ? '-' : formatter.format(res.impots)}</td>
+    <td class="px-4 py-3">${res.dividendesNets ? formatter.format(res.dividendesNets) : '-'}</td>
+    <td class="px-4 py-3">
+        ${res.sim.methodeDividendes ? 
+            (res.sim.methodeDividendes === 'PROGRESSIF' ? 
+                '<span class="text-green-400 text-xs">Barème <i class="fas fa-check-circle ml-1"></i></span>' : 
+                '<span class="text-blue-400 text-xs">PFU 30%</span>') 
+            : '-'}
+        ${res.sim.economieMethode > 0 ? 
+            `<div class="text-xs text-gray-400">+${formatter.format(res.sim.economieMethode)}</div>` 
+            : ''}
+    </td>
+    <td class="px-4 py-3">${optimisationValue}</td>
+    <td class="px-4 py-3">
+        <span class="net-value ${isTopResult ? 'top' : ''} cursor-pointer show-detail-btn" data-statut="${res.statutId}">
+            ${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}
+        </span>
+        ${isTopResult ? 
+        '<div class="text-xs text-green-400 mt-1"><i class="fas fa-check-circle mr-1"></i>Optimal pour ce CA</div>' : ''}
+        <div class="text-xs text-blue-400 mt-1"><i class="fas fa-info-circle mr-1"></i>Cliquez pour détails</div>
+    </td>
+`;
+
+resultsBody.appendChild(row);
     });
     
     // Ajouter une ligne de mode de calcul avec état de l'optimisation
