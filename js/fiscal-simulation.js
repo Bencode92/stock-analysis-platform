@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 2.8 - Fix calcul basé sur coût employeur total
+// Version 2.9 - Fix calcul dividendes SARL gérant majoritaire
 
 // Constantes pour les taux de charges sociales
 const TAUX_CHARGES = {
@@ -574,10 +574,9 @@ class SimulationsFiscales {
         // FIX: Distribution de dividendes uniquement si résultat positif
         const dividendesBruts = Math.max(0, resultatApresIS);
         
-        // Pour le gérant, on considère qu'il reçoit des dividendes proportionnels à ses parts sociales
-        // Si gérant majoritaire, on estime qu'il détient 51% minimum des parts
-        const partGerant = gerantMajoritaire ? 0.51 : (1 / nbAssocies);
-        const dividendesGerant = Math.round(dividendesBruts * partGerant);
+        // CORRECTION: Pour le calcul fiscal, le gérant reçoit 100% des dividendes s'il est seul
+        // ou sa quote-part s'il est minoritaire
+        const dividendesGerant = gerantMajoritaire ? dividendesBruts : Math.round(dividendesBruts / nbAssocies);
         
         // Cotisations TNS sur dividendes > 10% du capital social pour gérant majoritaire
         let cotTNSDiv = 0;
@@ -1034,7 +1033,7 @@ window.ajusterRemuneration = ajusterRemuneration;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v2.8 avec calcul basé sur coût employeur)");
+    console.log("Module SimulationsFiscales chargé (v2.9 avec fix dividendes SARL)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady'));
 });
