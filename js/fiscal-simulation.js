@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 2.7 - Fix taux TNS : 30% du brut (≈45% du net)
+// Version 2.8 - Fix calcul basé sur coût employeur total
 
 // Constantes pour les taux de charges sociales
 const TAUX_CHARGES = {
@@ -15,35 +15,17 @@ function calculerSalaireBrutMax(resultatDisponible, tauxChargesPatronales = TAUX
     return resultatDisponible / (1 + tauxChargesPatronales);
 }
 
-// Fonction pour ajuster la rémunération selon les contraintes
-function ajusterRemuneration(remunerationSouhaitee, resultatDisponible, estAssimileSalarie = true) {
-    if (!estAssimileSalarie) {
-        // Pour un TNS, les charges sont déduites du net, pas ajoutées au brut
-        return {
-            remuneration: Math.min(remunerationSouhaitee, resultatDisponible),
-            ajustee: remunerationSouhaitee > resultatDisponible,
-            remunerationInitiale: remunerationSouhaitee,
-            message: remunerationSouhaitee > resultatDisponible 
-                ? `Rémunération ajustée pour respecter le résultat disponible`
-                : null
-        };
+// Fonction pour ajuster la rémunération selon les contraintes - VERSION CORRIGÉE
+function ajusterRemuneration(remunerationSouhaitee, resultatDisponible, tauxCharges = 0.55) {
+    // Vérifier le coût total et non plus le brut
+    const coutTotal = remunerationSouhaitee * (1 + tauxCharges);
+    
+    if (coutTotal > resultatDisponible) {
+        // Ajuster pour que le coût total ne dépasse pas le résultat
+        return Math.floor(resultatDisponible / (1 + tauxCharges));
     }
     
-    // Pour un assimilé salarié, on doit tenir compte des charges patronales
-    const tauxChargesPatronales = TAUX_CHARGES.PATRONAL_MOYEN;
-    const salaireBrutMax = calculerSalaireBrutMax(resultatDisponible, tauxChargesPatronales);
-    
-    const remunerationAjustee = Math.min(remunerationSouhaitee, salaireBrutMax);
-    
-    return {
-        remuneration: Math.round(remunerationAjustee),
-        ajustee: remunerationSouhaitee > salaireBrutMax,
-        remunerationInitiale: Math.round(remunerationSouhaitee),
-        salaireBrutMax: Math.round(salaireBrutMax),
-        message: remunerationSouhaitee > salaireBrutMax 
-            ? `Rémunération ajustée de ${Math.round(remunerationSouhaitee)}€ à ${Math.round(remunerationAjustee)}€ pour respecter le résultat disponible`
-            : null
-    };
+    return remunerationSouhaitee;
 }
 
 // Classe pour les simulations fiscales des différents statuts juridiques
@@ -219,9 +201,6 @@ class SimulationsFiscales {
         // Calcul du résultat de l'entreprise (simplifié - CA * taux de marge)
         const resultatEntreprise = Math.round(ca * tauxMarge);
         
-        // Calcul de la rémunération du gérant
-        const remuneration = Math.round(resultatEntreprise * tauxRemuneration);
-        
         // Simulation selon le régime d'imposition
         if (!optionIS) {
             // Régime IR (transparence fiscale)
@@ -260,7 +239,7 @@ class SimulationsFiscales {
                 typeEntreprise: "EURL à l'IR",
                 tauxMarge: tauxMarge * 100 + '%',
                 resultatAvantRemuneration: resultatEntreprise,
-                remuneration: remuneration,
+                remuneration: resultatEntreprise, // Tout est considéré comme rémunération en IR
                 resultatApresRemuneration: 0, // Pas de distinction en IR
                 cotisationsSociales: cotisationsSociales,
                 beneficeImposable: beneficeImposable,
@@ -272,6 +251,13 @@ class SimulationsFiscales {
             };
         } else {
             // Régime IS
+            
+            // NOUVEAU: Calcul basé sur le coût total TNS
+            const remunerationSouhaitee = window.FiscalUtils && window.FiscalUtils.brutFromCostShare ? 
+                window.FiscalUtils.brutFromCostShare(resultatEntreprise, tauxRemuneration, 0.30) :
+                Math.round(resultatEntreprise * tauxRemuneration / 1.30);
+            
+            const remuneration = ajusterRemuneration(remunerationSouhaitee, resultatEntreprise, 0.30);
             
             // Utiliser la fonction utilitaire pour calculer les cotisations TNS
             let cotisationsSociales;
@@ -285,6 +271,9 @@ class SimulationsFiscales {
             // FIX: pour un TNS, les cotisations sont déductibles
             const coutRemunerationEntreprise = remuneration + cotisationsSociales;
             const resultatApresRemuneration = resultatEntreprise - coutRemunerationEntreprise;
+            
+            // Calcul du ratio effectif
+            const ratioEffectif = coutRemunerationEntreprise / resultatEntreprise;
             
             // Calcul de l'impôt sur le revenu sur la rémunération
             const remunerationNetteSociale = remuneration - cotisationsSociales;
@@ -365,7 +354,8 @@ class SimulationsFiscales {
                 dividendesNets: dividendesNets,
                 revenuNetTotal: revenuNetTotal,
                 ratioNetCA: (revenuNetTotal / ca) * 100,
-                resultatEntreprise: resultatEntreprise
+                resultatEntreprise: resultatEntreprise,
+                ratioEffectif: ratioEffectif
             };
         }
     }
@@ -377,12 +367,13 @@ class SimulationsFiscales {
         // Calcul du résultat de l'entreprise
         const resultatEntreprise = Math.round(ca * tauxMarge);
         
-        // Calcul de la rémunération souhaitée
-        const remunerationSouhaitee = Math.round(resultatEntreprise * tauxRemuneration);
+        // NOUVEAU: Calcul basé sur le coût employeur
+        const remunerationSouhaitee = window.FiscalUtils && window.FiscalUtils.brutFromCostShare ? 
+            window.FiscalUtils.brutFromCostShare(resultatEntreprise, tauxRemuneration, 0.55) :
+            Math.round(resultatEntreprise * tauxRemuneration / 1.55);
         
-        // NOUVEAU: Ajuster la rémunération selon les contraintes
-        const ajustement = ajusterRemuneration(remunerationSouhaitee, resultatEntreprise, true);
-        const remuneration = ajustement.remuneration;
+        // Ajuster si nécessaire
+        const remuneration = ajusterRemuneration(remunerationSouhaitee, resultatEntreprise, 0.55);
         
         // Calcul des charges sociales avec paramètres sectoriels
         let chargesPatronales, chargesSalariales;
@@ -399,6 +390,9 @@ class SimulationsFiscales {
         const coutTotalEmployeur = remuneration + chargesPatronales;
         // FIX: on déduit le coût total employeur
         const resultatApresRemuneration = resultatEntreprise - coutTotalEmployeur;
+        
+        // Calcul du ratio effectif
+        const ratioEffectif = coutTotalEmployeur / resultatEntreprise;
         
         const salaireNet = remuneration - chargesSalariales;
         
@@ -456,8 +450,6 @@ class SimulationsFiscales {
             tauxMarge: tauxMarge * 100 + '%',
             resultatEntreprise: resultatEntreprise,
             remuneration: remuneration,
-            remunerationAjustee: ajustement.ajustee,
-            messageAjustement: ajustement.message,
             chargesPatronales: chargesPatronales,
             coutTotalEmployeur: coutTotalEmployeur,
             chargesSalariales: chargesSalariales,
@@ -475,7 +467,8 @@ class SimulationsFiscales {
             ratioNetCA: (revenuNetTotal / ca) * 100,
             secteur: secteur,
             taille: taille,
-            message: ajustement.message
+            ratioEffectif: ratioEffectif,
+            modeExpert: modeExpert
         };
     }
 
@@ -497,20 +490,21 @@ class SimulationsFiscales {
         // Calcul du résultat de l'entreprise (simplifié - CA * taux de marge)
         const resultatEntreprise = Math.round(ca * tauxMarge);
         
-        // Calcul de la rémunération souhaitée
-        const remunerationSouhaitee = Math.round(resultatEntreprise * tauxRemuneration);
-        
         // Régime social différent selon que le gérant est majoritaire ou non
         let cotisationsSociales = 0;
         let salaireNet = 0;
         let resultatApresRemuneration = 0;
-        let remuneration = remunerationSouhaitee;
-        let ajustement = null;
+        let remuneration = 0;
+        let ratioEffectif = 0;
         
         if (gerantMajoritaire) {
             // Gérant majoritaire = TNS
-            ajustement = ajusterRemuneration(remunerationSouhaitee, resultatEntreprise, false);
-            remuneration = ajustement.remuneration;
+            // NOUVEAU: Calcul basé sur le coût total TNS
+            const remunerationSouhaitee = window.FiscalUtils && window.FiscalUtils.brutFromCostShare ? 
+                window.FiscalUtils.brutFromCostShare(resultatEntreprise, tauxRemuneration, 0.30) :
+                Math.round(resultatEntreprise * tauxRemuneration / 1.30);
+            
+            remuneration = ajusterRemuneration(remunerationSouhaitee, resultatEntreprise, 0.30);
             
             if (window.FiscalUtils) {
                 cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(remuneration);
@@ -522,10 +516,15 @@ class SimulationsFiscales {
             // FIX: pour un TNS, les cotisations sont déductibles
             const coutRemunerationEntreprise = remuneration + cotisationsSociales;
             resultatApresRemuneration = resultatEntreprise - coutRemunerationEntreprise;
+            ratioEffectif = coutRemunerationEntreprise / resultatEntreprise;
         } else {
             // Gérant minoritaire = assimilé salarié
-            ajustement = ajusterRemuneration(remunerationSouhaitee, resultatEntreprise, true);
-            remuneration = ajustement.remuneration;
+            // NOUVEAU: Calcul basé sur le coût employeur
+            const remunerationSouhaitee = window.FiscalUtils && window.FiscalUtils.brutFromCostShare ? 
+                window.FiscalUtils.brutFromCostShare(resultatEntreprise, tauxRemuneration, 0.55) :
+                Math.round(resultatEntreprise * tauxRemuneration / 1.55);
+            
+            remuneration = ajusterRemuneration(remunerationSouhaitee, resultatEntreprise, 0.55);
             
             let chargesPatronales, chargesSalariales;
             if (window.FiscalUtils) {
@@ -543,6 +542,7 @@ class SimulationsFiscales {
             // FIX: on déduit le coût total employeur
             const coutTotalEmployeur = remuneration + chargesPatronales;
             resultatApresRemuneration = resultatEntreprise - coutTotalEmployeur;
+            ratioEffectif = coutTotalEmployeur / resultatEntreprise;
         }
         
         // Calcul de l'impôt sur le revenu
@@ -609,6 +609,9 @@ class SimulationsFiscales {
         // Revenu net total (salaire net + dividendes nets)
         const revenuNetTotal = salaireNetApresIR + dividendesNets;
         
+        // Pour la rémunération nette sociale (utilisée dans l'affichage)
+        const remunerationNetteSociale = salaireNet;
+        
         return {
             compatible: true,
             ca: ca,
@@ -616,10 +619,9 @@ class SimulationsFiscales {
             tauxMarge: tauxMarge * 100 + '%',
             resultatEntreprise: resultatEntreprise,
             remuneration: remuneration,
-            remunerationAjustee: ajustement ? ajustement.ajustee : false,
-            messageAjustement: ajustement ? ajustement.message : null,
             cotisationsSociales: cotisationsSociales,
             salaireNet: salaireNet,
+            remunerationNetteSociale: remunerationNetteSociale,
             impotRevenu: impotRevenu,
             salaireNetApresIR: salaireNetApresIR,
             revenuNetSalaire: salaireNetApresIR,
@@ -637,7 +639,8 @@ class SimulationsFiscales {
             gerantMajoritaire: gerantMajoritaire,
             secteur: secteur,
             taille: taille,
-            message: ajustement ? ajustement.message : null
+            ratioEffectif: ratioEffectif,
+            modeExpert: modeExpert
         };
     }
 
@@ -978,17 +981,18 @@ class SimulationsFiscales {
         }
     }
 
-    // Pour SELARL, SELAS et SCA, les méthodes seront également mises à jour de manière similaire
-    // Je conserve le code existant pour éviter un fichier trop long
+    // SELARL avec calcul basé sur coût total
     static simulerSELARL(params) {
         // Similaire à SARL mais pour professions libérales
-        const result = this.simulerSARL({...params, typeEntreprise: 'SELARL'});
+        // Force gérant majoritaire pour les professions libérales
+        const result = this.simulerSARL({...params, gerantMajoritaire: true, typeEntreprise: 'SELARL'});
         if (result.compatible) {
             result.typeEntreprise = 'SELARL';
         }
         return result;
     }
 
+    // SELAS basé sur SAS
     static simulerSELAS(params) {
         // Similaire à SAS mais pour professions libérales
         const result = this.simulerSAS(params);
@@ -998,6 +1002,7 @@ class SimulationsFiscales {
         return result;
     }
 
+    // SCA avec calcul basé sur coût total
     static simulerSCA(params) {
         // Conserver le code existant
         const { capitalInvesti = 37000 } = params;
@@ -1010,7 +1015,7 @@ class SimulationsFiscales {
             };
         }
         
-        // Réutiliser une grande partie du code de la SARL
+        // Réutiliser une grande partie du code de la SARL avec gérant majoritaire
         const result = this.simulerSARL({...params, gerantMajoritaire: true});
         if (result.compatible) {
             result.typeEntreprise = 'SCA';
@@ -1029,7 +1034,7 @@ window.ajusterRemuneration = ajusterRemuneration;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v2.7 avec fix taux TNS: 30% du brut)");
+    console.log("Module SimulationsFiscales chargé (v2.8 avec calcul basé sur coût employeur)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady'));
 });
