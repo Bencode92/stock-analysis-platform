@@ -1265,6 +1265,24 @@ function runComparison() {
     });
 }
 
+// NOUVEAU: Configuration des statuts multi-associés (à ajouter au début de fiscal-guide.js)
+const STATUTS_MULTI_ASSOCIES = {
+    'sci': true,
+    'snc': true,
+    'sarl': true,
+    'sas': true,
+    'sa': true,
+    'selarl': true,
+    'selas': true,
+    'sca': true,
+    // Les suivants sont unipersonnels
+    'ei': false,
+    'eurl': false,
+    'eurlIS': false,
+    'sasu': false,
+    'micro': false
+};
+
 // Barème IR 2025 - Fonction utilitaire pour calculer le TMI effectif
 function getTMI(revenu) {
     if (revenu <= 11497)   return 0;
@@ -1518,6 +1536,54 @@ if (statutId === 'micro') {
             </td>
         </tr>
     </table>
+    
+    ${/* NOUVEAU: Section associés pour SAS/SA/SELAS */ ''}
+    ${STATUTS_MULTI_ASSOCIES[statutId] && result.sim.nbAssocies > 1 ? `
+    <div class="detail-category">Répartition entre associés</div>
+    <table class="detail-table">
+        <tr>
+            <td colspan="2" class="text-center text-sm text-green-400">
+                Simulation pour <strong>1 associé détenant ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%</strong>
+                (société à ${result.sim.nbAssocies} associés)
+            </td>
+        </tr>
+        <tr>
+            <td>Nombre total d'associés</td>
+            <td>${result.sim.nbAssocies}</td>
+        </tr>
+        <tr>
+            <td>Part de l'associé simulé</td>
+            <td>${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%</td>
+        </tr>
+        ${result.sim.dividendes > 0 ? `
+        <tr>
+            <td>Dividendes totaux de la société</td>
+            <td>${formatter.format(
+                Math.round(result.sim.dividendes / (result.sim.partAssocie || 1))
+            )}</td>
+        </tr>
+        <tr>
+            <td>Quote-part de dividendes (${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%)</td>
+            <td>${formatter.format(result.sim.dividendes)}</td>
+        </tr>
+        ` : ''}
+    </table>
+    
+    <div class="mt-3 p-3 bg-blue-900 bg-opacity-30 rounded-lg text-xs">
+        <p><i class="fas fa-calculator text-blue-400 mr-2"></i>
+        <strong>Note :</strong> Les montants affichés correspondent uniquement à la quote-part 
+        de cet associé. Pour obtenir les résultats totaux de la société, divisez par ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%.</p>
+    </div>
+    ` : ''}
+    
+    ${/* NOUVEAU: Note pour SASU unipersonnelle */ ''}
+    ${statutId === 'sasu' ? `
+    <div class="mt-3 p-3 bg-gray-800 bg-opacity-50 rounded-lg text-xs text-gray-400">
+        <p><i class="fas fa-user mr-1"></i> 
+        Structure unipersonnelle : 1 seul associé détenant 100% des parts.</p>
+    </div>
+    ` : ''}
+    
             <div class="detail-category">Rémunération</div>
             <table class="detail-table">
                 <tr>
@@ -1657,6 +1723,62 @@ if (statutId === 'micro') {
                 </tr>` : ''}
             </table>
             
+            ${/* NOUVEAU: Section associés pour SARL/SELARL/SCA */ ''}
+            ${STATUTS_MULTI_ASSOCIES[statutId] && result.sim.nbAssocies > 1 ? `
+            <div class="detail-category">Répartition entre associés</div>
+            <table class="detail-table">
+                <tr>
+                    <td colspan="2" class="text-center text-sm text-green-400">
+                        Simulation pour <strong>1 associé détenant ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%</strong>
+                        (société à ${result.sim.nbAssocies} associés)
+                    </td>
+                </tr>
+                <tr>
+                    <td>Nombre total d'associés</td>
+                    <td>${result.sim.nbAssocies}</td>
+                </tr>
+                <tr>
+                    <td>Part de l'associé simulé</td>
+                    <td>${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%</td>
+                </tr>
+                ${result.sim.dividendes > 0 ? `
+                <tr>
+                    <td>Dividendes totaux de la société</td>
+                    <td>${formatter.format(
+                        Math.round(result.sim.dividendes / (result.sim.partAssocie || 1))
+                    )}</td>
+                </tr>
+                <tr>
+                    <td>Quote-part de dividendes (${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%)</td>
+                    <td>${formatter.format(result.sim.dividendes)}</td>
+                </tr>
+                ` : ''}
+                ${statutId === 'sarl' && result.sim.gerantMajoritaire ? `
+                <tr>
+                    <td colspan="2" class="text-xs text-gray-400 italic">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        En tant que gérant majoritaire, les cotisations TNS sur dividendes 
+                        s'appliquent sur votre quote-part.
+                    </td>
+                </tr>
+                ` : ''}
+            </table>
+            
+            <div class="mt-3 p-3 bg-blue-900 bg-opacity-30 rounded-lg text-xs">
+                <p><i class="fas fa-calculator text-blue-400 mr-2"></i>
+                <strong>Note :</strong> Les montants affichés correspondent uniquement à la quote-part 
+                de cet associé. Pour obtenir les résultats totaux de la société, divisez par ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%.</p>
+            </div>
+            ` : ''}
+            
+            ${/* NOUVEAU: Note pour EURL unipersonnelle */ ''}
+            ${(statutId === 'eurl' || statutId === 'eurlIS') ? `
+            <div class="mt-3 p-3 bg-gray-800 bg-opacity-50 rounded-lg text-xs text-gray-400">
+                <p><i class="fas fa-user mr-1"></i> 
+                Structure unipersonnelle : 1 seul associé détenant 100% des parts.</p>
+            </div>
+            ` : ''}
+            
             <div class="detail-category">Rémunération</div>
             <table class="detail-table">
                 <tr>
@@ -1767,6 +1889,37 @@ if (statutId === 'micro') {
                     <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
                 </tr>
             </table>
+            
+            ${/* NOUVEAU: Section associés pour SNC */ ''}
+            ${statutId === 'snc' && STATUTS_MULTI_ASSOCIES[statutId] && result.sim.nbAssocies > 1 ? `
+            <div class="detail-category">Répartition entre associés</div>
+            <table class="detail-table">
+                <tr>
+                    <td colspan="2" class="text-center text-sm text-green-400">
+                        Simulation pour <strong>1 associé détenant ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%</strong>
+                        (société à ${result.sim.nbAssocies} associés)
+                    </td>
+                </tr>
+                <tr>
+                    <td>Nombre total d'associés</td>
+                    <td>${result.sim.nbAssocies}</td>
+                </tr>
+                <tr>
+                    <td>Part de l'associé simulé</td>
+                    <td>${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%</td>
+                </tr>
+                <tr>
+                    <td>Quote-part du bénéfice</td>
+                    <td>${formatter.format(result.sim.beneficeAssociePrincipal || (result.sim.beneficeAvantCotisations * (result.sim.partAssocie || 1)))}</td>
+                </tr>
+            </table>
+            
+            <div class="mt-3 p-3 bg-gray-800 bg-opacity-50 rounded-lg text-xs text-gray-400">
+                <p><i class="fas fa-balance-scale mr-1"></i> 
+                <strong>Transparence fiscale :</strong> Chaque associé déclare sa quote-part 
+                du résultat fiscal dans sa déclaration personnelle.</p>
+            </div>
+            ` : ''}
             
             <div class="detail-category">Charges sociales</div>
             <table class="detail-table">
@@ -1893,6 +2046,32 @@ if (statutId === 'micro') {
                 </tr>` : ''}
             </table>
             
+            ${/* NOUVEAU: Section associés pour SCI */ ''}
+            ${STATUTS_MULTI_ASSOCIES['sci'] && result.sim.nbAssocies > 1 ? `
+            <div class="detail-category">Répartition entre associés</div>
+            <table class="detail-table">
+                <tr>
+                    <td colspan="2" class="text-center text-sm text-green-400">
+                        Simulation pour <strong>1 associé détenant ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%</strong>
+                        (SCI à ${result.sim.nbAssocies} associés)
+                    </td>
+                </tr>
+                <tr>
+                    <td>Part de l'associé simulé</td>
+                    <td>${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%</td>
+                </tr>
+                <tr>
+                    <td>Quote-part du résultat fiscal</td>
+                    <td>${formatter.format(result.sim.resultatFiscalAssocie || quotePartAssocie)}</td>
+                </tr>
+            </table>
+            
+            <div class="mt-3 p-3 bg-gray-800 bg-opacity-50 rounded-lg text-xs text-gray-400">
+                <p><i class="fas fa-balance-scale mr-1"></i> 
+                <strong>Transparence fiscale :</strong> Chaque associé déclare sa quote-part 
+                du résultat fiscal dans sa déclaration personnelle (case 4BA pour les revenus fonciers).</p>
+            </div>
+            ` : `
             <div class="detail-category">Quote-part de l'associé${nombreAssocies > 1 ? ' (1/'+nombreAssocies+')' : ''}</div>
             <table class="detail-table">
                 <tr>
@@ -1905,6 +2084,7 @@ if (statutId === 'micro') {
                     </td>
                 </tr>
             </table>
+            `}
             
             <div class="detail-category">Prélèvements sociaux</div>
             <table class="detail-table">
