@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 3.2 - Calcul automatique TMI et optimisation PFU vs barème progressif
+// Version 3.3 - Calcul progressif IR toujours actif + CSG non déductible
 
 // Constantes pour les taux de charges sociales
 const TAUX_CHARGES = {
@@ -69,6 +69,34 @@ function calculerTMI(revenuImposable) {
     if (revenuImposable <= 74545) return 30;
     if (revenuImposable <= 160336) return 41;
     return 45;
+}
+
+// NOUVEAU : Fonction de calcul progressif de l'IR en fallback (toujours utilisée)
+function calculateProgressiveIRFallback(revenuImposable) {
+    const tranches = [
+        { max: 11497, taux: 0 },      // 0% jusqu'à 11 497€
+        { max: 26037, taux: 0.11 },   // 11% jusqu'à 26 037€
+        { max: 74545, taux: 0.30 },   // 30% jusqu'à 74 545€
+        { max: 160336, taux: 0.41 },  // 41% jusqu'à 160 336€
+        { max: Infinity, taux: 0.45 } // 45% au-delà
+    ];
+    
+    let impot = 0;
+    let resteImposable = revenuImposable;
+    
+    for (let i = 0; i < tranches.length; i++) {
+        const tranche = tranches[i];
+        const minTranche = i === 0 ? 0 : tranches[i-1].max;
+        const maxTranche = tranche.max;
+        
+        if (resteImposable > 0) {
+            const montantDansTranche = Math.min(resteImposable, maxTranche - minTranche);
+            impot += montantDansTranche * tranche.taux;
+            resteImposable -= montantDansTranche;
+        }
+    }
+    
+    return Math.round(impot);
 }
 // -------------------------------------------------------
 
@@ -183,7 +211,7 @@ class SimulationsFiscales {
     static simulerMicroEntreprise(params) {
         // Normaliser les paramètres
         const normalizedParams = this.normalizeAssociatesParams(params, 'micro');
-        const { ca, typeMicro = 'BIC', modeExpert = false, versementLiberatoire = false } = normalizedParams;
+        const { ca, typeMicro = 'BIC', modeExpert = true, versementLiberatoire = false } = normalizedParams;
         
         // Utiliser les plafonds depuis legalStatuses si disponible
         const plafonds = {
@@ -248,29 +276,11 @@ class SimulationsFiscales {
         if (versementLiberatoire) {
             impotRevenu = Math.round(ca * tauxVFL[typeEffectif]);
         } else {
-            // Toujours utiliser le calcul progressif pour la micro
+            // Toujours utiliser le calcul progressif
             if (window.FiscalUtils && window.FiscalUtils.calculateProgressiveIR) {
                 impotRevenu = window.FiscalUtils.calculateProgressiveIR(revenuImposable);
             } else {
-                // Fallback: calcul progressif manuel
-                const tranches = [
-                    { max: 11497, taux: 0 },
-                    { max: 29315, taux: 0.11 },
-                    { max: 83823, taux: 0.30 },
-                    { max: 180294, taux: 0.41 },
-                    { max: Infinity, taux: 0.45 }
-                ];
-                
-                impotRevenu = 0;
-                let min = 0;
-                
-                for (const t of tranches) {
-                    const taxable = Math.max(0, Math.min(revenuImposable - min, t.max - min));
-                    impotRevenu += taxable * t.taux;
-                    min = t.max;
-                }
-                
-                impotRevenu = Math.round(impotRevenu);
+                impotRevenu = calculateProgressiveIRFallback(revenuImposable);
             }
         }
         
@@ -289,7 +299,7 @@ class SimulationsFiscales {
             revenuNetApresImpot: revenuNetApresImpot,
             ratioNetCA: (revenuNetApresImpot / ca) * 100,
             versementLiberatoire: versementLiberatoire,
-            modeExpert: modeExpert,
+            modeExpert: true, // Toujours en mode expert
             tmiReel: tmiReel,
             // Infos associés (toujours 1 pour micro)
             nbAssocies: 1,
@@ -302,7 +312,7 @@ class SimulationsFiscales {
     static simulerEI(params) {
         // Normaliser les paramètres
         const normalizedParams = this.normalizeAssociatesParams(params, 'ei');
-        const { ca, tauxMarge = 0.3, modeExpert = false } = normalizedParams;
+        const { ca, tauxMarge = 0.3, modeExpert = true } = normalizedParams;
         
         // Calcul du bénéfice avant cotisations
         const beneficeAvantCotisations = Math.round(ca * tauxMarge);
@@ -326,12 +336,12 @@ class SimulationsFiscales {
             ? window.FiscalUtils.getTMI(beneficeApresCotisations)
             : calculerTMI(beneficeApresCotisations);
         
-        // Calcul de l'impôt sur le revenu
+        // MODIFIÉ : Toujours utiliser le calcul progressif
         let impotRevenu;
-        if (modeExpert && window.FiscalUtils) {
+        if (window.FiscalUtils && window.FiscalUtils.calculateProgressiveIR) {
             impotRevenu = window.FiscalUtils.calculateProgressiveIR(beneficeApresCotisations);
         } else {
-            impotRevenu = Math.round(beneficeApresCotisations * (tmiReel / 100));
+            impotRevenu = calculateProgressiveIRFallback(beneficeApresCotisations);
         }
         
         // Calcul du revenu net après impôt
@@ -351,6 +361,7 @@ class SimulationsFiscales {
             revenuNetApresImpot: revenuNetApresImpot,
             ratioNetCA: (revenuNetApresImpot / ca) * 100,
             tmiReel: tmiReel,
+            modeExpert: true, // Toujours en mode expert
             // Infos associés (toujours 1 pour EI)
             nbAssocies: 1,
             partAssocie: 1,
@@ -362,7 +373,7 @@ class SimulationsFiscales {
     static simulerEURL(params) {
         // Normaliser les paramètres
         const normalizedParams = this.normalizeAssociatesParams(params, 'eurl');
-        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, optionIS = false, modeExpert = false, capitalSocial = 1 } = normalizedParams;
+        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, optionIS = false, modeExpert = true, capitalSocial = 1 } = normalizedParams;
         
         // Calcul du résultat de l'entreprise
         const resultatEntreprise = Math.round(ca * tauxMarge);
@@ -390,11 +401,12 @@ class SimulationsFiscales {
                 ? window.FiscalUtils.getTMI(beneficeImposable)
                 : calculerTMI(beneficeImposable);
             
+            // MODIFIÉ : Toujours utiliser le calcul progressif
             let impotRevenu;
-            if (modeExpert && window.FiscalUtils) {
+            if (window.FiscalUtils && window.FiscalUtils.calculateProgressiveIR) {
                 impotRevenu = window.FiscalUtils.calculateProgressiveIR(beneficeImposable);
             } else {
-                impotRevenu = Math.round(beneficeImposable * (tmiReel / 100));
+                impotRevenu = calculateProgressiveIRFallback(beneficeImposable);
             }
             
             const revenuNetApresImpot = beneficeImposable - impotRevenu;
@@ -416,6 +428,7 @@ class SimulationsFiscales {
                 ratioNetCA: (revenuNetApresImpot / ca) * 100,
                 baseCalculTNS: baseCalculTNS,
                 tmiReel: tmiReel,
+                modeExpert: true, // Toujours en mode expert
                 // Infos associés
                 nbAssocies: 1,
                 partAssocie: 1,
@@ -447,11 +460,12 @@ class SimulationsFiscales {
                 ? window.FiscalUtils.getTMI(remunerationNetteSociale)
                 : calculerTMI(remunerationNetteSociale);
             
+            // MODIFIÉ : Toujours utiliser le calcul progressif
             let impotRevenu;
-            if (modeExpert && window.FiscalUtils) {
+            if (window.FiscalUtils && window.FiscalUtils.calculateProgressiveIR) {
                 impotRevenu = window.FiscalUtils.calculateProgressiveIR(remunerationNetteSociale);
             } else {
-                impotRevenu = Math.round(remunerationNetteSociale * (tmiReel / 100));
+                impotRevenu = calculateProgressiveIRFallback(remunerationNetteSociale);
             }
             
             let is;
@@ -501,6 +515,7 @@ class SimulationsFiscales {
                 resultatEntreprise: resultatEntreprise,
                 ratioEffectif: ratioEffectif,
                 tmiReel: tmiReel,
+                modeExpert: true, // Toujours en mode expert
                 // NOUVEAU : Ajout des infos d'optimisation
                 methodeDividendes: dividendesInfo.methodeDividendes,
                 economieMethode: dividendesInfo.economieMethode,
@@ -516,7 +531,7 @@ class SimulationsFiscales {
     static simulerSASU(params) {
         // Normaliser les paramètres
         const normalizedParams = this.normalizeAssociatesParams(params, 'sasu');
-        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, modeExpert = false, secteur = "Tous", taille = "<50" } = normalizedParams;
+        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, modeExpert = true, secteur = "Tous", taille = "<50" } = normalizedParams;
         
         // Calcul du résultat de l'entreprise
         const resultatEntreprise = Math.round(ca * tauxMarge);
@@ -548,11 +563,12 @@ class SimulationsFiscales {
             ? window.FiscalUtils.getTMI(salaireNet)
             : calculerTMI(salaireNet);
         
+        // MODIFIÉ : Toujours utiliser le calcul progressif
         let impotRevenu;
-        if (modeExpert && window.FiscalUtils) {
+        if (window.FiscalUtils && window.FiscalUtils.calculateProgressiveIR) {
             impotRevenu = window.FiscalUtils.calculateProgressiveIR(salaireNet);
         } else {
-            impotRevenu = Math.round(salaireNet * (tmiReel / 100));
+            impotRevenu = calculateProgressiveIRFallback(salaireNet);
         }
         
         const salaireNetApresIR = salaireNet - impotRevenu;
@@ -605,7 +621,7 @@ class SimulationsFiscales {
             secteur: secteur,
             taille: taille,
             ratioEffectif: ratioEffectif,
-            modeExpert: modeExpert,
+            modeExpert: true, // Toujours en mode expert
             tmiReel: tmiReel,
             // NOUVEAU : Ajout des infos d'optimisation
             methodeDividendes: dividendesInfo.methodeDividendes,
@@ -630,7 +646,7 @@ class SimulationsFiscales {
             nbAssocies = normalizedParams.nbAssocies,
             partAssocie = normalizedParams.partAssocie,
             partAssociePct = normalizedParams.partAssociePct,
-            modeExpert = false,
+            modeExpert = true,
             capitalSocial = 1,
             secteur = "Tous",
             taille = "<50"
@@ -696,12 +712,12 @@ class SimulationsFiscales {
             ? window.FiscalUtils.getTMI(salaireNet)
             : calculerTMI(salaireNet);
         
-        // Calcul de l'impôt sur le revenu
+        // MODIFIÉ : Toujours utiliser le calcul progressif
         let impotRevenu;
-        if (modeExpert && window.FiscalUtils) {
+        if (window.FiscalUtils && window.FiscalUtils.calculateProgressiveIR) {
             impotRevenu = window.FiscalUtils.calculateProgressiveIR(salaireNet);
         } else {
-            impotRevenu = Math.round(salaireNet * (tmiReel / 100));
+            impotRevenu = calculateProgressiveIRFallback(salaireNet);
         }
         
         const salaireNetApresIR = salaireNet - impotRevenu;
@@ -759,6 +775,7 @@ class SimulationsFiscales {
             revenuNetTotal: revenuNetTotal,
             ratioNetCA: (revenuNetTotal / ca) * 100,
             tmiReel: tmiReel,
+            modeExpert: true, // Toujours en mode expert
             
             // NOUVEAU : Ajout des infos d'optimisation
             methodeDividendes: dividendesInfo.methodeDividendes,
@@ -773,8 +790,7 @@ class SimulationsFiscales {
             gerantMajoritaire: gerantMajoritaire,
             secteur: secteur,
             taille: taille,
-            ratioEffectif: ratioEffectif,
-            modeExpert: modeExpert
+            ratioEffectif: ratioEffectif
         };
     }
 
@@ -914,7 +930,7 @@ class SimulationsFiscales {
             nbAssocies = normalizedParams.nbAssocies,
             partAssocie = normalizedParams.partAssocie,
             partAssociePct = normalizedParams.partAssociePct,
-            modeExpert = false 
+            modeExpert = true 
         } = normalizedParams;
         
         // Calcul du résultat de l'entreprise
@@ -942,12 +958,12 @@ class SimulationsFiscales {
             ? window.FiscalUtils.getTMI(beneficeApresCotisations)
             : calculerTMI(beneficeApresCotisations);
         
-        // Impôt sur le revenu
+        // MODIFIÉ : Toujours utiliser le calcul progressif
         let impotRevenu;
-        if (modeExpert && window.FiscalUtils) {
+        if (window.FiscalUtils && window.FiscalUtils.calculateProgressiveIR) {
             impotRevenu = window.FiscalUtils.calculateProgressiveIR(beneficeApresCotisations);
         } else {
-            impotRevenu = Math.round(beneficeApresCotisations * (tmiReel / 100));
+            impotRevenu = calculateProgressiveIRFallback(beneficeApresCotisations);
         }
         
         // Revenu net après impôt
@@ -971,6 +987,7 @@ class SimulationsFiscales {
             revenuNetTotal: revenuNetApresImpot,
             ratioNetCA: (revenuNetApresImpot / ca) * 100,
             tmiReel: tmiReel,
+            modeExpert: true, // Toujours en mode expert
             
             // Informations sur les associés
             nbAssocies: nbAssocies,
@@ -991,7 +1008,7 @@ class SimulationsFiscales {
             partAssocie = normalizedParams.partAssocie,
             nbAssocies = normalizedParams.nbAssocies,
             partAssociePct = normalizedParams.partAssociePct,
-            modeExpert = false,
+            modeExpert = true,
             typeLocation = "nue",
             valeurBien = 300000,
             tauxAmortissement = 0.02,
@@ -1050,27 +1067,7 @@ class SimulationsFiscales {
             if (window.FiscalUtils && window.FiscalUtils.calculateProgressiveIR) {
                 impotRevenu = window.FiscalUtils.calculateProgressiveIR(baseImposableIR);
             } else {
-                // Fallback: calcul progressif manuel
-                const tranches = [
-                    { max: 11497, taux: 0 },
-                    { max: 26037, taux: 0.11 },
-                    { max: 74545, taux: 0.30 },
-                    { max: 160336, taux: 0.41 },
-                    { max: Infinity, taux: 0.45 }
-                ];
-                
-                impotRevenu = 0;
-                let min = 0;
-                
-                for (const t of tranches) {
-                    if (baseImposableIR > min) {
-                        const taxable = Math.max(0, Math.min(baseImposableIR - min, t.max - min));
-                        impotRevenu += taxable * t.taux;
-                    }
-                    min = t.max;
-                }
-                
-                impotRevenu = Math.round(impotRevenu);
+                impotRevenu = calculateProgressiveIRFallback(baseImposableIR);
             }
             
             // Revenu net après impôt et prélèvements sociaux
@@ -1097,7 +1094,7 @@ class SimulationsFiscales {
                 ratioNetCA: (revenuNetApresImpot / ca) * 100,
                 amortissementPossible: false,
                 avertissementMeublee: avertissementMeublee,
-                modeExpert: true,
+                modeExpert: true, // Toujours en mode expert
                 
                 // Infos standardisées
                 nbAssocies: nbAssocies,
@@ -1173,6 +1170,7 @@ class SimulationsFiscales {
                 partAssociePrincipal: partAssocie, // Pour compatibilité
                 nombreAssocies: nbAssocies, // Pour compatibilité
                 tmiReel: tmiReel,
+                modeExpert: true, // Toujours en mode expert
                 
                 // NOUVEAU : Ajout des infos d'optimisation
                 methodeDividendes: dividendesInfo.methodeDividendes,
@@ -1244,15 +1242,16 @@ window.calculerSalaireBrutMax = calculerSalaireBrutMax;
 window.ajusterRemuneration = ajusterRemuneration;
 window.calculerDividendesIS = calculerDividendesIS;
 window.STATUTS_ASSOCIATES_CONFIG = STATUTS_ASSOCIATES_CONFIG;
+window.calculateProgressiveIRFallback = calculateProgressiveIRFallback; // Exposer la fonction
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v3.2 - Calcul automatique TMI et optimisation PFU vs barème progressif)");
+    console.log("Module SimulationsFiscales chargé (v3.3 - Calcul progressif IR toujours actif + CSG non déductible)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady', {
         detail: {
-            version: '3.2',
-            features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG', 'optimisationFiscaleDividendes', 'calculTMIAutomatique']
+            version: '3.3',
+            features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG', 'optimisationFiscaleDividendes', 'calculTMIAutomatique', 'calculProgressifIRActif', 'CSGNonDeductible']
         }
     }));
 });
