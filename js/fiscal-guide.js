@@ -1214,18 +1214,19 @@ row.innerHTML = `
 resultsBody.appendChild(row);
     });
     
-    // Ajouter une ligne de mode de calcul avec état de l'optimisation
-    const modeRow = document.createElement('tr');
-    modeRow.className = 'bg-pink-900 bg-opacity-20 text-sm border-t border-pink-800';
-    
-    modeRow.innerHTML = `
-        <td colspan="7" class="px-4 py-2 font-medium text-pink-300">
-            <i class="fas fa-chart-line mr-2"></i> 
-            Mode expert activé : calcul par tranches progressives d'IR + ${useOptimalRatio ? 'optimisation automatique' : 'ratio manuel'} du ratio rémunération/dividendes
-            ${useAvgChargeRate ? ' + calcul avec frais réels' : ''}
-            ${versementLiberatoire ? ' + versement libératoire pour micro-entreprise' : ''}
-        </td>
-    `;
+// Ajouter une ligne de mode de calcul avec état de l'optimisation
+const modeRow = document.createElement('tr');
+modeRow.className = 'bg-pink-900 bg-opacity-20 text-sm border-t border-pink-800';
+
+modeRow.innerHTML = `
+    <td colspan="8" class="px-4 py-2 font-medium text-pink-300">
+        <i class="fas fa-calculator mr-2"></i> 
+        Calculs fiscaux précis : IR progressif par tranches + ${useOptimalRatio ? 'optimisation automatique' : 'ratio manuel'} du ratio rémunération/dividendes
+        <span class="ml-2 text-xs text-gray-400">(Conforme au barème 2025)</span>
+        ${useAvgChargeRate ? '<span class="ml-3"><i class="fas fa-receipt mr-1"></i>Frais réels activés</span>' : ''}
+        ${versementLiberatoire ? '<span class="ml-3"><i class="fas fa-percentage mr-1"></i>VFL micro-entreprise</span>' : ''}
+    </td>
+`;
     
     resultsBody.appendChild(modeRow);
     
