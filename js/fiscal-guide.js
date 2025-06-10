@@ -146,7 +146,7 @@ function setupSimulator() {
     compareBtn.addEventListener('click', runComparison);
     
     // Écouter les changements dans les champs pour mettre à jour automatiquement
-    const inputFields = ['sim-ca', 'sim-marge', 'sim-salaire', 'sim-tmi'];
+    const inputFields = ['sim-ca', 'sim-marge', 'sim-salaire', 'sim-tmi', 'sim-nb-associes', 'sim-part-associe'];
     inputFields.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', runComparison);
