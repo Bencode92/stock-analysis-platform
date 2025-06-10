@@ -338,6 +338,37 @@ function initUIEvents() {
                                                 <span class="absolute inset-y-0 right-4 flex items-center text-gray-300 peer-focus:text-green-300">%</span>
                                             </div>
                                         </div>
+                                                                        <!-- Nombre d'associés -->
+                                        <div class="flex flex-col space-y-2 min-w-[260px]">
+                                            <label for="sim-nb-associes" class="text-gray-200 font-medium">
+                                                <i class="fas fa-users mr-2 text-blue-400"></i>Nombre d'associés
+                                                <span class="info-tooltip ml-2">
+                                                    <i class="fas fa-question-circle text-gray-400 text-sm"></i>
+                                                    <span class="tooltiptext">
+                                                        Nombre total d'associés dans la structure. 
+                                                        Mettez 1 si vous êtes seul.
+                                                    </span>
+                                                </span>
+                                            </label>
+                                            <div class="relative">
+                                                <input id="sim-nb-associes" type="number" value="1" min="1" step="1"
+                                                       class="peer w-full bg-blue-800/20 border border-blue-600 rounded-lg py-3 pl-6 pr-14 text-xl tracking-wide focus:outline-none focus:ring-2 focus:ring-green-400/60">
+                                                <span class="absolute inset-y-0 right-4 flex items-center text-gray-300 peer-focus:text-green-300">pers.</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Part détenue -->
+                                        <div class="flex flex-col space-y-2 min-w-[260px]">
+                                            <label for="sim-part-associe" class="text-gray-200 font-medium">
+                                                <i class="fas fa-chart-pie mr-2 text-yellow-400"></i>Part détenue (%)
+                                                <span class="text-xs text-gray-400 ml-1">(ajusté automatiquement)</span>
+                                            </label>
+                                            <div class="relative">
+                                                <input id="sim-part-associe" type="number" value="100" min="0.1" max="100" step="0.1"
+                                                       class="peer w-full bg-blue-800/20 border border-blue-600 rounded-lg py-3 pl-6 pr-14 text-xl tracking-wide focus:outline-none focus:ring-2 focus:ring-green-400/60">
+                                                <span class="absolute inset-y-0 right-4 flex items-center text-gray-300 peer-focus:text-green-300">%</span>
+                                            </div>
+                                        </div>
                                     </div>
                                     
                                     <!-- TMI caché -->
