@@ -992,7 +992,7 @@ function runComparison() {
         }
     };
     
-    // Simuler chaque statut sélectionné
+// Simuler chaque statut sélectionné
     for (const statutId of selectedStatuses) {
         if (statutsComplets[statutId]) {
             try {
@@ -1082,6 +1082,9 @@ function runComparison() {
                 // Calculer la répartition rémunération/dividendes
                 const ratioEffectif = useOptimalRatio && sim.ratioOptimise ? sim.ratioOptimise : ratioSalaire;
                 
+                // NOUVEAU: Déterminer si l'optimisation était active pour ce statut
+                const optimisationActive = useOptimalRatio && sim.ratioOptimise !== undefined;
+                
                 resultats.push({
                     statutId: statutId,
                     statut: statut.nom,
@@ -1093,7 +1096,8 @@ function runComparison() {
                     score: score,
                     ratioOptimise: sim.ratioOptimise,
                     dividendesNets: sim.dividendesNets || 0,
-                    ratioEffectif: ratioEffectif
+                    ratioEffectif: ratioEffectif,
+                    optimisationActive: optimisationActive  // NOUVEAU
                 });
             } catch (e) {
                 console.error(`Erreur lors de la simulation pour ${statutsComplets[statutId].nom}:`, e);
@@ -1274,6 +1278,7 @@ function showCalculationDetails(statutId, simulationResults) {
     // Trouver les résultats pour ce statut
     const result = simulationResults.find(r => r.statutId === statutId);
     if (!result) return;
+    const optimisationActive = result.optimisationActive || false;
     
     // Formatter les nombres
     const formatter = new Intl.NumberFormat('fr-FR', {
@@ -1497,11 +1502,15 @@ if (statutId === 'micro') {
                     <td>${formatter.format(result.sim.resultatEntreprise)}</td>
                 </tr>
                 <tr>
-                    <td>Ratio rémunération/dividendes ${result.sim.ratioOptimise ? '(optimisé)' : '(manuel)'}</td>
-                    <td>${formatPercent(result.sim.ratioOptimise ? result.sim.ratioOptimise * 100 : result.ratioEffectif * 100)} / ${formatPercent(result.sim.ratioOptimise ? (100 - result.sim.ratioOptimise * 100) : (100 - result.ratioEffectif * 100))}</td>
-                </tr>
-            </table>
-            
+            <td>Ratio rémunération/dividendes ${optimisationActive ? '(optimisé)' : '(manuel)'}</td>
+            <td>
+                ${formatPercent(result.ratioEffectif * 100)} / ${formatPercent(100 - result.ratioEffectif * 100)}
+                ${!optimisationActive && result.ratioOptimise ? 
+                    `<small class="ml-2 text-gray-400">(optimum : ${formatPercent(result.ratioOptimise * 100)})</small>` 
+                    : ''}
+            </td>
+        </tr>
+    </table>
             <div class="detail-category">Rémunération</div>
             <table class="detail-table">
                 <tr>
@@ -1626,8 +1635,13 @@ if (statutId === 'micro') {
                     <td>${formatter.format(result.sim.resultatAvantRemuneration || result.sim.resultatEntreprise)}</td>
                 </tr>
                 <tr>
-                    <td>Ratio rémunération/dividendes ${result.sim.ratioOptimise ? '(optimisé)' : '(manuel)'}</td>
-                    <td>${formatPercent(result.sim.ratioOptimise ? result.sim.ratioOptimise * 100 : result.ratioEffectif * 100)} / ${formatPercent(result.sim.ratioOptimise ? (100 - result.sim.ratioOptimise * 100) : (100 - result.ratioEffectif * 100))}</td>
+                    <td>Ratio rémunération/dividendes ${optimisationActive ? '(optimisé)' : '(manuel)'}</td>
+                    <td>
+                        ${formatPercent(result.ratioEffectif * 100)} / ${formatPercent(100 - result.ratioEffectif * 100)}
+                        ${!optimisationActive && result.ratioOptimise ? 
+                            `<small class="ml-2 text-gray-400">(optimum : ${formatPercent(result.ratioOptimise * 100)})</small>` 
+                            : ''}
+                    </td>
                 </tr>
                 ${statutId === 'sarl' ? `
                 <tr>
@@ -2362,3 +2376,4 @@ function getStatutFiscalInfo(statutId) {
     
     return infosFiscales[statutId] || `<p>Informations non disponibles pour ${statutId}</p>`;
 }// Contenu trop volumineux pour être inclus dans la demande
+
