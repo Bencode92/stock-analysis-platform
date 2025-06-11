@@ -15,6 +15,8 @@
  * Version 1.8 - Correction de la duplication des icônes info lors de simulations multiples
  * Version 1.9 - Synchronisation du tableau comparatif avec les valeurs incluant l'impact fiscal
  */
+// Désactiver complètement l'impact fiscal
+window.disableFiscalImpact = true;
 
 document.addEventListener('DOMContentLoaded', function() {
     // Constantes globales
