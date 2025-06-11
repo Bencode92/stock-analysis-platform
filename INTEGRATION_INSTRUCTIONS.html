@@ -1,0 +1,50 @@
+<!-- Patch pour améliorer l'affichage du pourcentage sur la barre de position -->
+
+<!-- 
+INSTRUCTIONS D'INTÉGRATION :
+
+1. Ajouter ces deux lignes dans le <head> de comparaison-fiscale.html, après les CSS existants :
+
+    <link rel="stylesheet" href="css/market-position-enhanced.css">
+    
+2. Ajouter cette ligne dans le <head> ou avant la fermeture </body>, après les autres scripts :
+
+    <script src="./market-analysis-enhancement.js"></script>
+
+Ces fichiers améliorent l'affichage du pourcentage sur la barre de position en ajoutant :
+- Un badge au-dessus du marqueur (au lieu du texte à l'intérieur)
+- Des animations fluides
+- Des couleurs adaptatives selon la position
+- Une meilleure ergonomie visuelle
+
+Le JavaScript remplace automatiquement la fonction analyzeMarket() existante par la version améliorée.
+-->
+
+<!-- Exemple d'intégration complète :
+
+<head>
+    ...
+    <!-- CSS existants -->
+    <link rel="stylesheet" href="css/immo-enhanced.css">
+    <link rel="stylesheet" href="css/regimes-fiscaux.css">
+    <link rel="stylesheet" href="css/immo-comparison-enhanced.css">
+    
+    <!-- NOUVEAU: CSS pour améliorer la barre de position -->
+    <link rel="stylesheet" href="css/market-position-enhanced.css">
+    ...
+</head>
+
+<body>
+    ...
+    <!-- Scripts existants -->
+    <script src="./ville-search.js"></script>
+    <script src="./immo-simulation.js"></script>
+    <script src="./fiscal-comparison-enhanced.js"></script>
+    <script src="./market-fiscal-analysis.js"></script>
+    
+    <!-- NOUVEAU: Script d'amélioration de l'analyse de marché -->
+    <script src="./market-analysis-enhancement.js"></script>
+    ...
+</body>
+
+-->
