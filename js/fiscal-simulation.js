@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 3.3 - Calcul progressif IR toujours actif + CSG non déductible
+// Version 3.4 - Correction calcul rémunération TNS vs assimilé salarié
 
 // Constantes pour les taux de charges sociales
 const TAUX_CHARGES = {
@@ -35,7 +35,19 @@ const STATUTS_ASSOCIATES_CONFIG = {
 
 // ========== FONCTIONS UTILITAIRES ==========
 
-// Fonction utilitaire pour calculer le salaire brut maximum possible
+// Fonction utilitaire pour calculer le salaire brut selon le régime social
+function calculerSalaireBrut(resultatEntreprise, tauxRemuneration, isTNS) {
+    if (isTNS) {
+        // TNS : pas de charges patronales, ratio direct
+        return Math.round(resultatEntreprise * tauxRemuneration);
+    } else {
+        // Assimilé salarié : on déduit les charges patronales
+        const TAUX_PATRONAL = 0.55; // 55% de charges patronales
+        return Math.round(resultatEntreprise * tauxRemuneration / (1 + TAUX_PATRONAL));
+    }
+}
+
+// Garder l'ancienne fonction pour compatibilité
 function calculerSalaireBrutMax(resultatDisponible, tauxChargesPatronales = TAUX_CHARGES.PATRONAL_MOYEN) {
     return resultatDisponible / (1 + tauxChargesPatronales);
 }
@@ -435,10 +447,8 @@ class SimulationsFiscales {
                 partAssociePct: 100
             };
         } else {
-            // Régime IS
-            const remunerationSouhaitee = window.FiscalUtils && window.FiscalUtils.brutFromCostShare ? 
-                window.FiscalUtils.brutFromCostShare(resultatEntreprise, tauxRemuneration, 0.30) :
-                Math.round(resultatEntreprise * tauxRemuneration / 1.30);
+            // Régime IS - CORRIGÉ : utiliser la nouvelle fonction
+            const remunerationSouhaitee = calculerSalaireBrut(resultatEntreprise, tauxRemuneration, true); // true = TNS
             
             const remuneration = ajusterRemuneration(remunerationSouhaitee, resultatEntreprise, 0.30);
             
@@ -536,9 +546,8 @@ class SimulationsFiscales {
         // Calcul du résultat de l'entreprise
         const resultatEntreprise = Math.round(ca * tauxMarge);
         
-        const remunerationSouhaitee = window.FiscalUtils && window.FiscalUtils.brutFromCostShare ? 
-            window.FiscalUtils.brutFromCostShare(resultatEntreprise, tauxRemuneration, 0.55) :
-            Math.round(resultatEntreprise * tauxRemuneration / 1.55);
+        // CORRIGÉ : utiliser la nouvelle fonction
+        const remunerationSouhaitee = calculerSalaireBrut(resultatEntreprise, tauxRemuneration, false); // false = Assimilé salarié
         
         const remuneration = ajusterRemuneration(remunerationSouhaitee, resultatEntreprise, 0.55);
         
@@ -664,10 +673,8 @@ class SimulationsFiscales {
         let remunerationNetteSociale = 0;
         
         if (gerantMajoritaire) {
-            // Gérant majoritaire = TNS
-            const remunerationSouhaitee = window.FiscalUtils && window.FiscalUtils.brutFromCostShare ? 
-                window.FiscalUtils.brutFromCostShare(resultatEntreprise, tauxRemuneration, 0.30) :
-                Math.round(resultatEntreprise * tauxRemuneration / 1.30);
+            // Gérant majoritaire = TNS - CORRIGÉ
+            const remunerationSouhaitee = calculerSalaireBrut(resultatEntreprise, tauxRemuneration, true); // true = TNS
             
             remuneration = ajusterRemuneration(remunerationSouhaitee, resultatEntreprise, 0.30);
             
@@ -682,10 +689,8 @@ class SimulationsFiscales {
             resultatApresRemuneration = resultatEntreprise - coutRemunerationEntreprise;
             ratioEffectif = coutRemunerationEntreprise / resultatEntreprise;
         } else {
-            // Gérant minoritaire = assimilé salarié
-            const remunerationSouhaitee = window.FiscalUtils && window.FiscalUtils.brutFromCostShare ? 
-                window.FiscalUtils.brutFromCostShare(resultatEntreprise, tauxRemuneration, 0.55) :
-                Math.round(resultatEntreprise * tauxRemuneration / 1.55);
+            // Gérant minoritaire = assimilé salarié - CORRIGÉ
+            const remunerationSouhaitee = calculerSalaireBrut(resultatEntreprise, tauxRemuneration, false); // false = Assimilé salarié
             
             remuneration = ajusterRemuneration(remunerationSouhaitee, resultatEntreprise, 0.55);
             
@@ -1238,6 +1243,7 @@ window.SimulationsFiscales = SimulationsFiscales;
 
 // Exposer les utilitaires
 window.TAUX_CHARGES = TAUX_CHARGES;
+window.calculerSalaireBrut = calculerSalaireBrut; // NOUVEAU
 window.calculerSalaireBrutMax = calculerSalaireBrutMax;
 window.ajusterRemuneration = ajusterRemuneration;
 window.calculerDividendesIS = calculerDividendesIS;
@@ -1246,12 +1252,12 @@ window.calculateProgressiveIRFallback = calculateProgressiveIRFallback; // Expos
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v3.3 - Calcul progressif IR toujours actif + CSG non déductible)");
+    console.log("Module SimulationsFiscales chargé (v3.4 - Correction calcul rémunération TNS vs assimilé salarié)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady', {
         detail: {
-            version: '3.3',
-            features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG', 'optimisationFiscaleDividendes', 'calculTMIAutomatique', 'calculProgressifIRActif', 'CSGNonDeductible']
+            version: '3.4',
+            features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG', 'optimisationFiscaleDividendes', 'calculTMIAutomatique', 'calculProgressifIRActif', 'CSGNonDeductible', 'calculerSalaireBrut']
         }
     }));
 });
