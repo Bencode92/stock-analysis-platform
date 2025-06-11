@@ -1,5 +1,5 @@
 // fiscal-utils.js - Utilitaires pour les calculs fiscaux
-// Version 1.7 - Calcul automatique TMI et optimisation PFU vs barème progressif
+// Version 1.8 - Correction du calcul progressif de l'IS
 
 const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS = 2,9%
 
@@ -205,17 +205,33 @@ class FiscalUtils {
         }
     }
     
-    // Calcul IS selon tranches avec paramètres additionnels
+    // CORRECTION: Calcul IS progressif selon le barème 2025
     static calculIS(resultat, params = {}) {
         // FIX CRITIQUE: Pas d'IS négatif si déficit
         if (resultat <= 0) return 0;
         
         const seuil = 42500;
-        const okTauxReduit = resultat <= seuil 
-            && (params.ca ?? Infinity) < 10000000
+        
+        // Vérifier les conditions pour le taux réduit
+        const conditionsTauxReduit = (params.ca ?? Infinity) < 10000000
             && (params.capitalEstLibere ?? true)
             && (params.detentionPersPhysiques75 ?? true);
-        return Math.round(resultat * (okTauxReduit ? 0.15 : 0.25));
+        
+        if (!conditionsTauxReduit) {
+            // Si les conditions ne sont pas remplies, tout à 25%
+            return Math.round(resultat * 0.25);
+        }
+        
+        // CALCUL PROGRESSIF : 15% jusqu'à 42 500€, puis 25% au-delà
+        if (resultat <= seuil) {
+            // Tout à 15%
+            return Math.round(resultat * 0.15);
+        } else {
+            // 15% sur les premiers 42 500€ + 25% sur le reste
+            const impotTranche1 = seuil * 0.15;              // 6 375€
+            const impotTranche2 = (resultat - seuil) * 0.25;
+            return Math.round(impotTranche1 + impotTranche2);
+        }
     }
     
     // Création de données pour le graphique d'optimisation
@@ -248,6 +264,6 @@ window.FiscalUtils = FiscalUtils;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module FiscalUtils chargé (v1.7 - Calcul automatique TMI et optimisation PFU vs barème progressif)");
+    console.log("Module FiscalUtils chargé (v1.8 - Calcul progressif IS corrigé)");
     document.dispatchEvent(new CustomEvent('fiscalUtilsReady'));
 });
