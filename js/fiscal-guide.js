@@ -1533,6 +1533,9 @@ if (statutId === 'micro') {
     const tauxChargesSalariales = (result.sim.chargesSalariales / result.sim.remuneration * 100) || 22;
     const tauxIS = result.sim.resultatApresRemuneration <= 42500 ? 15 : 25;
     
+    // NOUVEAU : Gestion du CAC pour la SA
+    const coutCAC = statutId === 'sa' ? (result.sim.coutCAC || 5000) : 0;
+    
     detailContent = `
         <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - ${result.statut}</h2>
         
@@ -1677,6 +1680,16 @@ if (statutId === 'micro') {
                 <td>Résultat après rémunération</td>
                 <td>${formatter.format(result.sim.resultatApresRemuneration)}</td>
             </tr>
+            ${coutCAC > 0 ? `
+            <tr>
+                <td class="text-red-400">- Honoraires CAC (obligatoire)</td>
+                <td class="text-red-400">- ${formatter.format(coutCAC)}</td>
+            </tr>
+            <tr class="border-t border-gray-600">
+                <td><strong>= Résultat après frais obligatoires</strong></td>
+                <td><strong>${formatter.format(result.sim.resultatApresRemuneration - coutCAC)}</strong></td>
+            </tr>
+            ` : ''}
             <tr>
                 <td>Impôt sur les sociétés (${formatPercent(tauxIS)})</td>
                 <td>${formatter.format(result.sim.is)}</td>
@@ -1748,6 +1761,13 @@ if (statutId === 'micro') {
             Économie réalisée : ${formatter.format(result.sim.economieMethode)}.</p>
             <p class="mt-2 text-gray-400">
             Note : Ce choix s'applique à tous vos revenus de capitaux mobiliers de l'année.</p>
+        </div>
+        ` : ''}
+        ${coutCAC > 0 ? `
+        <div class="mt-3 p-3 bg-orange-900 bg-opacity-20 rounded-lg text-xs border-l-4 border-orange-400">
+            <p><i class="fas fa-gavel text-orange-400 mr-2"></i>
+            <strong>Obligation légale SA :</strong> Les honoraires du Commissaire Aux Comptes (CAC) sont obligatoires 
+            pour toute SA, quel que soit son chiffre d'affaires. Ce coût est déductible du résultat imposable.</p>
         </div>
         ` : ''}
         ` : `
