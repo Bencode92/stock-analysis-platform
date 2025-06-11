@@ -1939,7 +1939,7 @@ if (statutId === 'micro') {
             </tr>
         </table>
         
-        ${/* NOUVEAU : Section Base imposable et impôt sur le revenu */}
+                ${/* NOUVEAU : Section Base imposable et impôt sur le revenu */ ''}
         <div class="detail-category">Base imposable et impôt sur le revenu</div>
         <div class="bg-blue-900 bg-opacity-30 rounded-lg p-4 mb-4">
             <table class="w-full">
