@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 3.8 - Correction CSG non déductible pour SNC
+// Version 3.9 - Ajout CSG non déductible pour assimilés salariés
 
 // Constantes pour les taux de charges sociales
 const TAUX_CHARGES = {
@@ -557,7 +557,7 @@ class SimulationsFiscales {
         }
     }
     
-    // SASU
+    // SASU - CORRIGÉ avec CSG non déductible
     static simulerSASU(params) {
         // Normaliser les paramètres
         const normalizedParams = this.normalizeAssociatesParams(params, 'sasu');
@@ -587,17 +587,21 @@ class SimulationsFiscales {
         
         const salaireNet = remuneration - chargesSalariales;
         
-        // NOUVEAU : Calcul automatique de la TMI
-        const tmiReel = window.FiscalUtils 
-            ? window.FiscalUtils.getTMI(salaireNet)
-            : calculerTMI(salaireNet);
+        // NOUVEAU : Calcul de la CSG non déductible sur le salaire brut
+        const csgNonDeductible = Math.round(remuneration * TAUX_CSG_NON_DEDUCTIBLE);
+        const baseImposableIR = salaireNet + csgNonDeductible;
         
-        // MODIFIÉ : Toujours utiliser le calcul progressif
+        // NOUVEAU : Calcul automatique de la TMI sur la base correcte
+        const tmiReel = window.FiscalUtils 
+            ? window.FiscalUtils.getTMI(baseImposableIR)
+            : calculerTMI(baseImposableIR);
+        
+        // MODIFIÉ : Toujours utiliser le calcul progressif sur la base correcte
         let impotRevenu;
         if (window.FiscalUtils && window.FiscalUtils.calculateProgressiveIR) {
-            impotRevenu = window.FiscalUtils.calculateProgressiveIR(salaireNet);
+            impotRevenu = window.FiscalUtils.calculateProgressiveIR(baseImposableIR);
         } else {
-            impotRevenu = calculateProgressiveIRFallback(salaireNet);
+            impotRevenu = calculateProgressiveIRFallback(baseImposableIR);
         }
         
         const salaireNetApresIR = salaireNet - impotRevenu;
@@ -615,7 +619,7 @@ class SimulationsFiscales {
             false, // Pas TNS
             false,  // Pas de gérant majoritaire
             tmiReel, // TMI calculé
-            salaireNet // Revenu imposable
+            baseImposableIR // Revenu imposable avec CSG
         );
         
         const revenuNetTotal = salaireNetApresIR + dividendesInfo.dividendesNets;
@@ -631,6 +635,8 @@ class SimulationsFiscales {
             coutTotalEmployeur: coutTotalEmployeur,
             chargesSalariales: chargesSalariales,
             salaireNet: salaireNet,
+            csgNonDeductible: csgNonDeductible,          // NOUVEAU
+            baseImposableIR: baseImposableIR,            // NOUVEAU
             impotRevenu: impotRevenu,
             salaireNetApresIR: salaireNetApresIR,
             revenuNetSalaire: salaireNetApresIR,
@@ -657,7 +663,7 @@ class SimulationsFiscales {
         };
     }
 
-    // SARL avec gestion des associés
+    // SARL avec gestion des associés - CORRIGÉ avec CSG pour gérant minoritaire
     static simulerSARL(params) {
         // Normaliser les paramètres
         const normalizedParams = this.normalizeAssociatesParams(params, 'sarl');
@@ -679,13 +685,15 @@ class SimulationsFiscales {
         // Calcul du résultat de l'entreprise
         const resultatEntreprise = Math.round(ca * tauxMarge);
         
-        // Régime social différent selon que le gérant est majoritaire ou non
+        // Variables communes
         let cotisationsSociales = 0;
         let salaireNet = 0;
         let resultatApresRemuneration = 0;
         let remuneration = 0;
         let ratioEffectif = 0;
         let remunerationNetteSociale = 0;
+        let csgNonDeductible = 0;
+        let baseImposableIR = 0;
         
         if (gerantMajoritaire) {
             // Gérant majoritaire = TNS - CORRIGÉ
@@ -700,11 +708,12 @@ class SimulationsFiscales {
             }
             salaireNet = remuneration - cotisationsSociales;
             remunerationNetteSociale = salaireNet;
+            baseImposableIR = salaireNet; // Pour TNS, pas de CSG non déductible sur salaire
             const coutRemunerationEntreprise = remuneration + cotisationsSociales;
             resultatApresRemuneration = resultatEntreprise - coutRemunerationEntreprise;
             ratioEffectif = coutRemunerationEntreprise / resultatEntreprise;
         } else {
-            // Gérant minoritaire = assimilé salarié - CORRIGÉ
+            // Gérant minoritaire = assimilé salarié - CORRIGÉ avec CSG
             const remunerationSouhaitee = calculerSalaireBrut(resultatEntreprise, tauxRemuneration, false); // false = Assimilé salarié
             
             remuneration = ajusterRemuneration(remunerationSouhaitee, resultatEntreprise, 0.55);
@@ -721,23 +730,28 @@ class SimulationsFiscales {
                 cotisationsSociales = chargesPatronales + chargesSalariales;
             }
             salaireNet = remuneration - chargesSalariales;
+            
+            // NOUVEAU : CSG non déductible pour gérant minoritaire (assimilé salarié)
+            csgNonDeductible = Math.round(remuneration * TAUX_CSG_NON_DEDUCTIBLE);
+            baseImposableIR = salaireNet + csgNonDeductible;
+            
             remunerationNetteSociale = salaireNet;
             const coutTotalEmployeur = remuneration + chargesPatronales;
             resultatApresRemuneration = resultatEntreprise - coutTotalEmployeur;
             ratioEffectif = coutTotalEmployeur / resultatEntreprise;
         }
         
-        // NOUVEAU : Calcul automatique de la TMI
+        // NOUVEAU : Calcul automatique de la TMI sur la base correcte
         const tmiReel = window.FiscalUtils 
-            ? window.FiscalUtils.getTMI(salaireNet)
-            : calculerTMI(salaireNet);
+            ? window.FiscalUtils.getTMI(baseImposableIR)
+            : calculerTMI(baseImposableIR);
         
-        // MODIFIÉ : Toujours utiliser le calcul progressif
+        // MODIFIÉ : Toujours utiliser le calcul progressif sur la base correcte
         let impotRevenu;
         if (window.FiscalUtils && window.FiscalUtils.calculateProgressiveIR) {
-            impotRevenu = window.FiscalUtils.calculateProgressiveIR(salaireNet);
+            impotRevenu = window.FiscalUtils.calculateProgressiveIR(baseImposableIR);
         } else {
-            impotRevenu = calculateProgressiveIRFallback(salaireNet);
+            impotRevenu = calculateProgressiveIRFallback(baseImposableIR);
         }
         
         const salaireNetApresIR = salaireNet - impotRevenu;
@@ -756,7 +770,7 @@ class SimulationsFiscales {
             gerantMajoritaire, // TNS si gérant majoritaire
             gerantMajoritaire,  // Cotisations sur dividendes si majoritaire
             tmiReel, // TMI calculé
-            salaireNet // Revenu imposable
+            baseImposableIR // Revenu imposable
         );
         
         const revenuNetTotal = salaireNetApresIR + dividendesInfo.dividendesNets;
@@ -770,6 +784,8 @@ class SimulationsFiscales {
             remuneration: remuneration,
             cotisationsSociales: cotisationsSociales,
             salaireNet: salaireNet,
+            csgNonDeductible: csgNonDeductible,          // NOUVEAU
+            baseImposableIR: baseImposableIR,            // NOUVEAU
             remunerationNetteSociale: remunerationNetteSociale,
             impotRevenu: impotRevenu,
             salaireNetApresIR: salaireNetApresIR,
@@ -834,7 +850,7 @@ class SimulationsFiscales {
             false, // Pas TNS
             false,  // Pas de gérant majoritaire
             resultSASU.tmiReel, // TMI calculé par SASU
-            resultSASU.salaireNet // Revenu imposable
+            resultSASU.baseImposableIR // Base imposable avec CSG
         );
         
         // Recalculer le revenu net total
@@ -902,7 +918,7 @@ class SimulationsFiscales {
             false,
             false,
             resultSAS.tmiReel, // TMI calculé par SAS
-            resultSAS.salaireNet // Revenu imposable
+            resultSAS.baseImposableIR // Base imposable avec CSG
         );
         
         const revenuNetTotal = resultSAS.salaireNetApresIR + dividendesInfo.dividendesNets;
@@ -1261,12 +1277,12 @@ window.calculateProgressiveIRFallback = calculateProgressiveIRFallback; // Expos
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v3.8 - Correction CSG non déductible pour SNC)");
+    console.log("Module SimulationsFiscales chargé (v3.9 - Ajout CSG non déductible pour assimilés salariés)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady', {
         detail: {
-            version: '3.8',
-            features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG', 'optimisationFiscaleDividendes', 'calculTMIAutomatique', 'calculProgressifIRActif', 'CSGNonDeductible', 'calculerSalaireBrut', 'calculerISProgressif', 'cashVsBaseImposable', 'SNCCsgFixed']
+            version: '3.9',
+            features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG', 'optimisationFiscaleDividendes', 'calculTMIAutomatique', 'calculProgressifIRActif', 'CSGNonDeductible', 'calculerSalaireBrut', 'calculerISProgressif', 'cashVsBaseImposable', 'SNCCsgFixed', 'AssimilesSalariesCsgFixed']
         }
     }));
 });
