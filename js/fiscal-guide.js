@@ -1517,8 +1517,12 @@ if (statutId === 'micro') {
     const hasDividendes = result.sim.dividendes && result.sim.dividendes > 0;
     const salaireNet = result.sim.salaireNet || 0;
     
-    // NOUVEAU : Calculer le TMI effectif sur le salaire net
-    const tmiEffectif = getTMI(salaireNet);
+    // NOUVEAU : Récupérer la CSG non déductible et la base imposable
+    const csgNonDeductible = getNumber(result.sim.csgNonDeductible);
+    const baseImposableIR = getNumber(result.sim.baseImposableIR) || (salaireNet + csgNonDeductible);
+    
+    // MODIFIÉ : Calculer le TMI effectif sur la BASE IMPOSABLE (pas le salaire net)
+    const tmiEffectif = getTMI(baseImposableIR);
     
     // Calcul des taux
     const tauxChargesPatronales = (result.sim.chargesPatronales / result.sim.remuneration * 100) || 55;
@@ -1618,15 +1622,54 @@ ${statutId === 'sasu' ? `
                 <td>Salaire net avant IR</td>
                 <td>${formatter.format(result.sim.salaireNet)}</td>
             </tr>
+        </table>
+        
+        <div class="detail-category">Base imposable et impôt</div>
+        <table class="detail-table">
+            <tr>
+                <td>Salaire net</td>
+                <td>${formatter.format(salaireNet)}</td>
+            </tr>
+            ${csgNonDeductible > 0 ? `
+            <tr>
+                <td>+ CSG/CRDS non déductible (2,9% du brut)</td>
+                <td class="text-orange-400">+ ${formatter.format(csgNonDeductible)}</td>
+            </tr>
+            <tr class="border-t border-gray-600">
+                <td><strong>= Base imposable IR</strong></td>
+                <td><strong>${formatter.format(baseImposableIR)}</strong></td>
+            </tr>
+            ` : `
+            <tr>
+                <td>Base imposable IR</td>
+                <td>${formatter.format(baseImposableIR)}</td>
+            </tr>
+            `}
             <tr>
                 <td>Impôt sur le revenu (${result.sim.modeExpert ? 'progressif, TMI: '+tmiEffectif+'%' : 'TMI: '+tmiEffectif+'%'})</td>
-                <td>${formatter.format(result.sim.impotRevenu)}</td>
+                <td class="text-red-400">- ${formatter.format(result.sim.impotRevenu)}</td>
             </tr>
             <tr>
                 <td>Salaire net après IR</td>
                 <td>${formatter.format(result.sim.salaireNetApresIR)}</td>
             </tr>
         </table>
+        
+        ${csgNonDeductible > 0 ? `
+        <div class="mt-3 p-3 bg-blue-900 bg-opacity-30 rounded-lg text-xs">
+            <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
+            <strong>Note fiscale :</strong> Pour les dirigeants assimilés salariés, la CSG/CRDS non déductible (2,9% du salaire brut) 
+            est réintégrée dans la base imposable. Vous payez donc l'IR sur un montant supérieur à votre salaire net.</p>
+        </div>
+        ` : ''}
+        
+        ${baseImposableIR > salaireNet ? `
+        <div class="mt-2 p-2 bg-yellow-900 bg-opacity-20 rounded flex items-center text-xs">
+            <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>
+            <span>Attention : Vous serez imposé sur ${formatter.format(baseImposableIR - salaireNet)} 
+            de plus que votre salaire net !</span>
+        </div>
+        ` : ''}
         
         ${hasDividendes ? `
         <div class="detail-category">Dividendes</div>
@@ -1744,6 +1787,20 @@ ${statutId === 'sasu' ? `
                 <td>${formatPercent(result.sim.ratioNetCA)}</td>
             </tr>
         </table>
+        
+        <div class="mt-4 p-4 bg-gray-800 bg-opacity-50 rounded-lg">
+            <h4 class="text-sm font-bold text-gray-300 mb-2">Récapitulatif fiscal :</h4>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <p class="text-gray-400">💰 Salaire net réel :</p>
+                    <p class="font-mono">${formatter.format(salaireNet)}</p>
+                </div>
+                <div>
+                    <p class="text-gray-400">📊 Base imposable IR :</p>
+                    <p class="font-mono">${formatter.format(salaireNet)} + ${formatter.format(csgNonDeductible)} = ${formatter.format(baseImposableIR)}</p>
+                </div>
+            </div>
+        </div>
     `;
 } else if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl' || statutId === 'sca') {
     // Cas des structures à l'IS avec un gérant TNS
