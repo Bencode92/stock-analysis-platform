@@ -945,11 +945,17 @@ const ImmoExtensions = (function() {
         ajouterSectionScenarios();
     }
 
-    // Ajoute le sélecteur de régime fiscal
-    function ajouterSelectionRegimeFiscal() {
-        // Vérifier si le conteneur approprié existe
-        const advancedParams = document.getElementById('advanced-params');
-        if (!advancedParams || document.getElementById('regime-fiscal-cards')) return;
+// Ajoute le sélecteur de régime fiscal
+function ajouterSelectionRegimeFiscal() {
+    // NOUVELLE VÉRIFICATION : Si l'impact fiscal est désactivé, ne rien faire
+    if (window.disableFiscalImpact) {
+        console.log('🚫 Sélection de régime fiscal désactivée (impact fiscal désactivé)');
+        return;
+    }
+    
+    // Vérifier si le conteneur approprié existe
+    const advancedParams = document.getElementById('advanced-params');
+    if (!advancedParams || document.getElementById('regime-fiscal-cards')) return;
         
         // Créer une nouvelle section pour le régime fiscal
         const sectionFiscale = document.createElement('div');
