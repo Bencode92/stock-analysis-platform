@@ -880,68 +880,74 @@ class SimulationsFiscales {
         };
     }
 
-    // SA avec gestion des associés
-    static simulerSA(params) {
-        // Normaliser les paramètres
-        const normalizedParams = this.normalizeAssociatesParams(params, 'sa');
-        const { capitalInvesti = 37000, partAssocie = normalizedParams.partAssocie } = normalizedParams;
-        
-        // Vérifier si le capital minimum est respecté
-        if (capitalInvesti < 37000) {
-            return {
-                compatible: false,
-                message: `Le capital minimum pour une SA est de 37 000€ (vous avez indiqué ${capitalInvesti}€)`
-            };
-        }
-        
-        // Simuler comme une SAS avec les params normalisés
-        const resultSAS = this.simulerSAS(normalizedParams);
-        
-        if (!resultSAS.compatible) {
-            return resultSAS;
-        }
-        
-        // Ajouter le coût du CAC
-        const coutCAC = 5000;
-        const resultatApresCAC = Math.max(0, resultSAS.resultatApresRemuneration - coutCAC);
-        
-        // CORRIGÉ : Utiliser directement le calcul progressif de l'IS
-        const is = calculerISProgressif(resultatApresCAC);
-        
-        const resultatApresIS = Math.max(0, resultatApresCAC - is);
-        
-        // MODIFIÉ : Utiliser le helper avec le TMI calculé de SAS
-        const dividendesInfo = calculerDividendesIS(
-            resultatApresIS,
-            partAssocie,
-            capitalInvesti * partAssocie,
-            false,
-            false,
-            resultSAS.tmiReel, // TMI calculé par SAS
-            resultSAS.baseImposableIR // Base imposable avec CSG
-        );
-        
-        const revenuNetTotal = resultSAS.salaireNetApresIR + dividendesInfo.dividendesNets;
-        
+// SA avec gestion des associés
+static simulerSA(params) {
+    // Normaliser les paramètres
+    const normalizedParams = this.normalizeAssociatesParams(params, 'sa');
+    const { capitalInvesti = 37000, partAssocie = normalizedParams.partAssocie } = normalizedParams;
+    
+    // Vérifier si le capital minimum est respecté
+    if (capitalInvesti < 37000) {
         return {
-            ...resultSAS,
-            typeEntreprise: 'SA',
-            coutCAC: coutCAC,
-            is: is,
-            dividendesNets: dividendesInfo.dividendesNets,
-            revenuNetTotal: revenuNetTotal,
-            ratioNetCA: (revenuNetTotal / normalizedParams.ca) * 100,
-            
-            // NOUVEAU : Ajout des infos d'optimisation
-            methodeDividendes: dividendesInfo.methodeDividendes,
-            economieMethode: dividendesInfo.economieMethode,
-            
-            // S'assurer que les infos d'associés sont présentes
-            nbAssocies: normalizedParams.nbAssocies,
-            partAssocie: partAssocie,
-            partAssociePct: normalizedParams.partAssociePct
+            compatible: false,
+            message: `Le capital minimum pour une SA est de 37 000€ (vous avez indiqué ${capitalInvesti}€)`
         };
     }
+    
+    // Simuler comme une SAS avec les params normalisés
+    const resultSAS = this.simulerSAS(normalizedParams);
+    
+    if (!resultSAS.compatible) {
+        return resultSAS;
+    }
+    
+    // Ajouter le coût du CAC
+    const coutCAC = 5000;
+    const resultatApresCAC = Math.max(0, resultSAS.resultatApresRemuneration - coutCAC);
+    
+    // CORRIGÉ : Utiliser directement le calcul progressif de l'IS
+    const is = calculerISProgressif(resultatApresCAC);
+    
+    // CORRECTION PRINCIPALE : Calculer le résultat après IS à partir du résultat après CAC
+    const resultatApresIS = Math.max(0, resultatApresCAC - is);
+    
+    // MODIFIÉ : Utiliser le helper avec le TMI calculé de SAS
+    const dividendesInfo = calculerDividendesIS(
+        resultatApresIS,
+        partAssocie,
+        capitalInvesti * partAssocie,
+        false,
+        false,
+        resultSAS.tmiReel, // TMI calculé par SAS
+        resultSAS.baseImposableIR // Base imposable avec CSG
+    );
+    
+    const revenuNetTotal = resultSAS.salaireNetApresIR + dividendesInfo.dividendesNets;
+    
+    return {
+        ...resultSAS,
+        typeEntreprise: 'SA',
+        coutCAC: coutCAC,
+        is: is,
+        // CORRECTION : Ajouter resultatApresIS pour la cohérence
+        resultatApresIS: resultatApresIS,
+        // CORRECTION : Les dividendes bruts sont égaux au résultat après IS
+        dividendes: resultatApresIS * partAssocie,
+        dividendesNets: dividendesInfo.dividendesNets,
+        revenuNetTotal: revenuNetTotal,
+        ratioNetCA: (revenuNetTotal / normalizedParams.ca) * 100,
+        
+        // NOUVEAU : Ajout des infos d'optimisation
+        methodeDividendes: dividendesInfo.methodeDividendes,
+        economieMethode: dividendesInfo.economieMethode,
+        prelevementForfaitaire: dividendesInfo.prelevementForfaitaire,
+        
+        // S'assurer que les infos d'associés sont présentes
+        nbAssocies: normalizedParams.nbAssocies,
+        partAssocie: partAssocie,
+        partAssociePct: normalizedParams.partAssociePct
+    };
+}
 
     // SNC avec transparence fiscale - CORRIGÉ AVEC CSG NON DÉDUCTIBLE
     static simulerSNC(params) {
