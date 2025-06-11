@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 3.4 - Correction calcul rémunération TNS vs assimilé salarié
+// Version 3.5 - Correction calcul IS progressif + rémunération TNS vs assimilé salarié
 
 // Constantes pour les taux de charges sociales
 const TAUX_CHARGES = {
@@ -61,6 +61,25 @@ function ajusterRemuneration(remunerationSouhaitee, resultatDisponible, tauxChar
     }
     
     return remunerationSouhaitee;
+}
+
+// Fonction pour calculer l'IS avec barème progressif
+function calculerISProgressif(resultat) {
+    if (resultat <= 0) return 0;
+    
+    let is = 0;
+    
+    // Première tranche : 15% jusqu'à 42 500€
+    if (resultat <= 42500) {
+        is = resultat * 0.15;
+    } else {
+        // 15% sur les premiers 42 500€
+        is = 42500 * 0.15;
+        // 25% sur le reste
+        is += (resultat - 42500) * 0.25;
+    }
+    
+    return Math.round(is);
 }
 
 // -------------------------------------------------------
@@ -478,12 +497,12 @@ class SimulationsFiscales {
                 impotRevenu = calculateProgressiveIRFallback(remunerationNetteSociale);
             }
             
+            // CORRIGÉ : Utiliser le calcul progressif de l'IS
             let is;
-            if (window.FiscalUtils) {
+            if (window.FiscalUtils?.calculIS) {
                 is = window.FiscalUtils.calculIS(resultatApresRemuneration);
             } else {
-                const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
-                is = Math.round(Math.max(0, resultatApresRemuneration) * tauxIS);
+                is = calculerISProgressif(resultatApresRemuneration);
             }
             
             const resultatApresIS = resultatApresRemuneration - is;
@@ -582,12 +601,12 @@ class SimulationsFiscales {
         
         const salaireNetApresIR = salaireNet - impotRevenu;
         
+        // CORRIGÉ : Utiliser le calcul progressif de l'IS
         let is;
-        if (window.FiscalUtils) {
+        if (window.FiscalUtils?.calculIS) {
             is = window.FiscalUtils.calculIS(resultatApresRemuneration);
         } else {
-            const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
-            is = Math.round(Math.max(0, resultatApresRemuneration) * tauxIS);
+            is = calculerISProgressif(resultatApresRemuneration);
         }
         
         const resultatApresIS = resultatApresRemuneration - is;
@@ -727,13 +746,12 @@ class SimulationsFiscales {
         
         const salaireNetApresIR = salaireNet - impotRevenu;
         
-        // Calcul de l'IS
+        // CORRIGÉ : Utiliser le calcul progressif de l'IS
         let is;
-        if (window.FiscalUtils) {
+        if (window.FiscalUtils?.calculIS) {
             is = window.FiscalUtils.calculIS(resultatApresRemuneration);
         } else {
-            const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
-            is = Math.round(Math.max(0, resultatApresRemuneration) * tauxIS);
+            is = calculerISProgressif(resultatApresRemuneration);
         }
         
         const resultatApresIS = resultatApresRemuneration - is;
@@ -880,13 +898,12 @@ class SimulationsFiscales {
         const coutCAC = 5000;
         const resultatApresCAC = Math.max(0, resultSAS.resultatApresRemuneration - coutCAC);
         
-        // Recalculer l'IS
+        // CORRIGÉ : Utiliser le calcul progressif de l'IS
         let is;
-        if (window.FiscalUtils) {
+        if (window.FiscalUtils?.calculIS) {
             is = window.FiscalUtils.calculIS(resultatApresCAC);
         } else {
-            const tauxIS = resultatApresCAC <= 42500 ? 0.15 : 0.25;
-            is = Math.round(resultatApresCAC * tauxIS);
+            is = calculerISProgressif(resultatApresCAC);
         }
         
         const resultatApresIS = Math.max(0, resultatApresCAC - is);
@@ -1109,13 +1126,12 @@ class SimulationsFiscales {
         } else {
             // Option IS
             
-            // Calcul de l'IS sur résultat après amortissement
+            // CORRIGÉ : Utiliser le calcul progressif de l'IS
             let is;
-            if (window.FiscalUtils) {
+            if (window.FiscalUtils?.calculIS) {
                 is = window.FiscalUtils.calculIS(resultatApresAmortissement);
             } else {
-                const tauxIS = resultatApresAmortissement <= 42500 ? 0.15 : 0.25;
-                is = Math.round(Math.max(0, resultatApresAmortissement) * tauxIS);
+                is = calculerISProgressif(resultatApresAmortissement);
             }
             
             // Résultat après IS
@@ -1247,17 +1263,18 @@ window.calculerSalaireBrut = calculerSalaireBrut; // NOUVEAU
 window.calculerSalaireBrutMax = calculerSalaireBrutMax;
 window.ajusterRemuneration = ajusterRemuneration;
 window.calculerDividendesIS = calculerDividendesIS;
+window.calculerISProgressif = calculerISProgressif; // NOUVEAU
 window.STATUTS_ASSOCIATES_CONFIG = STATUTS_ASSOCIATES_CONFIG;
 window.calculateProgressiveIRFallback = calculateProgressiveIRFallback; // Exposer la fonction
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v3.4 - Correction calcul rémunération TNS vs assimilé salarié)");
+    console.log("Module SimulationsFiscales chargé (v3.5 - Correction calcul IS progressif + rémunération TNS)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady', {
         detail: {
-            version: '3.4',
-            features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG', 'optimisationFiscaleDividendes', 'calculTMIAutomatique', 'calculProgressifIRActif', 'CSGNonDeductible', 'calculerSalaireBrut']
+            version: '3.5',
+            features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG', 'optimisationFiscaleDividendes', 'calculTMIAutomatique', 'calculProgressifIRActif', 'CSGNonDeductible', 'calculerSalaireBrut', 'calculerISProgressif']
         }
     }));
 });
