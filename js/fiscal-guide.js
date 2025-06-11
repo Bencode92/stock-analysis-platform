@@ -1826,8 +1826,12 @@ if (statutId === 'micro') {
     const hasDividendes = result.sim.dividendes && result.sim.dividendes > 0;
     const remunerationNetteSociale = result.sim.remunerationNetteSociale || 0;
     
-    // NOUVEAU : Calculer le TMI effectif
-    const tmiEffectif = getTMI(remunerationNetteSociale);
+    // NOUVEAU : Récupérer les valeurs CSG depuis la simulation
+    const csgNonDeductible = result.sim.csgNonDeductible || Math.round(result.sim.remuneration * 0.029);
+    const baseImposableIR = result.sim.baseImposableIR || (remunerationNetteSociale + csgNonDeductible);
+    
+    // MODIFIÉ : Calculer le TMI sur la base imposable correcte
+    const tmiEffectif = getTMI(baseImposableIR);
     
     // Calcul des taux
     const tauxCotisationsTNS = (result.sim.cotisationsSociales / result.sim.remuneration * 100) || 30;
@@ -1933,6 +1937,28 @@ if (statutId === 'micro') {
                 <td>Revenu net social</td>
                 <td>${formatter.format(result.sim.remunerationNetteSociale)}</td>
             </tr>
+        </table>
+        
+        ${/* NOUVEAU : Section Base imposable et impôt sur le revenu */}
+        <div class="detail-category">Base imposable et impôt sur le revenu</div>
+        <div class="bg-blue-900 bg-opacity-30 rounded-lg p-4 mb-4">
+            <table class="w-full">
+                <tr>
+                    <td class="text-gray-300 pb-2">Salaire net</td>
+                    <td class="text-right text-lg font-semibold">${formatter.format(remunerationNetteSociale)}</td>
+                </tr>
+                <tr>
+                    <td class="text-gray-300 pb-2">+ CSG/CRDS non déductible (2,9% du brut)</td>
+                    <td class="text-right text-lg font-semibold text-yellow-400">+ ${formatter.format(csgNonDeductible)}</td>
+                </tr>
+                <tr class="border-t border-gray-600 pt-2">
+                    <td class="text-white font-semibold pt-2">= Base imposable IR</td>
+                    <td class="text-right text-xl font-bold text-white pt-2">${formatter.format(baseImposableIR)}</td>
+                </tr>
+            </table>
+        </div>
+        
+        <table class="detail-table">
             <tr>
                 <td>Impôt sur le revenu (${result.sim.modeExpert ? 'progressif, TMI: '+tmiEffectif+'%' : 'TMI: '+tmiEffectif+'%'})</td>
                 <td>${formatter.format(result.sim.impotRevenu)}</td>
@@ -1942,6 +1968,12 @@ if (statutId === 'micro') {
                 <td>${formatter.format(result.sim.revenuNetSalaire)}</td>
             </tr>
         </table>
+        
+        <div class="mt-3 p-3 bg-yellow-900 bg-opacity-20 rounded-lg text-xs border-l-4 border-yellow-400">
+            <p><i class="fas fa-exclamation-triangle text-yellow-400 mr-2"></i>
+            <strong>Important :</strong> La CSG/CRDS non déductible (2,9%) augmente votre base imposable à l'IR. 
+            Cette particularité s'applique aux TNS (gérants majoritaires de SARL, gérants d'EURL, etc.).</p>
+        </div>
         
         ${hasDividendes ? `
         <div class="detail-category">Dividendes</div>
