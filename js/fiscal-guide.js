@@ -1986,10 +1986,14 @@ ${statutId === 'sasu' ? `
 } else if (statutId === 'ei' || statutId === 'eurl' || statutId === 'snc') {
     // Cas des entreprises à l'IR
     const tauxCotisationsTNS = 30;
-    const revenuImposable = result.sim.beneficeImposable || result.sim.beneficeApresCotisations || 0;
+    
+    // NOUVEAU : Récupérer les nouvelles variables
+    const cashAvantIR = result.sim.cashAvantIR || (result.sim.beneficeAvantCotisations - result.sim.cotisationsSociales);
+    const baseImposableIR = result.sim.baseImposableIR || result.sim.beneficeImposable || result.sim.beneficeApresCotisations || 0;
+    const csgNonDeductible = result.sim.csgNonDeductible || 0;
     
     // NOUVEAU : Calculer le TMI effectif
-    const tmiEffectif = getTMI(revenuImposable);
+    const tmiEffectif = getTMI(baseImposableIR);
     
     detailContent = `
         <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - ${result.statut}</h2>
@@ -2037,63 +2041,112 @@ ${statutId === 'sasu' ? `
         </div>
         ` : ''}
         
-        <div class="detail-category">Charges sociales</div>
-        <table class="detail-table">
-            <tr>
-                <td>Base de calcul</td>
-                <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
-            </tr>
-            <tr>
-                <td>Taux de cotisations sociales TNS</td>
-                <td>≈${formatPercent(tauxCotisationsTNS)}</td>
-            </tr>
-            <tr>
-                <td>Montant des cotisations sociales</td>
-                <td>${formatter.format(result.sim.cotisationsSociales)}</td>
-            </tr>
-            ${result.sim.csgNonDeductible ? `
-            <tr>
-                <td>dont CSG non déductible (2,4%)</td>
-                <td>${formatter.format(result.sim.csgNonDeductible)}</td>
-            </tr>
-            ` : ''}
-        </table>
-        
-        <div class="detail-category">Impôt sur le revenu</div>
-        <table class="detail-table">
-            <tr>
-                <td>Bénéfice après cotisations</td>
-                <td>${formatter.format(result.sim.beneficeApresCotisations || result.sim.beneficeImposable)}</td>
-            </tr>
-            <tr>
-                <td>Impôt sur le revenu (${result.sim.modeExpert ? 'progressif, TMI: '+tmiEffectif+'%' : 'TMI: '+tmiEffectif+'%'})</td>
-                <td>${formatter.format(result.sim.impotRevenu)}</td>
-            </tr>
-        </table>
-        
-        <div class="detail-category">Résultat final</div>
+        <div class="detail-category">Flux de trésorerie (cash)</div>
         <table class="detail-table">
             <tr>
                 <td>Bénéfice avant cotisations</td>
                 <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
             </tr>
             <tr>
-                <td>- Cotisations sociales (${formatPercent(tauxCotisationsTNS)})</td>
-                <td>${formatter.format(result.sim.cotisationsSociales)}</td>
+                <td>- Cotisations sociales TNS (${formatPercent(tauxCotisationsTNS)})</td>
+                <td class="text-red-400">- ${formatter.format(result.sim.cotisationsSociales)}</td>
+            </tr>
+            <tr class="border-t border-gray-600">
+                <td><strong>= Cash disponible avant IR</strong></td>
+                <td><strong>${formatter.format(cashAvantIR)}</strong></td>
+            </tr>
+        </table>
+        
+        <div class="detail-category">Base imposable (calcul fiscal)</div>
+        <table class="detail-table">
+            <tr>
+                <td>Cash disponible</td>
+                <td>${formatter.format(cashAvantIR)}</td>
+            </tr>
+            ${csgNonDeductible > 0 ? `
+            <tr>
+                <td>+ CSG/CRDS non déductible (2,9%)</td>
+                <td class="text-orange-400">+ ${formatter.format(csgNonDeductible)}</td>
+            </tr>
+            <tr class="border-t border-gray-600">
+                <td><strong>= Base imposable IR</strong></td>
+                <td><strong>${formatter.format(baseImposableIR)}</strong></td>
+            </tr>
+            ` : `
+            <tr>
+                <td>Base imposable IR</td>
+                <td>${formatter.format(baseImposableIR)}</td>
+            </tr>
+            `}
+        </table>
+        
+        <div class="mt-3 p-3 bg-blue-900 bg-opacity-30 rounded-lg text-xs">
+            <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
+            <strong>Note fiscale :</strong> La CSG/CRDS non déductible (2,9%) est réintégrée dans la base imposable 
+            mais reste bien payée. C'est pourquoi le cash réel est inférieur à la base imposable.</p>
+            <p class="mt-2 text-xs">
+                <strong>Exemple :</strong> Sur 100k€ de bénéfice, après 30k€ de cotisations, 
+                vous avez 70k€ en cash mais êtes imposé sur 72,9k€ (+2,9% de CSG non déductible).
+            </p>
+        </div>
+        
+        ${baseImposableIR > cashAvantIR ? `
+        <div class="mt-2 p-2 bg-yellow-900 bg-opacity-20 rounded flex items-center text-xs">
+            <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>
+            <span>Attention : Vous serez imposé sur ${formatter.format(baseImposableIR - cashAvantIR)} 
+            de plus que votre cash réel !</span>
+        </div>
+        ` : ''}
+        
+        <div class="detail-category">Impôt sur le revenu</div>
+        <table class="detail-table">
+            <tr>
+                <td>Base imposable IR</td>
+                <td>${formatter.format(baseImposableIR)}</td>
+            </tr>
+            <tr>
+                <td>Tranche marginale d'imposition (TMI)</td>
+                <td>${tmiEffectif}%</td>
+            </tr>
+            <tr>
+                <td>Impôt sur le revenu (${result.sim.modeExpert ? 'calcul progressif' : 'TMI simple'})</td>
+                <td class="text-red-400">- ${formatter.format(result.sim.impotRevenu)}</td>
+            </tr>
+        </table>
+        
+        <div class="detail-category">Résultat final</div>
+        <table class="detail-table">
+            <tr>
+                <td>Cash disponible avant IR</td>
+                <td>${formatter.format(cashAvantIR)}</td>
             </tr>
             <tr>
                 <td>- Impôt sur le revenu</td>
-                <td>${formatter.format(result.sim.impotRevenu)}</td>
+                <td class="text-red-400">- ${formatter.format(result.sim.impotRevenu)}</td>
             </tr>
-            <tr>
+            <tr class="border-t border-gray-600">
                 <td><strong>= Revenu net en poche</strong></td>
-                <td><strong>${formatter.format(result.sim.revenuNetApresImpot)}</strong></td>
+                <td><strong class="text-green-400">${formatter.format(result.sim.revenuNetApresImpot)}</strong></td>
             </tr>
             <tr>
                 <td>Ratio Net/CA</td>
                 <td>${formatPercent(result.sim.ratioNetCA)}</td>
             </tr>
         </table>
+        
+        <div class="mt-4 p-4 bg-gray-800 bg-opacity-50 rounded-lg">
+            <h4 class="text-sm font-bold text-gray-300 mb-2">Récapitulatif des flux :</h4>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <p class="text-gray-400">💰 Flux de trésorerie :</p>
+                    <p class="font-mono">${formatter.format(result.sim.beneficeAvantCotisations)} - ${formatter.format(result.sim.cotisationsSociales)} = ${formatter.format(cashAvantIR)}</p>
+                </div>
+                <div>
+                    <p class="text-gray-400">📊 Flux fiscal :</p>
+                    <p class="font-mono">${formatter.format(cashAvantIR)} + ${formatter.format(csgNonDeductible)} = ${formatter.format(baseImposableIR)}</p>
+                </div>
+            </div>
+        </div>
     `;
 
     } else if (statutId === 'sci') {
