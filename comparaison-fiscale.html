@@ -331,6 +331,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 5px 20px rgba(0, 191, 255, 0.3);
+            margin: 0 10px;
         }
         
         .btn-continue:hover {
@@ -342,6 +343,128 @@
             background: #64748b;
             cursor: not-allowed;
             box-shadow: none;
+        }
+        
+        /* Fiscal results styles */
+        .regime-comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .regime-result {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 191, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .regime-result:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 191, 255, 0.2);
+            border-color: rgba(0, 191, 255, 0.4);
+        }
+        
+        .regime-result.best {
+            border-color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+        }
+        
+        .regime-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .regime-name {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #00bfff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .regime-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+            background: #22c55e;
+            color: white;
+        }
+        
+        .regime-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .metric-box {
+            background: rgba(0, 191, 255, 0.05);
+            border: 1px solid rgba(0, 191, 255, 0.2);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+        }
+        
+        .metric-label {
+            color: #94a3b8;
+            font-size: 0.8em;
+            margin-bottom: 5px;
+        }
+        
+        .metric-value {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+        
+        .metric-value.positive {
+            color: #22c55e;
+        }
+        
+        .metric-value.negative {
+            color: #ef4444;
+        }
+        
+        .metric-value.neutral {
+            color: #00bfff;
+        }
+        
+        .best-regime-summary {
+            background: linear-gradient(135deg, rgba(0, 191, 255, 0.1), rgba(0, 191, 255, 0.05));
+            border: 2px solid rgba(0, 191, 255, 0.3);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .summary-title {
+            font-size: 1.8em;
+            color: #00bfff;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .summary-content {
+            font-size: 1.2em;
+            color: #e2e8f0;
+            line-height: 1.8;
+        }
+        
+        .summary-highlight {
+            color: #22c55e;
+            font-weight: 700;
+            font-size: 1.3em;
         }
     </style>
 </head>
@@ -647,7 +770,7 @@
                     <button class="btn btn-outline" onclick="goToStep(1)">
                         <i class="fas fa-arrow-left"></i> Retour
                     </button>
-                    <button class="btn-continue" onclick="goToStep(3)">
+                    <button class="btn-continue" onclick="proceedToFiscalAnalysis()">
                         Optimiser ma fiscalité
                         <i class="fas fa-arrow-right" style="margin-left: 10px;"></i>
                     </button>
@@ -657,9 +780,8 @@
 
         <!-- Section 3 : Optimisation fiscale -->
         <div class="market-analysis-section" id="section-3">
-            <!-- Ici on reprend votre comparateur fiscal existant -->
             <div id="fiscal-comparison-results">
-                <!-- Résultats de la comparaison fiscale -->
+                <!-- Les résultats fiscaux seront insérés ici -->
             </div>
         </div>
     </div>
@@ -668,12 +790,19 @@
     <script src="./ville-search.js"></script>
     <script src="./immo-simulation.js"></script>
     <script src="./fiscal-comparison-enhanced.js"></script>
+    <script src="./market-fiscal-analysis.js"></script>
     
     <script>
         // Variables globales
         let currentStep = 1;
         let marketData = null;
         let propertyData = null;
+        let analyzer = null;
+        
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            analyzer = new MarketFiscalAnalyzer();
+        });
         
         // Gestion des étapes
         function goToStep(step) {
@@ -929,6 +1058,47 @@
                                 <div class="market-metric-value">${((data.loyerActuel * 12) / data.prixPaye * 100).toFixed(2)}%</div>
                             </div>
                         </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Passer à l'analyse fiscale
+        async function proceedToFiscalAnalysis() {
+            goToStep(3);
+            
+            // Afficher un loading
+            const resultsDiv = document.getElementById('fiscal-comparison-results');
+            resultsDiv.innerHTML = `
+                <div style="text-align: center; padding: 60px;">
+                    <div class="loading-spinner"></div>
+                    <div style="color: #00bfff; font-size: 1.2em; margin-top: 20px;">
+                        Analyse des régimes fiscaux en cours...
+                    </div>
+                </div>
+            `;
+            
+            // Attendre un peu pour l'effet
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            try {
+                // Effectuer l'analyse complète
+                const analysis = await analyzer.performCompleteAnalysis(propertyData);
+                
+                // Afficher les résultats fiscaux
+                resultsDiv.innerHTML = analyzer.generateFiscalResultsHTML(analysis.fiscal, propertyData);
+                
+                // Créer les graphiques
+                setTimeout(() => {
+                    analyzer.createFiscalCharts(analysis.fiscal);
+                }, 100);
+                
+            } catch (error) {
+                console.error('Erreur lors de l\'analyse fiscale:', error);
+                resultsDiv.innerHTML = `
+                    <div class="market-comparison-card">
+                        <h3 style="color: #ef4444;">Erreur lors de l'analyse</h3>
+                        <p>Une erreur est survenue. Veuillez réessayer.</p>
                     </div>
                 `;
             }
