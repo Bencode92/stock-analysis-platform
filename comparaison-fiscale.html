@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparateur de Régimes Fiscaux - ImmoSim</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Réutiliser vos CSS existants -->
+    <link rel="stylesheet" href="css/immo-enhanced.css">
+    <link rel="stylesheet" href="css/regimes-fiscaux.css">
+    <link rel="stylesheet" href="css/immo-comparison-enhanced.css">
+    
+    <!-- Chart.js pour les graphiques -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    
+    <style>
+        /* Styles spécifiques pour cette page */
+        .simple-form {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .regime-result {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 191, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .regime-result:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 191, 255, 0.2);
+            border-color: rgba(0, 191, 255, 0.4);
+        }
+        
+        .regime-result.best {
+            border-color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+        }
+        
+        .regime-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .regime-name {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #00bfff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .regime-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 500;
+            background: #22c55e;
+            color: white;
+        }
+        
+        .regime-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .metric-box {
+            background: rgba(0, 191, 255, 0.05);
+            border: 1px solid rgba(0, 191, 255, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .metric-label {
+            color: #94a3b8;
+            font-size: 0.85em;
+            margin-bottom: 5px;
+        }
+        
+        .metric-value {
+            font-size: 1.4em;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+        
+        .metric-value.positive {
+            color: #22c55e;
+        }
+        
+        .metric-value.negative {
+            color: #ef4444;
+        }
+        
+        .best-regime-summary {
+            background: linear-gradient(135deg, rgba(0, 191, 255, 0.1), rgba(0, 191, 255, 0.05));
+            border: 2px solid rgba(0, 191, 255, 0.3);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .summary-title {
+            font-size: 1.8em;
+            color: #00bfff;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .summary-content {
+            font-size: 1.2em;
+            color: #e2e8f0;
+            line-height: 1.8;
+        }
+        
+        .summary-highlight {
+            color: #22c55e;
+            font-weight: 700;
+            font-size: 1.3em;
+        }
+        
+        /* Pour la compatibilité avec votre système existant */
+        .ville-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(10, 15, 30, 0.98);
+            border: 1px solid rgba(0, 191, 255, 0.3);
+            border-radius: 8px;
+            margin-top: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        
+        .ville-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .ville-item:hover {
+            background: rgba(0, 191, 255, 0.1);
+            padding-left: 20px;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 15, 30, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            display: none;
+        }
+        
+        .loading-content {
+            text-align: center;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 191, 255, 0.3);
+            border-top-color: #00bfff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar de navigation verticale (réutiliser votre sidebar) -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">SF</div>
+        <nav class="sidebar-nav">
+            <a href="actualites.html" class="nav-item" title="Actualités">
+                <i class="fas fa-newspaper"></i>
+            </a>
+            <a href="portefeuille.html" class="nav-item" title="Portefeuilles">
+                <i class="fas fa-chart-pie"></i>
+            </a>
+            <a href="dashboard.html" class="nav-item" title="Tableau de bord">
+                <i class="fas fa-tachometer-alt"></i>
+            </a>
+            <a href="marches.html" class="nav-item" title="Marchés">
+                <i class="fas fa-chart-line"></i>
+            </a>
+            <a href="secteurs.html" class="nav-item" title="Secteurs">
+                <i class="fas fa-industry"></i>
+            </a>
+            <a href="liste.html" class="nav-item" title="Listes">
+                <i class="fas fa-list"></i>
+            </a>
+            <a href="etf.html" class="nav-item" title="ETF">
+                <i class="fas fa-funnel-dollar"></i>
+            </a>
+            <a href="crypto.html" class="nav-item" title="Crypto">
+                <i class="fab fa-bitcoin"></i>
+            </a>
+            <a href="simulation.html" class="nav-item" title="Simulation">
+                <i class="fas fa-calculator"></i>
+            </a>
+            <a href="guide-placements.html" class="nav-item" title="Guide Placements">
+                <i class="fas fa-book"></i>
+            </a>
+            <a href="types-entreprise-v2.html" class="nav-item" title="Types d'Entreprise">
+                <i class="fas fa-building"></i>
+            </a>
+            <a href="immoSim.html" class="nav-item" title="Simulateur Immobilier">
+                <i class="fas fa-home"></i>
+            </a>
+            <a href="comparaison-fiscale.html" class="nav-item active" title="Comparateur Fiscal">
+                <i class="fas fa-balance-scale"></i>
+            </a>
+            <a href="parametres.html" class="nav-item" title="Paramètres">
+                <i class="fas fa-cog"></i>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Header principal (réutiliser votre header) -->
+    <header class="main-header">
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="pulse-dot"></div>
+                <a href="index.html">SMARTFLOW</a>
+            </div>
+            <nav class="main-nav">
+                <a href="actualites.html">News</a>
+                <a href="portefeuille.html?type=modere">Portefeuilles</a>
+                <a href="dashboard.html">Dashboard</a>
+                <a href="marches.html">Marchés</a>
+                <a href="secteurs.html">Secteurs</a>
+                <a href="liste.html">Actions</a>
+                <a href="etf.html">ETF</a>
+                <a href="crypto.html">Crypto</a>
+                <a href="simulation.html">Invest Simulation</a>
+                <a href="guide-placements.html">Guide Invest</a>
+                <a href="types-entreprise-v2.html">Entreprise</a>
+                <a href="immoSim.html">Immobilier</a>
+                <a href="comparaison-fiscale.html" class="active">Comparateur Fiscal</a>
+            </nav>
+        </div>
+        <div class="header-right">
+            <div class="market-status">
+                <div class="pulse-dot"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time" id="marketTime">11:09:16</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="page-title" style="margin-top: 3rem;">
+            <h1>Comparateur de Régimes Fiscaux</h1>
+            <div class="subtitle">Trouvez le régime fiscal optimal pour votre investissement immobilier</div>
+        </div>
+
+        <!-- Formulaire simple -->
+        <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg simple-form">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fas fa-home"></i>
+                </div>
+                <h2 class="card-title">Données de votre investissement</h2>
+            </div>
+            
+            <form id="fiscal-form">
+                <!-- Type d'achat -->
+                <div class="form-group">
+                    <label class="form-label">Type d'acquisition</label>
+                    <div class="calculation-mode-container">
+                        <label class="mode-option">
+                            <input type="radio" name="type-achat" value="classique" checked>
+                            <div class="mode-card">
+                                <div class="mode-icon">
+                                    <i class="fas fa-home"></i>
+                                </div>
+                                <div class="mode-content">
+                                    <h4>Achat Classique</h4>
+                                    <p>Via agence ou particulier</p>
+                                </div>
+                            </div>
+                        </label>
+                        
+                        <label class="mode-option">
+                            <input type="radio" name="type-achat" value="encheres">
+                            <div class="mode-card">
+                                <div class="mode-icon">
+                                    <i class="fas fa-gavel"></i>
+                                </div>
+                                <div class="mode-content">
+                                    <h4>Vente aux Enchères</h4>
+                                    <p>Adjudication judiciaire</p>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Recherche de ville (compatible avec votre système) -->
+                <div class="form-group">
+                    <label class="form-label" for="ville-search-fiscal">
+                        Rechercher une ville (optionnel)
+                    </label>
+                    <div class="search-container" style="position: relative;">
+                        <input type="text" id="ville-search-fiscal" class="form-input" 
+                               placeholder="Ex: Lyon, Paris, Marseille..." autocomplete="off">
+                        <div id="ville-suggestions-fiscal" class="ville-suggestions" style="display: none;"></div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="prix-bien">
+                            Prix du bien (hors frais)
+                        </label>
+                        <div class="form-input-wrapper">
+                            <input type="number" id="prix-bien" class="form-input" 
+                                   placeholder="200000" value="200000" required>
+                            <span class="form-addon-text">€</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="apport-fiscal">
+                            Apport personnel
+                        </label>
+                        <div class="form-input-wrapper">
+                            <input type="number" id="apport-fiscal" class="form-input" 
+                                   placeholder="40000" value="40000" required>
+                            <span class="form-addon-text">€</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="duree-pret">
+                            Durée du prêt
+                        </label>
+                        <div class="form-input-wrapper">
+                            <input type="number" id="duree-pret" class="form-input" 
+                                   placeholder="20" value="20" min="5" max="30" required>
+                            <span class="form-addon-text">ans</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="taux-interet">
+                            Taux d'intérêt
+                        </label>
+                        <div class="form-input-wrapper">
+                            <input type="number" id="taux-interet" class="form-input" 
+                                   placeholder="3.5" value="3.5" step="0.1" required>
+                            <span class="form-addon-text">%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="surface-bien">
+                            Surface du bien
+                        </label>
+                        <div class="form-input-wrapper">
+                            <input type="number" id="surface-bien" class="form-input" 
+                                   placeholder="60" value="60" required>
+                            <span class="form-addon-text">m²</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="loyer-mensuel">
+                            Loyer mensuel estimé
+                        </label>
+                        <div class="form-input-wrapper">
+                            <input type="number" id="loyer-mensuel" class="form-input" 
+                                   placeholder="800" value="800" required>
+                            <span class="form-addon-text">€/mois</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="tmi">
+                        Votre tranche marginale d'imposition
+                    </label>
+                    <select id="tmi" class="form-input">
+                        <option value="0">0% (Non imposable)</option>
+                        <option value="11">11%</option>
+                        <option value="30" selected>30%</option>
+                        <option value="41">41%</option>
+                        <option value="45">45%</option>
+                    </select>
+                </div>
+                
+                <div class="flex justify-center mt-4">
+                    <button type="submit" class="btn btn-primary btn-simulate">
+                        <i class="fas fa-calculator"></i> Comparer les régimes fiscaux
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Résultats -->
+        <div id="results-section" style="display: none;">
+            <!-- Résumé du meilleur régime -->
+            <div class="best-regime-summary" id="best-regime-summary">
+                <!-- Sera rempli dynamiquement -->
+            </div>
+            
+            <!-- Liste des régimes -->
+            <h2 style="margin: 40px 0 20px; color: #00bfff; text-align: center;">
+                <i class="fas fa-balance-scale"></i> Comparaison détaillée de tous les régimes
+            </h2>
+            
+            <div id="regimes-list">
+                <!-- Les cartes de régimes seront ajoutées ici -->
+            </div>
+            
+            <!-- Graphiques de comparaison -->
+            <div class="grid grid-2 mt-4">
+                <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg">
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <h2 class="card-title">Cash-flow net par régime</h2>
+                    </div>
+                    <canvas id="cashflow-chart" width="400" height="300"></canvas>
+                </div>
+                
+                <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg">
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <i class="fas fa-coins"></i>
+                        </div>
+                        <h2 class="card-title">Impact fiscal annuel</h2>
+                    </div>
+                    <canvas id="impot-chart" width="400" height="300"></canvas>
+                </div>
+            </div>
+            
+            <!-- Bouton pour afficher le détail -->
+            <div class="text-center mt-4">
+                <button id="btn-show-details" class="btn btn-outline">
+                    <i class="fas fa-info-circle"></i> Voir le détail des calculs
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loading">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div style="color: #00bfff; font-size: 1.2em;">Calcul en cours...</div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="./immo-simulation.js"></script>
+    <script src="./fiscal-comparison-enhanced.js"></script>
+    
+    <script>
+        // Base de données de villes simplifiée (réutiliser votre système existant si disponible)
+        const villesData = [
+            { nom: "Lyon", dept: "69", prixM2: { T2: 4200, T3: 3800 }, loyerM2: { T2: 15, T3: 13 } },
+            { nom: "Paris", dept: "75", prixM2: { T2: 9500, T3: 9000 }, loyerM2: { T2: 28, T3: 25 } },
+            { nom: "Marseille", dept: "13", prixM2: { T2: 2800, T3: 2500 }, loyerM2: { T2: 12, T3: 11 } },
+            { nom: "Toulouse", dept: "31", prixM2: { T2: 3200, T3: 2900 }, loyerM2: { T2: 13, T3: 12 } },
+            { nom: "Nice", dept: "06", prixM2: { T2: 4500, T3: 4100 }, loyerM2: { T2: 16, T3: 14 } },
+            { nom: "Nantes", dept: "44", prixM2: { T2: 3500, T3: 3200 }, loyerM2: { T2: 13, T3: 12 } },
+            { nom: "Strasbourg", dept: "67", prixM2: { T2: 3300, T3: 3000 }, loyerM2: { T2: 13, T3: 11 } },
+            { nom: "Montpellier", dept: "34", prixM2: { T2: 3400, T3: 3100 }, loyerM2: { T2: 14, T3: 12 } },
+            { nom: "Bordeaux", dept: "33", prixM2: { T2: 4100, T3: 3700 }, loyerM2: { T2: 14, T3: 13 } },
+            { nom: "Lille", dept: "59", prixM2: { T2: 3200, T3: 2900 }, loyerM2: { T2: 13, T3: 11 } }
+        ];
+        
+        // Initialiser le comparateur
+        const simulateur = new SimulateurImmo();
+        const comparateur = new FiscalComparator(simulateur);
+        
+        // Recherche de ville
+        const villeSearchInput = document.getElementById('ville-search-fiscal');
+        const villeSuggestions = document.getElementById('ville-suggestions-fiscal');
+        let selectedVille = null;
+        
+        villeSearchInput.addEventListener('input', function(e) {
+            const search = e.target.value.toLowerCase();
+            
+            if (search.length < 2) {
+                villeSuggestions.style.display = 'none';
+                return;
+            }
+            
+            const matches = villesData.filter(v => 
+                v.nom.toLowerCase().includes(search) || 
+                v.dept.includes(search)
+            );
+            
+            if (matches.length > 0) {
+                villeSuggestions.innerHTML = matches.map(ville => `
+                    <div class="ville-item" data-ville='${JSON.stringify(ville)}'>
+                        <strong>${ville.nom}</strong> (${ville.dept})
+                        <div style="font-size: 0.85em; color: #94a3b8; margin-top: 5px;">
+                            Prix m²: ${ville.prixM2.T3}€ • Loyer m²: ${ville.loyerM2.T3}€
+                        </div>
+                    </div>
+                `).join('');
+                
+                villeSuggestions.style.display = 'block';
+            } else {
+                villeSuggestions.style.display = 'none';
+            }
+        });
+        
+        // Sélection d'une ville
+        villeSuggestions.addEventListener('click', function(e) {
+            const villeItem = e.target.closest('.ville-item');
+            if (villeItem) {
+                selectedVille = JSON.parse(villeItem.dataset.ville);
+                villeSearchInput.value = selectedVille.nom;
+                villeSuggestions.style.display = 'none';
+                
+                // Pré-remplir les champs
+                const surface = parseFloat(document.getElementById('surface-bien').value) || 60;
+                const typeLogement = surface < 45 ? 'T2' : 'T3';
+                
+                document.getElementById('prix-bien').value = Math.round(surface * selectedVille.prixM2[typeLogement]);
+                document.getElementById('loyer-mensuel').value = Math.round(surface * selectedVille.loyerM2[typeLogement]);
+            }
+        });
+        
+        // Fermer les suggestions quand on clique ailleurs
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-container')) {
+                villeSuggestions.style.display = 'none';
+            }
+        });
+        
+        // Soumission du formulaire
+        document.getElementById('fiscal-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Afficher le loading
+            document.getElementById('loading').style.display = 'flex';
+            
+            // Récupérer les données
+            const formData = {
+                typeAchat: document.querySelector('input[name="type-achat"]:checked').value,
+                prixBien: parseFloat(document.getElementById('prix-bien').value),
+                surface: parseFloat(document.getElementById('surface-bien').value),
+                apport: parseFloat(document.getElementById('apport-fiscal').value),
+                duree: parseFloat(document.getElementById('duree-pret').value),
+                taux: parseFloat(document.getElementById('taux-interet').value),
+                loyerMensuel: parseFloat(document.getElementById('loyer-mensuel').value),
+                tmi: parseFloat(document.getElementById('tmi').value)
+            };
+            
+            // Attendre un peu pour l'effet visuel
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            try {
+                // Comparer les régimes
+                const resultats = await comparateur.compareAllRegimes(formData);
+                
+                // Afficher les résultats
+                afficherResultats(resultats, formData);
+                
+                // Masquer le loading et afficher les résultats
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('results-section').style.display = 'block';
+                
+                // Scroll vers les résultats
+                document.getElementById('results-section').scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+                
+            } catch (error) {
+                console.error('Erreur lors de la comparaison:', error);
+                document.getElementById('loading').style.display = 'none';
+                alert('Une erreur est survenue lors du calcul. Veuillez réessayer.');
+            }
+        });
+        
+        // Fonction pour afficher les résultats
+        function afficherResultats(resultats, formData) {
+            // Trier par cash-flow net décroissant
+            resultats.sort((a, b) => b.cashflowNetAnnuel - a.cashflowNetAnnuel);
+            
+            // Marquer le meilleur
+            if (resultats.length > 0) {
+                resultats[0].isBest = true;
+            }
+            
+            // Afficher le résumé du meilleur régime
+            const bestRegime = resultats[0];
+            document.getElementById('best-regime-summary').innerHTML = `
+                <div class="summary-title">
+                    <i class="fas fa-trophy"></i>
+                    Meilleur régime fiscal pour votre investissement
+                </div>
+                <div class="summary-content">
+                    <p>Le régime <strong>${bestRegime.nom}</strong> est le plus avantageux pour votre situation.</p>
+                    <p>Cash-flow net après impôt : <span class="summary-highlight">${formatNumber(bestRegime.cashflowNetAnnuel)} €/an</span></p>
+                    <p>Soit <span class="summary-highlight">${formatNumber(bestRegime.cashflowNetAnnuel / 12)} €/mois</span> dans votre poche</p>
+                    <p style="margin-top: 20px; font-size: 0.9em; color: #94a3b8;">
+                        Économie vs régime le moins favorable : 
+                        <strong style="color: #00bfff;">${formatNumber(bestRegime.cashflowNetAnnuel - resultats[resultats.length - 1].cashflowNetAnnuel)} €/an</strong>
+                    </p>
+                </div>
+            `;
+            
+            // Afficher tous les régimes
+            const regimesList = document.getElementById('regimes-list');
+            regimesList.innerHTML = '';
+            
+            resultats.forEach((regime, index) => {
+                const regimeCard = createRegimeCard(regime, index === 0);
+                regimesList.appendChild(regimeCard);
+            });
+            
+            // Créer les graphiques
+            createCharts(resultats);
+        }
+        
+        // Fonction pour créer une carte de régime
+        function createRegimeCard(regime, isBest) {
+            const card = document.createElement('div');
+            card.className = `regime-result ${isBest ? 'best' : ''}`;
+            
+            card.innerHTML = `
+                <div class="regime-header">
+                    <div class="regime-name">
+                        <i class="fas ${regime.icone || 'fa-home'}"></i>
+                        ${regime.nom}
+                    </div>
+                    ${isBest ? '<div class="regime-badge">Meilleur choix</div>' : ''}
+                </div>
+                
+                <div class="regime-metrics">
+                    <div class="metric-box">
+                        <div class="metric-label">Cash-flow mensuel</div>
+                        <div class="metric-value ${regime.cashflowMensuel >= 0 ? 'positive' : 'negative'}">
+                            ${formatNumber(regime.cashflowMensuel)} €
+                        </div>
+                    </div>
+                    
+                    <div class="metric-box">
+                        <div class="metric-label">Impôt annuel</div>
+                        <div class="metric-value negative">
+                            ${formatNumber(Math.abs(regime.impotAnnuel))} €
+                        </div>
+                    </div>
+                    
+                    <div class="metric-box">
+                        <div class="metric-label">Cash-flow net annuel</div>
+                        <div class="metric-value ${regime.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
+                            ${formatNumber(regime.cashflowNetAnnuel)} €
+                        </div>
+                    </div>
+                    
+                    <div class="metric-box">
+                        <div class="metric-label">Rendement net</div>
+                        <div class="metric-value neutral">
+                            ${regime.rendementNet.toFixed(2)}%
+                        </div>
+                    </div>
+                </div>
+                
+                ${regime.avantages && regime.avantages.length > 0 ? `
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <strong style="color: #94a3b8; font-size: 0.9em;">Avantages :</strong>
+                        <ul style="margin-top: 10px; list-style: none; padding: 0;">
+                            ${regime.avantages.map(a => `<li style="color: #e2e8f0; font-size: 0.9em; margin-top: 5px;">✓ ${a}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+            `;
+            
+            return card;
+        }
+        
+        // Fonction pour créer les graphiques
+        function createCharts(resultats) {
+            // Graphique des cash-flows
+            const ctxCashflow = document.getElementById('cashflow-chart').getContext('2d');
+            new Chart(ctxCashflow, {
+                type: 'bar',
+                data: {
+                    labels: resultats.map(r => r.nom),
+                    datasets: [{
+                        label: 'Cash-flow net annuel',
+                        data: resultats.map(r => r.cashflowNetAnnuel),
+                        backgroundColor: resultats.map(r => r.isBest ? 'rgba(34, 197, 94, 0.7)' : 'rgba(0, 191, 255, 0.7)'),
+                        borderColor: resultats.map(r => r.isBest ? 'rgba(34, 197, 94, 1)' : 'rgba(0, 191, 255, 1)'),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#94a3b8',
+                                callback: function(value) {
+                                    return formatNumber(value) + ' €';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#94a3b8',
+                                maxRotation: 45,
+                                minRotation: 45
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Graphique des impôts
+            const ctxImpot = document.getElementById('impot-chart').getContext('2d');
+            new Chart(ctxImpot, {
+                type: 'bar',
+                data: {
+                    labels: resultats.map(r => r.nom),
+                    datasets: [{
+                        label: 'Impôt annuel',
+                        data: resultats.map(r => Math.abs(r.impotAnnuel)),
+                        backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#94a3b8',
+                                callback: function(value) {
+                                    return formatNumber(value) + ' €';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#94a3b8',
+                                maxRotation: 45,
+                                minRotation: 45
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Fonction pour formater les nombres
+        function formatNumber(num) {
+            return new Intl.NumberFormat('fr-FR', { 
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0 
+            }).format(Math.round(num));
+        }
+        
+        // Bouton pour afficher les détails (rediriger vers votre page existante si disponible)
+        document.getElementById('btn-show-details').addEventListener('click', function() {
+            // Si vous avez une page de détails, redirigez-y
+            // window.location.href = 'fiscal-details.html';
+            
+            // Sinon, affichez un message
+            alert('Les détails complets des calculs seront bientôt disponibles dans une mise à jour.');
+        });
+        
+        // Script pour l'heure (réutiliser votre code)
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('fr-FR');
+            const timeElement = document.getElementById('marketTime');
+            if (timeElement) {
+                timeElement.textContent = timeString;
+            }
+        }
+
+        setInterval(updateTime, 1000);
+        updateTime();
+    </script>
+</body>
+</html>
