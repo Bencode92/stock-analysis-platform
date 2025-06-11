@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 3.7 - Correction CSG non déductible : séparation cash/base imposable
+// Version 3.8 - Correction CSG non déductible pour SNC
 
 // Constantes pour les taux de charges sociales
 const TAUX_CHARGES = {
@@ -927,7 +927,7 @@ class SimulationsFiscales {
         };
     }
 
-    // SNC avec transparence fiscale
+    // SNC avec transparence fiscale - CORRIGÉ AVEC CSG NON DÉDUCTIBLE
     static simulerSNC(params) {
         // Normaliser les paramètres
         const normalizedParams = this.normalizeAssociatesParams(params, 'snc');
@@ -958,24 +958,30 @@ class SimulationsFiscales {
             cotisationsSociales = Math.round(beneficeAssociePrincipal * TAUX_CHARGES.TNS);
         }
         
-        // Bénéfice après cotisations sociales
-        const beneficeApresCotisations = beneficeAssociePrincipal - cotisationsSociales;
+        // NOUVEAU : Calcul de la CSG non déductible (2,9%)
+        const csgNonDeductible = Math.round(beneficeAssociePrincipal * TAUX_CSG_NON_DEDUCTIBLE);
         
-        // NOUVEAU : Calcul automatique de la TMI
+        // Cash disponible après cotisations
+        const cashAvantIR = beneficeAssociePrincipal - cotisationsSociales;
+        
+        // Base imposable = cash + CSG non déductible
+        const baseImposableIR = cashAvantIR + csgNonDeductible;
+        
+        // NOUVEAU : Calcul automatique de la TMI sur la base imposable correcte
         const tmiReel = window.FiscalUtils 
-            ? window.FiscalUtils.getTMI(beneficeApresCotisations)
-            : calculerTMI(beneficeApresCotisations);
+            ? window.FiscalUtils.getTMI(baseImposableIR)
+            : calculerTMI(baseImposableIR);
         
-        // MODIFIÉ : Toujours utiliser le calcul progressif
+        // MODIFIÉ : Utiliser le calcul progressif sur la base imposable correcte
         let impotRevenu;
         if (window.FiscalUtils && window.FiscalUtils.calculateProgressiveIR) {
-            impotRevenu = window.FiscalUtils.calculateProgressiveIR(beneficeApresCotisations);
+            impotRevenu = window.FiscalUtils.calculateProgressiveIR(baseImposableIR);
         } else {
-            impotRevenu = calculateProgressiveIRFallback(beneficeApresCotisations);
+            impotRevenu = calculateProgressiveIRFallback(baseImposableIR);
         }
         
-        // Revenu net après impôt
-        const revenuNetApresImpot = beneficeApresCotisations - impotRevenu;
+        // Revenu net après impôt (basé sur le cash, pas sur la base imposable)
+        const revenuNetApresImpot = cashAvantIR - impotRevenu;
         
         return {
             compatible: true,
@@ -987,9 +993,14 @@ class SimulationsFiscales {
             resultatEntrepriseSociete: resultatEntrepriseSociete,
             resultatEntreprise: resultatEntreprise,
             beneficeAssociePrincipal: beneficeAssociePrincipal,
+            beneficeAvantCotisations: beneficeAssociePrincipal, // Pour compatibilité avec l'interface
             
             cotisationsSociales: cotisationsSociales,
-            beneficeApresCotisations: beneficeApresCotisations,
+            csgNonDeductible: csgNonDeductible,              // NOUVEAU
+            cashAvantIR: cashAvantIR,                        // NOUVEAU
+            baseImposableIR: baseImposableIR,                // NOUVEAU
+            beneficeApresCotisations: cashAvantIR,           // Pour compatibilité (cash réel)
+            beneficeImposable: baseImposableIR,              // Base imposable correcte
             impotRevenu: impotRevenu,
             revenuNetApresImpot: revenuNetApresImpot,
             revenuNetTotal: revenuNetApresImpot,
@@ -1250,12 +1261,12 @@ window.calculateProgressiveIRFallback = calculateProgressiveIRFallback; // Expos
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v3.7 - Correction CSG non déductible)");
+    console.log("Module SimulationsFiscales chargé (v3.8 - Correction CSG non déductible pour SNC)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady', {
         detail: {
-            version: '3.7',
-            features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG', 'optimisationFiscaleDividendes', 'calculTMIAutomatique', 'calculProgressifIRActif', 'CSGNonDeductible', 'calculerSalaireBrut', 'calculerISProgressif', 'cashVsBaseImposable']
+            version: '3.8',
+            features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG', 'optimisationFiscaleDividendes', 'calculTMIAutomatique', 'calculProgressifIRActif', 'CSGNonDeductible', 'calculerSalaireBrut', 'calculerISProgressif', 'cashVsBaseImposable', 'SNCCsgFixed']
         }
     }));
 });
