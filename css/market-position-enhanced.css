@@ -1,0 +1,208 @@
+/* === AMÉLIORATION DE L'AFFICHAGE DU POURCENTAGE === */
+
+/* Version améliorée avec badge au-dessus du marqueur */
+.position-indicator {
+    height: 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 100px;
+    position: relative;
+    overflow: visible; /* Changé pour permettre l'affichage du badge */
+    margin: 60px 0 40px; /* Plus d'espace en haut pour le badge */
+}
+
+.position-indicator::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to right,
+        rgba(34, 197, 94, 0.2),
+        rgba(0, 217, 255, 0.15),
+        rgba(239, 68, 68, 0.2)
+    );
+    border-radius: 100px;
+}
+
+.position-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px;
+    height: 24px;
+    background: #00D9FF;
+    border: 3px solid #0A192F;
+    border-radius: 50%;
+    box-shadow: 0 0 20px rgba(0, 217, 255, 0.6);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+/* Badge de pourcentage au-dessus du marqueur */
+.position-badge {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 12px;
+    background: rgba(10, 25, 47, 0.95);
+    border: 2px solid #00D9FF;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #00D9FF;
+    white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(0, 217, 255, 0.3);
+    animation: fadeInBounce 0.5s ease;
+}
+
+/* Petite flèche sous le badge pointant vers le marqueur */
+.position-badge::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid #00D9FF;
+}
+
+.position-badge::before {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-2px);
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid rgba(10, 25, 47, 0.95);
+}
+
+/* Animation d'apparition */
+@keyframes fadeInBounce {
+    0% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(10px);
+    }
+    60% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(-5px);
+    }
+    100% {
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* Effet hover */
+.position-marker:hover {
+    transform: translate(-50%, -50%) scale(1.2);
+    box-shadow: 0 0 30px rgba(0, 217, 255, 0.8);
+}
+
+.position-marker:hover .position-badge {
+    transform: translateX(-50%) translateY(-3px);
+    box-shadow: 0 6px 25px rgba(0, 217, 255, 0.4);
+}
+
+/* Styles spécifiques selon la position */
+
+/* Prix bas - Bonne affaire */
+.position-marker.good-deal .position-badge {
+    background: rgba(34, 197, 94, 0.95);
+    border-color: #22c55e;
+    color: #ffffff;
+}
+
+.position-marker.good-deal .position-badge::after {
+    border-top-color: #22c55e;
+}
+
+.position-marker.good-deal .position-badge::before {
+    border-top-color: rgba(34, 197, 94, 0.95);
+}
+
+.position-marker.good-deal {
+    background: #22c55e;
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
+}
+
+/* Prix élevé */
+.position-marker.high-price .position-badge {
+    background: rgba(239, 68, 68, 0.95);
+    border-color: #ef4444;
+    color: #ffffff;
+}
+
+.position-marker.high-price .position-badge::after {
+    border-top-color: #ef4444;
+}
+
+.position-marker.high-price .position-badge::before {
+    border-top-color: rgba(239, 68, 68, 0.95);
+}
+
+.position-marker.high-price {
+    background: #ef4444;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+}
+
+/* Version pour mobile */
+@media (max-width: 768px) {
+    .position-indicator {
+        margin: 50px 0 30px;
+    }
+    
+    .position-badge {
+        font-size: 0.8rem;
+        padding: 4px 10px;
+        margin-bottom: 8px;
+    }
+    
+    .position-marker {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+/* Tooltip optionnel au survol (en plus du badge permanent) */
+.position-tooltip {
+    position: absolute;
+    bottom: calc(100% + 45px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(10, 25, 47, 0.98);
+    border: 1px solid rgba(0, 217, 255, 0.3);
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: #e2e8f0;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.position-marker:hover .position-tooltip {
+    opacity: 1;
+}
+
+/* Style alternatif avec gradient sur le badge */
+.position-badge.gradient {
+    background: linear-gradient(135deg, rgba(0, 217, 255, 0.9), rgba(0, 153, 204, 0.9));
+    border: none;
+    box-shadow: 0 4px 20px rgba(0, 217, 255, 0.4);
+}
+
+.position-badge.gradient::after {
+    display: none;
+}
+
+.position-badge.gradient::before {
+    display: none;
+}
