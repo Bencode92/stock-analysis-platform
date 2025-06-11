@@ -32,9 +32,9 @@ class FiscalUtils {
     static getTMI(revenuImposable) {
         const BAREME = [
             { max: 11497,  taux: 0  },
-            { max: 26037,  taux: 11 },
-            { max: 74545,  taux: 30 },
-            { max: 160336, taux: 41 },
+            { max: 29315,  taux: 11 },
+            { max: 83823,  taux: 30 },
+            { max: 180294, taux: 41 },
             { max: Infinity, taux: 45 }
         ];
         for (const tr of BAREME) {
