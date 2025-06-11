@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 3.9 - Ajout CSG non déductible pour assimilés salariés
+// Version 3.10 - Ajout CSG non déductible pour TNS à l'IS
 
 // Constantes pour les taux de charges sociales
 const TAUX_CHARGES = {
@@ -472,7 +472,7 @@ class SimulationsFiscales {
                 partAssociePct: 100
             };
         } else {
-            // Régime IS - CORRIGÉ : utiliser la nouvelle fonction
+            // Régime IS - MODIFIÉ : AJOUT CSG NON DÉDUCTIBLE POUR TNS
             const remunerationSouhaitee = calculerSalaireBrut(resultatEntreprise, tauxRemuneration, true); // true = TNS
             
             const remuneration = ajusterRemuneration(remunerationSouhaitee, resultatEntreprise, 0.30);
@@ -490,17 +490,21 @@ class SimulationsFiscales {
             
             const remunerationNetteSociale = remuneration - cotisationsSociales;
             
-            // NOUVEAU : Calcul automatique de la TMI
-            const tmiReel = window.FiscalUtils 
-                ? window.FiscalUtils.getTMI(remunerationNetteSociale)
-                : calculerTMI(remunerationNetteSociale);
+            // NOUVEAU : Calcul de la CSG non déductible sur la rémunération brute
+            const csgNonDeductible = Math.round(remuneration * TAUX_CSG_NON_DEDUCTIBLE);
+            const baseImposableIR = remunerationNetteSociale + csgNonDeductible;
             
-            // MODIFIÉ : Toujours utiliser le calcul progressif
+            // NOUVEAU : Calcul automatique de la TMI sur la base correcte
+            const tmiReel = window.FiscalUtils 
+                ? window.FiscalUtils.getTMI(baseImposableIR)
+                : calculerTMI(baseImposableIR);
+            
+            // MODIFIÉ : Toujours utiliser le calcul progressif sur la base correcte
             let impotRevenu;
             if (window.FiscalUtils && window.FiscalUtils.calculateProgressiveIR) {
-                impotRevenu = window.FiscalUtils.calculateProgressiveIR(remunerationNetteSociale);
+                impotRevenu = window.FiscalUtils.calculateProgressiveIR(baseImposableIR);
             } else {
-                impotRevenu = calculateProgressiveIRFallback(remunerationNetteSociale);
+                impotRevenu = calculateProgressiveIRFallback(baseImposableIR);
             }
             
             // CORRIGÉ : Utiliser directement le calcul progressif de l'IS
@@ -516,7 +520,7 @@ class SimulationsFiscales {
                 true, // TNS
                 true,  // Toujours majoritaire en EURL
                 tmiReel, // TMI calculé
-                remunerationNetteSociale // Revenu imposable
+                baseImposableIR // Revenu imposable avec CSG
             );
             
             const revenuNetSalaire = remunerationNetteSociale - impotRevenu;
@@ -532,6 +536,8 @@ class SimulationsFiscales {
                 resultatApresRemuneration: resultatApresRemuneration,
                 cotisationsSociales: cotisationsSociales,
                 remunerationNetteSociale: remunerationNetteSociale,
+                csgNonDeductible: csgNonDeductible,          // NOUVEAU
+                baseImposableIR: baseImposableIR,            // NOUVEAU
                 impotRevenu: impotRevenu,
                 revenuNetSalaire: revenuNetSalaire,
                 is: is,
@@ -663,7 +669,7 @@ class SimulationsFiscales {
         };
     }
 
-    // SARL avec gestion des associés - CORRIGÉ avec CSG pour gérant minoritaire
+    // SARL avec gestion des associés - CORRIGÉ avec CSG pour gérant minoritaire et majoritaire
     static simulerSARL(params) {
         // Normaliser les paramètres
         const normalizedParams = this.normalizeAssociatesParams(params, 'sarl');
@@ -696,7 +702,7 @@ class SimulationsFiscales {
         let baseImposableIR = 0;
         
         if (gerantMajoritaire) {
-            // Gérant majoritaire = TNS - CORRIGÉ
+            // Gérant majoritaire = TNS - MODIFIÉ : AJOUT CSG NON DÉDUCTIBLE
             const remunerationSouhaitee = calculerSalaireBrut(resultatEntreprise, tauxRemuneration, true); // true = TNS
             
             remuneration = ajusterRemuneration(remunerationSouhaitee, resultatEntreprise, 0.30);
@@ -708,7 +714,11 @@ class SimulationsFiscales {
             }
             salaireNet = remuneration - cotisationsSociales;
             remunerationNetteSociale = salaireNet;
-            baseImposableIR = salaireNet; // Pour TNS, pas de CSG non déductible sur salaire
+            
+            // NOUVEAU : Calcul de la CSG non déductible sur la rémunération brute
+            csgNonDeductible = Math.round(remuneration * TAUX_CSG_NON_DEDUCTIBLE);
+            baseImposableIR = salaireNet + csgNonDeductible;
+            
             const coutRemunerationEntreprise = remuneration + cotisationsSociales;
             resultatApresRemuneration = resultatEntreprise - coutRemunerationEntreprise;
             ratioEffectif = coutRemunerationEntreprise / resultatEntreprise;
@@ -1283,12 +1293,12 @@ window.calculateProgressiveIRFallback = calculateProgressiveIRFallback; // Expos
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v3.9 - Ajout CSG non déductible pour assimilés salariés)");
+    console.log("Module SimulationsFiscales chargé (v3.10 - Ajout CSG non déductible pour TNS à l'IS)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady', {
         detail: {
-            version: '3.9',
-            features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG', 'optimisationFiscaleDividendes', 'calculTMIAutomatique', 'calculProgressifIRActif', 'CSGNonDeductible', 'calculerSalaireBrut', 'calculerISProgressif', 'cashVsBaseImposable', 'SNCCsgFixed', 'AssimilesSalariesCsgFixed']
+            version: '3.10',
+            features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG', 'optimisationFiscaleDividendes', 'calculTMIAutomatique', 'calculProgressifIRActif', 'CSGNonDeductible', 'calculerSalaireBrut', 'calculerISProgressif', 'cashVsBaseImposable', 'SNCCsgFixed', 'AssimilesSalariesCsgFixed', 'TNSISCsgFixed']
         }
     }));
 });
