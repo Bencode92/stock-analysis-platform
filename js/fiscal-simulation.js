@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 3.5 - Correction calcul IS progressif + rémunération TNS vs assimilé salarié
+// Version 3.6 - Utilisation directe du calcul IS progressif
 
 // Constantes pour les taux de charges sociales
 const TAUX_CHARGES = {
@@ -497,13 +497,8 @@ class SimulationsFiscales {
                 impotRevenu = calculateProgressiveIRFallback(remunerationNetteSociale);
             }
             
-            // CORRIGÉ : Utiliser le calcul progressif de l'IS
-            let is;
-            if (window.FiscalUtils?.calculIS) {
-                is = window.FiscalUtils.calculIS(resultatApresRemuneration);
-            } else {
-                is = calculerISProgressif(resultatApresRemuneration);
-            }
+            // CORRIGÉ : Utiliser directement le calcul progressif de l'IS
+            const is = calculerISProgressif(resultatApresRemuneration);
             
             const resultatApresIS = resultatApresRemuneration - is;
             
@@ -601,13 +596,8 @@ class SimulationsFiscales {
         
         const salaireNetApresIR = salaireNet - impotRevenu;
         
-        // CORRIGÉ : Utiliser le calcul progressif de l'IS
-        let is;
-        if (window.FiscalUtils?.calculIS) {
-            is = window.FiscalUtils.calculIS(resultatApresRemuneration);
-        } else {
-            is = calculerISProgressif(resultatApresRemuneration);
-        }
+        // CORRIGÉ : Utiliser directement le calcul progressif de l'IS
+        const is = calculerISProgressif(resultatApresRemuneration);
         
         const resultatApresIS = resultatApresRemuneration - is;
         
@@ -746,13 +736,8 @@ class SimulationsFiscales {
         
         const salaireNetApresIR = salaireNet - impotRevenu;
         
-        // CORRIGÉ : Utiliser le calcul progressif de l'IS
-        let is;
-        if (window.FiscalUtils?.calculIS) {
-            is = window.FiscalUtils.calculIS(resultatApresRemuneration);
-        } else {
-            is = calculerISProgressif(resultatApresRemuneration);
-        }
+        // CORRIGÉ : Utiliser directement le calcul progressif de l'IS
+        const is = calculerISProgressif(resultatApresRemuneration);
         
         const resultatApresIS = resultatApresRemuneration - is;
         
@@ -898,13 +883,8 @@ class SimulationsFiscales {
         const coutCAC = 5000;
         const resultatApresCAC = Math.max(0, resultSAS.resultatApresRemuneration - coutCAC);
         
-        // CORRIGÉ : Utiliser le calcul progressif de l'IS
-        let is;
-        if (window.FiscalUtils?.calculIS) {
-            is = window.FiscalUtils.calculIS(resultatApresCAC);
-        } else {
-            is = calculerISProgressif(resultatApresCAC);
-        }
+        // CORRIGÉ : Utiliser directement le calcul progressif de l'IS
+        const is = calculerISProgressif(resultatApresCAC);
         
         const resultatApresIS = Math.max(0, resultatApresCAC - is);
         
@@ -1126,13 +1106,8 @@ class SimulationsFiscales {
         } else {
             // Option IS
             
-            // CORRIGÉ : Utiliser le calcul progressif de l'IS
-            let is;
-            if (window.FiscalUtils?.calculIS) {
-                is = window.FiscalUtils.calculIS(resultatApresAmortissement);
-            } else {
-                is = calculerISProgressif(resultatApresAmortissement);
-            }
+            // CORRIGÉ : Utiliser directement le calcul progressif de l'IS
+            const is = calculerISProgressif(resultatApresAmortissement);
             
             // Résultat après IS
             const resultatApresIS = resultatApresAmortissement - is;
@@ -1269,11 +1244,11 @@ window.calculateProgressiveIRFallback = calculateProgressiveIRFallback; // Expos
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v3.5 - Correction calcul IS progressif + rémunération TNS)");
+    console.log("Module SimulationsFiscales chargé (v3.6 - Utilisation directe du calcul IS progressif)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady', {
         detail: {
-            version: '3.5',
+            version: '3.6',
             features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG', 'optimisationFiscaleDividendes', 'calculTMIAutomatique', 'calculProgressifIRActif', 'CSGNonDeductible', 'calculerSalaireBrut', 'calculerISProgressif']
         }
     }));
