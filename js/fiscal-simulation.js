@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 3.6 - Utilisation directe du calcul IS progressif
+// Version 3.7 - Correction CSG non déductible : séparation cash/base imposable
 
 // Constantes pour les taux de charges sociales
 const TAUX_CHARGES = {
@@ -10,8 +10,8 @@ const TAUX_CHARGES = {
     PATRONAL_MAX: 0.65           // Charges patronales max (grandes entreprises)
 };
 
-// Portion de la CSG/CRDS TNS qui n'est PAS déductible du tout (≈ 2,4 %)
-const TAUX_CSG_NON_DEDUCTIBLE = 0.024;
+// CSG non déductible (2,4%) + CRDS (0,5%) = 2,9%
+const TAUX_CSG_NON_DEDUCTIBLE = 0.029;
 
 // Configuration des statuts pour la gestion des associés
 const STATUTS_ASSOCIATES_CONFIG = {
@@ -339,7 +339,7 @@ class SimulationsFiscales {
         };
     }
     
-    // ENTREPRISE INDIVIDUELLE AU RÉGIME RÉEL
+    // ENTREPRISE INDIVIDUELLE AU RÉGIME RÉEL - CORRIGÉ
     static simulerEI(params) {
         // Normaliser les paramètres
         const normalizedParams = this.normalizeAssociatesParams(params, 'ei');
@@ -359,24 +359,25 @@ class SimulationsFiscales {
         // Portion de CSG non déductible que l'on doit ré-ajouter
         const csgNonDeductible = Math.round(beneficeAvantCotisations * TAUX_CSG_NON_DEDUCTIBLE);
         
-        // Bénéfice fiscal réellement imposable (= on ne déduit PAS cette CSG)
-        const beneficeApresCotisations = beneficeAvantCotisations - cotisationsSociales + csgNonDeductible;
+        // NOUVEAU : Séparer cash et base imposable
+        const cashAvantIR = beneficeAvantCotisations - cotisationsSociales;
+        const baseImposableIR = cashAvantIR + csgNonDeductible;
         
         // NOUVEAU : Calcul automatique de la TMI
         const tmiReel = window.FiscalUtils 
-            ? window.FiscalUtils.getTMI(beneficeApresCotisations)
-            : calculerTMI(beneficeApresCotisations);
+            ? window.FiscalUtils.getTMI(baseImposableIR)
+            : calculerTMI(baseImposableIR);
         
         // MODIFIÉ : Toujours utiliser le calcul progressif
         let impotRevenu;
         if (window.FiscalUtils && window.FiscalUtils.calculateProgressiveIR) {
-            impotRevenu = window.FiscalUtils.calculateProgressiveIR(beneficeApresCotisations);
+            impotRevenu = window.FiscalUtils.calculateProgressiveIR(baseImposableIR);
         } else {
-            impotRevenu = calculateProgressiveIRFallback(beneficeApresCotisations);
+            impotRevenu = calculateProgressiveIRFallback(baseImposableIR);
         }
         
         // Calcul du revenu net après impôt
-        const revenuNetApresImpot = beneficeApresCotisations - impotRevenu;
+        const revenuNetApresImpot = cashAvantIR - impotRevenu;
         
         return {
             compatible: true,
@@ -385,9 +386,11 @@ class SimulationsFiscales {
             tauxMarge: tauxMarge * 100 + '%',
             beneficeAvantCotisations: beneficeAvantCotisations,
             cotisationsSociales: cotisationsSociales,
-            csgNonDeductible: csgNonDeductible, // <-- pour le détail
-            beneficeApresCotisations: beneficeApresCotisations,
-            beneficeImposable: beneficeApresCotisations, // Ajout pour compatibilité
+            csgNonDeductible: csgNonDeductible,
+            cashAvantIR: cashAvantIR,                    // NOUVEAU
+            baseImposableIR: baseImposableIR,            // NOUVEAU
+            beneficeApresCotisations: cashAvantIR,       // Pour compatibilité temporaire
+            beneficeImposable: baseImposableIR,          // Pour clarté
             impotRevenu: impotRevenu,
             revenuNetApresImpot: revenuNetApresImpot,
             ratioNetCA: (revenuNetApresImpot / ca) * 100,
@@ -400,7 +403,7 @@ class SimulationsFiscales {
         };
     }
     
-    // EURL
+    // EURL - CORRIGÉ
     static simulerEURL(params) {
         // Normaliser les paramètres
         const normalizedParams = this.normalizeAssociatesParams(params, 'eurl');
@@ -411,7 +414,7 @@ class SimulationsFiscales {
         
         // Simulation selon le régime d'imposition
         if (!optionIS) {
-            // Régime IR (transparence fiscale)
+            // Régime IR (transparence fiscale) - CORRIGÉ
             const baseCalculTNS = resultatEntreprise;
             
             let cotisationsSociales;
@@ -424,23 +427,24 @@ class SimulationsFiscales {
             // Portion de CSG non déductible 
             const csgNonDeductible = Math.round(resultatEntreprise * TAUX_CSG_NON_DEDUCTIBLE);
             
-            // Bénéfice imposable avec CSG non déductible
-            const beneficeImposable = resultatEntreprise - cotisationsSociales + csgNonDeductible;
+            // NOUVEAU : Séparer cash et base imposable
+            const cashAvantIR = resultatEntreprise - cotisationsSociales;
+            const baseImposableIR = cashAvantIR + csgNonDeductible;
             
             // NOUVEAU : Calcul automatique de la TMI
             const tmiReel = window.FiscalUtils 
-                ? window.FiscalUtils.getTMI(beneficeImposable)
-                : calculerTMI(beneficeImposable);
+                ? window.FiscalUtils.getTMI(baseImposableIR)
+                : calculerTMI(baseImposableIR);
             
             // MODIFIÉ : Toujours utiliser le calcul progressif
             let impotRevenu;
             if (window.FiscalUtils && window.FiscalUtils.calculateProgressiveIR) {
-                impotRevenu = window.FiscalUtils.calculateProgressiveIR(beneficeImposable);
+                impotRevenu = window.FiscalUtils.calculateProgressiveIR(baseImposableIR);
             } else {
-                impotRevenu = calculateProgressiveIRFallback(beneficeImposable);
+                impotRevenu = calculateProgressiveIRFallback(baseImposableIR);
             }
             
-            const revenuNetApresImpot = beneficeImposable - impotRevenu;
+            const revenuNetApresImpot = cashAvantIR - impotRevenu;
             
             return {
                 compatible: true,
@@ -451,8 +455,10 @@ class SimulationsFiscales {
                 remuneration: resultatEntreprise,
                 resultatApresRemuneration: 0,
                 cotisationsSociales: cotisationsSociales,
-                csgNonDeductible: csgNonDeductible, // <-- pour le détail
-                beneficeImposable: beneficeImposable,
+                csgNonDeductible: csgNonDeductible,
+                cashAvantIR: cashAvantIR,                    // NOUVEAU
+                baseImposableIR: baseImposableIR,            // NOUVEAU
+                beneficeImposable: baseImposableIR,          // Pour clarté
                 impotRevenu: impotRevenu,
                 revenuNetApresImpot: revenuNetApresImpot,
                 revenuNetTotal: revenuNetApresImpot,
@@ -1244,12 +1250,12 @@ window.calculateProgressiveIRFallback = calculateProgressiveIRFallback; // Expos
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v3.6 - Utilisation directe du calcul IS progressif)");
+    console.log("Module SimulationsFiscales chargé (v3.7 - Correction CSG non déductible)");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady', {
         detail: {
-            version: '3.6',
-            features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG', 'optimisationFiscaleDividendes', 'calculTMIAutomatique', 'calculProgressifIRActif', 'CSGNonDeductible', 'calculerSalaireBrut', 'calculerISProgressif']
+            version: '3.7',
+            features: ['normalizeAssociatesParams', 'calculerDividendesIS', 'STATUTS_ASSOCIATES_CONFIG', 'optimisationFiscaleDividendes', 'calculTMIAutomatique', 'calculProgressifIRActif', 'CSGNonDeductible', 'calculerSalaireBrut', 'calculerISProgressif', 'cashVsBaseImposable']
         }
     }));
 });
