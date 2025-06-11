@@ -1987,10 +1987,32 @@ ${statutId === 'sasu' ? `
     // Cas des entreprises à l'IR
     const tauxCotisationsTNS = 30;
     
-    // NOUVEAU : Récupérer les nouvelles variables
-    const cashAvantIR = result.sim.cashAvantIR || (result.sim.beneficeAvantCotisations - result.sim.cotisationsSociales);
-    const baseImposableIR = result.sim.baseImposableIR || result.sim.beneficeImposable || result.sim.beneficeApresCotisations || 0;
-    const csgNonDeductible = result.sim.csgNonDeductible || 0;
+    // NOUVEAU : Fonction helper pour éviter les NaN
+    const getNumber = v => (typeof v === 'number' && !isNaN(v)) ? v : 0;
+    
+    // NOUVEAU : Récupérer le bénéfice de manière canonique selon le statut
+    const beneficeBrut = getNumber(
+        result.sim.beneficeAvantCotisations ??           // EI standard
+        result.sim.resultatAvantRemuneration ??          // EURL variante
+        result.sim.beneficeAssociePrincipal ??          // SNC quote-part
+        result.sim.benefice ??                           // Autre variante possible
+        result.brut                                      // Fallback ultime
+    );
+    
+    // Récupérer les autres valeurs de manière sûre
+    const cotisations = getNumber(result.sim.cotisationsSociales);
+    const csgNonDeductible = getNumber(result.sim.csgNonDeductible);
+    
+    // Calculer le cash de manière fiable
+    const cashAvantIR = getNumber(result.sim.cashAvantIR) || (beneficeBrut - cotisations);
+    
+    // Calculer la base imposable
+    const baseImposableIR = getNumber(
+        result.sim.baseImposableIR ??
+        result.sim.beneficeImposable ??
+        result.sim.beneficeApresCotisations ??
+        (cashAvantIR + csgNonDeductible)
+    );
     
     // NOUVEAU : Calculer le TMI effectif
     const tmiEffectif = getTMI(baseImposableIR);
@@ -2005,12 +2027,12 @@ ${statutId === 'sasu' ? `
                 <td>${formatter.format(result.sim.ca)}</td>
             </tr>
             <tr>
-                <td>Bénéfice avant cotisations (marge ${formatPercent((result.sim.beneficeAvantCotisations || result.brut)/result.sim.ca*100)})</td>
-                <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
+                <td>Bénéfice avant cotisations (marge ${formatPercent((beneficeBrut/result.sim.ca)*100)})</td>
+                <td>${formatter.format(beneficeBrut)}</td>
             </tr>
         </table>
         
-        ${/* NOUVEAU: Section associés pour SNC */ ''}
+        ${/* Section associés pour SNC */ ''}
         ${statutId === 'snc' && STATUTS_MULTI_ASSOCIES[statutId] && result.sim.nbAssocies > 1 ? `
         <div class="detail-category">Répartition entre associés</div>
         <table class="detail-table">
@@ -2030,7 +2052,7 @@ ${statutId === 'sasu' ? `
             </tr>
             <tr>
                 <td>Quote-part du bénéfice</td>
-                <td>${formatter.format(result.sim.beneficeAssociePrincipal || (result.sim.beneficeAvantCotisations * (result.sim.partAssocie || 1)))}</td>
+                <td>${formatter.format(beneficeBrut)}</td>
             </tr>
         </table>
         
@@ -2044,12 +2066,12 @@ ${statutId === 'sasu' ? `
         <div class="detail-category">Flux de trésorerie (cash)</div>
         <table class="detail-table">
             <tr>
-                <td>Bénéfice avant cotisations</td>
-                <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
+                <td>Bénéfice avant cotisations ${statutId === 'snc' ? '(quote-part)' : ''}</td>
+                <td>${formatter.format(beneficeBrut)}</td>
             </tr>
             <tr>
                 <td>- Cotisations sociales TNS (${formatPercent(tauxCotisationsTNS)})</td>
-                <td class="text-red-400">- ${formatter.format(result.sim.cotisationsSociales)}</td>
+                <td class="text-red-400">- ${formatter.format(cotisations)}</td>
             </tr>
             <tr class="border-t border-gray-600">
                 <td><strong>= Cash disponible avant IR</strong></td>
@@ -2110,7 +2132,7 @@ ${statutId === 'sasu' ? `
             </tr>
             <tr>
                 <td>Impôt sur le revenu (${result.sim.modeExpert ? 'calcul progressif' : 'TMI simple'})</td>
-                <td class="text-red-400">- ${formatter.format(result.sim.impotRevenu)}</td>
+                <td class="text-red-400">- ${formatter.format(result.sim.impotRevenu || 0)}</td>
             </tr>
         </table>
         
@@ -2122,15 +2144,15 @@ ${statutId === 'sasu' ? `
             </tr>
             <tr>
                 <td>- Impôt sur le revenu</td>
-                <td class="text-red-400">- ${formatter.format(result.sim.impotRevenu)}</td>
+                <td class="text-red-400">- ${formatter.format(getNumber(result.sim.impotRevenu))}</td>
             </tr>
             <tr class="border-t border-gray-600">
                 <td><strong>= Revenu net en poche</strong></td>
-                <td><strong class="text-green-400">${formatter.format(result.sim.revenuNetApresImpot)}</strong></td>
+                <td><strong class="text-green-400">${formatter.format(getNumber(result.sim.revenuNetApresImpot))}</strong></td>
             </tr>
             <tr>
                 <td>Ratio Net/CA</td>
-                <td>${formatPercent(result.sim.ratioNetCA)}</td>
+                <td>${formatPercent(result.sim.ratioNetCA || ((getNumber(result.sim.revenuNetApresImpot) / result.sim.ca) * 100))}</td>
             </tr>
         </table>
         
@@ -2139,7 +2161,7 @@ ${statutId === 'sasu' ? `
             <div class="grid grid-cols-2 gap-4 text-sm">
                 <div>
                     <p class="text-gray-400">💰 Flux de trésorerie :</p>
-                    <p class="font-mono">${formatter.format(result.sim.beneficeAvantCotisations)} - ${formatter.format(result.sim.cotisationsSociales)} = ${formatter.format(cashAvantIR)}</p>
+                    <p class="font-mono">${formatter.format(beneficeBrut)} - ${formatter.format(cotisations)} = ${formatter.format(cashAvantIR)}</p>
                 </div>
                 <div>
                     <p class="text-gray-400">📊 Flux fiscal :</p>
@@ -2147,6 +2169,22 @@ ${statutId === 'sasu' ? `
                 </div>
             </div>
         </div>
+        
+        ${statutId === 'snc' ? `
+        <div class="mt-4 p-3 bg-purple-900 bg-opacity-20 rounded-lg text-xs border-l-4 border-purple-400">
+            <p><i class="fas fa-info-circle text-purple-400 mr-2"></i>
+            <strong>Spécificité SNC :</strong> Les montants affichés correspondent à votre quote-part 
+            (${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}) du résultat total de la société.</p>
+        </div>
+        ` : ''}
+        
+        ${statutId === 'eurl' ? `
+        <div class="mt-4 p-3 bg-indigo-900 bg-opacity-20 rounded-lg text-xs border-l-4 border-indigo-400">
+            <p><i class="fas fa-info-circle text-indigo-400 mr-2"></i>
+            <strong>Spécificité EURL-IR :</strong> Structure unipersonnelle soumise à l'IR. 
+            Le gérant associé unique est imposé sur l'intégralité du bénéfice après cotisations.</p>
+        </div>
+        ` : ''}
     `;
 
     } else if (statutId === 'sci') {
