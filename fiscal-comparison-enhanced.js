@@ -1,7 +1,13 @@
 /**
  * fiscal-comparison-enhanced.js
  * Module de comparaison des régimes fiscaux qui s'appuie sur SimulateurImmo
- * Version optimisée pour une intégration rapide
+ * Version corrigée avec calculs fiscaux exacts
+ * 
+ * CORRECTIONS APPORTÉES :
+ * - Prélèvements sociaux uniquement pour location nue
+ * - Pas de PS pour LMNP/LMP
+ * - Seuil IS mis à jour pour 2024 (42 500€)
+ * - Fonction centralisée getTauxImposition()
  */
 
 class FiscalComparator {
@@ -13,6 +19,31 @@ class FiscalComparator {
         
         // Cache pour optimiser les calculs
         this.cache = new Map();
+        
+        // Constantes fiscales 2024
+        this.SEUIL_IS_2024 = 42500;
+        this.TAUX_PS = 17.2;
+    }
+
+    /**
+     * Fonction centralisée pour déterminer le taux d'imposition selon le régime
+     * @param {string} regimeId - Identifiant du régime fiscal
+     * @param {number} tmi - Taux marginal d'imposition
+     * @returns {number} - Taux d'imposition total à appliquer
+     */
+    getTauxImposition(regimeId, tmi) {
+        // LMNP, LMP : pas de prélèvements sociaux
+        if (regimeId === 'lmnp-micro' || regimeId === 'lmnp-reel' || regimeId === 'lmp') {
+            return tmi;
+        }
+        
+        // SCI IS : traitement spécial (IS, pas IR+PS)
+        if (regimeId === 'sci-is') {
+            return 0; // L'IS est calculé différemment dans la méthode dédiée
+        }
+        
+        // Location nue (micro-foncier, réel) : IR + PS
+        return tmi + this.TAUX_PS;
     }
 
     /**
@@ -74,7 +105,7 @@ class FiscalComparator {
                     locationMeublee: true
                 },
                 calcul: {
-                    amortissementBien: 0.02, // 2% par an (50 ans)
+                    amortissementBien: 0.025, // 2.5% par an (40 ans)
                     amortissementMobilier: 0.10, // 10% par an
                     amortissementTravaux: 0.10, // 10% par an
                     type: 'reel-amortissement'
@@ -105,9 +136,9 @@ class FiscalComparator {
                     structureSociete: true
                 },
                 calcul: {
-                    tauxIS: 0.15, // 15% jusqu'à 38K€
+                    tauxIS: 0.15, // 15% jusqu'à 42.5K€
                     tauxISPlein: 0.25, // 25% au-delà
-                    seuilIS: 38120,
+                    seuilIS: 42500, // Seuil 2024
                     type: 'societe'
                 }
             }
@@ -145,6 +176,9 @@ class FiscalComparator {
                 results.push(result);
             }
         }
+        
+        // Trier par cash-flow net décroissant
+        results.sort((a, b) => b.cashflowNetAnnuel - a.cashflowNetAnnuel);
         
         // Mettre en cache
         this.cache.set(cacheKey, results);
@@ -238,31 +272,35 @@ class FiscalComparator {
     }
 
     /**
-     * Calcul pour les régimes micro (micro-foncier, micro-BIC)
+     * Calcul pour les régimes micro (micro-foncier, micro-BIC) - CORRIGÉ
      */
     calculateMicroRegime(result, baseResults, data, abattement) {
         const loyerAnnuel = baseResults.loyerBrut * 12;
         const revenuImposable = loyerAnnuel * (1 - abattement);
-        const impot = revenuImposable * (data.tmi + 17.2) / 100;
+        
+        // Utiliser la fonction centralisée pour le taux
+        const taux = this.getTauxImposition(result.id, data.tmi);
+        const impot = revenuImposable * taux / 100;
         
         result.abattementForfaitaire = loyerAnnuel * abattement;
         result.revenuImposable = revenuImposable;
         result.impotAnnuel = -impot;
         result.cashflowNetAnnuel = (baseResults.cashFlow * 12) - impot;
         result.cashflowMensuel = result.cashflowNetAnnuel / 12;
-        result.rendementNet = (result.cashflowNetAnnuel / baseResults.apport) * 100;
+        result.rendementNet = (result.cashflowNetAnnuel / baseResults.coutTotal) * 100;
         
         result.avantages = [
             `Abattement forfaitaire de ${abattement * 100}%`,
             "Simplicité administrative",
-            "Pas de comptabilité détaillée"
-        ];
+            "Pas de comptabilité détaillée",
+            result.id.includes('lmnp') ? "Pas de prélèvements sociaux (régime BIC)" : null
+        ].filter(Boolean);
         
         return result;
     }
 
     /**
-     * Calcul pour le régime réel (location nue)
+     * Calcul pour le régime réel (location nue) - PS INCLUS
      */
     calculateReelRegime(result, baseResults, data, deficitMax = 10700) {
         const loyerAnnuel = baseResults.loyerBrut * 12;
@@ -290,8 +328,9 @@ class FiscalComparator {
             revenuImposable = 0;
         }
         
-        // Calcul de l'impôt
-        const impot = revenuImposable * (data.tmi + 17.2) / 100;
+        // Utiliser la fonction centralisée (location nue = TMI + PS)
+        const taux = this.getTauxImposition(result.id, data.tmi);
+        const impot = revenuImposable * taux / 100;
         
         result.chargesDeductibles = totalCharges;
         result.revenuImposable = revenuImposable;
@@ -299,7 +338,7 @@ class FiscalComparator {
         result.impotAnnuel = -impot;
         result.cashflowNetAnnuel = (baseResults.cashFlow * 12) - impot + economieDeficit;
         result.cashflowMensuel = result.cashflowNetAnnuel / 12;
-        result.rendementNet = (result.cashflowNetAnnuel / baseResults.apport) * 100;
+        result.rendementNet = (result.cashflowNetAnnuel / baseResults.coutTotal) * 100;
         
         result.avantages = [
             "Charges réelles déductibles",
@@ -311,7 +350,7 @@ class FiscalComparator {
     }
 
     /**
-     * Calcul pour LMNP au réel
+     * Calcul pour LMNP au réel - CORRIGÉ (pas de PS)
      */
     calculateLMNPReel(result, baseResults, data, calcul) {
         const loyerAnnuel = baseResults.loyerBrut * 12;
@@ -330,8 +369,9 @@ class FiscalComparator {
         // Résultat fiscal
         const resultatFiscal = Math.max(0, loyerAnnuel - chargesExploitation - totalAmortissements);
         
-        // Impôt
-        const impot = resultatFiscal * (data.tmi + 17.2) / 100;
+        // CORRECTION : Pas de prélèvements sociaux en LMNP
+        const taux = this.getTauxImposition(result.id, data.tmi);
+        const impot = resultatFiscal * taux / 100;
         
         result.chargesDeductibles = chargesExploitation;
         result.amortissements = totalAmortissements;
@@ -339,12 +379,13 @@ class FiscalComparator {
         result.impotAnnuel = -impot;
         result.cashflowNetAnnuel = (baseResults.cashFlow * 12) - impot;
         result.cashflowMensuel = result.cashflowNetAnnuel / 12;
-        result.rendementNet = (result.cashflowNetAnnuel / baseResults.apport) * 100;
+        result.rendementNet = (result.cashflowNetAnnuel / baseResults.coutTotal) * 100;
         
         result.avantages = [
             "Amortissement du bien et du mobilier",
             "Report des déficits sur 10 ans",
             resultatFiscal === 0 ? "Aucun impôt grâce aux amortissements" : null,
+            "Pas de prélèvements sociaux (régime BIC)",
             "Plus-value exonérée après 30 ans"
         ].filter(Boolean);
         
@@ -357,7 +398,7 @@ class FiscalComparator {
     calculateLMP(result, baseResults, data) {
         // Similaire au LMNP réel avec avantages supplémentaires
         result = this.calculateLMNPReel(result, baseResults, data, {
-            amortissementBien: 0.02,
+            amortissementBien: 0.025,
             amortissementMobilier: 0.10,
             amortissementTravaux: 0.10
         });
@@ -373,7 +414,7 @@ class FiscalComparator {
     }
 
     /**
-     * Calcul pour SCI IS
+     * Calcul pour SCI IS - CORRIGÉ avec seuil 2024
      */
     calculateSCIIS(result, baseResults, data, calcul) {
         const loyerAnnuel = baseResults.loyerBrut * 12;
@@ -384,19 +425,19 @@ class FiscalComparator {
                                    baseResults.entretienAnnuel + (loyerAnnuel * 0.05);
         
         // Amortissements (y compris du bâti)
-        const amortissementBatiment = baseResults.prixAchat * 0.8 * 0.02; // 80% du prix sur 50 ans
+        const amortissementBatiment = baseResults.prixAchat * 0.8 * 0.025; // 80% du prix sur 40 ans
         const amortissementTravaux = baseResults.travaux * 0.10;
         const totalAmortissements = amortissementBatiment + amortissementTravaux;
         
         // Résultat imposable
         const resultatImposable = Math.max(0, loyerAnnuel - chargesExploitation - totalAmortissements);
         
-        // Calcul de l'IS
+        // Calcul de l'IS avec seuil 2024
         let impotIS = 0;
-        if (resultatImposable <= calcul.seuilIS) {
+        if (resultatImposable <= this.SEUIL_IS_2024) {
             impotIS = resultatImposable * calcul.tauxIS;
         } else {
-            impotIS = calcul.seuilIS * calcul.tauxIS + (resultatImposable - calcul.seuilIS) * calcul.tauxISPlein;
+            impotIS = this.SEUIL_IS_2024 * calcul.tauxIS + (resultatImposable - this.SEUIL_IS_2024) * calcul.tauxISPlein;
         }
         
         result.chargesDeductibles = chargesExploitation;
@@ -405,10 +446,10 @@ class FiscalComparator {
         result.impotAnnuel = -impotIS;
         result.cashflowNetAnnuel = (baseResults.cashFlow * 12) - impotIS;
         result.cashflowMensuel = result.cashflowNetAnnuel / 12;
-        result.rendementNet = (result.cashflowNetAnnuel / baseResults.apport) * 100;
+        result.rendementNet = (result.cashflowNetAnnuel / baseResults.coutTotal) * 100;
         
         result.avantages = [
-            "Taux d'IS réduit jusqu'à 38 120€",
+            `Taux d'IS réduit à 15% jusqu'à ${this.SEUIL_IS_2024}€`,
             "Amortissement du bâtiment",
             "Report illimité des déficits",
             "Cession de parts facilitée"
