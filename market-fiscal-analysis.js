@@ -799,34 +799,8 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
             </div>
         </div>
 
-        <!-- Script pour le toggle -->
+  <!-- Script pour le debug uniquement (le toggle est géré ailleurs) -->
         <script>
-            // Auto-init après rendu
-            setTimeout(() => {
-                const btn = document.getElementById('btn-fiscal-detail');
-                const table = document.getElementById('detailed-fiscal-table');
-                
-                if (btn && table) {
-                    btn.addEventListener('click', () => {
-                        const isOpen = table.style.display !== 'none';
-                        
-                        if (!isOpen) {
-                            table.style.display = 'block';
-                            btn.setAttribute('aria-expanded', 'true');
-                            btn.innerHTML = '<i class="fas fa-chevron-up"></i> <span>Masquer le détail</span>';
-                            // Petit effet de scroll pour montrer le tableau
-                            setTimeout(() => {
-                                table.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                            }, 100);
-                        } else {
-                            table.style.display = 'none';
-                            btn.setAttribute('aria-expanded', 'false');
-                            btn.innerHTML = '<i class="fas fa-chevron-down"></i> <span>Voir le détail complet</span>';
-                        }
-                    });
-                }
-            }, 100);
-            
             // Debug data
             window.lastAnalysisData = {
                 input: ${JSON.stringify(inputData)},
