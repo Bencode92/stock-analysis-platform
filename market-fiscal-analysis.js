@@ -25,6 +25,21 @@ class MarketFiscalAnalyzer {
         // 3. Comparaison des régimes fiscaux
         const fiscalResults = await this.comparateur.compareAllRegimes(fiscalData);
         
+        // ✅ CORRECTION : Enrichir les résultats avec les calculs détaillés
+        const params = this.getAllAdvancedParams();
+        fiscalResults.forEach(regime => {
+            const detailedCalc = this.getDetailedCalculations(regime, fiscalData, params);
+            
+            // Remplacer par les valeurs détaillées plus précises
+            regime.cashflowNetAnnuel = detailedCalc.cashflowNetAnnuel;
+            regime.cashflowMensuel = detailedCalc.cashflowNetAnnuel / 12;
+            regime.impotAnnuel = -(detailedCalc.totalImpots);
+            regime.rendementNet = (detailedCalc.cashflowNetAnnuel / fiscalData.price) * 100;
+            
+            // Ajouter les détails pour le debug
+            regime._detailedCalc = detailedCalc;
+        });
+        
         return {
             market: this.marketAnalysis,
             fiscal: fiscalResults,
@@ -1015,6 +1030,32 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
                 console.log('🏆 Meilleur régime:', data.results.reduce((a, b) => 
                     a.cashflowNetAnnuel > b.cashflowNetAnnuel ? a : b
                 ));
+                console.groupEnd();
+            };
+            
+            // Fonction de debug pour voir les différences
+            window.debugFiscalDifferences = function() {
+                if (!window.lastAnalysisData) {
+                    console.log('❌ Aucune analyse disponible.');
+                    return;
+                }
+                
+                const data = window.lastAnalysisData;
+                console.group('🔍 Comparaison des méthodes de calcul');
+                
+                data.results.forEach(regime => {
+                    console.group('📊 ' + regime.nom);
+                    console.log('Calcul détaillé:', {
+                        cashflowMensuel: regime.cashflowMensuel,
+                        cashflowAnnuel: regime.cashflowNetAnnuel
+                    });
+                    
+                    if (regime._detailedCalc) {
+                        console.log('Détails complets:', regime._detailedCalc);
+                    }
+                    console.groupEnd();
+                });
+                
                 console.groupEnd();
             };
         </script>
