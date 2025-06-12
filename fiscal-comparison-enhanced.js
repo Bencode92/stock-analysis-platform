@@ -273,7 +273,7 @@ class FiscalComparator {
         const chargesCopro = baseResults.chargesNonRecuperables;
         const assurance = baseResults.assurancePNO;
         const entretien = baseResults.entretienAnnuel;
-        const fraisGestion = loyerAnnuel * 0.05; // 5% pour la gestion
+        const fraisGestion = data.gestionLocativeTaux > 0 ? loyerAnnuel * (data.gestionLocativeTaux / 100) : 0;
         
         const totalCharges = interets + taxeFonciere + chargesCopro + assurance + entretien + fraisGestion;
         
