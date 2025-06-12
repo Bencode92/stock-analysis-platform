@@ -102,11 +102,14 @@ class MarketFiscalAnalyzer {
      * Prépare les données pour la comparaison fiscale - VERSION AMÉLIORÉE
      */
     prepareFiscalData() {
+        // Récupérer les données de ville sélectionnée
+        const villeData = window.villeSearchManager?.getSelectedVilleData();
+        
         // Récupérer TOUS les paramètres du formulaire
         const formData = {
             // Localisation
-            city: document.getElementById('propertyCity')?.value || '',
-            department: document.getElementById('propertyDepartment')?.value || '',
+            city: villeData?.ville || document.getElementById('propertyCity')?.value || '',
+            department: villeData?.departement || document.getElementById('propertyDepartment')?.value || '',
             
             // Détails du bien
             propertyType: document.getElementById('propertyType')?.value || 'appartement',
@@ -130,8 +133,8 @@ class MarketFiscalAnalyzer {
             gestionLocative: document.getElementById('gestionLocative')?.checked || false,
             vacanceLocative: parseFloat(document.getElementById('vacanceLocative')?.value) || 5,
             
-            // Mode d'achat
-            typeAchat: document.getElementById('purchaseMode')?.value || 'classique'
+            // Mode d'achat - CORRECTION : récupérer la bonne valeur
+            typeAchat: document.querySelector('input[name="type-achat"]:checked')?.value || 'classique'
         };
         
         // Calculer les données dérivées
@@ -145,6 +148,7 @@ class MarketFiscalAnalyzer {
         
         // Stocker dans la console pour debug
         console.log('📊 Données fiscales préparées:', formData);
+        console.log('🏙️ Ville sélectionnée:', villeData);
         
         // Format compatible avec le comparateur fiscal existant
         return {
@@ -300,6 +304,10 @@ class MarketFiscalAnalyzer {
                 <h3>📊 Résumé de votre investissement</h3>
                 <div class="summary-grid">
                     <div class="summary-item">
+                        <span class="label">🏛️ Type d'acquisition:</span>
+                        <span class="value">${inputData.typeAchat === 'encheres' ? 'Vente aux enchères' : 'Achat classique'}</span>
+                    </div>
+                    <div class="summary-item">
                         <span class="label">📍 Localisation:</span>
                         <span class="value">${inputData.city || 'Non renseignée'} ${inputData.department ? `(${inputData.department})` : ''}</span>
                     </div>
@@ -418,6 +426,18 @@ class MarketFiscalAnalyzer {
                         `}).join('')}
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Graphiques de comparaison -->
+            <div class="charts-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 30px 0;">
+                <div class="chart-wrapper">
+                    <h4 style="text-align: center; color: #e2e8f0;">Cash-flow net annuel par régime</h4>
+                    <canvas id="fiscal-cashflow-chart" style="height: 300px;"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                    <h4 style="text-align: center; color: #e2e8f0;">Rendement net par régime</h4>
+                    <canvas id="fiscal-rendement-chart" style="height: 300px;"></canvas>
+                </div>
             </div>
 
             <!-- Debug pour vérification -->
