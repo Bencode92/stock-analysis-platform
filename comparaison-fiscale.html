@@ -1455,36 +1455,38 @@ document.getElementById('property-form').addEventListener('submit', async functi
     const typeAchat = document.querySelector('input[name="type-achat"]:checked').value;
     
     // Récupérer les données du formulaire
-    propertyData = {
-        ville: window.villeSearchManager?.getSelectedVilleData(),
-        prixPaye: parseFloat(document.getElementById('propertyPrice').value),
-        surface: parseFloat(document.getElementById('propertySurface').value),
-        loyerActuel: loyerHC,
-        charges: charges,
-        loyerCC: loyerHC + charges, // Ajouter le loyer CC pour l'analyse
-        apport: parseFloat(document.getElementById('apport').value),
-        duree: parseFloat(document.getElementById('loanDuration').value),
-        taux: parseFloat(document.getElementById('loanRate').value),
-        tmi: parseFloat(document.getElementById('tmi').value),
-        typeAchat: typeAchat,
-        // Paramètres avancés
-        fraisBancairesDossier: parseFloat(document.getElementById('frais-bancaires-dossier').value) || 900,
-        fraisBancairesCompte: parseFloat(document.getElementById('frais-bancaires-compte').value) || 150,
-        fraisGarantie: parseFloat(document.getElementById('frais-garantie').value) || 1.3709,
-        taxeFonciere: parseFloat(document.getElementById('taxeFonciere').value) || 800,
-        vacanceLocative: parseFloat(document.getElementById('vacanceLocative').value) || 5,
-        gestionLocative: document.getElementById('gestionLocative').checked || false,
-        travaux: parseFloat(document.getElementById('travaux').value) || 0,
-        chargesCopro: charges,
-        assurancePNO: parseFloat(document.getElementById('assurance-pno').value) || 15,
-        // Paramètres spécifiques selon le type
-        fraisNotaireTaux: typeAchat === 'classique' ? parseFloat(document.getElementById('frais-notaire-taux').value) || 8 : 0,
-        commissionImmo: typeAchat === 'classique' ? parseFloat(document.getElementById('commission-immo').value) || 4 : 0,
-        droitsEnregistrement: typeAchat === 'encheres' ? parseFloat(document.getElementById('droits-enregistrement').value) || 5.70 : 0,
-        coefMutation: typeAchat === 'encheres' ? parseFloat(document.getElementById('coef-mutation').value) || 2.37 : 0,
-        honorairesAvocat: typeAchat === 'encheres' ? parseFloat(document.getElementById('honoraires-avocat').value) || 1500 : 0,
-        fraisFixes: typeAchat === 'encheres' ? parseFloat(document.getElementById('frais-fixes').value) || 50 : 0
-    };
+propertyData = {
+    ville: window.villeSearchManager?.getSelectedVilleData(),
+    prixPaye: parseFloat(document.getElementById('propertyPrice').value),
+    surface: parseFloat(document.getElementById('propertySurface').value),
+    loyerActuel: loyerHC,
+    charges: charges,
+    loyerCC: loyerHC + charges,
+    apport: parseFloat(document.getElementById('apport').value),
+    duree: parseFloat(document.getElementById('loanDuration').value),
+    taux: parseFloat(document.getElementById('loanRate').value),
+    tmi: parseFloat(document.getElementById('tmi').value),
+    typeAchat: typeAchat,
+    // Paramètres avancés - CORRIGÉS
+    fraisBancairesDossier: parseFloat(document.getElementById('frais-bancaires-dossier').value) || 900,
+    fraisBancairesCompte: parseFloat(document.getElementById('frais-bancaires-compte').value) || 150,
+    fraisGarantie: parseFloat(document.getElementById('frais-garantie').value) || 1.3709,
+    taxeFonciere: parseFloat(document.getElementById('taxeFonciere').value) || 800,
+    vacanceLocative: parseFloat(document.getElementById('vacanceLocative').value) || 5,
+    gestionLocative: document.getElementById('gestionLocative').checked || false,
+    travauxRenovation: parseFloat(document.getElementById('travaux-renovation').value) || 0, // ✅ CORRIGÉ
+    entretienAnnuel: parseFloat(document.getElementById('entretien-annuel').value) || 500, // ✅ CORRIGÉ
+    chargesCoproNonRecup: parseFloat(document.getElementById('charges-copro-non-recup').value) || 50, // ✅ CORRIGÉ
+    chargesCopro: charges,
+    assurancePNO: parseFloat(document.getElementById('assurance-pno').value) || 15,
+    // Paramètres spécifiques selon le type
+    fraisNotaireTaux: typeAchat === 'classique' ? parseFloat(document.getElementById('frais-notaire-taux').value) || 8 : 0,
+    commissionImmo: typeAchat === 'classique' ? parseFloat(document.getElementById('commission-immo').value) || 4 : 0,
+    droitsEnregistrement: typeAchat === 'encheres' ? parseFloat(document.getElementById('droits-enregistrement').value) || 5.70 : 0,
+    coefMutation: typeAchat === 'encheres' ? parseFloat(document.getElementById('coef-mutation').value) || 2.37 : 0,
+    honorairesAvocat: typeAchat === 'encheres' ? parseFloat(document.getElementById('honoraires-avocat').value) || 1500 : 0,
+    fraisFixes: typeAchat === 'encheres' ? parseFloat(document.getElementById('frais-fixes').value) || 50 : 0
+};
     
     // Calculer le prix au m² payé
     propertyData.prixM2Paye = propertyData.prixPaye / propertyData.surface;
