@@ -390,13 +390,15 @@ class MarketFiscalAnalyzer {
                         <tr>
                             <th>Régime</th>
                             <th>Cash-flow mensuel</th>
+                            <th>Cash-flow annuel</th>
                             <th>Impôt annuel</th>
-                            <th>Taux effectif</th>
-                            <th>Rendement net</th>
+                            <th>Rendement</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${fiscalResults.map(regime => `
+                        ${fiscalResults.map(regime => {
+                            const rendementSurPrix = ((regime.cashflowNetAnnuel / inputData.price) * 100);
+                            return `
                             <tr class="${regime.nom === bestRegime.nom ? 'best-regime' : ''}">
                                 <td>
                                     <i class="fas ${regime.icone || 'fa-home'}"></i>
@@ -405,11 +407,15 @@ class MarketFiscalAnalyzer {
                                 <td class="${regime.cashflowMensuel > 0 ? 'positive' : 'negative'}">
                                     ${this.formatCurrency(regime.cashflowMensuel)}
                                 </td>
+                                <td class="${regime.cashflowNetAnnuel > 0 ? 'positive' : 'negative'}">
+                                    ${this.formatCurrency(regime.cashflowNetAnnuel)}
+                                </td>
                                 <td>${this.formatCurrency(Math.abs(regime.impotAnnuel))}</td>
-                                <td>${((Math.abs(regime.impotAnnuel) / inputData.yearlyRent) * 100).toFixed(1)}%</td>
-                                <td>${regime.rendementNet.toFixed(2)}%</td>
+                                <td class="${rendementSurPrix > 0 ? 'positive' : 'negative'}">
+                                    ${rendementSurPrix.toFixed(2)}%
+                                </td>
                             </tr>
-                        `).join('')}
+                        `}).join('')}
                     </tbody>
                 </table>
             </div>
@@ -690,9 +696,9 @@ class MarketFiscalAnalyzer {
                 description: "Déduction comptable représentant la perte de valeur du bien dans le temps. En LMNP, vous pouvez amortir 2-3% du bien par an, réduisant ainsi votre base imposable."
             },
             {
-                title: "Rendement net",
+                title: "Rendement",
                 icon: "fa-chart-pie",
-                description: "Rentabilité réelle de votre investissement après déduction de toutes les charges et impôts. Se calcule en divisant le cash-flow annuel net par votre apport initial."
+                description: "Rentabilité de votre investissement calculée en divisant le cash-flow annuel net par le prix total du bien. Plus ce pourcentage est élevé, plus votre investissement est rentable."
             }
         ];
         
