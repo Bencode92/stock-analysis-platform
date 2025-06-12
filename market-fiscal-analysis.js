@@ -99,19 +99,73 @@ class MarketFiscalAnalyzer {
     }
 
     /**
-     * Prépare les données pour la comparaison fiscale
+     * Prépare les données pour la comparaison fiscale - VERSION AMÉLIORÉE
      */
-    prepareFiscalData(data) {
+    prepareFiscalData() {
+        // Récupérer TOUS les paramètres du formulaire
+        const formData = {
+            // Localisation
+            city: document.getElementById('propertyCity')?.value || '',
+            department: document.getElementById('propertyDepartment')?.value || '',
+            
+            // Détails du bien
+            propertyType: document.getElementById('propertyType')?.value || 'appartement',
+            surface: parseFloat(document.getElementById('propertySurface')?.value) || 0,
+            price: parseFloat(document.getElementById('propertyPrice')?.value) || 0,
+            monthlyRent: parseFloat(document.getElementById('monthlyRent')?.value) || 0,
+            
+            // Financement
+            apport: parseFloat(document.getElementById('apport')?.value) || 0,
+            loanRate: parseFloat(document.getElementById('loanRate')?.value) || 2.5,
+            loanDuration: parseInt(document.getElementById('loanDuration')?.value) || 20,
+            
+            // Fiscal
+            tmi: parseFloat(document.getElementById('tmi')?.value) || 30,
+            
+            // Charges
+            monthlyCharges: parseFloat(document.getElementById('monthlyCharges')?.value) || 50,
+            taxeFonciere: parseFloat(document.getElementById('taxeFonciere')?.value) || 800,
+            
+            // Paramètres avancés
+            gestionLocative: document.getElementById('gestionLocative')?.checked || false,
+            vacanceLocative: parseFloat(document.getElementById('vacanceLocative')?.value) || 5,
+            
+            // Mode d'achat
+            typeAchat: document.getElementById('purchaseMode')?.value || 'classique'
+        };
+        
+        // Calculer les données dérivées
+        const loanAmount = formData.price - formData.apport;
+        const monthlyPayment = this.calculateMonthlyPayment(loanAmount, formData.loanRate, formData.loanDuration);
+        const yearlyRent = formData.monthlyRent * 12 * (1 - formData.vacanceLocative / 100);
+        const yearlyCharges = formData.monthlyCharges * 12;
+        
+        // Ajouter les frais de gestion si applicable
+        const gestionFees = formData.gestionLocative ? yearlyRent * 0.08 : 0;
+        
+        // Stocker dans la console pour debug
+        console.log('📊 Données fiscales préparées:', formData);
+        
+        // Format compatible avec le comparateur fiscal existant
         return {
-            typeAchat: data.typeAchat || 'classique',
-            prixBien: data.prixPaye,
-            surface: data.surface,
-            apport: data.apport,
-            duree: data.duree,
-            taux: data.taux,
-            loyerMensuel: data.loyerActuel,
-            tmi: data.tmi,
-            chargesCopro: data.charges
+            typeAchat: formData.typeAchat,
+            prixBien: formData.price,
+            surface: formData.surface,
+            apport: formData.apport,
+            duree: formData.loanDuration,
+            taux: formData.loanRate,
+            loyerMensuel: formData.monthlyRent,
+            tmi: formData.tmi,
+            chargesCopro: formData.monthlyCharges,
+            
+            // Données étendues pour l'affichage
+            ...formData,
+            loanAmount,
+            monthlyPayment,
+            yearlyRent,
+            yearlyCharges,
+            gestionFees,
+            timestamp: new Date().toISOString()
         };
     }
 
@@ -127,14 +181,14 @@ class MarketFiscalAnalyzer {
                 recommendations.push({
                     type: 'success',
                     icon: 'fa-trophy',
-                    title: 'Excellent prix d\\'achat',
+                    title: 'Excellent prix d\'achat',
                     description: `Vous avez acheté ${Math.abs(marketAnalysis.priceAnalysis.difference).toFixed(0)}% en dessous du marché, soit une économie de ${this.formatNumber(Math.abs(marketAnalysis.priceAnalysis.savings))}€.`
                 });
             } else if (marketAnalysis.priceAnalysis.position === 'overpriced') {
                 recommendations.push({
                     type: 'warning',
                     icon: 'fa-exclamation-triangle',
-                    title: 'Prix d\\'achat élevé',
+                    title: 'Prix d\'achat élevé',
                     description: `Vous avez payé ${marketAnalysis.priceAnalysis.difference.toFixed(0)}% au-dessus du marché. L'optimisation fiscale est cruciale pour compenser.`
                 });
             }
@@ -143,7 +197,7 @@ class MarketFiscalAnalyzer {
                 recommendations.push({
                     type: 'info',
                     icon: 'fa-chart-line',
-                    title: 'Potentiel d\\'augmentation du loyer',
+                    title: 'Potentiel d\'augmentation du loyer',
                     description: `Votre loyer pourrait être augmenté de ${this.formatNumber(Math.abs(marketAnalysis.rentAnalysis.potential))}€/mois pour atteindre le prix du marché.`
                 });
             }
@@ -178,7 +232,7 @@ class MarketFiscalAnalyzer {
                 type: 'success',
                 icon: 'fa-star',
                 title: 'Excellent investissement global',
-                description: 'Votre investissement est bien positionné sur le marché. L\\'optimisation fiscale le rendra encore plus rentable.'
+                description: 'Votre investissement est bien positionné sur le marché. L\'optimisation fiscale le rendra encore plus rentable.'
             });
         } else if (marketAnalysis.globalScore < 40) {
             recommendations.push({
@@ -203,144 +257,191 @@ class MarketFiscalAnalyzer {
     }
 
     /**
-     * Génère le HTML pour afficher les résultats fiscaux améliorés
+     * Formate une devise
      */
-    generateFiscalResultsHTML(fiscalResults, propertyData) {
-        const bestRegime = fiscalResults[0];
-        const mode = propertyData.typeAchat || 'classique';
+    formatCurrency(amount) {
+        return new Intl.NumberFormat('fr-FR', {
+            style: 'currency',
+            currency: 'EUR'
+        }).format(amount);
+    }
+
+    /**
+     * Calcul de mensualité de prêt
+     */
+    calculateMonthlyPayment(loanAmount, annualRate, years) {
+        const monthlyRate = annualRate / 100 / 12;
+        const numPayments = years * 12;
         
-        // Récupérer les données détaillées de simulation
-        const detailsClassique = this.simulateur.calculeTout(propertyData.surface, 'classique');
-        const detailsEncheres = this.simulateur.calculeTout(propertyData.surface, 'encheres');
-        const details = mode === 'classique' ? detailsClassique : detailsEncheres;
+        if (monthlyRate === 0) return loanAmount / numPayments;
         
-        let html = `
-            <div class=\"card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg\">
-                <div class=\"card-header\">
-                    <div class=\"card-icon\">
-                        <i class=\"fas fa-balance-scale\"></i>
+        return loanAmount * monthlyRate * Math.pow(1 + monthlyRate, numPayments) / 
+               (Math.pow(1 + monthlyRate, numPayments) - 1);
+    }
+
+    /**
+     * Génère le HTML pour afficher les résultats fiscaux améliorés - VERSION COMPLÈTE
+     */
+    generateFiscalResultsHTML(fiscalResults, inputData) {
+        const bestRegime = fiscalResults.reduce((a, b) => 
+            a.cashflowNetAnnuel > b.cashflowNetAnnuel ? a : b
+        );
+        
+        // Calcul des charges déductibles approximatives
+        const chargesDeductibles = inputData.yearlyCharges + inputData.taxeFonciere + 
+            (inputData.loanAmount * inputData.loanRate / 100) + inputData.gestionFees;
+        
+        const baseImposable = Math.max(0, inputData.yearlyRent - chargesDeductibles);
+        const impotEstime = baseImposable * inputData.tmi / 100;
+        
+        return `
+            <!-- Résumé du bien -->
+            <div class="property-summary">
+                <h3>📊 Résumé de votre investissement</h3>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="label">📍 Localisation:</span>
+                        <span class="value">${inputData.city || 'Non renseignée'} ${inputData.department ? `(${inputData.department})` : ''}</span>
                     </div>
-                    <h2 class=\"card-title\">Optimisation fiscale de votre investissement</h2>
-                </div>
-                
-                <!-- Meilleur régime mis en avant -->
-                <div class=\"best-regime-highlight\">
-                    <div class=\"regime-winner-card\">
-                        <div class=\"winner-badge\">
-                            <i class=\"fas fa-trophy\"></i>
-                            MEILLEUR CASH-FLOW
-                        </div>
-                        <h2 class=\"regime-winner-name\">${bestRegime.nom}</h2>
-                        <div class=\"regime-winner-metrics\">
-                            <div class=\"winner-metric\">
-                                <div class=\"metric-icon\"><i class=\"fas fa-coins\"></i></div>
-                                <div class=\"metric-content\">
-                                    <div class=\"metric-label\">Cash-flow mensuel</div>
-                                    <div class=\"metric-value positive\">${this.formatNumber(bestRegime.cashflowMensuel)} €</div>
-                                </div>
-                            </div>
-                            <div class=\"winner-metric\">
-                                <div class=\"metric-icon\"><i class=\"fas fa-calendar\"></i></div>
-                                <div class=\"metric-content\">
-                                    <div class=\"metric-label\">Gain annuel après impôts</div>
-                                    <div class=\"metric-value positive\">${this.formatNumber(bestRegime.cashflowNetAnnuel)} €</div>
-                                </div>
-                            </div>
-                            <div class=\"winner-metric\">
-                                <div class=\"metric-icon\"><i class=\"fas fa-percentage\"></i></div>
-                                <div class=\"metric-content\">
-                                    <div class=\"metric-label\">Rendement net</div>
-                                    <div class=\"metric-value\">${bestRegime.rendementNet.toFixed(2)}%</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class=\"regime-advantages\">
-                            ${bestRegime.avantages && bestRegime.avantages.length > 0 ? `
-                                <h4><i class=\"fas fa-check-circle\"></i> Avantages clés :</h4>
-                                <ul>
-                                    ${bestRegime.avantages.map(a => `<li>${a}</li>`).join('')}
-                                </ul>
-                            ` : ''}
-                        </div>
+                    <div class="summary-item">
+                        <span class="label">🏠 Type de bien:</span>
+                        <span class="value">${inputData.propertyType} - ${inputData.surface}m²</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">💰 Prix d'achat:</span>
+                        <span class="value">${this.formatCurrency(inputData.price)}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">🏦 Financement:</span>
+                        <span class="value">${inputData.loanRate}% sur ${inputData.loanDuration} ans</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">💵 Loyer mensuel:</span>
+                        <span class="value">${this.formatCurrency(inputData.monthlyRent)}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">📊 Votre TMI:</span>
+                        <span class="value">${inputData.tmi}%</span>
                     </div>
                 </div>
-                
-                <!-- Comparaison des autres régimes -->
-                <h3 style=\"margin: 40px 0 20px; color: #00bfff;\">
-                    <i class=\"fas fa-chart-bar\"></i> Comparaison de tous les régimes fiscaux
-                </h3>
-                
-                <div class=\"regime-comparison-grid\">
-                    ${fiscalResults.map((regime, index) => this.generateRegimeCard(regime, index === 0)).join('')}
-                </div>
-                
-                <!-- Tableau détaillé du mode sélectionné -->
-                <div class=\"detailed-analysis-section\">
-                    <h3 style=\"margin: 40px 0 20px; color: #00bfff;\">
-                        <i class=\"fas fa-table\"></i> Analyse détaillée - ${mode === 'classique' ? 'Achat Classique' : 'Vente aux Enchères'}
-                    </h3>
-                    
-                    <div class=\"expandable-table-container\">
-                        <button class=\"btn-expand-table\" onclick=\"toggleDetailedTable()\">
-                            <i class=\"fas fa-chevron-down\"></i> Voir le détail complet
-                        </button>
-                        
-                        <div id=\"detailed-table\" class=\"detailed-table-wrapper\" style=\"display: none;\">
-                            ${this.generateDetailedComparisonTable(detailsClassique, detailsEncheres, mode)}
-                        </div>
+                ${inputData.gestionLocative || inputData.vacanceLocative > 5 ? `
+                    <div class="parameter-modified" style="margin-top: 10px; padding: 10px; background: rgba(255, 193, 7, 0.1); border-radius: 5px;">
+                        <i class="fas fa-info-circle" style="color: #ffc107;"></i>
+                        Paramètres avancés modifiés : 
+                        ${inputData.gestionLocative ? 'Gestion locative (8%)' : ''}
+                        ${inputData.vacanceLocative > 5 ? ` Vacance locative (${inputData.vacanceLocative}%)` : ''}
+                    </div>
+                ` : ''}
+            </div>
+
+            <!-- Meilleur régime -->
+            <div class="best-regime-card">
+                <h3>🏆 Meilleur régime fiscal : ${bestRegime.nom}</h3>
+                <div class="regime-benefits">
+                    <div class="benefit-item">
+                        <h4>💸 Cash-flow mensuel</h4>
+                        <p class="amount">${this.formatCurrency(bestRegime.cashflowMensuel)}</p>
+                    </div>
+                    <div class="benefit-item">
+                        <h4>📉 Économie d'impôt annuelle</h4>
+                        <p class="amount">${this.formatCurrency(Math.max(0, impotEstime - Math.abs(bestRegime.impotAnnuel)))}</p>
                     </div>
                 </div>
                 
-                <!-- Graphiques -->
-                <div class=\"grid grid-2 mt-4\">
-                    <div class=\"card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg\">
-                        <div class=\"card-header\">
-                            <div class=\"card-icon\">
-                                <i class=\"fas fa-chart-bar\"></i>
-                            </div>
-                            <h2 class=\"card-title\">Cash-flow par régime</h2>
-                        </div>
-                        <canvas id=\"fiscal-cashflow-chart\" width=\"400\" height=\"300\"></canvas>
-                    </div>
-                    
-                    <div class=\"card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg\">
-                        <div class=\"card-header\">
-                            <div class=\"card-icon\">
-                                <i class=\"fas fa-percentage\"></i>
-                            </div>
-                            <h2 class=\"card-title\">Rendement net</h2>
-                        </div>
-                        <canvas id=\"fiscal-rendement-chart\" width=\"400\" height=\"300\"></canvas>
-                    </div>
-                </div>
-                
-                <!-- Cartes de définitions -->
-                <div class=\"definitions-section\">
-                    <h3 style=\"margin: 40px 0 20px; color: #00bfff;\">
-                        <i class=\"fas fa-book\"></i> Comprendre les régimes fiscaux
-                    </h3>
-                    
-                    <div class=\"definitions-grid\">
-                        ${this.generateDefinitionCards()}
-                    </div>
-                </div>
-                
-                <!-- Actions -->
-                <div class=\"continue-section\">
-                    <button class=\"btn btn-outline\" onclick=\"goToStep(2)\">
-                        <i class=\"fas fa-arrow-left\"></i> Retour à l'analyse
-                    </button>
-                    <button class=\"btn btn-primary\" onclick=\"window.print()\">
-                        <i class=\"fas fa-print\"></i> Imprimer le rapport
-                    </button>
-                    <button class=\"btn btn-success\" onclick=\"downloadReport()\">
-                        <i class=\"fas fa-download\"></i> Télécharger PDF
-                    </button>
+                <!-- Détail du calcul -->
+                <div class="fiscal-calculation-details">
+                    <h4>📋 Détail du calcul avec vos données</h4>
+                    <table class="calculation-table">
+                        <tr>
+                            <td>Revenus locatifs annuels:</td>
+                            <td class="positive">+${this.formatCurrency(inputData.yearlyRent)}</td>
+                        </tr>
+                        <tr>
+                            <td>Charges déductibles:</td>
+                            <td class="negative">-${this.formatCurrency(chargesDeductibles)}</td>
+                        </tr>
+                        <tr>
+                            <td>Base imposable:</td>
+                            <td>${this.formatCurrency(baseImposable)}</td>
+                        </tr>
+                        <tr>
+                            <td>Impôt (TMI ${inputData.tmi}%):</td>
+                            <td class="negative">-${this.formatCurrency(Math.abs(bestRegime.impotAnnuel))}</td>
+                        </tr>
+                        <tr>
+                            <td>Mensualité crédit:</td>
+                            <td class="negative">-${this.formatCurrency(inputData.monthlyPayment * 12)}</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td><strong>Résultat net annuel:</strong></td>
+                            <td class="${bestRegime.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
+                                <strong>${this.formatCurrency(bestRegime.cashflowNetAnnuel)}</strong>
+                            </td>
+                        </tr>
+                    </table>
                 </div>
             </div>
+
+            <!-- Tableau comparatif -->
+            <div class="comparison-table">
+                <h3>📊 Comparaison des régimes fiscaux</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Régime</th>
+                            <th>Cash-flow mensuel</th>
+                            <th>Impôt annuel</th>
+                            <th>Taux effectif</th>
+                            <th>Rendement net</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${fiscalResults.map(regime => `
+                            <tr class="${regime.nom === bestRegime.nom ? 'best-regime' : ''}">
+                                <td>
+                                    <i class="fas ${regime.icone || 'fa-home'}"></i>
+                                    ${regime.nom}
+                                </td>
+                                <td class="${regime.cashflowMensuel > 0 ? 'positive' : 'negative'}">
+                                    ${this.formatCurrency(regime.cashflowMensuel)}
+                                </td>
+                                <td>${this.formatCurrency(Math.abs(regime.impotAnnuel))}</td>
+                                <td>${((Math.abs(regime.impotAnnuel) / inputData.yearlyRent) * 100).toFixed(1)}%</td>
+                                <td>${regime.rendementNet.toFixed(2)}%</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Debug pour vérification -->
+            <script>
+                window.lastAnalysisData = {
+                    input: ${JSON.stringify(inputData)},
+                    results: ${JSON.stringify(fiscalResults)},
+                    timestamp: new Date()
+                };
+                console.log('✅ Analyse terminée. Tapez debugFiscalAnalysis() pour voir les détails.');
+                
+                // Fonction de debug globale
+                window.debugFiscalAnalysis = function() {
+                    if (!window.lastAnalysisData) {
+                        console.log('❌ Aucune analyse disponible.');
+                        return;
+                    }
+                    
+                    const data = window.lastAnalysisData;
+                    console.group('🔍 Debug Analyse Fiscale');
+                    console.log('📅 Date:', data.timestamp);
+                    console.log('📥 Données entrées:', data.input);
+                    console.log('📊 Résultats:', data.results);
+                    console.log('🏆 Meilleur régime:', data.results.reduce((a, b) => 
+                        a.cashflowNetAnnuel > b.cashflowNetAnnuel ? a : b
+                    ));
+                    console.groupEnd();
+                };
+            </script>
         `;
-        
-        return html;
     }
 
     /**
@@ -351,7 +452,7 @@ class MarketFiscalAnalyzer {
         const compareData = modeActuel === 'classique' ? encheres : classique;
         
         return `
-            <table class=\"detailed-comparison-table\">
+            <table class="detailed-comparison-table">
                 <thead>
                     <tr>
                         <th>Critère</th>
@@ -362,14 +463,14 @@ class MarketFiscalAnalyzer {
                 </thead>
                 <tbody>
                     <!-- COÛTS D'ACQUISITION -->
-                    <tr class=\"section-header\">
-                        <td colspan=\"4\"><strong>COÛTS D'ACQUISITION</strong></td>
+                    <tr class="section-header">
+                        <td colspan="4"><strong>COÛTS D'ACQUISITION</strong></td>
                     </tr>
                     <tr>
                         <td>Prix d'achat</td>
                         <td>${this.formatNumber(data.prixAchat)} €</td>
                         <td>${this.formatNumber(compareData.prixAchat)} €</td>
-                        <td class=\"${data.prixAchat < compareData.prixAchat ? 'positive' : 'negative'}\">
+                        <td class="${data.prixAchat < compareData.prixAchat ? 'positive' : 'negative'}">
                             ${this.formatNumber(data.prixAchat - compareData.prixAchat)} €
                         </td>
                     </tr>
@@ -377,7 +478,7 @@ class MarketFiscalAnalyzer {
                         <td>Frais de notaire / Droits</td>
                         <td>${this.formatNumber(data.fraisNotaire || data.droitsEnregistrement)} €</td>
                         <td>${this.formatNumber(compareData.fraisNotaire || compareData.droitsEnregistrement)} €</td>
-                        <td class=\"${(data.fraisNotaire || data.droitsEnregistrement) < (compareData.fraisNotaire || compareData.droitsEnregistrement) ? 'positive' : 'negative'}\">
+                        <td class="${(data.fraisNotaire || data.droitsEnregistrement) < (compareData.fraisNotaire || compareData.droitsEnregistrement) ? 'positive' : 'negative'}">
                             ${this.formatNumber((data.fraisNotaire || data.droitsEnregistrement) - (compareData.fraisNotaire || compareData.droitsEnregistrement))} €
                         </td>
                     </tr>
@@ -385,7 +486,7 @@ class MarketFiscalAnalyzer {
                         <td>Commission / Honoraires avocat</td>
                         <td>${this.formatNumber(data.commission || data.honorairesAvocat)} €</td>
                         <td>${this.formatNumber(compareData.commission || compareData.honorairesAvocat)} €</td>
-                        <td class=\"${(data.commission || data.honorairesAvocat) < (compareData.commission || compareData.honorairesAvocat) ? 'positive' : 'negative'}\">
+                        <td class="${(data.commission || data.honorairesAvocat) < (compareData.commission || compareData.honorairesAvocat) ? 'positive' : 'negative'}">
                             ${this.formatNumber((data.commission || data.honorairesAvocat) - (compareData.commission || compareData.honorairesAvocat))} €
                         </td>
                     </tr>
@@ -393,7 +494,7 @@ class MarketFiscalAnalyzer {
                         <td>Travaux de rénovation</td>
                         <td>${this.formatNumber(data.travaux)} €</td>
                         <td>${this.formatNumber(compareData.travaux)} €</td>
-                        <td class=\"${data.travaux < compareData.travaux ? 'positive' : 'negative'}\">
+                        <td class="${data.travaux < compareData.travaux ? 'positive' : 'negative'}">
                             ${this.formatNumber(data.travaux - compareData.travaux)} €
                         </td>
                     </tr>
@@ -401,22 +502,22 @@ class MarketFiscalAnalyzer {
                         <td>Frais bancaires</td>
                         <td>${this.formatNumber(data.fraisBancaires)} €</td>
                         <td>${this.formatNumber(compareData.fraisBancaires)} €</td>
-                        <td class=\"${data.fraisBancaires < compareData.fraisBancaires ? 'positive' : 'negative'}\">
+                        <td class="${data.fraisBancaires < compareData.fraisBancaires ? 'positive' : 'negative'}">
                             ${this.formatNumber(data.fraisBancaires - compareData.fraisBancaires)} €
                         </td>
                     </tr>
-                    <tr class=\"total-row\">
+                    <tr class="total-row">
                         <td><strong>Budget total nécessaire</strong></td>
                         <td><strong>${this.formatNumber(data.coutTotal)} €</strong></td>
                         <td><strong>${this.formatNumber(compareData.coutTotal)} €</strong></td>
-                        <td class=\"${data.coutTotal < compareData.coutTotal ? 'positive' : 'negative'}\">
+                        <td class="${data.coutTotal < compareData.coutTotal ? 'positive' : 'negative'}">
                             <strong>${this.formatNumber(data.coutTotal - compareData.coutTotal)} €</strong>
                         </td>
                     </tr>
                     
                     <!-- FINANCEMENT -->
-                    <tr class=\"section-header\">
-                        <td colspan=\"4\"><strong>FINANCEMENT</strong></td>
+                    <tr class="section-header">
+                        <td colspan="4"><strong>FINANCEMENT</strong></td>
                     </tr>
                     <tr>
                         <td>Votre apport personnel</td>
@@ -428,7 +529,7 @@ class MarketFiscalAnalyzer {
                         <td>Montant emprunté</td>
                         <td>${this.formatNumber(data.emprunt)} €</td>
                         <td>${this.formatNumber(compareData.emprunt)} €</td>
-                        <td class=\"${data.emprunt < compareData.emprunt ? 'positive' : 'negative'}\">
+                        <td class="${data.emprunt < compareData.emprunt ? 'positive' : 'negative'}">
                             ${this.formatNumber(data.emprunt - compareData.emprunt)} €
                         </td>
                     </tr>
@@ -436,20 +537,20 @@ class MarketFiscalAnalyzer {
                         <td>Remboursement mensuel</td>
                         <td>${this.formatNumber(data.mensualite)} €/mois</td>
                         <td>${this.formatNumber(compareData.mensualite)} €/mois</td>
-                        <td class=\"${data.mensualite < compareData.mensualite ? 'positive' : 'negative'}\">
+                        <td class="${data.mensualite < compareData.mensualite ? 'positive' : 'negative'}">
                             ${this.formatNumber(data.mensualite - compareData.mensualite)} €
                         </td>
                     </tr>
                     
                     <!-- REVENUS LOCATIFS -->
-                    <tr class=\"section-header\">
-                        <td colspan=\"4\"><strong>REVENUS LOCATIFS</strong></td>
+                    <tr class="section-header">
+                        <td colspan="4"><strong>REVENUS LOCATIFS</strong></td>
                     </tr>
                     <tr>
                         <td>Surface que vous pouvez acheter</td>
                         <td>${data.surface.toFixed(1)} m²</td>
                         <td>${compareData.surface.toFixed(1)} m²</td>
-                        <td class=\"${data.surface > compareData.surface ? 'positive' : 'negative'}\">
+                        <td class="${data.surface > compareData.surface ? 'positive' : 'negative'}">
                             ${(data.surface - compareData.surface).toFixed(1)} m²
                         </td>
                     </tr>
@@ -457,7 +558,7 @@ class MarketFiscalAnalyzer {
                         <td>Loyer mensuel (avant charges)</td>
                         <td>${this.formatNumber(data.loyerBrut)} €</td>
                         <td>${this.formatNumber(compareData.loyerBrut)} €</td>
-                        <td class=\"${data.loyerBrut > compareData.loyerBrut ? 'positive' : 'negative'}\">
+                        <td class="${data.loyerBrut > compareData.loyerBrut ? 'positive' : 'negative'}">
                             ${this.formatNumber(data.loyerBrut - compareData.loyerBrut)} €
                         </td>
                     </tr>
@@ -471,20 +572,20 @@ class MarketFiscalAnalyzer {
                         <td>Loyer net mensuel</td>
                         <td>${this.formatNumber(data.loyerNet)} €</td>
                         <td>${this.formatNumber(compareData.loyerNet)} €</td>
-                        <td class=\"${data.loyerNet > compareData.loyerNet ? 'positive' : 'negative'}\">
+                        <td class="${data.loyerNet > compareData.loyerNet ? 'positive' : 'negative'}">
                             ${this.formatNumber(data.loyerNet - compareData.loyerNet)} €
                         </td>
                     </tr>
                     
                     <!-- VOS DÉPENSES MENSUELLES -->
-                    <tr class=\"section-header\">
-                        <td colspan=\"4\"><strong>VOS DÉPENSES MENSUELLES</strong></td>
+                    <tr class="section-header">
+                        <td colspan="4"><strong>VOS DÉPENSES MENSUELLES</strong></td>
                     </tr>
                     <tr>
                         <td>Remboursement du prêt</td>
                         <td>-${this.formatNumber(data.mensualite)} €</td>
                         <td>-${this.formatNumber(compareData.mensualite)} €</td>
-                        <td class=\"${data.mensualite < compareData.mensualite ? 'positive' : 'negative'}\">
+                        <td class="${data.mensualite < compareData.mensualite ? 'positive' : 'negative'}">
                             ${this.formatNumber(compareData.mensualite - data.mensualite)} €
                         </td>
                     </tr>
@@ -492,7 +593,7 @@ class MarketFiscalAnalyzer {
                         <td>Taxe foncière (par mois)</td>
                         <td>-${this.formatNumber(data.taxeFonciere / 12)} €</td>
                         <td>-${this.formatNumber(compareData.taxeFonciere / 12)} €</td>
-                        <td class=\"${data.taxeFonciere < compareData.taxeFonciere ? 'positive' : 'negative'}\">
+                        <td class="${data.taxeFonciere < compareData.taxeFonciere ? 'positive' : 'negative'}">
                             ${this.formatNumber((compareData.taxeFonciere - data.taxeFonciere) / 12)} €
                         </td>
                     </tr>
@@ -500,7 +601,7 @@ class MarketFiscalAnalyzer {
                         <td>Charges de copropriété</td>
                         <td>-${this.formatNumber(data.chargesNonRecuperables / 12)} €</td>
                         <td>-${this.formatNumber(compareData.chargesNonRecuperables / 12)} €</td>
-                        <td class=\"${data.chargesNonRecuperables < compareData.chargesNonRecuperables ? 'positive' : 'negative'}\">
+                        <td class="${data.chargesNonRecuperables < compareData.chargesNonRecuperables ? 'positive' : 'negative'}">
                             ${this.formatNumber((compareData.chargesNonRecuperables - data.chargesNonRecuperables) / 12)} €
                         </td>
                     </tr>
@@ -508,7 +609,7 @@ class MarketFiscalAnalyzer {
                         <td>Budget entretien</td>
                         <td>-${this.formatNumber(data.entretienAnnuel / 12)} €</td>
                         <td>-${this.formatNumber(compareData.entretienAnnuel / 12)} €</td>
-                        <td class=\"${data.entretienAnnuel < compareData.entretienAnnuel ? 'positive' : 'negative'}\">
+                        <td class="${data.entretienAnnuel < compareData.entretienAnnuel ? 'positive' : 'negative'}">
                             ${this.formatNumber((compareData.entretienAnnuel - data.entretienAnnuel) / 12)} €
                         </td>
                     </tr>
@@ -518,7 +619,7 @@ class MarketFiscalAnalyzer {
                         <td>-${this.formatNumber(compareData.assurancePNO / 12)} €</td>
                         <td>${this.formatNumber((compareData.assurancePNO - data.assurancePNO) / 12)} €</td>
                     </tr>
-                    <tr class=\"total-row\">
+                    <tr class="total-row">
                         <td><strong>Total de vos dépenses</strong></td>
                         <td><strong>-${this.formatNumber(data.mensualite + data.taxeFonciere/12 + data.chargesNonRecuperables/12 + data.entretienAnnuel/12 + data.assurancePNO/12)} €</strong></td>
                         <td><strong>-${this.formatNumber(compareData.mensualite + compareData.taxeFonciere/12 + compareData.chargesNonRecuperables/12 + compareData.entretienAnnuel/12 + compareData.assurancePNO/12)} €</strong></td>
@@ -526,30 +627,30 @@ class MarketFiscalAnalyzer {
                     </tr>
                     
                     <!-- RÉSULTAT -->
-                    <tr class=\"section-header\">
-                        <td colspan=\"4\"><strong>RÉSULTAT</strong></td>
+                    <tr class="section-header">
+                        <td colspan="4"><strong>RÉSULTAT</strong></td>
                     </tr>
                     <tr>
                         <td>Cash-flow avant impôts</td>
-                        <td class=\"${data.cashFlow >= 0 ? 'positive' : 'negative'}\">${this.formatNumber(data.cashFlow)} €</td>
-                        <td class=\"${compareData.cashFlow >= 0 ? 'positive' : 'negative'}\">${this.formatNumber(compareData.cashFlow)} €</td>
-                        <td class=\"${data.cashFlow > compareData.cashFlow ? 'positive' : 'negative'}\">
+                        <td class="${data.cashFlow >= 0 ? 'positive' : 'negative'}">${this.formatNumber(data.cashFlow)} €</td>
+                        <td class="${compareData.cashFlow >= 0 ? 'positive' : 'negative'}">${this.formatNumber(compareData.cashFlow)} €</td>
+                        <td class="${data.cashFlow > compareData.cashFlow ? 'positive' : 'negative'}">
                             ${this.formatNumber(data.cashFlow - compareData.cashFlow)} €
                         </td>
                     </tr>
                     <tr>
                         <td>Gain annuel après impôts théorique</td>
-                        <td class=\"${data.cashFlowAnnuel >= 0 ? 'positive' : 'negative'}\">${this.formatNumber(data.cashFlowAnnuel)} €</td>
-                        <td class=\"${compareData.cashFlowAnnuel >= 0 ? 'positive' : 'negative'}\">${this.formatNumber(compareData.cashFlowAnnuel)} €</td>
-                        <td class=\"${data.cashFlowAnnuel > compareData.cashFlowAnnuel ? 'positive' : 'negative'}\">
+                        <td class="${data.cashFlowAnnuel >= 0 ? 'positive' : 'negative'}">${this.formatNumber(data.cashFlowAnnuel)} €</td>
+                        <td class="${compareData.cashFlowAnnuel >= 0 ? 'positive' : 'negative'}">${this.formatNumber(compareData.cashFlowAnnuel)} €</td>
+                        <td class="${data.cashFlowAnnuel > compareData.cashFlowAnnuel ? 'positive' : 'negative'}">
                             ${this.formatNumber(data.cashFlowAnnuel - compareData.cashFlowAnnuel)} €
                         </td>
                     </tr>
                     <tr>
                         <td>Rendement de votre investissement</td>
-                        <td class=\"${data.rendementNet >= 0 ? 'positive' : 'negative'}\">${data.rendementNet.toFixed(2)} %</td>
-                        <td class=\"${compareData.rendementNet >= 0 ? 'positive' : 'negative'}\">${compareData.rendementNet.toFixed(2)} %</td>
-                        <td class=\"${data.rendementNet > compareData.rendementNet ? 'positive' : 'negative'}\">
+                        <td class="${data.rendementNet >= 0 ? 'positive' : 'negative'}">${data.rendementNet.toFixed(2)} %</td>
+                        <td class="${compareData.rendementNet >= 0 ? 'positive' : 'negative'}">${compareData.rendementNet.toFixed(2)} %</td>
+                        <td class="${data.rendementNet > compareData.rendementNet ? 'positive' : 'negative'}">
                             ${(data.rendementNet - compareData.rendementNet).toFixed(2)} %
                         </td>
                     </tr>
@@ -564,44 +665,44 @@ class MarketFiscalAnalyzer {
     generateDefinitionCards() {
         const definitions = [
             {
-                title: \"Cash-flow\",
-                icon: \"fa-coins\",
-                description: \"Le cash-flow représente l'argent qui reste dans votre poche chaque mois après avoir payé toutes les charges (crédit, taxes, entretien, etc.). Un cash-flow positif signifie que l'investissement s'autofinance.\"
+                title: "Cash-flow",
+                icon: "fa-coins",
+                description: "Le cash-flow représente l'argent qui reste dans votre poche chaque mois après avoir payé toutes les charges (crédit, taxes, entretien, etc.). Un cash-flow positif signifie que l'investissement s'autofinance."
             },
             {
-                title: \"TMI (Taux Marginal d'Imposition)\",
-                icon: \"fa-percentage\",
-                description: \"C'est le taux d'imposition qui s'applique à la tranche la plus élevée de vos revenus. Plus votre TMI est élevé, plus les régimes avec déductions fiscales deviennent intéressants.\"
+                title: "TMI (Taux Marginal d'Imposition)",
+                icon: "fa-percentage",
+                description: "C'est le taux d'imposition qui s'applique à la tranche la plus élevée de vos revenus. Plus votre TMI est élevé, plus les régimes avec déductions fiscales deviennent intéressants."
             },
             {
-                title: \"LMNP (Loueur Meublé Non Professionnel)\",
-                icon: \"fa-bed\",
-                description: \"Régime fiscal pour la location meublée permettant d'amortir le bien et le mobilier. Très avantageux car les amortissements réduisent voire annulent l'impôt sur les loyers.\"
+                title: "LMNP (Loueur Meublé Non Professionnel)",
+                icon: "fa-bed",
+                description: "Régime fiscal pour la location meublée permettant d'amortir le bien et le mobilier. Très avantageux car les amortissements réduisent voire annulent l'impôt sur les loyers."
             },
             {
-                title: \"Déficit foncier\",
-                icon: \"fa-chart-line\",
-                description: \"Lorsque vos charges dépassent vos revenus locatifs, vous créez un déficit déductible de vos autres revenus (jusqu'à 10 700€/an), ce qui réduit votre impôt global.\"
+                title: "Déficit foncier",
+                icon: "fa-chart-line",
+                description: "Lorsque vos charges dépassent vos revenus locatifs, vous créez un déficit déductible de vos autres revenus (jusqu'à 10 700€/an), ce qui réduit votre impôt global."
             },
             {
-                title: \"Amortissement\",
-                icon: \"fa-clock\",
-                description: \"Déduction comptable représentant la perte de valeur du bien dans le temps. En LMNP, vous pouvez amortir 2-3% du bien par an, réduisant ainsi votre base imposable.\"
+                title: "Amortissement",
+                icon: "fa-clock",
+                description: "Déduction comptable représentant la perte de valeur du bien dans le temps. En LMNP, vous pouvez amortir 2-3% du bien par an, réduisant ainsi votre base imposable."
             },
             {
-                title: \"Rendement net\",
-                icon: \"fa-chart-pie\",
-                description: \"Rentabilité réelle de votre investissement après déduction de toutes les charges et impôts. Se calcule en divisant le cash-flow annuel net par votre apport initial.\"
+                title: "Rendement net",
+                icon: "fa-chart-pie",
+                description: "Rentabilité réelle de votre investissement après déduction de toutes les charges et impôts. Se calcule en divisant le cash-flow annuel net par votre apport initial."
             }
         ];
         
         return definitions.map(def => `
-            <div class=\"definition-card\">
-                <div class=\"definition-icon\">
-                    <i class=\"fas ${def.icon}\"></i>
+            <div class="definition-card">
+                <div class="definition-icon">
+                    <i class="fas ${def.icon}"></i>
                 </div>
-                <h4 class=\"definition-title\">${def.title}</h4>
-                <p class=\"definition-text\">${def.description}</p>
+                <h4 class="definition-title">${def.title}</h4>
+                <p class="definition-text">${def.description}</p>
             </div>
         `).join('');
     }
@@ -611,50 +712,50 @@ class MarketFiscalAnalyzer {
      */
     generateRegimeCard(regime, isBest) {
         return `
-            <div class=\"regime-result ${isBest ? 'best' : ''}\">
-                <div class=\"regime-header\">
-                    <div class=\"regime-name\">
-                        <i class=\"fas ${regime.icone || 'fa-home'}\"></i>
+            <div class="regime-result ${isBest ? 'best' : ''}">
+                <div class="regime-header">
+                    <div class="regime-name">
+                        <i class="fas ${regime.icone || 'fa-home'}"></i>
                         ${regime.nom}
                     </div>
-                    ${isBest ? '<div class=\"regime-badge\">Meilleur choix</div>' : ''}
+                    ${isBest ? '<div class="regime-badge">Meilleur choix</div>' : ''}
                 </div>
                 
-                <div class=\"regime-metrics\">
-                    <div class=\"metric-box\">
-                        <div class=\"metric-label\">Cash-flow mensuel</div>
-                        <div class=\"metric-value ${regime.cashflowMensuel >= 0 ? 'positive' : 'negative'}\">
+                <div class="regime-metrics">
+                    <div class="metric-box">
+                        <div class="metric-label">Cash-flow mensuel</div>
+                        <div class="metric-value ${regime.cashflowMensuel >= 0 ? 'positive' : 'negative'}">
                             ${this.formatNumber(regime.cashflowMensuel)} €
                         </div>
                     </div>
                     
-                    <div class=\"metric-box\">
-                        <div class=\"metric-label\">Impôt annuel</div>
-                        <div class=\"metric-value negative\">
+                    <div class="metric-box">
+                        <div class="metric-label">Impôt annuel</div>
+                        <div class="metric-value negative">
                             ${this.formatNumber(Math.abs(regime.impotAnnuel))} €
                         </div>
                     </div>
                     
-                    <div class=\"metric-box\">
-                        <div class=\"metric-label\">Cash-flow net annuel</div>
-                        <div class=\"metric-value ${regime.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}\">
+                    <div class="metric-box">
+                        <div class="metric-label">Cash-flow net annuel</div>
+                        <div class="metric-value ${regime.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
                             ${this.formatNumber(regime.cashflowNetAnnuel)} €
                         </div>
                     </div>
                     
-                    <div class=\"metric-box\">
-                        <div class=\"metric-label\">Rendement net</div>
-                        <div class=\"metric-value neutral\">
+                    <div class="metric-box">
+                        <div class="metric-label">Rendement net</div>
+                        <div class="metric-value neutral">
                             ${regime.rendementNet.toFixed(2)}%
                         </div>
                     </div>
                 </div>
                 
                 ${regime.avantages && regime.avantages.length > 0 ? `
-                    <div style=\"margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);\">
-                        <strong style=\"color: #94a3b8; font-size: 0.9em;\">Avantages :</strong>
-                        <ul style=\"margin-top: 10px; list-style: none; padding: 0;\">
-                            ${regime.avantages.map(a => `<li style=\"color: #e2e8f0; font-size: 0.9em; margin-top: 5px;\">✓ ${a}</li>`).join('')}
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <strong style="color: #94a3b8; font-size: 0.9em;">Avantages :</strong>
+                        <ul style="margin-top: 10px; list-style: none; padding: 0;">
+                            ${regime.avantages.map(a => `<li style="color: #e2e8f0; font-size: 0.9em; margin-top: 5px;">✓ ${a}</li>`).join('')}
                         </ul>
                     </div>
                 ` : ''}
