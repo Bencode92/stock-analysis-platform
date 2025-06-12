@@ -1421,22 +1421,21 @@ document.getElementById('property-form').addEventListener('submit', async functi
                             <i class="fas fa-coins"></i> Analyse du loyer
                         </h3>
                         
-<div class="comparison-input-group">
-    <div class="input-with-label">
+<div class=\"comparison-input-group\">
+    <div class=\"input-with-label\">
         <label>Votre loyer CC au m²</label>
-        <div style="font-size: 2em; font-weight: 700; color: #e2e8f0;">
-            ${((data.loyerActuel + data.charges) / data.surface).toFixed(2)} €/m²
+        <div style=\"font-size: 2em; font-weight: 700; color: #e2e8f0;\">
+            ${data.loyerCCM2.toFixed(2)} €/m²
         </div>
     </div>
-    <div class="vs-separator">VS</div>
-    <div class="input-with-label">
+    <div class=\"vs-separator\">VS</div>
+    <div class=\"input-with-label\">
         <label>Loyer du marché</label>
-        <div style="font-size: 2em; font-weight: 700; color: #00bfff;">
+        <div style=\"font-size: 2em; font-weight: 700; color: #00bfff;\">
             ${marketRentM2.toFixed(2)} €/m²
         </div>
     </div>
-</div>
-                        
+</div>              
                         <div class="position-indicator">
                             <div class="position-marker" style="left: ${Math.min(Math.max((rentDiff + 50) * 2, 0), 100)}%;">
                                 ${rentDiff > 0 ? '+' : ''}${Math.round(rentDiff)}%
