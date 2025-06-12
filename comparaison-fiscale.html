@@ -1047,7 +1047,7 @@
                                     Vacance locative
                                 </label>
                                 <div class="form-input-wrapper">
-                                    <input type="number" id="vacanceLocative" class="form-input" value="5" step="1">
+                                   <input type="number" id="vacanceLocative" class="form-input" value="0" step="1" min="0" max="100">
                                     <span class="form-addon-text">%</span>
                                 </div>
                             </div>
@@ -1435,7 +1435,7 @@ propertyData = {
     fraisBancairesCompte: parseFloat(document.getElementById('frais-bancaires-compte').value) || 150,
     fraisGarantie: parseFloat(document.getElementById('frais-garantie').value) || 1.3709,
     taxeFonciere: parseFloat(document.getElementById('taxeFonciere').value) || 800,
-    vacanceLocative: parseFloat(document.getElementById('vacanceLocative').value) || 5,
+    vacanceLocative: parseFloat(document.getElementById('vacanceLocative').value ?? 0),
     gestionLocative: document.getElementById('gestionLocative').checked || false,
     travaux: parseFloat(document.getElementById('travaux-renovation').value) || 0,
     chargesCoproNonRecup: parseFloat(document.getElementById('charges-copro-non-recup').value) || 50,
