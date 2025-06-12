@@ -1199,18 +1199,6 @@
                 };
             }
             
-            // Gestion du toggle HC/CC
-            document.querySelectorAll('input[name="loyer-type"]').forEach(radio => {
-                radio.addEventListener('change', function() {
-                    const chargesGroup = document.getElementById('monthlyCharges-group');
-                    if (this.value === 'cc') {
-                        chargesGroup.style.display = 'none';
-                    } else {
-                        chargesGroup.style.display = 'block';
-                    }
-                });
-            });
-            
             // Gestion des paramètres avancés
             document.getElementById('btn-advanced-toggle').addEventListener('click', function() {
                 const advancedParams = document.getElementById('advanced-params');
@@ -1278,69 +1266,60 @@
             }
         }
         
-        // Soumission du formulaire
-        document.getElementById('property-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            // Déterminer si les charges sont comprises ou non
-            const loyerType = document.querySelector('input[name="loyer-type"]:checked').value;
-            const loyerSaisi = parseFloat(document.getElementById('monthlyRent').value);
-            let loyerHC, charges;
-            
-            if (loyerType === 'cc') {
-                // Loyer charges comprises : estimer les charges à 15% du loyer
-                charges = loyerSaisi * 0.15;
-                loyerHC = loyerSaisi - charges;
-            } else {
-                // Loyer hors charges
-                loyerHC = loyerSaisi;
-                charges = parseFloat(document.getElementById('monthlyCharges').value) || 50;
-            }
-            
-            // Récupérer les paramètres avancés
-            const typeAchat = document.querySelector('input[name="type-achat"]:checked').value;
-            
-            // Récupérer les données du formulaire
-            propertyData = {
-                ville: window.villeSearchManager?.getSelectedVilleData(),
-                prixPaye: parseFloat(document.getElementById('propertyPrice').value),
-                surface: parseFloat(document.getElementById('propertySurface').value),
-                loyerActuel: loyerHC,
-                charges: charges,
-                apport: parseFloat(document.getElementById('apport').value),
-                duree: parseFloat(document.getElementById('loanDuration').value),
-                taux: parseFloat(document.getElementById('loanRate').value),
-                tmi: parseFloat(document.getElementById('tmi').value),
-                typeAchat: typeAchat,
-                // Paramètres avancés
-                fraisBancairesDossier: parseFloat(document.getElementById('frais-bancaires-dossier').value) || 900,
-                fraisBancairesCompte: parseFloat(document.getElementById('frais-bancaires-compte').value) || 150,
-                fraisGarantie: parseFloat(document.getElementById('frais-garantie').value) || 1.3709,
-                taxeFonciere: parseFloat(document.getElementById('taxeFonciere').value) || 800,
-                vacanceLocative: parseFloat(document.getElementById('vacanceLocative').value) || 5,
-                gestionLocative: document.getElementById('gestionLocative').checked || false,
-                travaux: parseFloat(document.getElementById('travaux').value) || 0,
-                chargesCopro: charges,
-                assurancePNO: parseFloat(document.getElementById('assurance-pno').value) || 15,
-                // Paramètres spécifiques selon le type
-                fraisNotaireTaux: typeAchat === 'classique' ? parseFloat(document.getElementById('frais-notaire-taux').value) || 8 : 0,
-                commissionImmo: typeAchat === 'classique' ? parseFloat(document.getElementById('commission-immo').value) || 4 : 0,
-                droitsEnregistrement: typeAchat === 'encheres' ? parseFloat(document.getElementById('droits-enregistrement').value) || 5.70 : 0,
-                coefMutation: typeAchat === 'encheres' ? parseFloat(document.getElementById('coef-mutation').value) || 2.37 : 0,
-                honorairesAvocat: typeAchat === 'encheres' ? parseFloat(document.getElementById('honoraires-avocat').value) || 1500 : 0,
-                fraisFixes: typeAchat === 'encheres' ? parseFloat(document.getElementById('frais-fixes').value) || 50 : 0
-            };
-            
-            // Calculer le prix au m² payé
-            propertyData.prixM2Paye = propertyData.prixPaye / propertyData.surface;
-            propertyData.loyerM2Actuel = propertyData.loyerActuel / propertyData.surface;
-            
-            // Analyser par rapport au marché
-            analyzeMarket(propertyData);
-            
-            // Passer à l'étape 2
-            goToStep(2);
-        });
+// Soumission du formulaire
+document.getElementById('property-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // SIMPLIFICATION : Toujours HC + charges récupérables
+    const loyerHC = parseFloat(document.getElementById('monthlyRent').value);
+    const charges = parseFloat(document.getElementById('monthlyCharges').value) || 50;
+    
+    // Récupérer les paramètres avancés
+    const typeAchat = document.querySelector('input[name="type-achat"]:checked').value;
+    
+    // Récupérer les données du formulaire
+    propertyData = {
+        ville: window.villeSearchManager?.getSelectedVilleData(),
+        prixPaye: parseFloat(document.getElementById('propertyPrice').value),
+        surface: parseFloat(document.getElementById('propertySurface').value),
+        loyerActuel: loyerHC,
+        charges: charges,
+        loyerCC: loyerHC + charges, // Ajouter le loyer CC pour l'analyse
+        apport: parseFloat(document.getElementById('apport').value),
+        duree: parseFloat(document.getElementById('loanDuration').value),
+        taux: parseFloat(document.getElementById('loanRate').value),
+        tmi: parseFloat(document.getElementById('tmi').value),
+        typeAchat: typeAchat,
+        // Paramètres avancés
+        fraisBancairesDossier: parseFloat(document.getElementById('frais-bancaires-dossier').value) || 900,
+        fraisBancairesCompte: parseFloat(document.getElementById('frais-bancaires-compte').value) || 150,
+        fraisGarantie: parseFloat(document.getElementById('frais-garantie').value) || 1.3709,
+        taxeFonciere: parseFloat(document.getElementById('taxeFonciere').value) || 800,
+        vacanceLocative: parseFloat(document.getElementById('vacanceLocative').value) || 5,
+        gestionLocative: document.getElementById('gestionLocative').checked || false,
+        travaux: parseFloat(document.getElementById('travaux').value) || 0,
+        chargesCopro: charges,
+        assurancePNO: parseFloat(document.getElementById('assurance-pno').value) || 15,
+        // Paramètres spécifiques selon le type
+        fraisNotaireTaux: typeAchat === 'classique' ? parseFloat(document.getElementById('frais-notaire-taux').value) || 8 : 0,
+        commissionImmo: typeAchat === 'classique' ? parseFloat(document.getElementById('commission-immo').value) || 4 : 0,
+        droitsEnregistrement: typeAchat === 'encheres' ? parseFloat(document.getElementById('droits-enregistrement').value) || 5.70 : 0,
+        coefMutation: typeAchat === 'encheres' ? parseFloat(document.getElementById('coef-mutation').value) || 2.37 : 0,
+        honorairesAvocat: typeAchat === 'encheres' ? parseFloat(document.getElementById('honoraires-avocat').value) || 1500 : 0,
+        fraisFixes: typeAchat === 'encheres' ? parseFloat(document.getElementById('frais-fixes').value) || 50 : 0
+    };
+    
+    // Calculer le prix au m² payé
+    propertyData.prixM2Paye = propertyData.prixPaye / propertyData.surface;
+    propertyData.loyerM2Actuel = propertyData.loyerActuel / propertyData.surface;
+    propertyData.loyerCCM2 = propertyData.loyerCC / propertyData.surface; // Loyer CC au m²
+    
+    // Analyser par rapport au marché
+    analyzeMarket(propertyData);
+    
+    // Passer à l'étape 2
+    goToStep(2);
+});
         
         // Fonction d'analyse de marché
         function analyzeMarket(data) {
@@ -1442,21 +1421,21 @@
                             <i class="fas fa-coins"></i> Analyse du loyer
                         </h3>
                         
-                        <div class="comparison-input-group">
-                            <div class="input-with-label">
-                                <label>Votre loyer au m²</label>
-                                <div style="font-size: 2em; font-weight: 700; color: #e2e8f0;">
-                                    ${data.loyerM2Actuel.toFixed(2)} €/m²
-                                </div>
-                            </div>
-                            <div class="vs-separator">VS</div>
-                            <div class="input-with-label">
-                                <label>Loyer du marché</label>
-                                <div style="font-size: 2em; font-weight: 700; color: #00bfff;">
-                                    ${marketRentM2.toFixed(2)} €/m²
-                                </div>
-                            </div>
-                        </div>
+<div class="comparison-input-group">
+    <div class="input-with-label">
+        <label>Votre loyer CC au m²</label>
+        <div style="font-size: 2em; font-weight: 700; color: #e2e8f0;">
+            ${((data.loyerActuel + data.charges) / data.surface).toFixed(2)} €/m²
+        </div>
+    </div>
+    <div class="vs-separator">VS</div>
+    <div class="input-with-label">
+        <label>Loyer du marché</label>
+        <div style="font-size: 2em; font-weight: 700; color: #00bfff;">
+            ${marketRentM2.toFixed(2)} €/m²
+        </div>
+    </div>
+</div>
                         
                         <div class="position-indicator">
                             <div class="position-marker" style="left: ${Math.min(Math.max((rentDiff + 50) * 2, 0), 100)}%;">
