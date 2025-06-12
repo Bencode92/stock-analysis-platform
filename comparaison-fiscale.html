@@ -1021,6 +1021,16 @@
                                     <span class="form-addon-text">%</span>
                                 </div>
                             </div>
+<div class="form-group">
+    <label class="form-label" for="charges-copro-non-recup">
+        Charges de copropriété non récupérables
+    </label>
+    <div class="form-input-wrapper">
+        <input type="number" id="charges-copro-non-recup" class="form-input" value="50" step="10">
+        <span class="form-addon-text">€/mois</span>
+    </div>
+    <span class="form-help">Part des charges non refacturables au locataire</span>
+</div>
                             
                             <div class="form-group">
                                 <label class="form-label" for="taxeFonciere">
@@ -1053,16 +1063,27 @@
                                 <span class="form-help">8% des loyers si activée</span>
                             </div>
                             
-                            <div class="form-group">
-                                <label class="form-label" for="travaux">
-                                    Travaux de rénovation
-                                </label>
-                                <div class="form-input-wrapper">
-                                    <input type="number" id="travaux" class="form-input" value="0" step="1000">
-                                    <span class="form-addon-text">€</span>
-                                </div>
-                                <span class="form-help">0 = calcul automatique (0.5% du prix)</span>
-                            </div>
+<div class="form-group">
+    <label class="form-label" for="travaux-renovation">
+        Travaux de rénovation initiaux
+    </label>
+    <div class="form-input-wrapper">
+        <input type="number" id="travaux-renovation" class="form-input" value="0" step="1000">
+        <span class="form-addon-text">€</span>
+    </div>
+    <span class="form-help">Montant des travaux à l'acquisition (impacte le coût total)</span>
+</div>
+
+<div class="form-group">
+    <label class="form-label" for="entretien-annuel">
+        Budget entretien annuel
+    </label>
+    <div class="form-input-wrapper">
+        <input type="number" id="entretien-annuel" class="form-input" value="500" step="100">
+        <span class="form-addon-text">€/an</span>
+    </div>
+    <span class="form-help">Frais d'entretien récurrents (impacte le cash-flow)</span>
+</div>
                             
                             <div class="form-group">
                                 <label class="form-label" for="assurance-pno">
@@ -1132,6 +1153,122 @@
                                     <input type="number" id="frais-fixes" class="form-input" value="50">
                                     <span class="form-addon-text">€</span>
                                 </div>
+                                    <div class="form-section-title" style="margin-top: 20px;">
+        <i class="fas fa-percentage"></i> Émoluments du poursuivant
+    </div>
+    
+    <div class="grid grid-2">
+        <div class="form-group">
+            <label class="form-label">0 à 6 500 €</label>
+            <div class="form-input-wrapper">
+                <input type="number" id="emoluments-tranche1" class="form-input" value="7" step="0.1">
+                <span class="form-addon-text">%</span>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">6 500 à 23 500 €</label>
+            <div class="form-input-wrapper">
+                <input type="number" id="emoluments-tranche2" class="form-input" value="3" step="0.1">
+                <span class="form-addon-text">%</span>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">23 500 à 83 500 €</label>
+            <div class="form-input-wrapper">
+                <input type="number" id="emoluments-tranche3" class="form-input" value="2" step="0.1">
+                <span class="form-addon-text">%</span>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Au-delà de 83 500 €</label>
+            <div class="form-input-wrapper">
+                <input type="number" id="emoluments-tranche4" class="form-input" value="1" step="0.1">
+                <span class="form-addon-text">%</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Autres frais -->
+    <div class="form-section-title" style="margin-top: 20px;">
+        <i class="fas fa-file-invoice-dollar"></i> Autres frais
+    </div>
+    
+    <div class="grid grid-2">
+        <div class="form-group">
+            <label class="form-label" for="honoraires-avocat-coef">
+                Honoraires avocat (coefficient)
+            </label>
+            <div class="form-input-wrapper">
+                <input type="number" id="honoraires-avocat-coef" class="form-input" value="0.25" step="0.01">
+                <span class="form-addon-text">x</span>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="tva-honoraires">
+                TVA honoraires avocat
+            </label>
+            <div class="form-input-wrapper">
+                <input type="number" id="tva-honoraires" class="form-input" value="20" step="0.1">
+                <span class="form-addon-text">%</span>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="publicite-fonciere">
+                Publicité foncière
+            </label>
+            <div class="form-input-wrapper">
+                <input type="number" id="publicite-fonciere" class="form-input" value="0.10" step="0.01">
+                <span class="form-addon-text">%</span>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="avocat-porter-enchere">
+                Avocat - Porter l'enchère
+            </label>
+            <div class="form-input-wrapper">
+                <input type="number" id="avocat-porter-enchere" class="form-input" value="300">
+                <span class="form-addon-text">€</span>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="suivi-dossier">
+                Suivi de dossier
+            </label>
+            <div class="form-input-wrapper">
+                <input type="number" id="suivi-dossier" class="form-input" value="1200">
+                <span class="form-addon-text">€</span>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="caution-mise-prix">
+                Caution (% mise à prix)
+            </label>
+            <div class="form-input-wrapper">
+                <input type="number" id="caution-mise-prix" class="form-input" value="5" step="0.1">
+                <span class="form-addon-text">%</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toggle caution restituée -->
+    <div class="form-group">
+        <label class="form-label" for="caution-restituee" style="display: flex; align-items: center; gap: 10px;">
+            Caution restituée
+            <label class="toggle-switch">
+                <input type="checkbox" id="caution-restituee" checked>
+                <span class="slider"></span>
+            </label>
+        </label>
+        <span class="form-help">Si non cochée, la caution est incluse dans le coût total</span>
+    </div>
                             </div>
                         </div>
                     </div>
