@@ -110,7 +110,7 @@ class MarketFiscalAnalyzer {
             fraisBancairesCompte: parseFloat(document.getElementById('frais-bancaires-compte')?.value) || 150,
             fraisGarantie: parseFloat(document.getElementById('frais-garantie')?.value) || 1.3709,
             taxeFonciere: parseFloat(document.getElementById('taxeFonciere')?.value) || 800,
-            vacanceLocative: parseFloat(document.getElementById('vacanceLocative')?.value) || 0,
+            vacanceLocative: parseFloat(document.getElementById('vacanceLocative')?.value ?? 0),
             gestionLocativeTaux: parseFloat(document.getElementById('gestionLocative')?.value) || 0,
             // NOUVEAU : Séparer travaux et entretien
             travauxRenovation: parseFloat(document.getElementById('travaux-renovation')?.value) || 0,
@@ -502,7 +502,7 @@ prepareFiscalData() {
         
         // Paramètres avancés
         gestionLocative: allParams.gestionLocative,
-        vacanceLocative: allParams.vacanceLocative,
+      vacanceLocative: parseFloat(document.getElementById('vacanceLocative')?.value ?? 0),
         
         // Mode d'achat
         typeAchat: document.querySelector('input[name="type-achat"]:checked')?.value || 'classique',
