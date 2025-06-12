@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="css/immo-enhanced.css">
     <link rel="stylesheet" href="css/regimes-fiscaux.css">
     <link rel="stylesheet" href="css/immo-comparison-enhanced.css">
+    <link rel="stylesheet" href="css/fiscal-optimization.css">
     
     <!-- Chart.js pour les graphiques -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
@@ -771,7 +772,7 @@
                         
                         <div class="calculation-mode-container">
                             <label class="mode-option">
-                                <input type="radio" name="type-achat" id="type-classique" value="classique" checked>
+                                <input type="radio" name="type-achat" id="purchaseMode" value="classique" checked>
                                 <div class="mode-card">
                                     <div class="mode-icon">
                                         <i class="fas fa-home"></i>
@@ -844,6 +845,11 @@
                         </div>
                     </div>
                     
+                    <!-- Champs cachés pour les données de localisation -->
+                    <input type="hidden" id="propertyCity" value="">
+                    <input type="hidden" id="propertyDepartment" value="">
+                    <input type="hidden" id="propertyType" value="appartement">
+                    
                     <!-- Données de votre investissement -->
                     <div class="form-section">
                         <div class="form-section-title">
@@ -853,33 +859,33 @@
                         
                         <div class="grid grid-2">
                             <div class="form-group">
-                                <label class="form-label" for="prix-paye">
+                                <label class="form-label" for="propertyPrice">
                                     Prix que vous avez payé
                                 </label>
                                 <div class="form-input-wrapper">
-                                    <input type="number" id="prix-paye" class="form-input" 
+                                    <input type="number" id="propertyPrice" class="form-input" 
                                            placeholder="200000" required>
                                     <span class="form-addon-text">€</span>
                                 </div>
                             </div>
                             
                             <div class="form-group">
-                                <label class="form-label" for="surface">
+                                <label class="form-label" for="propertySurface">
                                     Surface du bien
                                 </label>
                                 <div class="form-input-wrapper">
-                                    <input type="number" id="surface" class="form-input" 
+                                    <input type="number" id="propertySurface" class="form-input" 
                                            placeholder="60" required>
                                     <span class="form-addon-text">m²</span>
                                 </div>
                             </div>
                             
                             <div class="form-group">
-                                <label class="form-label" for="loyer-actuel">
+                                <label class="form-label" for="monthlyRent">
                                     Loyer mensuel
                                 </label>
                                 <div class="form-input-wrapper">
-                                    <input type="number" id="loyer-actuel" class="form-input" 
+                                    <input type="number" id="monthlyRent" class="form-input" 
                                            placeholder="800" required>
                                     <span class="form-addon-text">€/mois</span>
                                 </div>
@@ -895,13 +901,13 @@
                                 </div>
                             </div>
                             
-                            <div class="form-group" id="charges-group">
-                                <label class="form-label" for="charges">
+                            <div class="form-group" id="monthlyCharges-group">
+                                <label class="form-label" for="monthlyCharges">
                                     Charges récupérables
                                 </label>
                                 <div class="form-input-wrapper">
-                                    <input type="number" id="charges" class="form-input" 
-                                           placeholder="100" value="100">
+                                    <input type="number" id="monthlyCharges" class="form-input" 
+                                           placeholder="50" value="50">
                                     <span class="form-addon-text">€/mois</span>
                                 </div>
                                 <span class="form-help">Charges refacturées au locataire</span>
@@ -929,22 +935,22 @@
                             </div>
                             
                             <div class="form-group">
-                                <label class="form-label" for="duree">
+                                <label class="form-label" for="loanDuration">
                                     Durée du prêt
                                 </label>
                                 <div class="form-input-wrapper">
-                                    <input type="number" id="duree" class="form-input" 
+                                    <input type="number" id="loanDuration" class="form-input" 
                                            placeholder="20" value="20" min="5" max="30">
                                     <span class="form-addon-text">ans</span>
                                 </div>
                             </div>
                             
                             <div class="form-group">
-                                <label class="form-label" for="taux">
+                                <label class="form-label" for="loanRate">
                                     Taux d'intérêt
                                 </label>
                                 <div class="form-input-wrapper">
-                                    <input type="number" id="taux" class="form-input" 
+                                    <input type="number" id="loanRate" class="form-input" 
                                            placeholder="3.5" value="3.5" step="0.1">
                                     <span class="form-addon-text">%</span>
                                 </div>
@@ -1027,23 +1033,34 @@
                             </div>
                             
                             <div class="form-group">
-                                <label class="form-label" for="taxe-fonciere">
-                                    Taxe foncière
+                                <label class="form-label" for="taxeFonciere">
+                                    Taxe foncière annuelle
                                 </label>
                                 <div class="form-input-wrapper">
-                                    <input type="number" id="taxe-fonciere" class="form-input" value="1" step="0.1">
+                                    <input type="number" id="taxeFonciere" class="form-input" value="800" step="10">
+                                    <span class="form-addon-text">€/an</span>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="vacanceLocative">
+                                    Vacance locative
+                                </label>
+                                <div class="form-input-wrapper">
+                                    <input type="number" id="vacanceLocative" class="form-input" value="5" step="1">
                                     <span class="form-addon-text">%</span>
                                 </div>
                             </div>
                             
                             <div class="form-group">
-                                <label class="form-label" for="vacance-locative">
-                                    Vacance locative
+                                <label class="form-label" for="gestionLocative">
+                                    Gestion locative
                                 </label>
-                                <div class="form-input-wrapper">
-                                    <input type="number" id="vacance-locative" class="form-input" value="5" step="1">
-                                    <span class="form-addon-text">%</span>
-                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="gestionLocative">
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="form-help">8% des loyers si activée</span>
                             </div>
                             
                             <div class="form-group">
@@ -1055,16 +1072,6 @@
                                     <span class="form-addon-text">€</span>
                                 </div>
                                 <span class="form-help">0 = calcul automatique (0.5% du prix)</span>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label" for="charges-copro">
-                                    Charges de copropriété non récupérables
-                                </label>
-                                <div class="form-input-wrapper">
-                                    <input type="number" id="charges-copro" class="form-input" value="50">
-                                    <span class="form-addon-text">€/mois</span>
-                                </div>
                             </div>
                             
                             <div class="form-group">
@@ -1194,10 +1201,18 @@
         document.addEventListener('DOMContentLoaded', function() {
             analyzer = new MarketFiscalAnalyzer();
             
+            // Gérer les données de ville sélectionnée
+            if (window.villeSearchManager) {
+                window.villeSearchManager.onVilleSelected = function(villeData) {
+                    document.getElementById('propertyCity').value = villeData.ville || '';
+                    document.getElementById('propertyDepartment').value = villeData.departement || '';
+                };
+            }
+            
             // Gestion du toggle HC/CC
             document.querySelectorAll('input[name="loyer-type"]').forEach(radio => {
                 radio.addEventListener('change', function() {
-                    const chargesGroup = document.getElementById('charges-group');
+                    const chargesGroup = document.getElementById('monthlyCharges-group');
                     if (this.value === 'cc') {
                         chargesGroup.style.display = 'none';
                     } else {
@@ -1279,7 +1294,7 @@
             
             // Déterminer si les charges sont comprises ou non
             const loyerType = document.querySelector('input[name="loyer-type"]:checked').value;
-            const loyerSaisi = parseFloat(document.getElementById('loyer-actuel').value);
+            const loyerSaisi = parseFloat(document.getElementById('monthlyRent').value);
             let loyerHC, charges;
             
             if (loyerType === 'cc') {
@@ -1289,7 +1304,7 @@
             } else {
                 // Loyer hors charges
                 loyerHC = loyerSaisi;
-                charges = parseFloat(document.getElementById('charges').value) || 100;
+                charges = parseFloat(document.getElementById('monthlyCharges').value) || 50;
             }
             
             // Récupérer les paramètres avancés
@@ -1298,23 +1313,24 @@
             // Récupérer les données du formulaire
             propertyData = {
                 ville: window.villeSearchManager?.getSelectedVilleData(),
-                prixPaye: parseFloat(document.getElementById('prix-paye').value),
-                surface: parseFloat(document.getElementById('surface').value),
+                prixPaye: parseFloat(document.getElementById('propertyPrice').value),
+                surface: parseFloat(document.getElementById('propertySurface').value),
                 loyerActuel: loyerHC,
                 charges: charges,
                 apport: parseFloat(document.getElementById('apport').value),
-                duree: parseFloat(document.getElementById('duree').value),
-                taux: parseFloat(document.getElementById('taux').value),
+                duree: parseFloat(document.getElementById('loanDuration').value),
+                taux: parseFloat(document.getElementById('loanRate').value),
                 tmi: parseFloat(document.getElementById('tmi').value),
                 typeAchat: typeAchat,
                 // Paramètres avancés
                 fraisBancairesDossier: parseFloat(document.getElementById('frais-bancaires-dossier').value) || 900,
                 fraisBancairesCompte: parseFloat(document.getElementById('frais-bancaires-compte').value) || 150,
                 fraisGarantie: parseFloat(document.getElementById('frais-garantie').value) || 1.3709,
-                taxeFonciere: parseFloat(document.getElementById('taxe-fonciere').value) || 1,
-                vacanceLocative: parseFloat(document.getElementById('vacance-locative').value) || 5,
+                taxeFonciere: parseFloat(document.getElementById('taxeFonciere').value) || 800,
+                vacanceLocative: parseFloat(document.getElementById('vacanceLocative').value) || 5,
+                gestionLocative: document.getElementById('gestionLocative').checked || false,
                 travaux: parseFloat(document.getElementById('travaux').value) || 0,
-                chargesCopro: parseFloat(document.getElementById('charges-copro').value) || 50,
+                chargesCopro: charges,
                 assurancePNO: parseFloat(document.getElementById('assurance-pno').value) || 15,
                 // Paramètres spécifiques selon le type
                 fraisNotaireTaux: typeAchat === 'classique' ? parseFloat(document.getElementById('frais-notaire-taux').value) || 8 : 0,
@@ -1532,8 +1548,10 @@
             }
         }
         
-        // Passer à l'analyse fiscale
+        // NOUVELLE FONCTION AMÉLIORÉE - Passer à l'analyse fiscale
         async function proceedToFiscalAnalysis() {
+            console.log('🚀 Lancement de l\'analyse fiscale...');
+            
             goToStep(3);
             
             // Afficher un loading
@@ -1551,16 +1569,56 @@
             await new Promise(resolve => setTimeout(resolve, 1000));
             
             try {
+                // Récupérer toutes les données du formulaire
+                const analysisData = analyzer.prepareFiscalData();
+                
+                // Tracer dans la console pour debug
+                console.log('📊 Données d\'analyse complètes:', analysisData);
+                
+                // Vérifier les paramètres modifiés
+                const modifiedParams = checkModifiedParameters();
+                if (modifiedParams.length > 0) {
+                    console.log('⚠️ Paramètres avancés modifiés:', modifiedParams);
+                }
+                
                 // Effectuer l'analyse complète
                 const analysis = await analyzer.performCompleteAnalysis(propertyData);
                 
-                // Afficher les résultats fiscaux
-                resultsDiv.innerHTML = analyzer.generateFiscalResultsHTML(analysis.fiscal, propertyData);
+                // Afficher les résultats fiscaux avec les nouvelles fonctions
+                resultsDiv.innerHTML = analyzer.generateFiscalResultsHTML(analysis.fiscal, analysisData);
                 
                 // Créer les graphiques
                 setTimeout(() => {
                     analyzer.createFiscalCharts(analysis.fiscal);
                 }, 100);
+                
+                // Ajouter le toggle pour le tableau détaillé
+                setTimeout(() => {
+                    const toggleBtn = document.querySelector('.btn-expand-table');
+                    if (toggleBtn) {
+                        toggleBtn.addEventListener('click', function() {
+                            const table = document.getElementById('detailed-table');
+                            if (table.style.display === 'none') {
+                                table.style.display = 'block';
+                                this.classList.add('expanded');
+                                this.innerHTML = '<i class="fas fa-chevron-up"></i> Masquer le détail';
+                            } else {
+                                table.style.display = 'none';
+                                this.classList.remove('expanded');
+                                this.innerHTML = '<i class="fas fa-chevron-down"></i> Voir le détail complet';
+                            }
+                        });
+                    }
+                }, 200);
+                
+                // Sauvegarder pour debug
+                window.lastAnalysisData = {
+                    input: analysisData,
+                    results: analysis.fiscal,
+                    timestamp: new Date()
+                };
+                
+                console.log('✅ Analyse terminée. Tapez debugFiscalAnalysis() pour voir les détails.');
                 
             } catch (error) {
                 console.error('Erreur lors de l\'analyse fiscale:', error);
@@ -1571,6 +1629,51 @@
                     </div>
                 `;
             }
+        }
+        
+        // Fonction de debug
+        window.debugFiscalAnalysis = function() {
+            if (!window.lastAnalysisData) {
+                console.log('❌ Aucune analyse disponible. Lancez d\'abord une analyse.');
+                return;
+            }
+            
+            const data = window.lastAnalysisData;
+            console.group('🔍 Debug Analyse Fiscale');
+            console.log('📅 Date:', data.timestamp);
+            console.log('📥 Données entrées:', data.input);
+            console.log('📊 Résultats:', data.results);
+            console.log('🏆 Meilleur régime:', data.results.reduce((a, b) => 
+                a.cashflowNetAnnuel > b.cashflowNetAnnuel ? a : b
+            ));
+            console.groupEnd();
+        };
+        
+        // Vérifier les paramètres modifiés
+        function checkModifiedParameters() {
+            const modified = [];
+            const defaults = {
+                monthlyCharges: 50,
+                taxeFonciere: 800,
+                vacanceLocative: 5,
+                gestionLocative: false
+            };
+            
+            Object.keys(defaults).forEach(param => {
+                const element = document.getElementById(param);
+                if (element) {
+                    const currentValue = element.type === 'checkbox' ? element.checked : parseFloat(element.value);
+                    if (currentValue !== defaults[param]) {
+                        modified.push(param);
+                        const parentEl = element.closest('.form-group');
+                        if (parentEl) {
+                            parentEl.classList.add('parameter-modified');
+                        }
+                    }
+                }
+            });
+            
+            return modified;
         }
         
         // Générer les recommandations
