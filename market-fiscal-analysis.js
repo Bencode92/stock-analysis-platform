@@ -100,6 +100,331 @@ class MarketFiscalAnalyzer {
         return 'underpriced';
     }
 
+    /**
+     * Récupère tous les paramètres avancés du formulaire
+     */
+    getAllAdvancedParams() {
+        return {
+            // Communs
+            fraisBancairesDossier: parseFloat(document.getElementById('frais-bancaires-dossier')?.value) || 900,
+            fraisBancairesCompte: parseFloat(document.getElementById('frais-bancaires-compte')?.value) || 150,
+            fraisGarantie: parseFloat(document.getElementById('frais-garantie')?.value) || 1.3709,
+            taxeFonciere: parseFloat(document.getElementById('taxeFonciere')?.value) || 800,
+            vacanceLocative: parseFloat(document.getElementById('vacanceLocative')?.value) || 5,
+            gestionLocative: document.getElementById('gestionLocative')?.checked || false,
+            travaux: parseFloat(document.getElementById('travaux')?.value) || 0,
+            assurancePNO: parseFloat(document.getElementById('assurance-pno')?.value) || 15,
+            
+            // Spécifiques classique
+            fraisNotaireTaux: parseFloat(document.getElementById('frais-notaire-taux')?.value) || 8,
+            commissionImmo: parseFloat(document.getElementById('commission-immo')?.value) || 4,
+            
+            // Spécifiques enchères
+            droitsEnregistrement: parseFloat(document.getElementById('droits-enregistrement')?.value) || 5.70,
+            coefMutation: parseFloat(document.getElementById('coef-mutation')?.value) || 2.37,
+            honorairesAvocat: parseFloat(document.getElementById('honoraires-avocat')?.value) || 1500,
+            fraisFixes: parseFloat(document.getElementById('frais-fixes')?.value) || 50
+        };
+    }
+
+    /**
+     * Calcule tous les détails pour un régime donné
+     */
+    getDetailedCalculations(regime, inputData, params) {
+        const loyerHC = inputData.loyerHC;
+        const loyerAnnuelBrut = loyerHC * 12;
+        const vacanceAmount = loyerAnnuelBrut * (inputData.vacanceLocative / 100);
+        const loyerNetVacance = loyerAnnuelBrut - vacanceAmount;
+        const fraisGestion = params.gestionLocative ? loyerNetVacance * 0.08 : 0;
+        const revenusNets = loyerNetVacance - fraisGestion;
+        
+        // Calcul des intérêts annuels (approximation)
+        const tauxMensuel = inputData.loanRate / 100 / 12;
+        const nombreMensualites = inputData.loanDuration * 12;
+        const mensualite = inputData.monthlyPayment;
+        const interetsAnnuels = mensualite * 12 - (inputData.loanAmount / inputData.loanDuration);
+        
+        // Amortissement selon le régime
+        const tauxAmortissement = regime.nom.includes('LMNP') ? 2.5 : 0;
+        const amortissementBien = tauxAmortissement > 0 ? inputData.price * tauxAmortissement / 100 : 0;
+        const amortissementMobilier = regime.nom.includes('LMNP') && regime.nom.includes('meublé') ? 
+            inputData.price * 0.1 * 0.1 : 0; // 10% du prix en mobilier, amorti à 10%
+        
+        // Travaux
+        const travauxAnnuels = params.travaux || (inputData.price * 0.005);
+        
+        // Charges de copropriété
+        const chargesCopro = inputData.chargesRecuperables * 12;
+        
+        // Total charges déductibles
+        const totalCharges = interetsAnnuels + amortissementBien + amortissementMobilier + 
+            params.taxeFonciere + chargesCopro + (params.assurancePNO * 12) + 
+            travauxAnnuels + fraisGestion;
+        
+        // Base imposable et impôts
+        const baseImposable = Math.max(0, revenusNets - totalCharges);
+        const impotRevenu = baseImposable * (inputData.tmi / 100);
+        const prelevementsSociaux = regime.nom.includes('LMNP') ? 0 : baseImposable * 0.172;
+        const totalImpots = impotRevenu + prelevementsSociaux;
+        
+        // Cash-flow
+        const capitalAnnuel = (mensualite * 12) - interetsAnnuels;
+        const chargesNonDeductibles = 0; // Simplification
+        const cashflowNetAnnuel = revenusNets - totalImpots - capitalAnnuel - chargesNonDeductibles;
+        
+        return {
+            // Revenus
+            loyerHC,
+            loyerAnnuelBrut,
+            vacanceLocative: inputData.vacanceLocative,
+            vacanceAmount,
+            gestionLocative: params.gestionLocative,
+            fraisGestion,
+            revenusNets,
+            
+            // Charges
+            interetsAnnuels,
+            tauxAmortissement,
+            amortissementBien,
+            amortissementMobilier,
+            chargesCopro,
+            travaux: travauxAnnuels,
+            fraisDivers: 100, // Forfait
+            totalCharges,
+            
+            // Fiscalité
+            baseImposable,
+            impotRevenu,
+            prelevementsSociaux,
+            totalImpots,
+            
+            // Cash-flow
+            capitalAnnuel,
+            chargesNonDeductibles,
+            cashflowNetAnnuel,
+            
+            // Autres infos utiles
+            loyerType: inputData.loyerType || 'hc',
+            regime: regime.nom
+        };
+    }
+
+    /**
+     * Construit le tableau détaillé complet
+     */
+    buildDetailedTable(regime, inputData) {
+        const params = this.getAllAdvancedParams();
+        const calc = this.getDetailedCalculations(regime, inputData, params);
+        
+        return `
+            <table class="detailed-comparison-table" role="table">
+                <caption class="sr-only">Détail complet des calculs fiscaux pour le régime ${regime.nom}</caption>
+                <thead>
+                    <tr>
+                        <th colspan="3">📊 DÉTAIL COMPLET - ${regime.nom.toUpperCase()}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${this.buildRevenusSection(calc)}
+                    ${this.buildChargesSection(calc, params)}
+                    ${this.buildFiscaliteSection(calc, inputData)}
+                    ${this.buildCashflowSection(calc, inputData)}
+                    ${this.buildIndicateursSection(calc, inputData)}
+                </tbody>
+            </table>
+        `;
+    }
+
+    /**
+     * Construit la section revenus
+     */
+    buildRevenusSection(calc) {
+        return `
+            <tr class="section-header">
+                <td colspan="3"><strong>💰 REVENUS LOCATIFS</strong></td>
+            </tr>
+            <tr>
+                <td>Loyer mensuel HC</td>
+                <td class="text-right">${this.formatCurrency(calc.loyerHC)}</td>
+                <td class="formula">Loyer hors charges</td>
+            </tr>
+            <tr>
+                <td>Loyer annuel brut</td>
+                <td class="text-right">${this.formatCurrency(calc.loyerAnnuelBrut)}</td>
+                <td class="formula">= ${calc.loyerHC} × 12 mois</td>
+            </tr>
+            <tr>
+                <td>Vacance locative (${calc.vacanceLocative}%)</td>
+                <td class="text-right negative">-${this.formatCurrency(calc.vacanceAmount)}</td>
+                <td class="formula">= ${this.formatNumber(calc.loyerAnnuelBrut)} × ${calc.vacanceLocative}%</td>
+            </tr>
+            ${calc.gestionLocative ? `
+            <tr>
+                <td>Frais de gestion (8%)</td>
+                <td class="text-right negative">-${this.formatCurrency(calc.fraisGestion)}</td>
+                <td class="formula">= Loyer net × 8%</td>
+            </tr>
+            ` : ''}
+            <tr class="total-row">
+                <td><strong>Revenus locatifs nets</strong></td>
+                <td class="text-right"><strong>${this.formatCurrency(calc.revenusNets)}</strong></td>
+                <td></td>
+            </tr>
+        `;
+    }
+
+    /**
+     * Construit la section charges (triées par impact)
+     */
+    buildChargesSection(calc, params) {
+        const charges = [
+            { label: "Intérêts d'emprunt", value: calc.interetsAnnuels, formula: "Selon échéancier" },
+            calc.amortissementBien > 0 ? { label: "Amortissement bien", value: calc.amortissementBien, formula: `${calc.tauxAmortissement}% × valeur` } : null,
+            calc.amortissementMobilier > 0 ? { label: "Amortissement mobilier", value: calc.amortissementMobilier, formula: "10% × 10% du prix" } : null,
+            { label: "Taxe foncière", value: params.taxeFonciere, formula: "Paramètre avancé" },
+            { label: "Charges copropriété", value: calc.chargesCopro, formula: "12 × charges mensuelles" },
+            { label: "Assurance PNO", value: params.assurancePNO * 12, formula: `${params.assurancePNO} × 12` },
+            { label: "Travaux et entretien", value: calc.travaux, formula: params.travaux || "0.5% du prix" },
+            { label: "Frais divers", value: calc.fraisDivers, formula: "Comptable, etc." }
+        ].filter(Boolean).sort((a, b) => b.value - a.value);
+        
+        return `
+            <tr class="section-header">
+                <td colspan="3"><strong>📉 CHARGES DÉDUCTIBLES</strong></td>
+            </tr>
+            ${charges.map(charge => `
+            <tr>
+                <td>${charge.label}</td>
+                <td class="text-right negative">-${this.formatCurrency(charge.value)}</td>
+                <td class="formula">${charge.formula}</td>
+            </tr>
+            `).join('')}
+            <tr class="total-row">
+                <td><strong>Total charges déductibles</strong></td>
+                <td class="text-right negative"><strong>-${this.formatCurrency(calc.totalCharges)}</strong></td>
+                <td></td>
+            </tr>
+        `;
+    }
+
+    /**
+     * Construit la section fiscalité
+     */
+    buildFiscaliteSection(calc, inputData) {
+        return `
+            <tr class="section-header">
+                <td colspan="3"><strong>📊 CALCUL FISCAL</strong></td>
+            </tr>
+            <tr>
+                <td>Revenus nets</td>
+                <td class="text-right">${this.formatCurrency(calc.revenusNets)}</td>
+                <td class="formula">Après vacance et gestion</td>
+            </tr>
+            <tr>
+                <td>- Charges déductibles</td>
+                <td class="text-right negative">-${this.formatCurrency(calc.totalCharges)}</td>
+                <td class="formula">Total ci-dessus</td>
+            </tr>
+            <tr>
+                <td><strong>Base imposable</strong></td>
+                <td class="text-right"><strong>${this.formatCurrency(calc.baseImposable)}</strong></td>
+                <td class="formula">= Max(0, revenus - charges)</td>
+            </tr>
+            <tr>
+                <td>Impôt sur le revenu (TMI ${inputData.tmi}%)</td>
+                <td class="text-right negative">-${this.formatCurrency(calc.impotRevenu)}</td>
+                <td class="formula">= Base × ${inputData.tmi}%</td>
+            </tr>
+            ${calc.prelevementsSociaux > 0 ? `
+            <tr>
+                <td>Prélèvements sociaux (17.2%)</td>
+                <td class="text-right negative">-${this.formatCurrency(calc.prelevementsSociaux)}</td>
+                <td class="formula">Sauf LMNP</td>
+            </tr>
+            ` : ''}
+            <tr class="total-row">
+                <td><strong>Total impôts</strong></td>
+                <td class="text-right negative"><strong>-${this.formatCurrency(calc.totalImpots)}</strong></td>
+                <td></td>
+            </tr>
+        `;
+    }
+
+    /**
+     * Construit la section cash-flow
+     */
+    buildCashflowSection(calc, inputData) {
+        const mensualiteAnnuelle = inputData.monthlyPayment * 12;
+        
+        return `
+            <tr class="section-header">
+                <td colspan="3"><strong>💰 CASH-FLOW</strong></td>
+            </tr>
+            <tr>
+                <td>Revenus nets après impôts</td>
+                <td class="text-right positive">+${this.formatCurrency(calc.revenusNets - calc.totalImpots)}</td>
+                <td class="formula">= Revenus - impôts</td>
+            </tr>
+            <tr>
+                <td>Mensualité crédit (capital + intérêts)</td>
+                <td class="text-right negative">-${this.formatCurrency(mensualiteAnnuelle)}</td>
+                <td class="formula">= ${this.formatNumber(inputData.monthlyPayment)} × 12</td>
+            </tr>
+            <tr>
+                <td>Dont remboursement capital</td>
+                <td class="text-right">-${this.formatCurrency(calc.capitalAnnuel)}</td>
+                <td class="formula">Enrichissement</td>
+            </tr>
+            <tr class="total-row ${calc.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
+                <td><strong>Cash-flow net annuel</strong></td>
+                <td class="text-right"><strong>${this.formatCurrency(calc.cashflowNetAnnuel)}</strong></td>
+                <td><strong>${calc.cashflowNetAnnuel >= 0 ? 'Bénéfice' : 'Déficit'}</strong></td>
+            </tr>
+            <tr>
+                <td>Cash-flow mensuel moyen</td>
+                <td class="text-right ${calc.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
+                    ${this.formatCurrency(calc.cashflowNetAnnuel / 12)}
+                </td>
+                <td class="formula">= Annuel ÷ 12</td>
+            </tr>
+        `;
+    }
+
+    /**
+     * Construit la section indicateurs
+     */
+    buildIndicateursSection(calc, inputData) {
+        const rendementBrut = (calc.loyerAnnuelBrut / inputData.price) * 100;
+        const rendementNet = (calc.cashflowNetAnnuel / inputData.price) * 100;
+        const tauxEndettement = inputData.monthlyPayment / (calc.loyerHC * (1 - calc.vacanceLocative/100)) * 100;
+        
+        return `
+            <tr class="section-header">
+                <td colspan="3"><strong>📈 INDICATEURS DE PERFORMANCE</strong></td>
+            </tr>
+            <tr>
+                <td>Rendement brut</td>
+                <td class="text-right">${rendementBrut.toFixed(2)}%</td>
+                <td class="formula">= Loyer brut / Prix</td>
+            </tr>
+            <tr>
+                <td>Rendement net après impôts</td>
+                <td class="text-right ${rendementNet >= 0 ? 'positive' : 'negative'}">${rendementNet.toFixed(2)}%</td>
+                <td class="formula">= Cash-flow / Prix</td>
+            </tr>
+            <tr>
+                <td>Taux d'endettement</td>
+                <td class="text-right">${tauxEndettement.toFixed(0)}%</td>
+                <td class="formula">= Mensualité / Loyer net</td>
+            </tr>
+            <tr>
+                <td>Économie d'impôt annuelle</td>
+                <td class="text-right positive">+${this.formatCurrency(calc.baseImposable * inputData.tmi / 100 - calc.totalImpots)}</td>
+                <td class="formula">Grâce au régime ${calc.regime}</td>
+            </tr>
+        `;
+    }
+
 /**
  * Prépare les données pour la comparaison fiscale - VERSION CORRIGÉE HC/CC
  */
@@ -404,7 +729,24 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
                         </td>
                     </tr>
                 </table>
+                
+                <!-- NOUVEAU : Bouton pour afficher le détail -->
+                <button class="btn-expand-table" 
+                        id="btn-fiscal-detail"
+                        type="button"
+                        role="button"
+                        aria-expanded="false"
+                        aria-controls="detailed-fiscal-table"
+                        style="margin: 20px auto; background: rgba(0, 191, 255, 0.1); border: 1px solid rgba(0, 191, 255, 0.3); color: #00bfff; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-chevron-down" aria-hidden="true"></i> 
+                    <span>Voir le détail complet</span>
+                </button>
             </div>
+        </div>
+        
+        <!-- NOUVEAU : Tableau détaillé (caché par défaut) -->
+        <div id="detailed-fiscal-table" class="detailed-table-container" style="display: none; margin-top: 20px; animation: slideDown 0.3s ease;">
+            ${this.buildDetailedTable(bestRegime, inputData)}
         </div>
 
         <!-- Tableau comparatif -->
@@ -457,8 +799,35 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
             </div>
         </div>
 
-        <!-- Debug pour vérification -->
+        <!-- Script pour le toggle -->
         <script>
+            // Auto-init après rendu
+            setTimeout(() => {
+                const btn = document.getElementById('btn-fiscal-detail');
+                const table = document.getElementById('detailed-fiscal-table');
+                
+                if (btn && table) {
+                    btn.addEventListener('click', () => {
+                        const isOpen = table.style.display !== 'none';
+                        
+                        if (!isOpen) {
+                            table.style.display = 'block';
+                            btn.setAttribute('aria-expanded', 'true');
+                            btn.innerHTML = '<i class="fas fa-chevron-up"></i> <span>Masquer le détail</span>';
+                            // Petit effet de scroll pour montrer le tableau
+                            setTimeout(() => {
+                                table.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            }, 100);
+                        } else {
+                            table.style.display = 'none';
+                            btn.setAttribute('aria-expanded', 'false');
+                            btn.innerHTML = '<i class="fas fa-chevron-down"></i> <span>Voir le détail complet</span>';
+                        }
+                    });
+                }
+            }, 100);
+            
+            // Debug data
             window.lastAnalysisData = {
                 input: ${JSON.stringify(inputData)},
                 results: ${JSON.stringify(fiscalResults)},
