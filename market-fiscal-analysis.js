@@ -105,36 +105,18 @@ class MarketFiscalAnalyzer {
      */
     prepareFiscalData() {
         // Récupérer les données de ville sélectionnée
-        const villeData = window.villeSearchManager?.getSelectedVilleData();
-        
-        // Récupérer le type de loyer (HC ou CC)
-        const loyerType = document.querySelector('input[name="loyer-type"]:checked')?.value || 'hc';
-        const loyerSaisi = parseFloat(document.getElementById('monthlyRent')?.value) || 0;
-        const chargesSaisies = parseFloat(document.getElementById('monthlyCharges')?.value) || 50;
-        
-        // Calculer loyerHC et charges selon le type
-        let loyerHC, charges, loyerCC;
-        
-        if (loyerType === 'cc') {
-            // Loyer charges comprises : estimer les charges à 12% du loyer
-            charges = loyerSaisi * 0.12;
-            loyerHC = loyerSaisi - charges;
-            loyerCC = loyerSaisi;
-        } else {
-            // Loyer hors charges
-            loyerHC = loyerSaisi;
-            charges = chargesSaisies;
-            loyerCC = loyerHC + charges;
-        }
-        
-        console.log('💰 Calcul des loyers:', {
-            type: loyerType,
-            loyerSaisi,
-            loyerHC,
-            charges,
-            loyerCC
-        });
-        
+    const villeData = window.villeSearchManager?.getSelectedVilleData();
+    
+    // SIMPLIFICATION : Toujours HC + charges
+    const loyerHC = parseFloat(document.getElementById('monthlyRent')?.value) || 0;
+    const charges = parseFloat(document.getElementById('monthlyCharges')?.value) || 50;
+    const loyerCC = loyerHC + charges;
+    
+    console.log('💰 Calcul des loyers:', {
+        loyerHC,
+        charges,
+        loyerCC
+    });
         // Récupérer TOUS les paramètres du formulaire
         const formData = {
             // Localisation
