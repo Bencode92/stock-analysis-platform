@@ -154,7 +154,7 @@ class MarketFiscalAnalyzer {
         const loyerAnnuelBrut = loyerHC * 12;
         const vacanceAmount = loyerAnnuelBrut * (inputData.vacanceLocative / 100);
         const loyerNetVacance = loyerAnnuelBrut - vacanceAmount;
-        const fraisGestion = params.gestionLocative ? loyerNetVacance * 0.08 : 0;
+        const fraisGestion = params.gestionLocativeTaux > 0 ? loyerNetVacance * (params.gestionLocativeTaux / 100) : 0;
         const revenusNets = loyerNetVacance - fraisGestion;
         
         // Calcul des intérêts annuels (approximation)
@@ -247,7 +247,7 @@ class MarketFiscalAnalyzer {
                     </tr>
                 </thead>
                 <tbody>
-                    ${this.buildRevenusSection(calc)}
+                   ${this.buildRevenusSection(calc, params)}
                     ${this.buildChargesSection(calc, params)}
                     ${this.buildFiscaliteSection(calc, inputData)}
                     ${this.buildCashflowSection(calc, inputData)}
@@ -260,7 +260,7 @@ class MarketFiscalAnalyzer {
     /**
      * Construit la section revenus
      */
-    buildRevenusSection(calc) {
+    buildRevenusSection(calc, params) {
         return `
             <tr class="section-header">
                 <td colspan="3"><strong>💰 REVENUS LOCATIFS</strong></td>
@@ -280,13 +280,13 @@ class MarketFiscalAnalyzer {
                 <td class="text-right negative">-${this.formatCurrency(calc.vacanceAmount)}</td>
                 <td class="formula">= ${this.formatNumber(calc.loyerAnnuelBrut)} × ${calc.vacanceLocative}%</td>
             </tr>
-            ${calc.gestionLocative ? `
-            <tr>
-                <td>Frais de gestion (8%)</td>
-                <td class="text-right negative">-${this.formatCurrency(calc.fraisGestion)}</td>
-                <td class="formula">= Loyer net × 8%</td>
-            </tr>
-            ` : ''}
+${calc.fraisGestion > 0 ? `
+<tr>
+    <td>Frais de gestion (${params.gestionLocativeTaux}%)</td>
+    <td class="text-right negative">-${this.formatCurrency(calc.fraisGestion)}</td>
+    <td class="formula">= Loyer net × ${params.gestionLocativeTaux}%</td>
+</tr>
+` : ''}
             <tr class="total-row">
                 <td><strong>Revenus locatifs nets</strong></td>
                 <td class="text-right"><strong>${this.formatCurrency(calc.revenusNets)}</strong></td>
@@ -501,7 +501,7 @@ prepareFiscalData() {
         chargesCoproNonRecup: allParams.chargesCoproNonRecup,
         
         // Paramètres avancés
-        gestionLocative: allParams.gestionLocative,
+       gestionLocativeTaux: allParams.gestionLocativeTaux,
       vacanceLocative: parseFloat(document.getElementById('vacanceLocative')?.value ?? 0),
         
         // Mode d'achat
