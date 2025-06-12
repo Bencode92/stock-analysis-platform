@@ -566,3 +566,69 @@ canvas {
     background: rgba(34, 197, 94, 0.05);
     border-color: rgba(34, 197, 94, 0.2);
 }
+
+/* ========================================
+   CUSTOMISATIONS POUR MASQUER LES GRAPHIQUES
+   ======================================== */
+
+/* Masquer complètement la section des graphiques */
+.charts-container {
+    display: none !important;
+}
+
+/* ========================================
+   STYLE AMÉLIORÉ POUR LE MEILLEUR RÉGIME
+   ======================================== */
+
+/* Supprimer l'icône trophée */
+.comparison-table tr.best-regime::before {
+    display: none !important;
+}
+
+/* Nouveau style pour la ligne du meilleur régime - Bleu vif */
+.comparison-table tr.best-regime {
+    background: linear-gradient(90deg, rgba(0, 191, 255, 0.2) 0%, rgba(0, 191, 255, 0.1) 100%) !important;
+    border-left: 4px solid #00bfff;
+    position: relative;
+    box-shadow: inset 0 0 20px rgba(0, 191, 255, 0.15);
+    transition: all 0.3s ease;
+}
+
+.comparison-table tr.best-regime:hover {
+    background: linear-gradient(90deg, rgba(0, 191, 255, 0.25) 0%, rgba(0, 191, 255, 0.15) 100%) !important;
+    box-shadow: inset 0 0 30px rgba(0, 191, 255, 0.2);
+}
+
+/* Texte en blanc/bleu clair pour meilleure lisibilité */
+.comparison-table tr.best-regime td {
+    color: #fff !important;
+    font-weight: 600;
+}
+
+.comparison-table tr.best-regime td:first-child {
+    color: #00bfff !important;
+    font-weight: 700;
+}
+
+/* Animation subtile de pulsation */
+.comparison-table tr.best-regime {
+    animation: pulse-blue 3s ease-in-out infinite;
+}
+
+@keyframes pulse-blue {
+    0%, 100% {
+        box-shadow: inset 0 0 20px rgba(0, 191, 255, 0.15),
+                    0 0 10px rgba(0, 191, 255, 0.3);
+    }
+    50% {
+        box-shadow: inset 0 0 30px rgba(0, 191, 255, 0.2),
+                    0 0 20px rgba(0, 191, 255, 0.4);
+    }
+}
+
+/* Optionnel : Ajouter un indicateur "Recommandé" */
+.comparison-table tr.best-regime td:first-child::after {
+    content: " ⭐";
+    margin-left: 8px;
+    font-size: 1.1em;
+}
