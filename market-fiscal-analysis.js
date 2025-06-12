@@ -111,7 +111,7 @@ class MarketFiscalAnalyzer {
             fraisGarantie: parseFloat(document.getElementById('frais-garantie')?.value) || 1.3709,
             taxeFonciere: parseFloat(document.getElementById('taxeFonciere')?.value) || 800,
             vacanceLocative: parseFloat(document.getElementById('vacanceLocative')?.value) || 5,
-            gestionLocative: document.getElementById('gestionLocative')?.checked || false,
+            gestionLocativeTaux: parseFloat(document.getElementById('gestionLocative')?.value) || 0,
             // NOUVEAU : Séparer travaux et entretien
             travauxRenovation: parseFloat(document.getElementById('travaux-renovation')?.value) || 0,
             entretienAnnuel: parseFloat(document.getElementById('entretien-annuel')?.value) || 500,
@@ -518,7 +518,8 @@ prepareFiscalData() {
     const yearlyCharges = charges * 12;
     
     // Ajouter les frais de gestion si applicable
-    const gestionFees = formData.gestionLocative ? yearlyRent * 0.08 : 0;
+    const gestionFees = formData.gestionLocativeTaux > 0 ? 
+    yearlyRent * (formData.gestionLocativeTaux / 100) : 0;
     
     // NOUVEAU : Calculer le coût total d'acquisition
     const coutTotalAcquisition = formData.price + formData.travauxRenovation;
