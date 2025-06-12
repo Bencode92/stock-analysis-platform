@@ -57,14 +57,16 @@ class MarketFiscalAnalyzer {
                 savings: (marketPriceM2 - data.prixM2Paye) * data.surface
             };
             
-            // Analyse du loyer
-            const rentDiff = ((data.loyerM2Actuel - marketRentM2) / marketRentM2) * 100;
+            // Analyse du loyer - Comparer en CC
+            const loyerCCM2 = (data.loyerActuel + data.charges) / data.surface;
+            const rentDiff = ((loyerCCM2 - marketRentM2) / marketRentM2) * 100;
             result.rentAnalysis = {
                 userRent: data.loyerM2Actuel,
+                userRentCC: loyerCCM2,
                 marketRent: marketRentM2,
                 difference: rentDiff,
                 position: this.getRentPosition(rentDiff),
-                potential: (marketRentM2 - data.loyerM2Actuel) * data.surface
+                potential: (marketRentM2 - loyerCCM2) * data.surface
             };
             
             // Score global (0-100)
@@ -99,11 +101,39 @@ class MarketFiscalAnalyzer {
     }
 
     /**
-     * Prépare les données pour la comparaison fiscale - VERSION AMÉLIORÉE
+     * Prépare les données pour la comparaison fiscale - VERSION CORRIGÉE HC/CC
      */
     prepareFiscalData() {
         // Récupérer les données de ville sélectionnée
         const villeData = window.villeSearchManager?.getSelectedVilleData();
+        
+        // Récupérer le type de loyer (HC ou CC)
+        const loyerType = document.querySelector('input[name="loyer-type"]:checked')?.value || 'hc';
+        const loyerSaisi = parseFloat(document.getElementById('monthlyRent')?.value) || 0;
+        const chargesSaisies = parseFloat(document.getElementById('monthlyCharges')?.value) || 50;
+        
+        // Calculer loyerHC et charges selon le type
+        let loyerHC, charges, loyerCC;
+        
+        if (loyerType === 'cc') {
+            // Loyer charges comprises : estimer les charges à 12% du loyer
+            charges = loyerSaisi * 0.12;
+            loyerHC = loyerSaisi - charges;
+            loyerCC = loyerSaisi;
+        } else {
+            // Loyer hors charges
+            loyerHC = loyerSaisi;
+            charges = chargesSaisies;
+            loyerCC = loyerHC + charges;
+        }
+        
+        console.log('💰 Calcul des loyers:', {
+            type: loyerType,
+            loyerSaisi,
+            loyerHC,
+            charges,
+            loyerCC
+        });
         
         // Récupérer TOUS les paramètres du formulaire
         const formData = {
@@ -115,7 +145,7 @@ class MarketFiscalAnalyzer {
             propertyType: document.getElementById('propertyType')?.value || 'appartement',
             surface: parseFloat(document.getElementById('propertySurface')?.value) || 0,
             price: parseFloat(document.getElementById('propertyPrice')?.value) || 0,
-            monthlyRent: parseFloat(document.getElementById('monthlyRent')?.value) || 0,
+            monthlyRent: loyerHC, // Toujours HC pour les calculs fiscaux
             
             // Financement
             apport: parseFloat(document.getElementById('apport')?.value) || 0,
@@ -126,22 +156,22 @@ class MarketFiscalAnalyzer {
             tmi: parseFloat(document.getElementById('tmi')?.value) || 30,
             
             // Charges
-            monthlyCharges: parseFloat(document.getElementById('monthlyCharges')?.value) || 50,
+            monthlyCharges: charges,
             taxeFonciere: parseFloat(document.getElementById('taxeFonciere')?.value) || 800,
             
             // Paramètres avancés
             gestionLocative: document.getElementById('gestionLocative')?.checked || false,
             vacanceLocative: parseFloat(document.getElementById('vacanceLocative')?.value) || 5,
             
-            // Mode d'achat - CORRECTION : récupérer la bonne valeur
+            // Mode d'achat
             typeAchat: document.querySelector('input[name="type-achat"]:checked')?.value || 'classique'
         };
         
         // Calculer les données dérivées
         const loanAmount = formData.price - formData.apport;
         const monthlyPayment = this.calculateMonthlyPayment(loanAmount, formData.loanRate, formData.loanDuration);
-        const yearlyRent = formData.monthlyRent * 12 * (1 - formData.vacanceLocative / 100);
-        const yearlyCharges = formData.monthlyCharges * 12;
+        const yearlyRent = loyerHC * 12 * (1 - formData.vacanceLocative / 100);
+        const yearlyCharges = charges * 12;
         
         // Ajouter les frais de gestion si applicable
         const gestionFees = formData.gestionLocative ? yearlyRent * 0.08 : 0;
@@ -158,12 +188,17 @@ class MarketFiscalAnalyzer {
             apport: formData.apport,
             duree: formData.loanDuration,
             taux: formData.loanRate,
-            loyerMensuel: formData.monthlyRent,
+            loyerMensuel: loyerHC,
             tmi: formData.tmi,
-            chargesCopro: formData.monthlyCharges,
+            chargesCopro: charges,
             
             // Données étendues pour l'affichage
             ...formData,
+            loyerType: loyerType,
+            loyerSaisi: loyerSaisi,
+            loyerHC: loyerHC,
+            loyerCC: loyerCC,
+            chargesRecuperables: charges,
             loanAmount,
             monthlyPayment,
             yearlyRent,
@@ -284,7 +319,7 @@ class MarketFiscalAnalyzer {
     }
 
     /**
-     * Génère le HTML pour afficher les résultats fiscaux améliorés - VERSION COMPLÈTE
+     * Génère le HTML pour afficher les résultats fiscaux améliorés - VERSION CORRIGÉE HC/CC
      */
     generateFiscalResultsHTML(fiscalResults, inputData) {
         const bestRegime = fiscalResults.reduce((a, b) => 
@@ -325,8 +360,30 @@ class MarketFiscalAnalyzer {
                     </div>
                     <div class="summary-item">
                         <span class="label">💵 Loyer mensuel:</span>
-                        <span class="value">${this.formatCurrency(inputData.monthlyRent)}</span>
+                        <span class="value">
+                            ${this.formatCurrency(inputData.loyerSaisi)} 
+                            <span class="loyer-type-badge">${inputData.loyerType === 'cc' ? 'CC' : 'HC'}</span>
+                        </span>
                     </div>
+                    ${inputData.loyerType === 'hc' ? `
+                    <div class="summary-item">
+                        <span class="label">📋 Charges récupérables:</span>
+                        <span class="value">${this.formatCurrency(inputData.chargesRecuperables)}</span>
+                    </div>
+                    <div class="summary-item highlight">
+                        <span class="label">💰 Total mensuel (CC):</span>
+                        <span class="value">${this.formatCurrency(inputData.loyerCC)}</span>
+                    </div>
+                    ` : `
+                    <div class="summary-item info">
+                        <span class="label">ℹ️ Dont charges estimées:</span>
+                        <span class="value">~${this.formatCurrency(inputData.chargesRecuperables)}</span>
+                    </div>
+                    <div class="summary-item info">
+                        <span class="label">💵 Loyer HC estimé:</span>
+                        <span class="value">~${this.formatCurrency(inputData.loyerHC)}</span>
+                    </div>
+                    `}
                     <div class="summary-item">
                         <span class="label">📊 Votre TMI:</span>
                         <span class="value">${inputData.tmi}%</span>
@@ -340,6 +397,25 @@ class MarketFiscalAnalyzer {
                         ${inputData.vacanceLocative > 5 ? ` Vacance locative (${inputData.vacanceLocative}%)` : ''}
                     </div>
                 ` : ''}
+            </div>
+
+            <!-- Détail des loyers -->
+            <div class="loyer-detail-box" style="margin: 20px 0;">
+                <h4>📊 Détail de votre loyer mensuel</h4>
+                <table class="loyer-detail-table">
+                    <tr>
+                        <td>Loyer hors charges:</td>
+                        <td>${this.formatCurrency(inputData.loyerHC)}</td>
+                    </tr>
+                    <tr>
+                        <td>Charges récupérables:</td>
+                        <td>+${this.formatCurrency(inputData.chargesRecuperables)}</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td><strong>Total charges comprises:</strong></td>
+                        <td><strong>${this.formatCurrency(inputData.loyerCC)}</strong></td>
+                    </tr>
+                </table>
             </div>
 
             <!-- Meilleur régime -->
@@ -361,7 +437,7 @@ class MarketFiscalAnalyzer {
                     <h4>📋 Détail du calcul avec vos données</h4>
                     <table class="calculation-table">
                         <tr>
-                            <td>Revenus locatifs annuels:</td>
+                            <td>Revenus locatifs annuels (HC):</td>
                             <td class="positive">+${this.formatCurrency(inputData.yearlyRent)}</td>
                         </tr>
                         <tr>
