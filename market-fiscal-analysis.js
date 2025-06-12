@@ -247,7 +247,8 @@ class MarketFiscalAnalyzer {
                     </tr>
                 </thead>
                 <tbody>
-                   ${this.buildRevenusSection(calc, params)}
+                    ${this.buildCoutInitialSection(inputData, params)}
+                    ${this.buildRevenusSection(calc, params)}
                     ${this.buildChargesSection(calc, params)}
                     ${this.buildFiscaliteSection(calc, inputData)}
                     ${this.buildCashflowSection(calc, inputData)}
@@ -255,6 +256,124 @@ class MarketFiscalAnalyzer {
                 </tbody>
             </table>
         `;
+    }
+
+    /**
+     * Construit la section coût initial de l'opération
+     */
+    buildCoutInitialSection(inputData, params) {
+        // Calcul des frais selon le type d'achat
+        let fraisAcquisition = 0;
+        let detailFrais = [];
+        
+        if (inputData.typeAchat === 'encheres') {
+            // Frais pour vente aux enchères
+            const droitsEnregistrement = inputData.price * (params.droitsEnregistrement / 100);
+            const emoluments = this.calculateEmoluments(inputData.price, params);
+            const honorairesAvocat = params.honorairesAvocat;
+            const fraisDivers = params.fraisFixes + params.avocatPorterEnchere + params.suiviDossier;
+            
+            fraisAcquisition = droitsEnregistrement + emoluments + honorairesAvocat + fraisDivers;
+            
+            detailFrais = [
+                { label: "Droits d'enregistrement", value: droitsEnregistrement, formula: `${params.droitsEnregistrement}% du prix` },
+                { label: "Émoluments du poursuivant", value: emoluments, formula: "Selon barème" },
+                { label: "Honoraires avocat", value: honorairesAvocat, formula: "Forfait" },
+                { label: "Frais divers (admin, suivi...)", value: fraisDivers, formula: "Frais fixes" }
+            ];
+        } else {
+            // Frais pour achat classique
+            const fraisNotaire = inputData.price * (params.fraisNotaireTaux / 100);
+            const commission = inputData.price * (params.commissionImmo / 100);
+            
+            fraisAcquisition = fraisNotaire + commission;
+            
+            detailFrais = [
+                { label: "Frais de notaire", value: fraisNotaire, formula: `${params.fraisNotaireTaux}% du prix` },
+                { label: "Commission immobilière", value: commission, formula: `${params.commissionImmo}% du prix` }
+            ];
+        }
+        
+        // Ajouter les frais bancaires
+        const fraisBancaires = params.fraisBancairesDossier + params.fraisBancairesCompte + 
+                              (inputData.loanAmount * params.fraisGarantie / 100);
+        
+        detailFrais.push({ 
+            label: "Frais bancaires totaux", 
+            value: fraisBancaires, 
+            formula: "Dossier + compte + garantie" 
+        });
+        
+        const coutTotalOperation = inputData.price + inputData.travauxRenovation + fraisAcquisition + fraisBancaires;
+        
+        return `
+            <tr class="section-header">
+                <td colspan="3"><strong>💰 COÛT INITIAL DE L'OPÉRATION</strong></td>
+            </tr>
+            <tr>
+                <td>Prix d'achat du bien</td>
+                <td class="text-right">${this.formatCurrency(inputData.price)}</td>
+                <td class="formula">Prix négocié</td>
+            </tr>
+            ${inputData.travauxRenovation > 0 ? `
+            <tr>
+                <td>Travaux de rénovation</td>
+                <td class="text-right">${this.formatCurrency(inputData.travauxRenovation)}</td>
+                <td class="formula">Travaux initiaux</td>
+            </tr>
+            ` : ''}
+            ${detailFrais.map(frais => `
+            <tr>
+                <td>${frais.label}</td>
+                <td class="text-right">${this.formatCurrency(frais.value)}</td>
+                <td class="formula">${frais.formula}</td>
+            </tr>
+            `).join('')}
+            <tr class="total-row">
+                <td><strong>Coût total de l'opération</strong></td>
+                <td class="text-right"><strong>${this.formatCurrency(coutTotalOperation)}</strong></td>
+                <td class="formula"><strong>Investissement total</strong></td>
+            </tr>
+            <tr>
+                <td>Apport personnel</td>
+                <td class="text-right">${this.formatCurrency(inputData.apport)}</td>
+                <td class="formula">${((inputData.apport / coutTotalOperation) * 100).toFixed(1)}% du total</td>
+            </tr>
+            <tr>
+                <td>Montant emprunté</td>
+                <td class="text-right">${this.formatCurrency(inputData.loanAmount)}</td>
+                <td class="formula">${((inputData.loanAmount / coutTotalOperation) * 100).toFixed(1)}% du total</td>
+            </tr>
+        `;
+    }
+
+    /**
+     * Calcule les émoluments pour les enchères
+     */
+    calculateEmoluments(price, params) {
+        let emoluments = 0;
+        
+        // Tranche 1 : 0 à 6 500 €
+        if (price > 0) {
+            emoluments += Math.min(price, 6500) * (params.emolumentsTranche1 / 100);
+        }
+        
+        // Tranche 2 : 6 500 à 23 500 €
+        if (price > 6500) {
+            emoluments += Math.min(price - 6500, 17000) * (params.emolumentsTranche2 / 100);
+        }
+        
+        // Tranche 3 : 23 500 à 83 500 €
+        if (price > 23500) {
+            emoluments += Math.min(price - 23500, 60000) * (params.emolumentsTranche3 / 100);
+        }
+        
+        // Tranche 4 : Au-delà de 83 500 €
+        if (price > 83500) {
+            emoluments += (price - 83500) * (params.emolumentsTranche4 / 100);
+        }
+        
+        return emoluments;
     }
 
     /**
