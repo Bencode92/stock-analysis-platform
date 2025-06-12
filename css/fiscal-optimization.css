@@ -29,7 +29,7 @@
 
 .summary-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 15px;
     margin-top: 15px;
 }
@@ -37,28 +37,35 @@
 .summary-item {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     padding: 12px 15px;
     background: rgba(255, 255, 255, 0.15);
     border-radius: 8px;
     backdrop-filter: blur(10px);
+    min-height: 50px;
 }
 
 .summary-item .label {
     font-weight: 500;
     opacity: 0.9;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .summary-item .value {
     font-weight: 700;
     text-align: right;
+    word-break: break-word;
+    max-width: 60%;
 }
 
 /* ========================================
-   CARTE DU MEILLEUR RÉGIME
+   CARTE DU MEILLEUR RÉGIME - GRIS ARGENTÉ
    ======================================== */
 
 .best-regime-card {
-    background: #f8f9fa;
+    background: linear-gradient(135deg, #e8e8e8 0%, #d3d3d3 100%);
     border: 2px solid #28a745;
     border-radius: 12px;
     padding: 25px;
@@ -74,7 +81,7 @@
     right: -50%;
     width: 200%;
     height: 200%;
-    background: radial-gradient(circle, rgba(40, 167, 69, 0.05) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(40, 167, 69, 0.08) 0%, transparent 70%);
     animation: pulse 4s ease-in-out infinite;
 }
 
@@ -84,7 +91,7 @@
 }
 
 .best-regime-card h3 {
-    color: #1a1a1a;
+    color: #2d2d2d;
     margin: 0 0 20px 0;
     font-size: 1.5em;
     position: relative;
@@ -103,15 +110,15 @@
 .benefit-item {
     text-align: center;
     padding: 20px;
-    background: white;
+    background: rgba(255, 255, 255, 0.9);
     border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .benefit-item:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .benefit-item h4 {
@@ -133,7 +140,7 @@
    ======================================== */
 
 .fiscal-calculation-details {
-    background: white;
+    background: rgba(255, 255, 255, 0.95);
     padding: 20px;
     border-radius: 10px;
     margin-top: 25px;
@@ -264,7 +271,7 @@
 
 .comparison-table th,
 .comparison-table td {
-    padding: 12px 15px;
+    padding: 14px 16px;
     text-align: left;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -278,6 +285,11 @@
     letter-spacing: 0.5px;
 }
 
+.comparison-table th:not(:first-child),
+.comparison-table td:not(:first-child) {
+    text-align: right;
+}
+
 .comparison-table td {
     color: #e2e8f0;
 }
@@ -285,6 +297,9 @@
 .comparison-table td:first-child {
     font-weight: 500;
     color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .comparison-table tr:hover {
