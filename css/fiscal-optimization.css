@@ -805,3 +805,78 @@ canvas {
     .positive { color: green !important; }
     .negative { color: red !important; }
 }
+
+/* ========================================
+   NOUVEAUX STYLES POUR INDICATEURS OPTIMISÉS
+   ======================================== */
+
+/* Mise en valeur des indicateurs clés dans le tableau détaillé */
+.detailed-comparison-table tr:has(td:contains('Rendement')) td:nth-child(2) {
+    padding: 16px 20px;
+    font-size: 1.1em;
+}
+
+/* Couleur spéciale pour l'autofinancement */
+.detailed-comparison-table tr:has(td:contains('autofinancement')) {
+    background: rgba(0, 191, 255, 0.03);
+    border-left: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.detailed-comparison-table tr:has(td:contains('autofinancement')):hover {
+    background: rgba(0, 191, 255, 0.08);
+    border-left-color: #00bfff;
+}
+
+/* Style amélioré pour les valeurs neutres */
+.detailed-comparison-table .neutral {
+    color: #f59e0b !important;
+}
+
+/* Hover effect amélioré sur les indicateurs */
+.detailed-comparison-table tr:not(.section-header):hover td:nth-child(2) {
+    transform: scale(1.05);
+    transition: transform 0.2s ease;
+}
+
+/* Badge autofinancement avec check */
+.detailed-comparison-table td:contains('✅') {
+    position: relative;
+}
+
+/* Amélioration visuelle de la section indicateurs */
+.detailed-comparison-table tr.section-header:has(td:contains('INDICATEURS')) td {
+    background: linear-gradient(135deg, rgba(0, 191, 255, 0.1), transparent);
+    font-size: 1.15em;
+    padding: 24px 20px;
+}
+
+/* Style pour les pourcentages importants */
+.detailed-comparison-table td span[style*="font-size: 1.2em"] {
+    display: inline-block;
+    min-width: 80px;
+    text-align: center;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Icônes dans la première colonne */
+.detailed-comparison-table td i.fas {
+    margin-right: 8px;
+    opacity: 0.8;
+}
+
+/* Message de synthèse en bas de la section indicateurs */
+.detailed-comparison-table tr:has(td[style*="text-align: center"]) td {
+    padding: 24px !important;
+    background: rgba(0, 191, 255, 0.02);
+}
+
+/* Styles pour les badges de performance */
+.detailed-comparison-table div[style*="border-radius: 8px"] {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
