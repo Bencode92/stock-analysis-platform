@@ -112,7 +112,9 @@ class MarketFiscalAnalyzer {
             taxeFonciere: parseFloat(document.getElementById('taxeFonciere')?.value) || 800,
             vacanceLocative: parseFloat(document.getElementById('vacanceLocative')?.value) || 5,
             gestionLocative: document.getElementById('gestionLocative')?.checked || false,
-            travaux: parseFloat(document.getElementById('travaux')?.value) || 0,
+            // NOUVEAU : Séparer travaux et entretien
+            travauxRenovation: parseFloat(document.getElementById('travaux-renovation')?.value) || 0,
+            entretienAnnuel: parseFloat(document.getElementById('entretien-annuel')?.value) || 500,
             assurancePNO: parseFloat(document.getElementById('assurance-pno')?.value) || 15,
             
             // Spécifiques classique
@@ -150,8 +152,8 @@ class MarketFiscalAnalyzer {
         const amortissementMobilier = regime.nom.includes('LMNP') && regime.nom.includes('meublé') ? 
             inputData.price * 0.1 * 0.1 : 0; // 10% du prix en mobilier, amorti à 10%
         
-        // Travaux
-        const travauxAnnuels = params.travaux || (inputData.price * 0.005);
+        // NOUVEAU : Utiliser entretienAnnuel au lieu de travaux
+        const entretienAnnuel = params.entretienAnnuel || 500;
         
         // Charges de copropriété
         const chargesCopro = inputData.chargesRecuperables * 12;
@@ -159,7 +161,7 @@ class MarketFiscalAnalyzer {
         // Total charges déductibles
         const totalCharges = interetsAnnuels + amortissementBien + amortissementMobilier + 
             params.taxeFonciere + chargesCopro + (params.assurancePNO * 12) + 
-            travauxAnnuels + fraisGestion;
+            entretienAnnuel + fraisGestion;
         
         // Base imposable et impôts
         const baseImposable = Math.max(0, revenusNets - totalCharges);
@@ -188,7 +190,7 @@ class MarketFiscalAnalyzer {
             amortissementBien,
             amortissementMobilier,
             chargesCopro,
-            travaux: travauxAnnuels,
+            entretienAnnuel, // NOUVEAU : Utiliser le bon nom
             fraisDivers: 100, // Forfait
             totalCharges,
             
@@ -284,7 +286,7 @@ class MarketFiscalAnalyzer {
             { label: "Taxe foncière", value: params.taxeFonciere, formula: "Paramètre avancé" },
             { label: "Charges copropriété", value: calc.chargesCopro, formula: "12 × charges mensuelles" },
             { label: "Assurance PNO", value: params.assurancePNO * 12, formula: `${params.assurancePNO} × 12` },
-            { label: "Travaux et entretien", value: calc.travaux, formula: params.travaux || "0.5% du prix" },
+            { label: "Entretien annuel", value: calc.entretienAnnuel, formula: "Budget annuel" }, // NOUVEAU : Changé le label
             { label: "Frais divers", value: calc.fraisDivers, formula: "Comptable, etc." }
         ].filter(Boolean).sort((a, b) => b.value - a.value);
         
@@ -467,6 +469,10 @@ prepareFiscalData() {
         monthlyCharges: charges,
         taxeFonciere: parseFloat(document.getElementById('taxeFonciere')?.value) || 800,
         
+        // NOUVEAU : Séparer travaux et entretien
+        travauxRenovation: parseFloat(document.getElementById('travaux-renovation')?.value) || 0,
+        entretienAnnuel: parseFloat(document.getElementById('entretien-annuel')?.value) || 500,
+        
         // Paramètres avancés
         gestionLocative: document.getElementById('gestionLocative')?.checked || false,
         vacanceLocative: parseFloat(document.getElementById('vacanceLocative')?.value) || 5,
@@ -484,9 +490,13 @@ prepareFiscalData() {
     // Ajouter les frais de gestion si applicable
     const gestionFees = formData.gestionLocative ? yearlyRent * 0.08 : 0;
     
+    // NOUVEAU : Calculer le coût total d'acquisition
+    const coutTotalAcquisition = formData.price + formData.travauxRenovation;
+    
     // Stocker dans la console pour debug
     console.log('📊 Données fiscales préparées:', formData);
     console.log('🏙️ Ville sélectionnée:', villeData);
+    console.log('💸 Coût total acquisition:', coutTotalAcquisition);
     
     // Format compatible avec le comparateur fiscal existant
     return {
@@ -510,6 +520,7 @@ prepareFiscalData() {
         yearlyRent,
         yearlyCharges,
         gestionFees,
+        coutTotalAcquisition, // NOUVEAU
         timestamp: new Date().toISOString()
     };
 }
@@ -635,7 +646,8 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
     
     // Calcul des charges déductibles approximatives
     const chargesDeductibles = inputData.yearlyCharges + inputData.taxeFonciere + 
-        (inputData.loanAmount * inputData.loanRate / 100) + inputData.gestionFees;
+        (inputData.loanAmount * inputData.loanRate / 100) + inputData.gestionFees + 
+        inputData.entretienAnnuel; // NOUVEAU : Ajouter l'entretien annuel
     
     const baseImposable = Math.max(0, inputData.yearlyRent - chargesDeductibles);
     const impotEstime = baseImposable * inputData.tmi / 100;
@@ -661,6 +673,18 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
                     <span class="label">💰 Prix d'achat:</span>
                     <span class="value">${this.formatCurrency(inputData.price)}</span>
                 </div>
+                ${inputData.travauxRenovation > 0 ? `
+                <div class="summary-item">
+                    <span class="label">🔨 Travaux de rénovation:</span>
+                    <span class="value">${this.formatCurrency(inputData.travauxRenovation)}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">💸 Coût total d'acquisition:</span>
+                    <span class="value" style="font-weight: bold; color: #00bfff;">
+                        ${this.formatCurrency(inputData.coutTotalAcquisition)}
+                    </span>
+                </div>
+                ` : ''}
                 <div class="summary-item">
                     <span class="label">🏦 Financement:</span>
                     <span class="value">${inputData.loanRate}% sur ${inputData.loanDuration} ans</span>
@@ -673,13 +697,18 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
                     <span class="label">📊 Votre TMI:</span>
                     <span class="value">${inputData.tmi}%</span>
                 </div>
+                <div class="summary-item">
+                    <span class="label">🔧 Entretien annuel:</span>
+                    <span class="value">${this.formatCurrency(inputData.entretienAnnuel)}/an</span>
+                </div>
             </div>
-            ${inputData.gestionLocative || inputData.vacanceLocative > 5 ? `
+            ${inputData.gestionLocative || inputData.vacanceLocative > 5 || inputData.travauxRenovation > 0 ? `
                 <div class="parameter-modified" style="margin-top: 10px; padding: 10px; background: rgba(255, 193, 7, 0.1); border-radius: 5px;">
                     <i class="fas fa-info-circle" style="color: #ffc107;"></i>
                     Paramètres avancés modifiés : 
                     ${inputData.gestionLocative ? 'Gestion locative (8%)' : ''}
                     ${inputData.vacanceLocative > 5 ? ` Vacance locative (${inputData.vacanceLocative}%)` : ''}
+                    ${inputData.travauxRenovation > 0 ? ` Travaux initiaux (${this.formatCurrency(inputData.travauxRenovation)})` : ''}
                 </div>
             ` : ''}
         </div>
