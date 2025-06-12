@@ -101,7 +101,7 @@ class MarketFiscalAnalyzer {
     }
 
     /**
-     * Récupère tous les paramètres avancés du formulaire
+     * Récupère tous les paramètres avancés du formulaire - VERSION COMPLÈTE
      */
     getAllAdvancedParams() {
         return {
@@ -116,16 +116,33 @@ class MarketFiscalAnalyzer {
             travauxRenovation: parseFloat(document.getElementById('travaux-renovation')?.value) || 0,
             entretienAnnuel: parseFloat(document.getElementById('entretien-annuel')?.value) || 500,
             assurancePNO: parseFloat(document.getElementById('assurance-pno')?.value) || 15,
+            // NOUVEAU : Charges de copropriété non récupérables
+            chargesCoproNonRecup: parseFloat(document.getElementById('charges-copro-non-recup')?.value) || 50,
             
             // Spécifiques classique
             fraisNotaireTaux: parseFloat(document.getElementById('frais-notaire-taux')?.value) || 8,
             commissionImmo: parseFloat(document.getElementById('commission-immo')?.value) || 4,
             
-            // Spécifiques enchères
+            // Spécifiques enchères - BASE
             droitsEnregistrement: parseFloat(document.getElementById('droits-enregistrement')?.value) || 5.70,
             coefMutation: parseFloat(document.getElementById('coef-mutation')?.value) || 2.37,
             honorairesAvocat: parseFloat(document.getElementById('honoraires-avocat')?.value) || 1500,
-            fraisFixes: parseFloat(document.getElementById('frais-fixes')?.value) || 50
+            fraisFixes: parseFloat(document.getElementById('frais-fixes')?.value) || 50,
+            
+            // NOUVEAU : Enchères - Émoluments par tranches
+            emolumentsTranche1: parseFloat(document.getElementById('emoluments-tranche1')?.value) || 7,
+            emolumentsTranche2: parseFloat(document.getElementById('emoluments-tranche2')?.value) || 3,
+            emolumentsTranche3: parseFloat(document.getElementById('emoluments-tranche3')?.value) || 2,
+            emolumentsTranche4: parseFloat(document.getElementById('emoluments-tranche4')?.value) || 1,
+            
+            // NOUVEAU : Enchères - Autres frais détaillés
+            honorairesAvocatCoef: parseFloat(document.getElementById('honoraires-avocat-coef')?.value) || 0.25,
+            tvaHonoraires: parseFloat(document.getElementById('tva-honoraires')?.value) || 20,
+            publiciteFonciere: parseFloat(document.getElementById('publicite-fonciere')?.value) || 0.10,
+            avocatPorterEnchere: parseFloat(document.getElementById('avocat-porter-enchere')?.value) || 300,
+            suiviDossier: parseFloat(document.getElementById('suivi-dossier')?.value) || 1200,
+            cautionMisePrix: parseFloat(document.getElementById('caution-mise-prix')?.value) || 5,
+            cautionRestituee: document.getElementById('caution-restituee')?.checked ?? true
         };
     }
 
@@ -157,10 +174,12 @@ class MarketFiscalAnalyzer {
         
         // Charges de copropriété
         const chargesCopro = inputData.chargesRecuperables * 12;
+        // NOUVEAU : Ajouter les charges non récupérables
+        const chargesCoproNonRecup = params.chargesCoproNonRecup * 12;
         
         // Total charges déductibles
         const totalCharges = interetsAnnuels + amortissementBien + amortissementMobilier + 
-            params.taxeFonciere + chargesCopro + (params.assurancePNO * 12) + 
+            params.taxeFonciere + chargesCopro + chargesCoproNonRecup + (params.assurancePNO * 12) + 
             entretienAnnuel + fraisGestion;
         
         // Base imposable et impôts
@@ -190,7 +209,8 @@ class MarketFiscalAnalyzer {
             amortissementBien,
             amortissementMobilier,
             chargesCopro,
-            entretienAnnuel, // NOUVEAU : Utiliser le bon nom
+            chargesCoproNonRecup, // NOUVEAU
+            entretienAnnuel,
             fraisDivers: 100, // Forfait
             totalCharges,
             
@@ -284,9 +304,10 @@ class MarketFiscalAnalyzer {
             calc.amortissementBien > 0 ? { label: "Amortissement bien", value: calc.amortissementBien, formula: `${calc.tauxAmortissement}% × valeur` } : null,
             calc.amortissementMobilier > 0 ? { label: "Amortissement mobilier", value: calc.amortissementMobilier, formula: "10% × 10% du prix" } : null,
             { label: "Taxe foncière", value: params.taxeFonciere, formula: "Paramètre avancé" },
-            { label: "Charges copropriété", value: calc.chargesCopro, formula: "12 × charges mensuelles" },
+            { label: "Charges copro récupérables", value: calc.chargesCopro, formula: "12 × charges mensuelles" },
+            calc.chargesCoproNonRecup > 0 ? { label: "Charges copro non récupérables", value: calc.chargesCoproNonRecup, formula: `${params.chargesCoproNonRecup} × 12` } : null,
             { label: "Assurance PNO", value: params.assurancePNO * 12, formula: `${params.assurancePNO} × 12` },
-            { label: "Entretien annuel", value: calc.entretienAnnuel, formula: "Budget annuel" }, // NOUVEAU : Changé le label
+            { label: "Entretien annuel", value: calc.entretienAnnuel, formula: "Budget annuel" },
             { label: "Frais divers", value: calc.fraisDivers, formula: "Comptable, etc." }
         ].filter(Boolean).sort((a, b) => b.value - a.value);
         
@@ -428,7 +449,7 @@ class MarketFiscalAnalyzer {
     }
 
 /**
- * Prépare les données pour la comparaison fiscale - VERSION CORRIGÉE HC/CC
+ * Prépare les données pour la comparaison fiscale - VERSION COMPLÈTE
  */
 prepareFiscalData() {
     // Récupérer les données de ville sélectionnée
@@ -438,6 +459,9 @@ prepareFiscalData() {
     const loyerHC = parseFloat(document.getElementById('monthlyRent')?.value) || 0;
     const charges = parseFloat(document.getElementById('monthlyCharges')?.value) || 50;
     const loyerCC = loyerHC + charges;
+    
+    // Récupérer tous les paramètres avancés
+    const allParams = this.getAllAdvancedParams();
     
     console.log('💰 Calcul des loyers:', {
         loyerHC,
@@ -467,18 +491,24 @@ prepareFiscalData() {
         
         // Charges
         monthlyCharges: charges,
-        taxeFonciere: parseFloat(document.getElementById('taxeFonciere')?.value) || 800,
+        taxeFonciere: allParams.taxeFonciere,
         
         // NOUVEAU : Séparer travaux et entretien
-        travauxRenovation: parseFloat(document.getElementById('travaux-renovation')?.value) || 0,
-        entretienAnnuel: parseFloat(document.getElementById('entretien-annuel')?.value) || 500,
+        travauxRenovation: allParams.travauxRenovation,
+        entretienAnnuel: allParams.entretienAnnuel,
+        
+        // NOUVEAU : Charges de copropriété non récupérables
+        chargesCoproNonRecup: allParams.chargesCoproNonRecup,
         
         // Paramètres avancés
-        gestionLocative: document.getElementById('gestionLocative')?.checked || false,
-        vacanceLocative: parseFloat(document.getElementById('vacanceLocative')?.value) || 5,
+        gestionLocative: allParams.gestionLocative,
+        vacanceLocative: allParams.vacanceLocative,
         
         // Mode d'achat
-        typeAchat: document.querySelector('input[name="type-achat"]:checked')?.value || 'classique'
+        typeAchat: document.querySelector('input[name="type-achat"]:checked')?.value || 'classique',
+        
+        // NOUVEAU : Tous les paramètres avancés
+        ...allParams
     };
     
     // Calculer les données dérivées
@@ -497,6 +527,12 @@ prepareFiscalData() {
     console.log('📊 Données fiscales préparées:', formData);
     console.log('🏙️ Ville sélectionnée:', villeData);
     console.log('💸 Coût total acquisition:', coutTotalAcquisition);
+    console.log('🏛️ Paramètres enchères:', {
+        emoluments: [formData.emolumentsTranche1, formData.emolumentsTranche2, formData.emolumentsTranche3, formData.emolumentsTranche4],
+        honorairesCoef: formData.honorairesAvocatCoef,
+        tvaHonoraires: formData.tvaHonoraires,
+        cautionRestituee: formData.cautionRestituee
+    });
     
     // Format compatible avec le comparateur fiscal existant
     return {
@@ -637,7 +673,7 @@ prepareFiscalData() {
     }
 
 /**
- * Génère le HTML pour afficher les résultats fiscaux améliorés - VERSION CORRIGÉE HC/CC
+ * Génère le HTML pour afficher les résultats fiscaux améliorés - VERSION COMPLÈTE
  */
 generateFiscalResultsHTML(fiscalResults, inputData) {
     const bestRegime = fiscalResults.reduce((a, b) => 
@@ -647,7 +683,7 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
     // Calcul des charges déductibles approximatives
     const chargesDeductibles = inputData.yearlyCharges + inputData.taxeFonciere + 
         (inputData.loanAmount * inputData.loanRate / 100) + inputData.gestionFees + 
-        inputData.entretienAnnuel; // NOUVEAU : Ajouter l'entretien annuel
+        inputData.entretienAnnuel + (inputData.chargesCoproNonRecup * 12); // NOUVEAU : Ajouter charges non récup
     
     const baseImposable = Math.max(0, inputData.yearlyRent - chargesDeductibles);
     const impotEstime = baseImposable * inputData.tmi / 100;
@@ -701,14 +737,20 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
                     <span class="label">🔧 Entretien annuel:</span>
                     <span class="value">${this.formatCurrency(inputData.entretienAnnuel)}/an</span>
                 </div>
+                <div class="summary-item">
+                    <span class="label">🏢 Charges copro non récup.:</span>
+                    <span class="value">${this.formatCurrency(inputData.chargesCoproNonRecup)}/mois</span>
+                </div>
             </div>
-            ${inputData.gestionLocative || inputData.vacanceLocative > 5 || inputData.travauxRenovation > 0 ? `
+            ${inputData.gestionLocative || inputData.vacanceLocative > 5 || inputData.travauxRenovation > 0 || 
+              inputData.typeAchat === 'encheres' ? `
                 <div class="parameter-modified" style="margin-top: 10px; padding: 10px; background: rgba(255, 193, 7, 0.1); border-radius: 5px;">
                     <i class="fas fa-info-circle" style="color: #ffc107;"></i>
                     Paramètres avancés modifiés : 
                     ${inputData.gestionLocative ? 'Gestion locative (8%)' : ''}
                     ${inputData.vacanceLocative > 5 ? ` Vacance locative (${inputData.vacanceLocative}%)` : ''}
                     ${inputData.travauxRenovation > 0 ? ` Travaux initiaux (${this.formatCurrency(inputData.travauxRenovation)})` : ''}
+                    ${inputData.typeAchat === 'encheres' ? ' Frais enchères personnalisés' : ''}
                 </div>
             ` : ''}
         </div>
