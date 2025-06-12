@@ -100,11 +100,11 @@ class MarketFiscalAnalyzer {
         return 'underpriced';
     }
 
-    /**
-     * Prépare les données pour la comparaison fiscale - VERSION CORRIGÉE HC/CC
-     */
-    prepareFiscalData() {
-        // Récupérer les données de ville sélectionnée
+/**
+ * Prépare les données pour la comparaison fiscale - VERSION CORRIGÉE HC/CC
+ */
+prepareFiscalData() {
+    // Récupérer les données de ville sélectionnée
     const villeData = window.villeSearchManager?.getSelectedVilleData();
     
     // SIMPLIFICATION : Toujours HC + charges
@@ -117,78 +117,78 @@ class MarketFiscalAnalyzer {
         charges,
         loyerCC
     });
-        // Récupérer TOUS les paramètres du formulaire
-        const formData = {
-            // Localisation
-            city: villeData?.ville || document.getElementById('propertyCity')?.value || '',
-            department: villeData?.departement || document.getElementById('propertyDepartment')?.value || '',
-            
-            // Détails du bien
-            propertyType: document.getElementById('propertyType')?.value || 'appartement',
-            surface: parseFloat(document.getElementById('propertySurface')?.value) || 0,
-            price: parseFloat(document.getElementById('propertyPrice')?.value) || 0,
-            monthlyRent: loyerHC, // Toujours HC pour les calculs fiscaux
-            
-            // Financement
-            apport: parseFloat(document.getElementById('apport')?.value) || 0,
-            loanRate: parseFloat(document.getElementById('loanRate')?.value) || 2.5,
-            loanDuration: parseInt(document.getElementById('loanDuration')?.value) || 20,
-            
-            // Fiscal
-            tmi: parseFloat(document.getElementById('tmi')?.value) || 30,
-            
-            // Charges
-            monthlyCharges: charges,
-            taxeFonciere: parseFloat(document.getElementById('taxeFonciere')?.value) || 800,
-            
-            // Paramètres avancés
-            gestionLocative: document.getElementById('gestionLocative')?.checked || false,
-            vacanceLocative: parseFloat(document.getElementById('vacanceLocative')?.value) || 5,
-            
-            // Mode d'achat
-            typeAchat: document.querySelector('input[name="type-achat"]:checked')?.value || 'classique'
-        };
+    
+    // Récupérer TOUS les paramètres du formulaire
+    const formData = {
+        // Localisation
+        city: villeData?.ville || document.getElementById('propertyCity')?.value || '',
+        department: villeData?.departement || document.getElementById('propertyDepartment')?.value || '',
         
-        // Calculer les données dérivées
-        const loanAmount = formData.price - formData.apport;
-        const monthlyPayment = this.calculateMonthlyPayment(loanAmount, formData.loanRate, formData.loanDuration);
-        const yearlyRent = loyerHC * 12 * (1 - formData.vacanceLocative / 100);
-        const yearlyCharges = charges * 12;
+        // Détails du bien
+        propertyType: document.getElementById('propertyType')?.value || 'appartement',
+        surface: parseFloat(document.getElementById('propertySurface')?.value) || 0,
+        price: parseFloat(document.getElementById('propertyPrice')?.value) || 0,
+        monthlyRent: loyerHC, // Toujours HC pour les calculs fiscaux
         
-        // Ajouter les frais de gestion si applicable
-        const gestionFees = formData.gestionLocative ? yearlyRent * 0.08 : 0;
+        // Financement
+        apport: parseFloat(document.getElementById('apport')?.value) || 0,
+        loanRate: parseFloat(document.getElementById('loanRate')?.value) || 2.5,
+        loanDuration: parseInt(document.getElementById('loanDuration')?.value) || 20,
         
-        // Stocker dans la console pour debug
-        console.log('📊 Données fiscales préparées:', formData);
-        console.log('🏙️ Ville sélectionnée:', villeData);
+        // Fiscal
+        tmi: parseFloat(document.getElementById('tmi')?.value) || 30,
         
-        // Format compatible avec le comparateur fiscal existant
-        return {
-            typeAchat: formData.typeAchat,
-            prixBien: formData.price,
-            surface: formData.surface,
-            apport: formData.apport,
-            duree: formData.loanDuration,
-            taux: formData.loanRate,
-            loyerMensuel: loyerHC,
-            tmi: formData.tmi,
-            chargesCopro: charges,
-            
-            // Données étendues pour l'affichage
-            ...formData,
-            loyerType: loyerType,
-            loyerSaisi: loyerSaisi,
-            loyerHC: loyerHC,
-            loyerCC: loyerCC,
-            chargesRecuperables: charges,
-            loanAmount,
-            monthlyPayment,
-            yearlyRent,
-            yearlyCharges,
-            gestionFees,
-            timestamp: new Date().toISOString()
-        };
-    }
+        // Charges
+        monthlyCharges: charges,
+        taxeFonciere: parseFloat(document.getElementById('taxeFonciere')?.value) || 800,
+        
+        // Paramètres avancés
+        gestionLocative: document.getElementById('gestionLocative')?.checked || false,
+        vacanceLocative: parseFloat(document.getElementById('vacanceLocative')?.value) || 5,
+        
+        // Mode d'achat
+        typeAchat: document.querySelector('input[name="type-achat"]:checked')?.value || 'classique'
+    };
+    
+    // Calculer les données dérivées
+    const loanAmount = formData.price - formData.apport;
+    const monthlyPayment = this.calculateMonthlyPayment(loanAmount, formData.loanRate, formData.loanDuration);
+    const yearlyRent = loyerHC * 12 * (1 - formData.vacanceLocative / 100);
+    const yearlyCharges = charges * 12;
+    
+    // Ajouter les frais de gestion si applicable
+    const gestionFees = formData.gestionLocative ? yearlyRent * 0.08 : 0;
+    
+    // Stocker dans la console pour debug
+    console.log('📊 Données fiscales préparées:', formData);
+    console.log('🏙️ Ville sélectionnée:', villeData);
+    
+    // Format compatible avec le comparateur fiscal existant
+    return {
+        typeAchat: formData.typeAchat,
+        prixBien: formData.price,
+        surface: formData.surface,
+        apport: formData.apport,
+        duree: formData.loanDuration,
+        taux: formData.loanRate,
+        loyerMensuel: loyerHC,
+        tmi: formData.tmi,
+        chargesCopro: charges,
+        
+        // Données étendues pour l'affichage
+        ...formData,
+        loyerHC: loyerHC,
+        loyerCC: loyerCC,
+        chargesRecuperables: charges,
+        loanAmount,
+        monthlyPayment,
+        yearlyRent,
+        yearlyCharges,
+        gestionFees,
+        timestamp: new Date().toISOString()
+    };
+}
+
 
     /**
      * Génère des recommandations globales
