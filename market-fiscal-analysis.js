@@ -743,17 +743,16 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
                     <span class="value">${this.formatCurrency(inputData.chargesCoproNonRecup)}/mois</span>
                 </div>
             </div>
-            ${inputData.gestionLocative || inputData.vacanceLocative > 5 || inputData.travauxRenovation > 0 || 
-              inputData.typeAchat === 'encheres' ? `
-                <div class="parameter-modified" style="margin-top: 10px; padding: 10px; background: rgba(255, 193, 7, 0.1); border-radius: 5px;">
-                    <i class="fas fa-info-circle" style="color: #ffc107;"></i>
-                    Paramètres avancés modifiés : 
-                    ${inputData.gestionLocative ? 'Gestion locative (8%)' : ''}
-                    ${inputData.vacanceLocative > 5 ? ` Vacance locative (${inputData.vacanceLocative}%)` : ''}
-                    ${inputData.travauxRenovation > 0 ? ` Travaux initiaux (${this.formatCurrency(inputData.travauxRenovation)})` : ''}
-                    ${inputData.typeAchat === 'encheres' ? ' Frais enchères personnalisés' : ''}
-                </div>
-            ` : ''}
+${inputData.gestionLocative > 0 || inputData.vacanceLocative > 0 || inputData.travauxRenovation > 0 || inputData.typeAchat === 'encheres' ? `
+    <div class="parameter-modified" style="margin-top: 10px; padding: 10px; background: rgba(255, 193, 7, 0.1); border-radius: 5px;">
+        <i class="fas fa-info-circle" style="color: #ffc107;"></i>
+        Paramètres modifiés : 
+        ${inputData.gestionLocative > 0 ? `Gestion locative (${inputData.gestionLocative}%)` : ''}
+        ${inputData.vacanceLocative > 0 ? ` Vacance locative (${inputData.vacanceLocative}%)` : ''}
+        ${inputData.travauxRenovation > 0 ? ` Travaux initiaux (${this.formatCurrency(inputData.travauxRenovation)})` : ''}
+        ${inputData.typeAchat === 'encheres' ? ' Mode enchères' : ''}
+    </div>
+` : ''}`
         </div>
 
         <!-- Meilleur régime -->
