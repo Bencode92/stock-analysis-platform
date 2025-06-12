@@ -753,7 +753,6 @@ ${(inputData.gestionLocative > 0 || inputData.vacanceLocative > 0 || inputData.t
         ${inputData.typeAchat === 'encheres' ? ' Mode enchères' : ''}
     </div>
 ` : ''}`
-        </div>
 
         <!-- Meilleur régime -->
         <div class="best-regime-card">
