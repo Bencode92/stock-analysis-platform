@@ -775,70 +775,58 @@ ${calc.fraisGestion > 0 ? `
      * 1. Cash-on-Cash        = Cash-flow net annuel / Apport
      * 2. Rendement net réel  = Revenus nets / Coût total du projet
      * 3. Taux de couverture  = Revenus nets / Mensualités de crédit
-     * 4. Économie d'impôt    = (Impôt « sans optim » – Impôt réel)
      */
-    buildIndicateursSection(calc, inputData) {
-        // Récupération des constantes fiscales
-        const PS = FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX || 0.172;
+buildIndicateursSection(calc, inputData) {
+    // Récupération des constantes fiscales
+    const PS = FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX || 0.172;
+    
+    // Calcul du coût total du projet
+    const coutTotalProjet = inputData.coutTotalAcquisition || 
+                           (inputData.price + (inputData.travauxRenovation || 0) + (inputData.price * 0.10));
+    
+    // Mensualité annuelle
+    const mensualiteAnnuelle = inputData.monthlyPayment * 12;
+    
+    /* 1️⃣ Cash-on-Cash return (gérer apport = 0) */
+    const cashOnCash = inputData.apport > 0 
+        ? (calc.cashflowNetAnnuel / inputData.apport) * 100 
+        : null;
         
-        // Calcul du coût total du projet
-        const coutTotalProjet = inputData.coutTotalAcquisition || 
-                               (inputData.price + (inputData.travauxRenovation || 0) + (inputData.price * 0.10));
-        
-        // Mensualité annuelle
-        const mensualiteAnnuelle = inputData.monthlyPayment * 12;
-
-        /* 1️⃣ Cash-on-Cash return (gérer apport = 0) */
-        const cashOnCash = inputData.apport > 0 
-            ? (calc.cashflowNetAnnuel / inputData.apport) * 100 
-            : null;
-
-        /* 2️⃣ Rendement net sur coût total */
-        const rendementNetReel = (calc.revenusNets / coutTotalProjet) * 100;
-
-        /* 3️⃣ Taux de couverture du crédit */
-        const tauxCouverture = mensualiteAnnuelle > 0 
-            ? (calc.revenusNets / mensualiteAnnuelle) * 100
-            : 100;
-
-        /* 4️⃣ Économie d'impôt (avec PS uniquement si applicable) */
-        const psApplicables = (calc.regime.includes('LMNP') || calc.regime.includes('SCI')) ? 0 : PS;
-        const impotSansOptim = (calc.baseImposable * (inputData.tmi / 100)) +
-                               (calc.baseImposable * psApplicables);
-        const economieImpots = Math.max(0, impotSansOptim - calc.totalImpots);
-
-        return `
-            <tr class="section-header">
-                <td colspan="3"><strong>📈 INDICATEURS DE PERFORMANCE</strong></td>
-            </tr>
-            <tr>
-                <td>Cash-on-Cash return</td>
-                <td class="text-right ${cashOnCash !== null && cashOnCash >= 0 ? 'positive' : 'negative'}">
-                    ${cashOnCash !== null ? cashOnCash.toFixed(2) + '%' : '—'}
-                </td>
-                <td class="formula">${cashOnCash !== null ? '= Cash-flow / Apport' : 'Pas d\'apport'}</td>
-            </tr>
-            <tr>
-                <td>Rendement net sur coût total</td>
-                <td class="text-right ${rendementNetReel >= 0 ? 'positive' : 'negative'}">
-                    ${rendementNetReel.toFixed(2)}%
-                </td>
-                <td class="formula">= Revenus nets / Coût total</td>
-            </tr>
-            <tr>
-                <td>Taux de couverture du crédit</td>
-                <td class="text-right ${tauxCouverture >= 100 ? 'positive' : 'negative'}">
-                    ${tauxCouverture.toFixed(0)}%
-                </td>
-                <td class="formula">= Revenus nets / Mensualités</td>
-            </tr>
-            <tr>
-                <td>Économie d'impôt annuelle</td>
-                <td class="text-right positive">+${this.formatCurrency(economieImpots)}</td>
-                <td class="formula">Grâce au régime ${calc.regime}</td>
-            </tr>
-        `;
-    }
+    /* 2️⃣ Rendement net sur coût total */
+    const rendementNetReel = (calc.revenusNets / coutTotalProjet) * 100;
+    
+    /* 3️⃣ Taux de couverture du crédit */
+    const tauxCouverture = mensualiteAnnuelle > 0 
+        ? (calc.revenusNets / mensualiteAnnuelle) * 100
+        : 100;
+    
+    return `
+        <tr class="section-header">
+            <td colspan="3"><strong>📈 INDICATEURS DE PERFORMANCE</strong></td>
+        </tr>
+        <tr>
+            <td>Cash-on-Cash return</td>
+            <td class="text-right ${cashOnCash !== null && cashOnCash >= 0 ? 'positive' : 'negative'}">
+                ${cashOnCash !== null ? cashOnCash.toFixed(2) + '%' : '—'}
+            </td>
+            <td class="formula">${cashOnCash !== null ? '= Cash-flow / Apport' : 'Pas d\'apport'}</td>
+        </tr>
+        <tr>
+            <td>Rendement net sur coût total</td>
+            <td class="text-right ${rendementNetReel >= 0 ? 'positive' : 'negative'}">
+                ${rendementNetReel.toFixed(2)}%
+            </td>
+            <td class="formula">= Revenus nets / Coût total</td>
+        </tr>
+        <tr>
+            <td>Taux de couverture du crédit</td>
+            <td class="text-right ${tauxCouverture >= 100 ? 'positive' : 'negative'}">
+                ${tauxCouverture.toFixed(0)}%
+            </td>
+            <td class="formula">= Revenus nets / Mensualités</td>
+        </tr>
+    `;
+}
 
 /**
  * Prépare les données pour la comparaison fiscale - VERSION COMPLÈTE
