@@ -1560,13 +1560,16 @@ function analyzeMarket(data) {
                     <i class="fas fa-coins"></i> Analyse du loyer
                 </h3>
                 
-                <div class="comparison-input-group">
-                    <div class="input-with-label">
-                        <label>Votre loyer CC au m²</label>
-                        <div style="font-size: 2em; font-weight: 700; color: #e2e8f0;">
-                            ${data.loyerCCM2.toFixed(2)} €/m²
-                        </div>
-                    </div>
+<div class="comparison-input-group">
+    <div class="input-with-label">
+        <label>Votre loyer au m²</label>
+        <div style="font-size: 2em; font-weight: 700; color: #e2e8f0;">
+            ${data.loyerCCM2.toFixed(2)} €/m²
+        </div>
+        <div style="font-size: 0.85em; color: #94a3b8; margin-top: 5px;">
+            charges comprises
+        </div>
+    </div>
                     <div class="vs-separator">VS</div>
                     <div class="input-with-label">
                         <label>Loyer du marché</label>
@@ -1590,14 +1593,13 @@ function analyzeMarket(data) {
                     <span>+50% (Excellent)</span>
                 </div>
                 
-                <div class="market-details">
-                    <div class="market-metric">
-                        <div class="market-metric-label">Loyer mensuel HC</div>
-                        <div class="market-metric-value">${formatNumber(data.loyerActuel)} €</div>
-                        <div class="market-metric-comparison">
-                            Hors charges
-                        </div>
-                    </div>
+<div class="market-metric">
+    <div class="market-metric-label">Loyer mensuel</div>
+    <div class="market-metric-value">${formatNumber(data.loyerCC)} €</div>
+    <div class="market-metric-comparison">
+        Charges comprises
+    </div>
+</div>
                     <div class="market-metric">
                         <div class="market-metric-label">Potentiel de loyer</div>
                         <div class="market-metric-value">${formatNumber(marketRentM2 * data.surface)} €</div>
