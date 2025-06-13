@@ -450,8 +450,9 @@ class MarketFiscalAnalyzer {
     /**
      * Construit le tableau détaillé complet
      */
-   buildDetailedTable(regime, inputData) {
-    const calc = regime._detailedCalc; // ✅ Utilise le calcul déjà fait
+  buildDetailedTable(regime, inputData) {
+    const params = this.getAllAdvancedParams(); // ⚠️ GARDE CETTE LIGNE !
+    const calc = regime._detailedCalc;           // ✅ Utilise le calcul existant
         
         return `
             <table class="detailed-comparison-table" role="table">
