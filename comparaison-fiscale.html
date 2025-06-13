@@ -1590,28 +1590,29 @@ function analyzeMarket(data) {
                     <span>+50% (Excellent)</span>
                 </div>
                 
-<div class="market-metric">
-    <div class="market-metric-label">Loyer mensuel</div>
-    <div class="market-metric-value">${formatNumber(data.loyerCC)} €</div>
-    <div class="market-metric-comparison">
-        Charges comprises
+<div class="market-details">
+    <div class="market-metric">
+        <div class="market-metric-label">Loyer mensuel</div>
+        <div class="market-metric-value">${formatNumber(data.loyerCC)} €</div>
+        <div class="market-metric-comparison">
+            Charges comprises
+        </div>
+    </div>
+    <div class="market-metric">
+        <div class="market-metric-label">Potentiel de loyer</div>
+        <div class="market-metric-value">${formatNumber(marketRentM2 * data.surface)} €</div>
+        <div class="market-metric-comparison">
+            Au prix du marché
+        </div>
+    </div>
+    <div class="market-metric">
+        <div class="market-metric-label">Rendement brut</div>
+        <div class="market-metric-value">${((data.loyerActuel * 12) / data.prixPaye * 100).toFixed(2)}%</div>
+        <div class="market-metric-comparison">
+            Sur votre investissement
+        </div>
     </div>
 </div>
-                    <div class="market-metric">
-                        <div class="market-metric-label">Potentiel de loyer</div>
-                        <div class="market-metric-value">${formatNumber(marketRentM2 * data.surface)} €</div>
-                        <div class="market-metric-comparison">
-                            Au prix du marché
-                        </div>
-                    </div>
-                    <div class="market-metric">
-                        <div class="market-metric-label">Rendement brut</div>
-                        <div class="market-metric-value">${((data.loyerActuel * 12) / data.prixPaye * 100).toFixed(2)}%</div>
-                        <div class="market-metric-comparison">
-                            Sur votre investissement
-                        </div>
-                    </div>
-                </div>
             </div>
             
             <!-- Recommandations -->
