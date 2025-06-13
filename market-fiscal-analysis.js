@@ -362,6 +362,7 @@ calculateAnnualInterests(inputData, baseResults, year = 1) {
         let prelevementsSociaux = 0;
         let amortissementBien = 0;
         let amortissementMobilier = 0;
+        let amortissementTravaux = 0;
         
         switch(regime.nom) {
             case 'Micro-foncier':
