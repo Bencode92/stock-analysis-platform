@@ -62,6 +62,54 @@ class MarketFiscalAnalyzer {
         this.comparateur = new FiscalComparator(this.simulateur);
         this.propertyData = null;
         this.marketAnalysis = null;
+           // Constante pour le vrai signe minus
+        this.SIGN_MINUS = '−'; // U+2212 (pas un tiret simple !)
+    }
+    
+    /**
+     * Convertit une valeur en nombre, gère TOUS les formats français
+     * @param {any} val - Valeur à convertir ("−1 234,56 €", "1.234,56", etc.)
+     * @returns {number} - Nombre parsé ou 0
+     */
+    toFloat(val) {
+        if (typeof val === 'number') return val || 0;
+        if (!val) return 0;
+        
+        // 🔒 Conversion bulletproof pour format français
+        const cleaned = String(val)
+            .replace(/\u00A0/g, '')    // NBSP (espace insécable)
+            .replace(/\u2212/g, '-')   // U+2212 (vrai minus) → tiret ASCII
+            .replace(/\s/g, '')        // tous les espaces
+            .replace(/[€$]/g, '')      // symboles monétaires
+            .replace(/\./g, '')        // points (séparateurs de milliers)
+            .replace(',', '.');        // virgule → point décimal
+        
+        return parseFloat(cleaned) || 0; // parseFloat plus tolérant que Number
+    }
+    
+    /**
+     * Formate un montant avec le bon signe et la bonne classe CSS
+     * @param {any} value - Valeur à formater
+     * @param {boolean} showSign - Afficher le signe +/−
+     * @returns {object} { className, formattedValue, isPositive, numValue }
+     */
+    formatAmountWithClass(value, showSign = true) {
+        const numValue = this.toFloat(value); // Utilise notre helper bulletproof
+        const isPositive = numValue >= 0;
+        const absValue = Math.abs(numValue);
+        
+        let formattedValue = this.formatCurrency(absValue);
+        if (showSign) {
+            formattedValue = (isPositive ? '+' : this.SIGN_MINUS) + formattedValue;
+        }
+        
+        return {
+            className: isPositive ? 'positive' : 'negative',
+            formattedValue,
+            isPositive,
+            numValue,
+            rawValue: numValue
+        };
     }
 
     /**
@@ -1203,6 +1251,9 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
     const bestRegime = fiscalResults.reduce((a, b) => 
         a.cashflowNetAnnuel > b.cashflowNetAnnuel ? a : b
     );
+     // Utilisation du helper pour formater les montants avec conversion robuste
+    const cashflowMensuel = this.formatAmountWithClass(bestRegime.cashflowMensuel);
+    const cashflowAnnuel = this.formatAmountWithClass(bestRegime.cashflowNetAnnuel);
     
     // Calcul des charges déductibles approximatives
     const chargesDeductibles = inputData.yearlyCharges + inputData.taxeFonciere + 
