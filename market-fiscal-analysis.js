@@ -33,6 +33,28 @@ const FISCAL_CONSTANTS = {
     DUREE_AMORTISSEMENT_MOBILIER: 10
 };
 
+/**
+ * UNITS_CONTRACT - Documentation des unités utilisées
+ * IMPORTANT: Tout ce qui est "/ mois" doit finir ×12 avant comparaison fiscale
+ */
+const UNITS_CONTRACT = {
+    // MENSUEL (€/mois)
+    loyerHC: '€/mois',
+    monthlyCharges: '€/mois',
+    chargesCoproNonRecup: '€/mois',
+    assurancePNO: '€/mois',
+    
+    // ANNUEL (€/an)
+    taxeFonciere: '€/an',
+    entretienAnnuel: '€/an',
+    fraisGestion: '€/an',
+    
+    // POURCENTAGES (%)
+    vacanceLocative: '%',
+    gestionLocativeTaux: '%',
+    tmi: '%'
+};
+
 class MarketFiscalAnalyzer {
     constructor() {
         this.simulateur = new SimulateurImmo();
@@ -114,16 +136,18 @@ class MarketFiscalAnalyzer {
             duree: rawData.loanDuration,
             taux: rawData.loanRate,
             
-            // Revenus - IMPORTANT: loyerBrut calculé ici
+            // Revenus - V3: Distinction HC/CC pour plafonds
             loyerMensuel: rawData.loyerHC,
-            loyerBrut: loyerBrutAnnuel,
+            loyerBrutHC: rawData.loyerHC * 12,                 // Pour les plafonds fiscaux
+            loyerBrutCC: loyerBrutAnnuel,                      // Pour l'analyse cash-flow
+            loyerBrut: loyerBrutAnnuel,                        // Compatibilité
             chargesCopro: rawData.monthlyCharges || 50,
             
-            // Charges - ATTENTION aux unités
+            // Charges - V3: chargesNonRecuperables en ANNUEL
             taxeFonciere: rawData.taxeFonciere || 800, // Annuel
             vacanceLocative: rawData.vacanceLocative || 0,
             gestionLocativeTaux: rawData.gestionLocativeTaux || 0, // TAUX numérique
-            chargesNonRecuperables: rawData.chargesCoproNonRecup || 50, // MENSUEL
+            chargesNonRecuperables: (rawData.chargesCoproNonRecup || 50) * 12, // V3: ANNUEL
             
             // Divers
             surface: rawData.surface,
@@ -307,7 +331,8 @@ class MarketFiscalAnalyzer {
         // Calcul des intérêts annuels précis
         const interetsAnnuels = this.calculateAnnualInterests(inputData, baseResults);
         const mensualite = inputData.monthlyPayment;
-        const capitalAnnuel = (mensualite * 12) - interetsAnnuels;
+        const mensualiteAnnuelle = mensualite * 12;
+        const capitalAnnuel = mensualiteAnnuelle - interetsAnnuels;
         
         // IMPORTANT: Différencier selon le régime
         let chargesDeductibles = 0;
@@ -379,8 +404,8 @@ class MarketFiscalAnalyzer {
         
         const totalImpots = impotRevenu + prelevementsSociaux;
         
-        // Cash-flow net
-        const cashflowNetAnnuel = revenusNets - totalImpots - capitalAnnuel - interetsAnnuels;
+        // Cash-flow net - V3: Correction double comptabilisation
+        const cashflowNetAnnuel = revenusNets - totalImpots - mensualiteAnnuelle;
         
         return {
             // Revenus
@@ -412,6 +437,7 @@ class MarketFiscalAnalyzer {
             
             // Cash-flow
             capitalAnnuel,
+            mensualiteAnnuelle,
             cashflowNetAnnuel,
             
             // Autres infos utiles
@@ -1578,108 +1604,152 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
     }
 
     /**
-     * Crée les graphiques de comparaison fiscale
+     * Crée les graphiques de comparaison fiscale avec lazy loading - V3
      */
     createFiscalCharts(fiscalResults) {
+        // Utiliser lazy loading si disponible
+        if (typeof lazyLoadCharts === 'function') {
+            lazyLoadCharts('.charts-container', fiscalResults);
+        } else {
+            // Fallback : création directe
+            this._createChartsDirectly(fiscalResults);
+        }
+    }
+    
+    /**
+     * Création directe des graphiques (fallback ou après lazy load)
+     */
+    _createChartsDirectly(fiscalResults) {
         // Graphique des cash-flows
-        const ctxCashflow = document.getElementById('fiscal-cashflow-chart').getContext('2d');
-        new Chart(ctxCashflow, {
-            type: 'bar',
-            data: {
-                labels: fiscalResults.map(r => r.nom),
-                datasets: [{
-                    label: 'Cash-flow net annuel',
-                    data: fiscalResults.map(r => r.cashflowNetAnnuel),
-                    backgroundColor: fiscalResults.map((r, i) => i === 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(0, 191, 255, 0.7)'),
-                    borderColor: fiscalResults.map((r, i) => i === 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(0, 191, 255, 1)'),
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
+        const ctxCashflow = document.getElementById('fiscal-cashflow-chart')?.getContext('2d');
+        if (ctxCashflow) {
+            new Chart(ctxCashflow, {
+                type: 'bar',
+                data: {
+                    labels: fiscalResults.map(r => r.nom),
+                    datasets: [{
+                        label: 'Cash-flow net annuel',
+                        data: fiscalResults.map(r => r.cashflowNetAnnuel),
+                        backgroundColor: fiscalResults.map((r, i) => i === 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(0, 191, 255, 0.7)'),
+                        borderColor: fiscalResults.map((r, i) => i === 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(0, 191, 255, 1)'),
+                        borderWidth: 2
+                    }]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            color: '#94a3b8',
-                            callback: (value) => this.formatNumber(value) + ' €'
-                        },
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
                         }
                     },
-                    x: {
-                        ticks: {
-                            color: '#94a3b8',
-                            maxRotation: 45,
-                            minRotation: 45
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#94a3b8',
+                                callback: (value) => this.formatNumber(value) + ' €'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
                         },
-                        grid: {
-                            display: false
+                        x: {
+                            ticks: {
+                                color: '#94a3b8',
+                                maxRotation: 45,
+                                minRotation: 45
+                            },
+                            grid: {
+                                display: false
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
         
         // Graphique des rendements
-        const ctxRendement = document.getElementById('fiscal-rendement-chart').getContext('2d');
-        new Chart(ctxRendement, {
-            type: 'line',
-            data: {
-                labels: fiscalResults.map(r => r.nom),
-                datasets: [{
-                    label: 'Rendement net',
-                    data: fiscalResults.map(r => r.rendementNet),
-                    borderColor: 'rgba(0, 191, 255, 1)',
-                    backgroundColor: 'rgba(0, 191, 255, 0.1)',
-                    borderWidth: 3,
-                    tension: 0.4,
-                    pointRadius: 6,
-                    pointBackgroundColor: fiscalResults.map((r, i) => i === 0 ? '#22c55e' : '#00bfff'),
-                    pointBorderColor: '#0a0f1e',
-                    pointBorderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
+        const ctxRendement = document.getElementById('fiscal-rendement-chart')?.getContext('2d');
+        if (ctxRendement) {
+            new Chart(ctxRendement, {
+                type: 'line',
+                data: {
+                    labels: fiscalResults.map(r => r.nom),
+                    datasets: [{
+                        label: 'Rendement net',
+                        data: fiscalResults.map(r => r.rendementNet),
+                        borderColor: 'rgba(0, 191, 255, 1)',
+                        backgroundColor: 'rgba(0, 191, 255, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        pointRadius: 6,
+                        pointBackgroundColor: fiscalResults.map((r, i) => i === 0 ? '#22c55e' : '#00bfff'),
+                        pointBorderColor: '#0a0f1e',
+                        pointBorderWidth: 2
+                    }]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            color: '#94a3b8',
-                            callback: (value) => value.toFixed(1) + '%'
-                        },
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
                         }
                     },
-                    x: {
-                        ticks: {
-                            color: '#94a3b8',
-                            maxRotation: 45,
-                            minRotation: 45
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#94a3b8',
+                                callback: (value) => value.toFixed(1) + '%'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
                         },
-                        grid: {
-                            display: false
+                        x: {
+                            ticks: {
+                                color: '#94a3b8',
+                                maxRotation: 45,
+                                minRotation: 45
+                            },
+                            grid: {
+                                display: false
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
     }
+}
+
+/**
+ * Fonction de lazy loading pour les graphiques - V3
+ */
+function lazyLoadCharts(selector, fiscalResults) {
+    const el = document.querySelector(selector);
+    if (!el) return;
+    
+    const obs = new IntersectionObserver(async (entries) => {
+        if (entries[0].isIntersecting) {
+            // Si Chart.js n'est pas déjà chargé
+            if (typeof Chart === 'undefined') {
+                // Import dynamique
+                await import('https://cdn.jsdelivr.net/npm/chart.js');
+            }
+            
+            // Créer les graphiques
+            const analyzer = window.analyzer || new MarketFiscalAnalyzer();
+            analyzer._createChartsDirectly(fiscalResults);
+            
+            // Déconnecter l'observer
+            obs.disconnect();
+        }
+    }, { rootMargin: '200px' }); // Charger 200px avant d'être visible
+    
+    obs.observe(el);
 }
 
 // Export pour utilisation
@@ -1687,9 +1757,10 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     module.exports = MarketFiscalAnalyzer;
 } else {
     window.MarketFiscalAnalyzer = MarketFiscalAnalyzer;
+    window.lazyLoadCharts = lazyLoadCharts; // Export la fonction de lazy loading
 }
 
-// Helpers de debug V3
+// Helpers de debug V3 avec tests unitaires
 window.debugFiscalPipeline = function() {
     const analyzer = window.analyzer || new MarketFiscalAnalyzer();
     
@@ -1714,20 +1785,64 @@ window.debugFiscalPipeline = function() {
     
     console.group('🔍 Debug Pipeline Fiscal V3');
     
-    // 1. Test prepareFiscalData
-    const fiscalData = analyzer.prepareFiscalData(testData);
-    console.log('1️⃣ Fiscal Data:', fiscalData);
+    // 1. Test prepareFiscalData (sans DOM)
+    const fiscalData = {
+        ...testData,
+        yearlyRent: testData.loyerHC * 12,
+        loanAmount: testData.price - testData.apport,
+        monthlyPayment: analyzer.calculateMonthlyPayment(160000, 3.5, 20)
+    };
+    console.log('1️⃣ Fiscal Data simulée:', fiscalData);
     
     // 2. Test adaptation
     const comparatorData = analyzer.prepareFiscalDataForComparator(fiscalData);
     console.log('2️⃣ Comparator Data:', comparatorData);
-    console.log('   - loyerBrut calculé:', comparatorData.loyerBrut);
-    console.log('   - gestionLocativeTaux:', comparatorData.gestionLocativeTaux);
+    console.log('   - loyerBrutHC:', comparatorData.loyerBrutHC);
+    console.log('   - loyerBrutCC:', comparatorData.loyerBrutCC);
+    console.log('   - chargesNonRecuperables annuel:', comparatorData.chargesNonRecuperables);
     
-    // 3. Vérifier les calculs de base
-    console.log('3️⃣ Calculs de base:');
-    console.log('- Mensualité attendue:', analyzer.calculateMonthlyPayment(160000, 3.5, 20));
-    console.log('- Intérêts année 1:', 160000 * 0.035);
+    // 3. Tests unitaires
+    console.group('3️⃣ Tests unitaires');
+    
+    // Test Micro-foncier
+    const microFoncierCalc = analyzer.getDetailedCalculations(
+        { nom: 'Micro-foncier' }, 
+        fiscalData, 
+        analyzer.getAllAdvancedParams(), 
+        { tableauAmortissement: [] }
+    );
+    const abattementTest = microFoncierCalc.baseImposable / (fiscalData.loyerHC * 12);
+    console.log('✓ Micro-foncier abattement 30%:', 
+        Math.abs(abattementTest - 0.70) < 0.01 ? '✅ PASS' : '❌ FAIL', 
+        `(${abattementTest.toFixed(2)} vs 0.70 attendu)`
+    );
+    
+    // Test LMNP base imposable jamais négative
+    const lmnpCalc = analyzer.getDetailedCalculations(
+        { nom: 'LMNP au réel' }, 
+        { ...fiscalData, loyerHC: 100 }, // Très faible loyer
+        analyzer.getAllAdvancedParams(), 
+        { tableauAmortissement: [] }
+    );
+    console.log('✓ LMNP base imposable >= 0:', 
+        lmnpCalc.baseImposable >= 0 ? '✅ PASS' : '❌ FAIL',
+        `(${lmnpCalc.baseImposable})`
+    );
+    
+    // Test SCI IS taux réduit
+    const sciCalc = analyzer.getDetailedCalculations(
+        { nom: 'SCI à l\'IS' }, 
+        { ...fiscalData, loyerHC: 3000 }, 
+        analyzer.getAllAdvancedParams(), 
+        { tableauAmortissement: [] }
+    );
+    const tauxEffectif = sciCalc.impotRevenu / sciCalc.baseImposable;
+    console.log('✓ SCI IS taux 15% si < 42500€:', 
+        Math.abs(tauxEffectif - 0.15) < 0.01 ? '✅ PASS' : '❌ FAIL',
+        `(${(tauxEffectif * 100).toFixed(1)}% vs 15% attendu)`
+    );
+    
+    console.groupEnd();
     
     // 4. Vérifier chaque régime
     console.log('4️⃣ Test par régime:');
@@ -1742,5 +1857,39 @@ window.debugFiscalPipeline = function() {
         });
     });
     
+    console.groupEnd();
+};
+
+// Nouvelle fonction de test pour vérifier les calculs
+window.testFiscalCalculations = function() {
+    console.group('🧪 Tests de calculs fiscaux');
+    
+    const analyzer = new MarketFiscalAnalyzer();
+    let passed = 0;
+    let failed = 0;
+    
+    // Test 1: Mensualité de prêt
+    const mensualite = analyzer.calculateMonthlyPayment(160000, 3.5, 20);
+    const expectedMensualite = 928.37; // Valeur attendue
+    if (Math.abs(mensualite - expectedMensualite) < 1) {
+        console.log('✅ Test mensualité: PASS');
+        passed++;
+    } else {
+        console.log('❌ Test mensualité: FAIL', mensualite, 'vs', expectedMensualite);
+        failed++;
+    }
+    
+    // Test 2: Charges non récupérables annuelles
+    const testData = { chargesCoproNonRecup: 50 };
+    const adapted = analyzer.prepareFiscalDataForComparator(testData);
+    if (adapted.chargesNonRecuperables === 600) { // 50 * 12
+        console.log('✅ Test charges annuelles: PASS');
+        passed++;
+    } else {
+        console.log('❌ Test charges annuelles: FAIL', adapted.chargesNonRecuperables);
+        failed++;
+    }
+    
+    console.log(`\n📊 Résultats: ${passed} PASS, ${failed} FAIL`);
     console.groupEnd();
 };
