@@ -650,7 +650,7 @@ ${calc.fraisGestion > 0 ? `
                 calc.amortissementBien > 0 ? { label: "Amortissement bien", value: calc.amortissementBien, formula: `${calc.tauxAmortissement}% × valeur` } : null,
                 calc.amortissementMobilier > 0 ? { label: "Amortissement mobilier", value: calc.amortissementMobilier, formula: "10% × 10% du prix" } : null,
                 { label: "Taxe foncière", value: calc.taxeFonciere, formula: "Paramètre avancé" },
-                { label: "Charges copro récupérables", value: calc.chargesCopro, formula: "12 × charges mensuelles" },
+                // { label: "Charges copro récupérables", value: calc.chargesCopro, formula: "12 × charges mensuelles" }, // Commenté car non déductible
                 calc.chargesCoproNonRecup > 0 ? { label: "Charges copro non récupérables", value: calc.chargesCoproNonRecup, formula: `${params.chargesCoproNonRecup} × 12` } : null,
                 { label: "Assurance PNO", value: calc.assurancePNO, formula: `${params.assurancePNO} × 12` },
                 { label: "Entretien annuel", value: calc.entretienAnnuel, formula: "Budget annuel" }
@@ -792,8 +792,13 @@ buildIndicateursSection(calc, inputData) {
         ? (calc.cashflowNetAnnuel / inputData.apport) * 100 
         : null;
         
-    /* 2️⃣ Rendement net sur coût total */
-    const rendementNetReel = (calc.revenusNets / coutTotalProjet) * 100;
+    /* 2️⃣ Rendement net sur coût total (loyers - charges non récupérables) */
+const revenuNetReel = calc.revenusNets
+    - calc.taxeFonciere
+    - calc.chargesCoproNonRecup
+    - calc.entretienAnnuel
+    - calc.assurancePNO;
+const rendementNetReel = (revenuNetReel / coutTotalProjet) * 100;
     
     /* 3️⃣ Taux de couverture du crédit */
     const tauxCouverture = mensualiteAnnuelle > 0 
