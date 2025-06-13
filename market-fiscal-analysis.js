@@ -597,12 +597,15 @@ class MarketFiscalAnalyzer {
  * Calcule tous les frais d'acquisition (classique ou enchères)
  */
 calculateFraisAcquisition(prix, typeAchat, params) {
-    if (typeAchat === 'encheres') {
-        const droits = prix * (params.droitsEnregistrement / 100);
-        const emoluments = this.calculateEmoluments(prix, params);
-        const honoraires = params.honorairesAvocat;
-        const divers = params.fraisFixes + params.avocatPorterEnchere + params.suiviDossier;
-        return droits + emoluments + honoraires + divers;
+if (typeAchat === 'encheres') {
+    const droits = prix * (params.droitsEnregistrement / 100);
+    const emoluments = this.calculateEmoluments(prix, params);
+    const honoraires = params.honorairesAvocat;
+    const publiciteFonciere = prix * (params.publiciteFonciere / 100);  // 🆕
+    const tvaHonoraires = honoraires * (params.tvaHonoraires / 100);    // 🆕
+    const fraisDivers = params.fraisFixes + params.avocatPorterEnchere + params.suiviDossier;
+    
+    return droits + emoluments + honoraires + tvaHonoraires + publiciteFonciere + fraisDivers;
     } else {
         const fraisNotaire = prix * (params.fraisNotaireTaux / 100);
         const commission = prix * (params.commissionImmo / 100);
@@ -987,6 +990,9 @@ return {
     yearlyRent,
     yearlyCharges,
     gestionFees,
+    
+      // 🆕 Ajout du booléen gestionLocative
+    gestionLocative: allParams.gestionLocativeTaux > 0,
     
     // 🆕 REMPLACEZ par ces 3 lignes :
     coutTotalAcquisition: coutTotalFinal,  // Utiliser la bonne variable !
