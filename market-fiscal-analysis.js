@@ -1303,7 +1303,7 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
                 <th>Cash-flow mensuel</th>
                 <th>Cash-flow annuel</th>
                 <th>Impôt annuel</th>
-                <th>Rendement net/coût total</th>
+                <th>cash-flow/coût total</th>
             </tr>
         </thead>
         <tbody>
