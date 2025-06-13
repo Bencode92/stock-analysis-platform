@@ -405,7 +405,19 @@ class MarketFiscalAnalyzer {
         const totalImpots = impotRevenu + prelevementsSociaux;
         
         // Cash-flow net - V3: Correction double comptabilisation
-        const cashflowNetAnnuel = revenusNets - totalImpots - mensualiteAnnuelle;
+      // ✅ APRÈS (avec UNIQUEMENT les champs existants)
+const chargesCashAnnuel =
+    params.taxeFonciere +                      // 800 €/an
+    params.entretienAnnuel +                   // 500 €/an
+    (params.assurancePNO * 12) +               // 180 €/an (15×12)
+    (params.chargesCoproNonRecup * 12) +       // 600 €/an (50×12)
+    fraisGestion;                              // Si applicable
+
+const cashflowNetAnnuel = 
+    revenusNets - 
+    chargesCashAnnuel -    // ← LA correction
+    totalImpots - 
+    mensualiteAnnuelle;
         
         return {
             // Revenus
