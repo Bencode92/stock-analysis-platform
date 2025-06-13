@@ -1303,7 +1303,7 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
                         <th>Cash-flow mensuel</th>
                         <th>Cash-flow annuel</th>
                         <th>Impôt annuel</th>
-                        <th>Rendement</th>
+                        <th>Rendement net/coût total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1321,9 +1321,9 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
                             <td class="${regime.cashflowNetAnnuel > 0 ? 'positive' : 'negative'}">
                                 ${this.formatCurrency(regime.cashflowNetAnnuel)}
                             </td>
-                            <td>${this.formatCurrency(Math.abs(regime.impotAnnuel))}</td>
-                            <td class="${rendementSurPrix > 0 ? 'positive' : 'negative'}">
-                                ${rendementSurPrix.toFixed(2)}%
+     <td>${this.formatCurrency(Math.abs(regime.impotAnnuel))}</td>
+        <td class="${rendementNet > 0 ? 'positive' : 'negative'}">
+            ${rendementNet.toFixed(2)}%
                             </td>
                         </tr>
                     `}).join('')}
