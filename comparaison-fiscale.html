@@ -1417,42 +1417,124 @@ document.getElementById('property-form').addEventListener('submit', async functi
     const typeAchat = document.querySelector('input[name="type-achat"]:checked').value;
     
     // Récupérer les données du formulaire
-    // Récupérer les données du formulaire
-propertyData = {
-    ville: window.villeSearchManager?.getSelectedVilleData(),
-    prixPaye: parseFloat(document.getElementById('propertyPrice').value),
-    surface: parseFloat(document.getElementById('propertySurface').value),
-    loyerActuel: loyerHC,
-    charges: charges,
-    loyerCC: loyerHC + charges, // Ajouter le loyer CC pour l'analyse
-    apport: parseFloat(document.getElementById('apport').value),
-    duree: parseFloat(document.getElementById('loanDuration').value),
-    taux: parseFloat(document.getElementById('loanRate').value),
-    tmi: parseFloat(document.getElementById('tmi').value),
-    typeAchat: typeAchat,
-    // Paramètres avancés
-    fraisBancairesDossier: parseFloat(document.getElementById('frais-bancaires-dossier').value) || 900,
-    fraisBancairesCompte: parseFloat(document.getElementById('frais-bancaires-compte').value) || 150,
-    fraisGarantie: parseFloat(document.getElementById('frais-garantie').value) || 1.3709,
-    taxeFonciere: parseFloat(document.getElementById('taxeFonciere').value) || 800,
-    vacanceLocative: parseFloat(document.getElementById('vacanceLocative').value ?? 0),
-    gestionLocative: document.getElementById('gestionLocative').checked || false,
-    travaux: parseFloat(document.getElementById('travaux-renovation').value) || 0,
-    chargesCoproNonRecup: parseFloat(document.getElementById('charges-copro-non-recup').value) || 50,
-    assurancePNO: parseFloat(document.getElementById('assurance-pno').value) || 15,
-    // Paramètres spécifiques selon le type
-    fraisNotaireTaux: typeAchat === 'classique' ? parseFloat(document.getElementById('frais-notaire-taux').value) || 8 : 0,
-    commissionImmo: typeAchat === 'classique' ? parseFloat(document.getElementById('commission-immo').value) || 4 : 0,
-    droitsEnregistrement: typeAchat === 'encheres' ? parseFloat(document.getElementById('droits-enregistrement').value) || 5.70 : 0,
-    coefMutation: typeAchat === 'encheres' ? parseFloat(document.getElementById('coef-mutation').value) || 2.37 : 0,
-    honorairesAvocat: typeAchat === 'encheres' ? parseFloat(document.getElementById('honoraires-avocat').value) || 1500 : 0,
-    fraisFixes: typeAchat === 'encheres' ? parseFloat(document.getElementById('frais-fixes').value) || 50 : 0
-};
- 
+    propertyData = {
+        ville: window.villeSearchManager?.getSelectedVilleData(),
+        prixPaye: parseFloat(document.getElementById('propertyPrice').value),
+        surface: parseFloat(document.getElementById('propertySurface').value),
+        loyerActuel: loyerHC,
+        charges: charges,
+        loyerCC: loyerHC + charges, // Ajouter le loyer CC pour l'analyse
+        apport: parseFloat(document.getElementById('apport').value),
+        duree: parseFloat(document.getElementById('loanDuration').value),
+        taux: parseFloat(document.getElementById('loanRate').value),
+        tmi: parseFloat(document.getElementById('tmi').value),
+        typeAchat: typeAchat,
+        // Paramètres avancés
+        fraisBancairesDossier: parseFloat(document.getElementById('frais-bancaires-dossier').value) || 900,
+        fraisBancairesCompte: parseFloat(document.getElementById('frais-bancaires-compte').value) || 150,
+        fraisGarantie: parseFloat(document.getElementById('frais-garantie').value) || 1.3709,
+        taxeFonciere: parseFloat(document.getElementById('taxeFonciere').value) || 800,
+        vacanceLocative: parseFloat(document.getElementById('vacanceLocative').value ?? 0),
+        gestionLocative: parseFloat(document.getElementById('gestionLocative').value) || 0,
+        travaux: parseFloat(document.getElementById('travaux-renovation').value) || 0,
+        chargesCoproNonRecup: parseFloat(document.getElementById('charges-copro-non-recup').value) || 50,
+        assurancePNO: parseFloat(document.getElementById('assurance-pno').value) || 15,
+        entretienAnnuel: parseFloat(document.getElementById('entretien-annuel').value) || 500,
+        // Paramètres spécifiques selon le type
+        fraisNotaireTaux: typeAchat === 'classique' ? parseFloat(document.getElementById('frais-notaire-taux').value) || 8 : 0,
+        commissionImmo: typeAchat === 'classique' ? parseFloat(document.getElementById('commission-immo').value) || 4 : 0,
+        droitsEnregistrement: typeAchat === 'encheres' ? parseFloat(document.getElementById('droits-enregistrement').value) || 5.70 : 0,
+        coefMutation: typeAchat === 'encheres' ? parseFloat(document.getElementById('coef-mutation').value) || 2.37 : 0,
+        honorairesAvocat: typeAchat === 'encheres' ? parseFloat(document.getElementById('honoraires-avocat').value) || 1500 : 0,
+        fraisFixes: typeAchat === 'encheres' ? parseFloat(document.getElementById('frais-fixes').value) || 50 : 0,
+        // Paramètres enchères supplémentaires
+        emolumentsTranche1: typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche1')?.value) || 7 : 0,
+        emolumentsTranche2: typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche2')?.value) || 3 : 0,
+        emolumentsTranche3: typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche3')?.value) || 2 : 0,
+        emolumentsTranche4: typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche4')?.value) || 1 : 0,
+    };
+    
+    // ========== CALCUL DU COÛT TOTAL ET DE L'EMPRUNT ==========
+    let coutTotal = propertyData.prixPaye;
+    
+    if (typeAchat === 'classique') {
+        // Frais d'acquisition classique
+        coutTotal += propertyData.prixPaye * (propertyData.fraisNotaireTaux / 100); // Notaire
+        coutTotal += propertyData.prixPaye * (propertyData.commissionImmo / 100);   // Agence
+        
+    } else {
+        // Frais vente aux enchères
+        coutTotal += propertyData.prixPaye * (propertyData.droitsEnregistrement / 100); // Droits
+        
+        // Émoluments dégressifs avec les taux paramétrables
+        const prix = propertyData.prixPaye;
+        let emoluments = 0;
+        if (prix <= 6500) {
+            emoluments = prix * (propertyData.emolumentsTranche1 / 100);
+        } else if (prix <= 23500) {
+            emoluments = 6500 * (propertyData.emolumentsTranche1 / 100) + 
+                        (prix - 6500) * (propertyData.emolumentsTranche2 / 100);
+        } else if (prix <= 83500) {
+            emoluments = 6500 * (propertyData.emolumentsTranche1 / 100) + 
+                        17000 * (propertyData.emolumentsTranche2 / 100) + 
+                        (prix - 23500) * (propertyData.emolumentsTranche3 / 100);
+        } else {
+            emoluments = 6500 * (propertyData.emolumentsTranche1 / 100) + 
+                        17000 * (propertyData.emolumentsTranche2 / 100) + 
+                        60000 * (propertyData.emolumentsTranche3 / 100) + 
+                        (prix - 83500) * (propertyData.emolumentsTranche4 / 100);
+        }
+        coutTotal += emoluments;
+        
+        // Autres frais enchères
+        coutTotal += propertyData.honorairesAvocat;
+        coutTotal += propertyData.fraisFixes;
+    }
+    
+    // Frais bancaires fixes (communs aux deux types)
+    coutTotal += propertyData.fraisBancairesDossier;
+    coutTotal += propertyData.fraisBancairesCompte;
+    
+    // Travaux initiaux
+    coutTotal += propertyData.travaux;
+    
+    // L'EMPRUNT COUVRE TOUT SAUF L'APPORT
+    const montantEmprunt = coutTotal - propertyData.apport;
+    
+    // GARDE : Vérifier que l'emprunt n'est pas négatif
+    if (montantEmprunt < 0) {
+        alert(`⚠️ Votre apport (${propertyData.apport.toLocaleString()} €) dépasse le coût total (${coutTotal.toLocaleString()} €).\n\nPas besoin d'emprunt dans ce cas !`);
+        propertyData.montantEmprunt = 0;
+        propertyData.empruntAvecGarantie = 0;
+    } else {
+        // Ajouter les frais de garantie sur le montant emprunté
+        const tauxGarantie = propertyData.fraisGarantie; // Utilisation du paramètre
+        const empruntAvecGarantie = montantEmprunt * (1 + tauxGarantie / 100);
+        
+        // Stocker les deux montants
+        propertyData.montantEmprunt = montantEmprunt; // Sans garantie
+        propertyData.empruntAvecGarantie = empruntAvecGarantie; // Avec garantie (pour les mensualités)
+    }
+    
+    // Coût total final incluant la garantie
+    propertyData.coutTotal = coutTotal + (propertyData.empruntAvecGarantie - propertyData.montantEmprunt);
+    
+    // ========== FIN DES CALCULS ==========
+    
     // Calculer le prix au m² payé
     propertyData.prixM2Paye = propertyData.prixPaye / propertyData.surface;
     propertyData.loyerM2Actuel = propertyData.loyerActuel / propertyData.surface;
-    propertyData.loyerCCM2 = propertyData.loyerCC / propertyData.surface; // Loyer CC au m²
+    propertyData.loyerCCM2 = propertyData.loyerCC / propertyData.surface;
+    
+    // Log de vérification
+    console.log('💰 Financement calculé:', {
+        prixBien: propertyData.prixPaye.toLocaleString() + ' €',
+        coutTotal: coutTotal.toLocaleString() + ' €',
+        apport: propertyData.apport.toLocaleString() + ' €',
+        empruntBase: propertyData.montantEmprunt.toLocaleString() + ' €',
+        tauxGarantie: propertyData.fraisGarantie + '%',
+        empruntFinal: propertyData.empruntAvecGarantie.toLocaleString() + ' €'
+    });
     
     // Analyser par rapport au marché
     analyzeMarket(propertyData);
