@@ -477,7 +477,7 @@ class MarketFiscalAnalyzer {
     /**
      * Construit la section coût initial de l'opération
      */
-    buildCoutInitialSection(inputData, params) {
+   buildCoutInitialSection(inputData, params, coutTotalProjet = null) {
         // Calcul des frais selon le type d'achat
         let fraisAcquisition = 0;
         let detailFrais = [];
@@ -520,7 +520,8 @@ class MarketFiscalAnalyzer {
             formula: "Dossier + compte + garantie" 
         });
         
-        const coutTotalOperation = inputData.price + inputData.travauxRenovation + fraisAcquisition + fraisBancaires;
+        const coutTotalOperation = coutTotalProjet || inputData.coutTotalAcquisition || 
+    (inputData.price + inputData.travauxRenovation + fraisAcquisition + fraisBancaires);
         
         return `
             <tr class="section-header">
@@ -591,6 +592,23 @@ class MarketFiscalAnalyzer {
         
         return emoluments;
     }
+    // 🆕 AJOUTEZ LA NOUVELLE FONCTION ICI (juste après l'accolade fermante)
+/**
+ * Calcule tous les frais d'acquisition (classique ou enchères)
+ */
+calculateFraisAcquisition(prix, typeAchat, params) {
+    if (typeAchat === 'encheres') {
+        const droits = prix * (params.droitsEnregistrement / 100);
+        const emoluments = this.calculateEmoluments(prix, params);
+        const honoraires = params.honorairesAvocat;
+        const divers = params.fraisFixes + params.avocatPorterEnchere + params.suiviDossier;
+        return droits + emoluments + honoraires + divers;
+    } else {
+        const fraisNotaire = prix * (params.fraisNotaireTaux / 100);
+        const commission = prix * (params.commissionImmo / 100);
+        return fraisNotaire + commission;
+    }
+}
 
     /**
      * Construit la section revenus
@@ -896,18 +914,45 @@ prepareFiscalData() {
         ...allParams
     };
     
-    // Calculer les données dérivées
-    const loanAmount = formData.price - formData.apport;
-    const monthlyPayment = this.calculateMonthlyPayment(loanAmount, formData.loanRate, formData.loanDuration);
-    const yearlyRent = loyerHC * 12 * (1 - formData.vacanceLocative / 100);
-    const yearlyCharges = charges * 12;
+// 🆕 Calcul des frais d'acquisition
+const fraisAcquisition = this.calculateFraisAcquisition(
+    formData.price,
+    formData.typeAchat,
+    allParams
+);
+
+// 🆕 Calcul analytique de l'emprunt (comme dans immo-simulation.js)
+const fraisDossier = allParams.fraisBancairesDossier;
+const fraisCompte = allParams.fraisBancairesCompte;
+const tauxGarantie = allParams.fraisGarantie / 100;
+
+// Coût hors frais bancaires
+const coutHorsFraisB = formData.price + allParams.travauxRenovation + fraisAcquisition;
+
+// Formule analytique pour l'emprunt
+const loanAmount = (coutHorsFraisB - formData.apport + fraisDossier + fraisCompte) 
+                 / (1 - tauxGarantie);
+
+// Frais bancaires réels
+const fraisBancaires = fraisDossier + fraisCompte + (loanAmount * tauxGarantie);
+
+// Coût total final
+const coutTotalFinal = coutHorsFraisB + fraisBancaires;
+
+// Calcul de la mensualité
+const monthlyPayment = this.calculateMonthlyPayment(
+    loanAmount, 
+    formData.loanRate, 
+    formData.loanDuration
+);
+
+// GARDEZ ces deux lignes qui étaient déjà là
+const yearlyRent = loyerHC * 12 * (1 - formData.vacanceLocative / 100);
+const yearlyCharges = charges * 12;
     
     // Ajouter les frais de gestion si applicable
     const gestionFees = formData.gestionLocativeTaux > 0 ? 
     yearlyRent * (formData.gestionLocativeTaux / 100) : 0;
-    
-    // NOUVEAU : Calculer le coût total d'acquisition
-    const coutTotalAcquisition = formData.price + formData.travauxRenovation;
     
     // Stocker dans la console pour debug
     console.log('📊 Données fiscales préparées:', formData);
@@ -921,30 +966,35 @@ prepareFiscalData() {
     });
     
     // Format compatible avec le comparateur fiscal existant
-    return {
-        typeAchat: formData.typeAchat,
-        prixBien: formData.price,
-        surface: formData.surface,
-        apport: formData.apport,
-        duree: formData.loanDuration,
-        taux: formData.loanRate,
-        loyerMensuel: loyerHC,
-        tmi: formData.tmi,
-        chargesCopro: charges,
-        
-        // Données étendues pour l'affichage
-        ...formData,
-        loyerHC: loyerHC,
-        loyerCC: loyerCC,
-        chargesRecuperables: charges,
-        loanAmount,
-        monthlyPayment,
-        yearlyRent,
-        yearlyCharges,
-        gestionFees,
-        coutTotalAcquisition, // NOUVEAU
-        timestamp: new Date().toISOString()
-    };
+return {
+    typeAchat: formData.typeAchat,
+    prixBien: formData.price,
+    surface: formData.surface,
+    apport: formData.apport,
+    duree: formData.loanDuration,
+    taux: formData.loanRate,
+    loyerMensuel: loyerHC,
+    tmi: formData.tmi,
+    chargesCopro: charges,
+    
+    // Données étendues pour l'affichage
+    ...formData,
+    loyerHC: loyerHC,
+    loyerCC: loyerCC,
+    chargesRecuperables: charges,
+    loanAmount,
+    monthlyPayment,
+    yearlyRent,
+    yearlyCharges,
+    gestionFees,
+    
+    // 🆕 REMPLACEZ par ces 3 lignes :
+    coutTotalAcquisition: coutTotalFinal,  // Utiliser la bonne variable !
+    fraisAcquisition: fraisAcquisition,
+    fraisBancaires: fraisBancaires,
+    
+    timestamp: new Date().toISOString()
+};
 }
 
 
