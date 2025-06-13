@@ -64,123 +64,62 @@ class MarketFiscalAnalyzer {
     }
 
     /**
- * Effectue l'analyse complète (marché + fiscal) - V4 FINALE
- */
-async performCompleteAnalysis(propertyData) {
-    try {
-        console.log('🚀 Début de l\'analyse complète avec données:', propertyData);
-        
-        // 1. Analyse de marché
-        this.marketAnalysis = this.analyzeMarketPosition(propertyData);
-        
-        // 2. Préparation des données enrichies directement depuis propertyData
-        const comparatorData = {
-            ...this.prepareFiscalDataForComparator(propertyData),
+     * Effectue l'analyse complète (marché + fiscal) - V3 CORRIGÉE
+     */
+    async performCompleteAnalysis(data) {
+        try {
+            // 1. Analyse de marché
+            this.marketAnalysis = this.analyzeMarketPosition(data);
             
-            // 🆕 PROPAGATION DES NOUVEAUX CHAMPS
-            capitalEmprunte: propertyData.empruntAvecGarantie || propertyData.montantEmprunt || 0,
-            coutTotal: propertyData.coutTotal || propertyData.prixPaye,
-            monthlyPayment: Math.round(
-                this.calculateMonthlyPayment(
-                    propertyData.empruntAvecGarantie || propertyData.montantEmprunt || 0,
-                    propertyData.taux,
-                    propertyData.duree
-                ) * 100
-            ) / 100, // Arrondi à 2 décimales
-            gestionLocativeTaux: propertyData.gestionLocative || 0,
-            empruntAvecGarantie: propertyData.empruntAvecGarantie || 0,
-            montantEmprunt: propertyData.montantEmprunt || 0
-        };
-        
-        console.log('📊 Données comparateur préparées:', {
-            capitalEmprunte: comparatorData.capitalEmprunte,
-            coutTotal: comparatorData.coutTotal,
-            monthlyPayment: comparatorData.monthlyPayment,
-            gestionLocative: comparatorData.gestionLocativeTaux + '%'
-        });
-        
-        // 3. 🆕 CHARGER LES PARAMÈTRES DANS LE SIMULATEUR AVANT calculeTout
-        const simulatorParams = this.comparateur.prepareSimulatorParams(comparatorData);
-        this.simulateur.chargerParametres(simulatorParams);
-        
-        console.log('🔧 Paramètres simulateur chargés:', {
-            capital: this.simulateur.params.capital,
-            capitalEmprunte: simulatorParams.capitalEmprunte,
-            match: this.simulateur.params.capital === simulatorParams.capitalEmprunte
-        });
-        
-        // 4. IMPORTANT: Attendre le calcul de base
-        const baseResults = await this.simulateur.calculeTout(
-            comparatorData.surface, 
-            comparatorData.typeAchat || 'classique'
-        );
-        
-        // 5. Vérifier que baseResults est valide
-        if (!baseResults || typeof baseResults.mensualite === 'undefined') {
-            console.error('❌ baseResults invalide:', baseResults);
-            throw new Error('Calcul de base échoué');
-        }
-        
-        console.log('📈 Résultats de base calculés:', {
-            mensualite: baseResults.chargeMensuelleCredit || baseResults.mensualite,
-            cashflow: baseResults.cashFlowMensuel
-        });
-        
-        // 6. Enrichir comparatorData avec les résultats du simulateur
-        comparatorData.chargeMensuelleCredit = baseResults.mensualite;
-        comparatorData.tableauAmortissement = baseResults.tableauAmortissement;
-        
-        // 7. Comparaison des régimes avec l'adaptateur
-        const fiscalResults = await this.comparateur.compareAllRegimes(comparatorData);
-        
-        // 8. Enrichir les résultats avec les calculs détaillés différenciés
-        const params = this.getAllAdvancedParams();
-        fiscalResults.forEach(regime => {
-            const detailedCalc = this.getDetailedCalculations(
-                regime, 
-                comparatorData, // Utiliser comparatorData enrichi au lieu de fiscalData
-                params, 
-                baseResults
+            // 2. Préparation des données
+            const fiscalData = this.prepareFiscalData(data);
+            const comparatorData = this.prepareFiscalDataForComparator(fiscalData);
+            
+            // 3. IMPORTANT: Attendre le calcul de base
+            const baseResults = await this.simulateur.calculeTout(
+                comparatorData.surface, 
+                comparatorData.typeAchat
             );
             
-            // Remplacer par les valeurs détaillées plus précises
-            regime.cashflowNetAnnuel = detailedCalc.cashflowNetAnnuel;
-            regime.cashflowMensuel = detailedCalc.cashflowNetAnnuel / 12;
-            regime.impotAnnuel = -(detailedCalc.totalImpots);
-            regime.rendementNet = (detailedCalc.cashflowNetAnnuel / comparatorData.coutTotal) * 100;
+            // 4. Vérifier que baseResults est valide
+            if (!baseResults || typeof baseResults.mensualite === 'undefined') {
+                console.error('❌ baseResults invalide:', baseResults);
+                throw new Error('Calcul de base échoué');
+            }
             
-            // Ajouter les détails pour le debug
-            regime._detailedCalc = detailedCalc;
-        });
-        
-        console.log('💰 Analyse fiscale terminée:', {
-            nombreRegimes: fiscalResults.length,
-            meilleurRegime: fiscalResults[0]?.nom,
-            cashflowMeilleur: fiscalResults[0]?.cashflowMensuel
-        });
-        
-        // 9. Stocker les résultats dans l'instance
-        this.fiscalAnalysis = fiscalResults;
-        
-        // 10. Retourner les résultats complets
-        return {
-            market: this.marketAnalysis,
-            fiscal: fiscalResults,
-            baseResults: baseResults,
-            financing: {
-                capitalEmprunte: comparatorData.capitalEmprunte,
-                coutTotal: comparatorData.coutTotal,
-                monthlyPayment: comparatorData.monthlyPayment,
-                apport: propertyData.apport
-            },
-            recommendations: this.generateGlobalRecommendations(this.marketAnalysis, fiscalResults)
-        };
-        
-    } catch (error) {
-        console.error('❌ Erreur dans performCompleteAnalysis:', error);
-        throw error;
+            // 5. Enrichir comparatorData avec les résultats du simulateur
+            comparatorData.chargeMensuelleCredit = baseResults.mensualite;
+            comparatorData.tableauAmortissement = baseResults.tableauAmortissement;
+            
+            // 6. Comparaison des régimes avec l'adaptateur
+            const fiscalResults = await this.comparateur.compareAllRegimes(comparatorData);
+            
+            // 7. Enrichir les résultats avec les calculs détaillés différenciés
+            const params = this.getAllAdvancedParams();
+            fiscalResults.forEach(regime => {
+                const detailedCalc = this.getDetailedCalculations(regime, fiscalData, params, baseResults);
+                
+                // Remplacer par les valeurs détaillées plus précises
+                regime.cashflowNetAnnuel = detailedCalc.cashflowNetAnnuel;
+                regime.cashflowMensuel = detailedCalc.cashflowNetAnnuel / 12;
+                regime.impotAnnuel = -(detailedCalc.totalImpots);
+                regime.rendementNet = (detailedCalc.cashflowNetAnnuel / fiscalData.price) * 100;
+                
+                // Ajouter les détails pour le debug
+                regime._detailedCalc = detailedCalc;
+            });
+            
+            return {
+                market: this.marketAnalysis,
+                fiscal: fiscalResults,
+                recommendations: this.generateGlobalRecommendations(this.marketAnalysis, fiscalResults)
+            };
+            
+        } catch (error) {
+            console.error('Erreur dans performCompleteAnalysis:', error);
+            throw error;
+        }
     }
-}
 
     /**
      * Prépare les données pour le comparateur fiscal - V3 COMPLÈTE
