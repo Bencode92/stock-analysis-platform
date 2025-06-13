@@ -1562,22 +1562,19 @@ function analyzeMarket(data) {
                 
 <div class="comparison-input-group">
     <div class="input-with-label">
-        <label>Votre loyer au m²</label>
+        <label>Votre loyer au m² (CC)</label>
         <div style="font-size: 2em; font-weight: 700; color: #e2e8f0;">
             ${data.loyerCCM2.toFixed(2)} €/m²
         </div>
-        <div style="font-size: 0.85em; color: #94a3b8; margin-top: 5px;">
-            charges comprises
+    </div>
+    <div class="vs-separator">VS</div>
+    <div class="input-with-label">
+        <label>Loyer du marché</label>
+        <div style="font-size: 2em; font-weight: 700; color: #00bfff;">
+            ${marketRentM2.toFixed(2)} €/m²
         </div>
     </div>
-                    <div class="vs-separator">VS</div>
-                    <div class="input-with-label">
-                        <label>Loyer du marché</label>
-                        <div style="font-size: 2em; font-weight: 700; color: #00bfff;">
-                            ${marketRentM2.toFixed(2)} €/m²
-                        </div>
-                    </div>
-                </div>
+</div>
                 
                 <div class="position-indicator">
                     <div class="position-marker" style="left: ${Math.min(Math.max((rentDiff + 50) * 2, 0), 100)}%;">
