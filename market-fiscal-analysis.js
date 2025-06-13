@@ -76,17 +76,22 @@ class MarketFiscalAnalyzer {
             const fiscalData = this.prepareFiscalData(data);
             const comparatorData = this.prepareFiscalDataForComparator(fiscalData);
             
-            // 3. IMPORTANT: Attendre le calcul de base
-            const baseResults = await this.simulateur.calculeTout(
-                comparatorData.surface, 
-                comparatorData.typeAchat
-            );
-            
-            // 4. Vérifier que baseResults est valide
-            if (!baseResults || typeof baseResults.mensualite === 'undefined') {
-                console.error('❌ baseResults invalide:', baseResults);
-                throw new Error('Calcul de base échoué');
-            }
+// 3. Créer un pseudo-résultat sans tableau d'amortissement
+const baseResults = {
+    // Mensualité déjà calculée dans prepareFiscalData
+    mensualite: comparatorData.chargeMensuelleCredit || 
+                this.calculateMonthlyPayment(
+                    comparatorData.loanAmount,
+                    comparatorData.loanRate,
+                    comparatorData.loanDuration
+                ),
+    
+    // Pas de tableau → force la formule analytique
+    tableauAmortissement: null
+};
+
+// 4. Propager la mensualité pour le comparateur
+comparatorData.chargeMensuelleCredit = baseResults.mensualite;
             
             // 5. Enrichir comparatorData avec les résultats du simulateur
             comparatorData.chargeMensuelleCredit = baseResults.mensualite;
@@ -707,61 +712,69 @@ ${calc.fraisGestion > 0 ? `
         `;
     }
 
-    /**
-     * Construit la section charges (triées par impact)
-     */
-    buildChargesSection(calc, params) {
-        const charges = [];
-        
-        // Pour les régimes micro, afficher l'abattement forfaitaire
-        if (calc.regime.includes('Micro')) {
-            charges.push({
-                label: `Abattement forfaitaire (${calc.regime === 'Micro-foncier' ? '30%' : '50%'})`,
-                value: calc.abattementApplique,
-                formula: 'Sur revenus nets'
-            });
-        } else {
-            // Pour les régimes réels, détailler toutes les charges
-            charges.push(
-                { label: "Intérêts d'emprunt", value: calc.interetsAnnuels, formula: "Selon échéancier" },
-                calc.amortissementBien > 0 ? { label: "Amortissement bien", value: calc.amortissementBien, formula: `${calc.tauxAmortissement}% × valeur` } : null,
-                calc.amortissementMobilier > 0 ? { label: "Amortissement mobilier", value: calc.amortissementMobilier, formula: "10% × 10% du prix" } : null,
-                { label: "Taxe foncière", value: calc.taxeFonciere, formula: "Paramètre avancé" },
-                // { label: "Charges copro récupérables", value: calc.chargesCopro, formula: "12 × charges mensuelles" }, // Commenté car non déductible
-                calc.chargesCoproNonRecup > 0 ? { label: "Charges copro non récupérables", value: calc.chargesCoproNonRecup, formula: `${params.chargesCoproNonRecup} × 12` } : null,
-                { label: "Assurance PNO", value: calc.assurancePNO, formula: `${params.assurancePNO} × 12` },
-                { label: "Entretien annuel", value: calc.entretienAnnuel, formula: "Budget annuel" }
-            );
-        }
-        
-        const validCharges = charges.filter(Boolean).sort((a, b) => b.value - a.value);
-        
-        return `
-            <tr class="section-header">
-                <td colspan="3"><strong>📉 CHARGES DÉDUCTIBLES</strong></td>
-            </tr>
-            ${validCharges.map(charge => `
-            <tr>
-                <td>${charge.label}</td>
-                <td class="text-right negative">-${this.formatCurrency(charge.value)}</td>
-                <td class="formula">${charge.formula}</td>
-            </tr>
-            `).join('')}
-            ${calc.regime.includes('Micro') && calc.chargesReelles > calc.abattementApplique ? `
-            <tr class="warning-row">
-                <td colspan="3" style="color: #f59e0b; font-style: italic;">
-                    ⚠️ Charges réelles (${this.formatCurrency(calc.chargesReelles)}) > Abattement (${this.formatCurrency(calc.abattementApplique)})
-                    → Le régime réel serait plus avantageux
-                </td>
-            </tr>
-            ` : ''}
-            <tr class="total-row">
-                <td><strong>Total charges déductibles</strong></td>
-                <td class="text-right negative"><strong>-${this.formatCurrency(calc.totalCharges)}</strong></td>
-                <td></td>
-            </tr>
-        `;
+/**
+ * Construit la section charges (triées par impact)
+ */
+buildChargesSection(calc, params) {
+    const charges = [];
+    
+    // Pour les régimes micro, afficher l'abattement forfaitaire
+    if (calc.regime.includes('Micro')) {
+        charges.push({
+            label: `Abattement forfaitaire (${calc.regime === 'Micro-foncier' ? '30%' : '50%'})`,
+            value: calc.abattementApplique,
+            formula: 'Sur revenus nets'
+        });
+    } else {
+        // Pour les régimes réels, détailler toutes les charges
+        charges.push(
+            { label: "Intérêts d'emprunt", value: calc.interetsAnnuels, formula: "Selon échéancier" },
+            calc.amortissementBien > 0 ? { label: "Amortissement bien", value: calc.amortissementBien, formula: `${calc.tauxAmortissement}% × valeur` } : null,
+            calc.amortissementMobilier > 0 ? { label: "Amortissement mobilier", value: calc.amortissementMobilier, formula: "10% × 10% du prix" } : null,
+            
+            // 🆕 LIGNE AJOUTÉE : Amortissement des travaux
+            calc.amortissementTravaux > 0 ? { 
+                label: "Amortissement travaux", 
+                value: calc.amortissementTravaux, 
+                formula: "2.5% × coût travaux" 
+            } : null,
+            
+            { label: "Taxe foncière", value: calc.taxeFonciere, formula: "Paramètre avancé" },
+            // { label: "Charges copro récupérables", value: calc.chargesCopro, formula: "12 × charges mensuelles" }, // Commenté car non déductible
+            calc.chargesCoproNonRecup > 0 ? { label: "Charges copro non récupérables", value: calc.chargesCoproNonRecup, formula: `${params.chargesCoproNonRecup} × 12` } : null,
+            { label: "Assurance PNO", value: calc.assurancePNO, formula: `${params.assurancePNO} × 12` },
+            { label: "Entretien annuel", value: calc.entretienAnnuel, formula: "Budget annuel" }
+        );
     }
+    
+    const validCharges = charges.filter(Boolean).sort((a, b) => b.value - a.value);
+    
+    return `
+        <tr class="section-header">
+            <td colspan="3"><strong>📉 CHARGES DÉDUCTIBLES</strong></td>
+        </tr>
+        ${validCharges.map(charge => `
+        <tr>
+            <td>${charge.label}</td>
+            <td class="text-right negative">-${this.formatCurrency(charge.value)}</td>
+            <td class="formula">${charge.formula}</td>
+        </tr>
+        `).join('')}
+        ${calc.regime.includes('Micro') && calc.chargesReelles > calc.abattementApplique ? `
+        <tr class="warning-row">
+            <td colspan="3" style="color: #f59e0b; font-style: italic;">
+                ⚠️ Charges réelles (${this.formatCurrency(calc.chargesReelles)}) > Abattement (${this.formatCurrency(calc.abattementApplique)})
+                → Le régime réel serait plus avantageux
+            </td>
+        </tr>
+        ` : ''}
+        <tr class="total-row">
+            <td><strong>Total charges déductibles</strong></td>
+            <td class="text-right negative"><strong>-${this.formatCurrency(calc.totalCharges)}</strong></td>
+            <td></td>
+        </tr>
+    `;
+}
 
     /**
      * Construit la section fiscalité
