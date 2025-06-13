@@ -902,10 +902,11 @@ const revenuNetReel = calc.revenusNets
     - calc.assurancePNO;
 const rendementNetReel = (revenuNetReel / coutTotalProjet) * 100;
     
-    /* 3️⃣ Taux de couverture du crédit */
-    const tauxCouverture = mensualiteAnnuelle > 0 
-        ? (calc.revenusNets / mensualiteAnnuelle) * 100
-        : 100;
+/* 3️⃣ Taux de couverture du crédit (DSCR) */
+const dscr = mensualiteAnnuelle > 0
+    ? (revenuNetReel / mensualiteAnnuelle)
+    : 1;
+const tauxCouverture = dscr * 100;
     
     return `
         <tr class="section-header">
