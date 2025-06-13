@@ -27,6 +27,7 @@ const FISCAL_CONSTANTS = {
     LMNP_TAUX_AMORTISSEMENT_BIEN: 0.025,
     LMNP_TAUX_AMORTISSEMENT_MOBILIER: 0.10,
     LMNP_PART_MOBILIER: 0.10,
+    LMNP_PART_TERRAIN: 0.10,  
     
     // Durées
     DUREE_AMORTISSEMENT_BIEN: 40,
@@ -288,24 +289,44 @@ class MarketFiscalAnalyzer {
     /**
      * Calcule les intérêts annuels avec précision - V3
      */
-    calculateAnnualInterests(inputData, baseResults, year = 1) {
-        // Si on a le tableau d'amortissement, l'utiliser
-        if (baseResults?.tableauAmortissement?.length >= 12) {
-            const startMonth = (year - 1) * 12;
-            const endMonth = Math.min(year * 12, baseResults.tableauAmortissement.length);
-            
-            return baseResults.tableauAmortissement
-                .slice(startMonth, endMonth)
-                .reduce((sum, month) => sum + (month.interets || 0), 0);
-        }
-        
-        // Sinon, approximation pour l'année demandée
-        const capitalRestant = inputData.loanAmount - 
-            ((year - 1) * inputData.loanAmount / inputData.loanDuration);
-        
-        return capitalRestant * (inputData.loanRate / 100);
+calculateAnnualInterests(inputData, baseResults, year = 1) {
+    // 1️⃣ Cas idéal : on dispose du tableau d'amortissement précis
+    if (baseResults?.tableauAmortissement?.length >= 12) {
+        const start = (year - 1) * 12;
+        const end = Math.min(year * 12, baseResults.tableauAmortissement.length);
+        return baseResults.tableauAmortissement
+            .slice(start, end)
+            .reduce((sum, m) => sum + (m.interets || 0), 0);
     }
 
+    // 2️⃣ Approximation analytique avec formule actuarielle (sans tableau)
+    const r = (inputData.loanRate / 100) / 12;  // taux mensuel
+    const M = this.calculateMonthlyPayment(
+        inputData.loanAmount,
+        inputData.loanRate,
+        inputData.loanDuration
+    );
+    
+    const n0 = (year - 1) * 12;  // nombre de mois déjà écoulés
+    const n1 = Math.min(year * 12, inputData.loanDuration * 12);  // fin d'année
+    
+    // Formule actuarielle exacte du capital restant dû après n mensualités
+    const CRD = (n) => {
+        if (n === 0) return inputData.loanAmount;
+        if (n >= inputData.loanDuration * 12) return 0;
+        
+        return inputData.loanAmount * Math.pow(1 + r, n) - 
+               M * (Math.pow(1 + r, n) - 1) / r;
+    };
+    
+    // Capital restant dû au début et à la fin de l'année
+    const crdStart = CRD(n0);
+    const crdEnd = CRD(n1);
+    
+    // Méthode des trapèzes : moyenne du CRD × taux annuel
+    const capitalMoyen = (crdStart + crdEnd) / 2;
+    return capitalMoyen * (inputData.loanRate / 100);
+}
     /**
      * Calcule les charges réelles déductibles
      */
@@ -367,18 +388,35 @@ class MarketFiscalAnalyzer {
                 prelevementsSociaux = 0; // Pas de PS en LMNP
                 break;
                 
-            case 'LMNP au réel':
-                // Charges + amortissement
-                chargesDeductibles = this.calculateRealCharges(inputData, params, interetsAnnuels);
-                amortissementBien = inputData.price * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
-                amortissementMobilier = inputData.price * FISCAL_CONSTANTS.LMNP_PART_MOBILIER * 
-                                       FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
-                
-                const totalDeductionsLMNP = chargesDeductibles + amortissementBien + amortissementMobilier;
-                baseImposable = Math.max(0, revenusNets - totalDeductionsLMNP);
-                impotRevenu = baseImposable * (inputData.tmi / 100);
-                prelevementsSociaux = 0; // Pas de PS en LMNP
-                break;
+        case 'LMNP au réel':
+            // 1. Charges réelles
+            chargesDeductibles = this.calculateRealCharges(inputData, params, interetsAnnuels);
+
+            // 2. Amortissements
+            const baseAmortissable = inputData.price * 
+                (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN - FISCAL_CONSTANTS.LMNP_PART_MOBILIER);
+
+            amortissementBien = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
+            
+            amortissementMobilier = inputData.price * 
+                FISCAL_CONSTANTS.LMNP_PART_MOBILIER * 
+                FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
+
+            // 🆕 Amortissement des travaux capitalisés
+            amortissementTravaux = (inputData.travauxRenovation || 0) * 
+                FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
+
+            const totalDeductionsLMNP = chargesDeductibles + 
+                amortissementBien + 
+                amortissementMobilier + 
+                amortissementTravaux;
+
+            // 3. Fiscalité
+            baseImposable = Math.max(0, revenusNets - totalDeductionsLMNP);
+            impotRevenu = baseImposable * (inputData.tmi / 100);
+            prelevementsSociaux = baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;  // 🆕 PS à 17,2%
+            
+            break;
                 
             case 'SCI à l\'IS':
                 // IS à 15% jusqu'à 42500€
@@ -407,11 +445,10 @@ class MarketFiscalAnalyzer {
         // Cash-flow net - V3: Correction double comptabilisation
       // ✅ APRÈS (avec UNIQUEMENT les champs existants)
 const chargesCashAnnuel =
-    params.taxeFonciere +                      // 800 €/an
-    params.entretienAnnuel +                   // 500 €/an
-    (params.assurancePNO * 12) +               // 180 €/an (15×12)
-    (params.chargesCoproNonRecup * 12) +       // 600 €/an (50×12)
-    fraisGestion;                              // Si applicable
+    params.taxeFonciere +
+    params.entretienAnnuel +
+    (params.assurancePNO * 12) +
+    (params.chargesCoproNonRecup * 12);
 
 const cashflowNetAnnuel = 
     revenusNets - 
@@ -429,17 +466,23 @@ const cashflowNetAnnuel =
             fraisGestion,
             revenusNets,
             
-            // Charges
-            interetsAnnuels,
-            tauxAmortissement: amortissementBien > 0 ? FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN * 100 : 0,
-            amortissementBien,
-            amortissementMobilier,
-            chargesCopro: inputData.chargesRecuperables * 12,
-            chargesCoproNonRecup: params.chargesCoproNonRecup * 12,
-            entretienAnnuel: params.entretienAnnuel,
-            taxeFonciere: params.taxeFonciere,
-            assurancePNO: params.assurancePNO * 12,
-            totalCharges: chargesDeductibles + amortissementBien + amortissementMobilier,
+     // Charges
+        interetsAnnuels,
+        tauxAmortissement: amortissementBien > 0 
+            ? FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN * 100 
+            : 0,
+        amortissementBien,
+        amortissementMobilier,
+        amortissementTravaux,  // 🆕 Maintenant accessible car déclaré avant le switch
+        chargesCopro: (inputData.chargesRecuperables || 0) * 12,  // 🆕 Sécurisé
+        chargesCoproNonRecup: params.chargesCoproNonRecup * 12,
+        entretienAnnuel: params.entretienAnnuel,
+        taxeFonciere: params.taxeFonciere,
+        assurancePNO: params.assurancePNO * 12,
+        totalCharges: chargesDeductibles + 
+            amortissementBien + 
+            amortissementMobilier + 
+            amortissementTravaux,  // 🆕 Inclus dans le total
             
             // Fiscalité
             baseImposable,
@@ -769,12 +812,11 @@ buildCashflowSection(calc, inputData) {
     const mensualiteAnnuelle = inputData.monthlyPayment * 12;
     
     // Recalculer les charges cash pour l'affichage
-    const chargesCashAnnuel = 
-        calc.taxeFonciere +
-        calc.chargesCoproNonRecup +
-        calc.entretienAnnuel +
-        calc.assurancePNO +
-        (calc.fraisGestion || 0);
+const chargesCashAnnuel = 
+    calc.taxeFonciere +
+    calc.chargesCoproNonRecup +
+    calc.entretienAnnuel +
+    calc.assurancePNO;
     
     return `
         <tr class="section-header">
