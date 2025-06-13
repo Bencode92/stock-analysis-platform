@@ -187,21 +187,46 @@ class FiscalComparator {
         return results;
     }
 
-    /**
-     * Prépare les paramètres pour le simulateur
-     */
-    prepareSimulatorParams(data) {
-        return {
-            apport: data.apport,
-            taux: data.taux,
-            duree: data.duree,
-            surface: data.surface,
-            prixM2: data.prixBien / data.surface,
-            loyerM2: data.loyerMensuel / data.surface,
-            // Utiliser les paramètres par défaut du simulateur pour le reste
-            ...this.simulateur.params.communs
-        };
-    }
+/**
+ * Prépare les paramètres pour le simulateur
+ */
+prepareSimulatorParams(data) {
+    return {
+        // Financement
+        apport: Number(data.apport),
+        taux: Number(data.taux),
+        duree: Number(data.duree),
+        
+        // Capital réellement emprunté
+        capitalEmprunte: Number(data.empruntAvecGarantie) || 0,
+        
+        // Coût global du projet
+        prixTotal: Number(data.coutTotal) || Number(data.prixBien || data.prixPaye),
+        
+        // Dimensions du bien
+        surface: Number(data.surface),
+        prixM2: Number(data.prixBien || data.prixPaye) / Number(data.surface),
+        loyerM2: Number(data.loyerMensuel) / Number(data.surface),
+        
+        // Gestion locative
+        gestionLocative: Number(data.gestionLocative) || 0,
+        tauxGestionLocative: Number(data.gestionLocativeTaux || data.gestionLocative) || 0,
+        
+        // Hypothèses d'exploitation
+        typeAchat: data.typeAchat || 'classique',
+        vacanceLocative: Number(data.vacanceLocative) || 0,
+        taxeFonciere: Number(data.taxeFonciere) || 800,
+        chargesCopro: Number(data.chargesCoproNonRecup) || 50,  // mensuel
+        assurancePNO: Number(data.assurancePNO) || 15,          // mensuel
+        entretienAnnuel: Number(data.entretienAnnuel) || 500,
+        
+        // Fiscalité
+        tmi: Number(data.tmi) || 30,
+        
+        // Paramètres généraux du simulateur
+        ...this.simulateur.params.communs
+    };
+}
 
     /**
      * Vérifie si un régime est applicable
