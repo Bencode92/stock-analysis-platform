@@ -1288,48 +1288,52 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
             </div>
         </div>
         
-        <!-- NOUVEAU : Tableau détaillé (caché par défaut) -->
-        <div id="detailed-fiscal-table" class="detailed-table-container" style="display: none; margin-top: 20px; animation: slideDown 0.3s ease;">
-            ${this.buildDetailedTable(bestRegime, inputData)}
-        </div>
+<!-- NOUVEAU : Tableau détaillé (caché par défaut) -->
+<div id="detailed-fiscal-table" class="detailed-table-container" style="display: none; margin-top: 20px; animation: slideDown 0.3s ease;">
+    ${this.buildDetailedTable(bestRegime, inputData)}
+</div>
 
-        <!-- Tableau comparatif -->
-        <div class="comparison-table">
-            <h3>📊 Comparaison des régimes fiscaux</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Régime</th>
-                        <th>Cash-flow mensuel</th>
-                        <th>Cash-flow annuel</th>
-                        <th>Impôt annuel</th>
-                        <th>Rendement net/coût total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${fiscalResults.map(regime => {
-                        const rendementSurPrix = ((regime.cashflowNetAnnuel / inputData.price) * 100);
-                        return `
-                        <tr class="${regime.nom === bestRegime.nom ? 'best-regime' : ''}">
-                            <td>
-                                <i class="fas ${regime.icone || 'fa-home'}"></i>
-                                ${regime.nom}
-                            </td>
-                            <td class="${regime.cashflowMensuel > 0 ? 'positive' : 'negative'}">
-                                ${this.formatCurrency(regime.cashflowMensuel)}
-                            </td>
-                            <td class="${regime.cashflowNetAnnuel > 0 ? 'positive' : 'negative'}">
-                                ${this.formatCurrency(regime.cashflowNetAnnuel)}
-                            </td>
-     <td>${this.formatCurrency(Math.abs(regime.impotAnnuel))}</td>
-        <td class="${rendementNet > 0 ? 'positive' : 'negative'}">
-            ${rendementNet.toFixed(2)}%
-                            </td>
-                        </tr>
-                    `}).join('')}
-                </tbody>
-            </table>
-        </div>
+<!-- Tableau comparatif -->
+<div class="comparison-table">
+    <h3>📊 Comparaison des régimes fiscaux</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Régime</th>
+                <th>Cash-flow mensuel</th>
+                <th>Cash-flow annuel</th>
+                <th>Impôt annuel</th>
+                <th>Rendement net/coût total</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${fiscalResults.map(regime => {
+                // Calcul du rendement NET sur coût total
+                const rendementNet = (regime.cashflowNetAnnuel / 
+                                     (inputData.coutTotalAcquisition || inputData.price)) * 100;
+                
+                return `
+                <tr class="${regime.nom === bestRegime.nom ? 'best-regime' : ''}">
+                    <td>
+                        <i class="fas ${regime.icone || 'fa-home'}"></i>
+                        ${regime.nom}
+                    </td>
+                    <td class="${regime.cashflowMensuel > 0 ? 'positive' : 'negative'}">
+                        ${this.formatCurrency(regime.cashflowMensuel)}
+                    </td>
+                    <td class="${regime.cashflowNetAnnuel > 0 ? 'positive' : 'negative'}">
+                        ${this.formatCurrency(regime.cashflowNetAnnuel)}
+                    </td>
+                    <td>${this.formatCurrency(Math.abs(regime.impotAnnuel))}</td>
+                    <td class="${rendementNet > 0 ? 'positive' : 'negative'}">
+                        ${rendementNet.toFixed(2)}%
+                    </td>
+                </tr>
+                `;
+            }).join('')}
+        </tbody>
+    </table>
+</div>
 
         <!-- Graphiques de comparaison -->
         <div class="charts-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 30px 0;">
