@@ -131,7 +131,6 @@
 .benefit-item .amount {
     font-size: 28px;
     font-weight: 700;
-    color: #28a745;
     margin: 10px 0;
 }
 
@@ -879,4 +878,32 @@ canvas {
     align-items: center;
     gap: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* ========================================
+   RÈGLES DE COULEUR PRIORITAIRES
+   ======================================== */
+
+/* Force les couleurs pour positive/negative - DOIT ÊTRE À LA FIN */
+.amount.positive,
+.positive {
+    color: var(--positive) !important;
+}
+
+.amount.negative,
+.negative {
+    color: var(--negative) !important;
+}
+
+/* S'assurer que ces classes gagnent toujours, même dans les tableaux */
+.calculation-table .positive,
+.comparison-table .positive,
+.detailed-comparison-table .positive {
+    color: var(--positive) !important;
+}
+
+.calculation-table .negative,
+.comparison-table .negative,
+.detailed-comparison-table .negative {
+    color: var(--negative) !important;
 }
