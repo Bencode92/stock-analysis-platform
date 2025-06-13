@@ -957,7 +957,7 @@ const yearlyCharges = charges * 12;
     // Stocker dans la console pour debug
     console.log('📊 Données fiscales préparées:', formData);
     console.log('🏙️ Ville sélectionnée:', villeData);
-    console.log('💸 Coût total acquisition:', coutTotalAcquisition);
+  console.log('💸 Coût total acquisition:', coutTotalFinal);
     console.log('🏛️ Paramètres enchères:', {
         emoluments: [formData.emolumentsTranche1, formData.emolumentsTranche2, formData.emolumentsTranche3, formData.emolumentsTranche4],
         honorairesCoef: formData.honorairesAvocatCoef,
