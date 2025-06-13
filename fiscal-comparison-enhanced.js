@@ -4,10 +4,11 @@
  * Version corrigée avec calculs fiscaux exacts
  * 
  * CORRECTIONS APPORTÉES :
+ * - Cash-flow spécifique à chaque régime
  * - Prélèvements sociaux uniquement pour location nue
  * - Pas de PS pour LMNP/LMP
  * - Seuil IS mis à jour pour 2024 (42 500€)
- * - Fonction centralisée getTauxImposition()
+ * - Calculs de cash-flow réels basés sur les charges effectivement payées
  */
 
 class FiscalComparator {
@@ -237,225 +238,498 @@ class FiscalComparator {
             description: regime.description
         };
         
+        // Préparer les données communes pour tous les calculs
+        const commonData = {
+            loyerMensuel: baseResults.loyerBrut,
+            vacanceLocative: baseResults.vacanceLocative || 5,
+            taxeFonciere: baseResults.taxeFonciere || 800,
+            chargesCopro: baseResults.chargesNonRecuperables / 12 || 50,
+            assurancePNO: baseResults.assurancePNO / 12 || 15,
+            entretien: baseResults.entretienAnnuel || 500,
+            gestionLocative: data.gestionLocativeTaux > 0 ? loyerAnnuel * (data.gestionLocativeTaux / 100) : 0,
+            interetsAnnuels: baseResults.interetsAnnee1 || baseResults.tableauAmortissement.slice(0, 12).reduce((sum, m) => sum + m.interets, 0),
+            fraisAchat: baseResults.fraisAchat || 0,
+            travaux: baseResults.travaux || 0
+        };
+        
         switch (calcul.type) {
             case 'micro':
-                result = this.calculateMicroRegime(result, baseResults, data, calcul.abattement);
+                if (regime.id === 'micro-foncier') {
+                    result = this.calculateMicroFoncier(result, baseResults, data, commonData);
+                } else if (regime.id === 'lmnp-micro') {
+                    result = this.calculateLMNPMicroBIC(result, baseResults, data, commonData);
+                }
                 break;
                 
             case 'reel':
-                result = this.calculateReelRegime(result, baseResults, data, calcul.deficitMax);
+                result = this.calculateNuReel(result, baseResults, data, commonData);
                 break;
                 
             case 'reel-amortissement':
-                result = this.calculateLMNPReel(result, baseResults, data, calcul);
+                result = this.calculateLMNPReel(result, baseResults, data, commonData);
                 break;
                 
             case 'professionnel':
-                result = this.calculateLMP(result, baseResults, data);
+                result = this.calculateLMP(result, baseResults, data, commonData);
                 break;
                 
             case 'societe':
-                result = this.calculateSCIIS(result, baseResults, data, calcul);
+                result = this.calculateSCIIS(result, baseResults, data, commonData);
                 break;
                 
             default:
                 // Régime par défaut
-                result = this.calculateReelRegime(result, baseResults, data);
+                result = this.calculateNuReel(result, baseResults, data, commonData);
         }
         
         // Ajouter les métriques communes
         result.loyerAnnuel = loyerAnnuel;
-        result.cashflowAnnuel = baseResults.cashFlow * 12;
         result.rendementBrut = (loyerAnnuel / baseResults.coutTotal) * 100;
         
         return result;
     }
 
     /**
-     * Calcul pour les régimes micro (micro-foncier, micro-BIC) - CORRIGÉ
+     * Calcul pour Micro-foncier - CORRIGÉ avec cash-flow réel
      */
-    calculateMicroRegime(result, baseResults, data, abattement) {
-        const loyerAnnuel = baseResults.loyerBrut * 12;
+    calculateMicroFoncier(result, baseResults, data, calcul) {
+        console.log('📊 Calcul Micro-foncier');
+        
+        const loyerAnnuel = calcul.loyerMensuel * 12 * (1 - calcul.vacanceLocative / 100);
+        const abattement = 0.30; // 30% d'abattement forfaitaire
         const revenuImposable = loyerAnnuel * (1 - abattement);
         
-        // Utiliser la fonction centralisée pour le taux
-        const taux = this.getTauxImposition(result.id, data.tmi);
-        const impot = revenuImposable * taux / 100;
+        // Impôt sur le revenu + prélèvements sociaux
+        const impotRevenu = revenuImposable * (data.tmi / 100);
+        const prelevementsSociaux = revenuImposable * 0.172;
+        const impotTotal = impotRevenu + prelevementsSociaux;
         
-        result.abattementForfaitaire = loyerAnnuel * abattement;
-        result.revenuImposable = revenuImposable;
-        result.impotAnnuel = -impot;
-        result.cashflowNetAnnuel = (baseResults.cashFlow * 12) - impot;
+        // ✅ NOUVEAU : Calcul du cash-flow réel
+        // En micro-foncier, on ne peut déduire AUCUNE charge réelle
+        const chargesReelles = 
+            calcul.taxeFonciere +
+            calcul.chargesCopro * 12 +
+            calcul.assurancePNO * 12 +
+            calcul.entretien +
+            (calcul.gestionLocative || 0);
+        
+        const interetsAnnuels = calcul.interetsAnnuels || 0;
+        const capitalAnnuel = (baseResults.chargeMensuelleCredit * 12) - interetsAnnuels;
+        
+        // Cash-flow = Loyers - Charges réelles - Mensualité crédit - Impôts
+        const cashflowBrut = loyerAnnuel - chargesReelles - (interetsAnnuels + capitalAnnuel);
+        result.cashflowNetAnnuel = cashflowBrut - impotTotal;
         result.cashflowMensuel = result.cashflowNetAnnuel / 12;
-        result.rendementNet = (result.cashflowNetAnnuel / baseResults.coutTotal) * 100;
+        
+        // Logging pour debug
+        console.log('Micro-foncier - Détails:', {
+            loyerAnnuel,
+            abattementForfaitaire: loyerAnnuel * abattement,
+            chargesReelles,
+            revenuImposable,
+            impotTotal,
+            cashflowNet: result.cashflowNetAnnuel,
+            'Charges réelles > Abattement ?': chargesReelles > (loyerAnnuel * abattement)
+        });
+        
+        // Autres calculs
+        result.baseImposable = revenuImposable;
+        result.impotAnnuel = -impotTotal;
+        result.rendementNet = data.prixBien ? (result.cashflowNetAnnuel / data.prixBien) * 100 : 0;
+        
+        result.details = {
+            regime: 'Micro-foncier',
+            abattement: '30%',
+            chargesForfaitaires: (loyerAnnuel * abattement).toFixed(2),
+            chargesReelles: chargesReelles.toFixed(2),
+            alerteDefavorable: chargesReelles > (loyerAnnuel * abattement)
+        };
         
         result.avantages = [
-            `Abattement forfaitaire de ${abattement * 100}%`,
-            "Simplicité administrative",
-            "Pas de comptabilité détaillée",
-            result.id.includes('lmnp') ? "Pas de prélèvements sociaux (régime BIC)" : null
-        ].filter(Boolean);
+            'Simplicité administrative (pas de comptabilité)',
+            `Abattement forfaitaire de ${(loyerAnnuel * abattement).toFixed(0)}€`,
+            chargesReelles > (loyerAnnuel * abattement) ? 
+                `⚠️ ATTENTION : Vos charges réelles (${chargesReelles.toFixed(0)}€) dépassent l'abattement !` : 
+                `✅ L'abattement vous fait économiser ${((loyerAnnuel * abattement) - chargesReelles).toFixed(0)}€`
+        ];
         
         return result;
     }
 
     /**
-     * Calcul pour le régime réel (location nue) - PS INCLUS
+     * Calcul pour Location nue au réel - CORRIGÉ avec déficit foncier
      */
-    calculateReelRegime(result, baseResults, data, deficitMax = 10700) {
-        const loyerAnnuel = baseResults.loyerBrut * 12;
+    calculateNuReel(result, baseResults, data, calcul) {
+        console.log('📊 Calcul Location nue au réel');
         
-        // Charges déductibles
-        const interets = baseResults.interetsAnnee1 || baseResults.tableauAmortissement.slice(0, 12).reduce((sum, m) => sum + m.interets, 0);
-        const taxeFonciere = baseResults.taxeFonciere;
-        const chargesCopro = baseResults.chargesNonRecuperables;
-        const assurance = baseResults.assurancePNO;
-        const entretien = baseResults.entretienAnnuel;
-        const fraisGestion = data.gestionLocativeTaux > 0 ? loyerAnnuel * (data.gestionLocativeTaux / 100) : 0;
+        const loyerAnnuel = calcul.loyerMensuel * 12 * (1 - calcul.vacanceLocative / 100);
         
-        const totalCharges = interets + taxeFonciere + chargesCopro + assurance + entretien + fraisGestion;
+        // ✅ NOUVEAU : Charges déductibles en location nue
+        const chargesDeductibles = {
+            interets: calcul.interetsAnnuels || 0,
+            taxeFonciere: calcul.taxeFonciere || 0,
+            chargesCopro: (calcul.chargesCopro || 0) * 12,
+            assurancePNO: (calcul.assurancePNO || 0) * 12,
+            entretien: calcul.entretien || 0,
+            travauxDeductibles: calcul.travaux || 0, // Si travaux d'entretien
+            fraisGestion: calcul.gestionLocative || 0,
+            total: 0
+        };
         
-        // Revenu foncier imposable
-        let revenuImposable = loyerAnnuel - totalCharges;
-        let deficitReportable = 0;
-        let economieDeficit = 0;
-        
-        // Gestion du déficit foncier
-        if (revenuImposable < 0) {
-            const deficitHorsInterets = Math.min(Math.abs(revenuImposable - interets), deficitMax);
-            economieDeficit = deficitHorsInterets * data.tmi / 100;
-            deficitReportable = Math.abs(revenuImposable) - deficitHorsInterets;
-            revenuImposable = 0;
-        }
-        
-        // Utiliser la fonction centralisée (location nue = TMI + PS)
-        const taux = this.getTauxImposition(result.id, data.tmi);
-        const impot = revenuImposable * taux / 100;
-        
-        result.chargesDeductibles = totalCharges;
-        result.revenuImposable = revenuImposable;
-        result.deficitFoncier = deficitReportable;
-        result.impotAnnuel = -impot;
-        result.cashflowNetAnnuel = (baseResults.cashFlow * 12) - impot + economieDeficit;
-        result.cashflowMensuel = result.cashflowNetAnnuel / 12;
-        result.rendementNet = (result.cashflowNetAnnuel / baseResults.coutTotal) * 100;
-        
-        result.avantages = [
-            "Charges réelles déductibles",
-            deficitReportable > 0 ? `Déficit foncier de ${Math.round(deficitReportable)}€` : null,
-            "Intérêts d'emprunt déductibles"
-        ].filter(Boolean);
-        
-        return result;
-    }
-
-    /**
-     * Calcul pour LMNP au réel - CORRIGÉ (pas de PS)
-     */
-    calculateLMNPReel(result, baseResults, data, calcul) {
-        const loyerAnnuel = baseResults.loyerBrut * 12;
-        
-        // Charges déductibles
-        const chargesExploitation = baseResults.interetsAnnee1 + baseResults.taxeFonciere + 
-                                   baseResults.chargesNonRecuperables + baseResults.assurancePNO + 
-                                   baseResults.entretienAnnuel + (loyerAnnuel * 0.05);
-        
-        // Amortissements
-        const amortissementBien = baseResults.prixAchat * calcul.amortissementBien;
-        const amortissementMobilier = (baseResults.prixAchat * 0.10) * calcul.amortissementMobilier;
-        const amortissementTravaux = baseResults.travaux * calcul.amortissementTravaux;
-        const totalAmortissements = amortissementBien + amortissementMobilier + amortissementTravaux;
+        chargesDeductibles.total = Object.values(chargesDeductibles)
+            .filter(v => typeof v === 'number')
+            .reduce((a, b) => a + b, 0);
         
         // Résultat fiscal
-        const resultatFiscal = Math.max(0, loyerAnnuel - chargesExploitation - totalAmortissements);
+        const resultatFiscal = loyerAnnuel - chargesDeductibles.total;
+        const deficit = resultatFiscal < 0 ? Math.abs(resultatFiscal) : 0;
+        const deficitImputable = Math.min(deficit, 10700); // Plafond déficit foncier
         
-        // CORRECTION : Pas de prélèvements sociaux en LMNP
-        const taux = this.getTauxImposition(result.id, data.tmi);
-        const impot = resultatFiscal * taux / 100;
+        // Base imposable après déficit
+        const baseImposable = Math.max(0, resultatFiscal);
         
-        result.chargesDeductibles = chargesExploitation;
-        result.amortissements = totalAmortissements;
-        result.resultatFiscal = resultatFiscal;
-        result.impotAnnuel = -impot;
-        result.cashflowNetAnnuel = (baseResults.cashFlow * 12) - impot;
+        // Impôts
+        const impotRevenu = baseImposable * (data.tmi / 100);
+        const prelevementsSociaux = baseImposable * 0.172;
+        const impotTotal = impotRevenu + prelevementsSociaux;
+        
+        // Économie d'impôt si déficit
+        const economieDeficit = deficitImputable * (data.tmi / 100);
+        
+        // ✅ NOUVEAU : Cash-flow réel
+        const chargesReellementPayees = chargesDeductibles.total - chargesDeductibles.interets;
+        const mensualiteCredit = baseResults.chargeMensuelleCredit * 12;
+        
+        const cashflowBrut = loyerAnnuel - chargesReellementPayees - mensualiteCredit;
+        result.cashflowNetAnnuel = cashflowBrut - impotTotal + economieDeficit;
         result.cashflowMensuel = result.cashflowNetAnnuel / 12;
-        result.rendementNet = (result.cashflowNetAnnuel / baseResults.coutTotal) * 100;
+        
+        // Logging
+        console.log('Location nue réel - Détails:', {
+            loyerAnnuel,
+            chargesDeductibles: chargesDeductibles.total,
+            resultatFiscal,
+            deficit,
+            economieDeficit,
+            impotTotal,
+            cashflowNet: result.cashflowNetAnnuel
+        });
+        
+        // Autres calculs
+        result.baseImposable = baseImposable;
+        result.impotAnnuel = -(impotTotal - economieDeficit);
+        result.deficit = deficit;
+        result.deficitReportable = deficit - deficitImputable;
+        result.rendementNet = data.prixBien ? (result.cashflowNetAnnuel / data.prixBien) * 100 : 0;
+        
+        result.details = {
+            regime: 'Location nue au réel',
+            chargesDeductibles: chargesDeductibles.total.toFixed(2),
+            deficit: deficit.toFixed(2),
+            economieDeficit: economieDeficit.toFixed(2)
+        };
         
         result.avantages = [
-            "Amortissement du bien et du mobilier",
-            "Report des déficits sur 10 ans",
-            resultatFiscal === 0 ? "Aucun impôt grâce aux amortissements" : null,
-            "Pas de prélèvements sociaux (régime BIC)",
-            "Plus-value exonérée après 30 ans"
+            'Déduction de toutes les charges réelles',
+            deficit > 0 ? `Déficit foncier : ${deficit.toFixed(0)}€` : null,
+            deficitImputable > 0 ? `Économie d'impôt déficit : ${economieDeficit.toFixed(0)}€` : null,
+            result.deficitReportable > 0 ? `Déficit reportable : ${result.deficitReportable.toFixed(0)}€` : null
         ].filter(Boolean);
         
         return result;
     }
 
     /**
-     * Calcul pour LMP
+     * Calcul pour LMNP Micro-BIC - CORRIGÉ
      */
-    calculateLMP(result, baseResults, data) {
-        // Similaire au LMNP réel avec avantages supplémentaires
-        result = this.calculateLMNPReel(result, baseResults, data, {
-            amortissementBien: 0.025,
-            amortissementMobilier: 0.10,
-            amortissementTravaux: 0.10
+    calculateLMNPMicroBIC(result, baseResults, data, calcul) {
+        console.log('📊 Calcul LMNP Micro-BIC');
+        
+        const loyerAnnuel = calcul.loyerMensuel * 12 * (1 - calcul.vacanceLocative / 100);
+        const abattement = 0.50; // 50% d'abattement
+        const baseImposable = loyerAnnuel * (1 - abattement);
+        const impot = baseImposable * (data.tmi / 100); // Pas de PS en LMNP
+        
+        // ✅ Charges réelles pour le cash-flow (sans abattement)
+        const chargesReelles = 
+            calcul.taxeFonciere +
+            calcul.chargesCopro * 12 +
+            calcul.assurancePNO * 12 +
+            calcul.entretien +
+            (calcul.gestionLocative || 0);
+        
+        const cashflowAvantImpot = loyerAnnuel - chargesReelles;
+        const remboursementTotal = baseResults.chargeMensuelleCredit * 12;
+        const cashflowBrut = cashflowAvantImpot - remboursementTotal;
+        
+        // Cash-flow net
+        result.cashflowNetAnnuel = cashflowBrut - impot;
+        result.cashflowMensuel = result.cashflowNetAnnuel / 12;
+        
+        // Logging
+        console.log('LMNP Micro-BIC - Détails:', {
+            loyerAnnuel,
+            baseImposable,
+            impot,
+            chargesReelles,
+            cashflowNet: result.cashflowNetAnnuel
         });
+        
+        // Autres calculs
+        result.baseImposable = baseImposable;
+        result.impotAnnuel = -impot;
+        result.rendementNet = data.prixBien ? (result.cashflowNetAnnuel / data.prixBien) * 100 : 0;
+        
+        result.details = {
+            regime: 'LMNP Micro-BIC',
+            abattement: `${(abattement * 100)}%`,
+            chargesForfaitaires: (loyerAnnuel * abattement).toFixed(2),
+            chargesReelles: chargesReelles.toFixed(2)
+        };
+        
+        result.avantages = [
+            `Abattement forfaitaire de ${(abattement * 100)}%`,
+            'Simplicité : pas de comptabilité détaillée',
+            'Pas de prélèvements sociaux',
+            chargesReelles > (loyerAnnuel * abattement) ? 
+                '⚠️ Vos charges réelles dépassent l\'abattement' : 
+                `Économie vs charges réelles : ${((loyerAnnuel * abattement) - chargesReelles).toFixed(0)}€`
+        ];
+        
+        return result;
+    }
+
+    /**
+     * Calcul pour LMNP au réel - CORRIGÉ avec amortissements
+     */
+    calculateLMNPReel(result, baseResults, data, calcul) {
+        console.log('📊 Calcul LMNP au réel - Début');
+        
+        const loyerAnnuel = calcul.loyerMensuel * 12 * (1 - calcul.vacanceLocative / 100);
+        
+        // ✅ NOUVEAU : Calculer les charges RÉELLEMENT DÉCAISSÉES
+        const chargesReellementPayees = 
+            calcul.taxeFonciere +
+            calcul.chargesCopro * 12 +
+            calcul.assurancePNO * 12 +
+            calcul.entretien +
+            calcul.interetsAnnuels +
+            (calcul.gestionLocative || 0);
+        
+        // ✅ NOUVEAU : Calculer les amortissements (non décaissés)
+        const valeurBien = baseResults.prixAchat || data.prixBien || 0;
+        const valeurTerrain = valeurBien * 0.15;
+        const valeurConstruction = valeurBien - valeurTerrain;
+        const valeurMobilier = valeurBien * 0.10; // 10% du prix en mobilier
+        
+        const amortissementConstruction = valeurConstruction * 0.025; // 2.5% par an
+        const amortissementMobilier = valeurMobilier * 0.10; // 10% par an
+        const amortissementFrais = calcul.fraisAchat * 0.20; // 20% sur 5 ans
+        
+        const totalAmortissements = amortissementConstruction + amortissementMobilier + amortissementFrais;
+        
+        // ✅ NOUVEAU : Charges déductibles fiscalement (incluant amortissements)
+        const chargesFiscalesDeductibles = chargesReellementPayees + totalAmortissements;
+        
+        // Résultat fiscal
+        const resultatFiscal = Math.max(0, loyerAnnuel - chargesFiscalesDeductibles);
+        
+        // Calcul de l'impôt (pas de PS en LMNP)
+        const impot = resultatFiscal * (data.tmi / 100);
+        
+        // ✅ CORRECTION PRINCIPALE : Cash-flow basé sur les charges RÉELLES
+        const cashflowAvantImpot = loyerAnnuel - chargesReellementPayees;
+        const remboursementCapital = (baseResults.chargeMensuelleCredit * 12) - calcul.interetsAnnuels;
+        const cashflowBrut = cashflowAvantImpot - remboursementCapital;
+        
+        // Cash-flow net après impôt
+        result.cashflowNetAnnuel = cashflowBrut - impot;
+        result.cashflowMensuel = result.cashflowNetAnnuel / 12;
+        
+        // Logging pour debug
+        console.log('LMNP Réel - Détails du calcul:', {
+            loyerAnnuel,
+            chargesReellementPayees,
+            totalAmortissements,
+            chargesFiscalesDeductibles,
+            resultatFiscal,
+            impot,
+            cashflowBrut,
+            cashflowNet: result.cashflowNetAnnuel
+        });
+        
+        // Autres calculs
+        result.amortissements = totalAmortissements;
+        result.baseImposable = resultatFiscal;
+        result.impotAnnuel = -impot;
+        result.deficit = resultatFiscal < 0 ? Math.abs(resultatFiscal) : 0;
+        result.rendementNet = data.prixBien ? (result.cashflowNetAnnuel / data.prixBien) * 100 : 0;
+        
+        // Détails pour affichage
+        result.details = {
+            regime: 'LMNP au réel',
+            chargesDeductibles: chargesFiscalesDeductibles.toFixed(2),
+            amortissements: totalAmortissements.toFixed(2),
+            resultatFiscal: resultatFiscal.toFixed(2),
+            economieImpot: (totalAmortissements * (data.tmi / 100)).toFixed(2)
+        };
+        
+        result.avantages = [
+            `Amortissement du bien : ${amortissementConstruction.toFixed(0)}€/an`,
+            `Amortissement mobilier : ${amortissementMobilier.toFixed(0)}€/an`,
+            totalAmortissements > loyerAnnuel ? 'Aucun impôt grâce aux amortissements' : 
+                `Économie d'impôt : ${(totalAmortissements * data.tmi / 100).toFixed(0)}€/an`,
+            'Pas de prélèvements sociaux',
+            result.deficit > 0 ? `Déficit reportable : ${result.deficit.toFixed(0)}€` : null
+        ].filter(Boolean);
+        
+        return result;
+    }
+
+    /**
+     * Calcul pour LMP - Loueur Meublé Professionnel
+     */
+    calculateLMP(result, baseResults, data, calcul) {
+        console.log('📊 Calcul LMP');
+        
+        // Base similaire au LMNP réel
+        result = this.calculateLMNPReel(result, baseResults, data, calcul);
+        
+        // Ajustements spécifiques LMP
+        result.nom = 'LMP (Loueur Meublé Professionnel)';
+        
+        // Le déficit est déductible du revenu global en LMP
+        if (result.deficit > 0) {
+            const economieDeficitGlobal = result.deficit * (data.tmi / 100);
+            result.cashflowNetAnnuel += economieDeficitGlobal;
+            result.cashflowMensuel = result.cashflowNetAnnuel / 12;
+        }
         
         result.avantages = [
             ...result.avantages,
-            "Exonération ISF/IFI sur le bien",
-            "Exonération de plus-value professionnelle",
-            "Déduction du déficit sur le revenu global"
+            'Déficit déductible du revenu global',
+            'Exonération ISF/IFI sur le bien',
+            'Exonération de plus-value professionnelle',
+            'Cotisations sociales déductibles'
         ];
         
         return result;
     }
 
     /**
-     * Calcul pour SCI IS - CORRIGÉ avec seuil 2024
+     * Calcul pour SCI à l'IS - CORRIGÉ avec taux 2024
      */
     calculateSCIIS(result, baseResults, data, calcul) {
-        const loyerAnnuel = baseResults.loyerBrut * 12;
+        console.log('📊 Calcul SCI à l\'IS');
         
-        // Charges déductibles (plus étendues qu'en nom propre)
-        const chargesExploitation = baseResults.interetsAnnee1 + baseResults.taxeFonciere + 
-                                   baseResults.chargesNonRecuperables + baseResults.assurancePNO + 
-                                   baseResults.entretienAnnuel + (loyerAnnuel * 0.05);
+        const loyerAnnuel = calcul.loyerMensuel * 12 * (1 - calcul.vacanceLocative / 100);
         
-        // Amortissements (y compris du bâti)
-        const amortissementBatiment = baseResults.prixAchat * 0.8 * 0.025; // 80% du prix sur 40 ans
-        const amortissementTravaux = baseResults.travaux * 0.10;
-        const totalAmortissements = amortissementBatiment + amortissementTravaux;
+        // ✅ NOUVEAU : Charges déductibles spécifiques SCI IS
+        const chargesDeductibles = {
+            interets: calcul.interetsAnnuels || 0,
+            taxeFonciere: calcul.taxeFonciere || 0,
+            chargesCopro: (calcul.chargesCopro || 0) * 12,
+            assurancePNO: (calcul.assurancePNO || 0) * 12,
+            entretien: calcul.entretien || 0,
+            fraisGestion: calcul.gestionLocative || 0,
+            honorairesComptable: 1200, // Forfait comptable SCI
+            fraisBancaires: 200,
+            amortissementBien: (data.prixBien || 0) * 0.025, // 2.5% du bien
+            amortissementFrais: (calcul.fraisAchat || 0) * 0.20, // 20% des frais
+            total: 0
+        };
         
-        // Résultat imposable
-        const resultatImposable = Math.max(0, loyerAnnuel - chargesExploitation - totalAmortissements);
+        chargesDeductibles.total = Object.values(chargesDeductibles)
+            .filter(v => typeof v === 'number')
+            .reduce((a, b) => a + b, 0);
         
-        // Calcul de l'IS avec seuil 2024
+        // Résultat fiscal
+        const resultatFiscal = loyerAnnuel - chargesDeductibles.total;
+        const resultatImposable = Math.max(0, resultatFiscal);
+        
+        // Calcul IS avec taux réduit
         let impotIS = 0;
-        if (resultatImposable <= this.SEUIL_IS_2024) {
-            impotIS = resultatImposable * calcul.tauxIS;
+        if (resultatImposable <= 42500) {
+            impotIS = resultatImposable * 0.15; // Taux réduit 15%
         } else {
-            impotIS = this.SEUIL_IS_2024 * calcul.tauxIS + (resultatImposable - this.SEUIL_IS_2024) * calcul.tauxISPlein;
+            impotIS = 42500 * 0.15 + (resultatImposable - 42500) * 0.25;
         }
         
-        result.chargesDeductibles = chargesExploitation;
-        result.amortissements = totalAmortissements;
-        result.resultatImposable = resultatImposable;
-        result.impotAnnuel = -impotIS;
-        result.cashflowNetAnnuel = (baseResults.cashFlow * 12) - impotIS;
+        // ✅ NOUVEAU : Cash-flow réel SCI
+        // Les amortissements ne sont pas des sorties de cash
+        const chargesDecaissables = chargesDeductibles.total - 
+            chargesDeductibles.amortissementBien - 
+            chargesDeductibles.amortissementFrais;
+        
+        const mensualiteCredit = baseResults.chargeMensuelleCredit * 12;
+        
+        const cashflowBrut = loyerAnnuel - chargesDecaissables - mensualiteCredit;
+        result.cashflowNetAnnuel = cashflowBrut - impotIS;
         result.cashflowMensuel = result.cashflowNetAnnuel / 12;
-        result.rendementNet = (result.cashflowNetAnnuel / baseResults.coutTotal) * 100;
+        
+        // Logging
+        console.log('SCI IS - Détails:', {
+            loyerAnnuel,
+            chargesDeductibles: chargesDeductibles.total,
+            dontAmortissements: chargesDeductibles.amortissementBien + chargesDeductibles.amortissementFrais,
+            resultatFiscal,
+            impotIS,
+            tauxEffectifIS: resultatImposable > 0 ? (impotIS / resultatImposable * 100).toFixed(1) + '%' : '0%',
+            cashflowNet: result.cashflowNetAnnuel
+        });
+        
+        // Autres calculs
+        result.baseImposable = resultatImposable;
+        result.impotAnnuel = -impotIS;
+        result.deficit = resultatFiscal < 0 ? Math.abs(resultatFiscal) : 0;
+        result.rendementNet = data.prixBien ? (result.cashflowNetAnnuel / data.prixBien) * 100 : 0;
+        
+        // Comparaison avec TMI personnel
+        const impotSiIR = resultatImposable * (data.tmi / 100) + resultatImposable * 0.172;
+        const economieVsIR = impotSiIR - impotIS;
+        
+        result.details = {
+            regime: 'SCI à l\'IS',
+            tauxIS: resultatImposable <= 42500 ? '15%' : 'Mixte 15%/25%',
+            amortissements: (chargesDeductibles.amortissementBien + chargesDeductibles.amortissementFrais).toFixed(2),
+            economieVsIR: economieVsIR.toFixed(2)
+        };
         
         result.avantages = [
-            `Taux d'IS réduit à 15% jusqu'à ${this.SEUIL_IS_2024}€`,
-            "Amortissement du bâtiment",
-            "Report illimité des déficits",
-            "Cession de parts facilitée"
-        ];
+            `Taux IS : ${resultatImposable <= 42500 ? '15%' : 'jusqu\'à 15%'} vs TMI ${data.tmi}%`,
+            `Amortissement du bien : ${chargesDeductibles.amortissementBien.toFixed(0)}€/an`,
+            economieVsIR > 0 ? `Économie vs IR : ${economieVsIR.toFixed(0)}€/an` : null,
+            'Possibilité de déduire la rémunération du gérant',
+            'Report illimité des déficits'
+        ].filter(Boolean);
         
         return result;
+    }
+
+    /**
+     * Helper pour calculer les charges réelles
+     */
+    calculateChargesReellesComplete(calcul) {
+        return {
+            // Charges financières
+            interetsAnnuels: calcul.interetsAnnuels || 0,
+            
+            // Charges d'exploitation
+            taxeFonciere: calcul.taxeFonciere || 0,
+            chargesCopro: (calcul.chargesCopro || 0) * 12,
+            assurancePNO: (calcul.assurancePNO || 0) * 12,
+            entretien: calcul.entretien || 0,
+            gestionLocative: calcul.gestionLocative || 0,
+            
+            // Méthodes utiles
+            totalSansInterets: function() {
+                return this.taxeFonciere + this.chargesCopro + 
+                       this.assurancePNO + this.entretien + this.gestionLocative;
+            },
+            totalAvecInterets: function() {
+                return this.totalSansInterets() + this.interetsAnnuels;
+            }
+        };
     }
 
     /**
