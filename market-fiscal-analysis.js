@@ -1225,16 +1225,22 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
         <!-- Meilleur régime -->
         <div class="best-regime-card">
             <h3>🏆 Meilleur régime fiscal : ${bestRegime.nom}</h3>
-            <div class="regime-benefits">
-                <div class="benefit-item">
-                    <h4>💸 Cash-flow mensuel</h4>
-                    <p class="amount">${this.formatCurrency(bestRegime.cashflowMensuel)}</p>
-                </div>
-                <div class="benefit-item">
-                    <h4>📉 Économie d'impôt annuelle</h4>
-                    <p class="amount">${this.formatCurrency(Math.max(0, impotEstime - Math.abs(bestRegime.impotAnnuel)))}</p>
-                </div>
-            </div>
+<div class="regime-benefits">
+    <div class="benefit-item">
+        <h4>💸 Cash-flow mensuel</h4>
+        <p class="amount ${bestRegime.cashflowMensuel >= 0 ? 'positive' : 'negative'}">
+            ${bestRegime.cashflowMensuel >= 0 ? '+' : ''}${this.formatCurrency(bestRegime.cashflowMensuel)}
+        </p>
+    </div>
+    
+    <div class="benefit-item">
+        <h4>📊 Rendement brut / coût total</h4>
+        <p class="amount neutral">
+            ${(((inputData.yearlyRent || inputData.loyerHC * 12) / 
+                (inputData.coutTotalAcquisition || inputData.price)) * 100).toFixed(2)} %
+        </p>
+    </div>
+</div>
             
             <!-- Détail du calcul -->
             <div class="fiscal-calculation-details">
