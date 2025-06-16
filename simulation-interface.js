@@ -1871,15 +1871,15 @@ function remplirTableauComparatifDetaille(classique, encheres) {
         document.getElementById('comp-encheres-cashflow-avant').textContent = formaterMontantAvecSigne(encheres.cashFlow);
         majDifference('comp-cashflow-avant-diff', encheres.cashFlow - classique.cashFlow);
         
-    // Ligne des impôts (ANNUELS)
-    if (document.getElementById('comp-classique-impots')) {
-        const impotClassique = Math.abs(classique.impactFiscal || 0);
-        const impotEncheres = Math.abs(encheres.impactFiscal || 0);
-        
-        document.getElementById('comp-classique-impots').textContent = formaterMontant(impotClassique);
-        document.getElementById('comp-encheres-impots').textContent = formaterMontant(impotEncheres);
-        majDifference('comp-impots-diff', impotEncheres - impotClassique);
-    }
+// Ligne des impôts (ANNUELS)
+if (document.getElementById('comp-classique-impots')) {
+    const impotClassique = classique.impots || 0;
+    const impotEncheres = encheres.impots || 0;
+    
+    document.getElementById('comp-classique-impots').textContent = formaterMontant(impotClassique);
+    document.getElementById('comp-encheres-impots').textContent = formaterMontant(impotEncheres);
+    majDifference('comp-impots-diff', impotEncheres - impotClassique);
+}
 }
     
 // RÉSULTATS FINAUX
