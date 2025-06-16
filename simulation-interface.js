@@ -1767,7 +1767,7 @@ function afficherResultats(resultats) {
  * @param {Object} classique - Résultats achat classique
  * @param {Object} encheres - Résultats vente aux enchères
  */
-function remplirTableauComparatifDetaille(classique, encheres) {
+function updateComparisonTable(resultats) {
     // COÛTS D'ACQUISITION
     document.getElementById('comp-classique-prix').textContent = formaterMontant(classique.prixAchat);
     document.getElementById('comp-encheres-prix').textContent = formaterMontant(encheres.prixAchat);
