@@ -258,7 +258,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1rem;                   /* Augmenté de 0.75rem → 1rem */
+    font-size: 0.75rem;                  /* Augmenté de 0.75rem → 1rem */
     font-weight: 700;
     line-height: 1;                    /* Ajouté pour centrage parfait */
     color: #00D9FF;
@@ -299,7 +299,7 @@
     .position-marker {
         width: 56px;                   /* 48px → 56px sur desktop */
         height: 56px;                  /* 48px → 56px sur desktop */
-        font-size: 1.25rem;            /* 1rem → 1.25rem sur desktop */
+        font-size: 0.9rem;            /* 1rem → 1.25rem sur desktop */
         top: -36px;                    /* MODIFIÉ : -24px → -36px pour sortir de la barre */
     }
 }
@@ -1850,6 +1850,17 @@ function applyMarkerColors() {
         );
     });
 }
+
+// Recalculer les positions au resize
+let resizeTimer;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+        if (document.querySelector('.position-marker')) {
+            applyMarkerColors();
+        }
+    }, 250); // Debounce de 250ms
+});
 
 // Recalculer les positions au resize
 let resizeTimer;
