@@ -1350,7 +1350,7 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
     </div>
 </div>
             
-   <!-- Détail du calcul -->
+ <!-- Détail du calcul -->
 <div class="fiscal-calculation-details">
     <h4>📋 Détail du calcul avec vos données</h4>
     <table class="calculation-table mini-recap">
@@ -1392,13 +1392,9 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
         </tr>
         
         <tr>
-            <td>Mensualités crédit (12&nbsp;mois)
-                <br><span class="hint">
-                    ${this.formatCurrency(inputData.monthlyPayment)}/mois
-                </span>
-            </td>
+            <td>Remboursement capital (épargne forcée)</td>
             <td class="text-right negative">
-                ${this.SIGN_MINUS}${this.formatCurrency(inputData.monthlyPayment * 12)}
+                ${this.SIGN_MINUS}${this.formatCurrency(bestRegime._detailedCalc.capitalAnnuel)}
             </td>
         </tr>
         
