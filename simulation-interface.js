@@ -1756,22 +1756,10 @@ function afficherResultats(resultats) {
         setTimeout(ajouterBoutonExplication, 500);
         
         // Remplir le tableau comparatif détaillé
-if (classique && encheres) {
-    // TEST : Activer avec localStorage.setItem('useNewTable', 'true')
-    const USE_NEW_TABLE = localStorage.getItem('useNewTable') === 'true';
-    
-    if (USE_NEW_TABLE) {
-        console.log('🆕 Utilisation du nouveau tableau');
-        const tableContainer = document.querySelector('.comparison-table');
-        if (tableContainer) {
-            const newTableHtml = buildDetailedComparisonTableV2(classique, encheres);
-            tableContainer.innerHTML = newTableHtml;
+        if (classique && encheres) {
+            remplirTableauComparatifDetaille(classique, encheres);
         }
-    } else {
-        console.log('📜 Utilisation de l\'ancien tableau');
-        remplirTableauComparatifDetaille(classique, encheres);
     }
-}
 
    
 /**
@@ -2141,5 +2129,4 @@ ajouterBarresVisuelles(classique, encheres);
             </div>
         `;
     }
-
 });
