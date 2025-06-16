@@ -1591,15 +1591,27 @@ function analyzeMarket(data) {
         const priceDiff = ((data.prixM2Paye - marketPriceM2) / marketPriceM2) * 100;
         const rentDiff = ((data.loyerCCM2 - marketRentM2) / marketRentM2) * 100;
         
-        // Déterminer la position sur le marché
-        let pricePosition = 'average';
-        let rentPosition = 'average';
-        
-        if (priceDiff < -10) pricePosition = 'low';
-        else if (priceDiff > 10) pricePosition = 'high';
-        
-        if (rentDiff < -10) rentPosition = 'low';
-        else if (rentDiff > 10) rentPosition = 'high';
+    // Déterminer la position sur le marché
+let pricePosition = 'average';
+let rentPosition = 'average';
+let rentCardClass = 'average';  // Pour la couleur de la carte
+let rentBadgeClass = 'average'; // Pour la couleur du badge
+
+if (priceDiff < -10) pricePosition = 'low';
+else if (priceDiff > 10) pricePosition = 'high';
+
+// Logique inversée pour le loyer
+if (rentDiff > 10) {           // Loyer AU-DESSUS du marché = BON
+    rentPosition = 'high';      // → Texte "Bon rendement"
+    rentCardClass = 'low';      // → Carte VERTE
+    rentBadgeClass = 'low';     // → Badge VERT
+} else if (rentDiff < -10) {   // Loyer SOUS le marché = MAUVAIS
+    rentPosition = 'low';       // → Texte "Loyer faible"
+    rentCardClass = 'high';     // → Carte ROUGE
+    rentBadgeClass = 'high';    // → Badge ROUGE
+} else {
+    rentBadgeClass = 'average'; // → Badge ORANGE si dans la moyenne
+}
         
         resultsDiv.innerHTML = `
             <!-- Analyse du prix d'achat -->
@@ -1673,8 +1685,8 @@ function analyzeMarket(data) {
             </div>
             
             <!-- Analyse du loyer -->
-            <div class="market-comparison-card ${rentPosition}">
-                <div class="market-badge ${rentPosition}">
+            <div class="market-comparison-card ${rentCardClass}">
+                <div class="market-badge ${rentBadgeClass}">
                     ${rentPosition === 'high' ? 'Bon rendement' : rentPosition === 'low' ? 'Loyer faible' : 'Loyer du marché'}
                 </div>
                 
