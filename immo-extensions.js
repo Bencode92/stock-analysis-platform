@@ -538,6 +538,7 @@ const ImmoExtensions = (function() {
 
                 // Remplacer l'impact fiscal calculé (positif = économie, négatif = impôt à payer)
                 res.impactFiscal = -fiscal.impot; // Inverser le signe pour cohérence avec le reste du code
+                res.impots = fiscal.impot; // Valeur positive pour l'affichage dans le tableau
                 
                 // Recalculer la rentabilité nette
                 res.rendementNet = this.calculerRendementNet(
