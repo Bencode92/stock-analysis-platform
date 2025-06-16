@@ -272,6 +272,28 @@
     box-shadow: 0 0 30px rgba(0, 217, 255, 0.6);
 }
 
+/* ✅ Bonne couleur (vert) */
+.position-marker--green {
+    border-color: #22c55e;
+    color: #22c55e;
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+}
+
+.position-marker--green:hover {
+    box-shadow: 0 0 30px rgba(34, 197, 94, 0.6);
+}
+
+/* ❌ Mauvaise couleur (rouge) */
+.position-marker--red {
+    border-color: #ef4444;
+    color: #ef4444;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+}
+
+.position-marker--red:hover {
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.6);
+}
+
 /* Responsive : écrans ≥ 768px */
 @media (min-width: 768px) {
     .position-marker {
@@ -1606,19 +1628,22 @@ function analyzeMarket(data) {
                     </div>
                 </div>
                 
-                <div class="position-indicator">
-                    <div class="position-marker" style="left: ${Math.min(Math.max((priceDiff + 50) * 2, 0), 100)}%;">
-                        ${priceDiff > 0 ? '+' : ''}${Math.round(priceDiff)}%
-                        <div class="position-tooltip">
-                            ${priceDiff > 0 ? 'Au-dessus' : 'En dessous'} du marché de ${Math.abs(Math.round(priceDiff))}%
-                        </div>
-                    </div>
-                </div>
-                <div class="position-labels">
-                    <span>-50% (Excellente affaire)</span>
-                    <span>0% (Prix du marché)</span>
-                    <span>+50% (Trop cher)</span>
-                </div>
+<div class="position-indicator">
+    <div class="position-marker" 
+         data-category="price"
+         data-percent="${priceDiff}"
+         style="left: ${Math.min(Math.max((priceDiff + 50) * 2, 0), 100)}%;">
+        ${priceDiff > 0 ? '+' : ''}${Math.round(priceDiff)}%
+        <div class="position-tooltip">
+            ${priceDiff > 0 ? 'Au-dessus' : 'En dessous'} du marché de ${Math.abs(Math.round(priceDiff))}%
+        </div>
+    </div>
+</div>
+<div class="position-labels">
+    <span>-50% (Excellente affaire)</span>
+    <span>0% (Prix du marché)</span>
+    <span>+50% (Trop cher)</span>
+</div>
                 
                 <div class="market-details">
                     <div class="market-metric">
@@ -1673,19 +1698,22 @@ function analyzeMarket(data) {
     </div>
 </div>
                 
-                <div class="position-indicator">
-                    <div class="position-marker" style="left: ${Math.min(Math.max((rentDiff + 50) * 2, 0), 100)}%;">
-                        ${rentDiff > 0 ? '+' : ''}${Math.round(rentDiff)}%
-                        <div class="position-tooltip">
-                            ${rentDiff > 0 ? 'Au-dessus' : 'En dessous'} du marché de ${Math.abs(Math.round(rentDiff))}%
-                        </div>
-                    </div>
-                </div>
-                <div class="position-labels">
-                    <span>-50% (Trop bas)</span>
-                    <span>0% (Loyer du marché)</span>
-                    <span>+50% (Excellent)</span>
-                </div>
+<div class="position-indicator">
+    <div class="position-marker" 
+         data-category="rent"
+         data-percent="${rentDiff}"
+         style="left: ${Math.min(Math.max((rentDiff + 50) * 2, 0), 100)}%;">
+        ${rentDiff > 0 ? '+' : ''}${Math.round(rentDiff)}%
+        <div class="position-tooltip">
+            ${rentDiff > 0 ? 'Au-dessus' : 'En dessous'} du marché de ${Math.abs(Math.round(rentDiff))}%
+        </div>
+    </div>
+</div>
+<div class="position-labels">
+    <span>-50% (Trop bas)</span>
+    <span>0% (Loyer du marché)</span>
+    <span>+50% (Excellent)</span>
+</div>
                 
 <div class="market-details">
     <div class="market-metric">
