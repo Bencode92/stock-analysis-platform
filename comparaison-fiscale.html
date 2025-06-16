@@ -1818,6 +1818,19 @@ function applyMarkerColors() {
         const value = parseFloat(marker.dataset.percent);
         const cat = marker.dataset.category;
         
+        // NOUVEAU : Corriger la position
+        const indicator = marker.parentElement;
+        if (indicator) {
+            const indicatorW = indicator.clientWidth;
+            const markerW = marker.offsetWidth || 48;
+            
+            let px = ((value + 50) / 100) * indicatorW;
+            px = Math.max(markerW / 2, Math.min(indicatorW - markerW / 2, px));
+            
+            marker.style.left = `${px}px`;
+            marker.style.transform = 'translateX(-50%)';
+        }
+        
         // Retirer les anciennes classes
         marker.classList.remove('position-marker--green', 'position-marker--red');
         
@@ -1830,8 +1843,24 @@ function applyMarkerColors() {
         
         marker.classList.add(isGood ? 'position-marker--green' 
                                    : 'position-marker--red');
+        
+        // Accessibilité
+        marker.setAttribute('aria-label', 
+            `${value > 0 ? '+' : ''}${Math.round(value)}% par rapport au marché`
+        );
     });
 }
+
+// Recalculer les positions au resize
+let resizeTimer;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+        if (document.querySelector('.position-marker')) {
+            applyMarkerColors();
+        }
+    }, 250); // Debounce de 250ms
+});
 // Générer les recommandations
 function generateRecommendations(pricePosition, rentPosition, data) {
     let recommendations = '';
