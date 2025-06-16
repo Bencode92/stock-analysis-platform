@@ -1370,45 +1370,49 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
             </td>
         </tr>
         
-        <tr>
-            <td>Loyer net annuel (HC)</td>
-            <td class="text-right positive">
-                +${this.formatCurrency(inputData.yearlyRent)}
-            </td>
-        </tr>
-        
-        <tr>
-            <td>Charges déductibles</td>
-            <td class="text-right negative">
-                ${this.SIGN_MINUS}${this.formatCurrency(chargesDeductibles)}
-            </td>
-        </tr>
-        
-        <tr>
-            <td>Impôts (IR&nbsp;+&nbsp;PS)</td>
-            <td class="text-right negative">
-                ${this.SIGN_MINUS}${this.formatCurrency(Math.abs(bestRegime.impotAnnuel))}
-            </td>
-        </tr>
-        
-        <tr>
-            <td>Remboursement capital (épargne forcée)</td>
-            <td class="text-right negative">
-                ${this.SIGN_MINUS}${this.formatCurrency(bestRegime._detailedCalc.capitalAnnuel)}
-            </td>
-        </tr>
-        
-        <tr class="total-row">
-            <td><strong>Cash-flow net annuel</strong>
-                <br><span class="hint ${bestRegime.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
-                    ${bestRegime.cashflowNetAnnuel >= 0 ? '+' : this.SIGN_MINUS}${this.formatCurrency(Math.abs(bestRegime.cashflowNetAnnuel / 12))}/mois
-                </span>
-            </td>
-            <td class="text-right ${bestRegime.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
-                <strong>${bestRegime.cashflowNetAnnuel >= 0 ? '+' : this.SIGN_MINUS}${this.formatCurrency(Math.abs(bestRegime.cashflowNetAnnuel))}</strong>
-            </td>
-        </tr>
-    </table>
+  <tr>
+    <td>Revenus nets après impôts</td>
+    <td class="text-right positive">
+      +${this.formatCurrency(bestRegime._detailedCalc.revenuNetApresImpots)}
+    </td>
+  </tr>
+
+  <tr>
+    <td>Charges cash annuelles</td>
+    <td class="text-right negative">
+      ${this.SIGN_MINUS}${this.formatCurrency(bestRegime._detailedCalc.chargesCashAnnuel)}
+    </td>
+  </tr>
+
+  <tr>
+    <td>Mensualité crédit (capital&nbsp;+ intérêts)<br>
+        <span class="hint">
+          ${this.formatCurrency(inputData.monthlyPayment)}/mois
+        </span>
+    </td>
+    <td class="text-right negative">
+      ${this.SIGN_MINUS}${this.formatCurrency(bestRegime._detailedCalc.mensualiteAnnuelle)}
+    </td>
+  </tr>
+
+  <tr class="total-row">
+    <td><strong>Cash-flow net annuel</strong></td>
+    <td class="text-right ${bestRegime.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
+      <strong>
+        ${bestRegime.cashflowNetAnnuel >= 0 ? '+' : this.SIGN_MINUS}
+        ${this.formatCurrency(Math.abs(bestRegime.cashflowNetAnnuel))}
+      </strong>
+    </td>
+  </tr>
+
+  <tr>
+    <td>Cash-flow mensuel moyen</td>
+    <td class="text-right ${bestRegime.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
+      ${bestRegime.cashflowNetAnnuel >= 0 ? '+' : this.SIGN_MINUS}
+      ${this.formatCurrency(Math.abs(bestRegime.cashflowNetAnnuel / 12))}
+    </td>
+  </tr>
+</table>
                 
                 <!-- NOUVEAU : Bouton pour afficher le détail -->
                 <button class="btn-expand-table" 
