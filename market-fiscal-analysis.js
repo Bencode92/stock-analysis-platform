@@ -1350,69 +1350,37 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
     </div>
 </div>
             
- <!-- Détail du calcul -->
-<div class="fiscal-calculation-details">
-    <h4>📋 Détail du calcul avec vos données</h4>
-    <table class="calculation-table mini-recap">
-        <tr>
-            <td>Investissement total</td>
-            <td class="text-right">
-                ${this.formatCurrency(inputData.coutTotalAcquisition || inputData.price)}
-            </td>
-        </tr>
-        
-        <tr>
-            <td>Apport / Emprunt</td>
-            <td class="text-right">
-                ${this.formatCurrency(inputData.apport)}
-                &nbsp;/&nbsp;
-                ${this.formatCurrency(inputData.loanAmount)}
-            </td>
-        </tr>
-        
-  <tr>
-    <td>Revenus nets après impôts</td>
-    <td class="text-right positive">
-      +${this.formatCurrency(bestRegime._detailedCalc.revenuNetApresImpots)}
-    </td>
-  </tr>
-
-  <tr>
-    <td>Charges cash annuelles</td>
-    <td class="text-right negative">
-      ${this.SIGN_MINUS}${this.formatCurrency(bestRegime._detailedCalc.chargesCashAnnuel)}
-    </td>
-  </tr>
-
-  <tr>
-    <td>Mensualité crédit (capital&nbsp;+ intérêts)<br>
-        <span class="hint">
-          ${this.formatCurrency(inputData.monthlyPayment)}/mois
-        </span>
-    </td>
-    <td class="text-right negative">
-      ${this.SIGN_MINUS}${this.formatCurrency(bestRegime._detailedCalc.mensualiteAnnuelle)}
-    </td>
-  </tr>
-
-  <tr class="total-row">
-    <td><strong>Cash-flow net annuel</strong></td>
-    <td class="text-right ${bestRegime.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
-      <strong>
-        ${bestRegime.cashflowNetAnnuel >= 0 ? '+' : this.SIGN_MINUS}
-        ${this.formatCurrency(Math.abs(bestRegime.cashflowNetAnnuel))}
-      </strong>
-    </td>
-  </tr>
-
-  <tr>
-    <td>Cash-flow mensuel moyen</td>
-    <td class="text-right ${bestRegime.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
-      ${bestRegime.cashflowNetAnnuel >= 0 ? '+' : this.SIGN_MINUS}
-      ${this.formatCurrency(Math.abs(bestRegime.cashflowNetAnnuel / 12))}
-    </td>
-  </tr>
-</table>
+            <!-- Détail du calcul -->
+            <div class="fiscal-calculation-details">
+                <h4>📋 Détail du calcul avec vos données</h4>
+                <table class="calculation-table">
+                    <tr>
+                        <td>Revenus locatifs annuels (HC):</td>
+                        <td class="positive">+${this.formatCurrency(inputData.yearlyRent)}</td>
+                    </tr>
+                    <tr>
+                        <td>Charges déductibles:</td>
+                        <td class="negative">-${this.formatCurrency(chargesDeductibles)}</td>
+                    </tr>
+                    <tr>
+                        <td>Base imposable:</td>
+                        <td>${this.formatCurrency(baseImposable)}</td>
+                    </tr>
+                    <tr>
+                        <td>Impôt (TMI ${inputData.tmi}%):</td>
+                        <td class="negative">-${this.formatCurrency(Math.abs(bestRegime.impotAnnuel))}</td>
+                    </tr>
+                    <tr>
+                        <td>Mensualité crédit:</td>
+                        <td class="negative">-${this.formatCurrency(inputData.monthlyPayment * 12)}</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td><strong>Résultat net annuel:</strong></td>
+                        <td class="${bestRegime.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
+                            <strong>${this.formatCurrency(bestRegime.cashflowNetAnnuel)}</strong>
+                        </td>
+                    </tr>
+                </table>
                 
                 <!-- NOUVEAU : Bouton pour afficher le détail -->
                 <button class="btn-expand-table" 
