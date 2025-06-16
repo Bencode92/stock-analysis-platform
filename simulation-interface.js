@@ -2282,4 +2282,4 @@ ajouterBarresVisuelles(classique, encheres);
             return '<p class="error">Erreur lors de la construction du tableau</p>';
         }
     }
-});
+
