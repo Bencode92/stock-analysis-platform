@@ -1579,7 +1579,7 @@ propertyData = {
     // Passer à l'étape 2
     goToStep(2);
 });
-        // Fonction d'analyse de marché
+// Fonction d'analyse de marché
 function analyzeMarket(data) {
     const resultsDiv = document.getElementById('market-analysis-results');
     
@@ -1750,6 +1750,10 @@ function analyzeMarket(data) {
                 ${generateRecommendations(pricePosition, rentPosition, data)}
             </div>
         `;
+        
+        // ✅ AJOUT : Appliquer les couleurs aux marqueurs
+        setTimeout(applyMarkerColors, 0);
+        
     } else {
         // Analyse sans données de marché
         resultsDiv.innerHTML = `
@@ -1778,6 +1782,9 @@ function analyzeMarket(data) {
                 </div>
             </div>
         `;
+        
+        // ✅ AJOUT : Appliquer les couleurs même sans données de marché (au cas où)
+        setTimeout(applyMarkerColors, 0);
     }
 }
 
@@ -1793,6 +1800,26 @@ function formatNumber(num) {
     }).format(Math.round(num));
 }
 
+// ✅ AJOUT : Fonction pour colorer les marqueurs selon le contexte
+function applyMarkerColors() {
+    document.querySelectorAll('.position-marker').forEach(marker => {
+        const value = parseFloat(marker.dataset.percent);
+        const cat = marker.dataset.category;
+        
+        // Retirer les anciennes classes
+        marker.classList.remove('position-marker--green', 'position-marker--red');
+        
+        // Logique de coloration
+        // Prix : négatif = vert (bonne affaire), positif = rouge (trop cher)
+        // Loyer : positif = vert (bon rendement), négatif = rouge (trop bas)
+        const isGood = (cat === 'price') ? value < 0
+                     : (cat === 'rent')  ? value > 0
+                     : false;
+        
+        marker.classList.add(isGood ? 'position-marker--green' 
+                                   : 'position-marker--red');
+    });
+}
 // Générer les recommandations
 function generateRecommendations(pricePosition, rentPosition, data) {
     let recommendations = '';
