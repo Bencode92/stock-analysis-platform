@@ -1230,6 +1230,16 @@ return {
             currency: 'EUR'
         }).format(amount);
     }
+        /**
+     * Détermine la classe CSS selon le rendement
+     * @param {number} r - Rendement en pourcentage
+     * @returns {string} 'positive' | 'neutral' | 'negative'
+     */
+    getRendementClass(r) {
+        if (r > 4.5)  return 'positive'; // vert
+        if (r < 2.5)  return 'negative'; // rouge
+        return 'neutral';                // gris
+    }
 
     /**
      * Calcul de mensualité de prêt
@@ -1341,13 +1351,13 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
         </p>
     </div>
     
-    <div class="benefit-item">
-        <h4>📊 Rendement brut / coût total</h4>
-        <p class="amount neutral">
-            ${(((inputData.yearlyRent || inputData.loyerHC * 12) / 
-                (inputData.coutTotalAcquisition || inputData.price)) * 100).toFixed(2)} %
-        </p>
-    </div>
+           <div class="benefit-item">
+                <h4>📊 Rendement brut / coût total</h4>
+                <p class="amount ${this.getRendementClass(((inputData.yearlyRent || inputData.loyerHC * 12) / (inputData.coutTotalAcquisition || inputData.price)) * 100)}">
+                    ${(((inputData.yearlyRent || inputData.loyerHC * 12) / 
+                        (inputData.coutTotalAcquisition || inputData.price)) * 100).toFixed(2)} %
+                </p>
+            </div>
 </div>
             
             <!-- Détail du calcul -->
@@ -1433,7 +1443,7 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
                         ${this.formatCurrency(regime.cashflowNetAnnuel)}
                     </td>
                     <td>${this.formatCurrency(Math.abs(regime.impotAnnuel))}</td>
-                    <td class="${rendementNet > 0 ? 'positive' : 'negative'}">
+                    <td class="${this.getRendementClass(rendementNet)}">
                         ${rendementNet.toFixed(2)}%
                     </td>
                 </tr>
