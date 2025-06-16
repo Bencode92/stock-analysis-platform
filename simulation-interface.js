@@ -1773,9 +1773,19 @@ function remplirTableauComparatifDetaille(classique, encheres) {
     document.getElementById('comp-encheres-prix').textContent = formaterMontant(encheres.prixAchat);
     majDifference('comp-prix-diff', encheres.prixAchat - classique.prixAchat);
     
+    // Frais de notaire / Droits - MODIFIÉ
     document.getElementById('comp-classique-frais-notaire').textContent = formaterMontant(classique.fraisNotaire);
-    document.getElementById('comp-encheres-droits').textContent = formaterMontant(encheres.droitsEnregistrement);
-    majDifference('comp-frais-diff', encheres.droitsEnregistrement - classique.fraisNotaire);
+    
+    // Calculer le TOTAL des frais enchères
+    const totalFraisEncheres = 
+        encheres.droitsEnregistrement + 
+        encheres.emolumentsPoursuivant + 
+        encheres.honorairesAvocat + 
+        encheres.publiciteFonciere + 
+        encheres.fraisDivers;
+    
+    document.getElementById('comp-encheres-total-frais').textContent = formaterMontant(totalFraisEncheres);
+    majDifference('comp-frais-diff', totalFraisEncheres - classique.fraisNotaire);
     
     document.getElementById('comp-classique-commission').textContent = formaterMontant(classique.commission);
     const honorairesEncheres = (encheres.honorairesAvocat || 0) + (encheres.fraisDivers || 0);
