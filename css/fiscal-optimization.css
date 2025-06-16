@@ -907,3 +907,18 @@ canvas {
 .detailed-comparison-table .negative {
     color: var(--negative) !important;
 }
+
+/* ========================================
+   FIX POUR TEXTES TRONQUÉS DANS LE RÉSUMÉ
+   ======================================== */
+
+/* Empêche les montants € de passer à la ligne ou d'être coupés */
+.summary-grid .summary-item .value {
+    white-space: nowrap;          /* pas de retour à la ligne */
+    overflow: visible;            /* on laisse déborder si besoin */
+}
+
+/* Optionnel : on agrandit un peu la "carte" pour les labels longs */
+.summary-grid .summary-item {
+    min-width: 260px;             /* 240-260 px tient sur la plupart des écrans */
+}
