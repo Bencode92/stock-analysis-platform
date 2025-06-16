@@ -843,14 +843,15 @@ class SimulateurImmo {
             fraisSpecifiques = droitsEnregistrement + emolumentsPoursuivant + 
                              honorairesAvocat + publiciteFonciere + fraisDivers + caution;
             
-            fraisDetails = {
-                droitsEnregistrement,
-                emolumentsPoursuivant,
-                honorairesAvocat,
-                publiciteFonciere,
-                fraisDivers,
-                caution
-            };
+ fraisDetails = {
+    droitsEnregistrement,
+    emolumentsPoursuivant,
+    honorairesAvocat,
+    publiciteFonciere,
+    fraisDivers,
+    caution,
+    honorairesTotal: honorairesAvocat + fraisDivers + publiciteFonciere  // NOUVELLE LIGNE
+};
         }
         
         // Coût hors frais bancaires
@@ -949,6 +950,7 @@ class SimulateurImmo {
             resultat.droitsEnregistrement = fraisDetails.droitsEnregistrement;
             resultat.emolumentsPoursuivant = fraisDetails.emolumentsPoursuivant;
             resultat.honorairesAvocat = fraisDetails.honorairesAvocat;
+            resultat.honorairesTotal = fraisDetails.honorairesTotal;  // NOUVELLE LIGNE
             resultat.publiciteFonciere = fraisDetails.publiciteFonciere;
             resultat.fraisDivers = fraisDetails.fraisDivers;
             resultat.caution = fraisDetails.caution;
