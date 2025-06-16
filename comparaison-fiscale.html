@@ -230,7 +230,7 @@
     background: rgba(255, 255, 255, 0.05);
     border-radius: 100px;
     position: relative;
-    overflow: hidden;
+    overflow: visible;                 /* MODIFIÉ : hidden → visible */
     margin: 40px 0;
 }
 
@@ -308,6 +308,49 @@
     display: flex;
     justify-content: space-between;
     margin-top: 10px;
+    color: #94a3b8;
+    font-size: 0.9em;
+}
+
+/* Form improvements */
+.form-section {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 15px;
+    padding: 30px;
+    margin-bottom: 30px;
+}
+
+.form-section-title {
+    color: #00bfff;
+    font-size: 1.2em;
+    font-weight: 600;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.comparison-input-group {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 20px;
+    align-items: center;
+    margin: 20px 0;
+}
+
+.vs-separator {
+    color: #00bfff;
+    font-weight: 700;
+    font-size: 1.2em;
+}
+
+.input-with-label {
+    text-align: center;
+}
+
+.input-with-label label {
+    display: block;
+    margin-bottom: 10px;
     color: #94a3b8;
     font-size: 0.9em;
 }
