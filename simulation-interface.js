@@ -16,7 +16,7 @@
  * Version 1.9 - Synchronisation du tableau comparatif avec les valeurs incluant l'impact fiscal
  */
 // Désactiver complètement l'impact fiscal
-window.disableFiscalImpact = false;
+window.disableFiscalImpact = true;
 
 document.addEventListener('DOMContentLoaded', function() {
     // Constantes globales
@@ -1871,16 +1871,15 @@ function remplirTableauComparatifDetaille(classique, encheres) {
         document.getElementById('comp-encheres-cashflow-avant').textContent = formaterMontantAvecSigne(encheres.cashFlow);
         majDifference('comp-cashflow-avant-diff', encheres.cashFlow - classique.cashFlow);
         
-// Ligne des impôts (ANNUELS)
-if (document.getElementById('comp-classique-impots')) {
-    const impotClassique = classique.impots || 0;
-    const impotEncheres = encheres.impots || 0;
-    
-    document.getElementById('comp-classique-impots').textContent = formaterMontant(impotClassique);
-    document.getElementById('comp-encheres-impots').textContent = formaterMontant(impotEncheres);
-    majDifference('comp-impots-diff', impotEncheres - impotClassique);
+  // Impôt mensuel
+if (classique.impotFiscal !== undefined && encheres.impotFiscal !== undefined) {
+    const impotMensuelClassique = Math.abs(classique.impotFiscal) / 12;
+    const impotMensuelEncheres = Math.abs(encheres.impotFiscal) / 12;
+    document.getElementById('comp-classique-impot-mensuel').textContent = formaterMontant(-impotMensuelClassique);
+    document.getElementById('comp-encheres-impot-mensuel').textContent = formaterMontant(-impotMensuelEncheres);
+    majDifference('comp-impot-mensuel-diff', -(impotMensuelEncheres - impotMensuelClassique));
 }
-}
+    }
     
 // RÉSULTATS FINAUX
 // Récupérer l'apport total nécessaire pour chaque mode
