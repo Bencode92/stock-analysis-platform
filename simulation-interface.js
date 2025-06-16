@@ -2129,4 +2129,157 @@ ajouterBarresVisuelles(classique, encheres);
             </div>
         `;
     }
+       
+    // ========================================
+    // NOUVEAU SYSTÈME DE TABLEAU - VERSION 2
+    // ========================================
+    
+    /**
+     * Formate un nombre avec séparateurs de milliers
+     */
+    function formatNumberV2(num) {
+        if (typeof num !== 'number' || isNaN(num)) {
+            console.warn('formatNumberV2: valeur invalide', num);
+            return '0';
+        }
+        return new Intl.NumberFormat('fr-FR', { 
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0 
+        }).format(Math.round(num));
+    }
+    
+    /**
+     * Détermine la classe CSS selon le signe et le type
+     */
+    function getValueClassV2(value, isCost = false) {
+        if (isCost) {
+            return value <= 0 ? 'positive' : 'negative';
+        }
+        return value >= 0 ? 'positive' : 'negative';
+    }
+    
+    /**
+     * Formate une valeur selon son type
+     */
+    function formatTableValueV2(value, config) {
+        if (config.isPercentage) {
+            return value.toFixed(2) + '%';
+        }
+        if (config.unit === 'm²') {
+            return value.toFixed(1) + ' m²';
+        }
+        if (config.unit === '/mois') {
+            return formatNumberV2(value) + ' €/mois';
+        }
+        return formatNumberV2(value) + ' €';
+    }
+    
+    /**
+     * Construit le tableau comparatif détaillé - Version 2
+     */
+    function buildDetailedComparisonTableV2(classique, encheres) {
+        console.log('🔨 Construction du nouveau tableau...');
+        
+        if (!classique || !encheres) {
+            console.error('Données manquantes pour le tableau');
+            return '<p class="error">Données manquantes</p>';
+        }
+        
+        try {
+            const tbody = COMPARISON_TABLE_CONFIG.map(section => {
+                let sectionHtml = `
+                    <tr class="category-row">
+                        <td colspan="4">${section.section}</td>
+                    </tr>
+                `;
+                
+                const rowsHtml = section.rows.map(row => {
+                    const classiqueKey = row.altKey?.classique || row.key;
+                    const encheresKey = row.altKey?.encheres || row.key;
+                    
+                    let valClassique = row.calculate ? 
+                        row.calculate(classique) : 
+                        classique[classiqueKey] || 0;
+                        
+                    let valEncheres = row.calculate ? 
+                        row.calculate(encheres) : 
+                        encheres[encheresKey] || 0;
+                    
+                    if (row.transform) {
+                        valClassique = row.transform(valClassique);
+                        valEncheres = row.transform(valEncheres);
+                    }
+                    
+                    const diff = row.noCompare ? 0 : valEncheres - valClassique;
+                    const diffClass = row.noCompare ? '' : getValueClassV2(diff, row.isCost);
+                    
+                    const formattedClassique = formatTableValueV2(valClassique, row);
+                    const formattedEncheres = formatTableValueV2(valEncheres, row);
+                    const formattedDiff = row.noCompare ? '—' : 
+                        (row.isPercentage ? 
+                            (diff >= 0 ? '+' : '') + diff.toFixed(2) + '%' :
+                            (diff >= 0 ? '+' : '') + formatNumberV2(diff) + ' €'
+                        );
+                    
+                    return `
+                        <tr>
+                            <td>${row.label}</td>
+                            <td>${formattedClassique}</td>
+                            <td>${formattedEncheres}</td>
+                            <td class="${diffClass}">${formattedDiff}</td>
+                        </tr>
+                    `;
+                }).join('');
+                
+                if (section.totalRow) {
+                    const total = section.totalRow;
+                    const valClassique = total.calculate ? 
+                        total.calculate(classique) : 
+                        classique[total.key] || 0;
+                        
+                    const valEncheres = total.calculate ? 
+                        total.calculate(encheres) : 
+                        encheres[total.key] || 0;
+                        
+                    const diff = valEncheres - valClassique;
+                    const diffClass = getValueClassV2(diff, true);
+                    
+                    sectionHtml += rowsHtml + `
+                        <tr class="subtotal-row">
+                            <td><strong>${total.label}</strong></td>
+                            <td><strong>${formatNumberV2(valClassique)} €</strong></td>
+                            <td><strong>${formatNumberV2(valEncheres)} €</strong></td>
+                            <td class="${diffClass}">
+                                <strong>${diff >= 0 ? '+' : ''}${formatNumberV2(diff)} €</strong>
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    sectionHtml += rowsHtml;
+                }
+                
+                return sectionHtml;
+            }).join('');
+            
+            console.log('✅ Tableau construit avec succès');
+            
+            return `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Critère</th>
+                            <th>Achat Classique</th>
+                            <th>Vente aux Enchères</th>
+                            <th>Différence</th>
+                        </tr>
+                    </thead>
+                    <tbody>${tbody}</tbody>
+                </table>
+            `;
+            
+        } catch (error) {
+            console.error('Erreur construction tableau:', error);
+            return '<p class="error">Erreur lors de la construction du tableau</p>';
+        }
+    }
 });
