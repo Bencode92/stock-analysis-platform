@@ -1603,17 +1603,17 @@ function afficherResultats(resultats) {
     }
     
     // Anciens éléments et détails
-    document.getElementById('encheres-prix-achat').textContent = formaterMontant(encheres.prixAchat);
-    document.getElementById('encheres-droits').textContent = formaterMontant(encheres.droitsEnregistrement);
-    document.getElementById('encheres-emoluments').textContent = formaterMontant(encheres.emolumentsPoursuivant);
-    document.getElementById('encheres-honoraires').textContent = formaterMontant(encheres.honorairesAvocat);
-    document.getElementById('encheres-publicite').textContent = formaterMontant(encheres.publiciteFonciere);
-    document.getElementById('encheres-frais-divers').textContent = formaterMontant(encheres.fraisDivers);
-    document.getElementById('encheres-travaux').textContent = formaterMontant(encheres.travaux);
-    document.getElementById('encheres-frais-bancaires').textContent = formaterMontant(encheres.fraisBancaires);
-    document.getElementById('encheres-total').textContent = formaterMontant(encheres.coutTotal);
-    document.getElementById('encheres-mensualite').textContent = formaterMontantMensuel(encheres.mensualite);
-    document.getElementById('encheres-loyer-net').textContent = formaterMontantMensuel(encheres.loyerNet);
+    document.getElementById('encheres-prix-achat') = formaterMontant(encheres.prixAchat);
+    document.getElementById('encheres-droits') = formaterMontant(encheres.droitsEnregistrement);
+    document.getElementById('encheres-emoluments') = formaterMontant(encheres.emolumentsPoursuivant);
+    document.getElementById('encheres-honoraires') = formaterMontant(encheres.honorairesAvocat);
+    document.getElementById('encheres-publicite') = formaterMontant(encheres.publiciteFonciere);
+    document.getElementById('encheres-frais-divers') = formaterMontant(encheres.fraisDivers);
+    document.getElementById('encheres-travaux') = formaterMontant(encheres.travaux);
+    document.getElementById('encheres-frais-bancaires') = formaterMontant(encheres.fraisBancaires);
+    document.getElementById('encheres-total') = formaterMontant(encheres.coutTotal);
+    document.getElementById('encheres-mensualite') = formaterMontantMensuel(encheres.mensualite);
+    document.getElementById('encheres-loyer-net') = formaterMontantMensuel(encheres.loyerNet);
     
     // Cash-flow mensuel et annuel pour les enchères
     const cashflowEncheres = document.getElementById('encheres-cashflow');
@@ -1650,8 +1650,8 @@ function afficherResultats(resultats) {
     
     // Affichage des données fiscales pour les enchères si les éléments existent
     if (document.getElementById('encheres-revenu-foncier')) {
-        document.getElementById('encheres-revenu-foncier').textContent = formaterMontant(encheres.revenuFoncier);
-        document.getElementById('encheres-impact-fiscal').textContent = formaterMontant(encheres.impactFiscal);
+        document.getElementById('encheres-revenu-foncier') = formaterMontant(encheres.revenuFoncier);
+        document.getElementById('encheres-impact-fiscal') = formaterMontant(encheres.impactFiscal);
         
         // Cash-flow après impôt mensuel et annuel
         const cashflowApresImpotMensuel = encheres.cashFlow + (encheres.impactFiscal / 12);
@@ -1683,40 +1683,40 @@ function afficherResultats(resultats) {
     }
         
         // Comparatif
-        document.getElementById('comp-classique-prix').textContent = formaterMontant(classique.prixAchat);
-        document.getElementById('comp-encheres-prix').textContent = formaterMontant(encheres.prixAchat);
+        document.getElementById('comp-classique-prix') = formaterMontant(classique.prixAchat);
+        document.getElementById('comp-encheres-prix') = formaterMontant(encheres.prixAchat);
         
         const diffPrix = encheres.prixAchat - classique.prixAchat;
         const compPrixDiff = document.getElementById('comp-prix-diff');
         compPrixDiff.textContent = formaterMontantAvecSigne(diffPrix);
         compPrixDiff.className = diffPrix < 0 ? 'positive' : diffPrix > 0 ? 'negative' : '';
         
-        document.getElementById('comp-classique-total').textContent = formaterMontant(classique.coutTotal);
-        document.getElementById('comp-encheres-total').textContent = formaterMontant(encheres.coutTotal);
+        document.getElementById('comp-classique-total') = formaterMontant(classique.coutTotal);
+        document.getElementById('comp-encheres-total') = formaterMontant(encheres.coutTotal);
         
         const diffTotal = encheres.coutTotal - classique.coutTotal;
         const compTotalDiff = document.getElementById('comp-total-diff');
         compTotalDiff.textContent = formaterMontantAvecSigne(diffTotal);
         compTotalDiff.className = diffTotal < 0 ? 'positive' : diffTotal > 0 ? 'negative' : '';
         
-        document.getElementById('comp-classique-loyer').textContent = formaterMontant(classique.loyerBrut);
-        document.getElementById('comp-encheres-loyer').textContent = formaterMontant(encheres.loyerBrut);
+        document.getElementById('comp-classique-loyer') = formaterMontant(classique.loyerBrut);
+        document.getElementById('comp-encheres-loyer') = formaterMontant(encheres.loyerBrut);
         
         const diffLoyer = encheres.loyerBrut - classique.loyerBrut;
         const compLoyerDiff = document.getElementById('comp-loyer-diff');
         compLoyerDiff.textContent = formaterMontantAvecSigne(diffLoyer);
         compLoyerDiff.className = diffLoyer > 0 ? 'positive' : diffLoyer < 0 ? 'negative' : '';
         
-        document.getElementById('comp-classique-rentabilite').textContent = formaterPourcentage(classique.rendementNet);
-        document.getElementById('comp-encheres-rentabilite').textContent = formaterPourcentage(encheres.rendementNet);
+        document.getElementById('comp-classique-rentabilite') = formaterPourcentage(classique.rendementNet);
+        document.getElementById('comp-encheres-rentabilite') = formaterPourcentage(encheres.rendementNet);
         
         const diffRentabilite = encheres.rendementNet - classique.rendementNet;
         const compRentabiliteDiff = document.getElementById('comp-rentabilite-diff');
         compRentabiliteDiff.textContent = formaterPourcentage(diffRentabilite, 2);
         compRentabiliteDiff.className = diffRentabilite > 0 ? 'positive' : diffRentabilite < 0 ? 'negative' : '';
         
-        document.getElementById('comp-classique-cashflow').textContent = formaterMontantAvecSigne(classique.cashFlow);
-        document.getElementById('comp-encheres-cashflow').textContent = formaterMontantAvecSigne(encheres.cashFlow);
+        document.getElementById('comp-classique-cashflow') = formaterMontantAvecSigne(classique.cashFlow);
+        document.getElementById('comp-encheres-cashflow') = formaterMontantAvecSigne(encheres.cashFlow);
         
         const diffCashflow = encheres.cashFlow - classique.cashFlow;
         const compCashflowDiff = document.getElementById('comp-cashflow-diff');
