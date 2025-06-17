@@ -10,61 +10,267 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="css/simulation.css">
     <style>
+        /* Variables personnalisées TradePulse */
+        :root {
+            --drawer-width: 520px;
+            --transition-drawer: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Style des cartes de placement */
         .placement-card {
-            transition: all 0.3s ease;
+            background: linear-gradient(145deg, rgba(4, 35, 53, 0.5), rgba(1, 25, 39, 0.8));
+            border: 1px solid rgba(0, 255, 135, 0.1);
+            border-radius: 16px;
+            padding: 24px;
             cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .placement-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #00FF87, transparent);
+            transform: translateX(-100%);
+            transition: transform 0.5s ease;
+        }
+        
+        .placement-card:hover::before {
+            transform: translateX(0);
         }
         
         .placement-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0, 255, 135, 0.2);
+            transform: translateY(-4px);
+            border-color: rgba(0, 255, 135, 0.3);
+            box-shadow: 0 12px 24px rgba(0, 255, 135, 0.15);
         }
         
-        .profile-pill {
+        .placement-card.active {
+            border-color: #00FF87;
+            box-shadow: 0 0 20px rgba(0, 255, 135, 0.3);
+        }
+        
+        /* Drawer styles */
+        .drawer-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .drawer-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            max-width: var(--drawer-width);
+            background: rgba(1, 22, 39, 0.98);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(0, 255, 135, 0.2);
+            transform: translateX(100%);
+            transition: var(--transition-drawer);
+            z-index: 1001;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        .drawer.active {
+            transform: translateX(0);
+            box-shadow: -20px 0 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Mobile fullscreen */
+        @media (max-width: 640px) {
+            .drawer {
+                max-width: 100%;
+                border-left: none;
+            }
+        }
+        
+        /* Drawer header */
+        .drawer-header {
+            position: sticky;
+            top: 0;
+            background: rgba(1, 22, 39, 0.98);
+            backdrop-filter: blur(20px);
+            padding: 20px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10;
+        }
+        
+        /* Drawer content sections */
+        .drawer-section {
+            padding: 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .drawer-section:last-child {
+            border-bottom: none;
+        }
+        
+        /* Risk indicator */
+        .risk-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            font-size: 0.875rem;
+            margin-top: 12px;
+        }
+        
+        .risk-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .risk-low { background-color: #4d9fff; }
+        .risk-medium { background-color: #00d26e; }
+        .risk-high { background-color: #ff6b6b; }
+        
+        /* Focus trap styles */
+        .drawer:focus {
+            outline: none;
+        }
+        
+        /* Smooth scrollbar */
+        .drawer::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .drawer::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .drawer::-webkit-scrollbar-thumb {
+            background: rgba(0, 255, 135, 0.3);
+            border-radius: 3px;
+        }
+        
+        .drawer::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 255, 135, 0.5);
+        }
+        
+        /* Feature list styling */
+        .feature-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            line-height: 1.6;
+        }
+        
+        .feature-icon {
+            color: #00FF87;
+            margin-top: 2px;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+        
+        .feature-icon.warning {
+            color: #FFA500;
+        }
+        
+        .feature-icon.danger {
+            color: #FF6B6B;
+        }
+        
+        /* Animation entrée des cartes */
+        @keyframes cardFadeIn {
+            from { 
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .placement-card {
+            animation: cardFadeIn 0.5s ease-out forwards;
+            animation-delay: calc(var(--card-index) * 0.05s);
+            opacity: 0;
+        }
+        
+        /* Profile badges */
+        .profile-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 4px;
+            margin-bottom: 4px;
+        }
+        
+        .profile-badge.prudent {
+            background: rgba(0, 117, 255, 0.2);
+            color: #4d9fff;
+        }
+        
+        .profile-badge.equilibre {
+            background: rgba(0, 210, 110, 0.2);
+            color: #00d26e;
+        }
+        
+        .profile-badge.dynamique {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+        }
+        
+        /* Profile filter buttons */
+        .profile-filter {
             transition: all 0.3s ease;
-            cursor: pointer;
         }
         
-        .profile-pill:hover {
-            transform: scale(1.05);
-        }
-        
-        .profile-pill.active {
+        .profile-filter.active {
             background-color: rgba(0, 255, 135, 0.15);
             color: #00FF87;
             border-color: #00FF87;
         }
         
-        .tooltip-container {
-            position: relative;
-            display: inline-block;
+        /* Important info highlight */
+        .important-info {
+            font-weight: 700;
+            color: #00FF87;
         }
         
-        .tooltip-content {
-            visibility: hidden;
-            position: absolute;
-            z-index: 1;
-            bottom: 125%;
-            left: 50%;
-            margin-left: -150px;
-            width: 300px;
-            background-color: rgba(1, 22, 39, 0.95);
-            color: #fff;
-            text-align: left;
+        /* Key info badge */
+        .key-info {
+            background-color: rgba(0, 255, 135, 0.1);
             border-radius: 6px;
-            padding: 10px;
-            border: 1px solid #00FF87;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            opacity: 0;
-            transition: opacity 0.3s;
+            padding: 4px 12px;
+            font-weight: 500;
+            display: inline-block;
+            margin-top: 8px;
+            font-size: 0.92rem;
         }
         
-        .tooltip-container:hover .tooltip-content {
-            visibility: visible;
-            opacity: 1;
-        }
-        
-        /* Styles pour l'accordéon */
+        /* Accordéon styles (conservés de l'original) */
         .accordion-header {
             cursor: pointer;
             padding: 15px;
@@ -103,227 +309,6 @@
         .accordion-content.active {
             max-height: 1000px;
             padding: 15px;
-        }
-        
-        /* STYLES AMÉLIORÉS POUR LE TABLEAU - MEILLEURE LISIBILITÉ */
-        .comparison-table {
-            border-collapse: separate;
-            border-spacing: 0 8px; /* Espacement entre les lignes */
-            width: 100%;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
-        }
-        
-        .comparison-table th {
-            background-color: rgba(0, 255, 135, 0.15);
-            font-weight: 600;
-            text-align: left;
-            position: sticky;
-            top: 0;
-            padding: 20px 24px; /* Augmenté de 16px à 20px */
-            font-size: 1.1rem; /* Augmenté de 1.05rem */
-        }
-        
-        .comparison-table th, .comparison-table td {
-            padding: 24px 24px; /* Augmenté de 15px à 24px */
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            vertical-align: top;
-        }
-        
-        /* Amélioration de l'espacement des lignes */
-        .comparison-table tr {
-            background-color: rgba(1, 30, 52, 0.4);
-        }
-        
-        .comparison-table tr:hover {
-            background-color: rgba(0, 255, 135, 0.05);
-            transform: translateX(2px);
-            transition: all 0.3s ease;
-        }
-        
-        /* Améliorations visuelles pour le tableau */
-        .comparison-table td {
-            line-height: 1.7; /* Augmenté de 1.5 à 1.7 */
-        }
-        
-        .comparison-table td .feature-item {
-            display: flex;
-            align-items: flex-start; /* Changé de center à flex-start */
-            margin-bottom: 12px; /* Augmenté de 4px à 12px */
-            font-size: 0.95rem; /* Légèrement augmenté */
-        }
-        
-        .comparison-table td .feature-icon {
-            margin-right: 10px; /* Augmenté de 8px */
-            margin-top: 2px; /* Pour aligner avec le texte */
-            color: #00FF87;
-            flex-shrink: 0;
-            font-size: 14px;
-        }
-        
-        .product-name {
-            font-size: 1.25rem; /* Augmenté de 1.1rem */
-            font-weight: 700; /* Augmenté de 600 */
-            margin-bottom: 8px; /* Augmenté de 4px */
-            color: white;
-        }
-        
-        .profile-tag {
-            display: inline-block;
-            padding: 4px 12px; /* Augmenté de 3px 8px */
-            border-radius: 16px; /* Augmenté de 12px */
-            font-size: 12px; /* Augmenté de 11px */
-            font-weight: 600;
-            margin-right: 6px; /* Augmenté de 5px */
-            margin-top: 6px; /* Augmenté de 4px */
-            margin-bottom: 4px; /* Ajouté */
-        }
-        
-        .profile-tag.prudent {
-            background-color: rgba(0, 117, 255, 0.2);
-            color: #4d9fff;
-        }
-        
-        .profile-tag.equilibre {
-            background-color: rgba(0, 210, 110, 0.2);
-            color: #00d26e;
-        }
-        
-        .profile-tag.dynamique {
-            background-color: rgba(255, 107, 107, 0.2);
-            color: #ff6b6b;
-        }
-        
-        /* Badge visuel pour info clé */
-        .key-info {
-            background-color: rgba(0, 255, 135, 0.1);
-            border-radius: 6px; /* Augmenté de 4px */
-            padding: 4px 12px; /* Augmenté de 2px 8px */
-            font-weight: 500;
-            display: inline-block;
-            margin-top: 8px; /* Augmenté de 5px */
-            font-size: 0.92rem; /* Légèrement augmenté */
-        }
-        
-        /* Info bulle pour risque */
-        .risk-level {
-            display: inline-flex;
-            align-items: center;
-            margin-top: 12px; /* Augmenté de 5px */
-            padding: 6px 14px; /* Ajouté du padding */
-            background-color: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            font-size: 0.9rem;
-        }
-        
-        .risk-dot {
-            width: 10px; /* Augmenté de 8px */
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 6px; /* Augmenté de 4px */
-        }
-        
-        .risk-low {
-            background-color: #4d9fff;
-        }
-        
-        .risk-medium {
-            background-color: #00d26e;
-        }
-        
-        .risk-high {
-            background-color: #ff6b6b;
-        }
-        
-        /* Amélioration des highlights */
-        .highlight {
-            background-color: rgba(0, 255, 135, 0.08); /* Réduit l'opacité pour plus de subtilité */
-            border-left: 4px solid #00FF87; /* Augmenté de 3px */
-            padding-left: 16px !important; /* Augmenté de 12px */
-            margin-left: -4px; /* Pour compenser le border */
-            font-weight: 600;
-        }
-        
-        .tooltip-container {
-            position: relative;
-            display: inline-block;
-            margin-left: 8px; /* Augmenté de 5px */
-            cursor: help;
-        }
-        
-        .tooltip-text {
-            visibility: hidden;
-            position: absolute;
-            z-index: 10;
-            width: 320px; /* Augmenté de 300px */
-            background-color: rgba(1, 22, 39, 0.95);
-            color: #fff;
-            text-align: left;
-            border-radius: 8px; /* Augmenté de 6px */
-            padding: 12px; /* Augmenté de 10px */
-            bottom: 125%;
-            left: 50%;
-            margin-left: -160px; /* Ajusté */
-            border: 1px solid #00FF87;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            opacity: 0;
-            transition: opacity 0.3s;
-            font-size: 0.9rem;
-            line-height: 1.5;
-        }
-        
-        .tooltip-container:hover .tooltip-text {
-            visibility: visible;
-            opacity: 1;
-        }
-
-        /* Style pour le bouton de simulation */
-        .simulation-link {
-            display: inline-flex;
-            align-items: center;
-            margin-top: 12px;
-            background-color: rgba(0, 255, 135, 0.15);
-            color: #00FF87;
-            border-radius: 4px;
-            padding: 6px 10px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        
-        .simulation-link:hover {
-            background-color: rgba(0, 255, 135, 0.25);
-            transform: translateY(-2px);
-        }
-        
-        .simulation-link i {
-            margin-right: 6px;
-        }
-        
-        /* Icônes spéciales pour l'écologie */
-        .fa-leaf, .fa-seedling {
-            color: #4CAF50 !important;
-        }
-        
-        /* Style pour mettre en évidence certaines informations importantes */
-        .important-info {
-            font-weight: 700; /* Augmenté de 600 */
-            color: #00FF87;
-            font-size: 1.05em; /* Ajouté pour plus de visibilité */
-            padding: 0 2px; /* Ajouté un léger padding */
-        }
-        
-        /* Amélioration de la première colonne */
-        .comparison-table td:first-child {
-            width: 280px; /* Fixé une largeur */
-            min-width: 280px;
-        }
-        
-        /* Espacement entre les sections dans les cellules */
-        .feature-item + .risk-level,
-        .feature-item + .key-info {
-            margin-top: 16px; /* Espacement avant les badges */
         }
     </style>
 </head>
@@ -430,8 +415,8 @@
                     </p>
                     
                     <div class="flex flex-col md:flex-row justify-center gap-4 mt-8 mb-6">
-                        <a href="#comparatif" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center justify-center">
-                            <i class="fas fa-table mr-2"></i> Voir le comparatif complet
+                        <a href="#placements" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center justify-center">
+                            <i class="fas fa-th mr-2"></i> Explorer les placements
                         </a>
                         <a href="simulation.html" class="bg-transparent border border-green-400 text-green-400 hover:bg-green-900 hover:bg-opacity-30 font-semibold py-3 px-6 rounded-lg transition flex items-center justify-center">
                             <i class="fas fa-calculator mr-2"></i> Simuler mes investissements
@@ -445,576 +430,46 @@
                 <h3 class="text-xl font-semibold mb-6 text-center">Choisis ton profil d'investisseur</h3>
                 
                 <div class="flex flex-wrap justify-center gap-4">
-                    <button class="profile-pill flex flex-col items-center w-52 p-5 border border-blue-700 rounded-xl bg-blue-900 bg-opacity-20 active" data-profile="all">
-                        <i class="fas fa-users text-3xl mb-2 text-green-400"></i>
-                        <span class="font-semibold text-lg">Tous les profils</span>
-                        <span class="text-sm opacity-80 mt-1">Vue complète</span>
+                    <button class="profile-filter flex items-center px-6 py-3 border border-gray-600 rounded-xl hover:border-green-400 transition-all active" data-profile="all">
+                        <i class="fas fa-users text-xl mr-3"></i>
+                        <div class="text-left">
+                            <span class="font-semibold">Tous les profils</span>
+                            <span class="text-xs block opacity-70">Vue complète</span>
+                        </div>
                     </button>
                     
-                    <button class="profile-pill flex flex-col items-center w-52 p-5 border border-blue-700 rounded-xl bg-blue-900 bg-opacity-20" data-profile="prudent">
-                        <i class="fas fa-shield-alt text-3xl mb-2 text-blue-400"></i>
-                        <span class="font-semibold text-lg">Prudent</span>
-                        <span class="text-sm opacity-80 mt-1">Sécurité & fiscalité</span>
+                    <button class="profile-filter flex items-center px-6 py-3 border border-gray-600 rounded-xl hover:border-blue-400 transition-all" data-profile="prudent">
+                        <i class="fas fa-shield-alt text-xl mr-3 text-blue-400"></i>
+                        <div class="text-left">
+                            <span class="font-semibold">Prudent</span>
+                            <span class="text-xs block opacity-70">Sécurité & fiscalité</span>
+                        </div>
                     </button>
                     
-                    <button class="profile-pill flex flex-col items-center w-52 p-5 border border-blue-700 rounded-xl bg-blue-900 bg-opacity-20" data-profile="equilibre">
-                        <i class="fas fa-balance-scale text-3xl mb-2 text-green-400"></i>
-                        <span class="font-semibold text-lg">Équilibré</span>
-                        <span class="text-sm opacity-80 mt-1">Diversification & fiscalité</span>
+                    <button class="profile-filter flex items-center px-6 py-3 border border-gray-600 rounded-xl hover:border-green-400 transition-all" data-profile="equilibre">
+                        <i class="fas fa-balance-scale text-xl mr-3 text-green-400"></i>
+                        <div class="text-left">
+                            <span class="font-semibold">Équilibré</span>
+                            <span class="text-xs block opacity-70">Diversification</span>
+                        </div>
                     </button>
                     
-                    <button class="profile-pill flex flex-col items-center w-52 p-5 border border-blue-700 rounded-xl bg-blue-900 bg-opacity-20" data-profile="dynamique">
-                        <i class="fas fa-rocket text-3xl mb-2 text-red-400"></i>
-                        <span class="font-semibold text-lg">Dynamique</span>
-                        <span class="text-sm opacity-80 mt-1">Rendement & long terme</span>
+                    <button class="profile-filter flex items-center px-6 py-3 border border-gray-600 rounded-xl hover:border-red-400 transition-all" data-profile="dynamique">
+                        <i class="fas fa-rocket text-xl mr-3 text-red-400"></i>
+                        <div class="text-left">
+                            <span class="font-semibold">Dynamique</span>
+                            <span class="text-xs block opacity-70">Rendement & long terme</span>
+                        </div>
                     </button>
                 </div>
             </div>
 
-            <!-- Tableau comparatif des placements -->
-            <div id="comparatif" class="mb-16">
-                <h3 class="text-2xl font-bold text-green-400 mb-6 flex items-center">
-                    <i class="fas fa-table mr-3"></i>
-                    Comparatif des placements financiers
-                </h3>
-                
-                <div class="overflow-x-auto">
-                    <table class="comparison-table">
-                        <thead>
-                            <tr>
-                                <th>
-                                    <div class="flex items-center">
-                                        <i class="fas fa-piggy-bank mr-2 text-green-400"></i> Produit
-                                    </div>
-                                </th>
-                                <th>
-                                    <div class="flex items-center">
-                                        <i class="fas fa-check-circle mr-2 text-green-400"></i> Points forts
-                                    </div>
-                                </th>
-                                <th>
-                                    <div class="flex items-center">
-                                        <i class="fas fa-exclamation-triangle mr-2 text-yellow-400"></i> Risques
-                                    </div>
-                                </th>
-                                <th>
-                                    <div class="flex items-center">
-                                        <i class="fas fa-percentage mr-2 text-green-400"></i> Fiscalité
-                                    </div>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- PEA -->
-                            <tr class="placement-row" data-profiles="equilibre dynamique">
-                                <td>
-                                    <div class="product-name">PEA <span class="tooltip-container">
-                                        <i class="fas fa-info-circle text-green-400"></i>
-                                        <span class="tooltip-text">Plan d'Épargne en Actions : l'enveloppe fiscale de référence pour investir en Bourse européenne avec une fiscalité optimisée après 5 ans.</span>
-                                    </span></div>
-                                    <div class="flex flex-wrap mt-2">
-                                        <span class="profile-tag equilibre">Équilibré</span>
-                                        <span class="profile-tag dynamique">Dynamique</span>
-                                    </div>
-                                    <span class="key-info"><i class="fas fa-chart-line mr-1"></i> Horizon ≥ 5 ans</span>
-                                </td>
-                                <td>
-                                    <div class="feature-item highlight"><i class="fas fa-check feature-icon"></i> <span class="important-info">0% IR</span> sur gains après 5 ans</div>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Versements libres ; plafond <span class="important-info">150 k€</span> (225 k€ avec PEA-PME)</div>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Retraits partiels possibles dès 5 ans <span class="important-info">sans fermer le plan</span></div>
-                                    <div class="feature-item"><i class="fas fa-clock feature-icon"></i> Un seul compteur : date du <span class="important-info">1er versement</span></div>
-                                </td>
-                                <td>
-                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Retrait <span class="important-info">&lt; 5 ans</span> ⇒ PFU 30% + clôture</div>
-                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Univers limité <span class="important-info">UE/EEE</span></div>
-                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Volatilité actions</div>
-                                    <div class="risk-level"><span class="risk-dot risk-medium"></span> Risque moyen → élevé</div>
-                                </td>
-                                <td>
-                                    <div class="feature-item highlight"><i class="fas fa-check feature-icon"></i> <span class="important-info">&gt; 5 ans</span> : 17,2% prélèv. sociaux, pas d'IR</div>
-                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> <span class="important-info">&lt; 5 ans</span> : PFU 30% (12,8% IR + 17,2% PS)</div>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Dividendes non cotés exonérés jusqu'à <span class="important-info">10%/an</span></div>
-                                    <span class="key-info"><i class="fas fa-calendar-check mr-1"></i> Compteur unique : 1er versement</span>
-                                </td>
-                            </tr>
-                            
-                            <!-- CTO -->
-                            <tr class="placement-row" data-profiles="dynamique">
-                                <td>
-                                    <div class="product-name">CTO <span class="tooltip-container">
-                                        <i class="fas fa-info-circle text-green-400"></i>
-                                        <span class="tooltip-text">Compte-titres ordinaire : la "porte ouverte" pour investir partout dans le monde, mais avec une fiscalité classique et la nécessité de bien gérer volatilité et devises.</span>
-                                    </span></div>
-                                    <div class="flex flex-wrap mt-2">
-                                        <span class="profile-tag dynamique">Dynamique</span>
-                                    </div>
-                                    <span class="key-info"><i class="fas fa-globe mr-1"></i> La porte ouverte sur le monde</span>
-                                </td>
-                                <td>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Accès <span class="important-info">illimité aux marchés mondiaux</span> (actions, ETF, obligations, crypto…)</div>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Aucun plafond</span> de versement</div>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Pertes <span class="important-info">déductibles des gains</span> pendant 10 ans</div>
-                                </td>
-                                <td>
-                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Fiscalité pleine</span> : impôts chaque année, pas d'exonération</div>
-                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Volatilité des marchés + <span class="important-info">risque de change</span> hors zone €</div>
-                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Taxe <span class="important-info">0,4%</span> sur grandes actions FR + retenues sur dividendes étrangers</div>
-                                    <div class="risk-level"><span class="risk-dot risk-high"></span> Risque variable selon actifs</div>
-                                </td>
-                                <td>
-                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Par défaut : flat tax <span class="important-info">30%</span> (12,8% IR + 17,2% PS)</div>
-                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Option barème progressif si plus avantageux</div>
-                                    <div class="feature-item highlight"><i class="fas fa-check feature-icon"></i> <span class="important-info">Moins-values imputables</span> sur plus-values (report 10 ans)</div>
-                                    <span class="key-info"><i class="fas fa-wallet mr-1"></i> Fiscalité classique</span>
-                                </td>
-                            </tr>
-                            
-<!-- Assurance-vie -->
-<tr class="placement-row" data-profiles="prudent equilibre">
-    <td>
-        <div class="product-name">Assurance-vie</div>
-        <div class="flex flex-wrap mt-2">
-            <span class="profile-tag prudent">Prudent</span>
-            <span class="profile-tag equilibre">Équilibré</span>
-        </div>
-        <span class="key-info"><i class="fas fa-users mr-1"></i> Retraite & succession</span>
-    </td>
-    <td>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Transmission optimisée</span> : bénéficiaire désigné, capital transmis hors succession jusqu'à <span class="important-info">152 500 €</span>/bénéficiaire (primes < 70 ans)</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Fonds € sécurisés</span> : capital garanti ; rendement net 2024 ≈ 2 – 2,5 %</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Gestion flexible</span> : arbitrages vers des unités de compte (UC) pour viser un meilleur rendement</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Liquidité</span> : rachats partiels possibles à tout moment sans fermer le contrat</div>
-    </td>
-    <td>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Fonds €</span> : rendement parfois < inflation</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">UC</span> : risque de marché, capital non garanti</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Frais</span> : entrée 0–4 %, gestion fonds € ≈ 0,6 %, gestion UC ≈ 1–2 % → impact sur la performance</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Fiscalité moins favorable</span> avant 8 ans</div>
-        <div class="risk-level"><span class="risk-dot risk-low"></span> Risque faible (fonds €) à moyen (UC)</div>
-    </td>
-    <td>
-        <div class="feature-item highlight"><i class="fas fa-info-circle feature-icon"></i> <span class="important-info">Avant 8 ans</span> ➜ PFU <span class="important-info">12,8 %</span> + <span class="important-info">17,2 %</span> PS <em>ou</em> barème progressif</div>
-        <div class="feature-item highlight"><i class="fas fa-check feature-icon"></i> <span class="important-info">Après 8 ans</span> :</div>
-        <div class="feature-item" style="margin-left: 20px;"><i class="fas fa-arrow-right feature-icon"></i> Primes post-2017 <span class="important-info">≤ 150 000 €</span> : <span class="important-info">7,5 %</span> + 17,2 % PS</div>
-        <div class="feature-item" style="margin-left: 20px;"><i class="fas fa-arrow-right feature-icon"></i> Au-delà : <span class="important-info">12,8 %</span> + 17,2 % PS</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Abattement annuel</span> sur les gains : <span class="important-info">4 600 €</span> (célibataire) ou <span class="important-info">9 200 €</span> (couple)</div>
-        <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> <span class="important-info">PS 17,2 %</span> dus dans tous les cas</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Moins-values</span> imputables sur plus-values du même contrat</div>
-        <span class="key-info"><i class="fas fa-clock mr-1"></i> Délai fiscal : 8 ans</span>
-    </td>
-</tr>
-                            <!-- PER -->
-                            <tr class="placement-row" data-profiles="equilibre">
-                                <td>
-                                    <div class="product-name">Plan d'Épargne Retraite (PER)</div>
-                                    <div class="flex flex-wrap mt-2">
-                                        <span class="profile-tag equilibre">Équilibré</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Déduction immédiate des versements (jusqu'à ≈ <span class="important-info">35 000 €/an</span> salarié, <span class="important-info">37 000 €</span> TNS)</div>
-                                    <div class="feature-item highlight"><i class="fas fa-home feature-icon"></i> Déblocage anticipé <span class="important-info">possible une fois</span> pour acheter sa résidence principale</div>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> À la retraite : sortie <span class="important-info">au choix</span> – capital, rente ou mix</div>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Gestion pilotée (prudent → dynamique) selon votre horizon</div>
-                                </td>
-                                <td>
-                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Argent bloqué jusqu'à la retraite (hors cas exceptionnels : achat RP, invalidité, chômage…)</div>
-                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Rendement variable selon le profil choisi ; capital non garanti</div>
-                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Fiscalité au déblocage à prévoir</div>
-                                </td>
-                                <td>
-                                    <div class="feature-item highlight"><i class="fas fa-check feature-icon"></i> <span class="important-info">À l'entrée</span> : vos versements réduisent votre revenu imposable (gain = TMI)</div>
-                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> <span class="important-info">Sortie en capital</span> : versements imposés, gains = <span class="important-info">flat-tax 30 %</span></div>
-                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> <span class="important-info">Sortie en rente</span> : rente taxée comme pension (après abattement 10 %)</div>
-                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Prélèvements sociaux <span class="important-info">17,2 %</span> sur les gains dans tous les cas</div>
-                                </td>
-                            </tr>
-                            
-                            <!-- SCPI -->
-                            <tr class="placement-row" data-profiles="equilibre">
-                                <td>
-                                    <div class="product-name">SCPI</div>
-                                    <div class="flex flex-wrap mt-2">
-                                        <span class="profile-tag equilibre">Équilibré</span>
-                                    </div>
-                                    <span class="text-sm opacity-80">Profil : Équilibré – revenu passif immobilier</span>
-                                </td>
-                                <td>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Revenus trimestriels</span> (≈ 4 % net 2024)</div>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Aucune gestion locative</span> : tout est délégué</div>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Diversification</span> secteurs / régions</div>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Ticket d'entrée dès <span class="important-info">200 €</span> ; logeable dans une assurance-vie</div>
-                                </td>
-                                <td>
-                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Illiquidité</span> : revente 3-6 mois</div>
-                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Frais : <span class="important-info">8-10 %</span> à l'achat + ~0,5 %/an gestion</div>
-                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Rendement & capital <span class="important-info">non garantis</span> (vacance, baisse valeur part)</div>
-                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">IFI</span> : valeur des immeubles à déclarer si patrimoine > 1,3 M €</div>
-                                </td>
-                                <td>
-                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Revenus = <span class="important-info">barème IR</span> + <span class="important-info">17,2 %</span> prélèv. sociaux (micro-foncier possible < 15 k €)</div>
-                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Via <span class="important-info">assurance-vie</span> : taxation AV (7,5 % ou 12,8 % + PS après 8 ans)</div>
-                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Plus-value de cession : régime immo (19 % + PS, abattement > 22/30 ans)</div>
-                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> SCPI « travaux » : charges déductibles (déficit foncier)</div>
-                                </td>
-                            </tr>
-                            
-  <!-- FCPI / FIP -->
-<tr class="placement-row" data-profiles="dynamique">
-    <td>
-        <div class="product-name">FCPI / FIP</div>
-        <div class="flex flex-wrap mt-2">
-            <span class="profile-tag dynamique">Dynamique</span>
-        </div>
-        <span class="key-info"><i class="fas fa-users mr-1"></i> Défiscalisation PME / innovation</span>
-    </td>
-    <td>
-        <div class="feature-item highlight"><i class="fas fa-check feature-icon"></i> <span class="important-info">FCPI</span> : réduction IR <span class="important-info">25 %</span> (loi de finances 2025)</div>
-        <div class="feature-item highlight"><i class="fas fa-check feature-icon"></i> <span class="important-info">FIP Corse / Outre-mer</span> : réduction IR <span class="important-info">30 %</span></div>
-        <div class="feature-item"><i class="fas fa-times feature-icon" style="color: #ff6b6b;"></i> <span class="important-info">FIP métropole</span> : plus d'avantage fiscal</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> Gains <span class="important-info">exonérés d'IR</span> (hors PS) si conservé jusqu'au terme</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> Soutien innovation / PME françaises</div>
-    </td>
-    <td>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Capital non garanti</span>, PME non cotées → risque très élevé</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Blocage 5 à 10 ans</span> (durée fixée par le fonds)</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Liquidité quasi nulle avant la liquidation</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Plafond de souscription : <span class="important-info">12 000 €</span> (24 000 € couple)</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Compte dans le plafond global « niches fiscales » <span class="important-info">10 000 €</span></div>
-        <div class="risk-level"><span class="risk-dot risk-high"></span> Risque très élevé</div>
-    </td>
-    <td>
-        <div class="feature-item highlight"><i class="fas fa-check feature-icon"></i> Réduction IR l'année du versement : <span class="important-info">25 % FCPI</span>, <span class="important-info">30 % FIP Corse/OM</span></div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> Plus-values <span class="important-info">exonérées d'IR</span> à la sortie</div>
-        <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> <span class="important-info">17,2 %</span> prélèvements sociaux dus sur les gains</div>
-        <div class="feature-item"><i class="fas fa-exclamation-triangle feature-icon"></i> Perte de la réduction + imposition des gains si cession <span class="important-info">avant 5 ans</span></div>
-        <span class="key-info"><i class="fas fa-calendar-alt mr-1"></i> Blocage 5 à 10 ans</span>
-    </td>
-</tr>
-                            
-<!-- Crypto (CTO) -->
-<tr class="placement-row" data-profiles="dynamique">
-    <td>
-        <div class="product-name">Crypto (via CTO)</div>
-        <div class="flex flex-wrap mt-2">
-            <span class="profile-tag dynamique">Dynamique</span>
-        </div>
-        <span class="key-info"><i class="fas fa-users mr-1"></i> Investisseur averti</span>
-    </td>
-    <td>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> Potentiel de rendement <span class="important-info">très élevé</span></div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> Diversification <span class="important-info">« hors marché »</span> traditionnelle</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> Marché <span class="important-info">24h/24</span>, ticket d'entrée faible</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> Accessibilité et liquidité élevée</div>
-    </td>
-    <td>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Volatilité extrême</span>, possible perte totale du capital</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Cyber-risque</span> : piratage, perte de clés privées, faillite d'exchange</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Réglementation encore jeune : cadre européen <span class="important-info">MiCA</span> en vigueur depuis 30/12/2024</div>
-        <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> (ex-PSAN ⇒ CASP), mais adaptation continue</div>
-        <div class="risk-level"><span class="risk-dot risk-high"></span> Risque très élevé</div>
-    </td>
-    <td>
-        <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Gains taxés lors de la <span class="important-info">conversion en €</span> / utilisation : <span class="important-info">PFU 30 %</span> (12,8 % IR + 17,2 % PS)</div>
-        <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Option barème IR possible</div>
-        <div class="feature-item highlight"><i class="fas fa-check feature-icon"></i> <span class="important-info">Échanges crypto-à-crypto non imposés</span> (réforme 2022)</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Moins-values</span> imputables sur plus-values de même nature, reportables 10 ans</div>
-        <div class="feature-item"><i class="fas fa-exclamation-triangle feature-icon"></i> Comptes sur plateformes étrangères : <span class="important-info">déclaration 3916-bis</span> annuelle</div>
-        <div class="feature-item"><i class="fas fa-times feature-icon" style="color: #ff6b6b;"></i> Aucun avantage successoral ou fiscal spécifique</div>
-        <span class="key-info"><i class="fas fa-wallet mr-1"></i> Fiscalité classique</span>
-    </td>
-</tr>
-                            
-<!-- Livret A -->
-<tr class="placement-row" data-profiles="prudent">
-    <td>
-        <div class="product-name">Livret A</div>
-        <div class="flex flex-wrap mt-2">
-            <span class="profile-tag prudent">Prudent</span>
-        </div>
-        <span class="key-info"><i class="fas fa-users mr-1"></i> Épargne de précaution</span>
-    </td>
-    <td>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Capital 100 % garanti</span> par l'État (Caisse des dépôts)</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Liquidité totale</span> : retraits et versements libres (mini 10 €)</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Simplicité</span> : ouverture dans toute banque, aucun frais</div>
-        <div class="feature-item highlight"><i class="fas fa-percentage feature-icon"></i> <span class="important-info">Taux : 2,4 %</span> depuis le 1ᵉʳ février 2025 (révisé chaque semestre)</div>
-        <div class="feature-item"><i class="fas fa-euro-sign feature-icon"></i> Plafond de dépôts : <span class="important-info">22 950 €</span></div>
-    </td>
-    <td>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Rendement souvent < inflation</span> : pouvoir d'achat érodé sur le long terme</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Plafond relativement bas pour des projets importants (<span class="important-info">22 950 €</span>)</div>
-        <div class="risk-level"><span class="risk-dot risk-low"></span> Risque nul - Garantie État</div>
-    </td>
-    <td>
-        <div class="feature-item highlight"><i class="fas fa-check feature-icon"></i> Intérêts <span class="important-info">exonérés</span> d'impôt sur le revenu <span class="important-info">et</span> de prélèvements sociaux</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">0 % de taxation</span></div>
-        <div class="feature-item"><i class="fas fa-shield-alt feature-icon"></i> Aucun impôt, aucun prélèvement</div>
-        <span class="key-info"><i class="fas fa-shield-alt mr-1"></i> Exonération totale</span>
-    </td>
-</tr>
-                            
-<!-- LDDS -->
-<tr class="placement-row" data-profiles="prudent">
-    <td>
-        <div class="product-name">LDDS <span class="tooltip-container">
-            <i class="fas fa-info-circle text-green-400"></i>
-            <span class="tooltip-text">Livret de Développement Durable et Solidaire : finance la transition écologique & sociale</span>
-        </span></div>
-        <div class="flex flex-wrap mt-2">
-            <span class="profile-tag prudent">Prudent</span>
-        </div>
-        <span class="key-info"><i class="fas fa-leaf mr-1"></i> Épargne solidaire</span>
-    </td>
-    <td>
-        <div class="feature-item highlight"><i class="fas fa-percentage feature-icon"></i> <span class="important-info">Taux réglementé : 2,40 %</span> brut/an (identique au Livret A)</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Capital garanti</span> par l'État et couvert jusqu'à 100 000 € par le FGDR</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Liquidité totale</span> : dépôts/retraits libres, argent disponible à tout moment</div>
-        <div class="feature-item"><i class="fas fa-euro-sign feature-icon"></i> Plafond de dépôts : <span class="important-info">12 000 €</span> hors intérêts</div>
-        <div class="feature-item highlight"><i class="fas fa-leaf feature-icon"></i> <span class="important-info">Épargne solidaire</span> : finance la transition écologique & sociale</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Rendement réel positif</span> : taux 2,4 % > inflation 0,9 % (avril 2025)</div>
-        <div class="feature-item"><i class="fas fa-heart feature-icon"></i> Possibilité de <span class="important-info">dons ESS</span> depuis le livret</div>
-    </td>
-    <td>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Taux révisable</span> deux fois l'an (1ᵉʳ février & 1ᵉʳ août)</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Plafond limité</span> : au-delà de 12 000 € il faut diversifier</div>
-        <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> <span class="important-info">Risque réglementaire</span> : conditions fixées par l'État et susceptibles d'évoluer</div>
-        <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> <span class="important-info">Risque souverain très faible</span> : seule une défaillance de l'État remettrait en cause la garantie</div>
-        <div class="risk-level"><span class="risk-dot risk-low"></span> Risque nul - Garantie État</div>
-    </td>
-    <td>
-        <div class="feature-item highlight"><i class="fas fa-check feature-icon"></i> <span class="important-info">Intérêts exonérés</span> d'impôt sur le revenu <span class="important-info">et</span> de prélèvements sociaux</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Aucune déclaration</span> : les revenus ne sont pas à renseigner sur la déclaration fiscale</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">0 % de taxation</span></div>
-        <div class="feature-item"><i class="fas fa-heart feature-icon"></i> Dons ESS sans réduction d'impôt mais sans fiscalité</div>
-        <span class="key-info"><i class="fas fa-shield-alt mr-1"></i> Exonération totale</span>
-    </td>
-</tr>
-                            
-<!-- LEP -->
-<tr class="placement-row" data-profiles="prudent">
-    <td>
-        <div class="product-name">LEP <span class="tooltip-container">
-            <i class="fas fa-info-circle text-green-400"></i>
-            <span class="tooltip-text">Livret d'Épargne Populaire : réservé aux revenus modestes avec taux bonifié</span>
-        </span></div>
-        <div class="flex flex-wrap mt-2">
-            <span class="profile-tag prudent">Prudent</span>
-        </div>
-        <span class="key-info"><i class="fas fa-users mr-1"></i> Revenus modestes</span>
-    </td>
-    <td>
-        <div class="feature-item highlight"><i class="fas fa-percentage feature-icon"></i> <span class="important-info">Taux réglementé : 3,50 %</span> (≈ +1,1 pt vs Livret A)</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Capital garanti</span> : épargne couverte jusqu'à 100 000 € par le FGDR + garantie État</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Liquidité totale</span> : dépôts et retraits gratuits à tout moment, sans pénalité</div>
-        <div class="feature-item"><i class="fas fa-euro-sign feature-icon"></i> Plafond de dépôts : <span class="important-info">10 000 €</span> hors intérêts (depuis oct. 2023)</div>
-        <div class="feature-item highlight"><i class="fas fa-heart feature-icon"></i> <span class="important-info">Réservé aux revenus modestes</span> : taux bonifié pour les ménages éligibles</div>
-    </td>
-    <td>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Taux révisable</span> deux fois par an par l'État</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Plafond limité</span> : au-delà de 10 000 €, il faut diversifier</div>
-        <div class="feature-item"><i class="fas fa-exclamation-triangle feature-icon"></i> <span class="important-info">Contrôle annuel des revenus</span> : clôture si dépassement 2 années de suite</div>
-        <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> <span class="important-info">Risque souverain extrêmement faible</span> : seule une défaillance de l'État remettrait en cause la garantie</div>
-        <div class="risk-level"><span class="risk-dot risk-low"></span> Risque nul - Garantie État</div>
-    </td>
-    <td>
-        <div class="feature-item highlight"><i class="fas fa-check feature-icon"></i> <span class="important-info">Intérêts exonérés</span> d'impôt sur le revenu <span class="important-info">et</span> de prélèvements sociaux ✔️</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Aucune déclaration fiscale requise</span></div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> Les intérêts ne figurent pas sur la déclaration d'impôt</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">0 % de taxation</span></div>
-        <span class="key-info"><i class="fas fa-shield-alt mr-1"></i> Exonération totale</span>
-    </td>
-</tr>
-                            
-<!-- PEA-PME-ETI -->
-<tr class="placement-row" data-profiles="equilibre dynamique">
-    <td>
-        <div class="product-name">PEA-PME-ETI <span class="tooltip-container">
-            <i class="fas fa-info-circle text-green-400"></i>
-            <span class="tooltip-text">Plan d'Épargne en Actions dédié aux PME/ETI : complète le PEA classique pour investir dans les entreprises de taille intermédiaire européennes</span>
-        </span></div>
-        <div class="flex flex-wrap mt-2">
-            <span class="profile-tag equilibre">Équilibré</span>
-            <span class="profile-tag dynamique">Dynamique</span>
-        </div>
-        <span class="key-info"><i class="fas fa-users mr-1"></i> Investisseur pro-croissance</span>
-    </td>
-    <td>
-        <div class="feature-item highlight"><i class="fas fa-check feature-icon"></i> <span class="important-info">Plafond versements : 225 000 €</span> (somme PEA + PEA-PME, dont max 150 000 € sur le PEA)</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Accès direct aux PME/ETI européennes</span> : < 5 000 salariés, CA < 1,5 Mds €, capitalisation < 2 Mds €</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Soutien à l'économie réelle</span> : l'épargne finance la croissance des petites et moyennes entreprises</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Cumulable avec un PEA classique</span> (sous réserve du plafond commun)</div>
-        <div class="feature-item"><i class="fas fa-rocket feature-icon"></i> <span class="important-info">Tremplin de croissance</span> : potentiel de performance supérieur aux grandes capitalisations sur longue durée</div>
-    </td>
-    <td>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Volatilité élevée des small & mid caps</span> : écart-type ≈ 19 % vs 15 % pour les large caps</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Liquidité plus faible</span> : spreads bid-ask larges et volumes réduits sur petites valeurs</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Univers restreint</span> : < 5 000 salariés et < 2 Mds € capitalisation → diversification limitée</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Risque de perte en capital</span> : aucune garantie si marché ou émetteur défaille</div>
-        <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> <span class="important-info">Plafond contraignant</span> : impossible de verser au-delà de 225 000 € cumulés</div>
-        <div class="risk-level"><span class="risk-dot risk-high"></span> Risque élevé</div>
-    </td>
-    <td>
-        <div class="feature-item highlight"><i class="fas fa-check feature-icon"></i> <span class="important-info">Même régime que le PEA</span> : plus-values & dividendes <span class="important-info">exonérés d'IR après 5 ans</span></div>
-        <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> <span class="important-info">Prélèvements sociaux 17,2 %</span> sur les gains lors de tout retrait, quel que soit l'âge du plan</div>
-        <div class="feature-item"><i class="fas fa-exclamation-triangle feature-icon"></i> <span class="important-info">Retrait < 5 ans</span> : clôture automatique et taxation à la flat-tax <span class="important-info">30 %</span> (12,8 % IR + 17,2 % PS)</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> Retraits partiels possibles après 5 ans sans clôture</div>
-        <span class="key-info"><i class="fas fa-clock mr-1"></i> Délai fiscal : 5 ans</span>
-    </td>
-</tr>
-
-<!-- PEAC (Plan d'épargne Avenir Climat) -->
-<tr class="placement-row" data-profiles="equilibre">
-    <td>
-        <div class="product-name">PEAC <span class="tooltip-container">
-            <i class="fas fa-info-circle text-green-400"></i>
-            <span class="tooltip-text">Plan d'épargne Avenir Climat : réservé aux jeunes pour financer 100% la transition écologique</span>
-        </span></div>
-        <div class="flex flex-wrap mt-2">
-            <span class="profile-tag equilibre">Équilibré</span>
-        </div>
-        <span class="key-info"><i class="fas fa-users mr-1"></i> Jeunes < 21 ans</span>
-    </td>
-    <td>
-        <div class="feature-item highlight"><i class="fas fa-user-check feature-icon"></i> <span class="important-info">Réservé aux < 21 ans</span> à l'ouverture ; un seul PEAC par personne</div>
-        <div class="feature-item"><i class="fas fa-euro-sign feature-icon"></i> Plafond de versements : <span class="important-info">22 950 €</span> (identique au Livret A)</div>
-        <div class="feature-item highlight"><i class="fas fa-leaf feature-icon"></i> <span class="important-info">Financement 100 % "transition écologique"</span> : supports labellisés <span class="important-info">ISR</span> ou <span class="important-info">France Finance verte</span>, obligations vertes</div>
-        <div class="feature-item"><i class="fas fa-shield-alt feature-icon"></i> <span class="important-info">Gestion pilotée sécurisée</span> : ≥ 70 % d'actifs « faible risque » dès J-2 ans avant liquidation</div>
-        <div class="feature-item"><i class="fas fa-calendar-alt feature-icon"></i> <span class="important-info">Horizon long (≤ 30 ans)</span> : clôture automatique le 31 déc. de l'année des 30 ans</div>
-    </td>
-    <td>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Capital non garanti</span> : soumis aux marchés financiers</div>
-        <div class="feature-item"><i class="fas fa-lock feature-icon"></i> <span class="important-info">Blocage</span> : retraits impossibles <span class="important-info">avant 18 ans</span> <em>et</em> avant <span class="important-info">5 ans de détention</span></div>
-        <div class="feature-item"><i class="fas fa-exclamation-triangle feature-icon"></i> Un retrait partiel interdit tout versement futur</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Liquidité limitée</span> : sorties anticipées seulement en cas de décès ou invalidité du titulaire / décès d'un parent</div>
-        <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> <span class="important-info">Plafond modeste</span> pour un objectif patrimonial conséquent</div>
-        <div class="risk-level"><span class="risk-dot risk-medium"></span> Risque "moyen à modéré" - volatilité atténuée</div>
-    </td>
-    <td>
-        <div class="feature-item highlight"><i class="fas fa-check feature-icon"></i> <span class="important-info">Exonération totale</span> d'<span class="important-info">impôt sur le revenu</span> <span class="important-info">et</span> de <span class="important-info">prélèvements sociaux</span></div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> Sur plus-values et revenus, quelle que soit la date de retrait <em>autorisé</em></div>
-        <div class="feature-item"><i class="fas fa-times feature-icon" style="color: #ff6b6b;"></i> <span class="important-info">Aucun avantage fiscal à l'entrée</span></div>
-        <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Frais de gestion/tenue de compte possibles</div>
-        <span class="key-info"><i class="fas fa-seedling mr-1"></i> 0% d'imposition sur les gains</span>
-    </td>
-</tr>
-
-<!-- PEL (Plan d'Épargne Logement) -->
-<tr class="placement-row" data-profiles="prudent">
-    <td>
-        <div class="product-name">PEL <span class="tooltip-container">
-            <i class="fas fa-info-circle text-green-400"></i>
-            <span class="tooltip-text">Plan d'Épargne Logement : épargne bloquée avec taux fixe garanti et droit à prêt immobilier</span>
-        </span></div>
-        <div class="flex flex-wrap mt-2">
-            <span class="profile-tag prudent">Prudent</span>
-        </div>
-        <span class="key-info"><i class="fas fa-home mr-1"></i> Objectif logement</span>
-    </td>
-    <td>
-        <div class="feature-item highlight"><i class="fas fa-percentage feature-icon"></i> <span class="important-info">Taux fixe : 1,75 % brut</span> pour tout PEL ouvert depuis le 1ᵉʳ janvier 2025, garanti pendant toute la vie du plan</div>
-        <div class="feature-item"><i class="fas fa-home feature-icon"></i> <span class="important-info">Droit à prêt épargne-logement</span> : jusqu'à <span class="important-info">92 000 €</span> au taux <span class="important-info">2,95 %</span> (PEL 2025)</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Capital garanti</span> et couvert jusqu'à 100 000 € par le FGDR</div>
-        <div class="feature-item"><i class="fas fa-euro-sign feature-icon"></i> Plafond de versements : <span class="important-info">61 200 €</span> hors intérêts</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Objectif logement</span> : épargne + taux de prêt connus dès l'ouverture</div>
-    </td>
-    <td>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Retrait = clôture</span> ; impossible de retirer partiellement</div>
-        <div class="feature-item"><i class="fas fa-exclamation-triangle feature-icon"></i> Retrait < 4 ans fait perdre les avantages prêts/intérêts</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Rendement net modeste</span> : ≈ <span class="important-info">1,225 %</span> après PFU → souvent < inflation</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Versements réguliers imposés</span> (540 €/an minimum)</div>
-        <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> <span class="important-info">Prêt parfois non compétitif</span> si les taux de marché baissent en dessous de 2,95 %</div>
-        <div class="risk-level"><span class="risk-dot risk-low"></span> Risque nul - Capital garanti</div>
-    </td>
-    <td>
-        <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> <span class="important-info">PFU 30 %</span> (12,8 % IR + 17,2 % PS) prélevé chaque année dès l'ouverture pour tout PEL créé depuis 2018</div>
-        <div class="feature-item"><i class="fas fa-times feature-icon" style="color: #ff6b6b;"></i> <span class="important-info">Prime d'État supprimée</span> pour les nouveaux plans (≥ 2018)</div>
-        <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Fiscalité appliquée annuellement sur les intérêts</div>
-        <span class="key-info"><i class="fas fa-home mr-1"></i> Pas d'avantage fiscal</span>
-    </td>
-</tr>
-
-<!-- CEL (Compte d'Épargne Logement) -->
-<tr class="placement-row" data-profiles="prudent">
-    <td>
-        <div class="product-name">CEL <span class="tooltip-container">
-            <i class="fas fa-info-circle text-green-400"></i>
-            <span class="tooltip-text">Compte d'Épargne Logement : épargne flexible avec taux variable et droit à prêt après 18 mois</span>
-        </span></div>
-        <div class="flex flex-wrap mt-2">
-            <span class="profile-tag prudent">Prudent</span>
-        </div>
-        <span class="key-info"><i class="fas fa-home mr-1"></i> Épargne logement flexible</span>
-    </td>
-    <td>
-        <div class="feature-item highlight"><i class="fas fa-percentage feature-icon"></i> <span class="important-info">Taux variable : 1,5 % brut</span> (depuis février 2025)</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Liquidité totale</span> : dépôts et retraits libres, solde mini 300 €</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Capital garanti</span> et couvert FGDR 100 000 €</div>
-        <div class="feature-item"><i class="fas fa-home feature-icon"></i> <span class="important-info">Droit à prêt</span> après <span class="important-info">18 mois</span> : jusqu'à 23 000 €, taux actuellement <span class="important-info">3 %</span></div>
-        <div class="feature-item"><i class="fas fa-euro-sign feature-icon"></i> Plafond dépôts : <span class="important-info">15 300 €</span> (hors intérêts)</div>
-        <div class="feature-item"><i class="fas fa-link feature-icon"></i> Cumulable avec un PEL</div>
-    </td>
-    <td>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Rendement net faible</span> : ≈ <span class="important-info">1,05 %</span> après PFU ; inférieur aux livrets exonérés</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Prêt limité & rarement avantageux</span> versus taux du marché</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Plafond réduit</span> et absence de taux garanti (revue à chaque révision Livret A)</div>
-        <div class="feature-item"><i class="fas fa-times feature-icon" style="color: #ff6b6b;"></i> <span class="important-info">Pas de prime d'État</span> pour les comptes récents</div>
-        <div class="risk-level"><span class="risk-dot risk-low"></span> Risque nul - Capital garanti</div>
-    </td>
-    <td>
-        <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> <span class="important-info">PFU 30 %</span> (12,8 % IR + 17,2 % PS) retenu sur les intérêts chaque année pour les CEL ouverts depuis 2018</div>
-        <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Possibilité d'opter pour le barème progressif</div>
-        <div class="feature-item"><i class="fas fa-times feature-icon" style="color: #ff6b6b;"></i> Pas d'avantage fiscal spécifique</div>
-        <span class="key-info"><i class="fas fa-home mr-1"></i> Fiscalité classique</span>
-    </td>
-</tr>
-<!-- OPCI -->
-<tr class="placement-row" data-profiles="equilibre">
-    <td>
-        <div class="product-name">OPCI « grand public » <span class="tooltip-container">
-            <i class="fas fa-info-circle text-green-400"></i>
-            <span class="tooltip-text">Organisme de Placement Collectif Immobilier : formes SPPICAV ou FPI, combine immobilier et liquidités</span>
-        </span></div>
-        <div class="flex flex-wrap mt-2">
-            <span class="profile-tag equilibre">Équilibré</span>
-        </div>
-        <span class="key-info"><i class="fas fa-building mr-1"></i> Immobilier liquide</span>
-    </td>
-    <td>
-        <div class="feature-item highlight"><i class="fas fa-chart-pie feature-icon"></i> <span class="important-info">Portefeuille réglementé</span> : ≥ 60 % d'actifs immobiliers, ≥ 5 % de liquidités, ≤ 35 % d'instruments financiers</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Liquidité supérieure à la SCPI</span> : rachat automatique à la VL ; délai usuel de 7 jours à 2 mois (plafond légal : 6 mois)</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Souscription flexible</span> : éligible sur contrat d'assurance-vie (UC) ou compte-titres ordinaire</div>
-        <div class="feature-item"><i class="fas fa-chart-line feature-icon"></i> <span class="important-info">Valeur liquidative transparente</span> : calculée au moins semestriellement et au plus deux fois par mois</div>
-        <div class="feature-item"><i class="fas fa-check feature-icon"></i> Combine loyers et diversification financière</div>
-    </td>
-    <td>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Risque « équilibré-modéré »</span> : indicateur SRI/SRRI 3-4 /7 ; capital non garanti</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Sensibilité marchés immo & actions</span> : VL exposée aux cycles économiques</div>
-        <div class="feature-item"><i class="fas fa-exclamation-triangle feature-icon"></i> Rachat pouvant être temporairement plafonné ou suspendu (<span class="important-info">gates</span>) en cas de crise</div>
-        <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Frais</span> : droits d'entrée 3-5%; frais annuels de gestion 1-2 % + éventuelle sur-performance</div>
-        <div class="risk-level"><span class="risk-dot risk-medium"></span> Risque modéré (3-4/7)</div>
-    </td>
-    <td>
-        <div class="feature-item highlight"><i class="fas fa-info-circle feature-icon"></i> <span class="important-info">Selon la forme juridique :</span></div>
-        <div class="feature-item" style="margin-left: 20px;"><i class="fas fa-arrow-right feature-icon"></i> <span class="important-info">SPPICAV</span> : distributions & plus-values = <span class="important-info">PFU 30 %</span> (12,8 % IR + 17,2 % PS) ou option barème</div>
-        <div class="feature-item" style="margin-left: 20px;"><i class="fas fa-arrow-right feature-icon"></i> <span class="important-info">FPI</span> : loyers = <span class="important-info">revenus fonciers</span> ; plus-values immobilières (19 % IR + 17,2 % PS, abattements durée)</div>
-        <div class="feature-item" style="margin-left: 20px;"><i class="fas fa-arrow-right feature-icon"></i> Revenus financiers au PFU 30 %</div>
-        <div class="feature-item"><i class="fas fa-exclamation-triangle feature-icon"></i> Part imposable à l'<span class="important-info">IFI</span> pour la fraction immobilière</div>
-        <span class="key-info"><i class="fas fa-building mr-1"></i> Fiscalité variable</span>
-    </td>
-</tr>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <div class="flex justify-center mt-8 mb-4">
-                    <a href="#" class="bg-blue-900 bg-opacity-30 hover:bg-blue-800 text-white font-medium py-2 px-6 rounded-lg transition flex items-center" onclick="downloadPDF(event)">
-                        <i class="fas fa-file-pdf mr-2"></i> Télécharger le comparatif PDF
-                    </a>
-                </div>
+            <!-- Grille de cartes de placements -->
+            <div id="placements" class="placements-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+                <!-- Les cartes seront générées dynamiquement par JavaScript -->
             </div>
 
-            <!-- Comment bien faire ? (Accordéon) -->
+            <!-- Section Guide pratique (conservée) -->
             <div class="mb-16">
                 <h3 class="text-2xl font-bold text-green-400 mb-6 flex items-center">
                     <i class="fas fa-lightbulb mr-3"></i>
@@ -1248,9 +703,9 @@
                     <a href="simulation.html" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center justify-center">
                         <i class="fas fa-play-circle mr-2"></i> Lancer une simulation
                     </a>
-                    <a href="#comparatif" class="bg-transparent border border-green-400 text-green-400 hover:bg-green-900 hover:bg-opacity-30 font-semibold py-3 px-6 rounded-lg transition flex items-center justify-center">
-                        <i class="fas fa-table mr-2"></i> Revoir le comparatif
-                    </a>
+                    <button onclick="window.scrollTo({top: document.getElementById('placements').offsetTop - 100, behavior: 'smooth'})" class="bg-transparent border border-green-400 text-green-400 hover:bg-green-900 hover:bg-opacity-30 font-semibold py-3 px-6 rounded-lg transition flex items-center justify-center">
+                        <i class="fas fa-th mr-2"></i> Revoir les placements
+                    </button>
                 </div>
             </div>
         </div>
@@ -1274,6 +729,24 @@
         </footer>
     </div>
 
+    <!-- Drawer pour les détails -->
+    <div class="drawer-backdrop" id="drawerBackdrop"></div>
+    
+    <div class="drawer" id="placementDrawer" tabindex="-1" role="dialog" aria-labelledby="drawerTitle">
+        <div class="drawer-header">
+            <div class="flex items-center justify-between">
+                <h2 id="drawerTitle" class="text-2xl font-bold text-green-400">Détails du placement</h2>
+                <button id="closeDrawer" class="p-2 hover:bg-gray-800 rounded-lg transition-colors" aria-label="Fermer">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div id="drawerContent">
+            <!-- Le contenu sera injecté dynamiquement ici -->
+        </div>
+    </div>
+
     <!-- Bouton du sélecteur de thème -->
     <div class="theme-toggle">
         <button id="theme-toggle-btn" class="theme-toggle-btn">
@@ -1284,26 +757,1025 @@
 
     <!-- Scripts -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Mise à jour de la date actuelle
-            updateDate();
-            
-            // Initialiser l'accordéon
-            initAccordion();
-            
-            // Initialiser le filtrage par profil
-            initProfileFilter();
-            
-            // Ajouter le comportement pour ouvrir l'onglet d'optimisation fiscale quand on arrive depuis un lien
-            if (window.location.hash === '#tax-optimizer') {
-                setTimeout(function() {
-                    // Simuler un clic sur l'onglet d'optimisation fiscale
-                    document.querySelector('[data-target="tax-optimizer"]').click();
-                }, 500);
+        // Données complètes des placements
+        const placementsData = {
+            'pea': {
+                title: 'PEA',
+                subtitle: 'Plan d\'Épargne en Actions',
+                icon: 'fas fa-chart-line',
+                color: 'green',
+                profiles: ['equilibre', 'dynamique'],
+                summary: {
+                    horizon: '≥ 5 ans',
+                    fiscalite: '0% IR après 5 ans',
+                    plafond: '150 000€'
+                },
+                sections: [
+                    {
+                        title: 'Points forts',
+                        icon: 'fas fa-check-circle',
+                        items: [
+                            '<span class="important-info">0% d\'impôt sur le revenu</span> sur les gains après 5 ans',
+                            'Versements libres ; plafond <span class="important-info">150 k€</span> (225 k€ avec PEA-PME)',
+                            'Retraits partiels possibles dès 5 ans <span class="important-info">sans fermer le plan</span>',
+                            'Un seul compteur : date du <span class="important-info">1er versement</span>'
+                        ]
+                    },
+                    {
+                        title: 'Risques et limites',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'warning',
+                        items: [
+                            'Retrait <span class="important-info">&lt; 5 ans</span> ⇒ PFU 30% + clôture',
+                            'Univers limité <span class="important-info">UE/EEE</span>',
+                            'Volatilité actions',
+                            'Capital non garanti'
+                        ],
+                        risk: 'medium'
+                    },
+                    {
+                        title: 'Fiscalité',
+                        icon: 'fas fa-percentage',
+                        items: [
+                            '<span class="important-info">&gt; 5 ans</span> : 17,2% prélèv. sociaux, pas d\'IR',
+                            '<span class="important-info">&lt; 5 ans</span> : PFU 30% (12,8% IR + 17,2% PS)',
+                            'Dividendes non cotés exonérés jusqu\'à <span class="important-info">10%/an</span>',
+                            'Compteur unique : 1er versement'
+                        ]
+                    }
+                ]
+            },
+            'assurance-vie': {
+                title: 'Assurance-vie',
+                subtitle: 'Épargne polyvalente',
+                icon: 'fas fa-umbrella',
+                color: 'blue',
+                profiles: ['prudent', 'equilibre'],
+                summary: {
+                    horizon: '≥ 8 ans',
+                    fiscalite: '7,5% après 8 ans',
+                    liquidite: 'Totale'
+                },
+                sections: [
+                    {
+                        title: 'Points forts',
+                        icon: 'fas fa-check-circle',
+                        items: [
+                            '<span class="important-info">Transmission optimisée</span> : bénéficiaire désigné, capital transmis hors succession jusqu\'à <span class="important-info">152 500 €</span>/bénéficiaire',
+                            '<span class="important-info">Fonds € sécurisés</span> : capital garanti ; rendement net 2024 ≈ 2 – 2,5 %',
+                            '<span class="important-info">Gestion flexible</span> : arbitrages vers des unités de compte (UC) pour viser un meilleur rendement',
+                            '<span class="important-info">Liquidité</span> : rachats partiels possibles à tout moment sans fermer le contrat'
+                        ]
+                    },
+                    {
+                        title: 'Risques et limites',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'warning',
+                        items: [
+                            '<span class="important-info">Fonds €</span> : rendement parfois &lt; inflation',
+                            '<span class="important-info">UC</span> : risque de marché, capital non garanti',
+                            '<span class="important-info">Frais</span> : entrée 0–4 %, gestion fonds € ≈ 0,6 %, gestion UC ≈ 1–2 %',
+                            '<span class="important-info">Fiscalité moins favorable</span> avant 8 ans'
+                        ],
+                        risk: 'low'
+                    },
+                    {
+                        title: 'Fiscalité',
+                        icon: 'fas fa-percentage',
+                        items: [
+                            '<span class="important-info">Après 8 ans</span> : 7,5 % + 17,2 % PS sur primes ≤ 150 000 €',
+                            '<span class="important-info">Abattement annuel</span> sur les gains : <span class="important-info">4 600 €</span> (célibataire) ou <span class="important-info">9 200 €</span> (couple)',
+                            '<span class="important-info">Avant 8 ans</span> : PFU 12,8 % + 17,2 % PS',
+                            '<span class="important-info">Moins-values</span> imputables sur plus-values du même contrat'
+                        ]
+                    }
+                ]
+            },
+            'cto': {
+                title: 'CTO',
+                subtitle: 'Compte-titres ordinaire',
+                icon: 'fas fa-globe',
+                color: 'purple',
+                profiles: ['dynamique'],
+                summary: {
+                    univers: 'Monde entier',
+                    fiscalite: 'PFU 30%',
+                    plafond: 'Illimité'
+                },
+                sections: [
+                    {
+                        title: 'Points forts',
+                        icon: 'fas fa-check-circle',
+                        items: [
+                            'Accès <span class="important-info">illimité aux marchés mondiaux</span> (actions, ETF, obligations, crypto…)',
+                            '<span class="important-info">Aucun plafond</span> de versement',
+                            'Pertes <span class="important-info">déductibles des gains</span> pendant 10 ans',
+                            'La porte ouverte sur le monde'
+                        ]
+                    },
+                    {
+                        title: 'Risques et limites',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'warning',
+                        items: [
+                            '<span class="important-info">Fiscalité pleine</span> : impôts chaque année, pas d\'exonération',
+                            'Volatilité des marchés + <span class="important-info">risque de change</span> hors zone €',
+                            'Taxe <span class="important-info">0,4%</span> sur grandes actions FR + retenues sur dividendes étrangers'
+                        ],
+                        risk: 'high'
+                    },
+                    {
+                        title: 'Fiscalité',
+                        icon: 'fas fa-percentage',
+                        items: [
+                            'Par défaut : flat tax <span class="important-info">30%</span> (12,8% IR + 17,2% PS)',
+                            'Option barème progressif si plus avantageux',
+                            '<span class="important-info">Moins-values imputables</span> sur plus-values (report 10 ans)',
+                            'Fiscalité classique sans avantage'
+                        ]
+                    }
+                ]
+            },
+            'per': {
+                title: 'PER',
+                subtitle: 'Plan d\'Épargne Retraite',
+                icon: 'fas fa-piggy-bank',
+                color: 'green',
+                profiles: ['equilibre'],
+                summary: {
+                    horizon: 'Retraite',
+                    avantage: 'Déduction fiscale',
+                    plafond: '≈ 35 000€/an'
+                },
+                sections: [
+                    {
+                        title: 'Points forts',
+                        icon: 'fas fa-check-circle',
+                        items: [
+                            'Déduction immédiate des versements (jusqu\'à ≈ <span class="important-info">35 000 €/an</span> salarié, <span class="important-info">37 000 €</span> TNS)',
+                            'Déblocage anticipé <span class="important-info">possible une fois</span> pour acheter sa résidence principale',
+                            'À la retraite : sortie <span class="important-info">au choix</span> – capital, rente ou mix',
+                            'Gestion pilotée (prudent → dynamique) selon votre horizon'
+                        ]
+                    },
+                    {
+                        title: 'Risques et limites',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'warning',
+                        items: [
+                            'Argent bloqué jusqu\'à la retraite (hors cas exceptionnels)',
+                            'Rendement variable selon le profil choisi ; capital non garanti',
+                            'Fiscalité au déblocage à prévoir'
+                        ],
+                        risk: 'medium'
+                    },
+                    {
+                        title: 'Fiscalité',
+                        icon: 'fas fa-percentage',
+                        items: [
+                            '<span class="important-info">À l\'entrée</span> : vos versements réduisent votre revenu imposable (gain = TMI)',
+                            '<span class="important-info">Sortie en capital</span> : versements imposés, gains = <span class="important-info">flat-tax 30 %</span>',
+                            '<span class="important-info">Sortie en rente</span> : rente taxée comme pension (après abattement 10 %)',
+                            'Prélèvements sociaux <span class="important-info">17,2 %</span> sur les gains dans tous les cas'
+                        ]
+                    }
+                ]
+            },
+            'scpi': {
+                title: 'SCPI',
+                subtitle: 'Société Civile de Placement Immobilier',
+                icon: 'fas fa-building',
+                color: 'blue',
+                profiles: ['equilibre'],
+                summary: {
+                    rendement: '≈ 4% net',
+                    ticket: 'Dès 200€',
+                    type: 'Revenus passifs'
+                },
+                sections: [
+                    {
+                        title: 'Points forts',
+                        icon: 'fas fa-check-circle',
+                        items: [
+                            '<span class="important-info">Revenus trimestriels</span> (≈ 4 % net 2024)',
+                            '<span class="important-info">Aucune gestion locative</span> : tout est délégué',
+                            '<span class="important-info">Diversification</span> secteurs / régions',
+                            'Ticket d\'entrée dès <span class="important-info">200 €</span> ; logeable dans une assurance-vie'
+                        ]
+                    },
+                    {
+                        title: 'Risques et limites',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'warning',
+                        items: [
+                            '<span class="important-info">Illiquidité</span> : revente 3-6 mois',
+                            'Frais : <span class="important-info">8-10 %</span> à l\'achat + ~0,5 %/an gestion',
+                            'Rendement & capital <span class="important-info">non garantis</span> (vacance, baisse valeur part)',
+                            '<span class="important-info">IFI</span> : valeur des immeubles à déclarer si patrimoine > 1,3 M €'
+                        ],
+                        risk: 'medium'
+                    },
+                    {
+                        title: 'Fiscalité',
+                        icon: 'fas fa-percentage',
+                        items: [
+                            'Revenus = <span class="important-info">barème IR</span> + <span class="important-info">17,2 %</span> prélèv. sociaux',
+                            'Via <span class="important-info">assurance-vie</span> : taxation AV (7,5 % ou 12,8 % + PS après 8 ans)',
+                            'Plus-value de cession : régime immo (19 % + PS, abattement > 22/30 ans)',
+                            'SCPI « travaux » : charges déductibles (déficit foncier)'
+                        ]
+                    }
+                ]
+            },
+            'livret-a': {
+                title: 'Livret A',
+                subtitle: 'Épargne de précaution',
+                icon: 'fas fa-piggy-bank',
+                color: 'blue',
+                profiles: ['prudent'],
+                summary: {
+                    taux: '2,4%',
+                    plafond: '22 950€',
+                    garantie: 'État'
+                },
+                sections: [
+                    {
+                        title: 'Points forts',
+                        icon: 'fas fa-check-circle',
+                        items: [
+                            '<span class="important-info">Capital 100 % garanti</span> par l\'État (Caisse des dépôts)',
+                            '<span class="important-info">Liquidité totale</span> : retraits et versements libres (mini 10 €)',
+                            '<span class="important-info">Simplicité</span> : ouverture dans toute banque, aucun frais',
+                            'Taux : <span class="important-info">2,4 %</span> depuis le 1ᵉʳ février 2025'
+                        ]
+                    },
+                    {
+                        title: 'Risques et limites',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'warning',
+                        items: [
+                            '<span class="important-info">Rendement souvent &lt; inflation</span> : pouvoir d\'achat érodé sur le long terme',
+                            'Plafond relativement bas pour des projets importants (<span class="important-info">22 950 €</span>)'
+                        ],
+                        risk: 'low'
+                    },
+                    {
+                        title: 'Fiscalité',
+                        icon: 'fas fa-percentage',
+                        items: [
+                            'Intérêts <span class="important-info">exonérés</span> d\'impôt sur le revenu <span class="important-info">et</span> de prélèvements sociaux',
+                            '<span class="important-info">0 % de taxation</span>',
+                            'Aucun impôt, aucun prélèvement',
+                            'Exonération totale'
+                        ]
+                    }
+                ]
+            },
+            'ldds': {
+                title: 'LDDS',
+                subtitle: 'Livret de Développement Durable et Solidaire',
+                icon: 'fas fa-leaf',
+                color: 'green',
+                profiles: ['prudent'],
+                summary: {
+                    taux: '2,40%',
+                    plafond: '12 000€',
+                    type: 'Épargne solidaire'
+                },
+                sections: [
+                    {
+                        title: 'Points forts',
+                        icon: 'fas fa-check-circle',
+                        items: [
+                            'Taux réglementé : <span class="important-info">2,40 %</span> brut/an (identique au Livret A)',
+                            '<span class="important-info">Capital garanti</span> par l\'État et couvert jusqu\'à 100 000 € par le FGDR',
+                            '<span class="important-info">Liquidité totale</span> : dépôts/retraits libres',
+                            '<span class="important-info">Épargne solidaire</span> : finance la transition écologique & sociale'
+                        ]
+                    },
+                    {
+                        title: 'Risques et limites',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'warning',
+                        items: [
+                            '<span class="important-info">Taux révisable</span> deux fois l\'an',
+                            '<span class="important-info">Plafond limité</span> : au-delà de 12 000 € il faut diversifier',
+                            '<span class="important-info">Risque réglementaire</span> : conditions fixées par l\'État'
+                        ],
+                        risk: 'low'
+                    },
+                    {
+                        title: 'Fiscalité',
+                        icon: 'fas fa-percentage',
+                        items: [
+                            '<span class="important-info">Intérêts exonérés</span> d\'impôt sur le revenu <span class="important-info">et</span> de prélèvements sociaux',
+                            '<span class="important-info">Aucune déclaration</span> : les revenus ne sont pas à renseigner',
+                            '<span class="important-info">0 % de taxation</span>',
+                            'Dons ESS sans réduction d\'impôt mais sans fiscalité'
+                        ]
+                    }
+                ]
+            },
+            'lep': {
+                title: 'LEP',
+                subtitle: 'Livret d\'Épargne Populaire',
+                icon: 'fas fa-coins',
+                color: 'blue',
+                profiles: ['prudent'],
+                summary: {
+                    taux: '3,50%',
+                    plafond: '10 000€',
+                    condition: 'Revenus modestes'
+                },
+                sections: [
+                    {
+                        title: 'Points forts',
+                        icon: 'fas fa-check-circle',
+                        items: [
+                            'Taux réglementé : <span class="important-info">3,50 %</span> (≈ +1,1 pt vs Livret A)',
+                            '<span class="important-info">Capital garanti</span> : épargne couverte jusqu\'à 100 000 € par le FGDR + garantie État',
+                            '<span class="important-info">Liquidité totale</span> : dépôts et retraits gratuits à tout moment',
+                            '<span class="important-info">Réservé aux revenus modestes</span> : taux bonifié pour les ménages éligibles'
+                        ]
+                    },
+                    {
+                        title: 'Risques et limites',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'warning',
+                        items: [
+                            '<span class="important-info">Taux révisable</span> deux fois par an par l\'État',
+                            '<span class="important-info">Plafond limité</span> : au-delà de 10 000 €, il faut diversifier',
+                            '<span class="important-info">Contrôle annuel des revenus</span> : clôture si dépassement 2 années de suite'
+                        ],
+                        risk: 'low'
+                    },
+                    {
+                        title: 'Fiscalité',
+                        icon: 'fas fa-percentage',
+                        items: [
+                            '<span class="important-info">Intérêts exonérés</span> d\'impôt sur le revenu <span class="important-info">et</span> de prélèvements sociaux',
+                            '<span class="important-info">Aucune déclaration fiscale requise</span>',
+                            'Les intérêts ne figurent pas sur la déclaration d\'impôt',
+                            '<span class="important-info">0 % de taxation</span>'
+                        ]
+                    }
+                ]
+            },
+            'crypto': {
+                title: 'Crypto (via CTO)',
+                subtitle: 'Actifs numériques',
+                icon: 'fab fa-bitcoin',
+                color: 'orange',
+                profiles: ['dynamique'],
+                summary: {
+                    potentiel: 'Très élevé',
+                    risque: 'Très élevé',
+                    marche: '24h/24'
+                },
+                sections: [
+                    {
+                        title: 'Points forts',
+                        icon: 'fas fa-check-circle',
+                        items: [
+                            'Potentiel de rendement <span class="important-info">très élevé</span>',
+                            'Diversification <span class="important-info">« hors marché »</span> traditionnelle',
+                            'Marché <span class="important-info">24h/24</span>, ticket d\'entrée faible',
+                            'Accessibilité et liquidité élevée'
+                        ]
+                    },
+                    {
+                        title: 'Risques et limites',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'danger',
+                        items: [
+                            '<span class="important-info">Volatilité extrême</span>, possible perte totale du capital',
+                            '<span class="important-info">Cyber-risque</span> : piratage, perte de clés privées, faillite d\'exchange',
+                            'Réglementation encore jeune : cadre européen <span class="important-info">MiCA</span> en vigueur depuis 30/12/2024'
+                        ],
+                        risk: 'high'
+                    },
+                    {
+                        title: 'Fiscalité',
+                        icon: 'fas fa-percentage',
+                        items: [
+                            'Gains taxés lors de la <span class="important-info">conversion en €</span> / utilisation : <span class="important-info">PFU 30 %</span>',
+                            '<span class="important-info">Échanges crypto-à-crypto non imposés</span> (réforme 2022)',
+                            '<span class="important-info">Moins-values</span> imputables sur plus-values de même nature, reportables 10 ans',
+                            'Comptes sur plateformes étrangères : <span class="important-info">déclaration 3916-bis</span> annuelle'
+                        ]
+                    }
+                ]
+            },
+            'pea-pme': {
+                title: 'PEA-PME-ETI',
+                subtitle: 'Plan d\'Épargne PME/ETI',
+                icon: 'fas fa-industry',
+                color: 'purple',
+                profiles: ['equilibre', 'dynamique'],
+                summary: {
+                    plafond: '225 000€',
+                    univers: 'PME/ETI UE',
+                    fiscalite: 'Comme PEA'
+                },
+                sections: [
+                    {
+                        title: 'Points forts',
+                        icon: 'fas fa-check-circle',
+                        items: [
+                            'Plafond versements : <span class="important-info">225 000 €</span> (somme PEA + PEA-PME)',
+                            '<span class="important-info">Accès direct aux PME/ETI européennes</span> : < 5 000 salariés, CA < 1,5 Mds €',
+                            '<span class="important-info">Soutien à l\'économie réelle</span> : l\'épargne finance la croissance',
+                            '<span class="important-info">Cumulable avec un PEA classique</span> (sous réserve du plafond commun)'
+                        ]
+                    },
+                    {
+                        title: 'Risques et limites',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'warning',
+                        items: [
+                            '<span class="important-info">Volatilité élevée des small & mid caps</span>',
+                            '<span class="important-info">Liquidité plus faible</span> : spreads bid-ask larges',
+                            '<span class="important-info">Univers restreint</span> : < 5 000 salariés et < 2 Mds € capitalisation',
+                            '<span class="important-info">Risque de perte en capital</span>'
+                        ],
+                        risk: 'high'
+                    },
+                    {
+                        title: 'Fiscalité',
+                        icon: 'fas fa-percentage',
+                        items: [
+                            '<span class="important-info">Même régime que le PEA</span> : plus-values & dividendes <span class="important-info">exonérés d\'IR après 5 ans</span>',
+                            '<span class="important-info">Prélèvements sociaux 17,2 %</span> sur les gains lors de tout retrait',
+                            '<span class="important-info">Retrait < 5 ans</span> : clôture automatique et taxation à la flat-tax <span class="important-info">30 %</span>',
+                            'Retraits partiels possibles après 5 ans sans clôture'
+                        ]
+                    }
+                ]
+            },
+            'fcpi-fip': {
+                title: 'FCPI / FIP',
+                subtitle: 'Fonds innovation / proximité',
+                icon: 'fas fa-rocket',
+                color: 'red',
+                profiles: ['dynamique'],
+                summary: {
+                    reduction: '25-30% IR',
+                    blocage: '5-10 ans',
+                    risque: 'Très élevé'
+                },
+                sections: [
+                    {
+                        title: 'Points forts',
+                        icon: 'fas fa-check-circle',
+                        items: [
+                            '<span class="important-info">FCPI</span> : réduction IR <span class="important-info">25 %</span> (loi de finances 2025)',
+                            '<span class="important-info">FIP Corse / Outre-mer</span> : réduction IR <span class="important-info">30 %</span>',
+                            'Gains <span class="important-info">exonérés d\'IR</span> (hors PS) si conservé jusqu\'au terme',
+                            'Soutien innovation / PME françaises'
+                        ]
+                    },
+                    {
+                        title: 'Risques et limites',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'danger',
+                        items: [
+                            '<span class="important-info">Capital non garanti</span>, PME non cotées → risque très élevé',
+                            '<span class="important-info">Blocage 5 à 10 ans</span> (durée fixée par le fonds)',
+                            'Liquidité quasi nulle avant la liquidation',
+                            'Plafond de souscription : <span class="important-info">12 000 €</span> (24 000 € couple)'
+                        ],
+                        risk: 'high'
+                    },
+                    {
+                        title: 'Fiscalité',
+                        icon: 'fas fa-percentage',
+                        items: [
+                            'Réduction IR l\'année du versement : <span class="important-info">25 % FCPI</span>, <span class="important-info">30 % FIP Corse/OM</span>',
+                            'Plus-values <span class="important-info">exonérées d\'IR</span> à la sortie',
+                            '<span class="important-info">17,2 %</span> prélèvements sociaux dus sur les gains',
+                            'Perte de la réduction + imposition des gains si cession <span class="important-info">avant 5 ans</span>'
+                        ]
+                    }
+                ]
+            },
+            'peac': {
+                title: 'PEAC',
+                subtitle: 'Plan épargne Avenir Climat',
+                icon: 'fas fa-seedling',
+                color: 'green',
+                profiles: ['equilibre'],
+                summary: {
+                    age: '< 21 ans',
+                    plafond: '22 950€',
+                    type: 'Transition écologique'
+                },
+                sections: [
+                    {
+                        title: 'Points forts',
+                        icon: 'fas fa-check-circle',
+                        items: [
+                            '<span class="important-info">Réservé aux < 21 ans</span> à l\'ouverture ; un seul PEAC par personne',
+                            'Plafond de versements : <span class="important-info">22 950 €</span> (identique au Livret A)',
+                            '<span class="important-info">Financement 100 % "transition écologique"</span> : supports labellisés <span class="important-info">ISR</span> ou <span class="important-info">France Finance verte</span>',
+                            '<span class="important-info">Gestion pilotée sécurisée</span> : ≥ 70 % d\'actifs « faible risque » dès J-2 ans avant liquidation'
+                        ]
+                    },
+                    {
+                        title: 'Risques et limites',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'warning',
+                        items: [
+                            '<span class="important-info">Capital non garanti</span> : soumis aux marchés financiers',
+                            '<span class="important-info">Blocage</span> : retraits impossibles <span class="important-info">avant 18 ans</span> <em>et</em> avant <span class="important-info">5 ans de détention</span>',
+                            'Un retrait partiel interdit tout versement futur',
+                            '<span class="important-info">Liquidité limitée</span> : sorties anticipées seulement en cas de décès ou invalidité'
+                        ],
+                        risk: 'medium'
+                    },
+                    {
+                        title: 'Fiscalité',
+                        icon: 'fas fa-percentage',
+                        items: [
+                            '<span class="important-info">Exonération totale</span> d\'<span class="important-info">impôt sur le revenu</span> <span class="important-info">et</span> de <span class="important-info">prélèvements sociaux</span>',
+                            'Sur plus-values et revenus, quelle que soit la date de retrait <em>autorisé</em>',
+                            '<span class="important-info">Aucun avantage fiscal à l\'entrée</span>',
+                            '<span class="important-info">0% d\'imposition sur les gains</span>'
+                        ]
+                    }
+                ]
+            },
+            'pel': {
+                title: 'PEL',
+                subtitle: 'Plan d\'Épargne Logement',
+                icon: 'fas fa-home',
+                color: 'blue',
+                profiles: ['prudent'],
+                summary: {
+                    taux: '1,75% brut',
+                    plafond: '61 200€',
+                    objectif: 'Achat immobilier'
+                },
+                sections: [
+                    {
+                        title: 'Points forts',
+                        icon: 'fas fa-check-circle',
+                        items: [
+                            'Taux fixe : <span class="important-info">1,75 % brut</span> pour tout PEL ouvert depuis le 1ᵉʳ janvier 2025',
+                            '<span class="important-info">Droit à prêt épargne-logement</span> : jusqu\'à <span class="important-info">92 000 €</span> au taux <span class="important-info">2,95 %</span>',
+                            '<span class="important-info">Capital garanti</span> et couvert jusqu\'à 100 000 € par le FGDR',
+                            '<span class="important-info">Objectif logement</span> : épargne + taux de prêt connus dès l\'ouverture'
+                        ]
+                    },
+                    {
+                        title: 'Risques et limites',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'warning',
+                        items: [
+                            '<span class="important-info">Retrait = clôture</span> ; impossible de retirer partiellement',
+                            'Retrait < 4 ans fait perdre les avantages prêts/intérêts',
+                            '<span class="important-info">Rendement net modeste</span> : ≈ <span class="important-info">1,225 %</span> après PFU',
+                            '<span class="important-info">Versements réguliers imposés</span> (540 €/an minimum)'
+                        ],
+                        risk: 'low'
+                    },
+                    {
+                        title: 'Fiscalité',
+                        icon: 'fas fa-percentage',
+                        items: [
+                            '<span class="important-info">PFU 30 %</span> (12,8 % IR + 17,2 % PS) prélevé chaque année',
+                            '<span class="important-info">Prime d\'État supprimée</span> pour les nouveaux plans (≥ 2018)',
+                            'Fiscalité appliquée annuellement sur les intérêts',
+                            'Pas d\'avantage fiscal'
+                        ]
+                    }
+                ]
+            },
+            'cel': {
+                title: 'CEL',
+                subtitle: 'Compte d\'Épargne Logement',
+                icon: 'fas fa-house-user',
+                color: 'blue',
+                profiles: ['prudent'],
+                summary: {
+                    taux: '1,5% brut',
+                    plafond: '15 300€',
+                    liquidite: 'Totale'
+                },
+                sections: [
+                    {
+                        title: 'Points forts',
+                        icon: 'fas fa-check-circle',
+                        items: [
+                            'Taux variable : <span class="important-info">1,5 % brut</span> (depuis février 2025)',
+                            '<span class="important-info">Liquidité totale</span> : dépôts et retraits libres, solde mini 300 €',
+                            '<span class="important-info">Capital garanti</span> et couvert FGDR 100 000 €',
+                            '<span class="important-info">Droit à prêt</span> après <span class="important-info">18 mois</span> : jusqu\'à 23 000 €, taux actuellement <span class="important-info">3 %</span>'
+                        ]
+                    },
+                    {
+                        title: 'Risques et limites',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'warning',
+                        items: [
+                            '<span class="important-info">Rendement net faible</span> : ≈ <span class="important-info">1,05 %</span> après PFU',
+                            '<span class="important-info">Prêt limité & rarement avantageux</span> versus taux du marché',
+                            '<span class="important-info">Plafond réduit</span> et absence de taux garanti',
+                            '<span class="important-info">Pas de prime d\'État</span> pour les comptes récents'
+                        ],
+                        risk: 'low'
+                    },
+                    {
+                        title: 'Fiscalité',
+                        icon: 'fas fa-percentage',
+                        items: [
+                            '<span class="important-info">PFU 30 %</span> (12,8 % IR + 17,2 % PS) retenu sur les intérêts chaque année',
+                            'Possibilité d\'opter pour le barème progressif',
+                            'Pas d\'avantage fiscal spécifique',
+                            'Fiscalité classique'
+                        ]
+                    }
+                ]
+            },
+            'opci': {
+                title: 'OPCI « grand public »',
+                subtitle: 'Organisme de Placement Collectif Immobilier',
+                icon: 'fas fa-city',
+                color: 'purple',
+                profiles: ['equilibre'],
+                summary: {
+                    composition: '≥ 60% immo',
+                    liquidite: 'Meilleure que SCPI',
+                    risque: 'Modéré'
+                },
+                sections: [
+                    {
+                        title: 'Points forts',
+                        icon: 'fas fa-check-circle',
+                        items: [
+                            '<span class="important-info">Portefeuille réglementé</span> : ≥ 60 % d\'actifs immobiliers, ≥ 5 % de liquidités',
+                            '<span class="important-info">Liquidité supérieure à la SCPI</span> : rachat automatique à la VL',
+                            '<span class="important-info">Souscription flexible</span> : éligible sur contrat d\'assurance-vie (UC) ou compte-titres',
+                            'Combine loyers et diversification financière'
+                        ]
+                    },
+                    {
+                        title: 'Risques et limites',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'warning',
+                        items: [
+                            '<span class="important-info">Risque « équilibré-modéré »</span> : indicateur SRI/SRRI 3-4 /7',
+                            '<span class="important-info">Sensibilité marchés immo & actions</span> : VL exposée aux cycles économiques',
+                            'Rachat pouvant être temporairement plafonné ou suspendu (<span class="important-info">gates</span>)',
+                            '<span class="important-info">Frais</span> : droits d\'entrée 3-5%; frais annuels de gestion 1-2 %'
+                        ],
+                        risk: 'medium'
+                    },
+                    {
+                        title: 'Fiscalité',
+                        icon: 'fas fa-percentage',
+                        items: [
+                            '<span class="important-info">SPPICAV</span> : distributions & plus-values = <span class="important-info">PFU 30 %</span>',
+                            '<span class="important-info">FPI</span> : loyers = <span class="important-info">revenus fonciers</span> ; plus-values immobilières (19 % IR + 17,2 % PS)',
+                            'Revenus financiers au PFU 30 %',
+                            'Part imposable à l\'<span class="important-info">IFI</span> pour la fraction immobilière'
+                        ]
+                    }
+                ]
             }
-        });
+        };
+
+        // Gestion du drawer
+        class DrawerManager {
+            constructor() {
+                this.drawer = document.getElementById('placementDrawer');
+                this.backdrop = document.getElementById('drawerBackdrop');
+                this.closeBtn = document.getElementById('closeDrawer');
+                this.content = document.getElementById('drawerContent');
+                this.isOpen = false;
+                this.focusableElements = [];
+                this.lastFocusedElement = null;
+                
+                this.init();
+            }
+            
+            init() {
+                // Event listeners
+                this.closeBtn.addEventListener('click', () => this.close());
+                this.backdrop.addEventListener('click', () => this.close());
+                
+                // ESC key
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && this.isOpen) {
+                        this.close();
+                    }
+                });
+                
+                // Swipe sur mobile
+                let touchStartX = 0;
+                this.drawer.addEventListener('touchstart', (e) => {
+                    touchStartX = e.touches[0].clientX;
+                });
+                
+                this.drawer.addEventListener('touchend', (e) => {
+                    const touchEndX = e.changedTouches[0].clientX;
+                    if (touchEndX - touchStartX > 100) { // Swipe right
+                        this.close();
+                    }
+                });
+                
+                // Handle hash on load
+                if (window.location.hash) {
+                    const placementId = window.location.hash.substring(1);
+                    if (placementsData[placementId]) {
+                        setTimeout(() => this.open(placementId), 100);
+                    }
+                }
+                
+                // Profile filtering
+                document.querySelectorAll('.profile-filter').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const profile = btn.dataset.profile;
+                        this.filterByProfile(profile);
+                        
+                        // Update active state
+                        document.querySelectorAll('.profile-filter').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                    });
+                });
+                
+                // Generate cards
+                this.generateCards();
+                
+                // Initialize accordion
+                this.initAccordion();
+            }
+            
+            generateCards() {
+                const grid = document.querySelector('.placements-grid');
+                let cardIndex = 0;
+                
+                Object.entries(placementsData).forEach(([id, data]) => {
+                    const card = document.createElement('div');
+                    card.className = 'placement-card';
+                    card.style.setProperty('--card-index', cardIndex++);
+                    card.dataset.placement = id;
+                    card.dataset.profiles = data.profiles.join(' ');
+                    
+                    // Extract key info from summary
+                    const summaryKeys = Object.keys(data.summary);
+                    const firstKey = summaryKeys[0];
+                    const secondKey = summaryKeys[1];
+                    const thirdKey = summaryKeys[2];
+                    
+                    card.innerHTML = `
+                        <div class="flex items-start justify-between mb-4">
+                            <div>
+                                <h3 class="text-xl font-bold mb-2">${data.title}</h3>
+                                <p class="text-sm opacity-80">${data.subtitle}</p>
+                            </div>
+                            <i class="${data.icon} text-2xl text-${data.color}-400"></i>
+                        </div>
+                        
+                        <div class="mb-4 flex flex-wrap">
+                            ${data.profiles.map(profile => `
+                                <span class="profile-badge ${profile}">${profile.charAt(0).toUpperCase() + profile.slice(1)}</span>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="space-y-3">
+                            ${firstKey ? `
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm opacity-70">${this.formatLabel(firstKey)}</span>
+                                    <span class="font-semibold ${data.color === 'green' ? 'text-green-400' : ''}">${data.summary[firstKey]}</span>
+                                </div>
+                            ` : ''}
+                            ${secondKey ? `
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm opacity-70">${this.formatLabel(secondKey)}</span>
+                                    <span class="font-semibold ${secondKey === 'fiscalite' ? 'text-green-400' : ''}">${data.summary[secondKey]}</span>
+                                </div>
+                            ` : ''}
+                            ${thirdKey ? `
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm opacity-70">${this.formatLabel(thirdKey)}</span>
+                                    <span class="font-semibold">${data.summary[thirdKey]}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="mt-4 pt-4 border-t border-gray-700">
+                            <button class="text-green-400 text-sm font-medium hover:text-green-300 transition-colors">
+                                Voir les détails <i class="fas fa-arrow-right ml-1"></i>
+                            </button>
+                        </div>
+                    `;
+                    
+                    card.addEventListener('click', () => this.open(id));
+                    grid.appendChild(card);
+                });
+            }
+            
+            formatLabel(key) {
+                const labels = {
+                    horizon: 'Horizon',
+                    fiscalite: 'Fiscalité',
+                    plafond: 'Plafond',
+                    liquidite: 'Liquidité',
+                    univers: 'Univers',
+                    taux: 'Taux',
+                    rendement: 'Rendement',
+                    ticket: 'Ticket',
+                    type: 'Type',
+                    garantie: 'Garantie',
+                    avantage: 'Avantage',
+                    potentiel: 'Potentiel',
+                    risque: 'Risque',
+                    marche: 'Marché',
+                    reduction: 'Réduction',
+                    blocage: 'Blocage',
+                    age: 'Âge',
+                    condition: 'Condition',
+                    objectif: 'Objectif',
+                    composition: 'Composition'
+                };
+                return labels[key] || key.charAt(0).toUpperCase() + key.slice(1);
+            }
+            
+            open(placementId) {
+                const data = placementsData[placementId];
+                if (!data) return;
+                
+                // Update URL
+                history.pushState({placement: placementId}, '', `#${placementId}`);
+                
+                // Store last focused element
+                this.lastFocusedElement = document.activeElement;
+                
+                // Update drawer title
+                document.getElementById('drawerTitle').textContent = data.title;
+                
+                // Generate content
+                this.content.innerHTML = this.generateContent(data);
+                
+                // Show drawer
+                this.backdrop.classList.add('active');
+                this.drawer.classList.add('active');
+                this.isOpen = true;
+                
+                // Mark active card
+                document.querySelectorAll('.placement-card').forEach(card => {
+                    card.classList.toggle('active', card.dataset.placement === placementId);
+                });
+                
+                // Set focus
+                this.drawer.focus();
+                this.setupFocusTrap();
+                
+                // Prevent body scroll
+                document.body.style.overflow = 'hidden';
+            }
+            
+            close() {
+                this.backdrop.classList.remove('active');
+                this.drawer.classList.remove('active');
+                this.isOpen = false;
+                
+                // Remove active card state
+                document.querySelectorAll('.placement-card').forEach(card => {
+                    card.classList.remove('active');
+                });
+                
+                // Clear URL hash
+                history.pushState('', document.title, window.location.pathname);
+                
+                // Restore focus
+                if (this.lastFocusedElement) {
+                    this.lastFocusedElement.focus();
+                }
+                
+                // Restore body scroll
+                document.body.style.overflow = '';
+            }
+            
+            generateContent(data) {
+                let html = '';
+                
+                // Subtitle
+                if (data.subtitle) {
+                    html += `<div class="drawer-section pt-0">
+                        <p class="text-lg opacity-80">${data.subtitle}</p>
+                    </div>`;
+                }
+                
+                // Main sections
+                data.sections.forEach(section => {
+                    const iconClass = section.iconClass || '';
+                    html += `
+                        <div class="drawer-section">
+                            <h3 class="text-lg font-semibold mb-4 flex items-center text-${section.icon.includes('check') ? 'green' : section.icon.includes('exclamation') ? 'yellow' : 'blue'}-400">
+                                <i class="${section.icon} mr-3"></i>
+                                ${section.title}
+                            </h3>
+                            
+                            <div class="feature-list">
+                                ${section.items.map(item => `
+                                    <div class="feature-item">
+                                        <i class="fas fa-${section.icon.includes('check') ? 'check' : section.icon.includes('exclamation') ? 'exclamation-circle' : 'info-circle'} feature-icon ${iconClass}"></i>
+                                        <span>${item}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            
+                            ${section.risk ? `
+                                <div class="risk-indicator">
+                                    <span class="risk-dot risk-${section.risk}"></span>
+                                    Risque ${section.risk === 'low' ? 'faible' : section.risk === 'medium' ? 'moyen' : 'élevé'}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                // Add action buttons
+                html += `
+                    <div class="drawer-section">
+                        <div class="flex gap-3">
+                            <a href="simulation.html#${data.title.toLowerCase().replace(/\s+/g, '-')}" 
+                               class="flex-1 bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-4 rounded-lg transition text-center">
+                                <i class="fas fa-calculator mr-2"></i> Simuler
+                            </a>
+                            <button onclick="if(navigator.share) { navigator.share({title: '${data.title} - TradePulse', url: window.location.href}); }" 
+                                    class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition">
+                                <i class="fas fa-share mr-2"></i> Partager
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                return html;
+            }
+            
+            setupFocusTrap() {
+                this.focusableElements = this.drawer.querySelectorAll(
+                    'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled])'
+                );
+                
+                const firstFocusable = this.focusableElements[0];
+                const lastFocusable = this.focusableElements[this.focusableElements.length - 1];
+                
+                this.drawer.addEventListener('keydown', (e) => {
+                    if (e.key !== 'Tab') return;
+                    
+                    if (e.shiftKey) {
+                        if (document.activeElement === firstFocusable) {
+                            lastFocusable.focus();
+                            e.preventDefault();
+                        }
+                    } else {
+                        if (document.activeElement === lastFocusable) {
+                            firstFocusable.focus();
+                            e.preventDefault();
+                        }
+                    }
+                });
+            }
+            
+            filterByProfile(profile) {
+                document.querySelectorAll('.placement-card').forEach(card => {
+                    if (profile === 'all') {
+                        card.style.display = 'block';
+                    } else {
+                        const profiles = card.dataset.profiles.split(' ');
+                        card.style.display = profiles.includes(profile) ? 'block' : 'none';
+                    }
+                });
+            }
+            
+            initAccordion() {
+                const headers = document.querySelectorAll('.accordion-header');
+                
+                headers.forEach((header, index) => {
+                    const content = header.nextElementSibling;
+                    
+                    // Ouvrir le premier accordéon par défaut
+                    if (index === 0) {
+                        header.classList.add('active');
+                        content.classList.add('active');
+                    }
+                    
+                    header.addEventListener('click', () => {
+                        header.classList.toggle('active');
+                        content.classList.toggle('active');
+                    });
+                });
+            }
+        }
         
-        function updateDate() {
+        // Initialize drawer
+        const drawerManager = new DrawerManager();
+        
+        // Update date and time
+        function updateDateTime() {
             const now = new Date();
             const options = { day: 'numeric', month: 'long', year: 'numeric' };
             const formattedDate = now.toLocaleDateString('fr-FR', options).toUpperCase();
@@ -1313,7 +1785,7 @@
                 currentDateElement.textContent = formattedDate;
             }
             
-            // Mettre à jour l'heure du marché
+            // Market time
             const hours = now.getHours().toString().padStart(2, '0');
             const minutes = now.getMinutes().toString().padStart(2, '0');
             const seconds = now.getSeconds().toString().padStart(2, '0');
@@ -1324,55 +1796,8 @@
             }
         }
         
-        function initAccordion() {
-            const headers = document.querySelectorAll('.accordion-header');
-            
-            headers.forEach((header, index) => {
-                const content = header.nextElementSibling;
-                
-                // Ouvrir le premier accordéon par défaut
-                if (index === 0) {
-                    header.classList.add('active');
-                    content.classList.add('active');
-                }
-                
-                header.addEventListener('click', () => {
-                    header.classList.toggle('active');
-                    content.classList.toggle('active');
-                });
-            });
-        }
-        
-        function initProfileFilter() {
-            const profilePills = document.querySelectorAll('.profile-pill');
-            const placementRows = document.querySelectorAll('.placement-row');
-            
-            profilePills.forEach(pill => {
-                pill.addEventListener('click', () => {
-                    // Mettre à jour les pills
-                    profilePills.forEach(p => p.classList.remove('active'));
-                    pill.classList.add('active');
-                    
-                    const selectedProfile = pill.getAttribute('data-profile');
-                    
-                    // Filtrer les lignes du tableau
-                    placementRows.forEach(row => {
-                        if (selectedProfile === 'all') {
-                            row.style.display = 'table-row';
-                        } else {
-                            const profiles = row.getAttribute('data-profiles').split(' ');
-                            row.style.display = profiles.includes(selectedProfile) ? 'table-row' : 'none';
-                        }
-                    });
-                });
-            });
-        }
-        
-        function downloadPDF(event) {
-            event.preventDefault();
-            alert('Le PDF du comparatif va être téléchargé (fonctionnalité en développement)');
-            // Ici, tu peux implémenter le téléchargement réel du PDF
-        }
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
     </script>
 </body>
 </html>
