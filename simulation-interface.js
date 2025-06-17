@@ -1996,7 +1996,6 @@ function remplirTableauComparatifDetaille(classique, encheres) {
         if (winnerCard) {
             winnerCard.classList.toggle('winner', cashflowDiff > 0);
         }
-    }
 
     /**
      * Ajoute des barres de progression visuelles
