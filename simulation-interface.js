@@ -1961,7 +1961,6 @@ if (document.getElementById('comp-classique-cashflow-avant')) {
             majDifference('comp-impot-mensuel-diff', -(impotMensuelEncheres - impotMensuelClassique));
         }
     }
-}
 
 // CALCUL DU RENDEMENT BASÉ SUR L'APPORT INITIAL PARAMÉTRÉ
 // Récupérer l'apport depuis le formulaire ou le simulateur
