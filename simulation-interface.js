@@ -1879,7 +1879,36 @@ if (classique.impotFiscal !== undefined && encheres.impotFiscal !== undefined) {
     document.getElementById('comp-encheres-impot-mensuel').textContent = formaterMontant(-impotMensuelEncheres);
     majDifference('comp-impot-mensuel-diff', -(impotMensuelEncheres - impotMensuelClassique));
 }
+        /* ---------- NOUVEAU : CASH-FLOW APRÈS IMPÔT ---------- */
+    // Calcul du cash-flow après impôt (mensuel)
+    let cfMensClass, cfMensEnch;
+    
+    // Si impactFiscal existe, l'utiliser, sinon utiliser impotFiscal
+    if (classique.impactFiscal !== undefined) {
+        cfMensClass = classique.cashFlow + (classique.impactFiscal / 12);
+        cfMensEnch = encheres.cashFlow + (encheres.impactFiscal / 12);
+    } else if (classique.impotFiscal !== undefined) {
+        // impotFiscal est négatif (c'est un impôt à payer), donc on le soustrait
+        cfMensClass = classique.cashFlow - (Math.abs(classique.impotFiscal) / 12);
+        cfMensEnch = encheres.cashFlow - (Math.abs(encheres.impotFiscal) / 12);
+    } else {
+        // Si aucune donnée fiscale, cash-flow après impôt = cash-flow avant impôt
+        cfMensClass = classique.cashFlow;
+        cfMensEnch = encheres.cashFlow;
     }
+    
+    const cfDiffMens = cfMensEnch - cfMensClass;
+    
+    // Affichage cash-flow mensuel après impôt
+    document.getElementById('comp-classique-cashflow-impot').textContent = formaterMontantAvecSigne(cfMensClass);
+    document.getElementById('comp-encheres-cashflow-impot').textContent = formaterMontantAvecSigne(cfMensEnch);
+    majDifference('comp-cashflow-impot-diff', cfDiffMens);
+    
+    // Affichage cash-flow annuel après impôt
+    document.getElementById('comp-classique-cashflow-impot-annuel').textContent = formaterMontantAvecSigne(cfMensClass * 12);
+    document.getElementById('comp-encheres-cashflow-impot-annuel').textContent = formaterMontantAvecSigne(cfMensEnch * 12);
+    majDifference('comp-cashflow-impot-annuel-diff', cfDiffMens * 12);
+}
     
 // RÉSULTATS FINAUX
 // Récupérer l'apport total nécessaire pour chaque mode
