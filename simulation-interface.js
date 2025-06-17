@@ -1931,25 +1931,19 @@ function remplirTableauComparatifDetaille(classique, encheres) {
     // SECTION 5 : FISCALITÉ (optionnelle selon le template)
     // ===================================================================
     
-if (document.getElementById('comp-classique-cashflow-avant')) {
-    // Cash-flow AVANT impôt : maintenant ANNUEL (= mensuel × 12)
-    const cashflowAvantClassiqueAnnuel  = classique.cashFlow * 12;
-    const cashflowAvantEncheresAnnuel   = encheres.cashFlow  * 12;
-    const diffCashflowAvantAnnuel       = (encheres.cashFlow - classique.cashFlow) * 12;
+if (document.getElementById('comp-classique-cashflow-annuel')) {
+    // Gain annuel avant impôts théorique (cashflow mensuel × 12)
+    const gainAnnuelClassique = classique.cashFlow * 12;
+    const gainAnnuelEncheres  = encheres.cashFlow * 12;
+    const diffGainAnnuel      = gainAnnuelEncheres - gainAnnuelClassique;
 
-    document.getElementById('comp-classique-cashflow-avant')
-            .textContent = formaterMontantAvecSigne(cashflowAvantClassiqueAnnuel);
-    document.getElementById('comp-encheres-cashflow-avant')
-            .textContent = formaterMontantAvecSigne(cashflowAvantEncheresAnnuel);
+    document.getElementById('comp-classique-cashflow-annuel')
+            .textContent = formaterMontantAvecSigne(gainAnnuelClassique);
+    document.getElementById('comp-encheres-cashflow-annuel')
+            .textContent = formaterMontantAvecSigne(gainAnnuelEncheres);
 
-    // on garde l'indicateur « /an »
-    document.getElementById('comp-classique-cashflow-avant')
-            .insertAdjacentText('beforeend', '/an');
-    document.getElementById('comp-encheres-cashflow-avant')
-            .insertAdjacentText('beforeend', '/an');
-
-    // différence (elle aussi annuelle)
-    majDifference('comp-cashflow-avant-diff', diffCashflowAvantAnnuel);
+    // Utiliser majDifference pour la différence
+    majDifference('comp-cashflow-annuel-diff', diffGainAnnuel);
 }
         
         // Impôt mensuel
