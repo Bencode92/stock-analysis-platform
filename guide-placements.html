@@ -282,6 +282,11 @@
         .simulation-link i {
             margin-right: 6px;
         }
+        
+        /* Icônes spéciales pour l'écologie */
+        .fa-leaf, .fa-seedling {
+            color: #4CAF50 !important;
+        }
     </style>
 </head>
 <body class="dark">
@@ -728,6 +733,135 @@
                                     <div class="feature-item"><i class="fas fa-check feature-icon"></i> Exonération totale</div>
                                     <div class="feature-item"><i class="fas fa-check feature-icon"></i> Aucun impôt</div>
                                     <span class="key-info"><i class="fas fa-shield-alt mr-1"></i> 0% d'imposition</span>
+                                </td>
+                            </tr>
+                            
+                            <!-- PEA-PME-ETI -->
+                            <tr class="placement-row" data-profiles="equilibre dynamique">
+                                <td>
+                                    <div class="product-name">PEA-PME-ETI <span class="tooltip-container">
+                                        <i class="fas fa-info-circle text-green-400"></i>
+                                        <span class="tooltip-text">Double le plafond PEA à 225 000 € et ouvre l'accès aux PME/ETI françaises et européennes. Cumulable avec un PEA classique.</span>
+                                    </span></div>
+                                    <div class="flex mt-1">
+                                        <span class="profile-tag equilibre">Équilibré</span>
+                                        <span class="profile-tag dynamique">Dynamique</span>
+                                    </div>
+                                    <span class="key-info"><i class="fas fa-users mr-1"></i> Investisseur pro-croissance</span>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Plafond cumulé 225 000€ (avec PEA)</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Accès PME/ETI européennes</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Soutien économie réelle</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Cumulable avec PEA classique</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Plus volatil que grandes capi</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Illiquidité sur petites valeurs</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Univers plus restreint</div>
+                                    <div class="risk-level"><span class="risk-dot risk-high"></span> Risque élevé</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Même régime que PEA</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> 0% IR après 5 ans</div>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> 17,2% PS sur retraits</div>
+                                    <span class="key-info"><i class="fas fa-clock mr-1"></i> Délai fiscal: 5 ans</span>
+                                </td>
+                            </tr>
+
+                            <!-- PEAC (Plan d'épargne Avenir Climat) -->
+                            <tr class="placement-row" data-profiles="equilibre">
+                                <td>
+                                    <div class="product-name">PEAC <span class="tooltip-container">
+                                        <i class="fas fa-info-circle text-green-400"></i>
+                                        <span class="tooltip-text">Plan d'épargne Avenir Climat (2024) pour les moins de 21 ans. Finance la transition écologique via fonds verts avec gains exonérés.</span>
+                                    </span></div>
+                                    <div class="flex mt-1">
+                                        <span class="profile-tag equilibre">Équilibré</span>
+                                    </div>
+                                    <span class="key-info"><i class="fas fa-users mr-1"></i> Jeunes < 21 ans, horizon ≥ 10 ans</span>
+                                </td>
+                                <td>
+                                    <div class="feature-item highlight"><i class="fas fa-leaf feature-icon"></i> Finance la transition écologique</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Plafond 22 950€</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Fonds ISR/Greenfin</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Nouveau dispositif 2024</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Capital non garanti</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Bloqué jusqu'à 18 ans</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Clôture obligatoire à 30 ans</div>
+                                    <div class="risk-level"><span class="risk-dot risk-medium"></span> Risque moyen</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item highlight"><i class="fas fa-check feature-icon"></i> Exonération totale IR & PS</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Si conservé jusqu'à 18 ans</div>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> 0% d'imposition</div>
+                                    <span class="key-info"><i class="fas fa-seedling mr-1"></i> Spécial transition</span>
+                                </td>
+                            </tr>
+
+                            <!-- PEL / CEL -->
+                            <tr class="placement-row" data-profiles="prudent">
+                                <td>
+                                    <div class="product-name">PEL / CEL <span class="tooltip-container">
+                                        <i class="fas fa-info-circle text-green-400"></i>
+                                        <span class="tooltip-text">Plans d'épargne logement : taux fixe connu à l'avance et droit à prêt bonifié pour projet immobilier.</span>
+                                    </span></div>
+                                    <div class="flex mt-1">
+                                        <span class="profile-tag prudent">Prudent</span>
+                                    </div>
+                                    <span class="key-info"><i class="fas fa-users mr-1"></i> Objectif logement 4-10 ans</span>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Capital garanti</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Taux fixe 1,75% brut (2025)</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Droit à prêt bonifié</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Plafond 61 200€ (PEL)</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Retrait = clôture</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Rendement faible</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Durée minimale 4 ans</div>
+                                    <div class="risk-level"><span class="risk-dot risk-low"></span> Risque nul</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> PFU 30% (PEL ≥ 2018)</div>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> + 17,2% PS</div>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Dès l'ouverture</div>
+                                    <span class="key-info"><i class="fas fa-home mr-1"></i> Projet immobilier</span>
+                                </td>
+                            </tr>
+
+                            <!-- OPCI -->
+                            <tr class="placement-row" data-profiles="equilibre">
+                                <td>
+                                    <div class="product-name">OPCI <span class="tooltip-container">
+                                        <i class="fas fa-info-circle text-green-400"></i>
+                                        <span class="tooltip-text">Fonds immobiliers ouverts, plus liquides que les SCPI. Allocation 60% immobilier / 40% liquidités & actions.</span>
+                                    </span></div>
+                                    <div class="flex mt-1">
+                                        <span class="profile-tag equilibre">Équilibré</span>
+                                    </div>
+                                    <span class="key-info"><i class="fas fa-users mr-1"></i> Revenu immo + liquidité</span>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Plus liquide que SCPI</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Rachat < 1 mois</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Disponible en AV/CTO</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> 60% immo / 40% liquidités</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Valeur liquidative variable</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Sensible aux marchés</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Frais de gestion</div>
+                                    <div class="risk-level"><span class="risk-dot risk-medium"></span> Risque modéré</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> SPPICAV: PFU 30%</div>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> FPI: Revenus fonciers</div>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Selon type d'OPCI</div>
+                                    <span class="key-info"><i class="fas fa-building mr-1"></i> Immobilier liquide</span>
                                 </td>
                             </tr>
                         </tbody>
