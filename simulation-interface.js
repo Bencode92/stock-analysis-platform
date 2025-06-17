@@ -1948,75 +1948,7 @@ function remplirTableauComparatifDetaille(classique, encheres) {
     }
 }
 
-// CALCUL DU RENDEMENT BASÉ SUR L'APPORT INITIAL PARAMÉTRÉ
-// Récupérer l'apport depuis le formulaire ou le simulateur
-const apportInitial = parseFloat(document.getElementById('apport')?.value) || 
-                     window.simulateur?.params.base.apport || 
-                     20000;
 
-const rendementClassique = apportInitial > 0 ? (cashflowClassiqueFinal * 12 / apportInitial) * 100 : 0;
-const rendementEncheres = apportInitial > 0 ? (cashflowEncheresFinal * 12 / apportInitial) * 100 : 0;
-
-document.getElementById('comp-classique-rentabilite').textContent = formaterPourcentage(rendementClassique);
-document.getElementById('comp-encheres-rentabilite').textContent = formaterPourcentage(rendementEncheres);
-majDifference('comp-rentabilite-diff', rendementEncheres - rendementClassique, true);
-
-// Mettre à jour aussi les badges de rendement en haut des cartes
-const classiqueRendEl = document.getElementById('classique-rentabilite');
-const encheresRendEl = document.getElementById('encheres-rentabilite');
-if (classiqueRendEl) classiqueRendEl.textContent = rendementClassique.toFixed(2) + '%';
-if (encheresRendEl) encheresRendEl.textContent = rendementEncheres.toFixed(2) + '%';
-
-// Générer le résumé lisible
-genererResumeLisible(classique, encheres);
-
-// Ajouter les barres visuelles
-ajouterBarresVisuelles(classique, encheres);
-    
-    /**
-     * Met à jour un élément de différence avec la bonne classe CSS
-     */
-    function majDifference(elementId, difference, isPourcentage = false) {
-        const element = document.getElementById(elementId);
-        if (!element) return;
-        
-        if (isPourcentage) {
-            element.textContent = (difference > 0 ? '+' : '') + difference.toFixed(2) + ' %';
-        } else {
-            element.textContent = formaterMontantAvecSigne(difference);
-        }
-        element.className = difference > 0 ? 'positive' : difference < 0 ? 'negative' : '';
-    }
-
-    /**
-     * Génère un résumé lisible pour les non-financiers
-     */
-    function genererResumeLisible(classique, encheres) {
-        // Utiliser les valeurs synchronisées du DOM pour le cash-flow
-        const cashflowClassiqueElement = document.querySelector('#classique-cashflow .cashflow-monthly');
-        const cashflowEncheresElement = document.querySelector('#encheres-cashflow .cashflow-monthly');
-        
-        let cashflowDiff = encheres.cashFlow - classique.cashFlow; // Valeur par défaut
-        
-        if (cashflowClassiqueElement && cashflowEncheresElement) {
-            // Extraire les montants numériques des textes
-            const extractMontant = (text) => {
-                const match = text.match(/(-?\d[\d\s]*(?:,\d+)?)\s*€/);
-                if (match) {
-                    return parseFloat(match[1].replace(/\s/g, '').replace(',', '.'));
-                }
-                return 0;
-            };
-            
-            const cashflowClassiqueValue = extractMontant(cashflowClassiqueElement.textContent);
-            const cashflowEncheresValue = extractMontant(cashflowEncheresElement.textContent);
-            cashflowDiff = cashflowEncheresValue - cashflowClassiqueValue;
-        }
-        
-        const surfaceDiff = encheres.surface - classique.surface;
-        const coutDiff = encheres.coutTotal - classique.coutTotal;
-        
-        let texte = "";
         
         // Déterminer le gagnant basé sur le cash-flow après impôt
         const gagnant = cashflowDiff > 0 ? "vente aux enchères" : "achat classique";
