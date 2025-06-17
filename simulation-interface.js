@@ -18,6 +18,24 @@
 // Désactiver complètement l'impact fiscal
 window.disableFiscalImpact = true;
 
+// ===== CORRECTIFS POUR LE TABLEAU COMPARATIF =====
+
+// Vérifier qu'on est sur la bonne page
+function isImmoSimPage() {
+    return window.location.pathname.includes('immoSim.html') || 
+           document.querySelector('h1')?.textContent?.includes('Simulateur d\'Investissement Immobilier');
+}
+
+// Mise à jour sécurisée des éléments
+function safeUpdateElement(id, value, formatter = null) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.textContent = formatter ? formatter(value) : value;
+        return true;
+    }
+    return false;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Constantes globales
     const TOAST_DURATION = 5000; // Durée d'affichage des toasts en millisecondes
@@ -1771,48 +1789,81 @@ function afficherResultats(resultats) {
  * @param {Object} resultats - Objet contenant classique et encheres
  */
 function updateComparisonTable(resultats) {
+    console.log('🔍 updateComparisonTable appelée');
+    
+    // Vérifier qu'on est sur la bonne page
+    if (!isImmoSimPage()) {
+        console.log('⏭️ Pas sur la page immoSim, abandon');
+        return;
+    }
+    
+    // Vérifier les résultats
     if (!resultats || !resultats.classique || !resultats.encheres) {
-        console.error('Résultats manquants pour la comparaison');
+        console.error('❌ Résultats manquants pour la comparaison');
         return;
     }
 
     const classique = resultats.classique;
     const encheres = resultats.encheres;
 
-    // 1. Mettre à jour les indicateurs principaux en haut
-    updateMainIndicators(classique, encheres);
-
-    // 2. Générer et injecter le tableau HTML
-    if (window.generateComparisonTableHTML) {
-        const tableHTML = window.generateComparisonTableHTML(resultats);
-        const container = document.getElementById('comparison-table-container');
-        if (container) {
-            container.innerHTML = tableHTML;
-        } else {
-            console.error('Conteneur comparison-table-container non trouvé');
-        }
-    } else {
-        console.warn('generateComparisonTableHTML non disponible, utilisation du fallback');
-        // Fallback : utiliser l'ancienne méthode si nécessaire
-        updateComparisonTableManually(classique, encheres);
+    // 1. Mettre à jour les indicateurs principaux
+    try {
+        updateMainIndicators(classique, encheres);
+    } catch (error) {
+        console.error('⚠️ Erreur indicateurs:', error);
     }
 
-    // 3. Mettre à jour les avantages
-    updateAvantages(classique, encheres);
+    // 2. Vérifier le conteneur AVANT de continuer
+    const container = document.getElementById('comparison-table-container');
+    if (!container) {
+        console.warn('⚠️ [updateComparisonTable] Conteneur non trouvé');
+        
+        // Essayer de le créer
+        const comparisonCard = document.getElementById('comparison-table-card');
+        if (comparisonCard) {
+            console.log('🔧 Création du conteneur...');
+            const newContainer = document.createElement('div');
+            newContainer.id = 'comparison-table-container';
+            
+            const header = comparisonCard.querySelector('.comparison-header');
+            if (header) {
+                header.insertAdjacentElement('afterend', newContainer);
+            } else {
+                comparisonCard.appendChild(newContainer);
+            }
+        }
+        return;
+    }
 
-    // 4. Générer le résumé visuel
-    genererResumeLisible(classique, encheres);
+    // 3. Générer le tableau avec le nouveau système
+    if (window.generateComparisonTableHTML) {
+        try {
+            console.log('✅ Génération du tableau...');
+            const tableHTML = window.generateComparisonTableHTML(resultats);
+            container.innerHTML = tableHTML;
+            console.log('✅ Tableau injecté avec succès');
+        } catch (error) {
+            console.error('❌ Erreur lors de la génération:', error);
+        }
+    } else {
+        console.error('❌ generateComparisonTableHTML non défini');
+    }
 
-    // 5. Ajouter les barres visuelles
-    ajouterBarresVisuelles(classique, encheres);
+    // 4. Mettre à jour les autres éléments
+    try {
+        updateAvantages(classique, encheres);
+        genererResumeLisible(classique, encheres);
+        ajouterBarresVisuelles(classique, encheres);
+    } catch (error) {
+        console.error('⚠️ Erreur mises à jour secondaires:', error);
+    }
 
-    // 6. Ajouter les infobulles et boutons (avec délai pour le DOM)
+    // 5. Ajouter les infobulles avec délai
     setTimeout(() => {
         ajouterInfobullesExplicatives();
         ajouterBoutonExplication();
     }, 500);
 }
-
 /**
  * Met à jour les indicateurs principaux (prix, total, loyer, etc.)
  */
