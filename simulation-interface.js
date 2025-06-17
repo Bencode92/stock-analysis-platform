@@ -1234,6 +1234,26 @@ document.addEventListener('DOMContentLoaded', function() {
     function formaterMontantAnnuel(montant) {
         return formaterMontant(montant) + '/an';
     }
+ /* ------------------------------------------------------------------ */
+/*  UTILITAIRE : calcule les « autres frais »                         */
+/* ------------------------------------------------------------------ */
+/**
+ * Calcule la différence entre le coût total et la somme
+ * des postes déjà détaillés dans le tableau comparatif,
+ * afin d'obtenir la part "autres frais".
+ * @param {Object} data  Résultats du mode (classique / enchères)
+ * @returns {number}     Montant des frais restants
+ */
+function calculerAutresFrais(data) {
+    const sommeConnue =
+        (data.prixAchat || 0) +
+        ((data.fraisNotaire ?? data.droitsEnregistrement) || 0) +
+        ((data.commission ?? data.honorairesAvocat) || 0) +
+        (data.travaux || 0) +
+        (data.fraisBancaires || 0);
+
+    return Math.max(0, (data.coutTotal || 0) - sommeConnue);
+}
 
     /**
      * Applique une classe positive ou négative selon la valeur
@@ -1879,35 +1899,16 @@ if (classique.impotFiscal !== undefined && encheres.impotFiscal !== undefined) {
     document.getElementById('comp-encheres-impot-mensuel').textContent = formaterMontant(-impotMensuelEncheres);
     majDifference('comp-impot-mensuel-diff', -(impotMensuelEncheres - impotMensuelClassique));
 }
-        /* ---------- NOUVEAU : CASH-FLOW APRÈS IMPÔT ---------- */
-    // Calcul du cash-flow après impôt (mensuel)
-    let cfMensClass, cfMensEnch;
-    
-    // Si impactFiscal existe, l'utiliser, sinon utiliser impotFiscal
-    if (classique.impactFiscal !== undefined) {
-        cfMensClass = classique.cashFlow + (classique.impactFiscal / 12);
-        cfMensEnch = encheres.cashFlow + (encheres.impactFiscal / 12);
-    } else if (classique.impotFiscal !== undefined) {
-        // impotFiscal est négatif (c'est un impôt à payer), donc on le soustrait
-        cfMensClass = classique.cashFlow - (Math.abs(classique.impotFiscal) / 12);
-        cfMensEnch = encheres.cashFlow - (Math.abs(encheres.impotFiscal) / 12);
-    } else {
-        // Si aucune donnée fiscale, cash-flow après impôt = cash-flow avant impôt
-        cfMensClass = classique.cashFlow;
-        cfMensEnch = encheres.cashFlow;
-    }
-    
-    const cfDiffMens = cfMensEnch - cfMensClass;
-    
-    // Affichage cash-flow mensuel après impôt
-    document.getElementById('comp-classique-cashflow-impot').textContent = formaterMontantAvecSigne(cfMensClass);
-    document.getElementById('comp-encheres-cashflow-impot').textContent = formaterMontantAvecSigne(cfMensEnch);
-    majDifference('comp-cashflow-impot-diff', cfDiffMens);
-    
-    // Affichage cash-flow annuel après impôt
-    document.getElementById('comp-classique-cashflow-impot-annuel').textContent = formaterMontantAvecSigne(cfMensClass * 12);
-    document.getElementById('comp-encheres-cashflow-impot-annuel').textContent = formaterMontantAvecSigne(cfMensEnch * 12);
-    majDifference('comp-cashflow-impot-annuel-diff', cfDiffMens * 12);
+  // --- AUTRES FRAIS (auto-calculés) -----------------------------------------
+const autresFraisClassique = calculerAutresFrais(classique);   // ≈ 0 €
+const autresFraisEncheres = calculerAutresFrais(encheres);     // ≈ 2 619 €
+
+document.getElementById('comp-classique-autres-frais').textContent = formaterMontant(autresFraisClassique);
+document.getElementById('comp-encheres-autres-frais').textContent = formaterMontant(autresFraisEncheres);
+
+const diffAutresFrais = autresFraisEncheres - autresFraisClassique;
+document.getElementById('comp-autres-frais-diff').textContent = formaterMontantAvecSigne(diffAutresFrais);
+majDifference('comp-autres-frais-diff', diffAutresFrais);
 }
     
 // RÉSULTATS FINAUX
