@@ -1788,127 +1788,163 @@ function afficherResultats(resultats) {
  * @param {Object} encheres - Résultats vente aux enchères
  */
 function remplirTableauComparatifDetaille(classique, encheres) {
-    // COÛTS D'ACQUISITION
+    // ===================================================================
+    // SECTION 1 : COÛTS D'ACQUISITION
+    // ===================================================================
+    
+    // Prix d'achat
     document.getElementById('comp-classique-prix').textContent = formaterMontant(classique.prixAchat);
     document.getElementById('comp-encheres-prix').textContent = formaterMontant(encheres.prixAchat);
     majDifference('comp-prix-diff', encheres.prixAchat - classique.prixAchat);
     
+    // Frais de notaire / Droits d'enregistrement
     document.getElementById('comp-classique-frais-notaire').textContent = formaterMontant(classique.fraisNotaire);
     document.getElementById('comp-encheres-droits').textContent = formaterMontant(encheres.droitsEnregistrement);
     majDifference('comp-frais-diff', encheres.droitsEnregistrement - classique.fraisNotaire);
     
+    // Commission / Honoraires avocat
     document.getElementById('comp-classique-commission').textContent = formaterMontant(classique.commission);
     const honorairesEncheres = (encheres.honorairesAvocat || 0) + (encheres.fraisDivers || 0);
     document.getElementById('comp-encheres-honoraires').textContent = formaterMontant(honorairesEncheres);
     majDifference('comp-commission-diff', honorairesEncheres - classique.commission);
     
+    // Travaux de rénovation
     document.getElementById('comp-classique-travaux').textContent = formaterMontant(classique.travaux);
     document.getElementById('comp-encheres-travaux').textContent = formaterMontant(encheres.travaux);
     majDifference('comp-travaux-diff', encheres.travaux - classique.travaux);
     
+    // Frais bancaires
     document.getElementById('comp-classique-frais-bancaires').textContent = formaterMontant(classique.fraisBancaires);
     document.getElementById('comp-encheres-frais-bancaires').textContent = formaterMontant(encheres.fraisBancaires);
     majDifference('comp-frais-bancaires-diff', encheres.fraisBancaires - classique.fraisBancaires);
     
+    // Autres frais (auto-calculés pour équilibrer le tableau)
+    const autresFraisClassique = calculerAutresFrais(classique);
+    const autresFraisEncheres = calculerAutresFrais(encheres);
+    
+    document.getElementById('comp-classique-autres-frais').textContent = formaterMontant(autresFraisClassique);
+    document.getElementById('comp-encheres-autres-frais').textContent = formaterMontant(autresFraisEncheres);
+    
+    const diffAutresFrais = autresFraisEncheres - autresFraisClassique;
+    document.getElementById('comp-autres-frais-diff').textContent = formaterMontantAvecSigne(diffAutresFrais);
+    majDifference('comp-autres-frais-diff', diffAutresFrais);
+    
+    // Budget total nécessaire
     document.getElementById('comp-classique-total').textContent = formaterMontant(classique.coutTotal);
     document.getElementById('comp-encheres-total').textContent = formaterMontant(encheres.coutTotal);
     majDifference('comp-total-diff', encheres.coutTotal - classique.coutTotal);
     
-    // FINANCEMENT
+    // ===================================================================
+    // SECTION 2 : FINANCEMENT
+    // ===================================================================
+    
+    // Apport personnel
     const apport = simulateur.params.base.apport;
     document.getElementById('comp-classique-apport').textContent = formaterMontant(apport);
     document.getElementById('comp-encheres-apport').textContent = formaterMontant(apport);
     document.getElementById('comp-apport-diff').textContent = '0 €';
     
+    // Montant emprunté
     document.getElementById('comp-classique-emprunt').textContent = formaterMontant(classique.emprunt);
     document.getElementById('comp-encheres-emprunt').textContent = formaterMontant(encheres.emprunt);
     majDifference('comp-emprunt-diff', encheres.emprunt - classique.emprunt);
     
+    // Remboursement mensuel
     document.getElementById('comp-classique-mensualite').textContent = formaterMontantMensuel(classique.mensualite);
     document.getElementById('comp-encheres-mensualite').textContent = formaterMontantMensuel(encheres.mensualite);
     majDifference('comp-mensualite-diff', encheres.mensualite - classique.mensualite);
     
-    // REVENUS
+    // ===================================================================
+    // SECTION 3 : REVENUS LOCATIFS
+    // ===================================================================
+    
+    // Surface que vous pouvez acheter
     document.getElementById('comp-classique-surface').textContent = classique.surface.toFixed(1) + ' m²';
     document.getElementById('comp-encheres-surface').textContent = encheres.surface.toFixed(1) + ' m²';
     const surfaceDiff = encheres.surface - classique.surface;
     document.getElementById('comp-surface-diff').textContent = (surfaceDiff > 0 ? '+' : '') + surfaceDiff.toFixed(1) + ' m²';
     document.getElementById('comp-surface-diff').className = surfaceDiff >= 0 ? 'positive' : 'negative';
     
+    // Loyer mensuel (avant charges)
     document.getElementById('comp-classique-loyer').textContent = formaterMontant(classique.loyerBrut);
     document.getElementById('comp-encheres-loyer').textContent = formaterMontant(encheres.loyerBrut);
     majDifference('comp-loyer-diff', encheres.loyerBrut - classique.loyerBrut);
     
+    // Provision logement vide
     const vacanceClassique = classique.loyerBrut - classique.loyerNet;
     const vacanceEncheres = encheres.loyerBrut - encheres.loyerNet;
     document.getElementById('comp-classique-vacance').textContent = formaterMontant(-vacanceClassique);
     document.getElementById('comp-encheres-vacance').textContent = formaterMontant(-vacanceEncheres);
     majDifference('comp-vacance-diff', -(vacanceEncheres - vacanceClassique));
     
+    // Loyer net mensuel
     document.getElementById('comp-classique-loyer-net').textContent = formaterMontant(classique.loyerNet);
     document.getElementById('comp-encheres-loyer-net').textContent = formaterMontant(encheres.loyerNet);
     majDifference('comp-loyer-net-diff', encheres.loyerNet - classique.loyerNet);
     
-    // CHARGES MENSUELLES
+    // ===================================================================
+    // SECTION 4 : VOS DÉPENSES MENSUELLES
+    // ===================================================================
+    
+    // Remboursement du prêt
     document.getElementById('comp-classique-mensualite2').textContent = formaterMontant(-classique.mensualite);
     document.getElementById('comp-encheres-mensualite2').textContent = formaterMontant(-encheres.mensualite);
     majDifference('comp-mensualite2-diff', -(encheres.mensualite - classique.mensualite));
     
+    // Taxe foncière (par mois)
     const taxeClassique = classique.taxeFonciere / 12;
     const taxeEncheres = encheres.taxeFonciere / 12;
     document.getElementById('comp-classique-taxe').textContent = formaterMontant(-taxeClassique);
     document.getElementById('comp-encheres-taxe').textContent = formaterMontant(-taxeEncheres);
     majDifference('comp-taxe-diff', -(taxeEncheres - taxeClassique));
     
+    // Charges de copropriété
     const chargesClassique = classique.chargesNonRecuperables / 12;
     const chargesEncheres = encheres.chargesNonRecuperables / 12;
     document.getElementById('comp-classique-charges').textContent = formaterMontant(-chargesClassique);
     document.getElementById('comp-encheres-charges').textContent = formaterMontant(-chargesEncheres);
     majDifference('comp-charges-diff', -(chargesEncheres - chargesClassique));
     
+    // Budget entretien
     const entretienClassique = classique.entretienAnnuel / 12;
     const entretienEncheres = encheres.entretienAnnuel / 12;
     document.getElementById('comp-classique-entretien').textContent = formaterMontant(-entretienClassique);
     document.getElementById('comp-encheres-entretien').textContent = formaterMontant(-entretienEncheres);
     majDifference('comp-entretien-diff', -(entretienEncheres - entretienClassique));
     
+    // Assurance propriétaire
     const assuranceClassique = classique.assurancePNO / 12;
     const assuranceEncheres = encheres.assurancePNO / 12;
     document.getElementById('comp-classique-assurance').textContent = formaterMontant(-assuranceClassique);
     document.getElementById('comp-encheres-assurance').textContent = formaterMontant(-assuranceEncheres);
     majDifference('comp-assurance-diff', -(assuranceEncheres - assuranceClassique));
     
+    // Total de vos dépenses
     const totalChargesClassique = classique.mensualite + taxeClassique + chargesClassique + entretienClassique + assuranceClassique;
     const totalChargesEncheres = encheres.mensualite + taxeEncheres + chargesEncheres + entretienEncheres + assuranceEncheres;
     document.getElementById('comp-classique-total-charges').textContent = formaterMontant(-totalChargesClassique);
     document.getElementById('comp-encheres-total-charges').textContent = formaterMontant(-totalChargesEncheres);
     majDifference('comp-total-charges-diff', -(totalChargesEncheres - totalChargesClassique));
     
-    // FISCALITÉ
+    // ===================================================================
+    // SECTION 5 : FISCALITÉ (optionnelle selon le template)
+    // ===================================================================
+    
     if (document.getElementById('comp-classique-cashflow-avant')) {
         // Cash-flow avant impôt
         document.getElementById('comp-classique-cashflow-avant').textContent = formaterMontantAvecSigne(classique.cashFlow);
         document.getElementById('comp-encheres-cashflow-avant').textContent = formaterMontantAvecSigne(encheres.cashFlow);
         majDifference('comp-cashflow-avant-diff', encheres.cashFlow - classique.cashFlow);
         
-  // Impôt mensuel
-if (classique.impotFiscal !== undefined && encheres.impotFiscal !== undefined) {
-    const impotMensuelClassique = Math.abs(classique.impotFiscal) / 12;
-    const impotMensuelEncheres = Math.abs(encheres.impotFiscal) / 12;
-    document.getElementById('comp-classique-impot-mensuel').textContent = formaterMontant(-impotMensuelClassique);
-    document.getElementById('comp-encheres-impot-mensuel').textContent = formaterMontant(-impotMensuelEncheres);
-    majDifference('comp-impot-mensuel-diff', -(impotMensuelEncheres - impotMensuelClassique));
-}
-  // --- AUTRES FRAIS (auto-calculés) -----------------------------------------
-const autresFraisClassique = calculerAutresFrais(classique);   // ≈ 0 €
-const autresFraisEncheres = calculerAutresFrais(encheres);     // ≈ 2 619 €
-
-document.getElementById('comp-classique-autres-frais').textContent = formaterMontant(autresFraisClassique);
-document.getElementById('comp-encheres-autres-frais').textContent = formaterMontant(autresFraisEncheres);
-
-const diffAutresFrais = autresFraisEncheres - autresFraisClassique;
-document.getElementById('comp-autres-frais-diff').textContent = formaterMontantAvecSigne(diffAutresFrais);
-majDifference('comp-autres-frais-diff', diffAutresFrais);
+        // Impôt mensuel
+        if (classique.impotFiscal !== undefined && encheres.impotFiscal !== undefined) {
+            const impotMensuelClassique = Math.abs(classique.impotFiscal) / 12;
+            const impotMensuelEncheres = Math.abs(encheres.impotFiscal) / 12;
+            document.getElementById('comp-classique-impot-mensuel').textContent = formaterMontant(-impotMensuelClassique);
+            document.getElementById('comp-encheres-impot-mensuel').textContent = formaterMontant(-impotMensuelEncheres);
+            majDifference('comp-impot-mensuel-diff', -(impotMensuelEncheres - impotMensuelClassique));
+        }
+    }
 }
     
 // RÉSULTATS FINAUX
