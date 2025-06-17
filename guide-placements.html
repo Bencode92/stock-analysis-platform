@@ -287,6 +287,12 @@
         .fa-leaf, .fa-seedling {
             color: #4CAF50 !important;
         }
+        
+        /* Style pour mettre en évidence certaines informations importantes */
+        .important-info {
+            font-weight: 600;
+            color: #00FF87;
+        }
     </style>
 </head>
 <body class="dark">
@@ -497,26 +503,31 @@
                             <!-- CTO -->
                             <tr class="placement-row" data-profiles="dynamique">
                                 <td>
-                                    <div class="product-name">CTO</div>
+                                    <div class="product-name">CTO <span class="tooltip-container">
+                                        <i class="fas fa-info-circle text-green-400"></i>
+                                        <span class="tooltip-text">Compte-titres ordinaire : la "porte ouverte" pour investir partout dans le monde, mais avec une fiscalité classique et la nécessité de bien gérer volatilité et devises.</span>
+                                    </span></div>
                                     <div class="flex mt-1">
                                         <span class="profile-tag dynamique">Dynamique</span>
                                     </div>
-                                    <span class="key-info"><i class="fas fa-users mr-1"></i> Investisseur monde entier</span>
+                                    <span class="key-info"><i class="fas fa-globe mr-1"></i> La porte ouverte sur le monde</span>
                                 </td>
                                 <td>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Accès à tous les marchés mondiaux</div>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Sans plafond</div>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Crypto, obligations, etc.</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Accès <span class="important-info">illimité aux marchés mondiaux</span> (actions, ETF, obligations, crypto…)</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> <span class="important-info">Aucun plafond</span> de versement</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Pertes <span class="important-info">déductibles des gains</span> pendant 10 ans</div>
                                 </td>
                                 <td>
-                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Fiscalité élevée</div>
-                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Volatilité potentielle</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> <span class="important-info">Fiscalité pleine</span> : impôts chaque année, pas d'exonération</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Volatilité des marchés + <span class="important-info">risque de change</span> hors zone €</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Taxe <span class="important-info">0,4%</span> sur grandes actions FR + retenues sur dividendes étrangers</div>
                                     <div class="risk-level"><span class="risk-dot risk-high"></span> Risque variable selon actifs</div>
                                 </td>
                                 <td>
-                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> 30% PFU (flat tax)</div>
-                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Ou barème progressif IR</div>
-                                    <span class="key-info"><i class="fas fa-wallet mr-1"></i> Pas d'avantage fiscal</span>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Par défaut : flat tax <span class="important-info">30%</span> (12,8% IR + 17,2% PS)</div>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Option barème progressif si plus avantageux</div>
+                                    <div class="feature-item highlight"><i class="fas fa-check feature-icon"></i> <span class="important-info">Moins-values imputables</span> sur plus-values (report 10 ans)</div>
+                                    <span class="key-info"><i class="fas fa-wallet mr-1"></i> Fiscalité classique</span>
                                 </td>
                             </tr>
                             
