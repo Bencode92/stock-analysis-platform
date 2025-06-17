@@ -1981,12 +1981,10 @@ function remplirTableauComparatifDetaille(classique, encheres) {
         if (summaryMode) summaryMode.textContent = gagnantCard;
         
         const summaryGain = document.querySelector('.summary-gain');
-      if (summaryGain) summaryGain.textContent = 
-    `${diffCashflow > 0 ? '+' : ''}${diffCashflow.toFixed(0)}€/mois`
+        if (summaryGain) summaryGain.textContent = `${cashflowDiff > 0 ? '+' : ''}${cashflowDiff.toFixed(0)}€/mois`;
         
         const summaryAmount = document.querySelector('.summary-amount');
-        if (summaryAmount) summaryAmount.textContent = 
-    formaterMontant(Math.abs(diffTotal));
+        if (summaryAmount) summaryAmount.textContent = formaterMontant(Math.abs(coutDiff));
         
         const summarySurface = document.querySelector('.summary-surface');
         if (summarySurface) summarySurface.textContent = `${surfaceDiff > 0 ? '+' : ''}${surfaceDiff.toFixed(1)} m²`;
@@ -1996,6 +1994,7 @@ function remplirTableauComparatifDetaille(classique, encheres) {
         if (winnerCard) {
             winnerCard.classList.toggle('winner', cashflowDiff > 0);
         }
+    }
 
     /**
      * Ajoute des barres de progression visuelles
