@@ -26,14 +26,15 @@ function isImmoSimPage() {
            document.querySelector('h1')?.textContent?.includes('Simulateur d\'Investissement Immobilier');
 }
 
-// Mise à jour sécurisée des éléments
+// Mise à jour sécurisée des éléments avec journalisation
 function safeUpdateElement(id, value, formatter = null) {
     const element = document.getElementById(id);
-    if (element) {
-        element.textContent = formatter ? formatter(value) : value;
-        return true;
+    if (!element) {
+        console.warn(`⚠️ [SimuImmo] Élément #${id} manquant dans le HTML`);
+        return false;
     }
-    return false;
+    element.textContent = formatter ? formatter(value) : value;
+    return true;
 }
 
 document.addEventListener('DOMContentLoaded', function() {
