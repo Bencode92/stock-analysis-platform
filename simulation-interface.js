@@ -1249,6 +1249,7 @@ function calculerAutresFrais(data) {
         (data.prixAchat || 0) +
         ((data.fraisNotaire ?? data.droitsEnregistrement) || 0) +
         ((data.commission ?? data.honorairesAvocat) || 0) +
+        // PAS de fraisDivers ici !
         (data.travaux || 0) +
         (data.fraisBancaires || 0);
 
