@@ -524,19 +524,20 @@ function updateReturnSuggestions() {
     
     // Rendements suggérés par type d'enveloppe
     const suggestedReturns = {
-        'livret-a': 3,
-        'ldds': 3,
-        'lep': 4,
-        'pel': 2.25,
-        'cel': 2,
-        'assurance-vie': 3.5, // Fonds euros
-        'scpi-cto': 5,
-        'scpi-av': 5,
+        'livret-a': 2.4,
+        'ldds': 2.4,
+        'lep': 3.5,
+        'pel': 1.75,
+        'cel': 1.5,
+        'livret jeune':2.7
+        'assurance-vie': 2.5, // Fonds euros
+        'scpi-cto': 4.7,
+        'scpi-av': 4,
         'pea': 8,
-        'pea-pme': 10,
+        'pea-pme': 6,
         'cto': 8,
-        'per': 6,
-        'fcpi-fip': 12,
+        'per': 3.5,
+        'fcpi-fip': 5,
         'crypto-cto': 15
     };
     
