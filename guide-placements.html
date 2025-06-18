@@ -310,6 +310,97 @@
             max-height: 1000px;
             padding: 15px;
         }
+        
+        /* Styles pour le bouton CTA du simulateur dans le drawer */
+        .simulator-cta {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(0, 255, 135, 0.1);
+        }
+
+        .simulator-cta a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #00FF87, #00d673);
+            color: #011627;
+            font-weight: 600;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 25px rgba(0, 255, 135, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .simulator-cta a::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .simulator-cta a:hover::before {
+            left: 100%;
+        }
+
+        .simulator-cta a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(0, 255, 135, 0.4);
+            background: linear-gradient(135deg, #00d673, #00FF87);
+        }
+
+        .simulator-cta a:active {
+            transform: translateY(0);
+            box-shadow: 0 5px 15px rgba(0, 255, 135, 0.3);
+        }
+
+        .simulator-cta a i {
+            margin-right: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .simulator-cta p {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 0.5rem;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        /* Animation d'apparition dans le drawer */
+        .drawer.active .simulator-cta {
+            animation: slideInUp 0.5s ease-out 0.3s both;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .simulator-cta a {
+                padding: 0.625rem 1.25rem;
+                font-size: 0.9rem;
+            }
+            
+            .simulator-cta a i {
+                font-size: 1rem;
+            }
+        }
     </style>
 </head>
 <body class="dark">
@@ -1182,6 +1273,21 @@
                             '<span class="important-info">Sortie en rente</span> : rente taxée comme pension (après abattement 10 %)',
                             'Prélèvements sociaux <span class="important-info">17,2 %</span> sur les gains dans tous les cas'
                         ]
+                    },
+                    {
+                        title: 'Action',
+                        icon: 'fas fa-calculator',
+                        customContent: `
+                            <div class="simulator-cta mt-4">
+                                <a href="simulation.html#per" class="inline-flex items-center justify-center w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-400 text-gray-900 font-semibold rounded-lg shadow-lg hover:shadow-green-500/30 hover:-translate-y-0.5 transition-all duration-300">
+                                    <i class="fas fa-calculator mr-2"></i>
+                                    Simuler mon économie d'impôts PER
+                                </a>
+                                <p class="text-xs text-gray-400 mt-2 text-center">
+                                    Calculez votre économie d'impôt immédiate et optimisez votre épargne retraite
+                                </p>
+                            </div>
+                        `
                     }
                 ]
             },
@@ -1782,36 +1888,28 @@
                         
                         <div class="mb-4 flex flex-wrap">
                             ${data.profiles.map(profile => `
-                                <span class="profile-badge ${profile}">${profile.charAt(0).toUpperCase() + profile.slice(1)}</span>
+                                <span class="profile-badge ${profile}">${profile}</span>
                             `).join('')}
                         </div>
                         
-                        <div class="space-y-3">
-                            ${firstKey ? `
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm opacity-70">${this.formatLabel(firstKey)}</span>
-                                    <span class="font-semibold ${data.color === 'green' ? 'text-green-400' : ''}">${data.summary[firstKey]}</span>
-                                </div>
-                            ` : ''}
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="opacity-70">${this.formatLabel(firstKey)}</span>
+                                <span class="font-semibold">${data.summary[firstKey]}</span>
+                            </div>
                             ${secondKey ? `
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm opacity-70">${this.formatLabel(secondKey)}</span>
-                                    <span class="font-semibold ${secondKey === 'fiscalite' ? 'text-green-400' : ''}">${data.summary[secondKey]}</span>
-                                </div>
-                            ` : ''}
-                            ${thirdKey ? `
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm opacity-70">${this.formatLabel(thirdKey)}</span>
-                                    <span class="font-semibold">${data.summary[thirdKey]}</span>
+                                <div class="flex justify-between">
+                                    <span class="opacity-70">${this.formatLabel(secondKey)}</span>
+                                    <span class="font-semibold">${data.summary[secondKey]}</span>
                                 </div>
                             ` : ''}
                         </div>
                         
-                        <div class="mt-4 pt-4 border-t border-gray-700">
-                            <button class="text-green-400 text-sm font-medium hover:text-green-300 transition-colors">
-                                Voir les détails <i class="fas fa-arrow-right ml-1"></i>
-                            </button>
-                        </div>
+                        ${thirdKey ? `
+                            <div class="key-info">
+                                ${this.formatLabel(thirdKey)} : ${data.summary[thirdKey]}
+                            </div>
+                        ` : ''}
                     `;
                     
                     card.addEventListener('click', () => this.open(id));
@@ -1826,19 +1924,19 @@
                     plafond: 'Plafond',
                     liquidite: 'Liquidité',
                     univers: 'Univers',
-                    taux: 'Taux',
                     rendement: 'Rendement',
-                    ticket: 'Ticket',
+                    ticket: 'Ticket d\'entrée',
                     type: 'Type',
+                    taux: 'Taux',
                     garantie: 'Garantie',
-                    avantage: 'Avantage',
+                    condition: 'Condition',
                     potentiel: 'Potentiel',
                     risque: 'Risque',
                     marche: 'Marché',
-                    reduction: 'Réduction',
+                    avantage: 'Avantage',
+                    reduction: 'Réduction IR',
                     blocage: 'Blocage',
                     age: 'Âge',
-                    condition: 'Condition',
                     objectif: 'Objectif',
                     composition: 'Composition'
                 };
@@ -1849,34 +1947,94 @@
                 const data = placementsData[placementId];
                 if (!data) return;
                 
-                // Update URL
-                history.pushState({placement: placementId}, '', `#${placementId}`);
-                
-                // Store last focused element
-                this.lastFocusedElement = document.activeElement;
-                
-                // Update drawer title
+                // Update title
                 document.getElementById('drawerTitle').textContent = data.title;
                 
-                // Generate content
-                this.content.innerHTML = this.generateContent(data);
+                // Generate content with custom content support
+                this.content.innerHTML = this.generateDrawerContent(placementId);
                 
-                // Show drawer
+                // Update URL hash
+                window.location.hash = placementId;
+                
+                // Open drawer
                 this.backdrop.classList.add('active');
                 this.drawer.classList.add('active');
                 this.isOpen = true;
                 
-                // Mark active card
+                // Save last focused element
+                this.lastFocusedElement = document.activeElement;
+                
+                // Focus drawer
+                this.drawer.focus();
+                
+                // Trap focus
+                this.setupFocusTrap();
+                
+                // Update active card
                 document.querySelectorAll('.placement-card').forEach(card => {
                     card.classList.toggle('active', card.dataset.placement === placementId);
                 });
+            }
+            
+            generateDrawerContent(placementId) {
+                const data = placementsData[placementId];
+                if (!data) return '';
                 
-                // Set focus
-                this.drawer.focus();
-                this.setupFocusTrap();
+                let content = '<div class="drawer-section">';
                 
-                // Prevent body scroll
-                document.body.style.overflow = 'hidden';
+                // Résumé
+                content += '<div class="summary-grid">';
+                Object.entries(data.summary).forEach(([key, value]) => {
+                    content += `
+                        <div class="summary-item">
+                            <div class="summary-label">${this.formatLabel(key)}</div>
+                            <div class="summary-value">${value}</div>
+                        </div>
+                    `;
+                });
+                content += '</div>';
+                
+                // Sections
+                data.sections.forEach(section => {
+                    content += `
+                        <div class="drawer-section">
+                            <h3 class="section-header">
+                                <i class="${section.icon} ${section.iconClass || ''}"></i>
+                                ${section.title}
+                            </h3>
+                    `;
+                    
+                    // Si la section a un contenu personnalisé, l'afficher
+                    if (section.customContent) {
+                        content += section.customContent;
+                    } else if (section.items) {
+                        // Sinon, afficher la liste d'items habituelle
+                        content += '<ul class="feature-list">';
+                        section.items.forEach(item => {
+                            content += `
+                                <li class="feature-item">
+                                    <i class="fas fa-chevron-right feature-icon ${section.iconClass || ''}"></i>
+                                    <span>${item}</span>
+                                </li>
+                            `;
+                        });
+                        content += '</ul>';
+                    }
+                    
+                    if (section.risk) {
+                        content += `
+                            <div class="risk-indicator">
+                                <span class="risk-dot risk-${section.risk}"></span>
+                                <span>Risque ${section.risk === 'low' ? 'faible' : section.risk === 'medium' ? 'modéré' : 'élevé'}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    content += '</div>';
+                });
+                
+                content += '</div>';
+                return content;
             }
             
             close() {
@@ -1884,85 +2042,25 @@
                 this.drawer.classList.remove('active');
                 this.isOpen = false;
                 
-                // Remove active card state
+                // Remove hash
+                history.pushState("", document.title, window.location.pathname + window.location.search);
+                
+                // Remove active card
                 document.querySelectorAll('.placement-card').forEach(card => {
                     card.classList.remove('active');
                 });
-                
-                // Clear URL hash
-                history.pushState('', document.title, window.location.pathname);
                 
                 // Restore focus
                 if (this.lastFocusedElement) {
                     this.lastFocusedElement.focus();
                 }
-                
-                // Restore body scroll
-                document.body.style.overflow = '';
-            }
-            
-            generateContent(data) {
-                let html = '';
-                
-                // Subtitle
-                if (data.subtitle) {
-                    html += `<div class="drawer-section pt-0">
-                        <p class="text-lg opacity-80">${data.subtitle}</p>
-                    </div>`;
-                }
-                
-                // Main sections
-                data.sections.forEach(section => {
-                    const iconClass = section.iconClass || '';
-                    html += `
-                        <div class="drawer-section">
-                            <h3 class="text-lg font-semibold mb-4 flex items-center text-${section.icon.includes('check') ? 'green' : section.icon.includes('exclamation') ? 'yellow' : 'blue'}-400">
-                                <i class="${section.icon} mr-3"></i>
-                                ${section.title}
-                            </h3>
-                            
-                            <div class="feature-list">
-                                ${section.items.map(item => `
-                                    <div class="feature-item">
-                                        <i class="fas fa-${section.icon.includes('check') ? 'check' : section.icon.includes('exclamation') ? 'exclamation-circle' : 'info-circle'} feature-icon ${iconClass}"></i>
-                                        <span>${item}</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                            
-                            ${section.risk ? `
-                                <div class="risk-indicator">
-                                    <span class="risk-dot risk-${section.risk}"></span>
-                                    Risque ${section.risk === 'low' ? 'faible' : section.risk === 'medium' ? 'moyen' : 'élevé'}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                // Add action buttons
-                html += `
-                    <div class="drawer-section">
-                        <div class="flex gap-3">
-                            <a href="simulation.html#${data.title.toLowerCase().replace(/\s+/g, '-')}" 
-                               class="flex-1 bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-4 rounded-lg transition text-center">
-                                <i class="fas fa-calculator mr-2"></i> Simuler
-                            </a>
-                            <button onclick="if(navigator.share) { navigator.share({title: '${data.title} - TradePulse', url: window.location.href}); }" 
-                                    class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition">
-                                <i class="fas fa-share mr-2"></i> Partager
-                            </button>
-                        </div>
-                    </div>
-                `;
-                
-                return html;
             }
             
             setupFocusTrap() {
-                this.focusableElements = this.drawer.querySelectorAll(
-                    'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled])'
-                );
+                const focusableSelectors = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+                this.focusableElements = [...this.drawer.querySelectorAll(focusableSelectors)];
+                
+                if (this.focusableElements.length === 0) return;
                 
                 const firstFocusable = this.focusableElements[0];
                 const lastFocusable = this.focusableElements[this.focusableElements.length - 1];
@@ -1972,119 +2070,81 @@
                     
                     if (e.shiftKey) {
                         if (document.activeElement === firstFocusable) {
-                            lastFocusable.focus();
                             e.preventDefault();
+                            lastFocusable.focus();
                         }
                     } else {
                         if (document.activeElement === lastFocusable) {
-                            firstFocusable.focus();
                             e.preventDefault();
+                            firstFocusable.focus();
                         }
                     }
                 });
             }
             
             filterByProfile(profile) {
-                document.querySelectorAll('.placement-card').forEach(card => {
+                const cards = document.querySelectorAll('.placement-card');
+                cards.forEach(card => {
                     if (profile === 'all') {
-                        card.style.display = 'block';
+                        card.style.display = '';
                     } else {
                         const profiles = card.dataset.profiles.split(' ');
-                        card.style.display = profiles.includes(profile) ? 'block' : 'none';
+                        card.style.display = profiles.includes(profile) ? '' : 'none';
                     }
                 });
             }
             
             initAccordion() {
-                const headers = document.querySelectorAll('.accordion-header');
-                
-                headers.forEach((header, index) => {
-                    const content = header.nextElementSibling;
-                    
-                    // Ouvrir le premier accordéon par défaut
-                    if (index === 0) {
-                        header.classList.add('active');
-                        content.classList.add('active');
-                    }
-                    
+                document.querySelectorAll('.accordion-header').forEach(header => {
                     header.addEventListener('click', () => {
-                        header.classList.toggle('active');
-                        content.classList.toggle('active');
+                        const content = header.nextElementSibling;
+                        const isActive = header.classList.contains('active');
+                        
+                        // Close all accordions
+                        document.querySelectorAll('.accordion-header').forEach(h => {
+                            h.classList.remove('active');
+                            h.nextElementSibling.classList.remove('active');
+                        });
+                        
+                        // Open clicked accordion if it wasn't active
+                        if (!isActive) {
+                            header.classList.add('active');
+                            content.classList.add('active');
+                        }
                     });
                 });
             }
         }
         
-        // Initialize drawer
-        const drawerManager = new DrawerManager();
-        
-        // Update date and time
-        function updateDateTime() {
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            new DrawerManager();
+            
+            // Update date
+            const dateElement = document.getElementById('currentDate');
             const now = new Date();
-            const options = { day: 'numeric', month: 'long', year: 'numeric' };
-            const formattedDate = now.toLocaleDateString('fr-FR', options).toUpperCase();
+            const months = ['JANVIER', 'FÉVRIER', 'MARS', 'AVRIL', 'MAI', 'JUIN', 'JUILLET', 'AOÛT', 'SEPTEMBRE', 'OCTOBRE', 'NOVEMBRE', 'DÉCEMBRE'];
+            dateElement.textContent = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
             
-            const currentDateEl = document.getElementById('currentDate');
-            if (currentDateEl) {
-                currentDateEl.textContent = formattedDate;
-            }
+            // Update time
+            const updateTime = () => {
+                const now = new Date();
+                const time = now.toLocaleTimeString('fr-FR');
+                document.getElementById('marketTime').textContent = time;
+            };
+            updateTime();
+            setInterval(updateTime, 1000);
             
-            const marketTimeEl = document.getElementById('marketTime');
-            if (marketTimeEl) {
-                marketTimeEl.textContent = now.toLocaleTimeString('fr-FR');
-            }
+            // Theme toggle
+            const themeToggle = document.getElementById('theme-toggle-btn');
+            const darkIcon = document.getElementById('dark-icon');
+            const lightIcon = document.getElementById('light-icon');
             
-            // Update all update-time elements
-            document.querySelectorAll('.update-time').forEach(el => {
-                el.textContent = now.toLocaleDateString('fr-FR') + ' ' + now.toLocaleTimeString('fr-FR');
-            });
-        }
-        
-        // Update time every second
-        updateDateTime();
-        setInterval(updateDateTime, 1000);
-        
-        // Theme toggle
-        const themeToggleBtn = document.getElementById('theme-toggle-btn');
-        const darkIcon = document.getElementById('dark-icon');
-        const lightIcon = document.getElementById('light-icon');
-        
-        if (themeToggleBtn) {
-            themeToggleBtn.addEventListener('click', () => {
-                const html = document.documentElement;
-                const isDark = html.classList.contains('dark');
-                
-                if (isDark) {
-                    html.classList.remove('dark');
-                    darkIcon.style.display = 'none';
-                    lightIcon.style.display = 'block';
-                } else {
-                    html.classList.add('dark');
-                    darkIcon.style.display = 'block';
-                    lightIcon.style.display = 'none';
-                }
-            });
-        }
-        
-        // Ripple effect on buttons
-        document.querySelectorAll('.ripple').forEach(button => {
-            button.addEventListener('click', function(e) {
-                const ripple = document.createElement('span');
-                ripple.classList.add('ripple-effect');
-                const rect = this.getBoundingClientRect();
-                const size = Math.max(rect.width, rect.height);
-                const x = e.clientX - rect.left - size / 2;
-                const y = e.clientY - rect.top - size / 2;
-                
-                ripple.style.width = ripple.style.height = size + 'px';
-                ripple.style.left = x + 'px';
-                ripple.style.top = y + 'px';
-                
-                this.appendChild(ripple);
-                
-                setTimeout(() => {
-                    ripple.remove();
-                }, 600);
+            themeToggle.addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+                const isDark = document.documentElement.classList.contains('dark');
+                darkIcon.style.display = isDark ? 'block' : 'none';
+                lightIcon.style.display = isDark ? 'none' : 'block';
             });
         });
     </script>
