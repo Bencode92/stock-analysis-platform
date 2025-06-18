@@ -751,49 +751,6 @@
                             <li>🔹 2 % : PER (non déduit)</li>
                           </ul>
                           <div class="text-xs mt-4 text-gray-400">Objectif : Sécurité, diversification mondiale et souplesse maximale.</div>
-
-                          <!-- Détails complets -->
-                          <details class="mt-4">
-                            <summary class="cursor-pointer text-yellow-300 hover:text-yellow-200 transition-colors">Détails complets</summary>
-                            <div class="mt-3 space-y-4 text-sm leading-relaxed">
-
-                              <!-- Tableau répartition -->
-                              <table class="w-full text-xs text-gray-200 border-collapse">
-                                <thead>
-                                  <tr class="bg-yellow-800 bg-opacity-30">
-                                    <th class="p-2 text-left">Rang</th>
-                                    <th class="p-2 text-left">Produit</th>
-                                    <th class="p-2 text-left">% cible</th>
-                                    <th class="p-2 text-left">Rôle</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  <tr><td class="p-2">1</td><td class="p-2">LEP</td><td class="p-2">20 %</td><td class="p-2">Meilleur taux cash (3,5 % net) & capital garanti.</td></tr>
-                                  <tr class="bg-yellow-800 bg-opacity-10"><td class="p-2">2</td><td class="p-2">LDDS / Livret A</td><td class="p-2">20 %</td><td class="p-2">Liquidités défiscalisées jusqu'à 34 950 €.</td></tr>
-                                  <tr><td class="p-2">3</td><td class="p-2">PEA‑Jeune – ETF MSCI World</td><td class="p-2">40 %</td><td class="p-2">Diversification actions mondiale, frais très bas.</td></tr>
-                                  <tr class="bg-yellow-800 bg-opacity-10"><td class="p-2">4</td><td class="p-2">PEL / CEL</td><td class="p-2">10 %</td><td class="p-2">Préparer caution ou apport immobilier.</td></tr>
-                                  <tr><td class="p-2">5</td><td class="p-2">Crypto "learning"</td><td class="p-2">5 %</td><td class="p-2">Potentiel asymétrique, éducation financière.</td></tr>
-                                  <tr class="bg-yellow-800 bg-opacity-10"><td class="p-2">6</td><td class="p-2">PEA‑PME / ETI</td><td class="p-2">3 %</td><td class="p-2">Small‑caps européennes.</td></tr>
-                                  <tr><td class="p-2">7</td><td class="p-2">PER (non déduit)</td><td class="p-2">2 %</td><td class="p-2">Prendre date pour avantages futurs.</td></tr>
-                                </tbody>
-                              </table>
-
-                              <!-- Variante sans LEP -->
-                              <p class="font-semibold">Variante si vous n'êtes pas éligible au LEP</p>
-                              <p>Remplacez les 20 % LEP par LDDS jusqu'à 12 000 €, puis Livret A au même taux net de 2,4 %. Le reste du portefeuille reste inchangé.</p>
-
-                              <!-- Routine simple -->
-                              <p class="font-semibold">Routine simple</p>
-                              <ul class="list-disc list-inside space-y-1">
-                                <li><b>Approvisionner LEP/LDDS</b> : mensuel jusqu'à 3 mois de dépenses.</li>
-                                <li><b>Versement PEA‑Jeune</b> : 25 € / mois en automatique.</li>
-                                <li><b>Rebalance annuel</b> : si actions > 45 %, réalimenter LDDS/Livret A.</li>
-                                <li><b>Surveiller le TMI</b> : dès 30 %, commencer à déduire le PER.</li>
-                              </ul>
-
-                              <p class="text-xs text-gray-400">Plan pédagogique – ajuste-le à ton propre horizon et consulte un professionnel (CIF) pour un conseil personnalisé.</p>
-                            </div>
-                          </details>
                         </div>
 
                         <!-- Profil Prudent -->
@@ -1138,6 +1095,63 @@
                     }
                 ]
             },
+'livret-jeune': {
+    title: 'Livret Jeune',
+    subtitle: 'Épargne réglementée 12–25 ans',
+    icon: 'fas fa-piggy-bank',
+    color: 'yellow',
+    profiles: ['prudent'],
+    summary: {
+        horizon: 'très liquide',
+        fiscalite: '0 % IR & PS',
+        plafond: '1 600 € (hors intérêts)',
+        ouverture: 'dès 12 ans (avec représentant légal)'
+    },
+    sections: [
+        {
+            title: 'Points forts',
+            icon: 'fas fa-check-circle',
+            items: [
+                '<span class="important-info">Taux net d\'impôt</span> fixé librement par la banque mais toujours ≥ Livret A',
+                'Capital <span class="important-info">garanti par l\'État</span>',
+                'Ouverture possible dès <span class="important-info">12 ans</span> ; retraits autonomes dès 16 ans',
+                'Versements et retraits libres, sans frais',
+                'Intérêts capitalisés chaque 31 décembre'
+            ]
+        },
+        {
+            title: 'Limites & vigilance',
+            icon: 'fas fa-exclamation-triangle',
+            iconClass: 'warning',
+            items: [
+                'Plafond de <span class="important-info">1 600 €</span> (hors intérêts)',
+                'Réservé aux <span class="important-info">résidents de 12 à 25 ans</span>',
+                'Un seul Livret Jeune par personne, toutes banques confondues',
+                'Clôture automatique au 31 décembre de l\'année des 25 ans (capital transférable sur un Livret A)',
+                'Taux variable : peut baisser, rendement réel faible en période d\'inflation'
+            ],
+            risk: 'low'
+        },
+        {
+            title: 'Fiscalité',
+            icon: 'fas fa-percentage',
+            items: [
+                'Intérêts exonérés d\'<span class="important-info">impôt sur le revenu</span>',
+                'Pas de <span class="important-info">prélèvements sociaux</span>',
+                'Aucune déclaration fiscale requise'
+            ]
+        },
+        {
+            title: 'Bon à savoir',
+            icon: 'fas fa-info-circle',
+            items: [
+                'Chaque banque décide de son taux : comparer avant d\'ouvrir',
+                'Clôture anticipée possible à tout moment sans frais',
+                'Idéal pour placer l\'épargne de précaution d\'un jeune avant des projets courts terme'
+            ]
+        }
+    ]
+},
             'assurance-vie': {
                 title: 'Assurance-vie',
                 subtitle: 'Épargne polyvalente',
