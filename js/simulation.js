@@ -4,6 +4,42 @@
  * TradePulse Finance Intelligence Platform
  */
 
+// Import des données fiscales depuis fiscal-enveloppes.js
+import { enveloppes, TAXES, netAfterFlatTax, round2 } from './fiscal-enveloppes.js';
+
+// Créer un cache pour les performances
+const enveloppesCache = new Map();
+enveloppes.forEach(env => {
+    enveloppesCache.set(env.id, env);
+});
+
+// Fonction pour récupérer les infos d'une enveloppe
+function getEnveloppeInfo(enveloppeId) {
+    return enveloppesCache.get(enveloppeId) || null;
+}
+
+// Fonction utilitaire pour formater les montants
+function formatMoney(amount) {
+    return new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: 'EUR',
+        maximumFractionDigits: 0
+    }).format(amount);
+}
+
+// Fonction pour afficher un tooltip
+function showTooltip(message) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'fixed bottom-4 right-4 bg-green-900 bg-opacity-90 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fadeIn';
+    tooltip.textContent = message;
+    document.body.appendChild(tooltip);
+    
+    setTimeout(() => {
+        tooltip.classList.add('animate-fadeOut');
+        setTimeout(() => tooltip.remove(), 300);
+    }, 3000);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Mettre à jour la date du jour
     updateDate();
@@ -24,7 +60,15 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('simulate-button').addEventListener('click', runSimulation);
     
     // Ajouter un événement au sélecteur d'enveloppe fiscale
-    document.getElementById('investment-vehicle').addEventListener('change', updateTaxInfo);
+    document.getElementById('investment-vehicle').addEventListener('change', function() {
+        updateTaxInfo();
+        updateReturnSuggestions();
+        
+        // Relancer la simulation si déjà des résultats
+        if (document.querySelector('.result-value').textContent !== '') {
+            runSimulation();
+        }
+    });
     
     // Initialiser les onglets de simulation
     initSimulationTabs();
@@ -429,55 +473,145 @@ function updateReturnValue(value) {
 }
 
 /**
- * Fonction pour mettre à jour les infos fiscales
+ * Fonction pour mettre à jour les infos fiscales avec les vraies données
  */
 function updateTaxInfo() {
-    // Récupérer l'élément sélectionné
-    const vehicle = document.getElementById('investment-vehicle').value;
+    const vehicleId = document.getElementById('investment-vehicle').value;
     const taxInfoElement = document.getElementById('tax-info');
     
     if (!taxInfoElement) return;
     
-    // Définir les informations fiscales pour chaque véhicule
-    const taxInfo = {
-        pea: {
-            title: "Fiscalité du PEA",
-            description: "Le Plan d'Épargne en Actions (PEA) offre une exonération d'impôt sur les plus-values après 5 ans de détention (hors prélèvements sociaux de 17,2%).",
-            limit: "Plafond: 150 000€ par personne"
-        },
-        cto: {
-            title: "Fiscalité du Compte-Titres",
-            description: "Le Compte-Titres Ordinaire est soumis au Prélèvement Forfaitaire Unique (PFU) de 30% sur les plus-values (12,8% d'impôt et 17,2% de prélèvements sociaux).",
-            limit: "Pas de plafond de versement"
-        },
-        "assurance-vie": {
-            title: "Fiscalité de l'Assurance-Vie",
-            description: "Après 8 ans de détention, abattement annuel de 4 600€ (9 200€ pour un couple) sur les gains, puis PFU de 30% ou barème progressif sur le reste.",
-            limit: "Pas de plafond de versement"
-        },
-        per: {
-            title: "Fiscalité du PER",
-            description: "Les versements sont déductibles des revenus imposables. La fiscalité à la sortie dépend du type de sortie (capital ou rente).",
-            limit: "Plafond de déductibilité fiscal annuel"
-        },
-        scpi: {
-            title: "Fiscalité des SCPI",
-            description: "Les revenus des SCPI sont soumis au PFU de 30% ou au barème progressif de l'impôt sur le revenu + prélèvements sociaux.",
-            limit: "Dépend du cadre de détention (direct, assurance-vie, etc.)"
-        }
+    const enveloppe = getEnveloppeInfo(vehicleId);
+    if (!enveloppe) return;
+    
+    // Construire le HTML avec les vraies données
+    let html = `
+        <h5 class="text-green-400 font-medium flex items-center mb-2">
+            <i class="fas fa-chart-pie mr-2"></i>
+            ${enveloppe.label} - ${enveloppe.type}
+        </h5>
+    `;
+    
+    // Afficher le plafond
+    if (enveloppe.plafond) {
+        const plafondText = typeof enveloppe.plafond === 'object' 
+            ? `Solo: ${formatMoney(enveloppe.plafond.solo)} / Couple: ${formatMoney(enveloppe.plafond.couple)}`
+            : `Plafond: ${formatMoney(enveloppe.plafond)}`;
+        html += `<p class="text-sm font-medium text-blue-300">${plafondText}</p>`;
+    }
+    
+    // Afficher la fiscalité
+    if (enveloppe.seuil) {
+        html += `<p class="text-sm text-gray-300 mb-1">
+            <strong>Avant ${enveloppe.seuil} ans:</strong> ${enveloppe.fiscalite.avant || enveloppe.fiscalite.texte}
+        </p>`;
+        html += `<p class="text-sm text-gray-300 mb-1">
+            <strong>Après ${enveloppe.seuil} ans:</strong> ${enveloppe.fiscalite.apres || 'Avantages fiscaux'}
+        </p>`;
+    } else {
+        html += `<p class="text-sm text-gray-300 mb-1">${enveloppe.fiscalite.texte || 'Fiscalité standard'}</p>`;
+    }
+    
+    taxInfoElement.innerHTML = html;
+}
+
+/**
+ * Ajouter un sélecteur de rendement basé sur l'enveloppe
+ */
+function updateReturnSuggestions() {
+    const vehicleId = document.getElementById('investment-vehicle').value;
+    const returnSlider = document.getElementById('return-slider');
+    
+    // Rendements suggérés par type d'enveloppe
+    const suggestedReturns = {
+        'livret-a': 3,
+        'ldds': 3,
+        'lep': 4,
+        'pel': 2.25,
+        'cel': 2,
+        'assurance-vie': 3.5, // Fonds euros
+        'scpi-cto': 5,
+        'scpi-av': 5,
+        'pea': 8,
+        'pea-pme': 10,
+        'cto': 8,
+        'per': 6,
+        'fcpi-fip': 12,
+        'crypto-cto': 15
     };
     
-    // Mettre à jour l'affichage
-    if (taxInfo[vehicle]) {
-        taxInfoElement.innerHTML = `
-            <h5 class="text-green-400 font-medium flex items-center mb-2">
-                <i class="fas fa-chart-pie mr-2"></i>
-                ${taxInfo[vehicle].title}
-            </h5>
-            <p class="text-sm text-gray-300 mb-1">${taxInfo[vehicle].description}</p>
-            <p class="text-sm font-medium">${taxInfo[vehicle].limit}</p>
-        `;
+    if (suggestedReturns[vehicleId]) {
+        returnSlider.value = suggestedReturns[vehicleId];
+        updateReturnValue(suggestedReturns[vehicleId]);
+        
+        // Afficher une info bulle
+        showTooltip(`Rendement suggéré pour ${getEnveloppeInfo(vehicleId).label}: ${suggestedReturns[vehicleId]}%`);
     }
+}
+
+/**
+ * Fonction pour suggérer le meilleur véhicule
+ */
+function suggestBestVehicle(amount, duration, objective = 'growth') {
+    const suggestions = [];
+    
+    enveloppes.forEach(env => {
+        let score = 0;
+        let reasons = [];
+        
+        // Vérifier le plafond
+        if (!env.plafond || 
+            (typeof env.plafond === 'number' && amount <= env.plafond) ||
+            (typeof env.plafond === 'object' && amount <= env.plafond.couple)) {
+            score += 20;
+        } else {
+            reasons.push(`Montant dépasse le plafond`);
+            score -= 10;
+        }
+        
+        // Vérifier la durée vs seuil fiscal
+        if (env.seuil && duration >= env.seuil) {
+            score += 30;
+            reasons.push(`Durée optimale (≥${env.seuil} ans)`);
+        } else if (env.seuil && duration < env.seuil) {
+            score -= 20;
+            reasons.push(`Durée trop courte (<${env.seuil} ans)`);
+        }
+        
+        // Bonus selon l'objectif
+        if (objective === 'growth' && ['pea', 'cto', 'assurance-vie'].includes(env.id)) {
+            score += 15;
+        } else if (objective === 'safety' && ['livret-a', 'ldds', 'pel'].includes(env.id)) {
+            score += 15;
+        } else if (objective === 'retirement' && env.id === 'per') {
+            score += 25;
+            reasons.push('Idéal pour la retraite');
+        }
+        
+        // Calculer le gain net estimé
+        if (env.fiscalite.calcGainNet) {
+            const estimatedGain = amount * Math.pow(1 + 0.07, duration) - amount;
+            const netGain = env.fiscalite.calcGainNet({
+                gain: estimatedGain,
+                duree: duration,
+                tmi: 0.30
+            });
+            const efficiency = netGain / estimatedGain;
+            score += efficiency * 20;
+        }
+        
+        suggestions.push({
+            enveloppe: env,
+            score,
+            reasons,
+            recommended: score > 40
+        });
+    });
+    
+    // Trier par score décroissant
+    suggestions.sort((a, b) => b.score - a.score);
+    
+    return suggestions.slice(0, 3); // Top 3
 }
 
 /**
@@ -515,34 +649,72 @@ function runSimulation() {
 }
 
 /**
- * Calcule les résultats d'investissement
+ * Calcule les résultats d'investissement avec la vraie fiscalité
  * @param {number} initialAmount - Montant initial investi
  * @param {number} years - Nombre d'années
  * @param {number} annualReturn - Rendement annuel (en décimal)
  * @returns {Object} Résultats de la simulation
  */
 function calculateInvestmentResults(initialAmount, years, annualReturn) {
-    // Calcul du capital final
-    const finalAmount = initialAmount * Math.pow(1 + annualReturn, years);
+    const vehicleId = document.getElementById('investment-vehicle').value;
+    const enveloppe = getEnveloppeInfo(vehicleId);
     
-    // Calcul des gains
-    const gains = finalAmount - initialAmount;
+    // Mode de versement
+    const isPeriodicMode = document.getElementById('periodic-investment')?.classList.contains('selected');
+    const frequency = document.getElementById('investment-frequency')?.value || 'monthly';
     
-    // Calcul du montant après impôts (exemple avec PEA après 5 ans: 17.2% de prélèvements sociaux)
-    const taxRate = 0.172;
-    const afterTaxAmount = initialAmount + (gains * (1 - taxRate));
+    let totalInvested = initialAmount;
+    let finalAmount = initialAmount;
     
-    // Calcul du montant des impôts
-    const taxAmount = gains * taxRate;
+    if (isPeriodicMode) {
+        // Calcul pour versements périodiques
+        const periodsPerYear = frequency === 'monthly' ? 12 : frequency === 'quarterly' ? 4 : 1;
+        const totalPeriods = years * periodsPerYear;
+        const periodRate = annualReturn / periodsPerYear;
+        
+        // Formule de la valeur future d'une annuité
+        finalAmount = initialAmount * ((Math.pow(1 + periodRate, totalPeriods) - 1) / periodRate) * (1 + periodRate);
+        totalInvested = initialAmount * totalPeriods;
+    } else {
+        // Versement unique
+        finalAmount = initialAmount * Math.pow(1 + annualReturn, years);
+    }
+    
+    const gains = finalAmount - totalInvested;
+    
+    // Calculer le net après impôts selon l'enveloppe
+    let afterTaxAmount = finalAmount;
+    let taxAmount = 0;
+    
+    if (enveloppe && enveloppe.fiscalite.calcGainNet) {
+        // Utiliser la fonction de calcul spécifique
+        const netGain = enveloppe.fiscalite.calcGainNet({
+            gain: gains,
+            duree: years,
+            tmi: 0.30, // TMI par défaut, pourrait être un paramètre
+            primesVerseesAvantRachat: 0, // Pour assurance-vie
+            estCouple: false, // Pourrait être un paramètre
+        });
+        
+        afterTaxAmount = totalInvested + netGain;
+        taxAmount = gains - netGain;
+    } else {
+        // Fallback sur le calcul simple
+        const taxRate = years >= 5 ? TAXES.PRL_SOC : TAXES.PFU_TOTAL;
+        taxAmount = gains * taxRate;
+        afterTaxAmount = finalAmount - taxAmount;
+    }
     
     return {
-        initialAmount,
-        finalAmount,
-        gains,
-        afterTaxAmount,
-        taxAmount,
+        initialAmount: totalInvested,
+        finalAmount: round2(finalAmount),
+        gains: round2(gains),
+        afterTaxAmount: round2(afterTaxAmount),
+        taxAmount: round2(taxAmount),
         years,
-        annualReturn
+        annualReturn,
+        vehicleId,
+        enveloppe
     };
 }
 
@@ -553,10 +725,10 @@ function calculateInvestmentResults(initialAmount, years, annualReturn) {
  */
 function updateBudgetResults(results, years) {
     // Récupérer les données du budget
-    const budgetLoyer = parseFloat(document.getElementById('simulation-budget-loyer').value) || 1000;
-    const budgetQuotidien = parseFloat(document.getElementById('simulation-budget-quotidien').value) || 1200;
-    const budgetExtra = parseFloat(document.getElementById('simulation-budget-extra').value) || 500;
-    const budgetInvest = parseFloat(document.getElementById('simulation-budget-invest').value) || 300;
+    const budgetLoyer = parseFloat(document.getElementById('simulation-budget-loyer')?.value) || 1000;
+    const budgetQuotidien = parseFloat(document.getElementById('simulation-budget-quotidien')?.value) || 1200;
+    const budgetExtra = parseFloat(document.getElementById('simulation-budget-extra')?.value) || 500;
+    const budgetInvest = parseFloat(document.getElementById('simulation-budget-invest')?.value) || 300;
     
     // Calculer les totaux du budget
     const depensesTotales = budgetLoyer + budgetQuotidien + budgetExtra + budgetInvest;
@@ -571,11 +743,16 @@ function updateBudgetResults(results, years) {
         maximumFractionDigits: 2
     });
     
-    // Mettre à jour l'affichage du budget
-    document.getElementById('simulation-revenu-mensuel').textContent = formatter.format(revenuMensuel);
-    document.getElementById('simulation-depenses-totales').textContent = formatter.format(depensesTotales);
-    document.getElementById('simulation-epargne-possible').textContent = formatter.format(epargnePossible);
-    document.getElementById('simulation-taux-epargne').textContent = tauxEpargne.toFixed(1) + '%';
+    // Mettre à jour l'affichage du budget si les éléments existent
+    const revenuElement = document.getElementById('simulation-revenu-mensuel');
+    const depensesElement = document.getElementById('simulation-depenses-totales');
+    const epargneElement = document.getElementById('simulation-epargne-possible');
+    const tauxElement = document.getElementById('simulation-taux-epargne');
+    
+    if (revenuElement) revenuElement.textContent = formatter.format(revenuMensuel);
+    if (depensesElement) depensesElement.textContent = formatter.format(depensesTotales);
+    if (epargneElement) epargneElement.textContent = formatter.format(epargnePossible);
+    if (tauxElement) tauxElement.textContent = tauxEpargne.toFixed(1) + '%';
 }
 
 /**
@@ -604,42 +781,44 @@ function updateResultsDisplay(results) {
 }
 
 /**
- * Met à jour le message d'adéquation au profil
+ * Met à jour le message d'adéquation au profil avec analyse intelligente
  * @param {Object} results - Résultats de la simulation
  */
 function updateProfileAdequacy(results) {
     const adequacyElement = document.getElementById('profile-adequacy');
     if (!adequacyElement) return;
     
-    // Logique d'évaluation (exemple simplifié)
-    let adequacyScore = 5; // Par défaut
+    const suggestions = suggestBestVehicle(
+        results.initialAmount,
+        results.years,
+        'growth' // Objectif par défaut
+    );
+    
+    const currentVehicle = suggestions.find(s => s.enveloppe.id === results.vehicleId);
+    const bestVehicle = suggestions[0];
+    
+    let adequacyScore = currentVehicle ? Math.round(currentVehicle.score / 20) : 3;
+    adequacyScore = Math.min(5, Math.max(1, adequacyScore));
+    
     let adequacyMessages = [];
     
-    // Vérification du véhicule d'investissement
-    const vehicle = document.getElementById('investment-vehicle').value;
-    
-    // Évaluer l'adéquation en fonction de la durée et du véhicule
-    if (vehicle === 'pea' && results.years < 5) {
-        adequacyScore--;
-        adequacyMessages.push("Le PEA est plus avantageux fiscalement après 5 ans de détention.");
-    } else if (vehicle === 'pea') {
-        adequacyMessages.push("Le PEA est parfaitement adapté pour un investissement de cette durée.");
+    // Messages sur le véhicule actuel
+    if (currentVehicle) {
+        adequacyMessages = adequacyMessages.concat(currentVehicle.reasons);
     }
     
-    // Vérification du montant (PEA plafonné à 150 000€)
-    if (vehicle === 'pea' && results.initialAmount > 150000) {
-        adequacyScore--;
-        adequacyMessages.push("Attention: votre montant dépasse le plafond du PEA (150 000€).");
-    } else if (vehicle === 'pea') {
-        adequacyMessages.push("Votre montant d'investissement est inférieur au plafond du PEA (150 000€).");
+    // Suggérer une alternative si meilleure
+    if (bestVehicle && bestVehicle.enveloppe.id !== results.vehicleId && bestVehicle.score > (currentVehicle?.score || 0)) {
+        adequacyMessages.push(
+            `💡 Alternative suggérée: ${bestVehicle.enveloppe.label} pourrait être plus avantageux`
+        );
     }
     
-    // Vérification du rendement
-    if (results.annualReturn > 0.15) {
-        adequacyScore--;
-        adequacyMessages.push("Un rendement annuel supérieur à 15% est très optimiste.");
-    } else if (results.annualReturn >= 0.06 && results.annualReturn <= 0.1) {
-        adequacyMessages.push("Un rendement de " + (results.annualReturn * 100) + "% correspond aux performances historiques moyennes des indices boursiers.");
+    // Ajouter des conseils généraux
+    if (results.enveloppe?.plafond && results.initialAmount > results.enveloppe.plafond * 0.8) {
+        adequacyMessages.push(
+            `⚠️ Vous approchez du plafond. Pensez à diversifier sur d'autres enveloppes.`
+        );
     }
     
     // Mettre à jour l'affichage
@@ -648,6 +827,7 @@ function updateProfileAdequacy(results) {
     
     if (adequacyText) {
         adequacyText.textContent = `Adéquation: ${adequacyScore}/5`;
+        adequacyText.className = `adequacy-score bg-${adequacyScore >= 4 ? 'green' : adequacyScore >= 3 ? 'yellow' : 'red'}-900 bg-opacity-20 text-${adequacyScore >= 4 ? 'green' : adequacyScore >= 3 ? 'yellow' : 'red'}-400 inline-block px-2 py-1 rounded text-sm font-medium mb-2`;
     }
     
     if (adequacyList) {
