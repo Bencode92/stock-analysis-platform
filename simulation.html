@@ -1433,7 +1433,46 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log("Initialisation directe du simulateur PTZ");
             
-            // Attacher le gestionnaire d'événements au bouton
+            // Fonction pour activer un onglet spécifique
+            function activateTab(targetId) {
+                // Masquer tous les contenus
+                document.querySelectorAll('.simulation-content').forEach(content => {
+                    content.style.display = 'none';
+                });
+                
+                // Désactiver tous les onglets
+                document.querySelectorAll('.simulation-tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Afficher le contenu cible
+                const targetContent = document.getElementById(targetId);
+                if (targetContent) {
+                    targetContent.style.display = 'block';
+                    
+                    // Activer l'onglet correspondant
+                    const targetTab = document.querySelector(`.simulation-tab[data-target="${targetId}"]`);
+                    if (targetTab) {
+                        targetTab.classList.add('active');
+                    }
+                }
+            }
+            
+            // Vérifier si l'URL contient l'ancre #per
+            if (window.location.hash === '#per') {
+                console.log("Ancre #per détectée - activation de l'onglet PER");
+                activateTab('tax-optimizer');
+                
+                // Faire défiler jusqu'au simulateur après un court délai
+                setTimeout(() => {
+                    const simulatorPanel = document.querySelector('.simulator-panel');
+                    if (simulatorPanel) {
+                        simulatorPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 100);
+            }
+            
+            // Attacher le gestionnaire d'événements au bouton PTZ
             const ptzButton = document.getElementById('calculate-ptz-button');
             if (ptzButton) {
                 ptzButton.onclick = function(e) {
@@ -1478,6 +1517,14 @@
                     }
                 });
             }
+            
+            // Gestion des changements d'onglets
+            document.querySelectorAll('.simulation-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-target');
+                    activateTab(targetId);
+                });
+            });
         });
     </script>
 </body>
