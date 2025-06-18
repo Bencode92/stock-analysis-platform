@@ -257,6 +257,15 @@ export const enveloppes = [
     seuil: null,
     fiscalite: { texte: 'Exonéré', calcGainNet: ({ gain }) => gain },
   },
+   {
+    id: 'livret-jeune',
+    label: 'Livret Jeune',
+    type: 'Épargne réglementée 12-25 ans',
+    plafond: 1_600,
+    clockFrom: null,
+    seuil: null,
+    fiscalite: { texte: 'Exonéré', calcGainNet: ({ gain }) => gain },
+  },
 
   /* ───────────── LOGEMENT ───────────── */
   {
