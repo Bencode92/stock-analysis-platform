@@ -224,7 +224,7 @@ export const enveloppes = [
     },
     fiscalite: {
       texte:
-        'Déduction à l'entrée, PFU 30 % sur plus‑values à la sortie capital (pension imposée au barème)',
+        "Déduction à l'entrée, PFU 30 % sur plus‑values à la sortie capital (pension imposée au barème)",
       calcGainNet: ({ gain }) => netAfterFlatTax(gain),
     },
   },
@@ -268,7 +268,7 @@ export const enveloppes = [
     seuil: null,
     fiscalite: {
       texte:
-        'Plans > 2018 : PFU 30 % sur intérêts (années 1‑12). Plans ≤ 2017 : intérêts exonérés d'IR, soumis aux PS (17,2 %) chaque année. Au‑delà de 12 ans, barème + PS (CSG déductible intégrée).',
+        "Plans > 2018 : PFU 30 % sur intérêts (années 1‑12). Plans ≤ 2017 : intérêts exonérés d'IR, soumis aux PS (17,2 %) chaque année. Au‑delà de 12 ans, barème + PS (CSG déductible intégrée).",
       /**
        * @param {number} gain – intérêts bruts
        * @param {number} duree – âge du plan
