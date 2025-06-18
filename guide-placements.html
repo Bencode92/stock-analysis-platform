@@ -476,80 +476,161 @@
                     Comment bien faire ? Guide pratique
                 </h3>
                 
-                <!-- Accordéon 1 -->
+                <!-- Accordéon 1 optimisé -->
                 <div class="accordion-item mb-4 bg-blue-900 bg-opacity-20 rounded-xl overflow-hidden">
                     <div class="accordion-header flex items-center">
                         <i class="fas fa-list-ol text-green-400 mr-3"></i>
                         <span class="font-semibold">1. Par où commencer ? L'ordre idéal des placements</span>
                     </div>
+
                     <div class="accordion-content">
-                        <div class="space-y-4">
-                            <p>Un investissement réussi commence par une stratégie réfléchie. Voici l'ordre optimal pour construire son patrimoine :</p>
-                            
-                            <ol class="space-y-4 pl-6 list-decimal">
+                        <div class="space-y-6">
+                            <p>Voici <strong>la séquence éprouvée</strong> pour bâtir ton patrimoine, chiffrée pour te guider&nbsp;:</p>
+
+                            <!-- Liste ordonnée -->
+                            <ol class="space-y-5 pl-6 list-decimal text-sm leading-relaxed">
                                 <li class="pl-2">
-                                    <strong class="text-green-400">Épargne de sécurité</strong> : Constitue d'abord 3 à 6 mois de dépenses sur Livret A et LDDS.
+                                    <strong class="text-green-400">Épargne de sécurité</strong> (Livret A / LDDS) : <span class="underline decoration-green-400/70">3&nbsp;à&nbsp;6 mois</span> de dépenses.<br>
+                                    <span class="text-xs text-gray-300">Ex. budget 1&nbsp;500 € → objectif 4 500 € à 9 000 €.</span>
                                 </li>
                                 <li class="pl-2">
-                                    <strong class="text-green-400">Préparer les projets à moyen terme</strong> : Assurance-vie en fonds euros pour les projets à 2-8 ans.
+                                    <strong class="text-green-400">Projets à moyen terme (2‑8 ans)</strong> : Assurance‑vie <span class="italic">fonds euros&nbsp;70 %</span> / ETF&nbsp;30 %.
                                 </li>
                                 <li class="pl-2">
-                                    <strong class="text-green-400">Optimiser la fiscalité</strong> : Ouvrir un PEA et commencer les versements réguliers (pour faire courir le délai de 5 ans).
+                                    <strong class="text-green-400">Optimiser la fiscalité</strong> : ouvrir un PEA et injecter <span class="underline">50 € minimum</span> pour démarrer le délai fiscal de 5 ans.
                                 </li>
                                 <li class="pl-2">
-                                    <strong class="text-green-400">Réduire les impôts</strong> : Si TMI > 30%, envisager un PER pour réduire l'imposition immédiate.
+                                    <strong class="text-green-400">Réduire les impôts</strong> : si <span class="font-semibold">TMI ≥ 30 %</span>, verse sur un PER (déduction fiscale immédiate).
                                 </li>
                                 <li class="pl-2">
-                                    <strong class="text-green-400">Diversifier</strong> : Compléter avec CTO pour l'international, SCPI pour l'immobilier, etc.
+                                    <strong class="text-green-400">Diversifier</strong> : CTO pour l'international, SCPI ou OPCI pour l'immobilier, crypto &lt; 5 % max.
                                 </li>
                             </ol>
-                            
-                            <div class="bg-green-900 bg-opacity-10 rounded-lg p-4 border-l-4 border-green-400 mt-4">
-                                <p class="font-medium"><i class="fas fa-check-circle text-green-400 mr-2"></i> Conseil pratique :</p>
-                                <p>Avance étape par étape sans chercher à tout faire en même temps. Ouvre d'abord les enveloppes principales (Assurance-vie, PEA) dès que possible, même avec de petits montants, pour faire courir les délais fiscaux.</p>
+
+                            <!-- Tableau récap quantitatif -->
+                            <div class="overflow-x-auto">
+                                <table class="table-auto text-xs text-left w-full bg-blue-800 bg-opacity-30 rounded-lg">
+                                    <thead>
+                                        <tr class="text-green-300">
+                                            <th class="px-3 py-2">Étape</th>
+                                            <th class="px-3 py-2">Horizon</th>
+                                            <th class="px-3 py-2">Rendement attendu*</th>
+                                            <th class="px-3 py-2">Fiscalité</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-blue-700/60">
+                                        <tr>
+                                            <td class="px-3 py-2">Livret A / LDDS</td>
+                                            <td class="px-3 py-2">Disponible</td>
+                                            <td class="px-3 py-2">3&nbsp;% net</td>
+                                            <td class="px-3 py-2">Exonéré</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-3 py-2">Assurance‑vie (fonds&nbsp;€)</td>
+                                            <td class="px-3 py-2">2‑8 ans</td>
+                                            <td class="px-3 py-2">2‑3,5 % brut</td>
+                                            <td class="px-3 py-2">PFU 24,7 % avant 8 ans*</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-3 py-2">PEA (ETF)</td>
+                                            <td class="px-3 py-2">&gt; 5 ans</td>
+                                            <td class="px-3 py-2">7‑9 % brut</td>
+                                            <td class="px-3 py-2">17,2 % PS après 5 ans</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-3 py-2">PER</td>
+                                            <td class="px-3 py-2">Retraite</td>
+                                            <td class="px-3 py-2">Variable</td>
+                                            <td class="px-3 py-2">Déduction à l'entrée</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-3 py-2">CTO / SCPI</td>
+                                            <td class="px-3 py-2">&gt; 8 ans</td>
+                                            <td class="px-3 py-2">8‑10 % brut*</td>
+                                            <td class="px-3 py-2">PFU 30 %</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
+
+                            <!-- Conseil pratique -->
+                            <div class="bg-green-900 bg-opacity-10 rounded-lg p-4 border-l-4 border-green-400">
+                                <p class="font-medium flex items-center"><i class="fas fa-check-circle text-green-400 mr-2"></i> Conseil pratique&nbsp;:</p>
+                                <p class="text-sm leading-relaxed">Ne saute pas d'étapes ! Chaque enveloppe protège la suivante. Lance le <strong>PEA dès aujourd'hui</strong> : même 1 € versé verrouille la date d'ouverture (et donc la sortie à 0 % d'impôt sur les plus‑values après 5 ans).</p>
+                            </div>
+
                         </div>
                     </div>
                 </div>
                 
-                <!-- Accordéon 2 -->
+                <!-- Accordéon 2 optimisé -->
                 <div class="accordion-item mb-4 bg-blue-900 bg-opacity-20 rounded-xl overflow-hidden">
                     <div class="accordion-header flex items-center">
                         <i class="fas fa-percentage text-green-400 mr-3"></i>
                         <span class="font-semibold">2. Comment optimiser sa fiscalité ?</span>
                     </div>
+
                     <div class="accordion-content">
-                        <div class="space-y-4">
-                            <p>La fiscalité est un élément clé de la performance. Quelques principes pour l'optimiser :</p>
-                            
-                            <ul class="space-y-4 pl-6 list-disc">
+                        <div class="space-y-6">
+                            <p>La <strong>fiscalité</strong> peut grignoter jusqu'à 30 % de tes gains. Voici comment la réduire&nbsp;:</p>
+
+                            <ul class="space-y-4 pl-6 list-disc text-sm leading-relaxed">
                                 <li class="pl-2">
-                                    <strong class="text-green-400">Respecte l'ordre des enveloppes fiscales</strong> : PEA pour les actions européennes, Assurance-vie pour la diversification, CTO en dernier recours.
+                                    <strong class="text-green-400">Respecte l'ordre des enveloppes</strong> : <em>PEA → AV → CTO</em>.
                                 </li>
                                 <li class="pl-2">
-                                    <strong class="text-green-400">Considère ton horizon</strong> : Plus ton investissement est long, plus l'avantage du PEA est important.
+                                    <strong class="text-green-400">Anticipe ton horizon</strong> : plus tu investis longtemps, plus l'avantage PEA/AV &gt; 8 ans est fort.
                                 </li>
                                 <li class="pl-2">
-                                    <strong class="text-green-400">Tiens compte de ta TMI</strong> : Si ta TMI > 30%, un PER peut générer d'importantes économies d'impôt.
+                                    <strong class="text-green-400">Calibre selon ta TMI</strong> :
+                                    <ul class="list-disc pl-4 mt-1 space-y-1">
+                                        <li>TMI ≤ 11 % : favorise PEA + AV, pas forcément PER.</li>
+                                        <li>TMI 30 % ou 41 % : le <span class="underline">PER</span> devient un puissant levier (déduction d'impôt immédiate).</li>
+                                    </ul>
                                 </li>
                                 <li class="pl-2">
-                                    <strong class="text-green-400">Utilise les abattements</strong> : 4 600€ par an (9 200€ pour un couple) de rachat d'assurance-vie après 8 ans.
+                                    <strong class="text-green-400">Exploite les abattements</strong> : rachat AV après 8 ans (4 600 €/an solo, 9 200 € couple).
                                 </li>
                             </ul>
-                            
-                            <div class="bg-blue-900 bg-opacity-40 rounded-lg p-4 mt-4">
-                                <p class="font-medium"><i class="fas fa-lightbulb text-green-400 mr-2"></i> Exemple concret :</p>
-                                <p>Pour un investissement de 10 000€ en actions avec un gain de 5% par an sur 10 ans, la différence entre un CTO (PFU 30%) et un PEA (17,2% de PS) représente environ 1 000€ d'économie fiscale.</p>
+
+                            <!-- Tableau comparatif PEA vs CTO -->
+                            <div class="overflow-x-auto">
+                                <table class="table-auto text-xs text-left w-full bg-blue-800 bg-opacity-30 rounded-lg">
+                                    <thead>
+                                        <tr class="text-yellow-300">
+                                            <th class="px-3 py-2">Scénario</th>
+                                            <th class="px-3 py-2">Capital&nbsp;net après<br>10&nbsp;ans</th>
+                                            <th class="px-3 py-2">Gain fiscal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-blue-700/60">
+                                        <tr>
+                                            <td class="px-3 py-2">PEA (17,2 % PS)</td>
+                                            <td class="px-3 py-2">16 190 €</td>
+                                            <td class="px-3 py-2 font-semibold text-green-300">+1 020 €</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-3 py-2">CTO (PFU 30 %)</td>
+                                            <td class="px-3 py-2">15 170 €</td>
+                                            <td class="px-3 py-2">—</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
-                            
-                            <a href="simulation.html" class="inline-block bg-green-500 hover:bg-green-400 text-gray-900 font-medium py-2 px-4 rounded-lg transition mt-4">
-                                <i class="fas fa-calculator mr-2"></i> Simuler ton optimisation fiscale
-                            </a>
+                            <p class="text-[10px] text-gray-500">Hypothèses : placement initial 10 000 €, rendement 5 %/an capitalisé, fiscalité appliquée en fin de période.</p>
+
+                            <!-- CTA simulateur -->
+                            <div class="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-3 md:space-y-0">
+                                <a href="simulation.html" class="inline-block bg-gradient-to-r from-green-500 to-green-400 text-gray-900 font-medium py-2 px-4 rounded-lg shadow-lg hover:shadow-green-500/30 hover:-translate-y-0.5 transition">
+                                    <i class="fas fa-calculator mr-2"></i> Simuler ton optimisation fiscale
+                                </a>
+                                <span class="text-xs text-gray-400">Inclut PER, PEA, AV – hypothèses personnalisables.</span>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Accordéon 3 : Répartition de l'épargne -->
+                <!-- Accordéon 3 : Répartition de l'épargne (CONSERVÉ TEL QUEL) -->
                 <div class="accordion-item mb-4 bg-blue-900 bg-opacity-20 rounded-xl overflow-hidden">
                   <!-- Header -->
                   <div class="accordion-header flex items-center">
@@ -697,83 +778,166 @@
                   </div>
                 </div>
 
-                <!-- Accordéon 4 -->
+                <!-- Accordéon 4 amélioré -->
                 <div class="accordion-item mb-4 bg-blue-900 bg-opacity-20 rounded-xl overflow-hidden">
+                    <!-- En‑tête -->
                     <div class="accordion-header flex items-center">
                         <i class="fas fa-rocket text-green-400 mr-3"></i>
                         <span class="font-semibold">4. Conseils pratiques pour démarrer simplement</span>
                     </div>
+
+                    <!-- Contenu -->
                     <div class="accordion-content">
-                        <div class="space-y-4">
-                            <p>Voici des recommandations concrètes pour mettre en place efficacement ta stratégie :</p>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                                <div class="bg-blue-800 bg-opacity-20 p-5 rounded-lg">
-                                    <h5 class="font-semibold flex items-center mb-3">
+                        <div class="space-y-6">
+                            <p>
+                                Voici une <strong>feuille de route chiffrée</strong> pour poser des bases solides dès aujourd'hui&nbsp;:
+                            </p>
+
+                            <!-- Étapes + pièges -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Commencer simplement -->
+                                <div class="bg-blue-800 bg-opacity-20 p-6 rounded-lg">
+                                    <h5 class="font-semibold flex items-center mb-4">
                                         <i class="fas fa-check-circle text-green-400 mr-2"></i>
                                         Commencer simplement
                                     </h5>
-                                    <ul class="space-y-3">
+                                    <ul class="space-y-4 text-sm leading-relaxed">
                                         <li class="flex items-start">
                                             <span class="text-green-400 mr-2">•</span>
-                                            <span>Ouvre une assurance-vie adaptée à ton profil (frais faibles, large choix d'UC)</span>
+                                            <span>
+                                                <strong>Ouvre une assurance‑vie</strong> à frais <span class="underline decoration-green-400/70">&lt; 0,80 %</span>/an, avec au moins <em>300&nbsp;UC</em> disponibles.
+                                                <br><span class="text-xs text-gray-300">Objectif&nbsp;: combiner <span class="italic">fonds&nbsp;euros sécurisé</span> et ETF dynamiques.</span>
+                                            </span>
                                         </li>
                                         <li class="flex items-start">
                                             <span class="text-green-400 mr-2">•</span>
-                                            <span>Ouvre un PEA dès que possible (même avec de petits versements)</span>
+                                            <span>
+                                                <strong>Ouvre un PEA</strong> le plus tôt possible, <em>même 50 €</em> pour démarrer.
+                                                <br><span class="text-xs text-gray-300">Après 5&nbsp;ans, la fiscalité tombe à 0 % sur les plus‑values.</span>
+                                            </span>
                                         </li>
                                         <li class="flex items-start">
                                             <span class="text-green-400 mr-2">•</span>
-                                            <span>Met en place un virement automatique mensuel (même petit)</span>
+                                            <span>
+                                                <strong>Mets en place un virement automatique mensuel</strong> (&ge; 5 % de tes revenus).
+                                                <br><span class="text-xs text-gray-300">Rendement d'un ETF Monde&nbsp;≈ +8 %/an sur 20&nbsp;ans*.</span>
+                                            </span>
                                         </li>
                                         <li class="flex items-start">
                                             <span class="text-green-400 mr-2">•</span>
-                                            <span>Investis d'abord dans des ETF diversifiés avant de te lancer dans les actions individuelles</span>
+                                            <span>
+                                                <strong>Privilégie les ETF globaux</strong> (MSCI World ou ACWI) avant les actions individuelles.
+                                                <br><span class="text-xs text-gray-300">Diversification instantanée &gt; 2 000 sociétés.</span>
+                                            </span>
                                         </li>
                                     </ul>
                                 </div>
-                                
-                                <div class="bg-blue-800 bg-opacity-20 p-5 rounded-lg">
-                                    <h5 class="font-semibold flex items-center mb-3">
+
+                                <!-- Pièges à éviter -->
+                                <div class="bg-blue-800 bg-opacity-20 p-6 rounded-lg">
+                                    <h5 class="font-semibold flex items-center mb-4">
                                         <i class="fas fa-exclamation-triangle text-yellow-400 mr-2"></i>
                                         Pièges à éviter
                                     </h5>
-                                    <ul class="space-y-3">
+                                    <ul class="space-y-4 text-sm leading-relaxed">
                                         <li class="flex items-start">
                                             <span class="text-yellow-400 mr-2">•</span>
-                                            <span>Ne pas diversifier (concentration trop forte sur une seule classe d'actifs)</span>
+                                            <span>Manquer de diversification (par ex.&nbsp;> 20 % sur un seul titre).</span>
                                         </li>
                                         <li class="flex items-start">
                                             <span class="text-yellow-400 mr-2">•</span>
-                                            <span>Choisir ses placements uniquement en fonction de la fiscalité</span>
+                                            <span>Choisir ses placements uniquement pour la fiscalité : la performance prime.</span>
                                         </li>
                                         <li class="flex items-start">
                                             <span class="text-yellow-400 mr-2">•</span>
-                                            <span>Multiplier les contrats et comptes sans nécessité (frais inutiles)</span>
+                                            <span>Multiplier assurances‑vie/PEA sans raison : frais &amp; gestion inutile.</span>
                                         </li>
                                         <li class="flex items-start">
                                             <span class="text-yellow-400 mr-2">•</span>
-                                            <span>Chercher à "timer" le marché plutôt que d'investir régulièrement</span>
+                                            <span>Essayer de « timer » le marché au lieu d'investir régulièrement.</span>
                                         </li>
                                     </ul>
                                 </div>
                             </div>
-                            
-                            <blockquote class="bg-blue-900 bg-opacity-40 rounded-lg p-5 border-l-4 border-green-400 mt-6">
-                                <p class="italic">"Le meilleur moment pour planter un arbre était il y a 20 ans. Le deuxième meilleur moment est maintenant."</p>
+
+                            <!-- Filet de sécurité et profils -->
+                            <div class="bg-blue-800 bg-opacity-20 p-6 rounded-lg space-y-4">
+                                <h5 class="font-semibold flex items-center">
+                                    <i class="fas fa-life-ring text-cyan-400 mr-2"></i>
+                                    Filet de sécurité avant d'investir
+                                </h5>
+                                <p class="text-sm leading-relaxed">
+                                    Conserve <strong>3&nbsp;à&nbsp;6 mois de dépenses</strong> sur un livret A ou LDDS avant de placer. Le fonds euros à capital garanti peut compléter cette poche de sûreté.
+                                </p>
+                            </div>
+
+                            <!-- Timeline -->
+                            <div class="bg-blue-800 bg-opacity-20 p-6 rounded-lg">
+                                <h5 class="font-semibold flex items-center mb-4">
+                                    <i class="fas fa-stream text-purple-400 mr-2"></i>
+                                    Plan d'action sur 6 mois
+                                </h5>
+                                <ol class="relative border-l border-purple-400 pl-6 space-y-6 text-sm">
+                                    <li>
+                                        <span class="absolute -left-2.5 top-0.5 w-3 h-3 bg-purple-400 rounded-full"></span>
+                                        <strong>Mois 1</strong> : ouvrir assurance‑vie et verser 500 € (70 % fonds euros, 30 % ETF Monde).
+                                    </li>
+                                    <li>
+                                        <span class="absolute -left-2.5 top-0.5 w-3 h-3 bg-purple-400 rounded-full"></span>
+                                        <strong>Mois 2</strong> : ouvrir PEA et acheter 100 € d'ETF CAC 40 ou SBF 120.
+                                    </li>
+                                    <li>
+                                        <span class="absolute -left-2.5 top-0.5 w-3 h-3 bg-purple-400 rounded-full"></span>
+                                        <strong>Mois 3‑6</strong> : automatiser un virement de 150 € et rééquilibrer tous les 6 mois.
+                                    </li>
+                                </ol>
+                            </div>
+
+                            <!-- Adaptation selon le profil -->
+                            <div class="bg-blue-800 bg-opacity-20 p-6 rounded-lg">
+                                <h5 class="font-semibold flex items-center mb-4">
+                                    <i class="fas fa-user-friends text-pink-400 mr-2"></i>
+                                    Ajuste selon ton profil
+                                </h5>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs leading-relaxed">
+                                    <div>
+                                        <h6 class="font-semibold">Étudiant·e</h6>
+                                        <p>somme modeste (20 €/mois), focus ETF Monde.</p>
+                                    </div>
+                                    <div>
+                                        <h6 class="font-semibold">Jeune actif·ve</h6>
+                                        <p>hausse à 10 % du salaire, PEA prioritaire.</p>
+                                    </div>
+                                    <div>
+                                        <h6 class="font-semibold">À 5 ans de la retraite</h6>
+                                        <p>=> basculer progressivement vers fonds euros (70 %) et obligations.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Citation -->
+                            <blockquote class="bg-blue-900 bg-opacity-40 rounded-lg p-5 border-l-4 border-green-400">
+                                <p class="italic leading-relaxed">« Le meilleur moment pour planter un arbre était il y a 20&nbsp;ans. Le deuxième meilleur moment est maintenant. »</p>
                                 <p class="mt-2 text-sm text-right text-gray-400">— Proverbe chinois</p>
                             </blockquote>
-                            
-                            <div class="flex justify-center mt-6">
+
+                            <!-- Bouton CTA -->
+                            <div class="flex justify-center">
                                 <a href="simulation.html" class="bg-gradient-to-r from-green-500 to-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg shadow-lg hover:shadow-green-500/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center">
                                     <i class="fas fa-calculator mr-2"></i> 
                                     Simuler ma stratégie personnalisée
                                 </a>
                             </div>
+
+                            <!-- Note de bas de page -->
+                            <p class="text-[10px] text-gray-500 mt-2">*Performance annualisée de l'indice MSCI&nbsp;World entre 2004 et 2024, dividendes réinvestis.</p>
                         </div>
                     </div>
                 </div>
             </div>
+            
+            <!-- Notes de bas de page -->
+            <p class="text-[10px] text-gray-500 mt-2">*Sources : Banque de France, performances passées 2014‑2024. Les performances passées ne préjugent pas des performances futures.</p>
             
             <!-- Call-to-Action -->
             <div class="bg-gradient-to-r from-blue-900 to-green-900 bg-opacity-30 rounded-xl p-8 text-center mb-16">
@@ -1860,24 +2024,69 @@
             const options = { day: 'numeric', month: 'long', year: 'numeric' };
             const formattedDate = now.toLocaleDateString('fr-FR', options).toUpperCase();
             
-            const currentDateElement = document.getElementById('currentDate');
-            if (currentDateElement) {
-                currentDateElement.textContent = formattedDate;
+            const currentDateEl = document.getElementById('currentDate');
+            if (currentDateEl) {
+                currentDateEl.textContent = formattedDate;
             }
             
-            // Market time
-            const hours = now.getHours().toString().padStart(2, '0');
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            const seconds = now.getSeconds().toString().padStart(2, '0');
-            
-            const marketTimeElement = document.getElementById('marketTime');
-            if (marketTimeElement) {
-                marketTimeElement.textContent = `${hours}:${minutes}:${seconds}`;
+            const marketTimeEl = document.getElementById('marketTime');
+            if (marketTimeEl) {
+                marketTimeEl.textContent = now.toLocaleTimeString('fr-FR');
             }
+            
+            // Update all update-time elements
+            document.querySelectorAll('.update-time').forEach(el => {
+                el.textContent = now.toLocaleDateString('fr-FR') + ' ' + now.toLocaleTimeString('fr-FR');
+            });
         }
         
-        setInterval(updateDateTime, 1000);
+        // Update time every second
         updateDateTime();
+        setInterval(updateDateTime, 1000);
+        
+        // Theme toggle
+        const themeToggleBtn = document.getElementById('theme-toggle-btn');
+        const darkIcon = document.getElementById('dark-icon');
+        const lightIcon = document.getElementById('light-icon');
+        
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', () => {
+                const html = document.documentElement;
+                const isDark = html.classList.contains('dark');
+                
+                if (isDark) {
+                    html.classList.remove('dark');
+                    darkIcon.style.display = 'none';
+                    lightIcon.style.display = 'block';
+                } else {
+                    html.classList.add('dark');
+                    darkIcon.style.display = 'block';
+                    lightIcon.style.display = 'none';
+                }
+            });
+        }
+        
+        // Ripple effect on buttons
+        document.querySelectorAll('.ripple').forEach(button => {
+            button.addEventListener('click', function(e) {
+                const ripple = document.createElement('span');
+                ripple.classList.add('ripple-effect');
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = e.clientX - rect.left - size / 2;
+                const y = e.clientY - rect.top - size / 2;
+                
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = x + 'px';
+                ripple.style.top = y + 'px';
+                
+                this.appendChild(ripple);
+                
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            });
+        });
     </script>
 </body>
 </html>
