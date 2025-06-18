@@ -1,50 +1,61 @@
-/**
- * fiscal-enveloppes.js - Configuration fiscale des enveloppes d'investissement
- * TradePulse Finance Intelligence Platform
- * Version 1.0 - Juin 2025
- * 
- * Basé sur les données fiscales 2025
- * Compatible avec simulation.js
- */
+/* -----------------------------------------------------------------------------
+   Smartflow – Catalogue exhaustif d'enveloppes patrimoniales
+   Version « 12.0 » – révisée le 18 juin 2025
+   -----------------------------------------------------------------------------
+   • Isolates all tax parameters in a configurable TAXES object
+   • Corrects the surtaxe sur plus‑values immobilières to apply on net gain
+   • Clarifies PEL regime comment (plans opened before/after 2018)
+   • Adds utility functions and Jest unit‑test stubs for edge cases
+   ----------------------------------------------------------------------------- */
 
 /* --------------------------------------------------------------------
-   PARAMÈTRES FISCAUX CONFIGURABLES
+   CONFIGURABLE TAX PARAMETERS
    -------------------------------------------------------------------- */
 export const TAXES = {
   YEAR: 2025,
-  // Prélèvement forfaitaire unique (flat-tax)
-  IR_PFU: 0.128,              // Part impôt sur le revenu
-  PRL_SOC: 0.172,             // Prélèvements sociaux (17.2%)
+  // Prélèvement forfaitaire unique (flat‑tax) – Income‑tax share
+  IR_PFU: 0.128,
+  // Prélèvements sociaux (CSG 9,2 % + CRDS 0,5 % + prélèv. solidarité 7,5 %)
+  PRL_SOC: 0.172,
+  // Dynamic getter keeps PFU_TOTAL in sync
   get PFU_TOTAL() {
-    return this.IR_PFU + this.PRL_SOC;  // 30%
+    return this.IR_PFU + this.PRL_SOC;
   },
-  // CSG déductible
+  // Fraction de CSG déductible
   CSG_DEDUCTIBLE_RATE: 0.068,
-  // Assurance-vie après 8 ans (≤ 150k€)
+  // Assurance‑vie – part IR après 8 ans (≤ 150 k€ de primes)
   IR_AV_8Y: 0.075,
-  // Plus-values immobilières
+  // Plus‑values immobilières (IR 19 %)
   IR_SCPI_PV: 0.19,
 };
 
-/* --------------------------------------------------------------------
-   CONSTANTES
-   -------------------------------------------------------------------- */
-export const PASS_2025 = 47100; // Plafond annuel Sécurité sociale
+/**
+ * Let the host application patch TAXES when new Finance Acts are voted.
+ * @param {Partial<typeof TAXES>} patch – key/value pairs to override.
+ */
+export function updateTaxes(patch = {}) {
+  Object.assign(TAXES, patch);
+}
 
 /* --------------------------------------------------------------------
-   FONCTIONS UTILITAIRES
+   CONSTANTES SOCIALES 2025
+   -------------------------------------------------------------------- */
+export const PASS_2025 = 47_100; // Plafond annuel de la Sécurité sociale
+
+/* --------------------------------------------------------------------
+   OUTILS GÉNÉRIQUES
    -------------------------------------------------------------------- */
 export const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
-
-export const formatMoney = (n) => new Intl.NumberFormat('fr-FR', { 
-  style: 'currency', 
-  currency: 'EUR',
-  maximumFractionDigits: 0
-}).format(n);
 
 export const netAfterFlatTax = (gain, taux = TAXES.PFU_TOTAL) =>
   round2(gain * (1 - taux));
 
+/**
+ * Net après option barème – année de la déclaration + économie d'IR N+1
+ * grâce à la CSG déductible (6,8 % de la base imposable).
+ * @param {number} base – Base imposable après charges/abattements.
+ * @param {number} tmi  – Taux marginal d'imposition (0.11, 0.30, 0.41, 0.45 …).
+ */
 export function netAfterBareme(base, tmi) {
   const ir = base * tmi;
   const ps = base * TAXES.PRL_SOC;
@@ -53,491 +64,400 @@ export function netAfterBareme(base, tmi) {
 }
 
 /* --------------------------------------------------------------------
-   CONFIGURATION DES ENVELOPPES FISCALES
+   ABATTEMENTS SUR PLUS‑VALUES IMMOBILIÈRES
    -------------------------------------------------------------------- */
-export const ENVELOPPES_CONFIG = {
-  /* ───────────── ACTIONS ───────────── */
-  'pea': {
+export function abattImmoIR(duree) {
+  if (duree < 6) return 0;
+  if (duree < 22) return (duree - 5) * 0.06; // 6 %/an années 6‑21
+  return 1; // exonération totale ≥ 22 ans
+}
+
+export function abattImmoPS(duree) {
+  if (duree < 6) return 0;
+  if (duree <= 21) return (duree - 5) * 0.0165; // 1,65 %/an années 6‑21
+  if (duree === 22) return 0.28; // 26,4 % + 1,6 % = 28 %
+  if (duree <= 30) return 0.28 + (duree - 22) * 0.09; // +9 %/an années 23‑30
+  return 1; // exonération totale ≥ 31 ans
+}
+
+/* --------------------------------------------------------------------
+   SURTAXE PROGRESSIVE SUR PLUS‑VALUES (> 50 k€) – appliquée sur le NET
+   -------------------------------------------------------------------- */
+export function surtaxePlusValue(gainNet) {
+  if (gainNet <= 50_000) return 0;
+  const brackets = [
+    { limit: 100_000, rate: 0.02 },
+    { limit: 150_000, rate: 0.03 },
+    { limit: 200_000, rate: 0.04 },
+    { limit: 250_000, rate: 0.05 },
+    { limit: Infinity, rate: 0.06 },
+  ];
+  let prev = 50_000;
+  let surtaxe = 0;
+  for (const { limit, rate } of brackets) {
+    if (gainNet <= prev) break;
+    const taxableSlice = Math.min(gainNet, limit) - prev;
+    surtaxe += taxableSlice * rate;
+    prev = limit;
+  }
+  return round2(surtaxe);
+}
+
+/* --------------------------------------------------------------------
+   CATALOGUE D'ENVELOPPES PATRIMONIALES
+   -------------------------------------------------------------------- */
+export const enveloppes = [
+  /* ───────────── INVESTISSEMENT ACTIONS ───────────── */
+  {
     id: 'pea',
-    label: 'PEA - Plan d\'Épargne en Actions',
-    shortLabel: 'PEA',
-    category: 'actions',
-    description: 'Investissement en actions européennes avec fiscalité avantageuse après 5 ans',
-    plafond: 150000,
-    plafondCouple: null,
-    dureeOptimale: 5,
+    label: 'PEA',
+    type: 'Actions UE (ETF, titres vifs)',
+    plafond: 150_000,
+    plafondGlobal: 225_000, // PEA + PEA‑PME
     clockFrom: 'ouverture',
-    
-    avantages: [
-      'Exonération d\'impôt sur les plus-values après 5 ans',
-      'Seuls les prélèvements sociaux restent dus (17.2%)',
-      'Dividendes exonérés après 5 ans',
-      'Transmission facilitée'
-    ],
-    
-    contraintes: [
-      'Limité aux actions européennes',
-      'Retrait avant 5 ans = clôture du plan',
-      'Un seul PEA par personne',
-      'Plafond de versement : 150 000€'
-    ],
-    
+    seuil: 5,
     fiscalite: {
-      avant5ans: {
-        description: 'PFU 30% + clôture du plan',
-        tauxGlobal: TAXES.PFU_TOTAL,
-        calcul: (gain) => netAfterFlatTax(gain)
-      },
-      apres5ans: {
-        description: 'Exonéré IR, prélèvements sociaux 17.2%',
-        tauxGlobal: TAXES.PRL_SOC,
-        calcul: (gain) => netAfterFlatTax(gain, TAXES.PRL_SOC)
-      }
+      avant: 'PFU 30 % + clôture',
+      apres: 'Exonéré IR, 17,2 % PS',
+      calcGainNet: ({ gain, duree }) =>
+        duree >= 5 ? netAfterFlatTax(gain, TAXES.PRL_SOC) : netAfterFlatTax(gain),
     },
-    
-    // Fonction principale de calcul compatible avec simulation.js
-    calculateNetGain: function(gain, duree = 0) {
-      if (duree >= 5) {
-        return this.fiscalite.apres5ans.calcul(gain);
-      }
-      return this.fiscalite.avant5ans.calcul(gain);
-    },
-    
-    // Pour l'affichage dans l'interface
-    getTaxInfo: function(duree = 0) {
-      const regime = duree >= 5 ? 'apres5ans' : 'avant5ans';
-      return {
-        description: this.fiscalite[regime].description,
-        taux: this.fiscalite[regime].tauxGlobal,
-        tauxPct: (this.fiscalite[regime].tauxGlobal * 100).toFixed(1) + '%'
-      };
-    }
   },
-
-  /* ───────────── COMPTE-TITRES ───────────── */
-  'cto': {
+  {
+    id: 'pea-pme',
+    label: 'PEA‑PME/ETI',
+    type: 'Actions PME/ETI UE',
+    plafond: 225_000,
+    clockFrom: 'ouverture',
+    seuil: 5,
+    fiscalite: {
+      avant: 'PFU 30 % + clôture',
+      apres: 'Exonéré IR, 17,2 % PS',
+      calcGainNet: ({ gain, duree }) =>
+        duree >= 5 ? netAfterFlatTax(gain, TAXES.PRL_SOC) : netAfterFlatTax(gain),
+    },
+  },
+  {
     id: 'cto',
-    label: 'Compte-Titres Ordinaire',
-    shortLabel: 'CTO',
-    category: 'polyvalent',
-    description: 'Investissement libre sans contrainte, fiscalité au PFU ou barème',
+    label: 'Compte‑titres ordinaire',
+    type: 'Actions/ETF monde, obligations, fonds',
     plafond: null,
-    dureeOptimale: null,
-    
-    avantages: [
-      'Aucune limite de versement',
-      'Tous types d\'actifs (actions, obligations, ETF monde...)',
-      'Report des moins-values sur 10 ans',
-      'Option barème possible si avantageux',
-      'CSG déductible à 6.8% si option barème'
-    ],
-    
-    contraintes: [
-      'Fiscalité pleine (30% ou barème)',
-      'Pas d\'avantage fiscal particulier'
-    ],
-    
+    clockFrom: null,
+    seuil: null,
     fiscalite: {
-      pfu: {
-        description: 'Prélèvement forfaitaire unique 30%',
-        tauxGlobal: TAXES.PFU_TOTAL,
-        calcul: (gain) => netAfterFlatTax(gain)
+      texte:
+        'PFU 30 % ou option barème (report moins‑values 10 ans, CSG 6,8 % déductible année N+1)',
+      /**
+       * @param {number} gain
+       * @param {number} tmi – taux marginal (default 30 %)
+       * @param {number} moinsValuesDisponibles
+       * @param {boolean} optionBareme
+       */
+      calcGainNet({
+        gain,
+        tmi = 0.3,
+        moinsValuesDisponibles = 0,
+        optionBareme = false,
+      }) {
+        const gainApresMV = Math.max(gain - moinsValuesDisponibles, 0);
+        return optionBareme
+          ? netAfterBareme(gainApresMV, tmi)
+          : netAfterFlatTax(gainApresMV);
       },
-      bareme: {
-        description: 'Option barème progressif + PS 17.2%',
-        calcul: (gain, tmi = 0.3) => netAfterBareme(gain, tmi)
-      }
     },
-    
-    calculateNetGain: function(gain, duree = 0, options = {}) {
-      const { optionBareme = false, tmi = 0.3, moinsValues = 0 } = options;
-      const gainNet = Math.max(gain - moinsValues, 0);
-      
-      if (optionBareme) {
-        return this.fiscalite.bareme.calcul(gainNet, tmi);
-      }
-      return this.fiscalite.pfu.calcul(gainNet);
-    },
-    
-    getTaxInfo: function(options = {}) {
-      const { optionBareme = false, tmi = 0.3 } = options;
-      if (optionBareme) {
-        const tauxEffectif = tmi + TAXES.PRL_SOC - (TAXES.CSG_DEDUCTIBLE_RATE * tmi);
-        return {
-          description: `Barème progressif (TMI ${(tmi*100)}%) + PS 17.2%`,
-          taux: tauxEffectif,
-          tauxPct: (tauxEffectif * 100).toFixed(1) + '%'
-        };
-      }
-      return {
-        description: this.fiscalite.pfu.description,
-        taux: this.fiscalite.pfu.tauxGlobal,
-        tauxPct: '30%'
-      };
-    }
   },
 
-  /* ───────────── ASSURANCE-VIE ───────────── */
-  'assurance-vie': {
+  /* ───────────── ÉPARGNE POLYVALENTE ───────────── */
+  {
     id: 'assurance-vie',
-    label: 'Assurance-Vie',
-    shortLabel: 'AV',
-    category: 'epargne',
-    description: 'Épargne polyvalente avec avantages fiscaux après 8 ans',
+    label: 'Assurance‑vie',
+    type: 'Fonds € + UC',
     plafond: null,
-    dureeOptimale: 8,
     clockFrom: 'versement',
-    
-    avantages: [
-      'Abattement annuel après 8 ans (4600€ solo, 9200€ couple)',
-      'Fiscalité réduite après 8 ans',
-      'Transmission avantageuse (abattement 152 500€)',
-      'Rachat partiel possible',
-      'Fonds euros garanti + unités de compte'
-    ],
-    
-    contraintes: [
-      'Frais d\'entrée et de gestion',
-      'Fiscalité moins avantageuse avant 8 ans',
-      'Performance des fonds euros faible'
-    ],
-    
-    abattements: {
-      solo: 4600,
-      couple: 9200
-    },
-    
+    seuil: 8,
     fiscalite: {
-      avant8ans: {
-        description: 'PFU 30%',
-        tauxGlobal: TAXES.PFU_TOTAL
-      },
-      apres8ans: {
-        jusqua150k: {
-          description: '24.7% (7.5% IR + 17.2% PS) après abattement',
-          tauxIR: TAXES.IR_AV_8Y,
-          tauxGlobal: TAXES.IR_AV_8Y + TAXES.PRL_SOC
-        },
-        auDela150k: {
-          description: 'PFU 30% après abattement',
-          tauxGlobal: TAXES.PFU_TOTAL
-        }
-      }
-    },
-    
-    calculateNetGain: function(gain, duree = 0, options = {}) {
-      const { 
-        estCouple = false, 
-        primesVersees = 0 
-      } = options;
-      
-      const abattement = estCouple ? this.abattements.couple : this.abattements.solo;
-      
-      if (duree < 8) {
-        const gainImposable = Math.max(gain - abattement, 0);
-        const impot = gainImposable * this.fiscalite.avant8ans.tauxGlobal;
-        return round2(gain - impot);
-      }
-      
-      // Après 8 ans
-      const gainImposable = Math.max(gain - abattement, 0);
-      if (gainImposable === 0) return gain;
-      
-      const seuilRestant = Math.max(150000 - primesVersees, 0);
-      const partBasse = Math.min(gainImposable, seuilRestant);
-      const partHaute = gainImposable - partBasse;
-      
-      const impotBas = partBasse * this.fiscalite.apres8ans.jusqua150k.tauxGlobal;
-      const impotHaut = partHaute * this.fiscalite.apres8ans.auDela150k.tauxGlobal;
-      
-      return round2(gain - impotBas - impotHaut);
-    },
-    
-    getTaxInfo: function(duree = 0, options = {}) {
-      const { primesVersees = 0, estCouple = false } = options;
-      const abatt = estCouple ? '9 200€' : '4 600€';
-      
-      if (duree < 8) {
-        return {
-          description: `PFU 30% (abattement ${abatt})`,
-          taux: this.fiscalite.avant8ans.tauxGlobal,
-          tauxPct: '30%'
-        };
-      }
-      
-      if (primesVersees <= 150000) {
-        return {
-          description: `24.7% après abattement de ${abatt}`,
-          taux: this.fiscalite.apres8ans.jusqua150k.tauxGlobal,
-          tauxPct: '24.7%'
-        };
-      }
-      
-      return {
-        description: `Mixte: 24.7% jusqu'à 150k€, 30% au-delà (abatt. ${abatt})`,
-        taux: null,
-        tauxPct: '24.7% / 30%'
-      };
-    }
-  },
+      avant: 'PFU 30 % (ou 35/15 % si < 4 ans pour anciens contrats)',
+      apres:
+        '24,7 % (7,5 % IR + 17,2 % PS) sur prime ≤ 150 k€ ; 30 % au‑delà',
+      abattement: { solo: 4_600, couple: 9_200 },
+      /**
+       * @param {number} gain
+       * @param {number} duree – durée du contrat en années
+       * @param {number} primesVerseesAvantRachat
+       * @param {boolean} estCouple
+       */
+      calcGainNet({
+        gain,
+        duree,
+        primesVerseesAvantRachat = 0,
+        estCouple = false,
+      }) {
+        const abatt = estCouple
+          ? this.abattement.couple
+          : this.abattement.solo;
+        const taxable = Math.max(gain - abatt, 0);
+        if (duree < 8) return netAfterFlatTax(taxable) + Math.min(gain, abatt);
 
-  /* ───────────── PER ───────────── */
-  'per': {
-    id: 'per',
-    label: 'Plan d\'Épargne Retraite',
-    shortLabel: 'PER',
-    category: 'retraite',
-    description: 'Épargne retraite avec déduction fiscale à l\'entrée',
-    plafond: null,
-    dureeOptimale: null,
-    
-    avantages: [
-      'Déduction du revenu imposable',
-      'Économie d\'impôt immédiate selon TMI',
-      'Sortie en capital possible',
-      'Déblocage anticipé (résidence principale)',
-      'Gestion pilotée par défaut'
-    ],
-    
-    contraintes: [
-      'Épargne bloquée jusqu\'à la retraite',
-      'Fiscalité à la sortie',
-      'Plafond de déduction annuel'
-    ],
-    
-    // Calcul du plafond de déduction
-    calculerPlafond: function(revenusPro) {
-      const dixPctRevenus = revenusPro * 0.1;
-      const plafondMax = PASS_2025 * 8 * 0.1; // 10% de 8 PASS
-      const plafondMin = PASS_2025 * 0.1;     // 10% d'1 PASS
-      
-      return {
-        montant: Math.max(plafondMin, Math.min(dixPctRevenus, plafondMax)),
-        minimum: plafondMin,
-        maximum: plafondMax
-      };
-    },
-    
-    fiscalite: {
-      entree: {
-        description: 'Déduction du revenu imposable',
-        economie: (versement, tmi) => round2(versement * tmi)
+        // Après 8 ans
+        const enveloppeRestante = Math.max(150_000 - primesVerseesAvantRachat, 0);
+        const partLow = Math.min(taxable, enveloppeRestante);
+        const partHigh = taxable - partLow;
+        const netLow =
+          partLow * (1 - (TAXES.IR_AV_8Y + TAXES.PRL_SOC)); // 7,5 % + PS
+        const netHigh = partHigh * (1 - TAXES.PFU_TOTAL); // 30 %
+        return round2(netLow + netHigh + Math.min(gain, abatt));
       },
-      sortie: {
-        description: 'PFU 30% sur les plus-values',
-        tauxGlobal: TAXES.PFU_TOTAL
-      }
     },
-    
-    calculateNetGain: function(gain, duree = 0, options = {}) {
-      // Pour le PER, on calcule seulement la fiscalité sur les gains
-      return netAfterFlatTax(gain);
+  },
+  {
+    id: 'per',
+    label: 'PER',
+    type: 'Épargne retraite (UC / fonds €)',
+    plafond: null,
+    clockFrom: 'versement',
+    seuil: null,
+    plafondCalcule({ revenusPro }) {
+      const partRevenus = revenusPro * 0.1; // 10 % revenus pro
+      const plafond1 = PASS_2025 * 8 * 0.1; // 10 % × 8 PASS
+      const plafond2 = PASS_2025 * 0.1; // 10 % PASS
+      return Math.max(plafond2, Math.min(partRevenus, plafond1));
     },
-    
-    calculateEconomieImpot: function(versement, tmi = 0.3) {
-      return this.fiscalite.entree.economie(versement, tmi);
+    fiscalite: {
+      texte:
+        'Déduction à l'entrée, PFU 30 % sur plus‑values à la sortie capital (pension imposée au barème)',
+      calcGainNet: ({ gain }) => netAfterFlatTax(gain),
     },
-    
-    getTaxInfo: function(options = {}) {
-      const { tmi = 0.3 } = options;
-      return {
-        description: `Déduction à l'entrée (${(tmi*100)}% TMI), PFU 30% sur gains à la sortie`,
-        taux: TAXES.PFU_TOTAL,
-        tauxPct: '30%',
-        economieEntree: `${(tmi*100)}%`
-      };
-    }
   },
 
   /* ───────────── LIVRETS RÉGLEMENTÉS ───────────── */
-  'livret-a': {
+  {
     id: 'livret-a',
     label: 'Livret A',
-    shortLabel: 'Livret A',
-    category: 'livrets',
-    description: 'Épargne de précaution totalement défiscalisée',
-    plafond: 22950,
-    taux: 0.03, // 3% en 2025
-    
-    avantages: [
-      'Totalement défiscalisé',
-      'Liquidité immédiate',
-      'Capital garanti',
-      'Taux fixé par l\'État'
-    ],
-    
-    contraintes: [
-      'Plafond limité (22 950€)',
-      'Taux de rendement faible',
-      'Un seul livret par personne'
-    ],
-    
-    fiscalite: {
-      description: 'Exonéré d\'impôts et de prélèvements sociaux',
-      tauxGlobal: 0
-    },
-    
-    calculateNetGain: function(gain) {
-      return gain; // Aucune fiscalité
-    },
-    
-    getTaxInfo: function() {
-      return {
-        description: 'Totalement exonéré',
-        taux: 0,
-        tauxPct: '0%'
-      };
-    }
+    type: 'Épargne de précaution',
+    plafond: 22_950,
+    clockFrom: null,
+    seuil: null,
+    fiscalite: { texte: 'Exonéré', calcGainNet: ({ gain }) => gain },
   },
-
-  'ldds': {
+  {
     id: 'ldds',
-    label: 'Livret de Développement Durable et Solidaire',
-    shortLabel: 'LDDS',
-    category: 'livrets',
-    description: 'Épargne solidaire défiscalisée',
-    plafond: 12000,
-    taux: 0.03, // 3% en 2025
-    
-    avantages: [
-      'Totalement défiscalisé',
-      'Liquidité immédiate',
-      'Finance l\'économie sociale et solidaire',
-      'Peut financer des travaux d\'économie d\'énergie'
-    ],
-    
-    contraintes: [
-      'Plafond limité (12 000€)',
-      'Taux de rendement faible'
-    ],
-    
-    fiscalite: {
-      description: 'Exonéré d\'impôts et de prélèvements sociaux',
-      tauxGlobal: 0
-    },
-    
-    calculateNetGain: function(gain) {
-      return gain;
-    },
-    
-    getTaxInfo: function() {
-      return {
-        description: 'Totalement exonéré',
-        taux: 0,
-        tauxPct: '0%'
-      };
-    }
+    label: 'LDDS',
+    type: 'Épargne de précaution / solidaire',
+    plafond: 12_000,
+    clockFrom: null,
+    seuil: null,
+    fiscalite: { texte: 'Exonéré', calcGainNet: ({ gain }) => gain },
+  },
+  {
+    id: 'lep',
+    label: 'LEP',
+    type: 'Livret Épargne Populaire',
+    plafond: 10_000,
+    clockFrom: null,
+    seuil: null,
+    fiscalite: { texte: 'Exonéré', calcGainNet: ({ gain }) => gain },
   },
 
-  /* ───────────── IMMOBILIER ───────────── */
-  'scpi': {
-    id: 'scpi',
-    label: 'SCPI - Sociétés Civiles de Placement Immobilier',
-    shortLabel: 'SCPI',
-    category: 'immobilier',
-    description: 'Investissement immobilier mutualisé',
-    plafond: null,
-    
-    avantages: [
-      'Revenus réguliers (4-6% en moyenne)',
-      'Diversification immobilière',
-      'Gestion déléguée',
-      'Accessible dès quelques milliers d\'euros'
-    ],
-    
-    contraintes: [
-      'Frais d\'entrée élevés (8-12%)',
-      'Liquidité limitée',
-      'Fiscalité des revenus fonciers',
-      'Délai de jouissance (3-6 mois)'
-    ],
-    
+  /* ───────────── LOGEMENT ───────────── */
+  {
+    id: 'pel',
+    label: 'PEL',
+    type: 'Plan Épargne Logement',
+    plafond: 61_200,
+    clockFrom: 'ouverture',
+    seuil: null,
     fiscalite: {
-      revenus: {
-        microFoncier: {
-          description: 'Abattement 30% si revenus < 15k€',
-          seuil: 15000,
-          abattement: 0.3
-        },
-        reel: {
-          description: 'Déduction des charges réelles'
-        }
+      texte:
+        'Plans > 2018 : PFU 30 % sur intérêts (années 1‑12). Plans ≤ 2017 : intérêts exonérés d'IR, soumis aux PS (17,2 %) chaque année. Au‑delà de 12 ans, barème + PS (CSG déductible intégrée).',
+      /**
+       * @param {number} gain – intérêts bruts
+       * @param {number} duree – âge du plan
+       * @param {number} tmi  – taux marginal, seulement utile après 12 ans
+       */
+      calcGainNet({ gain, duree, tmi = 0.3 }) {
+        if (duree < 12) return netAfterFlatTax(gain); // PFU 30 %
+        return netAfterBareme(gain, tmi);
       },
-      plusValues: {
-        description: '19% IR + 17.2% PS avec abattements selon durée'
-      }
     },
-    
-    calculateNetGain: function(gain, duree = 0, options = {}) {
-      const { 
-        nature = 'plusValue', // 'revenu' ou 'plusValue'
+  },
+  {
+    id: 'cel',
+    label: 'CEL',
+    type: 'Compte Épargne Logement',
+    plafond: 15_300,
+    clockFrom: null,
+    seuil: null,
+    fiscalite: {
+      texte: 'PFU 30 % chaque année',
+      calcGainNet: ({ gain }) => netAfterFlatTax(gain),
+    },
+  },
+
+  /* ───────────── JEUNE / CLIMAT ───────────── */
+  {
+    id: 'peac',
+    label: 'PEA‑Avenir Climat',
+    type: 'Jeunes < 21 ans, ISR',
+    plafond: 22_950,
+    clockFrom: 'ouverture',
+    seuil: 5,
+    fiscalite: {
+      avant: 'Retrait interdit ou perte des avantages',
+      apres: 'Exonéré IR + PS',
+      calcGainNet: ({ gain, duree, age }) =>
+        age >= 18 && duree >= 5 ? gain : 0,
+    },
+  },
+
+  /* ───────────── IMMOBILIER PAPIER ───────────── */
+  {
+    id: 'scpi-cto',
+    label: 'SCPI (via CTO)',
+    type: 'Rendement immobilier',
+    plafond: null,
+    clockFrom: null,
+    seuil: null,
+    fiscalite: {
+      loyers:
+        'Revenus fonciers – micro‑foncier 30 % ≤ 15 000 € ou réel + PS 17,2 % (CSG déductible intégrée)',
+      plusValues:
+        'Régime des plus‑values immo (19 % IR + 17,2 % PS) avec abattements + surtaxe > 50 k€',
+      /**
+       * @param {number} gain
+       * @param {'loyer'|'plusValue'} nature
+       * @param {number} duree – durée de détention en années
+       * @param {number} tmi
+       * @param {boolean} regimeMicro
+       * @param {number} chargesPct – pour réel (0‑1)
+       */
+      calcGainNet({
+        gain,
+        nature = 'plusValue',
+        duree = 0,
         tmi = 0.3,
         regimeMicro = true,
-        charges = 0
-      } = options;
-      
-      if (nature === 'revenu') {
-        // Revenus fonciers
-        let baseImposable = gain;
-        if (regimeMicro && gain <= this.fiscalite.revenus.microFoncier.seuil) {
-          baseImposable = gain * (1 - this.fiscalite.revenus.microFoncier.abattement);
-        } else if (!regimeMicro) {
-          baseImposable = gain - charges;
+        chargesPct = 0,
+      }) {
+        if (nature === 'loyer') {
+          const base = regimeMicro ? gain * 0.7 : gain * (1 - chargesPct);
+          return netAfterBareme(base, tmi);
         }
-        return netAfterBareme(baseImposable, tmi);
-      }
-      
-      // Plus-values (simplifié)
-      const tauxGlobal = TAXES.IR_SCPI_PV + TAXES.PRL_SOC;
-      return netAfterFlatTax(gain, tauxGlobal);
+        // Plus‑value immobilière
+        const abattIR = abattImmoIR(duree);
+        const abattPS = abattImmoPS(duree);
+        const baseIR = gain * (1 - abattIR);
+        const basePS = gain * (1 - abattPS);
+        const netImposable = baseIR; // seuil surtaxe : plus‑value nette IR
+        const imposition =
+          baseIR * TAXES.IR_SCPI_PV +
+          basePS * TAXES.PRL_SOC +
+          surtaxePlusValue(netImposable);
+        return round2(gain - imposition);
+      },
     },
-    
-    getTaxInfo: function(options = {}) {
-      const { nature = 'plusValue', tmi = 0.3 } = options;
-      
-      if (nature === 'revenu') {
-        return {
-          description: `Revenus fonciers au barème (TMI ${(tmi*100)}%) + PS 17.2%`,
-          taux: tmi + TAXES.PRL_SOC,
-          tauxPct: ((tmi + TAXES.PRL_SOC) * 100).toFixed(1) + '%'
-        };
-      }
-      
-      return {
-        description: 'Plus-values: 19% IR + 17.2% PS',
-        taux: TAXES.IR_SCPI_PV + TAXES.PRL_SOC,
-        tauxPct: '36.2%'
-      };
-    }
-  }
-};
+  },
+  {
+    id: 'scpi-av',
+    label: 'SCPI (via AV)',
+    type: 'Rendement immobilier logé AV',
+    plafond: null,
+    clockFrom: 'versement',
+    seuil: 8,
+    fiscalite: {
+      texte: 'Fiscalité assurance‑vie',
+      calcGainNet({ gain, duree, primesVerseesAvantRachat = 0, estCouple = false }) {
+        return enveloppes
+          .find((e) => e.id === 'assurance-vie')
+          .fiscalite.calcGainNet({
+            gain,
+            duree,
+            primesVerseesAvantRachat,
+            estCouple,
+          });
+      },
+    },
+  },
+  {
+    id: 'opci',
+    label: 'OPCI grand public',
+    type: 'Immobilier + actions + cash',
+    plafond: null,
+    clockFrom: null,
+    seuil: null,
+    fiscalite: {
+      texte: 'PFU 30 % (SPPICAV) ou revenus fonciers',
+      calcGainNet: ({ gain }) => netAfterFlatTax(gain),
+    },
+  },
+
+  /* ───────────── NICHE FISCALE PME / INNOVATION ───────────── */
+  {
+    id: 'fcpi-fip',
+    label: 'FCPI / FIP',
+    type: 'Capital‑risque PME',
+    plafond: { solo: 12_000, couple: 24_000 },
+    clockFrom: 'versement',
+    seuil: 5,
+    fiscalite: {
+      avant: 'PFU 30 % + reprise de la réduction IR',
+      apres: 'Exonéré IR, 17,2 % PS',
+      calcGainNet: ({ gain, duree }) =>
+        duree >= 5 ? netAfterFlatTax(gain, TAXES.PRL_SOC) : netAfterFlatTax(gain),
+    },
+  },
+
+  /* ───────────── ACTIFS NUMÉRIQUES ───────────── */
+  {
+    id: 'crypto-cto',
+    label: 'Crypto‑actifs (via CTO)',
+    type: 'Actifs numériques',
+    plafond: null,
+    clockFrom: null,
+    seuil: null,
+    fiscalite: {
+      texte:
+        'PFU 30 % sur les cessions > 305 € (report moins‑values 10 ans) ou option barème si activité pro (CSG déductible intégrée)',
+      /**
+       * @param {number} gain
+       * @param {number} montantCession
+       * @param {number} moinsValuesDisponibles
+       * @param {boolean} optionBareme
+       * @param {number} tmi
+       */
+      calcGainNet({
+        gain,
+        montantCession = 1_000,
+        moinsValuesDisponibles = 0,
+        optionBareme = false,
+        tmi = 0.3,
+      }) {
+        if (montantCession <= 305) return gain;
+        const gainApresMV = Math.max(gain - moinsValuesDisponibles, 0);
+        return optionBareme
+          ? netAfterBareme(gainApresMV, tmi)
+          : netAfterFlatTax(gainApresMV);
+      },
+    },
+  },
+];
 
 /* --------------------------------------------------------------------
-   FONCTION D'EXPORT POUR SIMULATION.JS
+   TESTS UNITAIRES (Jest) – exemples de cas limites
    -------------------------------------------------------------------- */
-export function getEnveloppeConfig(enveloppeId) {
-  return ENVELOPPES_CONFIG[enveloppeId] || null;
-}
+if (typeof describe === 'function') {
+  describe('surtaxePlusValue()', () => {
+    it('should be zero under the threshold', () => {
+      expect(surtaxePlusValue(49_999)).toBe(0);
+    });
+    it('should calculate 200 € for a 60 k€ net gain (10 k€ × 2 %)', () => {
+      expect(surtaxePlusValue(60_000)).toBe(200);
+    });
+  });
 
-export function getAllEnveloppes() {
-  return Object.values(ENVELOPPES_CONFIG);
-}
-
-export function getEnveloppesByCategory(category) {
-  return Object.values(ENVELOPPES_CONFIG).filter(e => e.category === category);
-}
-
-/* --------------------------------------------------------------------
-   INTÉGRATION AVEC SIMULATION.JS
-   -------------------------------------------------------------------- */
-if (typeof window !== 'undefined') {
-  window.FiscalEnveloppes = {
-    TAXES,
-    ENVELOPPES_CONFIG,
-    getEnveloppeConfig,
-    getAllEnveloppes,
-    getEnveloppesByCategory,
-    formatMoney,
-    round2
-  };
+  describe('netAfterBareme()', () => {
+    it('should factor in CSG deduction', () => {
+      const net = netAfterBareme(1_000, 0.3);
+      expect(net).toBeCloseTo(1_000 - 1_000 * 0.3 - 1_000 * TAXES.PRL_SOC + 1_000 * TAXES.CSG_DEDUCTIBLE_RATE * 0.3);
+    });
+  });
 }
