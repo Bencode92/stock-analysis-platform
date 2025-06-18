@@ -1422,9 +1422,8 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/simulation.js"></script>
+    <script type="module" src="js/simulation.js"></script>
     <script src="js/fiscal-optimizer.js"></script>
-   <script type="module" src="js/simulation.js"></script>
     <script src="js/budget-epargne.js"></script>
     <script src="js/loan-simulator.js"></script>
     <script src="js/loan-sensitivity.js"></script>
@@ -1502,40 +1501,15 @@
             if (typeof window.initPTZSimulator === 'function') {
                 window.initPTZSimulator();
                 console.log("Simulateur PTZ initialisé");
-            }
-            
-            // Attacher le gestionnaire aussi lors du changement d'onglet
-            const ptzTab = document.querySelector('.simulation-tab[data-target="ptz-simulator"]');
-            if (ptzTab) {
-                ptzTab.addEventListener('click', function() {
-                    console.log("Onglet PTZ cliqué");
-                    
-                    // Rafraîchir le simulateur
+            } else {
+                // Attendre un peu et réessayer
+                setTimeout(() => {
                     if (typeof window.initPTZSimulator === 'function') {
                         window.initPTZSimulator();
-                        console.log("Simulateur PTZ rafraîchi");
+                        console.log("Simulateur PTZ initialisé (après délai)");
                     }
-                    
-                    // Réattacher le gestionnaire au bouton
-                    const ptzButton = document.getElementById('calculate-ptz-button');
-                    if (ptzButton) {
-                        ptzButton.onclick = function(e) {
-                            e.preventDefault();
-                            console.log("Bouton PTZ cliqué depuis l'onglet");
-                            simulerPTZ();
-                            return false;
-                        };
-                    }
-                });
+                }, 500);
             }
-            
-            // Gestion des changements d'onglets
-            document.querySelectorAll('.simulation-tab').forEach(tab => {
-                tab.addEventListener('click', function() {
-                    const targetId = this.getAttribute('data-target');
-                    activateTab(targetId);
-                });
-            });
         });
     </script>
 </body>
