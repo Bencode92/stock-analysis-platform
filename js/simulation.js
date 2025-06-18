@@ -993,3 +993,254 @@ function toggleInvestmentMode(mode) {
         runSimulation();
     }
 }
+
+// ============================================
+// GESTION DES PLAFONDS - OPTION 1+4+2
+// ============================================
+
+/**
+ * Vérifie les plafonds et affiche une alerte discrète
+ * Seulement quand on dépasse ou ≥ 80% du plafond
+ */
+function checkPlafondLimits() {
+    const vehicleId = document.getElementById('investment-vehicle').value;
+    const amount = parseFloat(document.getElementById('investment-amount').value) || 0;
+    const isPeriodicMode = document.getElementById('periodic-investment')?.classList.contains('selected');
+    const years = parseInt(document.getElementById('duration-slider').value);
+    const enveloppe = getEnveloppeInfo(vehicleId);
+    
+    if (!enveloppe || !enveloppe.plafond) {
+        // Masquer l'alerte si elle existe
+        const alertElement = document.getElementById('plafond-alert');
+        if (alertElement) alertElement.style.display = 'none';
+        return;
+    }
+    
+    // Calculer le montant total selon le mode
+    let totalAmount = amount;
+    if (isPeriodicMode) {
+        const frequency = document.getElementById('investment-frequency')?.value || 'monthly';
+        const periodsPerYear = frequency === 'monthly' ? 12 : frequency === 'quarterly' ? 4 : 1;
+        totalAmount = amount * periodsPerYear * years;
+    }
+    
+    // Récupérer le plafond applicable (TODO: gérer couple/solo via une checkbox)
+    const plafond = typeof enveloppe.plafond === 'object' 
+        ? enveloppe.plafond.solo 
+        : enveloppe.plafond;
+    
+    // Créer/mettre à jour l'alerte
+    let alertElement = document.getElementById('plafond-alert');
+    if (!alertElement) {
+        alertElement = document.createElement('div');
+        alertElement.id = 'plafond-alert';
+        alertElement.className = 'mt-3 p-3 rounded-lg flex items-start gap-2 transition-all duration-300';
+        document.getElementById('investment-amount').parentElement.appendChild(alertElement);
+    }
+    
+    const percentage = (totalAmount / plafond) * 100;
+    
+    if (totalAmount > plafond) {
+        // Dépassement - Alerte rouge
+        const excess = totalAmount - plafond;
+        alertElement.innerHTML = `
+            <i class="fas fa-exclamation-circle text-red-500 mt-0.5"></i>
+            <div class="flex-1 text-sm">
+                <span class="text-red-400 font-medium">Plafond dépassé de ${formatMoney(excess)}</span>
+                <span class="text-gray-400 ml-2">(limite : ${formatMoney(plafond)})</span>
+            </div>
+        `;
+        alertElement.className = 'mt-3 p-3 rounded-lg flex items-start gap-2 bg-red-900 bg-opacity-20 border border-red-600 animate-fadeIn';
+        alertElement.style.display = 'flex';
+    } else if (percentage >= 80) {
+        // Proche du plafond - Alerte jaune
+        const remaining = plafond - totalAmount;
+        alertElement.innerHTML = `
+            <i class="fas fa-info-circle text-yellow-500 mt-0.5"></i>
+            <div class="flex-1 text-sm">
+                <span class="text-yellow-400">Il reste ${formatMoney(remaining)}</span>
+                <span class="text-gray-400 ml-2">(${Math.round(percentage)}% du plafond)</span>
+            </div>
+        `;
+        alertElement.className = 'mt-3 p-3 rounded-lg flex items-start gap-2 bg-yellow-900 bg-opacity-20 border border-yellow-600 animate-fadeIn';
+        alertElement.style.display = 'flex';
+    } else {
+        // Sous les 80% - Masquer l'alerte avec fade out
+        if (alertElement.style.display !== 'none') {
+            alertElement.classList.add('animate-fadeOut');
+            setTimeout(() => {
+                alertElement.style.display = 'none';
+                alertElement.classList.remove('animate-fadeOut');
+            }, 300);
+        }
+    }
+}
+
+/**
+ * Ajoute une ligne de plafond au graphique
+ * La ligne reste visible même si on est en dessous
+ */
+function addPlafondLineToChart() {
+    if (!window.investmentChart) return;
+    
+    const vehicleId = document.getElementById('investment-vehicle').value;
+    const enveloppe = getEnveloppeInfo(vehicleId);
+    
+    // Supprimer l'ancienne ligne de plafond si elle existe
+    const plafondDatasetIndex = window.investmentChart.data.datasets.findIndex(
+        ds => ds.label && ds.label.includes('Plafond')
+    );
+    if (plafondDatasetIndex !== -1) {
+        window.investmentChart.data.datasets.splice(plafondDatasetIndex, 1);
+    }
+    
+    if (enveloppe && enveloppe.plafond) {
+        const plafond = typeof enveloppe.plafond === 'object' 
+            ? enveloppe.plafond.solo 
+            : enveloppe.plafond;
+        
+        const years = parseInt(document.getElementById('duration-slider').value);
+        
+        // Ajouter la ligne de plafond
+        window.investmentChart.data.datasets.push({
+            label: `Plafond ${enveloppe.label}`,
+            data: Array(years + 1).fill(plafond),
+            borderColor: 'rgba(255, 71, 87, 0.8)',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            borderDash: [8, 4],
+            fill: false,
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            tension: 0,
+            order: -1 // Pour être derrière les autres courbes
+        });
+    }
+    
+    window.investmentChart.update();
+}
+
+/**
+ * Affiche un badge récapitulatif si dépassement
+ * Avec conseils de diversification
+ */
+function showPlafondBadgeInResults(results) {
+    const resultsContainer = document.querySelector('.bg-blue-900.bg-opacity-20.p-6.rounded-lg:last-child');
+    if (!resultsContainer) return;
+    
+    // Supprimer l'ancien badge s'il existe
+    const oldBadge = document.getElementById('plafond-results-badge');
+    if (oldBadge) oldBadge.remove();
+    
+    if (!results.enveloppe || !results.enveloppe.plafond) return;
+    
+    const plafond = typeof results.enveloppe.plafond === 'object' 
+        ? results.enveloppe.plafond.solo 
+        : results.enveloppe.plafond;
+    
+    // Calculer le montant total investi
+    const isPeriodicMode = document.getElementById('periodic-investment')?.classList.contains('selected');
+    let totalInvested = results.initialAmount;
+    
+    if (totalInvested > plafond) {
+        const excess = totalInvested - plafond;
+        
+        const badge = document.createElement('div');
+        badge.id = 'plafond-results-badge';
+        badge.className = 'mb-4 p-4 bg-red-900 bg-opacity-20 border border-red-600 rounded-lg animate-fadeIn';
+        badge.innerHTML = `
+            <div class="flex items-start gap-3">
+                <i class="fas fa-exclamation-triangle text-red-500 text-xl mt-1"></i>
+                <div class="flex-1">
+                    <h5 class="text-red-400 font-semibold mb-2">
+                        ⚠️ Dépassement du plafond de ${formatMoney(excess)}
+                    </h5>
+                    <p class="text-sm text-gray-300 mb-3">
+                        Le ${results.enveloppe.label} est limité à ${formatMoney(plafond)}. 
+                        Votre simulation porte sur ${formatMoney(totalInvested)}.
+                    </p>
+                    <div class="bg-blue-900 bg-opacity-30 p-3 rounded">
+                        <p class="text-sm text-blue-300 font-medium mb-2">
+                            💡 Conseils de diversification :
+                        </p>
+                        <ul class="text-sm text-gray-300 space-y-1 ml-4">
+                            <li>• Placez ${formatMoney(plafond)} sur votre ${results.enveloppe.label}</li>
+                            <li>• Investissez les ${formatMoney(excess)} restants sur :</li>
+                            <li class="ml-4">→ Assurance-vie (sans plafond, fiscalité dégressive)</li>
+                            <li class="ml-4">→ CTO (flexibilité totale, flat tax 30%)</li>
+                            ${results.enveloppe.id === 'pea' ? '<li class="ml-4">→ PEA-PME (plafond additionnel de 225k€)</li>' : ''}
+                        </ul>
+                    </div>
+                    <button onclick="toggleOptimizationMode()" class="mt-3 text-sm bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg transition">
+                        <i class="fas fa-magic mr-2"></i>Optimiser automatiquement
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        resultsContainer.insertBefore(badge, resultsContainer.firstChild);
+    }
+}
+
+// Modifier la fonction updateSimulationChart existante pour ajouter la ligne de plafond
+const originalUpdateChart = updateSimulationChart;
+updateSimulationChart = function(initialAmount, years, annualReturn) {
+    // Appeler la fonction originale
+    originalUpdateChart.call(this, initialAmount, years, annualReturn);
+    // Ajouter la ligne de plafond
+    addPlafondLineToChart();
+};
+
+// Modifier la fonction updateResultsDisplay existante pour ajouter le badge
+const originalUpdateResults = updateResultsDisplay;
+updateResultsDisplay = function(results) {
+    // Appeler la fonction originale
+    originalUpdateResults.call(this, results);
+    // Ajouter le badge si nécessaire
+    showPlafondBadgeInResults(results);
+};
+
+// Event listeners pour la gestion des plafonds
+document.addEventListener('DOMContentLoaded', function() {
+    // Listeners pour l'alerte temps réel
+    const inputs = [
+        'investment-amount',
+        'duration-slider',
+        'investment-frequency'
+    ];
+    
+    inputs.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('input', checkPlafondLimits);
+            element.addEventListener('change', checkPlafondLimits);
+        }
+    });
+    
+    // Listener pour le changement d'enveloppe
+    const vehicleSelect = document.getElementById('investment-vehicle');
+    if (vehicleSelect) {
+        vehicleSelect.addEventListener('change', function() {
+            checkPlafondLimits();
+            // Redessiner le graphe si déjà visible
+            if (window.investmentChart) {
+                addPlafondLineToChart();
+            }
+        });
+    }
+    
+    // Listener pour le mode d'investissement
+    ['unique-investment', 'periodic-investment'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.addEventListener('click', () => {
+                setTimeout(checkPlafondLimits, 100);
+            });
+        }
+    });
+});
+
+// Fonction placeholder pour l'optimisation automatique
+window.toggleOptimizationMode = function() {
+    showTooltip('Optimisation automatique en cours de développement...');
+};
