@@ -529,7 +529,7 @@ function updateReturnSuggestions() {
         'lep': 3.5,
         'pel': 1.75,
         'cel': 1.5,
-        'livret jeune':2.7
+        'livret-jeune':2.7
         'assurance-vie': 2.5, // Fonds euros
         'scpi-cto': 4.7,
         'scpi-av': 4,
