@@ -486,8 +486,8 @@ function updateTaxInfo() {
     
     // Construire le HTML avec les vraies données
     let html = `
-        <h5 class="text-green-400 font-medium flex items-center mb-2">
-            <i class="fas fa-chart-pie mr-2"></i>
+        <h5 class=\"text-green-400 font-medium flex items-center mb-2\">
+            <i class=\"fas fa-chart-pie mr-2\"></i>
             ${enveloppe.label} - ${enveloppe.type}
         </h5>
     `;
@@ -497,19 +497,19 @@ function updateTaxInfo() {
         const plafondText = typeof enveloppe.plafond === 'object' 
             ? `Solo: ${formatMoney(enveloppe.plafond.solo)} / Couple: ${formatMoney(enveloppe.plafond.couple)}`
             : `Plafond: ${formatMoney(enveloppe.plafond)}`;
-        html += `<p class="text-sm font-medium text-blue-300">${plafondText}</p>`;
+        html += `<p class=\"text-sm font-medium text-blue-300\">${plafondText}</p>`;
     }
     
     // Afficher la fiscalité
     if (enveloppe.seuil) {
-        html += `<p class="text-sm text-gray-300 mb-1">
+        html += `<p class=\"text-sm text-gray-300 mb-1\">
             <strong>Avant ${enveloppe.seuil} ans:</strong> ${enveloppe.fiscalite.avant || enveloppe.fiscalite.texte}
         </p>`;
-        html += `<p class="text-sm text-gray-300 mb-1">
+        html += `<p class=\"text-sm text-gray-300 mb-1\">
             <strong>Après ${enveloppe.seuil} ans:</strong> ${enveloppe.fiscalite.apres || 'Avantages fiscaux'}
         </p>`;
     } else {
-        html += `<p class="text-sm text-gray-300 mb-1">${enveloppe.fiscalite.texte || 'Fiscalité standard'}</p>`;
+        html += `<p class=\"text-sm text-gray-300 mb-1\">${enveloppe.fiscalite.texte || 'Fiscalité standard'}</p>`;
     }
     
     taxInfoElement.innerHTML = html;
@@ -621,13 +621,29 @@ function suggestBestVehicle(amount, duration, objective = 'growth') {
 function runSimulation() {
     // Animation du bouton
     const button = document.getElementById('simulate-button');
-    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Calcul en cours...';
+    button.innerHTML = '<i class=\"fas fa-spinner fa-spin mr-2\"></i> Calcul en cours...';
     button.disabled = true;
     
     // Simuler un délai pour l'effet visuel
     setTimeout(() => {
         // Récupérer les données du formulaire
-        const amount = parseFloat(document.getElementById('investment-amount').value);
+        const isPeriodicMode = document.getElementById('periodic-investment')?.classList.contains('selected');
+        
+        // Récupérer le montant selon le mode actif
+        let amount;
+        if (isPeriodicMode) {
+            // Vérifier d'abord si on a un champ spécifique pour le versement périodique
+            const periodicAmountElement = document.getElementById('periodic-investment-amount');
+            if (periodicAmountElement) {
+                amount = parseFloat(periodicAmountElement.value) || 100;
+            } else {
+                // Sinon, utiliser le champ standard
+                amount = parseFloat(document.getElementById('investment-amount').value) || 100;
+            }
+        } else {
+            amount = parseFloat(document.getElementById('investment-amount').value) || 1000;
+        }
+        
         const years = parseInt(document.getElementById('duration-slider').value);
         const annualReturn = parseFloat(document.getElementById('return-slider').value) / 100;
         
@@ -644,7 +660,7 @@ function runSimulation() {
         updateBudgetResults(results, years);
         
         // Restaurer le bouton
-        button.innerHTML = '<i class="fas fa-play-circle mr-2"></i> Lancer la simulation';
+        button.innerHTML = '<i class=\"fas fa-play-circle mr-2\"></i> Lancer la simulation';
         button.disabled = false;
     }, 800);
 }
@@ -947,16 +963,44 @@ function createChart() {
 function updateSimulationChart(initialAmount, years, annualReturn) {
     if (!window.investmentChart) return;
     
+    const isPeriodicMode = document.getElementById('periodic-investment')?.classList.contains('selected');
+    const frequency = document.getElementById('investment-frequency')?.value || 'monthly';
+    
     // Générer les nouvelles données
     const labels = Array.from({length: years + 1}, (_, i) => i === 0 ? 'Départ' : `Année ${i}`);
-    const investedValues = [initialAmount];
-    const totalValues = [initialAmount];
+    const investedValues = [0];
+    const totalValues = [0];
     
-    let total = initialAmount;
-    for (let i = 1; i <= years; i++) {
-        total *= (1 + annualReturn);
-        investedValues.push(initialAmount);
-        totalValues.push(total);
+    if (isPeriodicMode) {
+        // Pour versements périodiques
+        const periodsPerYear = frequency === 'monthly' ? 12 : frequency === 'quarterly' ? 4 : 1;
+        const periodRate = annualReturn / periodsPerYear;
+        let totalInvested = 0;
+        let total = 0;
+        
+        for (let year = 0; year <= years; year++) {
+            if (year === 0) {
+                investedValues.push(0);
+                totalValues.push(0);
+            } else {
+                totalInvested = initialAmount * periodsPerYear * year;
+                const periods = year * periodsPerYear;
+                total = initialAmount * ((Math.pow(1 + periodRate, periods) - 1) / periodRate) * (1 + periodRate);
+                investedValues.push(totalInvested);
+                totalValues.push(total);
+            }
+        }
+    } else {
+        // Pour versement unique
+        let total = initialAmount;
+        investedValues[0] = initialAmount;
+        totalValues[0] = initialAmount;
+        
+        for (let i = 1; i <= years; i++) {
+            total *= (1 + annualReturn);
+            investedValues.push(initialAmount);
+            totalValues.push(total);
+        }
     }
     
     // Mettre à jour le graphique
@@ -973,26 +1017,51 @@ function updateSimulationChart(initialAmount, years, annualReturn) {
 function toggleInvestmentMode(mode) {
     const uniqueButton = document.getElementById('unique-investment');
     const periodicButton = document.getElementById('periodic-investment');
-    const frequencySelect = document.getElementById('investment-frequency');
     const frequencyContainer = document.getElementById('frequency-container');
     
     if (!uniqueButton || !periodicButton || !frequencyContainer) return;
     
     if (mode === 'unique') {
-        uniqueButton.classList.add('selected');
-        periodicButton.classList.remove('selected');
+        // Versement unique actif
+        uniqueButton.classList.add('selected', 'text-green-400', 'bg-green-900', 'bg-opacity-30');
+        uniqueButton.classList.remove('text-gray-300');
+        
+        periodicButton.classList.remove('selected', 'text-green-400', 'bg-green-900', 'bg-opacity-30');
+        periodicButton.classList.add('text-gray-300');
+        
         frequencyContainer.style.display = 'none';
+        
+        // Gestion de l'affichage des montants si les conteneurs existent
+        const uniqueAmountContainer = document.getElementById('unique-amount-container');
+        const periodicAmountContainer = document.getElementById('periodic-amount-container');
+        if (uniqueAmountContainer) uniqueAmountContainer.style.display = 'block';
+        if (periodicAmountContainer) periodicAmountContainer.style.display = 'none';
+        
     } else {
-        uniqueButton.classList.remove('selected');
-        periodicButton.classList.add('selected');
+        // Versement périodique actif
+        periodicButton.classList.add('selected', 'text-green-400', 'bg-green-900', 'bg-opacity-30');
+        periodicButton.classList.remove('text-gray-300');
+        
+        uniqueButton.classList.remove('selected', 'text-green-400', 'bg-green-900', 'bg-opacity-30');
+        uniqueButton.classList.add('text-gray-300');
+        
         frequencyContainer.style.display = 'block';
+        
+        // Gestion de l'affichage des montants si les conteneurs existent
+        const uniqueAmountContainer = document.getElementById('unique-amount-container');
+        const periodicAmountContainer = document.getElementById('periodic-amount-container');
+        if (uniqueAmountContainer) uniqueAmountContainer.style.display = 'none';
+        if (periodicAmountContainer) periodicAmountContainer.style.display = 'block';
     }
     
     // Si une simulation est déjà active, la mettre à jour
-    if (document.querySelector('.results-container') && document.querySelector('.results-container').style.display !== 'none') {
+    if (document.querySelector('.result-value').textContent !== '') {
         runSimulation();
     }
 }
+
+// Rendre la fonction globale pour être accessible depuis le HTML
+window.toggleInvestmentMode = toggleInvestmentMode;
 
 // ============================================
 // GESTION DES PLAFONDS - OPTION 1+4+2
@@ -1004,10 +1073,22 @@ function toggleInvestmentMode(mode) {
  */
 function checkPlafondLimits() {
     const vehicleId = document.getElementById('investment-vehicle').value;
-    const amount = parseFloat(document.getElementById('investment-amount').value) || 0;
     const isPeriodicMode = document.getElementById('periodic-investment')?.classList.contains('selected');
     const years = parseInt(document.getElementById('duration-slider').value);
     const enveloppe = getEnveloppeInfo(vehicleId);
+    
+    // Récupérer le bon montant selon le mode
+    let amount;
+    if (isPeriodicMode) {
+        const periodicAmountElement = document.getElementById('periodic-investment-amount');
+        if (periodicAmountElement) {
+            amount = parseFloat(periodicAmountElement.value) || 100;
+        } else {
+            amount = parseFloat(document.getElementById('investment-amount').value) || 100;
+        }
+    } else {
+        amount = parseFloat(document.getElementById('investment-amount').value) || 1000;
+    }
     
     if (!enveloppe || !enveloppe.plafond) {
         // Masquer l'alerte si elle existe
@@ -1035,7 +1116,13 @@ function checkPlafondLimits() {
         alertElement = document.createElement('div');
         alertElement.id = 'plafond-alert';
         alertElement.className = 'mt-3 p-3 rounded-lg flex items-start gap-2 transition-all duration-300';
-        document.getElementById('investment-amount').parentElement.appendChild(alertElement);
+        
+        // Trouver le bon conteneur parent selon le mode
+        const parentElement = isPeriodicMode && document.getElementById('periodic-amount-container')
+            ? document.getElementById('periodic-amount-container')
+            : document.getElementById('investment-amount').parentElement;
+        
+        parentElement.appendChild(alertElement);
     }
     
     const percentage = (totalAmount / plafond) * 100;
@@ -1044,10 +1131,10 @@ function checkPlafondLimits() {
         // Dépassement - Alerte rouge
         const excess = totalAmount - plafond;
         alertElement.innerHTML = `
-            <i class="fas fa-exclamation-circle text-red-500 mt-0.5"></i>
-            <div class="flex-1 text-sm">
-                <span class="text-red-400 font-medium">Plafond dépassé de ${formatMoney(excess)}</span>
-                <span class="text-gray-400 ml-2">(limite : ${formatMoney(plafond)})</span>
+            <i class=\"fas fa-exclamation-circle text-red-500 mt-0.5\"></i>
+            <div class=\"flex-1 text-sm\">
+                <span class=\"text-red-400 font-medium\">Plafond dépassé de ${formatMoney(excess)}</span>
+                <span class=\"text-gray-400 ml-2\">(limite : ${formatMoney(plafond)})</span>
             </div>
         `;
         alertElement.className = 'mt-3 p-3 rounded-lg flex items-start gap-2 bg-red-900 bg-opacity-20 border border-red-600 animate-fadeIn';
@@ -1056,10 +1143,10 @@ function checkPlafondLimits() {
         // Proche du plafond - Alerte jaune
         const remaining = plafond - totalAmount;
         alertElement.innerHTML = `
-            <i class="fas fa-info-circle text-yellow-500 mt-0.5"></i>
-            <div class="flex-1 text-sm">
-                <span class="text-yellow-400">Il reste ${formatMoney(remaining)}</span>
-                <span class="text-gray-400 ml-2">(${Math.round(percentage)}% du plafond)</span>
+            <i class=\"fas fa-info-circle text-yellow-500 mt-0.5\"></i>
+            <div class=\"flex-1 text-sm\">
+                <span class=\"text-yellow-400\">Il reste ${formatMoney(remaining)}</span>
+                <span class=\"text-gray-400 ml-2\">(${Math.round(percentage)}% du plafond)</span>
             </div>
         `;
         alertElement.className = 'mt-3 p-3 rounded-lg flex items-start gap-2 bg-yellow-900 bg-opacity-20 border border-yellow-600 animate-fadeIn';
@@ -1149,30 +1236,30 @@ function showPlafondBadgeInResults(results) {
         badge.id = 'plafond-results-badge';
         badge.className = 'mb-4 p-4 bg-red-900 bg-opacity-20 border border-red-600 rounded-lg animate-fadeIn';
         badge.innerHTML = `
-            <div class="flex items-start gap-3">
-                <i class="fas fa-exclamation-triangle text-red-500 text-xl mt-1"></i>
-                <div class="flex-1">
-                    <h5 class="text-red-400 font-semibold mb-2">
+            <div class=\"flex items-start gap-3\">
+                <i class=\"fas fa-exclamation-triangle text-red-500 text-xl mt-1\"></i>
+                <div class=\"flex-1\">
+                    <h5 class=\"text-red-400 font-semibold mb-2\">
                         ⚠️ Dépassement du plafond de ${formatMoney(excess)}
                     </h5>
-                    <p class="text-sm text-gray-300 mb-3">
+                    <p class=\"text-sm text-gray-300 mb-3\">
                         Le ${results.enveloppe.label} est limité à ${formatMoney(plafond)}. 
                         Votre simulation porte sur ${formatMoney(totalInvested)}.
                     </p>
-                    <div class="bg-blue-900 bg-opacity-30 p-3 rounded">
-                        <p class="text-sm text-blue-300 font-medium mb-2">
+                    <div class=\"bg-blue-900 bg-opacity-30 p-3 rounded\">
+                        <p class=\"text-sm text-blue-300 font-medium mb-2\">
                             💡 Conseils de diversification :
                         </p>
-                        <ul class="text-sm text-gray-300 space-y-1 ml-4">
+                        <ul class=\"text-sm text-gray-300 space-y-1 ml-4\">
                             <li>• Placez ${formatMoney(plafond)} sur votre ${results.enveloppe.label}</li>
                             <li>• Investissez les ${formatMoney(excess)} restants sur :</li>
-                            <li class="ml-4">→ Assurance-vie (sans plafond, fiscalité dégressive)</li>
-                            <li class="ml-4">→ CTO (flexibilité totale, flat tax 30%)</li>
-                            ${results.enveloppe.id === 'pea' ? '<li class="ml-4">→ PEA-PME (plafond additionnel de 225k€)</li>' : ''}
+                            <li class=\"ml-4\">→ Assurance-vie (sans plafond, fiscalité dégressive)</li>
+                            <li class=\"ml-4\">→ CTO (flexibilité totale, flat tax 30%)</li>
+                            ${results.enveloppe.id === 'pea' ? '<li class=\"ml-4\">→ PEA-PME (plafond additionnel de 225k€)</li>' : ''}
                         </ul>
                     </div>
-                    <button onclick="toggleOptimizationMode()" class="mt-3 text-sm bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg transition">
-                        <i class="fas fa-magic mr-2"></i>Optimiser automatiquement
+                    <button onclick=\"toggleOptimizationMode()\" class=\"mt-3 text-sm bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg transition\">
+                        <i class=\"fas fa-magic mr-2\"></i>Optimiser automatiquement
                     </button>
                 </div>
             </div>
@@ -1205,6 +1292,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Listeners pour l'alerte temps réel
     const inputs = [
         'investment-amount',
+        'periodic-investment-amount',
         'duration-slider',
         'investment-frequency'
     ];
