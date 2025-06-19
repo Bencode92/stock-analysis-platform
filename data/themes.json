@@ -66,21 +66,39 @@
           },
           "gpt_summary": "📰 The theme **geopolitics** was detected in **7 articles** during the period, mainly through topics like: war (3), israel (3), conflict (3), geopolitical (2), middle east (2). Sentiment is mixed (28.6% positive, 28.6% negative). Examples of articles: « Stock Markets Plagued by Uncertainty Amid Iran, Israel, Fed Fears. One Thing Is Inevitable. », « Warren Buffett’s Best Investment Quote », « Natural Gas Infrastructure at Risk as Iran‑Israel Tensions Escalate »."
         },
-        "monetary_policy": {
-          "count": 5,
+        "recession": {
+          "count": 3,
           "articles": [
-            "The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect",
-            "Fed holds key rate steady, still sees two more cuts this year",
+            "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears",
+            "Expectations are for higher inflation and lower growth, says RBC's Frances Donald",
+            "Ireland sells final AIB shares 15 years after banking crisis"
+          ],
+          "keywords": {
+            "slowdown": {
+              "count": 1,
+              "examples": [
+                "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 33.3,
+            "neutral": 0.0,
+            "negative": 66.7
+          },
+          "gpt_summary": "📰 The theme **recession** was detected in **3 articles** during the period, mainly through topics like: slowdown (1). Sentiment is mostly negative (66.7% vs 33.3% positive). Examples of articles: « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears », « Expectations are for higher inflation and lower growth, says RBC's Frances Donald », « Ireland sells final AIB shares 15 years after banking crisis »."
+        },
+        "monetary_policy": {
+          "count": 3,
+          "articles": [
             "Trump rips into 'too late' Jerome Powell after Fed holds rates steady",
             "Stock Markets Plagued by Uncertainty Amid Iran, Israel, Fed Fears. One Thing Is Inevitable.",
             "Oil, war and tariffs tear up markets' central bank roadmap"
           ],
           "keywords": {
             "fed": {
-              "count": 3,
+              "count": 1,
               "examples": [
-                "The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect",
-                "Fed holds key rate steady, still sees two more cuts this year",
                 "Trump rips into 'too late' Jerome Powell after Fed holds rates steady"
               ]
             },
@@ -105,36 +123,16 @@
           },
           "sentiment_distribution": {
             "positive": 0.0,
-            "neutral": 40.0,
-            "negative": 60.0
+            "neutral": 66.7,
+            "negative": 33.3
           },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **5 articles** during the period, mainly through topics like: fed (3), central bank (1), rate cut (1), monetary (1). Sentiment is mostly negative (60.0% vs 0.0% positive). Examples of articles: « The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect », « Fed holds key rate steady, still sees two more cuts this year », « Trump rips into 'too late' Jerome Powell after Fed holds rates steady »."
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **3 articles** during the period, mainly through topics like: fed (1), central bank (1), rate cut (1), monetary (1). Sentiment is mostly negative (33.3% vs 0.0% positive). Examples of articles: « Trump rips into 'too late' Jerome Powell after Fed holds rates steady », « Stock Markets Plagued by Uncertainty Amid Iran, Israel, Fed Fears. One Thing Is Inevitable. », « Oil, war and tariffs tear up markets' central bank roadmap »."
         },
-        "recession": {
+        "inflation": {
           "count": 2,
           "articles": [
             "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears",
-            "Ireland sells final AIB shares 15 years after banking crisis"
-          ],
-          "keywords": {
-            "slowdown": {
-              "count": 1,
-              "examples": [
-                "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 0.0,
-            "negative": 100.0
-          },
-          "gpt_summary": "📰 The theme **recession** was detected in **2 articles** during the period, mainly through topics like: slowdown (1). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears », « Ireland sells final AIB shares 15 years after banking crisis »."
-        },
-        "inflation": {
-          "count": 1,
-          "articles": [
-            "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears"
+            "Expectations are for higher inflation and lower growth, says RBC's Frances Donald"
           ],
           "keywords": {
             "price": {
@@ -160,14 +158,20 @@
               "examples": [
                 "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears"
               ]
+            },
+            "interest rate": {
+              "count": 1,
+              "examples": [
+                "Expectations are for higher inflation and lower growth, says RBC's Frances Donald"
+              ]
             }
           },
           "sentiment_distribution": {
-            "positive": 0.0,
+            "positive": 50.0,
             "neutral": 0.0,
-            "negative": 100.0
+            "negative": 50.0
           },
-          "gpt_summary": "📰 The theme **inflation** was detected in **1 articles** during the period, mainly through topics like: price (1), prices (1), yield (1), yields (1). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears »."
+          "gpt_summary": "📰 The theme **inflation** was detected in **2 articles** during the period, mainly through topics like: price (1), prices (1), yield (1), yields (1), interest rate (1). Sentiment is mixed (50.0% positive, 50.0% negative). Examples of articles: « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears », « Expectations are for higher inflation and lower growth, says RBC's Frances Donald »."
         }
       },
       "sectors": {
@@ -227,36 +231,6 @@
           },
           "gpt_summary": "📰 The theme **technology** was detected in **13 articles** during the period, mainly through topics like: ai (9), artificial intelligence (3), tech (3), data (1). Sentiment is mostly negative (46.2% vs 23.1% positive). Examples of articles: « Apple supplier Jabil raises annual forecast as data center appetite remains strong », « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears », « The U.S. added a thousand new millionaires a day in 2024: report »."
         },
-        "finance": {
-          "count": 4,
-          "articles": [
-            "The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect",
-            "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears",
-            "Trump rips into 'too late' Jerome Powell after Fed holds rates steady",
-            "Ireland sells final AIB shares 15 years after banking crisis"
-          ],
-          "keywords": {
-            "rates": {
-              "count": 2,
-              "examples": [
-                "The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect",
-                "Trump rips into 'too late' Jerome Powell after Fed holds rates steady"
-              ]
-            },
-            "treasury": {
-              "count": 1,
-              "examples": [
-                "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 25.0,
-            "negative": 75.0
-          },
-          "gpt_summary": "📰 The theme **finance** was detected in **4 articles** during the period, mainly through topics like: rates (2), treasury (1). Sentiment is mostly negative (75.0% vs 0.0% positive). Examples of articles: « The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect », « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears », « Trump rips into 'too late' Jerome Powell after Fed holds rates steady »."
-        },
         "energy": {
           "count": 4,
           "articles": [
@@ -292,6 +266,34 @@
             "negative": 50.0
           },
           "gpt_summary": "📰 The theme **energy** was detected in **4 articles** during the period, mainly through topics like: energy (2), gas (1), opec (1). Sentiment is mostly negative (50.0% vs 25.0% positive). Examples of articles: « Natural Gas Infrastructure at Risk as Iran‑Israel Tensions Escalate », « Oil, war and tariffs tear up markets' central bank roadmap », « Energy Intelligence: Conflict escalation could pressure global energy markets »."
+        },
+        "finance": {
+          "count": 3,
+          "articles": [
+            "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears",
+            "Trump rips into 'too late' Jerome Powell after Fed holds rates steady",
+            "Ireland sells final AIB shares 15 years after banking crisis"
+          ],
+          "keywords": {
+            "treasury": {
+              "count": 1,
+              "examples": [
+                "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears"
+              ]
+            },
+            "rates": {
+              "count": 1,
+              "examples": [
+                "Trump rips into 'too late' Jerome Powell after Fed holds rates steady"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 0.0,
+            "neutral": 33.3,
+            "negative": 66.7
+          },
+          "gpt_summary": "📰 The theme **finance** was detected in **3 articles** during the period, mainly through topics like: treasury (1), rates (1). Sentiment is mostly negative (66.7% vs 0.0% positive). Examples of articles: « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears », « Trump rips into 'too late' Jerome Powell after Fed holds rates steady », « Ireland sells final AIB shares 15 years after banking crisis »."
         },
         "consumer": {
           "count": 3,
@@ -385,20 +387,16 @@
       },
       "regions": {
         "usa": {
-          "count": 5,
+          "count": 3,
           "articles": [
-            "The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect",
-            "Fed holds key rate steady, still sees two more cuts this year",
             "Trump rips into 'too late' Jerome Powell after Fed holds rates steady",
             "The U.S. added a thousand new millionaires a day in 2024: report",
             "Stock Markets Plagued by Uncertainty Amid Iran, Israel, Fed Fears. One Thing Is Inevitable."
           ],
           "keywords": {
             "fed": {
-              "count": 3,
+              "count": 1,
               "examples": [
-                "The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect",
-                "Fed holds key rate steady, still sees two more cuts this year",
                 "Trump rips into 'too late' Jerome Powell after Fed holds rates steady"
               ]
             },
@@ -410,11 +408,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 20.0,
-            "neutral": 40.0,
-            "negative": 40.0
+            "positive": 33.3,
+            "neutral": 66.7,
+            "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **usa** was detected in **5 articles** during the period, mainly through topics like: fed (3), america (1). Sentiment is mixed (20.0% positive, 40.0% negative). Examples of articles: « The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect », « Fed holds key rate steady, still sees two more cuts this year », « Trump rips into 'too late' Jerome Powell after Fed holds rates steady »."
+          "gpt_summary": "📰 The theme **usa** was detected in **3 articles** during the period, mainly through topics like: fed (1), america (1). Sentiment is mostly positive (33.3% vs 0.0% negative). Examples of articles: « Trump rips into 'too late' Jerome Powell after Fed holds rates steady », « The U.S. added a thousand new millionaires a day in 2024: report », « Stock Markets Plagued by Uncertainty Amid Iran, Israel, Fed Fears. One Thing Is Inevitable. »."
         },
         "global": {
           "count": 2,
@@ -457,82 +455,31 @@
             "negative": 0.0
           },
           "gpt_summary": "📰 The theme **blocs** was detected in **1 articles** during the period, mainly through topics like: nato (1). Sentiment is mixed (0.0% positive, 0.0% negative). Examples of articles: « Dutch government supports NATO spending target of 5% of GDP »."
+        },
+        "europe": {
+          "count": 1,
+          "articles": [
+            "Expectations are for higher inflation and lower growth, says RBC's Frances Donald"
+          ],
+          "keywords": {
+            "france": {
+              "count": 1,
+              "examples": [
+                "Expectations are for higher inflation and lower growth, says RBC's Frances Donald"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 100.0,
+            "neutral": 0.0,
+            "negative": 0.0
+          },
+          "gpt_summary": "📰 The theme **europe** was detected in **1 articles** during the period, mainly through topics like: france (1). Sentiment is mostly positive (100.0% vs 0.0% negative). Examples of articles: « Expectations are for higher inflation and lower growth, says RBC's Frances Donald »."
         }
       }
     },
     "monthly": {
       "macroeconomics": {
-        "monetary_policy": {
-          "count": 19,
-          "articles": [
-            "Fed's Williams calls for strong response if inflation deviates from target",
-            "The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect",
-            "Fed holds key rate steady, still sees two more cuts this year",
-            "Fed taps Horowitz as next inspector general",
-            "Trump rips into 'too late' Jerome Powell after Fed holds rates steady",
-            "Supreme Court insulates Federal Reserve while backing Trump firing of agency leaders",
-            "French Inflation Declines, Opening Door to ECB Rate Cut",
-            "Stock Markets Plagued by Uncertainty Amid Iran, Israel, Fed Fears. One Thing Is Inevitable.",
-            "'Trade wars have only losers,' former Fed vice chair says",
-            "ECB's Schnabel sees no lasting decoupling from Fed",
-            "ECB should watch out for price hikes from U.S. tariffs, Schnabel says",
-            "ECB should not 'overreact' if inflation edges below 2%, Vujcic says",
-            "Euro zone inflation falls to cooler-than-expected 1.9% in May, below ECB target",
-            "Nasdaq gains as investors weigh ECB cut and weak data",
-            "Dax Index News: Inflation, PMI, and Fed Outlook to Guide DAX Forecast This Week",
-            "Turkey Inflation Keeps Falling in Boost to Central Bank",
-            "Oil, war and tariffs tear up markets' central bank roadmap",
-            "Big central banks' forecasting lens gets fogged by US tariffs",
-            "Federal appeals court stays sweeping order that blocked most of Trump tariffs"
-          ],
-          "keywords": {
-            "fed": {
-              "count": 9,
-              "examples": [
-                "Fed's Williams calls for strong response if inflation deviates from target",
-                "The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect",
-                "Fed holds key rate steady, still sees two more cuts this year"
-              ]
-            },
-            "central bank": {
-              "count": 10,
-              "examples": [
-                "Fed's Williams calls for strong response if inflation deviates from target",
-                "Fed taps Horowitz as next inspector general",
-                "Trump rips into 'too late' Jerome Powell after Fed holds rates steady"
-              ]
-            },
-            "ecb": {
-              "count": 5,
-              "examples": [
-                "French Inflation Declines, Opening Door to ECB Rate Cut",
-                "ECB's Schnabel sees no lasting decoupling from Fed",
-                "ECB should watch out for price hikes from U.S. tariffs, Schnabel says"
-              ]
-            },
-            "rate cut": {
-              "count": 3,
-              "examples": [
-                "French Inflation Declines, Opening Door to ECB Rate Cut",
-                "Dax Index News: Inflation, PMI, and Fed Outlook to Guide DAX Forecast This Week",
-                "Oil, war and tariffs tear up markets' central bank roadmap"
-              ]
-            },
-            "monetary": {
-              "count": 2,
-              "examples": [
-                "ECB's Schnabel sees no lasting decoupling from Fed",
-                "Oil, war and tariffs tear up markets' central bank roadmap"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 10.5,
-            "neutral": 52.6,
-            "negative": 36.8
-          },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **19 articles** during the period, mainly through topics like: central bank (10), fed (9), ecb (5), rate cut (3), monetary (2). Sentiment is mostly negative (36.8% vs 10.5% positive). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect », « Fed holds key rate steady, still sees two more cuts this year »."
-        },
         "geopolitics": {
           "count": 19,
           "articles": [
@@ -624,12 +571,82 @@
           },
           "gpt_summary": "📰 The theme **geopolitics** was detected in **19 articles** during the period, mainly through topics like: war (7), china (6), israel (3), conflict (3), geopolitical (2). Sentiment is mixed (26.3% positive, 26.3% negative). Examples of articles: « WWDC: Apple faces AI, regulatory challenges as it woos software developers », « Stock Markets Plagued by Uncertainty Amid Iran, Israel, Fed Fears. One Thing Is Inevitable. », « U.S.-China agree on framework to implement Geneva trade consensus after second day of London talks »."
         },
+        "monetary_policy": {
+          "count": 17,
+          "articles": [
+            "Fed's Williams calls for strong response if inflation deviates from target",
+            "Fed taps Horowitz as next inspector general",
+            "Trump rips into 'too late' Jerome Powell after Fed holds rates steady",
+            "Supreme Court insulates Federal Reserve while backing Trump firing of agency leaders",
+            "French Inflation Declines, Opening Door to ECB Rate Cut",
+            "Stock Markets Plagued by Uncertainty Amid Iran, Israel, Fed Fears. One Thing Is Inevitable.",
+            "'Trade wars have only losers,' former Fed vice chair says",
+            "ECB's Schnabel sees no lasting decoupling from Fed",
+            "ECB should watch out for price hikes from U.S. tariffs, Schnabel says",
+            "ECB should not 'overreact' if inflation edges below 2%, Vujcic says",
+            "Euro zone inflation falls to cooler-than-expected 1.9% in May, below ECB target",
+            "Nasdaq gains as investors weigh ECB cut and weak data",
+            "Dax Index News: Inflation, PMI, and Fed Outlook to Guide DAX Forecast This Week",
+            "Turkey Inflation Keeps Falling in Boost to Central Bank",
+            "Oil, war and tariffs tear up markets' central bank roadmap",
+            "Big central banks' forecasting lens gets fogged by US tariffs",
+            "Federal appeals court stays sweeping order that blocked most of Trump tariffs"
+          ],
+          "keywords": {
+            "fed": {
+              "count": 7,
+              "examples": [
+                "Fed's Williams calls for strong response if inflation deviates from target",
+                "Fed taps Horowitz as next inspector general",
+                "Trump rips into 'too late' Jerome Powell after Fed holds rates steady"
+              ]
+            },
+            "central bank": {
+              "count": 10,
+              "examples": [
+                "Fed's Williams calls for strong response if inflation deviates from target",
+                "Fed taps Horowitz as next inspector general",
+                "Trump rips into 'too late' Jerome Powell after Fed holds rates steady"
+              ]
+            },
+            "ecb": {
+              "count": 5,
+              "examples": [
+                "French Inflation Declines, Opening Door to ECB Rate Cut",
+                "ECB's Schnabel sees no lasting decoupling from Fed",
+                "ECB should watch out for price hikes from U.S. tariffs, Schnabel says"
+              ]
+            },
+            "rate cut": {
+              "count": 3,
+              "examples": [
+                "French Inflation Declines, Opening Door to ECB Rate Cut",
+                "Dax Index News: Inflation, PMI, and Fed Outlook to Guide DAX Forecast This Week",
+                "Oil, war and tariffs tear up markets' central bank roadmap"
+              ]
+            },
+            "monetary": {
+              "count": 2,
+              "examples": [
+                "ECB's Schnabel sees no lasting decoupling from Fed",
+                "Oil, war and tariffs tear up markets' central bank roadmap"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 11.8,
+            "neutral": 58.8,
+            "negative": 29.4
+          },
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **17 articles** during the period, mainly through topics like: central bank (10), fed (7), ecb (5), rate cut (3), monetary (2). Sentiment is mixed (11.8% positive, 29.4% negative). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « Fed taps Horowitz as next inspector general », « Trump rips into 'too late' Jerome Powell after Fed holds rates steady »."
+        },
         "inflation": {
-          "count": 14,
+          "count": 15,
           "articles": [
             "Fed's Williams calls for strong response if inflation deviates from target",
             "Swiss inflation turns negative for first time since COVID pandemic",
             "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears",
+            "Expectations are for higher inflation and lower growth, says RBC's Frances Donald",
             "French Inflation Declines, Opening Door to ECB Rate Cut",
             "Tariffs & AAPL Lead Market Focus Today, TSLA & Inflation Later This Week",
             "ECB should watch out for price hikes from U.S. tariffs, Schnabel says",
@@ -668,9 +685,10 @@
               ]
             },
             "interest rate": {
-              "count": 2,
+              "count": 3,
               "examples": [
                 "Swiss inflation turns negative for first time since COVID pandemic",
+                "Expectations are for higher inflation and lower growth, says RBC's Frances Donald",
                 "Turkey Inflation Keeps Falling in Boost to Central Bank"
               ]
             },
@@ -696,17 +714,17 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 21.4,
-            "neutral": 35.7,
-            "negative": 42.9
+            "positive": 26.7,
+            "neutral": 33.3,
+            "negative": 40.0
           },
-          "gpt_summary": "📰 The theme **inflation** was detected in **14 articles** during the period, mainly through topics like: price (7), prices (5), inflation (4), consumer price (3), interest rate (2). Sentiment is mostly negative (42.9% vs 21.4% positive). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « Swiss inflation turns negative for first time since COVID pandemic », « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears »."
+          "gpt_summary": "📰 The theme **inflation** was detected in **15 articles** during the period, mainly through topics like: price (7), prices (5), inflation (4), interest rate (3), consumer price (3). Sentiment is mixed (26.7% positive, 40.0% negative). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « Swiss inflation turns negative for first time since COVID pandemic », « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears »."
         },
         "recession": {
           "count": 5,
           "articles": [
             "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears",
-            "OECD chops U.S. growth forecasts, cites risks to the downside as tariffs bite",
+            "Expectations are for higher inflation and lower growth, says RBC's Frances Donald",
             "Ireland sells final AIB shares 15 years after banking crisis",
             "India's iPhone exports to the U.S. soared an estimated 76%. But Trump, Beijing won't make further growth easy",
             "Does Consumer Spending Drive Earnings Growth?"
@@ -718,14 +736,13 @@
                 "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears"
               ]
             },
-            "growth": {
-              "count": 2,
+            "recession": {
+              "count": 1,
               "examples": [
-                "OECD chops U.S. growth forecasts, cites risks to the downside as tariffs bite",
                 "Does Consumer Spending Drive Earnings Growth?"
               ]
             },
-            "recession": {
+            "growth": {
               "count": 1,
               "examples": [
                 "Does Consumer Spending Drive Earnings Growth?"
@@ -733,11 +750,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 40.0,
-            "neutral": 20.0,
+            "positive": 60.0,
+            "neutral": 0.0,
             "negative": 40.0
           },
-          "gpt_summary": "📰 The theme **recession** was detected in **5 articles** during the period, mainly through topics like: growth (2), slowdown (1), recession (1). Sentiment is mixed (40.0% positive, 40.0% negative). Examples of articles: « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears », « OECD chops U.S. growth forecasts, cites risks to the downside as tariffs bite », « Ireland sells final AIB shares 15 years after banking crisis »."
+          "gpt_summary": "📰 The theme **recession** was detected in **5 articles** during the period, mainly through topics like: slowdown (1), recession (1), growth (1). Sentiment is mixed (60.0% positive, 40.0% negative). Examples of articles: « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears », « Expectations are for higher inflation and lower growth, says RBC's Frances Donald », « Ireland sells final AIB shares 15 years after banking crisis »."
         }
       },
       "sectors": {
@@ -911,43 +928,6 @@
           },
           "gpt_summary": "📰 The theme **consumer** was detected in **6 articles** during the period, mainly through topics like: retail (3), sales (3), spending (2), consumer (2). Sentiment is mixed (33.3% positive, 33.3% negative). Examples of articles: « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears », « Dutch government supports NATO spending target of 5% of GDP », « S&P 500 (NYSEARCA: SPY) Live: Markets Under Pressure Amid Consumer Weariness »."
         },
-        "finance": {
-          "count": 5,
-          "articles": [
-            "The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect",
-            "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears",
-            "Trump rips into 'too late' Jerome Powell after Fed holds rates steady",
-            "Ireland sells final AIB shares 15 years after banking crisis",
-            "Big central banks' forecasting lens gets fogged by US tariffs"
-          ],
-          "keywords": {
-            "rates": {
-              "count": 2,
-              "examples": [
-                "The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect",
-                "Trump rips into 'too late' Jerome Powell after Fed holds rates steady"
-              ]
-            },
-            "treasury": {
-              "count": 1,
-              "examples": [
-                "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears"
-              ]
-            },
-            "banks": {
-              "count": 1,
-              "examples": [
-                "Big central banks' forecasting lens gets fogged by US tariffs"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 40.0,
-            "negative": 60.0
-          },
-          "gpt_summary": "📰 The theme **finance** was detected in **5 articles** during the period, mainly through topics like: rates (2), treasury (1), banks (1). Sentiment is mostly negative (60.0% vs 0.0% positive). Examples of articles: « The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect », « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears », « Trump rips into 'too late' Jerome Powell after Fed holds rates steady »."
-        },
         "energy": {
           "count": 5,
           "articles": [
@@ -984,6 +964,41 @@
             "negative": 60.0
           },
           "gpt_summary": "📰 The theme **energy** was detected in **5 articles** during the period, mainly through topics like: energy (2), gas (1), opec (1). Sentiment is mostly negative (60.0% vs 20.0% positive). Examples of articles: « Natural Gas Infrastructure at Risk as Iran‑Israel Tensions Escalate », « Oil, war and tariffs tear up markets' central bank roadmap », « Energy Intelligence: Conflict escalation could pressure global energy markets »."
+        },
+        "finance": {
+          "count": 4,
+          "articles": [
+            "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears",
+            "Trump rips into 'too late' Jerome Powell after Fed holds rates steady",
+            "Ireland sells final AIB shares 15 years after banking crisis",
+            "Big central banks' forecasting lens gets fogged by US tariffs"
+          ],
+          "keywords": {
+            "treasury": {
+              "count": 1,
+              "examples": [
+                "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears"
+              ]
+            },
+            "rates": {
+              "count": 1,
+              "examples": [
+                "Trump rips into 'too late' Jerome Powell after Fed holds rates steady"
+              ]
+            },
+            "banks": {
+              "count": 1,
+              "examples": [
+                "Big central banks' forecasting lens gets fogged by US tariffs"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 0.0,
+            "neutral": 50.0,
+            "negative": 50.0
+          },
+          "gpt_summary": "📰 The theme **finance** was detected in **4 articles** during the period, mainly through topics like: treasury (1), rates (1), banks (1). Sentiment is mostly negative (50.0% vs 0.0% positive). Examples of articles: « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears », « Trump rips into 'too late' Jerome Powell after Fed holds rates steady », « Ireland sells final AIB shares 15 years after banking crisis »."
         },
         "industry": {
           "count": 2,
@@ -1061,11 +1076,9 @@
       },
       "regions": {
         "usa": {
-          "count": 19,
+          "count": 17,
           "articles": [
             "Fed's Williams calls for strong response if inflation deviates from target",
-            "The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect",
-            "Fed holds key rate steady, still sees two more cuts this year",
             "Fed taps Horowitz as next inspector general",
             "Trump rips into 'too late' Jerome Powell after Fed holds rates steady",
             "The U.S. added a thousand new millionaires a day in 2024: report",
@@ -1085,11 +1098,11 @@
           ],
           "keywords": {
             "fed": {
-              "count": 12,
+              "count": 10,
               "examples": [
                 "Fed's Williams calls for strong response if inflation deviates from target",
-                "The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect",
-                "Fed holds key rate steady, still sees two more cuts this year"
+                "Fed taps Horowitz as next inspector general",
+                "Trump rips into 'too late' Jerome Powell after Fed holds rates steady"
               ]
             },
             "america": {
@@ -1132,15 +1145,16 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 26.3,
-            "neutral": 31.6,
-            "negative": 42.1
+            "positive": 29.4,
+            "neutral": 35.3,
+            "negative": 35.3
           },
-          "gpt_summary": "📰 The theme **usa** was detected in **19 articles** during the period, mainly through topics like: fed (12), dow jones (5), nasdaq (4), america (3), usa (2). Sentiment is mixed (26.3% positive, 42.1% negative). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect », « Fed holds key rate steady, still sees two more cuts this year »."
+          "gpt_summary": "📰 The theme **usa** was detected in **17 articles** during the period, mainly through topics like: fed (10), dow jones (5), nasdaq (4), america (3), usa (2). Sentiment is mixed (29.4% positive, 35.3% negative). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « Fed taps Horowitz as next inspector general », « Trump rips into 'too late' Jerome Powell after Fed holds rates steady »."
         },
         "europe": {
-          "count": 13,
+          "count": 14,
           "articles": [
+            "Expectations are for higher inflation and lower growth, says RBC's Frances Donald",
             "French Inflation Declines, Opening Door to ECB Rate Cut",
             "US stocks vs European stocks: does Jim Cramer support ‘sell America' trade?",
             "ECB's Schnabel sees no lasting decoupling from Fed",
@@ -1156,6 +1170,12 @@
             "Apple challenges 'unreasonable' EU order to open up to rivals"
           ],
           "keywords": {
+            "france": {
+              "count": 1,
+              "examples": [
+                "Expectations are for higher inflation and lower growth, says RBC's Frances Donald"
+              ]
+            },
             "ecb": {
               "count": 4,
               "examples": [
@@ -1190,11 +1210,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 7.7,
-            "neutral": 53.8,
-            "negative": 38.5
+            "positive": 14.3,
+            "neutral": 50.0,
+            "negative": 35.7
           },
-          "gpt_summary": "📰 The theme **europe** was detected in **13 articles** during the period, mainly through topics like: eu (10), europe (9), ecb (4), european union (4). Sentiment is mostly negative (38.5% vs 7.7% positive). Examples of articles: « French Inflation Declines, Opening Door to ECB Rate Cut », « US stocks vs European stocks: does Jim Cramer support ‘sell America' trade? », « ECB's Schnabel sees no lasting decoupling from Fed »."
+          "gpt_summary": "📰 The theme **europe** was detected in **14 articles** during the period, mainly through topics like: eu (10), europe (9), ecb (4), european union (4), france (1). Sentiment is mostly negative (35.7% vs 14.3% positive). Examples of articles: « Expectations are for higher inflation and lower growth, says RBC's Frances Donald », « French Inflation Declines, Opening Door to ECB Rate Cut », « US stocks vs European stocks: does Jim Cramer support ‘sell America' trade? »."
         },
         "asia": {
           "count": 10,
@@ -1279,11 +1299,10 @@
           "gpt_summary": "📰 The theme **global** was detected in **5 articles** during the period, mainly through topics like: world (3), global (1). Sentiment is mixed (40.0% positive, 60.0% negative). Examples of articles: « OECD Slashes Global Economic Forecasts Amid Tariffs, Trade Uncertainty », « The World’s Richest Don’t Have to Be Tech Founders, Look at Steve Ballmer », « DoubleLine's Gundlach says to buy international stocks on the dollar's 'secular decline' »."
         },
         "blocs": {
-          "count": 3,
+          "count": 2,
           "articles": [
             "Dutch government supports NATO spending target of 5% of GDP",
-            "OECD Slashes Global Economic Forecasts Amid Tariffs, Trade Uncertainty",
-            "OECD chops U.S. growth forecasts, cites risks to the downside as tariffs bite"
+            "OECD Slashes Global Economic Forecasts Amid Tariffs, Trade Uncertainty"
           ],
           "keywords": {
             "nato": {
@@ -1300,11 +1319,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 33.3,
-            "neutral": 66.7,
+            "positive": 50.0,
+            "neutral": 50.0,
             "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **blocs** was detected in **3 articles** during the period, mainly through topics like: nato (1), oecd (1). Sentiment is mostly positive (33.3% vs 0.0% negative). Examples of articles: « Dutch government supports NATO spending target of 5% of GDP », « OECD Slashes Global Economic Forecasts Amid Tariffs, Trade Uncertainty », « OECD chops U.S. growth forecasts, cites risks to the downside as tariffs bite »."
+          "gpt_summary": "📰 The theme **blocs** was detected in **2 articles** during the period, mainly through topics like: nato (1), oecd (1). Sentiment is mostly positive (50.0% vs 0.0% negative). Examples of articles: « Dutch government supports NATO spending target of 5% of GDP », « OECD Slashes Global Economic Forecasts Amid Tariffs, Trade Uncertainty »."
         },
         "latam": {
           "count": 1,
@@ -1350,77 +1369,6 @@
     },
     "quarterly": {
       "macroeconomics": {
-        "monetary_policy": {
-          "count": 19,
-          "articles": [
-            "Fed's Williams calls for strong response if inflation deviates from target",
-            "The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect",
-            "Fed holds key rate steady, still sees two more cuts this year",
-            "Fed taps Horowitz as next inspector general",
-            "Trump rips into 'too late' Jerome Powell after Fed holds rates steady",
-            "Supreme Court insulates Federal Reserve while backing Trump firing of agency leaders",
-            "French Inflation Declines, Opening Door to ECB Rate Cut",
-            "Stock Markets Plagued by Uncertainty Amid Iran, Israel, Fed Fears. One Thing Is Inevitable.",
-            "'Trade wars have only losers,' former Fed vice chair says",
-            "ECB's Schnabel sees no lasting decoupling from Fed",
-            "ECB should watch out for price hikes from U.S. tariffs, Schnabel says",
-            "ECB should not 'overreact' if inflation edges below 2%, Vujcic says",
-            "Euro zone inflation falls to cooler-than-expected 1.9% in May, below ECB target",
-            "Nasdaq gains as investors weigh ECB cut and weak data",
-            "Dax Index News: Inflation, PMI, and Fed Outlook to Guide DAX Forecast This Week",
-            "Turkey Inflation Keeps Falling in Boost to Central Bank",
-            "Oil, war and tariffs tear up markets' central bank roadmap",
-            "Big central banks' forecasting lens gets fogged by US tariffs",
-            "Federal appeals court stays sweeping order that blocked most of Trump tariffs"
-          ],
-          "keywords": {
-            "fed": {
-              "count": 9,
-              "examples": [
-                "Fed's Williams calls for strong response if inflation deviates from target",
-                "The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect",
-                "Fed holds key rate steady, still sees two more cuts this year"
-              ]
-            },
-            "central bank": {
-              "count": 10,
-              "examples": [
-                "Fed's Williams calls for strong response if inflation deviates from target",
-                "Fed taps Horowitz as next inspector general",
-                "Trump rips into 'too late' Jerome Powell after Fed holds rates steady"
-              ]
-            },
-            "ecb": {
-              "count": 5,
-              "examples": [
-                "French Inflation Declines, Opening Door to ECB Rate Cut",
-                "ECB's Schnabel sees no lasting decoupling from Fed",
-                "ECB should watch out for price hikes from U.S. tariffs, Schnabel says"
-              ]
-            },
-            "rate cut": {
-              "count": 3,
-              "examples": [
-                "French Inflation Declines, Opening Door to ECB Rate Cut",
-                "Dax Index News: Inflation, PMI, and Fed Outlook to Guide DAX Forecast This Week",
-                "Oil, war and tariffs tear up markets' central bank roadmap"
-              ]
-            },
-            "monetary": {
-              "count": 2,
-              "examples": [
-                "ECB's Schnabel sees no lasting decoupling from Fed",
-                "Oil, war and tariffs tear up markets' central bank roadmap"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 10.5,
-            "neutral": 52.6,
-            "negative": 36.8
-          },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **19 articles** during the period, mainly through topics like: central bank (10), fed (9), ecb (5), rate cut (3), monetary (2). Sentiment is mostly negative (36.8% vs 10.5% positive). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect », « Fed holds key rate steady, still sees two more cuts this year »."
-        },
         "geopolitics": {
           "count": 19,
           "articles": [
@@ -1512,12 +1460,82 @@
           },
           "gpt_summary": "📰 The theme **geopolitics** was detected in **19 articles** during the period, mainly through topics like: war (7), china (6), israel (3), conflict (3), geopolitical (2). Sentiment is mixed (26.3% positive, 26.3% negative). Examples of articles: « WWDC: Apple faces AI, regulatory challenges as it woos software developers », « Stock Markets Plagued by Uncertainty Amid Iran, Israel, Fed Fears. One Thing Is Inevitable. », « U.S.-China agree on framework to implement Geneva trade consensus after second day of London talks »."
         },
+        "monetary_policy": {
+          "count": 17,
+          "articles": [
+            "Fed's Williams calls for strong response if inflation deviates from target",
+            "Fed taps Horowitz as next inspector general",
+            "Trump rips into 'too late' Jerome Powell after Fed holds rates steady",
+            "Supreme Court insulates Federal Reserve while backing Trump firing of agency leaders",
+            "French Inflation Declines, Opening Door to ECB Rate Cut",
+            "Stock Markets Plagued by Uncertainty Amid Iran, Israel, Fed Fears. One Thing Is Inevitable.",
+            "'Trade wars have only losers,' former Fed vice chair says",
+            "ECB's Schnabel sees no lasting decoupling from Fed",
+            "ECB should watch out for price hikes from U.S. tariffs, Schnabel says",
+            "ECB should not 'overreact' if inflation edges below 2%, Vujcic says",
+            "Euro zone inflation falls to cooler-than-expected 1.9% in May, below ECB target",
+            "Nasdaq gains as investors weigh ECB cut and weak data",
+            "Dax Index News: Inflation, PMI, and Fed Outlook to Guide DAX Forecast This Week",
+            "Turkey Inflation Keeps Falling in Boost to Central Bank",
+            "Oil, war and tariffs tear up markets' central bank roadmap",
+            "Big central banks' forecasting lens gets fogged by US tariffs",
+            "Federal appeals court stays sweeping order that blocked most of Trump tariffs"
+          ],
+          "keywords": {
+            "fed": {
+              "count": 7,
+              "examples": [
+                "Fed's Williams calls for strong response if inflation deviates from target",
+                "Fed taps Horowitz as next inspector general",
+                "Trump rips into 'too late' Jerome Powell after Fed holds rates steady"
+              ]
+            },
+            "central bank": {
+              "count": 10,
+              "examples": [
+                "Fed's Williams calls for strong response if inflation deviates from target",
+                "Fed taps Horowitz as next inspector general",
+                "Trump rips into 'too late' Jerome Powell after Fed holds rates steady"
+              ]
+            },
+            "ecb": {
+              "count": 5,
+              "examples": [
+                "French Inflation Declines, Opening Door to ECB Rate Cut",
+                "ECB's Schnabel sees no lasting decoupling from Fed",
+                "ECB should watch out for price hikes from U.S. tariffs, Schnabel says"
+              ]
+            },
+            "rate cut": {
+              "count": 3,
+              "examples": [
+                "French Inflation Declines, Opening Door to ECB Rate Cut",
+                "Dax Index News: Inflation, PMI, and Fed Outlook to Guide DAX Forecast This Week",
+                "Oil, war and tariffs tear up markets' central bank roadmap"
+              ]
+            },
+            "monetary": {
+              "count": 2,
+              "examples": [
+                "ECB's Schnabel sees no lasting decoupling from Fed",
+                "Oil, war and tariffs tear up markets' central bank roadmap"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 11.8,
+            "neutral": 58.8,
+            "negative": 29.4
+          },
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **17 articles** during the period, mainly through topics like: central bank (10), fed (7), ecb (5), rate cut (3), monetary (2). Sentiment is mixed (11.8% positive, 29.4% negative). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « Fed taps Horowitz as next inspector general », « Trump rips into 'too late' Jerome Powell after Fed holds rates steady »."
+        },
         "inflation": {
-          "count": 14,
+          "count": 15,
           "articles": [
             "Fed's Williams calls for strong response if inflation deviates from target",
             "Swiss inflation turns negative for first time since COVID pandemic",
             "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears",
+            "Expectations are for higher inflation and lower growth, says RBC's Frances Donald",
             "French Inflation Declines, Opening Door to ECB Rate Cut",
             "Tariffs & AAPL Lead Market Focus Today, TSLA & Inflation Later This Week",
             "ECB should watch out for price hikes from U.S. tariffs, Schnabel says",
@@ -1556,9 +1574,10 @@
               ]
             },
             "interest rate": {
-              "count": 2,
+              "count": 3,
               "examples": [
                 "Swiss inflation turns negative for first time since COVID pandemic",
+                "Expectations are for higher inflation and lower growth, says RBC's Frances Donald",
                 "Turkey Inflation Keeps Falling in Boost to Central Bank"
               ]
             },
@@ -1584,17 +1603,17 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 21.4,
-            "neutral": 35.7,
-            "negative": 42.9
+            "positive": 26.7,
+            "neutral": 33.3,
+            "negative": 40.0
           },
-          "gpt_summary": "📰 The theme **inflation** was detected in **14 articles** during the period, mainly through topics like: price (7), prices (5), inflation (4), consumer price (3), interest rate (2). Sentiment is mostly negative (42.9% vs 21.4% positive). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « Swiss inflation turns negative for first time since COVID pandemic », « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears »."
+          "gpt_summary": "📰 The theme **inflation** was detected in **15 articles** during the period, mainly through topics like: price (7), prices (5), inflation (4), interest rate (3), consumer price (3). Sentiment is mixed (26.7% positive, 40.0% negative). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « Swiss inflation turns negative for first time since COVID pandemic », « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears »."
         },
         "recession": {
           "count": 5,
           "articles": [
             "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears",
-            "OECD chops U.S. growth forecasts, cites risks to the downside as tariffs bite",
+            "Expectations are for higher inflation and lower growth, says RBC's Frances Donald",
             "Ireland sells final AIB shares 15 years after banking crisis",
             "India's iPhone exports to the U.S. soared an estimated 76%. But Trump, Beijing won't make further growth easy",
             "Does Consumer Spending Drive Earnings Growth?"
@@ -1606,14 +1625,13 @@
                 "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears"
               ]
             },
-            "growth": {
-              "count": 2,
+            "recession": {
+              "count": 1,
               "examples": [
-                "OECD chops U.S. growth forecasts, cites risks to the downside as tariffs bite",
                 "Does Consumer Spending Drive Earnings Growth?"
               ]
             },
-            "recession": {
+            "growth": {
               "count": 1,
               "examples": [
                 "Does Consumer Spending Drive Earnings Growth?"
@@ -1621,11 +1639,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 40.0,
-            "neutral": 20.0,
+            "positive": 60.0,
+            "neutral": 0.0,
             "negative": 40.0
           },
-          "gpt_summary": "📰 The theme **recession** was detected in **5 articles** during the period, mainly through topics like: growth (2), slowdown (1), recession (1). Sentiment is mixed (40.0% positive, 40.0% negative). Examples of articles: « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears », « OECD chops U.S. growth forecasts, cites risks to the downside as tariffs bite », « Ireland sells final AIB shares 15 years after banking crisis »."
+          "gpt_summary": "📰 The theme **recession** was detected in **5 articles** during the period, mainly through topics like: slowdown (1), recession (1), growth (1). Sentiment is mixed (60.0% positive, 40.0% negative). Examples of articles: « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears », « Expectations are for higher inflation and lower growth, says RBC's Frances Donald », « Ireland sells final AIB shares 15 years after banking crisis »."
         }
       },
       "sectors": {
@@ -1799,43 +1817,6 @@
           },
           "gpt_summary": "📰 The theme **consumer** was detected in **6 articles** during the period, mainly through topics like: retail (3), sales (3), spending (2), consumer (2). Sentiment is mixed (33.3% positive, 33.3% negative). Examples of articles: « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears », « Dutch government supports NATO spending target of 5% of GDP », « S&P 500 (NYSEARCA: SPY) Live: Markets Under Pressure Amid Consumer Weariness »."
         },
-        "finance": {
-          "count": 5,
-          "articles": [
-            "The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect",
-            "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears",
-            "Trump rips into 'too late' Jerome Powell after Fed holds rates steady",
-            "Ireland sells final AIB shares 15 years after banking crisis",
-            "Big central banks' forecasting lens gets fogged by US tariffs"
-          ],
-          "keywords": {
-            "rates": {
-              "count": 2,
-              "examples": [
-                "The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect",
-                "Trump rips into 'too late' Jerome Powell after Fed holds rates steady"
-              ]
-            },
-            "treasury": {
-              "count": 1,
-              "examples": [
-                "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears"
-              ]
-            },
-            "banks": {
-              "count": 1,
-              "examples": [
-                "Big central banks' forecasting lens gets fogged by US tariffs"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 40.0,
-            "negative": 60.0
-          },
-          "gpt_summary": "📰 The theme **finance** was detected in **5 articles** during the period, mainly through topics like: rates (2), treasury (1), banks (1). Sentiment is mostly negative (60.0% vs 0.0% positive). Examples of articles: « The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect », « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears », « Trump rips into 'too late' Jerome Powell after Fed holds rates steady »."
-        },
         "energy": {
           "count": 5,
           "articles": [
@@ -1872,6 +1853,41 @@
             "negative": 60.0
           },
           "gpt_summary": "📰 The theme **energy** was detected in **5 articles** during the period, mainly through topics like: energy (2), gas (1), opec (1). Sentiment is mostly negative (60.0% vs 20.0% positive). Examples of articles: « Natural Gas Infrastructure at Risk as Iran‑Israel Tensions Escalate », « Oil, war and tariffs tear up markets' central bank roadmap », « Energy Intelligence: Conflict escalation could pressure global energy markets »."
+        },
+        "finance": {
+          "count": 4,
+          "articles": [
+            "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears",
+            "Trump rips into 'too late' Jerome Powell after Fed holds rates steady",
+            "Ireland sells final AIB shares 15 years after banking crisis",
+            "Big central banks' forecasting lens gets fogged by US tariffs"
+          ],
+          "keywords": {
+            "treasury": {
+              "count": 1,
+              "examples": [
+                "U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears"
+              ]
+            },
+            "rates": {
+              "count": 1,
+              "examples": [
+                "Trump rips into 'too late' Jerome Powell after Fed holds rates steady"
+              ]
+            },
+            "banks": {
+              "count": 1,
+              "examples": [
+                "Big central banks' forecasting lens gets fogged by US tariffs"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 0.0,
+            "neutral": 50.0,
+            "negative": 50.0
+          },
+          "gpt_summary": "📰 The theme **finance** was detected in **4 articles** during the period, mainly through topics like: treasury (1), rates (1), banks (1). Sentiment is mostly negative (50.0% vs 0.0% positive). Examples of articles: « U.S. Treasury yields slide after retail sales tumbled in May, raising recession fears », « Trump rips into 'too late' Jerome Powell after Fed holds rates steady », « Ireland sells final AIB shares 15 years after banking crisis »."
         },
         "industry": {
           "count": 2,
@@ -1949,11 +1965,9 @@
       },
       "regions": {
         "usa": {
-          "count": 19,
+          "count": 17,
           "articles": [
             "Fed's Williams calls for strong response if inflation deviates from target",
-            "The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect",
-            "Fed holds key rate steady, still sees two more cuts this year",
             "Fed taps Horowitz as next inspector general",
             "Trump rips into 'too late' Jerome Powell after Fed holds rates steady",
             "The U.S. added a thousand new millionaires a day in 2024: report",
@@ -1973,11 +1987,11 @@
           ],
           "keywords": {
             "fed": {
-              "count": 12,
+              "count": 10,
               "examples": [
                 "Fed's Williams calls for strong response if inflation deviates from target",
-                "The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect",
-                "Fed holds key rate steady, still sees two more cuts this year"
+                "Fed taps Horowitz as next inspector general",
+                "Trump rips into 'too late' Jerome Powell after Fed holds rates steady"
               ]
             },
             "america": {
@@ -2020,15 +2034,16 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 26.3,
-            "neutral": 31.6,
-            "negative": 42.1
+            "positive": 29.4,
+            "neutral": 35.3,
+            "negative": 35.3
           },
-          "gpt_summary": "📰 The theme **usa** was detected in **19 articles** during the period, mainly through topics like: fed (12), dow jones (5), nasdaq (4), america (3), usa (2). Sentiment is mixed (26.3% positive, 42.1% negative). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « The Fed is likely to keep rates the same, but give a forecast that moves markets. What to expect », « Fed holds key rate steady, still sees two more cuts this year »."
+          "gpt_summary": "📰 The theme **usa** was detected in **17 articles** during the period, mainly through topics like: fed (10), dow jones (5), nasdaq (4), america (3), usa (2). Sentiment is mixed (29.4% positive, 35.3% negative). Examples of articles: « Fed's Williams calls for strong response if inflation deviates from target », « Fed taps Horowitz as next inspector general », « Trump rips into 'too late' Jerome Powell after Fed holds rates steady »."
         },
         "europe": {
-          "count": 13,
+          "count": 14,
           "articles": [
+            "Expectations are for higher inflation and lower growth, says RBC's Frances Donald",
             "French Inflation Declines, Opening Door to ECB Rate Cut",
             "US stocks vs European stocks: does Jim Cramer support ‘sell America' trade?",
             "ECB's Schnabel sees no lasting decoupling from Fed",
@@ -2044,6 +2059,12 @@
             "Apple challenges 'unreasonable' EU order to open up to rivals"
           ],
           "keywords": {
+            "france": {
+              "count": 1,
+              "examples": [
+                "Expectations are for higher inflation and lower growth, says RBC's Frances Donald"
+              ]
+            },
             "ecb": {
               "count": 4,
               "examples": [
@@ -2078,11 +2099,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 7.7,
-            "neutral": 53.8,
-            "negative": 38.5
+            "positive": 14.3,
+            "neutral": 50.0,
+            "negative": 35.7
           },
-          "gpt_summary": "📰 The theme **europe** was detected in **13 articles** during the period, mainly through topics like: eu (10), europe (9), ecb (4), european union (4). Sentiment is mostly negative (38.5% vs 7.7% positive). Examples of articles: « French Inflation Declines, Opening Door to ECB Rate Cut », « US stocks vs European stocks: does Jim Cramer support ‘sell America' trade? », « ECB's Schnabel sees no lasting decoupling from Fed »."
+          "gpt_summary": "📰 The theme **europe** was detected in **14 articles** during the period, mainly through topics like: eu (10), europe (9), ecb (4), european union (4), france (1). Sentiment is mostly negative (35.7% vs 14.3% positive). Examples of articles: « Expectations are for higher inflation and lower growth, says RBC's Frances Donald », « French Inflation Declines, Opening Door to ECB Rate Cut », « US stocks vs European stocks: does Jim Cramer support ‘sell America' trade? »."
         },
         "asia": {
           "count": 10,
@@ -2167,11 +2188,10 @@
           "gpt_summary": "📰 The theme **global** was detected in **5 articles** during the period, mainly through topics like: world (3), global (1). Sentiment is mixed (40.0% positive, 60.0% negative). Examples of articles: « OECD Slashes Global Economic Forecasts Amid Tariffs, Trade Uncertainty », « The World’s Richest Don’t Have to Be Tech Founders, Look at Steve Ballmer », « DoubleLine's Gundlach says to buy international stocks on the dollar's 'secular decline' »."
         },
         "blocs": {
-          "count": 3,
+          "count": 2,
           "articles": [
             "Dutch government supports NATO spending target of 5% of GDP",
-            "OECD Slashes Global Economic Forecasts Amid Tariffs, Trade Uncertainty",
-            "OECD chops U.S. growth forecasts, cites risks to the downside as tariffs bite"
+            "OECD Slashes Global Economic Forecasts Amid Tariffs, Trade Uncertainty"
           ],
           "keywords": {
             "nato": {
@@ -2188,11 +2208,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 33.3,
-            "neutral": 66.7,
+            "positive": 50.0,
+            "neutral": 50.0,
             "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **blocs** was detected in **3 articles** during the period, mainly through topics like: nato (1), oecd (1). Sentiment is mostly positive (33.3% vs 0.0% negative). Examples of articles: « Dutch government supports NATO spending target of 5% of GDP », « OECD Slashes Global Economic Forecasts Amid Tariffs, Trade Uncertainty », « OECD chops U.S. growth forecasts, cites risks to the downside as tariffs bite »."
+          "gpt_summary": "📰 The theme **blocs** was detected in **2 articles** during the period, mainly through topics like: nato (1), oecd (1). Sentiment is mostly positive (50.0% vs 0.0% negative). Examples of articles: « Dutch government supports NATO spending target of 5% of GDP », « OECD Slashes Global Economic Forecasts Amid Tariffs, Trade Uncertainty »."
         },
         "latam": {
           "count": 1,
@@ -2237,6 +2257,6 @@
       }
     }
   },
-  "lastUpdated": "2025-06-19T16:21:45.206394",
-  "analysisCount": 113
+  "lastUpdated": "2025-06-19T20:15:37.126372",
+  "analysisCount": 112
 }
