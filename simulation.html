@@ -341,8 +341,8 @@
                                 </div>
                                 
                                 <div class="flex mt-2 bg-blue-800 bg-opacity-30 rounded-md overflow-hidden">
-                                    <button id="unique-investment" class="flex-1 py-2 px-3 text-sm font-medium text-green-400 bg-green-900 bg-opacity-30 selected" onclick="toggleInvestmentMode('unique')">Versement unique</button>
-                                    <button id="periodic-investment" class="flex-1 py-2 px-3 text-sm font-medium text-gray-300" onclick="toggleInvestmentMode('periodique')">Versement périodique</button>
+                                    <button id="unique-investment" class="flex-1 py-2 px-3 text-sm font-medium text-green-400 bg-green-900 bg-opacity-30 selected">Versement unique</button>
+                                    <button id="periodic-investment" class="flex-1 py-2 px-3 text-sm font-medium text-gray-300">Versement périodique</button>
                                 </div>
                                 
                                 <div id="frequency-container" class="mt-3" style="display: none;">
@@ -530,7 +530,7 @@
                                     </div>
                                 </div>
                                 
-                                <button onclick="afficherSynthesePER()" class="w-full py-4 px-6 bg-gradient-to-r from-green-500 to-green-400 text-gray-900 text-xl font-semibold rounded-lg shadow-lg hover:shadow-green-500/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center">
+                                <button id="btn-analyser-per" class="w-full py-4 px-6 bg-gradient-to-r from-green-500 to-green-400 text-gray-900 text-xl font-semibold rounded-lg shadow-lg hover:shadow-green-500/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center">
                                     <i class="fas fa-calculator mr-3"></i> 
                                     Analyser mon potentiel d'économie
                                 </button>
@@ -831,10 +831,10 @@
                                 
                                 <!-- Choix du mode (onglets) -->
                                 <div class="flex bg-blue-800 bg-opacity-20 rounded-lg mb-4 overflow-hidden">
-                                    <button id="mode-duree" class="flex-1 py-2 px-3 text-sm font-medium text-green-400 active" onclick="switchRepaymentMode('duree')">
+                                    <button id="mode-duree" class="flex-1 py-2 px-3 text-sm font-medium text-green-400 active">
                                         <i class="fas fa-calendar-day mr-1"></i> Réduire la durée
                                     </button>
-                                    <button id="mode-mensualite" class="flex-1 py-2 px-3 text-sm font-medium text-white" onclick="switchRepaymentMode('mensualite')">
+                                    <button id="mode-mensualite" class="flex-1 py-2 px-3 text-sm font-medium text-white">
                                         <i class="fas fa-money-bill-wave mr-1"></i> Réduire la mensualité
                                     </button>
                                 </div>
@@ -1333,7 +1333,7 @@
                         <div class="scenario-block">
                             <h4 class="font-medium mb-2">Que se passe-t-il en cas de krach boursier ?</h4>
                             <p class="text-sm text-gray-300 mb-3">Simulation d'une baisse de 30% suivie d'une reprise progressive sur 5 ans.</p>
-                            <button class="text-green-400 text-sm font-medium flex items-center" onclick="alert('Fonctionnalité en développement')">
+                            <button class="text-green-400 text-sm font-medium flex items-center btn-scenario-krach">
                                 Simuler ce scénario <i class="fas fa-chevron-right ml-2"></i>
                             </button>
                         </div>
@@ -1341,7 +1341,7 @@
                         <div class="scenario-block">
                             <h4 class="font-medium mb-2">Investissement progressif vs somme forfaitaire</h4>
                             <p class="text-sm text-gray-300 mb-3">Comparaison entre investir une somme d'un coup ou progressivement.</p>
-                            <button class="text-green-400 text-sm font-medium flex items-center" onclick="alert('Fonctionnalité en développement')">
+                            <button class="text-green-400 text-sm font-medium flex items-center btn-scenario-progressif">
                                 Simuler ce scénario <i class="fas fa-chevron-right ml-2"></i>
                             </button>
                         </div>
@@ -1512,24 +1512,26 @@
                     
                     // Appel direct de la fonction simulerPTZ
                     simulerPTZ();
-                    
-                    return false;
                 };
-                console.log("Gestionnaire attaché au bouton PTZ avec succès");
             }
             
-            // S'assurer que l'initialisation est appelée quand le script est chargé
-            if (typeof window.initPTZSimulator === 'function') {
-                window.initPTZSimulator();
-                console.log("Simulateur PTZ initialisé");
-            } else {
-                // Attendre un peu et réessayer
-                setTimeout(() => {
-                    if (typeof window.initPTZSimulator === 'function') {
-                        window.initPTZSimulator();
-                        console.log("Simulateur PTZ initialisé (après délai)");
+            // Event listeners pour les boutons de scénarios
+            document.querySelector('.btn-scenario-krach')?.addEventListener('click', function() {
+                alert('Fonctionnalité en développement');
+            });
+            
+            document.querySelector('.btn-scenario-progressif')?.addEventListener('click', function() {
+                alert('Fonctionnalité en développement');
+            });
+            
+            // Event listener pour le bouton d'analyse PER
+            const btnAnalyserPER = document.getElementById('btn-analyser-per');
+            if (btnAnalyserPER) {
+                btnAnalyserPER.addEventListener('click', function() {
+                    if (typeof afficherSynthesePER === 'function') {
+                        afficherSynthesePER();
                     }
-                }, 500);
+                });
             }
         });
     </script>
