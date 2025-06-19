@@ -70,6 +70,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // AJOUT : Gestion du changement de mode d'investissement (unique/périodique)
+    const uniqueBtn = document.getElementById('unique-investment');
+    const periodicBtn = document.getElementById('periodic-investment');
+    
+    if (uniqueBtn && periodicBtn) {
+        uniqueBtn.addEventListener('click', () => {
+            toggleInvestmentMode('unique');
+            checkPlafondLimits(); // Garde l'alerte plafond
+        });
+        
+        periodicBtn.addEventListener('click', () => {
+            toggleInvestmentMode('periodic'); // Utilisation cohérente du terme 'periodic'
+            checkPlafondLimits(); // Garde l'alerte plafond
+        });
+    }
+    
     // Initialiser les onglets de simulation
     initSimulationTabs();
 
@@ -486,8 +502,8 @@ function updateTaxInfo() {
     
     // Construire le HTML avec les vraies données
     let html = `
-        <h5 class=\"text-green-400 font-medium flex items-center mb-2\">
-            <i class=\"fas fa-chart-pie mr-2\"></i>
+        <h5 class="text-green-400 font-medium flex items-center mb-2">
+            <i class="fas fa-chart-pie mr-2"></i>
             ${enveloppe.label} - ${enveloppe.type}
         </h5>
     `;
@@ -497,19 +513,19 @@ function updateTaxInfo() {
         const plafondText = typeof enveloppe.plafond === 'object' 
             ? `Solo: ${formatMoney(enveloppe.plafond.solo)} / Couple: ${formatMoney(enveloppe.plafond.couple)}`
             : `Plafond: ${formatMoney(enveloppe.plafond)}`;
-        html += `<p class=\"text-sm font-medium text-blue-300\">${plafondText}</p>`;
+        html += `<p class="text-sm font-medium text-blue-300">${plafondText}</p>`;
     }
     
     // Afficher la fiscalité
     if (enveloppe.seuil) {
-        html += `<p class=\"text-sm text-gray-300 mb-1\">
+        html += `<p class="text-sm text-gray-300 mb-1">
             <strong>Avant ${enveloppe.seuil} ans:</strong> ${enveloppe.fiscalite.avant || enveloppe.fiscalite.texte}
         </p>`;
-        html += `<p class=\"text-sm text-gray-300 mb-1\">
+        html += `<p class="text-sm text-gray-300 mb-1">
             <strong>Après ${enveloppe.seuil} ans:</strong> ${enveloppe.fiscalite.apres || 'Avantages fiscaux'}
         </p>`;
     } else {
-        html += `<p class=\"text-sm text-gray-300 mb-1\">${enveloppe.fiscalite.texte || 'Fiscalité standard'}</p>`;
+        html += `<p class="text-sm text-gray-300 mb-1">${enveloppe.fiscalite.texte || 'Fiscalité standard'}</p>`;
     }
     
     taxInfoElement.innerHTML = html;
@@ -621,7 +637,7 @@ function suggestBestVehicle(amount, duration, objective = 'growth') {
 function runSimulation() {
     // Animation du bouton
     const button = document.getElementById('simulate-button');
-    button.innerHTML = '<i class=\"fas fa-spinner fa-spin mr-2\"></i> Calcul en cours...';
+    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Calcul en cours...';
     button.disabled = true;
     
     // Simuler un délai pour l'effet visuel
@@ -660,14 +676,14 @@ function runSimulation() {
         updateBudgetResults(results, years);
         
         // Restaurer le bouton
-        button.innerHTML = '<i class=\"fas fa-play-circle mr-2\"></i> Lancer la simulation';
+        button.innerHTML = '<i class="fas fa-play-circle mr-2"></i> Lancer la simulation';
         button.disabled = false;
     }, 800);
 }
 
 /**
  * Calcule les résultats d'investissement avec la vraie fiscalité
- * @param {number} initialAmount - Montant initial investi
+ * @param {number} initialAmount - Montant initial investi (ou montant par période en mode périodique)
  * @param {number} years - Nombre d'années
  * @param {number} annualReturn - Rendement annuel (en décimal)
  * @returns {Object} Résultats de la simulation
@@ -956,7 +972,7 @@ function createChart() {
 
 /**
  * Fonction pour mettre à jour le graphique de simulation
- * @param {number} initialAmount - Montant initial investi
+ * @param {number} initialAmount - Montant initial investi (ou montant par période)
  * @param {number} years - Nombre d'années
  * @param {number} annualReturn - Rendement annuel (en décimal)
  */
@@ -968,8 +984,8 @@ function updateSimulationChart(initialAmount, years, annualReturn) {
     
     // Générer les nouvelles données
     const labels = Array.from({length: years + 1}, (_, i) => i === 0 ? 'Départ' : `Année ${i}`);
-    const investedValues = [0];
-    const totalValues = [0];
+    const investedValues = [];
+    const totalValues = [];
     
     if (isPeriodicMode) {
         // Pour versements périodiques
@@ -993,8 +1009,8 @@ function updateSimulationChart(initialAmount, years, annualReturn) {
     } else {
         // Pour versement unique
         let total = initialAmount;
-        investedValues[0] = initialAmount;
-        totalValues[0] = initialAmount;
+        investedValues.push(initialAmount);
+        totalValues.push(initialAmount);
         
         for (let i = 1; i <= years; i++) {
             total *= (1 + annualReturn);
@@ -1012,7 +1028,7 @@ function updateSimulationChart(initialAmount, years, annualReturn) {
 
 /**
  * Conversion entre versement unique et périodique
- * @param {string} mode - Mode de versement ('unique' ou 'periodique')
+ * @param {string} mode - Mode de versement ('unique' ou 'periodic')
  */
 function toggleInvestmentMode(mode) {
     const uniqueButton = document.getElementById('unique-investment');
@@ -1037,7 +1053,7 @@ function toggleInvestmentMode(mode) {
         if (uniqueAmountContainer) uniqueAmountContainer.style.display = 'block';
         if (periodicAmountContainer) periodicAmountContainer.style.display = 'none';
         
-    } else {
+    } else if (mode === 'periodic') {
         // Versement périodique actif
         periodicButton.classList.add('selected', 'text-green-400', 'bg-green-900', 'bg-opacity-30');
         periodicButton.classList.remove('text-gray-300');
@@ -1131,10 +1147,10 @@ function checkPlafondLimits() {
         // Dépassement - Alerte rouge
         const excess = totalAmount - plafond;
         alertElement.innerHTML = `
-            <i class=\"fas fa-exclamation-circle text-red-500 mt-0.5\"></i>
-            <div class=\"flex-1 text-sm\">
-                <span class=\"text-red-400 font-medium\">Plafond dépassé de ${formatMoney(excess)}</span>
-                <span class=\"text-gray-400 ml-2\">(limite : ${formatMoney(plafond)})</span>
+            <i class="fas fa-exclamation-circle text-red-500 mt-0.5"></i>
+            <div class="flex-1 text-sm">
+                <span class="text-red-400 font-medium">Plafond dépassé de ${formatMoney(excess)}</span>
+                <span class="text-gray-400 ml-2">(limite : ${formatMoney(plafond)})</span>
             </div>
         `;
         alertElement.className = 'mt-3 p-3 rounded-lg flex items-start gap-2 bg-red-900 bg-opacity-20 border border-red-600 animate-fadeIn';
@@ -1143,10 +1159,10 @@ function checkPlafondLimits() {
         // Proche du plafond - Alerte jaune
         const remaining = plafond - totalAmount;
         alertElement.innerHTML = `
-            <i class=\"fas fa-info-circle text-yellow-500 mt-0.5\"></i>
-            <div class=\"flex-1 text-sm\">
-                <span class=\"text-yellow-400\">Il reste ${formatMoney(remaining)}</span>
-                <span class=\"text-gray-400 ml-2\">(${Math.round(percentage)}% du plafond)</span>
+            <i class="fas fa-info-circle text-yellow-500 mt-0.5"></i>
+            <div class="flex-1 text-sm">
+                <span class="text-yellow-400">Il reste ${formatMoney(remaining)}</span>
+                <span class="text-gray-400 ml-2">(${Math.round(percentage)}% du plafond)</span>
             </div>
         `;
         alertElement.className = 'mt-3 p-3 rounded-lg flex items-start gap-2 bg-yellow-900 bg-opacity-20 border border-yellow-600 animate-fadeIn';
@@ -1236,30 +1252,30 @@ function showPlafondBadgeInResults(results) {
         badge.id = 'plafond-results-badge';
         badge.className = 'mb-4 p-4 bg-red-900 bg-opacity-20 border border-red-600 rounded-lg animate-fadeIn';
         badge.innerHTML = `
-            <div class=\"flex items-start gap-3\">
-                <i class=\"fas fa-exclamation-triangle text-red-500 text-xl mt-1\"></i>
-                <div class=\"flex-1\">
-                    <h5 class=\"text-red-400 font-semibold mb-2\">
+            <div class="flex items-start gap-3">
+                <i class="fas fa-exclamation-triangle text-red-500 text-xl mt-1"></i>
+                <div class="flex-1">
+                    <h5 class="text-red-400 font-semibold mb-2">
                         ⚠️ Dépassement du plafond de ${formatMoney(excess)}
                     </h5>
-                    <p class=\"text-sm text-gray-300 mb-3\">
+                    <p class="text-sm text-gray-300 mb-3">
                         Le ${results.enveloppe.label} est limité à ${formatMoney(plafond)}. 
                         Votre simulation porte sur ${formatMoney(totalInvested)}.
                     </p>
-                    <div class=\"bg-blue-900 bg-opacity-30 p-3 rounded\">
-                        <p class=\"text-sm text-blue-300 font-medium mb-2\">
+                    <div class="bg-blue-900 bg-opacity-30 p-3 rounded">
+                        <p class="text-sm text-blue-300 font-medium mb-2">
                             💡 Conseils de diversification :
                         </p>
-                        <ul class=\"text-sm text-gray-300 space-y-1 ml-4\">
+                        <ul class="text-sm text-gray-300 space-y-1 ml-4">
                             <li>• Placez ${formatMoney(plafond)} sur votre ${results.enveloppe.label}</li>
                             <li>• Investissez les ${formatMoney(excess)} restants sur :</li>
-                            <li class=\"ml-4\">→ Assurance-vie (sans plafond, fiscalité dégressive)</li>
-                            <li class=\"ml-4\">→ CTO (flexibilité totale, flat tax 30%)</li>
-                            ${results.enveloppe.id === 'pea' ? '<li class=\"ml-4\">→ PEA-PME (plafond additionnel de 225k€)</li>' : ''}
+                            <li class="ml-4">→ Assurance-vie (sans plafond, fiscalité dégressive)</li>
+                            <li class="ml-4">→ CTO (flexibilité totale, flat tax 30%)</li>
+                            ${results.enveloppe.id === 'pea' ? '<li class="ml-4">→ PEA-PME (plafond additionnel de 225k€)</li>' : ''}
                         </ul>
                     </div>
-                    <button onclick=\"toggleOptimizationMode()\" class=\"mt-3 text-sm bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg transition\">
-                        <i class=\"fas fa-magic mr-2\"></i>Optimiser automatiquement
+                    <button onclick="toggleOptimizationMode()" class="mt-3 text-sm bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg transition">
+                        <i class="fas fa-magic mr-2"></i>Optimiser automatiquement
                     </button>
                 </div>
             </div>
