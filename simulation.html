@@ -452,24 +452,38 @@
                                 Résultats de la simulation
                             </h4>
                             
-                            <div class="grid grid-cols-2 gap-4 mb-6">
-                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                                    <p class="text-green-400 text-2xl font-bold mb-1 result-value">1 967,15 €</p>
-                                    <p class="text-gray-400 text-sm">Capital final</p>
-                                </div>
-                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                                    <p class="text-green-400 text-2xl font-bold mb-1 result-value">1 000,00 €</p>
-                                    <p class="text-gray-400 text-sm">Montant investi</p>
-                                </div>
-                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                                    <p class="text-green-400 text-2xl font-bold mb-1 result-value">967,15 €</p>
-                                    <p class="text-gray-400 text-sm">Gains générés</p>
-                                </div>
-                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                                    <p class="text-green-400 text-2xl font-bold mb-1 result-value">1 800,80 €</p>
-                                    <p class="text-gray-400 text-sm">Net d'impôts</p>
-                                </div>
-                            </div>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+    <!-- Capital final -->
+    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+        <p id="result-final" class="text-green-400 text-2xl font-bold mb-1">-- €</p>
+        <p class="text-gray-400 text-sm">Capital final</p>
+    </div>
+    
+    <!-- Montant initial -->
+    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+        <p id="result-initial" class="text-green-400 text-2xl font-bold mb-1">-- €</p>
+        <p class="text-gray-400 text-sm">Montant initial</p>
+    </div>
+    
+    <!-- Versements périodiques -->
+    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+        <p id="result-periodic" class="text-green-400 text-2xl font-bold mb-1">-- €</p>
+        <p class="text-gray-400 text-sm">Versements périodiques</p>
+    </div>
+    
+    <!-- Gains générés -->
+    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+        <p id="result-gain" class="text-green-400 text-2xl font-bold mb-1">-- €</p>
+        <p class="text-gray-400 text-sm">Gains générés</p>
+    </div>
+    
+    <!-- Net d'impôts (prend 2 colonnes sur desktop) -->
+    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center col-span-2">
+        <p id="result-after-tax" class="text-green-400 text-2xl font-bold mb-1">-- €</p>
+        <p class="text-gray-400 text-sm">Net d'impôts</p>
+    </div>
+</div>
+
                             
                             <div class="chart-container mb-6">
                                 <canvas id="investment-chart"></canvas>
