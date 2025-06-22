@@ -329,6 +329,19 @@
                                     </span>
                                 </label>
                                 
+                                <!-- Montant DÉPART : toujours visible -->
+                                <div id="initial-amount-container" class="mb-4">
+                                    <label class="block mb-1 text-sm font-medium text-gray-300">
+                                        Montant initial
+                                        <span class="ml-1 text-green-400 cursor-help" title="Somme versée une seule fois au départ">
+                                            <i class="fas fa-info-circle"></i>
+                                        </span>
+                                    </label>
+                                    <input type="number" id="initial-investment-amount"
+                                           value="1000" min="0"
+                                           class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                </div>
+                                
                                 <!-- Montant pour versement unique -->
                                 <div id="unique-amount-container">
                                     <input type="number" id="investment-amount" value="1000" min="1" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
@@ -350,6 +363,7 @@
                                         Fréquence de versement
                                     </label>
                                     <select id="investment-frequency" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                        <option value="weekly">Hebdomadaire</option>
                                         <option value="monthly">Mensuel</option>
                                         <option value="quarterly">Trimestriel</option>
                                         <option value="annually">Annuel</option>
@@ -1517,22 +1531,12 @@
             
             // Event listeners pour les boutons de scénarios
             document.querySelector('.btn-scenario-krach')?.addEventListener('click', function() {
-                alert('Fonctionnalité en développement');
+                alert('Fonctionnalité en développement - Simulation de krach boursier avec reprise progressive');
             });
             
             document.querySelector('.btn-scenario-progressif')?.addEventListener('click', function() {
-                alert('Fonctionnalité en développement');
+                alert('Fonctionnalité en développement - Comparaison DCA vs versement unique');
             });
-            
-            // Event listener pour le bouton d'analyse PER
-            const btnAnalyserPER = document.getElementById('btn-analyser-per');
-            if (btnAnalyserPER) {
-                btnAnalyserPER.addEventListener('click', function() {
-                    if (typeof afficherSynthesePER === 'function') {
-                        afficherSynthesePER();
-                    }
-                });
-            }
         });
     </script>
 </body>
