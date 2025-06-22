@@ -502,8 +502,8 @@ function updateTaxInfo() {
     
     // Construire le HTML avec les vraies données
     let html = `
-        <h5 class=\"text-green-400 font-medium flex items-center mb-2\">
-            <i class=\"fas fa-chart-pie mr-2\"></i>
+        <h5 class="text-green-400 font-medium flex items-center mb-2">
+            <i class="fas fa-chart-pie mr-2"></i>
             ${enveloppe.label} - ${enveloppe.type}
         </h5>
     `;
@@ -513,19 +513,19 @@ function updateTaxInfo() {
         const plafondText = typeof enveloppe.plafond === 'object' 
             ? `Solo: ${formatMoney(enveloppe.plafond.solo)} / Couple: ${formatMoney(enveloppe.plafond.couple)}`
             : `Plafond: ${formatMoney(enveloppe.plafond)}`;
-        html += `<p class=\"text-sm font-medium text-blue-300\">${plafondText}</p>`;
+        html += `<p class="text-sm font-medium text-blue-300">${plafondText}</p>`;
     }
     
     // Afficher la fiscalité
     if (enveloppe.seuil) {
-        html += `<p class=\"text-sm text-gray-300 mb-1\">
+        html += `<p class="text-sm text-gray-300 mb-1">
             <strong>Avant ${enveloppe.seuil} ans:</strong> ${enveloppe.fiscalite.avant || enveloppe.fiscalite.texte}
         </p>`;
-        html += `<p class=\"text-sm text-gray-300 mb-1\">
+        html += `<p class="text-sm text-gray-300 mb-1">
             <strong>Après ${enveloppe.seuil} ans:</strong> ${enveloppe.fiscalite.apres || 'Avantages fiscaux'}
         </p>`;
     } else {
-        html += `<p class=\"text-sm text-gray-300 mb-1\">${enveloppe.fiscalite.texte || 'Fiscalité standard'}</p>`;
+        html += `<p class="text-sm text-gray-300 mb-1">${enveloppe.fiscalite.texte || 'Fiscalité standard'}</p>`;
     }
     
     taxInfoElement.innerHTML = html;
@@ -638,27 +638,24 @@ function suggestBestVehicle(amount, duration, objective = 'growth') {
 function runSimulation() {
     // Animation du bouton
     const button = document.getElementById('simulate-button');
-    button.innerHTML = '<i class=\"fas fa-spinner fa-spin mr-2\"></i> Calcul en cours...';
+    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Calcul en cours...';
     button.disabled = true;
     
     // Simuler un délai pour l'effet visuel
     setTimeout(() => {
-        // ==== NOUVEAU : montants séparés ====
+        // ✅ NOUVEAU : Détection du mode périodique CORRIGÉE
+        const isPeriodicMode = document.getElementById('periodic-investment')
+                              ?.classList.contains('selected');
+
+        // ✅ NOUVEAU : Lecture sécurisée du montant initial
         const initialDeposit = parseFloat(
             document.getElementById('initial-investment-amount')?.value
         ) || 0;
 
-        const isPeriodicMode = document.getElementById('periodic-investment')
-                               ?.classList.contains('selected');
-
-        let periodicAmount = 0;
-        if (isPeriodicMode) {
-            periodicAmount = parseFloat(
-                document.getElementById('periodic-investment-amount')?.value
-            ) || 0;
-        }
-        // Si versement unique, on utilise seulement le montant initial
-        // ============================
+        // ✅ NOUVEAU : Lecture sécurisée du montant périodique
+        const periodicInput = document.getElementById('periodic-investment-amount');
+        const periodicAmount = (isPeriodicMode && periodicInput) ? 
+                              parseFloat(periodicInput.value) || 0 : 0;
         
         const years = parseInt(document.getElementById('duration-slider').value);
         const annualReturn = parseFloat(document.getElementById('return-slider').value) / 100;
@@ -676,14 +673,14 @@ function runSimulation() {
         updateBudgetResults(results, years);
         
         // Restaurer le bouton
-        button.innerHTML = '<i class=\"fas fa-play-circle mr-2\"></i> Lancer la simulation';
+        button.innerHTML = '<i class="fas fa-play-circle mr-2"></i> Lancer la simulation';
         button.disabled = false;
     }, 800);
 }
 
 /**
  * Calcule les résultats d'investissement avec la vraie fiscalité
- * MODIFIÉE : Prend maintenant initialDeposit et periodicAmount séparés
+ * MODIFIÉE : Prend maintenant initialDeposit et periodicAmount séparés + retourne les montants séparés
  * @param {number} initialDeposit - Montant initial versé au départ
  * @param {number} periodicAmount - Montant des versements périodiques
  * @param {number} years - Nombre d'années
@@ -698,23 +695,27 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
     const isPeriodicMode = document.getElementById('periodic-investment')?.classList.contains('selected');
     const frequency = document.getElementById('investment-frequency')?.value || 'monthly';
     
-    let totalInvested = initialDeposit;
+    // ✅ NOUVEAU : Calcul des montants séparés
+    const periodsPerYear = frequency === 'weekly' ? 52 : 
+                          frequency === 'monthly' ? 12 : 
+                          frequency === 'quarterly' ? 4 : 1;
+
+    const periodicTotal = isPeriodicMode ? periodicAmount * periodsPerYear * years : 0;
+    const investedTotal = initialDeposit + periodicTotal; // Gardé pour compatibilité
+    
+    // Calcul de la valeur finale
     let finalAmount = initialDeposit * Math.pow(1 + annualReturn, years);
 
     if (isPeriodicMode && periodicAmount > 0) {
         // Calcul pour versements périodiques
-        const periodsPerYear = frequency === 'weekly' ? 52 : 
-                              frequency === 'monthly' ? 12 : 
-                              frequency === 'quarterly' ? 4 : 1;
         const totalPeriods = years * periodsPerYear;
         const periodRate = annualReturn / periodsPerYear;
         
         // Formule de la valeur future d'une annuité
         finalAmount += periodicAmount * ((Math.pow(1 + periodRate, totalPeriods) - 1) / periodRate) * (1 + periodRate);
-        totalInvested += periodicAmount * totalPeriods;
     }
     
-    const gains = finalAmount - totalInvested;
+    const gains = finalAmount - investedTotal;
     
     // Calculer le net après impôts selon l'enveloppe
     let afterTaxAmount = finalAmount;
@@ -730,7 +731,7 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
             estCouple: false, // Pourrait être un paramètre
         });
         
-        afterTaxAmount = totalInvested + netGain;
+        afterTaxAmount = investedTotal + netGain;
         taxAmount = gains - netGain;
     } else {
         // Fallback sur le calcul simple
@@ -739,8 +740,11 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
         afterTaxAmount = finalAmount - taxAmount;
     }
     
+    // ✅ NOUVEAU : Retour avec montants séparés
     return {
-        initialAmount: totalInvested,
+        initialDeposit,      // NOUVEAU : Montant initial séparé
+        periodicTotal,       // NOUVEAU : Total des versements périodiques
+        investedTotal,       // GARDÉ : Total investi pour compatibilité
         finalAmount: round2(finalAmount),
         gains: round2(gains),
         afterTaxAmount: round2(afterTaxAmount),
@@ -791,6 +795,7 @@ function updateBudgetResults(results, years) {
 
 /**
  * Met à jour l'affichage des résultats
+ * MODIFIÉE : Utilise les nouveaux IDs HTML pour l'affichage séparé
  * @param {Object} results - Résultats de la simulation
  */
 function updateResultsDisplay(results) {
@@ -798,14 +803,29 @@ function updateResultsDisplay(results) {
     const formatter = new Intl.NumberFormat('fr-FR', { 
         style: 'currency', 
         currency: 'EUR',
+        minimumFractionDigits: 2,
         maximumFractionDigits: 2
     });
     
-    // Mettre à jour les valeurs affichées
+    // ✅ NOUVEAU : Affichage par ID spécifique avec valeurs par défaut
+    const resultFinal = document.getElementById('result-final');
+    const resultInitial = document.getElementById('result-initial'); 
+    const resultPeriodic = document.getElementById('result-periodic');
+    const resultGain = document.getElementById('result-gain');
+    const resultAfterTax = document.getElementById('result-after-tax');
+    
+    if (resultFinal) resultFinal.textContent = formatter.format(results.finalAmount || 0);
+    if (resultInitial) resultInitial.textContent = formatter.format(results.initialDeposit || 0);
+    if (resultPeriodic) resultPeriodic.textContent = formatter.format(results.periodicTotal || 0);
+    if (resultGain) resultGain.textContent = formatter.format(results.gains || 0);
+    if (resultAfterTax) resultAfterTax.textContent = formatter.format(results.afterTaxAmount || 0);
+    
+    // ✅ FALLBACK : Garder l'ancien système pour compatibilité
     const resultElements = document.querySelectorAll('.result-value');
-    if (resultElements.length >= 4) {
+    if (resultElements.length >= 4 && !resultFinal) {
+        // Si les nouveaux IDs n'existent pas, utiliser l'ancien système
         resultElements[0].textContent = formatter.format(results.finalAmount);
-        resultElements[1].textContent = formatter.format(results.initialAmount);
+        resultElements[1].textContent = formatter.format(results.investedTotal); // Total pour compatibilité
         resultElements[2].textContent = formatter.format(results.gains);
         resultElements[3].textContent = formatter.format(results.afterTaxAmount);
     }
@@ -823,7 +843,7 @@ function updateProfileAdequacy(results) {
     if (!adequacyElement) return;
     
     const suggestions = suggestBestVehicle(
-        results.initialAmount,
+        results.investedTotal, // Utilise le total pour l'analyse
         results.years,
         'growth' // Objectif par défaut
     );
@@ -849,7 +869,7 @@ function updateProfileAdequacy(results) {
     }
     
     // Ajouter des conseils généraux
-    if (results.enveloppe?.plafond && results.initialAmount > results.enveloppe.plafond * 0.8) {
+    if (results.enveloppe?.plafond && results.investedTotal > results.enveloppe.plafond * 0.8) {
         adequacyMessages.push(
             `⚠️ Vous approchez du plafond. Pensez à diversifier sur d'autres enveloppes.`
         );
@@ -1160,10 +1180,10 @@ function checkPlafondLimits() {
         // Dépassement - Alerte rouge
         const excess = totalAmount - plafond;
         alertElement.innerHTML = `
-            <i class=\"fas fa-exclamation-circle text-red-500 mt-0.5\"></i>
-            <div class=\"flex-1 text-sm\">
-                <span class=\"text-red-400 font-medium\">Plafond dépassé de ${formatMoney(excess)}</span>
-                <span class=\"text-gray-400 ml-2\">(limite : ${formatMoney(plafond)})</span>
+            <i class="fas fa-exclamation-circle text-red-500 mt-0.5"></i>
+            <div class="flex-1 text-sm">
+                <span class="text-red-400 font-medium">Plafond dépassé de ${formatMoney(excess)}</span>
+                <span class="text-gray-400 ml-2">(limite : ${formatMoney(plafond)})</span>
             </div>
         `;
         alertElement.className = 'mt-3 p-3 rounded-lg flex items-start gap-2 bg-red-900 bg-opacity-20 border border-red-600 animate-fadeIn';
@@ -1172,10 +1192,10 @@ function checkPlafondLimits() {
         // Proche du plafond - Alerte jaune
         const remaining = plafond - totalAmount;
         alertElement.innerHTML = `
-            <i class=\"fas fa-info-circle text-yellow-500 mt-0.5\"></i>
-            <div class=\"flex-1 text-sm\">
-                <span class=\"text-yellow-400\">Il reste ${formatMoney(remaining)}</span>
-                <span class=\"text-gray-400 ml-2\">(${Math.round(percentage)}% du plafond)</span>
+            <i class="fas fa-info-circle text-yellow-500 mt-0.5"></i>
+            <div class="flex-1 text-sm">
+                <span class="text-yellow-400">Il reste ${formatMoney(remaining)}</span>
+                <span class="text-gray-400 ml-2">(${Math.round(percentage)}% du plafond)</span>
             </div>
         `;
         alertElement.className = 'mt-3 p-3 rounded-lg flex items-start gap-2 bg-yellow-900 bg-opacity-20 border border-yellow-600 animate-fadeIn';
@@ -1255,8 +1275,7 @@ function showPlafondBadgeInResults(results) {
         : results.enveloppe.plafond;
     
     // Calculer le montant total investi
-    const isPeriodicMode = document.getElementById('periodic-investment')?.classList.contains('selected');
-    let totalInvested = results.initialAmount;
+    const totalInvested = results.investedTotal;
     
     if (totalInvested > plafond) {
         const excess = totalInvested - plafond;
@@ -1265,30 +1284,30 @@ function showPlafondBadgeInResults(results) {
         badge.id = 'plafond-results-badge';
         badge.className = 'mb-4 p-4 bg-red-900 bg-opacity-20 border border-red-600 rounded-lg animate-fadeIn';
         badge.innerHTML = `
-            <div class=\"flex items-start gap-3\">
-                <i class=\"fas fa-exclamation-triangle text-red-500 text-xl mt-1\"></i>
-                <div class=\"flex-1\">
-                    <h5 class=\"text-red-400 font-semibold mb-2\">
+            <div class="flex items-start gap-3">
+                <i class="fas fa-exclamation-triangle text-red-500 text-xl mt-1"></i>
+                <div class="flex-1">
+                    <h5 class="text-red-400 font-semibold mb-2">
                         ⚠️ Dépassement du plafond de ${formatMoney(excess)}
                     </h5>
-                    <p class=\"text-sm text-gray-300 mb-3\">
+                    <p class="text-sm text-gray-300 mb-3">
                         Le ${results.enveloppe.label} est limité à ${formatMoney(plafond)}. 
                         Votre simulation porte sur ${formatMoney(totalInvested)}.
                     </p>
-                    <div class=\"bg-blue-900 bg-opacity-30 p-3 rounded\">
-                        <p class=\"text-sm text-blue-300 font-medium mb-2\">
+                    <div class="bg-blue-900 bg-opacity-30 p-3 rounded">
+                        <p class="text-sm text-blue-300 font-medium mb-2">
                             💡 Conseils de diversification :
                         </p>
-                        <ul class=\"text-sm text-gray-300 space-y-1 ml-4\">
+                        <ul class="text-sm text-gray-300 space-y-1 ml-4">
                             <li>• Placez ${formatMoney(plafond)} sur votre ${results.enveloppe.label}</li>
                             <li>• Investissez les ${formatMoney(excess)} restants sur :</li>
-                            <li class=\"ml-4\">→ Assurance-vie (sans plafond, fiscalité dégressive)</li>
-                            <li class=\"ml-4\">→ CTO (flexibilité totale, flat tax 30%)</li>
-                            ${results.enveloppe.id === 'pea' ? '<li class=\"ml-4\">→ PEA-PME (plafond additionnel de 225k€)</li>' : ''}
+                            <li class="ml-4">→ Assurance-vie (sans plafond, fiscalité dégressive)</li>
+                            <li class="ml-4">→ CTO (flexibilité totale, flat tax 30%)</li>
+                            ${results.enveloppe.id === 'pea' ? '<li class="ml-4">→ PEA‑PME (plafond additionnel de 225k€)</li>' : ''}
                         </ul>
                     </div>
-                    <button onclick=\"toggleOptimizationMode()\" class=\"mt-3 text-sm bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg transition\">
-                        <i class=\"fas fa-magic mr-2\"></i>Optimiser automatiquement
+                    <button onclick="toggleOptimizationMode()" class="mt-3 text-sm bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg transition">
+                        <i class="fas fa-magic mr-2"></i>Optimiser automatiquement
                     </button>
                 </div>
             </div>
