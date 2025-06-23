@@ -109,6 +109,24 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
+
+    // 🚀 NOUVELLE INTERFACE V2.0 - Initialisation conditionnelle
+    // Vérifier si la nouvelle interface est disponible
+    if (document.getElementById('mainFlipCard')) {
+        console.log('🚀 Interface v2.0 détectée - Initialisation des modules avancés');
+        
+        // Initialiser les nouveaux modules
+        if (window.FlipCard) FlipCard.init();
+        if (window.Timeline) Timeline.init();
+        if (window.TaxToggle) TaxToggle.init();
+        if (window.AlertSystem) AlertSystem.init();
+        if (window.DetailsSection) DetailsSection.init();
+        
+        // Calcul initial pour la nouvelle interface
+        if (window.Timeline && window.SimulationData) {
+            Timeline.calculateForYear(SimulationData.currentYear);
+        }
+    }
 });
 
 /**
@@ -795,7 +813,7 @@ function updateBudgetResults(results, years) {
 
 /**
  * Met à jour l'affichage des résultats
- * MODIFIÉE : Utilise les nouveaux IDs HTML pour l'affichage séparé
+ * MODIFIÉE : Support interface v2.0 + compatibilité ancienne interface
  * @param {Object} results - Résultats de la simulation
  */
 function updateResultsDisplay(results) {
@@ -807,7 +825,40 @@ function updateResultsDisplay(results) {
         maximumFractionDigits: 2
     });
     
-    // ✅ NOUVEAU : Affichage par ID spécifique avec valeurs par défaut
+    // 🚀 NOUVELLE INTERFACE V2.0 - Priorité si disponible
+    if (window.SimulationData && window.FlipCard && document.getElementById('mainFlipCard')) {
+        // Mettre à jour les données globales
+        const annualizedReturn = results.years > 0 ? 
+            ((results.afterTaxAmount / results.investedTotal) ** (1/results.years) - 1) * 100 : 0;
+            
+        Object.assign(SimulationData, {
+            grossAmount: results.finalAmount,
+            netAmount: results.afterTaxAmount,
+            taxAmount: results.taxAmount,
+            initialInvestment: results.initialDeposit,
+            periodicTotal: results.periodicTotal,
+            investedTotal: results.investedTotal,
+            annualizedReturn: annualizedReturn,
+            years: results.years,
+            vehicle: results.vehicleId,
+            enveloppe: results.enveloppe
+        });
+        
+        // Mettre à jour les modules v2.0
+        if (window.FlipCard.update) {
+            FlipCard.update(results.afterTaxAmount, results.taxAmount, results.investedTotal, annualizedReturn);
+        }
+        if (window.TaxToggle.updateAmounts) {
+            TaxToggle.updateAmounts(results.finalAmount, results.afterTaxAmount, results.taxAmount);
+        }
+        if (window.AlertSystem.refresh) {
+            AlertSystem.refresh();
+        }
+        
+        console.log('✅ Interface v2.0 mise à jour avec succès');
+    }
+    
+    // ✅ ANCIENNE INTERFACE - Fallback et support des nouveaux IDs
     const resultFinal = document.getElementById('result-final');
     const resultInitial = document.getElementById('result-initial'); 
     const resultPeriodic = document.getElementById('result-periodic');
@@ -820,17 +871,16 @@ function updateResultsDisplay(results) {
     if (resultGain) resultGain.textContent = formatter.format(results.gains || 0);
     if (resultAfterTax) resultAfterTax.textContent = formatter.format(results.afterTaxAmount || 0);
     
-    // ✅ FALLBACK : Garder l'ancien système pour compatibilité
+    // ✅ FALLBACK ULTIME : Anciens sélecteurs génériques
     const resultElements = document.querySelectorAll('.result-value');
     if (resultElements.length >= 4 && !resultFinal) {
-        // Si les nouveaux IDs n'existent pas, utiliser l'ancien système
         resultElements[0].textContent = formatter.format(results.finalAmount);
-        resultElements[1].textContent = formatter.format(results.investedTotal); // Total pour compatibilité
+        resultElements[1].textContent = formatter.format(results.investedTotal);
         resultElements[2].textContent = formatter.format(results.gains);
         resultElements[3].textContent = formatter.format(results.afterTaxAmount);
     }
     
-    // Mettre à jour le message d'adéquation
+    // Mettre à jour le message d'adéquation (toujours actif)
     updateProfileAdequacy(results);
 }
 
@@ -1381,3 +1431,443 @@ document.addEventListener('DOMContentLoaded', function() {
 window.toggleOptimizationMode = function() {
     showTooltip('Optimisation automatique en cours de développement...');
 };
+
+// ============================================
+// 🚀 INTERFACE V2.0 - MODULES AVANCÉS
+// ============================================
+
+// Données globales pour l'interface v2.0
+window.SimulationData = {
+    initialInvestment: 1000,
+    years: 10,
+    annualReturn: 0.07,
+    currentYear: 10,
+    grossAmount: 1967,
+    netAmount: 1801,
+    taxAmount: 166,
+    annualizedReturn: 6.1,
+    vehicle: 'pea',
+    alerts: []
+};
+
+// Module FlipCard avec accessibilité
+window.FlipCard = {
+    init() {
+        this.element = document.getElementById('mainFlipCard');
+        if (!this.element) return;
+        this.bindEvents();
+    },
+
+    bindEvents() {
+        this.element.addEventListener('click', () => this.toggle());
+        this.element.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.toggle();
+            }
+        });
+    },
+
+    toggle() {
+        this.element.classList.toggle('flipped');
+        const isFlipped = this.element.classList.contains('flipped');
+        this.element.setAttribute('aria-pressed', isFlipped);
+    },
+
+    update(netAmount, taxAmount, investedAmount, annualizedReturn) {
+        const netEl = document.getElementById('netAmount');
+        const taxEl = document.getElementById('taxAmount');
+        const investedEl = document.getElementById('investedAmount');
+        const returnEl = document.getElementById('annualizedReturn');
+        
+        if (netEl) netEl.textContent = this.formatCurrency(netAmount);
+        if (taxEl) taxEl.textContent = this.formatCurrency(taxAmount);
+        if (investedEl) investedEl.textContent = this.formatCurrency(investedAmount);
+        if (returnEl) returnEl.textContent = annualizedReturn.toFixed(1) + '%';
+    },
+
+    formatCurrency(amount) {
+        return Math.round(amount).toLocaleString('fr-FR') + ' €';
+    }
+};
+
+// Module Timeline avec throttling
+window.Timeline = {
+    init() {
+        this.slider = document.getElementById('timeSlider');
+        this.yearDisplay = document.getElementById('currentYear');
+        this.chart = null;
+        this.throttleTimeout = null;
+        if (!this.slider) return;
+        this.bindEvents();
+        this.initChart();
+    },
+
+    bindEvents() {
+        this.slider.addEventListener('input', (e) => {
+            // Throttle à 60ms pour performance
+            if (this.throttleTimeout) return;
+            
+            this.throttleTimeout = setTimeout(() => {
+                this.updateYear(parseInt(e.target.value));
+                this.throttleTimeout = null;
+            }, 60);
+        });
+    },
+
+    updateYear(year) {
+        SimulationData.currentYear = year;
+        if (this.yearDisplay) this.yearDisplay.textContent = year;
+        this.calculateForYear(year);
+        this.updateChart();
+    },
+
+    calculateForYear(year) {
+        const grossAmount = SimulationData.initialInvestment * Math.pow(1 + SimulationData.annualReturn, year);
+        const gain = grossAmount - SimulationData.initialInvestment;
+        const taxRate = year < 5 ? 0.172 : 0.172; // PEA logic
+        const taxAmount = gain * taxRate;
+        const netAmount = grossAmount - taxAmount;
+        const annualizedReturn = ((netAmount / SimulationData.initialInvestment) ** (1/year) - 1) * 100;
+
+        // Mise à jour globale
+        Object.assign(SimulationData, {
+            grossAmount: grossAmount,
+            netAmount: netAmount,
+            taxAmount: taxAmount,
+            annualizedReturn: annualizedReturn
+        });
+
+        // Mise à jour UI
+        if (window.FlipCard) FlipCard.update(netAmount, taxAmount, SimulationData.initialInvestment, annualizedReturn);
+        if (window.TaxToggle) TaxToggle.updateAmounts(grossAmount, netAmount, taxAmount);
+        if (window.AlertSystem) AlertSystem.refresh();
+    },
+
+    initChart() {
+        const ctx = document.getElementById('miniChart');
+        if (!ctx) return;
+        
+        const data = this.generateChartData();
+        
+        this.chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.values,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false, // Optimisation performance
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                },
+                scales: {
+                    x: { display: false },
+                    y: { display: false }
+                },
+                elements: {
+                    point: { radius: 0 }
+                }
+            }
+        });
+    },
+
+    updateChart() {
+        if (!this.chart) return;
+        const data = this.generateChartData();
+        this.chart.data.labels = data.labels;
+        this.chart.data.datasets[0].data = data.values;
+        this.chart.update('none'); // Pas d'animation pour fluidité
+    },
+
+    generateChartData() {
+        const labels = [];
+        const values = [];
+        const maxYear = SimulationData.currentYear;
+        
+        for (let i = 0; i <= maxYear; i++) {
+            labels.push(i);
+            const amount = SimulationData.initialInvestment * Math.pow(1 + SimulationData.annualReturn, i);
+            values.push(amount);
+        }
+        
+        return { labels, values };
+    }
+};
+
+// Module TaxToggle amélioré
+window.TaxToggle = {
+    init() {
+        this.afterBtn = document.getElementById('afterTaxBtn');
+        this.beforeBtn = document.getElementById('beforeTaxBtn');
+        this.barFill = document.getElementById('taxBarFill');
+        this.barReduction = document.getElementById('taxBarReduction');
+        this.displayAmount = document.getElementById('displayAmount');
+        this.reductionAmount = document.getElementById('reductionAmount');
+        this.taxPercentage = document.getElementById('taxPercentage');
+        if (!this.afterBtn) return;
+        this.bindEvents();
+    },
+
+    bindEvents() {
+        this.afterBtn.addEventListener('click', () => this.setView('after'));
+        this.beforeBtn.addEventListener('click', () => this.setView('before'));
+    },
+
+    setView(view) {
+        // Mise à jour ARIA
+        this.afterBtn.classList.toggle('active', view === 'after');
+        this.beforeBtn.classList.toggle('active', view === 'before');
+        this.afterBtn.setAttribute('aria-selected', view === 'after');
+        this.beforeBtn.setAttribute('aria-selected', view === 'before');
+        
+        const { grossAmount, netAmount, taxAmount } = SimulationData;
+        const taxPercentage = (taxAmount / grossAmount) * 100;
+        
+        if (view === 'before') {
+            this.barReduction.style.width = taxPercentage + '%';
+            this.reductionAmount.classList.add('visible');
+            this.displayAmount.textContent = this.formatCurrency(grossAmount);
+            if (this.taxPercentage) this.taxPercentage.style.opacity = '1';
+        } else {
+            this.barReduction.style.width = '0';
+            this.reductionAmount.classList.remove('visible');
+            this.displayAmount.textContent = this.formatCurrency(netAmount);
+            if (this.taxPercentage) this.taxPercentage.style.opacity = '0';
+        }
+    },
+
+    updateAmounts(grossAmount, netAmount, taxAmount) {
+        const currentView = this.beforeBtn.classList.contains('active') ? 'before' : 'after';
+        
+        this.reductionAmount.textContent = '- ' + this.formatCurrency(taxAmount);
+        
+        const taxPercentage = (taxAmount / grossAmount) * 100;
+        if (this.taxPercentage) this.taxPercentage.textContent = '-' + taxPercentage.toFixed(1) + '%';
+        
+        if (currentView === 'before') {
+            this.displayAmount.textContent = this.formatCurrency(grossAmount);
+            this.barReduction.style.width = taxPercentage + '%';
+        } else {
+            this.displayAmount.textContent = this.formatCurrency(netAmount);
+        }
+    },
+
+    formatCurrency(amount) {
+        return Math.round(amount).toLocaleString('fr-FR') + ' €';
+    }
+};
+
+// Module AlertSystem avec IDs uniques
+window.AlertSystem = {
+    init() {
+        this.container = document.getElementById('alertsContainer');
+        this.alertCounter = 0;
+        if (!this.container) return;
+        this.refresh();
+    },
+
+    refresh() {
+        if (!this.container) return;
+        this.container.innerHTML = '';
+        this.generateAlerts().forEach(alert => this.addAlert(alert));
+    },
+
+    generateAlerts() {
+        const alerts = [];
+        const { netAmount, currentYear, vehicle } = SimulationData;
+        
+        // Alerte plafond PEA
+        if (vehicle === 'pea') {
+            const remaining = 150000 - netAmount;
+            if (remaining > 0) {
+                alerts.push({
+                    type: 'info',
+                    icon: 'fas fa-info-circle',
+                    message: `Il vous reste <strong>${this.formatCurrency(remaining)}</strong> de plafond PEA disponible`
+                });
+            }
+        }
+        
+        // Alerte seuil fiscal
+        if (currentYear < 5) {
+            alerts.push({
+                type: 'warning',
+                icon: 'fas fa-exclamation-triangle',
+                message: 'Retrait avant 5 ans = clôture automatique du PEA'
+            });
+        }
+        
+        return alerts;
+    },
+
+    addAlert(alert) {
+        if (!this.container) return;
+        const alertId = `alert-${++this.alertCounter}`;
+        const alertElement = document.createElement('div');
+        alertElement.id = alertId;
+        alertElement.className = `alert alert-${alert.type}`;
+        alertElement.innerHTML = `
+            <i class="${alert.icon} alert-icon"></i>
+            <span>${alert.message}</span>
+        `;
+        this.container.appendChild(alertElement);
+    },
+
+    formatCurrency(amount) {
+        return Math.round(amount).toLocaleString('fr-FR') + ' €';
+    }
+};
+
+// Module DetailsSection
+window.DetailsSection = {
+    init() {
+        this.toggle = document.getElementById('detailsToggle');
+        this.content = document.getElementById('detailsContent');
+        this.chevron = document.getElementById('detailsChevron');
+        this.chart = null;
+        if (!this.toggle) return;
+        this.bindEvents();
+    },
+
+    bindEvents() {
+        this.toggle.addEventListener('click', () => this.toggleExpanded());
+        this.toggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.toggleExpanded();
+            }
+        });
+    },
+
+    toggleExpanded() {
+        const isExpanded = this.content.classList.contains('expanded');
+        this.content.classList.toggle('expanded');
+        this.chevron.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(180deg)';
+        this.toggle.setAttribute('aria-expanded', !isExpanded);
+        
+        if (!isExpanded && !this.chart) {
+            setTimeout(() => this.initChart(), 300);
+        }
+        
+        this.updateStats();
+    },
+
+    initChart() {
+        if (window.innerWidth < 480) return; // Optimisation mobile
+        
+        const ctx = document.getElementById('detailedChart');
+        if (!ctx) return;
+        
+        const data = this.generateDetailedChartData();
+        
+        this.chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [
+                    {
+                        label: 'Capital net',
+                        data: data.netValues,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Capital brut',
+                        data: data.grossValues,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: {
+                    legend: { 
+                        position: 'top',
+                        labels: { color: 'white' }
+                    }
+                },
+                scales: {
+                    x: { 
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: 'white' }
+                    },
+                    y: { 
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { 
+                            color: 'white',
+                            callback: function(value) {
+                                return value.toLocaleString('fr-FR') + ' €';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    },
+
+    updateStats() {
+        const { grossAmount, netAmount, initialInvestment, taxAmount, currentYear } = SimulationData;
+        const gain = grossAmount - initialInvestment;
+        const growthRate = ((grossAmount / initialInvestment) ** (1/currentYear) - 1) * 100;
+        const effectiveTaxRate = (taxAmount / gain) * 100;
+
+        const elements = {
+            grossAmountStat: this.formatCurrency(grossAmount),
+            gainStat: this.formatCurrency(gain),
+            growthRateStat: growthRate.toFixed(1) + '%',
+            effectiveTaxRateStat: effectiveTaxRate.toFixed(1) + '%'
+        };
+
+        Object.entries(elements).forEach(([id, value]) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        });
+    },
+
+    generateDetailedChartData() {
+        const labels = [];
+        const grossValues = [];
+        const netValues = [];
+        
+        for (let i = 0; i <= 30; i++) {
+            labels.push('Année ' + i);
+            const grossAmount = SimulationData.initialInvestment * Math.pow(1 + SimulationData.annualReturn, i);
+            const gain = grossAmount - SimulationData.initialInvestment;
+            const taxAmount = gain * 0.172;
+            const netAmount = grossAmount - taxAmount;
+            
+            grossValues.push(grossAmount);
+            netValues.push(netAmount);
+        }
+        
+        return { labels, grossValues, netValues };
+    },
+
+    formatCurrency(amount) {
+        return Math.round(amount).toLocaleString('fr-FR') + ' €';
+    }
+};
+
+console.log('🚀 TradePulse Simulation v2.0 - Modules chargés avec succès');
