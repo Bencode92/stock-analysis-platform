@@ -204,61 +204,6 @@
         #frequency-container {
             animation: fadeIn 0.3s ease;
         }
-        /* ═══════════════════════════════════════════════════════════════ */
-/* 🎯 STYLES POUR LES CARTES DÉTAILLÉES D'ENVELOPPES */
-/* ═══════════════════════════════════════════════════════════════ */
-
-/* Animations pour les cartes modales */
-.animate-fadeIn {
-    animation: fadeIn 0.3s ease-out;
-}
-
-.animate-fadeOut {
-    animation: fadeOut 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes fadeOut {
-    from { opacity: 1; transform: scale(1); }
-    to { opacity: 0; transform: scale(0.95); }
-}
-
-/* Bouton info pour ouvrir les cartes */
-.envelope-info-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    background: rgba(34, 197, 94, 0.2);
-    border: 1px solid rgba(34, 197, 94, 0.4);
-    border-radius: 50%;
-    color: #22c55e;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-left: 8px;
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 10;
-}
-
-.envelope-info-btn:hover {
-    background: rgba(34, 197, 94, 0.3);
-    border-color: #22c55e;
-    transform: translateY(-50%) scale(1.1);
-}
-
-/* Container pour le sélecteur avec bouton info */
-.envelope-select-container {
-    position: relative;
-}
     </style>
 </head>
 <body class="dark">
@@ -449,61 +394,33 @@
         
                             </div>
                             
-<!-- Investment Vehicle -->
-<div class="mb-4">
-    <label class="block mb-2 text-sm font-medium text-gray-300">
-        Enveloppe fiscale
-        <span class="ml-1 text-green-400 cursor-help" title="L'enveloppe fiscale influence la taxation des gains générés par votre investissement. Chaque véhicule a des avantages et limites spécifiques.">
-            <i class="fas fa-info-circle"></i>
-        </span>
-    </label>
-    
-    <!-- NOUVEAU : Container avec bouton info -->
-    <div class="envelope-select-container">
-        <select id="investment-vehicle" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full pr-16">
-            <option value="pea">PEA</option>
-            <option value="cto">Compte-Titres</option>
-            <option value="assurance-vie">Assurance-Vie</option>
-            <option value="per">PER</option>
-            <option value="scpi-av">SCPI (via AV)</option>
-            <option value="scpi-cto">SCPI (via CTO)</option>
-            <option value="fcpi-fip">FCPI / FIP</option>
-            <option value="pel">PEL</option>
-            <option value="cel">CEL</option>
-            <option value="livret-a">Livret A</option>
-            <option value="ldds">LDDS</option>
-            <option value="lep">LEP</option>
-            <option value="livret-jeune">Livret Jeune</option>
-            <option value="pea-pme">PEA‑PME/ETI</option>
-            <option value="peac">PEA‑Avenir Climat</option>
-            <option value="opci">OPCI grand public</option>
-            <option value="crypto-cto">Crypto‑actifs (via CTO)</option>
-        </select>
-        
-        <!-- NOUVEAU : Bouton pour ouvrir la carte détaillée -->
-        <button type="button" 
-                id="envelope-detail-btn"
-                class="envelope-info-btn"
-                title="Voir les détails de cette enveloppe">
-            <i class="fas fa-info"></i>
-        </button>
-    </div>
-    
-    <div id="tax-info" class="mt-4 bg-green-900 bg-opacity-10 border-l-4 border-green-400 rounded-md p-3">
-        <h5 class="text-green-400 font-medium flex items-center mb-2">
-            <i class="fas fa-chart-pie mr-2"></i>
-            Fiscalité du PEA
-        </h5>
-        <p class="text-sm text-gray-300 mb-1">Le Plan d'Épargne en Actions (PEA) offre une exonération d'impôt sur les plus-values après 5 ans de détention (hors prélèvements sociaux de 17,2%).</p>
-        <p class="text-sm font-medium">Plafond: 150 000€ par personne</p>
-    </div>
-    <div class="mt-3 text-sm text-blue-300">
-        <a href="guide-placements.html" class="flex items-center hover:text-green-400 transition">
-            <i class="fas fa-book mr-1"></i> Consulter le guide complet des enveloppes fiscales
-            <i class="fas fa-chevron-right ml-1 text-xs"></i>
-        </a>
-    </div>
-</div>
+                            <!-- Investment Vehicle -->
+                            <div class="mb-4">
+                                <label class="block mb-2 text-sm font-medium text-gray-300">
+                                    Enveloppe fiscale
+                                    <span class="ml-1 text-green-400 cursor-help" title="L'enveloppe fiscale influence la taxation des gains générés par votre investissement. Chaque véhicule a des avantages et limites spécifiques.">
+                                        <i class="fas fa-info-circle"></i>
+                                    </span>
+                                </label>
+ <select id="investment-vehicle" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+        <option value="pea">PEA</option>
+        <option value="cto">Compte-Titres</option>
+        <option value="assurance-vie">Assurance-Vie</option>
+        <option value="per">PER</option>
+        <option value="scpi-av">SCPI (via AV)</option>
+        <option value="scpi-cto">SCPI (via CTO)</option>
+        <option value="fcpi-fip">FCPI / FIP</option>
+        <option value="pel">PEL</option>
+        <option value="cel">CEL</option>
+        <option value="livret-a">Livret A</option>
+        <option value="ldds">LDDS</option>
+        <option value="lep">LEP</option>
+        <option value="livret-jeune">Livret Jeune</option>
+        <option value="pea-pme">PEA‑PME/ETI</option>
+        <option value="peac">PEA‑Avenir Climat</option>
+        <option value="opci">OPCI grand public</option>
+        <option value="crypto-cto">Crypto‑actifs (via CTO)</option>
+    </select>
                                 
                                 <div id="tax-info" class="mt-4 bg-green-900 bg-opacity-10 border-l-4 border-green-400 rounded-md p-3">
                                     <h5 class="text-green-400 font-medium flex items-center mb-2">
@@ -1612,94 +1529,14 @@
                 }, 100);
             }
             
-<!-- NOUVEAU : Import du système de cartes -->
-<script type="module">
-    // Import du système de cartes
-    import { showEnveloppeCard, closeEnveloppeCard } from './js/envelope-cards.js';
-    
-    // Rendre les fonctions globales
-    window.showEnveloppeCard = showEnveloppeCard;
-    window.closeEnveloppeCard = closeEnveloppeCard;
-    
-    // Fonction pour activer un onglet spécifique
-    function activateTab(targetId) {
-        // Masquer tous les contenus
-        document.querySelectorAll('.simulation-content').forEach(content => {
-            content.style.display = 'none';
-        });
-        
-        // Désactiver tous les onglets
-        document.querySelectorAll('.simulation-tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        
-        // Afficher le contenu cible
-        const targetContent = document.getElementById(targetId);
-        if (targetContent) {
-            targetContent.style.display = 'block';
-            
-            // Activer l'onglet correspondant
-            const targetTab = document.querySelector(`.simulation-tab[data-target="${targetId}"]`);
-            if (targetTab) {
-                targetTab.classList.add('active');
-            }
-        }
-    }
-    
-    // Initialiser les événements
-    document.addEventListener('DOMContentLoaded', function() {
-        // NOUVEAU : Initialiser les cartes d'enveloppes
-        initEnveloppeCardsListeners();
-        
-        // EXISTANT : Événements pour les onglets
-        document.querySelectorAll('.simulation-tab').forEach(tab => {
-            tab.addEventListener('click', function() {
-                const targetId = this.getAttribute('data-target');
-                activateTab(targetId);
+            // Événements pour les onglets
+            document.querySelectorAll('.simulation-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-target');
+                    activateTab(targetId);
+                });
             });
         });
-        
-        // Activer le premier onglet par défaut si aucun n'est actif
-        const activeTab = document.querySelector('.simulation-tab.active');
-        if (!activeTab) {
-            const firstTab = document.querySelector('.simulation-tab');
-            if (firstTab) {
-                const firstTargetId = firstTab.getAttribute('data-target');
-                activateTab(firstTargetId);
-            }
-        }
-    });
-    
-    // NOUVEAU : Fonction d'initialisation des cartes
-    function initEnveloppeCardsListeners() {
-        // Bouton info à côté du sélecteur
-        const envelopeDetailBtn = document.getElementById('envelope-detail-btn');
-        if (envelopeDetailBtn) {
-            envelopeDetailBtn.addEventListener('click', function() {
-                const vehicleId = document.getElementById('investment-vehicle').value;
-                window.showEnveloppeCard(vehicleId);
-            });
-        }
-        
-        // Délégation d'événement pour le bouton "En savoir plus" dans tax-info
-        document.addEventListener('click', function(e) {
-            if (e.target && e.target.id === 'tax-info-detail-btn') {
-                const vehicleId = document.getElementById('investment-vehicle').value;
-                window.showEnveloppeCard(vehicleId);
-            }
-        });
-        
-        // Raccourci clavier Ctrl+I
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.key === 'i') {
-                e.preventDefault();
-                const vehicleId = document.getElementById('investment-vehicle').value;
-                window.showEnveloppeCard(vehicleId);
-            }
-        });
-        
-        console.log('✅ Système de cartes détaillées initialisé');
-    }
-</script>
+    </script>
 </body>
 </html>
