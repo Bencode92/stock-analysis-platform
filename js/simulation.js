@@ -4,6 +4,20 @@
  * TradePulse Finance Intelligence Platform
  */
 
+// ========================================
+// Rendement annualisé (CAGR)
+// ========================================
+/**
+ * @param {number} finalAmount  Capital final (net ou brut)
+ * @param {number} investedTotal  Somme effectivement investie
+ * @param {number} years  Nombre d'années
+ * @returns {number}  Ex : 0.072 = 7,2 %
+ */
+function calculateAnnualizedReturn(finalAmount, investedTotal, years) {
+    if (years <= 0 || investedTotal <= 0 || finalAmount <= 0) return 0;
+    return Math.pow(finalAmount / investedTotal, 1 / years) - 1;
+}
+
 // Import des données fiscales depuis fiscal-enveloppes.js
 import { enveloppes, TAXES, netAfterFlatTax, round2 } from './fiscal-enveloppes.js';
 
@@ -739,6 +753,13 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
         taxAmount = gains * taxRate;
         afterTaxAmount = finalAmount - taxAmount;
     }
+
+    // ➜ Rendement annualisé réel
+    const annualizedReturn = calculateAnnualizedReturn(
+        afterTaxAmount /* capital net = + pertinent */,
+        investedTotal,
+        years
+    );
     
     // ✅ NOUVEAU : Retour avec montants séparés
     return {
@@ -752,7 +773,8 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
         years,
         annualReturn,
         vehicleId,
-        enveloppe
+        enveloppe,
+        annualizedReturn     // 🔥 nouveau
     };
 }
 
@@ -799,35 +821,35 @@ function updateBudgetResults(results, years) {
  * @param {Object} results - Résultats de la simulation
  */
 function updateResultsDisplay(results) {
-    // Formater les valeurs monétaires
-    const formatter = new Intl.NumberFormat('fr-FR', { 
-        style: 'currency', 
-        currency: 'EUR',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
+    const fmtMoney = new Intl.NumberFormat('fr-FR', { style:'currency', currency:'EUR', minimumFractionDigits:2 });
+    const fmtPct   = new Intl.NumberFormat('fr-FR', { style:'percent',  minimumFractionDigits:2, maximumFractionDigits:2 });
+    
+    // Tableau metrics pour générer automatiquement les cartes
+    const metrics = [
+        { key: 'finalAmount',     label: 'Capital final' },
+        { key: 'initialDeposit',  label: 'Montant initial' },
+        { key: 'periodicTotal',   label: 'Versements périodiques' },
+        { key: 'gains',           label: 'Gains générés'          },
+        { key: 'afterTaxAmount',  label: 'Net d\'impôts', col2: true },
+        { key: 'annualizedReturn',label: 'Rendement annualisé', isPct:true } // NEW
+    ];
+
+    metrics.forEach(m => {
+        const amountEl = document.getElementById(`result-${m.key}`);
+        if (!amountEl) return;
+
+        const val = results[m.key] ?? 0;
+        amountEl.textContent = m.isPct ? fmtPct.format(val) : fmtMoney.format(val);
     });
-    
-    // ✅ NOUVEAU : Affichage par ID spécifique avec valeurs par défaut
-    const resultFinal = document.getElementById('result-final');
-    const resultInitial = document.getElementById('result-initial'); 
-    const resultPeriodic = document.getElementById('result-periodic');
-    const resultGain = document.getElementById('result-gain');
-    const resultAfterTax = document.getElementById('result-after-tax');
-    
-    if (resultFinal) resultFinal.textContent = formatter.format(results.finalAmount || 0);
-    if (resultInitial) resultInitial.textContent = formatter.format(results.initialDeposit || 0);
-    if (resultPeriodic) resultPeriodic.textContent = formatter.format(results.periodicTotal || 0);
-    if (resultGain) resultGain.textContent = formatter.format(results.gains || 0);
-    if (resultAfterTax) resultAfterTax.textContent = formatter.format(results.afterTaxAmount || 0);
     
     // ✅ FALLBACK : Garder l'ancien système pour compatibilité
     const resultElements = document.querySelectorAll('.result-value');
-    if (resultElements.length >= 4 && !resultFinal) {
+    if (resultElements.length >= 4) {
         // Si les nouveaux IDs n'existent pas, utiliser l'ancien système
-        resultElements[0].textContent = formatter.format(results.finalAmount);
-        resultElements[1].textContent = formatter.format(results.investedTotal); // Total pour compatibilité
-        resultElements[2].textContent = formatter.format(results.gains);
-        resultElements[3].textContent = formatter.format(results.afterTaxAmount);
+        resultElements[0].textContent = fmtMoney.format(results.finalAmount);
+        resultElements[1].textContent = fmtMoney.format(results.investedTotal); // Total pour compatibilité
+        resultElements[2].textContent = fmtMoney.format(results.gains);
+        resultElements[3].textContent = fmtMoney.format(results.afterTaxAmount);
     }
     
     // Mettre à jour le message d'adéquation
