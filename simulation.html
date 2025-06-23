@@ -445,177 +445,67 @@
                             </button>
                         </div>
                         
-<!-- Résultats de la simulation -->
-<div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-    <h4 class="text-xl font-semibold mb-4 flex items-center">
-        <i class="fas fa-chart-line text-green-400 mr-2"></i>
-        Résultats de la simulation
-    </h4>
-    
-    <!-- CARTE FLIP PRINCIPALE -->
-    <div class="flip-card-container">
-        <div class="flip-card" id="mainFlipCard" role="button" aria-pressed="false" tabindex="0" aria-label="Cliquez pour voir les détails fiscaux">
-            <div class="flip-card-face flip-card-front">
-                <div class="flip-indicator">
-                    <i class="fas fa-mouse-pointer"></i> Cliquez pour voir les détails
-                </div>
-                <div class="main-value" id="netAmount">-- €</div>
-                <div class="main-label">Capital net après impôts</div>
-                <div style="margin-top: 15px; font-size: 1rem; opacity: 0.8;">
-                    <strong id="annualizedReturn">--%</strong> de rendement annualisé
-                </div>
-            </div>
-            <div class="flip-card-face flip-card-back">
-                <div class="flip-indicator">
-                    <i class="fas fa-arrow-left"></i> Cliquez pour revenir
-                </div>
-                <div class="secondary-value" id="taxAmount">-- €</div>
-                <div class="secondary-label">Impôts prélevés</div>
-                <div style="margin-top: 15px;">
-                    <div class="secondary-value" id="investedAmount">-- €</div>
-                    <div class="secondary-label">Montant investi</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- SLIDER TEMPOREL -->
-    <div class="timeline-container">
-        <div class="timeline-header">
-            <h3><i class="fas fa-clock"></i> Projection temporelle</h3>
-            <div class="year-display">Année <span id="currentYear">10</span></div>
-        </div>
-        
-        <div class="slider-container">
-            <input type="range" id="timeSlider" class="timeline-slider" min="1" max="30" value="10" aria-label="Nombre d'années d'investissement">
-        </div>
-        
-        <div class="mini-chart">
-            <canvas id="miniChart"></canvas>
-        </div>
-    </div>
-
-    <!-- TOGGLE IMPÔTS -->
-    <div class="tax-toggle-container">
-        <div class="tax-toggle-header">
-            <h3><i class="fas fa-receipt"></i> Impact de la fiscalité</h3>
-            <div class="tax-toggle-buttons" role="tablist">
-                <button class="tax-toggle-btn active" id="afterTaxBtn" role="tab" aria-selected="true">Après impôt</button>
-                <button class="tax-toggle-btn" id="beforeTaxBtn" role="tab" aria-selected="false">Avant impôt</button>
-            </div>
-        </div>
-        
-        <div class="tax-visual">
-            <div class="tax-bar-container">
-                <div class="tax-bar-fill" id="taxBarFill">
-                    <div class="tax-bar-reduction" id="taxBarReduction"></div>
-                </div>
-            </div>
-            <div class="tax-amount">
-                <div id="displayAmount">-- €</div>
-                <div class="tax-reduction-amount" id="reductionAmount">-- €</div>
-                <div class="tax-percentage" id="taxPercentage">--%</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ALERTES INTELLIGENTES -->
-    <div class="alerts-container" id="alertsContainer">
-        <!-- Les alertes seront générées dynamiquement par JavaScript -->
-    </div>
-
-    <!-- SECTION DÉTAILS PLIABLE -->
-    <div class="details-section">
-        <div class="details-header" id="detailsToggle" role="button" tabindex="0" aria-expanded="false" aria-label="Afficher les détails de l'analyse">
-            <h3><i class="fas fa-chart-area"></i> Analyse détaillée</h3>
-            <i class="fas fa-chevron-down" id="detailsChevron"></i>
-        </div>
-        <div class="details-content" id="detailsContent">
-            <div class="details-inner">
-                <div class="chart-container">
-                    <canvas id="detailedChart"></canvas>
-                </div>
-                
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="grossAmountStat">-- €</div>
-                        <div class="stat-label">Capital avant impôt</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="gainStat">-- €</div>
-                        <div class="stat-label">Plus-value brute</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="growthRateStat">--%</div>
-                        <div class="stat-label">Taux de croissance</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="effectiveTaxRateStat">--%</div>
-                        <div class="stat-label">Taux d'imposition effectif</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+                        <!-- Résultats de la simulation -->
+                        <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                            <h4 class="text-xl font-semibold mb-4 flex items-center">
+                                <i class="fas fa-chart-line text-green-400 mr-2"></i>
+                                Résultats de la simulation
+                            </h4>
+                            
+<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+    <!-- Capital final -->
+    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+        <p id="result-final" class="text-green-400 text-2xl font-bold mb-1">-- €</p>
+        <p class="text-gray-400 text-sm">Capital final</p>
     </div>
     
-    <!-- FALLBACK LEGACY - Anciens éléments cachés pour compatibilité -->
-    <div id="legacy-results" style="display: none;">
-        <!-- Ancienne grille de résultats -->
-        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-            <!-- Capital final -->
-            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                <p id="result-final" class="text-green-400 text-2xl font-bold mb-1">-- €</p>
-                <p class="text-gray-400 text-sm">Capital final</p>
-            </div>
-            
-            <!-- Montant initial -->
-            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                <p id="result-initial" class="text-green-400 text-2xl font-bold mb-1">-- €</p>
-                <p class="text-gray-400 text-sm">Montant initial</p>
-            </div>
-            
-            <!-- Versements périodiques -->
-            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                <p id="result-periodic" class="text-green-400 text-2xl font-bold mb-1">-- €</p>
-                <p class="text-gray-400 text-sm">Versements périodiques</p>
-            </div>
-            
-            <!-- Gains générés -->
-            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                <p id="result-gain" class="text-green-400 text-2xl font-bold mb-1">-- €</p>
-                <p class="text-gray-400 text-sm">Gains générés</p>
-            </div>
-            
-            <!-- Net d'impôts (prend 2 colonnes sur desktop) -->
-            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center col-span-2">
-                <p id="result-after-tax" class="text-green-400 text-2xl font-bold mb-1">-- €</p>
-                <p class="text-gray-400 text-sm">Net d'impôts</p>
-            </div>
-        </div>
-        
-        <!-- Ancien graphique -->
-        <div class="chart-container mb-6">
-            <canvas id="investment-chart"></canvas>
-        </div>
-        
-        <!-- Ancienne adéquation -->
-        <div id="profile-adequacy" class="bg-blue-900 bg-opacity-20 p-4 rounded-lg border-l-4 border-blue-400">
-            <h5 class="text-blue-400 font-medium flex items-center mb-2">
-                <i class="fas fa-check-circle mr-2"></i>
-                Adéquation avec votre profil
-            </h5>
-            <div class="adequacy-score bg-green-900 bg-opacity-20 text-green-400 inline-block px-2 py-1 rounded text-sm font-medium mb-2">
-                Adéquation: 5/5
-            </div>
-            <ul class="adequacy-list text-sm text-gray-300 space-y-1 pl-4">
-                <li>Le PEA est parfaitement adapté pour un investissement de cette durée.</li>
-                <li>Votre montant d'investissement est inférieur au plafond du PEA (150 000€).</li>
-                <li>Un rendement de 7% correspond aux performances historiques moyennes des indices boursiers.</li>
-            </ul>
-        </div>
+    <!-- Montant initial -->
+    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+        <p id="result-initial" class="text-green-400 text-2xl font-bold mb-1">-- €</p>
+        <p class="text-gray-400 text-sm">Montant initial</p>
+    </div>
+    
+    <!-- Versements périodiques -->
+    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+        <p id="result-periodic" class="text-green-400 text-2xl font-bold mb-1">-- €</p>
+        <p class="text-gray-400 text-sm">Versements périodiques</p>
+    </div>
+    
+    <!-- Gains générés -->
+    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+        <p id="result-gain" class="text-green-400 text-2xl font-bold mb-1">-- €</p>
+        <p class="text-gray-400 text-sm">Gains générés</p>
+    </div>
+    
+    <!-- Net d'impôts (prend 2 colonnes sur desktop) -->
+    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center col-span-2">
+        <p id="result-after-tax" class="text-green-400 text-2xl font-bold mb-1">-- €</p>
+        <p class="text-gray-400 text-sm">Net d'impôts</p>
     </div>
 </div>
+
+                            
+                            <div class="chart-container mb-6">
+                                <canvas id="investment-chart"></canvas>
+                            </div>
+                            
+                            <div id="profile-adequacy" class="bg-blue-900 bg-opacity-20 p-4 rounded-lg border-l-4 border-blue-400">
+                                <h5 class="text-blue-400 font-medium flex items-center mb-2">
+                                    <i class="fas fa-check-circle mr-2"></i>
+                                    Adéquation avec votre profil
+                                </h5>
+                                <div class="adequacy-score bg-green-900 bg-opacity-20 text-green-400 inline-block px-2 py-1 rounded text-sm font-medium mb-2">
+                                    Adéquation: 5/5
+                                </div>
+                                <ul class="adequacy-list text-sm text-gray-300 space-y-1 pl-4">
+                                    <li>Le PEA est parfaitement adapté pour un investissement de cette durée.</li>
+                                    <li>Votre montant d'investissement est inférieur au plafond du PEA (150 000€).</li>
+                                    <li>Un rendement de 7% correspond aux performances historiques moyennes des indices boursiers.</li>
+                                </ul>
+                            </div>
                         </div>
+                    </div>
+                </div>
                 
                 <!-- Contenu pour l'onglet Optimisation fiscale PER -->
                 <div id="tax-optimizer" class="simulation-content" style="display: none;">
