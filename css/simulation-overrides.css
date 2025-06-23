@@ -1,0 +1,290 @@
+/**
+ * simulation-overrides.css
+ * Améliorations modernes pour le simulateur TradePulse
+ * À charger APRÈS simulation.css pour override les styles
+ */
+
+/* ========================================
+   VARIABLES CSS MODERNES
+======================================== */
+:root {
+    --glass-bg: rgba(30, 58, 138, 0.15);
+    --glass-border: rgba(59, 130, 246, 0.2);
+    --glass-hover: rgba(30, 58, 138, 0.25);
+    --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --transition-smooth: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ========================================
+   GRILLE RÉSULTATS RESPONSIVE
+======================================== */
+.grid.grid-cols-2.md\\:grid-cols-3.gap-4.mb-6 {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) !important;
+    gap: 1rem !important;
+    margin-bottom: 1.5rem !important;
+}
+
+/* Cartes de résultats modernisées */
+.bg-blue-800.bg-opacity-30.p-4.rounded-lg.text-center,
+.result-card {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: var(--shadow-soft) !important;
+    transition: var(--transition-smooth) !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.bg-blue-800.bg-opacity-30.p-4.rounded-lg.text-center:hover,
+.result-card:hover {
+    background: var(--glass-hover) !important;
+    box-shadow: var(--shadow-hover) !important;
+    transform: translateY(-2px) !important;
+    border-color: rgba(16, 185, 129, 0.4) !important;
+}
+
+/* ========================================
+   VALEURS ADAPTATIVES (CLAMP)
+======================================== */
+.text-green-400.text-2xl.font-bold,
+.result-value {
+    font-size: clamp(1.6rem, 4vw, 2.6rem) !important;
+    line-height: 1.2 !important;
+    font-weight: 700 !important;
+    transition: var(--transition-smooth) !important;
+}
+
+/* Animation d'apparition des valeurs */
+.result-value:not(:empty) {
+    animation: valueReveal 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@keyframes valueReveal {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ========================================
+   GRAPHIQUE ADAPTATIF
+======================================== */
+.chart-container {
+    height: clamp(240px, 40vh, 380px) !important;
+    background: linear-gradient(135deg, 
+        rgba(30, 58, 138, 0.1) 0%, 
+        rgba(59, 130, 246, 0.05) 100%) !important;
+    border-radius: 0.75rem !important;
+    padding: 1rem !important;
+    border: 1px solid var(--glass-border) !important;
+    animation: fadeInUp 0.8s ease-out 0.3s both;
+}
+
+/* ========================================
+   ANIMATIONS D'ENTRÉE
+======================================== */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.bg-blue-900.bg-opacity-20.p-6.rounded-lg {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.bg-blue-900.bg-opacity-20.p-6.rounded-lg:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.bg-blue-900.bg-opacity-20.p-6.rounded-lg:nth-child(3) {
+    animation-delay: 0.2s;
+}
+
+/* ========================================
+   TOOLTIPS & BADGES AMÉLIORÉS
+======================================== */
+#profile-adequacy {
+    background: rgba(30, 58, 138, 0.12) !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(59, 130, 246, 0.25) !important;
+    padding: 1.25rem !important;
+}
+
+.adequacy-score {
+    backdrop-filter: blur(6px) !important;
+    border: 1px solid currentColor !important;
+    transition: var(--transition-smooth) !important;
+}
+
+/* ========================================
+   SCROLLBARS PERSONNALISÉES
+======================================== */
+.amortization-table-container::-webkit-scrollbar,
+.overflow-auto::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.amortization-table-container::-webkit-scrollbar-track,
+.overflow-auto::-webkit-scrollbar-track {
+    background: rgba(30, 58, 138, 0.1);
+    border-radius: 4px;
+}
+
+.amortization-table-container::-webkit-scrollbar-thumb,
+.overflow-auto::-webkit-scrollbar-thumb {
+    background: rgba(16, 185, 129, 0.6);
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.amortization-table-container::-webkit-scrollbar-thumb:hover,
+.overflow-auto::-webkit-scrollbar-thumb:hover {
+    background: rgba(16, 185, 129, 0.8);
+}
+
+/* ========================================
+   SIDEBAR OPTIMISÉE
+======================================== */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .sidebar {
+        width: 64px !important; /* 70px → 64px = +6px de contenu */
+    }
+    
+    .main-content {
+        margin-left: 64px !important;
+    }
+}
+
+/* ========================================
+   RENDU TYPOGRAPHIQUE
+======================================== */
+.result-label,
+.text-gray-400.text-sm {
+    font-weight: 500 !important;
+    letter-spacing: 0.025em !important;
+    opacity: 0.9 !important;
+}
+
+/* ========================================
+   ÉTATS DE CHARGEMENT
+======================================== */
+.result-value:empty::before {
+    content: "-- €";
+    opacity: 0.5;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.8; }
+}
+
+/* ========================================
+   RESPONSIVE AVANCÉ
+======================================== */
+@media (max-width: 640px) {
+    .grid.grid-cols-2.md\\:grid-cols-3.gap-4.mb-6 {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+    }
+    
+    .text-green-400.text-2xl.font-bold,
+    .result-value {
+        font-size: clamp(1.4rem, 6vw, 2rem) !important;
+    }
+    
+    .chart-container {
+        height: clamp(200px, 35vh, 280px) !important;
+        padding: 0.75rem !important;
+    }
+}
+
+@media (min-width: 1280px) {
+    .grid.grid-cols-2.md\\:grid-cols-3.gap-4.mb-6 {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+    }
+}
+
+/* ========================================
+   COLORISATION INTELLIGENTE
+======================================== */
+.result-value[data-type="percentage"] {
+    background: linear-gradient(135deg, #10b981, #34d399);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Rendement annualisé : couleurs selon performance */
+#result-annualizedReturn {
+    transition: color 0.3s ease !important;
+}
+
+/* ≥ 7% → Vert */
+#result-annualizedReturn[data-performance="high"] {
+    color: #10b981 !important;
+}
+
+/* 4-7% → Jaune */
+#result-annualizedReturn[data-performance="medium"] {
+    color: #f59e0b !important;
+}
+
+/* < 4% → Rouge */
+#result-annualizedReturn[data-performance="low"] {
+    color: #ef4444 !important;
+}
+
+/* ========================================
+   MICRO-INTERACTIONS
+======================================== */
+.bg-blue-800.bg-opacity-30.p-4.rounded-lg.text-center::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        transparent, 
+        rgba(16, 185, 129, 0.1), 
+        transparent);
+    transition: left 0.6s ease;
+}
+
+.bg-blue-800.bg-opacity-30.p-4.rounded-lg.text-center:hover::before {
+    left: 100%;
+}
+
+/* ========================================
+   PERFORMANCE & ACCESSIBILITÉ
+======================================== */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Améliore le contraste pour l'accessibilité */
+@media (prefers-contrast: high) {
+    :root {
+        --glass-bg: rgba(30, 58, 138, 0.3);
+        --glass-border: rgba(59, 130, 246, 0.5);
+    }
+}
