@@ -2016,9 +2016,6 @@ function analyserBudget() {
     // Mise à jour du temps pour atteindre l'objectif d'épargne
     updateObjectiveTime(epargnePossible);
     
-    // ✅ NOUVEAU : Mettre à jour le widget de répartition épargne
-updateEpargneBreakdown(investAuto, epargnePossible, revenuMensuel);
-    
     // Mettre à jour le score budget
     updateBudgetScore(tauxEpargne, loyer, revenuMensuel, depensesTotales);
     
