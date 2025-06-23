@@ -2016,19 +2016,16 @@ function analyserBudget() {
     // Mise à jour du temps pour atteindre l'objectif d'épargne
     updateObjectiveTime(epargnePossible);
     
+    // ✅ NOUVEAU : Mettre à jour le widget de répartition épargne
+updateEpargneBreakdown(investAuto, epargnePossible, revenuMensuel);
+    
     // Mettre à jour le score budget
     updateBudgetScore(tauxEpargne, loyer, revenuMensuel, depensesTotales);
     
-// Calculer l'épargne totale et le pourcentage
-const epargneTotale = investAuto + epargnePossible;
-const pourcentageEpargne = revenuMensuel > 0 ? (epargneTotale / revenuMensuel) * 100 : 0;
-
-// Mettre à jour les recommandations avec les bons paramètres
-updateRecommendations(epargneTotale, pourcentageEpargne, revenuMensuel);
-
-// Mettre à jour la visualisation de répartition épargne
-updateEpargneBreakdown(investAuto, epargnePossible, revenuMensuel);
+    // Mettre à jour les recommandations
+    updateRecommendations(epargnePossible, tauxEpargne, investAuto);
 }
+
 /**
  * Met à jour le temps nécessaire pour atteindre l'objectif d'épargne
  * @param {number} epargneMensuelle - Montant d'épargne mensuelle possible
@@ -2218,60 +2215,6 @@ function updateBudgetAdvice(loyer, quotidien, extra, investAuto, depensesVariabl
         investAuto,
         epargnePossible: Math.max(0, revenuMensuel - (loyer + quotidien + extra + investAuto + depensesVariables))
     };
-    /**
- * Moteur de règles dynamiques pour les conseils
- */
-const BUDGET_RULES = [
-    {
-        id: 'epargne_critique',
-        condition: (data) => data.tauxEpargne < 5,
-        message: '🚨 Priorité absolue : constituez un fonds d\'urgence de 1000€ minimum',
-        severity: 'danger',
-        action: 'Réduisez vos dépenses non essentielles'
-    },
-    {
-        id: 'logement_cher',
-        condition: (data) => data.ratioLogement > 33,
-        message: '🏠 Votre logement dépasse 33% de vos revenus',
-        severity: 'warning',
-        action: 'Envisagez un déménagement ou une colocation'
-    },
-    {
-        id: 'epargne_excellente',
-        condition: (data) => data.tauxEpargne > 20,
-        message: '🎉 Excellent taux d\'épargne ! Optimisez maintenant',
-        severity: 'success',
-        action: 'Diversifiez vers PEA et Assurance-vie'
-    },
-    {
-        id: 'loisirs_excessifs',
-        condition: (data) => data.ratioLoisirs > 15,
-        message: '🎭 Vos loisirs dépassent 15% de vos revenus',
-        severity: 'info',
-        action: 'Établissez un budget loisirs strict'
-    },
-    {
-        id: 'auto_invest_manquant',
-        condition: (data) => data.investAuto === 0 && data.epargnePossible > 100,
-        message: '🤖 Automatisez votre épargne pour garantir vos objectifs',
-        severity: 'info',
-        action: 'Mettez en place un virement automatique'
-    }
-];
-
-/**
- * Génère des conseils dynamiques basés sur les règles
- */
-function getDynamicTips(budgetData) {
-    return BUDGET_RULES
-        .filter(rule => rule.condition(budgetData))
-        .map(rule => ({
-            message: rule.message,
-            action: rule.action,
-            severity: rule.severity,
-            id: rule.id
-        }));
-}
     
     // Générer les conseils dynamiques
     const dynamicTips = getDynamicTips(budgetData);
@@ -2327,10 +2270,10 @@ function updateEpargneBreakdown(epargnAutomatique, epargnePossible, revenuMensue
     const pourcentageEpargne = revenuMensuel > 0 ? ((epargneTotale / revenuMensuel) * 100).toFixed(1) : 0;
     
     // ✅ SÉLECTEURS CORRIGÉS pour correspondre au HTML de votre capture
-const epargneAutoElement = document.getElementById('epargne-auto-display');
-const epargneLibreElement = document.getElementById('epargne-libre-display');
-const totalDispoElement = document.getElementById('epargne-totale-display');
-const pourcentageElement = document.getElementById('taux-epargne-totale');
+    const epargneAutoElement = document.querySelector('.capacite-epargne .bg-blue-800:nth-child(1) p:first-child');
+    const epargneLibreElement = document.querySelector('.capacite-epargne .bg-blue-800:nth-child(2) p:first-child');
+    const totalDispoElement = document.querySelector('.capacite-epargne .bg-blue-800:nth-child(3) p:first-child');
+    const pourcentageElement = document.querySelector('.capacite-epargne p:last-child');
     
     // Mise à jour avec vérification
     if (epargneAutoElement) {
@@ -2351,7 +2294,7 @@ const pourcentageElement = document.getElementById('taux-epargne-totale');
     }
     
     // ✅ APPELER LES RECOMMANDATIONS
-updateRecommendations(epargneTotale, pourcentageEpargne, revenuMensuel);
+    updateRecommandations(pourcentageEpargne, epargneTotale, revenuMensuel);
     
     console.log('🔄 Épargne breakdown mise à jour:', {
         automatique: epargnAutomatique,
@@ -2364,7 +2307,7 @@ updateRecommendations(epargneTotale, pourcentageEpargne, revenuMensuel);
 /**
  * ✅ Met à jour les recommandations personnalisées
  */
-function updateRecommendations(epargneTotale, pourcentageEpargne, revenuMensuel) {
+function updateRecommandations(pourcentageEpargne, epargneTotale, revenuMensuel) {
     // ✅ CHERCHER LE CONTAINER DANS LA SECTION RECOMMANDATIONS
     let container = document.getElementById('recommandations-container');
     
