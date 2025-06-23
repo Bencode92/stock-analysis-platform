@@ -759,26 +759,75 @@ function ajusterValeursParDefaut(revenu) {
 }
 
 /**
- * Exporte le budget en PDF
+ * Exporte le budget en PDF avec html2pdf
  */
 function exportBudgetToPDF() {
-    // Ici, nous pourrions utiliser html2pdf.js ou jsPDF
-    // Pour cette démo, nous affichons juste une alerte
-    alert('Fonctionnalité d\'export PDF disponible prochainement');
+    const button = document.getElementById('export-budget-pdf');
     
-    // Si html2pdf était importé:
-    /*
-    const element = document.querySelector('.content-wrapper');
+    // Animation du bouton
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Génération PDF...';
+    button.disabled = true;
+    
+    // Préparer l'élément à exporter
+    const element = document.getElementById('budget-planner');
+    
+    // Configuration PDF
     const opt = {
-        margin: 1,
-        filename: 'TradePulse-Budget.pdf',
+        margin: [10, 10, 10, 10],
+        filename: `TradePulse-Budget-${new Date().toISOString().slice(0,10)}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'cm', format: 'a4', orientation: 'portrait' }
+        html2canvas: { 
+            scale: 2,
+            useCORS: true,
+            allowTaint: true
+        },
+        jsPDF: { 
+            unit: 'mm', 
+            format: 'a4', 
+            orientation: 'portrait' 
+        }
     };
     
-    html2pdf().set(opt).from(element).save();
-    */
+    // Générer et télécharger le PDF
+    html2pdf().set(opt).from(element).save().then(() => {
+        // Restaurer le bouton
+        button.innerHTML = originalHTML;
+        button.disabled = false;
+        
+        // Notification de succès
+        showBudgetNotification('PDF généré avec succès !', 'success');
+    }).catch(error => {
+        console.error('Erreur PDF:', error);
+        button.innerHTML = originalHTML;
+        button.disabled = false;
+        showBudgetNotification('Erreur lors de la génération du PDF', 'error');
+    });
+}
+
+/**
+ * Affiche une notification temporaire
+ */
+function showBudgetNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `
+        fixed bottom-4 right-4 z-50 p-4 rounded-lg shadow-lg text-white
+        ${type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'}
+        animate-fade-in
+    `;
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation-triangle' : 'info'} mr-2"></i>
+            ${message}
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-suppression après 3 secondes
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
 }
 
 /**
@@ -1045,6 +1094,61 @@ function updateEvolutionChart(epargneMensuelle) {
 }
 
 /**
+ * Moteur de règles dynamiques pour les conseils
+ */
+const BUDGET_RULES = [
+    {
+        id: 'epargne_critique',
+        condition: (data) => data.tauxEpargne < 5,
+        message: '🚨 Priorité absolue : constituez un fonds d\'urgence de 1000€ minimum',
+        severity: 'danger',
+        action: 'Réduisez vos dépenses non essentielles'
+    },
+    {
+        id: 'logement_cher',
+        condition: (data) => data.ratioLogement > 33,
+        message: '🏠 Votre logement dépasse 33% de vos revenus',
+        severity: 'warning',
+        action: 'Envisagez un déménagement ou une colocation'
+    },
+    {
+        id: 'epargne_excellente',
+        condition: (data) => data.tauxEpargne > 20,
+        message: '🎉 Excellent taux d\'épargne ! Optimisez maintenant',
+        severity: 'success',
+        action: 'Diversifiez vers PEA et Assurance-vie'
+    },
+    {
+        id: 'loisirs_excessifs',
+        condition: (data) => data.ratioLoisirs > 15,
+        message: '🎭 Vos loisirs dépassent 15% de vos revenus',
+        severity: 'info',
+        action: 'Établissez un budget loisirs strict'
+    },
+    {
+        id: 'auto_invest_manquant',
+        condition: (data) => data.investAuto === 0 && data.epargnePossible > 100,
+        message: '🤖 Automatisez votre épargne pour garantir vos objectifs',
+        severity: 'info',
+        action: 'Mettez en place un virement automatique'
+    }
+];
+
+/**
+ * Génère des conseils dynamiques basés sur les règles
+ */
+function getDynamicTips(budgetData) {
+    return BUDGET_RULES
+        .filter(rule => rule.condition(budgetData))
+        .map(rule => ({
+            message: rule.message,
+            action: rule.action,
+            severity: rule.severity,
+            id: rule.id
+        }));
+}
+
+/**
  * Met à jour les conseils budgétaires en fonction des données
  */
 function updateBudgetAdvice(loyer, quotidien, extra, investAuto, depensesVariables, revenuMensuel, tauxEpargne) {
@@ -1054,57 +1158,47 @@ function updateBudgetAdvice(loyer, quotidien, extra, investAuto, depensesVariabl
     
     if (!adviceElement || !adviceList || !adviceScore) return;
     
-    // Calculer un score d'adéquation budgétaire
-    let score = 3; // Score de base moyen
-    const conseils = [];
+    // Préparer les données pour le moteur de règles
+    const budgetData = {
+        tauxEpargne,
+        ratioLogement: revenuMensuel > 0 ? (loyer / revenuMensuel) * 100 : 0,
+        ratioLoisirs: revenuMensuel > 0 ? (extra / revenuMensuel) * 100 : 0,
+        investAuto,
+        epargnePossible: Math.max(0, revenuMensuel - (loyer + quotidien + extra + investAuto + depensesVariables))
+    };
     
-    // Évaluer le taux d'épargne
-    if (tauxEpargne < 5) {
-        score--;
-        conseils.push("Votre taux d'épargne est faible. Essayez de réduire certaines dépenses non essentielles.");
-    } else if (tauxEpargne >= 20) {
-        score++;
-        conseils.push("Excellent taux d'épargne! Vous êtes sur la bonne voie pour atteindre vos objectifs financiers.");
-    } else {
-        conseils.push("Un taux d'épargne optimal se situe généralement entre 15% et 25% de vos revenus.");
-    }
+    // Générer les conseils dynamiques
+    const dynamicTips = getDynamicTips(budgetData);
     
-    // Évaluer la part du logement
-    const ratioLogement = revenuMensuel > 0 ? (loyer / revenuMensuel) * 100 : 0;
-    if (ratioLogement > 33) {
-        score--;
-        conseils.push("Vos dépenses de logement dépassent 33% de vos revenus, ce qui peut limiter votre capacité d'épargne.");
-    } else if (ratioLogement <= 25) {
-        score++;
-        conseils.push("Vos dépenses de logement sont bien maîtrisées (moins de 25% de vos revenus).");
-    } else {
-        conseils.push(`Vos dépenses de logement représentent environ ${Math.round(ratioLogement)}% de votre budget, ce qui est raisonnable.`);
-    }
-    
-    // Évaluer les dépenses variables
-    if (depensesVariables > 0) {
-        const ratioVariables = (depensesVariables / revenuMensuel) * 100;
-        if (ratioVariables > 20) {
-            conseils.push(`Vos dépenses variables représentent ${Math.round(ratioVariables)}% de vos revenus. Analyser ces postes pourrait vous aider à optimiser votre budget.`);
-        }
-    }
-    
-    // Conseil sur l'investissement automatique
-    if (investAuto > 0) {
-        const ratioInvest = (investAuto / revenuMensuel) * 100;
-        conseils.push(`Vous investissez automatiquement ${Math.round(ratioInvest)}% de vos revenus, ce qui est une excellente habitude.`);
-    } else {
-        conseils.push("Envisagez d'automatiser votre épargne pour atteindre plus facilement vos objectifs.");
-    }
-    
-    // Limiter le score entre 1 et 5
+    // Calculer le score (gardez votre logique existante)
+    let score = 3;
+    if (tauxEpargne < 5) score--;
+    if (budgetData.ratioLogement > 33) score--;
+    if (tauxEpargne >= 20) score++;
+    if (budgetData.ratioLogement <= 25) score++;
     score = Math.max(1, Math.min(5, score));
     
-    // Mettre à jour le score
+    // Mettre à jour l'affichage
     adviceScore.textContent = `Évaluation: ${score}/5`;
     
-    // Mettre à jour la liste des conseils
-    adviceList.innerHTML = conseils.map(conseil => `<li>${conseil}</li>`).join('');
+    // Afficher les conseils dynamiques avec style
+    const conseilsHTML = dynamicTips.map(tip => {
+        const colorClass = {
+            danger: 'text-red-400',
+            warning: 'text-orange-400',
+            success: 'text-green-400',
+            info: 'text-blue-400'
+        }[tip.severity] || 'text-gray-300';
+        
+        return `
+            <li class="mb-2">
+                <span class="${colorClass} font-medium">${tip.message}</span>
+                <br><span class="text-gray-400 text-xs ml-4">💡 ${tip.action}</span>
+            </li>
+        `;
+    }).join('');
+    
+    adviceList.innerHTML = conseilsHTML || '<li>Votre budget semble équilibré.</li>';
     
     // Ajuster la couleur du score selon l'évaluation
     adviceScore.className = 'advice-score inline-block px-2 py-1 rounded text-sm font-medium mb-2';
