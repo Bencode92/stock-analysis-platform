@@ -817,45 +817,117 @@ function updateBudgetResults(results, years) {
 
 /**
  * Met à jour l'affichage des résultats
- * MODIFIÉE : Utilise les nouveaux IDs HTML pour l'affichage séparé
+ * CORRIGÉE : Utilise les bons IDs HTML correspondant à la structure existante
  * @param {Object} results - Résultats de la simulation
  */
 function updateResultsDisplay(results) {
-    const fmtMoney = new Intl.NumberFormat('fr-FR', { style:'currency', currency:'EUR', minimumFractionDigits:2 });
-    const fmtPct   = new Intl.NumberFormat('fr-FR', { style:'percent',  minimumFractionDigits:2, maximumFractionDigits:2 });
+    console.log('📈 Mise à jour de l\'affichage des résultats...', results);
     
-    // Tableau metrics pour générer automatiquement les cartes
+    // ✅ CORRESPONDANCE CORRECTE : JavaScript key ↔ HTML ID
     const metrics = [
-        { key: 'finalAmount',     label: 'Capital final' },
-        { key: 'initialDeposit',  label: 'Montant initial' },
-        { key: 'periodicTotal',   label: 'Versements périodiques' },
-        { key: 'gains',           label: 'Gains générés'          },
-        { key: 'afterTaxAmount',  label: 'Net d\'impôts', col2: true },
-        { key: 'annualizedReturn',label: 'Rendement annualisé', isPct:true } // NEW
+        { 
+            key: 'finalAmount',      
+            domId: 'result-final',
+            label: 'Capital final',
+            isPct: false 
+        },
+        { 
+            key: 'initialDeposit',   
+            domId: 'result-initial',
+            label: 'Montant initial',
+            isPct: false 
+        },
+        { 
+            key: 'periodicTotal',    
+            domId: 'result-periodic',
+            label: 'Versements périodiques',
+            isPct: false 
+        },
+        { 
+            key: 'gains',            
+            domId: 'result-gain',
+            label: 'Gains générés',
+            isPct: false 
+        },
+        { 
+            key: 'afterTaxAmount',   
+            domId: 'result-after-tax',
+            label: 'Net d\'impôts',
+            isPct: false 
+        },
+        { 
+            key: 'annualizedReturn', 
+            domId: 'result-annualized-return',
+            label: 'Rendement annualisé',
+            isPct: true 
+        }
     ];
 
-    metrics.forEach(m => {
-        const amountEl = document.getElementById(`result-${m.key}`);
-        if (!amountEl) return;
+    // 💰 FORMATTERS
+    const formatCurrency = (amount) => new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(amount || 0);
 
-        const val = results[m.key] ?? 0;
-        amountEl.textContent = m.isPct ? fmtPct.format(val) : fmtMoney.format(val);
+    const formatPercentage = (value) => new Intl.NumberFormat('fr-FR', {
+        style: 'percent',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format((value || 0) / 100); // Conversion : 7.2% → 0.072 pour le formatter
+
+    // 🔄 MISE À JOUR DE CHAQUE MÉTRIQUE
+    metrics.forEach(metric => {
+        const element = document.getElementById(metric.domId);
+        const value = results[metric.key];
+        
+        if (!element) {
+            console.warn(`⚠️ Élément avec ID '${metric.domId}' non trouvé`);
+            return;
+        }
+        
+        if (value === undefined || value === null) {
+            console.warn(`⚠️ Valeur '${metric.key}' non définie dans les résultats`);
+            element.textContent = metric.isPct ? '0,00 %' : '0 €';
+            return;
+        }
+        
+        // Formatage selon le type
+        const formattedValue = metric.isPct ? 
+            formatPercentage(value) : 
+            formatCurrency(value);
+        
+        element.textContent = formattedValue;
+        
+        console.log(`✅ ${metric.domId}: ${formattedValue} (${metric.label})`);
     });
     
-    // ✅ FALLBACK : Garder l'ancien système pour compatibilité
+    // 🔄 FALLBACK : Système de compatibilité pour les anciens sélecteurs
     const resultElements = document.querySelectorAll('.result-value');
-    if (resultElements.length >= 4) {
-        // Si les nouveaux IDs n'existent pas, utiliser l'ancien système
-        resultElements[0].textContent = fmtMoney.format(results.finalAmount);
-        resultElements[1].textContent = fmtMoney.format(results.investedTotal); // Total pour compatibilité
-        resultElements[2].textContent = fmtMoney.format(results.gains);
-        resultElements[3].textContent = fmtMoney.format(results.afterTaxAmount);
+    if (resultElements.length > 0) {
+        console.log(`🔄 Fallback activé pour ${resultElements.length} éléments avec classe 'result-value'`);
+        
+        // Mettre à jour les éléments avec classe result-value (s'ils existent)
+        if (resultElements[0] && results.finalAmount !== undefined) {
+            resultElements[0].textContent = formatCurrency(results.finalAmount);
+        }
+        if (resultElements[1] && results.initialDeposit !== undefined) {
+            resultElements[1].textContent = formatCurrency(results.initialDeposit);
+        }
+        if (resultElements[2] && results.gains !== undefined) {
+            resultElements[2].textContent = formatCurrency(results.gains);
+        }
+        if (resultElements[3] && results.afterTaxAmount !== undefined) {
+            resultElements[3].textContent = formatCurrency(results.afterTaxAmount);
+        }
     }
     
-    // Mettre à jour le message d'adéquation
-    updateProfileAdequacy(results);
+    // 📊 METTRE À JOUR LES INFORMATIONS SUPPLÉMENTAIRES
+    updateAdditionalInfo(results);
+    
+    console.log('✅ Affichage des résultats terminé');
 }
-
 /**
  * Met à jour le message d'adéquation au profil avec analyse intelligente
  * @param {Object} results - Résultats de la simulation
