@@ -13,6 +13,90 @@ enveloppes.forEach(env => {
     enveloppesCache.set(env.id, env);
 });
 
+// ============================================
+// FONCTIONS DE CALCUL DU RENDEMENT ANNUALISÉ
+// ============================================
+
+/**
+ * Calcul du rendement annualisé simple (CAGR) pour versement unique
+ * @param {Object} params - Paramètres du calcul
+ * @param {number} params.invested - Montant initial investi
+ * @param {number} params.finalValue - Valeur finale obtenue
+ * @param {number} params.years - Nombre d'années
+ * @returns {number} Rendement annualisé (décimal)
+ */
+function calcCAGR({ invested, finalValue, years }) {
+    if (invested === 0 || years === 0 || finalValue <= 0) return 0;
+    return Math.pow(finalValue / invested, 1 / years) - 1;
+}
+
+/**
+ * Calcul du rendement annualisé interne (IRR) pour versements périodiques
+ * Utilise la méthode Newton-Raphson pour résoudre l'équation IRR
+ * @param {Object} params - Paramètres du calcul
+ * @param {number} params.initial - Montant initial versé
+ * @param {number} params.periodic - Montant des versements périodiques
+ * @param {number} params.periodsPerYear - Nombre de périodes par an
+ * @param {number} params.years - Nombre d'années
+ * @param {number} params.finalValue - Valeur finale obtenue
+ * @returns {number} Rendement annualisé (décimal)
+ */
+function calcIRR({ initial, periodic, periodsPerYear, years, finalValue }) {
+    // Si pas de versements périodiques, utiliser le CAGR simple
+    if (periodic === 0 || periodsPerYear === 0) {
+        return calcCAGR({ invested: initial, finalValue, years });
+    }
+
+    // Validation des entrées
+    if (initial <= 0 || years <= 0 || periodsPerYear <= 0 || finalValue <= 0) return 0;
+    
+    const n = years * periodsPerYear;
+    const cashFlows = Array(n + 1).fill(-periodic);
+    cashFlows[0] = -initial;               // sortie initiale
+    cashFlows[n] += finalValue;            // entrée finale
+
+    // Vérifier qu'il y a un changement de signe (condition nécessaire pour l'IRR)
+    const hasPositive = cashFlows.some(cf => cf > 0);
+    const hasNegative = cashFlows.some(cf => cf < 0);
+    if (!hasPositive || !hasNegative) return 0;
+
+    // Newton-Raphson pour résoudre l'équation IRR
+    let r = 0.07;  // point de départ (7%)
+    
+    for (let k = 0; k < 50; k++) { // Maximum 50 itérations
+        let f = 0, fPrime = 0;
+        
+        // Calculer f(r) et f'(r)
+        for (let t = 0; t <= n; t++) {
+            const v = Math.pow(1 + r, -t);
+            f += cashFlows[t] * v;
+            fPrime += -t * cashFlows[t] * v / (1 + r);
+        }
+        
+        // Éviter division par zéro
+        if (Math.abs(fPrime) < 1e-12) break;
+        
+        const newR = r - f / fPrime;
+        
+        // Limiter les valeurs aberrantes (-99% à 500%)
+        const clampedR = Math.max(-0.99, Math.min(5.0, newR));
+        
+        // Test de convergence
+        if (Math.abs(clampedR - r) < 1e-9) {
+            return clampedR * periodsPerYear; // Annualisé
+        }
+        
+        r = clampedR;
+    }
+    
+    // Retourner même sans convergence parfaite
+    return r * periodsPerYear;
+}
+
+// ============================================
+// FONCTIONS UTILITAIRES
+// ============================================
+
 // Fonction pour récupérer les infos d'une enveloppe
 function getEnveloppeInfo(enveloppeId) {
     return enveloppesCache.get(enveloppeId) || null;
@@ -680,7 +764,7 @@ function runSimulation() {
 
 /**
  * Calcule les résultats d'investissement avec la vraie fiscalité
- * MODIFIÉE : Prend maintenant initialDeposit et periodicAmount séparés + retourne les montants séparés
+ * MODIFIÉE : Prend maintenant initialDeposit et periodicAmount séparés + retourne les montants séparés + calcul du rendement annualisé
  * @param {number} initialDeposit - Montant initial versé au départ
  * @param {number} periodicAmount - Montant des versements périodiques
  * @param {number} years - Nombre d'années
@@ -717,6 +801,28 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
     
     const gains = finalAmount - investedTotal;
     
+    // ============================================
+    // ✅ NOUVEAU : CALCUL DU RENDEMENT ANNUALISÉ
+    // ============================================
+    let annualizedReturn;
+    if (periodicTotal === 0) {
+        // Versement unique : utiliser CAGR
+        annualizedReturn = calcCAGR({
+            invested: initialDeposit,
+            finalValue: finalAmount,
+            years
+        });
+    } else {
+        // Versements périodiques : utiliser IRR
+        annualizedReturn = calcIRR({
+            initial: initialDeposit,
+            periodic: isPeriodicMode ? periodicAmount : 0,
+            periodsPerYear,
+            years,
+            finalValue: finalAmount
+        });
+    }
+    
     // Calculer le net après impôts selon l'enveloppe
     let afterTaxAmount = finalAmount;
     let taxAmount = 0;
@@ -740,7 +846,7 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
         afterTaxAmount = finalAmount - taxAmount;
     }
     
-    // ✅ NOUVEAU : Retour avec montants séparés
+    // ✅ NOUVEAU : Retour avec montants séparés + rendement annualisé
     return {
         initialDeposit,      // NOUVEAU : Montant initial séparé
         periodicTotal,       // NOUVEAU : Total des versements périodiques
@@ -749,6 +855,7 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
         gains: round2(gains),
         afterTaxAmount: round2(afterTaxAmount),
         taxAmount: round2(taxAmount),
+        annualizedReturn,    // ✅ NOUVEAU : Rendement annualisé
         years,
         annualReturn,
         vehicleId,
@@ -795,7 +902,7 @@ function updateBudgetResults(results, years) {
 
 /**
  * Met à jour l'affichage des résultats
- * MODIFIÉE : Utilise les nouveaux IDs HTML pour l'affichage séparé
+ * MODIFIÉE : Utilise les nouveaux IDs HTML pour l'affichage séparé + affichage du rendement annualisé
  * @param {Object} results - Résultats de la simulation
  */
 function updateResultsDisplay(results) {
@@ -820,6 +927,37 @@ function updateResultsDisplay(results) {
     if (resultGain) resultGain.textContent = formatter.format(results.gains || 0);
     if (resultAfterTax) resultAfterTax.textContent = formatter.format(results.afterTaxAmount || 0);
     
+    // ✅ NOUVEAU : Affichage du rendement annualisé
+    const resultAnnualized = document.getElementById('result-annualized-return');
+    if (resultAnnualized) {
+        const pct = (results.annualizedReturn * 100);
+        const displayPct = isFinite(pct) ? pct.toFixed(2) : '—';
+        
+        // Ajouter un indicateur de performance
+        let performanceIcon = '';
+        let performanceClass = '';
+        const nominalReturn = results.annualReturn * 100;
+        
+        if (pct > nominalReturn + 0.5) {
+            performanceIcon = ' 📈';
+            performanceClass = 'text-green-400';
+        } else if (pct < nominalReturn - 0.5) {
+            performanceIcon = ' 📉';
+            performanceClass = 'text-orange-400';
+        } else {
+            performanceClass = 'text-blue-400';
+        }
+        
+        resultAnnualized.innerHTML = `
+            <span class="${performanceClass}">
+                ${displayPct} %${performanceIcon}
+            </span>
+        `;
+        
+        // Tooltip explicatif
+        resultAnnualized.title = `Rendement annualisé réel tenant compte de tous les versements (vs ${nominalReturn.toFixed(1)}% nominal)`;
+    }
+    
     // ✅ FALLBACK : Garder l'ancien système pour compatibilité
     const resultElements = document.querySelectorAll('.result-value');
     if (resultElements.length >= 4 && !resultFinal) {
@@ -836,6 +974,7 @@ function updateResultsDisplay(results) {
 
 /**
  * Met à jour le message d'adéquation au profil avec analyse intelligente
+ * MODIFIÉE : Inclut l'analyse du rendement annualisé
  * @param {Object} results - Résultats de la simulation
  */
 function updateProfileAdequacy(results) {
@@ -859,6 +998,28 @@ function updateProfileAdequacy(results) {
     // Messages sur le véhicule actuel
     if (currentVehicle) {
         adequacyMessages = adequacyMessages.concat(currentVehicle.reasons);
+    }
+    
+    // ✅ NOUVEAU : Analyse du rendement annualisé
+    const annualizedPct = results.annualizedReturn * 100;
+    const nominalPct = results.annualReturn * 100;
+    const difference = annualizedPct - nominalPct;
+    
+    if (Math.abs(difference) > 0.5) {
+        if (difference > 0) {
+            adequacyMessages.push("🎯 Vos versements réguliers améliorent le rendement global");
+        } else {
+            adequacyMessages.push("📊 L'étalement des versements lisse les performances dans le temps");
+        }
+    }
+    
+    if (results.vehicleId === 'pea' && annualizedPct >= 7) {
+        adequacyMessages.push("📈 Excellent rendement annualisé pour un PEA sur cette durée");
+    } else if (results.vehicleId === 'assurance-vie' && annualizedPct >= 4) {
+        adequacyMessages.push("✅ Performance annualisée satisfaisante pour une assurance-vie");
+    } else if (annualizedPct < 2) {
+        adequacyScore = Math.max(1, adequacyScore - 1);
+        adequacyMessages.push("⚠️ Rendement annualisé faible, considérez d'autres options");
     }
     
     // Suggérer une alternative si meilleure
