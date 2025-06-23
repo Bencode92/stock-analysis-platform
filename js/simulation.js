@@ -4,20 +4,6 @@
  * TradePulse Finance Intelligence Platform
  */
 
-// ========================================
-// Rendement annualisé (CAGR)
-// ========================================
-/**
- * @param {number} finalAmount  Capital final (net ou brut)
- * @param {number} investedTotal  Somme effectivement investie
- * @param {number} years  Nombre d'années
- * @returns {number}  Ex : 0.072 = 7,2 %
- */
-function calculateAnnualizedReturn(finalAmount, investedTotal, years) {
-    if (years <= 0 || investedTotal <= 0 || finalAmount <= 0) return 0;
-    return Math.pow(finalAmount / investedTotal, 1 / years) - 1;
-}
-
 // Import des données fiscales depuis fiscal-enveloppes.js
 import { enveloppes, TAXES, netAfterFlatTax, round2 } from './fiscal-enveloppes.js';
 
@@ -753,13 +739,6 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
         taxAmount = gains * taxRate;
         afterTaxAmount = finalAmount - taxAmount;
     }
-
-    // ➜ Rendement annualisé réel
-    const annualizedReturn = calculateAnnualizedReturn(
-        afterTaxAmount /* capital net = + pertinent */,
-        investedTotal,
-        years
-    );
     
     // ✅ NOUVEAU : Retour avec montants séparés
     return {
@@ -773,8 +752,7 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
         years,
         annualReturn,
         vehicleId,
-        enveloppe,
-        annualizedReturn     // 🔥 nouveau
+        enveloppe
     };
 }
 
@@ -817,117 +795,45 @@ function updateBudgetResults(results, years) {
 
 /**
  * Met à jour l'affichage des résultats
- * CORRIGÉE : Utilise les bons IDs HTML correspondant à la structure existante
+ * MODIFIÉE : Utilise les nouveaux IDs HTML pour l'affichage séparé
  * @param {Object} results - Résultats de la simulation
  */
 function updateResultsDisplay(results) {
-    console.log('📈 Mise à jour de l\'affichage des résultats...', results);
-    
-    // ✅ CORRESPONDANCE CORRECTE : JavaScript key ↔ HTML ID
-    const metrics = [
-        { 
-            key: 'finalAmount',      
-            domId: 'result-final',
-            label: 'Capital final',
-            isPct: false 
-        },
-        { 
-            key: 'initialDeposit',   
-            domId: 'result-initial',
-            label: 'Montant initial',
-            isPct: false 
-        },
-        { 
-            key: 'periodicTotal',    
-            domId: 'result-periodic',
-            label: 'Versements périodiques',
-            isPct: false 
-        },
-        { 
-            key: 'gains',            
-            domId: 'result-gain',
-            label: 'Gains générés',
-            isPct: false 
-        },
-        { 
-            key: 'afterTaxAmount',   
-            domId: 'result-after-tax',
-            label: 'Net d\'impôts',
-            isPct: false 
-        },
-        { 
-            key: 'annualizedReturn', 
-            domId: 'result-annualized-return',
-            label: 'Rendement annualisé',
-            isPct: true 
-        }
-    ];
-
-    // 💰 FORMATTERS
-    const formatCurrency = (amount) => new Intl.NumberFormat('fr-FR', {
-        style: 'currency',
+    // Formater les valeurs monétaires
+    const formatter = new Intl.NumberFormat('fr-FR', { 
+        style: 'currency', 
         currency: 'EUR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    }).format(amount || 0);
-
-    const formatPercentage = (value) => new Intl.NumberFormat('fr-FR', {
-        style: 'percent',
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
-    }).format((value || 0) / 100); // Conversion : 7.2% → 0.072 pour le formatter
-
-    // 🔄 MISE À JOUR DE CHAQUE MÉTRIQUE
-    metrics.forEach(metric => {
-        const element = document.getElementById(metric.domId);
-        const value = results[metric.key];
-        
-        if (!element) {
-            console.warn(`⚠️ Élément avec ID '${metric.domId}' non trouvé`);
-            return;
-        }
-        
-        if (value === undefined || value === null) {
-            console.warn(`⚠️ Valeur '${metric.key}' non définie dans les résultats`);
-            element.textContent = metric.isPct ? '0,00 %' : '0 €';
-            return;
-        }
-        
-        // Formatage selon le type
-        const formattedValue = metric.isPct ? 
-            formatPercentage(value) : 
-            formatCurrency(value);
-        
-        element.textContent = formattedValue;
-        
-        console.log(`✅ ${metric.domId}: ${formattedValue} (${metric.label})`);
     });
     
-    // 🔄 FALLBACK : Système de compatibilité pour les anciens sélecteurs
+    // ✅ NOUVEAU : Affichage par ID spécifique avec valeurs par défaut
+    const resultFinal = document.getElementById('result-final');
+    const resultInitial = document.getElementById('result-initial'); 
+    const resultPeriodic = document.getElementById('result-periodic');
+    const resultGain = document.getElementById('result-gain');
+    const resultAfterTax = document.getElementById('result-after-tax');
+    
+    if (resultFinal) resultFinal.textContent = formatter.format(results.finalAmount || 0);
+    if (resultInitial) resultInitial.textContent = formatter.format(results.initialDeposit || 0);
+    if (resultPeriodic) resultPeriodic.textContent = formatter.format(results.periodicTotal || 0);
+    if (resultGain) resultGain.textContent = formatter.format(results.gains || 0);
+    if (resultAfterTax) resultAfterTax.textContent = formatter.format(results.afterTaxAmount || 0);
+    
+    // ✅ FALLBACK : Garder l'ancien système pour compatibilité
     const resultElements = document.querySelectorAll('.result-value');
-    if (resultElements.length > 0) {
-        console.log(`🔄 Fallback activé pour ${resultElements.length} éléments avec classe 'result-value'`);
-        
-        // Mettre à jour les éléments avec classe result-value (s'ils existent)
-        if (resultElements[0] && results.finalAmount !== undefined) {
-            resultElements[0].textContent = formatCurrency(results.finalAmount);
-        }
-        if (resultElements[1] && results.initialDeposit !== undefined) {
-            resultElements[1].textContent = formatCurrency(results.initialDeposit);
-        }
-        if (resultElements[2] && results.gains !== undefined) {
-            resultElements[2].textContent = formatCurrency(results.gains);
-        }
-        if (resultElements[3] && results.afterTaxAmount !== undefined) {
-            resultElements[3].textContent = formatCurrency(results.afterTaxAmount);
-        }
+    if (resultElements.length >= 4 && !resultFinal) {
+        // Si les nouveaux IDs n'existent pas, utiliser l'ancien système
+        resultElements[0].textContent = formatter.format(results.finalAmount);
+        resultElements[1].textContent = formatter.format(results.investedTotal); // Total pour compatibilité
+        resultElements[2].textContent = formatter.format(results.gains);
+        resultElements[3].textContent = formatter.format(results.afterTaxAmount);
     }
     
-    // 📊 METTRE À JOUR LES INFORMATIONS SUPPLÉMENTAIRES
-    updateAdditionalInfo(results);
-    
-    console.log('✅ Affichage des résultats terminé');
+    // Mettre à jour le message d'adéquation
+    updateProfileAdequacy(results);
 }
+
 /**
  * Met à jour le message d'adéquation au profil avec analyse intelligente
  * @param {Object} results - Résultats de la simulation
