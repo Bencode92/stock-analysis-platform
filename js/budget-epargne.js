@@ -3,8 +3,91 @@
  * Ce module gère la génération de l'interface et des calculs pour la section Budget & Épargne
  * TradePulse Finance Intelligence Platform
  * 
+ * Version 3.0 - Intégration système Budget × Quantités pour plus de réalisme
  * Version 2.0 - Ajout accessibilité complète et transparence des formules
  */
+
+// Configuration des catégories de dépenses avec valeurs par défaut
+const EXPENSE_CATEGORIES = {
+    'vie-courante': {
+        title: 'Dépenses de la vie courante',
+        icon: '🏠',
+        color: '#3B82F6',
+        items: [
+            {
+                id: 'alimentation',
+                name: 'Alimentation (courses)',
+                defaultAmount: 100,
+                defaultQuantity: 4,
+                unit: 'fois/mois',
+                description: 'Courses alimentaires'
+            },
+            {
+                id: 'transport',
+                name: 'Transports (essence, métro...)',
+                defaultAmount: 75,
+                defaultQuantity: 2,
+                unit: 'pleins/mois',
+                description: 'Carburant et transports'
+            },
+            {
+                id: 'factures',
+                name: 'Factures (électricité, eau...)',
+                defaultAmount: 150,
+                defaultQuantity: 1,
+                unit: 'fois/mois',
+                description: 'Charges fixes du logement'
+            },
+            {
+                id: 'abonnements',
+                name: 'Téléphone / Internet',
+                defaultAmount: 80,
+                defaultQuantity: 1,
+                unit: 'fois/mois',
+                description: 'Forfaits téléphoniques et internet'
+            }
+        ]
+    },
+    'loisirs': {
+        title: 'Loisirs & plaisirs',
+        icon: '🎉',
+        color: '#10B981',
+        items: [
+            {
+                id: 'restaurants',
+                name: 'Restaurants & cafés',
+                defaultAmount: 25,
+                defaultQuantity: 6,
+                unit: 'sorties/mois',
+                description: 'Sorties restaurants et cafés'
+            },
+            {
+                id: 'shopping',
+                name: 'Shopping & achats plaisir',
+                defaultAmount: 50,
+                defaultQuantity: 2,
+                unit: 'fois/mois',
+                description: 'Achats non essentiels'
+            },
+            {
+                id: 'abos-loisirs',
+                name: 'Netflix, Spotify...',
+                defaultAmount: 15,
+                defaultQuantity: 2,
+                unit: 'abonnements',
+                description: 'Abonnements divertissement'
+            },
+            {
+                id: 'voyages',
+                name: 'Voyages & week-ends',
+                defaultAmount: 200,
+                defaultQuantity: 1,
+                unit: 'fois/mois',
+                description: 'Vacances et escapades'
+            }
+        ]
+    }
+};
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialiser l'onglet Budget
@@ -481,6 +564,271 @@ const ScoreDetails = {
 };
 
 /**
+ * Génère l'interface HTML pour les sections de dépenses avec système montant × quantité
+ */
+function generateExpenseSectionsHTML() {
+    let html = '<div id="dynamic-expenses-container">';
+    
+    Object.keys(EXPENSE_CATEGORIES).forEach(categoryKey => {
+        const category = EXPENSE_CATEGORIES[categoryKey];
+        
+        html += `
+            <div class="expense-category mb-6">
+                <div class="category-header flex items-center justify-between mb-4">
+                    <h5 class="text-lg font-semibold flex items-center">
+                        <span class="mr-2">${category.icon}</span>
+                        ${category.title}
+                    </h5>
+                    <div class="category-total">
+                        <span id="total-${categoryKey}" class="text-xl font-bold" style="color: ${category.color}">
+                            0€
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="category-progress mb-4">
+                    <div class="progress-bar bg-blue-800 bg-opacity-20 rounded-full h-2">
+                        <div id="progress-${categoryKey}" 
+                             class="progress-fill h-full rounded-full transition-all duration-500" 
+                             style="background-color: ${category.color}; width: 0%">
+                        </div>
+                    </div>
+                    <div class="progress-label text-sm text-gray-400 mt-1">
+                        <span id="percentage-${categoryKey}">0%</span> du budget total
+                    </div>
+                </div>
+                
+                <div class="expenses-list bg-blue-800 bg-opacity-20 p-4 rounded-lg space-y-3">
+                    ${generateCategoryItemsHTML(categoryKey, category.items)}
+                </div>
+                
+                <div class="category-actions mt-3 text-right">
+                    <button onclick="resetCategoryToDefaults('${categoryKey}')" 
+                            class="btn-reset text-sm text-blue-400 hover:text-blue-300 transition">
+                        <i class="fas fa-undo mr-1"></i>
+                        Réinitialiser aux valeurs par défaut
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    return html;
+}
+
+/**
+ * Génère les éléments d'une catégorie avec système montant × quantité
+ */
+function generateCategoryItemsHTML(categoryKey, items) {
+    return items.map(item => `
+        <div class="expense-item flex items-center justify-between">
+            <div class="expense-info flex-1">
+                <label class="expense-label font-medium">${item.name}</label>
+                <div class="expense-description text-xs text-gray-400 mt-1">
+                    ${item.description}
+                </div>
+            </div>
+            
+            <div class="expense-controls flex items-center space-x-2">
+                <div class="amount-input flex items-center">
+                    <input type="number" 
+                           id="amount-${item.id}" 
+                           value="${item.defaultAmount}"
+                           min="0"
+                           step="1"
+                           class="w-16 p-1 text-sm rounded bg-blue-900 bg-opacity-30 border border-blue-700 text-white text-center">
+                    <span class="text-sm text-gray-300 ml-1">€</span>
+                </div>
+                
+                <span class="text-gray-400">×</span>
+                
+                <div class="quantity-input flex items-center">
+                    <input type="number" 
+                           id="quantity-${item.id}" 
+                           value="${item.defaultQuantity}"
+                           min="0"
+                           step="1"
+                           class="w-12 p-1 text-sm rounded bg-blue-900 bg-opacity-30 border border-blue-700 text-white text-center">
+                    <span class="text-xs text-gray-400 ml-1 w-20">${item.unit}</span>
+                </div>
+                
+                <span class="text-gray-400">=</span>
+                
+                <div class="total-display">
+                    <span id="total-${item.id}" class="font-bold text-green-400">
+                        ${item.defaultAmount * item.defaultQuantity}€
+                    </span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+/**
+ * Initialise les écouteurs pour les sections de dépenses avec système montant × quantité
+ */
+function initFixedExpenseSections() {
+    // Ajouter les écouteurs pour tous les champs
+    Object.keys(EXPENSE_CATEGORIES).forEach(categoryKey => {
+        const category = EXPENSE_CATEGORIES[categoryKey];
+        
+        category.items.forEach(item => {
+            const amountInput = document.getElementById(`amount-${item.id}`);
+            const quantityInput = document.getElementById(`quantity-${item.id}`);
+            
+            if (amountInput && quantityInput) {
+                amountInput.addEventListener('input', () => updateItemTotal(item.id));
+                quantityInput.addEventListener('input', () => updateItemTotal(item.id));
+            }
+        });
+    });
+    
+    // Calculer les totaux initiaux
+    updateAllTotals();
+}
+
+/**
+ * Met à jour le total d'un élément de dépense
+ */
+function updateItemTotal(itemId) {
+    const amountInput = document.getElementById(`amount-${itemId}`);
+    const quantityInput = document.getElementById(`quantity-${itemId}`);
+    const totalDisplay = document.getElementById(`total-${itemId}`);
+    
+    if (!amountInput || !quantityInput || !totalDisplay) return;
+    
+    const amount = parseFloat(amountInput.value) || 0;
+    const quantity = parseFloat(quantityInput.value) || 0;
+    const total = amount * quantity;
+    
+    totalDisplay.textContent = `${total}€`;
+    
+    // Mettre à jour le total de la catégorie
+    const categoryKey = findCategoryByItemId(itemId);
+    if (categoryKey) {
+        updateCategoryTotal(categoryKey);
+    }
+    
+    // Mettre à jour l'analyse globale du budget
+    if (typeof analyserBudget === 'function') {
+        analyserBudget();
+    }
+}
+
+/**
+ * Met à jour le total d'une catégorie - VERSION AMÉLIORÉE
+ */
+function updateCategoryTotal(categoryKey) {
+    const category = EXPENSE_CATEGORIES[categoryKey];
+    if (!category) return 0;
+    
+    let total = 0;
+    
+    category.items.forEach(item => {
+        const amountInput = document.getElementById(`amount-${item.id}`);
+        const quantityInput = document.getElementById(`quantity-${item.id}`);
+        
+        if (amountInput && quantityInput) {
+            const amount = parseFloat(amountInput.value) || 0;
+            const quantity = parseFloat(quantityInput.value) || 0;
+            total += amount * quantity;
+        }
+    });
+    
+    // Mettre à jour l'affichage du total
+    const totalDisplay = document.getElementById(`total-${categoryKey}`);
+    if (totalDisplay) {
+        totalDisplay.textContent = `${total}€`;
+    }
+    
+    // Mettre à jour la barre de progression
+    updateCategoryProgressBar(categoryKey, total);
+    
+    return total;
+}
+
+/**
+ * Met à jour la barre de progression d'une catégorie
+ */
+function updateCategoryProgressBar(categoryKey, total) {
+    const loyer = parseFloat(document.getElementById('simulation-budget-loyer')?.value) || 3000;
+    const percentage = loyer > 0 ? (total / loyer * 100) : 0;
+    
+    const progressBar = document.getElementById(`progress-${categoryKey}`);
+    const progressLabel = document.getElementById(`percentage-${categoryKey}`);
+    
+    if (progressBar) {
+        progressBar.style.width = `${Math.min(percentage, 100)}%`;
+    }
+    
+    if (progressLabel) {
+        progressLabel.textContent = `${percentage.toFixed(1)}%`;
+    }
+}
+
+/**
+ * Trouve la catégorie d'un élément par son ID
+ */
+function findCategoryByItemId(itemId) {
+    for (const [categoryKey, category] of Object.entries(EXPENSE_CATEGORIES)) {
+        if (category.items.some(item => item.id === itemId)) {
+            return categoryKey;
+        }
+    }
+    return null;
+}
+
+/**
+ * Remet une catégorie aux valeurs par défaut
+ */
+function resetCategoryToDefaults(categoryKey) {
+    const category = EXPENSE_CATEGORIES[categoryKey];
+    if (!category) return;
+    
+    category.items.forEach(item => {
+        const amountInput = document.getElementById(`amount-${item.id}`);
+        const quantityInput = document.getElementById(`quantity-${item.id}`);
+        
+        if (amountInput) amountInput.value = item.defaultAmount;
+        if (quantityInput) quantityInput.value = item.defaultQuantity;
+        
+        updateItemTotal(item.id);
+    });
+    
+    // Animation de confirmation
+    const categoryElement = document.querySelector(`#total-${categoryKey}`).closest('.expense-category');
+    if (categoryElement) {
+        categoryElement.style.transform = 'scale(1.02)';
+        categoryElement.style.transition = 'transform 0.2s ease';
+        setTimeout(() => {
+            categoryElement.style.transform = 'scale(1)';
+        }, 200);
+    }
+}
+
+/**
+ * Met à jour tous les totaux
+ */
+function updateAllTotals() {
+    Object.keys(EXPENSE_CATEGORIES).forEach(categoryKey => {
+        updateCategoryTotal(categoryKey);
+    });
+}
+
+/**
+ * NOUVELLE VERSION des fonctions updateTotalVieCourante et updateTotalLoisirs 
+ * Compatible avec le système montant × quantité
+ */
+function updateTotalVieCourante() {
+    return updateCategoryTotal('vie-courante');
+}
+
+function updateTotalLoisirs() {
+    return updateCategoryTotal('loisirs');
+}
+
+/**
  * Initialise et génère le contenu de l'onglet Budget
  */
 function initBudgetPlanner() {
@@ -498,8 +846,9 @@ function initBudgetPlanner() {
     // Ajouter le conteneur à l'onglet Budget
     budgetPlanner.appendChild(budgetGrid);
     
-    // Ajouter les styles d'accessibilité
+    // Ajouter les styles d'accessibilité ET les styles pour le système montant × quantité
     addAccessibilityStyles();
+    addQuantitySystemStyles();
     
     // Générer l'interface Budget & Épargne
     generateBudgetInterface(budgetGrid);
@@ -511,6 +860,313 @@ function initBudgetPlanner() {
     setTimeout(() => {
         analyserBudget();
     }, 500);
+}
+
+/**
+ * Ajoute les styles CSS pour le système montant × quantité
+ */
+function addQuantitySystemStyles() {
+    if (document.getElementById('quantity-system-styles')) return;
+    
+    const styleEl = document.createElement('style');
+    styleEl.id = 'quantity-system-styles';
+    styleEl.textContent = `
+        /* ===== CONTENEUR PRINCIPAL ===== */
+        #dynamic-expenses-container {
+            margin-top: 1rem;
+        }
+
+        /* ===== CATÉGORIES DE DÉPENSES ===== */
+        .expense-category {
+            background: rgba(30, 58, 138, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .expense-category:hover {
+            background: rgba(30, 58, 138, 0.25);
+            border-color: rgba(59, 130, 246, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        /* ===== EN-TÊTE DE CATÉGORIE ===== */
+        .category-header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .category-header h5 {
+            color: #E5E7EB;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .category-total {
+            text-align: right;
+        }
+
+        .category-total span {
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        /* ===== BARRES DE PROGRESSION ===== */
+        .category-progress {
+            margin: 1rem 0;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(30, 64, 175, 0.3);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        /* ===== LISTE DES DÉPENSES ===== */
+        .expenses-list {
+            background: rgba(30, 64, 175, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        /* ===== ÉLÉMENTS DE DÉPENSE ===== */
+        .expense-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .expense-item:last-child {
+            border-bottom: none;
+        }
+
+        .expense-item:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 6px;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            margin: 0 -0.5rem;
+        }
+
+        /* ===== INFO DÉPENSE ===== */
+        .expense-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .expense-label {
+            color: #F3F4F6;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .expense-description {
+            color: #9CA3AF;
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+            font-style: italic;
+        }
+
+        /* ===== CONTRÔLES DE DÉPENSE ===== */
+        .expense-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .amount-input, .quantity-input {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .expense-controls input {
+            background: rgba(30, 64, 175, 0.4);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            border-radius: 6px;
+            color: #F3F4F6;
+            font-weight: 500;
+            text-align: center;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .expense-controls input:focus {
+            outline: none;
+            border-color: #34D399;
+            box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.2);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .expense-controls input:hover {
+            border-color: rgba(59, 130, 246, 0.6);
+            background: rgba(30, 64, 175, 0.5);
+        }
+
+        /* Largeurs spécifiques */
+        .amount-input input {
+            width: 4rem;
+            padding: 0.5rem 0.25rem;
+        }
+
+        .quantity-input input {
+            width: 3rem;
+            padding: 0.5rem 0.25rem;
+        }
+
+        /* ===== SÉPARATEURS ET LABELS ===== */
+        .expense-controls > span {
+            color: #9CA3AF;
+            font-weight: 500;
+            font-size: 1rem;
+        }
+
+        .quantity-input span {
+            color: #6B7280;
+            font-size: 0.75rem;
+            width: 5rem;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        /* ===== AFFICHAGE DU TOTAL ===== */
+        .total-display {
+            min-width: 4rem;
+            text-align: right;
+        }
+
+        .total-display span {
+            color: #34D399;
+            font-weight: 700;
+            font-size: 1rem;
+            text-shadow: 0 0 8px rgba(52, 211, 153, 0.3);
+        }
+
+        /* ===== ACTIONS DE CATÉGORIE ===== */
+        .category-actions {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-reset {
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+        }
+
+        .btn-reset:hover {
+            background: rgba(59, 130, 246, 0.1);
+            color: #60A5FA !important;
+            transform: translateX(-2px);
+        }
+
+        /* ===== RESPONSIVE DESIGN ===== */
+        @media (max-width: 768px) {
+            .expense-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .expense-controls {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            
+            .amount-input, .quantity-input {
+                flex-direction: column;
+                text-align: center;
+                gap: 0.25rem;
+            }
+            
+            .quantity-input span {
+                width: auto;
+                text-align: center;
+            }
+            
+            .total-display {
+                width: 100%;
+                text-align: center;
+                order: -1;
+                margin-bottom: 0.5rem;
+            }
+            
+            .total-display span {
+                font-size: 1.25rem;
+            }
+        }
+
+        /* ===== ANIMATIONS D'APPARITION ===== */
+        .expense-category {
+            animation: fadeInUp 0.6s ease forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .expense-category:nth-child(1) { animation-delay: 0.1s; }
+        .expense-category:nth-child(2) { animation-delay: 0.2s; }
+        .expense-category:nth-child(3) { animation-delay: 0.3s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    `;
+    document.head.appendChild(styleEl);
 }
 
 /**
@@ -616,7 +1272,126 @@ function generateBudgetInterface(container) {
             </div>
         </div>
         
-        <!-- Entrées de budget -->\n        <div class=\"mb-4\">\n            <label class=\"block mb-2 text-sm font-medium text-gray-300\">\n                Loyer / Crédit immobilier\n                <span class=\"ml-1 text-blue-400 cursor-help\" title=\"Votre dépense mensuelle pour votre logement (loyer ou mensualité de crédit).\">\n                    <i class=\"fas fa-info-circle\"></i>\n                </span>\n            </label>\n            <input type=\"number\" id=\"simulation-budget-loyer\" value=\"800\" min=\"0\" class=\"bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full\">\n        </div>\n        \n        <!-- Vue détaillée - Dépenses vie courante -->\n        <div id=\"detailed-view-courante\" class=\"mb-6\">\n            <h5 class=\"text-sm font-medium text-blue-400 mb-3 flex items-center\">\n                <i class=\"fas fa-shopping-basket mr-2\"></i>\n                Dépenses de la vie courante\n            </h5>\n            \n            <div class=\"space-y-3 bg-blue-800 bg-opacity-20 p-3 rounded-lg\">\n                <div>\n                    <label class=\"block text-xs text-gray-300 mb-1\">Alimentation (courses)</label>\n                    <input type=\"number\" id=\"depense-alimentation\" value=\"400\" min=\"0\" class=\"bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm\">\n                </div>\n                <div>\n                    <label class=\"block text-xs text-gray-300 mb-1\">Transports (essence, métro...)</label>\n                    <input type=\"number\" id=\"depense-transport\" value=\"150\" min=\"0\" class=\"bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm\">\n                </div>\n                <div>\n                    <label class=\"block text-xs text-gray-300 mb-1\">Factures (électricité, eau...)</label>\n                    <input type=\"number\" id=\"depense-factures\" value=\"150\" min=\"0\" class=\"bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm\">\n                </div>\n                <div>\n                    <label class=\"block text-xs text-gray-300 mb-1\">Abonnements fixes (téléphone, Internet...)</label>\n                    <input type=\"number\" id=\"depense-abonnements\" value=\"100\" min=\"0\" class=\"bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm\">\n                </div>\n                <div class=\"pt-2 border-t border-blue-700 flex justify-between items-center\">\n                    <span class=\"text-xs text-gray-300\">Total vie courante:</span>\n                    <span id=\"total-vie-courante\" class=\"text-sm font-medium text-blue-400\">800 €</span>\n                </div>\n            </div>\n        </div>\n        \n        <!-- Vue détaillée - Loisirs & plaisirs -->\n        <div id=\"detailed-view-loisirs\" class=\"mb-6\">\n            <h5 class=\"text-sm font-medium text-blue-400 mb-3 flex items-center\">\n                <i class=\"fas fa-glass-cheers mr-2\"></i>\n                Loisirs & plaisirs\n            </h5>\n            \n            <div class=\"space-y-3 bg-blue-800 bg-opacity-20 p-3 rounded-lg\">\n                <div>\n                    <label class=\"block text-xs text-gray-300 mb-1\">Restaurants & cafés</label>\n                    <input type=\"number\" id=\"depense-restaurants\" value=\"120\" min=\"0\" class=\"bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm\">\n                </div>\n                <div>\n                    <label class=\"block text-xs text-gray-300 mb-1\">Shopping & achats plaisir</label>\n                    <input type=\"number\" id=\"depense-shopping\" value=\"100\" min=\"0\" class=\"bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm\">\n                </div>\n                <div>\n                    <label class=\"block text-xs text-gray-300 mb-1\">Abonnements loisirs (Netflix, Spotify...)</label>\n                    <input type=\"number\" id=\"depense-abos-loisirs\" value=\"30\" min=\"0\" class=\"bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm\">\n                </div>\n                <div>\n                    <label class=\"block text-xs text-gray-300 mb-1\">Voyages & week-ends</label>\n                    <input type=\"number\" id=\"depense-voyages\" value=\"150\" min=\"0\" class=\"bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm\">\n                </div>\n                <div class=\"pt-2 border-t border-blue-700 flex justify-between items-center\">\n                    <span class=\"text-xs text-gray-300\">Total loisirs:</span>\n                    <span id=\"total-loisirs\" class=\"text-sm font-medium text-blue-400\">400 €</span>\n                </div>\n            </div>\n        </div>\n        \n        <!-- Vue simplifiée -->\n        <div id=\"simple-view\" style=\"display: none;\" class=\"mb-6\">\n            <div class=\"mb-4\">\n                <label class=\"block mb-2 text-sm font-medium text-gray-300\">\n                    Vie courante : alimentation, transports, factures...\n                    <span class=\"ml-1 text-blue-400 cursor-help\" title=\"Exemples : courses, électricité, essence, carte de métro, forfait téléphonique, etc.\">\n                        <i class=\"fas fa-info-circle\"></i>\n                    </span>\n                </label>\n                <input type=\"number\" id=\"simulation-budget-quotidien\" value=\"800\" min=\"0\" class=\"bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full\">\n            </div>\n            \n            <div class=\"mb-4\">\n                <label class=\"block mb-2 text-sm font-medium text-gray-300\">\n                    Plaisirs & sorties : restaus, shopping, voyages...\n                    <span class=\"ml-1 text-blue-400 cursor-help\" title=\"Exemples : ciné, resto, bar, week-end, shopping, Netflix, Spotify, etc.\">\n                        <i class=\"fas fa-info-circle\"></i>\n                    </span>\n                </label>\n                <input type=\"number\" id=\"simulation-budget-extra\" value=\"400\" min=\"0\" class=\"bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full\">\n            </div>\n        </div>\n        \n        <div class=\"mb-4\">\n            <label class=\"block mb-2 text-sm font-medium text-gray-300\">\n                Épargne ou investissement automatique\n                <span class=\"ml-1 text-blue-400 cursor-help\" title=\"Exemples : Livret A, PEL, virement programmé sur un PEA, assurance-vie, etc.\">\n                    <i class=\"fas fa-info-circle\"></i>\n                </span>\n            </label>\n            <input type=\"number\" id=\"simulation-budget-invest\" value=\"200\" min=\"0\" class=\"bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full\">\n        </div>\n        \n        <!-- NOUVELLE SECTION: Dépenses détaillées personnalisables -->\n        <div class=\"mt-6\">\n            <div class=\"flex items-center justify-between mb-3\">\n                <label class=\"text-sm font-medium text-gray-300 flex items-center\">\n                    <i class=\"fas fa-receipt text-blue-400 mr-2\"></i>\n                    Dépenses variables (optionnel)\n                    <span class=\"ml-1 text-blue-400 cursor-help\" title=\"Ajoutez vos dépenses récurrentes spécifiques pour un budget plus précis\">\n                        <i class=\"fas fa-info-circle\"></i>\n                    </span>\n                </label>\n                <span class=\"text-xs text-blue-400 depense-total\">(Total: 0 €)</span>\n            </div>\n            <div id=\"depenses-detaillees\" class=\"space-y-3 mt-2\">\n                <!-- Les lignes de dépenses s'ajouteront ici dynamiquement -->\n            </div>\n            <button id=\"ajouter-depense\" class=\"mt-3 py-2 px-3 bg-blue-700 hover:bg-blue-600 text-white text-sm rounded-md flex items-center transition-colors\">\n                <i class=\"fas fa-plus-circle mr-2\"></i> Ajouter une dépense variable\n            </button>\n        </div>\n        \n        <!-- NOUVELLE SECTION: Objectif d'épargne -->\n        <div class=\"mt-5 p-3 bg-blue-800 bg-opacity-30 rounded-lg\">\n            <label class=\"flex items-center text-sm font-medium text-gray-300 mb-2\">\n                <i class=\"fas fa-bullseye text-blue-400 mr-2\"></i>\n                Objectif d'épargne\n                <span class=\"ml-1 text-blue-400 cursor-help\" title=\"Définissez un montant cible à atteindre grâce à votre épargne mensuelle\">\n                    <i class=\"fas fa-info-circle\"></i>\n                </span>\n            </label>\n            <div class=\"grid grid-cols-2 gap-3\">\n                <div>\n                    <input type=\"number\" id=\"objectif-epargne\" placeholder=\"Ex: 5000\" value=\"5000\" min=\"0\" class=\"bg-blue-900 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full text-sm\">\n                    <p class=\"text-xs text-gray-400 mt-1\">Montant cible (€)</p>\n                </div>\n                <div>\n                    <select id=\"objectif-type\" class=\"bg-blue-900 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full text-sm\">\n                        <option value=\"vacances\">Vacances</option>\n                        <option value=\"achat\">Gros achat</option>\n                        <option value=\"urgence\">Fond d'urgence</option>\n                        <option value=\"apport\">Apport immobilier</option>\n                        <option value=\"autre\">Autre projet</option>\n                    </select>\n                    <p class=\"text-xs text-gray-400 mt-1\">Type d'objectif</p>\n                </div>\n            </div>\n            <div id=\"temps-objectif\" class=\"mt-3 text-center p-2 bg-blue-900 bg-opacity-20 rounded text-sm hidden\">\n                <!-- Temps nécessaire pour atteindre l'objectif -->\n            </div>\n        </div>\n        \n        <div class=\"mt-4 mb-4\">\n            <label class=\"block mb-2 text-sm font-medium text-gray-300\">\n                Revenu mensuel estimé\n                <span class=\"ml-1 text-blue-400 cursor-help\" title=\"Votre revenu mensuel net après impôts.\">\n                    <i class=\"fas fa-info-circle\"></i>\n                </span>\n            </label>\n            <input type=\"number\" id=\"revenu-mensuel-input\" value=\"3000\" min=\"0\" class=\"bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full\">\n        </div>\n        \n        <button id=\"simulate-budget-button\" class=\"w-full mt-6 py-3 px-4 bg-gradient-to-r from-blue-500 to-blue-400 text-gray-900 font-semibold rounded-lg shadow-lg hover:shadow-blue-500/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center\">\n            <i class=\"fas fa-calculator mr-2\"></i> \n            Analyser mon budget\n        </button>\n        \n        <!-- Bouton d'export PDF -->\n        <button id=\"export-budget-pdf\" class=\"w-full mt-3 py-2 px-4 bg-transparent border border-blue-500 text-blue-400 font-medium rounded-lg hover:bg-blue-900 hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center\">\n            <i class=\"fas fa-file-export mr-2\"></i> \n            Exporter en PDF\n        </button>\n    `;
+        <!-- Entrées de budget -->
+        <div class="mb-4">
+            <label class="block mb-2 text-sm font-medium text-gray-300">
+                Loyer / Crédit immobilier
+                <span class="ml-1 text-blue-400 cursor-help" title="Votre dépense mensuelle pour votre logement (loyer ou mensualité de crédit).">
+                    <i class="fas fa-info-circle"></i>
+                </span>
+            </label>
+            <input type="number" id="simulation-budget-loyer" value="800" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+        </div>
+        
+        <!-- Vue détaillée - NOUVEAU SYSTÈME MONTANT × QUANTITÉ -->
+        <div id="detailed-view" class="mb-6">
+            <!-- Le contenu sera généré automatiquement par generateExpenseSectionsHTML() -->
+        </div>
+        
+        <!-- Vue simplifiée -->
+        <div id="simple-view" style="display: none;" class="mb-6">
+            <div class="mb-4">
+                <label class="block mb-2 text-sm font-medium text-gray-300">
+                    Vie courante : alimentation, transports, factures...
+                    <span class="ml-1 text-blue-400 cursor-help" title="Exemples : courses, électricité, essence, carte de métro, forfait téléphonique, etc.">
+                        <i class="fas fa-info-circle"></i>
+                    </span>
+                </label>
+                <input type="number" id="simulation-budget-quotidien" value="800" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+            </div>
+            
+            <div class="mb-4">
+                <label class="block mb-2 text-sm font-medium text-gray-300">
+                    Plaisirs & sorties : restaus, shopping, voyages...
+                    <span class="ml-1 text-blue-400 cursor-help" title="Exemples : ciné, resto, bar, week-end, shopping, Netflix, Spotify, etc.">
+                        <i class="fas fa-info-circle"></i>
+                    </span>
+                </label>
+                <input type="number" id="simulation-budget-extra" value="400" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+            </div>
+        </div>
+        
+        <div class="mb-4">
+            <label class="block mb-2 text-sm font-medium text-gray-300">
+                Épargne ou investissement automatique
+                <span class="ml-1 text-blue-400 cursor-help" title="Exemples : Livret A, PEL, virement programmé sur un PEA, assurance-vie, etc.">
+                    <i class="fas fa-info-circle"></i>
+                </span>
+            </label>
+            <input type="number" id="simulation-budget-invest" value="200" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+        </div>
+        
+        <!-- NOUVELLE SECTION: Dépenses détaillées personnalisables -->
+        <div class="mt-6">
+            <div class="flex items-center justify-between mb-3">
+                <label class="text-sm font-medium text-gray-300 flex items-center">
+                    <i class="fas fa-receipt text-blue-400 mr-2"></i>
+                    Dépenses variables (optionnel)
+                    <span class="ml-1 text-blue-400 cursor-help" title="Ajoutez vos dépenses récurrentes spécifiques pour un budget plus précis">
+                        <i class="fas fa-info-circle"></i>
+                    </span>
+                </label>
+                <span class="text-xs text-blue-400 depense-total">(Total: 0 €)</span>
+            </div>
+            <div id="depenses-detaillees" class="space-y-3 mt-2">
+                <!-- Les lignes de dépenses s'ajouteront ici dynamiquement -->
+            </div>
+            <button id="ajouter-depense" class="mt-3 py-2 px-3 bg-blue-700 hover:bg-blue-600 text-white text-sm rounded-md flex items-center transition-colors">
+                <i class="fas fa-plus-circle mr-2"></i> Ajouter une dépense variable
+            </button>
+        </div>
+        
+        <!-- NOUVELLE SECTION: Objectif d'épargne -->
+        <div class="mt-5 p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+            <label class="flex items-center text-sm font-medium text-gray-300 mb-2">
+                <i class="fas fa-bullseye text-blue-400 mr-2"></i>
+                Objectif d'épargne
+                <span class="ml-1 text-blue-400 cursor-help" title="Définissez un montant cible à atteindre grâce à votre épargne mensuelle">
+                    <i class="fas fa-info-circle"></i>
+                </span>
+            </label>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <input type="number" id="objectif-epargne" placeholder="Ex: 5000" value="5000" min="0" class="bg-blue-900 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full text-sm">
+                    <p class="text-xs text-gray-400 mt-1">Montant cible (€)</p>
+                </div>
+                <div>
+                    <select id="objectif-type" class="bg-blue-900 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full text-sm">
+                        <option value="vacances">Vacances</option>
+                        <option value="achat">Gros achat</option>
+                        <option value="urgence">Fond d'urgence</option>
+                        <option value="apport">Apport immobilier</option>
+                        <option value="autre">Autre projet</option>
+                    </select>
+                    <p class="text-xs text-gray-400 mt-1">Type d'objectif</p>
+                </div>
+            </div>
+            <div id="temps-objectif" class="mt-3 text-center p-2 bg-blue-900 bg-opacity-20 rounded text-sm hidden">
+                <!-- Temps nécessaire pour atteindre l'objectif -->
+            </div>
+        </div>
+        
+        <div class="mt-4 mb-4">
+            <label class="block mb-2 text-sm font-medium text-gray-300">
+                Revenu mensuel estimé
+                <span class="ml-1 text-blue-400 cursor-help" title="Votre revenu mensuel net après impôts.">
+                    <i class="fas fa-info-circle"></i>
+                </span>
+            </label>
+            <input type="number" id="revenu-mensuel-input" value="3000" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+        </div>
+        
+        <button id="simulate-budget-button" class="w-full mt-6 py-3 px-4 bg-gradient-to-r from-blue-500 to-blue-400 text-gray-900 font-semibold rounded-lg shadow-lg hover:shadow-blue-500/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center">
+            <i class="fas fa-calculator mr-2"></i> 
+            Analyser mon budget
+        </button>
+        
+        <!-- Bouton d'export PDF -->
+        <button id="export-budget-pdf" class="w-full mt-3 py-2 px-4 bg-transparent border border-blue-500 text-blue-400 font-medium rounded-lg hover:bg-blue-900 hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
+            <i class="fas fa-file-export mr-2"></i> 
+            Exporter en PDF
+        </button>
+    `;
     
     // Créer la deuxième colonne - Résultats du budget
     const budgetResultsCol = document.createElement('div');
@@ -627,11 +1402,88 @@ function generateBudgetInterface(container) {
             Analyse du budget
         </h4>
         
-        <!-- Score global du budget -->\n        <div class=\"mb-5 bg-blue-800 bg-opacity-30 p-3 rounded-lg flex items-center\">\n            <div class=\"w-16 h-16 rounded-full bg-blue-900 bg-opacity-50 flex items-center justify-center mr-4 budget-score-circle\">\n                <span id=\"budget-score\" class=\"text-2xl font-bold text-blue-400\">3</span>\n            </div>\n            <div>\n                <h5 class=\"font-medium text-white\">Score budget</h5>\n                <p class=\"text-sm text-gray-300\" id=\"budget-score-description\">Budget équilibré</p>\n                <div class=\"w-full bg-blue-900 h-2 rounded-full mt-1 overflow-hidden\">\n                    <div id=\"budget-score-bar\" class=\"h-full bg-blue-400\" style=\"width: 60%\"></div>\n                </div>\n            </div>\n        </div>\n        \n        <div class=\"grid grid-cols-2 gap-4 mb-6\">\n            <div class=\"bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center\">\n                <p class=\"text-blue-400 text-2xl font-bold mb-1\" id=\"simulation-revenu-mensuel\">3 000,00 €</p>\n                <p class=\"text-gray-400 text-sm\">Revenu mensuel</p>\n            </div>\n            <div class=\"bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center\">\n                <p class=\"text-blue-400 text-2xl font-bold mb-1\" id=\"simulation-depenses-totales\">2 600,00 €</p>\n                <p class=\"text-gray-400 text-sm\">Dépenses totales</p>\n            </div>\n            <div class=\"bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center\">\n                <p class=\"text-blue-400 text-2xl font-bold mb-1\" id=\"simulation-epargne-possible\">400,00 €</p>\n                <p class=\"text-gray-400 text-sm\">Épargne possible</p>\n            </div>\n            <div class=\"bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center\">\n                <p class=\"text-blue-400 text-2xl font-bold mb-1\" id=\"simulation-taux-epargne\">13,3%</p>\n                <p class=\"text-gray-400 text-sm\">Taux d'épargne</p>\n            </div>\n        </div>\n        \n        <div class=\"chart-container mb-6\">\n            <canvas id=\"budget-chart\"></canvas>\n        </div>\n        \n        <!-- Nouveau: Graphique d'évolution sur 12 mois -->\n        <div class=\"chart-container mb-6\">\n            <h5 class=\"text-sm font-medium text-blue-400 mb-3 flex items-center\">\n                <i class=\"fas fa-chart-line mr-2\"></i>\n                Projection d'épargne sur 12 mois\n            </h5>\n            <canvas id=\"evolution-chart\"></canvas>\n        </div>\n        \n        <div id=\"budget-advice\" class=\"bg-blue-900 bg-opacity-20 p-4 rounded-lg border-l-4 border-blue-400\">\n            <h5 class=\"text-blue-400 font-medium flex items-center mb-2\">\n                <i class=\"fas fa-lightbulb mr-2\"></i>\n                Conseils budgétaires\n            </h5>\n            <div class=\"advice-score bg-blue-900 bg-opacity-20 text-blue-400 inline-block px-2 py-1 rounded text-sm font-medium mb-2\">\n                Évaluation: 3/5\n            </div>\n            <ul class=\"advice-list text-sm text-gray-300 space-y-1 pl-4\">\n                <li>Un taux d'épargne optimal se situe généralement entre 15% et 25% de vos revenus.</li>\n                <li>Vos dépenses de logement représentent environ 30% de votre budget, ce qui est raisonnable.</li>\n                <li>Envisagez d'automatiser votre épargne pour atteindre plus facilement vos objectifs.</li>\n            </ul>\n        </div>\n        \n        <!-- Résumé final avec recommandations d'investissement -->\n        <div id=\"budget-summary\" class=\"mt-5 bg-green-900 bg-opacity-10 p-4 rounded-lg border-l-4 border-green-400\">\n            <h5 class=\"text-green-400 font-medium flex items-center mb-3\">\n                <i class=\"fas fa-check-double mr-2\"></i>\n                Recommandations personnalisées\n            </h5>\n            <div id=\"budget-recommendations\" class=\"text-sm text-gray-300\">\n                <!-- Généré dynamiquement -->\n            </div>\n        </div>\n    `;
+        <!-- Score global du budget -->
+        <div class="mb-5 bg-blue-800 bg-opacity-30 p-3 rounded-lg flex items-center">
+            <div class="w-16 h-16 rounded-full bg-blue-900 bg-opacity-50 flex items-center justify-center mr-4 budget-score-circle">
+                <span id="budget-score" class="text-2xl font-bold text-blue-400">3</span>
+            </div>
+            <div>
+                <h5 class="font-medium text-white">Score budget</h5>
+                <p class="text-sm text-gray-300" id="budget-score-description">Budget équilibré</p>
+                <div class="w-full bg-blue-900 h-2 rounded-full mt-1 overflow-hidden">
+                    <div id="budget-score-bar" class="h-full bg-blue-400" style="width: 60%"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-revenu-mensuel">3 000,00 €</p>
+                <p class="text-gray-400 text-sm">Revenu mensuel</p>
+            </div>
+            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-depenses-totales">2 600,00 €</p>
+                <p class="text-gray-400 text-sm">Dépenses totales</p>
+            </div>
+            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-epargne-possible">400,00 €</p>
+                <p class="text-gray-400 text-sm">Épargne possible</p>
+            </div>
+            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-taux-epargne">13,3%</p>
+                <p class="text-gray-400 text-sm">Taux d'épargne</p>
+            </div>
+        </div>
+        
+        <div class="chart-container mb-6">
+            <canvas id="budget-chart"></canvas>
+        </div>
+        
+        <!-- Nouveau: Graphique d'évolution sur 12 mois -->
+        <div class="chart-container mb-6">
+            <h5 class="text-sm font-medium text-blue-400 mb-3 flex items-center">
+                <i class="fas fa-chart-line mr-2"></i>
+                Projection d'épargne sur 12 mois
+            </h5>
+            <canvas id="evolution-chart"></canvas>
+        </div>
+        
+        <div id="budget-advice" class="bg-blue-900 bg-opacity-20 p-4 rounded-lg border-l-4 border-blue-400">
+            <h5 class="text-blue-400 font-medium flex items-center mb-2">
+                <i class="fas fa-lightbulb mr-2"></i>
+                Conseils budgétaires
+            </h5>
+            <div class="advice-score bg-blue-900 bg-opacity-20 text-blue-400 inline-block px-2 py-1 rounded text-sm font-medium mb-2">
+                Évaluation: 3/5
+            </div>
+            <ul class="advice-list text-sm text-gray-300 space-y-1 pl-4">
+                <li>Un taux d'épargne optimal se situe généralement entre 15% et 25% de vos revenus.</li>
+                <li>Vos dépenses de logement représentent environ 30% de votre budget, ce qui est raisonnable.</li>
+                <li>Envisagez d'automatiser votre épargne pour atteindre plus facilement vos objectifs.</li>
+            </ul>
+        </div>
+        
+        <!-- Résumé final avec recommandations d'investissement -->
+        <div id="budget-summary" class="mt-5 bg-green-900 bg-opacity-10 p-4 rounded-lg border-l-4 border-green-400">
+            <h5 class="text-green-400 font-medium flex items-center mb-3">
+                <i class="fas fa-check-double mr-2"></i>
+                Recommandations personnalisées
+            </h5>
+            <div id="budget-recommendations" class="text-sm text-gray-300">
+                <!-- Généré dynamiquement -->
+            </div>
+        </div>
+    `;
     
     // Ajouter les deux colonnes au conteneur
     container.appendChild(budgetInputCol);
     container.appendChild(budgetResultsCol);
+    
+    // Injecter le HTML du nouveau système dans la vue détaillée
+    const detailedView = document.getElementById('detailed-view');
+    if (detailedView) {
+        detailedView.innerHTML = generateExpenseSectionsHTML();
+    }
     
     // Initialiser les graphiques
     initBudgetChart();
@@ -640,61 +1492,11 @@ function generateBudgetInterface(container) {
     // Ajouter une première dépense détaillée par défaut pour l'exemple
     addDetailedExpense('Café', 2.5, 20);
 
-    // Mettre à jour les totaux initiaux
-    updateTotalVieCourante();
-    updateTotalLoisirs();
-}
-
-/**
- * Met à jour le total des dépenses vie courante
- */
-function updateTotalVieCourante() {
-    const alimentation = parseFloat(document.getElementById('depense-alimentation').value) || 0;
-    const transport = parseFloat(document.getElementById('depense-transport').value) || 0;
-    const factures = parseFloat(document.getElementById('depense-factures').value) || 0;
-    const abonnements = parseFloat(document.getElementById('depense-abonnements').value) || 0;
-    
-    const total = alimentation + transport + factures + abonnements;
-    
-    // Mettre à jour l'affichage
-    const totalElement = document.getElementById('total-vie-courante');
-    if (totalElement) {
-        totalElement.textContent = `${total.toLocaleString('fr-FR')} €`;
-    }
-    
-    // Mettre à jour le champ simplifié
-    const champSimplifie = document.getElementById('simulation-budget-quotidien');
-    if (champSimplifie) {
-        champSimplifie.value = total;
-    }
-    
-    return total;
-}
-
-/**
- * Met à jour le total des dépenses loisirs
- */
-function updateTotalLoisirs() {
-    const restaurants = parseFloat(document.getElementById('depense-restaurants').value) || 0;
-    const shopping = parseFloat(document.getElementById('depense-shopping').value) || 0;
-    const abosLoisirs = parseFloat(document.getElementById('depense-abos-loisirs').value) || 0;
-    const voyages = parseFloat(document.getElementById('depense-voyages').value) || 0;
-    
-    const total = restaurants + shopping + abosLoisirs + voyages;
-    
-    // Mettre à jour l'affichage
-    const totalElement = document.getElementById('total-loisirs');
-    if (totalElement) {
-        totalElement.textContent = `${total.toLocaleString('fr-FR')} €`;
-    }
-    
-    // Mettre à jour le champ simplifié
-    const champSimplifie = document.getElementById('simulation-budget-extra');
-    if (champSimplifie) {
-        champSimplifie.value = total;
-    }
-    
-    return total;
+    // Initialiser le système montant × quantité
+    setTimeout(() => {
+        initFixedExpenseSections();
+        updateAllTotals();
+    }, 200);
 }
 
 /**
@@ -896,40 +1698,6 @@ function initBudgetListeners() {
         budgetButton.addEventListener('click', analyserBudget);
     }
     
-    // Ajouter des écouteurs aux champs de saisie du budget détaillé
-    const vieCoursInputs = [
-        document.getElementById('depense-alimentation'),
-        document.getElementById('depense-transport'),
-        document.getElementById('depense-factures'),
-        document.getElementById('depense-abonnements')
-    ];
-    
-    vieCoursInputs.forEach(input => {
-        if (input) {
-            input.addEventListener('change', function() {
-                updateTotalVieCourante();
-                analyserBudget();
-            });
-        }
-    });
-    
-    // Ajouter des écouteurs aux champs de saisie des loisirs détaillés
-    const loisirsInputs = [
-        document.getElementById('depense-restaurants'),
-        document.getElementById('depense-shopping'),
-        document.getElementById('depense-abos-loisirs'),
-        document.getElementById('depense-voyages')
-    ];
-    
-    loisirsInputs.forEach(input => {
-        if (input) {
-            input.addEventListener('change', function() {
-                updateTotalLoisirs();
-                analyserBudget();
-            });
-        }
-    });
-    
     // Ajouter des écouteurs aux champs simples
     const simpleInputs = [
         document.getElementById('simulation-budget-loyer'),
@@ -952,11 +1720,10 @@ function initBudgetListeners() {
     // Écouteurs pour les boutons de vue
     const viewDetailed = document.getElementById('view-detailed');
     const viewSimple = document.getElementById('view-simple');
-    const detailedViewCourante = document.getElementById('detailed-view-courante');
-    const detailedViewLoisirs = document.getElementById('detailed-view-loisirs');
+    const detailedView = document.getElementById('detailed-view');
     const simpleView = document.getElementById('simple-view');
     
-    if (viewDetailed && viewSimple && detailedViewCourante && detailedViewLoisirs && simpleView) {
+    if (viewDetailed && viewSimple && detailedView && simpleView) {
         viewDetailed.addEventListener('click', function() {
             // Mise à jour ARIA
             viewDetailed.setAttribute('aria-selected', 'true');
@@ -973,13 +1740,11 @@ function initBudgetListeners() {
             viewSimple.classList.remove('bg-blue-900');
             viewSimple.classList.remove('bg-opacity-30');
             
-            detailedViewCourante.style.display = 'block';
-            detailedViewLoisirs.style.display = 'block';
+            detailedView.style.display = 'block';
             simpleView.style.display = 'none';
             
-            // Synchronisation des totaux
-            updateTotalVieCourante();
-            updateTotalLoisirs();
+            // Synchronisation des totaux avec le nouveau système
+            updateAllTotals();
         });
         
         viewSimple.addEventListener('click', function() {
@@ -998,8 +1763,7 @@ function initBudgetListeners() {
             viewDetailed.classList.remove('bg-blue-900');
             viewDetailed.classList.remove('bg-opacity-30');
             
-            detailedViewCourante.style.display = 'none';
-            detailedViewLoisirs.style.display = 'none';
+            detailedView.style.display = 'none';
             simpleView.style.display = 'block';
         });
     }
@@ -1026,6 +1790,11 @@ function initBudgetListeners() {
         exportButton.addEventListener('click', exportBudgetToPDF);
     }
     
+    // Initialiser le système montant × quantité
+    setTimeout(() => {
+        initFixedExpenseSections();
+    }, 200);
+    
     // Initialiser l'accessibilité
     KeyboardManager.init();
     
@@ -1037,7 +1806,7 @@ function initBudgetListeners() {
     
     // Notification d'initialisation
     setTimeout(() => {
-        KeyboardManager.showFeedback('Module budget accessible initialisé', true);
+        KeyboardManager.showFeedback('Module budget avec système montant × quantité initialisé', true);
     }, 500);
 }
 
@@ -1052,40 +1821,31 @@ function ajusterValeursParDefaut(revenu) {
     // Calculer des fourchettes raisonnables basées sur le revenu
     const loyerSuggere = Math.round(revenu * 0.3); // ~30% du revenu pour le logement
     
-    // Dépenses vie courante
-    const alimentationSuggeree = Math.round(revenu * 0.15); // ~15% pour l'alimentation
-    const transportSuggere = Math.round(revenu * 0.08); // ~8% pour les transports
-    const facturesSuggerees = Math.round(revenu * 0.07); // ~7% pour les factures
-    const abonnementsSuggeres = Math.round(revenu * 0.05); // ~5% pour les abonnements fixes
-    
-    // Dépenses loisirs
-    const restaurantsSuggeres = Math.round(revenu * 0.04); // ~4% pour les restaurants
-    const shoppingSuggere = Math.round(revenu * 0.03); // ~3% pour le shopping
-    const abosLoisirsSuggeres = Math.round(revenu * 0.01); // ~1% pour les abonnements loisirs
-    const voyagesSuggeres = Math.round(revenu * 0.05); // ~5% pour les voyages
-    
-    // Épargne
-    const investSuggere = Math.round(revenu * 0.1); // ~10% pour l'épargne/investissement
-    
-    // Mettre à jour les champs vie courante
-    document.getElementById('depense-alimentation').value = alimentationSuggeree;
-    document.getElementById('depense-transport').value = transportSuggere;
-    document.getElementById('depense-factures').value = facturesSuggerees;
-    document.getElementById('depense-abonnements').value = abonnementsSuggeres;
-    
-    // Mettre à jour les champs loisirs
-    document.getElementById('depense-restaurants').value = restaurantsSuggeres;
-    document.getElementById('depense-shopping').value = shoppingSuggere;
-    document.getElementById('depense-abos-loisirs').value = abosLoisirsSuggeres;
-    document.getElementById('depense-voyages').value = voyagesSuggeres;
+    // Ajuster les valeurs par défaut du nouveau système
+    Object.keys(EXPENSE_CATEGORIES).forEach(categoryKey => {
+        const category = EXPENSE_CATEGORIES[categoryKey];
+        category.items.forEach(item => {
+            let nouveauMontant = item.defaultAmount;
+            
+            // Ajuster selon le type de dépense et le revenu
+            if (categoryKey === 'vie-courante') {
+                nouveauMontant = Math.round(item.defaultAmount * (revenu / 3000));
+            } else if (categoryKey === 'loisirs') {
+                nouveauMontant = Math.round(item.defaultAmount * (revenu / 3000) * 0.8);
+            }
+            
+            const amountInput = document.getElementById(`amount-${item.id}`);
+            if (amountInput) {
+                amountInput.value = nouveauMontant;
+                updateItemTotal(item.id);
+            }
+        });
+    });
     
     // Mettre à jour les autres champs
     document.getElementById('simulation-budget-loyer').value = loyerSuggere;
+    const investSuggere = Math.round(revenu * 0.1); // ~10% pour l'épargne/investissement
     document.getElementById('simulation-budget-invest').value = investSuggere;
-    
-    // Mettre à jour les totaux
-    updateTotalVieCourante();
-    updateTotalLoisirs();
     
     // Analyser le budget avec les nouvelles valeurs
     analyserBudget();
@@ -1164,7 +1924,7 @@ function showBudgetNotification(message, type = 'info') {
 }
 
 /**
- * Analyse le budget et met à jour les résultats
+ * Analyse le budget et met à jour les résultats - VERSION AMÉLIORÉE
  */
 function analyserBudget() {
     // Récupérer les valeurs du budget
@@ -1172,12 +1932,12 @@ function analyserBudget() {
     let quotidien, extra;
     
     // Vérifier le mode d'affichage actif
-    const isDetailed = document.getElementById('detailed-view-courante').style.display !== 'none';
+    const isDetailed = document.getElementById('detailed-view').style.display !== 'none';
     
     if (isDetailed) {
-        // En mode détaillé, utiliser les totaux calculés
-        quotidien = updateTotalVieCourante();
-        extra = updateTotalLoisirs();
+        // En mode détaillé, utiliser le nouveau système montant × quantité
+        quotidien = updateCategoryTotal('vie-courante');
+        extra = updateCategoryTotal('loisirs');
     } else {
         // En mode simplifié, utiliser les valeurs directes
         quotidien = parseFloat(document.getElementById('simulation-budget-quotidien').value) || 0;
