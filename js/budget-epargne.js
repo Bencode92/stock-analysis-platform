@@ -2270,10 +2270,10 @@ function updateEpargneBreakdown(epargnAutomatique, epargnePossible, revenuMensue
     const pourcentageEpargne = revenuMensuel > 0 ? ((epargneTotale / revenuMensuel) * 100).toFixed(1) : 0;
     
     // ✅ SÉLECTEURS CORRIGÉS pour correspondre au HTML de votre capture
-    const epargneAutoElement = document.querySelector('.capacite-epargne .bg-blue-800:nth-child(1) p:first-child');
-    const epargneLibreElement = document.querySelector('.capacite-epargne .bg-blue-800:nth-child(2) p:first-child');
-    const totalDispoElement = document.querySelector('.capacite-epargne .bg-blue-800:nth-child(3) p:first-child');
-    const pourcentageElement = document.querySelector('.capacite-epargne p:last-child');
+const epargneAutoElement = document.getElementById('epargne-auto-display');
+const epargneLibreElement = document.getElementById('epargne-libre-display');
+const totalDispoElement = document.getElementById('epargne-totale-display');
+const pourcentageElement = document.getElementById('taux-epargne-totale');
     
     // Mise à jour avec vérification
     if (epargneAutoElement) {
@@ -2294,7 +2294,7 @@ function updateEpargneBreakdown(epargnAutomatique, epargnePossible, revenuMensue
     }
     
     // ✅ APPELER LES RECOMMANDATIONS
-    updateRecommandations(pourcentageEpargne, epargneTotale, revenuMensuel);
+updateRecommendations(epargneTotale, pourcentageEpargne, revenuMensuel);
     
     console.log('🔄 Épargne breakdown mise à jour:', {
         automatique: epargnAutomatique,
@@ -2307,7 +2307,7 @@ function updateEpargneBreakdown(epargnAutomatique, epargnePossible, revenuMensue
 /**
  * ✅ Met à jour les recommandations personnalisées
  */
-function updateRecommandations(pourcentageEpargne, epargneTotale, revenuMensuel) {
+function updateRecommendations(epargneTotale, pourcentageEpargne, revenuMensuel) {
     // ✅ CHERCHER LE CONTAINER DANS LA SECTION RECOMMANDATIONS
     let container = document.getElementById('recommandations-container');
     
