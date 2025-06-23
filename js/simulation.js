@@ -31,66 +31,45 @@ function calcCAGR({ invested, finalValue, years }) {
 }
 
 /**
- * Calcul du rendement annualisé interne (IRR) pour versements périodiques
- * Utilise la méthode Newton-Raphson pour résoudre l'équation IRR
- * @param {Object} params - Paramètres du calcul
- * @param {number} params.initial - Montant initial versé
- * @param {number} params.periodic - Montant des versements périodiques
- * @param {number} params.periodsPerYear - Nombre de périodes par an
- * @param {number} params.years - Nombre d'années
- * @param {number} params.finalValue - Valeur finale obtenue
- * @returns {number} Rendement annualisé (décimal)
+ * Taux Interne de Rendement annualisé pour versements périodiques
+ * Newton-Raphson sur le taux périodique, puis conversion en taux annuel effectif.
+ * @param {number} initial         Dépôt initial (t0)
+ * @param {number} periodic        Versement par période (>0)
+ * @param {number} periodsPerYear  52, 12, 4 ou 1
+ * @param {number} years           Durée totale
+ * @param {number} finalValue      Valeur finale
+ * @param {number} guess           Taux annuel "nominal" pour amorcer NR  (optionnel)
+ * @return {number}                Taux annuel effectif (décimal)
  */
-function calcIRR({ initial, periodic, periodsPerYear, years, finalValue }) {
-    // Si pas de versements périodiques, utiliser le CAGR simple
+function calcIRR({ initial, periodic, periodsPerYear, years, finalValue, guess = 0.07 }) {
     if (periodic === 0 || periodsPerYear === 0) {
         return calcCAGR({ invested: initial, finalValue, years });
     }
 
-    // Validation des entrées
-    if (initial <= 0 || years <= 0 || periodsPerYear <= 0 || finalValue <= 0) return 0;
-    
-    const n = years * periodsPerYear;
-    const cashFlows = Array(n + 1).fill(-periodic);
-    cashFlows[0] = -initial;               // sortie initiale
-    cashFlows[n] += finalValue;            // entrée finale
+    const n  = years * periodsPerYear;
+    const cf = Array(n + 1).fill(-periodic);
+    cf[0] = -initial;
+    cf[n] += finalValue;
 
-    // Vérifier qu'il y a un changement de signe (condition nécessaire pour l'IRR)
-    const hasPositive = cashFlows.some(cf => cf > 0);
-    const hasNegative = cashFlows.some(cf => cf < 0);
-    if (!hasPositive || !hasNegative) return 0;
+    // Point de départ = taux périodique ≈ taux annuel / p
+    let r = guess / periodsPerYear;
 
-    // Newton-Raphson pour résoudre l'équation IRR
-    let r = 0.07;  // point de départ (7%)
-    
-    for (let k = 0; k < 50; k++) { // Maximum 50 itérations
-        let f = 0, fPrime = 0;
-        
-        // Calculer f(r) et f'(r)
+    for (let k = 0; k < 100; k++) {
+        let f = 0, fp = 0;
         for (let t = 0; t <= n; t++) {
             const v = Math.pow(1 + r, -t);
-            f += cashFlows[t] * v;
-            fPrime += -t * cashFlows[t] * v / (1 + r);
+            f  += cf[t] * v;
+            fp += -t * cf[t] * v / (1 + r);
         }
-        
-        // Éviter division par zéro
-        if (Math.abs(fPrime) < 1e-12) break;
-        
-        const newR = r - f / fPrime;
-        
-        // Limiter les valeurs aberrantes (-99% à 500%)
-        const clampedR = Math.max(-0.99, Math.min(5.0, newR));
-        
-        // Test de convergence
-        if (Math.abs(clampedR - r) < 1e-9) {
-            return clampedR * periodsPerYear; // Annualisé
-        }
-        
-        r = clampedR;
+        if (Math.abs(fp) < 1e-12) break;
+
+        const newR = r - f / fp;
+        r = Math.max(-0.99, Math.min(1, newR));   // Borne entre −99% et +100% /période
+
+        if (Math.abs(newR - r) < 1e-10) break;    // Convergence
     }
-    
-    // Retourner même sans convergence parfaite
-    return r * periodsPerYear;
+
+    return Math.pow(1 + r, periodsPerYear) - 1;   // Taux annuel effectif
 }
 
 // ============================================
@@ -819,7 +798,8 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
             periodic: isPeriodicMode ? periodicAmount : 0,
             periodsPerYear,
             years,
-            finalValue: finalAmount
+            finalValue: finalAmount,
+            guess: annualReturn        // Aide Newton à converger
         });
     }
     
@@ -930,8 +910,10 @@ function updateResultsDisplay(results) {
     // ✅ NOUVEAU : Affichage du rendement annualisé
     const resultAnnualized = document.getElementById('result-annualized-return');
     if (resultAnnualized) {
-        const pct = (results.annualizedReturn * 100);
-        const displayPct = isFinite(pct) ? pct.toFixed(2) : '—';
+        const pct = Number.isFinite(results.annualizedReturn)
+                   ? results.annualizedReturn * 100
+                   : NaN;
+        const displayPct = isFinite(pct) && pct < 100 ? pct.toFixed(2) : '—';
         
         // Ajouter un indicateur de performance
         let performanceIcon = '';
