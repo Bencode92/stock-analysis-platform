@@ -1924,7 +1924,8 @@ function showBudgetNotification(message, type = 'info') {
 }
 
 /**
- * Analyse le budget et met à jour les résultats - VERSION AMÉLIORÉE
+ * Analyse le budget et met à jour les résultats - VERSION CORRIGÉE
+ * L'investissement automatique est maintenant traité comme de l'épargne, pas une dépense
  */
 function analyserBudget() {
     // Récupérer les valeurs du budget
@@ -1952,10 +1953,23 @@ function analyserBudget() {
     // Récupérer le revenu mensuel saisi par l'utilisateur
     const revenuMensuel = parseFloat(document.getElementById('revenu-mensuel-input').value) || 3000;
     
-    // Calculer les totaux du budget
-    const depensesTotales = loyer + quotidien + extra + investAuto + totalDepensesVariables;
-    const epargnePossible = Math.max(0, revenuMensuel - depensesTotales);
-    const tauxEpargne = revenuMensuel > 0 ? (epargnePossible / revenuMensuel) * 100 : 0;
+    // ===== NOUVELLE LOGIQUE CORRIGÉE =====
+    // 1. Dépenses "de consommation" (on retire l'épargne auto)
+    const depensesConsommation = loyer + quotidien + extra + totalDepensesVariables;
+    
+    // 2. Épargne automatique (investissement programmé)
+    const epargneAuto = investAuto;
+    
+    // 3. Épargne libre restante **après** l'épargne auto
+    const epargneLibre = Math.max(0, revenuMensuel - depensesConsommation - epargneAuto);
+    
+    // 4. Totaux à afficher
+    const depensesTotales = depensesConsommation;          // ↩️ on n'y met plus l'auto-invest
+    const epargnePossible = epargneLibre;                  // ↩️ affichage "Épargne possible"
+    const tauxEpargne = revenuMensuel > 0
+          ? ((epargneAuto + epargneLibre) / revenuMensuel) * 100
+          : 0;
+    // ===== FIN NOUVELLE LOGIQUE =====
     
     // Formater les valeurs monétaires
     const formatter = new Intl.NumberFormat('fr-FR', { 
@@ -1970,23 +1984,24 @@ function analyserBudget() {
     document.getElementById('simulation-epargne-possible').textContent = formatter.format(epargnePossible);
     document.getElementById('simulation-taux-epargne').textContent = tauxEpargne.toFixed(1) + '%';
     
+    // ===== APPELS CORRIGÉS =====
     // Mettre à jour le graphique
-    updateBudgetChart(loyer, quotidien, extra, investAuto, totalDepensesVariables, epargnePossible);
+    updateBudgetChart(loyer, quotidien, extra, epargneAuto, totalDepensesVariables, epargneLibre);
     
-    // Mettre à jour le graphique d'évolution
-    updateEvolutionChart(epargnePossible);
+    // Mettre à jour le graphique d'évolution (épargne totale)
+    updateEvolutionChart(epargneAuto + epargneLibre);
     
     // Mise à jour des conseils budgétaires
-    updateBudgetAdvice(loyer, quotidien, extra, investAuto, totalDepensesVariables, revenuMensuel, tauxEpargne);
+    updateBudgetAdvice(loyer, quotidien, extra, epargneAuto, totalDepensesVariables, revenuMensuel, tauxEpargne);
     
-    // Mise à jour du temps pour atteindre l'objectif d'épargne
-    updateObjectiveTime(epargnePossible);
+    // Mise à jour du temps pour atteindre l'objectif d'épargne (épargne totale)
+    updateObjectiveTime(epargneAuto + epargneLibre);
     
     // Mettre à jour le score budget
     updateBudgetScore(tauxEpargne, loyer, revenuMensuel, depensesTotales);
     
     // Mettre à jour les recommandations
-    updateRecommendations(epargnePossible, tauxEpargne, investAuto);
+    updateRecommendations(epargneLibre, tauxEpargne, epargneAuto);
 }
 
 /**
