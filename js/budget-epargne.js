@@ -2,12 +2,483 @@
  * budget-epargne.js - Module de gestion du budget et de l'épargne
  * Ce module gère la génération de l'interface et des calculs pour la section Budget & Épargne
  * TradePulse Finance Intelligence Platform
+ * 
+ * Version 2.0 - Ajout accessibilité complète et transparence des formules
  */
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialiser l'onglet Budget
     initBudgetPlanner();
 });
+
+/**
+ * Gestionnaire d'accessibilité clavier
+ */
+const KeyboardManager = {
+    /**
+     * Initialise la navigation clavier pour tous les éléments interactifs
+     */
+    init() {
+        this.setupTabNavigation();
+        this.setupFocusManagement();
+        this.setupAriaAttributes();
+    },
+
+    /**
+     * Configure la navigation par onglets
+     */
+    setupTabNavigation() {
+        // Boutons de vue (Détaillé/Simplifié)
+        document.querySelectorAll('[role="tab"]').forEach(tab => {
+            tab.addEventListener('keydown', (e) => {
+                if ([' ', 'Enter'].includes(e.key)) {
+                    e.preventDefault();
+                    tab.click();
+                }
+                // Navigation fléchée entre onglets
+                if (['ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                    e.preventDefault();
+                    this.navigateTabs(tab, e.key === 'ArrowRight');
+                }
+            });
+        });
+
+        // Inputs avec Enter pour validation
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    analyserBudget();
+                    this.showFeedback('Budget analysé');
+                }
+            });
+        });
+
+        // Boutons avec feedback vocal
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('focus', () => {
+                this.announceElement(button);
+            });
+        });
+    },
+
+    /**
+     * Navigation entre onglets avec flèches
+     */
+    navigateTabs(currentTab, isNext) {
+        const tabs = [...document.querySelectorAll('[role="tab"]')];
+        const currentIndex = tabs.indexOf(currentTab);
+        const nextIndex = isNext 
+            ? (currentIndex + 1) % tabs.length 
+            : (currentIndex - 1 + tabs.length) % tabs.length;
+        
+        tabs[nextIndex].focus();
+        tabs[nextIndex].click();
+    },
+
+    /**
+     * Gestion du focus visible
+     */
+    setupFocusManagement() {
+        // Focus visible sur tous les éléments interactifs
+        const focusableElements = [
+            'button', 'input', 'select', '[role="tab"]', '[tabindex]'
+        ].join(',');
+
+        document.querySelectorAll(focusableElements).forEach(el => {
+            // Focus visible
+            el.classList.add('focus:outline-none', 'focus:ring-2', 'focus:ring-blue-400', 'focus:ring-opacity-50');
+            
+            // Skip links pour navigation rapide
+            if (el.id) {
+                el.setAttribute('data-skip-target', el.id);
+            }
+        });
+    },
+
+    /**
+     * Configuration des attributs ARIA
+     */
+    setupAriaAttributes() {
+        // Titres et descriptions
+        const sections = [
+            { id: 'simulation-budget-loyer', label: 'Loyer mensuel', desc: 'Montant du loyer ou crédit immobilier' },
+            { id: 'simulation-budget-quotidien', label: 'Dépenses quotidiennes', desc: 'Alimentation, transport, factures' },
+            { id: 'simulation-budget-extra', label: 'Loisirs et sorties', desc: 'Restaurants, shopping, voyages' },
+            { id: 'simulation-budget-invest', label: 'Épargne automatique', desc: 'Investissement mensuel programmé' }
+        ];
+
+        sections.forEach(section => {
+            const element = document.getElementById(section.id);
+            if (element) {
+                element.setAttribute('aria-label', section.label);
+                element.setAttribute('aria-describedby', `${section.id}-desc`);
+                
+                // Créer description cachée pour lecteurs d'écran
+                const desc = document.createElement('div');
+                desc.id = `${section.id}-desc`;
+                desc.className = 'sr-only';
+                desc.textContent = section.desc;
+                element.parentNode.insertBefore(desc, element.nextSibling);
+            }
+        });
+
+        // Région live pour les résultats
+        const resultsContainer = document.getElementById('budget-advice');
+        if (resultsContainer) {
+            resultsContainer.setAttribute('aria-live', 'polite');
+            resultsContainer.setAttribute('aria-atomic', 'true');
+        }
+    },
+
+    /**
+     * Annonce vocale pour lecteurs d'écran
+     */
+    announceElement(element) {
+        const announcement = element.getAttribute('aria-label') || 
+                           element.textContent || 
+                           element.title || 
+                           'Élément interactif';
+        
+        // Annonce discrète via aria-live
+        this.showFeedback(announcement, true);
+    },
+
+    /**
+     * Feedback visuel et vocal
+     */
+    showFeedback(message, isScreenReaderOnly = false) {
+        const feedback = document.createElement('div');
+        feedback.setAttribute('aria-live', 'assertive');
+        feedback.className = isScreenReaderOnly ? 'sr-only' : 'fixed top-4 right-4 bg-blue-600 text-white px-3 py-2 rounded z-50 text-sm';
+        feedback.textContent = message;
+        
+        document.body.appendChild(feedback);
+        
+        setTimeout(() => feedback.remove(), isScreenReaderOnly ? 100 : 2000);
+    }
+};
+
+/**
+ * Gestionnaire des info-bulles de formules
+ */
+const FormulaTooltips = {
+    /**
+     * Base de données des formules
+     */
+    formulas: {
+        'simulation-taux-epargne': {
+            title: 'Taux d\'épargne',
+            formula: 'Taux = (Épargne possible ÷ Revenu total) × 100',
+            explanation: 'Indique le pourcentage de vos revenus que vous parvenez à épargner. Un taux optimal se situe entre 15% et 25%.',
+            example: 'Ex: 400€ épargne ÷ 3000€ revenu = 13,3%'
+        },
+        'simulation-epargne-possible': {
+            title: 'Épargne possible',
+            formula: 'Épargne = Revenus - (Loyer + Vie courante + Loisirs + Épargne auto + Variables)',
+            explanation: 'Montant restant après toutes vos dépenses. C\'est votre capacité d\'épargne additionnelle.',
+            example: 'Ex: 3000€ - 2600€ dépenses = 400€'
+        },
+        'budget-score': {
+            title: 'Score budget',
+            formula: 'Score = Base(3) + Bonus/Malus selon critères',
+            explanation: 'Évaluation de 1 à 5 basée sur vos ratios financiers.',
+            criteria: [
+                'Taux épargne < 5% : -1 point',
+                'Taux épargne > 20% : +1 point', 
+                'Loyer > 33% revenus : -1 point',
+                'Loyer < 25% revenus : +1 point'
+            ]
+        },
+        'temps-objectif': {
+            title: 'Temps pour objectif',
+            formula: 'Temps = Montant objectif ÷ Épargne mensuelle',
+            explanation: 'Durée nécessaire pour atteindre votre objectif au rythme d\'épargne actuel.',
+            example: 'Ex: 5000€ ÷ 400€/mois = 12,5 mois'
+        }
+    },
+
+    /**
+     * Initialise les info-bulles
+     */
+    init() {
+        Object.keys(this.formulas).forEach(elementId => {
+            this.attachTooltip(elementId);
+        });
+    },
+
+    /**
+     * Attache une info-bulle à un élément
+     */
+    attachTooltip(elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        // Ajouter indicateur visuel
+        const indicator = document.createElement('span');
+        indicator.className = 'ml-1 text-blue-400 cursor-help text-xs';
+        indicator.innerHTML = '<i class="fas fa-calculator"></i>';
+        indicator.setAttribute('aria-label', 'Voir la formule de calcul');
+        indicator.setAttribute('tabindex', '0');
+
+        // Événements
+        ['mouseenter', 'focus'].forEach(event => {
+            indicator.addEventListener(event, () => this.showTooltip(elementId, indicator));
+        });
+        
+        ['mouseleave', 'blur'].forEach(event => {
+            indicator.addEventListener(event, () => this.hideTooltip());
+        });
+
+        // Support tactile pour mobile
+        indicator.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.toggleTooltip(elementId, indicator);
+        });
+
+        // Gestion clavier
+        indicator.addEventListener('keydown', (e) => {
+            if ([' ', 'Enter'].includes(e.key)) {
+                e.preventDefault();
+                this.toggleTooltip(elementId, indicator);
+            }
+        });
+
+        // Insérer l'indicateur
+        element.parentNode.insertBefore(indicator, element.nextSibling);
+    },
+
+    /**
+     * Affiche l'info-bulle
+     */
+    showTooltip(elementId, triggerElement) {
+        this.hideTooltip(); // Masquer les autres
+
+        const formula = this.formulas[elementId];
+        const tooltip = document.createElement('div');
+        tooltip.id = 'formula-tooltip';
+        
+        // Responsive design
+        const isMobile = window.innerWidth < 768;
+        tooltip.className = isMobile 
+            ? 'fixed inset-x-4 bottom-4 z-50 p-4 bg-gray-900 border border-gray-700 rounded-lg shadow-xl text-sm text-white transform-none'
+            : 'absolute z-50 p-4 bg-gray-900 border border-gray-700 rounded-lg shadow-xl text-sm text-white max-w-xs sm:max-w-sm transform -translate-x-1/2 mt-2';
+        
+        tooltip.innerHTML = `
+            <div class="font-semibold text-blue-400 mb-2 flex items-center">
+                <i class="fas fa-formula mr-2"></i>
+                ${formula.title}
+            </div>
+            <div class="mb-2">
+                <strong class="text-green-400">Formule :</strong><br>
+                <code class="text-green-300 text-xs">${formula.formula}</code>
+            </div>
+            <div class="mb-2 text-gray-300">
+                ${formula.explanation}
+            </div>
+            ${formula.example ? `
+                <div class="text-blue-300 text-xs">
+                    <strong>Exemple :</strong> ${formula.example}
+                </div>
+            ` : ''}
+            ${formula.criteria ? `
+                <div class="mt-2">
+                    <strong class="text-orange-400">Critères :</strong>
+                    <ul class="text-xs mt-1 space-y-1">
+                        ${formula.criteria.map(c => `<li>• ${c}</li>`).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+            <div class="mt-2 pt-2 border-t border-gray-700 text-xs text-gray-400">
+                <kbd>Échap</kbd> pour fermer
+            </div>
+        `;
+
+        // Positionner la tooltip (seulement si pas mobile)
+        if (!isMobile) {
+            const rect = triggerElement.getBoundingClientRect();
+            tooltip.style.left = rect.left + (rect.width / 2) + 'px';
+            tooltip.style.top = rect.bottom + window.scrollY + 'px';
+        }
+
+        // Ajouter au DOM
+        document.body.appendChild(tooltip);
+
+        // Ajuster si hors écran (desktop seulement)
+        if (!isMobile) {
+            const tooltipRect = tooltip.getBoundingClientRect();
+            if (tooltipRect.right > window.innerWidth) {
+                tooltip.style.left = (window.innerWidth - tooltipRect.width - 10) + 'px';
+            }
+            if (tooltipRect.left < 0) {
+                tooltip.style.left = '10px';
+            }
+        }
+
+        // Gestion clavier globale
+        document.addEventListener('keydown', this.handleTooltipKeyboard);
+    },
+
+    /**
+     * Masque l'info-bulle
+     */
+    hideTooltip() {
+        const existing = document.getElementById('formula-tooltip');
+        if (existing) {
+            existing.remove();
+            document.removeEventListener('keydown', this.handleTooltipKeyboard);
+        }
+    },
+
+    /**
+     * Toggle l'info-bulle
+     */
+    toggleTooltip(elementId, triggerElement) {
+        const existing = document.getElementById('formula-tooltip');
+        if (existing) {
+            this.hideTooltip();
+        } else {
+            this.showTooltip(elementId, triggerElement);
+        }
+    },
+
+    /**
+     * Gestion clavier pour les tooltips
+     */
+    handleTooltipKeyboard: function(e) {
+        if (e.key === 'Escape') {
+            FormulaTooltips.hideTooltip();
+        }
+    }
+};
+
+/**
+ * Gestionnaire des détails du score budget
+ */
+const ScoreDetails = {
+    /**
+     * Initialise le panneau de détails
+     */
+    init() {
+        this.createDetailsPanel();
+    },
+
+    /**
+     * Crée le panneau de détails du score
+     */
+    createDetailsPanel() {
+        const scoreContainer = document.querySelector('.budget-score-circle')?.parentNode;
+        if (!scoreContainer) return;
+
+        // Bouton toggle
+        const toggleButton = document.createElement('button');
+        toggleButton.id = 'toggle-score-details';
+        toggleButton.className = 'mt-2 text-xs text-blue-400 hover:text-blue-300 flex items-center';
+        toggleButton.setAttribute('aria-expanded', 'false');
+        toggleButton.innerHTML = `
+            <i class="fas fa-chevron-down mr-1" id="details-chevron"></i>
+            Détails du calcul
+        `;
+
+        // Panneau de détails
+        const detailsPanel = document.createElement('div');
+        detailsPanel.id = 'score-details-panel';
+        detailsPanel.className = 'mt-3 p-3 bg-blue-800 bg-opacity-20 rounded-lg text-xs hidden';
+        detailsPanel.setAttribute('aria-hidden', 'true');
+
+        // Événement toggle
+        toggleButton.addEventListener('click', () => {
+            this.toggleDetails(toggleButton, detailsPanel);
+        });
+
+        // Ajouter au DOM
+        scoreContainer.appendChild(toggleButton);
+        scoreContainer.appendChild(detailsPanel);
+    },
+
+    /**
+     * Toggle l'affichage des détails
+     */
+    toggleDetails(button, panel) {
+        const isExpanded = button.getAttribute('aria-expanded') === 'true';
+        const chevron = document.getElementById('details-chevron');
+
+        if (isExpanded) {
+            // Fermer
+            panel.classList.add('hidden');
+            panel.setAttribute('aria-hidden', 'true');
+            button.setAttribute('aria-expanded', 'false');
+            chevron.className = 'fas fa-chevron-down mr-1';
+        } else {
+            // Ouvrir
+            panel.classList.remove('hidden');
+            panel.setAttribute('aria-hidden', 'false');
+            button.setAttribute('aria-expanded', 'true');
+            chevron.className = 'fas fa-chevron-up mr-1';
+            
+            // Mettre à jour le contenu
+            this.updateDetailsContent(panel);
+        }
+    },
+
+    /**
+     * Met à jour le contenu des détails
+     */
+    updateDetailsContent(panel) {
+        // Récupérer les données actuelles du budget
+        const revenuMensuel = parseFloat(document.getElementById('revenu-mensuel-input')?.value) || 0;
+        const loyer = parseFloat(document.getElementById('simulation-budget-loyer')?.value) || 0;
+        const tauxEpargne = parseFloat(document.getElementById('simulation-taux-epargne')?.textContent?.replace('%', '')) || 0;
+        
+        const ratioLogement = revenuMensuel > 0 ? (loyer / revenuMensuel) * 100 : 0;
+        
+        // Calculer les points
+        let scoreBreakdown = [
+            { label: 'Score de base', points: 3, reason: 'Point de départ standard' }
+        ];
+
+        if (tauxEpargne < 5) {
+            scoreBreakdown.push({ label: 'Taux d\'épargne faible', points: -1, reason: `${tauxEpargne.toFixed(1)}% < 5%` });
+        } else if (tauxEpargne >= 20) {
+            scoreBreakdown.push({ label: 'Excellent taux d\'épargne', points: 1, reason: `${tauxEpargne.toFixed(1)}% ≥ 20%` });
+        }
+
+        if (ratioLogement > 33) {
+            scoreBreakdown.push({ label: 'Logement trop cher', points: -1, reason: `${ratioLogement.toFixed(1)}% > 33%` });
+        } else if (ratioLogement <= 25) {
+            scoreBreakdown.push({ label: 'Logement bien maîtrisé', points: 1, reason: `${ratioLogement.toFixed(1)}% ≤ 25%` });
+        }
+
+        const totalScore = scoreBreakdown.reduce((sum, item) => sum + item.points, 0);
+        const finalScore = Math.max(1, Math.min(5, totalScore));
+
+        // Générer le HTML
+        const html = `
+            <h6 class="font-medium text-blue-400 mb-2">Calcul détaillé du score</h6>
+            <div class="space-y-2">
+                ${scoreBreakdown.map(item => `
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-300">${item.label}</span>
+                        <div class="text-right">
+                            <span class="${item.points > 0 ? 'text-green-400' : item.points < 0 ? 'text-red-400' : 'text-blue-400'}">
+                                ${item.points > 0 ? '+' : ''}${item.points} pt
+                            </span>
+                            <div class="text-gray-500 text-xs">${item.reason}</div>
+                        </div>
+                    </div>
+                `).join('')}
+                <div class="border-t border-blue-700 pt-2 mt-2">
+                    <div class="flex justify-between items-center font-medium">
+                        <span class="text-white">Score final</span>
+                        <span class="text-blue-400">${finalScore}/5</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        panel.innerHTML = html;
+    }
+};
 
 /**
  * Initialise et génère le contenu de l'onglet Budget
@@ -27,6 +498,9 @@ function initBudgetPlanner() {
     // Ajouter le conteneur à l'onglet Budget
     budgetPlanner.appendChild(budgetGrid);
     
+    // Ajouter les styles d'accessibilité
+    addAccessibilityStyles();
+    
     // Générer l'interface Budget & Épargne
     generateBudgetInterface(budgetGrid);
     
@@ -37,6 +511,68 @@ function initBudgetPlanner() {
     setTimeout(() => {
         analyserBudget();
     }, 500);
+}
+
+/**
+ * Ajoute les styles CSS d'accessibilité
+ */
+function addAccessibilityStyles() {
+    if (document.getElementById('budget-accessibility-styles')) return;
+    
+    const styleEl = document.createElement('style');
+    styleEl.id = 'budget-accessibility-styles';
+    styleEl.textContent = `
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        
+        .focus\\:outline-none:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+        }
+        
+        .focus\\:ring-2:focus {
+            --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+            --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+            box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+        }
+        
+        .focus\\:ring-blue-400:focus {
+            --tw-ring-opacity: 1;
+            --tw-ring-color: rgb(96 165 250 / var(--tw-ring-opacity));
+        }
+        
+        .focus\\:ring-opacity-50:focus {
+            --tw-ring-opacity: 0.5;
+        }
+        
+        /* Styles pour les animations réduites */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+        
+        /* Styles pour le contraste élevé */
+        @media (prefers-contrast: high) {
+            #formula-tooltip {
+                border: 2px solid white !important;
+                background-color: black !important;
+                color: white !important;
+            }
+        }
+    `;
+    document.head.appendChild(styleEl);
 }
 
 /**
@@ -53,192 +589,34 @@ function generateBudgetInterface(container) {
             Budget Mensuel & Épargne
         </h4>
         
-        <!-- Mode d'affichage -->
-        <div class="mb-4 flex items-center justify-end">
-            <span class="text-xs text-gray-400 mr-2">Mode d'affichage:</span>
-            <div class="flex items-center bg-blue-800 bg-opacity-30 rounded-md overflow-hidden">
-                <button id="view-detailed" class="py-1 px-3 text-xs font-medium text-blue-400 bg-blue-900 bg-opacity-30 selected">Détaillé</button>
-                <button id="view-simple" class="py-1 px-3 text-xs font-medium text-gray-300">Simplifié</button>
+        <!-- Mode d'affichage avec ARIA complet -->
+        <div class="mb-4 flex items-center justify-between">
+            <span class="text-xs text-gray-400 mr-2 hidden sm:inline">Mode d'affichage:</span>
+            <div class="flex items-center bg-blue-800 bg-opacity-30 rounded-md overflow-hidden w-full sm:w-auto" 
+                 role="tablist" 
+                 aria-label="Mode d'affichage du budget">
+                <button id="view-detailed" 
+                        class="flex-1 sm:flex-none py-2 px-3 text-xs font-medium text-blue-400 bg-blue-900 bg-opacity-30 selected"
+                        role="tab" 
+                        aria-selected="true" 
+                        aria-controls="detailed-view"
+                        tabindex="0">
+                    <span class="hidden sm:inline">Détaillé</span>
+                    <span class="sm:hidden" aria-hidden="true">📊</span>
+                </button>
+                <button id="view-simple" 
+                        class="flex-1 sm:flex-none py-2 px-3 text-xs font-medium text-gray-300"
+                        role="tab" 
+                        aria-selected="false" 
+                        aria-controls="simple-view"
+                        tabindex="-1">
+                    <span class="hidden sm:inline">Simplifié</span>
+                    <span class="sm:hidden" aria-hidden="true">📝</span>
+                </button>
             </div>
         </div>
         
-        <!-- Entrées de budget -->
-        <div class="mb-4">
-            <label class="block mb-2 text-sm font-medium text-gray-300">
-                Loyer / Crédit immobilier
-                <span class="ml-1 text-blue-400 cursor-help" title="Votre dépense mensuelle pour votre logement (loyer ou mensualité de crédit).">
-                    <i class="fas fa-info-circle"></i>
-                </span>
-            </label>
-            <input type="number" id="simulation-budget-loyer" value="800" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-        </div>
-        
-        <!-- Vue détaillée - Dépenses vie courante -->
-        <div id="detailed-view-courante" class="mb-6">
-            <h5 class="text-sm font-medium text-blue-400 mb-3 flex items-center">
-                <i class="fas fa-shopping-basket mr-2"></i>
-                Dépenses de la vie courante
-            </h5>
-            
-            <div class="space-y-3 bg-blue-800 bg-opacity-20 p-3 rounded-lg">
-                <div>
-                    <label class="block text-xs text-gray-300 mb-1">Alimentation (courses)</label>
-                    <input type="number" id="depense-alimentation" value="400" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-300 mb-1">Transports (essence, métro...)</label>
-                    <input type="number" id="depense-transport" value="150" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-300 mb-1">Factures (électricité, eau...)</label>
-                    <input type="number" id="depense-factures" value="150" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-300 mb-1">Abonnements fixes (téléphone, Internet...)</label>
-                    <input type="number" id="depense-abonnements" value="100" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
-                </div>
-                <div class="pt-2 border-t border-blue-700 flex justify-between items-center">
-                    <span class="text-xs text-gray-300">Total vie courante:</span>
-                    <span id="total-vie-courante" class="text-sm font-medium text-blue-400">800 €</span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Vue détaillée - Loisirs & plaisirs -->
-        <div id="detailed-view-loisirs" class="mb-6">
-            <h5 class="text-sm font-medium text-blue-400 mb-3 flex items-center">
-                <i class="fas fa-glass-cheers mr-2"></i>
-                Loisirs & plaisirs
-            </h5>
-            
-            <div class="space-y-3 bg-blue-800 bg-opacity-20 p-3 rounded-lg">
-                <div>
-                    <label class="block text-xs text-gray-300 mb-1">Restaurants & cafés</label>
-                    <input type="number" id="depense-restaurants" value="120" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-300 mb-1">Shopping & achats plaisir</label>
-                    <input type="number" id="depense-shopping" value="100" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-300 mb-1">Abonnements loisirs (Netflix, Spotify...)</label>
-                    <input type="number" id="depense-abos-loisirs" value="30" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-300 mb-1">Voyages & week-ends</label>
-                    <input type="number" id="depense-voyages" value="150" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
-                </div>
-                <div class="pt-2 border-t border-blue-700 flex justify-between items-center">
-                    <span class="text-xs text-gray-300">Total loisirs:</span>
-                    <span id="total-loisirs" class="text-sm font-medium text-blue-400">400 €</span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Vue simplifiée -->
-        <div id="simple-view" style="display: none;" class="mb-6">
-            <div class="mb-4">
-                <label class="block mb-2 text-sm font-medium text-gray-300">
-                    Vie courante : alimentation, transports, factures...
-                    <span class="ml-1 text-blue-400 cursor-help" title="Exemples : courses, électricité, essence, carte de métro, forfait téléphonique, etc.">
-                        <i class="fas fa-info-circle"></i>
-                    </span>
-                </label>
-                <input type="number" id="simulation-budget-quotidien" value="800" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-            </div>
-            
-            <div class="mb-4">
-                <label class="block mb-2 text-sm font-medium text-gray-300">
-                    Plaisirs & sorties : restaus, shopping, voyages...
-                    <span class="ml-1 text-blue-400 cursor-help" title="Exemples : ciné, resto, bar, week-end, shopping, Netflix, Spotify, etc.">
-                        <i class="fas fa-info-circle"></i>
-                    </span>
-                </label>
-                <input type="number" id="simulation-budget-extra" value="400" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-            </div>
-        </div>
-        
-        <div class="mb-4">
-            <label class="block mb-2 text-sm font-medium text-gray-300">
-                Épargne ou investissement automatique
-                <span class="ml-1 text-blue-400 cursor-help" title="Exemples : Livret A, PEL, virement programmé sur un PEA, assurance-vie, etc.">
-                    <i class="fas fa-info-circle"></i>
-                </span>
-            </label>
-            <input type="number" id="simulation-budget-invest" value="200" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-        </div>
-        
-        <!-- NOUVELLE SECTION: Dépenses détaillées personnalisables -->
-        <div class="mt-6">
-            <div class="flex items-center justify-between mb-3">
-                <label class="text-sm font-medium text-gray-300 flex items-center">
-                    <i class="fas fa-receipt text-blue-400 mr-2"></i>
-                    Dépenses variables (optionnel)
-                    <span class="ml-1 text-blue-400 cursor-help" title="Ajoutez vos dépenses récurrentes spécifiques pour un budget plus précis">
-                        <i class="fas fa-info-circle"></i>
-                    </span>
-                </label>
-                <span class="text-xs text-blue-400 depense-total">(Total: 0 €)</span>
-            </div>
-            <div id="depenses-detaillees" class="space-y-3 mt-2">
-                <!-- Les lignes de dépenses s'ajouteront ici dynamiquement -->
-            </div>
-            <button id="ajouter-depense" class="mt-3 py-2 px-3 bg-blue-700 hover:bg-blue-600 text-white text-sm rounded-md flex items-center transition-colors">
-                <i class="fas fa-plus-circle mr-2"></i> Ajouter une dépense variable
-            </button>
-        </div>
-        
-        <!-- NOUVELLE SECTION: Objectif d'épargne -->
-        <div class="mt-5 p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-            <label class="flex items-center text-sm font-medium text-gray-300 mb-2">
-                <i class="fas fa-bullseye text-blue-400 mr-2"></i>
-                Objectif d'épargne
-                <span class="ml-1 text-blue-400 cursor-help" title="Définissez un montant cible à atteindre grâce à votre épargne mensuelle">
-                    <i class="fas fa-info-circle"></i>
-                </span>
-            </label>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <input type="number" id="objectif-epargne" placeholder="Ex: 5000" value="5000" min="0" class="bg-blue-900 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full text-sm">
-                    <p class="text-xs text-gray-400 mt-1">Montant cible (€)</p>
-                </div>
-                <div>
-                    <select id="objectif-type" class="bg-blue-900 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full text-sm">
-                        <option value="vacances">Vacances</option>
-                        <option value="achat">Gros achat</option>
-                        <option value="urgence">Fond d'urgence</option>
-                        <option value="apport">Apport immobilier</option>
-                        <option value="autre">Autre projet</option>
-                    </select>
-                    <p class="text-xs text-gray-400 mt-1">Type d'objectif</p>
-                </div>
-            </div>
-            <div id="temps-objectif" class="mt-3 text-center p-2 bg-blue-900 bg-opacity-20 rounded text-sm hidden">
-                <!-- Temps nécessaire pour atteindre l'objectif -->
-            </div>
-        </div>
-        
-        <div class="mt-4 mb-4">
-            <label class="block mb-2 text-sm font-medium text-gray-300">
-                Revenu mensuel estimé
-                <span class="ml-1 text-blue-400 cursor-help" title="Votre revenu mensuel net après impôts.">
-                    <i class="fas fa-info-circle"></i>
-                </span>
-            </label>
-            <input type="number" id="revenu-mensuel-input" value="3000" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-        </div>
-        
-        <button id="simulate-budget-button" class="w-full mt-6 py-3 px-4 bg-gradient-to-r from-blue-500 to-blue-400 text-gray-900 font-semibold rounded-lg shadow-lg hover:shadow-blue-500/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center">
-            <i class="fas fa-calculator mr-2"></i> 
-            Analyser mon budget
-        </button>
-        
-        <!-- Bouton d'export PDF -->
-        <button id="export-budget-pdf" class="w-full mt-3 py-2 px-4 bg-transparent border border-blue-500 text-blue-400 font-medium rounded-lg hover:bg-blue-900 hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
-            <i class="fas fa-file-export mr-2"></i> 
-            Exporter en PDF
-        </button>
-    `;
+        <!-- Entrées de budget -->\n        <div class=\"mb-4\">\n            <label class=\"block mb-2 text-sm font-medium text-gray-300\">\n                Loyer / Crédit immobilier\n                <span class=\"ml-1 text-blue-400 cursor-help\" title=\"Votre dépense mensuelle pour votre logement (loyer ou mensualité de crédit).\">\n                    <i class=\"fas fa-info-circle\"></i>\n                </span>\n            </label>\n            <input type=\"number\" id=\"simulation-budget-loyer\" value=\"800\" min=\"0\" class=\"bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full\">\n        </div>\n        \n        <!-- Vue détaillée - Dépenses vie courante -->\n        <div id=\"detailed-view-courante\" class=\"mb-6\">\n            <h5 class=\"text-sm font-medium text-blue-400 mb-3 flex items-center\">\n                <i class=\"fas fa-shopping-basket mr-2\"></i>\n                Dépenses de la vie courante\n            </h5>\n            \n            <div class=\"space-y-3 bg-blue-800 bg-opacity-20 p-3 rounded-lg\">\n                <div>\n                    <label class=\"block text-xs text-gray-300 mb-1\">Alimentation (courses)</label>\n                    <input type=\"number\" id=\"depense-alimentation\" value=\"400\" min=\"0\" class=\"bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm\">\n                </div>\n                <div>\n                    <label class=\"block text-xs text-gray-300 mb-1\">Transports (essence, métro...)</label>\n                    <input type=\"number\" id=\"depense-transport\" value=\"150\" min=\"0\" class=\"bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm\">\n                </div>\n                <div>\n                    <label class=\"block text-xs text-gray-300 mb-1\">Factures (électricité, eau...)</label>\n                    <input type=\"number\" id=\"depense-factures\" value=\"150\" min=\"0\" class=\"bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm\">\n                </div>\n                <div>\n                    <label class=\"block text-xs text-gray-300 mb-1\">Abonnements fixes (téléphone, Internet...)</label>\n                    <input type=\"number\" id=\"depense-abonnements\" value=\"100\" min=\"0\" class=\"bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm\">\n                </div>\n                <div class=\"pt-2 border-t border-blue-700 flex justify-between items-center\">\n                    <span class=\"text-xs text-gray-300\">Total vie courante:</span>\n                    <span id=\"total-vie-courante\" class=\"text-sm font-medium text-blue-400\">800 €</span>\n                </div>\n            </div>\n        </div>\n        \n        <!-- Vue détaillée - Loisirs & plaisirs -->\n        <div id=\"detailed-view-loisirs\" class=\"mb-6\">\n            <h5 class=\"text-sm font-medium text-blue-400 mb-3 flex items-center\">\n                <i class=\"fas fa-glass-cheers mr-2\"></i>\n                Loisirs & plaisirs\n            </h5>\n            \n            <div class=\"space-y-3 bg-blue-800 bg-opacity-20 p-3 rounded-lg\">\n                <div>\n                    <label class=\"block text-xs text-gray-300 mb-1\">Restaurants & cafés</label>\n                    <input type=\"number\" id=\"depense-restaurants\" value=\"120\" min=\"0\" class=\"bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm\">\n                </div>\n                <div>\n                    <label class=\"block text-xs text-gray-300 mb-1\">Shopping & achats plaisir</label>\n                    <input type=\"number\" id=\"depense-shopping\" value=\"100\" min=\"0\" class=\"bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm\">\n                </div>\n                <div>\n                    <label class=\"block text-xs text-gray-300 mb-1\">Abonnements loisirs (Netflix, Spotify...)</label>\n                    <input type=\"number\" id=\"depense-abos-loisirs\" value=\"30\" min=\"0\" class=\"bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm\">\n                </div>\n                <div>\n                    <label class=\"block text-xs text-gray-300 mb-1\">Voyages & week-ends</label>\n                    <input type=\"number\" id=\"depense-voyages\" value=\"150\" min=\"0\" class=\"bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm\">\n                </div>\n                <div class=\"pt-2 border-t border-blue-700 flex justify-between items-center\">\n                    <span class=\"text-xs text-gray-300\">Total loisirs:</span>\n                    <span id=\"total-loisirs\" class=\"text-sm font-medium text-blue-400\">400 €</span>\n                </div>\n            </div>\n        </div>\n        \n        <!-- Vue simplifiée -->\n        <div id=\"simple-view\" style=\"display: none;\" class=\"mb-6\">\n            <div class=\"mb-4\">\n                <label class=\"block mb-2 text-sm font-medium text-gray-300\">\n                    Vie courante : alimentation, transports, factures...\n                    <span class=\"ml-1 text-blue-400 cursor-help\" title=\"Exemples : courses, électricité, essence, carte de métro, forfait téléphonique, etc.\">\n                        <i class=\"fas fa-info-circle\"></i>\n                    </span>\n                </label>\n                <input type=\"number\" id=\"simulation-budget-quotidien\" value=\"800\" min=\"0\" class=\"bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full\">\n            </div>\n            \n            <div class=\"mb-4\">\n                <label class=\"block mb-2 text-sm font-medium text-gray-300\">\n                    Plaisirs & sorties : restaus, shopping, voyages...\n                    <span class=\"ml-1 text-blue-400 cursor-help\" title=\"Exemples : ciné, resto, bar, week-end, shopping, Netflix, Spotify, etc.\">\n                        <i class=\"fas fa-info-circle\"></i>\n                    </span>\n                </label>\n                <input type=\"number\" id=\"simulation-budget-extra\" value=\"400\" min=\"0\" class=\"bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full\">\n            </div>\n        </div>\n        \n        <div class=\"mb-4\">\n            <label class=\"block mb-2 text-sm font-medium text-gray-300\">\n                Épargne ou investissement automatique\n                <span class=\"ml-1 text-blue-400 cursor-help\" title=\"Exemples : Livret A, PEL, virement programmé sur un PEA, assurance-vie, etc.\">\n                    <i class=\"fas fa-info-circle\"></i>\n                </span>\n            </label>\n            <input type=\"number\" id=\"simulation-budget-invest\" value=\"200\" min=\"0\" class=\"bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full\">\n        </div>\n        \n        <!-- NOUVELLE SECTION: Dépenses détaillées personnalisables -->\n        <div class=\"mt-6\">\n            <div class=\"flex items-center justify-between mb-3\">\n                <label class=\"text-sm font-medium text-gray-300 flex items-center\">\n                    <i class=\"fas fa-receipt text-blue-400 mr-2\"></i>\n                    Dépenses variables (optionnel)\n                    <span class=\"ml-1 text-blue-400 cursor-help\" title=\"Ajoutez vos dépenses récurrentes spécifiques pour un budget plus précis\">\n                        <i class=\"fas fa-info-circle\"></i>\n                    </span>\n                </label>\n                <span class=\"text-xs text-blue-400 depense-total\">(Total: 0 €)</span>\n            </div>\n            <div id=\"depenses-detaillees\" class=\"space-y-3 mt-2\">\n                <!-- Les lignes de dépenses s'ajouteront ici dynamiquement -->\n            </div>\n            <button id=\"ajouter-depense\" class=\"mt-3 py-2 px-3 bg-blue-700 hover:bg-blue-600 text-white text-sm rounded-md flex items-center transition-colors\">\n                <i class=\"fas fa-plus-circle mr-2\"></i> Ajouter une dépense variable\n            </button>\n        </div>\n        \n        <!-- NOUVELLE SECTION: Objectif d'épargne -->\n        <div class=\"mt-5 p-3 bg-blue-800 bg-opacity-30 rounded-lg\">\n            <label class=\"flex items-center text-sm font-medium text-gray-300 mb-2\">\n                <i class=\"fas fa-bullseye text-blue-400 mr-2\"></i>\n                Objectif d'épargne\n                <span class=\"ml-1 text-blue-400 cursor-help\" title=\"Définissez un montant cible à atteindre grâce à votre épargne mensuelle\">\n                    <i class=\"fas fa-info-circle\"></i>\n                </span>\n            </label>\n            <div class=\"grid grid-cols-2 gap-3\">\n                <div>\n                    <input type=\"number\" id=\"objectif-epargne\" placeholder=\"Ex: 5000\" value=\"5000\" min=\"0\" class=\"bg-blue-900 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full text-sm\">\n                    <p class=\"text-xs text-gray-400 mt-1\">Montant cible (€)</p>\n                </div>\n                <div>\n                    <select id=\"objectif-type\" class=\"bg-blue-900 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full text-sm\">\n                        <option value=\"vacances\">Vacances</option>\n                        <option value=\"achat\">Gros achat</option>\n                        <option value=\"urgence\">Fond d'urgence</option>\n                        <option value=\"apport\">Apport immobilier</option>\n                        <option value=\"autre\">Autre projet</option>\n                    </select>\n                    <p class=\"text-xs text-gray-400 mt-1\">Type d'objectif</p>\n                </div>\n            </div>\n            <div id=\"temps-objectif\" class=\"mt-3 text-center p-2 bg-blue-900 bg-opacity-20 rounded text-sm hidden\">\n                <!-- Temps nécessaire pour atteindre l'objectif -->\n            </div>\n        </div>\n        \n        <div class=\"mt-4 mb-4\">\n            <label class=\"block mb-2 text-sm font-medium text-gray-300\">\n                Revenu mensuel estimé\n                <span class=\"ml-1 text-blue-400 cursor-help\" title=\"Votre revenu mensuel net après impôts.\">\n                    <i class=\"fas fa-info-circle\"></i>\n                </span>\n            </label>\n            <input type=\"number\" id=\"revenu-mensuel-input\" value=\"3000\" min=\"0\" class=\"bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full\">\n        </div>\n        \n        <button id=\"simulate-budget-button\" class=\"w-full mt-6 py-3 px-4 bg-gradient-to-r from-blue-500 to-blue-400 text-gray-900 font-semibold rounded-lg shadow-lg hover:shadow-blue-500/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center\">\n            <i class=\"fas fa-calculator mr-2\"></i> \n            Analyser mon budget\n        </button>\n        \n        <!-- Bouton d'export PDF -->\n        <button id=\"export-budget-pdf\" class=\"w-full mt-3 py-2 px-4 bg-transparent border border-blue-500 text-blue-400 font-medium rounded-lg hover:bg-blue-900 hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center\">\n            <i class=\"fas fa-file-export mr-2\"></i> \n            Exporter en PDF\n        </button>\n    `;
     
     // Créer la deuxième colonne - Résultats du budget
     const budgetResultsCol = document.createElement('div');
@@ -249,78 +627,7 @@ function generateBudgetInterface(container) {
             Analyse du budget
         </h4>
         
-        <!-- Score global du budget -->
-        <div class="mb-5 bg-blue-800 bg-opacity-30 p-3 rounded-lg flex items-center">
-            <div class="w-16 h-16 rounded-full bg-blue-900 bg-opacity-50 flex items-center justify-center mr-4 budget-score-circle">
-                <span id="budget-score" class="text-2xl font-bold text-blue-400">3</span>
-            </div>
-            <div>
-                <h5 class="font-medium text-white">Score budget</h5>
-                <p class="text-sm text-gray-300" id="budget-score-description">Budget équilibré</p>
-                <div class="w-full bg-blue-900 h-2 rounded-full mt-1 overflow-hidden">
-                    <div id="budget-score-bar" class="h-full bg-blue-400" style="width: 60%"></div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="grid grid-cols-2 gap-4 mb-6">
-            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-revenu-mensuel">3 000,00 €</p>
-                <p class="text-gray-400 text-sm">Revenu mensuel</p>
-            </div>
-            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-depenses-totales">2 600,00 €</p>
-                <p class="text-gray-400 text-sm">Dépenses totales</p>
-            </div>
-            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-epargne-possible">400,00 €</p>
-                <p class="text-gray-400 text-sm">Épargne possible</p>
-            </div>
-            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-taux-epargne">13,3%</p>
-                <p class="text-gray-400 text-sm">Taux d'épargne</p>
-            </div>
-        </div>
-        
-        <div class="chart-container mb-6">
-            <canvas id="budget-chart"></canvas>
-        </div>
-        
-        <!-- Nouveau: Graphique d'évolution sur 12 mois -->
-        <div class="chart-container mb-6">
-            <h5 class="text-sm font-medium text-blue-400 mb-3 flex items-center">
-                <i class="fas fa-chart-line mr-2"></i>
-                Projection d'épargne sur 12 mois
-            </h5>
-            <canvas id="evolution-chart"></canvas>
-        </div>
-        
-        <div id="budget-advice" class="bg-blue-900 bg-opacity-20 p-4 rounded-lg border-l-4 border-blue-400">
-            <h5 class="text-blue-400 font-medium flex items-center mb-2">
-                <i class="fas fa-lightbulb mr-2"></i>
-                Conseils budgétaires
-            </h5>
-            <div class="advice-score bg-blue-900 bg-opacity-20 text-blue-400 inline-block px-2 py-1 rounded text-sm font-medium mb-2">
-                Évaluation: 3/5
-            </div>
-            <ul class="advice-list text-sm text-gray-300 space-y-1 pl-4">
-                <li>Un taux d'épargne optimal se situe généralement entre 15% et 25% de vos revenus.</li>
-                <li>Vos dépenses de logement représentent environ 30% de votre budget, ce qui est raisonnable.</li>
-                <li>Envisagez d'automatiser votre épargne pour atteindre plus facilement vos objectifs.</li>
-            </ul>
-        </div>
-        
-        <!-- Résumé final avec recommandations d'investissement -->
-        <div id="budget-summary" class="mt-5 bg-green-900 bg-opacity-10 p-4 rounded-lg border-l-4 border-green-400">
-            <h5 class="text-green-400 font-medium flex items-center mb-3">
-                <i class="fas fa-check-double mr-2"></i>
-                Recommandations personnalisées
-            </h5>
-            <div id="budget-recommendations" class="text-sm text-gray-300">
-                <!-- Généré dynamiquement -->
-            </div>
-        </div>
-    `;
+        <!-- Score global du budget -->\n        <div class=\"mb-5 bg-blue-800 bg-opacity-30 p-3 rounded-lg flex items-center\">\n            <div class=\"w-16 h-16 rounded-full bg-blue-900 bg-opacity-50 flex items-center justify-center mr-4 budget-score-circle\">\n                <span id=\"budget-score\" class=\"text-2xl font-bold text-blue-400\">3</span>\n            </div>\n            <div>\n                <h5 class=\"font-medium text-white\">Score budget</h5>\n                <p class=\"text-sm text-gray-300\" id=\"budget-score-description\">Budget équilibré</p>\n                <div class=\"w-full bg-blue-900 h-2 rounded-full mt-1 overflow-hidden\">\n                    <div id=\"budget-score-bar\" class=\"h-full bg-blue-400\" style=\"width: 60%\"></div>\n                </div>\n            </div>\n        </div>\n        \n        <div class=\"grid grid-cols-2 gap-4 mb-6\">\n            <div class=\"bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center\">\n                <p class=\"text-blue-400 text-2xl font-bold mb-1\" id=\"simulation-revenu-mensuel\">3 000,00 €</p>\n                <p class=\"text-gray-400 text-sm\">Revenu mensuel</p>\n            </div>\n            <div class=\"bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center\">\n                <p class=\"text-blue-400 text-2xl font-bold mb-1\" id=\"simulation-depenses-totales\">2 600,00 €</p>\n                <p class=\"text-gray-400 text-sm\">Dépenses totales</p>\n            </div>\n            <div class=\"bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center\">\n                <p class=\"text-blue-400 text-2xl font-bold mb-1\" id=\"simulation-epargne-possible\">400,00 €</p>\n                <p class=\"text-gray-400 text-sm\">Épargne possible</p>\n            </div>\n            <div class=\"bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center\">\n                <p class=\"text-blue-400 text-2xl font-bold mb-1\" id=\"simulation-taux-epargne\">13,3%</p>\n                <p class=\"text-gray-400 text-sm\">Taux d'épargne</p>\n            </div>\n        </div>\n        \n        <div class=\"chart-container mb-6\">\n            <canvas id=\"budget-chart\"></canvas>\n        </div>\n        \n        <!-- Nouveau: Graphique d'évolution sur 12 mois -->\n        <div class=\"chart-container mb-6\">\n            <h5 class=\"text-sm font-medium text-blue-400 mb-3 flex items-center\">\n                <i class=\"fas fa-chart-line mr-2\"></i>\n                Projection d'épargne sur 12 mois\n            </h5>\n            <canvas id=\"evolution-chart\"></canvas>\n        </div>\n        \n        <div id=\"budget-advice\" class=\"bg-blue-900 bg-opacity-20 p-4 rounded-lg border-l-4 border-blue-400\">\n            <h5 class=\"text-blue-400 font-medium flex items-center mb-2\">\n                <i class=\"fas fa-lightbulb mr-2\"></i>\n                Conseils budgétaires\n            </h5>\n            <div class=\"advice-score bg-blue-900 bg-opacity-20 text-blue-400 inline-block px-2 py-1 rounded text-sm font-medium mb-2\">\n                Évaluation: 3/5\n            </div>\n            <ul class=\"advice-list text-sm text-gray-300 space-y-1 pl-4\">\n                <li>Un taux d'épargne optimal se situe généralement entre 15% et 25% de vos revenus.</li>\n                <li>Vos dépenses de logement représentent environ 30% de votre budget, ce qui est raisonnable.</li>\n                <li>Envisagez d'automatiser votre épargne pour atteindre plus facilement vos objectifs.</li>\n            </ul>\n        </div>\n        \n        <!-- Résumé final avec recommandations d'investissement -->\n        <div id=\"budget-summary\" class=\"mt-5 bg-green-900 bg-opacity-10 p-4 rounded-lg border-l-4 border-green-400\">\n            <h5 class=\"text-green-400 font-medium flex items-center mb-3\">\n                <i class=\"fas fa-check-double mr-2\"></i>\n                Recommandations personnalisées\n            </h5>\n            <div id=\"budget-recommendations\" class=\"text-sm text-gray-300\">\n                <!-- Généré dynamiquement -->\n            </div>\n        </div>\n    `;
     
     // Ajouter les deux colonnes au conteneur
     container.appendChild(budgetInputCol);
@@ -651,6 +958,12 @@ function initBudgetListeners() {
     
     if (viewDetailed && viewSimple && detailedViewCourante && detailedViewLoisirs && simpleView) {
         viewDetailed.addEventListener('click', function() {
+            // Mise à jour ARIA
+            viewDetailed.setAttribute('aria-selected', 'true');
+            viewDetailed.setAttribute('tabindex', '0');
+            viewSimple.setAttribute('aria-selected', 'false');
+            viewSimple.setAttribute('tabindex', '-1');
+            
             viewDetailed.classList.add('selected');
             viewDetailed.classList.add('text-blue-400');
             viewDetailed.classList.add('bg-blue-900');
@@ -670,6 +983,12 @@ function initBudgetListeners() {
         });
         
         viewSimple.addEventListener('click', function() {
+            // Mise à jour ARIA
+            viewSimple.setAttribute('aria-selected', 'true');
+            viewSimple.setAttribute('tabindex', '0');
+            viewDetailed.setAttribute('aria-selected', 'false');
+            viewDetailed.setAttribute('tabindex', '-1');
+            
             viewSimple.classList.add('selected');
             viewSimple.classList.add('text-blue-400');
             viewSimple.classList.add('bg-blue-900');
@@ -706,6 +1025,20 @@ function initBudgetListeners() {
     if (exportButton) {
         exportButton.addEventListener('click', exportBudgetToPDF);
     }
+    
+    // Initialiser l'accessibilité
+    KeyboardManager.init();
+    
+    // Initialiser les info-bulles
+    FormulaTooltips.init();
+    
+    // Initialiser les détails du score
+    ScoreDetails.init();
+    
+    // Notification d'initialisation
+    setTimeout(() => {
+        KeyboardManager.showFeedback('Module budget accessible initialisé', true);
+    }, 500);
 }
 
 /**
