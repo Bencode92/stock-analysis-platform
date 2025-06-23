@@ -1449,10 +1449,6 @@ function showPlafondBadgeInResults(results) {
                             ${results.enveloppe.id === 'pea' ? '<li class="ml-4">→ PEA‑PME (plafond additionnel de 225k€)</li>' : ''}
                         </ul>
                     </div>
-                    <button onclick="toggleOptimizationMode()" class="mt-3 text-sm bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg transition">
-                        <i class="fas fa-magic mr-2"></i>Optimiser automatiquement
-                    </button>
-                </div>
             </div>
         `;
         
