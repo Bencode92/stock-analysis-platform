@@ -524,7 +524,7 @@ const ScoreDetails = {
     updateDetailsContent(panel) {
         // Récupérer les données actuelles du budget
         const revenuMensuel = parseFloat(document.getElementById('revenu-mensuel-input')?.value) || 0;
-        const loyer = parseFloat(document.getElementById('simulation-budget-loyer')?.value) || 0;
+        const loyer = toNumber(document.getElementById('simulation-budget-loyer').value);
         const tauxEpargne = parseFloat(document.getElementById('simulation-taux-epargne')?.textContent?.replace('%', '')) || 0;
         
         const ratioLogement = revenuMensuel > 0 ? (loyer / revenuMensuel) * 100 : 0;
@@ -2033,9 +2033,8 @@ const epargneTotale = investAuto + epargneLibre;
     document.getElementById('simulation-epargne-possible').textContent = formatter.format(epargnePossible);
     document.getElementById('simulation-taux-epargne').textContent = tauxEpargne.toFixed(1) + '%';
     // ===== NOUVELLES TUILES ÉPARGNE =====
-    const epargneTotale = epargneAuto + epargneLibre;
     document.getElementById('simulation-epargne-auto').textContent = formatter.format(epargneAuto);
-    document.getElementById('simulation-epargne-totale').textContent = formatCurrency(epargneTotale, 0);
+  document.getElementById('simulation-epargne-totale').textContent = formatter.format(epargneTotale);
     
     // ===== APPELS CORRIGÉS =====
     // Mettre à jour le graphique
