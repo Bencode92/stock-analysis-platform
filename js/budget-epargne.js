@@ -45,8 +45,8 @@ function debounce(fn, delay = 300) {
 
 // 👉 AJOUT : Vérifie que les 3 champs clés ne sont pas vides
 function champsOK() {
-    return ['simulation-budget-loyer', 'revenu-mensuel-input']
-           .every(id => document.getElementById(id).value.trim() !== '');
+    const revenu = document.getElementById('revenu-mensuel-input');
+    return revenu && revenu.value.trim() !== '';
 }
 // Configuration des catégories de dépenses avec valeurs par défaut
 const EXPENSE_CATEGORIES = {
@@ -807,35 +807,7 @@ function updateCategoryTotal(categoryKey) {
     return total;
 } 
 
-/**
- * Met à jour la barre de progression d'une catégorie
- */
-function updateCategoryProgressBar(categoryKey, total) {
-    const loyer = parseFloat(document.getElementById('simulation-budget-loyer')?.value) || 3000;
-    const percentage = loyer > 0 ? (total / loyer * 100) : 0;
-    
-    const progressBar = document.getElementById(`progress-${categoryKey}`);
-    const progressLabel = document.getElementById(`percentage-${categoryKey}`);
-    
-    if (progressBar) {
-        progressBar.style.width = `${Math.min(percentage, 100)}%`;
-    }
-    
-    if (progressLabel) {
-        progressLabel.textContent = `${percentage.toFixed(1)}%`;
-    }
-}
-
-/**
- * Trouve la catégorie d'un élément par son ID
- */
-function findCategoryByItemId(itemId) {
-    for (const [categoryKey, category] of Object.entries(EXPENSE_CATEGORIES)) {
-        if (category.items.some(item => item.id === itemId)) {
-            return categoryKey;
-        }
-    }
-    return null;
+   return null;
 }
 
 /**
@@ -891,21 +863,21 @@ function updateTotalLoisirs() {
  * Initialise et génère le contenu de l'onglet Budget
  */
 function initBudgetPlanner() {
-      // Vérifier que le container existe
+    // Vérifier que le container existe
     const budgetPlanner = document.getElementById('budget-planner');
     if (!budgetPlanner) {
         console.error('❌ Container #budget-planner non trouvé');
         return;
     }
     
- // 🛡️ Garde-fou : on ne construit l'UI qu'une seule fois
-if (window.__budgetPlannerInitialized__) {
-    console.log('Budget Planner déjà initialisé, mise à jour uniquement');
-    if (typeof analyserBudget === 'function') analyserBudget();
-    return;
-}
-window.__budgetPlannerInitialized__ = true;
-console.log('Initialisation du Budget Planner...');
+    // 🛡️ Garde-fou : on ne construit l'UI qu'une seule fois
+    if (window.__budgetPlannerInitialized__) {
+        console.log('Budget Planner déjà initialisé, mise à jour uniquement');
+        if (typeof analyserBudget === 'function') analyserBudget();
+        return;
+    }
+    window.__budgetPlannerInitialized__ = true;
+    console.log('Initialisation du Budget Planner...');
     
     // Vider le contenu actuel
     budgetPlanner.innerHTML = '';
@@ -927,11 +899,35 @@ console.log('Initialisation du Budget Planner...');
     // Initialiser les écouteurs d'événements
     initBudgetListeners();
     
+    // === 🔧 CORRECTIF RÉACTIVITÉ INSTANTANÉE ===
+    function bindRealtime(id) {
+        const el = document.getElementById(id);
+        if (!el) {
+            console.warn(`⚠️ Élément ${id} non trouvé pour bindRealtime`);
+            return;
+        }
+        const debounced = debounce(analyserBudget, 250);
+        ['input','change','keyup'].forEach(ev => el.addEventListener(ev, debounced));
+        console.log(`✅ Écouteurs temps réel ajoutés sur ${id}`);
+    }
+    
+    // Appliquer aux champs critiques (ceux qui causaient le bug)
+    const champsCritiques = [
+        'simulation-budget-loyer',
+        'simulation-budget-invest',
+        'revenu-mensuel-input'
+    ];
+    
+    console.log('🔧 Application des écouteurs temps réel...');
+    champsCritiques.forEach(bindRealtime);
+    
     // Analyser le budget avec les valeurs par défaut
     setTimeout(() => {
         analyserBudget();
+        console.log('✅ Budget Planner initialisé avec réactivité instantanée');
     }, 500);
 }
+
 
 /**
  * Ajoute les styles CSS pour le système montant × quantité
