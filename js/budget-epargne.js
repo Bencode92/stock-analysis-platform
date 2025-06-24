@@ -807,9 +807,6 @@ function updateCategoryTotal(categoryKey) {
     return total;
 } 
 
-   return null;
-}
-
 /**
  * Remet une catégorie aux valeurs par défaut
  */
