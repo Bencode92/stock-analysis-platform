@@ -13,13 +13,22 @@
 function toNumber(raw) {
     if (!raw || typeof raw !== 'string') return 0;
     
-    return parseFloat(
-        raw
-            .trim()
-            .replace(/[\s\u00A0\u2009]/g, '') // Espaces normaux, insécables, fines
-            .replace(/[€$£¥]/g, '')          // Symboles monétaires
-            .replace(',', '.')               // Virgule → point
-    ) || 0;
+    let cleaned = raw
+        .trim()
+        .replace(/[\s\u00A0\u2009]/g, '')    // espaces insécables
+        .replace(/[€$£¥]/g, '');            // monnaies
+    
+    // point + virgule → le point est sûrement un séparateur de milliers
+    if (cleaned.includes('.') && cleaned.includes(',')) {
+        cleaned = cleaned.replace(/\./g, '');
+    } else {
+        const first = cleaned.indexOf('.');
+        const last  = cleaned.lastIndexOf('.');
+        if (first !== -1 && first !== last) cleaned = cleaned.replace(/\./g, '');
+    }
+    
+    cleaned = cleaned.replace(',', '.');
+    return parseFloat(cleaned) || 0;
 }
 // Configuration des catégories de dépenses avec valeurs par défaut
 const EXPENSE_CATEGORIES = {
@@ -1747,13 +1756,14 @@ function initBudgetListeners() {
         document.getElementById('objectif-type')
     ];
     
-    simpleInputs.forEach(input => {
-        if (input) {
-            input.addEventListener('change', function() {
-                analyserBudget();
-            });
-        }
-    });
+simpleInputs.forEach(input => {
+    if (!input) return;
+
+    // On déclenche le calcul dès qu'on tape, ET quand on quitte le champ
+    ['input', 'change'].forEach(evt =>
+        input.addEventListener(evt, analyserBudget)
+    );
+});
     
     // Écouteurs pour les boutons de vue
     const viewDetailed = document.getElementById('view-detailed');
