@@ -45,7 +45,7 @@ function debounce(fn, delay = 300) {
 
 // 👉 AJOUT : Vérifie que les 3 champs clés ne sont pas vides
 function champsOK() {
-    return ['simulation-budget-loyer', 'simulation-budget-invest', 'revenu-mensuel-input']
+    return ['simulation-budget-loyer', 'revenu-mensuel-input']
            .every(id => document.getElementById(id).value.trim() !== '');
 }
 // Configuration des catégories de dépenses avec valeurs par défaut
