@@ -2411,6 +2411,7 @@ function updateBudgetAdvice(loyer, quotidien, extra, investAuto, depensesVariabl
     } else {
         adviceScore.classList.add('bg-blue-900', 'bg-opacity-20', 'text-blue-400');
     }
+    }
 /**
  * Fonction de nettoyage pour réinitialiser si nécessaire
  */
