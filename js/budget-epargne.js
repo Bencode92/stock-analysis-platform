@@ -10,25 +10,6 @@
 if (!window.__budgetPlannerInitialized__) {
     window.__budgetPlannerInitialized__ = false;
 }
-/* ---------- UTILITAIRES GÉNÉRIQUES ---------- */
-// 1) Anti-rafraîchissement : exécute fn APRÈS le délai s'il n'y a
-//    plus d'événements « input ».
-function debounce(fn, delay = 300) {
-  let t;
-  return (...args) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...args), delay);
-  };
-}
-
-// 2) Tous les champs indispensables sont-ils remplis ?
-function champsOK() {
-  return ['simulation-budget-loyer',
-          'simulation-budget-invest', 
-          'revenu-mensuel-input']
-         .every(id => document.getElementById(id).value.trim() !== '');
-}
-
 /**
  * Convertit une chaîne en nombre en gérant les formats français
  */
@@ -723,16 +704,8 @@ function initFixedExpenseSections() {
             const quantityInput = document.getElementById(`quantity-${item.id}`);
             
             if (amountInput && quantityInput) {
-                // Pour les champs amount et quantity, on met à jour le total de l'item
                 amountInput.addEventListener('input', () => updateItemTotal(item.id));
                 quantityInput.addEventListener('input', () => updateItemTotal(item.id));
-                
-                // ET on déclenche aussi l'analyse budget avec debounce
-                amountInput.addEventListener('input',  debounce(analyserBudget, 250));
-                amountInput.addEventListener('change', analyserBudget);
-                
-                quantityInput.addEventListener('input',  debounce(analyserBudget, 250));
-                quantityInput.addEventListener('change', analyserBudget);
             }
         });
     });
@@ -1798,13 +1771,14 @@ function initBudgetListeners() {
         document.getElementById('objectif-type')
     ];
     
-    simpleInputs.forEach(input => {
-        if (!input) return;
-        // On déclenche le calcul dès qu'on tape, ET quand on quitte le champ
-        input.addEventListener('input',  debounce(analyserBudget, 250)); // déclenche après frappe
-        input.addEventListener('change', analyserBudget);                // déclenche tout de suite
-    });
-}
+simpleInputs.forEach(input => {
+    if (!input) return;
+
+    // On déclenche le calcul dès qu'on tape, ET quand on quitte le champ
+    ['input', 'change'].forEach(evt =>
+        input.addEventListener(evt, analyserBudget)
+    );
+});
     
     // Écouteurs pour les boutons de vue
     const viewDetailed = document.getElementById('view-detailed');
@@ -2017,8 +1991,6 @@ function showBudgetNotification(message, type = 'info') {
  * L'investissement automatique est maintenant traité comme de l'épargne, pas une dépense
  */
 function analyserBudget() {
-     // 🛡️ Empêche un calcul bancal si les 3 champs clés sont vides
-    if (!champsOK()) return;
     // Récupérer les valeurs du budget
     const loyer = toNumber(document.getElementById('simulation-budget-loyer').value);
     let quotidien, extra;
