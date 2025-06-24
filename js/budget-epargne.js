@@ -1874,13 +1874,10 @@ function initBudgetListeners() {
         });
     }
     
-    // Ajouter un écouteur spécial pour le revenu mensuel pour ajuster les valeurs suggérées
-    const revenuInput = document.getElementById('revenu-mensuel-input');
-    if (revenuInput) {
-        revenuInput.addEventListener('change', function() {
-            ajusterValeursParDefaut(parseFloat(this.value) || 3000);
-        });
-    }
+// Ajouter un écouteur spécial pour le revenu mensuel pour ajuster les valeurs suggérées
+const revenuInput = document.getElementById('revenu-mensuel-input');
+if (revenuInput) {
+}
     
     // Écouteur pour le bouton d'ajout de dépense
     const addButton = document.getElementById('ajouter-depense');
@@ -1953,8 +1950,7 @@ function ajusterValeursParDefaut(revenu) {
     
     // Mettre à jour les autres champs
     document.getElementById('simulation-budget-loyer').value = loyerSuggere;
-    const investSuggere = Math.round(revenu * 0.1); // ~10% pour l'épargne/investissement
-    document.getElementById('simulation-budget-invest').value = investSuggere;
+   const investSuggere = Math.round(revenu * 0.1); // Calcul gardé pour référence
     
     // Analyser le budget avec les nouvelles valeurs
     analyserBudget();
