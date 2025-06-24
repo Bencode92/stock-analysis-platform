@@ -1781,28 +1781,47 @@ function initBudgetListeners() {
         budgetButton.addEventListener('click', analyserBudget);
     }
     
-    // Ajouter des écouteurs aux champs simples
-    const simpleInputs = [
-        document.getElementById('simulation-budget-loyer'),
-        document.getElementById('simulation-budget-quotidien'),
-        document.getElementById('simulation-budget-extra'),
-        document.getElementById('simulation-budget-invest'),
-        document.getElementById('revenu-mensuel-input'),
-        document.getElementById('objectif-epargne'),
-        document.getElementById('objectif-type')
+    // === CHAMPS STANDARDS (avec debounce) ===
+    const standardInputs = [
+        'simulation-budget-loyer',
+        'simulation-budget-quotidien',
+        'simulation-budget-extra',
+        'revenu-mensuel-input'
     ];
     
-    // 🔄 MODIF : Debounce sur 'input', immédiat sur 'change'
-    simpleInputs.forEach(input => {
-        if (!input) return;
-        
-        // Debounce pendant la frappe (250ms de délai)
-        input.addEventListener('input', debounce(analyserBudget, 250));
-        
-        // Exécution immédiate quand on quitte le champ
-        input.addEventListener('change', analyserBudget);
+    standardInputs.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            // Debounce pendant la frappe (250ms de délai)
+            input.addEventListener('input', debounce(analyserBudget, 250));
+            // Exécution immédiate quand on quitte le champ
+            input.addEventListener('change', analyserBudget);
+        }
     });
-    // ⚠️ PAS D'ACCOLADE ICI - tout le reste doit rester DANS la fonction
+    
+    // === CHAMPS CRITIQUES (réactivité maximale) ===
+    const criticalInputs = [
+        'simulation-budget-invest',    // Épargne/investissement automatique
+        'objectif-epargne',           // Objectif d'épargne
+        'objectif-type'               // Type d'objectif
+    ];
+    
+    criticalInputs.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            // Multi-événements pour réactivité maximale (SANS debounce)
+            ['input', 'keyup', 'change', 'blur'].forEach(eventType => {
+                input.addEventListener(eventType, () => {
+                    // Petite optimisation : éviter les recalculs identiques
+                    const currentValue = input.value;
+                    if (input.lastCalculatedValue !== currentValue) {
+                        input.lastCalculatedValue = currentValue;
+                        analyserBudget();
+                    }
+                });
+            });
+        }
+    });
     
     // Écouteurs pour les boutons de vue
     const viewDetailed = document.getElementById('view-detailed');
@@ -1895,7 +1914,10 @@ function initBudgetListeners() {
     setTimeout(() => {
         KeyboardManager.showFeedback('Module budget avec système montant × quantité initialisé', true);
     }, 500);
-} // ✅ ACCOLADE DE FERMETURE - SEULEMENT ICI À LA FIN
+    
+    // 🐛 DEBUG : Vérifier que les event listeners sont bien attachés
+    console.log('✅ Budget listeners initialisés avec réactivité différenciée');
+}
 
 /**
  * Ajuste les valeurs par défaut en fonction du revenu
