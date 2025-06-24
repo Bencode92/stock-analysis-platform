@@ -6,8 +6,10 @@
  * Version 3.0 - Intégration système Budget × Quantités pour plus de réalisme
  * Version 2.0 - Ajout accessibilité complète et transparence des formules
  */
-// Variable-sentinelle pour empêcher la double initialisation
-let budgetPlannerInitialized = false;
+// Variable-sentinelle globale pour empêcher la double initialisation
+if (!window.__budgetPlannerInitialized__) {
+    window.__budgetPlannerInitialized__ = false;
+}
 /**
  * Convertit une chaîne en nombre en gérant les formats français
  */
@@ -875,12 +877,14 @@ function initBudgetPlanner() {
         return;
     }
     
-    // 🛡️ Garde-fou : on ne construit l'UI qu'une seule fois
-    if (budgetPlannerInitialized) {
-        if (typeof analyserBudget === 'function') analyserBudget();
-        return;
-    }
-    budgetPlannerInitialized = true;
+ // 🛡️ Garde-fou : on ne construit l'UI qu'une seule fois
+if (window.__budgetPlannerInitialized__) {
+    console.log('Budget Planner déjà initialisé, mise à jour uniquement');
+    if (typeof analyserBudget === 'function') analyserBudget();
+    return;
+}
+window.__budgetPlannerInitialized__ = true;
+console.log('Initialisation du Budget Planner...');
     
     // Vider le contenu actuel
     budgetPlanner.innerHTML = '';
@@ -2382,4 +2386,18 @@ function updateBudgetAdvice(loyer, quotidien, extra, investAuto, depensesVariabl
     } else {
         adviceScore.classList.add('bg-blue-900', 'bg-opacity-20', 'text-blue-400');
     }
+/**
+ * Fonction de nettoyage pour réinitialiser si nécessaire
+ */
+function resetBudgetPlanner() {
+    window.__budgetPlannerInitialized__ = false;
+    const container = document.getElementById('budget-planner');
+    if (container) {
+        container.innerHTML = '';
+    }
+    console.log('Budget Planner réinitialisé');
 }
+
+// Exposer la fonction globalement pour le debug
+window.resetBudgetPlanner = resetBudgetPlanner;
+    }
