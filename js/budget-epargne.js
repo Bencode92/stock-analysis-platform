@@ -7,6 +7,20 @@
  * Version 2.0 - Ajout accessibilité complète et transparence des formules
  */
 
+/**
+ * Convertit une chaîne en nombre en gérant les formats français
+ */
+function toNumber(raw) {
+    if (!raw || typeof raw !== 'string') return 0;
+    
+    return parseFloat(
+        raw
+            .trim()
+            .replace(/[\s\u00A0\u2009]/g, '') // Espaces normaux, insécables, fines
+            .replace(/[€$£¥]/g, '')          // Symboles monétaires
+            .replace(',', '.')               // Virgule → point
+    ) || 0;
+}
 // Configuration des catégories de dépenses avec valeurs par défaut
 const EXPENSE_CATEGORIES = {
     'vie-courante': {
@@ -1955,13 +1969,13 @@ function analyserBudget() {
         extra = parseFloat(document.getElementById('simulation-budget-extra').value) || 0;
     }
     
-    const investAuto = parseFloat(document.getElementById('simulation-budget-invest').value) || 0;
+const investAuto = toNumber(document.getElementById('simulation-budget-invest').value);
     
     // Récupérer le total des dépenses détaillées
     const totalDepensesVariables = updateDetailedExpensesTotal();
     
     // Récupérer le revenu mensuel saisi par l'utilisateur
-    const revenuMensuel = parseFloat(document.getElementById('revenu-mensuel-input').value) || 3000;
+ const revenuMensuel = toNumber(document.getElementById('revenu-mensuel-input').value);
     
     // ===== NOUVELLE LOGIQUE CORRIGÉE =====
     // 1. Dépenses "de consommation" (on retire l'épargne auto)
@@ -1971,7 +1985,10 @@ function analyserBudget() {
     const epargneAuto = investAuto;
     
     // 3. Épargne libre restante **après** l'épargne auto
-    const epargneLibre = Math.max(0, revenuMensuel - depensesConsommation - epargneAuto);
+const epargneBrute = revenuMensuel - depensesConsommation - investAuto;
+const epargneLibre = Math.max(0, epargneBrute);
+const deficit = Math.min(0, epargneBrute);
+const epargneTotale = investAuto + epargneLibre;
     
     // 4. Totaux à afficher
     const depensesTotales = depensesConsommation;          // ↩️ on n'y met plus l'auto-invest
@@ -1996,7 +2013,7 @@ function analyserBudget() {
     // ===== NOUVELLES TUILES ÉPARGNE =====
     const epargneTotale = epargneAuto + epargneLibre;
     document.getElementById('simulation-epargne-auto').textContent = formatter.format(epargneAuto);
-    document.getElementById('simulation-epargne-totale').textContent = formatter.format(epargneTotale);
+    document.getElementById('simulation-epargne-totale').textContent = formatCurrency(epargneTotale, 0);
     
     // ===== APPELS CORRIGÉS =====
     // Mettre à jour le graphique
