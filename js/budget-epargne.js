@@ -737,7 +737,7 @@ function updateItemTotal(itemId) {
 }
 
 /**
- * Met à jour le total d'une catégorie - VERSION AMÉLIORÉE
+ * Met à jour le total d'une catégorie - VERSION CORRIGÉE
  */
 function updateCategoryTotal(categoryKey) {
     const category = EXPENSE_CATEGORIES[categoryKey];
@@ -756,6 +756,23 @@ function updateCategoryTotal(categoryKey) {
             total += amount * quantity;
         }
     });
+    
+    // ✅ MISE À JOUR DE L'AFFICHAGE DU TOTAL DE CATÉGORIE
+    const categoryTotalElement = document.getElementById(`total-${categoryKey}`);
+    if (categoryTotalElement) {
+        categoryTotalElement.textContent = new Intl.NumberFormat('fr-FR', {
+            style: 'currency',
+            currency: 'EUR',
+            minimumFractionDigits: 2
+        }).format(total);
+    }
+    
+    // ✅ MISE À JOUR DE LA BARRE DE PROGRESSION
+    updateCategoryProgressBar(categoryKey, total);
+    
+    // ✅ RETOUR OBLIGATOIRE
+    return total;
+} 
 
 /**
  * Met à jour la barre de progression d'une catégorie
