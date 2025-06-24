@@ -6,7 +6,8 @@
  * Version 3.0 - Intégration système Budget × Quantités pour plus de réalisme
  * Version 2.0 - Ajout accessibilité complète et transparence des formules
  */
-
+// Variable-sentinelle pour empêcher la double initialisation
+let budgetPlannerInitialized = false;
 /**
  * Convertit une chaîne en nombre en gérant les formats français
  */
@@ -867,9 +868,19 @@ function updateTotalLoisirs() {
  * Initialise et génère le contenu de l'onglet Budget
  */
 function initBudgetPlanner() {
-    // Cibler l'onglet Budget
+      // Vérifier que le container existe
     const budgetPlanner = document.getElementById('budget-planner');
-    if (!budgetPlanner) return;
+    if (!budgetPlanner) {
+        console.error('❌ Container #budget-planner non trouvé');
+        return;
+    }
+    
+    // 🛡️ Garde-fou : on ne construit l'UI qu'une seule fois
+    if (budgetPlannerInitialized) {
+        if (typeof analyserBudget === 'function') analyserBudget();
+        return;
+    }
+    budgetPlannerInitialized = true;
     
     // Vider le contenu actuel
     budgetPlanner.innerHTML = '';
