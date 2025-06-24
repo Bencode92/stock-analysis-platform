@@ -712,11 +712,17 @@ function updateItemTotal(itemId) {
     
     if (!amountInput || !quantityInput || !totalDisplay) return;
     
-    const amount = parseFloat(amountInput.value) || 0;
-    const quantity = parseFloat(quantityInput.value) || 0;
+    // ✅ CORRECTION : parseFloat → toNumber
+    const amount = toNumber(amountInput.value);
+    const quantity = toNumber(quantityInput.value);
     const total = amount * quantity;
     
-    totalDisplay.textContent = `${total}€`;
+    // ✅ AMÉLIORATION : Formatage français
+    totalDisplay.textContent = new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 2
+    }).format(total);
     
     // Mettre à jour le total de la catégorie
     const categoryKey = findCategoryByItemId(itemId);
@@ -744,11 +750,25 @@ function updateCategoryTotal(categoryKey) {
         const quantityInput = document.getElementById(`quantity-${item.id}`);
         
         if (amountInput && quantityInput) {
-            const amount = parseFloat(amountInput.value) || 0;
-            const quantity = parseFloat(quantityInput.value) || 0;
+            // ✅ CORRECTION : parseFloat → toNumber
+            const amount = toNumber(amountInput.value);
+            const quantity = toNumber(quantityInput.value);
             total += amount * quantity;
         }
     });
+    
+    // ✅ AMÉLIORATION OPTIONNELLE : Mise à jour de l'affichage du total de catégorie
+    const categoryTotalElement = document.getElementById(`total-${categoryKey}`);
+    if (categoryTotalElement) {
+        categoryTotalElement.textContent = new Intl.NumberFormat('fr-FR', {
+            style: 'currency',
+            currency: 'EUR',
+            minimumFractionDigits: 2
+        }).format(total);
+    }
+    
+    return total;
+}
     
     // Mettre à jour l'affichage du total
     const totalDisplay = document.getElementById(`total-${categoryKey}`);
@@ -1576,8 +1596,10 @@ function updateDetailedExpensesTotal() {
     const lignes = document.querySelectorAll('.depense-ligne');
     
     lignes.forEach(ligne => {
-        const prix = parseFloat(ligne.querySelector('.depense-prix').value) || 0;
-        const quantite = parseInt(ligne.querySelector('.depense-qte').value) || 0;
+        // ✅ CORRECTION : parseFloat → toNumber pour le prix
+        const prix = toNumber(ligne.querySelector('.depense-prix').value);
+        // ✅ CORRECTION : parseInt → toNumber pour la quantité (cohérence)
+        const quantite = toNumber(ligne.querySelector('.depense-qte').value);
         total += prix * quantite;
     });
     
@@ -1953,7 +1975,7 @@ function showBudgetNotification(message, type = 'info') {
  */
 function analyserBudget() {
     // Récupérer les valeurs du budget
-    const loyer = parseFloat(document.getElementById('simulation-budget-loyer').value) || 0;
+    const loyer = toNumber(document.getElementById('simulation-budget-loyer').value);
     let quotidien, extra;
     
     // Vérifier le mode d'affichage actif
@@ -1965,8 +1987,8 @@ function analyserBudget() {
         extra = updateCategoryTotal('loisirs');
     } else {
         // En mode simplifié, utiliser les valeurs directes
-        quotidien = parseFloat(document.getElementById('simulation-budget-quotidien').value) || 0;
-        extra = parseFloat(document.getElementById('simulation-budget-extra').value) || 0;
+ quotidien = toNumber(document.getElementById('simulation-budget-quotidien').value);
+extra     = toNumber(document.getElementById('simulation-budget-extra').value);
     }
     
 const investAuto = toNumber(document.getElementById('simulation-budget-invest').value);
