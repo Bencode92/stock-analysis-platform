@@ -704,8 +704,14 @@ function initFixedExpenseSections() {
             const quantityInput = document.getElementById(`quantity-${item.id}`);
             
             if (amountInput && quantityInput) {
-                amountInput.addEventListener('input', () => updateItemTotal(item.id));
-                quantityInput.addEventListener('input', () => updateItemTotal(item.id));
+                // 🔄 MODIF : Debounce sur 'input', immédiat sur 'change'
+                const updateWithDebounce = debounce(() => updateItemTotal(item.id), 250);
+                
+                amountInput.addEventListener('input', updateWithDebounce);
+                amountInput.addEventListener('change', () => updateItemTotal(item.id));
+                
+                quantityInput.addEventListener('input', updateWithDebounce);
+                quantityInput.addEventListener('change', () => updateItemTotal(item.id));
             }
         });
     });
@@ -1771,15 +1777,17 @@ function initBudgetListeners() {
         document.getElementById('objectif-type')
     ];
     
-simpleInputs.forEach(input => {
-    if (!input) return;
-
-    // On déclenche le calcul dès qu'on tape, ET quand on quitte le champ
-    ['input', 'change'].forEach(evt =>
-        input.addEventListener(evt, analyserBudget)
-    );
-});
-    
+    // 🔄 MODIF : Debounce sur 'input', immédiat sur 'change'
+    simpleInputs.forEach(input => {
+        if (!input) return;
+        
+        // Debounce pendant la frappe (250ms de délai)
+        input.addEventListener('input', debounce(analyserBudget, 250));
+        
+        // Exécution immédiate quand on quitte le champ
+        input.addEventListener('change', analyserBudget);
+    });
+}
     // Écouteurs pour les boutons de vue
     const viewDetailed = document.getElementById('view-detailed');
     const viewSimple = document.getElementById('view-simple');
