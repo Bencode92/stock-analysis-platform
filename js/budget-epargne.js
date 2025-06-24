@@ -1786,8 +1786,8 @@ function initBudgetListeners() {
         'simulation-budget-loyer',
         'simulation-budget-quotidien',
         'simulation-budget-extra',
-        'revenu-mensuel-input'
-       'simulation-budget-invest',    // Épargne/investissement automatique
+        'revenu-mensuel-input',
+       'simulation-budget-invest'   // Épargne/investissement automatique
     ];
     
     standardInputs.forEach(id => {
