@@ -1787,6 +1787,7 @@ function initBudgetListeners() {
         'simulation-budget-quotidien',
         'simulation-budget-extra',
         'revenu-mensuel-input'
+       'simulation-budget-invest',    // Épargne/investissement automatique
     ];
     
     standardInputs.forEach(id => {
@@ -1801,7 +1802,6 @@ function initBudgetListeners() {
     
     // === CHAMPS CRITIQUES (réactivité maximale) ===
     const criticalInputs = [
-        'simulation-budget-invest',    // Épargne/investissement automatique
         'objectif-epargne',           // Objectif d'épargne
         'objectif-type'               // Type d'objectif
     ];
