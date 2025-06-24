@@ -1891,11 +1891,7 @@ if (revenuInput) {
     
     // Initialiser l'accessibilité
     KeyboardManager.init();
-    
-    // Initialiser les info-bulles
-    FormulaTooltips.init();
-    
-    // Initialiser les détails du score
+Initialiser les détails du score
     ScoreDetails.init();
     
     // Notification d'initialisation
