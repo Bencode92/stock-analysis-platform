@@ -33,6 +33,21 @@ function toNumber(raw) {
     cleaned = cleaned.replace(',', '.');
     return parseFloat(cleaned) || 0;
 }
+
+// 👉 AJOUT : Anti-rafraîchissement : exécute fn après un délai d'inactivité
+function debounce(fn, delay = 300) {
+    let t;
+    return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn(...args), delay);
+    };
+}
+
+// 👉 AJOUT : Vérifie que les 3 champs clés ne sont pas vides
+function champsOK() {
+    return ['simulation-budget-loyer', 'simulation-budget-invest', 'revenu-mensuel-input']
+           .every(id => document.getElementById(id).value.trim() !== '');
+}
 // Configuration des catégories de dépenses avec valeurs par défaut
 const EXPENSE_CATEGORIES = {
     'vie-courante': {
@@ -1787,7 +1802,8 @@ function initBudgetListeners() {
         // Exécution immédiate quand on quitte le champ
         input.addEventListener('change', analyserBudget);
     });
-}
+    // ⚠️ PAS D'ACCOLADE ICI - tout le reste doit rester DANS la fonction
+    
     // Écouteurs pour les boutons de vue
     const viewDetailed = document.getElementById('view-detailed');
     const viewSimple = document.getElementById('view-simple');
@@ -1879,7 +1895,7 @@ function initBudgetListeners() {
     setTimeout(() => {
         KeyboardManager.showFeedback('Module budget avec système montant × quantité initialisé', true);
     }, 500);
-}
+} // ✅ ACCOLADE DE FERMETURE - SEULEMENT ICI À LA FIN
 
 /**
  * Ajuste les valeurs par défaut en fonction du revenu
@@ -1999,6 +2015,7 @@ function showBudgetNotification(message, type = 'info') {
  * L'investissement automatique est maintenant traité comme de l'épargne, pas une dépense
  */
 function analyserBudget() {
+    if (!champsOK()) return; // empêche un calcul bancal
     // Récupérer les valeurs du budget
     const loyer = toNumber(document.getElementById('simulation-budget-loyer').value);
     let quotidien, extra;
@@ -2405,7 +2422,3 @@ function resetBudgetPlanner() {
     }
     console.log('Budget Planner réinitialisé');
 }
-
-// Exposer la fonction globalement pour le debug
-window.resetBudgetPlanner = resetBudgetPlanner;
-    }
