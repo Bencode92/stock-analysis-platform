@@ -756,31 +756,6 @@ function updateCategoryTotal(categoryKey) {
             total += amount * quantity;
         }
     });
-    
-    // ✅ AMÉLIORATION OPTIONNELLE : Mise à jour de l'affichage du total de catégorie
-    const categoryTotalElement = document.getElementById(`total-${categoryKey}`);
-    if (categoryTotalElement) {
-        categoryTotalElement.textContent = new Intl.NumberFormat('fr-FR', {
-            style: 'currency',
-            currency: 'EUR',
-            minimumFractionDigits: 2
-        }).format(total);
-    }
-    
-    return total;
-}
-    
-    // Mettre à jour l'affichage du total
-    const totalDisplay = document.getElementById(`total-${categoryKey}`);
-    if (totalDisplay) {
-        totalDisplay.textContent = `${total}€`;
-    }
-    
-    // Mettre à jour la barre de progression
-    updateCategoryProgressBar(categoryKey, total);
-    
-    return total;
-}
 
 /**
  * Met à jour la barre de progression d'une catégorie
