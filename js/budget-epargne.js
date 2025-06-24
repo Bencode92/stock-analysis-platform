@@ -1793,8 +1793,6 @@ function initBudgetListeners() {
     standardInputs.forEach(id => {
         const input = document.getElementById(id);
         if (input) {
-            // Debounce pendant la frappe (250ms de délai)
-            input.addEventListener('input', debounce(analyserBudget, 250));
             // Exécution immédiate quand on quitte le champ
             input.addEventListener('change', analyserBudget);
         }
@@ -2297,10 +2295,15 @@ function updateRecommendations(epargnePossible, tauxEpargne, investAuto) {
 function updateBudgetChart(loyer, quotidien, extra, investAuto, depensesVariables, epargne) {
     if (!window.budgetChart) return;
     
-    window.budgetChart.data.datasets[0].data = [loyer, quotidien, extra, investAuto, depensesVariables, epargne];
-    window.budgetChart.update();
-}
-
+const d = window.budgetChart.data.datasets[0].data;
+d[0] = loyer;
+d[1] = quotidien; 
+d[2] = extra;
+d[3] = investAuto;          // ← Fini les "sauts" !
+d[4] = depensesVariables;
+d[5] = epargne;
+window.budgetChart.update();
+    }
 /**
  * Met à jour le graphique d'évolution sur 12 mois
  * @param {number} epargneMensuelle - Montant d'épargne mensuelle
