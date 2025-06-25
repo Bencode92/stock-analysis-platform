@@ -1416,34 +1416,24 @@ function generateBudgetInterface(container) {
             </div>
         </div>
         
-<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-        <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-revenu-mensuel">3 000,00 €</p>
-        <p class="text-gray-400 text-sm">Revenu mensuel</p>
-    </div>
-    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-        <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-depenses-totales">2 600,00 €</p>
-        <p class="text-gray-400 text-sm">Dépenses totales</p>
-    </div>
-    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-        <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-taux-epargne">13,3%</p>
-        <p class="text-gray-400 text-sm">Taux d'épargne</p>
-    </div>
-    
-    <!-- NOUVELLES TUILES -->
-    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-        <p class="text-green-400 text-2xl font-bold mb-1" id="simulation-epargne-possible">200,00 €</p>
-        <p class="text-gray-400 text-sm">Épargne possible</p>
-    </div>
-    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-        <p class="text-cyan-400 text-2xl font-bold mb-1" id="simulation-epargne-auto">200,00 €</p>
-        <p class="text-gray-400 text-sm">Épargne automatique</p>
-    </div>
-    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-        <p class="text-emerald-400 text-2xl font-bold mb-1" id="simulation-epargne-totale">400,00 €</p>
-        <p class="text-gray-400 text-sm">Épargne totale</p>
-    </div>
-</div>
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-revenu-mensuel">3 000,00 €</p>
+                <p class="text-gray-400 text-sm">Revenu mensuel</p>
+            </div>
+            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-depenses-totales">2 600,00 €</p>
+                <p class="text-gray-400 text-sm">Dépenses totales</p>
+            </div>
+            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-epargne-possible">400,00 €</p>
+                <p class="text-gray-400 text-sm">Épargne possible</p>
+            </div>
+            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-taux-epargne">13,3%</p>
+                <p class="text-gray-400 text-sm">Taux d'épargne</p>
+            </div>
+        </div>
         
         <div class="chart-container mb-6">
             <canvas id="budget-chart"></canvas>
@@ -1473,6 +1463,40 @@ function generateBudgetInterface(container) {
             </ul>
         </div>
         
+        <!-- ✅ NOUVEAU : Widget de répartition épargne -->
+        <div id="epargne-breakdown" class="mt-5 bg-green-900 bg-opacity-10 p-4 rounded-lg border-l-4 border-green-400">
+            <h5 class="text-green-400 font-medium flex items-center mb-3">
+                <i class="fas fa-piggy-bank mr-2"></i>
+                Capacité d'épargne totale
+            </h5>
+            <div id="epargne-breakdown-content">
+                <div class="grid grid-cols-3 gap-4 mb-4">
+                    <div class="text-center">
+                        <div class="text-lg font-bold text-green-400" id="epargne-auto-display">200€</div>
+                        <div class="text-xs text-gray-400">Épargne automatique</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-lg font-bold text-blue-400" id="epargne-libre-display">400€</div>
+                        <div class="text-xs text-gray-400">Épargne libre</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xl font-bold text-white" id="epargne-totale-display">600€</div>
+                        <div class="text-xs text-gray-400">Total disponible</div>
+                    </div>
+                </div>
+                
+                <div class="bg-blue-800 bg-opacity-20 p-3 rounded text-center">
+                    <div class="text-sm text-gray-300">
+                        Capacité d'épargne totale : 
+                        <strong class="text-green-400" id="taux-epargne-totale">20.0%</strong> de vos revenus
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        Cette épargne peut être allouée à vos objectifs financiers
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Résumé final avec recommandations d'investissement -->
         <div id="budget-summary" class="mt-5 bg-green-900 bg-opacity-10 p-4 rounded-lg border-l-4 border-green-400">
             <h5 class="text-green-400 font-medium flex items-center mb-3">
@@ -1934,8 +1958,7 @@ function showBudgetNotification(message, type = 'info') {
 }
 
 /**
- * Analyse le budget et met à jour les résultats - VERSION CORRIGÉE
- * L'investissement automatique est maintenant traité comme de l'épargne, pas une dépense
+ * Analyse le budget et met à jour les résultats - VERSION AMÉLIORÉE
  */
 function analyserBudget() {
     // Récupérer les valeurs du budget
@@ -1963,23 +1986,10 @@ function analyserBudget() {
     // Récupérer le revenu mensuel saisi par l'utilisateur
     const revenuMensuel = parseFloat(document.getElementById('revenu-mensuel-input').value) || 3000;
     
-    // ===== NOUVELLE LOGIQUE CORRIGÉE =====
-    // 1. Dépenses "de consommation" (on retire l'épargne auto)
-    const depensesConsommation = loyer + quotidien + extra + totalDepensesVariables;
-    
-    // 2. Épargne automatique (investissement programmé)
-    const epargneAuto = investAuto;
-    
-    // 3. Épargne libre restante **après** l'épargne auto
-    const epargneLibre = Math.max(0, revenuMensuel - depensesConsommation - epargneAuto);
-    
-    // 4. Totaux à afficher
-    const depensesTotales = depensesConsommation;          // ↩️ on n'y met plus l'auto-invest
-    const epargnePossible = epargneLibre;                  // ↩️ affichage "Épargne possible"
-    const tauxEpargne = revenuMensuel > 0
-          ? ((epargneAuto + epargneLibre) / revenuMensuel) * 100
-          : 0;
-    // ===== FIN NOUVELLE LOGIQUE =====
+    // Calculer les totaux du budget
+    const depensesTotales = loyer + quotidien + extra + investAuto + totalDepensesVariables;
+    const epargnePossible = Math.max(0, revenuMensuel - depensesTotales);
+    const tauxEpargne = revenuMensuel > 0 ? (epargnePossible / revenuMensuel) * 100 : 0;
     
     // Formater les valeurs monétaires
     const formatter = new Intl.NumberFormat('fr-FR', { 
@@ -1993,29 +2003,27 @@ function analyserBudget() {
     document.getElementById('simulation-depenses-totales').textContent = formatter.format(depensesTotales);
     document.getElementById('simulation-epargne-possible').textContent = formatter.format(epargnePossible);
     document.getElementById('simulation-taux-epargne').textContent = tauxEpargne.toFixed(1) + '%';
-    // ===== NOUVELLES TUILES ÉPARGNE =====
-    const epargneTotale = epargneAuto + epargneLibre;
-    document.getElementById('simulation-epargne-auto').textContent = formatter.format(epargneAuto);
-    document.getElementById('simulation-epargne-totale').textContent = formatter.format(epargneTotale);
     
-    // ===== APPELS CORRIGÉS =====
     // Mettre à jour le graphique
-    updateBudgetChart(loyer, quotidien, extra, epargneAuto, totalDepensesVariables, epargneLibre);
+    updateBudgetChart(loyer, quotidien, extra, investAuto, totalDepensesVariables, epargnePossible);
     
-    // Mettre à jour le graphique d'évolution (épargne totale)
-    updateEvolutionChart(epargneAuto + epargneLibre);
+    // Mettre à jour le graphique d'évolution
+    updateEvolutionChart(epargnePossible);
     
     // Mise à jour des conseils budgétaires
-    updateBudgetAdvice(loyer, quotidien, extra, epargneAuto, totalDepensesVariables, revenuMensuel, tauxEpargne);
+    updateBudgetAdvice(loyer, quotidien, extra, investAuto, totalDepensesVariables, revenuMensuel, tauxEpargne);
     
-    // Mise à jour du temps pour atteindre l'objectif d'épargne (épargne totale)
-    updateObjectiveTime(epargneAuto + epargneLibre);
+    // Mise à jour du temps pour atteindre l'objectif d'épargne
+    updateObjectiveTime(epargnePossible);
+    
+    // ✅ NOUVEAU : Mettre à jour le widget de répartition épargne
+updateEpargneBreakdown(investAuto, epargnePossible, revenuMensuel);
     
     // Mettre à jour le score budget
     updateBudgetScore(tauxEpargne, loyer, revenuMensuel, depensesTotales);
     
     // Mettre à jour les recommandations
-    updateRecommendations(epargneLibre, tauxEpargne, epargneAuto);
+    updateRecommendations(epargnePossible, tauxEpargne, investAuto);
 }
 
 /**
@@ -2027,13 +2035,33 @@ function updateObjectiveTime(epargneMensuelle) {
     const objectifType = document.getElementById('objectif-type').value;
     const tempsObjectifElement = document.getElementById('temps-objectif');
     
-    if (!tempsObjectifElement || objectifMontant <= 0 || epargneMensuelle <= 0) {
+    // ✅ NOUVEAU : Récupérer l'épargne automatique
+    const epargnAutomatique = parseFloat(document.getElementById('simulation-budget-invest').value) || 0;
+    
+    if (!tempsObjectifElement || objectifMontant <= 0) {
         if (tempsObjectifElement) tempsObjectifElement.classList.add('hidden');
         return;
     }
     
-    // Calculer le nombre de mois nécessaires
-    const moisNecessaires = Math.ceil(objectifMontant / epargneMensuelle);
+    // ✅ CORRECTION PRINCIPALE : Épargne totale = automatique + possible
+    const epargneTotaleDisponible = epargnAutomatique + epargneMensuelle;
+    
+    if (epargneTotaleDisponible <= 0) {
+        if (tempsObjectifElement) {
+            tempsObjectifElement.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-triangle text-orange-400 mr-2"></i>
+                    <span>Aucune épargne disponible pour cet objectif. 
+                    Ajustez votre budget pour libérer des fonds.</span>
+                </div>
+            `;
+            tempsObjectifElement.classList.remove('hidden');
+        }
+        return;
+    }
+    
+    // Calculer le nombre de mois nécessaires avec l'épargne totale
+    const moisNecessaires = Math.ceil(objectifMontant / epargneTotaleDisponible);
     
     // Formatage en années et mois si nécessaire
     let tempsFormate = '';
@@ -2055,6 +2083,32 @@ function updateObjectiveTime(epargneMensuelle) {
         default: icone = 'fas fa-bullseye';
     }
     
+    // ✅ AMÉLIORATION : Affichage détaillé de la répartition épargne
+    let detailEpargne = '';
+    if (epargnAutomatique > 0 && epargneMensuelle > 0) {
+        detailEpargne = `
+            <div class="text-xs text-gray-400 mt-2">
+                📊 Répartition : ${epargnAutomatique.toLocaleString('fr-FR')}€ automatique + 
+                ${epargneMensuelle.toLocaleString('fr-FR')}€ épargne libre = 
+                <strong class="text-blue-400">${epargneTotaleDisponible.toLocaleString('fr-FR')}€/mois</strong>
+            </div>
+        `;
+    } else if (epargnAutomatique > 0) {
+        detailEpargne = `
+            <div class="text-xs text-gray-400 mt-2">
+                🤖 Uniquement via épargne automatique : 
+                <strong class="text-blue-400">${epargneTotaleDisponible.toLocaleString('fr-FR')}€/mois</strong>
+            </div>
+        `;
+    } else {
+        detailEpargne = `
+            <div class="text-xs text-gray-400 mt-2">
+                💰 Uniquement via épargne libre : 
+                <strong class="text-blue-400">${epargneTotaleDisponible.toLocaleString('fr-FR')}€/mois</strong>
+            </div>
+        `;
+    }
+    
     // Mettre à jour l'affichage
     tempsObjectifElement.innerHTML = `
         <div class="flex items-center">
@@ -2063,6 +2117,7 @@ function updateObjectiveTime(epargneMensuelle) {
             <strong class="text-blue-400">${objectifMontant.toLocaleString('fr-FR')} €</strong> 
             en <strong class="text-blue-400">${tempsFormate}</strong></span>
         </div>
+        ${detailEpargne}
     `;
     
     tempsObjectifElement.classList.remove('hidden');
@@ -2331,4 +2386,23 @@ function updateBudgetAdvice(loyer, quotidien, extra, investAuto, depensesVariabl
     } else {
         adviceScore.classList.add('bg-blue-900', 'bg-opacity-20', 'text-blue-400');
     }
+    /**
+ * ✅ NOUVELLE : Met à jour la visualisation de répartition épargne
+ */
+function updateEpargneBreakdown(epargnAutomatique, epargnePossible, revenuMensuel) {
+    // Mettre à jour les affichages individuels
+    const epargneTotale = epargnAutomatique + epargnePossible;
+    const tauxEpargneTotale = revenuMensuel > 0 ? (epargneTotale / revenuMensuel) * 100 : 0;
+    
+    // Mise à jour des éléments d'affichage
+    const epargnAutoDisplay = document.getElementById('epargne-auto-display');
+    const epargnLibreDisplay = document.getElementById('epargne-libre-display');
+    const epargnTotaleDisplay = document.getElementById('epargne-totale-display');
+    const tauxEpargneTotaleDisplay = document.getElementById('taux-epargne-totale');
+    
+    if (epargnAutoDisplay) epargnAutoDisplay.textContent = `${epargnAutomatique.toLocaleString('fr-FR')}€`;
+    if (epargnLibreDisplay) epargnLibreDisplay.textContent = `${epargnePossible.toLocaleString('fr-FR')}€`;
+    if (epargnTotaleDisplay) epargnTotaleDisplay.textContent = `${epargneTotale.toLocaleString('fr-FR')}€`;
+    if (tauxEpargneTotaleDisplay) tauxEpargneTotaleDisplay.textContent = `${tauxEpargneTotale.toFixed(1)}%`;
+}
 }
