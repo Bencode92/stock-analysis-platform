@@ -9,6 +9,7 @@
  * - Conseils personnalisés
  * 
  * 🆕 MISE À JOUR : Utilise les nouveaux sélecteurs de budget-epargne.js
+ * 🐛 FIX : Correction de la portée de exportBtn dans le catch
  */
 
 // ===== CONFIGURATION PDF =====
@@ -44,9 +45,16 @@ const PDF_CONFIG = {
 export async function exportBudgetToPDF(budgetData = null, options = {}) {
     console.log('🚀 Début export PDF budget (version mise à jour)');
     
+    // 🐛 FIX : Déclarer exportBtn avant le try pour éviter ReferenceError dans catch
+    let exportBtn;
+    let uiState;
+    
     try {
         // Chargement de html2pdf si nécessaire
         await loadHtml2PdfLib();
+        
+        // Récupération du bouton d'export
+        exportBtn = document.getElementById('export-budget-pdf');
         
         // Extraction des données du budget avec NOUVEAUX SÉLECTEURS
         const data = budgetData || extractBudgetDataFromDOM();
@@ -57,8 +65,7 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
         }
         
         // Affichage du loader
-        const exportBtn = document.getElementById('export-budget-pdf');
-        const uiState = showLoadingState(exportBtn);
+        uiState = showLoadingState(exportBtn);
         
         // Génération du template PDF
         const template = await buildCompletePDFTemplate(data);
@@ -81,6 +88,7 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
         
     } catch (error) {
         console.error('❌ Erreur export PDF:', error);
+        // 🐛 FIX : exportBtn est maintenant accessible dans le catch
         showErrorState(exportBtn, error.message);
         throw error;
     }
@@ -1010,7 +1018,7 @@ function generatePDFFilename(date = new Date()) {
 }
 
 /**
- * Affiche l'état de chargement
+ * 🐛 FIX : Affiche l'état de chargement (exportBtn géré en dehors maintenant)
  */
 function showLoadingState(exportBtn) {
     if (!exportBtn) return null;
@@ -1027,7 +1035,7 @@ function showLoadingState(exportBtn) {
 }
 
 /**
- * Affiche l'état de succès
+ * 🐛 FIX : Affiche l'état de succès (exportBtn géré en dehors maintenant)
  */
 function showSuccessState(exportBtn, originalState) {
     if (!exportBtn) return;
@@ -1043,15 +1051,19 @@ function showSuccessState(exportBtn, originalState) {
 }
 
 /**
- * Affiche l'état d'erreur
+ * 🐛 FIX : Affiche l'état d'erreur (exportBtn maintenant accessible)
  */
 function showErrorState(exportBtn, errorMessage) {
-    if (!exportBtn) return;
+    if (!exportBtn) {
+        console.error('❌ Erreur export PDF (pas de bouton):', errorMessage);
+        alert(`Erreur lors de la génération du PDF: ${errorMessage}`);
+        return;
+    }
     
     console.error('❌ Erreur export PDF:', errorMessage);
     alert(`Erreur lors de la génération du PDF: ${errorMessage}`);
     
-    // Restaurer l'état original (peut être amélioré avec un cache de l'état)
+    // Restaurer l'état original
     exportBtn.innerHTML = '<i class="fas fa-file-pdf mr-2"></i>Exporter en PDF';
     exportBtn.disabled = false;
 }
