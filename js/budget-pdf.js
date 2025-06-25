@@ -1,5 +1,5 @@
 /**
- * budget-pdf.js - Module d'export PDF pour l'analyse de budget
+ * budget-pdf.js - Module d'export PDF pour l'analyse de budget (VERSION MISE À JOUR)
  * TradePulse Finance Intelligence Platform
  * 
  * Ce module gère l'export PDF des analyses de budget avec :
@@ -7,6 +7,8 @@
  * - Capture des graphiques
  * - Formatage professionnel
  * - Conseils personnalisés
+ * 
+ * 🆕 MISE À JOUR : Utilise les nouveaux sélecteurs de budget-epargne.js
  */
 
 // ===== CONFIGURATION PDF =====
@@ -40,13 +42,13 @@ const PDF_CONFIG = {
  * @returns {Promise<void>}
  */
 export async function exportBudgetToPDF(budgetData = null, options = {}) {
-    console.log('🚀 Début export PDF budget');
+    console.log('🚀 Début export PDF budget (version mise à jour)');
     
     try {
         // Chargement de html2pdf si nécessaire
         await loadHtml2PdfLib();
         
-        // Extraction des données du budget
+        // Extraction des données du budget avec NOUVEAUX SÉLECTEURS
         const data = budgetData || extractBudgetDataFromDOM();
         
         // Validation des données
@@ -74,7 +76,7 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
             .from(template)
             .save();
         
-        console.log('✅ PDF généré avec succès');
+        console.log('✅ PDF généré avec succès (nouveaux sélecteurs)');
         showSuccessState(exportBtn, uiState);
         
     } catch (error) {
@@ -84,37 +86,43 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
     }
 }
 
-// ===== EXTRACTION DES DONNÉES =====
+// ===== EXTRACTION DES DONNÉES (🆕 MISE À JOUR) =====
 
 /**
- * Extrait les données de budget depuis le DOM
+ * Extrait les données de budget depuis le DOM avec les NOUVEAUX SÉLECTEURS
  * @returns {Object} Données structurées du budget
  */
 function extractBudgetDataFromDOM() {
+    console.log('📊 Extraction données budget (nouveaux sélecteurs)');
+    
     const data = {
         // Métadonnées
         generatedAt: new Date(),
         
-        // Données principales
-        revenu: getInputValue('simulation-revenu-mensuel'),
+        // 🆕 NOUVEAU : Revenu mensuel avec nouveau sélecteur
+        revenu: getInputValue('revenu-mensuel-input'),
+        
+        // Score et description
         score: getElementText('budget-score', '--'),
         scoreDescription: getElementText('budget-score-description', 'Analyse effectuée'),
         
-        // Dépenses détaillées
+        // 🆕 NOUVEAU : Dépenses avec nouveaux sélecteurs
         depenses: {
-            loyer: getInputValue('simulation-budget-loyer'),
-            alimentation: getInputValue('simulation-budget-alimentation'),
-            transport: getInputValue('simulation-budget-transport'),
-            factures: getInputValue('simulation-budget-factures'),
+            loyer: getInputValue('simulation-budget-loyer'), // Inchangé
+            
+            // 🆕 NOUVEAU : Utilise les totaux calculés au lieu des sous-catégories
+            vieCourante: getTotalVieCourante(),
             loisirs: getTotalLoisirs(),
             variables: getTotalVariables(),
+            
+            // Épargne automatique (inchangé)
             epargne: getInputValue('simulation-budget-invest')
         },
         
-        // Totaux calculés
-        totalDepenses: parseFloat(getElementText('simulation-depenses-totales', '0').replace(/[^\d.-]/g, '')) || 0,
-        epargneDisponible: parseFloat(getElementText('simulation-epargne-possible', '0').replace(/[^\d.-]/g, '')) || 0,
-        tauxEpargne: parseFloat(getElementText('simulation-taux-epargne', '0').replace('%', '')) || 0,
+        // 🆕 NOUVEAU : Totaux calculés avec les nouveaux IDs
+        totalDepenses: getCalculatedValue('simulation-depenses-totales'),
+        epargneDisponible: getCalculatedValue('simulation-epargne-possible'),
+        tauxEpargne: getCalculatedValue('simulation-taux-epargne', '%'),
         
         // Graphiques (si disponibles)
         charts: captureCharts(),
@@ -128,7 +136,135 @@ function extractBudgetDataFromDOM() {
     data.evaluations = generateEvaluations(data);
     data.recommendations = generateRecommendations(data);
     
+    console.log('✅ Données extraites:', data);
     return data;
+}
+
+// ===== FONCTIONS D'EXTRACTION MISES À JOUR =====
+
+/**
+ * 🆕 NOUVEAU : Récupère le total "Vie courante" calculé
+ * Utilise la fonction globale ou parse le span #total-vie-courante
+ */
+function getTotalVieCourante() {
+    // Méthode 1 : Utiliser la fonction globale si disponible
+    if (typeof window.updateTotalVieCourante === 'function') {
+        try {
+            const total = window.updateTotalVieCourante();
+            console.log('📊 Total vie courante (fonction globale):', total);
+            return total || 0;
+        } catch (e) {
+            console.warn('⚠️ Erreur fonction updateTotalVieCourante:', e);
+        }
+    }
+    
+    // Méthode 2 : Parser le span #total-vie-courante
+    const totalElement = document.getElementById('total-vie-courante');
+    if (totalElement) {
+        const total = parseFloat(totalElement.textContent.replace(/[^0-9.-]/g, '')) || 0;
+        console.log('📊 Total vie courante (span):', total);
+        return total;
+    }
+    
+    // Méthode 3 : Fallback - calculer manuellement si les anciens inputs existent encore
+    const fallback = getInputValue('simulation-budget-alimentation') + 
+                    getInputValue('simulation-budget-transport') + 
+                    getInputValue('simulation-budget-factures');
+    
+    console.log('📊 Total vie courante (fallback):', fallback);
+    return fallback;
+}
+
+/**
+ * 🆕 NOUVEAU : Récupère le total "Loisirs & plaisirs" calculé
+ */
+function getTotalLoisirs() {
+    // Méthode 1 : Utiliser la fonction globale si disponible
+    if (typeof window.updateTotalLoisirs === 'function') {
+        try {
+            const total = window.updateTotalLoisirs();
+            console.log('📊 Total loisirs (fonction globale):', total);
+            return total || 0;
+        } catch (e) {
+            console.warn('⚠️ Erreur fonction updateTotalLoisirs:', e);
+        }
+    }
+    
+    // Méthode 2 : Parser le span #total-loisirs
+    const totalElement = document.getElementById('total-loisirs');
+    if (totalElement) {
+        const total = parseFloat(totalElement.textContent.replace(/[^0-9.-]/g, '')) || 0;
+        console.log('📊 Total loisirs (span):', total);
+        return total;
+    }
+    
+    // Méthode 3 : Fallback - calculer avec anciens inputs
+    const fallback = getInputValue('simulation-budget-loisirs-sorties') + 
+                    getInputValue('simulation-budget-loisirs-sport') + 
+                    getInputValue('simulation-budget-loisirs-autres');
+    
+    console.log('📊 Total loisirs (fallback):', fallback);
+    return fallback;
+}
+
+/**
+ * 🆕 NOUVEAU : Récupère le total des dépenses variables
+ */
+function getTotalVariables() {
+    // Méthode 1 : Utiliser la fonction globale si disponible
+    if (typeof window.updateDetailedExpensesTotal === 'function') {
+        try {
+            const total = window.updateDetailedExpensesTotal();
+            console.log('📊 Total variables (fonction globale):', total);
+            return total || 0;
+        } catch (e) {
+            console.warn('⚠️ Erreur fonction updateDetailedExpensesTotal:', e);
+        }
+    }
+    
+    // Méthode 2 : Parser les éléments .depense-total
+    const totalElements = document.querySelectorAll('.depense-total');
+    let total = 0;
+    totalElements.forEach(element => {
+        const value = parseFloat(element.textContent.replace(/[^0-9.-]/g, '')) || 0;
+        total += value;
+    });
+    
+    if (total > 0) {
+        console.log('📊 Total variables (parse .depense-total):', total);
+        return total;
+    }
+    
+    // Méthode 3 : Fallback - calculer avec anciens inputs
+    const fallback = getInputValue('simulation-budget-sante') + 
+                    getInputValue('simulation-budget-vetements') + 
+                    getInputValue('simulation-budget-autres');
+    
+    console.log('📊 Total variables (fallback):', fallback);
+    return fallback;
+}
+
+/**
+ * 🆕 NOUVEAU : Récupère une valeur calculée et affichée (avec nettoyage)
+ */
+function getCalculatedValue(id, suffix = '') {
+    const element = document.getElementById(id);
+    if (!element) {
+        console.warn(`⚠️ Élément ${id} non trouvé`);
+        return 0;
+    }
+    
+    let text = element.textContent.trim();
+    
+    // Nettoyage selon le type
+    if (suffix === '%') {
+        text = text.replace('%', '');
+    }
+    
+    // Suppression de tous les caractères non numériques sauf . et -
+    const value = parseFloat(text.replace(/[^0-9.-]/g, '')) || 0;
+    console.log(`📊 ${id}: ${value}${suffix}`);
+    return value;
 }
 
 // ===== CONSTRUCTION DU TEMPLATE PDF =====
@@ -364,7 +500,7 @@ function buildPdfCharts(data) {
 }
 
 /**
- * Construit le tableau détaillé des dépenses
+ * Construit le tableau détaillé des dépenses (🆕 MISE À JOUR)
  */
 function buildPdfDetailsTable(data) {
     const container = document.createElement('div');
@@ -393,14 +529,12 @@ function buildPdfDetailsTable(data) {
     
     const tbody = table.querySelector('tbody');
     
-    // Postes de dépense à afficher
+    // 🆕 NOUVEAUX POSTES avec structure mise à jour
     const postes = [
         { label: 'Loyer / Crédit immobilier', value: data.depenses.loyer, type: 'loyer' },
-        { label: 'Alimentation', value: data.depenses.alimentation, type: 'alimentation' },
-        { label: 'Transport', value: data.depenses.transport, type: 'transport' },
-        { label: 'Factures & charges', value: data.depenses.factures, type: 'factures' },
-        { label: 'Loisirs & sorties', value: data.depenses.loisirs, type: 'loisirs' },
-        { label: 'Dépenses variables', value: data.depenses.variables, type: 'variables' },
+        { label: 'Vie courante (alimentation, transport, factures)', value: data.depenses.vieCourante, type: 'vieCourante' },
+        { label: 'Loisirs & plaisirs', value: data.depenses.loisirs, type: 'loisirs' },
+        { label: 'Dépenses variables (santé, vêtements, autres)', value: data.depenses.variables, type: 'variables' },
         { label: 'Épargne automatique', value: data.depenses.epargne, type: 'epargne' }
     ];
     
@@ -469,7 +603,7 @@ function buildPdfObjective(data) {
 }
 
 /**
- * Construit la section recommandations
+ * Construit la section recommandations (🆕 MISE À JOUR)
  */
 function buildPdfRecommendations(data) {
     const container = document.createElement('div');
@@ -534,9 +668,9 @@ function buildPdfFormulas(data) {
             <h4 style="color: #374151; font-size: 14px; margin-bottom: 8px;">Seuils d'évaluation (normes françaises)</h4>
             <ul style="list-style-type: disc; margin-left: 20px; line-height: 1.5;">
                 <li><strong>Loyer/Crédit :</strong> ≤ 25% (optimal), ≤ 33% (recommandé), > 33% (risqué)</li>
-                <li><strong>Alimentation :</strong> ≤ 12% (économe), ≤ 18% (standard), > 18% (élevé)</li>
-                <li><strong>Transport :</strong> ≤ 15% (raisonnable), > 20% (revoir)</li>
+                <li><strong>Vie courante :</strong> ≤ 30% (maîtrisé), ≤ 40% (standard), > 40% (élevé)</li>
                 <li><strong>Loisirs :</strong> ≤ 10% (équilibré), ≤ 15% (modéré), > 15% (excessif)</li>
+                <li><strong>Variables :</strong> ≤ 10% (contrôlé), ≤ 15% (raisonnable), > 15% (à surveiller)</li>
                 <li><strong>Épargne :</strong> ≥ 20% (excellent), ≥ 10% (bon), < 10% (à améliorer)</li>
             </ul>
         </div>
@@ -640,24 +774,6 @@ function getElementText(id, defaultValue = '') {
 }
 
 /**
- * Calcule le total des loisirs
- */
-function getTotalLoisirs() {
-    return getInputValue('simulation-budget-loisirs-sorties') + 
-           getInputValue('simulation-budget-loisirs-sport') + 
-           getInputValue('simulation-budget-loisirs-autres');
-}
-
-/**
- * Calcule le total des variables
- */
-function getTotalVariables() {
-    return getInputValue('simulation-budget-sante') + 
-           getInputValue('simulation-budget-vetements') + 
-           getInputValue('simulation-budget-autres');
-}
-
-/**
  * Capture les graphiques disponibles
  */
 function captureCharts() {
@@ -730,43 +846,61 @@ function calculateExpenseRatios(data) {
 }
 
 /**
- * Génère les évaluations par poste
+ * 🆕 MISE À JOUR : Génère les évaluations pour les nouveaux types de postes
  */
 function generateEvaluations(data) {
     const evaluations = {};
     
     Object.keys(data.ratios).forEach(type => {
-        evaluations[type] = evaluateExpense(type, data.ratios[type]);
+        evaluations[type] = evaluateExpenseUpdated(type, data.ratios[type]);
     });
     
     return evaluations;
 }
 
 /**
- * Évalue une dépense selon son type et ratio
+ * 🆕 NOUVEAU : Évalue une dépense selon son type et ratio (mise à jour)
  */
-function evaluateExpense(type, ratio) {
+function evaluateExpenseUpdated(type, ratio) {
     switch(type) {
         case 'loyer':
             if (ratio <= 25) return '<span class="eval-excellent">✅ Optimal</span>';
             if (ratio <= 33) return '<span class="eval-bon">⚠️ Correct</span>';
             return '<span class="eval-alerte">🚨 Trop élevé</span>';
-        case 'alimentation':
-            if (ratio <= 12) return '<span class="eval-excellent">✅ Économe</span>';
-            if (ratio <= 18) return '<span class="eval-bon">⚠️ Standard</span>';
+            
+        case 'vieCourante':
+            // Vie courante = alimentation + transport + factures (env. 25-35% recommandé)
+            if (ratio <= 30) return '<span class="eval-excellent">✅ Maîtrisé</span>';
+            if (ratio <= 40) return '<span class="eval-bon">⚠️ Standard</span>';
             return '<span class="eval-attention">🚨 Élevé</span>';
-        case 'transport':
-            if (ratio <= 15) return '<span class="eval-excellent">✅ Raisonnable</span>';
-            if (ratio <= 20) return '<span class="eval-attention">⚠️ Modéré</span>';
-            return '<span class="eval-alerte">🚨 À revoir</span>';
+            
         case 'loisirs':
             if (ratio <= 10) return '<span class="eval-excellent">✅ Équilibré</span>';
             if (ratio <= 15) return '<span class="eval-bon">⚠️ Modéré</span>';
             return '<span class="eval-alerte">🚨 Excessif</span>';
+            
+        case 'variables':
+            // Dépenses variables (santé, vêtements, autres)
+            if (ratio <= 10) return '<span class="eval-excellent">✅ Contrôlé</span>';
+            if (ratio <= 15) return '<span class="eval-bon">⚠️ Raisonnable</span>';
+            return '<span class="eval-attention">🚨 À surveiller</span>';
+            
         case 'epargne':
             if (ratio >= 20) return '<span class="eval-excellent">🏆 Excellent</span>';
             if (ratio >= 10) return '<span class="eval-bon">✅ Bon</span>';
             return '<span class="eval-attention">⚠️ À améliorer</span>';
+            
+        // Fallback pour anciens types
+        case 'alimentation':
+            if (ratio <= 12) return '<span class="eval-excellent">✅ Économe</span>';
+            if (ratio <= 18) return '<span class="eval-bon">⚠️ Standard</span>';
+            return '<span class="eval-attention">🚨 Élevé</span>';
+            
+        case 'transport':
+            if (ratio <= 15) return '<span class="eval-excellent">✅ Raisonnable</span>';
+            if (ratio <= 20) return '<span class="eval-attention">⚠️ Modéré</span>';
+            return '<span class="eval-alerte">🚨 À revoir</span>';
+            
         default:
             return '<span class="eval-bon">📊 Variable</span>';
     }
@@ -788,7 +922,7 @@ function generateSummaryText(data) {
 }
 
 /**
- * Génère les recommandations personnalisées
+ * 🆕 MISE À JOUR : Génère des recommandations pour la nouvelle structure
  */
 function generateRecommendations(data) {
     const conseils = [];
@@ -798,6 +932,14 @@ function generateRecommendations(data) {
         conseils.push({
             icon: '🏠',
             text: 'Votre loyer est trop élevé (>33%). Envisagez un déménagement ou une colocation pour réduire ce poste.'
+        });
+    }
+    
+    // Conseil sur la vie courante
+    if (data.ratios.vieCourante > 40) {
+        conseils.push({
+            icon: '🛒',
+            text: 'Vos dépenses de vie courante sont élevées. Optimisez vos courses alimentaires et vos déplacements.'
         });
     }
     
