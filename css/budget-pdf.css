@@ -1,14 +1,52 @@
 /* ===== STYLES PDF EXPORT BUDGET - TRADEPULSE ===== */
 
+/* 🎯 CORRECTION PRINCIPALE : Template PDF capturable par html2canvas */
+.pdf-template-container {
+    position: fixed !important;           /* ✅ Dans le viewport (pas absolute) */
+    left: 0 !important;                   /* ✅ Coordonnées visibles */
+    top: 0 !important;                    /* ✅ html2canvas peut capturer */
+    width: 210mm !important;              /* ✅ Format A4 */
+    height: 297mm !important;             /* ✅ Hauteur A4 */
+    opacity: 0 !important;                /* ✅ Invisible visuellement */
+    pointer-events: none !important;      /* ✅ Pas d'interaction */
+    z-index: -9999 !important;            /* ✅ Derrière tout */
+    overflow: hidden !important;          /* ✅ Pas de débordement */
+    background-color: #ffffff !important; /* ✅ Fond blanc pour contraste */
+    color: #000000 !important;            /* ✅ Texte noir visible */
+    font-family: 'Arial', sans-serif !important;
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
+}
+
+/* ✅ FALLBACK : Si la classe template n'est pas utilisée */
 .pdf-container {
     font-family: 'Inter', sans-serif;
     max-width: 210mm;
-    margin: 0 auto !important;  /* ✅ CHANGÉ : centrage avec auto */
-    background: #e5f3ff;        /* ✅ CHANGÉ : fond bleu clair */
-    color: #1f2937;
+    margin: 0 auto !important;
+    background: #ffffff !important;      /* ✅ CHANGÉ : Fond blanc pour lisibilité */
+    color: #1f2937 !important;          /* ✅ FORCÉ : Texte foncé */
     line-height: 1.4;
-    padding: 20px;              /* ✅ AJOUTÉ : padding pour éviter les bords */
-    box-sizing: border-box;     /* ✅ AJOUTÉ : pour inclure padding dans la largeur */
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* 🎯 MODE CAPTURE : Styles spécifiques pour html2canvas */
+.pdf-container.capturing,
+.pdf-template-container {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.pdf-container.capturing *,
+.pdf-template-container * {
+    color: inherit !important;
+    background-color: transparent !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
 }
 
 .avoid-break {
@@ -17,17 +55,26 @@
 }
 
 .pdf-header {
-    border-bottom: 2px solid #059669;
+    border-bottom: 2px solid #059669 !important;
     padding-bottom: 10px;
     margin-bottom: 20px;
+    color: #000000 !important;           /* ✅ Titre noir */
+}
+
+.pdf-header h1 {
+    color: #000000 !important;           /* ✅ Titre principal noir */
+    font-size: 24px !important;
+    margin: 0 0 10px 0 !important;
+    font-weight: bold !important;
 }
 
 .pdf-hero {
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); /* ✅ CHANGÉ : Bleus plus cohérents */
+    background: #f8f9fa !important;      /* ✅ CHANGÉ : Gris très clair */
     border-radius: 12px;
     border-left: 4px solid #059669;
     padding: 20px;
     margin-bottom: 25px;
+    color: #000000 !important;           /* ✅ Texte noir */
 }
 
 .pdf-table {
@@ -35,19 +82,29 @@
     border-collapse: collapse;
     font-size: 12px;
     margin: 15px 0;
+    color: #000000 !important;           /* ✅ Texte tableau noir */
 }
 
 .pdf-table th,
 .pdf-table td {
     padding: 8px 12px;
     text-align: left;
-    border: 1px solid #e5e7eb;
+    border: 1px solid #333333 !important; /* ✅ Bordures foncées */
+    color: #000000 !important;            /* ✅ Texte noir */
+    background-color: transparent !important;
 }
 
 .pdf-table th {
-    background-color: #f9fafb;
+    background-color: #f0f0f0 !important; /* ✅ En-têtes gris clair */
     font-weight: 600;
-    color: #374151;
+    color: #000000 !important;            /* ✅ Titre colonnes noir */
+}
+
+/* ✅ CORRECTION : Cellules de données importantes */
+.pdf-table td:last-child {
+    text-align: right !important;
+    font-weight: bold !important;
+    color: #000000 !important;            /* ✅ Valeurs en noir (pas vert) */
 }
 
 .chart-container-pdf {
@@ -58,32 +115,36 @@
 .chart-container-pdf img {
     max-width: 250px;
     height: auto;
-    border: 1px solid #e5e7eb;
+    border: 1px solid #333333 !important;  /* ✅ Bordure foncée */
     border-radius: 8px;
 }
 
 .recommendation-pdf {
-    background: #f0f9ff;        /* ✅ CHANGÉ : Bleu clair au lieu de vert */
+    background: #f8f9fa !important;        /* ✅ CHANGÉ : Gris clair */
     padding: 15px;
     border-radius: 8px;
     border-left: 4px solid #059669;
     margin: 15px 0;
+    color: #000000 !important;             /* ✅ Texte noir */
 }
 
 .objective-pdf {
-    background: #f8fafc;        /* ✅ CHANGÉ : Gris-bleu très léger */
+    background: #f8f9fa !important;        /* ✅ CHANGÉ : Gris clair uniforme */
     padding: 15px;
     border-radius: 8px;
     border-left: 4px solid #3b82f6;
     margin: 15px 0;
+    color: #000000 !important;             /* ✅ Texte noir */
 }
 
 .formulas-pdf {
-    background: #f9fafb;
+    background: #f5f5f5 !important;        /* ✅ Gris très clair */
     padding: 15px;
     border-radius: 8px;
     margin: 15px 0;
     font-size: 11px;
+    color: #000000 !important;             /* ✅ Texte noir */
+    border: 1px solid #dddddd;             /* ✅ Bordure légère */
 }
 
 .footer-pdf {
@@ -91,29 +152,29 @@
     text-align: center;
     margin-top: 30px;
     padding-top: 15px;
-    border-top: 1px solid #e5e7eb;
-    color: #6b7280;
+    border-top: 1px solid #333333 !important; /* ✅ Bordure foncée */
+    color: #000000 !important;                /* ✅ Texte noir */
     line-height: 1.4;
 }
 
-/* Styles pour les évaluations */
+/* 🎯 STYLES POUR ÉVALUATIONS - Noir pour lisibilité PDF */
 .eval-excellent { 
-    color: #059669; 
+    color: #000000 !important;  /* ✅ Noir au lieu de vert */
     font-weight: 600; 
 }
 
 .eval-bon { 
-    color: #3b82f6; 
+    color: #000000 !important;  /* ✅ Noir au lieu de bleu */
     font-weight: 600; 
 }
 
 .eval-attention { 
-    color: #f59e0b; 
+    color: #000000 !important;  /* ✅ Noir au lieu d'orange */
     font-weight: 600; 
 }
 
 .eval-alerte { 
-    color: #dc2626; 
+    color: #000000 !important;  /* ✅ Noir au lieu de rouge */
     font-weight: 600; 
 }
 
@@ -126,159 +187,145 @@
     page-break-after: always;
 }
 
-/* Optimisations pour impression */
+/* 🎯 OPTIMISATIONS POUR IMPRESSION ET CAPTURE */
 @media print {
-    .pdf-container {
-        margin: 0 auto !important;  /* ✅ CHANGÉ : garder le centrage */
-        padding: 15px !important;   /* ✅ CHANGÉ : padding réduit pour print */
-        max-width: 210mm !important;
-        background: #e5f3ff !important; /* ✅ AJOUTÉ : forcer le fond bleu */
+    .pdf-container,
+    .pdf-template-container {
+        margin: 0 !important;
+        padding: 15mm !important;
+        max-width: none !important;
+        width: 210mm !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
     
     .avoid-break { 
         page-break-inside: avoid !important; 
     }
     
-    /* Couleurs pour impression N&B */
-    h3[style*="color: #059669"],
-    .text-green-400,
-    .text-blue-400 { 
-        color: #000 !important; 
-        font-weight: bold !important;
+    /* ✅ FORCAGE COULEURS POUR IMPRESSION */
+    * {
+        color: #000000 !important;
+        background-color: transparent !important;
     }
     
     .pdf-table,
     .pdf-table th,
     .pdf-table td { 
-        border: 1px solid #333 !important; 
-        padding: 6px !important; 
+        border: 1px solid #000000 !important; 
+        color: #000000 !important;
+        background-color: #ffffff !important;
     }
     
-    .chart-container-pdf img {
-        border: 1px solid #333 !important;
-    }
-    
-    .eval-excellent,
-    .eval-bon,
-    .eval-attention,
-    .eval-alerte {
-        color: #000 !important;
-        font-weight: bold !important;
-    }
-    
-    /* Forcer les couleurs d'arrière-plan en N&B */
-    .pdf-hero {
-        background: #f5f5f5 !important;
-    }
-    
-    .recommendation-pdf {
-        background: #f0f0f0 !important;
-    }
-    
-    .objective-pdf {
-        background: #f0f0f0 !important;
-    }
-    
-    .formulas-pdf {
-        background: #f5f5f5 !important;
+    .pdf-table th {
+        background-color: #f0f0f0 !important;
     }
 }
 
-/* Styles spécifiques pour html2pdf */
+/* 🎯 STYLES SPÉCIFIQUES POUR html2canvas */
 .pdf-container * {
-    box-sizing: border-box;
+    box-sizing: border-box !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
 }
 
 .pdf-container h1,
 .pdf-container h2,
 .pdf-container h3,
 .pdf-container h4 {
-    margin-top: 0;
-    margin-bottom: 10px;
+    margin-top: 0 !important;
+    margin-bottom: 10px !important;
+    color: #000000 !important;
+    font-weight: bold !important;
 }
 
 .pdf-container p {
-    margin-top: 0;
-    margin-bottom: 8px;
+    margin-top: 0 !important;
+    margin-bottom: 8px !important;
+    color: #000000 !important;
 }
 
 .pdf-container ul {
-    margin-top: 0;
-    margin-bottom: 10px;
-    padding-left: 20px;
+    margin-top: 0 !important;
+    margin-bottom: 10px !important;
+    padding-left: 20px !important;
+    color: #000000 !important;
 }
 
 .pdf-container li {
-    margin-bottom: 4px;
+    margin-bottom: 4px !important;
+    color: #000000 !important;
 }
 
-/* Amélioration de la lisibilité */
+/* ✅ AMÉLIORATION LISIBILITÉ */
 .pdf-container strong {
-    font-weight: 600;
+    font-weight: 600 !important;
+    color: #000000 !important;
 }
 
 .pdf-container em {
-    font-style: italic;
+    font-style: italic !important;
+    color: #000000 !important;
 }
 
-/* Styles pour les tableaux complexes */
+/* 🎯 STYLES POUR TABLEAUX COMPLEXES */
 .pdf-table tbody tr:nth-child(even) {
-    background-color: #f9fafb;
-}
-
-.pdf-table tbody tr:hover {
-    background-color: #f3f4f6;
+    background-color: #f9f9f9 !important;
 }
 
 .pdf-table .total-row {
-    background-color: #f0fdf4 !important;
-    font-weight: bold;
-    border-top: 2px solid #059669;
+    background-color: #f0f0f0 !important;
+    font-weight: bold !important;
+    border-top: 2px solid #000000 !important;
+    color: #000000 !important;
 }
 
 .pdf-table .header-row {
-    background-color: #1f2937 !important;
-    color: white !important;
+    background-color: #e0e0e0 !important;
+    color: #000000 !important;
+    font-weight: bold !important;
 }
 
-/* Styles pour les alertes et notifications */
+/* 🎯 STYLES POUR ALERTES - Version PDF */
 .alert-success {
-    background-color: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    color: #166534;
+    background-color: #f8f9fa !important;
+    border: 1px solid #333333 !important;
+    color: #000000 !important;
     padding: 10px;
     border-radius: 6px;
     margin: 10px 0;
 }
 
 .alert-warning {
-    background-color: #fffbeb;
-    border: 1px solid #fed7aa;
-    color: #92400e;
+    background-color: #f8f9fa !important;
+    border: 1px solid #333333 !important;
+    color: #000000 !important;
     padding: 10px;
     border-radius: 6px;
     margin: 10px 0;
 }
 
 .alert-error {
-    background-color: #fef2f2;
-    border: 1px solid #fecaca;
-    color: #991b1b;
+    background-color: #f8f9fa !important;
+    border: 1px solid #333333 !important;
+    color: #000000 !important;
     padding: 10px;
     border-radius: 6px;
     margin: 10px 0;
 }
 
 .alert-info {
-    background-color: #eff6ff;
-    border: 1px solid #bfdbfe;
-    color: #1e40af;
+    background-color: #f8f9fa !important;
+    border: 1px solid #333333 !important;
+    color: #000000 !important;
     padding: 10px;
     border-radius: 6px;
     margin: 10px 0;
 }
 
-/* Responsive pour différents formats */
+/* 🎯 RESPONSIVE POUR DIFFÉRENTS FORMATS */
 @media screen and (max-width: 210mm) {
     .pdf-container {
         max-width: 100%;
@@ -299,72 +346,77 @@
     }
 }
 
-/* Styles pour les graphiques vides */
+/* ✅ STYLES POUR GRAPHIQUES VIDES */
 .chart-placeholder {
     width: 250px;
     height: 200px;
-    border: 2px dashed #e5e7eb;
+    border: 2px dashed #333333 !important;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #6b7280;
+    color: #000000 !important;
     font-size: 14px;
     text-align: center;
     border-radius: 8px;
     margin: 10px auto;
+    background-color: #f8f9fa !important;
 }
 
-/* Amélioration de la typographie */
+/* 🎯 AMÉLIORATION TYPOGRAPHIE */
 .pdf-container .currency {
-    font-family: 'Courier New', monospace;
-    font-weight: 600;
+    font-family: 'Courier New', monospace !important;
+    font-weight: 600 !important;
+    color: #000000 !important;
 }
 
 .pdf-container .percentage {
-    font-weight: 600;
-    color: #059669;
+    font-weight: 600 !important;
+    color: #000000 !important;
 }
 
 .pdf-container .score {
-    font-size: 1.2em;
-    font-weight: bold;
-    color: #059669;
+    font-size: 1.2em !important;
+    font-weight: bold !important;
+    color: #000000 !important;
 }
 
-/* Styles pour les sections */
+/* ✅ STYLES POUR SECTIONS */
 .pdf-section {
     margin-bottom: 20px;
     padding: 0;
+    color: #000000 !important;
 }
 
 .pdf-section-title {
-    color: #059669;
-    font-size: 16px;
-    font-weight: 600;
+    color: #000000 !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
     margin-bottom: 10px;
     padding-bottom: 5px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid #333333 !important;
 }
 
-/* Styles pour les listes */
+/* ✅ STYLES POUR LISTES */
 .pdf-list {
     list-style-type: none;
     padding-left: 0;
+    color: #000000 !important;
 }
 
 .pdf-list li {
     padding: 5px 0;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid #eeeeee;
+    color: #000000 !important;
 }
 
 .pdf-list li:before {
     content: "▸ ";
-    color: #059669;
+    color: #000000 !important;
     font-weight: bold;
     margin-right: 5px;
 }
 
-/* Optimisations finales */
+/* 🎯 CLASSES UTILITAIRES FINALES */
 .hidden {
     display: none !important;
 }
@@ -374,25 +426,59 @@
 }
 
 .text-center {
-    text-align: center;
+    text-align: center !important;
 }
 
 .text-right {
-    text-align: right;
+    text-align: right !important;
 }
 
 .text-left {
-    text-align: left;
+    text-align: left !important;
 }
 
 .font-bold {
-    font-weight: bold;
+    font-weight: bold !important;
+    color: #000000 !important;
 }
 
 .font-semibold {
-    font-weight: 600;
+    font-weight: 600 !important;
+    color: #000000 !important;
 }
 
 .font-normal {
-    font-weight: normal;
+    font-weight: normal !important;
+    color: #000000 !important;
+}
+
+/* 🎯 DEBUG MODE (à supprimer en production) */
+.pdf-container.debug {
+    opacity: 1 !important;
+    border: 2px solid red !important;
+    z-index: 9999 !important;
+    background-color: yellow !important;
+}
+
+/* 🎯 CORRECTION FINALE : Assurer la visibilité des éléments importants */
+.pdf-container .result-value,
+.pdf-container .budget-value,
+.pdf-container .simulation-value {
+    color: #000000 !important;
+    font-weight: bold !important;
+    background-color: transparent !important;
+}
+
+/* ✅ STYLES POUR LES DONNÉES DYNAMIQUES */
+#pdf-revenu-mensuel,
+#pdf-depenses-totales,
+#pdf-epargne-possible,
+#pdf-taux-epargne,
+#pdf-capital-final,
+#pdf-montant-investi,
+#pdf-gains,
+#pdf-rendement {
+    color: #000000 !important;
+    font-weight: bold !important;
+    background-color: transparent !important;
 }
