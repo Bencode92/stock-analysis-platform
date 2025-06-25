@@ -2046,9 +2046,10 @@ function exportBudgetToPDF() {
 
     // Délai pour laisser l'UI se mettre à jour
     setTimeout(() => {
+        let template = null;
         try {
             console.log('📝 Construction du template PDF');
-            buildPDFTemplate();
+            template = buildPDFTemplate(); // ✅ Récupérer le template retourné
             
             console.log('⚙️ Configuration html2pdf');
             const options = {
@@ -2058,7 +2059,7 @@ function exportBudgetToPDF() {
                 html2canvas: { 
                     scale: 2,
                     useCORS: true,
-                    backgroundColor: '#ffffff',
+                    backgroundColor: null, // ✅ CHANGÉ : null au lieu de '#ffffff'
                     logging: false
                 },
                 jsPDF: { 
@@ -2073,15 +2074,20 @@ function exportBudgetToPDF() {
                 }
             };
 
-            const template = document.getElementById('budget-pdf-template');
             console.log('📄 Génération du PDF...');
             
             html2pdf()
                 .set(options)
-                .from(template)
+                .from(template) // ✅ Utiliser le template retourné
                 .save()
                 .then(() => {
                     console.log('✅ PDF généré avec succès');
+                    
+                    // ✅ NOUVEAU : Nettoyer le DOM
+                    if (template && template.parentNode) {
+                        template.parentNode.removeChild(template);
+                    }
+                    
                     exportBtn.innerHTML = '<i class="fas fa-check mr-2"></i>PDF téléchargé !';
                     setTimeout(() => {
                         exportBtn.innerHTML = originalText;
@@ -2090,6 +2096,12 @@ function exportBudgetToPDF() {
                 })
                 .catch(error => {
                     console.error('❌ Erreur génération PDF:', error);
+                    
+                    // ✅ NOUVEAU : Nettoyer même en cas d'erreur
+                    if (template && template.parentNode) {
+                        template.parentNode.removeChild(template);
+                    }
+                    
                     alert('Erreur lors de la génération du PDF. Vérifiez la console.');
                     exportBtn.innerHTML = originalText;
                     exportBtn.disabled = false;
@@ -2097,6 +2109,12 @@ function exportBudgetToPDF() {
                 
         } catch (error) {
             console.error('❌ Erreur construction PDF:', error);
+            
+            // ✅ NOUVEAU : Nettoyer même en cas d'erreur de construction
+            if (template && template.parentNode) {
+                template.parentNode.removeChild(template);
+            }
+            
             alert('Erreur lors de la construction du PDF. Vérifiez la console.');
             exportBtn.innerHTML = originalText;
             exportBtn.disabled = false;
@@ -2106,12 +2124,8 @@ function exportBudgetToPDF() {
 
 // Construction du template principal
 function buildPDFTemplate() {
-    const template = document.getElementById('budget-pdf-template');
-    if (!template) {
-        throw new Error('Template PDF non trouvé');
-    }
-    
-    template.innerHTML = '';
+    // ✅ NOUVEAU : Créer un clone hors-flux au lieu d'utiliser l'élément DOM
+    const template = document.createElement('div');
     template.className = 'pdf-container';
     
     console.log('🏗️ Construction des sections PDF');
@@ -2119,7 +2133,7 @@ function buildPDFTemplate() {
     // Construire chaque section
     template.appendChild(buildPdfHeader());
     template.appendChild(buildPdfHero());
-    template.appendChild(buildPdfCharts());
+    // ❌ SUPPRIMÉ : template.appendChild(buildPdfCharts()); // Retire les graphiques indésirables
     template.appendChild(buildPdfDetailsTable());
     template.appendChild(buildPdfObjective());
     template.appendChild(buildPdfRecommendations());
@@ -2132,6 +2146,15 @@ function buildPDFTemplate() {
     template.appendChild(page2);
     
     console.log('✅ Template construit:', template.innerHTML.length, 'caractères');
+    
+    // ✅ NOUVEAU : Injecter temporairement hors écran pour html2pdf
+    template.style.position = 'absolute';
+    template.style.left = '-9999px';
+    template.style.top = '-9999px';
+    document.body.appendChild(template);
+    
+    // ✅ NOUVEAU : Retourner le template créé
+    return template;
 }
 
 // 1. Header
