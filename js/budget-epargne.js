@@ -1940,70 +1940,201 @@ function showBudgetNotification(message, type = 'info') {
 }
 
 /**
- * Analyse le budget et met à jour les résultats - VERSION AMÉLIORÉE
+ /**
+ * Analyse le budget et met à jour tous les résultats
+ * VERSION AMÉLIORÉE avec système de cache pour éviter les mises à jour temps réel
  */
 function analyserBudget() {
-    // Récupérer les valeurs du budget
-     const loyer = readNumber('simulation-budget-loyer');
-    const investAuto = readNumber('simulation-budget-invest');
-    let quotidien, extra;
-    
-    // Vérifier le mode d'affichage actif
-    const isDetailed = document.getElementById('detailed-view').style.display !== 'none';
-    
-    if (isDetailed) {
-        // En mode détaillé, utiliser le nouveau système montant × quantité
-        quotidien = updateCategoryTotal('vie-courante');
-        extra = updateCategoryTotal('loisirs');
-    } else {
-        // En mode simplifié, utiliser les valeurs directes
-        quotidien = parseFloat(document.getElementById('simulation-budget-quotidien').value) || 0;
-        extra = parseFloat(document.getElementById('simulation-budget-extra').value) || 0;
+    try {
+        console.log('🔄 Démarrage de l\'analyse budget...');
+        
+        // ==========================================
+        // ÉTAPE 1 : COLLECTE DES DONNÉES
+        // ==========================================
+        
+        // Récupérer les valeurs principales du budget
+        const loyer = readNumber('simulation-budget-loyer');
+        const investAuto = readNumber('simulation-budget-invest');
+        const revenuMensuel = readNumber('revenu-mensuel-input');
+        
+        // Déterminer les dépenses selon le mode d'affichage
+        const isDetailed = document.getElementById('detailed-view').style.display !== 'none';
+        let quotidien, extra;
+        
+        if (isDetailed) {
+            // Mode détaillé : utiliser le système montant × quantité
+            quotidien = updateCategoryTotal('vie-courante');
+            extra = updateCategoryTotal('loisirs');
+        } else {
+            // Mode simplifié : utiliser les valeurs directes
+            quotidien = parseFloat(document.getElementById('simulation-budget-quotidien').value) || 0;
+            extra = parseFloat(document.getElementById('simulation-budget-extra').value) || 0;
+        }
+        
+        // Récupérer le total des dépenses variables détaillées
+        const totalDepensesVariables = updateDetailedExpensesTotal();
+        
+        console.log('📊 Données collectées:', { 
+            loyer, investAuto, revenuMensuel, quotidien, extra, totalDepensesVariables, isDetailed 
+        });
+        
+        // ==========================================
+        // ÉTAPE 2 : CALCULS BUDGÉTAIRES
+        // ==========================================
+        
+        const depensesTotales = loyer + quotidien + extra + investAuto + totalDepensesVariables;
+        const epargnePossible = Math.max(0, revenuMensuel - depensesTotales);
+        const tauxEpargne = revenuMensuel > 0 ? (epargnePossible / revenuMensuel) * 100 : 0;
+        
+        // ==========================================
+        // ÉTAPE 3 : FORMATAGE ET AFFICHAGE
+        // ==========================================
+        
+        // Configurateur de formatage monétaire français
+        const formatter = new Intl.NumberFormat('fr-FR', { 
+            style: 'currency', 
+            currency: 'EUR',
+            maximumFractionDigits: 2
+        });
+        
+        // Mise à jour de l'affichage principal
+        const elementsToUpdate = {
+            'simulation-revenu-mensuel': formatter.format(revenuMensuel),
+            'simulation-depenses-totales': formatter.format(depensesTotales),
+            'simulation-epargne-possible': formatter.format(epargnePossible),
+            'simulation-taux-epargne': tauxEpargne.toFixed(1) + '%'
+        };
+        
+        // Appliquer les mises à jour avec gestion d'erreur
+        Object.entries(elementsToUpdate).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+            } else {
+                console.warn(`⚠️ Élément non trouvé: ${id}`);
+            }
+        });
+        
+        // ==========================================
+        // ÉTAPE 4 : MISE À JOUR DES COMPOSANTS
+        // ==========================================
+        
+        // Graphiques et visualisations
+        updateBudgetChart(loyer, quotidien, extra, investAuto, totalDepensesVariables, epargnePossible);
+        updateEvolutionChart(epargnePossible);
+        
+        // Conseils et recommandations
+        updateBudgetAdvice(loyer, quotidien, extra, investAuto, totalDepensesVariables, revenuMensuel, tauxEpargne);
+        updateRecommendations(epargnePossible, tauxEpargne, investAuto);
+        
+        // Calculs d'objectifs et scoring
+        updateObjectiveTime(epargnePossible);
+        updateBudgetScore(tauxEpargne, loyer, revenuMensuel, depensesTotales);
+        
+        // ==========================================
+        // ÉTAPE 5 : MISE À JOUR DU CACHE
+        // ==========================================
+        
+        // Sauvegarder les valeurs validées pour éviter les mises à jour temps réel
+        lastAnalysedLoyer = loyer;
+        lastAnalysedInvest = investAuto;
+        isBudgetAnalysed = true;
+        
+        // Réinitialiser les styles des champs modifiés (optionnel)
+        resetFieldStyles();
+        
+        // ==========================================
+        // ÉTAPE 6 : LOGGING ET VALIDATION
+        // ==========================================
+        
+        console.log('✅ Analyse budget terminée avec succès');
+        console.log('💾 Cache mis à jour:', { 
+            lastAnalysedLoyer, 
+            lastAnalysedInvest, 
+            isBudgetAnalysed 
+        });
+        console.log('📈 Résultats:', {
+            depensesTotales: formatter.format(depensesTotales),
+            epargnePossible: formatter.format(epargnePossible),
+            tauxEpargne: tauxEpargne.toFixed(1) + '%'
+        });
+        
+        // Notification optionnelle de succès
+        showBudgetAnalysisSuccess(epargnePossible, tauxEpargne);
+        
+    } catch (error) {
+        // ==========================================
+        // GESTION D'ERREUR
+        // ==========================================
+        
+        console.error('❌ Erreur lors de l\'analyse budget:', error);
+        
+        // Afficher un message d'erreur à l'utilisateur
+        const errorMessage = 'Une erreur s\'est produite lors de l\'analyse. Vérifiez vos données et réessayez.';
+        showErrorNotification(errorMessage);
+        
+        // Ne pas mettre à jour le cache en cas d'erreur
+        isBudgetAnalysed = false;
     }
-    
-    // Récupérer le total des dépenses détaillées
-    const totalDepensesVariables = updateDetailedExpensesTotal();
-    
-    // Récupérer le revenu mensuel saisi par l'utilisateur
-    const revenuMensuel = readNumber('revenu-mensuel-input');
-    
-    // Calculer les totaux du budget
-    const depensesTotales = loyer + quotidien + extra + investAuto + totalDepensesVariables;
-    const epargnePossible = Math.max(0, revenuMensuel - depensesTotales);
-    const tauxEpargne = revenuMensuel > 0 ? (epargnePossible / revenuMensuel) * 100 : 0;
-    
-    // Formater les valeurs monétaires
-    const formatter = new Intl.NumberFormat('fr-FR', { 
-        style: 'currency', 
-        currency: 'EUR',
-        maximumFractionDigits: 2
-    });
-    
-    // Mettre à jour l'affichage du budget
-    document.getElementById('simulation-revenu-mensuel').textContent = formatter.format(revenuMensuel);
-    document.getElementById('simulation-depenses-totales').textContent = formatter.format(depensesTotales);
-    document.getElementById('simulation-epargne-possible').textContent = formatter.format(epargnePossible);
-    document.getElementById('simulation-taux-epargne').textContent = tauxEpargne.toFixed(1) + '%';
-    
-    // Mettre à jour le graphique
-    updateBudgetChart(loyer, quotidien, extra, investAuto, totalDepensesVariables, epargnePossible);
-    
-    // Mettre à jour le graphique d'évolution
-    updateEvolutionChart(epargnePossible);
-    
-    // Mise à jour des conseils budgétaires
-    updateBudgetAdvice(loyer, quotidien, extra, investAuto, totalDepensesVariables, revenuMensuel, tauxEpargne);
-    
-    // Mise à jour du temps pour atteindre l'objectif d'épargne
-    updateObjectiveTime(epargnePossible);
-    
-    // Mettre à jour le score budget
-    updateBudgetScore(tauxEpargne, loyer, revenuMensuel, depensesTotales);
-    
-    // Mettre à jour les recommandations
-    updateRecommendations(epargnePossible, tauxEpargne, investAuto);
 }
 
+/**
+ * Réinitialise les styles des champs modifiés (optionnel)
+ */
+function resetFieldStyles() {
+    const fieldsToReset = ['simulation-budget-loyer', 'simulation-budget-invest'];
+    
+    fieldsToReset.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.style.borderColor = '';
+            field.style.backgroundColor = '';
+        }
+    });
+}
+
+/**
+ * Affiche une notification de succès d'analyse (optionnel)
+ */
+function showBudgetAnalysisSuccess(epargnePossible, tauxEpargne) {
+    // Vous pouvez ajouter ici une notification discrète
+    if (epargnePossible > 0) {
+        console.log(`🎉 Budget analysé ! Épargne possible : ${epargnePossible.toFixed(0)}€ (${tauxEpargne.toFixed(1)}%)`);
+    }
+}
+
+/**
+ * Affiche une notification d'erreur (optionnel)
+ */
+function showErrorNotification(message) {
+    // Vous pouvez implémenter ici votre système de notification d'erreur
+    console.error('🚨', message);
+    
+    // Exemple simple d'affichage d'erreur
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-notification';
+    errorDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #ff4757;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        z-index: 9999;
+        box-shadow: 0 4px 12px rgba(255, 71, 87, 0.3);
+    `;
+    errorDiv.textContent = message;
+    
+    document.body.appendChild(errorDiv);
+    
+    // Supprimer après 5 secondes
+    setTimeout(() => {
+        if (errorDiv.parentNode) {
+            errorDiv.parentNode.removeChild(errorDiv);
+        }
+    }, 5000);
+}
 /**
  * Met à jour le temps nécessaire pour atteindre l'objectif d'épargne
  * @param {number} epargneMensuelle - Montant d'épargne mensuelle possible
