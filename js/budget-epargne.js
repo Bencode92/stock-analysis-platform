@@ -2,6 +2,8 @@
  * budget-epargne.js - Module de gestion du budget et de l'épargne
  * Ce module gère la génération de l'interface et des calculs pour la section Budget & Épargne
  * TradePulse Finance Intelligence Platform
+ * 
+ * MODIFIÉ: Loyer inclus dans "Vie courante" + Graphique à 5 catégories
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -62,18 +64,7 @@ function generateBudgetInterface(container) {
             </div>
         </div>
         
-        <!-- Entrées de budget -->
-        <div class="mb-4">
-            <label class="block mb-2 text-sm font-medium text-gray-300">
-                Loyer / Crédit immobilier
-                <span class="ml-1 text-blue-400 cursor-help" title="Votre dépense mensuelle pour votre logement (loyer ou mensualité de crédit).">
-                    <i class="fas fa-info-circle"></i>
-                </span>
-            </label>
-            <input type="number" id="simulation-budget-loyer" value="800" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-        </div>
-        
-        <!-- Vue détaillée - Dépenses vie courante -->
+        <!-- Vue détaillée - Dépenses vie courante (INCLUT LE LOYER) -->
         <div id="detailed-view-courante" class="mb-6">
             <h5 class="text-sm font-medium text-blue-400 mb-3 flex items-center">
                 <i class="fas fa-shopping-basket mr-2"></i>
@@ -81,6 +72,10 @@ function generateBudgetInterface(container) {
             </h5>
             
             <div class="space-y-3 bg-blue-800 bg-opacity-20 p-3 rounded-lg">
+                <div>
+                    <label class="block text-xs text-gray-300 mb-1">Loyer / Crédit immobilier</label>
+                    <input type="number" id="simulation-budget-loyer" value="800" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
+                </div>
                 <div>
                     <label class="block text-xs text-gray-300 mb-1">Alimentation (courses)</label>
                     <input type="number" id="depense-alimentation" value="400" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
@@ -99,7 +94,7 @@ function generateBudgetInterface(container) {
                 </div>
                 <div class="pt-2 border-t border-blue-700 flex justify-between items-center">
                     <span class="text-xs text-gray-300">Total vie courante:</span>
-                    <span id="total-vie-courante" class="text-sm font-medium text-blue-400">800 €</span>
+                    <span id="total-vie-courante" class="text-sm font-medium text-blue-400">1600 €</span>
                 </div>
             </div>
         </div>
@@ -139,12 +134,12 @@ function generateBudgetInterface(container) {
         <div id="simple-view" style="display: none;" class="mb-6">
             <div class="mb-4">
                 <label class="block mb-2 text-sm font-medium text-gray-300">
-                    Vie courante : alimentation, transports, factures...
-                    <span class="ml-1 text-blue-400 cursor-help" title="Exemples : courses, électricité, essence, carte de métro, forfait téléphonique, etc.">
+                    Vie courante : loyer, alimentation, transports, factures...
+                    <span class="ml-1 text-blue-400 cursor-help" title="Exemples : loyer/crédit, courses, électricité, essence, carte de métro, forfait téléphonique, etc.">
                         <i class="fas fa-info-circle"></i>
                     </span>
                 </label>
-                <input type="number" id="simulation-budget-quotidien" value="800" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                <input type="number" id="simulation-budget-quotidien" value="1600" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
             </div>
             
             <div class="mb-4">
@@ -339,15 +334,16 @@ function generateBudgetInterface(container) {
 }
 
 /**
- * Met à jour le total des dépenses vie courante
+ * ✅ MODIFIÉ: Met à jour le total des dépenses vie courante (INCLUT LE LOYER)
  */
 function updateTotalVieCourante() {
+    const loyer = parseFloat(document.getElementById('simulation-budget-loyer').value) || 0;
     const alimentation = parseFloat(document.getElementById('depense-alimentation').value) || 0;
     const transport = parseFloat(document.getElementById('depense-transport').value) || 0;
     const factures = parseFloat(document.getElementById('depense-factures').value) || 0;
     const abonnements = parseFloat(document.getElementById('depense-abonnements').value) || 0;
     
-    const total = alimentation + transport + factures + abonnements;
+    const total = loyer + alimentation + transport + factures + abonnements;
     
     // Mettre à jour l'affichage
     const totalElement = document.getElementById('total-vie-courante');
@@ -458,18 +454,17 @@ function updateDetailedExpensesTotal() {
 }
 
 /**
- * Initialise le graphique du budget
+ * ✅ MODIFIÉ: Initialise le graphique du budget (5 catégories au lieu de 6)
  */
 function initBudgetChart() {
     const ctx = document.getElementById('budget-chart');
     if (!ctx) return;
     
     const data = {
-        labels: ['Loyer', 'Vie courante', 'Loisirs', 'Épargne auto', 'Dépenses variables', 'Épargne possible'],
+        labels: ['Vie courante', 'Loisirs', 'Épargne auto', 'Dépenses variables', 'Épargne possible'],
         datasets: [{
-            data: [800, 800, 400, 200, 0, 400],
+            data: [1600, 400, 200, 0, 400], // 1600 = loyer + vie courante
             backgroundColor: [
-                'rgba(255, 99, 132, 0.7)',
                 'rgba(54, 162, 235, 0.7)',
                 'rgba(255, 206, 86, 0.7)',
                 'rgba(75, 192, 192, 0.7)',
@@ -477,7 +472,6 @@ function initBudgetChart() {
                 'rgba(255, 159, 64, 0.7)'
             ],
             borderColor: [
-                'rgba(255, 99, 132, 1)',
                 'rgba(54, 162, 235, 1)',
                 'rgba(255, 206, 86, 1)',
                 'rgba(75, 192, 192, 1)',
@@ -580,7 +574,7 @@ function initEvolutionChart() {
 }
 
 /**
- * Initialise les écouteurs d'événements pour le module budget
+ * ✅ MODIFIÉ: Initialise les écouteurs d'événements (loyer inclus dans vie courante)
  */
 function initBudgetListeners() {
     // Ajouter un écouteur au bouton d'analyse du budget
@@ -589,8 +583,9 @@ function initBudgetListeners() {
         budgetButton.addEventListener('click', analyserBudget);
     }
     
-    // Ajouter des écouteurs aux champs de saisie du budget détaillé
+    // ✅ MODIFIÉ: Ajouter des écouteurs aux champs de saisie du budget détaillé (AVEC LOYER)
     const vieCoursInputs = [
+        document.getElementById('simulation-budget-loyer'), // ← ajouté
         document.getElementById('depense-alimentation'),
         document.getElementById('depense-transport'),
         document.getElementById('depense-factures'),
@@ -625,7 +620,6 @@ function initBudgetListeners() {
     
     // Ajouter des écouteurs aux champs simples
     const simpleInputs = [
-        document.getElementById('simulation-budget-loyer'),
         document.getElementById('simulation-budget-quotidien'),
         document.getElementById('simulation-budget-extra'),
         document.getElementById('simulation-budget-invest'),
@@ -782,7 +776,7 @@ function exportBudgetToPDF() {
 }
 
 /**
- * Analyse le budget et met à jour les résultats
+ * ✅ MODIFIÉ: Analyse le budget et met à jour les résultats (pas de double comptage du loyer)
  */
 function analyserBudget() {
     // Récupérer les valeurs du budget
@@ -810,8 +804,8 @@ function analyserBudget() {
     // Récupérer le revenu mensuel saisi par l'utilisateur
     const revenuMensuel = parseFloat(document.getElementById('revenu-mensuel-input').value) || 3000;
     
-    // Calculer les totaux du budget
-    const depensesTotales = loyer + quotidien + extra + investAuto + totalDepensesVariables;
+    // ✅ MODIFIÉ: le loyer EST déjà dans "quotidien"
+    const depensesTotales = quotidien + extra + investAuto + totalDepensesVariables;
     const epargnePossible = Math.max(0, revenuMensuel - depensesTotales);
     const tauxEpargne = revenuMensuel > 0 ? (epargnePossible / revenuMensuel) * 100 : 0;
     
@@ -828,8 +822,8 @@ function analyserBudget() {
     document.getElementById('simulation-epargne-possible').textContent = formatter.format(epargnePossible);
     document.getElementById('simulation-taux-epargne').textContent = tauxEpargne.toFixed(1) + '%';
     
-    // Mettre à jour le graphique
-    updateBudgetChart(loyer, quotidien, extra, investAuto, totalDepensesVariables, epargnePossible);
+    // ✅ MODIFIÉ: Mettre à jour le graphique (signature simplifiée)
+    updateBudgetChart(quotidien, extra, investAuto, totalDepensesVariables, epargnePossible);
     
     // Mettre à jour le graphique d'évolution
     updateEvolutionChart(epargnePossible);
@@ -1023,12 +1017,12 @@ function updateRecommendations(epargnePossible, tauxEpargne, investAuto) {
 }
 
 /**
- * Met à jour le graphique du budget
+ * ✅ MODIFIÉ: Met à jour le graphique du budget (signature simplifiée)
  */
-function updateBudgetChart(loyer, quotidien, extra, investAuto, depensesVariables, epargne) {
+function updateBudgetChart(vieCourante, extra, investAuto, depensesVariables, epargne) {
     if (!window.budgetChart) return;
     
-    window.budgetChart.data.datasets[0].data = [loyer, quotidien, extra, investAuto, depensesVariables, epargne];
+    window.budgetChart.data.datasets[0].data = [vieCourante, extra, investAuto, depensesVariables, epargne];
     window.budgetChart.update();
 }
 
