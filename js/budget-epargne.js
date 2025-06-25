@@ -2198,134 +2198,6 @@ function updateBudgetScore(tauxEpargne, loyer, revenuMensuel, depensesTotales) {
 }
 
 /**
- * Met à jour les recommandations personnalisées
- * @param {number} epargnePossible - Montant d'épargne mensuelle possible
- * @param {number} tauxEpargne - Taux d'épargne en pourcentage
- * @param {number} investAuto - Montant déjà investi automatiquement
- */
-function updateRecommendations(epargnePossible, tauxEpargne, investAuto) {
-    const recommendationsElement = document.getElementById('budget-recommendations');
-    if (!recommendationsElement) return;
-    
-    const recommendations = [];
-    
-    // Recommandation basée sur l'épargne
-    if (epargnePossible > 0) {
-        let vehiculeRecommande = '';
-        let montantRecommande = 0;
-        
-        if (tauxEpargne < 10) {
-            // Priorité à l'épargne de précaution
-            vehiculeRecommande = 'Livret A';
-            montantRecommande = Math.round(epargnePossible * 0.7);
-            recommendations.push(`<p class="mb-2">Priorité à la sécurité: placez <strong>${montantRecommande.toLocaleString('fr-FR')} €/mois</strong> sur un ${vehiculeRecommande} jusqu'à constituer un fonds d'urgence de 3 mois de dépenses.</p>`);
-        } else if (tauxEpargne >= 10 && tauxEpargne < 20) {
-            // Mix entre sécurité et rendement
-            vehiculeRecommande = 'PEA (ETF diversifiés)';
-            montantRecommande = Math.round(epargnePossible * 0.6);
-            recommendations.push(`<p class="mb-2">Équilibrez sécurité et rendement: investissez <strong>${montantRecommande.toLocaleString('fr-FR')} €/mois</strong> sur un ${vehiculeRecommande} pour profiter de la croissance à long terme.</p>`);
-        } else {
-            // Optimisation fiscale et rendement
-            vehiculeRecommande = 'PEA + Assurance-vie';
-            montantRecommande = Math.round(epargnePossible * 0.8);
-            recommendations.push(`<p class="mb-2">Optimisez votre patrimoine: répartissez <strong>${montantRecommande.toLocaleString('fr-FR')} €/mois</strong> entre ${vehiculeRecommande} pour maximiser rendement et avantages fiscaux.</p>`);
-        }
-    } else {
-        recommendations.push(`<p class="mb-2">Votre budget est actuellement déficitaire. Concentrez-vous sur la réduction de vos dépenses non essentielles.</p>`);
-    }
-    
-    // Recommandation sur l'investissement automatique
-    if (investAuto === 0 && epargnePossible > 100) {
-        recommendations.push(`<p class="mb-2"><i class="fas fa-robot text-green-400 mr-1"></i> Mettez en place un <strong>versement automatique</strong> mensuel pour simplifier votre stratégie d'épargne.</p>`);
-    } else if (investAuto > 0) {
-        recommendations.push(`<p class="mb-2"><i class="fas fa-check text-green-400 mr-1"></i> Excellent! Votre investissement automatique de ${investAuto.toLocaleString('fr-FR')} €/mois vous permet de construire votre patrimoine régulièrement.</p>`);
-    }
-    
-    // Recommandation sur la simulation d'investissement
-    recommendations.push(`<p class="mb-2"><i class="fas fa-arrow-right text-green-400 mr-1"></i> <a href="#investment-simulator" class="text-green-400 hover:underline">Simulez l'évolution de vos investissements</a> sur le long terme dans l'onglet "Simulateur d'investissement".</p>`);
-    
-    // Mise à jour de l'élément
-    recommendationsElement.innerHTML = recommendations.join('');
-}
-
-/**
- * Met à jour le graphique du budget
- */
-function updateBudgetChart(loyer, quotidien, extra, investAuto, depensesVariables, epargne) {
-    if (!window.budgetChart) return;
-    
-    window.budgetChart.data.datasets[0].data = [loyer, quotidien, extra, investAuto, depensesVariables, epargne];
-    window.budgetChart.update();
-}
-
-/**
- * Met à jour le graphique d'évolution sur 12 mois
- * @param {number} epargneMensuelle - Montant d'épargne mensuelle
- */
-function updateEvolutionChart(epargneMensuelle) {
-    if (!window.evolutionChart) return;
-    
-    const dataPoints = Array.from({ length: 12 }, (_, i) => (i + 1) * epargneMensuelle);
-    window.evolutionChart.data.datasets[0].data = dataPoints;
-    window.evolutionChart.update();
-}
-
-/**
- * Moteur de règles dynamiques pour les conseils
- */
-const BUDGET_RULES = [
-    {
-        id: 'epargne_critique',
-        condition: (data) => data.tauxEpargne < 5,
-        message: '🚨 Priorité absolue : constituez un fonds d\'urgence de 1000€ minimum',
-        severity: 'danger',
-        action: 'Réduisez vos dépenses non essentielles'
-    },
-    {
-        id: 'logement_cher',
-        condition: (data) => data.ratioLogement > 33,
-        message: '🏠 Votre logement dépasse 33% de vos revenus',
-        severity: 'warning',
-        action: 'Envisagez un déménagement ou une colocation'
-    },
-    {
-        id: 'epargne_excellente',
-        condition: (data) => data.tauxEpargne > 20,
-        message: '🎉 Excellent taux d\'épargne ! Optimisez maintenant',
-        severity: 'success',
-        action: 'Diversifiez vers PEA et Assurance-vie'
-    },
-    {
-        id: 'loisirs_excessifs',
-        condition: (data) => data.ratioLoisirs > 15,
-        message: '🎭 Vos loisirs dépassent 15% de vos revenus',
-        severity: 'info',
-        action: 'Établissez un budget loisirs strict'
-    },
-    {
-        id: 'auto_invest_manquant',
-        condition: (data) => data.investAuto === 0 && data.epargnePossible > 100,
-        message: '🤖 Automatisez votre épargne pour garantir vos objectifs',
-        severity: 'info',
-        action: 'Mettez en place un virement automatique'
-    }
-];
-
-/**
- * Génère des conseils dynamiques basés sur les règles
- */
-function getDynamicTips(budgetData) {
-    return BUDGET_RULES
-        .filter(rule => rule.condition(budgetData))
-        .map(rule => ({
-            message: rule.message,
-            action: rule.action,
-            severity: rule.severity,
-            id: rule.id
-        }));
-}
-
-/**
  * Met à jour les conseils budgétaires en fonction des données
  */
 function updateBudgetAdvice(loyer, quotidien, extra, investAuto, depensesVariables, revenuMensuel, tauxEpargne) {
@@ -2386,23 +2258,159 @@ function updateBudgetAdvice(loyer, quotidien, extra, investAuto, depensesVariabl
     } else {
         adviceScore.classList.add('bg-blue-900', 'bg-opacity-20', 'text-blue-400');
     }
-    /**
- * ✅ NOUVELLE : Met à jour la visualisation de répartition épargne
+} // ← ✅ FERMETURE CORRECTE DE updateBudgetAdvice
+
+// --- FIN updateBudgetAdvice ---
+
+/**
+ * ✅ Met à jour la visualisation de répartition épargne
  */
 function updateEpargneBreakdown(epargnAutomatique, epargnePossible, revenuMensuel) {
-    // Mettre à jour les affichages individuels
     const epargneTotale = epargnAutomatique + epargnePossible;
-    const tauxEpargneTotale = revenuMensuel > 0 ? (epargneTotale / revenuMensuel) * 100 : 0;
+    const pourcentageEpargne = revenuMensuel > 0 ? ((epargneTotale / revenuMensuel) * 100).toFixed(1) : 0;
     
-    // Mise à jour des éléments d'affichage
-    const epargnAutoDisplay = document.getElementById('epargne-auto-display');
-    const epargnLibreDisplay = document.getElementById('epargne-libre-display');
-    const epargnTotaleDisplay = document.getElementById('epargne-totale-display');
-    const tauxEpargneTotaleDisplay = document.getElementById('taux-epargne-totale');
+    // ✅ SÉLECTEURS CORRIGÉS pour correspondre au HTML de votre capture
+    const epargneAutoElement = document.querySelector('.capacite-epargne .bg-blue-800:nth-child(1) p:first-child');
+    const epargneLibreElement = document.querySelector('.capacite-epargne .bg-blue-800:nth-child(2) p:first-child');
+    const totalDispoElement = document.querySelector('.capacite-epargne .bg-blue-800:nth-child(3) p:first-child');
+    const pourcentageElement = document.querySelector('.capacite-epargne p:last-child');
     
-    if (epargnAutoDisplay) epargnAutoDisplay.textContent = `${epargnAutomatique.toLocaleString('fr-FR')}€`;
-    if (epargnLibreDisplay) epargnLibreDisplay.textContent = `${epargnePossible.toLocaleString('fr-FR')}€`;
-    if (epargnTotaleDisplay) epargnTotaleDisplay.textContent = `${epargneTotale.toLocaleString('fr-FR')}€`;
-    if (tauxEpargneTotaleDisplay) tauxEpargneTotaleDisplay.textContent = `${tauxEpargneTotale.toFixed(1)}%`;
+    // Mise à jour avec vérification
+    if (epargneAutoElement) {
+        epargneAutoElement.textContent = `${epargnAutomatique.toFixed(0)}€`;
+        console.log('✅ Épargne automatique mise à jour:', epargnAutomatique);
+    }
+    if (epargneLibreElement) {
+        epargneLibreElement.textContent = `${epargnePossible.toFixed(0)}€`;
+        console.log('✅ Épargne libre mise à jour:', epargnePossible);
+    }
+    if (totalDispoElement) {
+        totalDispoElement.textContent = `${epargneTotale.toFixed(0)}€`;
+        console.log('✅ Total disponible mis à jour:', epargneTotale);
+    }
+    if (pourcentageElement) {
+        pourcentageElement.textContent = `Capacité d'épargne totale : ${pourcentageEpargne}% de vos revenus`;
+        console.log('✅ Pourcentage mis à jour:', pourcentageEpargne);
+    }
+    
+    // ✅ APPELER LES RECOMMANDATIONS
+    updateRecommandations(pourcentageEpargne, epargneTotale, revenuMensuel);
+    
+    console.log('🔄 Épargne breakdown mise à jour:', {
+        automatique: epargnAutomatique,
+        libre: epargnePossible,
+        totale: epargneTotale,
+        pourcentage: pourcentageEpargne
+    });
 }
+
+/**
+ * ✅ Met à jour les recommandations personnalisées
+ */
+function updateRecommandations(pourcentageEpargne, epargneTotale, revenuMensuel) {
+    // ✅ CHERCHER LE CONTAINER DANS LA SECTION RECOMMANDATIONS
+    let container = document.getElementById('recommandations-container');
+    
+    // Si pas trouvé, chercher dans la section recommandations personnalisées
+    if (!container) {
+        container = document.querySelector('.recommandations-personnalisees');
+    }
+    
+    // Si toujours pas trouvé, créer le container
+    if (!container) {
+        console.log('⚠️ Container recommandations introuvable, création...');
+        const parentSection = document.querySelector('#budget-planner');
+        if (parentSection) {
+            const newContainer = document.createElement('div');
+            newContainer.id = 'recommandations-container';
+            newContainer.className = 'mt-6';
+            parentSection.appendChild(newContainer);
+            container = newContainer;
+        } else {
+            console.error('❌ Impossible de créer le container recommandations');
+            return;
+        }
+    }
+    
+    let recommendations = [];
+    
+    // ✅ LOGIQUE DES RECOMMANDATIONS
+    if (pourcentageEpargne < 10) {
+        recommendations.push({
+            icon: '⚠️',
+            title: 'Épargne insuffisante',
+            text: 'Votre taux d\'épargne est faible. Essayez de réduire vos dépenses non essentielles.',
+            action: 'Analysez vos dépenses variables et réduisez les sorties'
+        });
+    } else if (pourcentageEpargne >= 10 && pourcentageEpargne < 20) {
+        recommendations.push({
+            icon: '👍',
+            title: 'Bon taux d\'épargne',
+            text: 'Vous êtes sur la bonne voie ! Optimisez maintenant vos placements.',
+            action: 'Diversifiez vers PEA et Assurance-vie'
+        });
+    } else if (pourcentageEpargne >= 20) {
+        recommendations.push({
+            icon: '🎯',
+            title: 'Excellent taux d\'épargne !',
+            text: 'Félicitations ! Votre épargne est optimale.',
+            action: 'Investissez dans des actifs plus dynamiques'
+        });
+    }
+    
+    // Recommandations selon le montant disponible
+    if (epargneTotale > 500) {
+        recommendations.push({
+            icon: '📈',
+            title: 'Capacité d\'investissement élevée',
+            text: `Avec ${epargneTotale.toFixed(0)}€ disponibles par mois, diversifiez vos placements.`,
+            action: 'Ouvrez un PEA pour investir en actions'
+        });
+    } else if (epargneTotale > 200) {
+        recommendations.push({
+            icon: '💰',
+            title: 'Bon potentiel d\'épargne',
+            text: `${epargneTotale.toFixed(0)}€/mois permettent de constituer un patrimoine.`,
+            action: 'Commencez par un fonds d\'urgence sur Livret A'
+        });
+    }
+    
+    // Vérifier les dépenses de loisirs (estimation)
+    if (pourcentageEpargne < 15) {
+        recommendations.push({
+            icon: '🎮',
+            title: 'Optimisation possible',
+            text: 'Vos loisirs et dépenses variables peuvent être optimisés.',
+            action: 'Établissez un budget strict pour les loisirs'
+        });
+    }
+    
+    // ✅ AFFICHAGE HTML DES RECOMMANDATIONS
+    const html = `
+        <div class="bg-green-900 bg-opacity-20 p-6 rounded-lg border-l-4 border-green-400">
+            <h4 class="text-green-400 font-semibold text-lg mb-4 flex items-center">
+                <i class="fas fa-lightbulb mr-2"></i>
+                Recommandations personnalisées
+            </h4>
+            ${recommendations.map(rec => `
+                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg mb-4 last:mb-0">
+                    <div class="flex items-start">
+                        <div class="text-2xl mr-3">${rec.icon}</div>
+                        <div class="flex-1">
+                            <h5 class="font-semibold text-green-400 mb-2">${rec.title}</h5>
+                            <p class="text-gray-300 mb-2">${rec.text}</p>
+                            <div class="text-sm text-blue-300 flex items-center">
+                                <i class="fas fa-arrow-right mr-1"></i>
+                                ${rec.action}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+    
+    container.innerHTML = html;
+    
+    console.log('✅ Recommandations affichées:', recommendations.length, 'recommandations');
 }
