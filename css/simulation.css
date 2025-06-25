@@ -500,3 +500,25 @@ body {
     border-radius: 8px;
     padding: 20px;
 }
+
+/* =================================
+   BUDGET ANALYSIS ANIMATIONS
+   ================================= */
+
+#budget-results {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    transform: translateY(-20px);
+    scroll-margin-top: 100px;
+}
+
+#budget-results:not(.hidden) {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Animation au survol du bouton analysé */
+.budget-button-analyzed:hover {
+    transform: scale(1.02);
+    transition: transform 0.2s ease;
+}
