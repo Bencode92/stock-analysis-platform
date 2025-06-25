@@ -1960,8 +1960,6 @@ function analyserBudget() {
         extra = parseFloat(document.getElementById('simulation-budget-extra').value) || 0;
     }
     
-     const loyer = readNumber('simulation-budget-loyer');
-    
     // Récupérer le total des dépenses détaillées
     const totalDepensesVariables = updateDetailedExpensesTotal();
     
