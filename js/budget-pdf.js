@@ -1,5 +1,5 @@
 /**
- * budget-pdf.js - Module d'export PDF pour l'analyse de budget (VERSION MISE À JOUR)
+ * budget-pdf.js - Module d'export PDF pour l'analyse de budget (VERSION CORRIGÉE)
  * TradePulse Finance Intelligence Platform
  * 
  * Ce module gère l'export PDF des analyses de budget avec :
@@ -9,7 +9,8 @@
  * - Conseils personnalisés
  * 
  * 🆕 MISE À JOUR : Utilise les nouveaux sélecteurs de budget-epargne.js
- * 🐛 FIX : Correction de la portée de exportBtn dans le catch
+ * 🐛 FIX : Correction validation des données et parsing des nombres
+ * 🔧 FIX : Ajout debug et synchronisation avec analyse budget
  */
 
 // ===== CONFIGURATION PDF =====
@@ -34,7 +35,7 @@ const PDF_CONFIG = {
     }
 };
 
-// ===== FONCTION PRINCIPALE D'EXPORT =====
+// ===== FONCTION PRINCIPALE D'EXPORT (🔧 CORRIGÉE) =====
 
 /**
  * Exporte l'analyse de budget en PDF
@@ -43,9 +44,8 @@ const PDF_CONFIG = {
  * @returns {Promise<void>}
  */
 export async function exportBudgetToPDF(budgetData = null, options = {}) {
-    console.log('🚀 Début export PDF budget (version mise à jour)');
+    console.log('🚀 Début export PDF budget (version corrigée)');
     
-    // 🐛 FIX : Déclarer exportBtn avant le try pour éviter ReferenceError dans catch
     let exportBtn;
     let uiState;
     
@@ -56,13 +56,27 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
         // Récupération du bouton d'export
         exportBtn = document.getElementById('export-budget-pdf');
         
+        // 🔧 NOUVEAU : S'assurer que l'analyse est terminée
+        console.log('🔄 Vérification analyse budget...');
+        await ensureBudgetAnalysisComplete();
+        
         // Extraction des données du budget avec NOUVEAUX SÉLECTEURS
         const data = budgetData || extractBudgetDataFromDOM();
         
-        // Validation des données
+        // 🔧 NOUVEAU : Debug complet avant validation
+        console.log('🔍 DEBUG Export PDF - Données extraites:');
+        console.table(data);
+        console.table(data.depenses);
+        console.log('Revenu type:', typeof data.revenu, 'valeur:', data.revenu);
+        console.log('Dépenses type:', typeof data.depenses, 'clés:', Object.keys(data.depenses || {}));
+        
+        // Validation des données (renforcée)
         if (!validateBudgetData(data)) {
+            console.error('❌ Validation échouée pour:', data);
             throw new Error('Données de budget insuffisantes pour générer le PDF');
         }
+        
+        console.log('✅ Validation réussie, génération PDF...');
         
         // Affichage du loader
         uiState = showLoadingState(exportBtn);
@@ -83,15 +97,37 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
             .from(template)
             .save();
         
-        console.log('✅ PDF généré avec succès (nouveaux sélecteurs)');
+        console.log('✅ PDF généré avec succès');
         showSuccessState(exportBtn, uiState);
         
     } catch (error) {
         console.error('❌ Erreur export PDF:', error);
-        // 🐛 FIX : exportBtn est maintenant accessible dans le catch
         showErrorState(exportBtn, error.message);
         throw error;
     }
+}
+
+// ===== 🔧 NOUVELLE FONCTION : SYNCHRONISATION =====
+
+/**
+ * S'assure que l'analyse de budget est terminée avant l'export
+ */
+async function ensureBudgetAnalysisComplete() {
+    // Vérifier si analyserBudget existe et l'appeler
+    if (typeof window.analyserBudget === 'function') {
+        console.log('📊 Relance de l\'analyse budget...');
+        try {
+            await window.analyserBudget();
+            console.log('✅ Analyse budget terminée');
+        } catch (error) {
+            console.warn('⚠️ Erreur lors de l\'analyse budget:', error);
+        }
+    } else {
+        console.log('⚠️ Fonction analyserBudget non disponible');
+    }
+    
+    // Attendre un court délai pour s'assurer que le DOM est mis à jour
+    await new Promise(resolve => setTimeout(resolve, 500));
 }
 
 // ===== EXTRACTION DES DONNÉES (🆕 MISE À JOUR) =====
@@ -107,30 +143,26 @@ function extractBudgetDataFromDOM() {
         // Métadonnées
         generatedAt: new Date(),
         
-        // 🆕 NOUVEAU : Revenu mensuel avec nouveau sélecteur
-        revenu: getInputValue('revenu-mensuel-input'),
+        // 🔧 CORRIGÉ : Revenu mensuel avec parsing sécurisé
+        revenu: toNumber(getInputValue('revenu-mensuel-input')),
         
         // Score et description
         score: getElementText('budget-score', '--'),
         scoreDescription: getElementText('budget-score-description', 'Analyse effectuée'),
         
-        // 🆕 NOUVEAU : Dépenses avec nouveaux sélecteurs
+        // 🔧 CORRIGÉ : Dépenses avec parsing sécurisé
         depenses: {
-            loyer: getInputValue('simulation-budget-loyer'), // Inchangé
-            
-            // 🆕 NOUVEAU : Utilise les totaux calculés au lieu des sous-catégories
-            vieCourante: getTotalVieCourante(),
-            loisirs: getTotalLoisirs(),
-            variables: getTotalVariables(),
-            
-            // Épargne automatique (inchangé)
-            epargne: getInputValue('simulation-budget-invest')
+            loyer: toNumber(getInputValue('simulation-budget-loyer')),
+            vieCourante: toNumber(getTotalVieCourante()),
+            loisirs: toNumber(getTotalLoisirs()),
+            variables: toNumber(getTotalVariables()),
+            epargne: toNumber(getInputValue('simulation-budget-invest'))
         },
         
-        // 🆕 NOUVEAU : Totaux calculés avec les nouveaux IDs
-        totalDepenses: getCalculatedValue('simulation-depenses-totales'),
-        epargneDisponible: getCalculatedValue('simulation-epargne-possible'),
-        tauxEpargne: getCalculatedValue('simulation-taux-epargne', '%'),
+        // 🔧 CORRIGÉ : Totaux calculés avec parsing sécurisé
+        totalDepenses: toNumber(getCalculatedValue('simulation-depenses-totales')),
+        epargneDisponible: toNumber(getCalculatedValue('simulation-epargne-possible')),
+        tauxEpargne: toNumber(getCalculatedValue('simulation-taux-epargne', '%')),
         
         // Graphiques (si disponibles)
         charts: captureCharts(),
@@ -146,6 +178,36 @@ function extractBudgetDataFromDOM() {
     
     console.log('✅ Données extraites:', data);
     return data;
+}
+
+// ===== 🔧 NOUVELLE FONCTION : PARSING UNIFORME =====
+
+/**
+ * Convertit une valeur en nombre de manière sécurisée
+ * @param {*} value - Valeur à convertir
+ * @returns {number} Nombre valide (0 si conversion impossible)
+ */
+function toNumber(value) {
+    if (value === null || value === undefined || value === '') {
+        return 0;
+    }
+    
+    // Si c'est déjà un nombre
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : 0;
+    }
+    
+    // Si c'est une chaîne, nettoyer et convertir
+    if (typeof value === 'string') {
+        // Supprimer les espaces, caractères non numériques sauf . et -
+        const cleaned = value.replace(/[^\d.-]/g, '');
+        const parsed = parseFloat(cleaned);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+    
+    // Tentative de conversion
+    const parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 0;
 }
 
 // ===== FONCTIONS D'EXTRACTION MISES À JOUR =====
@@ -169,15 +231,15 @@ function getTotalVieCourante() {
     // Méthode 2 : Parser le span #total-vie-courante
     const totalElement = document.getElementById('total-vie-courante');
     if (totalElement) {
-        const total = parseFloat(totalElement.textContent.replace(/[^0-9.-]/g, '')) || 0;
+        const total = toNumber(totalElement.textContent);
         console.log('📊 Total vie courante (span):', total);
         return total;
     }
     
     // Méthode 3 : Fallback - calculer manuellement si les anciens inputs existent encore
-    const fallback = getInputValue('simulation-budget-alimentation') + 
-                    getInputValue('simulation-budget-transport') + 
-                    getInputValue('simulation-budget-factures');
+    const fallback = toNumber(getInputValue('simulation-budget-alimentation')) + 
+                    toNumber(getInputValue('simulation-budget-transport')) + 
+                    toNumber(getInputValue('simulation-budget-factures'));
     
     console.log('📊 Total vie courante (fallback):', fallback);
     return fallback;
@@ -201,15 +263,15 @@ function getTotalLoisirs() {
     // Méthode 2 : Parser le span #total-loisirs
     const totalElement = document.getElementById('total-loisirs');
     if (totalElement) {
-        const total = parseFloat(totalElement.textContent.replace(/[^0-9.-]/g, '')) || 0;
+        const total = toNumber(totalElement.textContent);
         console.log('📊 Total loisirs (span):', total);
         return total;
     }
     
     // Méthode 3 : Fallback - calculer avec anciens inputs
-    const fallback = getInputValue('simulation-budget-loisirs-sorties') + 
-                    getInputValue('simulation-budget-loisirs-sport') + 
-                    getInputValue('simulation-budget-loisirs-autres');
+    const fallback = toNumber(getInputValue('simulation-budget-loisirs-sorties')) + 
+                    toNumber(getInputValue('simulation-budget-loisirs-sport')) + 
+                    toNumber(getInputValue('simulation-budget-loisirs-autres'));
     
     console.log('📊 Total loisirs (fallback):', fallback);
     return fallback;
@@ -234,7 +296,7 @@ function getTotalVariables() {
     const totalElements = document.querySelectorAll('.depense-total');
     let total = 0;
     totalElements.forEach(element => {
-        const value = parseFloat(element.textContent.replace(/[^0-9.-]/g, '')) || 0;
+        const value = toNumber(element.textContent);
         total += value;
     });
     
@@ -244,9 +306,9 @@ function getTotalVariables() {
     }
     
     // Méthode 3 : Fallback - calculer avec anciens inputs
-    const fallback = getInputValue('simulation-budget-sante') + 
-                    getInputValue('simulation-budget-vetements') + 
-                    getInputValue('simulation-budget-autres');
+    const fallback = toNumber(getInputValue('simulation-budget-sante')) + 
+                    toNumber(getInputValue('simulation-budget-vetements')) + 
+                    toNumber(getInputValue('simulation-budget-autres'));
     
     console.log('📊 Total variables (fallback):', fallback);
     return fallback;
@@ -269,8 +331,7 @@ function getCalculatedValue(id, suffix = '') {
         text = text.replace('%', '');
     }
     
-    // Suppression de tous les caractères non numériques sauf . et -
-    const value = parseFloat(text.replace(/[^0-9.-]/g, '')) || 0;
+    const value = toNumber(text);
     console.log(`📊 ${id}: ${value}${suffix}`);
     return value;
 }
@@ -389,7 +450,7 @@ function buildPdfHeader(data) {
                 </div>
             </div>
             <div style="font-size: 12px; color: #6b7280;">
-                TradePulse v4.8
+                TradePulse v4.9
             </div>
         </div>
     `;
@@ -766,11 +827,11 @@ function formatCurrency(amount) {
 }
 
 /**
- * Récupère la valeur d'un input
+ * 🔧 CORRIGÉ : Récupère la valeur d'un input avec parsing sécurisé
  */
 function getInputValue(id) {
     const element = document.getElementById(id);
-    return element ? parseFloat(element.value) || 0 : 0;
+    return element ? toNumber(element.value) : 0;
 }
 
 /**
@@ -989,22 +1050,36 @@ function generateRecommendations(data) {
 }
 
 /**
- * Valide les données de budget
+ * 🔧 CORRIGÉ : Valide les données de budget (validation renforcée)
  */
 function validateBudgetData(data) {
+    const ok = v => Number.isFinite(v) && v >= 0;
+    
     if (!data || typeof data !== 'object') {
+        console.error('❌ Validation: data n\'est pas un objet');
         return false;
     }
     
-    // Vérifications minimales
-    if (typeof data.revenu !== 'number' || data.revenu < 0) {
+    if (!ok(data.revenu)) {
+        console.error('❌ Validation: revenu invalide', data.revenu);
         return false;
     }
     
     if (!data.depenses || typeof data.depenses !== 'object') {
+        console.error('❌ Validation: dépenses invalides', data.depenses);
         return false;
     }
     
+    // Vérifier qu'il y a au moins une dépense > 0
+    const sommeDep = Object.values(data.depenses)
+                           .filter(Number.isFinite)
+                           .reduce((s, v) => s + v, 0);
+    if (sommeDep === 0) {
+        console.error('❌ Validation: aucune dépense trouvée', data.depenses);
+        return false;
+    }
+    
+    console.log('✅ Validation réussie');
     return true;
 }
 
@@ -1018,7 +1093,7 @@ function generatePDFFilename(date = new Date()) {
 }
 
 /**
- * 🐛 FIX : Affiche l'état de chargement (exportBtn géré en dehors maintenant)
+ * Affiche l'état de chargement
  */
 function showLoadingState(exportBtn) {
     if (!exportBtn) return null;
@@ -1035,7 +1110,7 @@ function showLoadingState(exportBtn) {
 }
 
 /**
- * 🐛 FIX : Affiche l'état de succès (exportBtn géré en dehors maintenant)
+ * Affiche l'état de succès
  */
 function showSuccessState(exportBtn, originalState) {
     if (!exportBtn) return;
@@ -1051,7 +1126,7 @@ function showSuccessState(exportBtn, originalState) {
 }
 
 /**
- * 🐛 FIX : Affiche l'état d'erreur (exportBtn maintenant accessible)
+ * Affiche l'état d'erreur
  */
 function showErrorState(exportBtn, errorMessage) {
     if (!exportBtn) {
