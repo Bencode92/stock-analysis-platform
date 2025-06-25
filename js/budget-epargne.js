@@ -5,10 +5,59 @@
  * 
  * Version 3.0 - Intégration système Budget × Quantités pour plus de réalisme
  * Version 2.0 - Ajout accessibilité complète et transparence des formules
+ 
  */
 // Variable-sentinelle globale pour empêcher la double initialisation
 if (!window.__budgetPlannerInitialized__) {
     window.__budgetPlannerInitialized__ = false;
+}
+// =================================
+// ÉTAT GLOBAL BUDGET ANALYSIS
+// =================================
+window.budgetAnalysisState = {
+    isFirstAnalysis: true,
+    isVisible: false,
+    isAnalyzing: false
+};
+/**
+ * Affiche l'analyse budget avec animation
+ * @param {HTMLElement} button - Le bouton qui a déclenché l'action
+ */
+function showBudgetAnalysis(button = null) {
+    const resultsContainer = document.getElementById('budget-results');
+    
+    // Si déjà visible, ne rien faire
+    if (!resultsContainer || window.budgetAnalysisState.isVisible) {
+        return;
+    }
+    
+    console.log('🎯 Affichage de l\'analyse budget');
+    
+    // 1. Affichage avec Tailwind
+    resultsContainer.classList.remove('hidden');
+    setTimeout(() => {
+        resultsContainer.style.opacity = '1';
+        resultsContainer.style.transform = 'translateY(0)';
+    }, 50);
+    
+    // 2. Mise à jour du bouton
+    if (button && window.budgetAnalysisState.isFirstAnalysis) {
+        button.innerHTML = '<i class="fas fa-chart-line mr-2"></i>Mettre à jour l\'analyse';
+        button.style.background = 'linear-gradient(135deg, #10B981, #059669)';
+        button.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
+    }
+    
+    // 3. Scroll fluide
+    setTimeout(() => {
+        resultsContainer.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start'
+        });
+    }, 300);
+    
+    // 4. Marquer comme visible
+    window.budgetAnalysisState.isVisible = true;
+    window.budgetAnalysisState.isFirstAnalysis = false;
 }
 /**
  * Convertit une chaîne en nombre en gérant les formats français
@@ -891,21 +940,22 @@ function updateTotalLoisirs() {
  * Initialise et génère le contenu de l'onglet Budget
  */
 function initBudgetPlanner() {
-      // Vérifier que le container existe
+    // Vérifier que le container existe
     const budgetPlanner = document.getElementById('budget-planner');
     if (!budgetPlanner) {
         console.error('❌ Container #budget-planner non trouvé');
         return;
     }
     
- // 🛡️ Garde-fou : on ne construit l'UI qu'une seule fois
-if (window.__budgetPlannerInitialized__) {
-    console.log('Budget Planner déjà initialisé, mise à jour uniquement');
-    if (typeof analyserBudget === 'function') analyserBudget();
-    return;
-}
-window.__budgetPlannerInitialized__ = true;
-console.log('Initialisation du Budget Planner...');
+    // 🛡️ Garde-fou : on ne construit l'UI qu'une seule fois
+    if (window.__budgetPlannerInitialized__) {
+        console.log('Budget Planner déjà initialisé, mise à jour uniquement');
+        // ❌ SUPPRIMÉ : Plus d'analyse automatique lors de la réinitialisation
+        // if (typeof analyserBudget === 'function') analyserBudget();
+        return;
+    }
+    window.__budgetPlannerInitialized__ = true;
+    console.log('Initialisation du Budget Planner...');
     
     // Vider le contenu actuel
     budgetPlanner.innerHTML = '';
@@ -927,10 +977,13 @@ console.log('Initialisation du Budget Planner...');
     // Initialiser les écouteurs d'événements
     initBudgetListeners();
     
-    // Analyser le budget avec les valeurs par défaut
-    setTimeout(() => {
-        analyserBudget();
-    }, 500);
+    // ❌ DÉSACTIVÉ : Analyse automatique au chargement
+    // L'analyse se déclenchera uniquement au premier clic utilisateur
+    // setTimeout(() => {
+    //     analyserBudget();
+    // }, 500);
+    
+    console.log('✅ Budget Planner initialisé - En attente du premier clic utilisateur');
 }
 
 /**
@@ -1464,29 +1517,30 @@ function generateBudgetInterface(container) {
         </button>
     `;
     
-    // Créer la deuxième colonne - Résultats du budget
-    const budgetResultsCol = document.createElement('div');
-    budgetResultsCol.className = 'bg-blue-900 bg-opacity-20 p-6 rounded-lg';
-    budgetResultsCol.innerHTML = `
-        <h4 class="text-xl font-semibold mb-4 flex items-center">
-            <i class="fas fa-piggy-bank text-blue-400 mr-2"></i>
-            Analyse du budget
-        </h4>
-        
-        <!-- Score global du budget -->
-        <div class="mb-5 bg-blue-800 bg-opacity-30 p-3 rounded-lg flex items-center">
-            <div class="w-16 h-16 rounded-full bg-blue-900 bg-opacity-50 flex items-center justify-center mr-4 budget-score-circle">
-                <span id="budget-score" class="text-2xl font-bold text-blue-400">3</span>
-            </div>
-            <div>
-                <h5 class="font-medium text-white">Score budget</h5>
-                <p class="text-sm text-gray-300" id="budget-score-description">Budget équilibré</p>
-                <div class="w-full bg-blue-900 h-2 rounded-full mt-1 overflow-hidden">
-                    <div id="budget-score-bar" class="h-full bg-blue-400" style="width: 60%"></div>
-                </div>
+// Créer la deuxième colonne - Résultats du budget
+const budgetResultsCol = document.createElement('div');
+budgetResultsCol.id = 'budget-results';
+budgetResultsCol.className = 'bg-blue-900 bg-opacity-20 p-6 rounded-lg hidden';
+budgetResultsCol.innerHTML = `
+    <h4 class="text-xl font-semibold mb-4 flex items-center">
+        <i class="fas fa-piggy-bank text-blue-400 mr-2"></i>
+        Analyse du budget
+    </h4>
+    
+    <!-- Score global du budget -->
+    <div class="mb-5 bg-blue-800 bg-opacity-30 p-3 rounded-lg flex items-center">
+        <div class="w-16 h-16 rounded-full bg-blue-900 bg-opacity-50 flex items-center justify-center mr-4 budget-score-circle">
+            <span id="budget-score" class="text-2xl font-bold text-blue-400">3</span>
+        </div>
+        <div>
+            <h5 class="font-medium text-white">Score budget</h5>
+            <p class="text-sm text-gray-300" id="budget-score-description">Budget équilibré</p>
+            <div class="w-full bg-blue-900 h-2 rounded-full mt-1 overflow-hidden">
+                <div id="budget-score-bar" class="h-full bg-blue-400" style="width: 60%"></div>
             </div>
         </div>
-        
+    </div>
+    
 <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
     <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
         <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-revenu-mensuel">3 000,00 €</p>
@@ -1778,7 +1832,17 @@ function initBudgetListeners() {
     // Ajouter un écouteur au bouton d'analyse du budget
     const budgetButton = document.getElementById('simulate-budget-button');
     if (budgetButton) {
-        budgetButton.addEventListener('click', analyserBudget);
+        budgetButton.addEventListener('click', () => {
+            console.log('👆 Clic sur bouton analyse budget');
+            
+            // Si pas encore visible, l'afficher d'abord
+            if (!window.budgetAnalysisState.isVisible) {
+                showBudgetAnalysis(budgetButton);
+            }
+            
+            // Puis lancer l'analyse
+            analyserBudget();
+        });
     }
     
     // === CHAMPS STANDARDS (avec debounce) ===
@@ -1787,7 +1851,7 @@ function initBudgetListeners() {
         'simulation-budget-quotidien',
         'simulation-budget-extra',
         'revenu-mensuel-input',
-       'simulation-budget-invest'   // Épargne/investissement automatique
+        'simulation-budget-invest'   // Épargne/investissement automatique
     ];
     
     standardInputs.forEach(id => {
@@ -1797,7 +1861,6 @@ function initBudgetListeners() {
             input.addEventListener('change', analyserBudget);
         }
     });
-    
     // === CHAMPS CRITIQUES (réactivité maximale) ===
     const criticalInputs = [
         'objectif-epargne',           // Objectif d'épargne
@@ -2031,7 +2094,16 @@ function showBudgetNotification(message, type = 'info') {
  * L'investissement automatique est maintenant traité comme de l'épargne, pas une dépense
  */
 function analyserBudget() {
+    // Bloqueur : ne calculer que si la section est visible
+    if (!window.budgetAnalysisState.isVisible) {
+        console.log('⏸️ Analyse bloquée - Section non encore affichée');
+        return;
+    }
+    
+    console.log('🔄 Analyse du budget en cours...');
+    
     if (!champsOK()) return; // empêche un calcul bancal
+    
     // Récupérer les valeurs du budget
     const loyer = toNumber(document.getElementById('simulation-budget-loyer').value);
     let quotidien, extra;
@@ -2045,17 +2117,17 @@ function analyserBudget() {
         extra = updateCategoryTotal('loisirs');
     } else {
         // En mode simplifié, utiliser les valeurs directes
- quotidien = toNumber(document.getElementById('simulation-budget-quotidien').value);
-extra     = toNumber(document.getElementById('simulation-budget-extra').value);
+        quotidien = toNumber(document.getElementById('simulation-budget-quotidien').value);
+        extra     = toNumber(document.getElementById('simulation-budget-extra').value);
     }
     
-const investAuto = toNumber(document.getElementById('simulation-budget-invest').value);
+    const investAuto = toNumber(document.getElementById('simulation-budget-invest').value);
     
     // Récupérer le total des dépenses détaillées
     const totalDepensesVariables = updateDetailedExpensesTotal();
     
     // Récupérer le revenu mensuel saisi par l'utilisateur
- const revenuMensuel = toNumber(document.getElementById('revenu-mensuel-input').value);
+    const revenuMensuel = toNumber(document.getElementById('revenu-mensuel-input').value);
     
     // ===== NOUVELLE LOGIQUE CORRIGÉE =====
     // 1. Dépenses "de consommation" (on retire l'épargne auto)
@@ -2065,10 +2137,10 @@ const investAuto = toNumber(document.getElementById('simulation-budget-invest').
     const epargneAuto = investAuto;
     
     // 3. Épargne libre restante **après** l'épargne auto
-const epargneBrute = revenuMensuel - depensesConsommation - investAuto;
-const epargneLibre = Math.max(0, epargneBrute);
-const deficit = Math.min(0, epargneBrute);
-const epargneTotale = investAuto + epargneLibre;
+    const epargneBrute = revenuMensuel - depensesConsommation - investAuto;
+    const epargneLibre = Math.max(0, epargneBrute);
+    const deficit = Math.min(0, epargneBrute);
+    const epargneTotale = investAuto + epargneLibre;
     
     // 4. Totaux à afficher
     const depensesTotales = depensesConsommation;          // ↩️ on n'y met plus l'auto-invest
@@ -2092,7 +2164,7 @@ const epargneTotale = investAuto + epargneLibre;
     document.getElementById('simulation-taux-epargne').textContent = tauxEpargne.toFixed(1) + '%';
     // ===== NOUVELLES TUILES ÉPARGNE =====
     document.getElementById('simulation-epargne-auto').textContent = formatter.format(epargneAuto);
-  document.getElementById('simulation-epargne-totale').textContent = formatter.format(epargneTotale);
+    document.getElementById('simulation-epargne-totale').textContent = formatter.format(epargneTotale);
     
     // ===== APPELS CORRIGÉS =====
     // Mettre à jour le graphique
@@ -2113,7 +2185,6 @@ const epargneTotale = investAuto + epargneLibre;
     // Mettre à jour les recommandations
     updateRecommendations(epargneLibre, tauxEpargne, epargneAuto);
 }
-
 /**
  * Met à jour le temps nécessaire pour atteindre l'objectif d'épargne
  * @param {number} epargneMensuelle - Montant d'épargne mensuelle possible
