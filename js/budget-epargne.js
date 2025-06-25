@@ -2232,6 +2232,19 @@ const BUDGET_RULES = [
     }
 ];
 
+// ✅ NOUVEAU : Fonction pour mettre en cache les données
+function setCachedBudgetData() {
+    const revenuMensuel = parseFloat(document.getElementById('simulation-budget-revenu')?.value) || 0;
+    const loyer = parseFloat(document.getElementById('simulation-budget-loyer')?.value) || 0;
+    const epargneTotale = parseFloat(document.getElementById('simulation-budget-invest')?.value) || 0;
+    
+    cachedBudgetData = {
+        revenuMensuel,
+        loyer,
+        epargneTotale,
+        timestamp: Date.now()
+    };
+}
 /**
  * Génère des conseils dynamiques basés sur les règles
  */
