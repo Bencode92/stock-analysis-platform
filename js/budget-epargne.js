@@ -11,6 +11,7 @@
 if (!window.__budgetPlannerInitialized__) {
     window.__budgetPlannerInitialized__ = false;
 }
+import { exportBudgetToPDF, activateExportButton, createExportButton } from './budget-pdf.js';
 // =================================
 // ÉTAT GLOBAL BUDGET ANALYSIS
 // =================================
