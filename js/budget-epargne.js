@@ -126,16 +126,22 @@ const KeyboardManager = {
             });
         });
 
-        // Inputs avec Enter pour validation
-        document.querySelectorAll('input[type="number"]').forEach(input => {
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    analyserBudget();
-                    this.showFeedback('Budget analysé');
-                }
-            });
-        });
+// Inputs avec Enter pour navigation (sans analyse automatique)
+document.querySelectorAll('input[type="number"]').forEach(input => {
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            // analyserBudget(); // ⬅️ SUPPRIMÉ
+            
+            // Optionnel : marquer comme modifié
+            if (typeof markBudgetAsModified === 'function') {
+                markBudgetAsModified();
+            }
+            
+            this.showFeedback('Appuyez sur "Analyser mon budget" pour voir les résultats');
+        }
+    });
+});
 
         // Boutons avec feedback vocal
         document.querySelectorAll('button').forEach(button => {
