@@ -7,12 +7,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-   <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       <!-- ✅ AJOUTER CES 2 LIGNES -->
-    <script defer src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <link rel="stylesheet" href="css/budget-pdf.css">
     <!-- Ajout de la bibliothèque html2pdf pour l'export PDF -->
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <!-- Styles généraux -->
     <link rel="stylesheet" href="css/simulation.css">
     <!-- Styles spécifiques pour le simulateur de prêt -->
@@ -1474,15 +1474,13 @@
             <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
         </button>
     </div>
-    
-<!-- Tes modules applicatifs (ordre important) -->
-<script defer src="js/budget-epargne.js"></script>
-<script defer src="js/fiscal-optimizer.js"></script>
-<script defer src="js/loan-simulator.js"></script>
-<script defer src="js/loan-sensitivity.js"></script>
-<script defer src="js/ptz-simulator.js"></script>
-<script defer src="js/simulation.js"></script>
- 
+
+    <!-- Scripts -->
+    <script type="module" src="js/simulation.js"></script>
+    <script src="js/fiscal-optimizer.js"></script>
+    <script src="js/budget-epargne.js"></script>
+    <script src="js/loan-simulator.js"></script>
+    <script src="js/loan-sensitivity.js"></script>
     <!-- Chargement du script PTZ avec les fonctions clés disponibles immédiatement -->
     <script>
         // Définir la fonction simulerPTZ temporaire pour éviter l'erreur pendant le chargement
