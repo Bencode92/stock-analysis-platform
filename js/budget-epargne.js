@@ -1945,6 +1945,7 @@ function showBudgetNotification(message, type = 'info') {
 function analyserBudget() {
     // Récupérer les valeurs du budget
      const loyer = readNumber('simulation-budget-loyer');
+    const investAuto = readNumber('simulation-budget-invest');
     let quotidien, extra;
     
     // Vérifier le mode d'affichage actif
