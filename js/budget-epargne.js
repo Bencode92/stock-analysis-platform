@@ -710,10 +710,7 @@ function updateItemTotal(itemId) {
         updateCategoryTotal(categoryKey);
     }
     
-    // Mettre à jour l'analyse globale du budget
-    if (typeof analyserBudget === 'function') {
-        analyserBudget();
-    }
+    // Plus d'analyse automatique - uniquement les totaux se mettent à jour
 }
 
 /**
@@ -1528,7 +1525,7 @@ function addDetailedExpense(nom = '', prix = '', quantite = '') {
     inputs.forEach(input => {
         input.addEventListener('change', function() {
             updateDetailedExpensesTotal();
-            analyserBudget();
+            // analyserBudget(); ⬅️ SUPPRIMÉ
         });
     });
     
@@ -1537,7 +1534,7 @@ function addDetailedExpense(nom = '', prix = '', quantite = '') {
     deleteBtn.addEventListener('click', function() {
         line.remove();
         updateDetailedExpensesTotal();
-        analyserBudget();
+        // analyserBudget(); ⬅️ SUPPRIMÉ
     });
     
     // Mettre à jour le total
@@ -1712,11 +1709,13 @@ function initBudgetListeners() {
     simpleInputs.forEach(input => {
         if (input) {
             input.addEventListener('change', function() {
-                analyserBudget();
+                // Plus d'analyse automatique
+                // Optionnel : marquer comme modifié
+                // markBudgetAsModified();
             });
         }
     });
-    
+}
     // Écouteurs pour les boutons de vue
     const viewDetailed = document.getElementById('view-detailed');
     const viewSimple = document.getElementById('view-simple');
