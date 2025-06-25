@@ -6,48 +6,7 @@
  * Version 3.0 - Intégration système Budget × Quantités pour plus de réalisme
  * Version 2.0 - Ajout accessibilité complète et transparence des formules
  */
-// Variable-sentinelle globale pour empêcher la double initialisation
-if (!window.__budgetPlannerInitialized__) {
-    window.__budgetPlannerInitialized__ = false;
-}
-/**
- * Convertit une chaîne en nombre en gérant les formats français
- */
-function toNumber(raw) {
-    if (!raw || typeof raw !== 'string') return 0;
-    
-    let cleaned = raw
-        .trim()
-        .replace(/[\s\u00A0\u2009]/g, '')    // espaces insécables
-        .replace(/[€$£¥]/g, '');            // monnaies
-    
-    // point + virgule → le point est sûrement un séparateur de milliers
-    if (cleaned.includes('.') && cleaned.includes(',')) {
-        cleaned = cleaned.replace(/\./g, '');
-    } else {
-        const first = cleaned.indexOf('.');
-        const last  = cleaned.lastIndexOf('.');
-        if (first !== -1 && first !== last) cleaned = cleaned.replace(/\./g, '');
-    }
-    
-    cleaned = cleaned.replace(',', '.');
-    return parseFloat(cleaned) || 0;
-}
 
-// 👉 AJOUT : Anti-rafraîchissement : exécute fn après un délai d'inactivité
-function debounce(fn, delay = 300) {
-    let t;
-    return (...args) => {
-        clearTimeout(t);
-        t = setTimeout(() => fn(...args), delay);
-    };
-}
-
-// 👉 AJOUT : Vérifie que les 3 champs clés ne sont pas vides
-function champsOK() {
-    const revenu = document.getElementById('revenu-mensuel-input');
-    return revenu && revenu.value.trim() !== '';
-}
 // Configuration des catégories de dépenses avec valeurs par défaut
 const EXPENSE_CATEGORIES = {
     'vie-courante': {
@@ -551,7 +510,7 @@ const ScoreDetails = {
     updateDetailsContent(panel) {
         // Récupérer les données actuelles du budget
         const revenuMensuel = parseFloat(document.getElementById('revenu-mensuel-input')?.value) || 0;
-        const loyer = toNumber(document.getElementById('simulation-budget-loyer').value);
+        const loyer = parseFloat(document.getElementById('simulation-budget-loyer')?.value) || 0;
         const tauxEpargne = parseFloat(document.getElementById('simulation-taux-epargne')?.textContent?.replace('%', '')) || 0;
         
         const ratioLogement = revenuMensuel > 0 ? (loyer / revenuMensuel) * 100 : 0;
@@ -719,14 +678,8 @@ function initFixedExpenseSections() {
             const quantityInput = document.getElementById(`quantity-${item.id}`);
             
             if (amountInput && quantityInput) {
-                // 🔄 MODIF : Debounce sur 'input', immédiat sur 'change'
-                const updateWithDebounce = debounce(() => updateItemTotal(item.id), 250);
-                
-                amountInput.addEventListener('input', updateWithDebounce);
-                amountInput.addEventListener('change', () => updateItemTotal(item.id));
-                
-                quantityInput.addEventListener('input', updateWithDebounce);
-                quantityInput.addEventListener('change', () => updateItemTotal(item.id));
+                amountInput.addEventListener('input', () => updateItemTotal(item.id));
+                quantityInput.addEventListener('input', () => updateItemTotal(item.id));
             }
         });
     });
@@ -745,17 +698,11 @@ function updateItemTotal(itemId) {
     
     if (!amountInput || !quantityInput || !totalDisplay) return;
     
-    // ✅ CORRECTION : parseFloat → toNumber
-    const amount = toNumber(amountInput.value);
-    const quantity = toNumber(quantityInput.value);
+    const amount = parseFloat(amountInput.value) || 0;
+    const quantity = parseFloat(quantityInput.value) || 0;
     const total = amount * quantity;
     
-    // ✅ AMÉLIORATION : Formatage français
-    totalDisplay.textContent = new Intl.NumberFormat('fr-FR', {
-        style: 'currency',
-        currency: 'EUR',
-        minimumFractionDigits: 2
-    }).format(total);
+    totalDisplay.textContent = `${total}€`;
     
     // Mettre à jour le total de la catégorie
     const categoryKey = findCategoryByItemId(itemId);
@@ -770,7 +717,7 @@ function updateItemTotal(itemId) {
 }
 
 /**
- * Met à jour le total d'une catégorie - VERSION CORRIGÉE
+ * Met à jour le total d'une catégorie - VERSION AMÉLIORÉE
  */
 function updateCategoryTotal(categoryKey) {
     const category = EXPENSE_CATEGORIES[categoryKey];
@@ -783,29 +730,54 @@ function updateCategoryTotal(categoryKey) {
         const quantityInput = document.getElementById(`quantity-${item.id}`);
         
         if (amountInput && quantityInput) {
-            // ✅ CORRECTION : parseFloat → toNumber
-            const amount = toNumber(amountInput.value);
-            const quantity = toNumber(quantityInput.value);
+            const amount = parseFloat(amountInput.value) || 0;
+            const quantity = parseFloat(quantityInput.value) || 0;
             total += amount * quantity;
         }
     });
     
-    // ✅ MISE À JOUR DE L'AFFICHAGE DU TOTAL DE CATÉGORIE
-    const categoryTotalElement = document.getElementById(`total-${categoryKey}`);
-    if (categoryTotalElement) {
-        categoryTotalElement.textContent = new Intl.NumberFormat('fr-FR', {
-            style: 'currency',
-            currency: 'EUR',
-            minimumFractionDigits: 2
-        }).format(total);
+    // Mettre à jour l'affichage du total
+    const totalDisplay = document.getElementById(`total-${categoryKey}`);
+    if (totalDisplay) {
+        totalDisplay.textContent = `${total}€`;
     }
     
-    // ✅ MISE À JOUR DE LA BARRE DE PROGRESSION
+    // Mettre à jour la barre de progression
     updateCategoryProgressBar(categoryKey, total);
     
-    // ✅ RETOUR OBLIGATOIRE
     return total;
-} 
+}
+
+/**
+ * Met à jour la barre de progression d'une catégorie
+ */
+function updateCategoryProgressBar(categoryKey, total) {
+    const loyer = parseFloat(document.getElementById('simulation-budget-loyer')?.value) || 3000;
+    const percentage = loyer > 0 ? (total / loyer * 100) : 0;
+    
+    const progressBar = document.getElementById(`progress-${categoryKey}`);
+    const progressLabel = document.getElementById(`percentage-${categoryKey}`);
+    
+    if (progressBar) {
+        progressBar.style.width = `${Math.min(percentage, 100)}%`;
+    }
+    
+    if (progressLabel) {
+        progressLabel.textContent = `${percentage.toFixed(1)}%`;
+    }
+}
+
+/**
+ * Trouve la catégorie d'un élément par son ID
+ */
+function findCategoryByItemId(itemId) {
+    for (const [categoryKey, category] of Object.entries(EXPENSE_CATEGORIES)) {
+        if (category.items.some(item => item.id === itemId)) {
+            return categoryKey;
+        }
+    }
+    return null;
+}
 
 /**
  * Remet une catégorie aux valeurs par défaut
@@ -860,21 +832,9 @@ function updateTotalLoisirs() {
  * Initialise et génère le contenu de l'onglet Budget
  */
 function initBudgetPlanner() {
-    // Vérifier que le container existe
+    // Cibler l'onglet Budget
     const budgetPlanner = document.getElementById('budget-planner');
-    if (!budgetPlanner) {
-        console.error('❌ Container #budget-planner non trouvé');
-        return;
-    }
-    
-    // 🛡️ Garde-fou : on ne construit l'UI qu'une seule fois
-    if (window.__budgetPlannerInitialized__) {
-        console.log('Budget Planner déjà initialisé, mise à jour uniquement');
-        if (typeof analyserBudget === 'function') analyserBudget();
-        return;
-    }
-    window.__budgetPlannerInitialized__ = true;
-    console.log('Initialisation du Budget Planner...');
+    if (!budgetPlanner) return;
     
     // Vider le contenu actuel
     budgetPlanner.innerHTML = '';
@@ -896,35 +856,11 @@ function initBudgetPlanner() {
     // Initialiser les écouteurs d'événements
     initBudgetListeners();
     
-    // === 🔧 CORRECTIF RÉACTIVITÉ INSTANTANÉE ===
-    function bindRealtime(id) {
-        const el = document.getElementById(id);
-        if (!el) {
-            console.warn(`⚠️ Élément ${id} non trouvé pour bindRealtime`);
-            return;
-        }
-        const debounced = debounce(analyserBudget, 250);
-        ['input','change','keyup'].forEach(ev => el.addEventListener(ev, debounced));
-        console.log(`✅ Écouteurs temps réel ajoutés sur ${id}`);
-    }
-    
-    // Appliquer aux champs critiques (ceux qui causaient le bug)
-    const champsCritiques = [
-        'simulation-budget-loyer',
-        'simulation-budget-invest',
-        'revenu-mensuel-input'
-    ];
-    
-    console.log('🔧 Application des écouteurs temps réel...');
-    champsCritiques.forEach(bindRealtime);
-    
     // Analyser le budget avec les valeurs par défaut
     setTimeout(() => {
         analyserBudget();
-        console.log('✅ Budget Planner initialisé avec réactivité instantanée');
     }, 500);
 }
-
 
 /**
  * Ajoute les styles CSS pour le système montant × quantité
@@ -1626,10 +1562,8 @@ function updateDetailedExpensesTotal() {
     const lignes = document.querySelectorAll('.depense-ligne');
     
     lignes.forEach(ligne => {
-        // ✅ CORRECTION : parseFloat → toNumber pour le prix
-        const prix = toNumber(ligne.querySelector('.depense-prix').value);
-        // ✅ CORRECTION : parseInt → toNumber pour la quantité (cohérence)
-        const quantite = toNumber(ligne.querySelector('.depense-qte').value);
+        const prix = parseFloat(ligne.querySelector('.depense-prix').value) || 0;
+        const quantite = parseInt(ligne.querySelector('.depense-qte').value) || 0;
         total += prix * quantite;
     });
     
@@ -1774,42 +1708,21 @@ function initBudgetListeners() {
         budgetButton.addEventListener('click', analyserBudget);
     }
     
-    // === CHAMPS STANDARDS (avec debounce) ===
-    const standardInputs = [
-        'simulation-budget-loyer',
-        'simulation-budget-quotidien',
-        'simulation-budget-extra',
-        'revenu-mensuel-input',
-       'simulation-budget-invest'   // Épargne/investissement automatique
+    // Ajouter des écouteurs aux champs simples
+    const simpleInputs = [
+        document.getElementById('simulation-budget-loyer'),
+        document.getElementById('simulation-budget-quotidien'),
+        document.getElementById('simulation-budget-extra'),
+        document.getElementById('simulation-budget-invest'),
+        document.getElementById('revenu-mensuel-input'),
+        document.getElementById('objectif-epargne'),
+        document.getElementById('objectif-type')
     ];
     
-    standardInputs.forEach(id => {
-        const input = document.getElementById(id);
+    simpleInputs.forEach(input => {
         if (input) {
-            // Exécution immédiate quand on quitte le champ
-            input.addEventListener('change', analyserBudget);
-        }
-    });
-    
-    // === CHAMPS CRITIQUES (réactivité maximale) ===
-    const criticalInputs = [
-        'objectif-epargne',           // Objectif d'épargne
-        'objectif-type'               // Type d'objectif
-    ];
-    
-    criticalInputs.forEach(id => {
-        const input = document.getElementById(id);
-        if (input) {
-            // Multi-événements pour réactivité maximale (SANS debounce)
-            ['input', 'keyup', 'change', 'blur'].forEach(eventType => {
-                input.addEventListener(eventType, () => {
-                    // Petite optimisation : éviter les recalculs identiques
-                    const currentValue = input.value;
-                    if (input.lastCalculatedValue !== currentValue) {
-                        input.lastCalculatedValue = currentValue;
-                        analyserBudget();
-                    }
-                });
+            input.addEventListener('change', function() {
+                analyserBudget();
             });
         }
     });
@@ -1865,10 +1778,13 @@ function initBudgetListeners() {
         });
     }
     
-// Ajouter un écouteur spécial pour le revenu mensuel pour ajuster les valeurs suggérées
-const revenuInput = document.getElementById('revenu-mensuel-input');
-if (revenuInput) {
-}
+    // Ajouter un écouteur spécial pour le revenu mensuel pour ajuster les valeurs suggérées
+    const revenuInput = document.getElementById('revenu-mensuel-input');
+    if (revenuInput) {
+        revenuInput.addEventListener('change', function() {
+            ajusterValeursParDefaut(parseFloat(this.value) || 3000);
+        });
+    }
     
     // Écouteur pour le bouton d'ajout de dépense
     const addButton = document.getElementById('ajouter-depense');
@@ -1891,16 +1807,17 @@ if (revenuInput) {
     
     // Initialiser l'accessibilité
     KeyboardManager.init();
-Initialiser les détails du score
+    
+    // Initialiser les info-bulles
+    FormulaTooltips.init();
+    
+    // Initialiser les détails du score
     ScoreDetails.init();
     
     // Notification d'initialisation
     setTimeout(() => {
         KeyboardManager.showFeedback('Module budget avec système montant × quantité initialisé', true);
     }, 500);
-    
-    // 🐛 DEBUG : Vérifier que les event listeners sont bien attachés
-    console.log('✅ Budget listeners initialisés avec réactivité différenciée');
 }
 
 /**
@@ -1937,7 +1854,8 @@ function ajusterValeursParDefaut(revenu) {
     
     // Mettre à jour les autres champs
     document.getElementById('simulation-budget-loyer').value = loyerSuggere;
-   const investSuggere = Math.round(revenu * 0.1); // Calcul gardé pour référence
+    const investSuggere = Math.round(revenu * 0.1); // ~10% pour l'épargne/investissement
+    document.getElementById('simulation-budget-invest').value = investSuggere;
     
     // Analyser le budget avec les nouvelles valeurs
     analyserBudget();
@@ -2020,9 +1938,8 @@ function showBudgetNotification(message, type = 'info') {
  * L'investissement automatique est maintenant traité comme de l'épargne, pas une dépense
  */
 function analyserBudget() {
-    if (!champsOK()) return; // empêche un calcul bancal
     // Récupérer les valeurs du budget
-    const loyer = toNumber(document.getElementById('simulation-budget-loyer').value);
+    const loyer = parseFloat(document.getElementById('simulation-budget-loyer').value) || 0;
     let quotidien, extra;
     
     // Vérifier le mode d'affichage actif
@@ -2034,17 +1951,17 @@ function analyserBudget() {
         extra = updateCategoryTotal('loisirs');
     } else {
         // En mode simplifié, utiliser les valeurs directes
- quotidien = toNumber(document.getElementById('simulation-budget-quotidien').value);
-extra     = toNumber(document.getElementById('simulation-budget-extra').value);
+        quotidien = parseFloat(document.getElementById('simulation-budget-quotidien').value) || 0;
+        extra = parseFloat(document.getElementById('simulation-budget-extra').value) || 0;
     }
     
-const investAuto = toNumber(document.getElementById('simulation-budget-invest').value);
+    const investAuto = parseFloat(document.getElementById('simulation-budget-invest').value) || 0;
     
     // Récupérer le total des dépenses détaillées
     const totalDepensesVariables = updateDetailedExpensesTotal();
     
     // Récupérer le revenu mensuel saisi par l'utilisateur
- const revenuMensuel = toNumber(document.getElementById('revenu-mensuel-input').value);
+    const revenuMensuel = parseFloat(document.getElementById('revenu-mensuel-input').value) || 3000;
     
     // ===== NOUVELLE LOGIQUE CORRIGÉE =====
     // 1. Dépenses "de consommation" (on retire l'épargne auto)
@@ -2054,10 +1971,7 @@ const investAuto = toNumber(document.getElementById('simulation-budget-invest').
     const epargneAuto = investAuto;
     
     // 3. Épargne libre restante **après** l'épargne auto
-const epargneBrute = revenuMensuel - depensesConsommation - investAuto;
-const epargneLibre = Math.max(0, epargneBrute);
-const deficit = Math.min(0, epargneBrute);
-const epargneTotale = investAuto + epargneLibre;
+    const epargneLibre = Math.max(0, revenuMensuel - depensesConsommation - epargneAuto);
     
     // 4. Totaux à afficher
     const depensesTotales = depensesConsommation;          // ↩️ on n'y met plus l'auto-invest
@@ -2080,8 +1994,9 @@ const epargneTotale = investAuto + epargneLibre;
     document.getElementById('simulation-epargne-possible').textContent = formatter.format(epargnePossible);
     document.getElementById('simulation-taux-epargne').textContent = tauxEpargne.toFixed(1) + '%';
     // ===== NOUVELLES TUILES ÉPARGNE =====
+    const epargneTotale = epargneAuto + epargneLibre;
     document.getElementById('simulation-epargne-auto').textContent = formatter.format(epargneAuto);
-  document.getElementById('simulation-epargne-totale').textContent = formatter.format(epargneTotale);
+    document.getElementById('simulation-epargne-totale').textContent = formatter.format(epargneTotale);
     
     // ===== APPELS CORRIGÉS =====
     // Mettre à jour le graphique
@@ -2284,15 +2199,10 @@ function updateRecommendations(epargnePossible, tauxEpargne, investAuto) {
 function updateBudgetChart(loyer, quotidien, extra, investAuto, depensesVariables, epargne) {
     if (!window.budgetChart) return;
     
-const d = window.budgetChart.data.datasets[0].data;
-d[0] = loyer;
-d[1] = quotidien; 
-d[2] = extra;
-d[3] = investAuto;          // ← Fini les "sauts" !
-d[4] = depensesVariables;
-d[5] = epargne;
-window.budgetChart.update();
-    }
+    window.budgetChart.data.datasets[0].data = [loyer, quotidien, extra, investAuto, depensesVariables, epargne];
+    window.budgetChart.update();
+}
+
 /**
  * Met à jour le graphique d'évolution sur 12 mois
  * @param {number} epargneMensuelle - Montant d'épargne mensuelle
@@ -2421,15 +2331,4 @@ function updateBudgetAdvice(loyer, quotidien, extra, investAuto, depensesVariabl
     } else {
         adviceScore.classList.add('bg-blue-900', 'bg-opacity-20', 'text-blue-400');
     }
-    }
-/**
- * Fonction de nettoyage pour réinitialiser si nécessaire
- */
-function resetBudgetPlanner() {
-    window.__budgetPlannerInitialized__ = false;
-    const container = document.getElementById('budget-planner');
-    if (container) {
-        container.innerHTML = '';
-    }
-    console.log('Budget Planner réinitialisé');
 }
