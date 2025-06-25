@@ -93,7 +93,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialiser l'onglet Budget
     initBudgetPlanner();
 });
+/* ---------- UTIL: lecture de nombres "français" ---------- */
+function readNumber(id) {
+  const el = document.getElementById(id);
+  if (!el) return 0;
 
+  return Number(
+    el.value
+      .replace(/\s+/g, '')               // supprime tous les espaces
+      .replace(/(\d),(\d{3})/g, '$1$2')  // enlève la virgule séparateur de milliers éventuelle
+      .replace(/,(\d{1,2})$/, '.$1')     // virgule décimale → point
+  ) || 0;
+}
 /**
  * Gestionnaire d'accessibilité clavier
  */
@@ -1933,7 +1944,7 @@ function showBudgetNotification(message, type = 'info') {
  */
 function analyserBudget() {
     // Récupérer les valeurs du budget
-    const loyer = parseFloat(document.getElementById('simulation-budget-loyer').value) || 0;
+     const loyer = readNumber('simulation-budget-loyer');
     let quotidien, extra;
     
     // Vérifier le mode d'affichage actif
@@ -1949,13 +1960,13 @@ function analyserBudget() {
         extra = parseFloat(document.getElementById('simulation-budget-extra').value) || 0;
     }
     
-    const investAuto = parseFloat(document.getElementById('simulation-budget-invest').value) || 0;
+     const loyer = readNumber('simulation-budget-loyer');
     
     // Récupérer le total des dépenses détaillées
     const totalDepensesVariables = updateDetailedExpensesTotal();
     
     // Récupérer le revenu mensuel saisi par l'utilisateur
-    const revenuMensuel = parseFloat(document.getElementById('revenu-mensuel-input').value) || 3000;
+    const revenuMensuel = readNumber('revenu-mensuel-input');
     
     // Calculer les totaux du budget
     const depensesTotales = loyer + quotidien + extra + investAuto + totalDepensesVariables;
