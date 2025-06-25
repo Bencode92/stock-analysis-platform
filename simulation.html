@@ -8,6 +8,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+      <!-- ✅ AJOUTER CES 2 LIGNES -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <link rel="stylesheet" href="css/budget-pdf.css">
     <!-- Ajout de la bibliothèque html2pdf pour l'export PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <!-- Styles généraux -->
@@ -647,8 +650,13 @@
                 </div>
                 
                 <!-- Contenu pour l'onglet Budget & Épargne -->
+               <!-- Contenu pour l'onglet Budget & Épargne -->
                 <div id="budget-planner" class="simulation-content" style="display: none;">
                     <!-- Le contenu sera généré dynamiquement par budget-epargne.js -->
+                </div>
+                
+                <!-- Template caché pour export PDF -->
+                <div id="budget-pdf-template" class="hidden pdf-container"></div>
                 </div>
                 
                 <!-- Contenu pour l'onglet Gestion de dette -->
