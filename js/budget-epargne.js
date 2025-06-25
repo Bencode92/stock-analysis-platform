@@ -1721,7 +1721,7 @@ function initBudgetListeners() {
             });
         }
     });
-}
+
     // Écouteurs pour les boutons de vue
     const viewDetailed = document.getElementById('view-detailed');
     const viewSimple = document.getElementById('view-simple');
