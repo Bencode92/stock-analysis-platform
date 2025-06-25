@@ -3,11 +3,12 @@
 .pdf-container {
     font-family: 'Inter', sans-serif;
     max-width: 210mm;
-    margin: 0 !important;
-    background: white;
+    margin: 0 auto !important;  /* ✅ CHANGÉ : centrage avec auto */
+    background: #e5f3ff;        /* ✅ CHANGÉ : fond bleu clair */
     color: #1f2937;
     line-height: 1.4;
-    padding: 0;
+    padding: 20px;              /* ✅ AJOUTÉ : padding pour éviter les bords */
+    box-sizing: border-box;     /* ✅ AJOUTÉ : pour inclure padding dans la largeur */
 }
 
 .avoid-break {
@@ -22,7 +23,7 @@
 }
 
 .pdf-hero {
-    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); /* ✅ CHANGÉ : Bleus plus cohérents */
     border-radius: 12px;
     border-left: 4px solid #059669;
     padding: 20px;
@@ -62,7 +63,7 @@
 }
 
 .recommendation-pdf {
-    background: #f0fdf4;
+    background: #f0f9ff;        /* ✅ CHANGÉ : Bleu clair au lieu de vert */
     padding: 15px;
     border-radius: 8px;
     border-left: 4px solid #059669;
@@ -70,7 +71,7 @@
 }
 
 .objective-pdf {
-    background: #eff6ff;
+    background: #f8fafc;        /* ✅ CHANGÉ : Gris-bleu très léger */
     padding: 15px;
     border-radius: 8px;
     border-left: 4px solid #3b82f6;
@@ -128,9 +129,10 @@
 /* Optimisations pour impression */
 @media print {
     .pdf-container {
-        margin: 0 !important;
-        padding: 0 !important;
-        max-width: none !important;
+        margin: 0 auto !important;  /* ✅ CHANGÉ : garder le centrage */
+        padding: 15px !important;   /* ✅ CHANGÉ : padding réduit pour print */
+        max-width: 210mm !important;
+        background: #e5f3ff !important; /* ✅ AJOUTÉ : forcer le fond bleu */
     }
     
     .avoid-break { 
