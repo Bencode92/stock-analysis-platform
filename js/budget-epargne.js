@@ -3,13 +3,830 @@
  * Ce module gère la génération de l'interface et des calculs pour la section Budget & Épargne
  * TradePulse Finance Intelligence Platform
  * 
- * MODIFIÉ: Loyer inclus dans "Vie courante" + Graphique à 5 catégories
+ * Version 3.0 - Intégration système Budget × Quantités pour plus de réalisme
+ * Version 2.0 - Ajout accessibilité complète et transparence des formules
  */
+
+// Configuration des catégories de dépenses avec valeurs par défaut
+const EXPENSE_CATEGORIES = {
+    'vie-courante': {
+        title: 'Dépenses de la vie courante',
+        icon: '🏠',
+        color: '#3B82F6',
+        items: [
+            {
+                id: 'alimentation',
+                name: 'Alimentation (courses)',
+                defaultAmount: 100,
+                defaultQuantity: 4,
+                unit: 'fois/mois',
+                description: 'Courses alimentaires'
+            },
+            {
+                id: 'transport',
+                name: 'Transports (essence, métro...)',
+                defaultAmount: 75,
+                defaultQuantity: 2,
+                unit: 'pleins/mois',
+                description: 'Carburant et transports'
+            },
+            {
+                id: 'factures',
+                name: 'Factures (électricité, eau...)',
+                defaultAmount: 150,
+                defaultQuantity: 1,
+                unit: 'fois/mois',
+                description: 'Charges fixes du logement'
+            },
+            {
+                id: 'abonnements',
+                name: 'Téléphone / Internet',
+                defaultAmount: 80,
+                defaultQuantity: 1,
+                unit: 'fois/mois',
+                description: 'Forfaits téléphoniques et internet'
+            }
+        ]
+    },
+    'loisirs': {
+        title: 'Loisirs & plaisirs',
+        icon: '🎉',
+        color: '#10B981',
+        items: [
+            {
+                id: 'restaurants',
+                name: 'Restaurants & cafés',
+                defaultAmount: 25,
+                defaultQuantity: 6,
+                unit: 'sorties/mois',
+                description: 'Sorties restaurants et cafés'
+            },
+            {
+                id: 'shopping',
+                name: 'Shopping & achats plaisir',
+                defaultAmount: 50,
+                defaultQuantity: 2,
+                unit: 'fois/mois',
+                description: 'Achats non essentiels'
+            },
+            {
+                id: 'abos-loisirs',
+                name: 'Netflix, Spotify...',
+                defaultAmount: 15,
+                defaultQuantity: 2,
+                unit: 'abonnements',
+                description: 'Abonnements divertissement'
+            },
+            {
+                id: 'voyages',
+                name: 'Voyages & week-ends',
+                defaultAmount: 200,
+                defaultQuantity: 1,
+                unit: 'fois/mois',
+                description: 'Vacances et escapades'
+            }
+        ]
+    }
+};
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialiser l'onglet Budget
     initBudgetPlanner();
 });
+
+/**
+ * Gestionnaire d'accessibilité clavier
+ */
+const KeyboardManager = {
+    /**
+     * Initialise la navigation clavier pour tous les éléments interactifs
+     */
+    init() {
+        this.setupTabNavigation();
+        this.setupFocusManagement();
+        this.setupAriaAttributes();
+    },
+
+    /**
+     * Configure la navigation par onglets
+     */
+    setupTabNavigation() {
+        // Boutons de vue (Détaillé/Simplifié)
+        document.querySelectorAll('[role="tab"]').forEach(tab => {
+            tab.addEventListener('keydown', (e) => {
+                if ([' ', 'Enter'].includes(e.key)) {
+                    e.preventDefault();
+                    tab.click();
+                }
+                // Navigation fléchée entre onglets
+                if (['ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                    e.preventDefault();
+                    this.navigateTabs(tab, e.key === 'ArrowRight');
+                }
+            });
+        });
+
+        // Inputs avec Enter pour validation
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    analyserBudget();
+                    this.showFeedback('Budget analysé');
+                }
+            });
+        });
+
+        // Boutons avec feedback vocal
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('focus', () => {
+                this.announceElement(button);
+            });
+        });
+    },
+
+    /**
+     * Navigation entre onglets avec flèches
+     */
+    navigateTabs(currentTab, isNext) {
+        const tabs = [...document.querySelectorAll('[role="tab"]')];
+        const currentIndex = tabs.indexOf(currentTab);
+        const nextIndex = isNext 
+            ? (currentIndex + 1) % tabs.length 
+            : (currentIndex - 1 + tabs.length) % tabs.length;
+        
+        tabs[nextIndex].focus();
+        tabs[nextIndex].click();
+    },
+
+    /**
+     * Gestion du focus visible
+     */
+    setupFocusManagement() {
+        // Focus visible sur tous les éléments interactifs
+        const focusableElements = [
+            'button', 'input', 'select', '[role="tab"]', '[tabindex]'
+        ].join(',');
+
+        document.querySelectorAll(focusableElements).forEach(el => {
+            // Focus visible
+            el.classList.add('focus:outline-none', 'focus:ring-2', 'focus:ring-blue-400', 'focus:ring-opacity-50');
+            
+            // Skip links pour navigation rapide
+            if (el.id) {
+                el.setAttribute('data-skip-target', el.id);
+            }
+        });
+    },
+
+    /**
+     * Configuration des attributs ARIA
+     */
+    setupAriaAttributes() {
+        // Titres et descriptions
+        const sections = [
+            { id: 'simulation-budget-loyer', label: 'Loyer mensuel', desc: 'Montant du loyer ou crédit immobilier' },
+            { id: 'simulation-budget-quotidien', label: 'Dépenses quotidiennes', desc: 'Alimentation, transport, factures' },
+            { id: 'simulation-budget-extra', label: 'Loisirs et sorties', desc: 'Restaurants, shopping, voyages' },
+            { id: 'simulation-budget-invest', label: 'Épargne automatique', desc: 'Investissement mensuel programmé' }
+        ];
+
+        sections.forEach(section => {
+            const element = document.getElementById(section.id);
+            if (element) {
+                element.setAttribute('aria-label', section.label);
+                element.setAttribute('aria-describedby', `${section.id}-desc`);
+                
+                // Créer description cachée pour lecteurs d'écran
+                const desc = document.createElement('div');
+                desc.id = `${section.id}-desc`;
+                desc.className = 'sr-only';
+                desc.textContent = section.desc;
+                element.parentNode.insertBefore(desc, element.nextSibling);
+            }
+        });
+
+        // Région live pour les résultats
+        const resultsContainer = document.getElementById('budget-advice');
+        if (resultsContainer) {
+            resultsContainer.setAttribute('aria-live', 'polite');
+            resultsContainer.setAttribute('aria-atomic', 'true');
+        }
+    },
+
+    /**
+     * Annonce vocale pour lecteurs d'écran
+     */
+    announceElement(element) {
+        const announcement = element.getAttribute('aria-label') || 
+                           element.textContent || 
+                           element.title || 
+                           'Élément interactif';
+        
+        // Annonce discrète via aria-live
+        this.showFeedback(announcement, true);
+    },
+
+    /**
+     * Feedback visuel et vocal
+     */
+    showFeedback(message, isScreenReaderOnly = false) {
+        const feedback = document.createElement('div');
+        feedback.setAttribute('aria-live', 'assertive');
+        feedback.className = isScreenReaderOnly ? 'sr-only' : 'fixed top-4 right-4 bg-blue-600 text-white px-3 py-2 rounded z-50 text-sm';
+        feedback.textContent = message;
+        
+        document.body.appendChild(feedback);
+        
+        setTimeout(() => feedback.remove(), isScreenReaderOnly ? 100 : 2000);
+    }
+};
+
+/**
+ * Gestionnaire des info-bulles de formules
+ */
+const FormulaTooltips = {
+    /**
+     * Base de données des formules
+     */
+    formulas: {
+        'simulation-taux-epargne': {
+            title: 'Taux d\'épargne',
+            formula: 'Taux = (Épargne possible ÷ Revenu total) × 100',
+            explanation: 'Indique le pourcentage de vos revenus que vous parvenez à épargner. Un taux optimal se situe entre 15% et 25%.',
+            example: 'Ex: 400€ épargne ÷ 3000€ revenu = 13,3%'
+        },
+        'simulation-epargne-possible': {
+            title: 'Épargne possible',
+            formula: 'Épargne = Revenus - (Loyer + Vie courante + Loisirs + Épargne auto + Variables)',
+            explanation: 'Montant restant après toutes vos dépenses. C\'est votre capacité d\'épargne additionnelle.',
+            example: 'Ex: 3000€ - 2600€ dépenses = 400€'
+        },
+        'budget-score': {
+            title: 'Score budget',
+            formula: 'Score = Base(3) + Bonus/Malus selon critères',
+            explanation: 'Évaluation de 1 à 5 basée sur vos ratios financiers.',
+            criteria: [
+                'Taux épargne < 5% : -1 point',
+                'Taux épargne > 20% : +1 point', 
+                'Loyer > 33% revenus : -1 point',
+                'Loyer < 25% revenus : +1 point'
+            ]
+        },
+        'temps-objectif': {
+            title: 'Temps pour objectif',
+            formula: 'Temps = Montant objectif ÷ Épargne mensuelle',
+            explanation: 'Durée nécessaire pour atteindre votre objectif au rythme d\'épargne actuel.',
+            example: 'Ex: 5000€ ÷ 400€/mois = 12,5 mois'
+        }
+    },
+
+    /**
+     * Initialise les info-bulles
+     */
+    init() {
+        Object.keys(this.formulas).forEach(elementId => {
+            this.attachTooltip(elementId);
+        });
+    },
+
+    /**
+     * Attache une info-bulle à un élément
+     */
+    attachTooltip(elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        // Ajouter indicateur visuel
+        const indicator = document.createElement('span');
+        indicator.className = 'ml-1 text-blue-400 cursor-help text-xs';
+        indicator.innerHTML = '<i class="fas fa-calculator"></i>';
+        indicator.setAttribute('aria-label', 'Voir la formule de calcul');
+        indicator.setAttribute('tabindex', '0');
+
+        // Événements
+        ['mouseenter', 'focus'].forEach(event => {
+            indicator.addEventListener(event, () => this.showTooltip(elementId, indicator));
+        });
+        
+        ['mouseleave', 'blur'].forEach(event => {
+            indicator.addEventListener(event, () => this.hideTooltip());
+        });
+
+        // Support tactile pour mobile
+        indicator.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.toggleTooltip(elementId, indicator);
+        });
+
+        // Gestion clavier
+        indicator.addEventListener('keydown', (e) => {
+            if ([' ', 'Enter'].includes(e.key)) {
+                e.preventDefault();
+                this.toggleTooltip(elementId, indicator);
+            }
+        });
+
+        // Insérer l'indicateur
+        element.parentNode.insertBefore(indicator, element.nextSibling);
+    },
+
+    /**
+     * Affiche l'info-bulle
+     */
+    showTooltip(elementId, triggerElement) {
+        this.hideTooltip(); // Masquer les autres
+
+        const formula = this.formulas[elementId];
+        const tooltip = document.createElement('div');
+        tooltip.id = 'formula-tooltip';
+        
+        // Responsive design
+        const isMobile = window.innerWidth < 768;
+        tooltip.className = isMobile 
+            ? 'fixed inset-x-4 bottom-4 z-50 p-4 bg-gray-900 border border-gray-700 rounded-lg shadow-xl text-sm text-white transform-none'
+            : 'absolute z-50 p-4 bg-gray-900 border border-gray-700 rounded-lg shadow-xl text-sm text-white max-w-xs sm:max-w-sm transform -translate-x-1/2 mt-2';
+        
+        tooltip.innerHTML = `
+            <div class="font-semibold text-blue-400 mb-2 flex items-center">
+                <i class="fas fa-formula mr-2"></i>
+                ${formula.title}
+            </div>
+            <div class="mb-2">
+                <strong class="text-green-400">Formule :</strong><br>
+                <code class="text-green-300 text-xs">${formula.formula}</code>
+            </div>
+            <div class="mb-2 text-gray-300">
+                ${formula.explanation}
+            </div>
+            ${formula.example ? `
+                <div class="text-blue-300 text-xs">
+                    <strong>Exemple :</strong> ${formula.example}
+                </div>
+            ` : ''}
+            ${formula.criteria ? `
+                <div class="mt-2">
+                    <strong class="text-orange-400">Critères :</strong>
+                    <ul class="text-xs mt-1 space-y-1">
+                        ${formula.criteria.map(c => `<li>• ${c}</li>`).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+            <div class="mt-2 pt-2 border-t border-gray-700 text-xs text-gray-400">
+                <kbd>Échap</kbd> pour fermer
+            </div>
+        `;
+
+        // Positionner la tooltip (seulement si pas mobile)
+        if (!isMobile) {
+            const rect = triggerElement.getBoundingClientRect();
+            tooltip.style.left = rect.left + (rect.width / 2) + 'px';
+            tooltip.style.top = rect.bottom + window.scrollY + 'px';
+        }
+
+        // Ajouter au DOM
+        document.body.appendChild(tooltip);
+
+        // Ajuster si hors écran (desktop seulement)
+        if (!isMobile) {
+            const tooltipRect = tooltip.getBoundingClientRect();
+            if (tooltipRect.right > window.innerWidth) {
+                tooltip.style.left = (window.innerWidth - tooltipRect.width - 10) + 'px';
+            }
+            if (tooltipRect.left < 0) {
+                tooltip.style.left = '10px';
+            }
+        }
+
+        // Gestion clavier globale
+        document.addEventListener('keydown', this.handleTooltipKeyboard);
+    },
+
+    /**
+     * Masque l'info-bulle
+     */
+    hideTooltip() {
+        const existing = document.getElementById('formula-tooltip');
+        if (existing) {
+            existing.remove();
+            document.removeEventListener('keydown', this.handleTooltipKeyboard);
+        }
+    },
+
+    /**
+     * Toggle l'info-bulle
+     */
+    toggleTooltip(elementId, triggerElement) {
+        const existing = document.getElementById('formula-tooltip');
+        if (existing) {
+            this.hideTooltip();
+        } else {
+            this.showTooltip(elementId, triggerElement);
+        }
+    },
+
+    /**
+     * Gestion clavier pour les tooltips
+     */
+    handleTooltipKeyboard: function(e) {
+        if (e.key === 'Escape') {
+            FormulaTooltips.hideTooltip();
+        }
+    }
+};
+
+/**
+ * Gestionnaire des détails du score budget
+ */
+const ScoreDetails = {
+    /**
+     * Initialise le panneau de détails
+     */
+    init() {
+        this.createDetailsPanel();
+    },
+
+    /**
+     * Crée le panneau de détails du score
+     */
+    createDetailsPanel() {
+        const scoreContainer = document.querySelector('.budget-score-circle')?.parentNode;
+        if (!scoreContainer) return;
+
+        // Bouton toggle
+        const toggleButton = document.createElement('button');
+        toggleButton.id = 'toggle-score-details';
+        toggleButton.className = 'mt-2 text-xs text-blue-400 hover:text-blue-300 flex items-center';
+        toggleButton.setAttribute('aria-expanded', 'false');
+        toggleButton.innerHTML = `
+            <i class="fas fa-chevron-down mr-1" id="details-chevron"></i>
+            Détails du calcul
+        `;
+
+        // Panneau de détails
+        const detailsPanel = document.createElement('div');
+        detailsPanel.id = 'score-details-panel';
+        detailsPanel.className = 'mt-3 p-3 bg-blue-800 bg-opacity-20 rounded-lg text-xs hidden';
+        detailsPanel.setAttribute('aria-hidden', 'true');
+
+        // Événement toggle
+        toggleButton.addEventListener('click', () => {
+            this.toggleDetails(toggleButton, detailsPanel);
+        });
+
+        // Ajouter au DOM
+        scoreContainer.appendChild(toggleButton);
+        scoreContainer.appendChild(detailsPanel);
+    },
+
+    /**
+     * Toggle l'affichage des détails
+     */
+    toggleDetails(button, panel) {
+        const isExpanded = button.getAttribute('aria-expanded') === 'true';
+        const chevron = document.getElementById('details-chevron');
+
+        if (isExpanded) {
+            // Fermer
+            panel.classList.add('hidden');
+            panel.setAttribute('aria-hidden', 'true');
+            button.setAttribute('aria-expanded', 'false');
+            chevron.className = 'fas fa-chevron-down mr-1';
+        } else {
+            // Ouvrir
+            panel.classList.remove('hidden');
+            panel.setAttribute('aria-hidden', 'false');
+            button.setAttribute('aria-expanded', 'true');
+            chevron.className = 'fas fa-chevron-up mr-1';
+            
+            // Mettre à jour le contenu
+            this.updateDetailsContent(panel);
+        }
+    },
+
+    /**
+     * Met à jour le contenu des détails
+     */
+    updateDetailsContent(panel) {
+        // Récupérer les données actuelles du budget
+        const revenuMensuel = parseFloat(document.getElementById('revenu-mensuel-input')?.value) || 0;
+        const loyer = parseFloat(document.getElementById('simulation-budget-loyer')?.value) || 0;
+        const tauxEpargne = parseFloat(document.getElementById('simulation-taux-epargne')?.textContent?.replace('%', '')) || 0;
+        
+        const ratioLogement = revenuMensuel > 0 ? (loyer / revenuMensuel) * 100 : 0;
+        
+        // Calculer les points
+        let scoreBreakdown = [
+            { label: 'Score de base', points: 3, reason: 'Point de départ standard' }
+        ];
+
+        if (tauxEpargne < 5) {
+            scoreBreakdown.push({ label: 'Taux d\'épargne faible', points: -1, reason: `${tauxEpargne.toFixed(1)}% < 5%` });
+        } else if (tauxEpargne >= 20) {
+            scoreBreakdown.push({ label: 'Excellent taux d\'épargne', points: 1, reason: `${tauxEpargne.toFixed(1)}% ≥ 20%` });
+        }
+
+        if (ratioLogement > 33) {
+            scoreBreakdown.push({ label: 'Logement trop cher', points: -1, reason: `${ratioLogement.toFixed(1)}% > 33%` });
+        } else if (ratioLogement <= 25) {
+            scoreBreakdown.push({ label: 'Logement bien maîtrisé', points: 1, reason: `${ratioLogement.toFixed(1)}% ≤ 25%` });
+        }
+
+        const totalScore = scoreBreakdown.reduce((sum, item) => sum + item.points, 0);
+        const finalScore = Math.max(1, Math.min(5, totalScore));
+
+        // Générer le HTML
+        const html = `
+            <h6 class="font-medium text-blue-400 mb-2">Calcul détaillé du score</h6>
+            <div class="space-y-2">
+                ${scoreBreakdown.map(item => `
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-300">${item.label}</span>
+                        <div class="text-right">
+                            <span class="${item.points > 0 ? 'text-green-400' : item.points < 0 ? 'text-red-400' : 'text-blue-400'}">
+                                ${item.points > 0 ? '+' : ''}${item.points} pt
+                            </span>
+                            <div class="text-gray-500 text-xs">${item.reason}</div>
+                        </div>
+                    </div>
+                `).join('')}
+                <div class="border-t border-blue-700 pt-2 mt-2">
+                    <div class="flex justify-between items-center font-medium">
+                        <span class="text-white">Score final</span>
+                        <span class="text-blue-400">${finalScore}/5</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        panel.innerHTML = html;
+    }
+};
+
+/**
+ * Génère l'interface HTML pour les sections de dépenses avec système montant × quantité
+ */
+function generateExpenseSectionsHTML() {
+    let html = '<div id="dynamic-expenses-container">';
+    
+    Object.keys(EXPENSE_CATEGORIES).forEach(categoryKey => {
+        const category = EXPENSE_CATEGORIES[categoryKey];
+        
+        html += `
+            <div class="expense-category mb-6">
+                <div class="category-header flex items-center justify-between mb-4">
+                    <h5 class="text-lg font-semibold flex items-center">
+                        <span class="mr-2">${category.icon}</span>
+                        ${category.title}
+                    </h5>
+                    <div class="category-total">
+                        <span id="total-${categoryKey}" class="text-xl font-bold" style="color: ${category.color}">
+                            0€
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="category-progress mb-4">
+                    <div class="progress-bar bg-blue-800 bg-opacity-20 rounded-full h-2">
+                        <div id="progress-${categoryKey}" 
+                             class="progress-fill h-full rounded-full transition-all duration-500" 
+                             style="background-color: ${category.color}; width: 0%">
+                        </div>
+                    </div>
+                    <div class="progress-label text-sm text-gray-400 mt-1">
+                        <span id="percentage-${categoryKey}">0%</span> du budget total
+                    </div>
+                </div>
+                
+                <div class="expenses-list bg-blue-800 bg-opacity-20 p-4 rounded-lg space-y-3">
+                    ${generateCategoryItemsHTML(categoryKey, category.items)}
+                </div>
+                
+                <div class="category-actions mt-3 text-right">
+                    <button onclick="resetCategoryToDefaults('${categoryKey}')" 
+                            class="btn-reset text-sm text-blue-400 hover:text-blue-300 transition">
+                        <i class="fas fa-undo mr-1"></i>
+                        Réinitialiser aux valeurs par défaut
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    return html;
+}
+
+/**
+ * Génère les éléments d'une catégorie avec système montant × quantité
+ */
+function generateCategoryItemsHTML(categoryKey, items) {
+    return items.map(item => `
+        <div class="expense-item flex items-center justify-between">
+            <div class="expense-info flex-1">
+                <label class="expense-label font-medium">${item.name}</label>
+                <div class="expense-description text-xs text-gray-400 mt-1">
+                    ${item.description}
+                </div>
+            </div>
+            
+            <div class="expense-controls flex items-center space-x-2">
+                <div class="amount-input flex items-center">
+                    <input type="number" 
+                           id="amount-${item.id}" 
+                           value="${item.defaultAmount}"
+                           min="0"
+                           step="1"
+                           class="w-16 p-1 text-sm rounded bg-blue-900 bg-opacity-30 border border-blue-700 text-white text-center">
+                    <span class="text-sm text-gray-300 ml-1">€</span>
+                </div>
+                
+                <span class="text-gray-400">×</span>
+                
+                <div class="quantity-input flex items-center">
+                    <input type="number" 
+                           id="quantity-${item.id}" 
+                           value="${item.defaultQuantity}"
+                           min="0"
+                           step="1"
+                           class="w-12 p-1 text-sm rounded bg-blue-900 bg-opacity-30 border border-blue-700 text-white text-center">
+                    <span class="text-xs text-gray-400 ml-1 w-20">${item.unit}</span>
+                </div>
+                
+                <span class="text-gray-400">=</span>
+                
+                <div class="total-display">
+                    <span id="total-${item.id}" class="font-bold text-green-400">
+                        ${item.defaultAmount * item.defaultQuantity}€
+                    </span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+/**
+ * Initialise les écouteurs pour les sections de dépenses avec système montant × quantité
+ */
+function initFixedExpenseSections() {
+    // Ajouter les écouteurs pour tous les champs
+    Object.keys(EXPENSE_CATEGORIES).forEach(categoryKey => {
+        const category = EXPENSE_CATEGORIES[categoryKey];
+        
+        category.items.forEach(item => {
+            const amountInput = document.getElementById(`amount-${item.id}`);
+            const quantityInput = document.getElementById(`quantity-${item.id}`);
+            
+            if (amountInput && quantityInput) {
+                amountInput.addEventListener('input', () => updateItemTotal(item.id));
+                quantityInput.addEventListener('input', () => updateItemTotal(item.id));
+            }
+        });
+    });
+    
+    // Calculer les totaux initiaux
+    updateAllTotals();
+}
+
+/**
+ * Met à jour le total d'un élément de dépense
+ */
+function updateItemTotal(itemId) {
+    const amountInput = document.getElementById(`amount-${itemId}`);
+    const quantityInput = document.getElementById(`quantity-${itemId}`);
+    const totalDisplay = document.getElementById(`total-${itemId}`);
+    
+    if (!amountInput || !quantityInput || !totalDisplay) return;
+    
+    const amount = parseFloat(amountInput.value) || 0;
+    const quantity = parseFloat(quantityInput.value) || 0;
+    const total = amount * quantity;
+    
+    totalDisplay.textContent = `${total}€`;
+    
+    // Mettre à jour le total de la catégorie
+    const categoryKey = findCategoryByItemId(itemId);
+    if (categoryKey) {
+        updateCategoryTotal(categoryKey);
+    }
+    
+    // Mettre à jour l'analyse globale du budget
+    if (typeof analyserBudget === 'function') {
+        analyserBudget();
+    }
+}
+
+/**
+ * Met à jour le total d'une catégorie - VERSION AMÉLIORÉE
+ */
+function updateCategoryTotal(categoryKey) {
+    const category = EXPENSE_CATEGORIES[categoryKey];
+    if (!category) return 0;
+    
+    let total = 0;
+    
+    category.items.forEach(item => {
+        const amountInput = document.getElementById(`amount-${item.id}`);
+        const quantityInput = document.getElementById(`quantity-${item.id}`);
+        
+        if (amountInput && quantityInput) {
+            const amount = parseFloat(amountInput.value) || 0;
+            const quantity = parseFloat(quantityInput.value) || 0;
+            total += amount * quantity;
+        }
+    });
+    
+    // Mettre à jour l'affichage du total
+    const totalDisplay = document.getElementById(`total-${categoryKey}`);
+    if (totalDisplay) {
+        totalDisplay.textContent = `${total}€`;
+    }
+    
+    // Mettre à jour la barre de progression
+    updateCategoryProgressBar(categoryKey, total);
+    
+    return total;
+}
+
+/**
+ * Met à jour la barre de progression d'une catégorie
+ */
+function updateCategoryProgressBar(categoryKey, total) {
+    const loyer = parseFloat(document.getElementById('simulation-budget-loyer')?.value) || 3000;
+    const percentage = loyer > 0 ? (total / loyer * 100) : 0;
+    
+    const progressBar = document.getElementById(`progress-${categoryKey}`);
+    const progressLabel = document.getElementById(`percentage-${categoryKey}`);
+    
+    if (progressBar) {
+        progressBar.style.width = `${Math.min(percentage, 100)}%`;
+    }
+    
+    if (progressLabel) {
+        progressLabel.textContent = `${percentage.toFixed(1)}%`;
+    }
+}
+
+/**
+ * Trouve la catégorie d'un élément par son ID
+ */
+function findCategoryByItemId(itemId) {
+    for (const [categoryKey, category] of Object.entries(EXPENSE_CATEGORIES)) {
+        if (category.items.some(item => item.id === itemId)) {
+            return categoryKey;
+        }
+    }
+    return null;
+}
+
+/**
+ * Remet une catégorie aux valeurs par défaut
+ */
+function resetCategoryToDefaults(categoryKey) {
+    const category = EXPENSE_CATEGORIES[categoryKey];
+    if (!category) return;
+    
+    category.items.forEach(item => {
+        const amountInput = document.getElementById(`amount-${item.id}`);
+        const quantityInput = document.getElementById(`quantity-${item.id}`);
+        
+        if (amountInput) amountInput.value = item.defaultAmount;
+        if (quantityInput) quantityInput.value = item.defaultQuantity;
+        
+        updateItemTotal(item.id);
+    });
+    
+    // Animation de confirmation
+    const categoryElement = document.querySelector(`#total-${categoryKey}`).closest('.expense-category');
+    if (categoryElement) {
+        categoryElement.style.transform = 'scale(1.02)';
+        categoryElement.style.transition = 'transform 0.2s ease';
+        setTimeout(() => {
+            categoryElement.style.transform = 'scale(1)';
+        }, 200);
+    }
+}
+
+/**
+ * Met à jour tous les totaux
+ */
+function updateAllTotals() {
+    Object.keys(EXPENSE_CATEGORIES).forEach(categoryKey => {
+        updateCategoryTotal(categoryKey);
+    });
+}
+
+/**
+ * NOUVELLE VERSION des fonctions updateTotalVieCourante et updateTotalLoisirs 
+ * Compatible avec le système montant × quantité
+ */
+function updateTotalVieCourante() {
+    return updateCategoryTotal('vie-courante');
+}
+
+function updateTotalLoisirs() {
+    return updateCategoryTotal('loisirs');
+}
 
 /**
  * Initialise et génère le contenu de l'onglet Budget
@@ -29,6 +846,10 @@ function initBudgetPlanner() {
     // Ajouter le conteneur à l'onglet Budget
     budgetPlanner.appendChild(budgetGrid);
     
+    // Ajouter les styles d'accessibilité ET les styles pour le système montant × quantité
+    addAccessibilityStyles();
+    addQuantitySystemStyles();
+    
     // Générer l'interface Budget & Épargne
     generateBudgetInterface(budgetGrid);
     
@@ -39,6 +860,375 @@ function initBudgetPlanner() {
     setTimeout(() => {
         analyserBudget();
     }, 500);
+}
+
+/**
+ * Ajoute les styles CSS pour le système montant × quantité
+ */
+function addQuantitySystemStyles() {
+    if (document.getElementById('quantity-system-styles')) return;
+    
+    const styleEl = document.createElement('style');
+    styleEl.id = 'quantity-system-styles';
+    styleEl.textContent = `
+        /* ===== CONTENEUR PRINCIPAL ===== */
+        #dynamic-expenses-container {
+            margin-top: 1rem;
+        }
+
+        /* ===== CATÉGORIES DE DÉPENSES ===== */
+        .expense-category {
+            background: rgba(30, 58, 138, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .expense-category:hover {
+            background: rgba(30, 58, 138, 0.25);
+            border-color: rgba(59, 130, 246, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        /* ===== EN-TÊTE DE CATÉGORIE ===== */
+        .category-header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .category-header h5 {
+            color: #E5E7EB;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .category-total {
+            text-align: right;
+        }
+
+        .category-total span {
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        /* ===== BARRES DE PROGRESSION ===== */
+        .category-progress {
+            margin: 1rem 0;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(30, 64, 175, 0.3);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        /* ===== LISTE DES DÉPENSES ===== */
+        .expenses-list {
+            background: rgba(30, 64, 175, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        /* ===== ÉLÉMENTS DE DÉPENSE ===== */
+        .expense-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .expense-item:last-child {
+            border-bottom: none;
+        }
+
+        .expense-item:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 6px;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            margin: 0 -0.5rem;
+        }
+
+        /* ===== INFO DÉPENSE ===== */
+        .expense-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .expense-label {
+            color: #F3F4F6;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .expense-description {
+            color: #9CA3AF;
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+            font-style: italic;
+        }
+
+        /* ===== CONTRÔLES DE DÉPENSE ===== */
+        .expense-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .amount-input, .quantity-input {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .expense-controls input {
+            background: rgba(30, 64, 175, 0.4);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            border-radius: 6px;
+            color: #F3F4F6;
+            font-weight: 500;
+            text-align: center;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .expense-controls input:focus {
+            outline: none;
+            border-color: #34D399;
+            box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.2);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .expense-controls input:hover {
+            border-color: rgba(59, 130, 246, 0.6);
+            background: rgba(30, 64, 175, 0.5);
+        }
+
+        /* Largeurs spécifiques */
+        .amount-input input {
+            width: 4rem;
+            padding: 0.5rem 0.25rem;
+        }
+
+        .quantity-input input {
+            width: 3rem;
+            padding: 0.5rem 0.25rem;
+        }
+
+        /* ===== SÉPARATEURS ET LABELS ===== */
+        .expense-controls > span {
+            color: #9CA3AF;
+            font-weight: 500;
+            font-size: 1rem;
+        }
+
+        .quantity-input span {
+            color: #6B7280;
+            font-size: 0.75rem;
+            width: 5rem;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        /* ===== AFFICHAGE DU TOTAL ===== */
+        .total-display {
+            min-width: 4rem;
+            text-align: right;
+        }
+
+        .total-display span {
+            color: #34D399;
+            font-weight: 700;
+            font-size: 1rem;
+            text-shadow: 0 0 8px rgba(52, 211, 153, 0.3);
+        }
+
+        /* ===== ACTIONS DE CATÉGORIE ===== */
+        .category-actions {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-reset {
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+        }
+
+        .btn-reset:hover {
+            background: rgba(59, 130, 246, 0.1);
+            color: #60A5FA !important;
+            transform: translateX(-2px);
+        }
+
+        /* ===== RESPONSIVE DESIGN ===== */
+        @media (max-width: 768px) {
+            .expense-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .expense-controls {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            
+            .amount-input, .quantity-input {
+                flex-direction: column;
+                text-align: center;
+                gap: 0.25rem;
+            }
+            
+            .quantity-input span {
+                width: auto;
+                text-align: center;
+            }
+            
+            .total-display {
+                width: 100%;
+                text-align: center;
+                order: -1;
+                margin-bottom: 0.5rem;
+            }
+            
+            .total-display span {
+                font-size: 1.25rem;
+            }
+        }
+
+        /* ===== ANIMATIONS D'APPARITION ===== */
+        .expense-category {
+            animation: fadeInUp 0.6s ease forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .expense-category:nth-child(1) { animation-delay: 0.1s; }
+        .expense-category:nth-child(2) { animation-delay: 0.2s; }
+        .expense-category:nth-child(3) { animation-delay: 0.3s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    `;
+    document.head.appendChild(styleEl);
+}
+
+/**
+ * Ajoute les styles CSS d'accessibilité
+ */
+function addAccessibilityStyles() {
+    if (document.getElementById('budget-accessibility-styles')) return;
+    
+    const styleEl = document.createElement('style');
+    styleEl.id = 'budget-accessibility-styles';
+    styleEl.textContent = `
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        
+        .focus\\:outline-none:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+        }
+        
+        .focus\\:ring-2:focus {
+            --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+            --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+            box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+        }
+        
+        .focus\\:ring-blue-400:focus {
+            --tw-ring-opacity: 1;
+            --tw-ring-color: rgb(96 165 250 / var(--tw-ring-opacity));
+        }
+        
+        .focus\\:ring-opacity-50:focus {
+            --tw-ring-opacity: 0.5;
+        }
+        
+        /* Styles pour les animations réduites */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+        
+        /* Styles pour le contraste élevé */
+        @media (prefers-contrast: high) {
+            #formula-tooltip {
+                border: 2px solid white !important;
+                background-color: black !important;
+                color: white !important;
+            }
+        }
+    `;
+    document.head.appendChild(styleEl);
 }
 
 /**
@@ -55,91 +1245,59 @@ function generateBudgetInterface(container) {
             Budget Mensuel & Épargne
         </h4>
         
-        <!-- Mode d'affichage -->
-        <div class="mb-4 flex items-center justify-end">
-            <span class="text-xs text-gray-400 mr-2">Mode d'affichage:</span>
-            <div class="flex items-center bg-blue-800 bg-opacity-30 rounded-md overflow-hidden">
-                <button id="view-detailed" class="py-1 px-3 text-xs font-medium text-blue-400 bg-blue-900 bg-opacity-30 selected">Détaillé</button>
-                <button id="view-simple" class="py-1 px-3 text-xs font-medium text-gray-300">Simplifié</button>
+        <!-- Mode d'affichage avec ARIA complet -->
+        <div class="mb-4 flex items-center justify-between">
+            <span class="text-xs text-gray-400 mr-2 hidden sm:inline">Mode d'affichage:</span>
+            <div class="flex items-center bg-blue-800 bg-opacity-30 rounded-md overflow-hidden w-full sm:w-auto" 
+                 role="tablist" 
+                 aria-label="Mode d'affichage du budget">
+                <button id="view-detailed" 
+                        class="flex-1 sm:flex-none py-2 px-3 text-xs font-medium text-blue-400 bg-blue-900 bg-opacity-30 selected"
+                        role="tab" 
+                        aria-selected="true" 
+                        aria-controls="detailed-view"
+                        tabindex="0">
+                    <span class="hidden sm:inline">Détaillé</span>
+                    <span class="sm:hidden" aria-hidden="true">📊</span>
+                </button>
+                <button id="view-simple" 
+                        class="flex-1 sm:flex-none py-2 px-3 text-xs font-medium text-gray-300"
+                        role="tab" 
+                        aria-selected="false" 
+                        aria-controls="simple-view"
+                        tabindex="-1">
+                    <span class="hidden sm:inline">Simplifié</span>
+                    <span class="sm:hidden" aria-hidden="true">📝</span>
+                </button>
             </div>
         </div>
         
-        <!-- Vue détaillée - Dépenses vie courante (INCLUT LE LOYER) -->
-        <div id="detailed-view-courante" class="mb-6">
-            <h5 class="text-sm font-medium text-blue-400 mb-3 flex items-center">
-                <i class="fas fa-shopping-basket mr-2"></i>
-                Dépenses de la vie courante
-            </h5>
-            
-            <div class="space-y-3 bg-blue-800 bg-opacity-20 p-3 rounded-lg">
-                <div>
-                    <label class="block text-xs text-gray-300 mb-1">Loyer / Crédit immobilier</label>
-                    <input type="number" id="simulation-budget-loyer" value="800" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-300 mb-1">Alimentation (courses)</label>
-                    <input type="number" id="depense-alimentation" value="400" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-300 mb-1">Transports (essence, métro...)</label>
-                    <input type="number" id="depense-transport" value="150" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-300 mb-1">Factures (électricité, eau...)</label>
-                    <input type="number" id="depense-factures" value="150" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-300 mb-1">Abonnements fixes (téléphone, Internet...)</label>
-                    <input type="number" id="depense-abonnements" value="100" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
-                </div>
-                <div class="pt-2 border-t border-blue-700 flex justify-between items-center">
-                    <span class="text-xs text-gray-300">Total vie courante:</span>
-                    <span id="total-vie-courante" class="text-sm font-medium text-blue-400">1600 €</span>
-                </div>
-            </div>
+        <!-- Entrées de budget -->
+        <div class="mb-4">
+            <label class="block mb-2 text-sm font-medium text-gray-300">
+                Loyer / Crédit immobilier
+                <span class="ml-1 text-blue-400 cursor-help" title="Votre dépense mensuelle pour votre logement (loyer ou mensualité de crédit).">
+                    <i class="fas fa-info-circle"></i>
+                </span>
+            </label>
+            <input type="number" id="simulation-budget-loyer" value="800" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
         </div>
         
-        <!-- Vue détaillée - Loisirs & plaisirs -->
-        <div id="detailed-view-loisirs" class="mb-6">
-            <h5 class="text-sm font-medium text-blue-400 mb-3 flex items-center">
-                <i class="fas fa-glass-cheers mr-2"></i>
-                Loisirs & plaisirs
-            </h5>
-            
-            <div class="space-y-3 bg-blue-800 bg-opacity-20 p-3 rounded-lg">
-                <div>
-                    <label class="block text-xs text-gray-300 mb-1">Restaurants & cafés</label>
-                    <input type="number" id="depense-restaurants" value="120" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-300 mb-1">Shopping & achats plaisir</label>
-                    <input type="number" id="depense-shopping" value="100" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-300 mb-1">Abonnements loisirs (Netflix, Spotify...)</label>
-                    <input type="number" id="depense-abos-loisirs" value="30" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-300 mb-1">Voyages & week-ends</label>
-                    <input type="number" id="depense-voyages" value="150" min="0" class="bg-blue-900 bg-opacity-50 border border-blue-700 text-white rounded-lg p-2 w-full text-sm">
-                </div>
-                <div class="pt-2 border-t border-blue-700 flex justify-between items-center">
-                    <span class="text-xs text-gray-300">Total loisirs:</span>
-                    <span id="total-loisirs" class="text-sm font-medium text-blue-400">400 €</span>
-                </div>
-            </div>
+        <!-- Vue détaillée - NOUVEAU SYSTÈME MONTANT × QUANTITÉ -->
+        <div id="detailed-view" class="mb-6">
+            <!-- Le contenu sera généré automatiquement par generateExpenseSectionsHTML() -->
         </div>
         
         <!-- Vue simplifiée -->
         <div id="simple-view" style="display: none;" class="mb-6">
             <div class="mb-4">
                 <label class="block mb-2 text-sm font-medium text-gray-300">
-                    Vie courante : loyer, alimentation, transports, factures...
-                    <span class="ml-1 text-blue-400 cursor-help" title="Exemples : loyer/crédit, courses, électricité, essence, carte de métro, forfait téléphonique, etc.">
+                    Vie courante : alimentation, transports, factures...
+                    <span class="ml-1 text-blue-400 cursor-help" title="Exemples : courses, électricité, essence, carte de métro, forfait téléphonique, etc.">
                         <i class="fas fa-info-circle"></i>
                     </span>
                 </label>
-                <input type="number" id="simulation-budget-quotidien" value="1600" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                <input type="number" id="simulation-budget-quotidien" value="800" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
             </div>
             
             <div class="mb-4">
@@ -321,6 +1479,12 @@ function generateBudgetInterface(container) {
     container.appendChild(budgetInputCol);
     container.appendChild(budgetResultsCol);
     
+    // Injecter le HTML du nouveau système dans la vue détaillée
+    const detailedView = document.getElementById('detailed-view');
+    if (detailedView) {
+        detailedView.innerHTML = generateExpenseSectionsHTML();
+    }
+    
     // Initialiser les graphiques
     initBudgetChart();
     initEvolutionChart();
@@ -328,62 +1492,11 @@ function generateBudgetInterface(container) {
     // Ajouter une première dépense détaillée par défaut pour l'exemple
     addDetailedExpense('Café', 2.5, 20);
 
-    // Mettre à jour les totaux initiaux
-    updateTotalVieCourante();
-    updateTotalLoisirs();
-}
-
-/**
- * ✅ MODIFIÉ: Met à jour le total des dépenses vie courante (INCLUT LE LOYER)
- */
-function updateTotalVieCourante() {
-    const loyer = parseFloat(document.getElementById('simulation-budget-loyer').value) || 0;
-    const alimentation = parseFloat(document.getElementById('depense-alimentation').value) || 0;
-    const transport = parseFloat(document.getElementById('depense-transport').value) || 0;
-    const factures = parseFloat(document.getElementById('depense-factures').value) || 0;
-    const abonnements = parseFloat(document.getElementById('depense-abonnements').value) || 0;
-    
-    const total = loyer + alimentation + transport + factures + abonnements;
-    
-    // Mettre à jour l'affichage
-    const totalElement = document.getElementById('total-vie-courante');
-    if (totalElement) {
-        totalElement.textContent = `${total.toLocaleString('fr-FR')} €`;
-    }
-    
-    // Mettre à jour le champ simplifié
-    const champSimplifie = document.getElementById('simulation-budget-quotidien');
-    if (champSimplifie) {
-        champSimplifie.value = total;
-    }
-    
-    return total;
-}
-
-/**
- * Met à jour le total des dépenses loisirs
- */
-function updateTotalLoisirs() {
-    const restaurants = parseFloat(document.getElementById('depense-restaurants').value) || 0;
-    const shopping = parseFloat(document.getElementById('depense-shopping').value) || 0;
-    const abosLoisirs = parseFloat(document.getElementById('depense-abos-loisirs').value) || 0;
-    const voyages = parseFloat(document.getElementById('depense-voyages').value) || 0;
-    
-    const total = restaurants + shopping + abosLoisirs + voyages;
-    
-    // Mettre à jour l'affichage
-    const totalElement = document.getElementById('total-loisirs');
-    if (totalElement) {
-        totalElement.textContent = `${total.toLocaleString('fr-FR')} €`;
-    }
-    
-    // Mettre à jour le champ simplifié
-    const champSimplifie = document.getElementById('simulation-budget-extra');
-    if (champSimplifie) {
-        champSimplifie.value = total;
-    }
-    
-    return total;
+    // Initialiser le système montant × quantité
+    setTimeout(() => {
+        initFixedExpenseSections();
+        updateAllTotals();
+    }, 200);
 }
 
 /**
@@ -454,17 +1567,18 @@ function updateDetailedExpensesTotal() {
 }
 
 /**
- * ✅ MODIFIÉ: Initialise le graphique du budget (5 catégories au lieu de 6)
+ * Initialise le graphique du budget
  */
 function initBudgetChart() {
     const ctx = document.getElementById('budget-chart');
     if (!ctx) return;
     
     const data = {
-        labels: ['Vie courante', 'Loisirs', 'Épargne auto', 'Dépenses variables', 'Épargne possible'],
+        labels: ['Loyer', 'Vie courante', 'Loisirs', 'Épargne auto', 'Dépenses variables', 'Épargne possible'],
         datasets: [{
-            data: [1600, 400, 200, 0, 400], // 1600 = loyer + vie courante
+            data: [800, 800, 400, 200, 0, 400],
             backgroundColor: [
+                'rgba(255, 99, 132, 0.7)',
                 'rgba(54, 162, 235, 0.7)',
                 'rgba(255, 206, 86, 0.7)',
                 'rgba(75, 192, 192, 0.7)',
@@ -472,6 +1586,7 @@ function initBudgetChart() {
                 'rgba(255, 159, 64, 0.7)'
             ],
             borderColor: [
+                'rgba(255, 99, 132, 1)',
                 'rgba(54, 162, 235, 1)',
                 'rgba(255, 206, 86, 1)',
                 'rgba(75, 192, 192, 1)',
@@ -574,7 +1689,7 @@ function initEvolutionChart() {
 }
 
 /**
- * ✅ MODIFIÉ: Initialise les écouteurs d'événements (loyer inclus dans vie courante)
+ * Initialise les écouteurs d'événements pour le module budget
  */
 function initBudgetListeners() {
     // Ajouter un écouteur au bouton d'analyse du budget
@@ -583,43 +1698,9 @@ function initBudgetListeners() {
         budgetButton.addEventListener('click', analyserBudget);
     }
     
-    // ✅ MODIFIÉ: Ajouter des écouteurs aux champs de saisie du budget détaillé (AVEC LOYER)
-    const vieCoursInputs = [
-        document.getElementById('simulation-budget-loyer'), // ← ajouté
-        document.getElementById('depense-alimentation'),
-        document.getElementById('depense-transport'),
-        document.getElementById('depense-factures'),
-        document.getElementById('depense-abonnements')
-    ];
-    
-    vieCoursInputs.forEach(input => {
-        if (input) {
-            input.addEventListener('change', function() {
-                updateTotalVieCourante();
-                analyserBudget();
-            });
-        }
-    });
-    
-    // Ajouter des écouteurs aux champs de saisie des loisirs détaillés
-    const loisirsInputs = [
-        document.getElementById('depense-restaurants'),
-        document.getElementById('depense-shopping'),
-        document.getElementById('depense-abos-loisirs'),
-        document.getElementById('depense-voyages')
-    ];
-    
-    loisirsInputs.forEach(input => {
-        if (input) {
-            input.addEventListener('change', function() {
-                updateTotalLoisirs();
-                analyserBudget();
-            });
-        }
-    });
-    
     // Ajouter des écouteurs aux champs simples
     const simpleInputs = [
+        document.getElementById('simulation-budget-loyer'),
         document.getElementById('simulation-budget-quotidien'),
         document.getElementById('simulation-budget-extra'),
         document.getElementById('simulation-budget-invest'),
@@ -639,12 +1720,17 @@ function initBudgetListeners() {
     // Écouteurs pour les boutons de vue
     const viewDetailed = document.getElementById('view-detailed');
     const viewSimple = document.getElementById('view-simple');
-    const detailedViewCourante = document.getElementById('detailed-view-courante');
-    const detailedViewLoisirs = document.getElementById('detailed-view-loisirs');
+    const detailedView = document.getElementById('detailed-view');
     const simpleView = document.getElementById('simple-view');
     
-    if (viewDetailed && viewSimple && detailedViewCourante && detailedViewLoisirs && simpleView) {
+    if (viewDetailed && viewSimple && detailedView && simpleView) {
         viewDetailed.addEventListener('click', function() {
+            // Mise à jour ARIA
+            viewDetailed.setAttribute('aria-selected', 'true');
+            viewDetailed.setAttribute('tabindex', '0');
+            viewSimple.setAttribute('aria-selected', 'false');
+            viewSimple.setAttribute('tabindex', '-1');
+            
             viewDetailed.classList.add('selected');
             viewDetailed.classList.add('text-blue-400');
             viewDetailed.classList.add('bg-blue-900');
@@ -654,16 +1740,20 @@ function initBudgetListeners() {
             viewSimple.classList.remove('bg-blue-900');
             viewSimple.classList.remove('bg-opacity-30');
             
-            detailedViewCourante.style.display = 'block';
-            detailedViewLoisirs.style.display = 'block';
+            detailedView.style.display = 'block';
             simpleView.style.display = 'none';
             
-            // Synchronisation des totaux
-            updateTotalVieCourante();
-            updateTotalLoisirs();
+            // Synchronisation des totaux avec le nouveau système
+            updateAllTotals();
         });
         
         viewSimple.addEventListener('click', function() {
+            // Mise à jour ARIA
+            viewSimple.setAttribute('aria-selected', 'true');
+            viewSimple.setAttribute('tabindex', '0');
+            viewDetailed.setAttribute('aria-selected', 'false');
+            viewDetailed.setAttribute('tabindex', '-1');
+            
             viewSimple.classList.add('selected');
             viewSimple.classList.add('text-blue-400');
             viewSimple.classList.add('bg-blue-900');
@@ -673,8 +1763,7 @@ function initBudgetListeners() {
             viewDetailed.classList.remove('bg-blue-900');
             viewDetailed.classList.remove('bg-opacity-30');
             
-            detailedViewCourante.style.display = 'none';
-            detailedViewLoisirs.style.display = 'none';
+            detailedView.style.display = 'none';
             simpleView.style.display = 'block';
         });
     }
@@ -700,6 +1789,25 @@ function initBudgetListeners() {
     if (exportButton) {
         exportButton.addEventListener('click', exportBudgetToPDF);
     }
+    
+    // Initialiser le système montant × quantité
+    setTimeout(() => {
+        initFixedExpenseSections();
+    }, 200);
+    
+    // Initialiser l'accessibilité
+    KeyboardManager.init();
+    
+    // Initialiser les info-bulles
+    FormulaTooltips.init();
+    
+    // Initialiser les détails du score
+    ScoreDetails.init();
+    
+    // Notification d'initialisation
+    setTimeout(() => {
+        KeyboardManager.showFeedback('Module budget avec système montant × quantité initialisé', true);
+    }, 500);
 }
 
 /**
@@ -713,70 +1821,110 @@ function ajusterValeursParDefaut(revenu) {
     // Calculer des fourchettes raisonnables basées sur le revenu
     const loyerSuggere = Math.round(revenu * 0.3); // ~30% du revenu pour le logement
     
-    // Dépenses vie courante
-    const alimentationSuggeree = Math.round(revenu * 0.15); // ~15% pour l'alimentation
-    const transportSuggere = Math.round(revenu * 0.08); // ~8% pour les transports
-    const facturesSuggerees = Math.round(revenu * 0.07); // ~7% pour les factures
-    const abonnementsSuggeres = Math.round(revenu * 0.05); // ~5% pour les abonnements fixes
-    
-    // Dépenses loisirs
-    const restaurantsSuggeres = Math.round(revenu * 0.04); // ~4% pour les restaurants
-    const shoppingSuggere = Math.round(revenu * 0.03); // ~3% pour le shopping
-    const abosLoisirsSuggeres = Math.round(revenu * 0.01); // ~1% pour les abonnements loisirs
-    const voyagesSuggeres = Math.round(revenu * 0.05); // ~5% pour les voyages
-    
-    // Épargne
-    const investSuggere = Math.round(revenu * 0.1); // ~10% pour l'épargne/investissement
-    
-    // Mettre à jour les champs vie courante
-    document.getElementById('depense-alimentation').value = alimentationSuggeree;
-    document.getElementById('depense-transport').value = transportSuggere;
-    document.getElementById('depense-factures').value = facturesSuggerees;
-    document.getElementById('depense-abonnements').value = abonnementsSuggeres;
-    
-    // Mettre à jour les champs loisirs
-    document.getElementById('depense-restaurants').value = restaurantsSuggeres;
-    document.getElementById('depense-shopping').value = shoppingSuggere;
-    document.getElementById('depense-abos-loisirs').value = abosLoisirsSuggeres;
-    document.getElementById('depense-voyages').value = voyagesSuggeres;
+    // Ajuster les valeurs par défaut du nouveau système
+    Object.keys(EXPENSE_CATEGORIES).forEach(categoryKey => {
+        const category = EXPENSE_CATEGORIES[categoryKey];
+        category.items.forEach(item => {
+            let nouveauMontant = item.defaultAmount;
+            
+            // Ajuster selon le type de dépense et le revenu
+            if (categoryKey === 'vie-courante') {
+                nouveauMontant = Math.round(item.defaultAmount * (revenu / 3000));
+            } else if (categoryKey === 'loisirs') {
+                nouveauMontant = Math.round(item.defaultAmount * (revenu / 3000) * 0.8);
+            }
+            
+            const amountInput = document.getElementById(`amount-${item.id}`);
+            if (amountInput) {
+                amountInput.value = nouveauMontant;
+                updateItemTotal(item.id);
+            }
+        });
+    });
     
     // Mettre à jour les autres champs
     document.getElementById('simulation-budget-loyer').value = loyerSuggere;
+    const investSuggere = Math.round(revenu * 0.1); // ~10% pour l'épargne/investissement
     document.getElementById('simulation-budget-invest').value = investSuggere;
-    
-    // Mettre à jour les totaux
-    updateTotalVieCourante();
-    updateTotalLoisirs();
     
     // Analyser le budget avec les nouvelles valeurs
     analyserBudget();
 }
 
 /**
- * Exporte le budget en PDF
+ * Exporte le budget en PDF avec html2pdf
  */
 function exportBudgetToPDF() {
-    // Ici, nous pourrions utiliser html2pdf.js ou jsPDF
-    // Pour cette démo, nous affichons juste une alerte
-    alert('Fonctionnalité d\'export PDF disponible prochainement');
+    const button = document.getElementById('export-budget-pdf');
     
-    // Si html2pdf était importé:
-    /*
-    const element = document.querySelector('.content-wrapper');
+    // Animation du bouton
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Génération PDF...';
+    button.disabled = true;
+    
+    // Préparer l'élément à exporter
+    const element = document.getElementById('budget-planner');
+    
+    // Configuration PDF
     const opt = {
-        margin: 1,
-        filename: 'TradePulse-Budget.pdf',
+        margin: [10, 10, 10, 10],
+        filename: `TradePulse-Budget-${new Date().toISOString().slice(0,10)}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'cm', format: 'a4', orientation: 'portrait' }
+        html2canvas: { 
+            scale: 2,
+            useCORS: true,
+            allowTaint: true
+        },
+        jsPDF: { 
+            unit: 'mm', 
+            format: 'a4', 
+            orientation: 'portrait' 
+        }
     };
     
-    html2pdf().set(opt).from(element).save();
-    */
+    // Générer et télécharger le PDF
+    html2pdf().set(opt).from(element).save().then(() => {
+        // Restaurer le bouton
+        button.innerHTML = originalHTML;
+        button.disabled = false;
+        
+        // Notification de succès
+        showBudgetNotification('PDF généré avec succès !', 'success');
+    }).catch(error => {
+        console.error('Erreur PDF:', error);
+        button.innerHTML = originalHTML;
+        button.disabled = false;
+        showBudgetNotification('Erreur lors de la génération du PDF', 'error');
+    });
 }
 
 /**
- * ✅ MODIFIÉ: Analyse le budget et met à jour les résultats (pas de double comptage du loyer)
+ * Affiche une notification temporaire
+ */
+function showBudgetNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `
+        fixed bottom-4 right-4 z-50 p-4 rounded-lg shadow-lg text-white
+        ${type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'}
+        animate-fade-in
+    `;
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation-triangle' : 'info'} mr-2"></i>
+            ${message}
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-suppression après 3 secondes
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+/**
+ * Analyse le budget et met à jour les résultats - VERSION AMÉLIORÉE
  */
 function analyserBudget() {
     // Récupérer les valeurs du budget
@@ -784,12 +1932,12 @@ function analyserBudget() {
     let quotidien, extra;
     
     // Vérifier le mode d'affichage actif
-    const isDetailed = document.getElementById('detailed-view-courante').style.display !== 'none';
+    const isDetailed = document.getElementById('detailed-view').style.display !== 'none';
     
     if (isDetailed) {
-        // En mode détaillé, utiliser les totaux calculés
-        quotidien = updateTotalVieCourante();
-        extra = updateTotalLoisirs();
+        // En mode détaillé, utiliser le nouveau système montant × quantité
+        quotidien = updateCategoryTotal('vie-courante');
+        extra = updateCategoryTotal('loisirs');
     } else {
         // En mode simplifié, utiliser les valeurs directes
         quotidien = parseFloat(document.getElementById('simulation-budget-quotidien').value) || 0;
@@ -804,8 +1952,8 @@ function analyserBudget() {
     // Récupérer le revenu mensuel saisi par l'utilisateur
     const revenuMensuel = parseFloat(document.getElementById('revenu-mensuel-input').value) || 3000;
     
-    // ✅ MODIFIÉ: le loyer EST déjà dans "quotidien"
-    const depensesTotales = quotidien + extra + investAuto + totalDepensesVariables;
+    // Calculer les totaux du budget
+    const depensesTotales = loyer + quotidien + extra + investAuto + totalDepensesVariables;
     const epargnePossible = Math.max(0, revenuMensuel - depensesTotales);
     const tauxEpargne = revenuMensuel > 0 ? (epargnePossible / revenuMensuel) * 100 : 0;
     
@@ -822,8 +1970,8 @@ function analyserBudget() {
     document.getElementById('simulation-epargne-possible').textContent = formatter.format(epargnePossible);
     document.getElementById('simulation-taux-epargne').textContent = tauxEpargne.toFixed(1) + '%';
     
-    // ✅ MODIFIÉ: Mettre à jour le graphique (signature simplifiée)
-    updateBudgetChart(quotidien, extra, investAuto, totalDepensesVariables, epargnePossible);
+    // Mettre à jour le graphique
+    updateBudgetChart(loyer, quotidien, extra, investAuto, totalDepensesVariables, epargnePossible);
     
     // Mettre à jour le graphique d'évolution
     updateEvolutionChart(epargnePossible);
@@ -1017,12 +2165,12 @@ function updateRecommendations(epargnePossible, tauxEpargne, investAuto) {
 }
 
 /**
- * ✅ MODIFIÉ: Met à jour le graphique du budget (signature simplifiée)
+ * Met à jour le graphique du budget
  */
-function updateBudgetChart(vieCourante, extra, investAuto, depensesVariables, epargne) {
+function updateBudgetChart(loyer, quotidien, extra, investAuto, depensesVariables, epargne) {
     if (!window.budgetChart) return;
     
-    window.budgetChart.data.datasets[0].data = [vieCourante, extra, investAuto, depensesVariables, epargne];
+    window.budgetChart.data.datasets[0].data = [loyer, quotidien, extra, investAuto, depensesVariables, epargne];
     window.budgetChart.update();
 }
 
@@ -1039,6 +2187,61 @@ function updateEvolutionChart(epargneMensuelle) {
 }
 
 /**
+ * Moteur de règles dynamiques pour les conseils
+ */
+const BUDGET_RULES = [
+    {
+        id: 'epargne_critique',
+        condition: (data) => data.tauxEpargne < 5,
+        message: '🚨 Priorité absolue : constituez un fonds d\'urgence de 1000€ minimum',
+        severity: 'danger',
+        action: 'Réduisez vos dépenses non essentielles'
+    },
+    {
+        id: 'logement_cher',
+        condition: (data) => data.ratioLogement > 33,
+        message: '🏠 Votre logement dépasse 33% de vos revenus',
+        severity: 'warning',
+        action: 'Envisagez un déménagement ou une colocation'
+    },
+    {
+        id: 'epargne_excellente',
+        condition: (data) => data.tauxEpargne > 20,
+        message: '🎉 Excellent taux d\'épargne ! Optimisez maintenant',
+        severity: 'success',
+        action: 'Diversifiez vers PEA et Assurance-vie'
+    },
+    {
+        id: 'loisirs_excessifs',
+        condition: (data) => data.ratioLoisirs > 15,
+        message: '🎭 Vos loisirs dépassent 15% de vos revenus',
+        severity: 'info',
+        action: 'Établissez un budget loisirs strict'
+    },
+    {
+        id: 'auto_invest_manquant',
+        condition: (data) => data.investAuto === 0 && data.epargnePossible > 100,
+        message: '🤖 Automatisez votre épargne pour garantir vos objectifs',
+        severity: 'info',
+        action: 'Mettez en place un virement automatique'
+    }
+];
+
+/**
+ * Génère des conseils dynamiques basés sur les règles
+ */
+function getDynamicTips(budgetData) {
+    return BUDGET_RULES
+        .filter(rule => rule.condition(budgetData))
+        .map(rule => ({
+            message: rule.message,
+            action: rule.action,
+            severity: rule.severity,
+            id: rule.id
+        }));
+}
+
+/**
  * Met à jour les conseils budgétaires en fonction des données
  */
 function updateBudgetAdvice(loyer, quotidien, extra, investAuto, depensesVariables, revenuMensuel, tauxEpargne) {
@@ -1048,57 +2251,47 @@ function updateBudgetAdvice(loyer, quotidien, extra, investAuto, depensesVariabl
     
     if (!adviceElement || !adviceList || !adviceScore) return;
     
-    // Calculer un score d'adéquation budgétaire
-    let score = 3; // Score de base moyen
-    const conseils = [];
+    // Préparer les données pour le moteur de règles
+    const budgetData = {
+        tauxEpargne,
+        ratioLogement: revenuMensuel > 0 ? (loyer / revenuMensuel) * 100 : 0,
+        ratioLoisirs: revenuMensuel > 0 ? (extra / revenuMensuel) * 100 : 0,
+        investAuto,
+        epargnePossible: Math.max(0, revenuMensuel - (loyer + quotidien + extra + investAuto + depensesVariables))
+    };
     
-    // Évaluer le taux d'épargne
-    if (tauxEpargne < 5) {
-        score--;
-        conseils.push("Votre taux d'épargne est faible. Essayez de réduire certaines dépenses non essentielles.");
-    } else if (tauxEpargne >= 20) {
-        score++;
-        conseils.push("Excellent taux d'épargne! Vous êtes sur la bonne voie pour atteindre vos objectifs financiers.");
-    } else {
-        conseils.push("Un taux d'épargne optimal se situe généralement entre 15% et 25% de vos revenus.");
-    }
+    // Générer les conseils dynamiques
+    const dynamicTips = getDynamicTips(budgetData);
     
-    // Évaluer la part du logement
-    const ratioLogement = revenuMensuel > 0 ? (loyer / revenuMensuel) * 100 : 0;
-    if (ratioLogement > 33) {
-        score--;
-        conseils.push("Vos dépenses de logement dépassent 33% de vos revenus, ce qui peut limiter votre capacité d'épargne.");
-    } else if (ratioLogement <= 25) {
-        score++;
-        conseils.push("Vos dépenses de logement sont bien maîtrisées (moins de 25% de vos revenus).");
-    } else {
-        conseils.push(`Vos dépenses de logement représentent environ ${Math.round(ratioLogement)}% de votre budget, ce qui est raisonnable.`);
-    }
-    
-    // Évaluer les dépenses variables
-    if (depensesVariables > 0) {
-        const ratioVariables = (depensesVariables / revenuMensuel) * 100;
-        if (ratioVariables > 20) {
-            conseils.push(`Vos dépenses variables représentent ${Math.round(ratioVariables)}% de vos revenus. Analyser ces postes pourrait vous aider à optimiser votre budget.`);
-        }
-    }
-    
-    // Conseil sur l'investissement automatique
-    if (investAuto > 0) {
-        const ratioInvest = (investAuto / revenuMensuel) * 100;
-        conseils.push(`Vous investissez automatiquement ${Math.round(ratioInvest)}% de vos revenus, ce qui est une excellente habitude.`);
-    } else {
-        conseils.push("Envisagez d'automatiser votre épargne pour atteindre plus facilement vos objectifs.");
-    }
-    
-    // Limiter le score entre 1 et 5
+    // Calculer le score (gardez votre logique existante)
+    let score = 3;
+    if (tauxEpargne < 5) score--;
+    if (budgetData.ratioLogement > 33) score--;
+    if (tauxEpargne >= 20) score++;
+    if (budgetData.ratioLogement <= 25) score++;
     score = Math.max(1, Math.min(5, score));
     
-    // Mettre à jour le score
+    // Mettre à jour l'affichage
     adviceScore.textContent = `Évaluation: ${score}/5`;
     
-    // Mettre à jour la liste des conseils
-    adviceList.innerHTML = conseils.map(conseil => `<li>${conseil}</li>`).join('');
+    // Afficher les conseils dynamiques avec style
+    const conseilsHTML = dynamicTips.map(tip => {
+        const colorClass = {
+            danger: 'text-red-400',
+            warning: 'text-orange-400',
+            success: 'text-green-400',
+            info: 'text-blue-400'
+        }[tip.severity] || 'text-gray-300';
+        
+        return `
+            <li class="mb-2">
+                <span class="${colorClass} font-medium">${tip.message}</span>
+                <br><span class="text-gray-400 text-xs ml-4">💡 ${tip.action}</span>
+            </li>
+        `;
+    }).join('');
+    
+    adviceList.innerHTML = conseilsHTML || '<li>Votre budget semble équilibré.</li>';
     
     // Ajuster la couleur du score selon l'évaluation
     adviceScore.className = 'advice-score inline-block px-2 py-1 rounded text-sm font-medium mb-2';
