@@ -2122,11 +2122,15 @@ function exportBudgetToPDF() {
     }, 100);
 }
 
-// Construction du template principal
+/**
+ * Construction du template principal - VERSION CORRIGÉE
+ * ✅ Problème résolu : Élément capturable par html2canvas
+ */
 function buildPDFTemplate() {
     // ✅ NOUVEAU : Créer un clone hors-flux au lieu d'utiliser l'élément DOM
     const template = document.createElement('div');
     template.className = 'pdf-container';
+    template.id = 'pdf-export-template';
     
     console.log('🏗️ Construction des sections PDF');
     
@@ -2147,11 +2151,42 @@ function buildPDFTemplate() {
     
     console.log('✅ Template construit:', template.innerHTML.length, 'caractères');
     
-    // ✅ NOUVEAU : Injecter temporairement hors écran pour html2pdf
-    template.style.position = 'absolute';
-    template.style.left = '-9999px';
-    template.style.top = '-9999px';
+    // 🎯 CORRECTION PRINCIPALE : Élément dans le viewport mais invisible
+    Object.assign(template.style, {
+        position: 'fixed',           // ✅ Dans le viewport (pas absolute)
+        left: '0',                   // ✅ Coordonnées visibles (pas -9999px)
+        top: '0',                    // ✅ html2canvas peut capturer
+        width: '210mm',              // Format A4 standard
+        height: 'auto',              // Hauteur automatique selon contenu
+        minHeight: '297mm',          // Hauteur A4 minimum
+        opacity: '0',                // ✅ Invisible visuellement
+        pointerEvents: 'none',       // ✅ Pas d'interaction utilisateur
+        zIndex: '-9999',             // ✅ Derrière tous les autres éléments
+        backgroundColor: 'white',    // ✅ Fond blanc pour contraste
+        color: 'black',              // ✅ Texte noir pour lisibilité
+        padding: '20px',             // Marges internes
+        boxSizing: 'border-box',     // Inclure padding dans les dimensions
+        fontFamily: 'Arial, sans-serif', // Police standard pour PDF
+        fontSize: '12px',            // Taille lisible
+        lineHeight: '1.4',           // Espacement des lignes
+        overflow: 'hidden',          // Éviter les débordements
+        transformOrigin: 'top left', // Point d'origine pour transformations
+        transform: 'scale(1)'        // Échelle normale (ajustable si besoin)
+    });
+    
+    // ✅ NOUVEAU : Ajouter au DOM pour rendu html2canvas
     document.body.appendChild(template);
+    
+    // ✅ DEBUG : Vérifier que le template est bien construit
+    if (template.innerHTML.length === 0) {
+        console.error('❌ Template PDF vide ! Vérifiez les fonctions de construction.');
+    } else {
+        console.log('✅ Template PDF prêt pour capture :', {
+            width: template.offsetWidth,
+            height: template.offsetHeight,
+            sections: template.children.length
+        });
+    }
     
     // ✅ NOUVEAU : Retourner le template créé
     return template;
