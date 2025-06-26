@@ -15,6 +15,7 @@
  * 🚀 FIX PDF : Suppression page blanche, optimisation marges et performances
  * 🔧 FIX BROWSER : Correction process.env pour compatibilité navigateur
  * ✅ FIX PAGES BLANCHES : Suppression double pagebreak
+ * 🎯 FIX DÉFINITIF : hard-page-break + recommandations non-tronquées
  */
 
 // ===== FIX BROWSER: Variable de debug compatible navigateur =====
@@ -38,9 +39,8 @@ const PDF_CONFIG = {
         orientation: 'portrait'
     },
     pagebreak: { 
-        mode: ['css', 'legacy'], // ✅ FIX: Supprime 'avoid-all' trop agressif
-        before: false,  // ✅ FIX PAGES BLANCHES: Désactive pour éviter double déclenchement
-        after: '.page-break-after'
+        mode: ['css', 'legacy'],
+        after: '.hard-page-break'  // ✅ FIX DÉFINITIF: place la rupture APRÈS le bloc voulu
     }
 };
 
@@ -55,7 +55,7 @@ const PDF_CONFIG = {
 export async function exportBudgetToPDF(budgetData = null, options = {}) {
     // ✅ FIX: Debug nettoyé (seulement en dev)
     if (isDev) {
-        console.log('🚀 Début export PDF budget (version corrigée anti-pages-blanches)');
+        console.log('🚀 Début export PDF budget (version corrigée définitive anti-pages-blanches)');
     }
     
     // 🔧 NOUVEAU : Protection contre les Events (fix PointerEvent bug)
@@ -402,11 +402,11 @@ function getCalculatedValue(id, suffix = '') {
     return value;
 }
 
-// ===== CONSTRUCTION DU TEMPLATE PDF (✅ FIX PAGE BLANCHE) =====
+// ===== CONSTRUCTION DU TEMPLATE PDF (✅ FIX PAGE BLANCHE DÉFINITIF) =====
 
 /**
  * Construit le template PDF complet
- * ✅ FIX: Structure simplifiée pour éviter la page blanche
+ * ✅ FIX DÉFINITIF: Utilise hard-page-break pour éviter la page blanche
  * @param {Object} data - Données du budget
  * @returns {HTMLElement} Template prêt pour html2pdf
  */
@@ -419,7 +419,7 @@ async function buildCompletePDFTemplate(data) {
     const styles = createPDFStyles();
     template.appendChild(styles);
     
-    // Construction des sections
+    // Construction des sections PAGE 1
     template.appendChild(buildPdfHeader(data));
     template.appendChild(buildPdfHero(data));
     template.appendChild(buildPdfCharts(data));
@@ -431,21 +431,21 @@ async function buildCompletePDFTemplate(data) {
     
     template.appendChild(buildPdfRecommendations(data));
     
-    // ✅ FIX: Page 2 - construire le contenu AVANT d'ajouter la classe page-break
-    const page2Content = document.createElement('div');
-    page2Content.appendChild(buildPdfFormulas(data));
-    page2Content.appendChild(buildPdfFooter(data));
+    // ✅ FIX DÉFINITIF: Créer un marqueur invisible pour la rupture de page
+    const hardBreak = document.createElement('div');
+    hardBreak.className = 'hard-page-break';
+    template.appendChild(hardBreak);
     
-    // ✅ FIX: Classe page-break appliquée APRÈS construction du contenu
-    page2Content.className = 'page-break-before';
-    template.appendChild(page2Content);
+    // ✅ FIX DÉFINITIF: PAGE 2 - construction normale sans page-break-before
+    template.appendChild(buildPdfFormulas(data));
+    template.appendChild(buildPdfFooter(data));
     
     return template;
 }
 
 /**
  * Crée les styles CSS pour le PDF
- * ✅ FIX: Marges CSS optimisées et page-break amélioré
+ * ✅ FIX DÉFINITIF: hard-page-break + recommandations non-tronquées
  * @returns {HTMLElement} Élément style
  */
 function createPDFStyles() {
@@ -467,6 +467,16 @@ function createPDFStyles() {
             margin: 0 !important;
             padding: 15mm 10mm !important; /* ✅ FIX: Réduit de 20mm à 15mm */
             box-sizing: border-box;
+        }
+        
+        /* ✅ FIX DÉFINITIF: Marqueur de rupture de page invisible */
+        .hard-page-break {
+            page-break-after: always;
+            break-after: page;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
         }
         
         /* ✅ FIX: Header sans espacement excessif */
@@ -497,19 +507,15 @@ function createPDFStyles() {
             color: #374151;
         }
         
-        /* ✅ FIX PAGES BLANCHES: Permet les coupures sur TOUS les éléments */
+        /* ✅ FIX DÉFINITIF: Autoriser les coupures pour éviter la troncature */
         .budget-analysis-table       { page-break-inside: auto; }
-        .recommendation-pdf li       { page-break-inside: avoid; }   /* seulement les <li> */
+        .recommendation-pdf          { page-break-inside: auto; }
+        .recommendation-pdf li       { page-break-inside: auto; }   /* ✅ FIX: Permet les coupures */
         
         /* ✅ FIX: Permet les coupures sur petits éléments */
         .chart-container-pdf,
         .pdf-hero {
             page-break-inside: auto;
-        }
-        
-        .page-break-before {
-            page-break-before: always;
-            break-before: page;
         }
         
         .chart-container-pdf {
@@ -770,7 +776,7 @@ function buildPdfObjective(data) {
 }
 
 /**
- * Construit la section recommandations (🆕 MISE À JOUR)
+ * Construit la section recommandations (✅ FIX DÉFINITIF - Non tronquée)
  */
 function buildPdfRecommendations(data) {
     const container = document.createElement('div');
