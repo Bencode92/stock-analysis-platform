@@ -1,66 +1,35 @@
 /**
- * budget-pdf.js - Module d'export PDF pour l'analyse de budget (VERSION PRODUCTION-READY)
+ * budget-pdf.js - Module d'export PDF pour l'analyse de budget (VERSION CORRIGÉE PDF)
  * TradePulse Finance Intelligence Platform
  * 
  * Ce module gère l'export PDF des analyses de budget avec :
- * - Génération de templates HTML optimisés
- * - Capture des graphiques haute qualité
- * - Formatage professionnel A4 verrouillé
- * - Conseils personnalisés basés sur l'IA
- * - Tests automatisés intégrés
- * - Monitoring des performances
- * - Sanitization et validation avancées
+ * - Génération de templates HTML
+ * - Capture des graphiques
+ * - Formatage professionnel
+ * - Conseils personnalisés
  * 
- * 🚀 VERSION 2025.1 - PRODUCTION READY
- * ✅ Verrouillage dimensions A4 + overflow-x: hidden
- * ✅ Seuil configurable pages vides + scrollY fix
- * ✅ Tests automatisés + monitoring intégrés
- * ✅ Cache templates + sanitization données
- * ✅ Error boundaries + fallbacks intelligents
- * ✅ Optimisations performance + PWA ready
- * 🔧 FIX: Correction double export getPDFMetrics
+ * 🆕 MISE À JOUR : Utilise les nouveaux sélecteurs de budget-epargne.js
+ * 🐛 FIX : Correction validation des données et parsing des nombres
+ * 🔧 FIX : Ajout debug et synchronisation avec analyse budget
+ * 🔧 FIX : Protection contre PointerEvent et double event listener
+ * 🚀 FIX PDF : Suppression page blanche, optimisation marges et performances
+ * 🔧 FIX BROWSER : Correction process.env pour compatibilité navigateur
  */
 
-// ===== CONFIGURATION AVANCÉE =====
-
-// Variables d'environnement compatibles navigateur
+// ===== FIX BROWSER: Variable de debug compatible navigateur =====
 const isDev = (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') ||
               location.hostname === 'localhost' ||
-              location.hostname === '127.0.0.1' ||
-              location.search.includes('debug=1');
+              location.hostname === '127.0.0.1';
 
-// Seuils configurables pour production
-const CONFIG = {
-    PDF: {
-        EMPTY_PAGE_THRESHOLD: 4, // 🆕 Configurable (5 si en-têtes ajoutés)
-        MAX_PAGES: 10, // Limite sécurité
-        QUALITY: 0.8, // Balance qualité/taille
-        SCALE: 1.5, // Balance netteté/performance
-        TIMEOUT: 30000 // 30s max pour génération
-    },
-    CACHE: {
-        MAX_TEMPLATES: 10, // Éviter memory leak
-        TTL: 300000 // 5min cache templates
-    },
-    MONITORING: {
-        ENABLED: true,
-        LOG_ERRORS: true,
-        TRACK_PERFORMANCE: true
-    }
-};
-
-// Configuration PDF optimisée PRODUCTION
+// ===== CONFIGURATION PDF OPTIMISÉE =====
 const PDF_CONFIG = {
-    margin: [0, 0, 0, 0], // ✅ Marges gérées uniquement par CSS
-    image: { type: 'jpeg', quality: CONFIG.PDF.QUALITY },
+    margin: [0, 0, 0, 0], // ✅ FIX: Marges gérées par CSS uniquement
+    image: { type: 'jpeg', quality: 0.8 }, // ✅ FIX: Réduit de 0.98 à 0.8
     html2canvas: { 
-        scale: CONFIG.PDF.SCALE,
+        scale: 1.5, // ✅ FIX: Réduit de 2 à 1.5 pour moins de RAM
         useCORS: true,
         backgroundColor: '#ffffff',
-        logging: isDev,
-        scrollY: -window.scrollY, // 🆕 FIX scrolling issues
-        windowWidth: 1200, // 🆕 Largeur fixe pour cohérence
-        windowHeight: 1600 // 🆕 Hauteur contrôlée
+        logging: false
     },
     jsPDF: { 
         unit: 'mm', 
@@ -68,40 +37,32 @@ const PDF_CONFIG = {
         orientation: 'portrait'
     },
     pagebreak: { 
-        mode: ['css', 'legacy'],
+        mode: ['css', 'legacy'], // ✅ FIX: Supprime 'avoid-all' trop agressif
         before: '.page-break-before',
         after: '.page-break-after'
     }
 };
 
-// 🆕 Cache des templates pour optimisation
-const templateCache = new Map();
-const performanceMetrics = {
-    exports: 0,
-    errors: 0,
-    avgTime: 0,
-    lastError: null
-};
-
-// ===== FONCTION PRINCIPALE D'EXPORT (🚀 VERSION PRODUCTION) =====
+// ===== FONCTION PRINCIPALE D'EXPORT (🔧 CORRIGÉE) =====
 
 /**
- * Exporte l'analyse de budget en PDF avec monitoring intégré
- * @param {Object|null} budgetData - Données du budget (optionnel, extrait du DOM si non fourni)
+ * Exporte l'analyse de budget en PDF
+ * @param {Object} budgetData - Données du budget (optionnel, extrait du DOM si non fourni)
  * @param {Object} options - Options d'export (optionnel)
  * @returns {Promise<void>}
  */
 export async function exportBudgetToPDF(budgetData = null, options = {}) {
-    const startTime = performance.now();
-    const exportId = `export_${Date.now()}`;
+    // ✅ FIX: Debug nettoyé (seulement en dev)
+    if (isDev) {
+        console.log('🚀 Début export PDF budget (version corrigée)');
+    }
     
-    // 🆕 Monitoring de début
-    logPDFMetrics('start', { exportId, timestamp: new Date() });
-    
-    // Protection contre les Events (fix PointerEvent bug)
+    // 🔧 NOUVEAU : Protection contre les Events (fix PointerEvent bug)
     if (budgetData instanceof Event) {
+        if (isDev) {
+            console.log('🔧 Event détecté en paramètre, ignoré');
+        }
         budgetData = null;
-        if (isDev) console.log('🔧 Event détecté, ignoré');
     }
     
     let exportBtn;
@@ -109,502 +70,351 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
     
     try {
         // Chargement de html2pdf si nécessaire
-        await loadPDFDependencies();
+        await loadHtml2PdfLib();
         
         // Récupération du bouton d'export
         exportBtn = document.getElementById('export-budget-pdf');
         
-        // 🆕 S'assurer que l'analyse est terminée
+        // 🔧 NOUVEAU : S'assurer que l'analyse est terminée
+        if (isDev) {
+            console.log('🔄 Vérification analyse budget...');
+        }
         await ensureBudgetAnalysisComplete();
         
-        // Extraction et sanitization des données
-        const rawData = budgetData || extractBudgetDataFromDOM();
-        const data = sanitizeBudgetData(rawData);
+        // Extraction des données du budget avec NOUVEAUX SÉLECTEURS
+        const data = budgetData || extractBudgetDataFromDOM();
         
-        // 🆕 Validation préalable avancée
-        const validation = validateBudgetData(data);
-        if (!validation.isValid) {
-            throw new Error(`Données invalides: ${validation.issues.join(', ')}`);
+        // 🔧 NOUVEAU : Debug complet avant validation (dev uniquement)
+        if (isDev) {
+            console.log('🔍 DEBUG Export PDF - Données extraites:');
+            if (data && typeof data === 'object' && !(data instanceof Event)) {
+                console.table(data);
+                console.table(data.depenses);
+                console.log('Revenu type:', typeof data.revenu, 'valeur:', data.revenu);
+                console.log('Dépenses type:', typeof data.depenses, 'clés:', Object.keys(data.depenses || {}));
+            } else {
+                console.error('🚨 Données invalides détectées:', data);
+            }
+        }
+        
+        // Validation des données (renforcée)
+        if (!validateBudgetData(data)) {
+            console.error('❌ Validation échouée pour:', data);
+            throw new Error('Données de budget insuffisantes pour générer le PDF');
+        }
+        
+        if (isDev) {
+            console.log('✅ Validation réussie, génération PDF...');
         }
         
         // Affichage du loader
         uiState = showLoadingState(exportBtn);
         
-        // 🆕 Vérification du cache
-        const cacheKey = generateCacheKey(data);
-        let template = getCachedTemplate(cacheKey);
+        // Génération du template PDF
+        const template = await buildCompletePDFTemplate(data);
         
-        if (!template) {
-            // Génération du template avec timeout
-            template = await Promise.race([
-                buildCompletePDFTemplate(data),
-                new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Timeout génération template')), CONFIG.PDF.TIMEOUT)
-                )
-            ]);
-            
-            // 🆕 Mise en cache
-            setCachedTemplate(cacheKey, template);
-        } else {
-            if (isDev) console.log('✅ Template récupéré du cache');
-        }
-        
-        // Configuration finale avec fallback
+        // Configuration finale
         const finalOptions = {
             ...PDF_CONFIG,
             filename: generatePDFFilename(data.generatedAt),
             ...options
         };
         
-        // Génération PDF avec nettoyage des pages vides
-        const pdf = await generatePDFWithCleanup(template, finalOptions);
+        // ✅ FIX: Générer à partir d'un seul nœud racine pour éviter la page blanche
+        await html2pdf()
+            .set(finalOptions)
+            .from(template)
+            .save();
         
-        // 🆕 Monitoring de succès
-        const duration = performance.now() - startTime;
-        logPDFMetrics('success', { 
-            exportId, 
-            duration,
-            pageCount: pdf?.internal?.getNumberOfPages?.() || 'unknown',
-            templateCached: !!getCachedTemplate(cacheKey)
-        });
-        
+        if (isDev) {
+            console.log('✅ PDF généré avec succès');
+        }
         showSuccessState(exportBtn, uiState);
         
     } catch (error) {
-        const duration = performance.now() - startTime;
-        
-        // 🆕 Monitoring d'erreur
-        logPDFMetrics('error', { 
-            exportId, 
-            duration,
-            error: error.message,
-            stack: isDev ? error.stack : undefined
-        });
-        
-        handleExportError(exportBtn, error);
+        console.error('❌ Erreur export PDF:', error);
+        showErrorState(exportBtn, error.message);
         throw error;
     }
 }
 
-// ===== 🆕 GESTION AVANCÉE DES DÉPENDANCES =====
+// ===== 🔧 NOUVELLE FONCTION : SYNCHRONISATION =====
 
 /**
- * Charge les dépendances PDF avec fallback et retry
+ * S'assure que l'analyse de budget est terminée avant l'export
  */
-async function loadPDFDependencies() {
-    if (typeof html2pdf !== 'undefined') return;
-    
-    if (isDev) console.log('📦 Chargement html2pdf...');
-    
-    try {
-        // Tentative de chargement depuis CDN principal
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
-    } catch (error) {
-        // Fallback CDN alternatif
-        console.warn('⚠️ CDN principal échoué, tentative fallback...');
-        await loadScript('https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js');
-    }
-    
-    // Vérification de disponibilité avec retry
-    let attempts = 0;
-    while (typeof html2pdf === 'undefined' && attempts < 20) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-    }
-    
-    if (typeof html2pdf === 'undefined') {
-        throw new Error('Impossible de charger html2pdf après plusieurs tentatives');
-    }
-    
-    if (isDev) console.log('✅ html2pdf chargé avec succès');
-}
-
-/**
- * Charge un script de manière asynchrone
- */
-function loadScript(url) {
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = url;
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-    });
-}
-
-// ===== 🆕 TESTS AUTOMATISÉS INTÉGRÉS =====
-
-/**
- * Lance les tests automatisés du module PDF (dev uniquement)
- */
-async function runPDFTests() {
-    if (!isDev) return;
-    
-    console.log('🧪 Tests PDF - Démarrage...');
-    
-    const testCases = [
-        {
-            name: 'Budget minimal',
-            data: {
-                revenu: 2000,
-                depenses: { loyer: 600, vieCourante: 400, loisirs: 200, variables: 100, epargne: 300 },
-                totalDepenses: 1300,
-                tauxEpargne: 35,
-                score: '4',
-                scoreDescription: 'Situation équilibrée',
-                generatedAt: new Date()
-            }
-        },
-        {
-            name: 'Budget complexe avec alertes',
-            data: {
-                revenu: 5000,
-                depenses: { loyer: 1800, vieCourante: 1200, loisirs: 800, variables: 600, epargne: 500 },
-                totalDepenses: 4400,
-                tauxEpargne: 12,
-                score: '3',
-                scoreDescription: 'À optimiser',
-                generatedAt: new Date()
-            }
+async function ensureBudgetAnalysisComplete() {
+    // Vérifier si analyserBudget existe et l'appeler
+    if (typeof window.analyserBudget === 'function') {
+        if (isDev) {
+            console.log('📊 Relance de l\'analyse budget...');
         }
-    ];
-    
-    for (const testCase of testCases) {
         try {
-            console.log(`🧪 Test: ${testCase.name}`);
-            const validation = validateBudgetData(testCase.data);
-            
-            if (!validation.isValid) {
-                console.error(`❌ Test ${testCase.name} - Validation échouée:`, validation.issues);
-                continue;
-            }
-            
-            // Test sanitization
-            const sanitized = sanitizeBudgetData(testCase.data);
-            console.log(`✅ Test ${testCase.name} - Sanitization OK`);
-            
-            // Test template generation (sans export réel)
-            const template = await buildCompletePDFTemplate(sanitized);
-            if (template && template.children.length > 0) {
-                console.log(`✅ Test ${testCase.name} - Template généré`);
-            } else {
-                console.error(`❌ Test ${testCase.name} - Template vide`);
-            }
-            
-            await new Promise(r => setTimeout(r, 500)); // Pause entre tests
-            
-        } catch (error) {
-            console.error(`❌ Test ${testCase.name} échoué:`, error.message);
-        }
-    }
-    
-    console.log('🧪 Tests PDF terminés');
-}
-
-// ===== 🆕 MONITORING ET MÉTRIQUES =====
-
-/**
- * Log des métriques PDF pour monitoring
- */
-function logPDFMetrics(event, data) {
-    if (!CONFIG.MONITORING.ENABLED) return;
-    
-    const timestamp = new Date().toISOString();
-    const logData = { timestamp, event, ...data };
-    
-    switch (event) {
-        case 'start':
-            performanceMetrics.exports++;
-            if (isDev) console.log('📊 PDF Export Start:', logData);
-            break;
-            
-        case 'success':
-            performanceMetrics.avgTime = (performanceMetrics.avgTime + data.duration) / 2;
+            await window.analyserBudget();
             if (isDev) {
-                console.log('📊 PDF Export Success:', {
-                    duration: `${data.duration.toFixed(0)}ms`,
-                    pageCount: data.pageCount,
-                    avgTime: `${performanceMetrics.avgTime.toFixed(0)}ms`,
-                    totalExports: performanceMetrics.exports
-                });
+                console.log('✅ Analyse budget terminée');
             }
-            break;
-            
-        case 'error':
-            performanceMetrics.errors++;
-            performanceMetrics.lastError = data.error;
-            
-            if (CONFIG.MONITORING.LOG_ERRORS) {
-                console.error('📊 PDF Export Error:', logData);
-            }
-            break;
-    }
-}
-
-/**
- * Obtient les métriques de performance actuelles
- * 🔧 FIX: Correction double export - fonction exportée uniquement ici
- */
-function getPDFMetrics() {
-    return {
-        ...performanceMetrics,
-        successRate: performanceMetrics.exports > 0 
-            ? ((performanceMetrics.exports - performanceMetrics.errors) / performanceMetrics.exports * 100).toFixed(1)
-            : 0,
-        cacheSize: templateCache.size
-    };
-}
-
-// ===== 🆕 GESTION DU CACHE =====
-
-/**
- * Génère une clé de cache unique pour les données budget
- */
-function generateCacheKey(data) {
-    const key = {
-        revenu: data.revenu,
-        depenses: data.depenses,
-        score: data.score
-    };
-    return btoa(JSON.stringify(key)).substr(0, 16);
-}
-
-/**
- * Récupère un template depuis le cache
- */
-function getCachedTemplate(cacheKey) {
-    const cached = templateCache.get(cacheKey);
-    if (cached && (Date.now() - cached.timestamp) < CONFIG.CACHE.TTL) {
-        return cached.template.cloneNode(true); // Deep clone pour éviter mutations
-    }
-    return null;
-}
-
-/**
- * Met en cache un template généré
- */
-function setCachedTemplate(cacheKey, template) {
-    // Nettoyer le cache si plein
-    if (templateCache.size >= CONFIG.CACHE.MAX_TEMPLATES) {
-        const oldestKey = templateCache.keys().next().value;
-        templateCache.delete(oldestKey);
-    }
-    
-    templateCache.set(cacheKey, {
-        template: template.cloneNode(true),
-        timestamp: Date.now()
-    });
-    
-    if (isDev) console.log(`📦 Template mis en cache: ${cacheKey}`);
-}
-
-// ===== 🆕 SANITIZATION AVANCÉE =====
-
-/**
- * Sanitise et normalise les données budget
- */
-function sanitizeBudgetData(data) {
-    if (!data || typeof data !== 'object' || data instanceof Event) {
-        throw new Error('Données budget invalides ou manquantes');
-    }
-    
-    const sanitized = {
-        // Métadonnées
-        generatedAt: data.generatedAt instanceof Date ? data.generatedAt : new Date(),
-        
-        // Sanitization des montants
-        revenu: sanitizeAmount(data.revenu),
-        totalDepenses: sanitizeAmount(data.totalDepenses),
-        epargneDisponible: sanitizeAmount(data.epargneDisponible),
-        tauxEpargne: sanitizePercentage(data.tauxEpargne),
-        
-        // Score et description avec fallbacks
-        score: sanitizeScore(data.score),
-        scoreDescription: sanitizeText(data.scoreDescription, 'Analyse de budget'),
-        
-        // Sanitization des dépenses
-        depenses: {},
-        
-        // Autres propriétés avec fallbacks
-        charts: Array.isArray(data.charts) ? data.charts : [],
-        objectif: data.objectif || { visible: false },
-        ratios: data.ratios || {},
-        evaluations: data.evaluations || {},
-        recommendations: Array.isArray(data.recommendations) ? data.recommendations : []
-    };
-    
-    // Sanitization détaillée des dépenses
-    const depenseTypes = ['loyer', 'vieCourante', 'loisirs', 'variables', 'epargne'];
-    depenseTypes.forEach(type => {
-        sanitized.depenses[type] = sanitizeAmount(data.depenses?.[type]);
-    });
-    
-    // Recalculs si nécessaire
-    if (!sanitized.ratios || Object.keys(sanitized.ratios).length === 0) {
-        sanitized.ratios = calculateExpenseRatios(sanitized);
-    }
-    
-    if (!sanitized.evaluations || Object.keys(sanitized.evaluations).length === 0) {
-        sanitized.evaluations = generateEvaluations(sanitized);
-    }
-    
-    if (!sanitized.recommendations || sanitized.recommendations.length === 0) {
-        sanitized.recommendations = generateRecommendations(sanitized);
-    }
-    
-    return sanitized;
-}
-
-/**
- * Sanitise un montant financier
- */
-function sanitizeAmount(value) {
-    const num = parseFloat(String(value).replace(/[^\d.-]/g, ''));
-    return Number.isFinite(num) && num >= 0 ? num : 0;
-}
-
-/**
- * Sanitise un pourcentage
- */
-function sanitizePercentage(value) {
-    const num = parseFloat(String(value).replace(/[^\d.-]/g, ''));
-    return Number.isFinite(num) ? Math.min(Math.max(num, 0), 100) : 0;
-}
-
-/**
- * Sanitise un score (1-5)
- */
-function sanitizeScore(value) {
-    const num = parseInt(String(value).replace(/[^\d]/g, ''));
-    return Number.isInteger(num) && num >= 1 && num <= 5 ? String(num) : '3';
-}
-
-/**
- * Sanitise du texte avec fallback
- */
-function sanitizeText(value, fallback = '') {
-    return typeof value === 'string' && value.trim() ? value.trim() : fallback;
-}
-
-// ===== 🆕 VALIDATION AVANCÉE =====
-
-/**
- * Valide les données budget avec diagnostic détaillé
- */
-function validateBudgetData(data) {
-    const issues = [];
-    
-    // Validation de base
-    if (!data || typeof data !== 'object' || data instanceof Event) {
-        issues.push('Données manquantes ou type invalide');
-        return { isValid: false, issues };
-    }
-    
-    // Validation du revenu
-    if (!Number.isFinite(data.revenu) || data.revenu <= 0) {
-        issues.push('Revenu manquant ou invalide');
-    }
-    
-    // Validation des dépenses
-    if (!data.depenses || typeof data.depenses !== 'object') {
-        issues.push('Structure dépenses invalide');
+        } catch (error) {
+            console.warn('⚠️ Erreur lors de l\'analyse budget:', error);
+        }
     } else {
-        const depenseValues = Object.values(data.depenses);
-        const validDepenses = depenseValues.filter(v => Number.isFinite(v) && v >= 0);
-        
-        if (validDepenses.length === 0) {
-            issues.push('Aucune dépense valide trouvée');
-        }
-        
-        const sumDepenses = validDepenses.reduce((sum, v) => sum + v, 0);
-        if (sumDepenses > data.revenu * 2) { // Seuil de cohérence
-            issues.push('Dépenses incohérentes par rapport au revenu');
+        if (isDev) {
+            console.log('⚠️ Fonction analyserBudget non disponible');
         }
     }
     
-    // Validation du score
-    const score = parseInt(data.score);
-    if (!Number.isInteger(score) || score < 1 || score > 5) {
-        issues.push('Score budget invalide (doit être 1-5)');
-    }
-    
-    // Validation des métadonnées
-    if (!data.generatedAt || !(data.generatedAt instanceof Date)) {
-        issues.push('Date de génération manquante');
-    }
-    
-    const isValid = issues.length === 0;
-    
-    if (isDev && !isValid) {
-        console.warn('⚠️ Validation échouée:', issues);
-    }
-    
-    return { isValid, issues };
+    // Attendre un court délai pour s'assurer que le DOM est mis à jour
+    await new Promise(resolve => setTimeout(resolve, 500));
 }
 
-// ===== 🆕 GÉNÉRATION PDF AVEC NETTOYAGE =====
+// ===== EXTRACTION DES DONNÉES (🆕 MISE À JOUR) =====
 
 /**
- * Génère le PDF avec nettoyage automatique des pages vides
+ * Extrait les données de budget depuis le DOM avec les NOUVEAUX SÉLECTEURS
+ * @returns {Object} Données structurées du budget
  */
-async function generatePDFWithCleanup(template, options) {
-    const pdf = html2pdf().set(options).from(template);
+function extractBudgetDataFromDOM() {
+    if (isDev) {
+        console.log('📊 Extraction données budget (nouveaux sélecteurs)');
+    }
     
-    // Hook pour nettoyage post-génération
-    const originalSave = pdf.save;
-    pdf.save = async function(...args) {
-        // Générer le PDF en mémoire d'abord
-        const pdfObj = await this.outputPdf('datauristring');
+    const data = {
+        // Métadonnées
+        generatedAt: new Date(),
         
-        // Nettoyage des pages vides si nécessaire
-        const cleanedPdf = await cleanupEmptyPages(pdfObj);
+        // 🔧 CORRIGÉ : Revenu mensuel avec parsing sécurisé
+        revenu: toNumber(getInputValue('revenu-mensuel-input')),
         
-        // Sauvegarder la version nettoyée
-        return cleanedPdf.save(...args);
+        // Score et description
+        score: getElementText('budget-score', '--'),
+        scoreDescription: getElementText('budget-score-description', 'Analyse effectuée'),
+        
+        // 🔧 CORRIGÉ : Dépenses avec parsing sécurisé
+        depenses: {
+            loyer: toNumber(getInputValue('simulation-budget-loyer')),
+            vieCourante: toNumber(getTotalVieCourante()),
+            loisirs: toNumber(getTotalLoisirs()),
+            variables: toNumber(getTotalVariables()),
+            epargne: toNumber(getInputValue('simulation-budget-invest'))
+        },
+        
+        // 🔧 CORRIGÉ : Totaux calculés avec parsing sécurisé
+        totalDepenses: toNumber(getCalculatedValue('simulation-depenses-totales')),
+        epargneDisponible: toNumber(getCalculatedValue('simulation-epargne-possible')),
+        tauxEpargne: toNumber(getCalculatedValue('simulation-taux-epargne', '%')),
+        
+        // Graphiques (si disponibles)
+        charts: captureCharts(),
+        
+        // Objectif utilisateur
+        objectif: extractObjectifData()
     };
     
-    return pdf.save();
-}
-
-/**
- * Nettoie les pages vides du PDF généré
- */
-async function cleanupEmptyPages(pdfData) {
-    // Cette fonction nécessiterait une implémentation plus avancée
-    // avec une bibliothèque PDF manipulation comme pdf-lib
-    // Pour l'instant, on retourne le PDF tel quel
+    // Calculs dérivés
+    data.ratios = calculateExpenseRatios(data);
+    data.evaluations = generateEvaluations(data);
+    data.recommendations = generateRecommendations(data);
     
     if (isDev) {
-        console.log('🧹 Nettoyage des pages vides (placeholder)');
+        console.log('✅ Données extraites:', data);
     }
-    
-    return { save: () => pdfData };
+    return data;
 }
 
-// ===== CONSTRUCTION DU TEMPLATE (🆕 VERSION OPTIMISÉE) =====
+// ===== 🔧 NOUVELLE FONCTION : PARSING UNIFORME =====
 
 /**
- * Construit le template PDF complet avec optimisations
+ * Convertit une valeur en nombre de manière sécurisée
+ * @param {*} value - Valeur à convertir
+ * @returns {number} Nombre valide (0 si conversion impossible)
  */
-async function buildCompletePDFTemplate(data) {
-    // Vérification pré-génération
-    if (!data || !data.depenses) {
-        throw new Error('Données insuffisantes pour générer le template');
+function toNumber(value) {
+    if (value === null || value === undefined || value === '') {
+        return 0;
     }
     
-    // 🚀 Conteneur racine avec verrouillage A4
+    // Si c'est déjà un nombre
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : 0;
+    }
+    
+    // Si c'est une chaîne, nettoyer et convertir
+    if (typeof value === 'string') {
+        // Supprimer les espaces, caractères non numériques sauf . et -
+        const cleaned = value.replace(/[^\d.-]/g, '');
+        const parsed = parseFloat(cleaned);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+    
+    // Tentative de conversion
+    const parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+// ===== FONCTIONS D'EXTRACTION MISES À JOUR =====
+
+/**
+ * 🆕 NOUVEAU : Récupère le total "Vie courante" calculé
+ * Utilise la fonction globale ou parse le span #total-vie-courante
+ */
+function getTotalVieCourante() {
+    // Méthode 1 : Utiliser la fonction globale si disponible
+    if (typeof window.updateTotalVieCourante === 'function') {
+        try {
+            const total = window.updateTotalVieCourante();
+            if (isDev) {
+                console.log('📊 Total vie courante (fonction globale):', total);
+            }
+            return total || 0;
+        } catch (e) {
+            console.warn('⚠️ Erreur fonction updateTotalVieCourante:', e);
+        }
+    }
+    
+    // Méthode 2 : Parser le span #total-vie-courante
+    const totalElement = document.getElementById('total-vie-courante');
+    if (totalElement) {
+        const total = toNumber(totalElement.textContent);
+        if (isDev) {
+            console.log('📊 Total vie courante (span):', total);
+        }
+        return total;
+    }
+    
+    // Méthode 3 : Fallback - calculer manuellement si les anciens inputs existent encore
+    const fallback = toNumber(getInputValue('simulation-budget-alimentation')) + 
+                    toNumber(getInputValue('simulation-budget-transport')) + 
+                    toNumber(getInputValue('simulation-budget-factures'));
+    
+    if (isDev) {
+        console.log('📊 Total vie courante (fallback):', fallback);
+    }
+    return fallback;
+}
+
+/**
+ * 🆕 NOUVEAU : Récupère le total "Loisirs & plaisirs" calculé
+ */
+function getTotalLoisirs() {
+    // Méthode 1 : Utiliser la fonction globale si disponible
+    if (typeof window.updateTotalLoisirs === 'function') {
+        try {
+            const total = window.updateTotalLoisirs();
+            if (isDev) {
+                console.log('📊 Total loisirs (fonction globale):', total);
+            }
+            return total || 0;
+        } catch (e) {
+            console.warn('⚠️ Erreur fonction updateTotalLoisirs:', e);
+        }
+    }
+    
+    // Méthode 2 : Parser le span #total-loisirs
+    const totalElement = document.getElementById('total-loisirs');
+    if (totalElement) {
+        const total = toNumber(totalElement.textContent);
+        if (isDev) {
+            console.log('📊 Total loisirs (span):', total);
+        }
+        return total;
+    }
+    
+    // Méthode 3 : Fallback - calculer avec anciens inputs
+    const fallback = toNumber(getInputValue('simulation-budget-loisirs-sorties')) + 
+                    toNumber(getInputValue('simulation-budget-loisirs-sport')) + 
+                    toNumber(getInputValue('simulation-budget-loisirs-autres'));
+    
+    if (isDev) {
+        console.log('📊 Total loisirs (fallback):', fallback);
+    }
+    return fallback;
+}
+
+/**
+ * 🆕 NOUVEAU : Récupère le total des dépenses variables
+ */
+function getTotalVariables() {
+    // Méthode 1 : Utiliser la fonction globale si disponible
+    if (typeof window.updateDetailedExpensesTotal === 'function') {
+        try {
+            const total = window.updateDetailedExpensesTotal();
+            if (isDev) {
+                console.log('📊 Total variables (fonction globale):', total);
+            }
+            return total || 0;
+        } catch (e) {
+            console.warn('⚠️ Erreur fonction updateDetailedExpensesTotal:', e);
+        }
+    }
+    
+    // Méthode 2 : Parser les éléments .depense-total
+    const totalElements = document.querySelectorAll('.depense-total');
+    let total = 0;
+    totalElements.forEach(element => {
+        const value = toNumber(element.textContent);
+        total += value;
+    });
+    
+    if (total > 0) {
+        if (isDev) {
+            console.log('📊 Total variables (parse .depense-total):', total);
+        }
+        return total;
+    }
+    
+    // Méthode 3 : Fallback - calculer avec anciens inputs
+    const fallback = toNumber(getInputValue('simulation-budget-sante')) + 
+                    toNumber(getInputValue('simulation-budget-vetements')) + 
+                    toNumber(getInputValue('simulation-budget-autres'));
+    
+    if (isDev) {
+        console.log('📊 Total variables (fallback):', fallback);
+    }
+    return fallback;
+}
+
+/**
+ * 🆕 NOUVEAU : Récupère une valeur calculée et affichée (avec nettoyage)
+ */
+function getCalculatedValue(id, suffix = '') {
+    const element = document.getElementById(id);
+    if (!element) {
+        console.warn(`⚠️ Élément ${id} non trouvé`);
+        return 0;
+    }
+    
+    let text = element.textContent.trim();
+    
+    // Nettoyage selon le type
+    if (suffix === '%') {
+        text = text.replace('%', '');
+    }
+    
+    const value = toNumber(text);
+    if (isDev) {
+        console.log(`📊 ${id}: ${value}${suffix}`);
+    }
+    return value;
+}
+
+// ===== CONSTRUCTION DU TEMPLATE PDF (✅ FIX PAGE BLANCHE) =====
+
+/**
+ * Construit le template PDF complet
+ * ✅ FIX: Structure simplifiée pour éviter la page blanche
+ * @param {Object} data - Données du budget
+ * @returns {HTMLElement} Template prêt pour html2pdf
+ */
+async function buildCompletePDFTemplate(data) {
+    // ✅ FIX: Un seul conteneur racine avec styles intégrés
     const template = document.createElement('div');
     template.className = 'pdf-container';
     
-    // 🆕 Attendre la capture des charts avant construction
-    if (typeof captureCharts === 'function') {
-        data.charts = await captureCharts();
-    }
-    
-    // Construction séquentielle pour éviter les conflits
+    // ✅ FIX: Styles intégrés DANS le conteneur (pas comme nœud séparé)
     const styles = createPDFStyles();
     template.appendChild(styles);
     
+    // Construction des sections
     template.appendChild(buildPdfHeader(data));
     template.appendChild(buildPdfHero(data));
     template.appendChild(buildPdfCharts(data));
@@ -616,24 +426,27 @@ async function buildCompletePDFTemplate(data) {
     
     template.appendChild(buildPdfRecommendations(data));
     
-    // Page 2 avec break contrôlé
+    // ✅ FIX: Page 2 - construire le contenu AVANT d'ajouter la classe page-break
     const page2Content = document.createElement('div');
-    page2Content.className = 'page-break-before';
     page2Content.appendChild(buildPdfFormulas(data));
     page2Content.appendChild(buildPdfFooter(data));
     
+    // ✅ FIX: Classe page-break appliquée APRÈS construction du contenu
+    page2Content.className = 'page-break-before';
     template.appendChild(page2Content);
     
     return template;
 }
 
 /**
- * Crée les styles CSS optimisés pour le PDF avec verrouillage A4
+ * Crée les styles CSS pour le PDF
+ * ✅ FIX: Marges CSS optimisées
+ * @returns {HTMLElement} Élément style
  */
 function createPDFStyles() {
     const style = document.createElement('style');
     style.textContent = `
-        /* ✅ VERROUILLAGE DIMENSIONS A4 + OVERFLOW FIX */
+        /* ✅ FIX: Reset complet avec marges contrôlées */
         body, html { 
             margin: 0 !important; 
             padding: 0 !important; 
@@ -641,24 +454,17 @@ function createPDFStyles() {
         }
         
         .pdf-container {
-            font-family: 'Arial', sans-serif;
+            font-family: Arial, sans-serif;
             font-size: 12px;
             line-height: 1.4;
             color: #374151;
             background: #ffffff;
-            
-            /* 🆕 VERROUILLAGE STRICT A4 */
-            width: 210mm !important;
-            max-width: 210mm !important;
-            min-height: 297mm !important;
-            overflow-x: hidden !important; /* 🆕 Empêche débordement horizontal */
-            
             margin: 0 !important;
-            padding: 20mm 15mm !important;
+            padding: 20mm 10mm !important; /* ✅ FIX: Marges gérées par CSS */
             box-sizing: border-box;
         }
         
-        /* ✅ Header optimisé */
+        /* ✅ FIX: Header sans espacement excessif */
         .pdf-header {
             margin-bottom: 15mm !important;
             padding: 0 !important;
@@ -669,53 +475,34 @@ function createPDFStyles() {
             align-items: center;
         }
         
-        /* ✅ Tables responsive dans A4 */
         .pdf-table {
             width: 100%;
-            max-width: 100%; /* 🆕 Respect largeur container */
             border-collapse: collapse;
             margin: 10px 0;
-            table-layout: fixed; /* 🆕 Largeurs colonnes contrôlées */
         }
-        
         .pdf-table th,
         .pdf-table td {
             border: 1px solid #e5e7eb;
-            padding: 6px; /* 🆕 Réduit pour optimiser l'espace */
+            padding: 8px;
             text-align: left;
-            word-wrap: break-word; /* 🆕 Coupe les mots longs */
-            overflow: hidden;
         }
-        
         .pdf-table th {
             background-color: #f9fafb;
             font-weight: 600;
             color: #374151;
-            font-size: 11px; /* 🆕 Légèrement plus petit */
         }
         
-        /* ✅ Charts containers A4-friendly */
-        .chart-container-pdf {
-            text-align: center;
-            margin: 0 5px; /* 🆕 Marges réduites */
-            flex: 1;
-            max-width: 45%;
-            overflow: hidden; /* 🆕 Prévention débordement */
-        }
-        
-        .chart-container-pdf img {
-            max-width: 100% !important;
-            height: auto !important;
-            max-height: 60mm !important; /* 🆕 Hauteur max pour A4 */
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        /* ✅ Page breaks optimisés pour A4 */
+        /* ✅ FIX: Page breaks optimisés - éviter les coupures seulement sur gros éléments */
         .budget-analysis-table,
         .recommendation-pdf {
             page-break-inside: avoid;
             break-inside: avoid;
+        }
+        
+        /* ✅ FIX: Permet les coupures sur petits éléments */
+        .chart-container-pdf,
+        .pdf-hero {
+            page-break-inside: auto;
         }
         
         .page-break-before {
@@ -723,241 +510,29 @@ function createPDFStyles() {
             break-before: page;
         }
         
-        /* ✅ Évaluations colorées */
+        .chart-container-pdf {
+            text-align: center;
+            margin: 0 10px;
+            flex: 1;
+            max-width: 45%;
+        }
+        .chart-container-pdf img {
+            max-width: 100% !important;
+            height: auto !important;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
         .eval-excellent { color: #059669; font-weight: 600; }
         .eval-bon { color: #d97706; font-weight: 600; }
         .eval-attention { color: #dc2626; font-weight: 600; }
-        .eval-alerte { color: #dc2626; font-weight: 600; background-color: #fef2f2; padding: 2px 4px; border-radius: 3px; }
-        
-        /* 🆕 Optimisations spécifiques pour petits écrans */
-        @media (max-width: 600px) {
-            .pdf-container {
-                padding: 15mm 10mm !important;
-            }
-            
-            .pdf-table {
-                font-size: 10px;
-            }
-            
-            .chart-container-pdf {
-                max-width: 100%;
-                margin-bottom: 10px;
-            }
-        }
+        .eval-alerte { color: #dc2626; font-weight: 600; }
     `;
     return style;
 }
 
-// ===== ERROR HANDLING AVANCÉ =====
-
 /**
- * Gère les erreurs d'export avec fallbacks intelligents
+ * Construit l'en-tête du PDF
  */
-function handleExportError(exportBtn, error) {
-    console.error('❌ Erreur export PDF:', error);
-    
-    // Classification de l'erreur
-    let userMessage = 'Erreur lors de la génération du PDF';
-    let suggestion = '';
-    
-    if (error.message.includes('html2pdf')) {
-        userMessage = 'Erreur de chargement du générateur PDF';
-        suggestion = 'Vérifiez votre connexion internet et réessayez.';
-    } else if (error.message.includes('Timeout')) {
-        userMessage = 'La génération prend trop de temps';
-        suggestion = 'Votre budget est peut-être trop complexe. Essayez de simplifier.';
-    } else if (error.message.includes('Données')) {
-        userMessage = 'Données de budget incomplètes';
-        suggestion = 'Vérifiez que tous les champs sont remplis correctement.';
-    }
-    
-    // Affichage utilisateur
-    const fullMessage = suggestion ? `${userMessage}\n\n${suggestion}` : userMessage;
-    alert(fullMessage);
-    
-    // Restauration bouton
-    if (exportBtn) {
-        exportBtn.innerHTML = '<i class="fas fa-file-pdf mr-2"></i>Exporter en PDF';
-        exportBtn.disabled = false;
-    }
-    
-    // Suggestion fallback simple
-    if (isDev) {
-        console.log('💡 Suggestion: Utiliser exportFallbackPDF() pour debug');
-    }
-}
-
-/**
- * Export PDF de fallback en cas d'échec (version simplifiée)
- */
-function exportFallbackPDF(data) {
-    if (!data) {
-        data = extractBudgetDataFromDOM();
-    }
-    
-    const sanitized = sanitizeBudgetData(data);
-    
-    // Template ultra-simple pour debug
-    const template = document.createElement('div');
-    template.innerHTML = `
-        <div style="font-family: Arial; padding: 20px;">
-            <h1>TradePulse - Budget (Mode Fallback)</h1>
-            <p><strong>Revenu:</strong> ${formatCurrency(sanitized.revenu)}</p>
-            <p><strong>Dépenses totales:</strong> ${formatCurrency(sanitized.totalDepenses)}</p>
-            <p><strong>Épargne:</strong> ${formatCurrency(sanitized.epargneDisponible)}</p>
-            <p><strong>Score:</strong> ${sanitized.score}/5</p>
-            <p><em>Version simplifiée générée le ${new Date().toLocaleString('fr-FR')}</em></p>
-        </div>
-    `;
-    
-    const fallbackConfig = {
-        margin: [10, 10, 10, 10],
-        image: { type: 'jpeg', quality: 0.7 },
-        html2canvas: { scale: 1, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        filename: `TradePulse-Budget-Fallback-${Date.now()}.pdf`
-    };
-    
-    return html2pdf().set(fallbackConfig).from(template).save();
-}
-
-// ===== FONCTIONS HÉRITÉES OPTIMISÉES =====
-
-/**
- * S'assure que l'analyse de budget est terminée
- */
-async function ensureBudgetAnalysisComplete() {
-    if (typeof window.analyserBudget === 'function') {
-        if (isDev) console.log('📊 Synchronisation analyse budget...');
-        try {
-            await window.analyserBudget();
-        } catch (error) {
-            console.warn('⚠️ Erreur synchronisation budget:', error.message);
-        }
-    }
-    
-    // Délai de sécurité pour màj DOM
-    await new Promise(resolve => setTimeout(resolve, 300));
-}
-
-/**
- * Extraction des données optimisée
- */
-function extractBudgetDataFromDOM() {
-    if (isDev) console.log('📊 Extraction données budget...');
-    
-    const data = {
-        generatedAt: new Date(),
-        revenu: toNumber(getInputValue('revenu-mensuel-input')),
-        score: getElementText('budget-score', '3'),
-        scoreDescription: getElementText('budget-score-description', 'Analyse effectuée'),
-        
-        depenses: {
-            loyer: toNumber(getInputValue('simulation-budget-loyer')),
-            vieCourante: toNumber(getTotalVieCourante()),
-            loisirs: toNumber(getTotalLoisirs()),
-            variables: toNumber(getTotalVariables()),
-            epargne: toNumber(getInputValue('simulation-budget-invest'))
-        },
-        
-        totalDepenses: toNumber(getCalculatedValue('simulation-depenses-totales')),
-        epargneDisponible: toNumber(getCalculatedValue('simulation-epargne-possible')),
-        tauxEpargne: toNumber(getCalculatedValue('simulation-taux-epargne', '%')),
-        
-        charts: captureCharts(),
-        objectif: extractObjectifData()
-    };
-    
-    // Calculs dérivés
-    data.ratios = calculateExpenseRatios(data);
-    data.evaluations = generateEvaluations(data);
-    data.recommendations = generateRecommendations(data);
-    
-    return data;
-}
-
-// ===== FONCTIONS UTILITAIRES CONSERVÉES =====
-
-function toNumber(value) {
-    if (value === null || value === undefined || value === '') return 0;
-    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
-    if (typeof value === 'string') {
-        const cleaned = value.replace(/[^\d.-]/g, '');
-        const parsed = parseFloat(cleaned);
-        return Number.isFinite(parsed) ? parsed : 0;
-    }
-    const parsed = parseFloat(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function getTotalVieCourante() {
-    if (typeof window.updateTotalVieCourante === 'function') {
-        try {
-            return window.updateTotalVieCourante() || 0;
-        } catch (e) {
-            console.warn('⚠️ Erreur updateTotalVieCourante:', e);
-        }
-    }
-    
-    const totalElement = document.getElementById('total-vie-courante');
-    if (totalElement) return toNumber(totalElement.textContent);
-    
-    return toNumber(getInputValue('simulation-budget-alimentation')) + 
-           toNumber(getInputValue('simulation-budget-transport')) + 
-           toNumber(getInputValue('simulation-budget-factures'));
-}
-
-function getTotalLoisirs() {
-    if (typeof window.updateTotalLoisirs === 'function') {
-        try {
-            return window.updateTotalLoisirs() || 0;
-        } catch (e) {
-            console.warn('⚠️ Erreur updateTotalLoisirs:', e);
-        }
-    }
-    
-    const totalElement = document.getElementById('total-loisirs');
-    if (totalElement) return toNumber(totalElement.textContent);
-    
-    return toNumber(getInputValue('simulation-budget-loisirs-sorties')) + 
-           toNumber(getInputValue('simulation-budget-loisirs-sport')) + 
-           toNumber(getInputValue('simulation-budget-loisirs-autres'));
-}
-
-function getTotalVariables() {
-    if (typeof window.updateDetailedExpensesTotal === 'function') {
-        try {
-            return window.updateDetailedExpensesTotal() || 0;
-        } catch (e) {
-            console.warn('⚠️ Erreur updateDetailedExpensesTotal:', e);
-        }
-    }
-    
-    const totalElements = document.querySelectorAll('.depense-total');
-    let total = 0;
-    totalElements.forEach(element => {
-        total += toNumber(element.textContent);
-    });
-    
-    if (total > 0) return total;
-    
-    return toNumber(getInputValue('simulation-budget-sante')) + 
-           toNumber(getInputValue('simulation-budget-vetements')) + 
-           toNumber(getInputValue('simulation-budget-autres'));
-}
-
-function getCalculatedValue(id, suffix = '') {
-    const element = document.getElementById(id);
-    if (!element) return 0;
-    
-    let text = element.textContent.trim();
-    if (suffix === '%') text = text.replace('%', '');
-    
-    return toNumber(text);
-}
-
-// ===== CONSTRUCTION DES SECTIONS PDF =====
-
 function buildPdfHeader(data) {
     const div = document.createElement('div');
     div.className = 'pdf-header';
@@ -973,13 +548,16 @@ function buildPdfHeader(data) {
             </div>
         </div>
         <div style="font-size: 12px; color: #6b7280;">
-            TradePulse v2025.1
+            TradePulse v4.9
         </div>
     `;
     
     return div;
 }
 
+/**
+ * Construit la section hero avec résumé principal
+ */
 function buildPdfHero(data) {
     const wrap = document.createElement('div');
     wrap.className = 'pdf-hero';
@@ -995,11 +573,11 @@ function buildPdfHero(data) {
         <table class="pdf-table">
             <thead>
                 <tr>
-                    <th style="width: 20%;">Revenu mensuel net</th>
-                    <th style="width: 20%;">Dépenses totales</th>
-                    <th style="width: 20%;">Épargne disponible</th>
-                    <th style="width: 20%;">Taux d'épargne</th>
-                    <th style="width: 20%;">Score budget</th>
+                    <th>Revenu mensuel net</th>
+                    <th>Dépenses totales</th>
+                    <th>Épargne disponible</th>
+                    <th>Taux d'épargne</th>
+                    <th>Score budget</th>
                 </tr>
             </thead>
             <tbody>
@@ -1037,6 +615,9 @@ function buildPdfHero(data) {
     return wrap;
 }
 
+/**
+ * Construit la section graphiques
+ */
 function buildPdfCharts(data) {
     const box = document.createElement('div');
     box.style.marginTop = '25px';
@@ -1051,6 +632,7 @@ function buildPdfCharts(data) {
     
     let chartAdded = false;
     
+    // Ajouter les graphiques capturés
     if (data.charts && data.charts.length > 0) {
         data.charts.forEach(chart => {
             const container = document.createElement('div');
@@ -1082,6 +664,9 @@ function buildPdfCharts(data) {
     return box;
 }
 
+/**
+ * Construit le tableau détaillé des dépenses (🆕 MISE À JOUR)
+ */
 function buildPdfDetailsTable(data) {
     const container = document.createElement('div');
     container.className = 'budget-analysis-table';
@@ -1098,10 +683,10 @@ function buildPdfDetailsTable(data) {
     table.innerHTML = `
         <thead>
             <tr>
-                <th style="width: 40%;">Poste de dépense</th>
-                <th style="width: 20%; text-align: right;">Montant</th>
-                <th style="width: 15%; text-align: right;">% du revenu</th>
-                <th style="width: 25%; text-align: center;">Évaluation</th>
+                <th>Poste de dépense</th>
+                <th style="text-align: right;">Montant</th>
+                <th style="text-align: right;">% du revenu</th>
+                <th style="text-align: center;">Évaluation</th>
             </tr>
         </thead>
         <tbody></tbody>
@@ -1109,11 +694,12 @@ function buildPdfDetailsTable(data) {
     
     const tbody = table.querySelector('tbody');
     
+    // 🆕 NOUVEAUX POSTES avec structure mise à jour
     const postes = [
         { label: 'Loyer / Crédit immobilier', value: data.depenses.loyer, type: 'loyer' },
-        { label: 'Vie courante', value: data.depenses.vieCourante, type: 'vieCourante' },
+        { label: 'Vie courante (alimentation, transport, factures)', value: data.depenses.vieCourante, type: 'vieCourante' },
         { label: 'Loisirs & plaisirs', value: data.depenses.loisirs, type: 'loisirs' },
-        { label: 'Dépenses variables', value: data.depenses.variables, type: 'variables' },
+        { label: 'Dépenses variables (santé, vêtements, autres)', value: data.depenses.variables, type: 'variables' },
         { label: 'Épargne automatique', value: data.depenses.epargne, type: 'epargne' }
     ];
     
@@ -1157,6 +743,9 @@ function buildPdfDetailsTable(data) {
     return container;
 }
 
+/**
+ * Construit la section objectif
+ */
 function buildPdfObjective(data) {
     if (!data.objectif || !data.objectif.visible) {
         return document.createElement('div');
@@ -1178,6 +767,9 @@ function buildPdfObjective(data) {
     return container;
 }
 
+/**
+ * Construit la section recommandations (🆕 MISE À JOUR)
+ */
 function buildPdfRecommendations(data) {
     const container = document.createElement('div');
     container.className = 'recommendation-pdf';
@@ -1200,6 +792,7 @@ function buildPdfRecommendations(data) {
     
     container.appendChild(ul);
     
+    // Lien vers les simulateurs
     const linkSection = document.createElement('div');
     linkSection.style.cssText = 'margin-top: 15px; padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 6px;';
     linkSection.innerHTML = `
@@ -1213,6 +806,9 @@ function buildPdfRecommendations(data) {
     return container;
 }
 
+/**
+ * Construit la section formules (Page 2)
+ */
 function buildPdfFormulas(data) {
     const container = document.createElement('div');
     container.className = 'formulas-pdf';
@@ -1234,7 +830,7 @@ function buildPdfFormulas(data) {
         </div>
         
         <div style="margin-bottom: 20px;">
-            <h4 style="color: #374151; font-size: 14px; margin-bottom: 8px;">Seuils d'évaluation (normes françaises 2025)</h4>
+            <h4 style="color: #374151; font-size: 14px; margin-bottom: 8px;">Seuils d'évaluation (normes françaises)</h4>
             <ul style="list-style-type: disc; margin-left: 20px; line-height: 1.5;">
                 <li><strong>Loyer/Crédit :</strong> ≤ 25% (optimal), ≤ 33% (recommandé), > 33% (risqué)</li>
                 <li><strong>Vie courante :</strong> ≤ 30% (maîtrisé), ≤ 40% (standard), > 40% (élevé)</li>
@@ -1257,6 +853,9 @@ function buildPdfFormulas(data) {
     return container;
 }
 
+/**
+ * Construit le footer du PDF
+ */
 function buildPdfFooter(data) {
     const footer = document.createElement('div');
     footer.className = 'footer-pdf';
@@ -1287,8 +886,37 @@ function buildPdfFooter(data) {
     return footer;
 }
 
-// ===== FONCTIONS UTILITAIRES COMPLÈTES =====
+// ===== FONCTIONS UTILITAIRES =====
 
+/**
+ * Charge la bibliothèque html2pdf si nécessaire
+ */
+async function loadHtml2PdfLib() {
+    if (typeof html2pdf === 'undefined') {
+        if (isDev) {
+            console.log('📦 Chargement de html2pdf...');
+        }
+        await import('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+        
+        // Attendre que la variable globale soit disponible
+        let attempts = 0;
+        while (typeof html2pdf === 'undefined' && attempts < 10) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+        
+        if (typeof html2pdf === 'undefined') {
+            throw new Error('Impossible de charger html2pdf');
+        }
+        if (isDev) {
+            console.log('✅ html2pdf chargé');
+        }
+    }
+}
+
+/**
+ * Formate un montant en devise
+ */
 function formatCurrency(amount) {
     return new Intl.NumberFormat('fr-FR', {
         style: 'currency',
@@ -1298,20 +926,29 @@ function formatCurrency(amount) {
     }).format(amount || 0);
 }
 
+/**
+ * 🔧 CORRIGÉ : Récupère la valeur d'un input avec parsing sécurisé
+ */
 function getInputValue(id) {
     const element = document.getElementById(id);
     return element ? toNumber(element.value) : 0;
 }
 
+/**
+ * Récupère le texte d'un élément
+ */
 function getElementText(id, defaultValue = '') {
     const element = document.getElementById(id);
     return element ? element.textContent.trim() : defaultValue;
 }
 
+/**
+ * Capture les graphiques disponibles
+ */
 function captureCharts() {
     const charts = [];
     
-    // Graphique budget
+    // Graphique budget (doughnut)
     const budgetChart = document.getElementById('budget-chart');
     if (budgetChart) {
         try {
@@ -1323,7 +960,7 @@ function captureCharts() {
                 });
             }
         } catch (e) {
-            console.warn('⚠️ Capture graphique budget échouée:', e.message);
+            console.warn('Impossible de capturer le graphique budget:', e);
         }
     }
     
@@ -1339,13 +976,16 @@ function captureCharts() {
                 });
             }
         } catch (e) {
-            console.warn('⚠️ Capture graphique évolution échouée:', e.message);
+            console.warn('Impossible de capturer le graphique évolution:', e);
         }
     }
     
     return charts;
 }
 
+/**
+ * Extrait les données d'objectif
+ */
 function extractObjectifData() {
     const objectifElement = document.getElementById('temps-objectif');
     
@@ -1359,6 +999,9 @@ function extractObjectifData() {
     };
 }
 
+/**
+ * Calcule les ratios de dépenses
+ */
 function calculateExpenseRatios(data) {
     const ratios = {};
     
@@ -1371,6 +1014,9 @@ function calculateExpenseRatios(data) {
     return ratios;
 }
 
+/**
+ * 🆕 MISE À JOUR : Génère les évaluations pour les nouveaux types de postes
+ */
 function generateEvaluations(data) {
     const evaluations = {};
     
@@ -1381,6 +1027,9 @@ function generateEvaluations(data) {
     return evaluations;
 }
 
+/**
+ * 🆕 NOUVEAU : Évalue une dépense selon son type et ratio (mise à jour)
+ */
 function evaluateExpenseUpdated(type, ratio) {
     switch(type) {
         case 'loyer':
@@ -1389,6 +1038,7 @@ function evaluateExpenseUpdated(type, ratio) {
             return '<span class="eval-alerte">🚨 Trop élevé</span>';
             
         case 'vieCourante':
+            // Vie courante = alimentation + transport + factures (env. 25-35% recommandé)
             if (ratio <= 30) return '<span class="eval-excellent">✅ Maîtrisé</span>';
             if (ratio <= 40) return '<span class="eval-bon">⚠️ Standard</span>';
             return '<span class="eval-attention">🚨 Élevé</span>';
@@ -1399,6 +1049,7 @@ function evaluateExpenseUpdated(type, ratio) {
             return '<span class="eval-alerte">🚨 Excessif</span>';
             
         case 'variables':
+            // Dépenses variables (santé, vêtements, autres)
             if (ratio <= 10) return '<span class="eval-excellent">✅ Contrôlé</span>';
             if (ratio <= 15) return '<span class="eval-bon">⚠️ Raisonnable</span>';
             return '<span class="eval-attention">🚨 À surveiller</span>';
@@ -1408,11 +1059,25 @@ function evaluateExpenseUpdated(type, ratio) {
             if (ratio >= 10) return '<span class="eval-bon">✅ Bon</span>';
             return '<span class="eval-attention">⚠️ À améliorer</span>';
             
+        // Fallback pour anciens types
+        case 'alimentation':
+            if (ratio <= 12) return '<span class="eval-excellent">✅ Économe</span>';
+            if (ratio <= 18) return '<span class="eval-bon">⚠️ Standard</span>';
+            return '<span class="eval-attention">🚨 Élevé</span>';
+            
+        case 'transport':
+            if (ratio <= 15) return '<span class="eval-excellent">✅ Raisonnable</span>';
+            if (ratio <= 20) return '<span class="eval-attention">⚠️ Modéré</span>';
+            return '<span class="eval-alerte">🚨 À revoir</span>';
+            
         default:
             return '<span class="eval-bon">📊 Variable</span>';
     }
 }
 
+/**
+ * Génère le texte de résumé
+ */
 function generateSummaryText(data) {
     if (data.tauxEpargne >= 20) {
         return "Excellente gestion financière ! Votre capacité d'épargne vous ouvre de nombreuses opportunités d'investissement.";
@@ -1425,6 +1090,9 @@ function generateSummaryText(data) {
     }
 }
 
+/**
+ * 🆕 MISE À JOUR : Génère des recommandations pour la nouvelle structure
+ */
 function generateRecommendations(data) {
     const conseils = [];
     
@@ -1481,12 +1149,60 @@ function generateRecommendations(data) {
     return conseils;
 }
 
+/**
+ * 🔧 CORRIGÉ : Valide les données de budget (validation renforcée)
+ */
+function validateBudgetData(data) {
+    const ok = v => Number.isFinite(v) && v >= 0;
+    
+    if (!data || typeof data !== 'object') {
+        console.error('❌ Validation: data n\'est pas un objet');
+        return false;
+    }
+    
+    // Protection supplémentaire contre les Events
+    if (data instanceof Event) {
+        console.error('❌ Validation: data est un Event');
+        return false;
+    }
+    
+    if (!ok(data.revenu)) {
+        console.error('❌ Validation: revenu invalide', data.revenu);
+        return false;
+    }
+    
+    if (!data.depenses || typeof data.depenses !== 'object') {
+        console.error('❌ Validation: dépenses invalides', data.depenses);
+        return false;
+    }
+    
+    // Vérifier qu'il y a au moins une dépense > 0
+    const sommeDep = Object.values(data.depenses)
+                           .filter(Number.isFinite)
+                           .reduce((s, v) => s + v, 0);
+    if (sommeDep === 0) {
+        console.error('❌ Validation: aucune dépense trouvée', data.depenses);
+        return false;
+    }
+    
+    if (isDev) {
+        console.log('✅ Validation réussie');
+    }
+    return true;
+}
+
+/**
+ * Génère le nom de fichier PDF
+ */
 function generatePDFFilename(date = new Date()) {
-    const dateStr = date.toISOString().split('T')[0];
-    const timeStr = date.toTimeString().split(' ')[0].replace(/:/g, '');
+    const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+    const timeStr = date.toTimeString().split(' ')[0].replace(/:/g, ''); // HHMMSS
     return `TradePulse-Budget-${dateStr}-${timeStr}.pdf`;
 }
 
+/**
+ * Affiche l'état de chargement
+ */
 function showLoadingState(exportBtn) {
     if (!exportBtn) return null;
     
@@ -1501,6 +1217,9 @@ function showLoadingState(exportBtn) {
     return originalState;
 }
 
+/**
+ * Affiche l'état de succès
+ */
 function showSuccessState(exportBtn, originalState) {
     if (!exportBtn) return;
     
@@ -1514,8 +1233,30 @@ function showSuccessState(exportBtn, originalState) {
     }, 2000);
 }
 
+/**
+ * Affiche l'état d'erreur
+ */
+function showErrorState(exportBtn, errorMessage) {
+    if (!exportBtn) {
+        console.error('❌ Erreur export PDF (pas de bouton):', errorMessage);
+        alert(`Erreur lors de la génération du PDF: ${errorMessage}`);
+        return;
+    }
+    
+    console.error('❌ Erreur export PDF:', errorMessage);
+    alert(`Erreur lors de la génération du PDF: ${errorMessage}`);
+    
+    // Restaurer l'état original
+    exportBtn.innerHTML = '<i class="fas fa-file-pdf mr-2"></i>Exporter en PDF';
+    exportBtn.disabled = false;
+}
+
 // ===== FONCTIONS D'INTÉGRATION =====
 
+/**
+ * Active le bouton d'export après analyse
+ * À appeler depuis le module principal
+ */
 export function activateExportButton() {
     const exportBtn = document.getElementById('export-budget-pdf');
     if (exportBtn) {
@@ -1523,16 +1264,25 @@ export function activateExportButton() {
         exportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         exportBtn.classList.add('hover:bg-green-400');
         exportBtn.title = 'Télécharger l\'analyse en PDF';
-        if (isDev) console.log('✅ Bouton export PDF activé');
+        if (isDev) {
+            console.log('✅ Bouton export PDF activé');
+        }
     }
 }
 
+/**
+ * Crée le bouton d'export s'il n'existe pas
+ * À appeler depuis le module principal
+ */
 export function createExportButton() {
     let exportBtn = document.getElementById('export-budget-pdf');
     
     if (!exportBtn) {
-        if (isDev) console.log('📝 Création du bouton export PDF');
+        if (isDev) {
+            console.log('📝 Création du bouton export PDF');
+        }
         
+        // Trouver où insérer le bouton
         const budgetAdvice = document.getElementById('budget-advice');
         const budgetResults = document.querySelector('#budget-planner .mt-8');
         const targetContainer = budgetAdvice || budgetResults;
@@ -1545,14 +1295,13 @@ export function createExportButton() {
             exportBtn.disabled = true;
             exportBtn.title = 'Analysez d\'abord votre budget';
             
-            // Protection contre les Events avec wrapper
-            exportBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                exportBudgetToPDF();
-            });
+            // 🔧 CORRIGÉ : Attacher l'événement avec wrapper pour éviter PointerEvent
+            exportBtn.addEventListener('click', () => exportBudgetToPDF());
             
             targetContainer.appendChild(exportBtn);
-            if (isDev) console.log('✅ Bouton export créé et attaché');
+            if (isDev) {
+                console.log('✅ Bouton export créé et attaché avec protection Event');
+            }
         } else {
             console.warn('⚠️ Container pour le bouton non trouvé');
         }
@@ -1560,18 +1309,3 @@ export function createExportButton() {
     
     return exportBtn;
 }
-
-// ===== 🆕 INITIALISATION AUTOMATIQUE DES TESTS =====
-
-// Lancer les tests en développement (décommenter si nécessaire)
-if (isDev) {
-    document.addEventListener('DOMContentLoaded', () => {
-        // runPDFTests(); // Décommenter pour tester automatiquement
-        
-        // Log des métriques initiales
-        console.log('📊 Module PDF Budget chargé - Métriques:', getPDFMetrics());
-    });
-}
-
-// ✅ FIX: Export unique des fonctions (getPDFMetrics non dupliqué)
-export { runPDFTests, exportFallbackPDF };
