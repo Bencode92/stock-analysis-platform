@@ -749,11 +749,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 tableBody.appendChild(tr);
 
                 // ==========================================
-                // 🚀 NOUVEAU : AFFICHAGE PTZ DANS TABLEAU
+                // 🚀 NOUVEAU : AFFICHAGE PTZ DANS TABLEAU AVEC LOGIQUE MODIFIÉE
                 // ==========================================
                 if (enablePTZ && ptzAmount > 0 && mensualitePTZ > 0) {
-                    // Afficher une ligne PTZ tous les 12 mois (et pas chaque mois)
-                    if (row.mois === 1 || row.mois % 12 === 0) {
+                    /* ── Début de l'insertion PTZ ───────────────────────────────────────── */
+                    if (row.mois % 12 === 1) { // mois 1, 13, 25, …
+                        // Année = 1 pour les mois 1-12, 2 pour 13-24, etc.
+                        const anneePTZ = Math.floor((row.mois - 1) / 12) + 1;
+                        const labelPTZ = `PTZ (Année ${anneePTZ})`;
+                        
                         const monthsRemaining = Math.max(0, ptzDurationMonths - row.mois + 1);
                         const ptzCapitalRestant = Math.max(0, ptzAmount - (mensualitePTZ * (row.mois - 1)));
                         
@@ -761,7 +765,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             const ptzRow = document.createElement('tr');
                             ptzRow.className = 'bg-amber-900 bg-opacity-10 border-l-4 border-amber-500';
                             ptzRow.innerHTML = `
-                                <td class="px-3 py-2 text-amber-300">PTZ (An ${Math.ceil(row.mois/12)})</td>
+                                <td class="px-3 py-2 text-amber-300">${labelPTZ}</td>
                                 <td class="px-3 py-2 text-right text-amber-300">${formatMontant(mensualitePTZ)}</td>
                                 <td class="px-3 py-2 text-right text-amber-300">${formatMontant(mensualitePTZ)}</td>
                                 <td class="px-3 py-2 text-right text-gray-400">0 €</td>
@@ -771,6 +775,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             tableBody.appendChild(ptzRow);
                         }
                     }
+                    /* ── Fin de l'insertion PTZ ─────────────────────────────────────────── */
                 }
                 // ==========================================
                 // FIN SECTION TABLEAU PTZ
@@ -815,7 +820,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ==========================================
-    // 🚀 NOUVEAU : FONCTION ENCADRÉ PTZ
+    // 🚀 NOUVEAU : FONCTION ENCADRÉ PTZ AVEC LIBELLÉ MODIFIÉ
     // ==========================================
     function updatePtzSummary(enablePTZ, ptzAmount, mensualitePTZ, ptzDurationYears, loanDurationYears, montantTotalEmprunte) {
         // Nettoyer l'ancien encadré
@@ -1346,7 +1351,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const applyRenegotiation = document.getElementById('apply-renegotiation')?.checked || false;
 
             // ==========================================
-            // 🚀 NOUVEAU : INFORMATIONS PTZ DANS PDF
+            // 🚀 NOUVEAU : INFORMATIONS PTZ DANS PDF AVEC LIBELLÉ MODIFIÉ
             // ==========================================
             const enablePTZ = document.getElementById('enable-ptz')?.checked || false;
             const ptzAmount = parseFloat(document.getElementById('ptz-amount')?.value || 0);
@@ -1396,7 +1401,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
 
-            // Ajouter section PTZ si activé
+            // Ajouter section PTZ si activé avec libellé modifié
             if (enablePTZ && ptzAmount > 0) {
                 const mensualitePTZ = ptzAmount / (ptzDuration * 12);
                 element.innerHTML += `
@@ -1423,6 +1428,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         <p class="text-sm text-yellow-700 mt-2">
                             <strong>Impact:</strong> Le PTZ représente ${((ptzAmount / (parseFloat(document.getElementById('loan-amount').value) + ptzAmount)) * 100).toFixed(1)}% 
                             du financement total et réduit votre apport personnel.
+                        </p>
+                        <p class="text-xs text-yellow-600 mt-1">
+                            <strong>Affichage:</strong> Les lignes "PTZ (Année 1)", "PTZ (Année 2)", etc. apparaissent au début de chaque année dans le tableau d'amortissement.
                         </p>
                     </div>
                 `;
@@ -1472,7 +1480,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Trier les remboursements par mois
                 const sortedRepayments = [...window.storedRepayments].sort((a, b) => a.mois - b.mois);
                 
-                sortedRepayments.forEach(repayment => {
+                sortedRepayments.forEach((repayment, index) => {
                     element.innerHTML += `
                         <tr>
                             <td class="border border-gray-300 p-2">${repayment.mois}</td>
