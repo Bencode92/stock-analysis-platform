@@ -289,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const sectionMensualite = document.getElementById('section-reduire-mensualite');
     
     // Nouvelle référence pour la case "Appliquer la renégociation"
-    const applyRenegotiationCheckbox = document.getElementById('apply-renegotiation');
+    const applyRenegotiationCheckbox = document.getElementById('apply-renegociation');
     
     // Nouvelle référence pour les sliders de chaque mode
     const earlyRepaymentMonthSliderDuree = document.getElementById('early-repayment-month-slider-duree');
@@ -301,6 +301,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const earlyRepaymentMonthValueMensualite = document.getElementById('early-repayment-month-value-mensualite');
     const penaltyMonthsSliderMensualite = document.getElementById('penalty-months-slider-mensualite');
     const penaltyMonthsValueMensualite = document.getElementById('penalty-months-value-mensualite');
+
+    // 🚀 NOUVEAU : Classes Tailwind pour gestion moderne des boutons
+    const ACTIVE = ['text-green-400', 'bg-green-900', 'bg-opacity-30', 'transition-colors', 'duration-200'];
+    const INACTIVE = ['text-white', 'transition-colors', 'duration-200'];
+
+    /**
+     * Passe un bouton en mode « actif » et l'autre en mode « inactif ».
+     * @param {HTMLElement} on  – bouton à activer
+     * @param {HTMLElement} off – bouton à désactiver
+     */
+    function switchModeButton(on, off) {
+        // État actif
+        on.classList.add(...ACTIVE);
+        on.classList.remove(...INACTIVE);
+        on.setAttribute('aria-pressed', 'true');
+
+        // État inactif  
+        off.classList.add(...INACTIVE);
+        off.classList.remove(...ACTIVE);
+        off.setAttribute('aria-pressed', 'false');
+    }
 
     // ==========================================
     // 🚀 NOUVEAU : GESTION PTZ INTÉGRÉE
@@ -515,23 +536,29 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Gestion du changement de mode de remboursement
+    // 🚀 NOUVELLE GESTION MODERNE DES BOUTONS DE MODE
     if (modeDureeBtn && modeMensualiteBtn && sectionDuree && sectionMensualite) {
-        modeDureeBtn.addEventListener('click', function() {
+
+        // ► « Réduire la durée »
+        modeDureeBtn.addEventListener('click', () => {
             document.getElementById('remboursement-mode').value = 'duree';
-            modeDureeBtn.classList.add('active');
-            modeMensualiteBtn.classList.remove('active');
+            switchModeButton(modeDureeBtn, modeMensualiteBtn);
+
             sectionDuree.classList.remove('hidden');
             sectionMensualite.classList.add('hidden');
         });
-        
-        modeMensualiteBtn.addEventListener('click', function() {
+
+        // ► « Réduire la mensualité »
+        modeMensualiteBtn.addEventListener('click', () => {
             document.getElementById('remboursement-mode').value = 'mensualite';
-            modeMensualiteBtn.classList.add('active');
-            modeDureeBtn.classList.remove('active');
+            switchModeButton(modeMensualiteBtn, modeDureeBtn);
+
             sectionMensualite.classList.remove('hidden');
             sectionDuree.classList.add('hidden');
         });
+
+        // État initial (facultatif : au chargement de la page)
+        switchModeButton(modeDureeBtn, modeMensualiteBtn);
     }
     
     // Ajout d'un écouteur pour la case à cocher "Appliquer la renégociation"
