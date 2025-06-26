@@ -225,6 +225,7 @@ function extractBudgetDataFromDOM() {
 
 /**
  * Convertit une valeur en nombre de manière sécurisée
+ * 🔧 FIX: Gestion de la virgule décimale française
  * @param {*} value - Valeur à convertir
  * @returns {number} Nombre valide (0 si conversion impossible)
  */
@@ -240,7 +241,10 @@ function toNumber(value) {
     
     // Si c'est une chaîne, nettoyer et convertir
     if (typeof value === 'string') {
-        // Supprimer les espaces, caractères non numériques sauf . et -
+        // 👉 NOUVEAU: convertit la virgule décimale AVANT le nettoyage
+        value = value.replace(',', '.');
+        
+        // nettoie : supprime espaces, symboles €, etc. (mais garde . et -)
         const cleaned = value.replace(/[^\d.-]/g, '');
         const parsed = parseFloat(cleaned);
         return Number.isFinite(parsed) ? parsed : 0;
