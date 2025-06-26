@@ -13,7 +13,13 @@
  * 🔧 FIX : Ajout debug et synchronisation avec analyse budget
  * 🔧 FIX : Protection contre PointerEvent et double event listener
  * 🚀 FIX PDF : Suppression page blanche, optimisation marges et performances
+ * 🔧 FIX BROWSER : Correction process.env pour compatibilité navigateur
  */
+
+// ===== FIX BROWSER: Variable de debug compatible navigateur =====
+const isDev = (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') ||
+              location.hostname === 'localhost' ||
+              location.hostname === '127.0.0.1';
 
 // ===== CONFIGURATION PDF OPTIMISÉE =====
 const PDF_CONFIG = {
@@ -47,13 +53,13 @@ const PDF_CONFIG = {
  */
 export async function exportBudgetToPDF(budgetData = null, options = {}) {
     // ✅ FIX: Debug nettoyé (seulement en dev)
-    if (process.env.NODE_ENV === 'development') {
+    if (isDev) {
         console.log('🚀 Début export PDF budget (version corrigée)');
     }
     
     // 🔧 NOUVEAU : Protection contre les Events (fix PointerEvent bug)
     if (budgetData instanceof Event) {
-        if (process.env.NODE_ENV === 'development') {
+        if (isDev) {
             console.log('🔧 Event détecté en paramètre, ignoré');
         }
         budgetData = null;
@@ -70,7 +76,7 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
         exportBtn = document.getElementById('export-budget-pdf');
         
         // 🔧 NOUVEAU : S'assurer que l'analyse est terminée
-        if (process.env.NODE_ENV === 'development') {
+        if (isDev) {
             console.log('🔄 Vérification analyse budget...');
         }
         await ensureBudgetAnalysisComplete();
@@ -79,7 +85,7 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
         const data = budgetData || extractBudgetDataFromDOM();
         
         // 🔧 NOUVEAU : Debug complet avant validation (dev uniquement)
-        if (process.env.NODE_ENV === 'development') {
+        if (isDev) {
             console.log('🔍 DEBUG Export PDF - Données extraites:');
             if (data && typeof data === 'object' && !(data instanceof Event)) {
                 console.table(data);
@@ -97,7 +103,7 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
             throw new Error('Données de budget insuffisantes pour générer le PDF');
         }
         
-        if (process.env.NODE_ENV === 'development') {
+        if (isDev) {
             console.log('✅ Validation réussie, génération PDF...');
         }
         
@@ -120,7 +126,7 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
             .from(template)
             .save();
         
-        if (process.env.NODE_ENV === 'development') {
+        if (isDev) {
             console.log('✅ PDF généré avec succès');
         }
         showSuccessState(exportBtn, uiState);
@@ -140,19 +146,19 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
 async function ensureBudgetAnalysisComplete() {
     // Vérifier si analyserBudget existe et l'appeler
     if (typeof window.analyserBudget === 'function') {
-        if (process.env.NODE_ENV === 'development') {
+        if (isDev) {
             console.log('📊 Relance de l\'analyse budget...');
         }
         try {
             await window.analyserBudget();
-            if (process.env.NODE_ENV === 'development') {
+            if (isDev) {
                 console.log('✅ Analyse budget terminée');
             }
         } catch (error) {
             console.warn('⚠️ Erreur lors de l\'analyse budget:', error);
         }
     } else {
-        if (process.env.NODE_ENV === 'development') {
+        if (isDev) {
             console.log('⚠️ Fonction analyserBudget non disponible');
         }
     }
@@ -168,7 +174,7 @@ async function ensureBudgetAnalysisComplete() {
  * @returns {Object} Données structurées du budget
  */
 function extractBudgetDataFromDOM() {
-    if (process.env.NODE_ENV === 'development') {
+    if (isDev) {
         console.log('📊 Extraction données budget (nouveaux sélecteurs)');
     }
     
@@ -209,7 +215,7 @@ function extractBudgetDataFromDOM() {
     data.evaluations = generateEvaluations(data);
     data.recommendations = generateRecommendations(data);
     
-    if (process.env.NODE_ENV === 'development') {
+    if (isDev) {
         console.log('✅ Données extraites:', data);
     }
     return data;
@@ -256,7 +262,7 @@ function getTotalVieCourante() {
     if (typeof window.updateTotalVieCourante === 'function') {
         try {
             const total = window.updateTotalVieCourante();
-            if (process.env.NODE_ENV === 'development') {
+            if (isDev) {
                 console.log('📊 Total vie courante (fonction globale):', total);
             }
             return total || 0;
@@ -269,7 +275,7 @@ function getTotalVieCourante() {
     const totalElement = document.getElementById('total-vie-courante');
     if (totalElement) {
         const total = toNumber(totalElement.textContent);
-        if (process.env.NODE_ENV === 'development') {
+        if (isDev) {
             console.log('📊 Total vie courante (span):', total);
         }
         return total;
@@ -280,7 +286,7 @@ function getTotalVieCourante() {
                     toNumber(getInputValue('simulation-budget-transport')) + 
                     toNumber(getInputValue('simulation-budget-factures'));
     
-    if (process.env.NODE_ENV === 'development') {
+    if (isDev) {
         console.log('📊 Total vie courante (fallback):', fallback);
     }
     return fallback;
@@ -294,7 +300,7 @@ function getTotalLoisirs() {
     if (typeof window.updateTotalLoisirs === 'function') {
         try {
             const total = window.updateTotalLoisirs();
-            if (process.env.NODE_ENV === 'development') {
+            if (isDev) {
                 console.log('📊 Total loisirs (fonction globale):', total);
             }
             return total || 0;
@@ -307,7 +313,7 @@ function getTotalLoisirs() {
     const totalElement = document.getElementById('total-loisirs');
     if (totalElement) {
         const total = toNumber(totalElement.textContent);
-        if (process.env.NODE_ENV === 'development') {
+        if (isDev) {
             console.log('📊 Total loisirs (span):', total);
         }
         return total;
@@ -318,7 +324,7 @@ function getTotalLoisirs() {
                     toNumber(getInputValue('simulation-budget-loisirs-sport')) + 
                     toNumber(getInputValue('simulation-budget-loisirs-autres'));
     
-    if (process.env.NODE_ENV === 'development') {
+    if (isDev) {
         console.log('📊 Total loisirs (fallback):', fallback);
     }
     return fallback;
@@ -332,7 +338,7 @@ function getTotalVariables() {
     if (typeof window.updateDetailedExpensesTotal === 'function') {
         try {
             const total = window.updateDetailedExpensesTotal();
-            if (process.env.NODE_ENV === 'development') {
+            if (isDev) {
                 console.log('📊 Total variables (fonction globale):', total);
             }
             return total || 0;
@@ -350,7 +356,7 @@ function getTotalVariables() {
     });
     
     if (total > 0) {
-        if (process.env.NODE_ENV === 'development') {
+        if (isDev) {
             console.log('📊 Total variables (parse .depense-total):', total);
         }
         return total;
@@ -361,7 +367,7 @@ function getTotalVariables() {
                     toNumber(getInputValue('simulation-budget-vetements')) + 
                     toNumber(getInputValue('simulation-budget-autres'));
     
-    if (process.env.NODE_ENV === 'development') {
+    if (isDev) {
         console.log('📊 Total variables (fallback):', fallback);
     }
     return fallback;
@@ -385,7 +391,7 @@ function getCalculatedValue(id, suffix = '') {
     }
     
     const value = toNumber(text);
-    if (process.env.NODE_ENV === 'development') {
+    if (isDev) {
         console.log(`📊 ${id}: ${value}${suffix}`);
     }
     return value;
@@ -887,7 +893,7 @@ function buildPdfFooter(data) {
  */
 async function loadHtml2PdfLib() {
     if (typeof html2pdf === 'undefined') {
-        if (process.env.NODE_ENV === 'development') {
+        if (isDev) {
             console.log('📦 Chargement de html2pdf...');
         }
         await import('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
@@ -902,7 +908,7 @@ async function loadHtml2PdfLib() {
         if (typeof html2pdf === 'undefined') {
             throw new Error('Impossible de charger html2pdf');
         }
-        if (process.env.NODE_ENV === 'development') {
+        if (isDev) {
             console.log('✅ html2pdf chargé');
         }
     }
@@ -1179,7 +1185,7 @@ function validateBudgetData(data) {
         return false;
     }
     
-    if (process.env.NODE_ENV === 'development') {
+    if (isDev) {
         console.log('✅ Validation réussie');
     }
     return true;
@@ -1258,7 +1264,7 @@ export function activateExportButton() {
         exportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         exportBtn.classList.add('hover:bg-green-400');
         exportBtn.title = 'Télécharger l\'analyse en PDF';
-        if (process.env.NODE_ENV === 'development') {
+        if (isDev) {
             console.log('✅ Bouton export PDF activé');
         }
     }
@@ -1272,7 +1278,7 @@ export function createExportButton() {
     let exportBtn = document.getElementById('export-budget-pdf');
     
     if (!exportBtn) {
-        if (process.env.NODE_ENV === 'development') {
+        if (isDev) {
             console.log('📝 Création du bouton export PDF');
         }
         
@@ -1293,7 +1299,7 @@ export function createExportButton() {
             exportBtn.addEventListener('click', () => exportBudgetToPDF());
             
             targetContainer.appendChild(exportBtn);
-            if (process.env.NODE_ENV === 'development') {
+            if (isDev) {
                 console.log('✅ Bouton export créé et attaché avec protection Event');
             }
         } else {
