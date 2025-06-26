@@ -17,6 +17,7 @@
  * ✅ FIX PAGES BLANCHES : Suppression double pagebreak
  * 🎯 FIX DÉFINITIF : hard-page-break + recommandations non-tronquées
  * 🔧 FIX SCROLL : Reset/restore scroll pour corriger capture html2canvas
+ * 🚫 SIMPLIFICATION : Retrait blocs Graphiques et Formules du PDF
  */
 
 // ===== FIX BROWSER: Variable de debug compatible navigateur =====
@@ -58,7 +59,7 @@ const PDF_CONFIG = {
 export async function exportBudgetToPDF(budgetData = null, options = {}) {
     // ✅ FIX: Debug nettoyé (seulement en dev)
     if (isDev) {
-        console.log('🚀 Début export PDF budget (version corrigée définitive anti-pages-blanches + fix scroll)');
+        console.log('🚀 Début export PDF budget (version simplifiée sans graphiques/formules)');
     }
     
     // 🔧 NOUVEAU : Protection contre les Events (fix PointerEvent bug)
@@ -147,7 +148,7 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
         }
         
         if (isDev) {
-            console.log('✅ PDF généré avec succès (sans pages blanches + scroll corrigé)');
+            console.log('✅ PDF généré avec succès (version simplifiée)');
         }
         showSuccessState(exportBtn, uiState);
         
@@ -223,8 +224,8 @@ function extractBudgetDataFromDOM() {
         epargneDisponible: toNumber(getCalculatedValue('simulation-epargne-possible')),
         tauxEpargne: toNumber(getCalculatedValue('simulation-taux-epargne', '%')),
         
-        // Graphiques (si disponibles)
-        charts: captureCharts(),
+        // 🚫 RETIRÉ : Plus de capture des graphiques
+        charts: [], // Toujours vide maintenant
         
         // Objectif utilisateur
         objectif: extractObjectifData()
@@ -421,11 +422,11 @@ function getCalculatedValue(id, suffix = '') {
     return value;
 }
 
-// ===== CONSTRUCTION DU TEMPLATE PDF (✅ FIX PAGE BLANCHE DÉFINITIF) =====
+// ===== CONSTRUCTION DU TEMPLATE PDF (🚫 SIMPLIFIÉE) =====
 
 /**
- * Construit le template PDF complet
- * ✅ FIX DÉFINITIF: Utilise hard-page-break pour éviter la page blanche
+ * Construit le template PDF complet (VERSION SIMPLIFIÉE)
+ * 🚫 SIMPLIFIÉ: Retire les blocs Graphiques et Formules
  * @param {Object} data - Données du budget
  * @returns {HTMLElement} Template prêt pour html2pdf
  */
@@ -438,10 +439,10 @@ async function buildCompletePDFTemplate(data) {
     const styles = createPDFStyles();
     template.appendChild(styles);
     
-    // Construction des sections PAGE 1
+    // 🚫 NOUVELLE STRUCTURE SIMPLIFIÉE - PAGE UNIQUE
     template.appendChild(buildPdfHeader(data));
     template.appendChild(buildPdfHero(data));
-    template.appendChild(buildPdfCharts(data));
+    // template.appendChild(buildPdfCharts(data));       // ❌ RETIRÉ
     template.appendChild(buildPdfDetailsTable(data));
     
     if (data.objectif && data.objectif.visible) {
@@ -450,13 +451,12 @@ async function buildCompletePDFTemplate(data) {
     
     template.appendChild(buildPdfRecommendations(data));
     
-    // ✅ FIX DÉFINITIF: Créer un marqueur invisible pour la rupture de page
-    const hardBreak = document.createElement('div');
-    hardBreak.className = 'hard-page-break';
-    template.appendChild(hardBreak);
+    // 🚫 PLUS DE RUPTURE DE PAGE - Tout tient sur une page
+    // const hardBreak = document.createElement('div');
+    // hardBreak.className = 'hard-page-break';
+    // template.appendChild(hardBreak);
     
-    // ✅ FIX DÉFINITIF: PAGE 2 - construction normale sans page-break-before
-    template.appendChild(buildPdfFormulas(data));
+    // template.appendChild(buildPdfFormulas(data));     // ❌ RETIRÉ
     template.appendChild(buildPdfFooter(data));
     
     return template;
@@ -642,54 +642,57 @@ function buildPdfHero(data) {
     return wrap;
 }
 
-/**
+// 🚫 FONCTIONS COMMENTÉES (inutilisées maintenant)
+
+/*
  * Construit la section graphiques
+ * 🚫 COMMENTÉE : Plus utilisée dans le PDF
  */
-function buildPdfCharts(data) {
-    const box = document.createElement('div');
-    box.style.marginTop = '25px';
-    
-    const title = document.createElement('h3');
-    title.textContent = '📈 Visualisation du budget';
-    title.style.cssText = 'color: #059669; margin-bottom: 15px; font-size: 16px;';
-    box.appendChild(title);
-    
-    const chartsContainer = document.createElement('div');
-    chartsContainer.style.cssText = 'display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap;';
-    
-    let chartAdded = false;
-    
-    // Ajouter les graphiques capturés
-    if (data.charts && data.charts.length > 0) {
-        data.charts.forEach(chart => {
-            const container = document.createElement('div');
-            container.className = 'chart-container-pdf';
-            
-            const img = document.createElement('img');
-            img.src = chart.dataUrl;
-            img.alt = chart.label;
-            
-            const label = document.createElement('p');
-            label.textContent = chart.label;
-            label.style.cssText = 'font-size: 12px; color: #6b7280; margin-top: 8px; font-weight: 500;';
-            
-            container.appendChild(img);
-            container.appendChild(label);
-            chartsContainer.appendChild(container);
-            chartAdded = true;
-        });
-    }
-    
-    if (!chartAdded) {
-        const placeholder = document.createElement('div');
-        placeholder.style.cssText = 'width: 100%; text-align: center; padding: 40px; color: #6b7280; border: 2px dashed #e5e7eb; border-radius: 8px;';
-        placeholder.innerHTML = '<p>📊 Graphiques non disponibles pour cette session</p>';
-        chartsContainer.appendChild(placeholder);
-    }
-    
-    box.appendChild(chartsContainer);
-    return box;
-}
+// function buildPdfCharts(data) {
+//     const box = document.createElement('div');
+//     box.style.marginTop = '25px';
+//     
+//     const title = document.createElement('h3');
+//     title.textContent = '📈 Visualisation du budget';
+//     title.style.cssText = 'color: #059669; margin-bottom: 15px; font-size: 16px;';
+//     box.appendChild(title);
+//     
+//     const chartsContainer = document.createElement('div');
+//     chartsContainer.style.cssText = 'display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap;';
+//     
+//     let chartAdded = false;
+//     
+//     // Ajouter les graphiques capturés
+//     if (data.charts && data.charts.length > 0) {
+//         data.charts.forEach(chart => {
+//             const container = document.createElement('div');
+//             container.className = 'chart-container-pdf';
+//             
+//             const img = document.createElement('img');
+//             img.src = chart.dataUrl;
+//             img.alt = chart.label;
+//             
+//             const label = document.createElement('p');
+//             label.textContent = chart.label;
+//             label.style.cssText = 'font-size: 12px; color: #6b7280; margin-top: 8px; font-weight: 500;';
+//             
+//             container.appendChild(img);
+//             container.appendChild(label);
+//             chartsContainer.appendChild(container);
+//             chartAdded = true;
+//         });
+//     }
+//     
+//     if (!chartAdded) {
+//         const placeholder = document.createElement('div');
+//         placeholder.style.cssText = 'width: 100%; text-align: center; padding: 40px; color: #6b7280; border: 2px dashed #e5e7eb; border-radius: 8px;';
+//         placeholder.innerHTML = '<p>📊 Graphiques non disponibles pour cette session</p>';
+//         chartsContainer.appendChild(placeholder);
+//     }
+//     
+//     box.appendChild(chartsContainer);
+//     return box;
+// }
 
 /**
  * Construit le tableau détaillé des dépenses (🆕 MISE À JOUR)
@@ -833,52 +836,55 @@ function buildPdfRecommendations(data) {
     return container;
 }
 
-/**
+// 🚫 FONCTION COMMENTÉE (inutilisée maintenant)
+
+/*
  * Construit la section formules (Page 2)
+ * 🚫 COMMENTÉE : Plus utilisée dans le PDF
  */
-function buildPdfFormulas(data) {
-    const container = document.createElement('div');
-    container.className = 'formulas-pdf';
-    
-    const title = document.createElement('h3');
-    title.textContent = '📐 Méthodes de calcul et références';
-    title.style.cssText = 'color: #059669; margin-bottom: 15px; font-size: 16px;';
-    container.appendChild(title);
-    
-    container.innerHTML += `
-        <div style="margin-bottom: 20px;">
-            <h4 style="color: #374151; font-size: 14px; margin-bottom: 8px;">Formules utilisées</h4>
-            <ul style="list-style-type: disc; margin-left: 20px; line-height: 1.5;">
-                <li><strong>Taux d'épargne :</strong> (Revenus - Dépenses totales) ÷ Revenus × 100</li>
-                <li><strong>Score budget :</strong> Algorithme TradePulse basé sur les ratios recommandés</li>
-                <li><strong>Projection 12 mois :</strong> Épargne mensuelle × 12 (sans intérêts composés)</li>
-                <li><strong>Capacité d'investissement :</strong> Épargne - Fonds d'urgence (3-6 mois de charges)</li>
-            </ul>
-        </div>
-        
-        <div style="margin-bottom: 20px;">
-            <h4 style="color: #374151; font-size: 14px; margin-bottom: 8px;">Seuils d'évaluation (normes françaises)</h4>
-            <ul style="list-style-type: disc; margin-left: 20px; line-height: 1.5;">
-                <li><strong>Loyer/Crédit :</strong> ≤ 25% (optimal), ≤ 33% (recommandé), > 33% (risqué)</li>
-                <li><strong>Vie courante :</strong> ≤ 30% (maîtrisé), ≤ 40% (standard), > 40% (élevé)</li>
-                <li><strong>Loisirs :</strong> ≤ 10% (équilibré), ≤ 15% (modéré), > 15% (excessif)</li>
-                <li><strong>Variables :</strong> ≤ 10% (contrôlé), ≤ 15% (raisonnable), > 15% (à surveiller)</li>
-                <li><strong>Épargne :</strong> ≥ 20% (excellent), ≥ 10% (bon), < 10% (à améliorer)</li>
-            </ul>
-        </div>
-        
-        <div>
-            <h4 style="color: #374151; font-size: 14px; margin-bottom: 8px;">Paramètres saisis</h4>
-            <p style="font-size: 11px; color: #6b7280;">
-                Revenu mensuel : ${formatCurrency(data.revenu)}<br>
-                Total dépenses : ${formatCurrency(data.totalDepenses)}<br>
-                Analyse effectuée le ${data.generatedAt.toLocaleDateString('fr-FR')} à ${data.generatedAt.toLocaleTimeString('fr-FR')}
-            </p>
-        </div>
-    `;
-    
-    return container;
-}
+// function buildPdfFormulas(data) {
+//     const container = document.createElement('div');
+//     container.className = 'formulas-pdf';
+//     
+//     const title = document.createElement('h3');
+//     title.textContent = '📐 Méthodes de calcul et références';
+//     title.style.cssText = 'color: #059669; margin-bottom: 15px; font-size: 16px;';
+//     container.appendChild(title);
+//     
+//     container.innerHTML += `
+//         <div style="margin-bottom: 20px;">
+//             <h4 style="color: #374151; font-size: 14px; margin-bottom: 8px;">Formules utilisées</h4>
+//             <ul style="list-style-type: disc; margin-left: 20px; line-height: 1.5;">
+//                 <li><strong>Taux d'épargne :</strong> (Revenus - Dépenses totales) ÷ Revenus × 100</li>
+//                 <li><strong>Score budget :</strong> Algorithme TradePulse basé sur les ratios recommandés</li>
+//                 <li><strong>Projection 12 mois :</strong> Épargne mensuelle × 12 (sans intérêts composés)</li>
+//                 <li><strong>Capacité d'investissement :</strong> Épargne - Fonds d'urgence (3-6 mois de charges)</li>
+//             </ul>
+//         </div>
+//         
+//         <div style="margin-bottom: 20px;">
+//             <h4 style="color: #374151; font-size: 14px; margin-bottom: 8px;">Seuils d'évaluation (normes françaises)</h4>
+//             <ul style="list-style-type: disc; margin-left: 20px; line-height: 1.5;">
+//                 <li><strong>Loyer/Crédit :</strong> ≤ 25% (optimal), ≤ 33% (recommandé), > 33% (risqué)</li>
+//                 <li><strong>Vie courante :</strong> ≤ 30% (maîtrisé), ≤ 40% (standard), > 40% (élevé)</li>
+//                 <li><strong>Loisirs :</strong> ≤ 10% (équilibré), ≤ 15% (modéré), > 15% (excessif)</li>
+//                 <li><strong>Variables :</strong> ≤ 10% (contrôlé), ≤ 15% (raisonnable), > 15% (à surveiller)</li>
+//                 <li><strong>Épargne :</strong> ≥ 20% (excellent), ≥ 10% (bon), < 10% (à améliorer)</li>
+//             </ul>
+//         </div>
+//         
+//         <div>
+//             <h4 style="color: #374151; font-size: 14px; margin-bottom: 8px;">Paramètres saisis</h4>
+//             <p style="font-size: 11px; color: #6b7280;">
+//                 Revenu mensuel : ${formatCurrency(data.revenu)}<br>
+//                 Total dépenses : ${formatCurrency(data.totalDepenses)}<br>
+//                 Analyse effectuée le ${data.generatedAt.toLocaleDateString('fr-FR')} à ${data.generatedAt.toLocaleTimeString('fr-FR')}
+//             </p>
+//         </div>
+//     `;
+//     
+//     return container;
+// }
 
 /**
  * Construit le footer du PDF
@@ -969,46 +975,49 @@ function getElementText(id, defaultValue = '') {
     return element ? element.textContent.trim() : defaultValue;
 }
 
-/**
+// 🚫 FONCTION COMMENTÉE (inutilisée maintenant)
+
+/*
  * Capture les graphiques disponibles
+ * 🚫 COMMENTÉE : Plus de capture des graphiques
  */
-function captureCharts() {
-    const charts = [];
-    
-    // Graphique budget (doughnut)
-    const budgetChart = document.getElementById('budget-chart');
-    if (budgetChart) {
-        try {
-            const dataUrl = budgetChart.toDataURL('image/png', 1.0);
-            if (dataUrl && dataUrl !== 'data:,') {
-                charts.push({
-                    dataUrl,
-                    label: 'Répartition des dépenses'
-                });
-            }
-        } catch (e) {
-            console.warn('Impossible de capturer le graphique budget:', e);
-        }
-    }
-    
-    // Graphique évolution
-    const evolutionChart = document.getElementById('evolution-chart');
-    if (evolutionChart) {
-        try {
-            const dataUrl = evolutionChart.toDataURL('image/png', 1.0);
-            if (dataUrl && dataUrl !== 'data:,') {
-                charts.push({
-                    dataUrl,
-                    label: 'Projection épargne 12 mois'
-                });
-            }
-        } catch (e) {
-            console.warn('Impossible de capturer le graphique évolution:', e);
-        }
-    }
-    
-    return charts;
-}
+// function captureCharts() {
+//     const charts = [];
+//     
+//     // Graphique budget (doughnut)
+//     const budgetChart = document.getElementById('budget-chart');
+//     if (budgetChart) {
+//         try {
+//             const dataUrl = budgetChart.toDataURL('image/png', 1.0);
+//             if (dataUrl && dataUrl !== 'data:,') {
+//                 charts.push({
+//                     dataUrl,
+//                     label: 'Répartition des dépenses'
+//                 });
+//             }
+//         } catch (e) {
+//             console.warn('Impossible de capturer le graphique budget:', e);
+//         }
+//     }
+//     
+//     // Graphique évolution
+//     const evolutionChart = document.getElementById('evolution-chart');
+//     if (evolutionChart) {
+//         try {
+//             const dataUrl = evolutionChart.toDataURL('image/png', 1.0);
+//             if (dataUrl && dataUrl !== 'data:,') {
+//                 charts.push({
+//                     dataUrl,
+//                     label: 'Projection épargne 12 mois'
+//                 });
+//             }
+//         } catch (e) {
+//             console.warn('Impossible de capturer le graphique évolution:', e);
+//         }
+//     }
+//     
+//     return charts;
+// }
 
 /**
  * Extrait les données d'objectif
