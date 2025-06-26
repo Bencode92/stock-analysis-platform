@@ -673,3 +673,11 @@ window.PatrimoineSimulator = PatrimoineSimulator;
 // Exporter les nouvelles fonctions
 window.genererSynthesePER = genererSynthesePER;
 window.afficherSynthesePER = afficherSynthesePER;
+// ------------------------------------------------------------------
+// ⬇️  AJOUTE CE BLOC JUSTE EN-DESSOUS  ⬇️
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('btn-analyser-per');
+  if (btn) {
+    btn.addEventListener('click', afficherSynthesePER);
+  }
+});
