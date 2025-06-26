@@ -1,6 +1,6 @@
 /**
  * budget-pdf.js - Module d'export PDF pour l'analyse de budget (VERSION CORRIGÉE PDF)
- * TradePulse Finance Intelligence Platform
+ * Smartflow Finance Intelligence Platform
  * 
  * Ce module gère l'export PDF des analyses de budget avec :
  * - Génération de templates HTML
@@ -566,7 +566,7 @@ function buildPdfHeader(data) {
     
     div.innerHTML = `
         <div style="font-size: 24px; font-weight: 900; color: #059669;">
-            TRADEPULSE
+            Smartflow
         </div>
         <div style="text-align: center;">
             <h1 style="margin: 0; color: #1f2937; font-size: 20px;">Analyse de mon budget</h1>
@@ -575,7 +575,7 @@ function buildPdfHeader(data) {
             </div>
         </div>
         <div style="font-size: 12px; color: #6b7280;">
-            TradePulse v4.9
+           Smartflow
         </div>
     `;
     
@@ -828,7 +828,7 @@ function buildPdfRecommendations(data) {
     linkSection.innerHTML = `
         <p style="margin: 0; font-size: 12px; color: #1e40af;">
             <strong>💡 Pour aller plus loin :</strong> Utilisez nos simulateurs d'investissement (PEA, Assurance-vie, PER) 
-            et notre calculateur de prêt immobilier sur TradePulse.
+            et notre calculateur de prêt immobilier sur Smartflow.
         </p>
     `;
     container.appendChild(linkSection);
@@ -1233,7 +1233,7 @@ function validateBudgetData(data) {
 function generatePDFFilename(date = new Date()) {
     const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
     const timeStr = date.toTimeString().split(' ')[0].replace(/:/g, ''); // HHMMSS
-    return `TradePulse-Budget-${dateStr}-${timeStr}.pdf`;
+    return `Smartflow-${dateStr}-${timeStr}.pdf`;
 }
 
 /**
