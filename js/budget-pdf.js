@@ -905,10 +905,7 @@ function buildPdfFooter(data) {
             </p>
             <div style="border-top: 1px solid #e5e7eb; padding-top: 10px; margin-top: 15px;">
                 <p style="margin: 0; font-weight: 600;">
-                    © TradePulse ${data.generatedAt.getFullYear()} - Plateforme d'analyse financière
-                </p>
-                <p style="margin: 5px 0 0 0;">
-                    🌐 Retour vers la plateforme : <strong>${window.location.origin}/simulation.html</strong>
+                    © Smartflow ${data.generatedAt.getFullYear()} - Plateforme d'analyse financière
                 </p>
             </div>
         </div>
