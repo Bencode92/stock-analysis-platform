@@ -686,7 +686,70 @@
                                 </label>
                                 <input type="number" id="loan-amount" value="200000" min="1000" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
                             </div>
-                            
+                            <!-- NOUVEAU : Section PTZ -->
+<div class="mb-4">
+    <div class="flex items-center mb-3">
+        <input type="checkbox" id="enable-ptz" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+        <label for="enable-ptz" class="ml-2 text-sm font-medium text-gray-300">
+            Inclure un PTZ dans cette simulation
+            <span class="loan-option-info cursor-help" title="Le Prêt à Taux Zéro vous permet de financer une partie de votre achat sans intérêts.">
+                <i class="fas fa-info-circle"></i>
+            </span>
+        </label>
+    </div>
+    
+    <!-- Champs PTZ avec transition fluide -->
+    <div id="ptz-fields" 
+         data-ptz-summary="true"
+         class="hidden overflow-hidden transition-all duration-300 ease-in-out space-y-4 bg-amber-900 bg-opacity-10 p-4 rounded-lg border border-amber-600"
+         style="max-height: 0; opacity: 0;">
+         
+        <!-- Info PTZ -->
+        <div class="bg-amber-900 bg-opacity-20 p-3 rounded text-sm">
+            <i class="fas fa-info-circle text-amber-400 mr-2"></i>
+            <span class="text-amber-200">Le PTZ ne peut dépasser 40% du coût total de l'opération.</span>
+            <a href="#ptz-simulator" class="text-amber-400 underline ml-2">En savoir plus</a>
+        </div>
+        
+        <!-- Montant du PTZ -->
+        <div>
+            <label class="loan-option-label">
+                Montant du PTZ (0% d'intérêt)
+                <span class="loan-option-info cursor-help" title="Le montant du prêt à taux zéro accordé (0% d'intérêt).">
+                    <i class="fas fa-info-circle"></i>
+                </span>
+            </label>
+            <input type="number" 
+                   id="ptz-amount" 
+                   value="50000" 
+                   min="0" 
+                   max="200000" 
+                   autocomplete="off"
+                   class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+            <div id="ptz-validation-message" class="text-xs text-red-400 mt-1 hidden"></div>
+        </div>
+        
+        <!-- Durée du PTZ -->
+        <div>
+            <label class="loan-option-label">
+                Durée du PTZ (années)
+                <span class="loan-option-info cursor-help" title="Nombre d'années pour rembourser le PTZ (max = durée prêt principal).">
+                    <i class="fas fa-info-circle"></i>
+                </span>
+            </label>
+            <div class="flex items-center gap-4">
+                <input type="range" 
+                       id="ptz-duration-slider" 
+                       min="10" 
+                       max="25" 
+                       value="20" 
+                       step="1" 
+                       class="loan-slider">
+                <span id="ptz-duration-value" class="loan-slider-value">20 ans</span>
+            </div>
+        </div>
+    </div>
+</div>
                             <!-- Taux d'intérêt -->
                             <div class="mb-4">
                                 <label class="loan-option-label">
