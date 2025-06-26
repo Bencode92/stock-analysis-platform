@@ -293,63 +293,51 @@ comparatorData.chargeMensuelleCredit = baseResults.mensualite;
         return 'underpriced';
     }
 
-   /**
- * Helper pour parser les valeurs numériques en acceptant 0
- * @param {string} elemId - ID de l'élément HTML
- * @param {number} def - Valeur par défaut
- * @returns {number} - Valeur parsée ou défaut si invalide
- */
-function parseFloatOrDefault(elemId, def) {
-    const v = parseFloat(document.getElementById(elemId)?.value);
-    return Number.isNaN(v) ? def : v;   // 0 est conservé, '' ou 'abc' donnent def
-}
-
-/**
- * Récupère tous les paramètres avancés du formulaire - VERSION COMPLÈTE CORRIGÉE
- * ✅ ACCEPTE MAINTENANT LA VALEUR 0 grâce au helper parseFloatOrDefault
- */
-getAllAdvancedParams() {
-    return {
-        // Communs
-        fraisBancairesDossier: parseFloatOrDefault('frais-bancaires-dossier', 900),
-        fraisBancairesCompte: parseFloatOrDefault('frais-bancaires-compte', 150),
-        fraisGarantie: parseFloatOrDefault('frais-garantie', 1.3709),
-        taxeFonciere: parseFloatOrDefault('taxeFonciere', 800),
-        vacanceLocative: parseFloatOrDefault('vacanceLocative', 0),
-        gestionLocativeTaux: parseFloatOrDefault('gestionLocative', 0),
-        // NOUVEAU : Séparer travaux et entretien
-        travauxRenovation: parseFloatOrDefault('travaux-renovation', 0),
-        entretienAnnuel: parseFloatOrDefault('entretien-annuel', 500),
-        assurancePNO: parseFloatOrDefault('assurance-pno', 15),
-        // NOUVEAU : Charges de copropriété non récupérables
-        chargesCoproNonRecup: parseFloatOrDefault('charges-copro-non-recup', 50),
-        
-        // Spécifiques classique
-        fraisNotaireTaux: parseFloatOrDefault('frais-notaire-taux', 8),
-        commissionImmo: parseFloatOrDefault('commission-immo', 4),
-        
-        // Spécifiques enchères - BASE
-        droitsEnregistrement: parseFloatOrDefault('droits-enregistrement', 5.70),
-        coefMutation: parseFloatOrDefault('coef-mutation', 2.37),
-        honorairesAvocat: parseFloatOrDefault('honoraires-avocat', 1500),
-        fraisFixes: parseFloatOrDefault('frais-fixes', 50),
-        
-        // NOUVEAU : Enchères - Émoluments par tranches
-        emolumentsTranche1: parseFloatOrDefault('emoluments-tranche1', 7),
-        emolumentsTranche2: parseFloatOrDefault('emoluments-tranche2', 3),
-        emolumentsTranche3: parseFloatOrDefault('emoluments-tranche3', 2),
-        emolumentsTranche4: parseFloatOrDefault('emoluments-tranche4', 1),
-        
-        // NOUVEAU : Enchères - Autres frais détaillés
-        honorairesAvocatCoef: parseFloatOrDefault('honoraires-avocat-coef', 0.25),
-        tvaHonoraires: parseFloatOrDefault('tva-honoraires', 20),
-        publiciteFonciere: parseFloatOrDefault('publicite-fonciere', 0.10),
-        avocatPorterEnchere: parseFloatOrDefault('avocat-porter-enchere', 300),
-        suiviDossier: parseFloatOrDefault('suivi-dossier', 1200),
-        cautionMisePrix: parseFloatOrDefault('caution-mise-prix', 5),
-        cautionRestituee: document.getElementById('caution-restituee')?.checked ?? true
-    };
-}
+    /**
+     * Récupère tous les paramètres avancés du formulaire - VERSION COMPLÈTE
+     */
+    getAllAdvancedParams() {
+        return {
+            // Communs
+            fraisBancairesDossier: parseFloat(document.getElementById('frais-bancaires-dossier')?.value) || 900,
+            fraisBancairesCompte: parseFloat(document.getElementById('frais-bancaires-compte')?.value) || 150,
+            fraisGarantie: parseFloat(document.getElementById('frais-garantie')?.value) || 1.3709,
+            taxeFonciere: parseFloat(document.getElementById('taxeFonciere')?.value) || 800,
+            vacanceLocative: parseFloat(document.getElementById('vacanceLocative')?.value ?? 0),
+            gestionLocativeTaux: parseFloat(document.getElementById('gestionLocative')?.value) || 0,
+            // NOUVEAU : Séparer travaux et entretien
+            travauxRenovation: parseFloat(document.getElementById('travaux-renovation')?.value) || 0,
+            entretienAnnuel: parseFloat(document.getElementById('entretien-annuel')?.value) || 500,
+            assurancePNO: parseFloat(document.getElementById('assurance-pno')?.value) || 15,
+            // NOUVEAU : Charges de copropriété non récupérables
+            chargesCoproNonRecup: parseFloat(document.getElementById('charges-copro-non-recup')?.value) || 50,
+            
+            // Spécifiques classique
+            fraisNotaireTaux: parseFloat(document.getElementById('frais-notaire-taux')?.value) || 8,
+            commissionImmo: parseFloat(document.getElementById('commission-immo')?.value) || 4,
+            
+            // Spécifiques enchères - BASE
+            droitsEnregistrement: parseFloat(document.getElementById('droits-enregistrement')?.value) || 5.70,
+            coefMutation: parseFloat(document.getElementById('coef-mutation')?.value) || 2.37,
+            honorairesAvocat: parseFloat(document.getElementById('honoraires-avocat')?.value) || 1500,
+            fraisFixes: parseFloat(document.getElementById('frais-fixes')?.value) || 50,
+            
+            // NOUVEAU : Enchères - Émoluments par tranches
+            emolumentsTranche1: parseFloat(document.getElementById('emoluments-tranche1')?.value) || 7,
+            emolumentsTranche2: parseFloat(document.getElementById('emoluments-tranche2')?.value) || 3,
+            emolumentsTranche3: parseFloat(document.getElementById('emoluments-tranche3')?.value) || 2,
+            emolumentsTranche4: parseFloat(document.getElementById('emoluments-tranche4')?.value) || 1,
+            
+            // NOUVEAU : Enchères - Autres frais détaillés
+            honorairesAvocatCoef: parseFloat(document.getElementById('honoraires-avocat-coef')?.value) || 0.25,
+            tvaHonoraires: parseFloat(document.getElementById('tva-honoraires')?.value) || 20,
+            publiciteFonciere: parseFloat(document.getElementById('publicite-fonciere')?.value) || 0.10,
+            avocatPorterEnchere: parseFloat(document.getElementById('avocat-porter-enchere')?.value) || 300,
+            suiviDossier: parseFloat(document.getElementById('suivi-dossier')?.value) || 1200,
+            cautionMisePrix: parseFloat(document.getElementById('caution-mise-prix')?.value) || 5,
+            cautionRestituee: document.getElementById('caution-restituee')?.checked ?? true
+        };
+    }
 
     /**
      * Calcule les intérêts annuels avec précision - V3
