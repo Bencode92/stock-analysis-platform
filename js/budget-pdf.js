@@ -14,6 +14,7 @@
  * 🔧 FIX : Protection contre PointerEvent et double event listener
  * 🚀 FIX PDF : Suppression page blanche, optimisation marges et performances
  * 🔧 FIX BROWSER : Correction process.env pour compatibilité navigateur
+ * ✅ FIX PAGES BLANCHES : Suppression double pagebreak
  */
 
 // ===== FIX BROWSER: Variable de debug compatible navigateur =====
@@ -21,7 +22,7 @@ const isDev = (typeof process !== 'undefined' && process.env?.NODE_ENV === 'deve
               location.hostname === 'localhost' ||
               location.hostname === '127.0.0.1';
 
-// ===== CONFIGURATION PDF OPTIMISÉE =====
+// ===== CONFIGURATION PDF OPTIMISÉE - FIX PAGES BLANCHES =====
 const PDF_CONFIG = {
     margin: [0, 0, 0, 0], // ✅ FIX: Marges gérées par CSS uniquement
     image: { type: 'jpeg', quality: 0.8 }, // ✅ FIX: Réduit de 0.98 à 0.8
@@ -38,7 +39,7 @@ const PDF_CONFIG = {
     },
     pagebreak: { 
         mode: ['css', 'legacy'], // ✅ FIX: Supprime 'avoid-all' trop agressif
-        before: '.page-break-before',
+        before: false,  // ✅ FIX PAGES BLANCHES: Désactive pour éviter double déclenchement
         after: '.page-break-after'
     }
 };
@@ -54,7 +55,7 @@ const PDF_CONFIG = {
 export async function exportBudgetToPDF(budgetData = null, options = {}) {
     // ✅ FIX: Debug nettoyé (seulement en dev)
     if (isDev) {
-        console.log('🚀 Début export PDF budget (version corrigée)');
+        console.log('🚀 Début export PDF budget (version corrigée anti-pages-blanches)');
     }
     
     // 🔧 NOUVEAU : Protection contre les Events (fix PointerEvent bug)
@@ -127,7 +128,7 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
             .save();
         
         if (isDev) {
-            console.log('✅ PDF généré avec succès');
+            console.log('✅ PDF généré avec succès (sans pages blanches)');
         }
         showSuccessState(exportBtn, uiState);
         
@@ -444,7 +445,7 @@ async function buildCompletePDFTemplate(data) {
 
 /**
  * Crée les styles CSS pour le PDF
- * ✅ FIX: Marges CSS optimisées
+ * ✅ FIX: Marges CSS optimisées et page-break amélioré
  * @returns {HTMLElement} Élément style
  */
 function createPDFStyles() {
@@ -464,7 +465,7 @@ function createPDFStyles() {
             color: #374151;
             background: #ffffff;
             margin: 0 !important;
-            padding: 20mm 10mm !important; /* ✅ FIX: Marges gérées par CSS */
+            padding: 15mm 10mm !important; /* ✅ FIX: Réduit de 20mm à 15mm */
             box-sizing: border-box;
         }
         
@@ -496,12 +497,9 @@ function createPDFStyles() {
             color: #374151;
         }
         
-        /* ✅ FIX: Page breaks optimisés - éviter les coupures seulement sur gros éléments */
-        .budget-analysis-table,
-        .recommendation-pdf {
-            page-break-inside: avoid;
-            break-inside: avoid;
-        }
+        /* ✅ FIX PAGES BLANCHES: Permet les coupures sur TOUS les éléments */
+        .budget-analysis-table       { page-break-inside: auto; }
+        .recommendation-pdf li       { page-break-inside: avoid; }   /* seulement les <li> */
         
         /* ✅ FIX: Permet les coupures sur petits éléments */
         .chart-container-pdf,
