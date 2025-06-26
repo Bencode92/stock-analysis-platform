@@ -18,6 +18,7 @@
  * ✅ Cache templates + sanitization données
  * ✅ Error boundaries + fallbacks intelligents
  * ✅ Optimisations performance + PWA ready
+ * 🔧 FIX: Correction double export getPDFMetrics
  */
 
 // ===== CONFIGURATION AVANCÉE =====
@@ -342,8 +343,9 @@ function logPDFMetrics(event, data) {
 
 /**
  * Obtient les métriques de performance actuelles
+ * 🔧 FIX: Correction double export - fonction exportée uniquement ici
  */
-export function getPDFMetrics() {
+function getPDFMetrics() {
     return {
         ...performanceMetrics,
         successRate: performanceMetrics.exports > 0 
@@ -788,7 +790,7 @@ function handleExportError(exportBtn, error) {
 /**
  * Export PDF de fallback en cas d'échec (version simplifiée)
  */
-export async function exportFallbackPDF(data) {
+function exportFallbackPDF(data) {
     if (!data) {
         data = extractBudgetDataFromDOM();
     }
@@ -1571,5 +1573,5 @@ if (isDev) {
     });
 }
 
-// Export des fonctions publiques
-export { runPDFTests, exportFallbackPDF, getPDFMetrics };
+// ✅ FIX: Export unique des fonctions (getPDFMetrics non dupliqué)
+export { runPDFTests, exportFallbackPDF };
