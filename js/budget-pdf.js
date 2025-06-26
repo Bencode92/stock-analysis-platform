@@ -18,6 +18,7 @@
  * 🎯 FIX DÉFINITIF : hard-page-break + recommandations non-tronquées
  * 🔧 FIX SCROLL : Reset/restore scroll pour corriger capture html2canvas
  * 🚫 SIMPLIFICATION : Retrait blocs Graphiques et Formules du PDF
+ * 🎨 FIX HEADER : Centrage parfait du header PDF
  */
 
 // ===== FIX BROWSER: Variable de debug compatible navigateur =====
@@ -464,7 +465,7 @@ async function buildCompletePDFTemplate(data) {
 
 /**
  * Crée les styles CSS pour le PDF
- * ✅ FIX DÉFINITIF: hard-page-break + recommandations non-tronquées
+ * ✅ FIX DÉFINITIF: hard-page-break + recommandations non-tronquées + header centré
  * @returns {HTMLElement} Élément style
  */
 function createPDFStyles() {
@@ -498,15 +499,17 @@ function createPDFStyles() {
             border: none !important;
         }
         
-        /* ✅ FIX: Header sans espacement excessif */
+        /* 🎨 FIX HEADER: Header centré et épuré */
         .pdf-header {
             margin-bottom: 15mm !important;
             padding: 0 !important;
             border-bottom: 2px solid #059669;
             padding-bottom: 15px;
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
             align-items: center;
+            text-align: center;
+            gap: 8px;
         }
         
         .pdf-table {
@@ -558,24 +561,19 @@ function createPDFStyles() {
 }
 
 /**
- * Construit l'en-tête du PDF
+ * Construit l'en-tête du PDF (🎨 VERSION CENTRÉE ET SIMPLIFIÉE)
  */
 function buildPdfHeader(data) {
     const div = document.createElement('div');
     div.className = 'pdf-header';
     
     div.innerHTML = `
-        <div style="font-size: 24px; font-weight: 900; color: #059669;">
-            Smartflow
-        </div>
-        <div style="text-align: center;">
-            <h1 style="margin: 0; color: #1f2937; font-size: 20px;">Analyse de mon budget</h1>
-            <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
-                Généré le ${data.generatedAt.toLocaleDateString('fr-FR')} à ${data.generatedAt.toLocaleTimeString('fr-FR')}
-            </div>
-        </div>
-        <div style="font-size: 12px; color: #6b7280;">
-           Smartflow
+        <h1 style="margin:0; color:#1f2937; font-size:22px; font-weight:600;">
+            📊 Analyse de mon budget
+        </h1>
+        <div style="font-size:12px; color:#6b7280; opacity:0.8;">
+            Généré le ${data.generatedAt.toLocaleDateString('fr-FR')} 
+            à ${data.generatedAt.toLocaleTimeString('fr-FR')}
         </div>
     `;
     
