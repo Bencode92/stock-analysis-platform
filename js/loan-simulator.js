@@ -1756,3 +1756,59 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(calculateLoan, 1000);
     }
 });
+// =================================================================
+// NAVIGATION PTZ - Ajouté pour le lien depuis la section dette  
+// =================================================================
+
+/**
+ * Gestion du lien PTZ depuis la section Gestion de dette
+ */
+function initPTZNavigation() {
+    document.addEventListener('click', (e) => {
+        // Vérifier si on clique sur le lien PTZ
+        const ptzLink = e.target.closest('#go-to-ptz');
+        if (!ptzLink) return; // Pas le bon lien, on ignore
+        
+        e.preventDefault(); // Empêcher le comportement par défaut
+        
+        console.log('🎯 Clic PTZ détecté !'); // Pour debug
+        
+        // 1. Activer l'onglet PTZ
+        const ptzTab = document.querySelector('[data-target="ptz-simulator"]');
+        const ptzContent = document.getElementById('ptz-simulator');
+        
+        if (ptzTab && ptzContent) {
+            // Désactiver tous les onglets
+            document.querySelectorAll('.simulation-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.simulation-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            // Activer l'onglet PTZ
+            ptzTab.classList.add('active');
+            ptzContent.style.display = 'block';
+            
+            console.log('✅ Onglet PTZ activé !'); // Pour debug
+            
+            // 2. Scroll fluide après un petit délai
+            setTimeout(() => {
+                ptzContent.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+                console.log('📜 Scroll vers PTZ !'); // Pour debug
+            }, 200);
+        } else {
+            console.error('❌ Éléments PTZ non trouvés');
+        }
+    });
+}
+
+// Initialiser quand le DOM est prêt
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPTZNavigation);
+} else {
+    initPTZNavigation(); // DOM déjà prêt
+}
