@@ -55,7 +55,34 @@
     margin-left: 0.5rem;
 }
 
-/* Styles pour les boutons de mode */
+/* ===== NOUVEAUX STYLES POUR LES BOUTONS DE MODE ===== */
+/* Styles pour les boutons de mode (Réduire durée / Réduire mensualité) */
+.mode-btn {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: rgba(255, 255, 255, 1);
+    border: none;
+    cursor: pointer;
+}
+
+.mode-btn.active {
+    background-color: rgba(52, 211, 153, 0.3);
+    color: rgba(52, 211, 153, 1);
+}
+
+.mode-btn:hover:not(.active) {
+    background-color: rgba(30, 64, 175, 0.2);
+}
+
+.mode-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.5);
+}
+
+/* Styles pour les boutons de mode (ancienne version - gardé pour compatibilité) */
 .mode-button {
     flex: 1;
     padding: 0.5rem 0.75rem;
@@ -70,6 +97,62 @@
 
 .mode-button:not(.active) {
     color: rgba(209, 213, 219, 1);
+}
+
+/* ===== NOUVEAUX STYLES POUR LES CHIPS DE REMBOURSEMENT ===== */
+/* Styles pour les chips de remboursement anticipé */
+.repayment-chip {
+    display: inline-flex;
+    align-items: center;
+    background-color: rgba(30, 64, 175, 0.3);
+    color: rgba(147, 197, 253, 1);
+    border-radius: 9999px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.repayment-chip:hover {
+    background-color: rgba(30, 64, 175, 0.4);
+    transform: scale(1.05);
+}
+
+.repayment-chip.negative {
+    background-color: rgba(190, 18, 60, 0.3);
+    color: rgba(251, 113, 133, 1);
+}
+
+.repayment-chip .remove-btn {
+    margin-left: 0.5rem;
+    font-size: 0.75rem;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+.repayment-chip .remove-btn:hover {
+    opacity: 1;
+    color: rgba(239, 68, 68, 1);
+    transform: scale(1.2);
+}
+
+/* Animation d'entrée pour les chips */
+.repayment-chip-enter {
+    opacity: 0;
+    transform: scale(0.9);
+    animation: chip-enter 0.3s ease forwards;
+}
+
+@keyframes chip-enter {
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 /* ===== Tableaux et résultats ===== */
@@ -357,5 +440,42 @@
     
     .loan-option-label {
         font-size: 0.8125rem;
+    }
+    
+    /* Responsive pour les chips sur mobile */
+    .repayment-chip {
+        font-size: 0.8125rem;
+        padding: 0.2rem 0.6rem;
+        margin-bottom: 0.4rem;
+    }
+    
+    /* Responsive pour les boutons de mode sur mobile */
+    .mode-btn {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8125rem;
+    }
+}
+
+/* ===== Améliorations d'accessibilité ===== */
+.mode-btn:focus-visible,
+.loan-action-button:focus-visible,
+.loan-secondary-button:focus-visible {
+    outline: 2px solid rgba(52, 211, 153, 1);
+    outline-offset: 2px;
+}
+
+/* ===== Animations supplémentaires ===== */
+.repayment-chip-exit {
+    animation: chip-exit 0.3s ease forwards;
+}
+
+@keyframes chip-exit {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.8);
     }
 }
