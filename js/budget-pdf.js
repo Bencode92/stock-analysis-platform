@@ -1,5 +1,5 @@
 /**
- * budget-pdf.js - Module d'export PDF pour l'analyse de budget (VERSION CORRIGÉE)
+ * budget-pdf.js - Module d'export PDF pour l'analyse de budget (VERSION CORRIGÉE PDF)
  * TradePulse Finance Intelligence Platform
  * 
  * Ce module gère l'export PDF des analyses de budget avec :
@@ -12,14 +12,15 @@
  * 🐛 FIX : Correction validation des données et parsing des nombres
  * 🔧 FIX : Ajout debug et synchronisation avec analyse budget
  * 🔧 FIX : Protection contre PointerEvent et double event listener
+ * 🚀 FIX PDF : Suppression page blanche, optimisation marges et performances
  */
 
-// ===== CONFIGURATION PDF =====
+// ===== CONFIGURATION PDF OPTIMISÉE =====
 const PDF_CONFIG = {
-    margin: [10, 10, 10, 10],
-    image: { type: 'jpeg', quality: 0.98 },
+    margin: [0, 0, 0, 0], // ✅ FIX: Marges gérées par CSS uniquement
+    image: { type: 'jpeg', quality: 0.8 }, // ✅ FIX: Réduit de 0.98 à 0.8
     html2canvas: { 
-        scale: 2,
+        scale: 1.5, // ✅ FIX: Réduit de 2 à 1.5 pour moins de RAM
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false
@@ -30,7 +31,7 @@ const PDF_CONFIG = {
         orientation: 'portrait'
     },
     pagebreak: { 
-        mode: ['avoid-all', 'css', 'legacy'],
+        mode: ['css', 'legacy'], // ✅ FIX: Supprime 'avoid-all' trop agressif
         before: '.page-break-before',
         after: '.page-break-after'
     }
@@ -45,11 +46,16 @@ const PDF_CONFIG = {
  * @returns {Promise<void>}
  */
 export async function exportBudgetToPDF(budgetData = null, options = {}) {
-    console.log('🚀 Début export PDF budget (version corrigée)');
+    // ✅ FIX: Debug nettoyé (seulement en dev)
+    if (process.env.NODE_ENV === 'development') {
+        console.log('🚀 Début export PDF budget (version corrigée)');
+    }
     
     // 🔧 NOUVEAU : Protection contre les Events (fix PointerEvent bug)
     if (budgetData instanceof Event) {
-        console.log('🔧 Event détecté en paramètre, ignoré');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('🔧 Event détecté en paramètre, ignoré');
+        }
         budgetData = null;
     }
     
@@ -64,21 +70,25 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
         exportBtn = document.getElementById('export-budget-pdf');
         
         // 🔧 NOUVEAU : S'assurer que l'analyse est terminée
-        console.log('🔄 Vérification analyse budget...');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('🔄 Vérification analyse budget...');
+        }
         await ensureBudgetAnalysisComplete();
         
         // Extraction des données du budget avec NOUVEAUX SÉLECTEURS
         const data = budgetData || extractBudgetDataFromDOM();
         
-        // 🔧 NOUVEAU : Debug complet avant validation
-        console.log('🔍 DEBUG Export PDF - Données extraites:');
-        if (data && typeof data === 'object' && !(data instanceof Event)) {
-            console.table(data);
-            console.table(data.depenses);
-            console.log('Revenu type:', typeof data.revenu, 'valeur:', data.revenu);
-            console.log('Dépenses type:', typeof data.depenses, 'clés:', Object.keys(data.depenses || {}));
-        } else {
-            console.error('🚨 Données invalides détectées:', data);
+        // 🔧 NOUVEAU : Debug complet avant validation (dev uniquement)
+        if (process.env.NODE_ENV === 'development') {
+            console.log('🔍 DEBUG Export PDF - Données extraites:');
+            if (data && typeof data === 'object' && !(data instanceof Event)) {
+                console.table(data);
+                console.table(data.depenses);
+                console.log('Revenu type:', typeof data.revenu, 'valeur:', data.revenu);
+                console.log('Dépenses type:', typeof data.depenses, 'clés:', Object.keys(data.depenses || {}));
+            } else {
+                console.error('🚨 Données invalides détectées:', data);
+            }
         }
         
         // Validation des données (renforcée)
@@ -87,7 +97,9 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
             throw new Error('Données de budget insuffisantes pour générer le PDF');
         }
         
-        console.log('✅ Validation réussie, génération PDF...');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Validation réussie, génération PDF...');
+        }
         
         // Affichage du loader
         uiState = showLoadingState(exportBtn);
@@ -102,13 +114,15 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
             ...options
         };
         
-        // Génération et téléchargement du PDF
+        // ✅ FIX: Générer à partir d'un seul nœud racine pour éviter la page blanche
         await html2pdf()
             .set(finalOptions)
             .from(template)
             .save();
         
-        console.log('✅ PDF généré avec succès');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ PDF généré avec succès');
+        }
         showSuccessState(exportBtn, uiState);
         
     } catch (error) {
@@ -126,15 +140,21 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
 async function ensureBudgetAnalysisComplete() {
     // Vérifier si analyserBudget existe et l'appeler
     if (typeof window.analyserBudget === 'function') {
-        console.log('📊 Relance de l\'analyse budget...');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('📊 Relance de l\'analyse budget...');
+        }
         try {
             await window.analyserBudget();
-            console.log('✅ Analyse budget terminée');
+            if (process.env.NODE_ENV === 'development') {
+                console.log('✅ Analyse budget terminée');
+            }
         } catch (error) {
             console.warn('⚠️ Erreur lors de l\'analyse budget:', error);
         }
     } else {
-        console.log('⚠️ Fonction analyserBudget non disponible');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('⚠️ Fonction analyserBudget non disponible');
+        }
     }
     
     // Attendre un court délai pour s'assurer que le DOM est mis à jour
@@ -148,7 +168,9 @@ async function ensureBudgetAnalysisComplete() {
  * @returns {Object} Données structurées du budget
  */
 function extractBudgetDataFromDOM() {
-    console.log('📊 Extraction données budget (nouveaux sélecteurs)');
+    if (process.env.NODE_ENV === 'development') {
+        console.log('📊 Extraction données budget (nouveaux sélecteurs)');
+    }
     
     const data = {
         // Métadonnées
@@ -187,7 +209,9 @@ function extractBudgetDataFromDOM() {
     data.evaluations = generateEvaluations(data);
     data.recommendations = generateRecommendations(data);
     
-    console.log('✅ Données extraites:', data);
+    if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Données extraites:', data);
+    }
     return data;
 }
 
@@ -232,7 +256,9 @@ function getTotalVieCourante() {
     if (typeof window.updateTotalVieCourante === 'function') {
         try {
             const total = window.updateTotalVieCourante();
-            console.log('📊 Total vie courante (fonction globale):', total);
+            if (process.env.NODE_ENV === 'development') {
+                console.log('📊 Total vie courante (fonction globale):', total);
+            }
             return total || 0;
         } catch (e) {
             console.warn('⚠️ Erreur fonction updateTotalVieCourante:', e);
@@ -243,7 +269,9 @@ function getTotalVieCourante() {
     const totalElement = document.getElementById('total-vie-courante');
     if (totalElement) {
         const total = toNumber(totalElement.textContent);
-        console.log('📊 Total vie courante (span):', total);
+        if (process.env.NODE_ENV === 'development') {
+            console.log('📊 Total vie courante (span):', total);
+        }
         return total;
     }
     
@@ -252,7 +280,9 @@ function getTotalVieCourante() {
                     toNumber(getInputValue('simulation-budget-transport')) + 
                     toNumber(getInputValue('simulation-budget-factures'));
     
-    console.log('📊 Total vie courante (fallback):', fallback);
+    if (process.env.NODE_ENV === 'development') {
+        console.log('📊 Total vie courante (fallback):', fallback);
+    }
     return fallback;
 }
 
@@ -264,7 +294,9 @@ function getTotalLoisirs() {
     if (typeof window.updateTotalLoisirs === 'function') {
         try {
             const total = window.updateTotalLoisirs();
-            console.log('📊 Total loisirs (fonction globale):', total);
+            if (process.env.NODE_ENV === 'development') {
+                console.log('📊 Total loisirs (fonction globale):', total);
+            }
             return total || 0;
         } catch (e) {
             console.warn('⚠️ Erreur fonction updateTotalLoisirs:', e);
@@ -275,7 +307,9 @@ function getTotalLoisirs() {
     const totalElement = document.getElementById('total-loisirs');
     if (totalElement) {
         const total = toNumber(totalElement.textContent);
-        console.log('📊 Total loisirs (span):', total);
+        if (process.env.NODE_ENV === 'development') {
+            console.log('📊 Total loisirs (span):', total);
+        }
         return total;
     }
     
@@ -284,7 +318,9 @@ function getTotalLoisirs() {
                     toNumber(getInputValue('simulation-budget-loisirs-sport')) + 
                     toNumber(getInputValue('simulation-budget-loisirs-autres'));
     
-    console.log('📊 Total loisirs (fallback):', fallback);
+    if (process.env.NODE_ENV === 'development') {
+        console.log('📊 Total loisirs (fallback):', fallback);
+    }
     return fallback;
 }
 
@@ -296,7 +332,9 @@ function getTotalVariables() {
     if (typeof window.updateDetailedExpensesTotal === 'function') {
         try {
             const total = window.updateDetailedExpensesTotal();
-            console.log('📊 Total variables (fonction globale):', total);
+            if (process.env.NODE_ENV === 'development') {
+                console.log('📊 Total variables (fonction globale):', total);
+            }
             return total || 0;
         } catch (e) {
             console.warn('⚠️ Erreur fonction updateDetailedExpensesTotal:', e);
@@ -312,7 +350,9 @@ function getTotalVariables() {
     });
     
     if (total > 0) {
-        console.log('📊 Total variables (parse .depense-total):', total);
+        if (process.env.NODE_ENV === 'development') {
+            console.log('📊 Total variables (parse .depense-total):', total);
+        }
         return total;
     }
     
@@ -321,7 +361,9 @@ function getTotalVariables() {
                     toNumber(getInputValue('simulation-budget-vetements')) + 
                     toNumber(getInputValue('simulation-budget-autres'));
     
-    console.log('📊 Total variables (fallback):', fallback);
+    if (process.env.NODE_ENV === 'development') {
+        console.log('📊 Total variables (fallback):', fallback);
+    }
     return fallback;
 }
 
@@ -343,23 +385,28 @@ function getCalculatedValue(id, suffix = '') {
     }
     
     const value = toNumber(text);
-    console.log(`📊 ${id}: ${value}${suffix}`);
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`📊 ${id}: ${value}${suffix}`);
+    }
     return value;
 }
 
-// ===== CONSTRUCTION DU TEMPLATE PDF =====
+// ===== CONSTRUCTION DU TEMPLATE PDF (✅ FIX PAGE BLANCHE) =====
 
 /**
  * Construit le template PDF complet
+ * ✅ FIX: Structure simplifiée pour éviter la page blanche
  * @param {Object} data - Données du budget
  * @returns {HTMLElement} Template prêt pour html2pdf
  */
 async function buildCompletePDFTemplate(data) {
+    // ✅ FIX: Un seul conteneur racine avec styles intégrés
     const template = document.createElement('div');
     template.className = 'pdf-container';
     
-    // Ajout des styles CSS pour PDF
-    template.appendChild(createPDFStyles());
+    // ✅ FIX: Styles intégrés DANS le conteneur (pas comme nœud séparé)
+    const styles = createPDFStyles();
+    template.appendChild(styles);
     
     // Construction des sections
     template.appendChild(buildPdfHeader(data));
@@ -373,32 +420,55 @@ async function buildCompletePDFTemplate(data) {
     
     template.appendChild(buildPdfRecommendations(data));
     
-    // Page 2
-    const page2 = document.createElement('div');
-    page2.className = 'page-break-before';
-    page2.appendChild(buildPdfFormulas(data));
-    page2.appendChild(buildPdfFooter(data));
-    template.appendChild(page2);
+    // ✅ FIX: Page 2 - construire le contenu AVANT d'ajouter la classe page-break
+    const page2Content = document.createElement('div');
+    page2Content.appendChild(buildPdfFormulas(data));
+    page2Content.appendChild(buildPdfFooter(data));
+    
+    // ✅ FIX: Classe page-break appliquée APRÈS construction du contenu
+    page2Content.className = 'page-break-before';
+    template.appendChild(page2Content);
     
     return template;
 }
 
 /**
  * Crée les styles CSS pour le PDF
+ * ✅ FIX: Marges CSS optimisées
  * @returns {HTMLElement} Élément style
  */
 function createPDFStyles() {
     const style = document.createElement('style');
     style.textContent = `
+        /* ✅ FIX: Reset complet avec marges contrôlées */
+        body, html { 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            box-sizing: border-box;
+        }
+        
         .pdf-container {
             font-family: Arial, sans-serif;
             font-size: 12px;
             line-height: 1.4;
             color: #374151;
             background: #ffffff;
-            padding: 0;
-            margin: 0;
+            margin: 0 !important;
+            padding: 20mm 10mm !important; /* ✅ FIX: Marges gérées par CSS */
+            box-sizing: border-box;
         }
+        
+        /* ✅ FIX: Header sans espacement excessif */
+        .pdf-header {
+            margin-bottom: 15mm !important;
+            padding: 0 !important;
+            border-bottom: 2px solid #059669;
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
         .pdf-table {
             width: 100%;
             border-collapse: collapse;
@@ -415,12 +485,25 @@ function createPDFStyles() {
             font-weight: 600;
             color: #374151;
         }
-        .avoid-break {
+        
+        /* ✅ FIX: Page breaks optimisés - éviter les coupures seulement sur gros éléments */
+        .budget-analysis-table,
+        .recommendation-pdf {
             page-break-inside: avoid;
+            break-inside: avoid;
         }
+        
+        /* ✅ FIX: Permet les coupures sur petits éléments */
+        .chart-container-pdf,
+        .pdf-hero {
+            page-break-inside: auto;
+        }
+        
         .page-break-before {
             page-break-before: always;
+            break-before: page;
         }
+        
         .chart-container-pdf {
             text-align: center;
             margin: 0 10px;
@@ -428,8 +511,8 @@ function createPDFStyles() {
             max-width: 45%;
         }
         .chart-container-pdf img {
-            max-width: 100%;
-            height: auto;
+            max-width: 100% !important;
+            height: auto !important;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
@@ -446,23 +529,20 @@ function createPDFStyles() {
  */
 function buildPdfHeader(data) {
     const div = document.createElement('div');
-    div.className = 'pdf-header avoid-break';
-    div.style.cssText = 'margin-bottom: 20px; border-bottom: 2px solid #059669; padding-bottom: 15px;';
+    div.className = 'pdf-header';
     
     div.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-size: 24px; font-weight: 900; color: #059669;">
-                TRADEPULSE
+        <div style="font-size: 24px; font-weight: 900; color: #059669;">
+            TRADEPULSE
+        </div>
+        <div style="text-align: center;">
+            <h1 style="margin: 0; color: #1f2937; font-size: 20px;">Analyse de mon budget</h1>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
+                Généré le ${data.generatedAt.toLocaleDateString('fr-FR')} à ${data.generatedAt.toLocaleTimeString('fr-FR')}
             </div>
-            <div style="text-align: center;">
-                <h1 style="margin: 0; color: #1f2937; font-size: 20px;">Analyse de mon budget</h1>
-                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
-                    Généré le ${data.generatedAt.toLocaleDateString('fr-FR')} à ${data.generatedAt.toLocaleTimeString('fr-FR')}
-                </div>
-            </div>
-            <div style="font-size: 12px; color: #6b7280;">
-                TradePulse v4.9
-            </div>
+        </div>
+        <div style="font-size: 12px; color: #6b7280;">
+            TradePulse v4.9
         </div>
     `;
     
@@ -474,7 +554,7 @@ function buildPdfHeader(data) {
  */
 function buildPdfHero(data) {
     const wrap = document.createElement('div');
-    wrap.className = 'pdf-hero avoid-break';
+    wrap.className = 'pdf-hero';
     wrap.style.marginBottom = '25px';
     
     const tauxEpargne = data.tauxEpargne.toFixed(1);
@@ -534,7 +614,6 @@ function buildPdfHero(data) {
  */
 function buildPdfCharts(data) {
     const box = document.createElement('div');
-    box.className = 'avoid-break';
     box.style.marginTop = '25px';
     
     const title = document.createElement('h3');
@@ -584,7 +663,7 @@ function buildPdfCharts(data) {
  */
 function buildPdfDetailsTable(data) {
     const container = document.createElement('div');
-    container.className = 'avoid-break';
+    container.className = 'budget-analysis-table';
     container.style.marginTop = '25px';
     
     const title = document.createElement('h3');
@@ -667,7 +746,7 @@ function buildPdfObjective(data) {
     }
     
     const container = document.createElement('div');
-    container.className = 'objective-pdf avoid-break';
+    container.className = 'objective-pdf';
     container.style.marginTop = '20px';
     
     const title = document.createElement('h4');
@@ -687,7 +766,7 @@ function buildPdfObjective(data) {
  */
 function buildPdfRecommendations(data) {
     const container = document.createElement('div');
-    container.className = 'recommendation-pdf avoid-break';
+    container.className = 'recommendation-pdf';
     container.style.marginTop = '25px';
     
     const title = document.createElement('h3');
@@ -726,7 +805,7 @@ function buildPdfRecommendations(data) {
  */
 function buildPdfFormulas(data) {
     const container = document.createElement('div');
-    container.className = 'formulas-pdf avoid-break';
+    container.className = 'formulas-pdf';
     
     const title = document.createElement('h3');
     title.textContent = '📐 Méthodes de calcul et références';
@@ -808,7 +887,9 @@ function buildPdfFooter(data) {
  */
 async function loadHtml2PdfLib() {
     if (typeof html2pdf === 'undefined') {
-        console.log('📦 Chargement de html2pdf...');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('📦 Chargement de html2pdf...');
+        }
         await import('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
         
         // Attendre que la variable globale soit disponible
@@ -821,7 +902,9 @@ async function loadHtml2PdfLib() {
         if (typeof html2pdf === 'undefined') {
             throw new Error('Impossible de charger html2pdf');
         }
-        console.log('✅ html2pdf chargé');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ html2pdf chargé');
+        }
     }
 }
 
@@ -1096,7 +1179,9 @@ function validateBudgetData(data) {
         return false;
     }
     
-    console.log('✅ Validation réussie');
+    if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Validation réussie');
+    }
     return true;
 }
 
@@ -1173,7 +1258,9 @@ export function activateExportButton() {
         exportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         exportBtn.classList.add('hover:bg-green-400');
         exportBtn.title = 'Télécharger l\'analyse en PDF';
-        console.log('✅ Bouton export PDF activé');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Bouton export PDF activé');
+        }
     }
 }
 
@@ -1185,7 +1272,9 @@ export function createExportButton() {
     let exportBtn = document.getElementById('export-budget-pdf');
     
     if (!exportBtn) {
-        console.log('📝 Création du bouton export PDF');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('📝 Création du bouton export PDF');
+        }
         
         // Trouver où insérer le bouton
         const budgetAdvice = document.getElementById('budget-advice');
@@ -1204,7 +1293,9 @@ export function createExportButton() {
             exportBtn.addEventListener('click', () => exportBudgetToPDF());
             
             targetContainer.appendChild(exportBtn);
-            console.log('✅ Bouton export créé et attaché avec protection Event');
+            if (process.env.NODE_ENV === 'development') {
+                console.log('✅ Bouton export créé et attaché avec protection Event');
+            }
         } else {
             console.warn('⚠️ Container pour le bouton non trouvé');
         }
