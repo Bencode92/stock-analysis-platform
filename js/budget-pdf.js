@@ -11,6 +11,7 @@
  * 🆕 MISE À JOUR : Utilise les nouveaux sélecteurs de budget-epargne.js
  * 🐛 FIX : Correction validation des données et parsing des nombres
  * 🔧 FIX : Ajout debug et synchronisation avec analyse budget
+ * 🔧 FIX : Protection contre PointerEvent et double event listener
  */
 
 // ===== CONFIGURATION PDF =====
@@ -46,6 +47,12 @@ const PDF_CONFIG = {
 export async function exportBudgetToPDF(budgetData = null, options = {}) {
     console.log('🚀 Début export PDF budget (version corrigée)');
     
+    // 🔧 NOUVEAU : Protection contre les Events (fix PointerEvent bug)
+    if (budgetData instanceof Event) {
+        console.log('🔧 Event détecté en paramètre, ignoré');
+        budgetData = null;
+    }
+    
     let exportBtn;
     let uiState;
     
@@ -65,10 +72,14 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
         
         // 🔧 NOUVEAU : Debug complet avant validation
         console.log('🔍 DEBUG Export PDF - Données extraites:');
-        console.table(data);
-        console.table(data.depenses);
-        console.log('Revenu type:', typeof data.revenu, 'valeur:', data.revenu);
-        console.log('Dépenses type:', typeof data.depenses, 'clés:', Object.keys(data.depenses || {}));
+        if (data && typeof data === 'object' && !(data instanceof Event)) {
+            console.table(data);
+            console.table(data.depenses);
+            console.log('Revenu type:', typeof data.revenu, 'valeur:', data.revenu);
+            console.log('Dépenses type:', typeof data.depenses, 'clés:', Object.keys(data.depenses || {}));
+        } else {
+            console.error('🚨 Données invalides détectées:', data);
+        }
         
         // Validation des données (renforcée)
         if (!validateBudgetData(data)) {
@@ -1060,6 +1071,12 @@ function validateBudgetData(data) {
         return false;
     }
     
+    // Protection supplémentaire contre les Events
+    if (data instanceof Event) {
+        console.error('❌ Validation: data est un Event');
+        return false;
+    }
+    
     if (!ok(data.revenu)) {
         console.error('❌ Validation: revenu invalide', data.revenu);
         return false;
@@ -1183,11 +1200,11 @@ export function createExportButton() {
             exportBtn.disabled = true;
             exportBtn.title = 'Analysez d\'abord votre budget';
             
-            // Attacher l'événement
+            // 🔧 CORRIGÉ : Attacher l'événement avec wrapper pour éviter PointerEvent
             exportBtn.addEventListener('click', () => exportBudgetToPDF());
             
             targetContainer.appendChild(exportBtn);
-            console.log('✅ Bouton export créé et attaché');
+            console.log('✅ Bouton export créé et attaché avec protection Event');
         } else {
             console.warn('⚠️ Container pour le bouton non trouvé');
         }
