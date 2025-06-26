@@ -16,6 +16,7 @@
  * 🔧 FIX BROWSER : Correction process.env pour compatibilité navigateur
  * ✅ FIX PAGES BLANCHES : Suppression double pagebreak
  * 🎯 FIX DÉFINITIF : hard-page-break + recommandations non-tronquées
+ * 🔧 FIX SCROLL : Reset/restore scroll pour corriger capture html2canvas
  */
 
 // ===== FIX BROWSER: Variable de debug compatible navigateur =====
@@ -31,7 +32,9 @@ const PDF_CONFIG = {
         scale: 1.5, // ✅ FIX: Réduit de 2 à 1.5 pour moins de RAM
         useCORS: true,
         backgroundColor: '#ffffff',
-        logging: false
+        logging: false,
+        scrollX: 0, // ✅ FIX SCROLL: Force scroll X à 0
+        scrollY: 0  // ✅ FIX SCROLL: Force scroll Y à 0
     },
     jsPDF: { 
         unit: 'mm', 
@@ -44,7 +47,7 @@ const PDF_CONFIG = {
     }
 };
 
-// ===== FONCTION PRINCIPALE D'EXPORT (🔧 CORRIGÉE) =====
+// ===== FONCTION PRINCIPALE D'EXPORT (🔧 CORRIGÉE + FIX SCROLL) =====
 
 /**
  * Exporte l'analyse de budget en PDF
@@ -55,7 +58,7 @@ const PDF_CONFIG = {
 export async function exportBudgetToPDF(budgetData = null, options = {}) {
     // ✅ FIX: Debug nettoyé (seulement en dev)
     if (isDev) {
-        console.log('🚀 Début export PDF budget (version corrigée définitive anti-pages-blanches)');
+        console.log('🚀 Début export PDF budget (version corrigée définitive anti-pages-blanches + fix scroll)');
     }
     
     // 🔧 NOUVEAU : Protection contre les Events (fix PointerEvent bug)
@@ -121,14 +124,30 @@ export async function exportBudgetToPDF(budgetData = null, options = {}) {
             ...options
         };
         
-        // ✅ FIX: Générer à partir d'un seul nœud racine pour éviter la page blanche
-        await html2pdf()
-            .set(finalOptions)
-            .from(template)
-            .save();
+        // 🆕 FIX SCROLL DÉFINITIF : Reset/restore scroll pour éviter capture coupée
+        
+        // 1. Mémoriser la position de scroll
+        const savedY = window.scrollY;
+        
+        // 2. Forcer le retour en haut de page
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        
+        // 3. Attendre que le repaint soit terminé
+        await new Promise(r => requestAnimationFrame(r));
+        
+        // 4. Générer le PDF de manière protégée
+        try {
+            await html2pdf()
+                .set(finalOptions)
+                .from(template)
+                .save();
+        } finally {
+            // 5. Restaurer la position utilisateur (même en cas d'erreur)
+            window.scrollTo({ top: savedY, left: 0, behavior: 'instant' });
+        }
         
         if (isDev) {
-            console.log('✅ PDF généré avec succès (sans pages blanches)');
+            console.log('✅ PDF généré avec succès (sans pages blanches + scroll corrigé)');
         }
         showSuccessState(exportBtn, uiState);
         
