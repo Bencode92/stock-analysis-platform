@@ -1424,6 +1424,91 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error("Erreur lors de la synchronisation des modes:", error);
         }
     }
+
+    // ==========================================
+    // 🚀 NOUVEAU : GESTIONNAIRE D'ÉVÉNEMENT POUR AJOUTER UN REMBOURSEMENT
+    // ==========================================
+    const addRepaymentBtn = document.getElementById('add-repayment-btn');
+    if (addRepaymentBtn) {
+        addRepaymentBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            const mode = document.getElementById('remboursement-mode').value;
+            let newRepayment;
+
+            if (mode === 'duree') {
+                const moisAReduire = +document.getElementById('reduction-duree-mois').value;
+                const mois = +document.getElementById('early-repayment-month-slider-duree').value;
+                if (moisAReduire <= 0) {
+                    document.getElementById('min-threshold-alert').classList.remove('hidden');
+                    return;
+                }
+                newRepayment = { montant: 0, mois, moisAReduire };
+            } else {
+                const montant = +document.getElementById('early-repayment-amount-mensualite').value;
+                const mois = +document.getElementById('early-repayment-month-slider-mensualite').value;
+                if (montant <= 0) {
+                    document.getElementById('min-threshold-alert').classList.remove('hidden');
+                    return;
+                }
+                newRepayment = { montant, mois };
+            }
+
+            // Stocker le nouveau remboursement
+            window.storedRepayments.push(newRepayment);
+
+            // Rafraîchir l'UI et recalculer
+            renderRepaymentsList();
+            document.getElementById('min-threshold-alert').classList.add('hidden');
+            calculateLoan();
+
+            // Reset des champs de saisie pour éviter les doublons
+            if (mode === 'mensualite') {
+                document.getElementById('early-repayment-amount-mensualite').value = '';
+            }
+        });
+    }
+
+    // ==========================================
+    // 🚀 NOUVEAU : FONCTION POUR AFFICHER LA LISTE DES REMBOURSEMENTS
+    // ==========================================
+    function renderRepaymentsList() {
+        const list = document.getElementById('repayments-list');
+        if (!list) return;
+        
+        list.innerHTML = '';
+        window.storedRepayments.forEach((r, idx) => {
+            const div = document.createElement('div');
+            div.className = 'repayment-item';
+            div.innerHTML = `
+                <div class="repayment-item-header">
+                    <span>${r.montant ? `${r.montant.toLocaleString('fr-FR')} €` : `-${r.moisAReduire} mois`} (M${r.mois})</span>
+                    <button class="remove-repayment" data-index="${idx}"><i class="fas fa-times"></i></button>
+                </div>`;
+            list.appendChild(div);
+        });
+        
+        // Ajouter les écouteurs pour supprimer
+        list.querySelectorAll('.remove-repayment').forEach(btn => {
+            btn.addEventListener('click', e => {
+                const i = +e.currentTarget.dataset.index;
+                window.storedRepayments.splice(i, 1);
+                renderRepaymentsList();
+                calculateLoan();
+            });
+        });
+    }
+
+    // ==========================================
+    // 🚀 NOUVEAU : BOUTON RÉINITIALISER TOUS LES REMBOURSEMENTS
+    // ==========================================
+    const resetRepaymentsBtn = document.getElementById('reset-repayments');
+    if (resetRepaymentsBtn) {
+        resetRepaymentsBtn.addEventListener('click', function() {
+            window.storedRepayments = [];
+            renderRepaymentsList();
+            calculateLoan();
+        });
+    }
     
     // Calculer les résultats initiaux au chargement de la page
     if (document.getElementById('loan-amount')) {
