@@ -285,16 +285,113 @@ function formatMontant(montant) {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(montant);
 }
 
+// ==========================================
+// 🚀 NOUVEAU : HELPER POUR CALCULER LE CAPITAL RESTANT DÛ
+// ==========================================
+function getRemainingCapitalAt(month) {
+    try {
+        const loanAmount = +document.getElementById('loan-amount').value;
+        const rate = +document.getElementById('interest-rate-slider').value / 100 / 12;
+        const duration = +document.getElementById('loan-duration-slider').value * 12;
+        
+        // Gestion PTZ si activé
+        const ptzEnabled = document.getElementById('enable-ptz')?.checked;
+        let ptzAmount = 0;
+        if (ptzEnabled) {
+            ptzAmount = +document.getElementById('ptz-amount').value || 0;
+        }
+        
+        const principalLoan = loanAmount - ptzAmount;
+        
+        if (principalLoan <= 0 || rate <= 0 || duration <= 0) {
+            return 0;
+        }
+        
+        const monthlyPayment = principalLoan * rate / (1 - Math.pow(1 + rate, -duration));
+        let remainingCapital = principalLoan;
+        
+        for (let m = 1; m < month && remainingCapital > 0; m++) {
+            const interest = remainingCapital * rate;
+            const principal = Math.min(monthlyPayment - interest, remainingCapital);
+            remainingCapital -= principal;
+        }
+        
+        return Math.max(0, remainingCapital + ptzAmount); // Inclure PTZ dans le total
+    } catch (error) {
+        console.error("Erreur lors du calcul du capital restant:", error);
+        return 0;
+    }
+}
+
+// ==========================================
+// 🚀 NOUVEAU : FONCTIONS UX POUR REMBOURSEMENT TOTAL
+// ==========================================
+function toggleTotalRepaymentUI(enabled) {
+    const amountInput = document.getElementById('early-repayment-amount-mensualite');
+    const container = amountInput?.closest('.parameter-row');
+    
+    if (!amountInput) return;
+    
+    if (enabled) {
+        amountInput.value = '';
+        amountInput.disabled = true;
+        amountInput.placeholder = 'Calculé automatiquement...';
+        amountInput.classList.add('opacity-60', 'cursor-not-allowed');
+        container?.classList.add('opacity-60', 'transition-opacity', 'duration-300');
+        
+        // Preview du montant
+        const mois = +document.getElementById('early-repayment-month-slider-mensualite').value;
+        const previewAmount = getRemainingCapitalAt(mois);
+        
+        showNotification(`Capital restant au mois ${mois}: ${formatMontant(previewAmount)}`, 'info');
+        
+    } else {
+        amountInput.disabled = false;
+        amountInput.placeholder = 'Montant à rembourser';
+        amountInput.classList.remove('opacity-60', 'cursor-not-allowed', 'text-green-400', 'font-semibold');
+        container?.classList.remove('opacity-60');
+    }
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transition-all duration-300 ${
+        type === 'success' ? 'bg-green-900 text-green-200 border border-green-600' :
+        type === 'error' ? 'bg-red-900 text-red-200 border border-red-600' :
+        'bg-blue-900 text-blue-200 border border-blue-600'
+    }`;
+    
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation' : 'info'}-circle mr-2"></i>
+            ${message}
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
 // 🎨 NOUVELLE FONCTION HELPER POUR FORMATER L'AFFICHAGE DES REMBOURSEMENTS
 function repaymentLabel(r) {
+    if (r.type === 'total') {
+        return {
+            html: `<i class="fas fa-flag-checkered mr-1 text-emerald-400"></i>Remboursement total`,
+            cls: 'text-emerald-300 font-semibold'
+        };
+    }
     if (r.montant && r.montant > 0) {
         return {
-            html: `<i class=\"fas fa-euro-sign mr-1 text-emerald-400\"></i>${formatMontant(r.montant)}`,
+            html: `<i class="fas fa-euro-sign mr-1 text-emerald-400"></i>${formatMontant(r.montant)}`,
             cls: 'text-emerald-300'
         };
     }
     return {
-        html: `<i class=\"fas fa-clock mr-1 text-amber-400\"></i>– ${r.moisAReduire} mois`,
+        html: `<i class="fas fa-clock mr-1 text-amber-400"></i>– ${r.moisAReduire} mois`,
         cls: 'text-amber-300'
     };
 }
@@ -458,7 +555,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ==========================================
-    // FIN SECTION PTZ
+    // 🚀 NOUVEAU : GESTION REMBOURSEMENT TOTAL
+    // ==========================================
+    
+    // Event listener pour la checkbox remboursement total
+    const totalRepaymentCheckbox = document.getElementById('total-repayment');
+    if (totalRepaymentCheckbox) {
+        totalRepaymentCheckbox.addEventListener('change', function(e) {
+            toggleTotalRepaymentUI(e.target.checked);
+        });
+    }
+
+    // Event listener pour mise à jour du preview en temps réel
+    if (earlyRepaymentMonthSliderMensualite) {
+        earlyRepaymentMonthSliderMensualite.addEventListener('input', function(e) {
+            if (totalRepaymentCheckbox?.checked) {
+                const mois = +e.target.value;
+                const amount = getRemainingCapitalAt(mois);
+                showNotification(`Capital restant: ${formatMontant(amount)}`, 'info');
+            }
+        });
+    }
+
+    // ==========================================
+    // FIN SECTION REMBOURSEMENT TOTAL
     // ==========================================
 
     // Fonction pour mettre à jour les valeurs maximales des sliders en fonction de la durée du prêt
@@ -1491,7 +1611,7 @@ if (window.activateLoanExportButton) {
     }
 
     // ==========================================
-    // 🚀 NOUVEAU : GESTIONNAIRE D'ÉVÉNEMENT POUR AJOUTER UN REMBOURSEMENT
+    // 🚀 NOUVEAU : GESTIONNAIRE D'ÉVÉNEMENT AMÉLIORÉ POUR AJOUTER UN REMBOURSEMENT
     // ==========================================
     const addRepaymentBtn = document.getElementById('add-repayment-btn');
     if (addRepaymentBtn) {
@@ -1509,13 +1629,39 @@ if (window.activateLoanExportButton) {
                 }
                 newRepayment = { montant: 0, mois, moisAReduire };
             } else {
-                const montant = +document.getElementById('early-repayment-amount-mensualite').value;
+                // ==========================================
+                // 🚀 CORRECTIF PRINCIPAL : GESTION REMBOURSEMENT TOTAL
+                // ==========================================
+                const totalCheckEl = document.getElementById('total-repayment');
+                const isTotal = totalCheckEl?.checked;
+                const amountInput = document.getElementById('early-repayment-amount-mensualite');
                 const mois = +document.getElementById('early-repayment-month-slider-mensualite').value;
+                
+                let montant = +amountInput.value;
+                
+                if (isTotal) {
+                    // Calculer automatiquement le capital restant dû
+                    montant = getRemainingCapitalAt(mois);
+                    
+                    // Feedback visuel
+                    showNotification(`Remboursement total calculé: ${formatMontant(montant)}`, 'success');
+                    
+                    // Réinitialiser la checkbox après utilisation
+                    totalCheckEl.checked = false;
+                    toggleTotalRepaymentUI(false);
+                }
+                
                 if (montant <= 0) {
                     document.getElementById('min-threshold-alert').classList.remove('hidden');
                     return;
                 }
-                newRepayment = { montant, mois };
+                
+                newRepayment = { 
+                    montant, 
+                    mois, 
+                    type: isTotal ? 'total' : 'partiel',
+                    timestamp: Date.now()
+                };
             }
 
             // Stocker le nouveau remboursement
