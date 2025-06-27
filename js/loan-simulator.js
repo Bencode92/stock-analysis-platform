@@ -67,6 +67,9 @@ class LoanSimulator {
         let capitalInitial = this.capital;
         let indemnites = 0;
         
+        // ✅ NOUVEAU : Suivi du dernier remboursement
+        let dernierRemboursement = 0;
+        
         // Gestion de la rétrocompatibilité : si remboursementAnticipe et moisAnticipe sont fournis,
         // nous les ajoutons à remboursementsAnticipes s'ils ne sont pas déjà inclus
         if (remboursementAnticipe > 0 && moisAnticipe !== null) {
@@ -120,6 +123,9 @@ class LoanSimulator {
             const remboursementCourant = remboursementsAnticipes.find(r => r.mois === mois);
             
             if (remboursementCourant) {
+                // ✅ NOUVEAU : Mettre à jour le dernier remboursement
+                dernierRemboursement = mois;
+                
                 // ✅ CORRECTION MAINTENUE : Gestion du cas montant = 0 pour raccourcissement durée
                 // ► Cas 1 : simple raccourcissement de durée (montant = 0)
                 if (remboursementCourant.montant === 0 &&
@@ -209,17 +215,18 @@ class LoanSimulator {
             if (capitalRestant <= 0) break;
         }
         
-        // MODIFICATION : Ne calculer les indemnités que s'il y a effectivement des remboursements anticipés
-        // Indemnités pour le mode durée si aucun remboursement anticipé n'est défini
-        if (modeRemboursement === 'duree' && remboursementsAnticipes.length > 0 && indemnites === 0) {
-            // Pour le mode durée, estimer le capital qui serait remboursé pour les mois réduits
-            // pour calculer les indemnités
-            const capitalEstime = mensualite * moisAReduire * 0.8; // Estimation approximative (80% de la mensualité * nb mois)
-            const indemniteStandard = capitalEstime * tauxMensuel * this.indemnitesMois;
-            const plafond3Pourcent = capitalEstime * 0.03;
-            const plafond6Mois = mensualite * 6;
-            indemnites = Math.min(indemniteStandard, Math.min(plafond3Pourcent, plafond6Mois));
-        }
+        // ✅ MODIFICATION 1 : SUPPRESSION COMPLÈTE DU CALCUL D'IRA FICTIVE
+        // ── SUPPRIME complètement cette portion ─────────────
+        // if (modeRemboursement === 'duree' && remboursementsAnticipes.length > 0 && indemnites === 0) {
+        //     // Pour le mode durée, estimer le capital qui serait remboursé pour les mois réduits
+        //     // pour calculer les indemnités
+        //     const capitalEstime = mensualite * moisAReduire * 0.8; // Estimation approximative (80% de la mensualité * nb mois)
+        //     const indemniteStandard = capitalEstime * tauxMensuel * this.indemnitesMois;
+        //     const plafond3Pourcent = capitalEstime * 0.03;
+        //     const plafond6Mois = mensualite * 6;
+        //     indemnites = Math.min(indemniteStandard, Math.min(plafond3Pourcent, plafond6Mois));
+        // }
+        // ────────────────────────────────────────────────────
         
         // Calcul des économies réalisées avec le remboursement anticipé
         const dureeInitiale = this.dureeMois;
@@ -266,7 +273,9 @@ class LoanSimulator {
             gainTemps,
             remboursementsAnticipes,
             moisRenegociation, // Ajout du mois de renégociation dans le résultat
-            appliquerRenegociation // Ajout de l'état de la renégociation dans le résultat
+            appliquerRenegociation, // Ajout de l'état de la renégociation dans le résultat
+            // ✅ MODIFICATION 2 : EXPOSITION DU DERNIER REMBOURSEMENT
+            dernierRemboursement
         };
     }
 }
@@ -280,12 +289,12 @@ function formatMontant(montant) {
 function repaymentLabel(r) {
     if (r.montant && r.montant > 0) {
         return {
-            html: `<i class="fas fa-euro-sign mr-1 text-emerald-400"></i>${formatMontant(r.montant)}`,
+            html: `<i class=\"fas fa-euro-sign mr-1 text-emerald-400\"></i>${formatMontant(r.montant)}`,
             cls: 'text-emerald-300'
         };
     }
     return {
-        html: `<i class="fas fa-clock mr-1 text-amber-400"></i>– ${r.moisAReduire} mois`,
+        html: `<i class=\"fas fa-clock mr-1 text-amber-400\"></i>– ${r.moisAReduire} mois`,
         cls: 'text-amber-300'
     };
 }
@@ -947,7 +956,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // FIN FONCTION PTZ
     // ==========================================
     
-    // Fonction pour mettre à jour le tableau de comparaison
+    // ✅ MODIFICATION 2b : Fonction pour mettre à jour le tableau de comparaison
     function updateComparisonTable(result, modeRemboursement) {
         const compareCheckbox = document.getElementById('compare-scenarios');
         const comparisonTable = document.getElementById('comparison-table');
@@ -969,6 +978,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 const baseResult = simulator.tableauAmortissement({});
+                
+                // ✅ MODIFICATION 2b : Récupérer la vraie mensualité post-opération
+                const moisRef = result.dernierRemboursement + 1;
+                const ligneRef = result.tableau.find(r => r.mois === moisRef);
+                const mensualiteApres = ligneRef 
+                    ? ligneRef.mensualite 
+                    : result.mensualiteInitiale; // fallback sécu
                 
                 // Construire le tableau de comparaison
                 comparisonTableBody.innerHTML = '';
@@ -1006,15 +1022,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
                 comparisonTableBody.appendChild(trInterets);
                 
-                // Ligne pour les mensualités
+                // ✅ MODIFICATION 2b : Ligne pour les mensualités (vraie mensualité post-opération)
                 const trMensualite = document.createElement('tr');
                 trMensualite.classList.add('bg-blue-900', 'bg-opacity-10');
                 trMensualite.innerHTML = `
                     <td class="px-3 py-2 font-medium">Mensualité</td>
                     <td class="px-3 py-2 text-right">${formatMontant(baseResult.mensualiteInitiale)}</td>
-                    <td class="px-3 py-2 text-right">${formatMontant(result.tableau[result.tableau.length - 1].mensualite)}</td>
+                    <td class="px-3 py-2 text-right">${formatMontant(mensualiteApres)}</td>
                     <td class="px-3 py-2 text-right ${modeRemboursement === 'mensualite' ? 'text-green-400' : 'text-gray-400'}">
-                    ${formatMontant(baseResult.mensualiteInitiale - result.tableau[result.tableau.length - 1].mensualite)}</td>
+                    ${formatMontant(baseResult.mensualiteInitiale - mensualiteApres)}</td>
                 `;
                 comparisonTableBody.appendChild(trMensualite);
                 
