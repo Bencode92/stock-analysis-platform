@@ -85,11 +85,15 @@ class LoanSimulator {
         // Définir la durée finale en fonction du mode
         let dureeFinale = this.dureeMois;
         
-        // ✅ PATCH APPLIQUÉ : Permettre le raccourcissement direct même avec des remboursements "montant = 0"
+        // ✅ PATCH APPLIQUÉ : Utiliser some() au lieu de every() pour éviter le piège du tableau vide
         if (modeRemboursement === 'duree' && 
-            remboursementsAnticipes.every(r => r.montant === 0) &&  // uniquement "durée pure"
-            moisAReduire > 0) {
-            dureeFinale = this.dureeMois - moisAReduire;
+            remboursementsAnticipes.some(r => r.montant === 0 && r.moisAReduire > 0)) {
+            // on comptera alors la/les réduction(s) réellement inscrit(es)
+            const totalReductions = remboursementsAnticipes
+                .filter(r => r.montant === 0)
+                .reduce((acc, r) => acc + (r.moisAReduire || 0), 0);
+
+            dureeFinale = this.dureeMois - totalReductions;
         }
         
         // Suivi avant remboursement anticipé
@@ -675,16 +679,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Récupérer le mode de remboursement (durée ou mensualité)
             const modeRemboursement = document.getElementById('remboursement-mode')?.value || 'duree';
             
-            // Variables pour stocker les valeurs du remboursement anticipé
-            let moisAReduire = 0;
-            
-            // Récupération des valeurs en fonction du mode de remboursement actif
-            if (modeRemboursement === 'duree') {
-                // Pour le mode durée, on utilise le nombre de mois à réduire
-                const reductionDureeMois = document.getElementById('reduction-duree-mois');
-                moisAReduire = reductionDureeMois ? parseInt(reductionDureeMois.value || 12) : 12;
-            }
-            
             // IMPORTANT: utiliser les remboursements stockés au lieu de créer un nouveau tableau vide
             // Cette ligne est la modification principale pour utiliser les remboursements multiples
             const remboursementsAnticipes = window.storedRepayments || [];
@@ -713,14 +707,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 assuranceSurCapitalInitial: assuranceSurCapitalInitial
             });
 
-            // Calcul du tableau d'amortissement avec les nouveaux paramètres
+            // ✅ CORRECTION APPLIQUÉE : Suppression du paramètre moisAReduire
             const result = simulator.tableauAmortissement({
                 nouveauTaux: newInterestRate,
                 moisRenegociation: renegotiationMonth,
                 modeRemboursement: modeRemboursement,
-                moisAReduire: moisAReduire,
+                // moisAReduire: moisAReduire,  ← LIGNE SUPPRIMÉE
                 remboursementsAnticipes: remboursementsAnticipes,
-                appliquerRenegociation: applyRenegotiation // Ajout du paramètre pour rendre la renégociation optionnelle
+                appliquerRenegociation: applyRenegotiation
             });
 
             console.log("Résultats calculés:", result);
