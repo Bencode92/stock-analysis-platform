@@ -118,21 +118,23 @@ function extractLoanDataFromDOM() {
     // Événements clés
     events: extractKeyEvents(),
     // Amortissement optimisé
-    amortization: grabTableRows('#amortization-table'),
-    // Période de double mensualité (si PTZ finit après prêt principal)
-    doublePeriod: calcDoubleMonthlyPeriod()
+    amortization: grabTableRows('#amortization-table')
   };
 
-  // Calcul période double mensualité
-  function calcDoubleMonthlyPeriod(){
-    const endPTZ  = data?.ptzEnabled ? data.ptzDuration : 0;
-    const endMain = data.durationYears;
-    if (!endPTZ || endPTZ === endMain) return null;
-    if (endPTZ > endMain)   return {start: endMain*12+1, end: endPTZ*12};
-    if (endMain > endPTZ)   return {start: endPTZ*12+1, end: endMain*12};
-  }
+  // ✅ CORRECTION: Calculer doublePeriod après la création de l'objet data
+  data.doublePeriod = calcDoubleMonthlyPeriod(data);
 
   return data;
+}
+
+// ✅ CORRECTION: Fonction modifiée pour accepter data en paramètre
+function calcDoubleMonthlyPeriod(data) {
+  const endPTZ  = data.ptzEnabled ? data.ptzDuration : 0;
+  const endMain = data.durationYears;
+  if (!endPTZ || endPTZ === endMain) return null;
+  if (endPTZ > endMain)   return {start: endMain*12+1, end: endPTZ*12};
+  if (endMain > endPTZ)   return {start: endPTZ*12+1, end: endMain*12};
+  return null;
 }
 
 function calculateOriginalCost() {
