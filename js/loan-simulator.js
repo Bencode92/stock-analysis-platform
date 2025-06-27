@@ -81,16 +81,15 @@ class LoanSimulator {
             }
         }
         
-        // MODIFICATION : Ne prendre en compte le moisAReduire que si aucun remboursement anticipé n'a été ajouté
+        // MODIFICATION : Gestion améliorée du moisAReduire
         // Définir la durée finale en fonction du mode
         let dureeFinale = this.dureeMois;
         
-        // On vérifie s'il y a des remboursements anticipés et on n'applique moisAReduire que si aucun remboursement 
-        // n'a été ajouté et si on est en mode durée
-        if (modeRemboursement === 'duree' && remboursementsAnticipes.length === 0 && moisAReduire > 0) {
-            // On n'applique plus la réduction de durée ici, elle doit être explicitement ajoutée
-            // via le bouton "Ajouter ce remboursement"
-            dureeFinale = this.dureeMois; // MODIFIÉ : on garde la durée initiale
+        // ✅ PATCH APPLIQUÉ : Permettre le raccourcissement direct même avec des remboursements "montant = 0"
+        if (modeRemboursement === 'duree' && 
+            remboursementsAnticipes.every(r => r.montant === 0) &&  // uniquement "durée pure"
+            moisAReduire > 0) {
+            dureeFinale = this.dureeMois - moisAReduire;
         }
         
         // Suivi avant remboursement anticipé
@@ -125,10 +124,28 @@ class LoanSimulator {
             const remboursementCourant = remboursementsAnticipes.find(r => r.mois === mois);
             
             if (remboursementCourant) {
-                // Vérification que le montant est positif
-                if (remboursementCourant.montant <= 0) {
-                    console.warn(`Remboursement ignoré au mois ${mois}: montant doit être positif`);
-                } else {
+                // ✅ PATCH APPLIQUÉ : Gestion du cas montant = 0 pour raccourcissement durée
+                // ► Cas 1 : simple raccourcissement de durée (montant = 0)
+                if (remboursementCourant.montant === 0 &&
+                    modeRemboursement === 'duree' &&
+                    remboursementCourant.moisAReduire > 0) {
+
+                    /* ------------  NOUVEAU  ------------ */
+                    // 1) on réduit la durée restante
+                    const resteAvant = dureeFinale - mois + 1;
+                    const resteApres = Math.max(1, resteAvant - remboursementCourant.moisAReduire);
+                    dureeFinale -= remboursementCourant.moisAReduire;
+
+                    // 2) on recalcule la nouvelle mensualité (plus élevée)
+                    mensualite = capitalRestant * tauxMensuel /
+                                 (1 - Math.pow(1 + tauxMensuel, -resteApres));
+
+                    // 3) on mémorise pour le tableau (facultatif)
+                    capitalAmorti = 0;             // pas de versement ponctuel
+                    /* ------------  FIN  ------------ */
+                }
+                /* Cas 2 : remboursement partiel/classique */
+                else if (remboursementCourant.montant > 0) {
                     // Calcul des indemnités de remboursement anticipé
                     const indemniteStandard = remboursementCourant.montant * tauxMensuel * this.indemnitesMois;
                     const plafond3Pourcent = remboursementCourant.montant * 0.03;
