@@ -1170,17 +1170,14 @@
                                 <canvas id="loan-chart"></canvas>
                             </div>
                             
-                            <div class="flex justify-between mb-4">
-                                <h5 class="text-lg font-semibold">Tableau d'amortissement</h5>
-                                <div class="flex">
-                                    <button id="export-pdf" class="loan-secondary-button ml-2">
-                                        <i class="fas fa-file-pdf"></i>Exporter en PDF
-                                    </button>
-                                    <button id="save-simulation-btn" class="loan-secondary-button ml-2 text-green-400 hover:bg-green-700">
-                                        <i class="fas fa-save"></i>Sauvegarder simulation
-                                    </button>
-                                </div>
-                            </div>
+<div class="flex justify-between mb-4">
+    <h5 class="text-lg font-semibold">Tableau d'amortissement</h5>
+    <div class="flex">
+        <button id="save-simulation-btn" class="loan-secondary-button ml-2 text-green-400 hover:bg-green-700">
+            <i class="fas fa-save"></i>Sauvegarder simulation
+        </button>
+    </div>
+</div>
                             
                             <div class="amortization-table-container">
                                 <table class="min-w-full text-sm">
@@ -1623,6 +1620,21 @@
                 });
             });
         });
+    </script>
+        <!-- ✅ NOUVEAU : Module loan-pdf.js -->
+    <script type="module">
+      import {
+        createLoanExportButton,
+        activateLoanExportButton
+      } from './loan-pdf.js';
+
+      // 1. Créer le bouton dès le chargement
+      document.addEventListener('DOMContentLoaded', () => {
+        createLoanExportButton();
+      });
+
+      // 2. Exposer la fonction d'activation
+      window.activateLoanExportButton = activateLoanExportButton;
     </script>
 </body>
 </html>
