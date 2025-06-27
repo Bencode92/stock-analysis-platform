@@ -264,6 +264,20 @@ function formatMontant(montant) {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(montant);
 }
 
+// 🎨 NOUVELLE FONCTION HELPER POUR FORMATER L'AFFICHAGE DES REMBOURSEMENTS
+function repaymentLabel(r) {
+    if (r.montant && r.montant > 0) {
+        return {
+            html: `<i class="fas fa-euro-sign mr-1 text-emerald-400"></i>${formatMontant(r.montant)}`,
+            cls: 'text-emerald-300'
+        };
+    }
+    return {
+        html: `<i class="fas fa-clock mr-1 text-amber-400"></i>– ${r.moisAReduire} mois`,
+        cls: 'text-amber-300'
+    };
+}
+
 // Mise à jour des valeurs des sliders
 document.addEventListener('DOMContentLoaded', function() {
     // Références aux éléments HTML
@@ -289,7 +303,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const sectionMensualite = document.getElementById('section-reduire-mensualite');
     
     // Nouvelle référence pour la case "Appliquer la renégociation"
-    const applyRenegotiationCheckbox = document.getElementById('apply-renegociation');
+    const applyRenegotiationCheckbox = document.getElementById('apply-renegotiation');
     
     // Nouvelle référence pour les sliders de chaque mode
     const earlyRepaymentMonthSliderDuree = document.getElementById('early-repayment-month-slider-duree');
@@ -1496,25 +1510,42 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ==========================================
-    // 🚀 NOUVEAU : FONCTION POUR AFFICHER LA LISTE DES REMBOURSEMENTS
+    // 🎨 NOUVELLE FONCTION POUR AFFICHER LA LISTE DES REMBOURSEMENTS AVEC UI AMÉLIORÉE
     // ==========================================
     function renderRepaymentsList() {
         const list = document.getElementById('repayments-list');
         if (!list) return;
-        
+
         list.innerHTML = '';
+
         window.storedRepayments.forEach((r, idx) => {
-            const div = document.createElement('div');
-            div.className = 'repayment-item';
-            div.innerHTML = `
-                <div class="repayment-item-header">
-                    <span>${r.montant ? `${r.montant.toLocaleString('fr-FR')} €` : `-${r.moisAReduire} mois`} (M${r.mois})</span>
-                    <button class="remove-repayment" data-index="${idx}"><i class="fas fa-times"></i></button>
-                </div>`;
-            list.appendChild(div);
+            const { html, cls } = repaymentLabel(r);
+
+            const item = document.createElement('div');
+            item.className =
+                'repayment-item flex items-center justify-between bg-blue-900 bg-opacity-15 rounded-lg px-3 py-2 mb-2 hover:bg-blue-800/30';
+
+            // bloc gauche = libellé + sous-libellé
+            const left = document.createElement('div');
+            left.innerHTML = `
+                <div class="font-medium ${cls}">${html}</div>
+                <div class="text-xs text-gray-400">au mois ${r.mois}</div>
+            `;
+
+            // bouton suppression
+            const remove = document.createElement('button');
+            remove.className =
+                'remove-repayment text-gray-400 hover:text-red-400 transition';
+            remove.dataset.index = idx;
+            remove.innerHTML = '<i class="fas fa-times"></i>';
+
+            // assemblage
+            item.appendChild(left);
+            item.appendChild(remove);
+            list.appendChild(item);
         });
-        
-        // Ajouter les écouteurs pour supprimer
+
+        // listener « supprimer »
         list.querySelectorAll('.remove-repayment').forEach(btn => {
             btn.addEventListener('click', e => {
                 const i = +e.currentTarget.dataset.index;
