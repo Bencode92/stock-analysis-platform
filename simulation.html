@@ -995,6 +995,21 @@
                                             </div>
                                         </div>
                                         
+                                        <!-- Indemnités de remboursement anticipé (mode durée) -->
+                                        <div class="parameter-row">
+                                            <label class="loan-option-label">
+                                                Indemnités (mois)
+                                                <span class="loan-option-info cursor-help" title="Nombre de mois d'intérêts servant de base au calcul des indemnités de remboursement anticipé (généralement entre 0 et 6 mois). Les IRA sont légalement plafonnées à 6 mois d'intérêts ou 3% du capital remboursé.">
+                                                    <i class="fas fa-info-circle"></i>
+                                                </span>
+                                            </label>
+                                            <div class="flex items-center gap-4">
+                                                <input type="range" id="penalty-months-slider-duree" min="0" max="6" value="3" step="1" class="loan-slider">
+                                                <span id="penalty-months-value-duree" class="loan-slider-value">3 mois</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
                                     <!-- Contenu pour le mode "Réduire la mensualité" -->
                                     <div id="section-reduire-mensualite" class="hidden">
                                         <!-- Montant du remboursement anticipé (mode mensualité) -->
