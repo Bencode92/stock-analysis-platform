@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const newInterestRateSlider = document.getElementById('new-interest-rate-slider');
     const newInterestRateValue = document.getElementById('new-interest-rate-value');
     const calculateLoanButton = document.getElementById('calculate-loan-button');
-    const exportPdfButton = document.getElementById('export-pdf');
+   const exportPdfButton = document.getElementById('export-loan-pdf');
     
     // Nouvelles références pour le mois de renégociation
     const renegotiationMonthSlider = document.getElementById('renegotiation-month-slider');
