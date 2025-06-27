@@ -862,6 +862,12 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Affichage du tableau de comparaison si l'option est cochée
             updateComparisonTable(result, modeRemboursement);
+            // Activation export PDF
+window.lastLoanResult = result;
+if (window.activateLoanExportButton) {
+    window.activateLoanExportButton();
+    console.log('✅ Bouton PDF activé');
+}
             
             return true;
         } catch (error) {
