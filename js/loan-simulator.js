@@ -81,20 +81,12 @@ class LoanSimulator {
             }
         }
         
-        // MODIFICATION : Gestion améliorée du moisAReduire
-        // Définir la durée finale en fonction du mode
+        // ✅ CORRECTION APPLIQUÉE : Supprimer la double déduction
+        // Définir la durée finale en fonction du mode (valeur initiale simple)
         let dureeFinale = this.dureeMois;
         
-        // ✅ PATCH APPLIQUÉ : Utiliser some() au lieu de every() pour éviter le piège du tableau vide
-        if (modeRemboursement === 'duree' && 
-            remboursementsAnticipes.some(r => r.montant === 0 && r.moisAReduire > 0)) {
-            // on comptera alors la/les réduction(s) réellement inscrit(es)
-            const totalReductions = remboursementsAnticipes
-                .filter(r => r.montant === 0)
-                .reduce((acc, r) => acc + (r.moisAReduire || 0), 0);
-
-            dureeFinale = this.dureeMois - totalReductions;
-        }
+        // ❌ SUPPRIMÉ : Le bloc de pré-déduction totalReductions qui causait la double déduction
+        // La logique de réduction de durée sera gérée uniquement dans la boucle
         
         // Suivi avant remboursement anticipé
         let interetsAvantRembours = 0;
@@ -128,13 +120,13 @@ class LoanSimulator {
             const remboursementCourant = remboursementsAnticipes.find(r => r.mois === mois);
             
             if (remboursementCourant) {
-                // ✅ PATCH APPLIQUÉ : Gestion du cas montant = 0 pour raccourcissement durée
+                // ✅ CORRECTION MAINTENUE : Gestion du cas montant = 0 pour raccourcissement durée
                 // ► Cas 1 : simple raccourcissement de durée (montant = 0)
                 if (remboursementCourant.montant === 0 &&
                     modeRemboursement === 'duree' &&
                     remboursementCourant.moisAReduire > 0) {
 
-                    /* ------------  NOUVEAU  ------------ */
+                    // ✅ UNIQUE ENDROIT de modification de dureeFinale
                     // 1) on réduit la durée restante
                     const resteAvant = dureeFinale - mois + 1;
                     const resteApres = Math.max(1, resteAvant - remboursementCourant.moisAReduire);
@@ -146,7 +138,6 @@ class LoanSimulator {
 
                     // 3) on mémorise pour le tableau (facultatif)
                     capitalAmorti = 0;             // pas de versement ponctuel
-                    /* ------------  FIN  ------------ */
                 }
                 /* Cas 2 : remboursement partiel/classique */
                 else if (remboursementCourant.montant > 0) {
