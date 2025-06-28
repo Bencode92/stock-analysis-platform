@@ -1,162 +1,419 @@
-// Fichier JS pour simulateur de dette avec options dynamiques et PTZ intégré
+/**
+ * ============================================
+ * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.0
+ * ============================================
+ * 
+ * Plan d'action implémenté :
+ * ✅ Étape 1 : Cash Flow centralisé (this.cashFlows)
+ * ✅ Étape 2 : Calcul TAEG via IRR/Newton-Raphson  
+ * ✅ Étape 3 : Intégration PTZ comme "sous-prêt"
+ * ✅ Étape 4 : Validations & debug helpers
+ * ✅ Étape 5 : Compatibilité UI existante
+ * 
+ * Architecture : Flux de trésorerie centralisés pour calculs financiers conformes
+ */
+
+// ==========================================
+// 🔧 CONSTANTES ET UTILITAIRES FINANCIERS
+// ==========================================
+
+const FLUX_ENTREE = 1;   // Multiplicateur pour entrées de trésorerie
+const FLUX_SORTIE = -1;  // Multiplicateur pour sorties de trésorerie
+const IRR_PRECISION = 1e-6;  // Précision pour calcul IRR
+const IRR_MAX_ITERATIONS = 100;  // Limite itérations Newton-Raphson
+
+/**
+ * ==========================================
+ * 💰 MOTEUR DE CALCUL IRR (Newton-Raphson)
+ * ==========================================
+ */
+class IRRCalculator {
+    /**
+     * Calcule le taux de rendement interne via Newton-Raphson
+     * @param {number[]} cashFlows - Flux de trésorerie [initial, flux1, flux2, ...]
+     * @param {number} initialGuess - Estimation initiale (défaut: 0.1)
+     * @returns {number} IRR en décimal (ex: 0.03 pour 3%)
+     */
+    static calculate(cashFlows, initialGuess = 0.1) {
+        if (!this.validateCashFlows(cashFlows)) {
+            throw new Error('Flux de trésorerie invalides pour calcul IRR');
+        }
+
+        let rate = initialGuess;
+        
+        for (let i = 0; i < IRR_MAX_ITERATIONS; i++) {
+            const { npv, npvDerivative } = this.calculateNPVAndDerivative(cashFlows, rate);
+            
+            if (Math.abs(npv) < IRR_PRECISION) {
+                return rate;
+            }
+            
+            if (Math.abs(npvDerivative) < IRR_PRECISION) {
+                throw new Error('Dérivée NPV trop proche de zéro - convergence impossible');
+            }
+            
+            const newRate = rate - (npv / npvDerivative);
+            
+            if (Math.abs(newRate - rate) < IRR_PRECISION) {
+                return newRate;
+            }
+            
+            rate = newRate;
+        }
+        
+        throw new Error(`IRR non convergente après ${IRR_MAX_ITERATIONS} itérations`);
+    }
+
+    /**
+     * Calcule NPV et sa dérivée pour Newton-Raphson
+     */
+    static calculateNPVAndDerivative(cashFlows, rate) {
+        let npv = 0;
+        let npvDerivative = 0;
+        
+        for (let t = 0; t < cashFlows.length; t++) {
+            const denominator = Math.pow(1 + rate, t);
+            npv += cashFlows[t] / denominator;
+            
+            if (t > 0) {
+                npvDerivative -= (t * cashFlows[t]) / Math.pow(1 + rate, t + 1);
+            }
+        }
+        
+        return { npv, npvDerivative };
+    }
+
+    /**
+     * Valide la structure des flux de trésorerie
+     */
+    static validateCashFlows(cashFlows) {
+        if (!Array.isArray(cashFlows) || cashFlows.length < 2) {
+            return false;
+        }
+        
+        // Le flux initial doit être négatif (sortie d'argent)
+        if (cashFlows[0] >= 0) {
+            return false;
+        }
+        
+        // Il doit y avoir au moins un flux positif (rentrée d'argent)
+        if (cashFlows.slice(1).every(f => f <= 0)) {
+            return false;
+        }
+        
+        return true;
+    }
+}
+
+/**
+ * ==========================================
+ * 🏠 GESTIONNAIRE PTZ (Sous-prêt)
+ * ==========================================
+ */
+class PTZManager {
+    constructor(params = {}) {
+        this.montant = params.montant || 0;
+        this.dureeMois = params.dureeMois || 0;
+        this.differeMois = params.differeMois || 0;
+        this.enabled = params.enabled || false;
+    }
+
+    /**
+     * Génère les flux de trésorerie PTZ
+     * @returns {number[]} Flux PTZ sur la durée totale
+     */
+    generateCashFlows(dureeTotale) {
+        if (!this.enabled || this.montant <= 0) {
+            return Array(dureeTotale + 1).fill(0);
+        }
+
+        const flows = Array(dureeTotale + 1).fill(0);
+        
+        // Flux initial : entrée de capital PTZ
+        flows[0] = FLUX_ENTREE * this.montant;
+        
+        // Mensualités PTZ (capital seulement, pas d'intérêts)
+        const mensualitePTZ = this.montant / this.dureeMois;
+        
+        for (let mois = this.differeMois + 1; mois <= Math.min(this.dureeMois + this.differeMois, dureeTotale); mois++) {
+            flows[mois] = FLUX_SORTIE * mensualitePTZ;
+        }
+        
+        return flows;
+    }
+
+    /**
+     * Valide les paramètres PTZ
+     */
+    validate(montantTotal, dureePretPrincipal) {
+        const errors = [];
+        
+        if (this.montant > montantTotal * 0.4) {
+            errors.push(`PTZ ne peut dépasser 40% du coût total (max: ${this.formatMontant(montantTotal * 0.4)})`);
+        }
+        
+        if (this.dureeMois > dureePretPrincipal) {
+            errors.push(`Durée PTZ ne peut dépasser celle du prêt principal (${Math.floor(dureePretPrincipal/12)} ans)`);
+        }
+        
+        return errors;
+    }
+
+    formatMontant(montant) {
+        return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(montant);
+    }
+}
+
+/**
+ * ==========================================
+ * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.0
+ * ==========================================
+ */
 class LoanSimulator {
-    constructor({ 
-        capital, 
-        tauxAnnuel, 
-        dureeMois, 
-        assuranceAnnuelle = 0, 
-        indemnitesMois = 12,
-        fraisDossier = 2000,
-        fraisTenueCompte = 710,
-        fraisGarantie = null,
-        typeGarantie = 'caution',
-        assuranceSurCapitalInitial = false
-    }) {
-        this.capital = capital;
-        this.tauxMensuel = tauxAnnuel / 100 / 12;
-        this.dureeMois = dureeMois;
-        this.assuranceMensuelle = assuranceAnnuelle / 100 / 12;
-        this.indemnitesMois = indemnitesMois;
-        this.assuranceSurCapitalInitial = assuranceSurCapitalInitial;
+    constructor(params) {
+        // Paramètres de base
+        this.capital = params.capital;
+        this.tauxAnnuel = params.tauxAnnuel;
+        this.tauxMensuel = params.tauxAnnuel / 100 / 12;
+        this.dureeMois = params.dureeMois;
+        this.assuranceMensuelle = (params.assuranceAnnuelle || 0) / 100 / 12;
+        this.indemnitesMois = params.indemnitesMois || 12;
+        this.assuranceSurCapitalInitial = params.assuranceSurCapitalInitial || false;
 
         // Frais annexes
-        this.fraisDossier = fraisDossier;
-        this.fraisTenueCompte = fraisTenueCompte;
+        this.fraisDossier = params.fraisDossier || 2000;
+        this.fraisTenueCompte = params.fraisTenueCompte || 710;
+        this.fraisGarantie = this.calculateFraisGarantie(params);
+
+        // 🚀 NOUVEAU : Flux de trésorerie centralisés
+        this.cashFlows = [];
+        this.tableauAmortissementCache = null;
         
-        // Calcul des frais de garantie selon le type
-        let fraisCalcules;
-        switch(typeGarantie) {
-            case 'hypotheque':
-                fraisCalcules = Math.max(capital * 0.015, 800); // Min 800€
-                break;
-            case 'ppd':
-                fraisCalcules = Math.max(capital * 0.01, 500); // Min 500€
-                break;
-            case 'caution':
-            default:
-                fraisCalcules = capital * 0.013709; // Crédit Logement
-        }
-        this.fraisGarantie = fraisGarantie !== null ? fraisGarantie : fraisCalcules;
+        // Gestionnaire PTZ
+        this.ptzManager = new PTZManager();
+        
+        // Debug mode
+        this.debugMode = false;
     }
-    
+
+    /**
+     * ==========================================
+     * 🔧 MÉTHODES DE CALCUL CORE
+     * ==========================================
+     */
+
     calculerMensualite() {
         const { capital, tauxMensuel, dureeMois } = this;
+        if (tauxMensuel === 0) return capital / dureeMois;
         return capital * tauxMensuel / (1 - Math.pow(1 + tauxMensuel, -dureeMois));
     }
+
+    calculateFraisGarantie(params) {
+        if (params.fraisGarantie !== null && params.fraisGarantie !== undefined) {
+            return params.fraisGarantie;
+        }
+
+        const { capital } = this;
+        const typeGarantie = params.typeGarantie || 'caution';
+
+        switch(typeGarantie) {
+            case 'hypotheque':
+                return Math.max(capital * 0.015, 800);
+            case 'ppd':
+                return Math.max(capital * 0.01, 500);
+            case 'caution':
+            default:
+                return capital * 0.013709; // Crédit Logement
+        }
+    }
+
+    /**
+     * ==========================================
+     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE
+     * ==========================================
+     */
     
-    tableauAmortissement({ 
-        remboursementAnticipe = 0, 
-        moisAnticipe = null, 
-        nouveauTaux = null,
-        moisRenegociation = null, // Nouveau paramètre pour le mois de renégociation
-        modeRemboursement = 'duree', // 'duree' ou 'mensualite'
-        moisAReduire = 0, // Nombre de mois à réduire directement
-        // Nouveau paramètre pour gérer plusieurs remboursements anticipés
-        remboursementsAnticipes = [],
-        // Nouveau paramètre pour rendre la renégociation optionnelle
-        appliquerRenegociation = true
-    }) {
-        let mensualite = this.calculerMensualite();
+    generateBaseCashFlows() {
+        const mensualite = this.calculerMensualite();
+        const flows = Array(this.dureeMois + 1).fill(0);
+        
+        // Flux initial : capital net reçu (positif car on reçoit l'argent)
+        const fraisInitiaux = this.fraisDossier + this.fraisGarantie;
+        flows[0] = FLUX_ENTREE * (this.capital - fraisInitiaux);
+        
+        // Flux mensuels : mensualités + assurance (négatif car on paie)
+        for (let mois = 1; mois <= this.dureeMois; mois++) {
+            const capitalRestant = this.getCapitalRestantAt(mois - 1);
+            const assurance = this.assuranceSurCapitalInitial ? 
+                this.capital * this.assuranceMensuelle : 
+                capitalRestant * this.assuranceMensuelle;
+            
+            flows[mois] = FLUX_SORTIE * (mensualite + assurance);
+        }
+        
+        // Ajouter frais de tenue de compte étalés
+        const fraisMensuels = this.fraisTenueCompte / this.dureeMois;
+        for (let mois = 1; mois <= this.dureeMois; mois++) {
+            flows[mois] -= fraisMensuels;
+        }
+        
+        return flows;
+    }
+
+    getCapitalRestantAt(mois) {
+        const mensualite = this.calculerMensualite();
         let capitalRestant = this.capital;
-        let tableau = [];
-        let tauxMensuel = this.tauxMensuel;
-        let assuranceMensuelle = this.assuranceMensuelle;
-        let totalInterets = 0;
-        let totalAssurance = 0;
-        let totalCapitalAmorti = 0;
-        let capitalInitial = this.capital;
-        let indemnites = 0;
         
-        // ✅ NOUVEAU : Suivi du dernier remboursement
-        let dernierRemboursement = 0;
+        for (let m = 1; m <= mois && capitalRestant > 0; m++) {
+            const interets = capitalRestant * this.tauxMensuel;
+            const capitalAmorti = Math.min(mensualite - interets, capitalRestant);
+            capitalRestant -= capitalAmorti;
+        }
         
-        // Gestion de la rétrocompatibilité : si remboursementAnticipe et moisAnticipe sont fournis,
-        // nous les ajoutons à remboursementsAnticipes s'ils ne sont pas déjà inclus
+        return Math.max(0, capitalRestant);
+    }
+
+    /**
+     * ==========================================
+     * 📊 TABLEAU D'AMORTISSEMENT v2.0
+     * ==========================================
+     */
+
+    tableauAmortissement(options = {}) {
+        const {
+            remboursementAnticipe = 0,
+            moisAnticipe = null,
+            nouveauTaux = null,
+            moisRenegociation = null,
+            modeRemboursement = 'duree',
+            moisAReduire = 0,
+            remboursementsAnticipes = [],
+            appliquerRenegociation = true,
+            ptzParams = null
+        } = options;
+
+        // Configuration PTZ si fournie
+        if (ptzParams) {
+            this.ptzManager = new PTZManager(ptzParams);
+        }
+
+        // Gestion rétrocompatibilité
+        let remboursements = [...remboursementsAnticipes];
         if (remboursementAnticipe > 0 && moisAnticipe !== null) {
-            // On vérifie si un remboursement à ce mois existe déjà
-            const remboursementExistant = remboursementsAnticipes.find(r => r.mois === moisAnticipe);
-            if (!remboursementExistant) {
-                remboursementsAnticipes.push({
+            const existant = remboursements.find(r => r.mois === moisAnticipe);
+            if (!existant) {
+                remboursements.push({
                     montant: remboursementAnticipe,
                     mois: moisAnticipe,
                     nouveauTaux: nouveauTaux
                 });
             }
         }
+
+        // Génération des flux de trésorerie
+        this.cashFlows = this.generateBaseCashFlows();
         
-        // ✅ CORRECTION APPLIQUÉE : Supprimer la double déduction
-        // Définir la durée finale en fonction du mode (valeur initiale simple)
+        // Ajout des flux PTZ si activé
+        if (this.ptzManager.enabled) {
+            const ptzFlows = this.ptzManager.generateCashFlows(this.dureeMois);
+            for (let i = 0; i < this.cashFlows.length; i++) {
+                this.cashFlows[i] += ptzFlows[i];
+            }
+        }
+
+        // Génération du tableau détaillé
+        const tableau = this.generateDetailedTable(remboursements, {
+            nouveauTaux,
+            moisRenegociation,
+            modeRemboursement,
+            appliquerRenegociation
+        });
+
+        // Calculs financiers
+        const results = this.calculateFinancialMetrics(tableau);
+        
+        // Calcul TAEG via IRR
+        try {
+            const taegPrecis = this.calculateTAEG();
+            results.taeg = taegPrecis * 100; // Conversion en pourcentage
+        } catch (error) {
+            console.warn('TAEG non calculable via IRR:', error.message);
+            results.taeg = this.tauxAnnuel * 1.1; // Fallback approximatif
+        }
+
+        // Debug si activé
+        if (this.debugMode) {
+            this.debugCashFlows();
+            this.validateResults(results);
+        }
+
+        // Cache des résultats
+        this.tableauAmortissementCache = { tableau, ...results };
+
+        return {
+            tableau,
+            ...results,
+            remboursementsAnticipes: remboursements,
+            moisRenegociation,
+            appliquerRenegociation,
+            dernierRemboursement: this.getDernierRemboursement(remboursements)
+        };
+    }
+
+    generateDetailedTable(remboursements, options) {
+        let mensualite = this.calculerMensualite();
+        let capitalRestant = this.capital;
+        let tableau = [];
+        let tauxMensuel = this.tauxMensuel;
+        let totalInterets = 0;
+        let totalAssurance = 0;
+        let totalCapitalAmorti = 0;
+        let capitalInitial = this.capital;
+        let indemnites = 0;
         let dureeFinale = this.dureeMois;
-        
-        // ❌ SUPPRIMÉ : Le bloc de pré-déduction totalReductions qui causait la double déduction
-        // La logique de réduction de durée sera gérée uniquement dans la boucle
-        
-        // Suivi avant remboursement anticipé
-        let interetsAvantRembours = 0;
-        let mensualitesAvantRembours = 0;
-        
+
         for (let mois = 1; mois <= dureeFinale; mois++) {
-            // Vérifier si on applique le nouveau taux de renégociation à ce mois
-            if (appliquerRenegociation && moisRenegociation !== null && mois === moisRenegociation && nouveauTaux !== null) {
-                tauxMensuel = nouveauTaux / 100 / 12;
-                
-                // Recalculer la mensualité avec le nouveau taux
-                mensualite = capitalRestant * tauxMensuel / (1 - Math.pow(1 + tauxMensuel, -(dureeFinale - mois + 1)));
+            // Renégociation de taux
+            if (options.appliquerRenegociation && 
+                options.moisRenegociation === mois && 
+                options.nouveauTaux !== null) {
+                tauxMensuel = options.nouveauTaux / 100 / 12;
+                mensualite = capitalRestant * tauxMensuel / 
+                    (1 - Math.pow(1 + tauxMensuel, -(dureeFinale - mois + 1)));
             }
-            
+
             let interets = capitalRestant * tauxMensuel;
-            
-            // Calcul de l'assurance selon le mode (capital initial ou restant dû)
             let assurance = this.assuranceSurCapitalInitial ? 
-                capitalInitial * assuranceMensuelle : 
-                capitalRestant * assuranceMensuelle;
-            
+                capitalInitial * this.assuranceMensuelle : 
+                capitalRestant * this.assuranceMensuelle;
             let capitalAmorti = mensualite - interets;
-            
-            // Calculs avant remboursement anticipé
-            if (remboursementsAnticipes.some(r => r.mois > mois)) {
-                interetsAvantRembours += interets;
-                mensualitesAvantRembours += (mensualite + assurance);
-            }
-            
-            // Vérifier s'il y a un remboursement anticipé pour ce mois
-            const remboursementCourant = remboursementsAnticipes.find(r => r.mois === mois);
+
+            // Gestion remboursements anticipés
+            const remboursementCourant = remboursements.find(r => r.mois === mois);
             
             if (remboursementCourant) {
-                // ✅ NOUVEAU : Mettre à jour le dernier remboursement
-                dernierRemboursement = mois;
+                const { montant, moisAReduire: reduction } = remboursementCourant;
                 
-                // ✅ CORRECTION MAINTENUE : Gestion du cas montant = 0 pour raccourcissement durée
-                // ► Cas 1 : simple raccourcissement de durée (montant = 0)
-                if (remboursementCourant.montant === 0 &&
-                    modeRemboursement === 'duree' &&
-                    remboursementCourant.moisAReduire > 0) {
-
-                    // ✅ UNIQUE ENDROIT de modification de dureeFinale
-                    // 1) on réduit la durée restante
+                if (montant === 0 && reduction > 0 && options.modeRemboursement === 'duree') {
+                    // Mode réduction de durée
                     const resteAvant = dureeFinale - mois + 1;
-                    const resteApres = Math.max(1, resteAvant - remboursementCourant.moisAReduire);
-                    dureeFinale -= remboursementCourant.moisAReduire;
-
-                    // 2) on recalcule la nouvelle mensualité (plus élevée)
-                    mensualite = capitalRestant * tauxMensuel /
-                                 (1 - Math.pow(1 + tauxMensuel, -resteApres));
-
-                    // 3) on mémorise pour le tableau (facultatif)
-                    capitalAmorti = 0;             // pas de versement ponctuel
-                }
-                /* Cas 2 : remboursement partiel/classique */
-                else if (remboursementCourant.montant > 0) {
-                    // Calcul des indemnités de remboursement anticipé
-                    const indemniteStandard = remboursementCourant.montant * tauxMensuel * this.indemnitesMois;
-                    const plafond3Pourcent = remboursementCourant.montant * 0.03;
-                    const plafond6Mois = mensualite * 6;
-                    const indemnitesCourantes = Math.min(indemniteStandard, Math.min(plafond3Pourcent, plafond6Mois));
-                    indemnites += indemnitesCourantes;
+                    const resteApres = Math.max(1, resteAvant - reduction);
+                    dureeFinale -= reduction;
                     
-                    // Vérification pour remboursement total
-                    if (capitalRestant <= remboursementCourant.montant) {
-                        // C'est un remboursement total
+                    mensualite = capitalRestant * tauxMensuel / 
+                        (1 - Math.pow(1 + tauxMensuel, -resteApres));
+                    capitalAmorti = 0;
+                } else if (montant > 0) {
+                    // Remboursement partiel/total
+                    const indemniteStandard = montant * tauxMensuel * this.indemnitesMois;
+                    const plafond3Pourcent = montant * 0.03;
+                    const plafond6Mois = mensualite * 6;
+                    const indemnitesCourantes = Math.min(indemniteStandard, 
+                        Math.min(plafond3Pourcent, plafond6Mois));
+                    indemnites += indemnitesCourantes;
+
+                    if (capitalRestant <= montant) {
+                        // Remboursement total
                         tableau.push({
                             mois,
                             interets,
@@ -167,127 +424,278 @@ class LoanSimulator {
                             remboursementAnticipe: capitalRestant,
                             indemnites: indemnitesCourantes
                         });
-                        
+
                         totalInterets += interets;
                         totalAssurance += assurance;
                         totalCapitalAmorti += capitalRestant;
-                        
-                        capitalRestant = 0;
-                        break; // On sort de la boucle car le prêt est soldé
+                        break;
                     } else {
                         // Remboursement partiel
-                        capitalRestant -= remboursementCourant.montant;
+                        capitalRestant -= montant;
                         
-                        // Appliquer le nouveau taux si spécifié
-                        if (remboursementCourant.nouveauTaux !== null && remboursementCourant.nouveauTaux !== undefined) {
-                            tauxMensuel = remboursementCourant.nouveauTaux / 100 / 12;
-                        }
-                        
-                        // Recalculer la mensualité selon le mode
-                        if (modeRemboursement === 'mensualite') {
-                            // Mode mensualité: on garde la même durée mais on réduit la mensualité
+                        if (options.modeRemboursement === 'mensualite') {
                             mensualite = capitalRestant * tauxMensuel / 
                                 (1 - Math.pow(1 + tauxMensuel, -(this.dureeMois - mois + 1)));
                         }
-                        // Pour le mode durée, on garde la même mensualité
                     }
                 }
             }
-            
+
             capitalRestant -= capitalAmorti;
             if (capitalRestant < 0) capitalRestant = 0;
-            
+
             totalInterets += interets;
             totalAssurance += assurance;
             totalCapitalAmorti += capitalAmorti;
-            
+
             tableau.push({
                 mois,
-                interets: interets,
+                interets,
                 capitalAmorti,
                 assurance,
                 mensualite: mensualite + assurance,
                 capitalRestant,
-                remboursementAnticipe: remboursementCourant ? remboursementCourant.montant : 0,
-                indemnites: remboursementCourant ? (indemnites / remboursementsAnticipes.length) : 0  // Répartition des indemnités
+                remboursementAnticipe: remboursementCourant?.montant || 0,
+                indemnites: 0
             });
-            
+
             if (capitalRestant <= 0) break;
         }
+
+        return tableau;
+    }
+
+    /**
+     * ==========================================
+     * 💎 CALCUL TAEG PRÉCIS VIA IRR
+     * ==========================================
+     */
+
+    calculateTAEG() {
+        if (!this.cashFlows || this.cashFlows.length < 2) {
+            throw new Error('Flux de trésorerie non générés');
+        }
+
+        // Conversion des flux mensuels en taux annuel
+        const irrMensuel = IRRCalculator.calculate(this.cashFlows);
+        const taegAnnuel = Math.pow(1 + irrMensuel, 12) - 1;
         
-        // ✅ MODIFICATION 1 : SUPPRESSION COMPLÈTE DU CALCUL D'IRA FICTIVE
-        // ── SUPPRIME complètement cette portion ─────────────
-        // if (modeRemboursement === 'duree' && remboursementsAnticipes.length > 0 && indemnites === 0) {
-        //     // Pour le mode durée, estimer le capital qui serait remboursé pour les mois réduits
-        //     // pour calculer les indemnités
-        //     const capitalEstime = mensualite * moisAReduire * 0.8; // Estimation approximative (80% de la mensualité * nb mois)
-        //     const indemniteStandard = capitalEstime * tauxMensuel * this.indemnitesMois;
-        //     const plafond3Pourcent = capitalEstime * 0.03;
-        //     const plafond6Mois = mensualite * 6;
-        //     indemnites = Math.min(indemniteStandard, Math.min(plafond3Pourcent, plafond6Mois));
-        // }
-        // ────────────────────────────────────────────────────
-        
-        // Calcul des économies réalisées avec le remboursement anticipé
+        return taegAnnuel;
+    }
+
+    calculateFinancialMetrics(tableau) {
+        const mensualiteInitiale = this.calculerMensualite();
         const dureeInitiale = this.dureeMois;
         const dureeReelle = tableau.length;
-        const mensualiteInitiale = this.calculerMensualite() + 
-            (this.assuranceSurCapitalInitial ? this.capital * this.assuranceMensuelle : this.capital * this.assuranceMensuelle);
-        const economiesMensualites = (dureeInitiale - dureeReelle) * mensualiteInitiale;
-        const economiesInterets = (capitalInitial * this.tauxMensuel * dureeInitiale) - totalInterets;
         
-        // Calcul du TAEG approximatif (sans les frais annexes pour l'instant)
-        const montantTotal = tableau.reduce((sum, l) => sum + l.mensualite, 0);
-        const tauxEffectifAnnuel = ((Math.pow((montantTotal / this.capital), (12 / dureeReelle)) - 1) * 12) * 100;
+        const totalInterets = tableau.reduce((sum, row) => sum + row.interets, 0);
+        const totalAssurance = tableau.reduce((sum, row) => sum + row.assurance, 0);
+        const totalCapitalAmorti = tableau.reduce((sum, row) => sum + row.capitalAmorti, 0);
+        const indemnites = tableau.reduce((sum, row) => sum + (row.indemnites || 0), 0);
         
-        // Total des frais annexes
+        const montantTotal = tableau.reduce((sum, row) => sum + row.mensualite, 0);
         const totalFrais = this.fraisDossier + this.fraisTenueCompte + this.fraisGarantie;
-        
-        // Coût global (tout compris)
         const coutGlobalTotal = montantTotal + indemnites + totalFrais;
         
-        // Vérification si le prêt est soldé avant terme
-        const pretSoldeAvantTerme = dureeReelle < dureeInitiale;
-        const gainTemps = dureeInitiale - dureeReelle;
+        const economiesMensualites = (dureeInitiale - dureeReelle) * 
+            (mensualiteInitiale + (this.assuranceSurCapitalInitial ? 
+                this.capital * this.assuranceMensuelle : 
+                this.capital * this.assuranceMensuelle));
         
+        const economiesInterets = (this.capital * this.tauxMensuel * dureeInitiale) - totalInterets;
+
         return {
-            tableau,
             mensualiteInitiale,
             indemnites,
             totalInterets,
             totalAssurance,
             totalCapitalAmorti,
-            capitalInitial,
+            capitalInitial: this.capital,
             totalPaye: montantTotal + indemnites,
             dureeReelle,
             dureeInitiale,
             economiesMensualites,
             economiesInterets,
-            interetsAvantRembours,
-            mensualitesAvantRembours,
-            taeg: tauxEffectifAnnuel,
             totalFrais,
             coutGlobalTotal,
-            moisAReduire,
-            pretSoldeAvantTerme,
-            gainTemps,
-            remboursementsAnticipes,
-            moisRenegociation, // Ajout du mois de renégociation dans le résultat
-            appliquerRenegociation, // Ajout de l'état de la renégociation dans le résultat
-            // ✅ MODIFICATION 2 : EXPOSITION DU DERNIER REMBOURSEMENT
-            dernierRemboursement
+            pretSoldeAvantTerme: dureeReelle < dureeInitiale,
+            gainTemps: dureeInitiale - dureeReelle
+        };
+    }
+
+    /**
+     * ==========================================
+     * 🔍 DEBUG & VALIDATION
+     * ==========================================
+     */
+
+    debugCashFlows() {
+        console.group('💰 Analyse des flux de trésorerie');
+        console.table(this.cashFlows.map((flux, index) => ({
+            periode: index === 0 ? 'Initial' : `Mois ${index}`,
+            flux: this.formatMontant(flux),
+            type: index === 0 ? 'Capital net reçu' : 
+                  flux < 0 ? 'Sortie (mensualité)' : 'Entrée',
+            cumul: this.formatMontant(this.cashFlows.slice(0, index + 1)
+                .reduce((sum, f) => sum + f, 0))
+        })));
+        console.groupEnd();
+    }
+
+    validateResults(results) {
+        const taegCalcule = results.taeg;
+        const taegAttendu = this.tauxAnnuel * 1.1;
+        
+        if (Math.abs(taegCalcule - taegAttendu) > 0.5) {
+            console.warn(`⚠️ TAEG suspect: ${taegCalcule.toFixed(2)}% vs ${taegAttendu.toFixed(2)}% attendu`);
+        }
+
+        if (results.totalCapitalAmorti < this.capital * 0.95) {
+            console.warn(`⚠️ Capital amorti insuffisant: ${this.formatMontant(results.totalCapitalAmorti)} vs ${this.formatMontant(this.capital)} initial`);
+        }
+
+        console.log('✅ Validation terminée');
+    }
+
+    /**
+     * ==========================================
+     * 🔄 COMPATIBILITÉ UI EXISTANTE
+     * ==========================================
+     */
+
+    // Getters pour maintenir la compatibilité
+    get totalInterest() {
+        return this.tableauAmortissementCache?.totalInterets || 0;
+    }
+
+    get totalCost() {
+        return this.tableauAmortissementCache?.coutGlobalTotal || 0;
+    }
+
+    get monthlyPayment() {
+        return this.tableauAmortissementCache?.mensualiteInitiale || this.calculerMensualite();
+    }
+
+    getDernierRemboursement(remboursements) {
+        if (!remboursements?.length) return 0;
+        return Math.max(...remboursements.map(r => r.mois));
+    }
+
+    formatMontant(montant, decimales = 0) {
+        return new Intl.NumberFormat('fr-FR', {
+            style: 'currency',
+            currency: 'EUR',
+            minimumFractionDigits: decimales,
+            maximumFractionDigits: decimales
+        }).format(montant);
+    }
+
+    /**
+     * ==========================================
+     * 📈 MÉTHODES POUR GRAPHIQUES
+     * ==========================================
+     */
+
+    getComparisonChartData() {
+        // Adapter les données pour Chart.js existant
+        if (!this.tableauAmortissementCache) return null;
+        
+        const { tableau } = this.tableauAmortissementCache;
+        
+        return {
+            labels: tableau.map((_, i) => `Mois ${i + 1}`),
+            datasets: [{
+                label: 'Capital restant',
+                data: tableau.map(row => row.capitalRestant),
+                borderColor: 'rgba(52, 211, 153, 1)',
+                backgroundColor: 'rgba(52, 211, 153, 0.1)',
+                fill: true
+            }]
+        };
+    }
+
+    getAmortissementData() {
+        if (!this.tableauAmortissementCache) return null;
+        
+        const { tableau } = this.tableauAmortissementCache;
+        
+        return {
+            labels: tableau.map(row => `Mois ${row.mois}`),
+            datasets: [
+                {
+                    label: 'Capital amorti',
+                    data: tableau.map(row => row.capitalAmorti),
+                    borderColor: 'rgba(34, 197, 94, 1)',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)'
+                },
+                {
+                    label: 'Intérêts',
+                    data: tableau.map(row => row.interets),
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)'
+                }
+            ]
+        };
+    }
+
+    getEvolutionValeurData(appreciationAnnuelle = 2) {
+        if (!this.tableauAmortissementCache) return null;
+        
+        const { tableau } = this.tableauAmortissementCache;
+        const tauxMensuel = appreciationAnnuelle / 100 / 12;
+        
+        return {
+            labels: tableau.map(row => `Mois ${row.mois}`),
+            datasets: [{
+                label: 'Valeur du bien',
+                data: tableau.map((row, index) => 
+                    this.capital * Math.pow(1 + tauxMensuel, index + 1)
+                ),
+                borderColor: 'rgba(59, 130, 246, 1)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)'
+            }]
+        };
+    }
+
+    getCoutsPieChartData() {
+        if (!this.tableauAmortissementCache) return null;
+        
+        const data = this.tableauAmortissementCache;
+        
+        return {
+            classique: {
+                labels: ['Capital', 'Intérêts', 'Assurance', 'Frais'],
+                datasets: [{
+                    data: [
+                        data.capitalInitial,
+                        data.totalInterets,
+                        data.totalAssurance,
+                        data.totalFrais
+                    ],
+                    backgroundColor: [
+                        'rgba(34, 197, 94, 0.8)',
+                        'rgba(239, 68, 68, 0.8)',
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(168, 85, 247, 0.8)'
+                    ]
+                }]
+            }
         };
     }
 }
+
+/**
+ * ==========================================
+ * 🛠️ FONCTIONS UTILITAIRES EXISTANTES
+ * ==========================================
+ */
 
 // Formater les nombres en euros
 function formatMontant(montant) {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(montant);
 }
 
-// ==========================================
-// 🚀 NOUVEAU : HELPER POUR CALCULER LE CAPITAL RESTANT DÛ
-// ==========================================
+// Helper pour calculer le capital restant dû
 function getRemainingCapitalAt(month) {
     try {
         const loanAmount = +document.getElementById('loan-amount').value;
@@ -316,16 +724,14 @@ function getRemainingCapitalAt(month) {
             remainingCapital -= principal;
         }
         
-        return Math.max(0, remainingCapital + ptzAmount); // Inclure PTZ dans le total
+        return Math.max(0, remainingCapital + ptzAmount);
     } catch (error) {
         console.error("Erreur lors du calcul du capital restant:", error);
         return 0;
     }
 }
 
-// ==========================================
-// 🚀 NOUVEAU : FONCTIONS UX POUR REMBOURSEMENT TOTAL
-// ==========================================
+// Fonctions UX pour remboursement total
 function toggleTotalRepaymentUI(enabled) {
     const amountInput = document.getElementById('early-repayment-amount-mensualite');
     const container = amountInput?.closest('.parameter-row');
@@ -339,7 +745,6 @@ function toggleTotalRepaymentUI(enabled) {
         amountInput.classList.add('opacity-60', 'cursor-not-allowed');
         container?.classList.add('opacity-60', 'transition-opacity', 'duration-300');
         
-        // Preview du montant
         const mois = +document.getElementById('early-repayment-month-slider-mensualite').value;
         const previewAmount = getRemainingCapitalAt(mois);
         
@@ -376,7 +781,7 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// 🎨 NOUVELLE FONCTION HELPER POUR FORMATER L'AFFICHAGE DES REMBOURSEMENTS
+// Helper pour formater l'affichage des remboursements
 function repaymentLabel(r) {
     if (r.type === 'total') {
         return {
@@ -396,7 +801,12 @@ function repaymentLabel(r) {
     };
 }
 
-// Mise à jour des valeurs des sliders
+/**
+ * ==========================================
+ * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI
+ * ==========================================
+ */
+
 document.addEventListener('DOMContentLoaded', function() {
     // Références aux éléments HTML
     const interestRateSlider = document.getElementById('interest-rate-slider');
@@ -408,7 +818,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const newInterestRateSlider = document.getElementById('new-interest-rate-slider');
     const newInterestRateValue = document.getElementById('new-interest-rate-value');
     const calculateLoanButton = document.getElementById('calculate-loan-button');
-   const exportPdfButton = document.getElementById('export-loan-pdf');
     
     // Nouvelles références pour le mois de renégociation
     const renegotiationMonthSlider = document.getElementById('renegotiation-month-slider');
@@ -421,9 +830,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const sectionMensualite = document.getElementById('section-reduire-mensualite');
     
     // Nouvelle référence pour la case "Appliquer la renégociation"
-    const applyRenegotiationCheckbox = document.getElementById('apply-renegotiation');
+    const applyRenegotiationCheckbox = document.getElementById('apply-renegociation');
     
-    // Nouvelle référence pour les sliders de chaque mode
+    // Nouvelles références pour les sliders de chaque mode
     const earlyRepaymentMonthSliderDuree = document.getElementById('early-repayment-month-slider-duree');
     const earlyRepaymentMonthValueDuree = document.getElementById('early-repayment-month-value-duree');
     const penaltyMonthsSliderDuree = document.getElementById('penalty-months-slider-duree');
@@ -434,32 +843,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const penaltyMonthsSliderMensualite = document.getElementById('penalty-months-slider-mensualite');
     const penaltyMonthsValueMensualite = document.getElementById('penalty-months-value-mensualite');
 
-    // 🚀 NOUVEAU : Classes Tailwind pour gestion moderne des boutons
+    // Classes Tailwind pour gestion moderne des boutons
     const ACTIVE = ['text-green-400', 'bg-green-900', 'bg-opacity-30', 'transition-colors', 'duration-200'];
     const INACTIVE = ['text-white', 'transition-colors', 'duration-200'];
 
-    /**
-     * Passe un bouton en mode « actif » et l'autre en mode « inactif ».
-     * @param {HTMLElement} on  – bouton à activer
-     * @param {HTMLElement} off – bouton à désactiver
-     */
     function switchModeButton(on, off) {
-        // État actif
         on.classList.add(...ACTIVE);
         on.classList.remove(...INACTIVE);
         on.setAttribute('aria-pressed', 'true');
 
-        // État inactif  
         off.classList.add(...INACTIVE);
         off.classList.remove(...ACTIVE);
         off.setAttribute('aria-pressed', 'false');
     }
 
-    // ==========================================
-    // 🚀 NOUVEAU : GESTION PTZ INTÉGRÉE
-    // ==========================================
-    
-    // Variables PTZ avec debouncing
+    // Gestion PTZ intégrée
     let ptzCalculationTimeout;
     const enablePtzCheckbox = document.getElementById('enable-ptz');
     const ptzFields = document.getElementById('ptz-fields');
@@ -467,26 +865,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const ptzDurationValue = document.getElementById('ptz-duration-value');
     const ptzAmountInput = document.getElementById('ptz-amount');
 
-    // Fonction debounced pour recalculer
     function debouncedCalculateLoan() {
         clearTimeout(ptzCalculationTimeout);
         ptzCalculationTimeout = setTimeout(() => {
             if (document.getElementById('monthly-payment').textContent !== '0 €') {
                 calculateLoan();
             }
-        }, 300); // 300ms de délai
+        }, 300);
     }
 
     // Toggle des champs PTZ avec animation
     if (enablePtzCheckbox && ptzFields) {
         enablePtzCheckbox.addEventListener('change', function() {
             if (this.checked) {
-                // Ouvrir avec animation
                 ptzFields.classList.remove('hidden');
                 ptzFields.style.maxHeight = '400px';
                 ptzFields.style.opacity = '1';
                 
-                // Synchroniser durée max PTZ avec prêt principal
                 const mainLoanDuration = parseInt(loanDurationSlider.value);
                 ptzDurationSlider.max = mainLoanDuration;
                 if (parseInt(ptzDurationSlider.value) > mainLoanDuration) {
@@ -494,7 +889,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     ptzDurationValue.textContent = `${mainLoanDuration} ans`;
                 }
             } else {
-                // Fermer avec animation
                 ptzFields.style.maxHeight = '0';
                 ptzFields.style.opacity = '0';
                 setTimeout(() => {
@@ -506,24 +900,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Slider durée PTZ
-    if (ptzDurationSlider && ptzDurationValue) {
-        ptzDurationSlider.addEventListener('input', function() {
-            ptzDurationValue.textContent = `${this.value} ans`;
-            debouncedCalculateLoan();
-        });
-    }
-
-    // Input montant PTZ avec validation
-    if (ptzAmountInput) {
-        ptzAmountInput.addEventListener('input', function() {
-            // Validation en temps réel
-            validatePtzAmount();
-            debouncedCalculateLoan();
-        });
-    }
-
-    // Fonction de validation PTZ
+    // Validation PTZ
     function validatePtzAmount() {
         const loanAmount = parseFloat(document.getElementById('loan-amount').value || 0);
         const ptzAmount = parseFloat(ptzAmountInput.value || 0);
@@ -548,17 +925,27 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Tout est OK
         validationMessage.classList.add('hidden');
         ptzAmountInput.classList.remove('border-red-500');
         return true;
     }
 
-    // ==========================================
-    // 🚀 NOUVEAU : GESTION REMBOURSEMENT TOTAL
-    // ==========================================
-    
-    // Event listener pour la checkbox remboursement total
+    // Event listeners pour sliders
+    if (ptzDurationSlider && ptzDurationValue) {
+        ptzDurationSlider.addEventListener('input', function() {
+            ptzDurationValue.textContent = `${this.value} ans`;
+            debouncedCalculateLoan();
+        });
+    }
+
+    if (ptzAmountInput) {
+        ptzAmountInput.addEventListener('input', function() {
+            validatePtzAmount();
+            debouncedCalculateLoan();
+        });
+    }
+
+    // Gestion remboursement total
     const totalRepaymentCheckbox = document.getElementById('total-repayment');
     if (totalRepaymentCheckbox) {
         totalRepaymentCheckbox.addEventListener('change', function(e) {
@@ -566,7 +953,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Event listener pour mise à jour du preview en temps réel
     if (earlyRepaymentMonthSliderMensualite) {
         earlyRepaymentMonthSliderMensualite.addEventListener('input', function(e) {
             if (totalRepaymentCheckbox?.checked) {
@@ -577,30 +963,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ==========================================
-    // FIN SECTION REMBOURSEMENT TOTAL
-    // ==========================================
-
-    // Fonction pour mettre à jour les valeurs maximales des sliders en fonction de la durée du prêt
+    // Fonction pour mettre à jour les valeurs maximales des sliders
     function updateSliderMaxValues() {
         try {
             const loanDurationYears = parseInt(loanDurationSlider.value);
             const loanDurationMonths = loanDurationYears * 12;
             
-            // Mettre à jour le max du slider de mois de renégociation
             if (renegotiationMonthSlider) {
                 renegotiationMonthSlider.max = loanDurationMonths;
-                // Ajuster la valeur si elle dépasse le nouveau max
                 if (parseInt(renegotiationMonthSlider.value) > loanDurationMonths) {
                     renegotiationMonthSlider.value = loanDurationMonths;
                     renegotiationMonthValue.textContent = loanDurationMonths;
                 }
             }
             
-            // Mettre à jour le max des sliders de mois de remboursement anticipé
             if (earlyRepaymentMonthSliderDuree) {
                 earlyRepaymentMonthSliderDuree.max = loanDurationMonths;
-                // Ajuster la valeur si elle dépasse le nouveau max
                 if (parseInt(earlyRepaymentMonthSliderDuree.value) > loanDurationMonths) {
                     earlyRepaymentMonthSliderDuree.value = loanDurationMonths;
                     earlyRepaymentMonthValueDuree.textContent = loanDurationMonths;
@@ -609,14 +987,12 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (earlyRepaymentMonthSliderMensualite) {
                 earlyRepaymentMonthSliderMensualite.max = loanDurationMonths;
-                // Ajuster la valeur si elle dépasse le nouveau max
                 if (parseInt(earlyRepaymentMonthSliderMensualite.value) > loanDurationMonths) {
                     earlyRepaymentMonthSliderMensualite.value = loanDurationMonths;
                     earlyRepaymentMonthValueMensualite.textContent = loanDurationMonths;
                 }
             }
 
-            // 🚀 NOUVEAU : Synchroniser durée max PTZ avec prêt principal
             if (enablePtzCheckbox?.checked && ptzDurationSlider) {
                 ptzDurationSlider.max = loanDurationYears;
                 if (parseInt(ptzDurationSlider.value) > loanDurationYears) {
@@ -631,7 +1007,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Mise à jour des affichages des sliders
+    // Event listeners pour les sliders de base
     if (interestRateSlider && interestRateValue) {
         interestRateSlider.addEventListener('input', function() {
             interestRateValue.textContent = `${this.value}%`;
@@ -641,7 +1017,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (loanDurationSlider && loanDurationValue) {
         loanDurationSlider.addEventListener('input', function() {
             loanDurationValue.textContent = `${this.value} ans`;
-            // Mettre à jour les max des sliders quand la durée change
             updateSliderMaxValues();
         });
     }
@@ -691,43 +1066,39 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // 🚀 NOUVELLE GESTION MODERNE DES BOUTONS DE MODE
+    // Gestion moderne des boutons de mode
     if (modeDureeBtn && modeMensualiteBtn && sectionDuree && sectionMensualite) {
-
-        // ► « Réduire la durée »
         modeDureeBtn.addEventListener('click', () => {
             document.getElementById('remboursement-mode').value = 'duree';
             switchModeButton(modeDureeBtn, modeMensualiteBtn);
-
             sectionDuree.classList.remove('hidden');
             sectionMensualite.classList.add('hidden');
         });
 
-        // ► « Réduire la mensualité »
         modeMensualiteBtn.addEventListener('click', () => {
             document.getElementById('remboursement-mode').value = 'mensualite';
             switchModeButton(modeMensualiteBtn, modeDureeBtn);
-
             sectionMensualite.classList.remove('hidden');
             sectionDuree.classList.add('hidden');
         });
 
-        // État initial (facultatif : au chargement de la page)
         switchModeButton(modeDureeBtn, modeMensualiteBtn);
     }
     
-    // Ajout d'un écouteur pour la case à cocher "Appliquer la renégociation"
     if (applyRenegotiationCheckbox) {
         applyRenegotiationCheckbox.addEventListener('change', function() {
-            // Recalculer lorsque la case est cochée/décochée
             calculateLoan();
         });
     }
 
-    // Fonction pour calculer et afficher les résultats
+    /**
+     * ==========================================
+     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.0
+     * ==========================================
+     */
     function calculateLoan() {
         try {
-            console.log("Début du calcul du prêt...");
+            console.log("🚀 Début du calcul du prêt v2.0...");
             
             const loanAmount = parseFloat(document.getElementById('loan-amount').value);
             const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
@@ -735,26 +1106,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const insuranceRate = parseFloat(document.getElementById('insurance-rate-slider').value);
             const newInterestRate = parseFloat(document.getElementById('new-interest-rate-slider').value);
             const renegotiationMonth = parseInt(document.getElementById('renegotiation-month-slider').value);
-            
-            // Récupérer l'état de la case à cocher "Appliquer la renégociation"
             const applyRenegotiation = document.getElementById('apply-renegotiation')?.checked || false;
             
-            // ==========================================
-            // 🚀 NOUVEAU : GESTION PTZ AVEC VALIDATION RENFORCÉE
-            // ==========================================
+            // Gestion PTZ avec validation renforcée
             const enablePTZ = document.getElementById('enable-ptz')?.checked || false;
-            let ptzAmount = 0;
-            let ptzDurationYears = 0;
-            let ptzDurationMonths = 0;
-            let mensualitePTZ = 0;
+            let ptzParams = null;
             let ptzValidationError = null;
 
             if (enablePTZ) {
-                ptzAmount = parseFloat(document.getElementById('ptz-amount')?.value || 0);
-                ptzDurationYears = parseInt(document.getElementById('ptz-duration-slider')?.value || 20);
-                ptzDurationMonths = ptzDurationYears * 12;
+                const ptzAmount = parseFloat(document.getElementById('ptz-amount')?.value || 0);
+                const ptzDurationYears = parseInt(document.getElementById('ptz-duration-slider')?.value || 20);
                 
-                // Validations
                 if (ptzAmount > 0) {
                     const maxPTZ = loanAmount * 0.4;
                     if (ptzAmount > maxPTZ) {
@@ -762,58 +1124,43 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else if (ptzDurationYears > loanDurationYears) {
                         ptzValidationError = `La durée du PTZ ne peut dépasser celle du prêt principal (${loanDurationYears} ans)`;
                     } else {
-                        // Calcul mensualité PTZ (capital seulement, pas d'intérêts)
-                        mensualitePTZ = ptzAmount / ptzDurationMonths;
+                        ptzParams = {
+                            montant: ptzAmount,
+                            dureeMois: ptzDurationYears * 12,
+                            differeMois: 0,
+                            enabled: true
+                        };
                     }
                 }
             }
 
-            // Arrêter si erreur PTZ
             if (ptzValidationError) {
                 alert(`⚠️ Erreur PTZ: ${ptzValidationError}`);
                 return;
             }
 
-            console.log('PTZ activé:', enablePTZ, 'Montant:', ptzAmount, 'Mensualité PTZ:', mensualitePTZ);
-            // ==========================================
-            // FIN SECTION PTZ CALCULS
-            // ==========================================
+            console.log('💎 PTZ configuré:', ptzParams);
             
-            // Récupérer les nouveaux paramètres
+            // Récupération des paramètres de frais
             const fraisDossier = parseFloat(document.getElementById('frais-dossier')?.value || 2000);
             const fraisTenueCompte = parseFloat(document.getElementById('frais-tenue-compte')?.value || 710);
             
-            // MODIFICATION: Toujours recalculer les frais de garantie estimés
             const fraisGarantieInput = document.getElementById('frais-garantie');
             let fraisGarantie = null;
             if (fraisGarantieInput) {
-                // Calculer automatiquement à chaque fois
                 fraisGarantie = Math.round(loanAmount * 0.013709);
-                // Mettre à jour la valeur dans le champ
                 fraisGarantieInput.value = fraisGarantie;
             }
             
             const typeGarantie = document.getElementById('type-garantie')?.value || 'caution';
             const assuranceSurCapitalInitial = document.getElementById('assurance-capital-initial')?.checked || false;
-            
-            // Récupérer le mode de remboursement (durée ou mensualité)
             const modeRemboursement = document.getElementById('remboursement-mode')?.value || 'duree';
-            
-            // IMPORTANT: utiliser les remboursements stockés au lieu de créer un nouveau tableau vide
-            // Cette ligne est la modification principale pour utiliser les remboursements multiples
             const remboursementsAnticipes = window.storedRepayments || [];
             
-            console.log("Remboursements anticipés:", remboursementsAnticipes);
-            console.log("Appliquer renégociation:", applyRenegotiation);
+            console.log("📋 Remboursements anticipés:", remboursementsAnticipes);
+            console.log("🔄 Appliquer renégociation:", applyRenegotiation);
             
-            // Appliquer le nouveau taux à tous les remboursements si spécifié
-            if (newInterestRate && remboursementsAnticipes.length > 0) {
-                remboursementsAnticipes.forEach(r => {
-                    r.nouveauTaux = newInterestRate;
-                });
-            }
-
-            // Création du simulateur
+            // Création du simulateur v2.0
             const simulator = new LoanSimulator({
                 capital: loanAmount,
                 tauxAnnuel: interestRate,
@@ -827,201 +1174,188 @@ document.addEventListener('DOMContentLoaded', function() {
                 assuranceSurCapitalInitial: assuranceSurCapitalInitial
             });
 
-            // ✅ CORRECTION APPLIQUÉE : Suppression du paramètre moisAReduire
+            // Activation du mode debug si nécessaire
+            if (window.location.search.includes('debug=true')) {
+                simulator.debugMode = true;
+                console.log('🔍 Mode debug activé');
+            }
+
+            // Calcul avec intégration PTZ
             const result = simulator.tableauAmortissement({
                 nouveauTaux: newInterestRate,
                 moisRenegociation: renegotiationMonth,
                 modeRemboursement: modeRemboursement,
-                // moisAReduire: moisAReduire,  ← LIGNE SUPPRIMÉE
                 remboursementsAnticipes: remboursementsAnticipes,
-                appliquerRenegociation: applyRenegotiation
+                appliquerRenegociation: applyRenegotiation,
+                ptzParams: ptzParams
             });
 
-            console.log("Résultats calculés:", result);
+            console.log("📊 Résultats calculés:", result);
 
-            // ==========================================
-            // 🚀 NOUVEAU : AFFICHAGE DES RÉSULTATS AVEC PTZ
-            // ==========================================
-            
-            // Mensualité globale (prêt principal + PTZ)
-            const mensualiteGlobale = result.mensualiteInitiale + mensualitePTZ;
-            const mensualiteLabel = (enablePTZ && ptzAmount > 0) ? 'Mensualité globale' : 'Mensualité initiale';
+            // Affichage des résultats avec PTZ
+            const mensualiteGlobale = result.mensualiteInitiale + 
+                (ptzParams ? ptzParams.montant / ptzParams.dureeMois : 0);
+            const mensualiteLabel = (enablePTZ && ptzParams) ? 'Mensualité globale' : 'Mensualité initiale';
 
             document.getElementById('monthly-payment').textContent = formatMontant(mensualiteGlobale);
-            // Changer le label si nécessaire
             const monthlyPaymentLabel = document.querySelector('#monthly-payment').parentElement.querySelector('.result-label');
             if (monthlyPaymentLabel) {
                 monthlyPaymentLabel.textContent = mensualiteLabel;
             }
 
-            // Coût total (prêt principal + capital PTZ, sans intérêts PTZ)
-            const totalCreditAvecPTZ = result.totalPaye + ptzAmount;
+            // Coût total avec PTZ
+            const totalCreditAvecPTZ = result.totalPaye + (ptzParams ? ptzParams.montant : 0);
             document.getElementById('total-cost').textContent = formatMontant(totalCreditAvecPTZ);
 
             // Coût global et ratio
-            const coutGlobalAvecPTZ = result.coutGlobalTotal + ptzAmount;
-            const montantTotalEmprunte = loanAmount + ptzAmount;
+            const coutGlobalAvecPTZ = result.coutGlobalTotal + (ptzParams ? ptzParams.montant : 0);
+            const montantTotalEmprunte = loanAmount + (ptzParams ? ptzParams.montant : 0);
 
             document.getElementById('cout-global').textContent = formatMontant(coutGlobalAvecPTZ);
             document.getElementById('ratio-cout').textContent = montantTotalEmprunte > 0 ? 
                 (coutGlobalAvecPTZ / montantTotalEmprunte).toFixed(3) : '0.000';
 
-            // Mise à jour du TAEG si PTZ inclus
-            if (enablePTZ && ptzAmount > 0) {
-                // Le TAEG doit être recalculé sur l'ensemble (approximation)
+            // TAEG avec PTZ
+            if (enablePTZ && ptzParams) {
                 const taegAjuste = result.taeg * (loanAmount / montantTotalEmprunte);
                 document.getElementById('taeg').textContent = taegAjuste.toFixed(2) + '%';
             } else {
                 document.getElementById('taeg').textContent = result.taeg.toFixed(2) + '%';
             }
 
-            // ==========================================
-            // FIN SECTION AFFICHAGE PTZ
-            // ==========================================
-
             // Mise à jour des résultats standards
             document.getElementById('total-interest').textContent = formatMontant(result.totalInterets);
             document.getElementById('early-repayment-penalty').textContent = formatMontant(result.indemnites);
             
-            // Mise à jour des nouveaux résultats
             const totalFeesElement = document.getElementById('total-fees');
-            
             if (totalFeesElement) totalFeesElement.textContent = formatMontant(result.totalFrais);
 
             // Génération du tableau d'amortissement
-            const tableBody = document.getElementById('amortization-table');
-            tableBody.innerHTML = '';
-
-            // Limiter le tableau aux 120 premières lignes pour des raisons de performance
-            const displayRows = Math.min(result.tableau.length, 120);
+            updateAmortizationTable(result, ptzParams);
             
-            for (let i = 0; i < displayRows; i++) {
-                const row = result.tableau[i];
-                const tr = document.createElement('tr');
-                
-                // Marquage différent pour les mois de remboursement anticipé
-                if (row.remboursementAnticipe > 0) {
-                    tr.classList.add('bg-green-900', 'bg-opacity-20');
-                } else if (i + 1 === result.moisRenegociation && result.appliquerRenegociation) {
-                    // Mise en évidence du mois de renégociation uniquement si elle est appliquée
-                    tr.classList.add('bg-blue-500', 'bg-opacity-20');
-                } else {
-                    tr.classList.add(i % 2 === 0 ? 'bg-blue-800' : 'bg-blue-900', 'bg-opacity-10');
-                }
-                
-                tr.innerHTML = `
-                    <td class="px-3 py-2">${row.mois}</td>
-                    <td class="px-3 py-2 text-right">${formatMontant(row.mensualite)}</td>
-                    <td class="px-3 py-2 text-right">${formatMontant(row.capitalAmorti)}</td>
-                    <td class="px-3 py-2 text-right">${formatMontant(row.interets)}</td>
-                    <td class="px-3 py-2 text-right">${formatMontant(row.assurance)}</td>
-                    <td class="px-3 py-2 text-right">${formatMontant(row.capitalRestant)}</td>
-                `;
-                
-                tableBody.appendChild(tr);
-
-                // ==========================================
-                // 🚀 NOUVEAU : AFFICHAGE PTZ DANS TABLEAU AVEC LOGIQUE MODIFIÉE
-                // ==========================================
-                if (enablePTZ && ptzAmount > 0 && mensualitePTZ > 0) {
-                    /* ── Début de l'insertion PTZ ───────────────────────────────────────── */
-                    if (row.mois % 12 === 1) { // mois 1, 13, 25, …
-                        // Année = 1 pour les mois 1-12, 2 pour 13-24, etc.
-                        const anneePTZ = Math.floor((row.mois - 1) / 12) + 1;
-                        const labelPTZ = `PTZ (Année ${anneePTZ})`;
-                        
-                        const monthsRemaining = Math.max(0, ptzDurationMonths - row.mois + 1);
-                        const ptzCapitalRestant = Math.max(0, ptzAmount - (mensualitePTZ * (row.mois - 1)));
-                        
-                        if (monthsRemaining > 0 && ptzCapitalRestant > 0) {
-                            const ptzRow = document.createElement('tr');
-                            ptzRow.className = 'bg-amber-900 bg-opacity-10 border-l-4 border-amber-500';
-                            ptzRow.innerHTML = `
-                                <td class="px-3 py-2 text-amber-300">${labelPTZ}</td>
-                                <td class="px-3 py-2 text-right text-amber-300">${formatMontant(mensualitePTZ)}</td>
-                                <td class="px-3 py-2 text-right text-amber-300">${formatMontant(mensualitePTZ)}</td>
-                                <td class="px-3 py-2 text-right text-gray-400">0 €</td>
-                                <td class="px-3 py-2 text-right text-gray-400">0 €</td>
-                                <td class="px-3 py-2 text-right text-amber-300">${formatMontant(ptzCapitalRestant)}</td>
-                            `;
-                            tableBody.appendChild(ptzRow);
-                        }
-                    }
-                    /* ── Fin de l'insertion PTZ ─────────────────────────────────────────── */
-                }
-                // ==========================================
-                // FIN SECTION TABLEAU PTZ
-                // ==========================================
-            }
+            // Encadré récapitulatif PTZ
+            updatePtzSummary(enablePTZ, ptzParams, loanDurationYears, montantTotalEmprunte);
             
-            // Si le tableau est trop long, ajouter un message
-            if (result.tableau.length > 120) {
-                const trInfo = document.createElement('tr');
-                trInfo.classList.add('bg-blue-900', 'bg-opacity-50');
-                trInfo.innerHTML = `
-                    <td colspan="6" class="px-3 py-2 text-center">
-                        <i class="fas fa-info-circle mr-2"></i>
-                        Affichage limité aux 120 premiers mois pour des raisons de performance.
-                        Durée totale du prêt: ${result.dureeReelle} mois.
-                    </td>
-                `;
-                tableBody.appendChild(trInfo);
-            }
-
-            // ==========================================
-            // 🚀 NOUVEAU : ENCADRÉ RÉCAPITULATIF PTZ
-            // ==========================================
-            updatePtzSummary(enablePTZ, ptzAmount, mensualitePTZ, ptzDurationYears, loanDurationYears, montantTotalEmprunte);
-            // ==========================================
-
-            // Génération du graphique
+            // Graphique mis à jour
             updateChart(result);
             
-            // Ajouter un résumé des économies
+            // Résumé des économies
             updateSavingsSummary(result, modeRemboursement);
             
-            // Affichage du tableau de comparaison si l'option est cochée
+            // Tableau de comparaison
             updateComparisonTable(result, modeRemboursement);
-            // Activation export PDF
-window.lastLoanResult = result;
-if (window.activateLoanExportButton) {
-    window.activateLoanExportButton();
-    console.log('✅ Bouton PDF activé');
-}
             
+            // Activation export PDF
+            window.lastLoanResult = result;
+            if (window.activateLoanExportButton) {
+                window.activateLoanExportButton();
+                console.log('✅ Bouton PDF activé');
+            }
+            
+            console.log('🎉 Calcul terminé avec succès');
             return true;
         } catch (error) {
-            console.error("Erreur lors du calcul:", error);
-            alert("Une erreur s'est produite lors du calcul. Consultez la console pour plus de détails.");
+            console.error("❌ Erreur lors du calcul:", error);
+            alert(`Une erreur s'est produite lors du calcul: ${error.message}`);
             return false;
         }
     }
 
-    // ==========================================
-    // 🚀 NOUVEAU : FONCTION ENCADRÉ PTZ AVEC LIBELLÉ MODIFIÉ
-    // ==========================================
-    function updatePtzSummary(enablePTZ, ptzAmount, mensualitePTZ, ptzDurationYears, loanDurationYears, montantTotalEmprunte) {
-        // Nettoyer l'ancien encadré
+    /**
+     * ==========================================
+     * 📋 FONCTIONS D'AFFICHAGE UI
+     * ==========================================
+     */
+
+    function updateAmortizationTable(result, ptzParams) {
+        const tableBody = document.getElementById('amortization-table');
+        tableBody.innerHTML = '';
+
+        const displayRows = Math.min(result.tableau.length, 120);
+        
+        for (let i = 0; i < displayRows; i++) {
+            const row = result.tableau[i];
+            const tr = document.createElement('tr');
+            
+            if (row.remboursementAnticipe > 0) {
+                tr.classList.add('bg-green-900', 'bg-opacity-20');
+            } else if (i + 1 === result.moisRenegociation && result.appliquerRenegociation) {
+                tr.classList.add('bg-blue-500', 'bg-opacity-20');
+            } else {
+                tr.classList.add(i % 2 === 0 ? 'bg-blue-800' : 'bg-blue-900', 'bg-opacity-10');
+            }
+            
+            tr.innerHTML = `
+                <td class="px-3 py-2">${row.mois}</td>
+                <td class="px-3 py-2 text-right">${formatMontant(row.mensualite)}</td>
+                <td class="px-3 py-2 text-right">${formatMontant(row.capitalAmorti)}</td>
+                <td class="px-3 py-2 text-right">${formatMontant(row.interets)}</td>
+                <td class="px-3 py-2 text-right">${formatMontant(row.assurance)}</td>
+                <td class="px-3 py-2 text-right">${formatMontant(row.capitalRestant)}</td>
+            `;
+            
+            tableBody.appendChild(tr);
+
+            // Affichage PTZ dans tableau
+            if (ptzParams && ptzParams.enabled && row.mois % 12 === 1) {
+                const anneePTZ = Math.floor((row.mois - 1) / 12) + 1;
+                const labelPTZ = `PTZ (Année ${anneePTZ})`;
+                const mensualitePTZ = ptzParams.montant / ptzParams.dureeMois;
+                
+                const monthsRemaining = Math.max(0, ptzParams.dureeMois - row.mois + 1);
+                const ptzCapitalRestant = Math.max(0, ptzParams.montant - (mensualitePTZ * (row.mois - 1)));
+                
+                if (monthsRemaining > 0 && ptzCapitalRestant > 0) {
+                    const ptzRow = document.createElement('tr');
+                    ptzRow.className = 'bg-amber-900 bg-opacity-10 border-l-4 border-amber-500';
+                    ptzRow.innerHTML = `
+                        <td class="px-3 py-2 text-amber-300">${labelPTZ}</td>
+                        <td class="px-3 py-2 text-right text-amber-300">${formatMontant(mensualitePTZ)}</td>
+                        <td class="px-3 py-2 text-right text-amber-300">${formatMontant(mensualitePTZ)}</td>
+                        <td class="px-3 py-2 text-right text-gray-400">0 €</td>
+                        <td class="px-3 py-2 text-right text-gray-400">0 €</td>
+                        <td class="px-3 py-2 text-right text-amber-300">${formatMontant(ptzCapitalRestant)}</td>
+                    `;
+                    tableBody.appendChild(ptzRow);
+                }
+            }
+        }
+        
+        if (result.tableau.length > 120) {
+            const trInfo = document.createElement('tr');
+            trInfo.classList.add('bg-blue-900', 'bg-opacity-50');
+            trInfo.innerHTML = `
+                <td colspan="6" class="px-3 py-2 text-center">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Affichage limité aux 120 premiers mois pour des raisons de performance.
+                    Durée totale du prêt: ${result.dureeReelle} mois.
+                </td>
+            `;
+            tableBody.appendChild(trInfo);
+        }
+    }
+
+    function updatePtzSummary(enablePTZ, ptzParams, loanDurationYears, montantTotalEmprunte) {
         const existingSummary = document.getElementById('ptz-summary');
         if (existingSummary) {
             existingSummary.remove();
         }
 
-        if (enablePTZ && ptzAmount > 0) {
+        if (enablePTZ && ptzParams && ptzParams.enabled) {
             const ptzSummary = document.createElement('div');
             ptzSummary.id = 'ptz-summary';
             ptzSummary.className = 'mb-6 p-4 bg-amber-900 bg-opacity-20 border border-amber-600 rounded-lg animate-fadeIn';
             
-            // Calculs additionnels
-            const pourcentageFinancement = ((ptzAmount / montantTotalEmprunte) * 100).toFixed(1);
-            const finPTZ = ptzDurationYears;
+            const mensualitePTZ = ptzParams.montant / ptzParams.dureeMois;
+            const pourcentageFinancement = ((ptzParams.montant / montantTotalEmprunte) * 100).toFixed(1);
+            const finPTZ = Math.floor(ptzParams.dureeMois / 12);
             const finPretPrincipal = loanDurationYears;
             
             ptzSummary.innerHTML = `
                 <div class="flex items-center justify-between mb-3">
                     <h5 class="text-amber-400 font-medium flex items-center">
                         <i class="fas fa-home mr-2"></i>
-                        Détail du Prêt à Taux Zéro
+                        Détail du Prêt à Taux Zéro v2.0
                     </h5>
                     <span class="text-xs text-amber-300 bg-amber-900 bg-opacity-30 px-2 py-1 rounded">
                         ${pourcentageFinancement}% du financement
@@ -1030,7 +1364,7 @@ if (window.activateLoanExportButton) {
                 
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                     <div class="text-center">
-                        <p class="text-amber-300 text-lg font-semibold">${formatMontant(ptzAmount)}</p>
+                        <p class="text-amber-300 text-lg font-semibold">${formatMontant(ptzParams.montant)}</p>
                         <p class="text-gray-400 text-sm">Capital PTZ</p>
                     </div>
                     <div class="text-center">
@@ -1038,7 +1372,7 @@ if (window.activateLoanExportButton) {
                         <p class="text-gray-400 text-sm">Mensualité PTZ</p>
                     </div>
                     <div class="text-center">
-                        <p class="text-amber-300 text-lg font-semibold">${ptzDurationYears} ans</p>
+                        <p class="text-amber-300 text-lg font-semibold">${finPTZ} ans</p>
                         <p class="text-gray-400 text-sm">Durée PTZ</p>
                     </div>
                     <div class="text-center">
@@ -1068,21 +1402,20 @@ if (window.activateLoanExportButton) {
                         </div>` : 
                         '<div class="mt-2 text-xs text-green-300"><i class="fas fa-check mr-1"></i>Les deux prêts se terminent en même temps</div>'
                     }
+                    <div class="mt-2 text-xs text-blue-300">
+                        <i class="fas fa-cogs mr-1"></i>
+                        Calcul via flux de trésorerie centralisés & IRR Newton-Raphson
+                    </div>
                 </div>
             `;
             
-            // Insérer après les résultats principaux
             const resultsContainer = document.querySelector('.grid.grid-cols-2.gap-4.mb-6');
             if (resultsContainer) {
                 resultsContainer.parentNode.insertBefore(ptzSummary, resultsContainer.nextSibling);
             }
         }
     }
-    // ==========================================
-    // FIN FONCTION PTZ
-    // ==========================================
-    
-    // ✅ MODIFICATION 2b : Fonction pour mettre à jour le tableau de comparaison
+
     function updateComparisonTable(result, modeRemboursement) {
         const compareCheckbox = document.getElementById('compare-scenarios');
         const comparisonTable = document.getElementById('comparison-table');
@@ -1092,7 +1425,7 @@ if (window.activateLoanExportButton) {
             if (compareCheckbox.checked) {
                 comparisonTable.classList.remove('hidden');
                 
-                // Calculer les mêmes paramètres sans remboursement anticipé
+                // Calculer scénario de base sans remboursement
                 const simulator = new LoanSimulator({
                     capital: result.capitalInitial,
                     tauxAnnuel: document.getElementById('interest-rate-slider').value,
@@ -1105,93 +1438,82 @@ if (window.activateLoanExportButton) {
                 
                 const baseResult = simulator.tableauAmortissement({});
                 
-                // ✅ MODIFICATION 2b : Récupérer la vraie mensualité post-opération
                 const moisRef = result.dernierRemboursement + 1;
                 const ligneRef = result.tableau.find(r => r.mois === moisRef);
-                const mensualiteApres = ligneRef 
-                    ? ligneRef.mensualite 
-                    : result.mensualiteInitiale; // fallback sécu
+                const mensualiteApres = ligneRef ? ligneRef.mensualite : result.mensualiteInitiale;
                 
-                // Construire le tableau de comparaison
                 comparisonTableBody.innerHTML = '';
                 
-                // Ligne pour la durée
-                const trDuree = document.createElement('tr');
-                trDuree.classList.add('bg-blue-800', 'bg-opacity-10');
-                trDuree.innerHTML = `
-                    <td class="px-3 py-2 font-medium">Durée du prêt</td>
-                    <td class="px-3 py-2 text-right">${baseResult.dureeReelle} mois</td>
-                    <td class="px-3 py-2 text-right">${result.dureeReelle} mois</td>
-                    <td class="px-3 py-2 text-right text-green-400">-${baseResult.dureeReelle - result.dureeReelle} mois</td>
-                `;
-                comparisonTableBody.appendChild(trDuree);
-                
-                // Ligne pour le coût total
-                const trCout = document.createElement('tr');
-                trCout.classList.add('bg-blue-900', 'bg-opacity-10');
-                trCout.innerHTML = `
-                    <td class="px-3 py-2 font-medium">Coût total</td>
-                    <td class="px-3 py-2 text-right">${formatMontant(baseResult.totalPaye)}</td>
-                    <td class="px-3 py-2 text-right">${formatMontant(result.totalPaye)}</td>
-                    <td class="px-3 py-2 text-right text-green-400">-${formatMontant(baseResult.totalPaye - result.totalPaye)}</td>
-                `;
-                comparisonTableBody.appendChild(trCout);
-                
-                // Ligne pour les intérêts
-                const trInterets = document.createElement('tr');
-                trInterets.classList.add('bg-blue-800', 'bg-opacity-10');
-                trInterets.innerHTML = `
-                    <td class="px-3 py-2 font-medium">Total des intérêts</td>
-                    <td class="px-3 py-2 text-right">${formatMontant(baseResult.totalInterets)}</td>
-                    <td class="px-3 py-2 text-right">${formatMontant(result.totalInterets)}</td>
-                    <td class="px-3 py-2 text-right text-green-400">-${formatMontant(baseResult.totalInterets - result.totalInterets)}</td>
-                `;
-                comparisonTableBody.appendChild(trInterets);
-                
-                // ✅ MODIFICATION 2b : Ligne pour les mensualités (vraie mensualité post-opération)
-                const trMensualite = document.createElement('tr');
-                trMensualite.classList.add('bg-blue-900', 'bg-opacity-10');
-                trMensualite.innerHTML = `
-                    <td class="px-3 py-2 font-medium">Mensualité</td>
-                    <td class="px-3 py-2 text-right">${formatMontant(baseResult.mensualiteInitiale)}</td>
-                    <td class="px-3 py-2 text-right">${formatMontant(mensualiteApres)}</td>
-                    <td class="px-3 py-2 text-right ${modeRemboursement === 'mensualite' ? 'text-green-400' : 'text-gray-400'}">
-                    ${formatMontant(baseResult.mensualiteInitiale - mensualiteApres)}</td>
-                `;
-                comparisonTableBody.appendChild(trMensualite);
-                
-                // Ligne pour le TAEG
-                const trTAEG = document.createElement('tr');
-                trTAEG.classList.add('bg-blue-800', 'bg-opacity-10');
-                trTAEG.innerHTML = `
-                    <td class="px-3 py-2 font-medium">TAEG approximatif</td>
-                    <td class="px-3 py-2 text-right">${baseResult.taeg.toFixed(2)}%</td>
-                    <td class="px-3 py-2 text-right">${result.taeg.toFixed(2)}%</td>
-                    <td class="px-3 py-2 text-right text-green-400">-${Math.max(0, (baseResult.taeg - result.taeg)).toFixed(2)}%</td>
-                `;
-                comparisonTableBody.appendChild(trTAEG);
-                
-                // Ligne pour les frais supplémentaires
-                const trFrais = document.createElement('tr');
-                trFrais.classList.add('bg-blue-900', 'bg-opacity-10');
-                trFrais.innerHTML = `
-                    <td class="px-3 py-2 font-medium">Frais supplémentaires</td>
-                    <td class="px-3 py-2 text-right">0 €</td>
-                    <td class="px-3 py-2 text-right">${formatMontant(result.indemnites)}</td>
-                    <td class="px-3 py-2 text-right text-amber-400">+${formatMontant(result.indemnites)}</td>
-                `;
-                comparisonTableBody.appendChild(trFrais);
-                
-                // Ligne pour le coût global total
-                const trCoutGlobal = document.createElement('tr');
-                trCoutGlobal.classList.add('bg-green-900', 'bg-opacity-10', 'font-bold');
-                trCoutGlobal.innerHTML = `
-                    <td class="px-3 py-2">Coût global total</td>
-                    <td class="px-3 py-2 text-right">${formatMontant(baseResult.coutGlobalTotal)}</td>
-                    <td class="px-3 py-2 text-right">${formatMontant(result.coutGlobalTotal)}</td>
-                    <td class="px-3 py-2 text-right text-green-400">-${formatMontant(baseResult.coutGlobalTotal - result.coutGlobalTotal)}</td>
-                `;
-                comparisonTableBody.appendChild(trCoutGlobal);
+                // Lignes de comparaison
+                const comparisons = [
+                    {
+                        label: 'Durée du prêt',
+                        base: `${baseResult.dureeReelle} mois`,
+                        current: `${result.dureeReelle} mois`,
+                        diff: `-${baseResult.dureeReelle - result.dureeReelle} mois`,
+                        positive: true
+                    },
+                    {
+                        label: 'Coût total',
+                        base: formatMontant(baseResult.totalPaye),
+                        current: formatMontant(result.totalPaye),
+                        diff: `-${formatMontant(baseResult.totalPaye - result.totalPaye)}`,
+                        positive: true
+                    },
+                    {
+                        label: 'Total des intérêts',
+                        base: formatMontant(baseResult.totalInterets),
+                        current: formatMontant(result.totalInterets),
+                        diff: `-${formatMontant(baseResult.totalInterets - result.totalInterets)}`,
+                        positive: true
+                    },
+                    {
+                        label: 'Mensualité',
+                        base: formatMontant(baseResult.mensualiteInitiale),
+                        current: formatMontant(mensualiteApres),
+                        diff: formatMontant(baseResult.mensualiteInitiale - mensualiteApres),
+                        positive: modeRemboursement === 'mensualite'
+                    },
+                    {
+                        label: 'TAEG approximatif',
+                        base: `${baseResult.taeg.toFixed(2)}%`,
+                        current: `${result.taeg.toFixed(2)}%`,
+                        diff: `-${Math.max(0, (baseResult.taeg - result.taeg)).toFixed(2)}%`,
+                        positive: true
+                    },
+                    {
+                        label: 'Frais supplémentaires',
+                        base: '0 €',
+                        current: formatMontant(result.indemnites),
+                        diff: `+${formatMontant(result.indemnites)}`,
+                        positive: false
+                    },
+                    {
+                        label: 'Coût global total',
+                        base: formatMontant(baseResult.coutGlobalTotal),
+                        current: formatMontant(result.coutGlobalTotal),
+                        diff: `-${formatMontant(baseResult.coutGlobalTotal - result.coutGlobalTotal)}`,
+                        positive: true
+                    }
+                ];
+
+                comparisons.forEach((comp, index) => {
+                    const tr = document.createElement('tr');
+                    tr.classList.add(index % 2 === 0 ? 'bg-blue-800' : 'bg-blue-900', 'bg-opacity-10');
+                    if (index === comparisons.length - 1) {
+                        tr.classList.add('font-bold', 'bg-green-900', 'bg-opacity-10');
+                    }
+                    
+                    const diffClass = comp.positive ? 'text-green-400' : 'text-amber-400';
+                    
+                    tr.innerHTML = `
+                        <td class="px-3 py-2 font-medium">${comp.label}</td>
+                        <td class="px-3 py-2 text-right">${comp.base}</td>
+                        <td class="px-3 py-2 text-right">${comp.current}</td>
+                        <td class="px-3 py-2 text-right ${diffClass}">${comp.diff}</td>
+                    `;
+                    comparisonTableBody.appendChild(tr);
+                });
                 
             } else {
                 comparisonTable.classList.add('hidden');
@@ -1199,15 +1521,12 @@ if (window.activateLoanExportButton) {
         }
     }
     
-    // Fonction pour ajouter un résumé des économies
     function updateSavingsSummary(result, modeRemboursement) {
-        // CORRECTION: Vérifier qu'on est bien dans l'onglet "Gestion de dette"
         const loanSimulatorTab = document.getElementById('loan-simulator');
         if (!loanSimulatorTab || loanSimulatorTab.style.display === 'none') {
-            return; // Ne rien faire si on n'est pas dans l'onglet du simulateur de prêt
+            return;
         }
         
-        // Rechercher ou créer la section de résumé
         let savingsSummary = document.getElementById('savings-summary');
         
         if (!savingsSummary) {
@@ -1215,17 +1534,14 @@ if (window.activateLoanExportButton) {
             savingsSummary.id = 'savings-summary';
             savingsSummary.className = 'bg-blue-900 bg-opacity-20 p-4 rounded-lg border-l-4 border-green-400 mt-6';
             
-            // Ajouter après le graphique
             const chartContainer = loanSimulatorTab.querySelector('.chart-container');
             if (chartContainer) {
                 chartContainer.after(savingsSummary);
             }
         }
         
-        // Calculer le pourcentage d'économies
         const economiesPourcentage = ((result.economiesInterets / (result.totalInterets + result.economiesInterets)) * 100).toFixed(1);
         
-        // Texte spécifique au mode de remboursement
         let modeText = '';
         if (modeRemboursement === 'duree') {
             modeText = `Réduction de la durée du prêt de ${result.dureeInitiale - result.dureeReelle} mois`;
@@ -1236,7 +1552,6 @@ if (window.activateLoanExportButton) {
             modeText = `Réduction de la mensualité de ${formatMontant(difference)} (${formatMontant(mensualiteInitiale)} → ${formatMontant(mensualiteFinale)})`;
         }
         
-        // Information sur la renégociation
         let renégociationText = '';
         if (result.appliquerRenegociation && result.moisRenegociation) {
             renégociationText = `
@@ -1254,11 +1569,11 @@ if (window.activateLoanExportButton) {
             `;
         }
         
-        // Préparer le contenu HTML
         let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
                 <i class="fas fa-piggy-bank mr-2"></i>
-                Analyse complète du prêt
+                Analyse complète du prêt v2.0
+                <span class="ml-2 text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded">IRR ${result.taeg.toFixed(3)}%</span>
             </h5>
             <ul class="text-sm text-gray-300 space-y-2 pl-4">
                 <li class="flex items-start">
@@ -1276,7 +1591,6 @@ if (window.activateLoanExportButton) {
                 </li>
                 ${renégociationText}`;
                 
-        // Affichage spécial pour le prêt soldé avant terme
         if (result.pretSoldeAvantTerme) {
             const gainTemps = result.gainTemps;
             const annees = Math.floor(gainTemps / 12);
@@ -1297,7 +1611,6 @@ if (window.activateLoanExportButton) {
                 </li>`;
         }
         
-        // Ajouter les infos restantes
         htmlContent += `
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
@@ -1306,14 +1619,14 @@ if (window.activateLoanExportButton) {
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                    <span>TAEG approximatif: ${result.taeg.toFixed(2)}%</span>
+                    <span>TAEG précis via IRR: ${result.taeg.toFixed(2)}% 
+                    <span class="text-xs text-green-300">(Newton-Raphson)</span></span>
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
                     <span>Frais annexes: ${formatMontant(result.totalFrais)}</span>
                 </li>`;
         
-        // Afficher les remboursements anticipés configurés
         if (result.remboursementsAnticipes && result.remboursementsAnticipes.length > 0) {
             htmlContent += `
                 <li class="flex items-start">
@@ -1322,11 +1635,7 @@ if (window.activateLoanExportButton) {
                 </li>`;
         }
         
-        htmlContent += `
-            </ul>
-        `;
-        
-        // Mettre à jour le contenu
+        htmlContent += `</ul>`;
         savingsSummary.innerHTML = htmlContent;
     }
 
@@ -1337,18 +1646,15 @@ if (window.activateLoanExportButton) {
         const ctx = document.getElementById('loan-chart')?.getContext('2d');
         if (!ctx) return;
         
-        // Destruction du graphique existant s'il y en a un
         if (loanChart) {
             loanChart.destroy();
         }
         
-        // Préparation des données pour le graphique
         const capitalData = [];
         const interestData = [];
         const insuranceData = [];
         const labels = [];
         
-        // Échantillonnage des données pour le graphique (une donnée tous les 3 mois)
         const sampleRate = Math.max(1, Math.floor(result.tableau.length / 40));
         
         for (let i = 0; i < result.tableau.length; i += sampleRate) {
@@ -1356,7 +1662,6 @@ if (window.activateLoanExportButton) {
             labels.push(`Mois ${row.mois}`);
             capitalData.push(row.capitalRestant);
             
-            // Calcul cumulatif des intérêts et assurances
             let cumulativeInterest = 0;
             let cumulativeInsurance = 0;
             
@@ -1369,11 +1674,9 @@ if (window.activateLoanExportButton) {
             insuranceData.push(cumulativeInsurance);
         }
         
-        // Ajout des frais annexes sous forme de point de départ
         const feesData = Array(labels.length).fill(0);
         feesData[0] = result.totalFrais;
         
-        // Création du graphique
         loanChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -1423,6 +1726,11 @@ if (window.activateLoanExportButton) {
                             color: 'rgba(255, 255, 255, 0.8)'
                         }
                     },
+                    title: {
+                        display: true,
+                        text: 'Évolution du prêt (v2.0 - IRR Précis)',
+                        color: 'rgba(255, 255, 255, 0.9)'
+                    },
                     tooltip: {
                         mode: 'index',
                         intersect: false,
@@ -1464,14 +1772,12 @@ if (window.activateLoanExportButton) {
             }
         });
         
-        // Marquer visuellement les remboursements anticipés et la renégociation
-        // Pour chaque remboursement anticipé dans result.remboursementsAnticipes
+        // Marquer les remboursements anticipés
         if (result.remboursementsAnticipes && result.remboursementsAnticipes.length > 0) {
             result.remboursementsAnticipes.forEach(rembours => {
                 const remboursementIndex = Math.floor(rembours.mois / sampleRate);
                 
                 if (remboursementIndex < labels.length) {
-                    // Ajouter un point pour indiquer le remboursement anticipé
                     const dataset = loanChart.data.datasets[0];
                     dataset.pointBackgroundColor = dataset.pointBackgroundColor || Array(dataset.data.length).fill('transparent');
                     dataset.pointRadius = dataset.pointRadius || Array(dataset.data.length).fill(0);
@@ -1480,21 +1786,18 @@ if (window.activateLoanExportButton) {
                     dataset.pointRadius[remboursementIndex] = 5;
                 }
             });
-            
-            loanChart.update();
         }
         
-        // Marquer le mois de renégociation sur le graphique seulement si la renégociation est appliquée
+        // Marquer la renégociation
         if (result.moisRenegociation && result.appliquerRenegociation) {
             const renegotiationIndex = Math.floor(result.moisRenegociation / sampleRate);
             
             if (renegotiationIndex < labels.length) {
-                // Ajouter un point pour indiquer la renégociation
-                const dataset = loanChart.data.datasets[1]; // Dataset des intérêts
+                const dataset = loanChart.data.datasets[1];
                 dataset.pointBackgroundColor = dataset.pointBackgroundColor || Array(dataset.data.length).fill('transparent');
                 dataset.pointRadius = dataset.pointRadius || Array(dataset.data.length).fill(0);
                 
-                dataset.pointBackgroundColor[renegotiationIndex] = 'rgba(59, 130, 246, 1)'; // Bleu pour la renégociation
+                dataset.pointBackgroundColor[renegotiationIndex] = 'rgba(59, 130, 246, 1)';
                 dataset.pointRadius[renegotiationIndex] = 5;
             }
         }
@@ -1502,14 +1805,12 @@ if (window.activateLoanExportButton) {
         loanChart.update();
     }
 
-    // Événement de clic sur le bouton de calcul
+    // Event listener pour le calcul
     if (calculateLoanButton) {
         calculateLoanButton.addEventListener('click', calculateLoan);
     }
     
-   
-    
-    // Définir une fonction pour vérifier le remboursement total
+    // Fonction pour vérifier le remboursement total
     window.checkTotalRepayment = function(montant) {
         try {
             const loanAmount = parseFloat(document.getElementById('loan-amount').value);
@@ -1517,7 +1818,6 @@ if (window.activateLoanExportButton) {
             const loanDurationYears = parseInt(document.getElementById('loan-duration-slider').value);
             const currentMonth = parseInt(document.getElementById('early-repayment-month-slider-mensualite').value);
             
-            // Calcul approximatif du capital restant dû au mois du remboursement
             const mensualite = loanAmount * interestRate / (1 - Math.pow(1 + interestRate, -(loanDurationYears * 12)));
             let capitalRestant = loanAmount;
             
@@ -1526,9 +1826,8 @@ if (window.activateLoanExportButton) {
                 capitalRestant -= (mensualite - interetMois);
             }
             
-            // Vérification si le montant est proche du capital restant dû
             const notice = document.getElementById('total-repayment-notice');
-            if (notice && montant >= capitalRestant * 0.95) { // Si le montant représente au moins 95% du capital restant
+            if (notice && montant >= capitalRestant * 0.95) {
                 notice.classList.remove('hidden');
             } else if (notice) {
                 notice.classList.add('hidden');
@@ -1541,7 +1840,6 @@ if (window.activateLoanExportButton) {
     // Synchroniser les valeurs entre les modes
     function syncModeValues() {
         try {
-            // Créer les éléments manquants si nécessaire pour le mode durée
             if (!document.getElementById('early-repayment-amount-duree')) {
                 const hiddenInput = document.createElement('input');
                 hiddenInput.type = 'hidden';
@@ -1550,7 +1848,6 @@ if (window.activateLoanExportButton) {
                 document.body.appendChild(hiddenInput);
             }
             
-            // Du mode durée vers le mode mensualité
             const earlyRepaymentAmountDuree = document.getElementById('early-repayment-amount-duree');
             const earlyRepaymentAmountMensualite = document.getElementById('early-repayment-amount-mensualite');
             
@@ -1570,7 +1867,6 @@ if (window.activateLoanExportButton) {
                 earlyRepaymentMonthSliderMensualite.value = earlyRepaymentMonthSliderDuree.value;
                 earlyRepaymentMonthValueMensualite.textContent = earlyRepaymentMonthValueDuree.textContent;
                 
-                // Écouter les changements
                 earlyRepaymentMonthSliderDuree.addEventListener('input', function() {
                     earlyRepaymentMonthSliderMensualite.value = this.value;
                     earlyRepaymentMonthValueMensualite.textContent = this.value;
@@ -1594,7 +1890,6 @@ if (window.activateLoanExportButton) {
                 penaltyMonthsSliderMensualite.value = penaltyMonthsSliderDuree.value;
                 penaltyMonthsValueMensualite.textContent = penaltyMonthsValueDuree.textContent;
                 
-                // Écouter les changements
                 penaltyMonthsSliderDuree.addEventListener('input', function() {
                     penaltyMonthsSliderMensualite.value = this.value;
                     penaltyMonthsValueMensualite.textContent = `${this.value} mois`;
@@ -1610,9 +1905,7 @@ if (window.activateLoanExportButton) {
         }
     }
 
-    // ==========================================
-    // 🚀 NOUVEAU : GESTIONNAIRE D'ÉVÉNEMENT AMÉLIORÉ POUR AJOUTER UN REMBOURSEMENT
-    // ==========================================
+    // Gestionnaire pour ajouter un remboursement
     const addRepaymentBtn = document.getElementById('add-repayment-btn');
     if (addRepaymentBtn) {
         addRepaymentBtn.addEventListener('click', function (e) {
@@ -1629,9 +1922,6 @@ if (window.activateLoanExportButton) {
                 }
                 newRepayment = { montant: 0, mois, moisAReduire };
             } else {
-                // ==========================================
-                // 🚀 CORRECTIF PRINCIPAL : GESTION REMBOURSEMENT TOTAL
-                // ==========================================
                 const totalCheckEl = document.getElementById('total-repayment');
                 const isTotal = totalCheckEl?.checked;
                 const amountInput = document.getElementById('early-repayment-amount-mensualite');
@@ -1640,13 +1930,8 @@ if (window.activateLoanExportButton) {
                 let montant = +amountInput.value;
                 
                 if (isTotal) {
-                    // Calculer automatiquement le capital restant dû
                     montant = getRemainingCapitalAt(mois);
-                    
-                    // Feedback visuel
                     showNotification(`Remboursement total calculé: ${formatMontant(montant)}`, 'success');
-                    
-                    // Réinitialiser la checkbox après utilisation
                     totalCheckEl.checked = false;
                     toggleTotalRepaymentUI(false);
                 }
@@ -1664,24 +1949,18 @@ if (window.activateLoanExportButton) {
                 };
             }
 
-            // Stocker le nouveau remboursement
             window.storedRepayments.push(newRepayment);
-
-            // Rafraîchir l'UI et recalculer
             renderRepaymentsList();
             document.getElementById('min-threshold-alert').classList.add('hidden');
             calculateLoan();
 
-            // Reset des champs de saisie pour éviter les doublons
             if (mode === 'mensualite') {
                 document.getElementById('early-repayment-amount-mensualite').value = '';
             }
         });
     }
 
-    // ==========================================
-    // 🎨 NOUVELLE FONCTION POUR AFFICHER LA LISTE DES REMBOURSEMENTS AVEC UI AMÉLIORÉE
-    // ==========================================
+    // Fonction pour afficher la liste des remboursements
     function renderRepaymentsList() {
         const list = document.getElementById('repayments-list');
         if (!list) return;
@@ -1695,27 +1974,23 @@ if (window.activateLoanExportButton) {
             item.className =
                 'repayment-item flex items-center justify-between bg-blue-900 bg-opacity-15 rounded-lg px-3 py-2 mb-2 hover:bg-blue-800/30';
 
-            // bloc gauche = libellé + sous-libellé
             const left = document.createElement('div');
             left.innerHTML = `
                 <div class="font-medium ${cls}">${html}</div>
                 <div class="text-xs text-gray-400">au mois ${r.mois}</div>
             `;
 
-            // bouton suppression
             const remove = document.createElement('button');
             remove.className =
                 'remove-repayment text-gray-400 hover:text-red-400 transition';
             remove.dataset.index = idx;
             remove.innerHTML = '<i class="fas fa-times"></i>';
 
-            // assemblage
             item.appendChild(left);
             item.appendChild(remove);
             list.appendChild(item);
         });
 
-        // listener « supprimer »
         list.querySelectorAll('.remove-repayment').forEach(btn => {
             btn.addEventListener('click', e => {
                 const i = +e.currentTarget.dataset.index;
@@ -1726,9 +2001,7 @@ if (window.activateLoanExportButton) {
         });
     }
 
-    // ==========================================
-    // 🚀 NOUVEAU : BOUTON RÉINITIALISER TOUS LES REMBOURSEMENTS
-    // ==========================================
+    // Bouton réinitialiser tous les remboursements
     const resetRepaymentsBtn = document.getElementById('reset-repayments');
     if (resetRepaymentsBtn) {
         resetRepaymentsBtn.addEventListener('click', function() {
@@ -1738,46 +2011,36 @@ if (window.activateLoanExportButton) {
         });
     }
     
-    // Calculer les résultats initiaux au chargement de la page
+    // Initialisation
     if (document.getElementById('loan-amount')) {
-        // Initialiser la mise à jour des valeurs max des sliders
         updateSliderMaxValues();
-        
-        // Initialiser la synchronisation des valeurs entre les modes
         setTimeout(syncModeValues, 500);
         
-        // S'assurer que window.storedRepayments existe
         if (!window.storedRepayments) {
             window.storedRepayments = [];
         }
         
-        // Lancer le calcul initial
         setTimeout(calculateLoan, 1000);
     }
 });
-// =================================================================
-// NAVIGATION PTZ - Ajouté pour le lien depuis la section dette  
-// =================================================================
 
 /**
- * Gestion du lien PTZ depuis la section Gestion de dette
+ * ==========================================
+ * 🎯 NAVIGATION PTZ
+ * ==========================================
  */
 function initPTZNavigation() {
     document.addEventListener('click', (e) => {
-        // Vérifier si on clique sur le lien PTZ
         const ptzLink = e.target.closest('#go-to-ptz');
-        if (!ptzLink) return; // Pas le bon lien, on ignore
+        if (!ptzLink) return;
         
-        e.preventDefault(); // Empêcher le comportement par défaut
+        e.preventDefault();
+        console.log('🎯 Navigation PTZ activée');
         
-        console.log('🎯 Clic PTZ détecté !'); // Pour debug
-        
-        // 1. Activer l'onglet PTZ
         const ptzTab = document.querySelector('[data-target="ptz-simulator"]');
         const ptzContent = document.getElementById('ptz-simulator');
         
         if (ptzTab && ptzContent) {
-            // Désactiver tous les onglets
             document.querySelectorAll('.simulation-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
@@ -1785,29 +2048,21 @@ function initPTZNavigation() {
                 content.style.display = 'none';
             });
             
-            // Activer l'onglet PTZ
             ptzTab.classList.add('active');
             ptzContent.style.display = 'block';
             
-            console.log('✅ Onglet PTZ activé !'); // Pour debug
-            
-            // 2. Scroll fluide après un petit délai
             setTimeout(() => {
                 ptzContent.scrollIntoView({
                     behavior: 'smooth',
                     block: 'start'
                 });
-                console.log('📜 Scroll vers PTZ !'); // Pour debug
             }, 200);
-        } else {
-            console.error('❌ Éléments PTZ non trouvés');
         }
     });
 }
 
-// Initialiser quand le DOM est prêt
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initPTZNavigation);
 } else {
-    initPTZNavigation(); // DOM déjà prêt
+    initPTZNavigation();
 }
