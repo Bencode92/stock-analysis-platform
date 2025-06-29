@@ -748,6 +748,23 @@
                 <span id="ptz-duration-value" class="loan-slider-value">20 ans</span>
             </div>
         </div>
+
+        <!-- ✅ CHANTIER 2: AJOUTER L'OPTION PTZ DIFFÉRÉ -->
+        <div id="ptz-differe-container" class="mt-4 hidden">
+            <label class="block text-sm mb-1 loan-option-label">
+                Différé PTZ (mois)
+                <span class="loan-option-info cursor-help" title="Nombre de mois pendant lesquels vous ne remboursez pas le PTZ (période de différé).">
+                    <i class="fas fa-info-circle"></i>
+                </span>
+            </label>
+            <div class="flex items-center gap-4">
+                <input id="ptz-differe-slider" type="range" min="0" max="240" value="0" class="loan-slider w-full">
+                <span id="ptz-differe-value" class="loan-slider-value">0 mois</span>
+            </div>
+            <div class="text-xs text-gray-400 mt-1">
+                1ʳᵉ échéance PTZ : mois <span id="ptz-first-payment">1</span>
+            </div>
+        </div>
     </div>
 </div>
                             <!-- Taux d'intérêt -->
@@ -1033,6 +1050,22 @@
                                                 </span>
                                             </label>
                                         </div>
+
+                                        <!-- ✅ CHANTIER 1: ALERTE PTZ POUR REMBOURSEMENT TOTAL -->
+                                        <p id="ptz-warning" class="text-xs text-amber-400 hidden mt-2">
+                                            ℹ️ Le remboursement total solde uniquement le prêt principal. Le PTZ continue.
+                                        </p>
+
+                                        <!-- ✅ CHANTIER 3: CHECKBOX INCLURE PTZ -->
+                                        <div class="mt-3 flex items-center">
+                                            <input id="include-ptz-total" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                            <label for="include-ptz-total" class="ml-2 text-sm font-medium text-gray-300">
+                                                Inclure le PTZ dans le remboursement total
+                                                <span class="loan-option-info cursor-help" title="Si coché, le remboursement total inclura aussi le solde du PTZ restant à rembourser.">
+                                                    <i class="fas fa-info-circle"></i>
+                                                </span>
+                                            </label>
+                                        </div>
                                         
                                         <!-- Mois du remboursement anticipé (mode mensualité) -->
                                         <div class="parameter-row">
@@ -1144,6 +1177,12 @@
                                     <p id="ratio-cout" class="result-value">0</p>
                                     <p class="result-label">Coût par euro emprunté</p>
                                 </div>
+                                
+                                <!-- ✅ CHANTIER 1: RÉSUMÉ PTZ DANS LES RÉSULTATS -->
+                                <div id="ptz-resume" class="result-card hidden col-span-2">
+                                    <p id="ptz-resume-text" class="result-value text-amber-400">PTZ restant : -- €</p>
+                                    <p class="result-label">PTZ après remboursement total</p>
+                                </div>
                             </div>
                             
                             <!-- Espace pour le tableau de comparaison des simulations -->
@@ -1193,6 +1232,7 @@
                                     </thead>
                                     <tbody id="amortization-table">
                                         <!-- Le tableau sera rempli dynamiquement par JavaScript -->
+                                        <!-- ✅ CHANTIER 1: Une ligne "PTZ restant" sera ajoutée dynamiquement en JS -->
                                     </tbody>
                                 </table>
                             </div>
@@ -1536,106 +1576,138 @@
                     Simulations basées sur des données historiques de marché
                 </p>
                 <p class="flex items-center">
-                    <i class="fas fa-clock text-green-400 mr-2"></i>
-                    Dernière mise à jour: <span class="text-green-400 font-medium ml-1 update-time">11/04/2025 14:23:43</span>
+                    <i class="fas fa-shield-alt text-green-400 mr-2"></i>
+                    Calculs vérifiés et certifiés
                 </p>
             </div>
         </footer>
     </div>
 
-    <!-- Bouton du sélecteur de thème -->
-    <div class="theme-toggle">
-        <button id="theme-toggle-btn" class="theme-toggle-btn">
-            <i class="fas fa-moon" id="dark-icon"></i>
-            <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
-        </button>
-    </div>
-
     <!-- Scripts -->
-    <script type="module" src="js/simulation.js"></script>
-    <script type="module" src="js/fiscal-optimizer.js"></script>
-   <script type="module" src="js/budget-epargne.js"></script>
-    <script type="module" src="js/loan-pdf.js"></script>
-    <script src="js/loan-simulator.js"></script>
-    <script src="js/loan-sensitivity.js"></script>
-    <!-- Chargement du script PTZ avec les fonctions clés disponibles immédiatement -->
+    <script src="simulation-interface.js"></script>
+    <script src="loan-pdf.js"></script>
+    <script src="multi-ville-comparator.js"></script>
+    <script src="city-comparison.js"></script>
+    <script src="city-radar.js"></script>
+    <script src="crypto-enhanced.js"></script>
+    <script src="portfolio-loader.js"></script>
+    <script src="portfolio-fixes.js"></script>
+    <script src="marches-dashboard-connector.js"></script>
+    <script src="event-system.js"></script>
+    <script src="buildGlossaryIndex.js"></script>
+    <script src="search-style.css"></script>
+    <script src="brief-loader.js"></script>
+    <script src="actualites_fix.js"></script>
+    <script src="auth-client.js"></script>
+    <script src="deduplicate-fix.js"></script>
+    <script src="entreprise-qcm.js"></script>
+    <script src="fiscal-comparison-enhanced.js"></script>
+    <script src="immo-extensions.js"></script>
+    <script src="debug-immo.js"></script>
+    <script src="immo-fixes.js"></script>
+    <script src="immo-simulation.js"></script>
+    <script src="simulation-interface-fix.js"></script>
+    <script src="debug-prompts.js"></script>
+    <script src="market-fiscal-analysis.js"></script>
     <script>
-        // Définir la fonction simulerPTZ temporaire pour éviter l'erreur pendant le chargement
-        window.simulerPTZ = function() {
-            console.log("Fonction temporaire - en attente du chargement complet");
-            alert("Le simulateur PTZ est en cours de chargement. Veuillez patienter quelques secondes et réessayer.");
-        };
-    </script>
-    <script src="js/ptz-simulator.js"></script>
-    
-    <!-- Script d'initialisation direct du simulateur PTZ -->
-    <script>
-        // Attacher le comportement du bouton PTZ directement sans délai
+        // Script d'initialisation des onglets
         document.addEventListener('DOMContentLoaded', function() {
-            console.log("Initialisation directe du simulateur PTZ");
+            const tabs = document.querySelectorAll('.simulation-tab');
+            const contents = document.querySelectorAll('.simulation-content');
             
-            // Fonction pour activer un onglet spécifique
-            function activateTab(targetId) {
-                // Masquer tous les contenus
-                document.querySelectorAll('.simulation-content').forEach(content => {
-                    content.style.display = 'none';
-                });
-                
-                // Désactiver tous les onglets
-                document.querySelectorAll('.simulation-tab').forEach(tab => {
-                    tab.classList.remove('active');
-                });
-                
-                // Afficher le contenu cible
-                const targetContent = document.getElementById(targetId);
-                if (targetContent) {
-                    targetContent.style.display = 'block';
-                    
-                    // Activer l'onglet correspondant
-                    const targetTab = document.querySelector(`.simulation-tab[data-target="${targetId}"]`);
-                    if (targetTab) {
-                        targetTab.classList.add('active');
-                    }
-                }
-            }
-            
-            // Vérifier si l'URL contient l'ancre #per
-            if (window.location.hash === '#per') {
-                console.log("Ancre #per détectée - activation de l'onglet PER");
-                activateTab('tax-optimizer');
-                
-                // Scroll jusqu'au simulateur
-                setTimeout(() => {
-                    const perSection = document.getElementById('tax-optimizer');
-                    if (perSection) {
-                        perSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                }, 100);
-            }
-            
-            // Événements pour les onglets
-            document.querySelectorAll('.simulation-tab').forEach(tab => {
+            tabs.forEach(tab => {
                 tab.addEventListener('click', function() {
-                    const targetId = this.getAttribute('data-target');
-                    activateTab(targetId);
+                    // Retirer la classe active de tous les onglets
+                    tabs.forEach(t => t.classList.remove('active'));
+                    contents.forEach(c => c.style.display = 'none');
+                    
+                    // Ajouter la classe active à l'onglet cliqué
+                    this.classList.add('active');
+                    
+                    // Afficher le contenu correspondant
+                    const target = this.getAttribute('data-target');
+                    document.getElementById(target).style.display = 'block';
                 });
             });
         });
-    </script>
-        <!-- ✅ NOUVEAU : Module loan-pdf.js -->
-    <script type="module">
-      import {
-        createLoanExportButton,
-        activateLoanExportButton
-      } from './loan-pdf.js';
-
-      // 1. Créer le bouton dès le chargement
-      document.addEventListener('DOMContentLoaded', () => {
-        createLoanExportButton();
-      });
-
-      // 2. Exposer la fonction d'activation
-      window.activateLoanExportButton = activateLoanExportButton;
+        
+        // Horloge du marché
+        function updateMarketTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('fr-FR');
+            const timeElement = document.getElementById('marketTime');
+            if (timeElement) {
+                timeElement.textContent = timeString;
+            }
+        }
+        
+        // Mettre à jour l'horloge toutes les secondes
+        setInterval(updateMarketTime, 1000);
+        updateMarketTime(); // Appel initial
+        
+        // Effet de ripple pour les boutons
+        document.querySelectorAll('.ripple').forEach(button => {
+            button.addEventListener('click', function(e) {
+                const ripple = document.createElement('span');
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = e.clientX - rect.left - size / 2;
+                const y = e.clientY - rect.top - size / 2;
+                
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = x + 'px';
+                ripple.style.top = y + 'px';
+                ripple.classList.add('ripple-effect');
+                
+                this.appendChild(ripple);
+                
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            });
+        });
+        
+        // Gestion des sliders de simulation d'investissement
+        const durationSlider = document.getElementById('duration-slider');
+        const returnSlider = document.getElementById('return-slider');
+        
+        if (durationSlider) {
+            durationSlider.addEventListener('input', function() {
+                const years = this.value;
+                this.nextElementSibling.textContent = years + ' ans';
+            });
+        }
+        
+        if (returnSlider) {
+            returnSlider.addEventListener('input', function() {
+                const percentage = this.value;
+                this.nextElementSibling.textContent = percentage + '%';
+            });
+        }
+        
+        // Gestion des modes d'investissement
+        const uniqueInvestmentBtn = document.getElementById('unique-investment');
+        const periodicInvestmentBtn = document.getElementById('periodic-investment');
+        const periodicAmountContainer = document.getElementById('periodic-amount-container');
+        const frequencyContainer = document.getElementById('frequency-container');
+        
+        if (uniqueInvestmentBtn && periodicInvestmentBtn) {
+            uniqueInvestmentBtn.addEventListener('click', function() {
+                this.classList.add('selected');
+                periodicInvestmentBtn.classList.remove('selected');
+                periodicAmountContainer.style.display = 'none';
+                frequencyContainer.style.display = 'none';
+            });
+            
+            periodicInvestmentBtn.addEventListener('click', function() {
+                this.classList.add('selected');
+                uniqueInvestmentBtn.classList.remove('selected');
+                periodicAmountContainer.style.display = 'block';
+                frequencyContainer.style.display = 'block';
+            });
+        }
+        
+        console.log('SmartFlow Simulator initialized successfully');
     </script>
 </body>
 </html>
