@@ -1,6 +1,6 @@
 /**
  * ============================================
- * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.1.3
+ * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.1.4
  * ============================================
  * 
  * Plan d'action implémenté :
@@ -13,6 +13,7 @@
  * 🔧 v2.1.1 : 3 retouches conformité Banque de France
  * 🔧 v2.1.2 : Fix TAEG -21% → multi-seeds + bissection
  * 🔧 v2.1.3 : Correction frais tenue compte affichage UI
+ * 🔧 v2.1.4 : Correction incohérences mensualité et TAEG
  * 
  * Architecture : Flux de trésorerie centralisés pour calculs financiers conformes
  */
@@ -177,7 +178,7 @@ class PTZManager {
 
 /**
  * ==========================================
- * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.1.3
+ * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.1.4
  * ==========================================
  */
 class LoanSimulator {
@@ -241,7 +242,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.1.3
+     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.1.4
      * ==========================================
      */
     
@@ -291,7 +292,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 📊 TABLEAU D'AMORTISSEMENT v2.1.3
+     * 📊 TABLEAU D'AMORTISSEMENT v2.1.4
      * ==========================================
      */
 
@@ -348,7 +349,7 @@ class LoanSimulator {
         // Calculs financiers
         const results = this.calculateFinancialMetrics(tableau);
         
-        // Calcul TAEG via IRR v2.1.3
+        // Calcul TAEG via IRR v2.1.4
         try {
             const taegPrecis = this.calculateTAEG();
             results.taeg = taegPrecis * 100; // Conversion en pourcentage
@@ -483,7 +484,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.1.3
+     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.1.4
      * ==========================================
      */
 
@@ -500,7 +501,7 @@ class LoanSimulator {
     }
 
     /**
-     * 🔧 v2.1.3: Calcul frais corrigé pour affichage UI correct
+     * 🔧 v2.1.4: Calcul frais corrigé et exposition assuranceInitiale
      */
     calculateFinancialMetrics(tableau) {
         const mensualiteInitiale = this.calculerMensualite();
@@ -532,8 +533,12 @@ class LoanSimulator {
         const economiesMensualites = (dureeInitiale - dureeReelle) * mensualiteInitialeTotale;
         const economiesInterets = (this.capital * this.tauxMensuel * dureeInitiale) - totalInterets;
 
+        // 🆕 v2.1.4: Exposition de l'assurance du 1er mois
+        const assuranceInitialeTableau = tableau[0]?.assurance || assuranceInitiale;
+
         return {
             mensualiteInitiale,
+            assuranceInitiale: assuranceInitialeTableau, // ← NEW (on la renvoie)
             indemnites,
             totalInterets,
             totalAssurance,
@@ -555,12 +560,12 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 🔍 DEBUG & VALIDATION v2.1.3
+     * 🔍 DEBUG & VALIDATION v2.1.4
      * ==========================================
      */
 
     debugCashFlows() {
-        console.group('💰 Analyse des flux de trésorerie (v2.1.3)');
+        console.group('💰 Analyse des flux de trésorerie (v2.1.4)');
         console.table(this.cashFlows.map((flux, index) => ({
             periode: index === 0 ? 'Initial' : `Mois ${index}`,
             flux: this.formatMontant(flux),
@@ -584,7 +589,7 @@ class LoanSimulator {
             console.warn(`⚠️ Capital amorti insuffisant: ${this.formatMontant(results.totalCapitalAmorti)} vs ${this.formatMontant(this.capital)} initial`);
         }
 
-        console.log('✅ Validation terminée (v2.1.3 - frais de tenue de compte UI corrigés)');
+        console.log('✅ Validation terminée (v2.1.4 - incohérences mensualité et TAEG corrigées)');
     }
 
     /**
@@ -1123,12 +1128,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.1.3
+     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.1.4
      * ==========================================
      */
     function calculateLoan() {
         try {
-            console.log("🚀 Début du calcul du prêt v2.1.3 (frais de tenue de compte UI corrigés)...");
+            console.log("🚀 Début du calcul du prêt v2.1.4 (incohérences mensualité et TAEG corrigées)...");
             
             const loanAmount = parseFloat(document.getElementById('loan-amount').value);
             const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
@@ -1190,7 +1195,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("📋 Remboursements anticipés:", remboursementsAnticipes);
             console.log("🔄 Appliquer renégociation:", applyRenegotiation);
             
-            // Création du simulateur v2.1.3
+            // Création du simulateur v2.1.4
             const simulator = new LoanSimulator({
                 capital: loanAmount,
                 tauxAnnuel: interestRate,
@@ -1222,10 +1227,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             console.log("📊 Résultats calculés:", result);
 
-            // Affichage des résultats avec PTZ
+            // 🆕 v2.1.4: Affichage des résultats avec assurance incluse
             const mensualiteGlobale = result.mensualiteInitiale + 
+                result.assuranceInitiale + // ← prime du 1er mois
                 (ptzParams ? ptzParams.montant / ptzParams.dureeMois : 0);
-            const mensualiteLabel = (enablePTZ && ptzParams) ? 'Mensualité globale' : 'Mensualité initiale';
+            
+            // 🆕 v2.1.4: Label plus explicite
+            const mensualiteLabel = 'Mensualité globale (crédit + assurance)';
 
             document.getElementById('monthly-payment').textContent = formatMontant(mensualiteGlobale);
             const monthlyPaymentLabel = document.querySelector('#monthly-payment').parentElement.querySelector('.result-label');
@@ -1245,15 +1253,10 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('ratio-cout').textContent = montantTotalEmprunte > 0 ? 
                 (coutGlobalAvecPTZ / montantTotalEmprunte).toFixed(3) : '0.000';
 
-            // TAEG avec PTZ
-            if (enablePTZ && ptzParams) {
-                const taegAjuste = result.taeg * (loanAmount / montantTotalEmprunte);
-                document.getElementById('taeg').textContent = taegAjuste.toFixed(2) + '%';
-            } else {
-                document.getElementById('taeg').textContent = result.taeg.toFixed(2) + '%';
-            }
+            // 🆕 v2.1.4: TAEG sans correction proportionnelle (IRR inclut déjà tout)
+            document.getElementById('taeg').textContent = result.taeg.toFixed(2) + '%';
 
-            // 🆕 v2.1.3: Mise à jour des frais annexes avec tenue de compte incluse
+            // 🆕 v2.1.4: Mise à jour des frais annexes avec tenue de compte incluse
             document.getElementById('total-interest').textContent = formatMontant(result.totalInterets);
             document.getElementById('early-repayment-penalty').textContent = formatMontant(result.indemnites);
             
@@ -1261,7 +1264,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (totalFeesElement) {
                 totalFeesElement.textContent = formatMontant(result.totalFraisAffiches); // ➜ 4 331 €
                 
-                // 🆕 v2.1.3: Mise à jour du label pour clarifier
+                // 🆕 v2.1.4: Mise à jour du label pour clarifier
                 const feesLabel = totalFeesElement.parentElement.querySelector('.result-label');
                 if (feesLabel) {
                     feesLabel.textContent = 'Frais annexes (dossier + garantie + tenue de compte)';
@@ -1290,7 +1293,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✅ Bouton PDF activé');
             }
             
-            console.log('🎉 Calcul terminé avec succès (v2.1.3 - frais de tenue de compte UI corrigés)');
+            console.log('🎉 Calcul terminé avec succès (v2.1.4 - incohérences mensualité et TAEG corrigées)');
             return true;
         } catch (error) {
             console.error("❌ Erreur lors du calcul:", error);
@@ -1323,9 +1326,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 tr.classList.add(i % 2 === 0 ? 'bg-blue-800' : 'bg-blue-900', 'bg-opacity-10');
             }
             
+            // 🆕 v2.1.4: Affichage mensualité + assurance dans le tableau
             tr.innerHTML = `
                 <td class="px-3 py-2">${row.mois}</td>
-                <td class="px-3 py-2 text-right">${formatMontant(row.mensualite)}</td>
+                <td class="px-3 py-2 text-right">
+                    ${formatMontant(row.mensualite + row.assurance)}
+                </td>
                 <td class="px-3 py-2 text-right">${formatMontant(row.capitalAmorti)}</td>
                 <td class="px-3 py-2 text-right">${formatMontant(row.interets)}</td>
                 <td class="px-3 py-2 text-right">${formatMontant(row.assurance)}</td>
@@ -1393,7 +1399,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="flex items-center justify-between mb-3">
                     <h5 class="text-amber-400 font-medium flex items-center">
                         <i class="fas fa-home mr-2"></i>
-                        Détail du Prêt à Taux Zéro v2.1.3
+                        Détail du Prêt à Taux Zéro v2.1.4
                     </h5>
                     <span class="text-xs text-amber-300 bg-amber-900 bg-opacity-30 px-2 py-1 rounded">
                         ${pourcentageFinancement}% du financement
@@ -1442,7 +1448,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     <div class="mt-2 text-xs text-blue-300">
                         <i class="fas fa-cogs mr-1"></i>
-                        Calcul TAEG v2.1.3 : frais de tenue de compte UI corrigés
+                        Calcul TAEG v2.1.4 : incohérences mensualité et TAEG corrigées
                     </div>
                 </div>
             `;
@@ -1513,7 +1519,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         positive: modeRemboursement === 'mensualite'
                     },
                     {
-                        label: 'TAEG v2.1.3 UI Corrigé',
+                        label: 'TAEG v2.1.4 Corrigé',
                         base: `${baseResult.taeg.toFixed(2)}%`,
                         current: `${result.taeg.toFixed(2)}%`,
                         diff: `-${Math.max(0, (baseResult.taeg - result.taeg)).toFixed(2)}%`,
@@ -1610,7 +1616,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
                 <i class="fas fa-piggy-bank mr-2"></i>
-                Analyse complète du prêt v2.1.3
+                Analyse complète du prêt v2.1.4
                 <span class="ml-2 text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded">IRR ${result.taeg.toFixed(3)}%</span>
             </h5>
             <ul class="text-sm text-gray-300 space-y-2 pl-4">
@@ -1657,8 +1663,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                    <span>TAEG précis via IRR v2.1.3: ${result.taeg.toFixed(2)}% 
-                    <span class="text-xs text-green-300">(frais tenue compte UI corrigés)</span></span>
+                    <span>TAEG précis via IRR v2.1.4: ${result.taeg.toFixed(2)}% 
+                    <span class="text-xs text-green-300">(incohérences corrigées)</span></span>
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
@@ -1714,7 +1720,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         const feesData = Array(labels.length).fill(0);
-        feesData[0] = result.totalFraisAffiches; // 🆕 v2.1.3: utilise totalFraisAffiches
+        feesData[0] = result.totalFraisAffiches; // 🆕 v2.1.4: utilise totalFraisAffiches
         
         loanChart = new Chart(ctx, {
             type: 'line',
@@ -1767,7 +1773,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     title: {
                         display: true,
-                        text: 'Évolution du prêt (v2.1.3 - frais tenue compte UI corrigés)',
+                        text: 'Évolution du prêt (v2.1.4 - incohérences mensualité et TAEG corrigées)',
                         color: 'rgba(255, 255, 255, 0.9)'
                     },
                     tooltip: {
