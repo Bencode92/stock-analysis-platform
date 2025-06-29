@@ -1,6 +1,6 @@
 /**
  * ============================================
- * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.2.1
+ * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.2.2
  * ============================================
  * 
  * Plan d'action implémenté :
@@ -17,6 +17,7 @@
  * 🔧 v2.1.5 : Correction coût global total - inclusion tenue de compte
  * 🚀 v2.2.0 : Amélioration renégociation avec bascule mensualité claire
  * 🔧 v2.2.1 : Fix affichage dual mensualité initiale/renégociée
+ * 🔧 v2.2.2 : Fix case "Remboursement total" universelle (durée + mensualité)
  * 
  * Architecture : Flux de trésorerie centralisés pour calculs financiers conformes
  */
@@ -181,7 +182,7 @@ class PTZManager {
 
 /**
  * ==========================================
- * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.2.1
+ * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.2.2
  * ==========================================
  */
 class LoanSimulator {
@@ -245,7 +246,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.2.1
+     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.2.2
      * ==========================================
      */
     
@@ -295,7 +296,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 📊 TABLEAU D'AMORTISSEMENT v2.2.1
+     * 📊 TABLEAU D'AMORTISSEMENT v2.2.2
      * ==========================================
      */
 
@@ -374,7 +375,7 @@ class LoanSimulator {
             mensualiteApresRenego
         });
         
-        // Calcul TAEG via IRR v2.2.1
+        // Calcul TAEG via IRR v2.2.2
         try {
             const taegPrecis = this.calculateTAEG();
             results.taeg = taegPrecis * 100; // Conversion en pourcentage
@@ -537,7 +538,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.2.1
+     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.2.2
      * ==========================================
      */
 
@@ -554,7 +555,7 @@ class LoanSimulator {
     }
 
     /**
-     * 🔧 v2.2.1: Calcul financier avec économie exacte d'intérêts
+     * 🔧 v2.2.2: Calcul financier avec économie exacte d'intérêts
      */
     calculateFinancialMetrics(tableau, extra = {}) {
         const mensualiteInitiale = this.calculerMensualite();
@@ -621,12 +622,12 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 🔍 DEBUG & VALIDATION v2.2.1
+     * 🔍 DEBUG & VALIDATION v2.2.2
      * ==========================================
      */
 
     debugCashFlows() {
-        console.group('💰 Analyse des flux de trésorerie (v2.2.1)');
+        console.group('💰 Analyse des flux de trésorerie (v2.2.2)');
         console.table(this.cashFlows.map((flux, index) => ({
             periode: index === 0 ? 'Initial' : `Mois ${index}`,
             flux: this.formatMontant(flux),
@@ -650,7 +651,7 @@ class LoanSimulator {
             console.warn(`⚠️ Capital amorti insuffisant: ${this.formatMontant(results.totalCapitalAmorti)} vs ${this.formatMontant(this.capital)} initial`);
         }
 
-        console.log('✅ Validation terminée (v2.2.1 - dual mensualité display system)');
+        console.log('✅ Validation terminée (v2.2.2 - universal total repayment checkbox)');
     }
 
     /**
@@ -899,7 +900,7 @@ function repaymentLabel(r) {
 
 /**
  * ==========================================
- * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.2.1
+ * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.2.2
  * ==========================================
  */
 
@@ -1189,12 +1190,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.2.1
+     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.2.2
      * ==========================================
      */
     function calculateLoan() {
         try {
-            console.log("🚀 Début du calcul du prêt v2.2.1 (dual mensualité display system)...");
+            console.log("🚀 Début du calcul du prêt v2.2.2 (universal total repayment checkbox)...");
             
             const loanAmount = parseFloat(document.getElementById('loan-amount').value);
             const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
@@ -1202,7 +1203,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const insuranceRate = parseFloat(document.getElementById('insurance-rate-slider').value);
             const newInterestRate = parseFloat(document.getElementById('new-interest-rate-slider').value);
             const renegotiationMonth = parseInt(document.getElementById('renegotiation-month-slider').value);
-            const applyRenegotiation = document.getElementById('apply-renegotiation')?.checked || false;
+            const applyRenegotiation = document.getElementById('apply-renegociation')?.checked || false;
             
             // Gestion PTZ avec validation renforcée
             const enablePTZ = document.getElementById('enable-ptz')?.checked || false;
@@ -1256,7 +1257,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("📋 Remboursements anticipés:", remboursementsAnticipes);
             console.log("🔄 Appliquer renégociation:", applyRenegotiation);
             
-            // Création du simulateur v2.2.1
+            // Création du simulateur v2.2.2
             const simulator = new LoanSimulator({
                 capital: loanAmount,
                 tauxAnnuel: interestRate,
@@ -1327,10 +1328,10 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('ratio-cout').textContent = montantTotalEmprunte > 0 ? 
                 (coutGlobalAvecPTZ / montantTotalEmprunte).toFixed(3) : '0.000';
 
-            // 🆕 v2.2.1: TAEG sans correction proportionnelle (IRR inclut déjà tout)
+            // 🆕 v2.2.2: TAEG sans correction proportionnelle (IRR inclut déjà tout)
             document.getElementById('taeg').textContent = result.taeg.toFixed(2) + '%';
 
-            // 🆕 v2.2.1: Mise à jour des frais annexes avec tenue de compte incluse
+            // 🆕 v2.2.2: Mise à jour des frais annexes avec tenue de compte incluse
             document.getElementById('total-interest').textContent = formatMontant(result.totalInterets);
             document.getElementById('early-repayment-penalty').textContent = formatMontant(result.indemnites);
             
@@ -1338,7 +1339,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (totalFeesElement) {
                 totalFeesElement.textContent = formatMontant(result.totalFraisAffiches); // ➜ 4 355 €
                 
-                // 🆕 v2.2.1: Mise à jour du label pour clarifier
+                // 🆕 v2.2.2: Mise à jour du label pour clarifier
                 const feesLabel = totalFeesElement.parentElement.querySelector('.result-label');
                 if (feesLabel) {
                     feesLabel.textContent = 'Frais annexes (dossier + garantie + tenue de compte)';
@@ -1367,7 +1368,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✅ Bouton PDF activé');
             }
             
-            console.log('🎉 Calcul terminé avec succès (v2.2.1 - dual mensualité display system)');
+            console.log('🎉 Calcul terminé avec succès (v2.2.2 - universal total repayment checkbox)');
             return true;
         } catch (error) {
             console.error("❌ Erreur lors du calcul:", error);
@@ -1378,7 +1379,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 🆕 v2.2.1: NOUVELLE FONCTION D'AFFICHAGE DUAL MENSUALITÉ
+     * 🆕 v2.2.2: NOUVELLE FONCTION D'AFFICHAGE DUAL MENSUALITÉ
      * ==========================================
      */
     function updateMensualiteDisplay(mensualiteBase, mensualiteRenego, applyRenegotiation, renegotiationMonth) {
@@ -1426,7 +1427,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 📋 FONCTIONS D'AFFICHAGE UI v2.2.1
+     * 📋 FONCTIONS D'AFFICHAGE UI v2.2.2
      * ==========================================
      */
 
@@ -1448,7 +1449,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 tr.classList.add(i % 2 === 0 ? 'bg-blue-800' : 'bg-blue-900', 'bg-opacity-10');
             }
             
-            // 🆕 v2.2.1: Affichage mensualiteGlobale (corrige le problème de double assurance)
+            // 🆕 v2.2.2: Affichage mensualiteGlobale (corrige le problème de double assurance)
             tr.innerHTML = `
                 <td class="px-3 py-2">${row.mois}</td>
                 <td class="px-3 py-2 text-right">
@@ -1521,7 +1522,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="flex items-center justify-between mb-3">
                     <h5 class="text-amber-400 font-medium flex items-center">
                         <i class="fas fa-home mr-2"></i>
-                        Détail du Prêt à Taux Zéro v2.2.1
+                        Détail du Prêt à Taux Zéro v2.2.2
                     </h5>
                     <span class="text-xs text-amber-300 bg-amber-900 bg-opacity-30 px-2 py-1 rounded">
                         ${pourcentageFinancement}% du financement
@@ -1570,7 +1571,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     <div class="mt-2 text-xs text-blue-300">
                         <i class="fas fa-cogs mr-1"></i>
-                        Calcul TAEG v2.2.1 : dual mensualité display system
+                        Calcul TAEG v2.2.2 : universal total repayment checkbox
                     </div>
                 </div>
             `;
@@ -1610,7 +1611,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 comparisonTableBody.innerHTML = '';
                 
-                // 🆕 v2.2.1: Comparaisons incluant la renégociation
+                // 🆕 v2.2.2: Comparaisons incluant la renégociation
                 const comparisons = [
                     {
                         label: 'Durée du prêt',
@@ -1641,7 +1642,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         positive: modeRemboursement === 'mensualite'
                     },
                     {
-                        label: 'TAEG v2.2.1 Corrigé',
+                        label: 'TAEG v2.2.2 Corrigé',
                         base: `${baseResult.taeg.toFixed(2)}%`,
                         current: `${result.taeg.toFixed(2)}%`,
                         diff: `-${Math.max(0, (baseResult.taeg - result.taeg)).toFixed(2)}%`,
@@ -1663,7 +1664,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 ];
 
-                // 🆕 v2.2.1: Ajout ligne renégociation si applicable
+                // 🆕 v2.2.2: Ajout ligne renégociation si applicable
                 if (result.mensualiteAvantRenego && result.mensualiteApresRenego) {
                     comparisons.splice(4, 0, {
                         label: `Diff. mensualité à M${result.moisRenegociation}`,
@@ -1717,7 +1718,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // 🆕 v2.2.1: Utilisation économie exacte d'intérêts
+        // 🆕 v2.2.2: Utilisation économie exacte d'intérêts
         const economiesPourcentage = result.economieInteretsExact > 0 ? 
             ((result.economieInteretsExact / (result.totalInterets + result.economieInteretsExact)) * 100).toFixed(1) :
             ((result.economiesInterets / (result.totalInterets + result.economiesInterets)) * 100).toFixed(1);
@@ -1741,7 +1742,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>
             `;
             
-            // 🆕 v2.2.1: Affichage bascule mensualité si disponible
+            // 🆕 v2.2.2: Affichage bascule mensualité si disponible
             if (result.mensualiteAvantRenego && result.mensualiteApresRenego) {
                 renégociationText += `
                     <li class="flex items-start bg-green-900 bg-opacity-30 p-2 rounded-lg my-2">
@@ -1763,7 +1764,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
                 <i class="fas fa-piggy-bank mr-2"></i>
-                Analyse complète du prêt v2.2.1
+                Analyse complète du prêt v2.2.2
                 <span class="ml-2 text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded">IRR ${result.taeg.toFixed(3)}%</span>
             </h5>
             <ul class="text-sm text-gray-300 space-y-2 pl-4">
@@ -1810,8 +1811,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                    <span>TAEG précis via IRR v2.2.1: ${result.taeg.toFixed(2)}% 
-                    <span class="text-xs text-green-300">(dual mensualité display system)</span></span>
+                    <span>TAEG précis via IRR v2.2.2: ${result.taeg.toFixed(2)}% 
+                    <span class="text-xs text-green-300">(universal total repayment checkbox)</span></span>
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
@@ -1867,7 +1868,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         const feesData = Array(labels.length).fill(0);
-        feesData[0] = result.totalFraisAffiches; // 🆕 v2.2.1: utilise totalFraisAffiches
+        feesData[0] = result.totalFraisAffiches; // 🆕 v2.2.2: utilise totalFraisAffiches
         
         loanChart = new Chart(ctx, {
             type: 'line',
@@ -1920,7 +1921,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     title: {
                         display: true,
-                        text: 'Évolution du prêt (v2.2.1 - dual mensualité display system)',
+                        text: 'Évolution du prêt (v2.2.2 - universal total repayment checkbox)',
                         color: 'rgba(255, 255, 255, 0.9)'
                     },
                     tooltip: {
@@ -2097,36 +2098,63 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Gestionnaire pour ajouter un remboursement
+    // 🔧 v2.2.2: GESTIONNAIRE POUR AJOUTER UN REMBOURSEMENT (PATCH APPLIQUÉ)
     const addRepaymentBtn = document.getElementById('add-repayment-btn');
     if (addRepaymentBtn) {
         addRepaymentBtn.addEventListener('click', function (e) {
             e.preventDefault();
+            
             const mode = document.getElementById('remboursement-mode').value;
+            const totalCheckEl = document.getElementById('total-repayment');
+            const isTotal = totalCheckEl?.checked;
+
+            // On récupère le mois saisi quel que soit le mode
+            const mois = mode === 'duree'
+                ? +document.getElementById('early-repayment-month-slider-duree').value
+                : +document.getElementById('early-repayment-month-slider-mensualite').value;
+
+            // ─────────────────────────────────────────────
+            // 1️⃣ CAS « REMBOURSEMENT TOTAL » : commun aux deux modes
+            // ─────────────────────────────────────────────
+            if (isTotal) {
+                const montant = getRemainingCapitalAt(mois);   // ← capital restant dû
+                const newRepayment = { montant, mois, type: 'total', timestamp: Date.now() };
+
+                showNotification(
+                    `Remboursement total calculé : ${formatMontant(montant)}`,
+                    'success'
+                );
+
+                // On décoche la case et on ré-active le champ montant si besoin
+                totalCheckEl.checked = false;
+                toggleTotalRepaymentUI(false);
+
+                window.storedRepayments.push(newRepayment);
+                renderRepaymentsList();
+                document.getElementById('min-threshold-alert').classList.add('hidden');
+                calculateLoan();
+
+                // Debug pour vérifier
+                console.table(window.storedRepayments);
+
+                return; // Important: on sort ici pour éviter la suite
+            }
+
+            // ─────────────────────────────────────────────
+            // 2️⃣ SINON : logique actuelle (réduction durée / mensualité)
+            // ─────────────────────────────────────────────
             let newRepayment;
 
             if (mode === 'duree') {
                 const moisAReduire = +document.getElementById('reduction-duree-mois').value;
-                const mois = +document.getElementById('early-repayment-month-slider-duree').value;
                 if (moisAReduire <= 0) {
                     document.getElementById('min-threshold-alert').classList.remove('hidden');
                     return;
                 }
                 newRepayment = { montant: 0, mois, moisAReduire };
-            } else {
-                const totalCheckEl = document.getElementById('total-repayment');
-                const isTotal = totalCheckEl?.checked;
+            } else { // mode === 'mensualite'
                 const amountInput = document.getElementById('early-repayment-amount-mensualite');
-                const mois = +document.getElementById('early-repayment-month-slider-mensualite').value;
-                
                 let montant = +amountInput.value;
-                
-                if (isTotal) {
-                    montant = getRemainingCapitalAt(mois);
-                    showNotification(`Remboursement total calculé: ${formatMontant(montant)}`, 'success');
-                    totalCheckEl.checked = false;
-                    toggleTotalRepaymentUI(false);
-                }
                 
                 if (montant <= 0) {
                     document.getElementById('min-threshold-alert').classList.remove('hidden');
@@ -2136,7 +2164,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 newRepayment = { 
                     montant, 
                     mois, 
-                    type: isTotal ? 'total' : 'partiel',
+                    type: 'partiel',
                     timestamp: Date.now()
                 };
             }
@@ -2146,9 +2174,13 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('min-threshold-alert').classList.add('hidden');
             calculateLoan();
 
+            // On vide le champ montant si on est en mode mensualité
             if (mode === 'mensualite') {
                 document.getElementById('early-repayment-amount-mensualite').value = '';
             }
+
+            // Debug pour vérifier
+            console.table(window.storedRepayments);
         });
     }
 
@@ -2197,64 +2229,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const resetRepaymentsBtn = document.getElementById('reset-repayments');
     if (resetRepaymentsBtn) {
         resetRepaymentsBtn.addEventListener('click', function() {
-            window.storedRepayments = [];
-            renderRepaymentsList();
-            calculateLoan();
+            if (confirm('Êtes-vous sûr de vouloir supprimer tous les remboursements anticipés ?')) {
+                window.storedRepayments = [];
+                renderRepaymentsList();
+                calculateLoan();
+                showNotification('Tous les remboursements anticipés ont été supprimés', 'success');
+            }
         });
     }
-    
+
     // Initialisation
-    if (document.getElementById('loan-amount')) {
-        updateSliderMaxValues();
-        setTimeout(syncModeValues, 500);
-        
-        if (!window.storedRepayments) {
-            window.storedRepayments = [];
-        }
-        
-        setTimeout(calculateLoan, 1000);
-    }
+    window.storedRepayments = window.storedRepayments || [];
+    syncModeValues();
+    renderRepaymentsList();
+    updateSliderMaxValues();
+    
+    console.log('✅ Simulateur de prêt v2.2.2 initialisé (universal total repayment checkbox)');
 });
-
-/**
- * ==========================================
- * 🎯 NAVIGATION PTZ
- * ==========================================
- */
-function initPTZNavigation() {
-    document.addEventListener('click', (e) => {
-        const ptzLink = e.target.closest('#go-to-ptz');
-        if (!ptzLink) return;
-        
-        e.preventDefault();
-        console.log('🎯 Navigation PTZ activée');
-        
-        const ptzTab = document.querySelector('[data-target="ptz-simulator"]');
-        const ptzContent = document.getElementById('ptz-simulator');
-        
-        if (ptzTab && ptzContent) {
-            document.querySelectorAll('.simulation-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.simulation-content').forEach(content => {
-                content.style.display = 'none';
-            });
-            
-            ptzTab.classList.add('active');
-            ptzContent.style.display = 'block';
-            
-            setTimeout(() => {
-                ptzContent.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }, 200);
-        }
-    });
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPTZNavigation);
-} else {
-    initPTZNavigation();
-}
