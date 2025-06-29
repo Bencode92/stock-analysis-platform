@@ -1,17 +1,16 @@
 /**
  * ============================================
- * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.1.2
+ * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.1.1
  * ============================================
  * 
  * Plan d'action implémenté :
  * ✅ Étape 1 : Cash Flow centralisé (this.cashFlows)
  * ✅ Étape 2 : Calcul TAEG via IRR/Newton-Raphson  
- * ✅ Étape 3 : Intégration PTZ comme \"sous-prêt\"
+ * ✅ Étape 3 : Intégration PTZ comme "sous-prêt"
  * ✅ Étape 4 : Validations & debug helpers
  * ✅ Étape 5 : Compatibilité UI existante
  * 🔧 v2.1 : 4 corrections critiques TAEG Newton-Raphson
  * 🔧 v2.1.1 : 3 retouches conformité Banque de France
- * 🚀 v2.1.2 : IRR robuste multi-seeds + bissection (fix TAEG -21%)
  * 
  * Architecture : Flux de trésorerie centralisés pour calculs financiers conformes
  */
@@ -28,49 +27,44 @@ const IRR_MAX_ITERATIONS = 100;  // Limite itérations Newton-Raphson
 
 /**
  * ==========================================
- * 💰 MOTEUR DE CALCUL IRR (Newton-Raphson) v2.1.2
+ * 💰 MOTEUR DE CALCUL IRR (Newton-Raphson)
  * ==========================================
  */
 class IRRCalculator {
     /**
-     * 🚀 v2.1.2: Calcule le taux de rendement interne via Newton-Raphson robuste
+     * Calcule le taux de rendement interne via Newton-Raphson
      * @param {number[]} cashFlows - Flux de trésorerie [initial, flux1, flux2, ...]
-     * @param {number} initialGuess - Estimation initiale (défaut: 0.05 = 5%/mois)
+     * @param {number} initialGuess - Estimation initiale (défaut: 0.1)
      * @returns {number} IRR en décimal (ex: 0.03 pour 3%)
      */
-    static calculate(cashFlows, initialGuess = 0.05) {
+    static calculate(cashFlows, initialGuess = 0.1) {
         if (!this.validateCashFlows(cashFlows)) {
             throw new Error('Flux de trésorerie invalides pour calcul IRR');
         }
 
-        const tryNewton = (guess) => {
-            let rate = guess;
-            for (let i = 0; i < IRR_MAX_ITERATIONS; i++) {
-                const { npv, npvDerivative: d } = this.calculateNPVAndDerivative(cashFlows, rate);
-                if (Math.abs(npv) < IRR_PRECISION) return rate;     // convergé
-                if (Math.abs(d) < IRR_PRECISION) break;             // pente trop plate
-                rate -= npv / d;
-                if (rate <= -0.99) break;                           // protège des dépassements
+        let rate = initialGuess;
+        
+        for (let i = 0; i < IRR_MAX_ITERATIONS; i++) {
+            const { npv, npvDerivative } = this.calculateNPVAndDerivative(cashFlows, rate);
+            
+            if (Math.abs(npv) < IRR_PRECISION) {
+                return rate;
             }
-            return null;                                            // échec
-        };
-
-        /* ➋ 1) on essaie Newton avec plusieurs seeds \"plausibles\" */
-        const seeds = [0.05, 0.02, 0.01, 0.005, 0.001];
-        for (const s of seeds) {
-            const r = tryNewton(s);
-            if (r !== null && r > 0) return r;                     // première racine > 0 trouvée
+            
+            if (Math.abs(npvDerivative) < IRR_PRECISION) {
+                throw new Error('Dérivée NPV trop proche de zéro - convergence impossible');
+            }
+            
+            const newRate = rate - (npv / npvDerivative);
+            
+            if (Math.abs(newRate - rate) < IRR_PRECISION) {
+                return newRate;
+            }
+            
+            rate = newRate;
         }
-
-        /* ➌ 2) fallback : bissection sur [0 ; 1] */
-        let low = 0, high = 1, npvLow = this.calculateNPVAndDerivative(cashFlows, low).npv;
-        for (let i = 0; i < 50; i++) {
-            const mid = (low + high) / 2;
-            const npvMid = this.calculateNPVAndDerivative(cashFlows, mid).npv;
-            if (Math.abs(npvMid) < IRR_PRECISION) return mid;
-            (npvMid * npvLow > 0) ? (low = mid) : (high = mid);
-        }
-        throw new Error(\"IRR non trouvée dans l'intervalle 0-100 % annuel\");
+        
+        throw new Error(`IRR non convergente après ${IRR_MAX_ITERATIONS} itérations`);
     }
 
     /**
@@ -93,7 +87,7 @@ class IRRCalculator {
     }
 
     /**
-     * 🔧 v2.1.2: Validation adaptée aux nouveaux signes avec commentaire clarifié
+     * 🔧 v2.1.1: Validation adaptée aux nouveaux signes avec commentaire clarifié
      */
     static validateCashFlows(cashFlows) {
         if (!Array.isArray(cashFlows) || cashFlows.length < 2) {
@@ -176,7 +170,7 @@ class PTZManager {
 
 /**
  * ==========================================
- * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.1.2
+ * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.1.1
  * ==========================================
  */
 class LoanSimulator {
@@ -239,7 +233,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.1.2
+     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.1.1
      * ==========================================
      */
     
@@ -267,7 +261,7 @@ class LoanSimulator {
     }
 
     /**
-     * 🔧 v2.1.2: getCapitalRestantAt recalcule la mensualité avec le taux courant
+     * 🔧 v2.1.1: getCapitalRestantAt recalcule la mensualité avec le taux courant
      */
     getCapitalRestantAt(mois, tauxMensuelCourant = null) {
         const taux = tauxMensuelCourant ?? this.tauxMensuel;
@@ -289,7 +283,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 📊 TABLEAU D'AMORTISSEMENT v2.1.2
+     * 📊 TABLEAU D'AMORTISSEMENT v2.1.1
      * ==========================================
      */
 
@@ -346,12 +340,12 @@ class LoanSimulator {
         // Calculs financiers
         const results = this.calculateFinancialMetrics(tableau);
         
-        // Calcul TAEG via IRR v2.1.2
+        // Calcul TAEG via IRR
         try {
             const taegPrecis = this.calculateTAEG();
             results.taeg = taegPrecis * 100; // Conversion en pourcentage
         } catch (error) {
-            console.warn('TAEG non calculable via IRR v2.1.2:', error.message);
+            console.warn('TAEG non calculable via IRR:', error.message);
             results.taeg = this.tauxAnnuel * 1.1; // Fallback approximatif
         }
 
@@ -481,7 +475,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.1.2
+     * 💎 CALCUL TAEG PRÉCIS VIA IRR
      * ==========================================
      */
 
@@ -498,7 +492,7 @@ class LoanSimulator {
     }
 
     /**
-     * 🔧 v2.1.2: Calcul frais corrigé dans calculateFinancialMetrics
+     * 🔧 v2.1.1: Calcul frais corrigé dans calculateFinancialMetrics
      */
     calculateFinancialMetrics(tableau) {
         const mensualiteInitiale = this.calculerMensualite();
@@ -545,12 +539,12 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 🔍 DEBUG & VALIDATION v2.1.2
+     * 🔍 DEBUG & VALIDATION v2.1.1
      * ==========================================
      */
 
     debugCashFlows() {
-        console.group('💰 Analyse des flux de trésorerie (v2.1.2 - IRR robuste)');
+        console.group('💰 Analyse des flux de trésorerie (v2.1.1)');
         console.table(this.cashFlows.map((flux, index) => ({
             periode: index === 0 ? 'Initial' : `Mois ${index}`,
             flux: this.formatMontant(flux),
@@ -574,7 +568,7 @@ class LoanSimulator {
             console.warn(`⚠️ Capital amorti insuffisant: ${this.formatMontant(results.totalCapitalAmorti)} vs ${this.formatMontant(this.capital)} initial`);
         }
 
-        console.log('✅ Validation terminée (v2.1.2 - IRR robuste multi-seeds)');
+        console.log('✅ Validation terminée (v2.1.1 - conforme Banque de France)');
     }
 
     /**
@@ -746,7 +740,7 @@ function getRemainingCapitalAt(month) {
         
         return Math.max(0, remainingCapital + ptzAmount);
     } catch (error) {
-        console.error(\"Erreur lors du calcul du capital restant:\", error);
+        console.error("Erreur lors du calcul du capital restant:", error);
         return 0;
     }
 }
@@ -787,8 +781,8 @@ function showNotification(message, type = 'info') {
     }`;
     
     notification.innerHTML = `
-        <div class=\"flex items-center\">
-            <i class=\"fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation' : 'info'}-circle mr-2\"></i>
+        <div class="flex items-center">
+            <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation' : 'info'}-circle mr-2"></i>
             ${message}
         </div>
     `;
@@ -805,18 +799,18 @@ function showNotification(message, type = 'info') {
 function repaymentLabel(r) {
     if (r.type === 'total') {
         return {
-            html: `<i class=\"fas fa-flag-checkered mr-1 text-emerald-400\"></i>Remboursement total`,
+            html: `<i class="fas fa-flag-checkered mr-1 text-emerald-400"></i>Remboursement total`,
             cls: 'text-emerald-300 font-semibold'
         };
     }
     if (r.montant && r.montant > 0) {
         return {
-            html: `<i class=\"fas fa-euro-sign mr-1 text-emerald-400\"></i>${formatMontant(r.montant)}`,
+            html: `<i class="fas fa-euro-sign mr-1 text-emerald-400"></i>${formatMontant(r.montant)}`,
             cls: 'text-emerald-300'
         };
     }
     return {
-        html: `<i class=\"fas fa-clock mr-1 text-amber-400\"></i>– ${r.moisAReduire} mois`,
+        html: `<i class="fas fa-clock mr-1 text-amber-400"></i>– ${r.moisAReduire} mois`,
         cls: 'text-amber-300'
     };
 }
@@ -849,7 +843,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const sectionDuree = document.getElementById('section-reduire-duree');
     const sectionMensualite = document.getElementById('section-reduire-mensualite');
     
-    // Nouvelle référence pour la case \"Appliquer la renégociation\"
+    // Nouvelle référence pour la case "Appliquer la renégociation"
     const applyRenegotiationCheckbox = document.getElementById('apply-renegociation');
     
     // Nouvelles références pour les sliders de chaque mode
@@ -1023,7 +1017,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             console.log(`Valeurs max des sliders mises à jour : ${loanDurationMonths} mois`);
         } catch (error) {
-            console.error(\"Erreur lors de la mise à jour des valeurs max des sliders:\", error);
+            console.error("Erreur lors de la mise à jour des valeurs max des sliders:", error);
         }
     }
 
@@ -1054,7 +1048,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Gestion des sliders pour mode \"durée\"
+    // Gestion des sliders pour mode "durée"
     if (earlyRepaymentMonthSliderDuree && earlyRepaymentMonthValueDuree) {
         earlyRepaymentMonthSliderDuree.addEventListener('input', function() {
             earlyRepaymentMonthValueDuree.textContent = this.value;
@@ -1067,7 +1061,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Gestion des sliders pour mode \"mensualité\"
+    // Gestion des sliders pour mode "mensualité"
     if (earlyRepaymentMonthSliderMensualite && earlyRepaymentMonthValueMensualite) {
         earlyRepaymentMonthSliderMensualite.addEventListener('input', function() {
             earlyRepaymentMonthValueMensualite.textContent = this.value;
@@ -1113,12 +1107,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.1.2
+     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.1.1
      * ==========================================
      */
     function calculateLoan() {
         try {
-            console.log(\"🚀 Début du calcul du prêt v2.1.2 (IRR robuste multi-seeds)...\");
+            console.log("🚀 Début du calcul du prêt v2.1.1 (conforme Banque de France)...");
             
             const loanAmount = parseFloat(document.getElementById('loan-amount').value);
             const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
@@ -1177,10 +1171,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const modeRemboursement = document.getElementById('remboursement-mode')?.value || 'duree';
             const remboursementsAnticipes = window.storedRepayments || [];
             
-            console.log(\"📋 Remboursements anticipés:\", remboursementsAnticipes);
-            console.log(\"🔄 Appliquer renégociation:\", applyRenegotiation);
+            console.log("📋 Remboursements anticipés:", remboursementsAnticipes);
+            console.log("🔄 Appliquer renégociation:", applyRenegotiation);
             
-            // Création du simulateur v2.1.2
+            // Création du simulateur v2.1.1
             const simulator = new LoanSimulator({
                 capital: loanAmount,
                 tauxAnnuel: interestRate,
@@ -1210,7 +1204,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 ptzParams: ptzParams
             });
 
-            console.log(\"📊 Résultats calculés:\", result);
+            console.log("📊 Résultats calculés:", result);
 
             // Affichage des résultats avec PTZ
             const mensualiteGlobale = result.mensualiteInitiale + 
@@ -1272,10 +1266,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✅ Bouton PDF activé');
             }
             
-            console.log('🎉 Calcul terminé avec succès (v2.1.2 - IRR robuste multi-seeds)');
+            console.log('🎉 Calcul terminé avec succès (v2.1.1 - conforme Banque de France)');
             return true;
         } catch (error) {
-            console.error(\"❌ Erreur lors du calcul:\", error);
+            console.error("❌ Erreur lors du calcul:", error);
             alert(`Une erreur s'est produite lors du calcul: ${error.message}`);
             return false;
         }
@@ -1306,12 +1300,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             tr.innerHTML = `
-                <td class=\"px-3 py-2\">${row.mois}</td>
-                <td class=\"px-3 py-2 text-right\">${formatMontant(row.mensualite)}</td>
-                <td class=\"px-3 py-2 text-right\">${formatMontant(row.capitalAmorti)}</td>
-                <td class=\"px-3 py-2 text-right\">${formatMontant(row.interets)}</td>
-                <td class=\"px-3 py-2 text-right\">${formatMontant(row.assurance)}</td>
-                <td class=\"px-3 py-2 text-right\">${formatMontant(row.capitalRestant)}</td>
+                <td class="px-3 py-2">${row.mois}</td>
+                <td class="px-3 py-2 text-right">${formatMontant(row.mensualite)}</td>
+                <td class="px-3 py-2 text-right">${formatMontant(row.capitalAmorti)}</td>
+                <td class="px-3 py-2 text-right">${formatMontant(row.interets)}</td>
+                <td class="px-3 py-2 text-right">${formatMontant(row.assurance)}</td>
+                <td class="px-3 py-2 text-right">${formatMontant(row.capitalRestant)}</td>
             `;
             
             tableBody.appendChild(tr);
@@ -1329,12 +1323,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     const ptzRow = document.createElement('tr');
                     ptzRow.className = 'bg-amber-900 bg-opacity-10 border-l-4 border-amber-500';
                     ptzRow.innerHTML = `
-                        <td class=\"px-3 py-2 text-amber-300\">${labelPTZ}</td>
-                        <td class=\"px-3 py-2 text-right text-amber-300\">${formatMontant(mensualitePTZ)}</td>
-                        <td class=\"px-3 py-2 text-right text-amber-300\">${formatMontant(mensualitePTZ)}</td>
-                        <td class=\"px-3 py-2 text-right text-gray-400\">0 €</td>
-                        <td class=\"px-3 py-2 text-right text-gray-400\">0 €</td>
-                        <td class=\"px-3 py-2 text-right text-amber-300\">${formatMontant(ptzCapitalRestant)}</td>
+                        <td class="px-3 py-2 text-amber-300">${labelPTZ}</td>
+                        <td class="px-3 py-2 text-right text-amber-300">${formatMontant(mensualitePTZ)}</td>
+                        <td class="px-3 py-2 text-right text-amber-300">${formatMontant(mensualitePTZ)}</td>
+                        <td class="px-3 py-2 text-right text-gray-400">0 €</td>
+                        <td class="px-3 py-2 text-right text-gray-400">0 €</td>
+                        <td class="px-3 py-2 text-right text-amber-300">${formatMontant(ptzCapitalRestant)}</td>
                     `;
                     tableBody.appendChild(ptzRow);
                 }
@@ -1345,8 +1339,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const trInfo = document.createElement('tr');
             trInfo.classList.add('bg-blue-900', 'bg-opacity-50');
             trInfo.innerHTML = `
-                <td colspan=\"6\" class=\"px-3 py-2 text-center\">
-                    <i class=\"fas fa-info-circle mr-2\"></i>
+                <td colspan="6" class="px-3 py-2 text-center">
+                    <i class="fas fa-info-circle mr-2"></i>
                     Affichage limité aux 120 premiers mois pour des raisons de performance.
                     Durée totale du prêt: ${result.dureeReelle} mois.
                 </td>
@@ -1372,59 +1366,59 @@ document.addEventListener('DOMContentLoaded', function() {
             const finPretPrincipal = loanDurationYears;
             
             ptzSummary.innerHTML = `
-                <div class=\"flex items-center justify-between mb-3\">
-                    <h5 class=\"text-amber-400 font-medium flex items-center\">
-                        <i class=\"fas fa-home mr-2\"></i>
-                        Détail du Prêt à Taux Zéro v2.1.2
+                <div class="flex items-center justify-between mb-3">
+                    <h5 class="text-amber-400 font-medium flex items-center">
+                        <i class="fas fa-home mr-2"></i>
+                        Détail du Prêt à Taux Zéro v2.1.1
                     </h5>
-                    <span class=\"text-xs text-amber-300 bg-amber-900 bg-opacity-30 px-2 py-1 rounded\">
+                    <span class="text-xs text-amber-300 bg-amber-900 bg-opacity-30 px-2 py-1 rounded">
                         ${pourcentageFinancement}% du financement
                     </span>
                 </div>
                 
-                <div class=\"grid grid-cols-2 md:grid-cols-4 gap-4 mb-4\">
-                    <div class=\"text-center\">
-                        <p class=\"text-amber-300 text-lg font-semibold\">${formatMontant(ptzParams.montant)}</p>
-                        <p class=\"text-gray-400 text-sm\">Capital PTZ</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div class="text-center">
+                        <p class="text-amber-300 text-lg font-semibold">${formatMontant(ptzParams.montant)}</p>
+                        <p class="text-gray-400 text-sm">Capital PTZ</p>
                     </div>
-                    <div class=\"text-center\">
-                        <p class=\"text-amber-300 text-lg font-semibold\">${formatMontant(mensualitePTZ)}</p>
-                        <p class=\"text-gray-400 text-sm\">Mensualité PTZ</p>
+                    <div class="text-center">
+                        <p class="text-amber-300 text-lg font-semibold">${formatMontant(mensualitePTZ)}</p>
+                        <p class="text-gray-400 text-sm">Mensualité PTZ</p>
                     </div>
-                    <div class=\"text-center\">
-                        <p class=\"text-amber-300 text-lg font-semibold\">${finPTZ} ans</p>
-                        <p class=\"text-gray-400 text-sm\">Durée PTZ</p>
+                    <div class="text-center">
+                        <p class="text-amber-300 text-lg font-semibold">${finPTZ} ans</p>
+                        <p class="text-gray-400 text-sm">Durée PTZ</p>
                     </div>
-                    <div class=\"text-center\">
-                        <p class=\"text-amber-300 text-lg font-semibold\">0%</p>
-                        <p class=\"text-gray-400 text-sm\">Taux PTZ</p>
+                    <div class="text-center">
+                        <p class="text-amber-300 text-lg font-semibold">0%</p>
+                        <p class="text-gray-400 text-sm">Taux PTZ</p>
                     </div>
                 </div>
                 
-                <div class=\"bg-amber-900 bg-opacity-20 p-3 rounded text-sm\">
-                    <div class=\"grid grid-cols-1 md:grid-cols-2 gap-2\">
-                        <div class=\"flex justify-between\">
-                            <span class=\"text-gray-300\">Fin PTZ:</span>
-                            <span class=\"text-amber-300\">Année ${finPTZ}</span>
+                <div class="bg-amber-900 bg-opacity-20 p-3 rounded text-sm">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Fin PTZ:</span>
+                            <span class="text-amber-300">Année ${finPTZ}</span>
                         </div>
-                        <div class=\"flex justify-between\">
-                            <span class=\"text-gray-300\">Fin prêt principal:</span>
-                            <span class=\"text-amber-300\">Année ${finPretPrincipal}</span>
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Fin prêt principal:</span>
+                            <span class="text-amber-300">Année ${finPretPrincipal}</span>
                         </div>
                     </div>
                     ${finPTZ !== finPretPrincipal ? 
-                        `<div class=\"mt-2 text-xs text-yellow-300\">
-                            <i class=\"fas fa-exclamation-triangle mr-1\"></i>
+                        `<div class="mt-2 text-xs text-yellow-300">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>
                             ${finPTZ > finPretPrincipal ? 
                                 `Le PTZ continuera ${finPTZ - finPretPrincipal} an(s) après la fin du prêt principal` :
                                 `Le prêt principal continuera ${finPretPrincipal - finPTZ} an(s) après la fin du PTZ`
                             }
                         </div>` : 
-                        '<div class=\"mt-2 text-xs text-green-300\"><i class=\"fas fa-check mr-1\"></i>Les deux prêts se terminent en même temps</div>'
+                        '<div class="mt-2 text-xs text-green-300"><i class="fas fa-check mr-1"></i>Les deux prêts se terminent en même temps</div>'
                     }
-                    <div class=\"mt-2 text-xs text-blue-300\">
-                        <i class=\"fas fa-cogs mr-1\"></i>
-                        Calcul via flux de trésorerie centralisés & IRR Newton-Raphson v2.1.2 (multi-seeds)
+                    <div class="mt-2 text-xs text-blue-300">
+                        <i class="fas fa-cogs mr-1"></i>
+                        Calcul via flux de trésorerie centralisés & IRR Newton-Raphson v2.1.1
                     </div>
                 </div>
             `;
@@ -1495,7 +1489,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         positive: modeRemboursement === 'mensualite'
                     },
                     {
-                        label: 'TAEG v2.1.2 IRR robuste',
+                        label: 'TAEG v2.1.1 Newton-Raphson',
                         base: `${baseResult.taeg.toFixed(2)}%`,
                         current: `${result.taeg.toFixed(2)}%`,
                         diff: `-${Math.max(0, (baseResult.taeg - result.taeg)).toFixed(2)}%`,
@@ -1527,10 +1521,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     const diffClass = comp.positive ? 'text-green-400' : 'text-amber-400';
                     
                     tr.innerHTML = `
-                        <td class=\"px-3 py-2 font-medium\">${comp.label}</td>
-                        <td class=\"px-3 py-2 text-right\">${comp.base}</td>
-                        <td class=\"px-3 py-2 text-right\">${comp.current}</td>
-                        <td class=\"px-3 py-2 text-right ${diffClass}\">${comp.diff}</td>
+                        <td class="px-3 py-2 font-medium">${comp.label}</td>
+                        <td class="px-3 py-2 text-right">${comp.base}</td>
+                        <td class="px-3 py-2 text-right">${comp.current}</td>
+                        <td class="px-3 py-2 text-right ${diffClass}">${comp.diff}</td>
                     `;
                     comparisonTableBody.appendChild(tr);
                 });
@@ -1575,38 +1569,38 @@ document.addEventListener('DOMContentLoaded', function() {
         let renégociationText = '';
         if (result.appliquerRenegociation && result.moisRenegociation) {
             renégociationText = `
-                <li class=\"flex items-start\">
-                    <i class=\"fas fa-check-circle text-green-400 mr-2 mt-1\"></i>
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
                     <span>Renégociation au mois ${result.moisRenegociation} : taux passant de ${document.getElementById('interest-rate-slider').value}% à ${document.getElementById('new-interest-rate-slider').value}%</span>
                 </li>
             `;
         } else if (result.moisRenegociation) {
             renégociationText = `
-                <li class=\"flex items-start\">
-                    <i class=\"fas fa-times-circle text-amber-400 mr-2 mt-1\"></i>
+                <li class="flex items-start">
+                    <i class="fas fa-times-circle text-amber-400 mr-2 mt-1"></i>
                     <span>Renégociation désactivée : le taux initial de ${document.getElementById('interest-rate-slider').value}% est conservé sur toute la durée du prêt</span>
                 </li>
             `;
         }
         
         let htmlContent = `
-            <h5 class=\"text-green-400 font-medium flex items-center mb-2\">
-                <i class=\"fas fa-piggy-bank mr-2\"></i>
-                Analyse complète du prêt v2.1.2
-                <span class=\"ml-2 text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded\">IRR ${result.taeg.toFixed(3)}%</span>
+            <h5 class="text-green-400 font-medium flex items-center mb-2">
+                <i class="fas fa-piggy-bank mr-2"></i>
+                Analyse complète du prêt v2.1.1
+                <span class="ml-2 text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded">IRR ${result.taeg.toFixed(3)}%</span>
             </h5>
-            <ul class=\"text-sm text-gray-300 space-y-2 pl-4\">
-                <li class=\"flex items-start\">
-                    <i class=\"fas fa-check-circle text-green-400 mr-2 mt-1\"></i>
+            <ul class="text-sm text-gray-300 space-y-2 pl-4">
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
                     <span>Coût total du crédit : ${formatMontant(result.coutGlobalTotal)} 
                     (capital + intérêts + assurance + frais)</span>
                 </li>
-                <li class=\"flex items-start\">
-                    <i class=\"fas fa-check-circle text-green-400 mr-2 mt-1\"></i>
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
                     <span>Vous économisez ${formatMontant(result.economiesInterets)} d'intérêts (${economiesPourcentage}% du total)</span>
                 </li>
-                <li class=\"flex items-start\">
-                    <i class=\"fas fa-check-circle text-green-400 mr-2 mt-1\"></i>
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
                     <span>${modeText}</span>
                 </li>
                 ${renégociationText}`;
@@ -1625,32 +1619,32 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             htmlContent += `
-                <li class=\"flex items-start bg-green-900 bg-opacity-30 p-2 rounded-lg my-2\">
-                    <i class=\"fas fa-award text-green-400 mr-2 mt-1\"></i>
+                <li class="flex items-start bg-green-900 bg-opacity-30 p-2 rounded-lg my-2">
+                    <i class="fas fa-award text-green-400 mr-2 mt-1"></i>
                     <span><strong>Prêt soldé avant terme!</strong> Vous gagnez ${texteGain} sur la durée initiale.</span>
                 </li>`;
         }
         
         htmlContent += `
-                <li class=\"flex items-start\">
-                    <i class=\"fas fa-check-circle text-green-400 mr-2 mt-1\"></i>
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
                     <span>Indemnités de remboursement anticipé: ${formatMontant(result.indemnites)} 
                     (plafonnées légalement à 6 mois d'intérêts ou 3% du capital remboursé)</span>
                 </li>
-                <li class=\"flex items-start\">
-                    <i class=\"fas fa-check-circle text-green-400 mr-2 mt-1\"></i>
-                    <span>TAEG précis via IRR v2.1.2: ${result.taeg.toFixed(2)}% 
-                    <span class=\"text-xs text-green-300\">(conforme Banque de France - IRR robuste)</span></span>
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                    <span>TAEG précis via IRR v2.1.1: ${result.taeg.toFixed(2)}% 
+                    <span class="text-xs text-green-300">(conforme Banque de France)</span></span>
                 </li>
-                <li class=\"flex items-start\">
-                    <i class=\"fas fa-check-circle text-green-400 mr-2 mt-1\"></i>
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
                     <span>Frais annexes: ${formatMontant(result.totalFrais)}</span>
                 </li>`;
         
         if (result.remboursementsAnticipes && result.remboursementsAnticipes.length > 0) {
             htmlContent += `
-                <li class=\"flex items-start\">
-                    <i class=\"fas fa-check-circle text-green-400 mr-2 mt-1\"></i>
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
                     <span>Remboursements anticipés: ${result.remboursementsAnticipes.length}</span>
                 </li>`;
         }
@@ -1748,7 +1742,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     title: {
                         display: true,
-                        text: 'Évolution du prêt (v2.1.2 - IRR robuste multi-seeds)',
+                        text: 'Évolution du prêt (v2.1.1 - conforme Banque de France)',
                         color: 'rgba(255, 255, 255, 0.9)'
                     },
                     tooltip: {
@@ -1853,7 +1847,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 notice.classList.add('hidden');
             }
         } catch (error) {
-            console.error(\"Erreur lors de la vérification du remboursement total:\", error);
+            console.error("Erreur lors de la vérification du remboursement total:", error);
         }
     };
     
@@ -1921,7 +1915,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
         } catch (error) {
-            console.error(\"Erreur lors de la synchronisation des modes:\", error);
+            console.error("Erreur lors de la synchronisation des modes:", error);
         }
     }
 
@@ -1996,15 +1990,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const left = document.createElement('div');
             left.innerHTML = `
-                <div class=\"font-medium ${cls}\">${html}</div>
-                <div class=\"text-xs text-gray-400\">au mois ${r.mois}</div>
+                <div class="font-medium ${cls}">${html}</div>
+                <div class="text-xs text-gray-400">au mois ${r.mois}</div>
             `;
 
             const remove = document.createElement('button');
             remove.className =
                 'remove-repayment text-gray-400 hover:text-red-400 transition';
             remove.dataset.index = idx;
-            remove.innerHTML = '<i class=\"fas fa-times\"></i>';
+            remove.innerHTML = '<i class="fas fa-times"></i>';
 
             item.appendChild(left);
             item.appendChild(remove);
@@ -2057,7 +2051,7 @@ function initPTZNavigation() {
         e.preventDefault();
         console.log('🎯 Navigation PTZ activée');
         
-        const ptzTab = document.querySelector('[data-target=\"ptz-simulator\"]');
+        const ptzTab = document.querySelector('[data-target="ptz-simulator"]');
         const ptzContent = document.getElementById('ptz-simulator');
         
         if (ptzTab && ptzContent) {
