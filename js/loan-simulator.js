@@ -1,6 +1,6 @@
 /**
  * ============================================
- * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.1.1
+ * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.1.2
  * ============================================
  * 
  * Plan d'action implémenté :
@@ -11,6 +11,7 @@
  * ✅ Étape 5 : Compatibilité UI existante
  * 🔧 v2.1 : 4 corrections critiques TAEG Newton-Raphson
  * 🔧 v2.1.1 : 3 retouches conformité Banque de France
+ * 🔧 v2.1.2 : Fix TAEG -21% → multi-seeds + bissection
  * 
  * Architecture : Flux de trésorerie centralisés pour calculs financiers conformes
  */
@@ -32,39 +33,44 @@ const IRR_MAX_ITERATIONS = 100;  // Limite itérations Newton-Raphson
  */
 class IRRCalculator {
     /**
-     * Calcule le taux de rendement interne via Newton-Raphson
+     * Calcule le taux de rendement interne via Newton-Raphson robuste
      * @param {number[]} cashFlows - Flux de trésorerie [initial, flux1, flux2, ...]
-     * @param {number} initialGuess - Estimation initiale (défaut: 0.1)
+     * @param {number} initialGuess - Estimation initiale (défaut: 0.05)
      * @returns {number} IRR en décimal (ex: 0.03 pour 3%)
      */
-    static calculate(cashFlows, initialGuess = 0.1) {
+    static calculate(cashFlows, initialGuess = 0.05) {
         if (!this.validateCashFlows(cashFlows)) {
             throw new Error('Flux de trésorerie invalides pour calcul IRR');
         }
 
-        let rate = initialGuess;
-        
-        for (let i = 0; i < IRR_MAX_ITERATIONS; i++) {
-            const { npv, npvDerivative } = this.calculateNPVAndDerivative(cashFlows, rate);
-            
-            if (Math.abs(npv) < IRR_PRECISION) {
-                return rate;
+        const tryNewton = (guess) => {
+            let rate = guess;
+            for (let i = 0; i < IRR_MAX_ITERATIONS; i++) {
+                const { npv, npvDerivative: d } = this.calculateNPVAndDerivative(cashFlows, rate);
+                if (Math.abs(npv) < IRR_PRECISION) return rate;     // convergé
+                if (Math.abs(d) < IRR_PRECISION) break;             // pente trop plate
+                rate -= npv / d;
+                if (rate <= -0.99) break;                           // protège des dépassements
             }
-            
-            if (Math.abs(npvDerivative) < IRR_PRECISION) {
-                throw new Error('Dérivée NPV trop proche de zéro - convergence impossible');
-            }
-            
-            const newRate = rate - (npv / npvDerivative);
-            
-            if (Math.abs(newRate - rate) < IRR_PRECISION) {
-                return newRate;
-            }
-            
-            rate = newRate;
+            return null;                                          // échec
+        };
+
+        /* ➋ 1) on essaie Newton avec plusieurs seeds "plausibles"       */
+        const seeds = [0.05, 0.02, 0.01, 0.005, 0.001];
+        for (const s of seeds) {
+            const r = tryNewton(s);
+            if (r !== null && r > 0) return r;                     // première racine > 0 trouvée
         }
-        
-        throw new Error(`IRR non convergente après ${IRR_MAX_ITERATIONS} itérations`);
+
+        /* ➌ 2) fallback : bissection sur [0 ; 1]                      */
+        let low = 0, high = 1, npvLow = this.calculateNPVAndDerivative(cashFlows, low).npv;
+        for (let i = 0; i < 50; i++) {
+            const mid = (low + high) / 2;
+            const npvMid = this.calculateNPVAndDerivative(cashFlows, mid).npv;
+            if (Math.abs(npvMid) < IRR_PRECISION) return mid;
+            (npvMid * npvLow > 0) ? (low = mid) : (high = mid);
+        }
+        throw new Error("IRR non trouvée dans l'intervalle 0-100 % annuel");
     }
 
     /**
@@ -170,7 +176,7 @@ class PTZManager {
 
 /**
  * ==========================================
- * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.1.1
+ * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.1.2
  * ==========================================
  */
 class LoanSimulator {
@@ -233,7 +239,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.1.1
+     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.1.2
      * ==========================================
      */
     
@@ -283,7 +289,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 📊 TABLEAU D'AMORTISSEMENT v2.1.1
+     * 📊 TABLEAU D'AMORTISSEMENT v2.1.2
      * ==========================================
      */
 
@@ -340,7 +346,7 @@ class LoanSimulator {
         // Calculs financiers
         const results = this.calculateFinancialMetrics(tableau);
         
-        // Calcul TAEG via IRR
+        // Calcul TAEG via IRR v2.1.2
         try {
             const taegPrecis = this.calculateTAEG();
             results.taeg = taegPrecis * 100; // Conversion en pourcentage
@@ -475,7 +481,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💎 CALCUL TAEG PRÉCIS VIA IRR
+     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.1.2
      * ==========================================
      */
 
@@ -539,12 +545,12 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 🔍 DEBUG & VALIDATION v2.1.1
+     * 🔍 DEBUG & VALIDATION v2.1.2
      * ==========================================
      */
 
     debugCashFlows() {
-        console.group('💰 Analyse des flux de trésorerie (v2.1.1)');
+        console.group('💰 Analyse des flux de trésorerie (v2.1.2)');
         console.table(this.cashFlows.map((flux, index) => ({
             periode: index === 0 ? 'Initial' : `Mois ${index}`,
             flux: this.formatMontant(flux),
@@ -568,7 +574,7 @@ class LoanSimulator {
             console.warn(`⚠️ Capital amorti insuffisant: ${this.formatMontant(results.totalCapitalAmorti)} vs ${this.formatMontant(this.capital)} initial`);
         }
 
-        console.log('✅ Validation terminée (v2.1.1 - conforme Banque de France)');
+        console.log('✅ Validation terminée (v2.1.2 - multi-seeds Newton-Raphson + bissection)');
     }
 
     /**
@@ -1107,12 +1113,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.1.1
+     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.1.2
      * ==========================================
      */
     function calculateLoan() {
         try {
-            console.log("🚀 Début du calcul du prêt v2.1.1 (conforme Banque de France)...");
+            console.log("🚀 Début du calcul du prêt v2.1.2 (TAEG corrigé multi-seeds)...");
             
             const loanAmount = parseFloat(document.getElementById('loan-amount').value);
             const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
@@ -1174,7 +1180,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("📋 Remboursements anticipés:", remboursementsAnticipes);
             console.log("🔄 Appliquer renégociation:", applyRenegotiation);
             
-            // Création du simulateur v2.1.1
+            // Création du simulateur v2.1.2
             const simulator = new LoanSimulator({
                 capital: loanAmount,
                 tauxAnnuel: interestRate,
@@ -1266,7 +1272,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✅ Bouton PDF activé');
             }
             
-            console.log('🎉 Calcul terminé avec succès (v2.1.1 - conforme Banque de France)');
+            console.log('🎉 Calcul terminé avec succès (v2.1.2 - TAEG corrigé multi-seeds + bissection)');
             return true;
         } catch (error) {
             console.error("❌ Erreur lors du calcul:", error);
@@ -1369,7 +1375,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="flex items-center justify-between mb-3">
                     <h5 class="text-amber-400 font-medium flex items-center">
                         <i class="fas fa-home mr-2"></i>
-                        Détail du Prêt à Taux Zéro v2.1.1
+                        Détail du Prêt à Taux Zéro v2.1.2
                     </h5>
                     <span class="text-xs text-amber-300 bg-amber-900 bg-opacity-30 px-2 py-1 rounded">
                         ${pourcentageFinancement}% du financement
@@ -1418,7 +1424,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     <div class="mt-2 text-xs text-blue-300">
                         <i class="fas fa-cogs mr-1"></i>
-                        Calcul via flux de trésorerie centralisés & IRR Newton-Raphson v2.1.1
+                        Calcul TAEG v2.1.2 : multi-seeds Newton-Raphson + bissection
                     </div>
                 </div>
             `;
@@ -1489,7 +1495,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         positive: modeRemboursement === 'mensualite'
                     },
                     {
-                        label: 'TAEG v2.1.1 Newton-Raphson',
+                        label: 'TAEG v2.1.2 Multi-Seeds',
                         base: `${baseResult.taeg.toFixed(2)}%`,
                         current: `${result.taeg.toFixed(2)}%`,
                         diff: `-${Math.max(0, (baseResult.taeg - result.taeg)).toFixed(2)}%`,
@@ -1586,7 +1592,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
                 <i class="fas fa-piggy-bank mr-2"></i>
-                Analyse complète du prêt v2.1.1
+                Analyse complète du prêt v2.1.2
                 <span class="ml-2 text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded">IRR ${result.taeg.toFixed(3)}%</span>
             </h5>
             <ul class="text-sm text-gray-300 space-y-2 pl-4">
@@ -1633,8 +1639,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                    <span>TAEG précis via IRR v2.1.1: ${result.taeg.toFixed(2)}% 
-                    <span class="text-xs text-green-300">(conforme Banque de France)</span></span>
+                    <span>TAEG précis via IRR v2.1.2: ${result.taeg.toFixed(2)}% 
+                    <span class="text-xs text-green-300">(multi-seeds + bissection)</span></span>
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
@@ -1742,7 +1748,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     title: {
                         display: true,
-                        text: 'Évolution du prêt (v2.1.1 - conforme Banque de France)',
+                        text: 'Évolution du prêt (v2.1.2 - TAEG corrigé multi-seeds)',
                         color: 'rgba(255, 255, 255, 0.9)'
                     },
                     tooltip: {
