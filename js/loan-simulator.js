@@ -937,16 +937,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const validationMessage = document.getElementById('ptz-validation-message');
         
         if (ptzAmount > 0 && loanAmount > 0) {
-            const maxPTZ = loanAmount * 0.4;
+            const maxPTZ = loanAmount * 0.5;
             const percentage = (ptzAmount / loanAmount * 100).toFixed(1);
             
             if (ptzAmount > maxPTZ) {
-                validationMessage.textContent = `⚠️ Maximum autorisé: ${formatMontant(maxPTZ)} (40%)`;
+                validationMessage.textContent = `⚠️ Maximum autorisé: ${formatMontant(maxPTZ)} (50%)`;
                 validationMessage.classList.remove('hidden');
                 ptzAmountInput.classList.add('border-red-500');
                 return false;
             } else if (ptzAmount > maxPTZ * 0.8) {
-                validationMessage.textContent = `ℹ️ ${percentage}% du coût total (max 40%)`;
+                validationMessage.textContent = `ℹ️ ${percentage}% du coût total (max 50%)`;
                 validationMessage.classList.remove('hidden');
                 validationMessage.classList.remove('text-red-400');
                 validationMessage.classList.add('text-yellow-400');
