@@ -1,6 +1,6 @@
 /**
  * ============================================
- * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.2.0
+ * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.2.1
  * ============================================
  * 
  * Plan d'action implémenté :
@@ -16,6 +16,7 @@
  * 🔧 v2.1.4 : Correction incohérences mensualité et TAEG
  * 🔧 v2.1.5 : Correction coût global total - inclusion tenue de compte
  * 🚀 v2.2.0 : Amélioration renégociation avec bascule mensualité claire
+ * 🔧 v2.2.1 : Fix affichage dual mensualité initiale/renégociée
  * 
  * Architecture : Flux de trésorerie centralisés pour calculs financiers conformes
  */
@@ -180,7 +181,7 @@ class PTZManager {
 
 /**
  * ==========================================
- * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.2.0
+ * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.2.1
  * ==========================================
  */
 class LoanSimulator {
@@ -244,7 +245,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.2.0
+     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.2.1
      * ==========================================
      */
     
@@ -294,7 +295,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 📊 TABLEAU D'AMORTISSEMENT v2.2.0
+     * 📊 TABLEAU D'AMORTISSEMENT v2.2.1
      * ==========================================
      */
 
@@ -348,7 +349,7 @@ class LoanSimulator {
             appliquerRenegociation
         });
 
-        // 🆕 v2.2.0: Calcul scénario de base pour économie d'intérêts exacte
+        // 🆕 v2.2.1: Calcul scénario de base pour économie d'intérêts exacte
         let baseInterets = 0;
         let mensualiteAvantRenego = null;
         let mensualiteApresRenego = null;
@@ -373,7 +374,7 @@ class LoanSimulator {
             mensualiteApresRenego
         });
         
-        // Calcul TAEG via IRR v2.2.0
+        // Calcul TAEG via IRR v2.2.1
         try {
             const taegPrecis = this.calculateTAEG();
             results.taeg = taegPrecis * 100; // Conversion en pourcentage
@@ -413,12 +414,12 @@ class LoanSimulator {
         let indemnites = 0;
         let dureeFinale = this.dureeMois;
 
-        // 🆕 v2.2.0: Variables pour capturer les mensualités avant/après renégociation
+        // 🆕 v2.2.1: Variables pour capturer les mensualités avant/après renégociation
         let mensualiteAvantRenego = null;
         let mensualiteApresRenego = null;
 
         for (let mois = 1; mois <= dureeFinale; mois++) {
-            // 🆕 v2.2.0: Capturer mensualité avant renégociation
+            // 🆕 v2.2.1: Capturer mensualité avant renégociation
             if (mois === options.moisRenegociation - 1 && options.appliquerRenegociation) {
                 const assuranceAvant = this.assuranceSurCapitalInitial ? 
                     capitalInitial * this.assuranceMensuelle : 
@@ -441,7 +442,7 @@ class LoanSimulator {
                 capitalRestant * this.assuranceMensuelle;
             let capitalAmorti = mensualite - interets;
 
-            // 🆕 v2.2.0: Capturer mensualité après renégociation
+            // 🆕 v2.2.1: Capturer mensualité après renégociation
             if (mois === options.moisRenegociation && options.appliquerRenegociation) {
                 mensualiteApresRenego = mensualite + assurance;
             }
@@ -480,7 +481,7 @@ class LoanSimulator {
                             capitalAmorti: capitalRestant,
                             assurance,
                             mensualite: capitalRestant + interets, // crédit seul
-                            mensualiteGlobale, // 🆕 v2.2.0: crédit + assurance
+                            mensualiteGlobale, // 🆕 v2.2.1: crédit + assurance
                             capitalRestant: 0,
                             remboursementAnticipe: capitalRestant,
                             indemnites: indemnitesCourantes
@@ -509,7 +510,7 @@ class LoanSimulator {
             totalAssurance += assurance;
             totalCapitalAmorti += capitalAmorti;
 
-            // 🆕 v2.2.0: Création de mensualiteGlobale (crédit + assurance)
+            // 🆕 v2.2.1: Création de mensualiteGlobale (crédit + assurance)
             const mensualiteGlobale = mensualite + assurance;
 
             tableau.push({
@@ -518,7 +519,7 @@ class LoanSimulator {
                 capitalAmorti,
                 assurance,
                 mensualite, // crédit seul (SANS assurance)
-                mensualiteGlobale, // 🆕 v2.2.0: crédit + assurance
+                mensualiteGlobale, // 🆕 v2.2.1: crédit + assurance
                 capitalRestant,
                 remboursementAnticipe: remboursementCourant?.montant || 0,
                 indemnites: 0
@@ -536,7 +537,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.2.0
+     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.2.1
      * ==========================================
      */
 
@@ -553,7 +554,7 @@ class LoanSimulator {
     }
 
     /**
-     * 🔧 v2.2.0: Calcul financier avec économie exacte d'intérêts
+     * 🔧 v2.2.1: Calcul financier avec économie exacte d'intérêts
      */
     calculateFinancialMetrics(tableau, extra = {}) {
         const mensualiteInitiale = this.calculerMensualite();
@@ -609,7 +610,7 @@ class LoanSimulator {
             coutGlobalTotal,          // 🔧 v2.1.5: maintenant avec tenue de compte incluse
             pretSoldeAvantTerme: dureeReelle < dureeInitiale,
             gainTemps: dureeInitiale - dureeReelle,
-            // 🆕 v2.2.0: Nouvelles propriétés pour renégociation
+            // 🆕 v2.2.1: Nouvelles propriétés pour renégociation
             mensualiteAvantRenego: extra.mensualiteAvantRenego,
             mensualiteApresRenego: extra.mensualiteApresRenego,
             economieMensualiteRenego: extra.mensualiteAvantRenego && extra.mensualiteApresRenego ? 
@@ -620,12 +621,12 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 🔍 DEBUG & VALIDATION v2.2.0
+     * 🔍 DEBUG & VALIDATION v2.2.1
      * ==========================================
      */
 
     debugCashFlows() {
-        console.group('💰 Analyse des flux de trésorerie (v2.2.0)');
+        console.group('💰 Analyse des flux de trésorerie (v2.2.1)');
         console.table(this.cashFlows.map((flux, index) => ({
             periode: index === 0 ? 'Initial' : `Mois ${index}`,
             flux: this.formatMontant(flux),
@@ -649,7 +650,7 @@ class LoanSimulator {
             console.warn(`⚠️ Capital amorti insuffisant: ${this.formatMontant(results.totalCapitalAmorti)} vs ${this.formatMontant(this.capital)} initial`);
         }
 
-        console.log('✅ Validation terminée (v2.2.0 - renégociation avec bascule mensualité)');
+        console.log('✅ Validation terminée (v2.2.1 - dual mensualité display system)');
     }
 
     /**
@@ -898,7 +899,7 @@ function repaymentLabel(r) {
 
 /**
  * ==========================================
- * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI
+ * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.2.1
  * ==========================================
  */
 
@@ -1188,12 +1189,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.2.0
+     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.2.1
      * ==========================================
      */
     function calculateLoan() {
         try {
-            console.log("🚀 Début du calcul du prêt v2.2.0 (renégociation avec bascule mensualité)...");
+            console.log("🚀 Début du calcul du prêt v2.2.1 (dual mensualité display system)...");
             
             const loanAmount = parseFloat(document.getElementById('loan-amount').value);
             const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
@@ -1255,7 +1256,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("📋 Remboursements anticipés:", remboursementsAnticipes);
             console.log("🔄 Appliquer renégociation:", applyRenegotiation);
             
-            // Création du simulateur v2.2.0
+            // Création du simulateur v2.2.1
             const simulator = new LoanSimulator({
                 capital: loanAmount,
                 tauxAnnuel: interestRate,
@@ -1287,33 +1288,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
             console.log("📊 Résultats calculés:", result);
 
-            // 🆕 v2.2.0: Gestion mensualité globale tenant compte de la renégociation
-            let mensualiteGlobaleAffichee = result.mensualiteInitiale + result.assuranceInitiale;
+            // 🆕 v2.2.1: NOUVELLE LOGIQUE - Conserver les deux mensualités distinctes
+            const mensualiteBase = result.mensualiteInitiale + result.assuranceInitiale;
             
-            // Si renégociation activée, afficher la mensualité après renégociation
+            let mensualiteRenego = mensualiteBase; // valeur par défaut
             if (applyRenegotiation && renegotiationMonth && result.mensualiteApresRenego) {
                 const rowAfter = result.tableau.find(r => r.mois === renegotiationMonth + 1);
                 if (rowAfter) {
-                    mensualiteGlobaleAffichee = rowAfter.mensualiteGlobale;
+                    mensualiteRenego = rowAfter.mensualiteGlobale;
                 }
             }
             
             // Ajout PTZ si activé
+            let mensualiteBasePTZ = mensualiteBase;
+            let mensualiteRenegoPTZ = mensualiteRenego;
             if (ptzParams) {
-                mensualiteGlobaleAffichee += ptzParams.montant / ptzParams.dureeMois;
+                const mensualitePTZ = ptzParams.montant / ptzParams.dureeMois;
+                mensualiteBasePTZ += mensualitePTZ;
+                mensualiteRenegoPTZ += mensualitePTZ;
             }
             
-            // 🆕 v2.2.0: Label plus explicite avec indication de renégociation
-            let mensualiteLabel = 'Mensualité globale (crédit + assurance)';
-            if (applyRenegotiation && renegotiationMonth) {
-                mensualiteLabel = `Mensualité après renégociation M${renegotiationMonth}`;
-            }
-
-            document.getElementById('monthly-payment').textContent = formatMontant(mensualiteGlobaleAffichee);
-            const monthlyPaymentLabel = document.querySelector('#monthly-payment').parentElement.querySelector('.result-label');
-            if (monthlyPaymentLabel) {
-                monthlyPaymentLabel.textContent = mensualiteLabel;
-            }
+            // 🆕 v2.2.1: Stocker les deux valeurs dans result pour usage ultérieur
+            result.mensualiteBaseGlobale = mensualiteBasePTZ;
+            result.mensualiteRenegoGlobale = mensualiteRenegoPTZ;
+            
+            // 🆕 v2.2.1: Mise à jour UI avec deux tuiles distinctes
+            updateMensualiteDisplay(mensualiteBasePTZ, mensualiteRenegoPTZ, applyRenegotiation, renegotiationMonth);
 
             // Coût total avec PTZ
             const totalCreditAvecPTZ = result.totalPaye + (ptzParams ? ptzParams.montant : 0);
@@ -1327,10 +1327,10 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('ratio-cout').textContent = montantTotalEmprunte > 0 ? 
                 (coutGlobalAvecPTZ / montantTotalEmprunte).toFixed(3) : '0.000';
 
-            // 🆕 v2.2.0: TAEG sans correction proportionnelle (IRR inclut déjà tout)
+            // 🆕 v2.2.1: TAEG sans correction proportionnelle (IRR inclut déjà tout)
             document.getElementById('taeg').textContent = result.taeg.toFixed(2) + '%';
 
-            // 🆕 v2.2.0: Mise à jour des frais annexes avec tenue de compte incluse
+            // 🆕 v2.2.1: Mise à jour des frais annexes avec tenue de compte incluse
             document.getElementById('total-interest').textContent = formatMontant(result.totalInterets);
             document.getElementById('early-repayment-penalty').textContent = formatMontant(result.indemnites);
             
@@ -1338,7 +1338,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (totalFeesElement) {
                 totalFeesElement.textContent = formatMontant(result.totalFraisAffiches); // ➜ 4 355 €
                 
-                // 🆕 v2.2.0: Mise à jour du label pour clarifier
+                // 🆕 v2.2.1: Mise à jour du label pour clarifier
                 const feesLabel = totalFeesElement.parentElement.querySelector('.result-label');
                 if (feesLabel) {
                     feesLabel.textContent = 'Frais annexes (dossier + garantie + tenue de compte)';
@@ -1367,7 +1367,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✅ Bouton PDF activé');
             }
             
-            console.log('🎉 Calcul terminé avec succès (v2.2.0 - renégociation avec bascule mensualité)');
+            console.log('🎉 Calcul terminé avec succès (v2.2.1 - dual mensualité display system)');
             return true;
         } catch (error) {
             console.error("❌ Erreur lors du calcul:", error);
@@ -1378,7 +1378,55 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 📋 FONCTIONS D'AFFICHAGE UI v2.2.0
+     * 🆕 v2.2.1: NOUVELLE FONCTION D'AFFICHAGE DUAL MENSUALITÉ
+     * ==========================================
+     */
+    function updateMensualiteDisplay(mensualiteBase, mensualiteRenego, applyRenegotiation, renegotiationMonth) {
+        const monthlyPaymentElement = document.getElementById('monthly-payment');
+        const monthlyPaymentCard = monthlyPaymentElement.parentElement;
+        
+        // Supprimer toute tuile de renégociation existante
+        const existingRenegoCard = document.getElementById('monthly-payment-renego-card');
+        if (existingRenegoCard) {
+            existingRenegoCard.remove();
+        }
+        
+        // Mise à jour de la tuile initiale
+        monthlyPaymentElement.textContent = formatMontant(mensualiteBase);
+        const initialLabel = monthlyPaymentCard.querySelector('.result-label');
+        if (initialLabel) {
+            initialLabel.textContent = 'Mensualité initiale (crédit + assurance)';
+        }
+        
+        // Si renégociation activée et différente, créer une seconde tuile
+        if (applyRenegotiation && renegotiationMonth && Math.abs(mensualiteRenego - mensualiteBase) > 0.01) {
+            const renegoCard = document.createElement('div');
+            renegoCard.id = 'monthly-payment-renego-card';
+            renegoCard.className = 'result-card bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500';
+            
+            renegoCard.innerHTML = `
+                <p id="monthly-payment-renego" class="result-value text-white">${formatMontant(mensualiteRenego)}</p>
+                <p class="result-label text-blue-100">Mensualité après renégociation M${renegotiationMonth}</p>
+                <div class="mt-2 text-xs text-blue-200 flex items-center">
+                    <i class="fas fa-arrow-down mr-1"></i>
+                    Économie: ${formatMontant(mensualiteBase - mensualiteRenego)}/mois
+                </div>
+            `;
+            
+            // Insérer après la tuile initiale
+            monthlyPaymentCard.parentNode.insertBefore(renegoCard, monthlyPaymentCard.nextSibling);
+            
+            // Animation d'apparition
+            setTimeout(() => {
+                renegoCard.style.transform = 'translateY(0)';
+                renegoCard.style.opacity = '1';
+            }, 100);
+        }
+    }
+
+    /**
+     * ==========================================
+     * 📋 FONCTIONS D'AFFICHAGE UI v2.2.1
      * ==========================================
      */
 
@@ -1400,7 +1448,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 tr.classList.add(i % 2 === 0 ? 'bg-blue-800' : 'bg-blue-900', 'bg-opacity-10');
             }
             
-            // 🆕 v2.2.0: Affichage mensualiteGlobale (corrige le problème de double assurance)
+            // 🆕 v2.2.1: Affichage mensualiteGlobale (corrige le problème de double assurance)
             tr.innerHTML = `
                 <td class="px-3 py-2">${row.mois}</td>
                 <td class="px-3 py-2 text-right">
@@ -1473,7 +1521,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="flex items-center justify-between mb-3">
                     <h5 class="text-amber-400 font-medium flex items-center">
                         <i class="fas fa-home mr-2"></i>
-                        Détail du Prêt à Taux Zéro v2.2.0
+                        Détail du Prêt à Taux Zéro v2.2.1
                     </h5>
                     <span class="text-xs text-amber-300 bg-amber-900 bg-opacity-30 px-2 py-1 rounded">
                         ${pourcentageFinancement}% du financement
@@ -1522,7 +1570,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     <div class="mt-2 text-xs text-blue-300">
                         <i class="fas fa-cogs mr-1"></i>
-                        Calcul TAEG v2.2.0 : renégociation avec bascule mensualité
+                        Calcul TAEG v2.2.1 : dual mensualité display system
                     </div>
                 </div>
             `;
@@ -1562,7 +1610,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 comparisonTableBody.innerHTML = '';
                 
-                // 🆕 v2.2.0: Comparaisons incluant la renégociation
+                // 🆕 v2.2.1: Comparaisons incluant la renégociation
                 const comparisons = [
                     {
                         label: 'Durée du prêt',
@@ -1593,7 +1641,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         positive: modeRemboursement === 'mensualite'
                     },
                     {
-                        label: 'TAEG v2.2.0 Corrigé',
+                        label: 'TAEG v2.2.1 Corrigé',
                         base: `${baseResult.taeg.toFixed(2)}%`,
                         current: `${result.taeg.toFixed(2)}%`,
                         diff: `-${Math.max(0, (baseResult.taeg - result.taeg)).toFixed(2)}%`,
@@ -1615,7 +1663,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 ];
 
-                // 🆕 v2.2.0: Ajout ligne renégociation si applicable
+                // 🆕 v2.2.1: Ajout ligne renégociation si applicable
                 if (result.mensualiteAvantRenego && result.mensualiteApresRenego) {
                     comparisons.splice(4, 0, {
                         label: `Diff. mensualité à M${result.moisRenegociation}`,
@@ -1669,7 +1717,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // 🆕 v2.2.0: Utilisation économie exacte d'intérêts
+        // 🆕 v2.2.1: Utilisation économie exacte d'intérêts
         const economiesPourcentage = result.economieInteretsExact > 0 ? 
             ((result.economieInteretsExact / (result.totalInterets + result.economieInteretsExact)) * 100).toFixed(1) :
             ((result.economiesInterets / (result.totalInterets + result.economiesInterets)) * 100).toFixed(1);
@@ -1693,7 +1741,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>
             `;
             
-            // 🆕 v2.2.0: Affichage bascule mensualité si disponible
+            // 🆕 v2.2.1: Affichage bascule mensualité si disponible
             if (result.mensualiteAvantRenego && result.mensualiteApresRenego) {
                 renégociationText += `
                     <li class="flex items-start bg-green-900 bg-opacity-30 p-2 rounded-lg my-2">
@@ -1715,7 +1763,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
                 <i class="fas fa-piggy-bank mr-2"></i>
-                Analyse complète du prêt v2.2.0
+                Analyse complète du prêt v2.2.1
                 <span class="ml-2 text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded">IRR ${result.taeg.toFixed(3)}%</span>
             </h5>
             <ul class="text-sm text-gray-300 space-y-2 pl-4">
@@ -1762,8 +1810,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                    <span>TAEG précis via IRR v2.2.0: ${result.taeg.toFixed(2)}% 
-                    <span class="text-xs text-green-300">(renégociation avec bascule mensualité)</span></span>
+                    <span>TAEG précis via IRR v2.2.1: ${result.taeg.toFixed(2)}% 
+                    <span class="text-xs text-green-300">(dual mensualité display system)</span></span>
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
@@ -1819,7 +1867,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         const feesData = Array(labels.length).fill(0);
-        feesData[0] = result.totalFraisAffiches; // 🆕 v2.2.0: utilise totalFraisAffiches
+        feesData[0] = result.totalFraisAffiches; // 🆕 v2.2.1: utilise totalFraisAffiches
         
         loanChart = new Chart(ctx, {
             type: 'line',
@@ -1872,7 +1920,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     title: {
                         display: true,
-                        text: 'Évolution du prêt (v2.2.0 - renégociation avec bascule mensualité)',
+                        text: 'Évolution du prêt (v2.2.1 - dual mensualité display system)',
                         color: 'rgba(255, 255, 255, 0.9)'
                     },
                     tooltip: {
