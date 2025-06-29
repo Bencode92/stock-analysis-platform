@@ -1,6 +1,6 @@
 /**
  * ============================================
- * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.1.2
+ * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.1.3
  * ============================================
  * 
  * Plan d'action implémenté :
@@ -12,6 +12,7 @@
  * 🔧 v2.1 : 4 corrections critiques TAEG Newton-Raphson
  * 🔧 v2.1.1 : 3 retouches conformité Banque de France
  * 🔧 v2.1.2 : Fix TAEG -21% → multi-seeds + bissection
+ * 🔧 v2.1.3 : Correction frais tenue compte affichage UI
  * 
  * Architecture : Flux de trésorerie centralisés pour calculs financiers conformes
  */
@@ -176,7 +177,7 @@ class PTZManager {
 
 /**
  * ==========================================
- * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.1.2
+ * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.1.3
  * ==========================================
  */
 class LoanSimulator {
@@ -190,10 +191,11 @@ class LoanSimulator {
         this.indemnitesMois = params.indemnitesMois || 12;
         this.assuranceSurCapitalInitial = params.assuranceSurCapitalInitial || false;
 
-        // Frais annexes
-        this.fraisDossier = params.fraisDossier || 2000;
-        this.fraisTenueCompte = params.fraisTenueCompte || 710;
-        this.fraisGarantie = this.calculateFraisGarantie(params);
+        // 🆕 v2.1.3: Séparation frais fixes / récurrents
+        this.fraisDossier = params.fraisDossier || 2000;                    // fixes
+        this.fraisGarantie = this.calculateFraisGarantie(params);           // fixes
+        this.fraisTenueCompteFix = params.fraisTenueCompte || 710;          // fixe, MAIS étalé
+        this.fraisTenueMensuel = this.fraisTenueCompteFix / this.dureeMois; // ↖️
 
         // 🚀 NOUVEAU : Flux de trésorerie centralisés
         this.cashFlows = [];
@@ -239,28 +241,28 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.1.2
+     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.1.3
      * ==========================================
      */
     
     generateBaseCashFlows() {
         const mensualite = this.calculerMensualite();
-        const fraisTenueMensuels = this.fraisTenueCompte / this.dureeMois;   // 🆕 v2.1.1
 
         const flows = Array(this.dureeMois + 1).fill(0);
         
-        // Flux initial : capital net reçu (négatif car on reçoit l'argent)
-        const fraisInitiaux = this.fraisDossier + this.fraisGarantie;
-        flows[0] = FLUX_ENTREE * (this.capital - fraisInitiaux);
+        // 🆕 v2.1.3: Flux initial avec seulement frais fixes (pas la tenue de compte)
+        const fraisInitiauxFixes = this.fraisDossier + this.fraisGarantie;
+        // 🟢 on NE met PAS fraisTenueCompteFix ici : il est déjà ventilé mensuellement
+        flows[0] = FLUX_ENTREE * (this.capital - fraisInitiauxFixes);
         
-        // Flux mensuels : mensualité + assurance + tenue de compte 🆕 v2.1.1
+        // Flux mensuels : mensualité + assurance + tenue de compte (déjà incluse v2.1.1)
         for (let mois = 1; mois <= this.dureeMois; mois++) {
             const capitalRestant = this.getCapitalRestantAt(mois - 1);
             const assurance = this.assuranceSurCapitalInitial ? 
                 this.capital * this.assuranceMensuelle : 
                 capitalRestant * this.assuranceMensuelle;
             
-            flows[mois] = FLUX_SORTIE * (mensualite + assurance + fraisTenueMensuels); // 🆕 v2.1.1
+            flows[mois] = FLUX_SORTIE * (mensualite + assurance + this.fraisTenueMensuel);
         }
         
         return flows;
@@ -289,7 +291,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 📊 TABLEAU D'AMORTISSEMENT v2.1.2
+     * 📊 TABLEAU D'AMORTISSEMENT v2.1.3
      * ==========================================
      */
 
@@ -346,7 +348,7 @@ class LoanSimulator {
         // Calculs financiers
         const results = this.calculateFinancialMetrics(tableau);
         
-        // Calcul TAEG via IRR v2.1.2
+        // Calcul TAEG via IRR v2.1.3
         try {
             const taegPrecis = this.calculateTAEG();
             results.taeg = taegPrecis * 100; // Conversion en pourcentage
@@ -481,7 +483,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.1.2
+     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.1.3
      * ==========================================
      */
 
@@ -498,7 +500,7 @@ class LoanSimulator {
     }
 
     /**
-     * 🔧 v2.1.1: Calcul frais corrigé dans calculateFinancialMetrics
+     * 🔧 v2.1.3: Calcul frais corrigé pour affichage UI correct
      */
     calculateFinancialMetrics(tableau) {
         const mensualiteInitiale = this.calculerMensualite();
@@ -511,8 +513,14 @@ class LoanSimulator {
         const indemnites = tableau.reduce((sum, row) => sum + (row.indemnites || 0), 0);
         
         const montantTotal = tableau.reduce((sum, row) => sum + row.mensualite, 0);
-        const totalFrais = this.fraisDossier + this.fraisGarantie; // 🆕 v2.1.1: retiré fraisTenueCompte
-        const coutGlobalTotal = montantTotal + indemnites + totalFrais;
+        
+        // 🆕 v2.1.3: Séparation des frais pour affichage correct
+        const totalTenueCompte = this.fraisTenueCompteFix;   // somme des 2,36 € x 300
+        const totalFraisFixes = this.fraisDossier + this.fraisGarantie;
+        const totalFraisAffiches = totalFraisFixes + totalTenueCompte; // ✅ 4 331 €
+        
+        // 👉 coutGlobalTotal inchangé (il tient déjà compte de la tenue de compte via montantTotal)
+        const coutGlobalTotal = montantTotal + indemnites + totalFraisFixes;
         
         // 🔧 CORRECTION 4: Calcul assurance corrigé pour economiesMensualites
         const assuranceInitiale = this.assuranceSurCapitalInitial 
@@ -536,8 +544,10 @@ class LoanSimulator {
             dureeInitiale,
             economiesMensualites,
             economiesInterets,
-            totalFrais,
-            coutGlobalTotal,
+            totalFraisFixes,          // pour le détail "frais dossier + garantie"
+            totalTenueCompte,         // pour l'info bulles
+            totalFraisAffiches,       // affiche "Frais annexes" = 4 331 €
+            coutGlobalTotal,          // idem avant
             pretSoldeAvantTerme: dureeReelle < dureeInitiale,
             gainTemps: dureeInitiale - dureeReelle
         };
@@ -545,12 +555,12 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 🔍 DEBUG & VALIDATION v2.1.2
+     * 🔍 DEBUG & VALIDATION v2.1.3
      * ==========================================
      */
 
     debugCashFlows() {
-        console.group('💰 Analyse des flux de trésorerie (v2.1.2)');
+        console.group('💰 Analyse des flux de trésorerie (v2.1.3)');
         console.table(this.cashFlows.map((flux, index) => ({
             periode: index === 0 ? 'Initial' : `Mois ${index}`,
             flux: this.formatMontant(flux),
@@ -574,7 +584,7 @@ class LoanSimulator {
             console.warn(`⚠️ Capital amorti insuffisant: ${this.formatMontant(results.totalCapitalAmorti)} vs ${this.formatMontant(this.capital)} initial`);
         }
 
-        console.log('✅ Validation terminée (v2.1.2 - multi-seeds Newton-Raphson + bissection)');
+        console.log('✅ Validation terminée (v2.1.3 - frais de tenue de compte UI corrigés)');
     }
 
     /**
@@ -690,7 +700,7 @@ class LoanSimulator {
                         data.capitalInitial,
                         data.totalInterets,
                         data.totalAssurance,
-                        data.totalFrais
+                        data.totalFraisAffiches  // 🆕 v2.1.3: utilise totalFraisAffiches
                     ],
                     backgroundColor: [
                         'rgba(34, 197, 94, 0.8)',
@@ -1113,12 +1123,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.1.2
+     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.1.3
      * ==========================================
      */
     function calculateLoan() {
         try {
-            console.log("🚀 Début du calcul du prêt v2.1.2 (TAEG corrigé multi-seeds)...");
+            console.log("🚀 Début du calcul du prêt v2.1.3 (frais de tenue de compte UI corrigés)...");
             
             const loanAmount = parseFloat(document.getElementById('loan-amount').value);
             const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
@@ -1180,7 +1190,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("📋 Remboursements anticipés:", remboursementsAnticipes);
             console.log("🔄 Appliquer renégociation:", applyRenegotiation);
             
-            // Création du simulateur v2.1.2
+            // Création du simulateur v2.1.3
             const simulator = new LoanSimulator({
                 capital: loanAmount,
                 tauxAnnuel: interestRate,
@@ -1243,12 +1253,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('taeg').textContent = result.taeg.toFixed(2) + '%';
             }
 
-            // Mise à jour des résultats standards
+            // 🆕 v2.1.3: Mise à jour des frais annexes avec tenue de compte incluse
             document.getElementById('total-interest').textContent = formatMontant(result.totalInterets);
             document.getElementById('early-repayment-penalty').textContent = formatMontant(result.indemnites);
             
             const totalFeesElement = document.getElementById('total-fees');
-            if (totalFeesElement) totalFeesElement.textContent = formatMontant(result.totalFrais);
+            if (totalFeesElement) {
+                totalFeesElement.textContent = formatMontant(result.totalFraisAffiches); // ➜ 4 331 €
+                
+                // 🆕 v2.1.3: Mise à jour du label pour clarifier
+                const feesLabel = totalFeesElement.parentElement.querySelector('.result-label');
+                if (feesLabel) {
+                    feesLabel.textContent = 'Frais annexes (dossier + garantie + tenue de compte)';
+                }
+            }
 
             // Génération du tableau d'amortissement
             updateAmortizationTable(result, ptzParams);
@@ -1272,7 +1290,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✅ Bouton PDF activé');
             }
             
-            console.log('🎉 Calcul terminé avec succès (v2.1.2 - TAEG corrigé multi-seeds + bissection)');
+            console.log('🎉 Calcul terminé avec succès (v2.1.3 - frais de tenue de compte UI corrigés)');
             return true;
         } catch (error) {
             console.error("❌ Erreur lors du calcul:", error);
@@ -1375,7 +1393,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="flex items-center justify-between mb-3">
                     <h5 class="text-amber-400 font-medium flex items-center">
                         <i class="fas fa-home mr-2"></i>
-                        Détail du Prêt à Taux Zéro v2.1.2
+                        Détail du Prêt à Taux Zéro v2.1.3
                     </h5>
                     <span class="text-xs text-amber-300 bg-amber-900 bg-opacity-30 px-2 py-1 rounded">
                         ${pourcentageFinancement}% du financement
@@ -1424,7 +1442,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     <div class="mt-2 text-xs text-blue-300">
                         <i class="fas fa-cogs mr-1"></i>
-                        Calcul TAEG v2.1.2 : multi-seeds Newton-Raphson + bissection
+                        Calcul TAEG v2.1.3 : frais de tenue de compte UI corrigés
                     </div>
                 </div>
             `;
@@ -1495,7 +1513,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         positive: modeRemboursement === 'mensualite'
                     },
                     {
-                        label: 'TAEG v2.1.2 Multi-Seeds',
+                        label: 'TAEG v2.1.3 UI Corrigé',
                         base: `${baseResult.taeg.toFixed(2)}%`,
                         current: `${result.taeg.toFixed(2)}%`,
                         diff: `-${Math.max(0, (baseResult.taeg - result.taeg)).toFixed(2)}%`,
@@ -1592,7 +1610,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
                 <i class="fas fa-piggy-bank mr-2"></i>
-                Analyse complète du prêt v2.1.2
+                Analyse complète du prêt v2.1.3
                 <span class="ml-2 text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded">IRR ${result.taeg.toFixed(3)}%</span>
             </h5>
             <ul class="text-sm text-gray-300 space-y-2 pl-4">
@@ -1639,12 +1657,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                    <span>TAEG précis via IRR v2.1.2: ${result.taeg.toFixed(2)}% 
-                    <span class="text-xs text-green-300">(multi-seeds + bissection)</span></span>
+                    <span>TAEG précis via IRR v2.1.3: ${result.taeg.toFixed(2)}% 
+                    <span class="text-xs text-green-300">(frais tenue compte UI corrigés)</span></span>
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                    <span>Frais annexes: ${formatMontant(result.totalFrais)}</span>
+                    <span>Frais annexes: ${formatMontant(result.totalFraisAffiches)} 
+                    <span class="text-xs text-blue-300">(dossier + garantie + tenue compte)</span></span>
                 </li>`;
         
         if (result.remboursementsAnticipes && result.remboursementsAnticipes.length > 0) {
@@ -1695,7 +1714,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         const feesData = Array(labels.length).fill(0);
-        feesData[0] = result.totalFrais;
+        feesData[0] = result.totalFraisAffiches; // 🆕 v2.1.3: utilise totalFraisAffiches
         
         loanChart = new Chart(ctx, {
             type: 'line',
@@ -1727,7 +1746,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         tension: 0.4
                     },
                     {
-                        label: 'Frais annexes',
+                        label: 'Frais annexes (complets)',
                         data: feesData,
                         borderColor: 'rgba(153, 102, 255, 1)',
                         backgroundColor: 'rgba(153, 102, 255, 0.1)',
@@ -1748,7 +1767,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     title: {
                         display: true,
-                        text: 'Évolution du prêt (v2.1.2 - TAEG corrigé multi-seeds)',
+                        text: 'Évolution du prêt (v2.1.3 - frais tenue compte UI corrigés)',
                         color: 'rgba(255, 255, 255, 0.9)'
                     },
                     tooltip: {
