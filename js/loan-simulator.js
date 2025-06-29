@@ -159,8 +159,8 @@ class PTZManager {
     validate(montantTotal, dureePretPrincipal) {
         const errors = [];
         
-        if (this.montant > montantTotal * 0.4) {
-            errors.push(`PTZ ne peut dépasser 40% du coût total (max: ${this.formatMontant(montantTotal * 0.4)})`);
+        if (this.montant > montantTotal * 0.5) {
+            errors.push(`PTZ ne peut dépasser 50% du coût total (max: ${this.formatMontant(montantTotal * 0.5)})`);
         }
         
         if (this.dureeMois > dureePretPrincipal) {
@@ -1148,9 +1148,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const ptzDurationYears = parseInt(document.getElementById('ptz-duration-slider')?.value || 20);
                 
                 if (ptzAmount > 0) {
-                    const maxPTZ = loanAmount * 0.4;
+                    const maxPTZ = loanAmount * 0.5;
                     if (ptzAmount > maxPTZ) {
-                        ptzValidationError = `Le PTZ ne peut dépasser 40% du coût total (maximum: ${formatMontant(maxPTZ)})`;
+                        ptzValidationError = `Le PTZ ne peut dépasser 50% du coût total (maximum: ${formatMontant(maxPTZ)})`;
                     } else if (ptzDurationYears > loanDurationYears) {
                         ptzValidationError = `La durée du PTZ ne peut dépasser celle du prêt principal (${loanDurationYears} ans)`;
                     } else {
