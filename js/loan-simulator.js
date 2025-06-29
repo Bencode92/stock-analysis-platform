@@ -1,6 +1,6 @@
 /**
  * ============================================
- * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.2.2
+ * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.2.1
  * ============================================
  * 
  * Plan d'action implémenté :
@@ -17,7 +17,6 @@
  * 🔧 v2.1.5 : Correction coût global total - inclusion tenue de compte
  * 🚀 v2.2.0 : Amélioration renégociation avec bascule mensualité claire
  * 🔧 v2.2.1 : Fix affichage dual mensualité initiale/renégociée
- * ✨ v2.2.2 : Ajout fonctionnalité remboursement total automatique
  * 
  * Architecture : Flux de trésorerie centralisés pour calculs financiers conformes
  */
@@ -182,7 +181,7 @@ class PTZManager {
 
 /**
  * ==========================================
- * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.2.2
+ * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.2.1
  * ==========================================
  */
 class LoanSimulator {
@@ -246,7 +245,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.2.2
+     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.2.1
      * ==========================================
      */
     
@@ -296,7 +295,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 📊 TABLEAU D'AMORTISSEMENT v2.2.2
+     * 📊 TABLEAU D'AMORTISSEMENT v2.2.1
      * ==========================================
      */
 
@@ -538,7 +537,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.2.2
+     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.2.1
      * ==========================================
      */
 
@@ -555,7 +554,7 @@ class LoanSimulator {
     }
 
     /**
-     * 🔧 v2.2.2: Calcul financier avec économie exacte d'intérêts
+     * 🔧 v2.2.1: Calcul financier avec économie exacte d'intérêts
      */
     calculateFinancialMetrics(tableau, extra = {}) {
         const mensualiteInitiale = this.calculerMensualite();
@@ -622,12 +621,12 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 🔍 DEBUG & VALIDATION v2.2.2
+     * 🔍 DEBUG & VALIDATION v2.2.1
      * ==========================================
      */
 
     debugCashFlows() {
-        console.group('💰 Analyse des flux de trésorerie (v2.2.2)');
+        console.group('💰 Analyse des flux de trésorerie (v2.2.1)');
         console.table(this.cashFlows.map((flux, index) => ({
             periode: index === 0 ? 'Initial' : `Mois ${index}`,
             flux: this.formatMontant(flux),
@@ -651,7 +650,7 @@ class LoanSimulator {
             console.warn(`⚠️ Capital amorti insuffisant: ${this.formatMontant(results.totalCapitalAmorti)} vs ${this.formatMontant(this.capital)} initial`);
         }
 
-        console.log('✅ Validation terminée (v2.2.2 - remboursement total automatique)');
+        console.log('✅ Validation terminée (v2.2.1 - dual mensualité display system)');
     }
 
     /**
@@ -828,27 +827,29 @@ function getRemainingCapitalAt(month) {
     }
 }
 
-// ✨ v2.2.2: NOUVELLE FONCTION toggleTotalRepaymentUI
+// Fonctions UX pour remboursement total
 function toggleTotalRepaymentUI(enabled) {
     const amountInput = document.getElementById('early-repayment-amount-mensualite');
-    const container   = amountInput?.closest('.parameter-row');
-
+    const container = amountInput?.closest('.parameter-row');
+    
     if (!amountInput) return;
-
+    
     if (enabled) {
         amountInput.value = '';
-        amountInput.disabled   = true;
-        amountInput.placeholder = 'Calculé automatiquement…';
+        amountInput.disabled = true;
+        amountInput.placeholder = 'Calculé automatiquement...';
         amountInput.classList.add('opacity-60', 'cursor-not-allowed');
-        container?.classList.add('opacity-60');
-
-        const mois  = +document.getElementById('early-repayment-month-slider-mensualite').value;
-        const restD = getRemainingCapitalAt(mois);
-        showNotification(`Capital restant au mois ${mois} : ${formatMontant(restD)}`, 'info');
+        container?.classList.add('opacity-60', 'transition-opacity', 'duration-300');
+        
+        const mois = +document.getElementById('early-repayment-month-slider-mensualite').value;
+        const previewAmount = getRemainingCapitalAt(mois);
+        
+        showNotification(`Capital restant au mois ${mois}: ${formatMontant(previewAmount)}`, 'info');
+        
     } else {
-        amountInput.disabled   = false;
+        amountInput.disabled = false;
         amountInput.placeholder = 'Montant à rembourser';
-        amountInput.classList.remove('opacity-60', 'cursor-not-allowed');
+        amountInput.classList.remove('opacity-60', 'cursor-not-allowed', 'text-green-400', 'font-semibold');
         container?.classList.remove('opacity-60');
     }
 }
@@ -898,7 +899,7 @@ function repaymentLabel(r) {
 
 /**
  * ==========================================
- * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.2.2
+ * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.2.1
  * ==========================================
  */
 
@@ -1188,12 +1189,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.2.2
+     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.2.1
      * ==========================================
      */
     function calculateLoan() {
         try {
-            console.log("🚀 Début du calcul du prêt v2.2.2 (remboursement total automatique)...");
+            console.log("🚀 Début du calcul du prêt v2.2.1 (dual mensualité display system)...");
             
             const loanAmount = parseFloat(document.getElementById('loan-amount').value);
             const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
@@ -1201,7 +1202,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const insuranceRate = parseFloat(document.getElementById('insurance-rate-slider').value);
             const newInterestRate = parseFloat(document.getElementById('new-interest-rate-slider').value);
             const renegotiationMonth = parseInt(document.getElementById('renegotiation-month-slider').value);
-            const applyRenegotiation = document.getElementById('apply-renegociation')?.checked || false;
+            const applyRenegotiation = document.getElementById('apply-renegotiation')?.checked || false;
             
             // Gestion PTZ avec validation renforcée
             const enablePTZ = document.getElementById('enable-ptz')?.checked || false;
@@ -1255,7 +1256,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("📋 Remboursements anticipés:", remboursementsAnticipes);
             console.log("🔄 Appliquer renégociation:", applyRenegotiation);
             
-            // Création du simulateur v2.2.2
+            // Création du simulateur v2.2.1
             const simulator = new LoanSimulator({
                 capital: loanAmount,
                 tauxAnnuel: interestRate,
@@ -1366,11 +1367,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✅ Bouton PDF activé');
             }
             
-            // ✨ v2.2.2: Vérification remboursement total
-            const montantInput = +document.getElementById('early-repayment-amount-mensualite').value || 0;
-            checkTotalRepayment(montantInput);
-            
-            console.log('🎉 Calcul terminé avec succès (v2.2.2 - remboursement total automatique)');
+            console.log('🎉 Calcul terminé avec succès (v2.2.1 - dual mensualité display system)');
             return true;
         } catch (error) {
             console.error("❌ Erreur lors du calcul:", error);
@@ -1429,7 +1426,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 📋 FONCTIONS D'AFFICHAGE UI v2.2.2
+     * 📋 FONCTIONS D'AFFICHAGE UI v2.2.1
      * ==========================================
      */
 
@@ -1524,7 +1521,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="flex items-center justify-between mb-3">
                     <h5 class="text-amber-400 font-medium flex items-center">
                         <i class="fas fa-home mr-2"></i>
-                        Détail du Prêt à Taux Zéro v2.2.2
+                        Détail du Prêt à Taux Zéro v2.2.1
                     </h5>
                     <span class="text-xs text-amber-300 bg-amber-900 bg-opacity-30 px-2 py-1 rounded">
                         ${pourcentageFinancement}% du financement
@@ -1573,7 +1570,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     <div class="mt-2 text-xs text-blue-300">
                         <i class="fas fa-cogs mr-1"></i>
-                        Calcul TAEG v2.2.2 : remboursement total automatique
+                        Calcul TAEG v2.2.1 : dual mensualité display system
                     </div>
                 </div>
             `;
@@ -1644,7 +1641,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         positive: modeRemboursement === 'mensualite'
                     },
                     {
-                        label: 'TAEG v2.2.2 Corrigé',
+                        label: 'TAEG v2.2.1 Corrigé',
                         base: `${baseResult.taeg.toFixed(2)}%`,
                         current: `${result.taeg.toFixed(2)}%`,
                         diff: `-${Math.max(0, (baseResult.taeg - result.taeg)).toFixed(2)}%`,
@@ -1766,7 +1763,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
                 <i class="fas fa-piggy-bank mr-2"></i>
-                Analyse complète du prêt v2.2.2
+                Analyse complète du prêt v2.2.1
                 <span class="ml-2 text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded">IRR ${result.taeg.toFixed(3)}%</span>
             </h5>
             <ul class="text-sm text-gray-300 space-y-2 pl-4">
@@ -1813,8 +1810,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                    <span>TAEG précis via IRR v2.2.2: ${result.taeg.toFixed(2)}% 
-                    <span class="text-xs text-green-300">(remboursement total automatique)</span></span>
+                    <span>TAEG précis via IRR v2.2.1: ${result.taeg.toFixed(2)}% 
+                    <span class="text-xs text-green-300">(dual mensualité display system)</span></span>
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
@@ -1923,7 +1920,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     title: {
                         display: true,
-                        text: 'Évolution du prêt (v2.2.2 - remboursement total automatique)',
+                        text: 'Évolution du prêt (v2.2.1 - dual mensualité display system)',
                         color: 'rgba(255, 255, 255, 0.9)'
                     },
                     tooltip: {
@@ -2100,7 +2097,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // ✨ v2.2.2: GESTIONNAIRE POUR AJOUTER UN REMBOURSEMENT AVEC LOGIQUE TOTAL
+    // Gestionnaire pour ajouter un remboursement
     const addRepaymentBtn = document.getElementById('add-repayment-btn');
     if (addRepaymentBtn) {
         addRepaymentBtn.addEventListener('click', function (e) {
@@ -2117,19 +2114,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 newRepayment = { montant: 0, mois, moisAReduire };
             } else {
-                // ✨ v2.2.2: NOUVELLE LOGIQUE REMBOURSEMENT TOTAL
                 const totalCheckEl = document.getElementById('total-repayment');
-                const isTotal      = totalCheckEl?.checked;
+                const isTotal = totalCheckEl?.checked;
                 const amountInput = document.getElementById('early-repayment-amount-mensualite');
                 const mois = +document.getElementById('early-repayment-month-slider-mensualite').value;
                 
                 let montant = +amountInput.value;
                 
-                // ⬇️ juste après avoir lu le montant :
                 if (isTotal) {
-                    montant = getRemainingCapitalAt(mois);        // auto-calcul
-                    showNotification(`💸 Remboursement total : ${formatMontant(montant)}`, 'success');
-                    totalCheckEl.checked = false;                 // on réinitialise la case
+                    montant = getRemainingCapitalAt(mois);
+                    showNotification(`Remboursement total calculé: ${formatMontant(montant)}`, 'success');
+                    totalCheckEl.checked = false;
                     toggleTotalRepaymentUI(false);
                 }
                 
@@ -2138,7 +2133,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                // et n'oublie pas de marquer l'objet :
                 newRepayment = { 
                     montant, 
                     mois, 
@@ -2203,64 +2197,64 @@ document.addEventListener('DOMContentLoaded', function() {
     const resetRepaymentsBtn = document.getElementById('reset-repayments');
     if (resetRepaymentsBtn) {
         resetRepaymentsBtn.addEventListener('click', function() {
-            if (confirm('Êtes-vous sûr de vouloir supprimer tous les remboursements anticipés ?')) {
-                window.storedRepayments = [];
-                renderRepaymentsList();
-                calculateLoan();
-                showNotification('Tous les remboursements ont été supprimés', 'success');
-            }
+            window.storedRepayments = [];
+            renderRepaymentsList();
+            calculateLoan();
         });
     }
-
+    
     // Initialisation
-    syncModeValues();
-    updateSliderMaxValues();
-    
-    // Stockage global des remboursements
-    if (!window.storedRepayments) {
-        window.storedRepayments = [];
+    if (document.getElementById('loan-amount')) {
+        updateSliderMaxValues();
+        setTimeout(syncModeValues, 500);
+        
+        if (!window.storedRepayments) {
+            window.storedRepayments = [];
+        }
+        
+        setTimeout(calculateLoan, 1000);
     }
-    
-    // Synchronisation initiale des champs
-    if (interestRateSlider && interestRateValue) {
-        interestRateValue.textContent = `${interestRateSlider.value}%`;
-    }
-    
-    if (loanDurationSlider && loanDurationValue) {
-        loanDurationValue.textContent = `${loanDurationSlider.value} ans`;
-    }
-    
-    if (insuranceRateSlider && insuranceRateValue) {
-        insuranceRateValue.textContent = `${insuranceRateSlider.value}%`;
-    }
-    
-    if (newInterestRateSlider && newInterestRateValue) {
-        newInterestRateValue.textContent = `${newInterestRateSlider.value}%`;
-    }
-    
-    if (renegotiationMonthSlider && renegotiationMonthValue) {
-        renegotiationMonthValue.textContent = renegotiationMonthSlider.value;
-    }
-    
-    if (earlyRepaymentMonthSliderDuree && earlyRepaymentMonthValueDuree) {
-        earlyRepaymentMonthValueDuree.textContent = earlyRepaymentMonthSliderDuree.value;
-    }
-    
-    if (earlyRepaymentMonthSliderMensualite && earlyRepaymentMonthValueMensualite) {
-        earlyRepaymentMonthValueMensualite.textContent = earlyRepaymentMonthSliderMensualite.value;
-    }
-    
-    if (penaltyMonthsSliderDuree && penaltyMonthsValueDuree) {
-        penaltyMonthsValueDuree.textContent = `${penaltyMonthsSliderDuree.value} mois`;
-    }
-    
-    if (penaltyMonthsSliderMensualite && penaltyMonthsValueMensualite) {
-        penaltyMonthsValueMensualite.textContent = `${penaltyMonthsSliderMensualite.value} mois`;
-    }
-    
-    if (ptzDurationSlider && ptzDurationValue) {
-        ptzDurationValue.textContent = `${ptzDurationSlider.value} ans`;
-    }
-    
-    console.log('✅ Simulateur de prêt v2.2.2 initialisé avec fonctionnalité remboursement total automatique');
 });
+
+/**
+ * ==========================================
+ * 🎯 NAVIGATION PTZ
+ * ==========================================
+ */
+function initPTZNavigation() {
+    document.addEventListener('click', (e) => {
+        const ptzLink = e.target.closest('#go-to-ptz');
+        if (!ptzLink) return;
+        
+        e.preventDefault();
+        console.log('🎯 Navigation PTZ activée');
+        
+        const ptzTab = document.querySelector('[data-target="ptz-simulator"]');
+        const ptzContent = document.getElementById('ptz-simulator');
+        
+        if (ptzTab && ptzContent) {
+            document.querySelectorAll('.simulation-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.simulation-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            ptzTab.classList.add('active');
+            ptzContent.style.display = 'block';
+            
+            setTimeout(() => {
+                ptzContent.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }, 200);
+        }
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPTZNavigation);
+} else {
+    initPTZNavigation();
+}
