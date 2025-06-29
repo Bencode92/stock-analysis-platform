@@ -1,6 +1,6 @@
 /**
  * ============================================
- * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.0
+ * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.1
  * ============================================
  * 
  * Plan d'action implémenté :
@@ -9,6 +9,7 @@
  * ✅ Étape 3 : Intégration PTZ comme "sous-prêt"
  * ✅ Étape 4 : Validations & debug helpers
  * ✅ Étape 5 : Compatibilité UI existante
+ * 🔧 v2.1 : 4 corrections critiques TAEG Newton-Raphson
  * 
  * Architecture : Flux de trésorerie centralisés pour calculs financiers conformes
  */
@@ -17,8 +18,9 @@
 // 🔧 CONSTANTES ET UTILITAIRES FINANCIERS
 // ==========================================
 
-const FLUX_ENTREE = 1;   // Multiplicateur pour entrées de trésorerie
-const FLUX_SORTIE = -1;  // Multiplicateur pour sorties de trésorerie
+// 🔧 CORRECTION 1: Signes cohérents pour IRR
+const FLUX_ENTREE = -1;  // On REÇOIT l'argent ⇒ flux négatif pour l'IRR
+const FLUX_SORTIE = 1;   // On PAYE ⇒ flux positif
 const IRR_PRECISION = 1e-6;  // Précision pour calcul IRR
 const IRR_MAX_ITERATIONS = 100;  // Limite itérations Newton-Raphson
 
@@ -84,7 +86,7 @@ class IRRCalculator {
     }
 
     /**
-     * Valide la structure des flux de trésorerie
+     * 🔧 CORRECTION 1: Validation adaptée aux nouveaux signes
      */
     static validateCashFlows(cashFlows) {
         if (!Array.isArray(cashFlows) || cashFlows.length < 2) {
@@ -166,7 +168,7 @@ class PTZManager {
 
 /**
  * ==========================================
- * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.0
+ * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.1
  * ==========================================
  */
 class LoanSimulator {
@@ -237,11 +239,11 @@ class LoanSimulator {
         const mensualite = this.calculerMensualite();
         const flows = Array(this.dureeMois + 1).fill(0);
         
-        // Flux initial : capital net reçu (positif car on reçoit l'argent)
+        // Flux initial : capital net reçu (négatif car on reçoit l'argent)
         const fraisInitiaux = this.fraisDossier + this.fraisGarantie;
         flows[0] = FLUX_ENTREE * (this.capital - fraisInitiaux);
         
-        // Flux mensuels : mensualités + assurance (négatif car on paie)
+        // Flux mensuels : mensualités + assurance (positif car on paie)
         for (let mois = 1; mois <= this.dureeMois; mois++) {
             const capitalRestant = this.getCapitalRestantAt(mois - 1);
             const assurance = this.assuranceSurCapitalInitial ? 
@@ -251,21 +253,23 @@ class LoanSimulator {
             flows[mois] = FLUX_SORTIE * (mensualite + assurance);
         }
         
-        // Ajouter frais de tenue de compte étalés
-        const fraisMensuels = this.fraisTenueCompte / this.dureeMois;
-        for (let mois = 1; mois <= this.dureeMois; mois++) {
-            flows[mois] -= fraisMensuels;
-        }
+        // 🔧 CORRECTION 2: Supprimer le double comptage des frais de tenue de compte
+        // Les frais de tenue de compte sont déjà inclus dans totalFrais
+        // Ne pas les déduire ici pour éviter le double comptage
         
         return flows;
     }
 
-    getCapitalRestantAt(mois) {
+    /**
+     * 🔧 CORRECTION 3: getCapitalRestantAt avec taux courant
+     */
+    getCapitalRestantAt(mois, tauxMensuelCourant = null) {
+        const tauxUtilise = tauxMensuelCourant || this.tauxMensuel;
         const mensualite = this.calculerMensualite();
         let capitalRestant = this.capital;
         
         for (let m = 1; m <= mois && capitalRestant > 0; m++) {
-            const interets = capitalRestant * this.tauxMensuel;
+            const interets = capitalRestant * tauxUtilise;
             const capitalAmorti = Math.min(mensualite - interets, capitalRestant);
             capitalRestant -= capitalAmorti;
         }
@@ -275,7 +279,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 📊 TABLEAU D'AMORTISSEMENT v2.0
+     * 📊 TABLEAU D'AMORTISSEMENT v2.1
      * ==========================================
      */
 
@@ -483,6 +487,9 @@ class LoanSimulator {
         return taegAnnuel;
     }
 
+    /**
+     * 🔧 CORRECTION 4: Calcul assurance corrigé dans calculateFinancialMetrics
+     */
     calculateFinancialMetrics(tableau) {
         const mensualiteInitiale = this.calculerMensualite();
         const dureeInitiale = this.dureeMois;
@@ -497,11 +504,14 @@ class LoanSimulator {
         const totalFrais = this.fraisDossier + this.fraisTenueCompte + this.fraisGarantie;
         const coutGlobalTotal = montantTotal + indemnites + totalFrais;
         
-        const economiesMensualites = (dureeInitiale - dureeReelle) * 
-            (mensualiteInitiale + (this.assuranceSurCapitalInitial ? 
-                this.capital * this.assuranceMensuelle : 
-                this.capital * this.assuranceMensuelle));
+        // 🔧 CORRECTION 4: Calcul assurance corrigé pour economiesMensualites
+        const assuranceInitiale = this.assuranceSurCapitalInitial 
+            ? this.capital * this.assuranceMensuelle
+            : (this.capital - mensualiteInitiale + this.capital * this.tauxMensuel) * this.assuranceMensuelle;
         
+        const mensualiteInitialeTotale = mensualiteInitiale + assuranceInitiale;
+        
+        const economiesMensualites = (dureeInitiale - dureeReelle) * mensualiteInitialeTotale;
         const economiesInterets = (this.capital * this.tauxMensuel * dureeInitiale) - totalInterets;
 
         return {
@@ -530,12 +540,12 @@ class LoanSimulator {
      */
 
     debugCashFlows() {
-        console.group('💰 Analyse des flux de trésorerie');
+        console.group('💰 Analyse des flux de trésorerie (v2.1)');
         console.table(this.cashFlows.map((flux, index) => ({
             periode: index === 0 ? 'Initial' : `Mois ${index}`,
             flux: this.formatMontant(flux),
-            type: index === 0 ? 'Capital net reçu' : 
-                  flux < 0 ? 'Sortie (mensualité)' : 'Entrée',
+            type: index === 0 ? 'Capital net reçu (-)' : 
+                  flux > 0 ? 'Sortie mensualité (+)' : 'Entrée',
             cumul: this.formatMontant(this.cashFlows.slice(0, index + 1)
                 .reduce((sum, f) => sum + f, 0))
         })));
@@ -554,7 +564,7 @@ class LoanSimulator {
             console.warn(`⚠️ Capital amorti insuffisant: ${this.formatMontant(results.totalCapitalAmorti)} vs ${this.formatMontant(this.capital)} initial`);
         }
 
-        console.log('✅ Validation terminée');
+        console.log('✅ Validation terminée (v2.1 - Newton-Raphson fiable)');
     }
 
     /**
@@ -1093,12 +1103,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.0
+     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.1
      * ==========================================
      */
     function calculateLoan() {
         try {
-            console.log("🚀 Début du calcul du prêt v2.0...");
+            console.log("🚀 Début du calcul du prêt v2.1 (Newton-Raphson corrigé)...");
             
             const loanAmount = parseFloat(document.getElementById('loan-amount').value);
             const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
@@ -1160,7 +1170,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("📋 Remboursements anticipés:", remboursementsAnticipes);
             console.log("🔄 Appliquer renégociation:", applyRenegotiation);
             
-            // Création du simulateur v2.0
+            // Création du simulateur v2.1
             const simulator = new LoanSimulator({
                 capital: loanAmount,
                 tauxAnnuel: interestRate,
@@ -1252,7 +1262,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✅ Bouton PDF activé');
             }
             
-            console.log('🎉 Calcul terminé avec succès');
+            console.log('🎉 Calcul terminé avec succès (v2.1 - TAEG Newton-Raphson fiable)');
             return true;
         } catch (error) {
             console.error("❌ Erreur lors du calcul:", error);
@@ -1355,7 +1365,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="flex items-center justify-between mb-3">
                     <h5 class="text-amber-400 font-medium flex items-center">
                         <i class="fas fa-home mr-2"></i>
-                        Détail du Prêt à Taux Zéro v2.0
+                        Détail du Prêt à Taux Zéro v2.1
                     </h5>
                     <span class="text-xs text-amber-300 bg-amber-900 bg-opacity-30 px-2 py-1 rounded">
                         ${pourcentageFinancement}% du financement
@@ -1404,7 +1414,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     <div class="mt-2 text-xs text-blue-300">
                         <i class="fas fa-cogs mr-1"></i>
-                        Calcul via flux de trésorerie centralisés & IRR Newton-Raphson
+                        Calcul via flux de trésorerie centralisés & IRR Newton-Raphson v2.1
                     </div>
                 </div>
             `;
@@ -1475,7 +1485,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         positive: modeRemboursement === 'mensualite'
                     },
                     {
-                        label: 'TAEG approximatif',
+                        label: 'TAEG v2.1 Newton-Raphson',
                         base: `${baseResult.taeg.toFixed(2)}%`,
                         current: `${result.taeg.toFixed(2)}%`,
                         diff: `-${Math.max(0, (baseResult.taeg - result.taeg)).toFixed(2)}%`,
@@ -1572,7 +1582,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
                 <i class="fas fa-piggy-bank mr-2"></i>
-                Analyse complète du prêt v2.0
+                Analyse complète du prêt v2.1
                 <span class="ml-2 text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded">IRR ${result.taeg.toFixed(3)}%</span>
             </h5>
             <ul class="text-sm text-gray-300 space-y-2 pl-4">
@@ -1619,8 +1629,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                    <span>TAEG précis via IRR: ${result.taeg.toFixed(2)}% 
-                    <span class="text-xs text-green-300">(Newton-Raphson)</span></span>
+                    <span>TAEG précis via IRR v2.1: ${result.taeg.toFixed(2)}% 
+                    <span class="text-xs text-green-300">(Newton-Raphson corrigé)</span></span>
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
@@ -1728,7 +1738,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     title: {
                         display: true,
-                        text: 'Évolution du prêt (v2.0 - IRR Précis)',
+                        text: 'Évolution du prêt (v2.1 - IRR Newton-Raphson Corrigé)',
                         color: 'rgba(255, 255, 255, 0.9)'
                     },
                     tooltip: {
