@@ -103,25 +103,24 @@ function getPtzHtmlFromWindow() {
 }
 
 function extractPtzDetailsFromDOM() {
-  const g = id => document.getElementById(id);
+  const g   = id => document.getElementById(id);
   const val = id => {
     const el = g(id);
-    if (!el) return 0;
-    const v = el.value || el.textContent || '0';
-    return parseFloat(String(v).replace(/[^\d.-]/g, '')) || 0;
+    const v  = el ? (el.value || el.textContent || '0') : '0';
+    return parseFloat(v.replace(/[^\d.-]/g, '')) || 0;
   };
 
+  const amount      = val('ptz-amount');           // capital PTZ
+  const duration    = val('ptz-duration-slider');  // durée PTZ (années)
+  const differeMois = val('ptz-differe-slider');   // différé éventuel
+
   return {
-    enabled: g('enable-ptz')?.checked ?? false,
-    amount: val('ptz-amount'),
-    duration: val('ptz-duration-slider'),
-    differeMois: val('ptz-differe-slider') || 0,
-    monthly: function() {
-      if (this.amount && this.duration) {
-        return this.amount / (this.duration * 12);
-      }
-      return 0;
-    }.call(this)
+    enabled     : g('enable-ptz')?.checked ?? false,
+    amount,
+    duration,
+    differeMois,
+    /** Mensualité PTZ : capital / (durée × 12) */
+    monthly     : duration ? amount / (duration * 12) : 0
   };
 }
 
