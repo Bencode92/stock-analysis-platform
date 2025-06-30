@@ -1437,7 +1437,7 @@ document.addEventListener('DOMContentLoaded', function() {
             updateMensualiteDisplay(mensualiteBasePTZ, mensualiteRenegoPTZ, applyRenegotiation, renegotiationMonth);
 
             // 🆕 v2.3.1: NOUVELLE FONCTION - Affichage dual crédit/PTZ
-            updateMensualitePTZDisplay(result, ptzParams, 1);
+           updateMensualitePTZDisplay(result, ptzParams, Infinity);
 
             // Coût total avec PTZ
             const totalCreditAvecPTZ = result.totalPaye + (ptzParams ? ptzParams.montant : 0);
