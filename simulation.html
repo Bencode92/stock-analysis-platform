@@ -729,7 +729,7 @@
             <div id="ptz-validation-message" class="text-xs text-red-400 mt-1 hidden"></div>
         </div>
         
-        <!-- Durée du PTZ -->
+<!-- Durée du PTZ -->
         <div>
             <label class="loan-option-label">
                 Durée du PTZ (années)
@@ -746,6 +746,15 @@
                        step="1" 
                        class="loan-slider">
                 <span id="ptz-duration-value" class="loan-slider-value">20 ans</span>
+            </div>
+        </div>
+        
+        <!-- Différé PTZ -->
+        <div id="ptz-differe-container" class="mt-4 hidden">
+            <label class="block text-sm mb-1">Différé PTZ (mois)</label>
+            <div class="flex items-center gap-4">
+                <input id="ptz-differe-slider" type="range" min="0" max="240" value="0" class="loan-slider w-full">
+                <span id="ptz-differe-value" class="loan-slider-value">0</span>
             </div>
         </div>
     </div>
@@ -1023,7 +1032,7 @@
                                             <input type="number" id="early-repayment-amount-mensualite" value="10000" min="1" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
                                         </div>
                                         
-                                        <!-- Option de remboursement total (NOUVEAU) -->
+ <!-- Option de remboursement total (NOUVEAU) -->
                                         <div class="mt-3 flex items-center">
                                             <input id="total-repayment" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
                                             <label for="total-repayment" class="ml-2 text-sm font-medium text-gray-300">
@@ -1032,6 +1041,11 @@
                                                     <i class="fas fa-info-circle"></i>
                                                 </span>
                                             </label>
+                                        </div>
+                                        
+                                        <div class="mt-3 flex items-center">
+                                            <input id="include-ptz-total" type="checkbox" class="w-4 h-4">
+                                            <label for="include-ptz-total" class="ml-2 text-sm">Inclure le PTZ</label>
                                         </div>
                                         
                                         <!-- Mois du remboursement anticipé (mode mensualité) -->
@@ -1088,6 +1102,7 @@
                                     <i class="fas fa-check-circle"></i>
                                     <div>
                                         <h6 class="font-semibold text-green-400">Remboursement total</h6>
+                                        <p id="ptz-warning" class="text-xs text-amber-400 hidden">ℹ️ Le remboursement total solde uniquement le prêt principal. Le PTZ continue.</p>
                                         <p class="text-sm text-gray-300">Ce montant permettra de solder intégralement votre prêt.</p>
                                     </div>
                                 </div>
@@ -1124,6 +1139,7 @@
                                     <p id="total-cost" class="result-value">0 €</p>
                                     <p class="result-label">Coût total du crédit</p>
                                 </div>
+                                <div id="ptz-resume" class="result-card hidden"></div>
                             </div>
                             
                             <!-- Nouvelles cellules pour frais et coût global -->
