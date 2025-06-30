@@ -9,7 +9,8 @@
  *   • Graphique capital/intérêts intégré au PDF
  *   • Alerte période « double mensualité » PTZ si applicable  
  *   • Amortissement → 12 premiers mois+trimestriel+juillet+annuel  
- *   • Code entièrement autocontenu, marges A4 optimisées  
+ *   • Code entièrement autocontenu, marges A4 optimisées
+ *   • 🔗 v2.1 : Intégration PTZ avec updatePtzSummary DOM data
  * ================================================================ */
 
 // ──────────────────────────────
@@ -31,7 +32,7 @@ const PDF_CONFIG = {
 // EXPORT PRINCIPAL
 // ──────────────────────────────
 export async function exportLoanToPDF(loanData = null, options = {}) {
-  if (isDev) console.log('📄 [Loan‑PDF] Début génération v2…');
+  if (isDev) console.log('📄 [Loan‑PDF] Début génération v2.1 avec PTZ…');
 
   if (loanData instanceof Event) loanData = null; // sécurité
 
@@ -58,7 +59,7 @@ export async function exportLoanToPDF(loanData = null, options = {}) {
       window.scrollTo({ top: y, left: 0, behavior: 'instant' });
     }
     showSuccessState(btn, uiState);
-    if (isDev) console.log('✅ PDF v2 généré avec succès');
+    if (isDev) console.log('✅ PDF v2.1 généré avec succès');
   } catch (err) {
     console.error('❌ [Loan‑PDF]', err);
     showErrorState(btn, err.message);
@@ -76,10 +77,49 @@ async function ensureLoanSimulationComplete() {
 }
 
 // ──────────────────────────────
+// 🔗 PTZ SUMMARY EXTRACTION (NOUVEAU v2.1)
+// ──────────────────────────────
+function getPtzSummaryFromDOM() {
+  // Récupérer le résumé PTZ créé par updatePtzSummary
+  const ptzSummary = document.getElementById('ptz-summary');
+  if (ptzSummary) {
+    return {
+      exists: true,
+      html: ptzSummary.outerHTML,
+      text: ptzSummary.textContent.trim()
+    };
+  }
+  return { exists: false, html: '', text: '' };
+}
+
+function extractPtzDetailsFromDOM() {
+  const g = id => document.getElementById(id);
+  const val = id => {
+    const el = g(id);
+    if (!el) return 0;
+    const v = el.value || el.textContent || '0';
+    return parseFloat(String(v).replace(/[^\d.-]/g, '')) || 0;
+  };
+
+  return {
+    enabled: g('enable-ptz')?.checked ?? false,
+    amount: val('ptz-amount'),
+    duration: val('ptz-duration-slider'),
+    differeMois: val('ptz-differe-slider') || 0,
+    monthly: function() {
+      if (this.amount && this.duration) {
+        return this.amount / (this.duration * 12);
+      }
+      return 0;
+    }.call(this)
+  };
+}
+
+// ──────────────────────────────
 // EXTRACTION DATAS & HELPERS
 // ──────────────────────────────
 function extractLoanDataFromDOM() {
-  if (isDev) console.log('🔍 Extraction Loan DOM v2');
+  if (isDev) console.log('🔍 Extraction Loan DOM v2.1 avec PTZ');
   const toNumber = v => {
     if (v === '' || v === undefined || v === null) return 0;
     if (typeof v === 'number') return Number.isFinite(v)?v:0;
@@ -95,6 +135,10 @@ function extractLoanDataFromDOM() {
   const totalCost = toNumber(txt('total-cost','0'));
   const totalInterest = toNumber(txt('total-interest','0'));
 
+  // 🔗 Extraction PTZ détaillée
+  const ptzDetails = extractPtzDetailsFromDOM();
+  const ptzSummary = getPtzSummaryFromDOM();
+
   const data = {
     generatedAt: new Date(),
     // Inputs & résultats de synthèse
@@ -108,10 +152,13 @@ function extractLoanDataFromDOM() {
     taeg: toNumber(txt('taeg','0')),
     totalFees: toNumber(txt('total-fees','0')),
     ratioCost: amount>0? (totalCost/amount).toFixed(2) : 0,
-    // PTZ
-    ptzEnabled: g('enable-ptz')?.checked ?? false,
-    ptzAmount: ptzAmt,
-    ptzDuration: val('ptz-duration-slider'),
+    // PTZ amélioré v2.1
+    ptzEnabled: ptzDetails.enabled,
+    ptzAmount: ptzDetails.amount,
+    ptzDuration: ptzDetails.duration,
+    ptzDiffereMois: ptzDetails.differeMois,
+    ptzMonthly: ptzDetails.monthly,
+    ptzSummary: ptzSummary,
     // Calculs d'économies
     originalCost: calculateOriginalCost(),
     savings: calculateSavings(),
@@ -160,6 +207,17 @@ function calculateSavings() {
 
 function extractKeyEvents() {
   const events = [{month: 0, label: "💰 Déblocage des fonds", type: "start"}];
+  
+  // PTZ start (avec différé)
+  const ptzDetails = extractPtzDetailsFromDOM();
+  if (ptzDetails.enabled) {
+    const ptzStartMonth = ptzDetails.differeMois || 0;
+    events.push({
+      month: ptzStartMonth, 
+      label: `🏡 Début PTZ${ptzStartMonth > 0 ? ' (après différé)' : ''}`, 
+      type: "ptz-start"
+    });
+  }
   
   // Renégociation
   const renegoMonth = document.getElementById('renegotiation-month-slider')?.value;
@@ -234,7 +292,7 @@ async function buildLoanPDFTemplate(d){
   const wrap = document.createElement('div');
   wrap.className = 'pdf-container';
   
-  // Structure améliorée v2
+  // Structure améliorée v2.1
   wrap.appendChild(buildStyles());
   wrap.appendChild(buildHeader(d));
   wrap.appendChild(buildHero(d));
@@ -245,6 +303,11 @@ async function buildLoanPDFTemplate(d){
   if (d.events.length > 2) wrap.appendChild(buildTimeline(d));
   if (d.ptzEnabled) wrap.appendChild(buildPTZBlock(d));
   if (d.doublePeriod) wrap.appendChild(buildDoubleAlert(d));
+  
+  // 🔗 Intégration résumé PTZ existant si disponible
+  if (d.ptzSummary && d.ptzSummary.exists) {
+    wrap.appendChild(buildPTZSummaryFromDOM(d));
+  }
   
   // Graphique et tableau
   wrap.appendChild(buildChart(d));
@@ -291,9 +354,10 @@ function buildStyles(){
     .timeline-event{display:flex;align-items:center;margin:2mm 0;font-size:11px;}
     .timeline-month{background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:4px;margin-right:8px;font-weight:600;min-width:40px;text-align:center;}
     
-    /* PTZ block */
+    /* PTZ block enhanced v2.1 */
     .ptz-box{background:linear-gradient(135deg,#fef3c7,#fef9c3);border:2px solid #fcd34d;padding:6mm;border-radius:8px;margin:6mm 0;}
     .ptz-box h3{margin:0 0 3mm;font-size:16px;color:#b45309;}
+    .ptz-summary-dom{background:linear-gradient(135deg,#fefbf3,#fef7ed);border:2px solid #f97316;padding:4mm;border-radius:6px;margin:4mm 0;font-size:11px;}
     
     /* Alert box */
     .alert-box{background:#fef9c3;border:2px dashed #facc15;padding:4mm;border-radius:6px;margin:6mm 0;font-size:12px;color:#a16207;}
@@ -329,7 +393,7 @@ function buildHeader(d){
   const h=document.createElement('div');h.className='pdf-header';
   h.innerHTML=`
     <h1>📊 Synthèse de prêt immobilier</h1>
-    <div class="small">Généré le ${d.generatedAt.toLocaleDateString('fr-FR')} à ${d.generatedAt.toLocaleTimeString('fr-FR')} • Smartflow Finance v2</div>
+    <div class="small">Généré le ${d.generatedAt.toLocaleDateString('fr-FR')} à ${d.generatedAt.toLocaleTimeString('fr-FR')} • Smartflow Finance v2.1</div>
   `;
   return h;
 }
@@ -412,16 +476,40 @@ function buildTimeline(d){
 }
 
 // ──────────────────────────────
-// 7. PTZ block amélioré
+// 7. PTZ block amélioré v2.1
 // ──────────────────────────────
 function buildPTZBlock(d){
   const div=document.createElement('div');div.className='ptz-box';
-  const ptzMonthly = d.ptzAmount && d.ptzDuration ? d.ptzAmount/(d.ptzDuration*12) : 0;
   
   div.innerHTML=`
-    <h3>🏡 Prêt à Taux Zéro (PTZ)</h3>
-    <p style="margin:0;font-size:13px;"><strong>Capital :</strong> ${fmt(d.ptzAmount)} • <strong>Durée :</strong> ${d.ptzDuration} ans • <strong>Mensualité :</strong> ${fmt(ptzMonthly)}</p>
-    <div class="small" style="margin-top:2mm;">Prêt complémentaire sans intérêts pour l'acquisition de votre résidence principale</div>
+    <h3>🏡 Prêt à Taux Zéro (PTZ) v2.1</h3>
+    <p style="margin:0;font-size:13px;">
+      <strong>Capital :</strong> ${fmt(d.ptzAmount)} • 
+      <strong>Durée :</strong> ${d.ptzDuration} ans • 
+      <strong>Mensualité :</strong> ${fmt(d.ptzMonthly)}
+      ${d.ptzDiffereMois > 0 ? `<br><strong>Différé :</strong> ${d.ptzDiffereMois} mois` : ''}
+    </p>
+    <div class="small" style="margin-top:2mm;">
+      Prêt complémentaire sans intérêts pour l'acquisition de votre résidence principale
+      ${d.ptzDiffereMois > 0 ? ` - Première échéance au mois ${d.ptzDiffereMois + 1}` : ''}
+    </div>
+  `;
+  return div;
+}
+
+// ──────────────────────────────
+// 🔗 7bis. PTZ Summary from DOM (NOUVEAU v2.1)
+// ──────────────────────────────
+function buildPTZSummaryFromDOM(d){
+  if (!d.ptzSummary || !d.ptzSummary.exists) return document.createElement('div');
+  
+  const div = document.createElement('div');
+  div.className = 'ptz-summary-dom';
+  div.innerHTML = `
+    <h4 style="margin:0 0 2mm;color:#ea580c;font-size:14px;">📋 Résumé PTZ détaillé</h4>
+    <div style="font-size:10px;line-height:1.3;">
+      ${d.ptzSummary.text.replace(/\n/g, '<br>')}
+    </div>
   `;
   return div;
 }
@@ -437,7 +525,7 @@ function buildDoubleAlert(d){
   div.innerHTML=`
     <strong>⚠️ Attention : Période de double mensualité</strong><br>
     Du mois ${start} au mois ${end} (${months} mois), vous paierez les deux prêts simultanément.<br>
-    <strong>Impact mensuel :</strong> +${fmt(d.ptzAmount/(d.ptzDuration*12))} • Prévoyez cette charge dans votre budget.
+    <strong>Impact mensuel :</strong> +${fmt(d.ptzMonthly)} • Prévoyez cette charge dans votre budget.
   `;
   return div;
 }
@@ -538,7 +626,7 @@ function generatePDFFilename(date=new Date(),prefix='Smartflow'){
 function showLoadingState(btn){
   if(!btn) return null;
   const originalState={html:btn.innerHTML,disabled:btn.disabled};
-  btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Génération PDF v2…';
+  btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Génération PDF v2.1…';
   btn.disabled=true;
   return originalState;
 }
@@ -598,7 +686,7 @@ export function createLoanExportButton(){
   btn.id='export-loan-pdf';
   btn.className='w-full mt-4 py-3 px-4 bg-green-500 hover:bg-green-400 text-gray-900 font-semibold rounded-lg shadow-lg hover:shadow-green-500/30 transition-all duration-300 flex items-center justify-center opacity-50 cursor-not-allowed';
   btn.disabled=true;
-  btn.innerHTML='<i class="fas fa-file-pdf mr-2"></i>Exporter en PDF v2';
+  btn.innerHTML='<i class="fas fa-file-pdf mr-2"></i>Exporter en PDF v2.1';
   btn.title='Calculez le prêt pour activer l\'export PDF';
   btn.addEventListener('click',()=>exportLoanToPDF());
   
@@ -612,7 +700,7 @@ export function activateLoanExportButton(){
     btn.disabled=false;
     btn.classList.remove('opacity-50','cursor-not-allowed');
     btn.title='Télécharger la synthèse PDF complète';
-    if(isDev) console.log('✅ Bouton PDF activé');
+    if(isDev) console.log('✅ Bouton PDF v2.1 activé');
   }
 }
 
@@ -622,9 +710,9 @@ export function activateLoanExportButton(){
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',()=>{
     createLoanExportButton();
-    if(isDev) console.log('🚀 Loan PDF v2 initialisé');
+    if(isDev) console.log('🚀 Loan PDF v2.1 initialisé');
   });
 }else{
   createLoanExportButton();
-  if(isDev) console.log('🚀 Loan PDF v2 ready');
+  if(isDev) console.log('🚀 Loan PDF v2.1 ready');
 }
