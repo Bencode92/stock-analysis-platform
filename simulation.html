@@ -748,21 +748,6 @@
                 <span id="ptz-duration-value" class="loan-slider-value">20 ans</span>
             </div>
         </div>
-        
-        <!-- Différé PTZ -->
-        <div id="ptz-differe-container" class="mt-4 hidden">
-            <label class="block text-sm mb-1">Différé PTZ (mois)</label>
-            <div class="flex items-center gap-4">
-                <input id="ptz-differe-slider"
-                       type="range"
-                       min="0"
-                       max="240"
-                       value="0"
-                       class="loan-slider w-full">
-                <span id="ptz-differe-value"
-                      class="loan-slider-value">0</span>
-            </div>
-        </div>
     </div>
 </div>
                             <!-- Taux d'intérêt -->
@@ -1049,13 +1034,6 @@
                                             </label>
                                         </div>
                                         
-                                        <div class="mt-3 flex items-center">
-                                            <input id="include-ptz-total" type="checkbox" class="w-4 h-4">
-                                            <label for="include-ptz-total" class="ml-2 text-sm">
-                                                Inclure le PTZ
-                                            </label>
-                                        </div>
-                                        
                                         <!-- Mois du remboursement anticipé (mode mensualité) -->
                                         <div class="parameter-row">
                                             <label class="loan-option-label">
@@ -1110,9 +1088,6 @@
                                     <i class="fas fa-check-circle"></i>
                                     <div>
                                         <h6 class="font-semibold text-green-400">Remboursement total</h6>
-                                        <p id="ptz-warning" class="text-xs text-amber-400 mt-1 hidden">
-                                           ℹ️ Le remboursement total solde uniquement le prêt principal. Le PTZ continue.
-                                        </p>
                                         <p class="text-sm text-gray-300">Ce montant permettra de solder intégralement votre prêt.</p>
                                     </div>
                                 </div>
@@ -1148,9 +1123,6 @@
                                 <div class="result-card">
                                     <p id="total-cost" class="result-value">0 €</p>
                                     <p class="result-label">Coût total du crédit</p>
-                                </div>
-                                <div id="ptz-resume" class="result-card hidden">
-                                    <!-- Le texte sera injecté en JS -->
                                 </div>
                             </div>
                             
@@ -1564,41 +1536,106 @@
                     Simulations basées sur des données historiques de marché
                 </p>
                 <p class="flex items-center">
-                    <i class="fas fa-shield-alt text-green-400 mr-2"></i>
-                    Aucune donnée financière n'est transmise ou stockée
-                </p>
-                <p class="flex items-center">
-                    <i class="fas fa-info-circle text-green-400 mr-2"></i>
-                    Simulations réalisées à titre indicatif
+                    <i class="fas fa-clock text-green-400 mr-2"></i>
+                    Dernière mise à jour: <span class="text-green-400 font-medium ml-1 update-time">11/04/2025 14:23:43</span>
                 </p>
             </div>
         </footer>
     </div>
-    
-    <!-- Scripts JavaScript -->
-    <script src="js/simulation-interface.js"></script>
-    <!-- JavaScript pour le module budget -->
-    <script src="js/budget-epargne.js"></script>
-    <!-- Script pour gestion de prêt et PTZ -->
-    <script src="loan-simulator.js"></script>
-    <!-- Script du module PTZ -->
-    <script src="js/ptz-calculator.js"></script>
-    <!-- Script for market time update -->
-    <script>
-        // Update market time
-        function updateMarketTime() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('fr-FR', { 
-                hour: '2-digit', 
-                minute: '2-digit', 
-                second: '2-digit' 
-            });
-            document.getElementById('marketTime').textContent = timeString;
-        }
 
-        // Update every second
-        setInterval(updateMarketTime, 1000);
-        updateMarketTime(); // Initial call
+    <!-- Bouton du sélecteur de thème -->
+    <div class="theme-toggle">
+        <button id="theme-toggle-btn" class="theme-toggle-btn">
+            <i class="fas fa-moon" id="dark-icon"></i>
+            <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
+        </button>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="js/simulation.js"></script>
+    <script type="module" src="js/fiscal-optimizer.js"></script>
+   <script type="module" src="js/budget-epargne.js"></script>
+    <script type="module" src="js/loan-pdf.js"></script>
+    <script src="js/loan-simulator.js"></script>
+    <script src="js/loan-sensitivity.js"></script>
+    <!-- Chargement du script PTZ avec les fonctions clés disponibles immédiatement -->
+    <script>
+        // Définir la fonction simulerPTZ temporaire pour éviter l'erreur pendant le chargement
+        window.simulerPTZ = function() {
+            console.log("Fonction temporaire - en attente du chargement complet");
+            alert("Le simulateur PTZ est en cours de chargement. Veuillez patienter quelques secondes et réessayer.");
+        };
+    </script>
+    <script src="js/ptz-simulator.js"></script>
+    
+    <!-- Script d'initialisation direct du simulateur PTZ -->
+    <script>
+        // Attacher le comportement du bouton PTZ directement sans délai
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("Initialisation directe du simulateur PTZ");
+            
+            // Fonction pour activer un onglet spécifique
+            function activateTab(targetId) {
+                // Masquer tous les contenus
+                document.querySelectorAll('.simulation-content').forEach(content => {
+                    content.style.display = 'none';
+                });
+                
+                // Désactiver tous les onglets
+                document.querySelectorAll('.simulation-tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Afficher le contenu cible
+                const targetContent = document.getElementById(targetId);
+                if (targetContent) {
+                    targetContent.style.display = 'block';
+                    
+                    // Activer l'onglet correspondant
+                    const targetTab = document.querySelector(`.simulation-tab[data-target="${targetId}"]`);
+                    if (targetTab) {
+                        targetTab.classList.add('active');
+                    }
+                }
+            }
+            
+            // Vérifier si l'URL contient l'ancre #per
+            if (window.location.hash === '#per') {
+                console.log("Ancre #per détectée - activation de l'onglet PER");
+                activateTab('tax-optimizer');
+                
+                // Scroll jusqu'au simulateur
+                setTimeout(() => {
+                    const perSection = document.getElementById('tax-optimizer');
+                    if (perSection) {
+                        perSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 100);
+            }
+            
+            // Événements pour les onglets
+            document.querySelectorAll('.simulation-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-target');
+                    activateTab(targetId);
+                });
+            });
+        });
+    </script>
+        <!-- ✅ NOUVEAU : Module loan-pdf.js -->
+    <script type="module">
+      import {
+        createLoanExportButton,
+        activateLoanExportButton
+      } from './loan-pdf.js';
+
+      // 1. Créer le bouton dès le chargement
+      document.addEventListener('DOMContentLoaded', () => {
+        createLoanExportButton();
+      });
+
+      // 2. Exposer la fonction d'activation
+      window.activateLoanExportButton = activateLoanExportButton;
     </script>
 </body>
 </html>
