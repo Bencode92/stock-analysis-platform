@@ -1,12 +1,11 @@
 /* ================================================================
- * loan-pdf.js – Export PDF (v2.5.2)  ▸ Smartflow Finance ▸ Juin 2025
+ * loan-pdf.js – Export PDF (v2.5.3)  ▸ Smartflow Finance ▸ Juin 2025
  *
- * Nouveautés (v2.5.2) - Patch tableaux Équivalence + overflow fixes
- *   • 🔧 #21: Dé-masquer tableau Équivalence (display, hidden, style)
- *   • 🔧 #22: CSS overflow:initial !important sur analysis-block  
- *   • 🔧 #23: Neutraliser overflows hérités dans buildComparisonBlock
- *   • ✅ #18-20: Toutes corrections v2.5.1 conservées
- *   • 🎯 Tableaux PDF complets sans coupure ni masquage garantis
+ * Nouveautés (v2.5.3) - Nouvelles KPI cards + suppression blocs inutiles
+ *   • ✅ Ajout: Mensualité après renégociation & Mensualité totale PTZ
+ *   • ✅ Renommage: "Coût total" → "Coût global (tout compris)"
+ *   • 🗑️ Suppression: Bloc "double mensualité" et placeholder graphique
+ *   • 🔧 #21-23: Toutes corrections v2.5.2 conservées
  * ================================================================ */
 
 // ──────────────────────────────
@@ -29,7 +28,7 @@ const PDF_CONFIG = {
 // EXPORT PRINCIPAL
 // ──────────────────────────────
 export async function exportLoanToPDF(loanData = null, options = {}) {
-  if (isDev) console.log('📄 [Loan‑PDF] Début génération v2.5.2 avec patch tableaux complet…');
+  if (isDev) console.log('📄 [Loan‑PDF] Début génération v2.5.3 avec nouvelles KPI cards…');
 
   if (loanData instanceof Event) loanData = null; // sécurité
 
@@ -56,7 +55,7 @@ export async function exportLoanToPDF(loanData = null, options = {}) {
       window.scrollTo({ top: y, left: 0, behavior: 'instant' });
     }
     showSuccessState(btn, uiState);
-    if (isDev) console.log('✅ PDF v2.5.2 généré - tableaux complets sans coupure ni masquage');
+    if (isDev) console.log('✅ PDF v2.5.3 généré - nouvelles KPI cards actives');
   } catch (err) {
     console.error('❌ [Loan‑PDF]', err);
     showErrorState(btn, err.message);
@@ -170,7 +169,7 @@ function extractPtzDetailsFromDOM() {
 // EXTRACTION DATAS & HELPERS
 // ──────────────────────────────
 function extractLoanDataFromDOM() {
-  if (isDev) console.log('🔍 Extraction Loan DOM v2.5.2 avec patch tableaux complet');
+  if (isDev) console.log('🔍 Extraction Loan DOM v2.5.3 avec nouvelles KPI cards');
   const toNumber = v => {
     if (v === '' || v === undefined || v === null) return 0;
     if (typeof v === 'number') return Number.isFinite(v)?v:0;
@@ -185,6 +184,14 @@ function extractLoanDataFromDOM() {
   const ptzAmt  = val('ptz-amount');
   const totalCost = toNumber(txt('total-cost','0'));
   const totalInterest = toNumber(txt('total-interest','0'));
+
+  // ✅ NOUVELLES EXTRACTIONS v2.5.3
+  const mensRenego  = toNumber(
+        document.getElementById('monthly-payment-renego')?.textContent || 0);
+  const mensTotalPTZ = toNumber(
+        document.querySelector('#monthly-payment-combined .result-value')?.textContent || 0);
+  const coutGlobal  = toNumber(
+        document.getElementById('cout-global')?.textContent || 0);
 
   // 🔗 Extraction PTZ HTML direct
   const ptzDetails = extractPtzDetailsFromDOM();
@@ -203,6 +210,10 @@ function extractLoanDataFromDOM() {
     taeg: toNumber(txt('taeg','0')),
     totalFees: toNumber(txt('total-fees','0')),
     ratioCost: amount>0? (totalCost/amount).toFixed(3) : '0.000',
+    // ✅ Nouvelles valeurs v2.5.3
+    mensRenego,
+    mensTotalPTZ,
+    coutGlobal,
     // PTZ v2.2 - HTML direct
     ptzEnabled: ptzDetails.enabled,
     ptzAmount: ptzDetails.amount,
@@ -227,6 +238,7 @@ function extractLoanDataFromDOM() {
     if (ptzHtml.exists) console.log(`🔗 PTZ HTML récupéré via ${ptzHtml.source}`);
     if (data.comparisonHtml) console.log('🔧 Tableau Comparaison extrait et nettoyé');
     if (data.equivalenceHtml) console.log('🔧 Tableau Équivalence extrait et fixé v2.5.2');
+    console.log('✅ Nouvelles données v2.5.3:', { mensRenego: data.mensRenego, mensTotalPTZ: data.mensTotalPTZ, coutGlobal: data.coutGlobal });
   }
 
   return data;
@@ -319,7 +331,7 @@ function extractKeyEvents() {
 }
 
 // ──────────────────────────────
-// TEMPLATE PDF ENHANCED v2.5.2
+// TEMPLATE PDF ENHANCED v2.5.3
 // ──────────────────────────────
 async function buildLoanPDFTemplate(d){
   const wrap = document.createElement('div');
@@ -329,13 +341,13 @@ async function buildLoanPDFTemplate(d){
   wrap.appendChild(buildStyles());
   wrap.appendChild(buildHeader(d));
   wrap.appendChild(buildHero(d));
-  wrap.appendChild(buildKPIBlockCards(d)); // ✅ #4: Nouveau format cards
+  wrap.appendChild(buildKPIBlockCards(d)); // ✅ #4: Nouveau format cards v2.5.3
   
   // Sections conditionnelles optimisées
   if (d.savings > 0) wrap.appendChild(buildSavingsBlock(d));
   if (d.events.length > 2) wrap.appendChild(buildTimeline(d));
   if (d.ptzEnabled) wrap.appendChild(buildPTZBlock(d));
-  if (d.doublePeriod) wrap.appendChild(buildDoubleAlert(d));
+  // 🗑️ SUPPRIMÉ v2.5.3: if (d.doublePeriod) wrap.appendChild(buildDoubleAlert(d));
   
   // ✅ #9: Doublon PTZ supprimé (buildPTZHtmlFromWindow retiré)
   
@@ -343,8 +355,7 @@ async function buildLoanPDFTemplate(d){
   if (d.comparisonHtml) wrap.appendChild(buildComparisonBlock(d));
   if (d.equivalenceHtml) wrap.appendChild(buildEquivalenceBlock(d));
   
-  // Chart placeholder + Footer
-  wrap.appendChild(buildChart(d));
+  // 🗑️ SUPPRIMÉ v2.5.3: Chart placeholder - wrap.appendChild(buildChart(d));
   wrap.appendChild(buildFooter(d));
   
   // ✅ #7: Numérotation automatique des pages
@@ -358,7 +369,7 @@ async function buildLoanPDFTemplate(d){
 }
 
 // ──────────────────────────────
-// 1. Styles CSS v2.5.2 - Fix overflow complet
+// 1. Styles CSS v2.5.3 - Fix overflow complet
 // ──────────────────────────────
 function buildStyles(){
   const s=document.createElement('style');
@@ -383,7 +394,7 @@ function buildStyles(){
     .hero-sub{font-size:16px;font-weight:600;color:#111827;margin:4px 0 0;}
     .hero-total{font-size:18px;color:#374151;font-weight:600;margin:6px 0 0;}
     
-    /* ✅ #4: KPI Cards 2×2 (remplace table) */
+    /* ✅ #4: KPI Cards 2×3 grid v2.5.3 */
     .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:4mm;margin:6mm 0;}
     .kpi-card{background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:6mm;text-align:center;}
     .kpi-card p{font-size:12px;color:#047857;margin:0;}
@@ -438,12 +449,6 @@ function buildStyles(){
     .ptz-box{background:linear-gradient(135deg,#fef3c7,#fef9c3);border:2px solid #fcd34d;padding:6mm;border-radius:8px;margin:6mm 0;}
     .ptz-box h3{margin:0 0 3mm;font-size:16px;color:#b45309;}
     
-    /* Alert box */
-    .alert-box{background:#fef9c3;border:2px dashed #facc15;padding:4mm;border-radius:6px;margin:6mm 0;font-size:12px;color:#a16207;}
-    
-    /* Chart placeholder */
-    .chart-placeholder{width:100%;height:120px;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border:1px solid #cbd5e1;border-radius:6px;margin:6mm 0;display:flex;align-items:center;justify-content:center;color:#64748b;font-style:italic;}
-    
     /* Utilities */
     .small{font-size:11px;color:#6b7280;}
     .text-center{text-align:center;}
@@ -465,7 +470,7 @@ function buildHeader(d){
   const h=document.createElement('div');h.className='pdf-header';
   h.innerHTML=`
     <h1>📊 Synthèse de prêt immobilier</h1>
-    <div class="small">Généré le ${d.generatedAt.toLocaleDateString('fr-FR')} à ${d.generatedAt.toLocaleTimeString('fr-FR')} • Smartflow Finance v2.5.2</div>
+    <div class="small">Généré le ${d.generatedAt.toLocaleDateString('fr-FR')} à ${d.generatedAt.toLocaleTimeString('fr-FR')} • Smartflow Finance v2.5.3</div>
     <div class="page-num"></div>
   `;
   return h;
@@ -485,24 +490,27 @@ function buildHero(d){
 }
 
 // ──────────────────────────────
-// ✅ #4: KPI block → 2×2 cards
+// ✅ #4: KPI block → 2×3 cards v2.5.3
 // ──────────────────────────────
 function buildKPIBlockCards(d){
   const wrap=document.createElement('div');
   wrap.className='kpi-grid';
   
-  const card=(label,val)=>`
-     <div class="kpi-card">
-        <p>${label}</p>
-        <h3>${val}</h3>
-     </div>`;
-     
-  wrap.innerHTML=
-     card('TAEG',d.taeg.toFixed(2)+' %')+
-     card('Intérêts',fmt(d.totalInterest))+
-     card('Frais',fmt(d.totalFees))+
-     card('Ratio',d.ratioCost);
-     
+  // helper rapide
+  const card = (label, val) => `
+      <div class="kpi-card">
+          <p>${label}</p>
+          <h3>${val}</h3>
+      </div>`;
+
+  wrap.innerHTML =
+      card('Mensualité après renégociation', fmt(d.mensRenego)) +
+      card('Mensualité totale après démarrage PTZ', fmt(d.mensTotalPTZ)) +
+      card('TAEG', d.taeg.toFixed(2) + ' %') +
+      card('Intérêts', fmt(d.totalInterest)) +
+      card('Frais', fmt(d.totalFees)) +
+      card('Coût global (tout compris)', fmt(d.coutGlobal || d.totalCost));
+
   return wrap;
 }
 
@@ -591,38 +599,7 @@ function buildEquivalenceBlock(d){
 }
 
 // ──────────────────────────────
-// 8. Alerte double mensualité
-// ──────────────────────────────
-function buildDoubleAlert(d){
-  const {start,end}=d.doublePeriod;
-  const div=document.createElement('div');div.className='alert-box';
-  const months = end - start + 1;
-  
-  div.innerHTML=`
-    <strong>⚠️ Attention : Période de double mensualité</strong><br>
-    Du mois ${start} au mois ${end} (${months} mois), vous paierez les deux prêts simultanément.<br>
-    <strong>Impact mensuel :</strong> +${fmt(d.ptzMonthly)} • Prévoyez cette charge dans votre budget.
-  `;
-  return div;
-}
-
-// ──────────────────────────────
-// 9. Graphique capital/intérêts
-// ──────────────────────────────
-function buildChart(d){
-  // Placeholder optimisé pour synthèse executive
-  const div=document.createElement('div');div.className='chart-placeholder';
-  div.innerHTML = `
-    <div style="text-align:center;">
-      <strong>📈 Évolution Capital / Intérêts</strong><br>
-      <small>Graphique disponible dans l'interface web • Lien QR code possible</small>
-    </div>
-  `;
-  return div;
-}
-
-// ──────────────────────────────
-// 11. Footer amélioré v2.5.2
+// 11. Footer amélioré v2.5.3
 // ──────────────────────────────
 function buildFooter(d){
   const f=document.createElement('div');
@@ -630,7 +607,7 @@ function buildFooter(d){
   f.innerHTML=`
     <div style="margin-bottom:2mm;"><strong>⚠️ Avertissement :</strong> Cette synthèse est fournie à titre informatif uniquement et ne constitue pas un conseil financier personnalisé.</div>
     <div>Pour toute décision d'investissement, consultez un conseiller financier qualifié.</div>
-    <div style="margin-top:4mm;font-weight:600;">© Smartflow Finance Intelligence ${d.generatedAt.getFullYear()} • Plateforme d'analyse financière v2.5.2</div>
+    <div style="margin-top:4mm;font-weight:600;">© Smartflow Finance Intelligence ${d.generatedAt.getFullYear()} • Plateforme d'analyse financière v2.5.3</div>
     <div class="page-num"></div>
   `;
   return f;
@@ -662,7 +639,7 @@ function generatePDFFilename(date=new Date(),prefix='Smartflow'){
 function showLoadingState(btn){
   if(!btn) return null;
   const originalState={html:btn.innerHTML,disabled:btn.disabled};
-  btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Génération PDF v2.5.2…';
+  btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Génération PDF v2.5.3…';
   btn.disabled=true;
   return originalState;
 }
@@ -722,7 +699,7 @@ export function createLoanExportButton(){
   btn.id='export-loan-pdf';
   btn.className='w-full mt-4 py-3 px-4 bg-green-500 hover:bg-green-400 text-gray-900 font-semibold rounded-lg shadow-lg hover:shadow-green-500/30 transition-all duration-300 flex items-center justify-center opacity-50 cursor-not-allowed';
   btn.disabled=true;
-  btn.innerHTML='<i class="fas fa-file-pdf mr-2"></i>Exporter en PDF v2.5.2';
+  btn.innerHTML='<i class="fas fa-file-pdf mr-2"></i>Exporter en PDF v2.5.3';
   btn.title='Calculez le prêt pour activer l\'export PDF';
   btn.addEventListener('click',()=>exportLoanToPDF());
   
@@ -735,8 +712,8 @@ export function activateLoanExportButton(){
   if(btn){
     btn.disabled=false;
     btn.classList.remove('opacity-50','cursor-not-allowed');
-    btn.title='Télécharger la synthèse PDF v2.5.2 (tableaux complets sans coupure ni masquage)';
-    if(isDev) console.log('✅ Bouton PDF v2.5.2 activé - tableaux complets garantis');
+    btn.title='Télécharger la synthèse PDF v2.5.3 avec nouvelles KPI cards';
+    if(isDev) console.log('✅ Bouton PDF v2.5.3 activé - nouvelles KPI cards prêtes');
   }
 }
 
@@ -746,9 +723,9 @@ export function activateLoanExportButton(){
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',()=>{
     createLoanExportButton();
-    if(isDev) console.log('🚀 Loan PDF v2.5.2 initialisé - patch tableaux complet');
+    if(isDev) console.log('🚀 Loan PDF v2.5.3 initialisé - nouvelles KPI cards intégrées');
   });
 }else{
   createLoanExportButton();
-  if(isDev) console.log('🚀 Loan PDF v2.5.2 ready');
+  if(isDev) console.log('🚀 Loan PDF v2.5.3 ready');
 }
