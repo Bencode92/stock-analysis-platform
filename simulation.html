@@ -1125,7 +1125,7 @@
 <div class="grid grid-cols-2 gap-4 mb-6">
     <!-- Mensualité crédit seul (avant PTZ) -->
     <div id="monthly-payment-main" class="result-card">
-        <p class="result-value">-- €</p>
+        <p id="monthly-payment" class="result-value">-- €</p>
         <p class="result-label">Mensualité crédit (hors PTZ)</p>
     </div>
     
@@ -1140,19 +1140,22 @@
         <p id="total-interest" class="result-value">0 €</p>
         <p class="result-label">Total des intérêts</p>
     </div>
+    
     <div class="result-card">
         <p id="early-repayment-penalty" class="result-value">0 €</p>
         <p class="result-label">Indemnités de remb. anticipé</p>
     </div>
+    
     <div class="result-card">
         <p id="total-cost" class="result-value">0 €</p>
         <p class="result-label">Coût total du crédit</p>
     </div>
+    
     <div id="ptz-resume" class="result-card hidden">
         <p class="text-sm">
-            <span class="font-semibold">Différé&nbsp;:</span> 75&nbsp;mois<br>
-            <span class="font-semibold">Mensualité PTZ&nbsp;:</span> 208,33 €/mois<br>
-            <span class="font-semibold">Fin PTZ&nbsp;:</span> année&nbsp;20
+            <span class="font-semibold">Différé&nbsp;:</span> <span id="ptz-differe-display">--</span>&nbsp;mois<br>
+            <span class="font-semibold">Mensualité PTZ&nbsp;:</span> <span id="ptz-mensualite-display">--</span>&nbsp;€/mois<br>
+            <span class="font-semibold">Fin PTZ&nbsp;:</span> année&nbsp;<span id="ptz-fin-display">--</span>
         </p>
     </div>
 </div>
