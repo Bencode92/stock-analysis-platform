@@ -1413,9 +1413,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
-            // 🔧 v2.3.3: Ajout PTZ seulement quand il est déjà en cours
-            let mensualiteBasePTZ   = ajoutePTZ(mensualiteBase,   /* mois = */ 1,                 ptzParams);
-            let mensualiteRenegoPTZ = ajoutePTZ(mensualiteRenego, /* mois = */ renegotiationMonth, ptzParams);
+            /* -------- PTZ & mensualités globales --------------------------------- */
+
+            // ➊  Toujours calculer la part PTZ
+            const debutPTZ = ptzParams?.enabled ? ptzParams.differeMois + 1 : Infinity;
+            const mensuPTZ = ptzParams?.enabled ? ptzParams.montant / ptzParams.dureeMois : 0;
+
+            /* ➋  Mensualité "base" (crédit + assurance + PTZ, même si différé) */
+            const mensualiteBasePTZ = mensualiteBase + mensuPTZ;
+
+            /* ➌  Mensualité renégociée :  
+                  – sans PTZ si la renégociation intervient **avant** le début du PTZ  
+                  – avec PTZ sinon                                              */
+            const mensualiteRenegoPTZ =
+                    (renegotiationMonth >= debutPTZ) ? mensualiteRenego + mensuPTZ
+                                                     : mensualiteRenego;
             
             // 🆕 v2.2.1: Stocker les deux valeurs dans result pour usage ultérieur
             result.mensualiteBaseGlobale = mensualiteBasePTZ;
