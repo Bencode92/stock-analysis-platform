@@ -1,6 +1,6 @@
 /**
  * ============================================
- * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.3.2
+ * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.3.3
  * ============================================
  * 
  * Plan d'action implémenté :
@@ -20,6 +20,7 @@
  * 🆕 v2.3.0 : 4 Chantiers PTZ - Clarification remboursement total, PTZ différé, couplage inclure PTZ
  * 🆕 v2.3.1 : Ajout fonction updateMensualitePTZDisplay pour affichage dual crédit/PTZ
  * 🔧 v2.3.2 : Restauration gestionnaire remboursements anticipés manquant
+ * 🔧 v2.3.3 : Fix PTZ différé - ajout conditionnel mensualité PTZ selon période
  * 
  * Architecture : Flux de trésorerie centralisés pour calculs financiers conformes
  */
@@ -679,7 +680,7 @@ class LoanSimulator {
             console.warn(`⚠️ Capital amorti insuffisant: ${this.formatMontant(results.totalCapitalAmorti)} vs ${this.formatMontant(this.capital)} initial`);
         }
 
-        console.log('✅ Validation terminée (v2.3.2 - Remboursements anticipés restaurés)');
+        console.log('✅ Validation terminée (v2.3.3 - Fix PTZ différé)');
     }
 
     /**
@@ -940,8 +941,23 @@ function repaymentLabel(r) {
 }
 
 /**
+ * 🆕 v2.3.3: UTILITAIRE CENTRAL PTZ DIFFÉRÉ
+ * Ajoute la mensualité PTZ seulement si le mois courant
+ * est au-delà du différé.
+ * @param {number} mensu - mensualité crédit+assurance
+ * @param {number} mois  - mois concerné (1, 2, …)
+ * @param {Object|null} ptz - params PTZ ou null
+ * @returns {number}
+ */
+function ajoutePTZ(mensu, mois, ptz) {
+    if (!ptz?.enabled) return mensu;
+    const debut = ptz.differeMois + 1;     // ex. 74
+    return mois >= debut ? mensu + ptz.montant / ptz.dureeMois : mensu;
+}
+
+/**
  * ==========================================
- * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.3.2
+ * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.3.3
  * ==========================================
  */
 
@@ -1278,12 +1294,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.3.2
+     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.3.3
      * ==========================================
      */
     function calculateLoan() {
         try {
-            console.log("🚀 Début du calcul du prêt v2.3.2 (remboursements anticipés restaurés)...");
+            console.log("🚀 Début du calcul du prêt v2.3.3 (PTZ différé corrigé)...");
             
             const loanAmount = parseFloat(document.getElementById('loan-amount').value);
             const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
@@ -1354,7 +1370,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("📋 Remboursements anticipés:", remboursementsAnticipes);
             console.log("🔄 Appliquer renégociation:", applyRenegotiation);
             
-            // Création du simulateur v2.3.2
+            // Création du simulateur v2.3.3
             const simulator = new LoanSimulator({
                 capital: loanAmount,
                 tauxAnnuel: interestRate,
@@ -1386,7 +1402,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             console.log("📊 Résultats calculés:", result);
 
-            // 🆕 v2.2.1: NOUVELLE LOGIQUE - Conserver les deux mensualités distinctes
+            // 🆕 v2.3.3: NOUVELLE LOGIQUE - Ajout PTZ conditionnel selon période
             const mensualiteBase = result.mensualiteInitiale + result.assuranceInitiale;
             
             let mensualiteRenego = mensualiteBase; // valeur par défaut
@@ -1397,14 +1413,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
-            // Ajout PTZ si activé
-            let mensualiteBasePTZ = mensualiteBase;
-            let mensualiteRenegoPTZ = mensualiteRenego;
-            if (ptzParams) {
-                const mensualitePTZ = ptzParams.montant / ptzParams.dureeMois;
-                mensualiteBasePTZ += mensualitePTZ;
-                mensualiteRenegoPTZ += mensualitePTZ;
-            }
+            // 🔧 v2.3.3: Ajout PTZ seulement quand il est déjà en cours
+            let mensualiteBasePTZ   = ajoutePTZ(mensualiteBase,   /* mois = */ 1,                 ptzParams);
+            let mensualiteRenegoPTZ = ajoutePTZ(mensualiteRenego, /* mois = */ renegotiationMonth, ptzParams);
             
             // 🆕 v2.2.1: Stocker les deux valeurs dans result pour usage ultérieur
             result.mensualiteBaseGlobale = mensualiteBasePTZ;
@@ -1414,7 +1425,7 @@ document.addEventListener('DOMContentLoaded', function() {
             updateMensualiteDisplay(mensualiteBasePTZ, mensualiteRenegoPTZ, applyRenegotiation, renegotiationMonth);
 
             // 🆕 v2.3.1: NOUVELLE FONCTION - Affichage dual crédit/PTZ
-            updateMensualitePTZDisplay(result, ptzParams);
+            updateMensualitePTZDisplay(result, ptzParams, 1);
 
             // Coût total avec PTZ
             const totalCreditAvecPTZ = result.totalPaye + (ptzParams ? ptzParams.montant : 0);
@@ -1468,7 +1479,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✅ Bouton PDF activé');
             }
             
-            console.log('🎉 Calcul terminé avec succès (v2.3.2 - remboursements anticipés restaurés)');
+            console.log('🎉 Calcul terminé avec succès (v2.3.3 - PTZ différé corrigé)');
             return true;
         } catch (error) {
             console.error("❌ Erreur lors du calcul:", error);
@@ -1527,10 +1538,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 🆕 v2.3.1: FONCTION AFFICHAGE DUAL CRÉDIT/PTZ
+     * 🆕 v2.3.3: FONCTION AFFICHAGE DUAL CRÉDIT/PTZ AVEC DIFFÉRÉ
      * ==========================================
      */
-    function updateMensualitePTZDisplay(result, ptz) {
+    function updateMensualitePTZDisplay(result, ptz, moisCourant = 1) {
         // Cartes + éléments DOM
         const cardMain = document.getElementById('monthly-payment-main');
         const valueMain = cardMain?.querySelector('.result-value');
@@ -1546,14 +1557,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // 2) Si le PTZ est activé et a un montant > 0
         if (ptz && ptz.enabled && ptz.montant > 0 && cardCombined && valueComb) {
-            const mensuPTZ = ptz.montant / ptz.dureeMois;
+            const debutPTZ  = ptz.differeMois + 1;
+            const mensuPTZ  = ptz.montant / ptz.dureeMois;
             const mensuTotal = mensuCredit + mensuPTZ;
-            valueComb.textContent = formatMontant(mensuTotal);
-            
-            if (badgeComb) {
-                badgeComb.textContent = `+${formatMontant(mensuPTZ)} à partir du mois ${ptz.differeMois + 1}`;
+
+            if (moisCourant >= debutPTZ) {
+                valueComb.textContent = formatMontant(mensuTotal);
+                if (badgeComb) {
+                    badgeComb.textContent = `+${formatMontant(mensuPTZ)} à partir du mois ${debutPTZ}`;
+                }
+                cardCombined.classList.remove('hidden');
+            } else {
+                cardCombined.classList.add('hidden');
             }
-            cardCombined.classList.remove('hidden');
         } else if (cardCombined) {
             // Pas de PTZ : on masque la carte combinée
             cardCombined.classList.add('hidden');
@@ -1562,7 +1578,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 📋 FONCTIONS D'AFFICHAGE UI v2.3.2
+     * 📋 FONCTIONS D'AFFICHAGE UI v2.3.3
      * ==========================================
      */
 
@@ -1720,7 +1736,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         positive: modeRemboursement === 'mensualite'
                     },
                     {
-                        label: 'TAEG v2.3.2 Corrigé',
+                        label: 'TAEG v2.3.3 Corrigé',
                         base: `${baseResult.taeg.toFixed(2)}%`,
                         current: `${result.taeg.toFixed(2)}%`,
                         diff: `-${Math.max(0, (baseResult.taeg - result.taeg)).toFixed(2)}%`,
@@ -1842,7 +1858,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
                 <i class="fas fa-piggy-bank mr-2"></i>
-                Analyse complète du prêt v2.3.2
+                Analyse complète du prêt v2.3.3
                 <span class="ml-2 text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded">IRR ${result.taeg.toFixed(3)}%</span>
             </h5>
             <ul class="text-sm text-gray-300 space-y-2 pl-4">
@@ -1889,8 +1905,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                    <span>TAEG précis via IRR v2.3.2: ${result.taeg.toFixed(2)}% 
-                    <span class="text-xs text-green-300">(remboursements anticipés restaurés)</span></span>
+                    <span>TAEG précis via IRR v2.3.3: ${result.taeg.toFixed(2)}% 
+                    <span class="text-xs text-green-300">(PTZ différé corrigé)</span></span>
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
@@ -1999,7 +2015,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     title: {
                         display: true,
-                        text: 'Évolution du prêt (v2.3.2 - remboursements anticipés restaurés)',
+                        text: 'Évolution du prêt (v2.3.3 - PTZ différé corrigé)',
                         color: 'rgba(255, 255, 255, 0.9)'
                     },
                     tooltip: {
@@ -2136,7 +2152,7 @@ document.addEventListener('DOMContentLoaded', function() {
             calculateLoan();
         });
     } else {
-        console.warn('🔧 v2.3.2: Bouton add-repayment-btn non trouvé');
+        console.warn('🔧 v2.3.3: Bouton add-repayment-btn non trouvé');
     }
 
     // 🔧 v2.3.2: FONCTION POUR AFFICHER LA LISTE DES REMBOURSEMENTS (RESTAURÉE)
@@ -2187,5 +2203,5 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialiser l'affichage des remboursements
     renderRepaymentsList();
 
-    console.log('✅ v2.3.2: Gestionnaire remboursements anticipés restauré - window.storedRepayments:', window.storedRepayments);
+    console.log('✅ v2.3.3: PTZ différé corrigé - window.storedRepayments:', window.storedRepayments);
 });
