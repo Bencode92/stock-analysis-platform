@@ -113,9 +113,9 @@ function getComparisonHtmlFromDOM () {
   return clone.outerHTML;
 }
 
-// 🔧 #19: Fix tableau Équivalence - ciblage <table> + nettoyage complet
+// 🔧 #19: Fix tableau Équivalence - ciblage <table> + nettoyage complet + patch #sensitivity-container
 function getEquivalenceHtmlFromDOM () {
-  const wrapper = document.querySelector('#equivalence-container, [data-table="equivalence"], #equivalence-table');
+  const wrapper = document.querySelector('#equivalence-container, [data-table="equivalence"], #equivalence-table, #sensitivity-container');
   if(!wrapper) return '';
 
   const target = wrapper.querySelector('table') || wrapper; // on vise d'abord la <table>
