@@ -1122,25 +1122,40 @@
                                 Résultats de la simulation
                             </h4>
                             
-                            <div class="grid grid-cols-2 gap-4 mb-6">
-                                <div class="result-card">
-                                    <p id="monthly-payment" class="result-value">0 €</p>
-                                    <p class="result-label">Mensualité initiale</p>
-                                </div>
-                                <div class="result-card">
-                                    <p id="total-interest" class="result-value">0 €</p>
-                                    <p class="result-label">Total des intérêts</p>
-                                </div>
-                                <div class="result-card">
-                                    <p id="early-repayment-penalty" class="result-value">0 €</p>
-                                    <p class="result-label">Indemnités de remb. anticipé</p>
-                                </div>
-                                <div class="result-card">
-                                    <p id="total-cost" class="result-value">0 €</p>
-                                    <p class="result-label">Coût total du crédit</p>
-                                </div>
-                                <div id="ptz-resume" class="result-card hidden"></div>
-                            </div>
+<div class="grid grid-cols-2 gap-4 mb-6">
+    <!-- Mensualité crédit seul (avant PTZ) -->
+    <div id="monthly-payment-main" class="result-card">
+        <p class="result-value">-- €</p>
+        <p class="result-label">Mensualité crédit (hors PTZ)</p>
+    </div>
+    
+    <!-- Mensualité totale quand le PTZ démarre -->
+    <div id="monthly-payment-combined" class="result-card hidden">
+        <p class="result-value text-amber-300">-- €</p>
+        <p class="result-label">Mensualité totale après démarrage PTZ</p>
+        <p id="ptz-start-badge" class="text-xs text-amber-400"></p>
+    </div>
+    
+    <div class="result-card">
+        <p id="total-interest" class="result-value">0 €</p>
+        <p class="result-label">Total des intérêts</p>
+    </div>
+    <div class="result-card">
+        <p id="early-repayment-penalty" class="result-value">0 €</p>
+        <p class="result-label">Indemnités de remb. anticipé</p>
+    </div>
+    <div class="result-card">
+        <p id="total-cost" class="result-value">0 €</p>
+        <p class="result-label">Coût total du crédit</p>
+    </div>
+    <div id="ptz-resume" class="result-card hidden">
+        <p class="text-sm">
+            <span class="font-semibold">Différé&nbsp;:</span> 75&nbsp;mois<br>
+            <span class="font-semibold">Mensualité PTZ&nbsp;:</span> 208,33 €/mois<br>
+            <span class="font-semibold">Fin PTZ&nbsp;:</span> année&nbsp;20
+        </p>
+    </div>
+</div>
                             
                             <!-- Nouvelles cellules pour frais et coût global -->
                             <div class="col-span-2 grid grid-cols-2 gap-4 mt-2 mb-6">
