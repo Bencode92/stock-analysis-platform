@@ -1,6 +1,6 @@
 /**
  * ============================================
- * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.3.0
+ * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.3.1
  * ============================================
  * 
  * Plan d'action implémenté :
@@ -18,6 +18,7 @@
  * 🚀 v2.2.0 : Amélioration renégociation avec bascule mensualité claire
  * 🔧 v2.2.1 : Fix affichage dual mensualité initiale/renégociée
  * 🆕 v2.3.0 : 4 Chantiers PTZ - Clarification remboursement total, PTZ différé, couplage inclure PTZ
+ * 🆕 v2.3.1 : Ajout fonction updateMensualitePTZDisplay pour affichage dual crédit/PTZ
  * 
  * Architecture : Flux de trésorerie centralisés pour calculs financiers conformes
  */
@@ -939,7 +940,7 @@ function repaymentLabel(r) {
 
 /**
  * ==========================================
- * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.3.0
+ * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.3.1
  * ==========================================
  */
 
@@ -1273,12 +1274,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.3.0
+     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.3.1
      * ==========================================
      */
     function calculateLoan() {
         try {
-            console.log("🚀 Début du calcul du prêt v2.3.0 (4 chantiers PTZ)...");
+            console.log("🚀 Début du calcul du prêt v2.3.1 (4 chantiers PTZ + updateMensualitePTZDisplay)...");
             
             const loanAmount = parseFloat(document.getElementById('loan-amount').value);
             const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
@@ -1349,7 +1350,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("📋 Remboursements anticipés:", remboursementsAnticipes);
             console.log("🔄 Appliquer renégociation:", applyRenegotiation);
             
-            // Création du simulateur v2.3.0
+            // Création du simulateur v2.3.1
             const simulator = new LoanSimulator({
                 capital: loanAmount,
                 tauxAnnuel: interestRate,
@@ -1408,6 +1409,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // 🆕 v2.2.1: Mise à jour UI avec deux tuiles distinctes
             updateMensualiteDisplay(mensualiteBasePTZ, mensualiteRenegoPTZ, applyRenegotiation, renegotiationMonth);
 
+            // 🆕 v2.3.1: NOUVELLE FONCTION - Affichage dual crédit/PTZ
+            updateMensualitePTZDisplay(result, ptzParams);
+
             // Coût total avec PTZ
             const totalCreditAvecPTZ = result.totalPaye + (ptzParams ? ptzParams.montant : 0);
             document.getElementById('total-cost').textContent = formatMontant(totalCreditAvecPTZ);
@@ -1460,7 +1464,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✅ Bouton PDF activé');
             }
             
-            console.log('🎉 Calcul terminé avec succès (v2.3.0 - 4 chantiers PTZ)');
+            console.log('🎉 Calcul terminé avec succès (v2.3.1 - 4 chantiers PTZ + updateMensualitePTZDisplay)');
             return true;
         } catch (error) {
             console.error("❌ Erreur lors du calcul:", error);
@@ -1519,7 +1523,42 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 📋 FONCTIONS D'AFFICHAGE UI v2.3.0
+     * 🆕 v2.3.1: FONCTION AFFICHAGE DUAL CRÉDIT/PTZ
+     * ==========================================
+     */
+    function updateMensualitePTZDisplay(result, ptz) {
+        // Cartes + éléments DOM
+        const cardMain = document.getElementById('monthly-payment-main');
+        const valueMain = cardMain?.querySelector('.result-value');
+        const cardCombined = document.getElementById('monthly-payment-combined');
+        const valueComb = cardCombined?.querySelector('.result-value');
+        const badgeComb = document.getElementById('ptz-start-badge');
+
+        if (!cardMain || !valueMain) return;
+
+        // 1) Mensualité crédit seul (crédit + assurance)
+        const mensuCredit = result.mensualiteInitiale + result.assuranceInitiale;
+        valueMain.textContent = formatMontant(mensuCredit);
+
+        // 2) Si le PTZ est activé et a un montant > 0
+        if (ptz && ptz.enabled && ptz.montant > 0 && cardCombined && valueComb) {
+            const mensuPTZ = ptz.montant / ptz.dureeMois;
+            const mensuTotal = mensuCredit + mensuPTZ;
+            valueComb.textContent = formatMontant(mensuTotal);
+            
+            if (badgeComb) {
+                badgeComb.textContent = `+${formatMontant(mensuPTZ)} à partir du mois ${ptz.differeMois + 1}`;
+            }
+            cardCombined.classList.remove('hidden');
+        } else if (cardCombined) {
+            // Pas de PTZ : on masque la carte combinée
+            cardCombined.classList.add('hidden');
+        }
+    }
+
+    /**
+     * ==========================================
+     * 📋 FONCTIONS D'AFFICHAGE UI v2.3.1
      * ==========================================
      */
 
@@ -1631,7 +1670,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="flex items-center justify-between mb-3">
                     <h5 class="text-amber-400 font-medium flex items-center">
                         <i class="fas fa-home mr-2"></i>
-                        Détail du Prêt à Taux Zéro v2.3.0
+                        Détail du Prêt à Taux Zéro v2.3.1
                     </h5>
                     <span class="text-xs text-amber-300 bg-amber-900 bg-opacity-30 px-2 py-1 rounded">
                         ${pourcentageFinancement}% du financement
@@ -1681,7 +1720,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     <div class="mt-2 text-xs text-blue-300">
                         <i class="fas fa-cogs mr-1"></i>
-                        Calcul TAEG v2.3.0 : 4 chantiers PTZ
+                        Calcul TAEG v2.3.1 : 4 chantiers PTZ + updateMensualitePTZDisplay
                     </div>
                 </div>
             `;
@@ -1752,7 +1791,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         positive: modeRemboursement === 'mensualite'
                     },
                     {
-                        label: 'TAEG v2.3.0 Corrigé',
+                        label: 'TAEG v2.3.1 Corrigé',
                         base: `${baseResult.taeg.toFixed(2)}%`,
                         current: `${result.taeg.toFixed(2)}%`,
                         diff: `-${Math.max(0, (baseResult.taeg - result.taeg)).toFixed(2)}%`,
@@ -1874,7 +1913,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
                 <i class="fas fa-piggy-bank mr-2"></i>
-                Analyse complète du prêt v2.3.0
+                Analyse complète du prêt v2.3.1
                 <span class="ml-2 text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded">IRR ${result.taeg.toFixed(3)}%</span>
             </h5>
             <ul class="text-sm text-gray-300 space-y-2 pl-4">
@@ -1921,8 +1960,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                    <span>TAEG précis via IRR v2.3.0: ${result.taeg.toFixed(2)}% 
-                    <span class="text-xs text-green-300">(4 chantiers PTZ)</span></span>
+                    <span>TAEG précis via IRR v2.3.1: ${result.taeg.toFixed(2)}% 
+                    <span class="text-xs text-green-300">(4 chantiers PTZ + updateMensualitePTZDisplay)</span></span>
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
@@ -2031,7 +2070,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     title: {
                         display: true,
-                        text: 'Évolution du prêt (v2.3.0 - 4 chantiers PTZ)',
+                        text: 'Évolution du prêt (v2.3.1 - 4 chantiers PTZ + updateMensualitePTZDisplay)',
                         color: 'rgba(255, 255, 255, 0.9)'
                     },
                     tooltip: {
@@ -2204,145 +2243,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
         } catch (error) {
-            console.error("Erreur lors de la synchronisation des modes:", error);
+            console.error("Erreur lors de la synchronisation des valeurs:", error);
         }
     }
-
-    // Gestionnaire pour ajouter un remboursement
-    const addRepaymentBtn = document.getElementById('add-repayment-btn');
-    if (addRepaymentBtn) {
-        addRepaymentBtn.addEventListener('click', function (e) {
-            e.preventDefault();
-            const mode = document.getElementById('remboursement-mode').value;
-            let newRepayment;
-
-            if (mode === 'duree') {
-                const moisAReduire = +document.getElementById('reduction-duree-mois').value;
-                const mois = +document.getElementById('early-repayment-month-slider-duree').value;
-                if (moisAReduire <= 0) {
-                    document.getElementById('min-threshold-alert').classList.remove('hidden');
-                    return;
-                }
-                newRepayment = { montant: 0, mois, moisAReduire };
-            } else {
-                const totalCheckEl = document.getElementById('total-repayment');
-                const isTotal = totalCheckEl?.checked;
-                const amountInput = document.getElementById('early-repayment-amount-mensualite');
-                const mois = +document.getElementById('early-repayment-month-slider-mensualite').value;
-                
-                let montant = +amountInput.value;
-                
-                if (isTotal) {
-                    // 🆕 v2.3.0: CHANTIER 3 - Logique pour inclure ou non le PTZ
-                    const includePTZ = document.getElementById('include-ptz-total')?.checked;
-                    const enablePTZ = document.getElementById('enable-ptz')?.checked;
-                    
-                    montant = getRemainingCapitalAt(mois);
-                    
-                    if (includePTZ && enablePTZ) {
-                        const ptzAmount = parseFloat(document.getElementById('ptz-amount')?.value || 0);
-                        const ptzDuration = parseInt(document.getElementById('ptz-duration-slider')?.value || 20) * 12;
-                        const ptzDiffere = parseInt(document.getElementById('ptz-differe-slider')?.value || 0);
-                        
-                        if (ptzAmount > 0) {
-                            const mensualitePTZ = ptzAmount / ptzDuration;
-                            const remboursementDejaFait = Math.max(0, mensualitePTZ * (mois - ptzDiffere - 1));
-                            const ptzRestant = Math.max(0, ptzAmount - remboursementDejaFait);
-                            montant += ptzRestant;
-                            
-                            showNotification(`Remboursement total calculé: ${formatMontant(montant)} (incluant PTZ: ${formatMontant(ptzRestant)})`, 'success');
-                        }
-                    } else {
-                        showNotification(`Remboursement total calculé: ${formatMontant(montant)}`, 'success');
-                    }
-                    
-                    totalCheckEl.checked = false;
-                    toggleTotalRepaymentUI(false);
-                }
-                
-                if (montant <= 0) {
-                    document.getElementById('min-threshold-alert').classList.remove('hidden');
-                    return;
-                }
-                
-                newRepayment = { 
-                    montant, 
-                    mois, 
-                    type: isTotal ? 'total' : 'partiel',
-                    timestamp: Date.now()
-                };
-            }
-
-            window.storedRepayments.push(newRepayment);
-            renderRepaymentsList();
-            document.getElementById('min-threshold-alert').classList.add('hidden');
-            calculateLoan();
-
-            if (mode === 'mensualite') {
-                document.getElementById('early-repayment-amount-mensualite').value = '';
-            }
-        });
-    }
-
-    // Fonction pour afficher la liste des remboursements
-    function renderRepaymentsList() {
-        const list = document.getElementById('repayments-list');
-        if (!list) return;
-
-        list.innerHTML = '';
-
-        window.storedRepayments.forEach((r, idx) => {
-            const { html, cls } = repaymentLabel(r);
-
-            const item = document.createElement('div');
-            item.className =
-                'repayment-item flex items-center justify-between bg-blue-900 bg-opacity-15 rounded-lg px-3 py-2 mb-2 hover:bg-blue-800/30';
-
-            const left = document.createElement('div');
-            left.innerHTML = `
-                <div class="font-medium ${cls}">${html}</div>
-                <div class="text-xs text-gray-400">au mois ${r.mois}</div>
-            `;
-
-            const remove = document.createElement('button');
-            remove.className =
-                'remove-repayment text-gray-400 hover:text-red-400 transition';
-            remove.dataset.index = idx;
-            remove.innerHTML = '<i class="fas fa-times"></i>';
-
-            item.appendChild(left);
-            item.appendChild(remove);
-            list.appendChild(item);
-        });
-
-        list.querySelectorAll('.remove-repayment').forEach(btn => {
-            btn.addEventListener('click', e => {
-                const i = +e.currentTarget.dataset.index;
-                window.storedRepayments.splice(i, 1);
-                renderRepaymentsList();
-                calculateLoan();
-            });
-        });
-    }
-
-    // Bouton réinitialiser tous les remboursements
-    const resetRepaymentsBtn = document.getElementById('reset-repayments');
-    if (resetRepaymentsBtn) {
-        resetRepaymentsBtn.addEventListener('click', function() {
-            if (confirm('Êtes-vous sûr de vouloir supprimer tous les remboursements anticipés ?')) {
-                window.storedRepayments = [];
-                renderRepaymentsList();
-                calculateLoan();
-                showNotification('Tous les remboursements anticipés ont été supprimés', 'info');
-            }
-        });
-    }
-
-    // Initialize
-    window.storedRepayments = window.storedRepayments || [];
-    syncModeValues();
-    updateSliderMaxValues();
-    renderRepaymentsList();
     
-    console.log('🎉 Simulateur de prêt v2.3.0 initialisé (4 chantiers PTZ)');
+    // Synchronisation initiale
+    syncModeValues();
+    
+    // Mise à jour des valeurs max initiale
+    updateSliderMaxValues();
 });
+
+console.log('🚀 Simulateur de prêt v2.3.1 chargé avec succès - 4 chantiers PTZ + updateMensualitePTZDisplay');
