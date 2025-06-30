@@ -1626,115 +1626,40 @@ document.addEventListener('DOMContentLoaded', function() {
             tableBody.appendChild(trInfo);
         }
     }
+    //
+    function buildPtzSummaryHtml(ptz, loanYears, montantTotal, result) {
+    if (!ptz || !ptz.enabled) return '';
+    
+    const mensualitePTZ = ptz.montant / ptz.dureeMois;
+    const pourcentage = ((ptz.montant / montantTotal) * 100).toFixed(1);
+    const finPTZ = Math.floor(ptz.dureeMois / 12);
+    
+    return `<div id="ptz-summary" class="mb-6 p-4 bg-amber-900 bg-opacity-20 border border-amber-600 rounded-lg">
+        <h5 class="text-amber-400 font-medium">
+            <i class="fas fa-home mr-2"></i>Détail du PTZ (${pourcentage}% financement)
+        </h5>
+        <p>Capital: ${formatMontant(ptz.montant)} • Durée: ${finPTZ} ans • Mensualité: ${formatMontant(mensualitePTZ)}</p>
+    </div>`;
+}
 
     // 🆕 v2.3.0: CHANTIER 1 - Fonction updatePtzSummary avec résumé PTZ
-    function updatePtzSummary(enablePTZ, ptzParams, loanDurationYears, montantTotalEmprunte, result) {
-        const existingSummary = document.getElementById('ptz-summary');
-        if (existingSummary) {
-            existingSummary.remove();
-        }
-
-        // 🆕 v2.3.0: CHANTIER 1 - Mise à jour du résumé PTZ dans les résultats
-        const ptzResumeElement = document.getElementById('ptz-resume');
-        if (!enablePTZ || !ptzParams || !ptzParams.enabled) {
-            if (ptzResumeElement) {
-                ptzResumeElement.classList.add('hidden');
-            }
-        } else {
-            if (ptzResumeElement) {
-                const mensualitePTZ = ptzParams.montant / ptzParams.dureeMois;
-                const moisRestants = Math.max(0, ptzParams.dureeMois - result.dureeReelle);
-                const capitalPtzRestant = Math.max(0, ptzParams.montant - (mensualitePTZ * result.dureeReelle));
-                
-                ptzResumeElement.innerHTML = `
-                    <p class="result-value text-amber-400">PTZ restant : ${formatMontant(mensualitePTZ)}/mois</p>
-                    <p class="result-label">sur ${moisRestants} mois (capital ${formatMontant(capitalPtzRestant)})</p>
-                `;
-                ptzResumeElement.classList.remove('hidden');
-            }
-        }
-
-        if (enablePTZ && ptzParams && ptzParams.enabled) {
-            const ptzSummary = document.createElement('div');
-            ptzSummary.id = 'ptz-summary';
-            ptzSummary.className = 'mb-6 p-4 bg-amber-900 bg-opacity-20 border border-amber-600 rounded-lg animate-fadeIn';
-            
-            const mensualitePTZ = ptzParams.montant / ptzParams.dureeMois;
-            const pourcentageFinancement = ((ptzParams.montant / montantTotalEmprunte) * 100).toFixed(1);
-            const finPTZ = Math.floor(ptzParams.dureeMois / 12);
-            const finPretPrincipal = loanDurationYears;
-            
-            // 🆕 v2.3.0: CHANTIER 2 - Affichage du différé
-            const differeInfo = ptzParams.differeMois > 0 ? 
-                `<div class="text-xs text-gray-400">
-                    Différé : ${ptzParams.differeMois} mois – 1ʳᵉ échéance PTZ à M${ptzParams.differeMois+1}
-                </div>` : '';
-            
-            ptzSummary.innerHTML = `
-                <div class="flex items-center justify-between mb-3">
-                    <h5 class="text-amber-400 font-medium flex items-center">
-                        <i class="fas fa-home mr-2"></i>
-                        Détail du Prêt à Taux Zéro v2.3.2
-                    </h5>
-                    <span class="text-xs text-amber-300 bg-amber-900 bg-opacity-30 px-2 py-1 rounded">
-                        ${pourcentageFinancement}% du financement
-                    </span>
-                </div>
-                
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                    <div class="text-center">
-                        <p class="text-amber-300 text-lg font-semibold">${formatMontant(ptzParams.montant)}</p>
-                        <p class="text-gray-400 text-sm">Capital PTZ</p>
-                    </div>
-                    <div class="text-center">
-                        <p class="text-amber-300 text-lg font-semibold">${formatMontant(mensualitePTZ)}</p>
-                        <p class="text-gray-400 text-sm">Mensualité PTZ</p>
-                    </div>
-                    <div class="text-center">
-                        <p class="text-amber-300 text-lg font-semibold">${finPTZ} ans</p>
-                        <p class="text-gray-400 text-sm">Durée PTZ</p>
-                    </div>
-                    <div class="text-center">
-                        <p class="text-amber-300 text-lg font-semibold">0%</p>
-                        <p class="text-gray-400 text-sm">Taux PTZ</p>
-                    </div>
-                </div>
-                
-                <div class="bg-amber-900 bg-opacity-20 p-3 rounded text-sm">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div class="flex justify-between">
-                            <span class="text-gray-300">Fin PTZ:</span>
-                            <span class="text-amber-300">Année ${finPTZ}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-300">Fin prêt principal:</span>
-                            <span class="text-amber-300">Année ${finPretPrincipal}</span>
-                        </div>
-                    </div>
-                    ${differeInfo}
-                    ${finPTZ !== finPretPrincipal ? 
-                        `<div class="mt-2 text-xs text-yellow-300">
-                            <i class="fas fa-exclamation-triangle mr-1"></i>
-                            ${finPTZ > finPretPrincipal ? 
-                                `Le PTZ continuera ${finPTZ - finPretPrincipal} an(s) après la fin du prêt principal` :
-                                `Le prêt principal continuera ${finPretPrincipal - finPTZ} an(s) après la fin du PTZ`
-                            }
-                        </div>` : 
-                        '<div class="mt-2 text-xs text-green-300"><i class="fas fa-check mr-1"></i>Les deux prêts se terminent en même temps</div>'
-                    }
-                    <div class="mt-2 text-xs text-blue-300">
-                        <i class="fas fa-cogs mr-1"></i>
-                        Calcul TAEG v2.3.2 : remboursements anticipés restaurés
-                    </div>
-                </div>
-            `;
-            
-            const resultsContainer = document.querySelector('.grid.grid-cols-2.gap-4.mb-6');
-            if (resultsContainer) {
-                resultsContainer.parentNode.insertBefore(ptzSummary, resultsContainer.nextSibling);
-            }
-        }
+ function updatePtzSummary(enablePTZ, ptzParams, loanYears, montantTotal, result, injectToDom = false) {
+    // Supprime l'ancien
+    const existing = document.getElementById('ptz-summary');
+    if (existing) existing.remove();
+    
+    // Génère le HTML
+    const html = buildPtzSummaryHtml(ptzParams, loanYears, montantTotal, result);
+    
+    // Stocke pour PDF
+    window.lastPtzSummaryHTML = html;
+    
+    // Injecte seulement si demandé
+    if (injectToDom && html) {
+        const container = document.querySelector('.grid.grid-cols-2.gap-4.mb-6');
+        if (container) container.insertAdjacentHTML('afterend', html);
     }
+}
 
     function updateComparisonTable(result, modeRemboursement) {
         const compareCheckbox = document.getElementById('compare-scenarios');
