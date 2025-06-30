@@ -1,15 +1,12 @@
 /* ================================================================
- * loan-pdf.js – Export PDF (v2.3)  ▸ Smartflow Finance ▸ Juin 2025
+ * loan-pdf.js – Export PDF (v2.4)  ▸ Smartflow Finance ▸ Juin 2025
  *
- * Nouveautés (v2.3) - 8 améliorations ciblées
- *   • ✅ #1: Résolution doublée (scale: 2) pour netteté impression
- *   • ✅ #3: Tableau amortissement détaillé supprimé (synthèse exec)
- *   • ✅ #4: KPI Table → 4 cartes 2×2 modernes et visuelles
- *   • ✅ #5: Structure pages optimisée (Hero + KPI + Savings + Timeline)
- *   • ✅ #6: En-têtes/pieds de page récurrents avec CSS print
- *   • ✅ #7: Numérotation automatique des pages
- *   • ✅ #8: CSS masquage tableau détaillé (réversible)
- *   • 🔗 v2.2 : Direct HTML PTZ from window.lastPtzSummaryHTML
+ * Nouveautés (v2.4) - Correctifs finaux
+ *   • ✅ #9: Doublon PTZ supprimé (un seul bloc PTZ)
+ *   • ✅ #10-11: Import HTML tableaux Comparaison + Équivalence
+ *   • ✅ #12-13: Builders pour tableaux d'analyse
+ *   • ✅ #14: CSS optimisé pour tableaux en PDF
+ *   • 🎯 Synthèse executive complète en <400KB
  * ================================================================ */
 
 // ──────────────────────────────
@@ -32,7 +29,7 @@ const PDF_CONFIG = {
 // EXPORT PRINCIPAL
 // ──────────────────────────────
 export async function exportLoanToPDF(loanData = null, options = {}) {
-  if (isDev) console.log('📄 [Loan‑PDF] Début génération v2.3 avec 8 améliorations…');
+  if (isDev) console.log('📄 [Loan‑PDF] Début génération v2.4 avec tableaux d\'analyse…');
 
   if (loanData instanceof Event) loanData = null; // sécurité
 
@@ -59,7 +56,7 @@ export async function exportLoanToPDF(loanData = null, options = {}) {
       window.scrollTo({ top: y, left: 0, behavior: 'instant' });
     }
     showSuccessState(btn, uiState);
-    if (isDev) console.log('✅ PDF v2.3 généré avec succès');
+    if (isDev) console.log('✅ PDF v2.4 généré avec succès');
   } catch (err) {
     console.error('❌ [Loan‑PDF]', err);
     showErrorState(btn, err.message);
@@ -77,7 +74,7 @@ async function ensureLoanSimulationComplete() {
 }
 
 // ──────────────────────────────
-// 🔗 PTZ HTML DIRECT (NOUVEAU v2.2)
+// 🔗 PTZ HTML DIRECT (v2.2)
 // ──────────────────────────────
 function getPtzHtmlFromWindow() {
   // Récupère le HTML PTZ stocké par updatePtzSummary
@@ -100,6 +97,18 @@ function getPtzHtmlFromWindow() {
   }
   
   return { exists: false, html: '', source: 'none' };
+}
+
+// ✅ #10: Import HTML Comparaison des scénarios
+function getComparisonHtmlFromDOM(){
+  const cmp = document.getElementById('comparison-table');
+  return cmp ? cmp.outerHTML : '';
+}
+
+// ✅ #11: Import HTML Équivalence baisse de taux
+function getEquivalenceHtmlFromDOM(){
+  const eq = document.getElementById('equivalence-table');
+  return eq ? eq.outerHTML : '';
 }
 
 function extractPtzDetailsFromDOM() {
@@ -128,7 +137,7 @@ function extractPtzDetailsFromDOM() {
 // EXTRACTION DATAS & HELPERS
 // ──────────────────────────────
 function extractLoanDataFromDOM() {
-  if (isDev) console.log('🔍 Extraction Loan DOM v2.3 avec KPI cards optimisé');
+  if (isDev) console.log('🔍 Extraction Loan DOM v2.4 avec tableaux d\'analyse');
   const toNumber = v => {
     if (v === '' || v === undefined || v === null) return 0;
     if (typeof v === 'number') return Number.isFinite(v)?v:0;
@@ -172,8 +181,10 @@ function extractLoanDataFromDOM() {
     originalCost: calculateOriginalCost(),
     savings: calculateSavings(),
     // Événements clés
-    events: extractKeyEvents()
-    // ✅ #3: Amortissement détaillé supprimé (plus dans l'extraction)
+    events: extractKeyEvents(),
+    // ✅ #10-11: Import tableaux d'analyse
+    comparisonHtml: getComparisonHtmlFromDOM(),
+    equivalenceHtml: getEquivalenceHtmlFromDOM()
   };
 
   // ✅ CORRECTION: Calculer doublePeriod après la création de l'objet data
@@ -273,13 +284,13 @@ function extractKeyEvents() {
 }
 
 // ──────────────────────────────
-// TEMPLATE PDF ENHANCED v2.3
+// TEMPLATE PDF ENHANCED v2.4
 // ──────────────────────────────
 async function buildLoanPDFTemplate(d){
   const wrap = document.createElement('div');
   wrap.className = 'pdf-container';
   
-  // ✅ #5: Structure pages optimisée - synthèse executive
+  // ✅ Structure pages optimisée - synthèse executive
   wrap.appendChild(buildStyles());
   wrap.appendChild(buildHeader(d));
   wrap.appendChild(buildHero(d));
@@ -291,14 +302,14 @@ async function buildLoanPDFTemplate(d){
   if (d.ptzEnabled) wrap.appendChild(buildPTZBlock(d));
   if (d.doublePeriod) wrap.appendChild(buildDoubleAlert(d));
   
-  // 🔗 Intégration HTML PTZ direct (v2.2)
-  if (d.ptzHtml && d.ptzHtml.exists) {
-    wrap.appendChild(buildPTZHtmlFromWindow(d));
-  }
+  // ✅ #9: Doublon PTZ supprimé (buildPTZHtmlFromWindow retiré)
+  
+  // ✅ #13: Tableaux d'analyse
+  if (d.comparisonHtml) wrap.appendChild(buildComparisonBlock(d));
+  if (d.equivalenceHtml) wrap.appendChild(buildEquivalenceBlock(d));
   
   // Chart placeholder + Footer
   wrap.appendChild(buildChart(d));
-  // ✅ #3: Tableau d'amortissement détaillé supprimé
   wrap.appendChild(buildFooter(d));
   
   // ✅ #7: Numérotation automatique des pages
@@ -312,7 +323,7 @@ async function buildLoanPDFTemplate(d){
 }
 
 // ──────────────────────────────
-// 1. Styles CSS améliorés v2.3
+// 1. Styles CSS améliorés v2.4
 // ──────────────────────────────
 function buildStyles(){
   const s=document.createElement('style');
@@ -346,6 +357,13 @@ function buildStyles(){
     /* ✅ #8: Masquage ancien tableau (réversible) */
     .pdf-table{display:none !important;}
     
+    /* ✅ #14: Styles tableaux d'analyse */
+    .analysis-block{margin:6mm 0;padding:4mm;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;font-size:11.5px;}
+    .analysis-title{margin:0 0 3mm;font-size:14px;color:#1e40af;font-weight:600;}
+    .analysis-block table{width:100%;border-collapse:collapse;font-size:11px;}
+    .analysis-block th,.analysis-block td{border:1px solid #e5e7eb;padding:4px;text-align:right;}
+    .analysis-block th{text-align:center;background:#eef2ff;color:#374151;}
+    
     /* Savings highlight */
     .savings-block{background:linear-gradient(135deg,#fef3c7,#fef9c3);border:2px solid #f59e0b;padding:6mm;border-radius:8px;margin:6mm 0;text-align:center;}
     .savings-block h3{margin:0 0 4mm;color:#b45309;font-size:16px;}
@@ -358,13 +376,9 @@ function buildStyles(){
     .timeline-event{display:flex;align-items:center;margin:2mm 0;font-size:11px;}
     .timeline-month{background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:4px;margin-right:8px;font-weight:600;min-width:40px;text-align:center;}
     
-    /* PTZ block enhanced v2.2 */
+    /* PTZ block enhanced */
     .ptz-box{background:linear-gradient(135deg,#fef3c7,#fef9c3);border:2px solid #fcd34d;padding:6mm;border-radius:8px;margin:6mm 0;}
     .ptz-box h3{margin:0 0 3mm;font-size:16px;color:#b45309;}
-    .ptz-html-direct{background:linear-gradient(135deg,#fef7ed,#fefbf3);border:2px solid #f97316;padding:4mm;border-radius:6px;margin:4mm 0;font-size:11px;}
-    .ptz-html-direct h5{color:#ea580c;font-size:14px;margin:0 0 2mm;}
-    .ptz-html-direct .text-amber-400{color:#f59e0b !important;}
-    .ptz-html-direct .bg-amber-900{background-color:rgba(146,64,14,0.1) !important;}
     
     /* Alert box */
     .alert-box{background:#fef9c3;border:2px dashed #facc15;padding:4mm;border-radius:6px;margin:6mm 0;font-size:12px;color:#a16207;}
@@ -393,7 +407,7 @@ function buildHeader(d){
   const h=document.createElement('div');h.className='pdf-header';
   h.innerHTML=`
     <h1>📊 Synthèse de prêt immobilier</h1>
-    <div class="small">Généré le ${d.generatedAt.toLocaleDateString('fr-FR')} à ${d.generatedAt.toLocaleTimeString('fr-FR')} • Smartflow Finance v2.3</div>
+    <div class="small">Généré le ${d.generatedAt.toLocaleDateString('fr-FR')} à ${d.generatedAt.toLocaleTimeString('fr-FR')} • Smartflow Finance v2.4</div>
     <div class="page-num"></div>
   `;
   return h;
@@ -413,7 +427,7 @@ function buildHero(d){
 }
 
 // ──────────────────────────────
-// ✅ #4: KPI block → 2×2 cards (NOUVEAU)
+// ✅ #4: KPI block → 2×2 cards
 // ──────────────────────────────
 function buildKPIBlockCards(d){
   const wrap=document.createElement('div');
@@ -473,13 +487,13 @@ function buildTimeline(d){
 }
 
 // ──────────────────────────────
-// 7. PTZ block amélioré v2.2
+// 7. PTZ block amélioré
 // ──────────────────────────────
 function buildPTZBlock(d){
   const div=document.createElement('div');div.className='ptz-box';
   
   div.innerHTML=`
-    <h3>🏡 Prêt à Taux Zéro (PTZ) v2.3</h3>
+    <h3>🏡 Prêt à Taux Zéro (PTZ)</h3>
     <p style="margin:0;font-size:13px;">
       <strong>Capital :</strong> ${fmt(d.ptzAmount)} • 
       <strong>Durée :</strong> ${d.ptzDuration} ans • 
@@ -495,25 +509,22 @@ function buildPTZBlock(d){
 }
 
 // ──────────────────────────────
-// 🔗 7bis. PTZ HTML Direct (v2.2)
+// ✅ #12: Builders tableaux d'analyse
 // ──────────────────────────────
-function buildPTZHtmlFromWindow(d){
-  if (!d.ptzHtml || !d.ptzHtml.exists) return document.createElement('div');
-  
-  const wrapper = document.createElement('div');
-  wrapper.className = 'ptz-html-direct';
-  
-  // Parse et nettoie le HTML
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = d.ptzHtml.html;
-  
-  // Ajoute header pour clarifier la source
-  wrapper.innerHTML = `
-    <h5>📋 Résumé PTZ détaillé (source: ${d.ptzHtml.source})</h5>
-    ${tempDiv.innerHTML}
-  `;
-  
-  return wrapper;
+function buildComparisonBlock(d){
+  if(!d.comparisonHtml) return document.createElement('div');
+  const wrap=document.createElement('div');
+  wrap.className='analysis-block';
+  wrap.innerHTML=`<h3 class="analysis-title">📊 Comparaison des scénarios</h3>`+d.comparisonHtml;
+  return wrap;
+}
+
+function buildEquivalenceBlock(d){
+  if(!d.equivalenceHtml) return document.createElement('div');
+  const wrap=document.createElement('div');
+  wrap.className='analysis-block';
+  wrap.innerHTML=`<h3 class="analysis-title">↔️ Équivalence baisse de taux / remb. anticipé</h3>`+d.equivalenceHtml;
+  return wrap;
 }
 
 // ──────────────────────────────
@@ -548,7 +559,7 @@ function buildChart(d){
 }
 
 // ──────────────────────────────
-// 11. Footer amélioré v2.3
+// 11. Footer amélioré v2.4
 // ──────────────────────────────
 function buildFooter(d){
   const f=document.createElement('div');
@@ -556,7 +567,7 @@ function buildFooter(d){
   f.innerHTML=`
     <div style="margin-bottom:2mm;"><strong>⚠️ Avertissement :</strong> Cette synthèse est fournie à titre informatif uniquement et ne constitue pas un conseil financier personnalisé.</div>
     <div>Pour toute décision d'investissement, consultez un conseiller financier qualifié.</div>
-    <div style="margin-top:4mm;font-weight:600;">© Smartflow Finance Intelligence ${d.generatedAt.getFullYear()} • Plateforme d'analyse financière v2.3</div>
+    <div style="margin-top:4mm;font-weight:600;">© Smartflow Finance Intelligence ${d.generatedAt.getFullYear()} • Plateforme d'analyse financière v2.4</div>
     <div class="page-num"></div>
   `;
   return f;
@@ -588,7 +599,7 @@ function generatePDFFilename(date=new Date(),prefix='Smartflow'){
 function showLoadingState(btn){
   if(!btn) return null;
   const originalState={html:btn.innerHTML,disabled:btn.disabled};
-  btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Génération PDF v2.3…';
+  btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Génération PDF v2.4…';
   btn.disabled=true;
   return originalState;
 }
@@ -648,7 +659,7 @@ export function createLoanExportButton(){
   btn.id='export-loan-pdf';
   btn.className='w-full mt-4 py-3 px-4 bg-green-500 hover:bg-green-400 text-gray-900 font-semibold rounded-lg shadow-lg hover:shadow-green-500/30 transition-all duration-300 flex items-center justify-center opacity-50 cursor-not-allowed';
   btn.disabled=true;
-  btn.innerHTML='<i class="fas fa-file-pdf mr-2"></i>Exporter en PDF v2.3';
+  btn.innerHTML='<i class="fas fa-file-pdf mr-2"></i>Exporter en PDF v2.4';
   btn.title='Calculez le prêt pour activer l\'export PDF';
   btn.addEventListener('click',()=>exportLoanToPDF());
   
@@ -661,8 +672,8 @@ export function activateLoanExportButton(){
   if(btn){
     btn.disabled=false;
     btn.classList.remove('opacity-50','cursor-not-allowed');
-    btn.title='Télécharger la synthèse PDF v2.3 (résolution x2, KPI cards)';
-    if(isDev) console.log('✅ Bouton PDF v2.3 activé avec 8 améliorations');
+    btn.title='Télécharger la synthèse PDF v2.4 (avec tableaux d\'analyse)';
+    if(isDev) console.log('✅ Bouton PDF v2.4 activé avec tableaux d\'analyse');
   }
 }
 
@@ -672,9 +683,9 @@ export function activateLoanExportButton(){
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',()=>{
     createLoanExportButton();
-    if(isDev) console.log('🚀 Loan PDF v2.3 initialisé avec 8 améliorations');
+    if(isDev) console.log('🚀 Loan PDF v2.4 initialisé avec tableaux d\'analyse');
   });
 }else{
   createLoanExportButton();
-  if(isDev) console.log('🚀 Loan PDF v2.3 ready');
+  if(isDev) console.log('🚀 Loan PDF v2.4 ready');
 }
