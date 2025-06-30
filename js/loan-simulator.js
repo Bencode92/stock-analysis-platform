@@ -1,6 +1,6 @@
 /**
  * ============================================
- * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.2.1
+ * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.3.0
  * ============================================
  * 
  * Plan d'action implémenté :
@@ -17,6 +17,7 @@
  * 🔧 v2.1.5 : Correction coût global total - inclusion tenue de compte
  * 🚀 v2.2.0 : Amélioration renégociation avec bascule mensualité claire
  * 🔧 v2.2.1 : Fix affichage dual mensualité initiale/renégociée
+ * 🆕 v2.3.0 : 4 Chantiers PTZ - Clarification remboursement total, PTZ différé, couplage inclure PTZ
  * 
  * Architecture : Flux de trésorerie centralisés pour calculs financiers conformes
  */
@@ -122,19 +123,19 @@ class IRRCalculator {
 
 /**
  * ==========================================
- * 🏠 GESTIONNAIRE PTZ (Sous-prêt)
+ * 🏠 GESTIONNAIRE PTZ (Sous-prêt) v2.3.0
  * ==========================================
  */
 class PTZManager {
     constructor(params = {}) {
         this.montant = params.montant || 0;
         this.dureeMois = params.dureeMois || 0;
-        this.differeMois = params.differeMois || 0;
+        this.differeMois = params.differeMois || 0; // 🆕 v2.3.0: Chantier 2
         this.enabled = params.enabled || false;
     }
 
     /**
-     * Génère les flux de trésorerie PTZ
+     * Génère les flux de trésorerie PTZ avec différé
      * @returns {number[]} Flux PTZ sur la durée totale
      */
     generateCashFlows(dureeTotale) {
@@ -150,6 +151,7 @@ class PTZManager {
         // Mensualités PTZ (capital seulement, pas d'intérêts)
         const mensualitePTZ = this.montant / this.dureeMois;
         
+        // 🆕 v2.3.0: Prise en compte du différé
         for (let mois = this.differeMois + 1; mois <= Math.min(this.dureeMois + this.differeMois, dureeTotale); mois++) {
             flows[mois] = FLUX_SORTIE * mensualitePTZ;
         }
@@ -158,7 +160,20 @@ class PTZManager {
     }
 
     /**
-     * Valide les paramètres PTZ
+     * 🆕 v2.3.0: Calcule le capital PTZ restant à un mois donné
+     */
+    getCapitalRestantAt(mois) {
+        if (!this.enabled || this.montant <= 0) return 0;
+        
+        const mensualitePTZ = this.montant / this.dureeMois;
+        const moisEffectifsPayes = Math.max(0, mois - this.differeMois);
+        const capitalRembourse = Math.min(mensualitePTZ * moisEffectifsPayes, this.montant);
+        
+        return Math.max(0, this.montant - capitalRembourse);
+    }
+
+    /**
+     * Valide les paramètres PTZ avec différé
      */
     validate(montantTotal, dureePretPrincipal) {
         const errors = [];
@@ -169,6 +184,18 @@ class PTZManager {
         
         if (this.dureeMois > dureePretPrincipal) {
             errors.push(`Durée PTZ ne peut dépasser celle du prêt principal (${Math.floor(dureePretPrincipal/12)} ans)`);
+        }
+
+        // 🆕 v2.3.0: Validation du différé
+        const diffMax = this.dureeMois - 12;
+        if (this.differeMois > diffMax) {
+            this.differeMois = diffMax;
+            console.warn(`Différé PTZ réduit à ${diffMax} mois`);
+        }
+        
+        if (this.differeMois > dureePretPrincipal) {
+            this.differeMois = dureePretPrincipal;
+            console.warn(`Différé PTZ ne peut dépasser la durée du prêt principal`);
         }
         
         return errors;
@@ -181,7 +208,7 @@ class PTZManager {
 
 /**
  * ==========================================
- * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.2.1
+ * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.3.0
  * ==========================================
  */
 class LoanSimulator {
@@ -245,7 +272,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.2.1
+     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.3.0
      * ==========================================
      */
     
@@ -295,7 +322,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 📊 TABLEAU D'AMORTISSEMENT v2.2.1
+     * 📊 TABLEAU D'AMORTISSEMENT v2.3.0
      * ==========================================
      */
 
@@ -537,7 +564,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.2.1
+     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.3.0
      * ==========================================
      */
 
@@ -621,12 +648,12 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 🔍 DEBUG & VALIDATION v2.2.1
+     * 🔍 DEBUG & VALIDATION v2.3.0
      * ==========================================
      */
 
     debugCashFlows() {
-        console.group('💰 Analyse des flux de trésorerie (v2.2.1)');
+        console.group('💰 Analyse des flux de trésorerie (v2.3.0)');
         console.table(this.cashFlows.map((flux, index) => ({
             periode: index === 0 ? 'Initial' : `Mois ${index}`,
             flux: this.formatMontant(flux),
@@ -650,7 +677,7 @@ class LoanSimulator {
             console.warn(`⚠️ Capital amorti insuffisant: ${this.formatMontant(results.totalCapitalAmorti)} vs ${this.formatMontant(this.capital)} initial`);
         }
 
-        console.log('✅ Validation terminée (v2.2.1 - dual mensualité display system)');
+        console.log('✅ Validation terminée (v2.3.0 - 4 chantiers PTZ)');
     }
 
     /**
@@ -827,7 +854,7 @@ function getRemainingCapitalAt(month) {
     }
 }
 
-// Fonctions UX pour remboursement total
+// 🆕 v2.3.0: CHANTIER 1 - Fonction pour basculer l'interface de remboursement total
 function toggleTotalRepaymentUI(enabled) {
     const amountInput = document.getElementById('early-repayment-amount-mensualite');
     const container = amountInput?.closest('.parameter-row');
@@ -846,11 +873,24 @@ function toggleTotalRepaymentUI(enabled) {
         
         showNotification(`Capital restant au mois ${mois}: ${formatMontant(previewAmount)}`, 'info');
         
+        // 🆕 v2.3.0: CHANTIER 1 - Afficher/masquer l'alerte PTZ
+        const enablePtzCheckbox = document.getElementById('enable-ptz');
+        const ptzWarning = document.getElementById('ptz-warning');
+        if (ptzWarning) {
+            ptzWarning.classList.toggle('hidden', !enablePtzCheckbox?.checked);
+        }
+        
     } else {
         amountInput.disabled = false;
         amountInput.placeholder = 'Montant à rembourser';
         amountInput.classList.remove('opacity-60', 'cursor-not-allowed', 'text-green-400', 'font-semibold');
         container?.classList.remove('opacity-60');
+        
+        // Masquer l'alerte PTZ quand remboursement total désactivé
+        const ptzWarning = document.getElementById('ptz-warning');
+        if (ptzWarning) {
+            ptzWarning.classList.add('hidden');
+        }
     }
 }
 
@@ -899,7 +939,7 @@ function repaymentLabel(r) {
 
 /**
  * ==========================================
- * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.2.1
+ * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.3.0
  * ==========================================
  */
 
@@ -926,7 +966,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const sectionMensualite = document.getElementById('section-reduire-mensualite');
     
     // Nouvelle référence pour la case "Appliquer la renégociation"
-    const applyRenegotiationCheckbox = document.getElementById('apply-renegociation');
+    const applyRenegotiationCheckbox = document.getElementById('apply-renegotiation');
     
     // Nouvelles références pour les sliders de chaque mode
     const earlyRepaymentMonthSliderDuree = document.getElementById('early-repayment-month-slider-duree');
@@ -953,13 +993,18 @@ document.addEventListener('DOMContentLoaded', function() {
         off.setAttribute('aria-pressed', 'false');
     }
 
-    // Gestion PTZ intégrée
+    // 🆕 v2.3.0: CHANTIER 2 - Gestion PTZ intégrée avec différé
     let ptzCalculationTimeout;
     const enablePtzCheckbox = document.getElementById('enable-ptz');
     const ptzFields = document.getElementById('ptz-fields');
     const ptzDurationSlider = document.getElementById('ptz-duration-slider');
     const ptzDurationValue = document.getElementById('ptz-duration-value');
     const ptzAmountInput = document.getElementById('ptz-amount');
+
+    // 🆕 v2.3.0: CHANTIER 2 - Nouveaux éléments pour PTZ différé
+    const ptzDiffereContainer = document.getElementById('ptz-differe-container');
+    const ptzDiffereSlider = document.getElementById('ptz-differe-slider');
+    const ptzDiffereValue = document.getElementById('ptz-differe-value');
 
     function debouncedCalculateLoan() {
         clearTimeout(ptzCalculationTimeout);
@@ -984,14 +1029,32 @@ document.addEventListener('DOMContentLoaded', function() {
                     ptzDurationSlider.value = mainLoanDuration;
                     ptzDurationValue.textContent = `${mainLoanDuration} ans`;
                 }
+
+                // 🆕 v2.3.0: CHANTIER 2 - Afficher/masquer le conteneur différé PTZ
+                if (ptzDiffereContainer) {
+                    ptzDiffereContainer.classList.toggle('hidden', !this.checked);
+                }
             } else {
                 ptzFields.style.maxHeight = '0';
                 ptzFields.style.opacity = '0';
                 setTimeout(() => {
                     ptzFields.classList.add('hidden');
                 }, 300);
+
+                // Masquer le conteneur différé PTZ
+                if (ptzDiffereContainer) {
+                    ptzDiffereContainer.classList.add('hidden');
+                }
             }
             
+            debouncedCalculateLoan();
+        });
+    }
+
+    // 🆕 v2.3.0: CHANTIER 2 - Wire du slider PTZ différé
+    if (ptzDiffereSlider && ptzDiffereValue) {
+        ptzDiffereSlider.addEventListener('input', function() {
+            ptzDiffereValue.textContent = `${this.value} mois`;
             debouncedCalculateLoan();
         });
     }
@@ -1030,6 +1093,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (ptzDurationSlider && ptzDurationValue) {
         ptzDurationSlider.addEventListener('input', function() {
             ptzDurationValue.textContent = `${this.value} ans`;
+            
+            // 🆕 v2.3.0: CHANTIER 2 - Mettre à jour le max du slider différé
+            if (ptzDiffereSlider) {
+                const maxDiffere = Math.max(0, this.value * 12 - 12);
+                ptzDiffereSlider.max = maxDiffere;
+                if (parseInt(ptzDiffereSlider.value) > maxDiffere) {
+                    ptzDiffereSlider.value = maxDiffere;
+                    ptzDiffereValue.textContent = `${maxDiffere} mois`;
+                }
+            }
+            
             debouncedCalculateLoan();
         });
     }
@@ -1094,6 +1168,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (parseInt(ptzDurationSlider.value) > loanDurationYears) {
                     ptzDurationSlider.value = loanDurationYears;
                     ptzDurationValue.textContent = `${loanDurationYears} ans`;
+                }
+
+                // 🆕 v2.3.0: CHANTIER 2 - Mise à jour max différé PTZ
+                if (ptzDiffereSlider) {
+                    const maxDiffere = Math.max(0, loanDurationMonths - 12);
+                    ptzDiffereSlider.max = maxDiffere;
+                    if (parseInt(ptzDiffereSlider.value) > maxDiffere) {
+                        ptzDiffereSlider.value = maxDiffere;
+                        ptzDiffereValue.textContent = `${maxDiffere} mois`;
+                    }
                 }
             }
             
@@ -1189,12 +1273,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.2.1
+     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.3.0
      * ==========================================
      */
     function calculateLoan() {
         try {
-            console.log("🚀 Début du calcul du prêt v2.2.1 (dual mensualité display system)...");
+            console.log("🚀 Début du calcul du prêt v2.3.0 (4 chantiers PTZ)...");
             
             const loanAmount = parseFloat(document.getElementById('loan-amount').value);
             const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
@@ -1204,7 +1288,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const renegotiationMonth = parseInt(document.getElementById('renegotiation-month-slider').value);
             const applyRenegotiation = document.getElementById('apply-renegotiation')?.checked || false;
             
-            // Gestion PTZ avec validation renforcée
+            // 🆕 v2.3.0: CHANTIER 2 - Gestion PTZ avec différé
             const enablePTZ = document.getElementById('enable-ptz')?.checked || false;
             let ptzParams = null;
             let ptzValidationError = null;
@@ -1212,6 +1296,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (enablePTZ) {
                 const ptzAmount = parseFloat(document.getElementById('ptz-amount')?.value || 0);
                 const ptzDurationYears = parseInt(document.getElementById('ptz-duration-slider')?.value || 20);
+                const ptzDiffereMois = parseInt(document.getElementById('ptz-differe-slider')?.value || 0); // NOUVEAU
                 
                 if (ptzAmount > 0) {
                     const maxPTZ = loanAmount * 0.5;
@@ -1220,10 +1305,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else if (ptzDurationYears > loanDurationYears) {
                         ptzValidationError = `La durée du PTZ ne peut dépasser celle du prêt principal (${loanDurationYears} ans)`;
                     } else {
+                        // 🆕 v2.3.0: CHANTIER 2 - Validation du différé
+                        const diffMax = ptzDurationYears * 12 - 12;
+                        const differeFinal = Math.min(ptzDiffereMois, diffMax, loanDurationYears * 12);
+                        
+                        if (ptzDiffereMois > diffMax) {
+                            console.warn(`Différé PTZ ajusté de ${ptzDiffereMois} à ${differeFinal} mois`);
+                        }
+
                         ptzParams = {
                             montant: ptzAmount,
                             dureeMois: ptzDurationYears * 12,
-                            differeMois: 0,
+                            differeMois: differeFinal, // 🆕 v2.3.0: CHANTIER 2
                             enabled: true
                         };
                     }
@@ -1256,7 +1349,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("📋 Remboursements anticipés:", remboursementsAnticipes);
             console.log("🔄 Appliquer renégociation:", applyRenegotiation);
             
-            // Création du simulateur v2.2.1
+            // Création du simulateur v2.3.0
             const simulator = new LoanSimulator({
                 capital: loanAmount,
                 tauxAnnuel: interestRate,
@@ -1348,8 +1441,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Génération du tableau d'amortissement
             updateAmortizationTable(result, ptzParams);
             
-            // Encadré récapitulatif PTZ
-            updatePtzSummary(enablePTZ, ptzParams, loanDurationYears, montantTotalEmprunte);
+            // 🆕 v2.3.0: CHANTIER 1 - Encadré récapitulatif PTZ avec résumé
+            updatePtzSummary(enablePTZ, ptzParams, loanDurationYears, montantTotalEmprunte, result);
             
             // Graphique mis à jour
             updateChart(result);
@@ -1367,7 +1460,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✅ Bouton PDF activé');
             }
             
-            console.log('🎉 Calcul terminé avec succès (v2.2.1 - dual mensualité display system)');
+            console.log('🎉 Calcul terminé avec succès (v2.3.0 - 4 chantiers PTZ)');
             return true;
         } catch (error) {
             console.error("❌ Erreur lors du calcul:", error);
@@ -1426,7 +1519,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 📋 FONCTIONS D'AFFICHAGE UI v2.2.1
+     * 📋 FONCTIONS D'AFFICHAGE UI v2.3.0
      * ==========================================
      */
 
@@ -1462,27 +1555,17 @@ document.addEventListener('DOMContentLoaded', function() {
             
             tableBody.appendChild(tr);
 
-            // Affichage PTZ dans tableau
-            if (ptzParams && ptzParams.enabled && row.mois % 12 === 1) {
-                const anneePTZ = Math.floor((row.mois - 1) / 12) + 1;
-                const labelPTZ = `PTZ (Année ${anneePTZ})`;
-                const mensualitePTZ = ptzParams.montant / ptzParams.dureeMois;
-                
-                const monthsRemaining = Math.max(0, ptzParams.dureeMois - row.mois + 1);
-                const ptzCapitalRestant = Math.max(0, ptzParams.montant - (mensualitePTZ * (row.mois - 1)));
-                
-                if (monthsRemaining > 0 && ptzCapitalRestant > 0) {
-                    const ptzRow = document.createElement('tr');
-                    ptzRow.className = 'bg-amber-900 bg-opacity-10 border-l-4 border-amber-500';
-                    ptzRow.innerHTML = `
-                        <td class="px-3 py-2 text-amber-300">${labelPTZ}</td>
-                        <td class="px-3 py-2 text-right text-amber-300">${formatMontant(mensualitePTZ)}</td>
-                        <td class="px-3 py-2 text-right text-amber-300">${formatMontant(mensualitePTZ)}</td>
-                        <td class="px-3 py-2 text-right text-gray-400">0 €</td>
-                        <td class="px-3 py-2 text-right text-gray-400">0 €</td>
-                        <td class="px-3 py-2 text-right text-amber-300">${formatMontant(ptzCapitalRestant)}</td>
-                    `;
-                    tableBody.appendChild(ptzRow);
+            // 🆕 v2.3.0: CHANTIER 1 - Ligne PTZ restant après remboursement total
+            if (i + 1 === result.dureeReelle && ptzParams?.enabled && row.capitalRestant === 0) {
+                const ptzRemaining = ptzParams.montant - (ptzParams.montant/ptzParams.dureeMois)*result.dureeReelle;
+                if (ptzRemaining > 0) {
+                    const trPtz = document.createElement('tr');
+                    trPtz.className = 'bg-amber-900 bg-opacity-10 italic';
+                    trPtz.innerHTML = `
+                         <td colspan="2" class="px-3 py-2 text-amber-300">PTZ restant</td>
+                         <td class="px-3 py-2 text-right text-amber-300">${formatMontant(ptzRemaining)}</td>
+                         <td colspan="3" class="px-3 py-2 text-gray-400">PTZ continue jusqu'à M${ptzParams.dureeMois + ptzParams.differeMois}</td>`;
+                    tableBody.appendChild(trPtz);
                 }
             }
         }
@@ -1501,10 +1584,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function updatePtzSummary(enablePTZ, ptzParams, loanDurationYears, montantTotalEmprunte) {
+    // 🆕 v2.3.0: CHANTIER 1 - Fonction updatePtzSummary avec résumé PTZ
+    function updatePtzSummary(enablePTZ, ptzParams, loanDurationYears, montantTotalEmprunte, result) {
         const existingSummary = document.getElementById('ptz-summary');
         if (existingSummary) {
             existingSummary.remove();
+        }
+
+        // 🆕 v2.3.0: CHANTIER 1 - Mise à jour du résumé PTZ dans les résultats
+        const ptzResumeElement = document.getElementById('ptz-resume');
+        if (!enablePTZ || !ptzParams || !ptzParams.enabled) {
+            if (ptzResumeElement) {
+                ptzResumeElement.classList.add('hidden');
+            }
+        } else {
+            if (ptzResumeElement) {
+                const mensualitePTZ = ptzParams.montant / ptzParams.dureeMois;
+                const moisRestants = Math.max(0, ptzParams.dureeMois - result.dureeReelle);
+                const capitalPtzRestant = Math.max(0, ptzParams.montant - (mensualitePTZ * result.dureeReelle));
+                
+                ptzResumeElement.innerHTML = `
+                    <p class="result-value text-amber-400">PTZ restant : ${formatMontant(mensualitePTZ)}/mois</p>
+                    <p class="result-label">sur ${moisRestants} mois (capital ${formatMontant(capitalPtzRestant)})</p>
+                `;
+                ptzResumeElement.classList.remove('hidden');
+            }
         }
 
         if (enablePTZ && ptzParams && ptzParams.enabled) {
@@ -1517,11 +1621,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const finPTZ = Math.floor(ptzParams.dureeMois / 12);
             const finPretPrincipal = loanDurationYears;
             
+            // 🆕 v2.3.0: CHANTIER 2 - Affichage du différé
+            const differeInfo = ptzParams.differeMois > 0 ? 
+                `<div class="text-xs text-gray-400">
+                    Différé : ${ptzParams.differeMois} mois – 1ʳᵉ échéance PTZ à M${ptzParams.differeMois+1}
+                </div>` : '';
+            
             ptzSummary.innerHTML = `
                 <div class="flex items-center justify-between mb-3">
                     <h5 class="text-amber-400 font-medium flex items-center">
                         <i class="fas fa-home mr-2"></i>
-                        Détail du Prêt à Taux Zéro v2.2.1
+                        Détail du Prêt à Taux Zéro v2.3.0
                     </h5>
                     <span class="text-xs text-amber-300 bg-amber-900 bg-opacity-30 px-2 py-1 rounded">
                         ${pourcentageFinancement}% du financement
@@ -1558,6 +1668,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <span class="text-amber-300">Année ${finPretPrincipal}</span>
                         </div>
                     </div>
+                    ${differeInfo}
                     ${finPTZ !== finPretPrincipal ? 
                         `<div class="mt-2 text-xs text-yellow-300">
                             <i class="fas fa-exclamation-triangle mr-1"></i>
@@ -1570,7 +1681,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     <div class="mt-2 text-xs text-blue-300">
                         <i class="fas fa-cogs mr-1"></i>
-                        Calcul TAEG v2.2.1 : dual mensualité display system
+                        Calcul TAEG v2.3.0 : 4 chantiers PTZ
                     </div>
                 </div>
             `;
@@ -1641,7 +1752,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         positive: modeRemboursement === 'mensualite'
                     },
                     {
-                        label: 'TAEG v2.2.1 Corrigé',
+                        label: 'TAEG v2.3.0 Corrigé',
                         base: `${baseResult.taeg.toFixed(2)}%`,
                         current: `${result.taeg.toFixed(2)}%`,
                         diff: `-${Math.max(0, (baseResult.taeg - result.taeg)).toFixed(2)}%`,
@@ -1763,7 +1874,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
                 <i class="fas fa-piggy-bank mr-2"></i>
-                Analyse complète du prêt v2.2.1
+                Analyse complète du prêt v2.3.0
                 <span class="ml-2 text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded">IRR ${result.taeg.toFixed(3)}%</span>
             </h5>
             <ul class="text-sm text-gray-300 space-y-2 pl-4">
@@ -1810,8 +1921,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                    <span>TAEG précis via IRR v2.2.1: ${result.taeg.toFixed(2)}% 
-                    <span class="text-xs text-green-300">(dual mensualité display system)</span></span>
+                    <span>TAEG précis via IRR v2.3.0: ${result.taeg.toFixed(2)}% 
+                    <span class="text-xs text-green-300">(4 chantiers PTZ)</span></span>
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
@@ -1920,7 +2031,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     title: {
                         display: true,
-                        text: 'Évolution du prêt (v2.2.1 - dual mensualité display system)',
+                        text: 'Évolution du prêt (v2.3.0 - 4 chantiers PTZ)',
                         color: 'rgba(255, 255, 255, 0.9)'
                     },
                     tooltip: {
@@ -2122,8 +2233,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 let montant = +amountInput.value;
                 
                 if (isTotal) {
+                    // 🆕 v2.3.0: CHANTIER 3 - Logique pour inclure ou non le PTZ
+                    const includePTZ = document.getElementById('include-ptz-total')?.checked;
+                    const enablePTZ = document.getElementById('enable-ptz')?.checked;
+                    
                     montant = getRemainingCapitalAt(mois);
-                    showNotification(`Remboursement total calculé: ${formatMontant(montant)}`, 'success');
+                    
+                    if (includePTZ && enablePTZ) {
+                        const ptzAmount = parseFloat(document.getElementById('ptz-amount')?.value || 0);
+                        const ptzDuration = parseInt(document.getElementById('ptz-duration-slider')?.value || 20) * 12;
+                        const ptzDiffere = parseInt(document.getElementById('ptz-differe-slider')?.value || 0);
+                        
+                        if (ptzAmount > 0) {
+                            const mensualitePTZ = ptzAmount / ptzDuration;
+                            const remboursementDejaFait = Math.max(0, mensualitePTZ * (mois - ptzDiffere - 1));
+                            const ptzRestant = Math.max(0, ptzAmount - remboursementDejaFait);
+                            montant += ptzRestant;
+                            
+                            showNotification(`Remboursement total calculé: ${formatMontant(montant)} (incluant PTZ: ${formatMontant(ptzRestant)})`, 'success');
+                        }
+                    } else {
+                        showNotification(`Remboursement total calculé: ${formatMontant(montant)}`, 'success');
+                    }
+                    
                     totalCheckEl.checked = false;
                     toggleTotalRepaymentUI(false);
                 }
@@ -2197,64 +2329,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const resetRepaymentsBtn = document.getElementById('reset-repayments');
     if (resetRepaymentsBtn) {
         resetRepaymentsBtn.addEventListener('click', function() {
-            window.storedRepayments = [];
-            renderRepaymentsList();
-            calculateLoan();
+            if (confirm('Êtes-vous sûr de vouloir supprimer tous les remboursements anticipés ?')) {
+                window.storedRepayments = [];
+                renderRepaymentsList();
+                calculateLoan();
+                showNotification('Tous les remboursements anticipés ont été supprimés', 'info');
+            }
         });
     }
+
+    // Initialize
+    window.storedRepayments = window.storedRepayments || [];
+    syncModeValues();
+    updateSliderMaxValues();
+    renderRepaymentsList();
     
-    // Initialisation
-    if (document.getElementById('loan-amount')) {
-        updateSliderMaxValues();
-        setTimeout(syncModeValues, 500);
-        
-        if (!window.storedRepayments) {
-            window.storedRepayments = [];
-        }
-        
-        setTimeout(calculateLoan, 1000);
-    }
+    console.log('🎉 Simulateur de prêt v2.3.0 initialisé (4 chantiers PTZ)');
 });
-
-/**
- * ==========================================
- * 🎯 NAVIGATION PTZ
- * ==========================================
- */
-function initPTZNavigation() {
-    document.addEventListener('click', (e) => {
-        const ptzLink = e.target.closest('#go-to-ptz');
-        if (!ptzLink) return;
-        
-        e.preventDefault();
-        console.log('🎯 Navigation PTZ activée');
-        
-        const ptzTab = document.querySelector('[data-target="ptz-simulator"]');
-        const ptzContent = document.getElementById('ptz-simulator');
-        
-        if (ptzTab && ptzContent) {
-            document.querySelectorAll('.simulation-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.simulation-content').forEach(content => {
-                content.style.display = 'none';
-            });
-            
-            ptzTab.classList.add('active');
-            ptzContent.style.display = 'block';
-            
-            setTimeout(() => {
-                ptzContent.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }, 200);
-        }
-    });
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPTZNavigation);
-} else {
-    initPTZNavigation();
-}
