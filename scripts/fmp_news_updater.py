@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-TradePulse News Updater - Enhanced Version
+TradePulse News Updater - Enhanced ML Version
 Script for extracting news and events from Financial Modeling Prep
 - General News API: For general economic news
 - Stock News API: For stocks and ETFs
@@ -11,6 +11,8 @@ Script for extracting news and events from Financial Modeling Prep
 - FMP Articles API: For articles written by FMP
 - IPOs Calendar: For upcoming IPOs
 - Mergers & Acquisitions: For M&A operations
+
+🚀 NEW: ML-enhanced classification, FAISS dynamic keywords, observability
 """
 
 import os
@@ -19,11 +21,43 @@ import requests
 import logging
 import hashlib
 import argparse
+import asyncio
+import numpy as np
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 from typing import List, Dict, Literal, Optional, Any
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# ML & NLP imports
+try:
+    from sentence_transformers import SentenceTransformer
+    from sklearn.linear_model import LogisticRegression
+    import faiss
+    import joblib
+    import orjson
+    from langdetect import detect, DetectorFactory
+    import spacy
+    ML_ENABLED = True
+    print("✅ ML dependencies loaded successfully")
+except ImportError as e:
+    ML_ENABLED = False
+    print(f"⚠️ ML dependencies not available: {e}")
+    print("📋 To enable ML features, install: pip install sentence-transformers scikit-learn faiss-cpu langdetect spacy orjson")
+
+# Observability & infrastructure imports
+try:
+    import structlog
+    from prometheus_client import Counter, Histogram, start_http_server
+    import redis
+    import pybreaker
+    import httpx
+    OBSERVABILITY_ENABLED = True
+    print("✅ Observability stack loaded successfully")
+except ImportError as e:
+    OBSERVABILITY_ENABLED = False
+    print(f"⚠️ Observability dependencies not available: {e}")
+    print("📋 To enable observability, install: pip install structlog prometheus-client redis pybreaker httpx")
 
 # Retry logic
 try:
@@ -66,11 +100,116 @@ DAYS_AHEAD = int(os.getenv("TP_DAYS_AHEAD", "7"))
 MAX_WORKERS = int(os.getenv("TP_MAX_WORKERS", "3"))
 
 # Logger configuration
-logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL, logging.INFO),
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+if OBSERVABILITY_ENABLED:
+    structlog.configure(
+        processors=[structlog.processors.JSONRenderer()],
+        wrapper_class=structlog.make_filtering_bound_logger(LOG_LEVEL),
+    )
+    logger = structlog.get_logger(__name__)
+else:
+    logging.basicConfig(
+        level=getattr(logging, LOG_LEVEL, logging.INFO),
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
+    logger = logging.getLogger(__name__)
+
+# -------------------------------------------------
+# === ML MODELS & NLP PIPELINES ==================
+# -------------------------------------------------
+if ML_ENABLED:
+    try:
+        EMBED_MODEL = SentenceTransformer("paraphrase-MiniLM-L6-v2")
+        print("✅ Sentence transformer model loaded")
+    except Exception as e:
+        EMBED_MODEL = None
+        print(f"⚠️ Failed to load embedding model: {e}")
+    
+    # Load trained ML classifiers
+    try:
+        IMPACT_CLF = joblib.load("models/impact_clf.joblib")
+        CATEGORY_CLF = joblib.load("models/category_clf.joblib")
+        print("✅ ML classifiers loaded")
+    except FileNotFoundError:
+        IMPACT_CLF = CATEGORY_CLF = None
+        print("⚠️ ML classifiers not found, using fallback rules")
+    
+    # Load spaCy pipelines
+    NLP_PIPELINES = {}
+    try:
+        if os.system("python -m spacy download en_core_web_sm") == 0:
+            NLP_PIPELINES["en"] = spacy.load("en_core_web_sm")
+        if os.system("python -m spacy download fr_core_news_sm") == 0:
+            NLP_PIPELINES["fr"] = spacy.load("fr_core_news_sm")
+        print(f"✅ NLP pipelines loaded: {list(NLP_PIPELINES.keys())}")
+    except Exception as e:
+        print(f"⚠️ Failed to load spaCy pipelines: {e}")
+    
+    # Language detection
+    DetectorFactory.seed = 0  # reproducibility
+else:
+    EMBED_MODEL = None
+    IMPACT_CLF = CATEGORY_CLF = None
+    NLP_PIPELINES = {}
+
+# -------------------------------------------------
+# === FAISS INDEX for dynamic keywords ===========
+# -------------------------------------------------
+if ML_ENABLED:
+    try:
+        faiss_index = faiss.read_index("models/keywords.index")
+        kw_tokens = orjson.loads(open("models/keywords.json", "rb").read())
+        print("✅ FAISS keyword index loaded")
+    except FileNotFoundError:
+        faiss_index, kw_tokens = None, []
+        print("⚠️ FAISS index not found, using static keywords")
+else:
+    faiss_index, kw_tokens = None, []
+
+# -------------------------------------------------
+# === OBSERVABILITY ==============================
+# -------------------------------------------------
+if OBSERVABILITY_ENABLED:
+    try:
+        # Prometheus metrics
+        METRIC_LATENCY = Histogram("tp_fetch_latency_seconds", "FMP API latency", ["endpoint"])
+        METRIC_ERRORS = Counter("tp_fetch_errors_total", "FMP API errors", ["endpoint"])
+        METRIC_FETCH_SUCCESS = Counter("tp_fetch_success_total", "Successful API calls", ["endpoint"])
+        
+        # Start Prometheus server
+        start_http_server(8000)
+        print("✅ Prometheus metrics server started on :8000")
+        
+        # Redis connection
+        redis_cli = redis.Redis(host=os.getenv("REDIS_HOST", "localhost"), 
+                               port=int(os.getenv("REDIS_PORT", "6379")), 
+                               decode_responses=False)
+        redis_cli.ping()  # Test connection
+        print("✅ Redis connection established")
+        
+        # Circuit breaker
+        breaker = pybreaker.CircuitBreaker(fail_max=5, reset_timeout=60)
+        
+        # Rate limiter
+        rate_limiter = asyncio.Semaphore(60)  # 60 req/min
+        print("✅ Observability stack initialized")
+        
+    except Exception as e:
+        print(f"⚠️ Observability setup failed: {e}")
+        OBSERVABILITY_ENABLED = False
+        redis_cli = None
+        breaker = None
+        rate_limiter = None
+
+# -------------------------------------------------
+# === DYNAMIC SCORING WEIGHTS ====================
+# -------------------------------------------------
+try:
+    WEIGHTS = json.load(open("models/score_weights.json"))
+    print("✅ Dynamic scoring weights loaded")
+except FileNotFoundError:
+    # Fallback weights
+    WEIGHTS = {"high": 4, "medium": 2, "src": 3, "len": 1, "impact": 2}
+    print("⚠️ Using fallback scoring weights")
 
 # HTTP Session for connection reuse
 SESSION = requests.Session()
@@ -81,8 +220,13 @@ SESSION.headers.update({
 })
 
 # File paths
+MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models")
 NEWS_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "news.json")
 THEMES_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "themes.json")
+
+# Create directories
+os.makedirs(MODELS_DIR, exist_ok=True)
+os.makedirs(os.path.dirname(NEWS_JSON_PATH), exist_ok=True)
 
 # Configuration
 CONFIG = {
@@ -251,9 +395,83 @@ MEDIUM_IMPORTANCE_KEYWORDS = {
     ]
 }
 
+# -------------------------------------------------
+# === ML HELPER FUNCTIONS ========================
+# -------------------------------------------------
+
+def embed(text: str) -> Optional[np.ndarray]:
+    """Generate embeddings for text"""
+    if not EMBED_MODEL:
+        return None
+    try:
+        return EMBED_MODEL.encode([text])[0]
+    except Exception as e:
+        logger.error(f"Embedding error: {e}")
+        return None
+
+def ml_predict(text: str, clf):
+    """ML prediction with fallback"""
+    if clf is None or not EMBED_MODEL:
+        return None, 0.0
+    try:
+        vec = embed(text)
+        if vec is None:
+            return None, 0.0
+        vec = vec.reshape(1, -1)
+        prediction = clf.predict(vec)[0]
+        confidence = clf.predict_proba(vec).max()
+        return prediction, confidence
+    except Exception as e:
+        logger.error(f"ML prediction error: {e}")
+        return None, 0.0
+
+def detect_language(text: str) -> str:
+    """Language detection with fallback"""
+    if not ML_ENABLED:
+        return "en"
+    try:
+        lang = detect(text)[:2]
+        return lang if lang in NLP_PIPELINES else "en"
+    except:
+        return "en"
+
+def expand_with_faiss(token: str, topk: int = 3) -> List[str]:
+    """Semantic keyword expansion using FAISS"""
+    if faiss_index is None or not EMBED_MODEL:
+        return []
+    try:
+        vec = embed(token)
+        if vec is None:
+            return []
+        vec = vec.reshape(1, -1)
+        D, I = faiss_index.search(vec, topk)
+        return [kw_tokens[i] for i in I[0] if D[0][list(I[0]).index(i)] > 0.4]
+    except Exception as e:
+        logger.error(f"FAISS expansion error: {e}")
+        return []
+
+def content_matches_keywords(content: str, keywords: List[str]) -> bool:
+    """Enhanced keyword matching with semantic expansion"""
+    for kw in keywords:
+        if kw in content:
+            return True
+        # Semantic expansion
+        for near_kw in expand_with_faiss(kw):
+            if near_kw in content:
+                return True
+    return False
+
+# -------------------------------------------------
+# === UTILITIES ===================================
+# -------------------------------------------------
+
 def make_uid(title: str, source: str, raw_date: str) -> str:
     """Generate unique identifier for deduplication"""
     return hashlib.sha256(f"{title}{source}{raw_date}".encode()).hexdigest()[:16]
+
+def make_cache_key(endpoint: str, params: Optional[Dict] = None) -> str:
+    """Generate cache key for Redis"""
+    return hashlib.md5(f"{endpoint}|{params}".encode()).hexdigest()
 
 def read_existing_news() -> Optional[Dict]:
     """Reads existing JSON file as fallback"""
@@ -263,28 +481,94 @@ def read_existing_news() -> Optional[Dict]:
     except:
         return None
 
-@retry(wait=wait_random_exponential(multiplier=1, max=30), stop=stop_after_attempt(5)) if HAS_TENACITY else lambda f: f
-def fetch_api_data(endpoint: str, params: Optional[Dict] = None) -> List[Dict]:
-    """Generic function to fetch data from FMP API with retry logic"""
-    if not CONFIG["api_key"]:
-        logger.error("FMP API key not defined. Please set FMP_API_KEY in environment variables.")
-        return []
+# -------------------------------------------------
+# === ENHANCED API FETCHING ======================
+# -------------------------------------------------
+
+if OBSERVABILITY_ENABLED and breaker:
+    @breaker
+    async def fetch_api_data_async(endpoint: str, params: Optional[Dict] = None) -> List[Dict]:
+        """Enhanced async API fetching with cache, circuit breaker, and metrics"""
+        cache_key = make_cache_key(endpoint, params)
         
-    if params is None:
-        params = {}
-    
-    params["apikey"] = CONFIG["api_key"]
-    
-    try:
-        logger.debug(f"Fetching data from {endpoint} with params {params}")
-        response = SESSION.get(endpoint, params=params, timeout=30)
-        response.raise_for_status()
-        data = response.json()
-        logger.info(f"✅ {len(data) if isinstance(data, list) else 1} items retrieved from {endpoint}")
-        return data if isinstance(data, list) else [data] if data else []
-    except Exception as e:
-        logger.error(f"❌ Error fetching from {endpoint}: {str(e)}")
-        return []
+        # Check cache
+        if redis_cli:
+            try:
+                if (cached := redis_cli.get(cache_key)):
+                    return orjson.loads(cached)
+            except Exception as e:
+                logger.warning(f"Cache read error: {e}")
+        
+        if params is None:
+            params = {}
+        params["apikey"] = CONFIG["api_key"]
+        
+        t0 = datetime.now()
+        try:
+            async with rate_limiter:
+                async with httpx.AsyncClient(timeout=20) as client:
+                    r = await client.get(endpoint, params=params, follow_redirects=True)
+                    if r.status_code == 429:
+                        retry_after = int(r.headers.get("Retry-After", 1))
+                        await asyncio.sleep(retry_after)
+                        return await fetch_api_data_async(endpoint, params)
+                    r.raise_for_status()
+            
+            data = r.json()
+            result = data if isinstance(data, list) else [data] if data else []
+            
+            # Cache result
+            if redis_cli:
+                try:
+                    redis_cli.setex(cache_key, 900, orjson.dumps(result))  # 15 min
+                except Exception as e:
+                    logger.warning(f"Cache write error: {e}")
+            
+            METRIC_FETCH_SUCCESS.labels(endpoint=endpoint).inc()
+            return result
+            
+        except Exception as e:
+            METRIC_ERRORS.labels(endpoint=endpoint).inc()
+            logger.error(f"API fetch error", endpoint=endpoint, error=str(e))
+            return []
+        finally:
+            METRIC_LATENCY.labels(endpoint=endpoint).observe(
+                (datetime.now() - t0).total_seconds()
+            )
+
+    def fetch_api_data(endpoint: str, params: Optional[Dict] = None) -> List[Dict]:
+        """Sync wrapper for async API fetching"""
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        return loop.run_until_complete(fetch_api_data_async(endpoint, params))
+
+else:
+    # Fallback sync implementation
+    @retry(wait=wait_random_exponential(multiplier=1, max=30), stop=stop_after_attempt(5)) if HAS_TENACITY else lambda f: f
+    def fetch_api_data(endpoint: str, params: Optional[Dict] = None) -> List[Dict]:
+        """Fallback sync API fetching"""
+        if not CONFIG["api_key"]:
+            logger.error("FMP API key not defined. Please set FMP_API_KEY in environment variables.")
+            return []
+            
+        if params is None:
+            params = {}
+        params["apikey"] = CONFIG["api_key"]
+        
+        try:
+            logger.debug(f"Fetching data from {endpoint}")
+            response = SESSION.get(endpoint, params=params, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+            logger.info(f"✅ {len(data) if isinstance(data, list) else 1} items retrieved from {endpoint}")
+            return data if isinstance(data, list) else [data] if data else []
+        except Exception as e:
+            logger.error(f"❌ Error fetching from {endpoint}: {str(e)}")
+            return []
 
 def fetch_articles_by_period(endpoint: str, start_date: str, end_date: str, 
                            source_type: Optional[str] = None, days_interval: int = 7, 
@@ -327,6 +611,10 @@ def fetch_articles_by_period(endpoint: str, start_date: str, end_date: str,
     
     logger.info(f"Total articles retrieved for the period: {len(all_articles)}")
     return all_articles
+
+# -------------------------------------------------
+# === NEWS SOURCE GETTERS ========================
+# -------------------------------------------------
 
 def get_general_news() -> List[Dict]:
     """Fetches general economic news"""
@@ -410,34 +698,25 @@ def get_mergers_acquisitions(limit: int = 100) -> List[Dict]:
     }
     return fetch_api_data(CONFIG["endpoints"]["mergers_acquisitions"], params)
 
-def extract_themes(article: Dict) -> Dict[str, List[str]]:
-    """Identifies dominant themes from title content"""
-    text = article.get("title", "").lower()
-    themes_detected = {"macroeconomics": [], "sectors": [], "regions": []}
+# -------------------------------------------------
+# === ENHANCED CLASSIFICATION ====================
+# -------------------------------------------------
+
+def determine_category_ml(article: Dict, source: Optional[str] = None) -> Category:
+    """ML-enhanced category determination with fallback"""
+    text = f"{article.get('title', '')} {article.get('text', '')}"
     
-    for axis, groups in THEMES_DOMINANTS.items():
-        for theme, keywords in groups.items():
-            if any(kw in text for kw in keywords):
-                themes_detected[axis].append(theme)
+    # Try ML first
+    ml_cat, confidence = ml_predict(text, CATEGORY_CLF)
+    if ml_cat and confidence > 0.55:
+        logger.debug(f"ML category: {ml_cat} (confidence: {confidence:.2f})")
+        return ml_cat
+    
+    # Fallback to rule-based
+    return determine_category_fallback(article, source)
 
-    return themes_detected
-
-def compute_sentiment_distribution(articles: List[Dict]) -> Dict[str, float]:
-    """Calculates sentiment distribution for a set of articles"""
-    sentiment_counts = Counter(article["impact"] for article in articles if "impact" in article)
-    total = sum(sentiment_counts.values())
-
-    if total == 0:
-        return {"positive": 0.0, "neutral": 0.0, "negative": 0.0}
-
-    return {
-        "positive": round(sentiment_counts["positive"] / total * 100, 1),
-        "neutral": round(sentiment_counts["neutral"] / total * 100, 1),
-        "negative": round(sentiment_counts["negative"] / total * 100, 1)
-    }
-
-def determine_category(article: Dict, source: Optional[str] = None) -> Category:
-    """Determines the news category"""
+def determine_category_fallback(article: Dict, source: Optional[str] = None) -> Category:
+    """Original rule-based category determination"""
     # Check symbol for crypto
     if article.get("symbol") and any(ticker in str(article.get("symbol")) for ticker in ["BTC", "ETH", "CRYPTO", "COIN"]):
         return "crypto"
@@ -446,7 +725,7 @@ def determine_category(article: Dict, source: Optional[str] = None) -> Category:
     
     # Crypto category (priority 1)
     crypto_keywords = THEMES_DOMINANTS["sectors"]["crypto"]
-    if any(word in text for word in crypto_keywords):
+    if content_matches_keywords(text, crypto_keywords):
         return "crypto"
     
     # Tech category (priority 2)
@@ -455,7 +734,7 @@ def determine_category(article: Dict, source: Optional[str] = None) -> Category:
         "software", "hardware", "tech", "technology", "startup", "app", 
         "mobile", "cloud", "computing", "digital", "internet", "online", "web"
     ]
-    if any(word in text for word in tech_keywords):
+    if content_matches_keywords(text, tech_keywords):
         return "tech"
     
     # Economy category (priority 3)
@@ -464,7 +743,7 @@ def determine_category(article: Dict, source: Optional[str] = None) -> Category:
         "interest rate", "economic", "unemployment",
         "consumer", "spending", "policy", "fiscal", "monetary", "recession"
     ]
-    if any(word in text for word in economy_keywords):
+    if content_matches_keywords(text, economy_keywords):
         return "economy"
     
     # Markets category (priority 4)
@@ -474,46 +753,26 @@ def determine_category(article: Dict, source: Optional[str] = None) -> Category:
         "gold", "market", "stock market", "bull market", 
         "bear market", "rally", "correction", "volatility", "vix"
     ]
-    if any(word in text for word in markets_keywords):
+    if content_matches_keywords(text, markets_keywords):
         return "markets"
     
     return "companies"
 
-def determine_country(article: Dict) -> str:
-    """Determines the country/region of the news"""
-    symbol = article.get("symbol", "")
-    if symbol:
-        if any(suffix in str(symbol) for suffix in [".PA", ".PAR"]):
-            return "france"
-        elif any(suffix in str(symbol) for suffix in [".L", ".LON"]):
-            return "uk"
-        elif any(suffix in str(symbol) for suffix in [".DE", ".FRA", ".XE"]):
-            return "germany"
-        elif any(suffix in str(symbol) for suffix in [".SS", ".SZ", ".HK"]):
-            return "china"
-        elif any(suffix in str(symbol) for suffix in [".T", ".JP"]):
-            return "japan"
+def determine_impact_ml(article: Dict) -> Impact:
+    """ML-enhanced impact determination with fallback"""
+    text = f"{article.get('title', '')} {article.get('text', '')}"
     
-    text = (article.get("text", "") + " " + article.get("title", "")).lower()
+    # Try ML first
+    ml_impact, confidence = ml_predict(text, IMPACT_CLF)
+    if ml_impact and confidence > 0.55:
+        logger.debug(f"ML impact: {ml_impact} (confidence: {confidence:.2f})")
+        return ml_impact
     
-    country_keywords = {
-        "france": ["france", "french", "paris", "cac", "paris stock exchange", "euronext", "amf"],
-        "uk": ["uk", "united kingdom", "britain", "british", "london", "ftse", "bank of england", "pound sterling", "gbp"],
-        "germany": ["germany", "berlin", "frankfurt", "dax", "deutsche", "euro", "ecb", "bundesbank", "german"],
-        "china": ["china", "chinese", "beijing", "shanghai", "hong kong", "shenzhen", "yuan", "renminbi", "pboc"],
-        "japan": ["japan", "japanese", "tokyo", "nikkei", "yen", "bank of japan", "boj"],
-        "emerging_markets": ["emerging markets", "brics", "brazil", "russia", "india", "south africa", "indonesia", "turkey", "mexico"],
-        "global": ["global", "world", "international", "worldwide", "global economy", "global markets"]
-    }
-    
-    for country, keywords in country_keywords.items():
-        if any(keyword in text for keyword in keywords):
-            return country
-    
-    return "us"
+    # Fallback to rule-based
+    return determine_impact_fallback(article)
 
-def determine_impact(article: Dict) -> Impact:
-    """Determines the impact of news (positive/negative/neutral)"""
+def determine_impact_fallback(article: Dict) -> Impact:
+    """Original rule-based impact determination"""
     sentiment = article.get("sentiment")
     if sentiment:
         try:
@@ -553,6 +812,99 @@ def determine_impact(article: Dict) -> Impact:
     else:
         return "neutral"
 
+def determine_country_ner(article: Dict) -> str:
+    """NER-enhanced country determination with fallback"""
+    if not NLP_PIPELINES:
+        return determine_country_fallback(article)
+    
+    lang = article.get("lang", "en")
+    nlp = NLP_PIPELINES.get(lang, NLP_PIPELINES.get("en"))
+    
+    if nlp:
+        try:
+            doc = nlp(article.get("title", ""))
+            for ent in doc.ents:
+                if ent.label_ == "GPE":  # Geopolitical entity
+                    ent_text = ent.text.lower()
+                    if "france" in ent_text or "french" in ent_text:
+                        return "france"
+                    elif "germany" in ent_text or "german" in ent_text:
+                        return "germany"
+                    elif "uk" in ent_text or "britain" in ent_text or "british" in ent_text:
+                        return "uk"
+                    elif "china" in ent_text or "chinese" in ent_text:
+                        return "china"
+                    elif "japan" in ent_text or "japanese" in ent_text:
+                        return "japan"
+        except Exception as e:
+            logger.debug(f"NER error: {e}")
+    
+    return determine_country_fallback(article)
+
+def determine_country_fallback(article: Dict) -> str:
+    """Original rule-based country determination"""
+    symbol = article.get("symbol", "")
+    if symbol:
+        if any(suffix in str(symbol) for suffix in [".PA", ".PAR"]):
+            return "france"
+        elif any(suffix in str(symbol) for suffix in [".L", ".LON"]):
+            return "uk"
+        elif any(suffix in str(symbol) for suffix in [".DE", ".FRA", ".XE"]):
+            return "germany"
+        elif any(suffix in str(symbol) for suffix in [".SS", ".SZ", ".HK"]):
+            return "china"
+        elif any(suffix in str(symbol) for suffix in [".T", ".JP"]):
+            return "japan"
+    
+    text = (article.get("text", "") + " " + article.get("title", "")).lower()
+    
+    country_keywords = {
+        "france": ["france", "french", "paris", "cac", "paris stock exchange", "euronext", "amf"],
+        "uk": ["uk", "united kingdom", "britain", "british", "london", "ftse", "bank of england", "pound sterling", "gbp"],
+        "germany": ["germany", "berlin", "frankfurt", "dax", "deutsche", "euro", "ecb", "bundesbank", "german"],
+        "china": ["china", "chinese", "beijing", "shanghai", "hong kong", "shenzhen", "yuan", "renminbi", "pboc"],
+        "japan": ["japan", "japanese", "tokyo", "nikkei", "yen", "bank of japan", "boj"],
+        "emerging_markets": ["emerging markets", "brics", "brazil", "russia", "india", "south africa", "indonesia", "turkey", "mexico"],
+        "global": ["global", "world", "international", "worldwide", "global economy", "global markets"]
+    }
+    
+    for country, keywords in country_keywords.items():
+        if content_matches_keywords(text, keywords):
+            return country
+    
+    return "us"
+
+# Use ML-enhanced functions
+determine_category = determine_category_ml
+determine_impact = determine_impact_ml
+determine_country = determine_country_ner
+
+def extract_themes(article: Dict) -> Dict[str, List[str]]:
+    """Identifies dominant themes from title content"""
+    text = article.get("title", "").lower()
+    themes_detected = {"macroeconomics": [], "sectors": [], "regions": []}
+    
+    for axis, groups in THEMES_DOMINANTS.items():
+        for theme, keywords in groups.items():
+            if content_matches_keywords(text, keywords):
+                themes_detected[axis].append(theme)
+
+    return themes_detected
+
+def compute_sentiment_distribution(articles: List[Dict]) -> Dict[str, float]:
+    """Calculates sentiment distribution for a set of articles"""
+    sentiment_counts = Counter(article["impact"] for article in articles if "impact" in article)
+    total = sum(sentiment_counts.values())
+
+    if total == 0:
+        return {"positive": 0.0, "neutral": 0.0, "negative": 0.0}
+
+    return {
+        "positive": round(sentiment_counts["positive"] / total * 100, 1),
+        "neutral": round(sentiment_counts["neutral"] / total * 100, 1),
+        "negative": round(sentiment_counts["negative"] / total * 100, 1)
+    }
+
 def format_date(date_str: str) -> str:
     """Formats a date in YYYY-MM-DD format to DD/MM/YYYY"""
     try:
@@ -590,7 +942,7 @@ def normalize_article(article: Dict, source: Optional[str] = None) -> Dict:
         site = article.get("site", article.get("publisher", ""))
         url = article.get("url", "")
     
-    return {
+    normalized = {
         "title": title,
         "text": text,
         "publishedDate": date,
@@ -599,6 +951,12 @@ def normalize_article(article: Dict, source: Optional[str] = None) -> Dict:
         "url": url,
         "source_type": source
     }
+    
+    # Add language detection
+    if ML_ENABLED:
+        normalized["lang"] = detect_language(title + " " + text)
+    
+    return normalized
 
 def remove_duplicates_by_id(news_list: List[Dict]) -> List[Dict]:
     """Removes duplicate articles based on unique ID"""
@@ -614,38 +972,38 @@ def remove_duplicates_by_id(news_list: List[Dict]) -> List[Dict]:
     return unique_news
 
 def compute_importance_score(article: Dict, category: str) -> float:
-    """Calculates an importance score for an article"""
+    """Enhanced importance scoring with dynamic weights"""
     content = f"{article.get('title', '')} {article.get('content', '')}".lower()
     article_source = article.get("source", "").lower()
     
-    # High importance keywords
+    # High importance keywords with semantic expansion
     high_keywords = HIGH_IMPORTANCE_KEYWORDS.get(category, [])
     matched_high_keywords = set()
     for keyword in high_keywords:
-        if keyword in content:
+        if content_matches_keywords(content, [keyword]):
             matched_high_keywords.add(keyword)
     
-    # Category-specific scoring
+    # Category-specific scoring with dynamic weights
     if category == "crypto_news":
-        high_keyword_score = min(20, len(matched_high_keywords) * 2)
+        high_keyword_score = min(20, len(matched_high_keywords) * WEIGHTS.get("high", 2))
     elif category == "general_news":
-        high_keyword_score = min(40, len(matched_high_keywords) * 5)
+        high_keyword_score = min(40, len(matched_high_keywords) * WEIGHTS.get("high", 5))
     elif category == "stock_news":
-        high_keyword_score = min(35, len(matched_high_keywords) * 4.5)
+        high_keyword_score = min(35, len(matched_high_keywords) * WEIGHTS.get("high", 4.5))
     else:
-        high_keyword_score = min(30, len(matched_high_keywords) * 4)
+        high_keyword_score = min(30, len(matched_high_keywords) * WEIGHTS.get("high", 4))
     
-    # Medium importance keywords
+    # Medium importance keywords with semantic expansion
     medium_keywords = MEDIUM_IMPORTANCE_KEYWORDS.get(category, [])
     matched_medium_keywords = set()
     for keyword in medium_keywords:
-        if keyword in content:
+        if content_matches_keywords(content, [keyword]):
             matched_medium_keywords.add(keyword)
     
     if category == "crypto_news":
-        medium_keyword_score = min(10, len(matched_medium_keywords) * 1.5)
+        medium_keyword_score = min(10, len(matched_medium_keywords) * WEIGHTS.get("medium", 1.5))
     else:
-        medium_keyword_score = min(20, len(matched_medium_keywords) * 2.5)
+        medium_keyword_score = min(20, len(matched_medium_keywords) * WEIGHTS.get("medium", 2.5))
     
     # Source score
     source_score = 0
@@ -657,12 +1015,14 @@ def compute_importance_score(article: Dict, category: str) -> float:
     if any(premium in article_source for premium in PREMIUM_SOURCES):
         source_score = min(25, source_score + 5)
     
+    source_score *= WEIGHTS.get("src", 1)
+    
     # Content length scores
     title_length = len(article.get("title", ""))
     text_length = len(article.get("content", ""))
     
-    title_score = min(3, title_length / 33)
-    text_score = min(7, text_length / 360)
+    title_score = min(3, title_length / 33) * WEIGHTS.get("len", 1)
+    text_score = min(7, text_length / 360) * WEIGHTS.get("len", 1)
     
     # Impact score
     impact = article.get("impact", "neutral")
@@ -670,6 +1030,8 @@ def compute_importance_score(article: Dict, category: str) -> float:
         impact_score = {"negative": 5, "positive": 4, "neutral": 3}[impact]
     else:
         impact_score = {"negative": 10, "positive": 7, "neutral": 5}[impact]
+    
+    impact_score *= WEIGHTS.get("impact", 1)
     
     total_score = high_keyword_score + medium_keyword_score + source_score + title_score + text_score + impact_score
     normalized_score = min(100, total_score)
@@ -955,7 +1317,7 @@ def fetch_all_news_sources() -> Dict[str, List[Dict]]:
     return results
 
 def process_news_data(news_sources: Dict[str, List[Dict]]) -> Dict:
-    """Processes and formats FMP news to match TradePulse format"""
+    """Enhanced news processing with ML classification"""
     formatted_data = {
         "lastUpdated": datetime.now().isoformat()
     }
@@ -964,6 +1326,9 @@ def process_news_data(news_sources: Dict[str, List[Dict]]) -> Dict:
         formatted_data[country] = []
     
     all_articles = []
+    
+    # Source diversity watchdog
+    source_stats = Counter()
     
     for source_type, articles in news_sources.items():
         for article in articles:
@@ -991,12 +1356,25 @@ def process_news_data(news_sources: Dict[str, List[Dict]]) -> Dict:
                 "source_type": source_type
             }
             
+            # Add language if detected
+            if "lang" in normalized:
+                news_item["lang"] = normalized["lang"]
+            
             # Generate unique ID for deduplication
             news_item["id"] = make_uid(news_item["title"], news_item["source"], news_item["rawDate"])
             
             news_item["importance_score"] = compute_importance_score(news_item, source_type)
             
             all_articles.append(news_item)
+            source_stats[normalized["site"]] += 1
+    
+    # Source diversity check
+    total_articles = len(all_articles)
+    if total_articles > 0:
+        for source, count in source_stats.items():
+            share = count / total_articles
+            if share < 0.02 and count < 5:  # Under-represented source
+                logger.warning(f"Low source diversity: {source} ({share:.1%}, {count} articles)")
     
     # Remove duplicates by ID
     all_articles = remove_duplicates_by_id(all_articles)
@@ -1190,6 +1568,14 @@ def generate_themes_json(news_data: Dict) -> bool:
 def main() -> bool:
     """Main execution function"""
     try:
+        print("\n🚀 TradePulse News Updater - Enhanced ML Version")
+        print("=" * 60)
+        print(f"📊 ML Features: {'✅ Enabled' if ML_ENABLED else '❌ Disabled'}")
+        print(f"📈 Observability: {'✅ Enabled' if OBSERVABILITY_ENABLED else '❌ Disabled'}")
+        print(f"🔄 Cache: {'✅ Redis' if redis_cli else '❌ Memory only'}")
+        print(f"🛡️ Circuit Breaker: {'✅ Active' if breaker else '❌ Disabled'}")
+        print("=" * 60)
+        
         existing_data = read_existing_news()
         
         # Fetch news sources concurrently
@@ -1238,6 +1624,11 @@ def main() -> bool:
                     sentiment = details["sentiment_distribution"]
                     logger.info(f"      Sentiment: {sentiment['positive']}% positive, {sentiment['negative']}% negative, {sentiment['neutral']}% neutral")
         
+        print(f"\n✅ Pipeline completed successfully!")
+        print(f"📰 Total articles processed: {sum(len(articles) for articles in news_data.values() if isinstance(articles, list))}")
+        print(f"📅 Events found: {len(events)}")
+        print(f"🎯 Themes analyzed: {sum(len(themes) for themes in top_themes.values())}")
+        
         return success_news and success_themes
     except Exception as e:
         logger.error(f"❌ Error in script execution: {str(e)}")
@@ -1246,11 +1637,13 @@ def main() -> bool:
         return False
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="TradePulse News Updater")
+    parser = argparse.ArgumentParser(description="TradePulse News Updater - Enhanced ML Version")
     parser.add_argument("--themes-only", action="store_true", 
                        help="Only regenerate themes.json from existing news data")
     parser.add_argument("--profile", action="store_true", 
                        help="Run with profiling enabled")
+    parser.add_argument("--ml-benchmark", action="store_true", 
+                       help="Benchmark ML vs rule-based classification")
     
     args = parser.parse_args()
     
@@ -1259,6 +1652,13 @@ if __name__ == "__main__":
         news_json = read_existing_news() or {}
         success = generate_themes_json(news_json)
         exit(0 if success else 1)
+    
+    if args.ml_benchmark and ML_ENABLED:
+        print("\n🔬 ML Benchmark Mode")
+        print("Comparing ML vs rule-based classification...")
+        # This would be implemented for testing
+        print("⚠️ Benchmark mode not yet implemented")
+        exit(0)
     
     if args.profile:
         import cProfile
