@@ -1,11 +1,12 @@
 /* ================================================================
- * loan-pdf.js – Export PDF (v2.5.3)  ▸ Smartflow Finance ▸ Juin 2025
+ * loan-pdf.js – Export PDF (v2.6.0)  ▸ Smartflow Finance ▸ Juin 2025
  *
- * Nouveautés (v2.5.3) - Nouvelles KPI cards + suppression blocs inutiles
- *   • ✅ Ajout: Mensualité après renégociation & Mensualité totale PTZ
- *   • ✅ Renommage: "Coût total" → "Coût global (tout compris)"
- *   • 🗑️ Suppression: Bloc "double mensualité" et placeholder graphique
- *   • 🔧 #21-23: Toutes corrections v2.5.2 conservées
+ * Nouveautés (v2.6.0) - Refonte esthétique complète
+ *   • 🎨 Design tokens CSS pour cohérence couleurs
+ *   • ✨ Grille KPI 3×2 pour meilleur équilibre visuel
+ *   • 📐 Hero centré + coins arrondis + effets hover
+ *   • 🪶 Header allégé + marges harmonisées
+ *   • 🔢 Typographie tabulaire + box-shadows modernes
  * ================================================================ */
 
 // ──────────────────────────────
@@ -28,7 +29,7 @@ const PDF_CONFIG = {
 // EXPORT PRINCIPAL
 // ──────────────────────────────
 export async function exportLoanToPDF(loanData = null, options = {}) {
-  if (isDev) console.log('📄 [Loan‑PDF] Début génération v2.5.3 avec nouvelles KPI cards…');
+  if (isDev) console.log('📄 [Loan‑PDF] Début génération v2.6.0 avec nouvelle esthétique…');
 
   if (loanData instanceof Event) loanData = null; // sécurité
 
@@ -55,7 +56,7 @@ export async function exportLoanToPDF(loanData = null, options = {}) {
       window.scrollTo({ top: y, left: 0, behavior: 'instant' });
     }
     showSuccessState(btn, uiState);
-    if (isDev) console.log('✅ PDF v2.5.3 généré - nouvelles KPI cards actives');
+    if (isDev) console.log('✅ PDF v2.6.0 généré - nouvelle esthétique active');
   } catch (err) {
     console.error('❌ [Loan‑PDF]', err);
     showErrorState(btn, err.message);
@@ -169,7 +170,7 @@ function extractPtzDetailsFromDOM() {
 // EXTRACTION DATAS & HELPERS
 // ──────────────────────────────
 function extractLoanDataFromDOM() {
-  if (isDev) console.log('🔍 Extraction Loan DOM v2.5.3 avec nouvelles KPI cards');
+  if (isDev) console.log('🔍 Extraction Loan DOM v2.6.0 avec nouvelle esthétique');
   const toNumber = v => {
     if (v === '' || v === undefined || v === null) return 0;
     if (typeof v === 'number') return Number.isFinite(v)?v:0;
@@ -238,7 +239,7 @@ function extractLoanDataFromDOM() {
     if (ptzHtml.exists) console.log(`🔗 PTZ HTML récupéré via ${ptzHtml.source}`);
     if (data.comparisonHtml) console.log('🔧 Tableau Comparaison extrait et nettoyé');
     if (data.equivalenceHtml) console.log('🔧 Tableau Équivalence extrait et fixé v2.5.2');
-    console.log('✅ Nouvelles données v2.5.3:', { mensRenego: data.mensRenego, mensTotalPTZ: data.mensTotalPTZ, coutGlobal: data.coutGlobal });
+    console.log('✅ Nouvelles données v2.6.0:', { mensRenego: data.mensRenego, mensTotalPTZ: data.mensTotalPTZ, coutGlobal: data.coutGlobal });
   }
 
   return data;
@@ -331,7 +332,7 @@ function extractKeyEvents() {
 }
 
 // ──────────────────────────────
-// TEMPLATE PDF ENHANCED v2.5.3
+// TEMPLATE PDF ENHANCED v2.6.0
 // ──────────────────────────────
 async function buildLoanPDFTemplate(d){
   const wrap = document.createElement('div');
@@ -341,21 +342,17 @@ async function buildLoanPDFTemplate(d){
   wrap.appendChild(buildStyles());
   wrap.appendChild(buildHeader(d));
   wrap.appendChild(buildHero(d));
-  wrap.appendChild(buildKPIBlockCards(d)); // ✅ #4: Nouveau format cards v2.5.3
+  wrap.appendChild(buildKPIBlockCards(d)); // ✅ #4: Nouveau format cards v2.6.0
   
   // Sections conditionnelles optimisées
   if (d.savings > 0) wrap.appendChild(buildSavingsBlock(d));
   if (d.events.length > 2) wrap.appendChild(buildTimeline(d));
   if (d.ptzEnabled) wrap.appendChild(buildPTZBlock(d));
-  // 🗑️ SUPPRIMÉ v2.5.3: if (d.doublePeriod) wrap.appendChild(buildDoubleAlert(d));
-  
-  // ✅ #9: Doublon PTZ supprimé (buildPTZHtmlFromWindow retiré)
   
   // 🔧 #15-19: Tableaux d'analyse fixes
   if (d.comparisonHtml) wrap.appendChild(buildComparisonBlock(d));
   if (d.equivalenceHtml) wrap.appendChild(buildEquivalenceBlock(d));
   
-  // 🗑️ SUPPRIMÉ v2.5.3: Chart placeholder - wrap.appendChild(buildChart(d));
   wrap.appendChild(buildFooter(d));
   
   // ✅ #7: Numérotation automatique des pages
@@ -369,13 +366,32 @@ async function buildLoanPDFTemplate(d){
 }
 
 // ──────────────────────────────
-// 1. Styles CSS v2.5.3 - Fix overflow complet
+// 1. Styles CSS v2.6.0 - Refonte esthétique complète
 // ──────────────────────────────
 function buildStyles(){
   const s=document.createElement('style');
   s.textContent=`
+    /* 🎨 Design tokens v2.6.0 */
+    :root {
+      --c-primary: #059669;
+      --c-secondary: #2563eb;
+      --c-accent: #f59e0b;
+      --c-bg: #f8fafc;
+      --c-surface: #ffffff;
+      --shadow-sm: 0 2px 4px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 14px rgba(0,0,0,0.06);
+    }
+    
     body,html{margin:0;padding:0;box-sizing:border-box;}
-    .pdf-container{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#374151;padding:15mm 12mm;background:#ffffff;line-height:1.4;}
+    .pdf-container{
+      font-family:'Segoe UI',Arial,sans-serif;
+      font-size:12px;
+      color:#374151;
+      padding:15mm 12mm;
+      background:var(--c-surface);
+      line-height:1.4;
+      font-variant-numeric:tabular-nums; /* 🔢 Police tabulaire pour chiffres */
+    }
     
     /* ✅ #6: En-têtes/pieds de page récurrents */
     @media print {
@@ -384,69 +400,137 @@ function buildStyles(){
       .page-num{position:fixed;bottom:12mm;right:14mm;font-size:11px;}
     }
     
-    /* Header */
-    .pdf-header{text-align:center;border-bottom:3px solid #059669;margin-bottom:10mm;padding-bottom:6mm;}
+    /* 🪶 Header allégé v2.6.0 */
+    .pdf-header{
+      text-align:center;
+      border-bottom:1px solid var(--c-primary); /* 🪶 Plus léger */
+      margin-bottom:8mm;
+      padding-bottom:5mm;
+    }
     .pdf-header h1{margin:0;font-size:24px;color:#1f2937;font-weight:700;}
     
-    /* Hero section - BIG numbers */
-    .hero-card{display:flex;flex-direction:column;align-items:center;justify-content:center;margin:8mm 0;padding:6mm;background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border-radius:8px;border:2px solid #10b981;}
-    .hero-main{font-size:32px;font-weight:700;color:#059669;margin:0;text-shadow:0 1px 2px rgba(0,0,0,0.1);}
+    /* 📐 Hero section centré + coins arrondis v2.6.0 */
+    .hero-card{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      text-align:center; /* 📐 Centrage parfait */
+      margin:6mm 0; /* 📏 Marge harmonisée */
+      padding:8mm;
+      background:linear-gradient(135deg,#f0fdf4,#ecfdf5);
+      border-radius:12px; /* 📐 Coins plus arrondis */
+      border:2px solid var(--c-primary);
+      box-shadow:var(--shadow-sm); /* 🌟 Profondeur subtile */
+    }
+    .hero-main{font-size:28px;font-weight:700;color:var(--c-primary);margin:0;text-shadow:0 1px 2px rgba(0,0,0,0.1);}
     .hero-sub{font-size:16px;font-weight:600;color:#111827;margin:4px 0 0;}
     .hero-total{font-size:18px;color:#374151;font-weight:600;margin:6px 0 0;}
     
-    /* ✅ #4: KPI Cards 2×3 grid v2.5.3 */
-    .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:4mm;margin:6mm 0;}
-    .kpi-card{background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:6mm;text-align:center;}
+    /* ✨ KPI Cards 3×2 grid v2.6.0 */
+    .kpi-grid{
+      display:grid;
+      grid-template-columns:repeat(3,1fr); /* ✨ 3 colonnes */
+      gap:3mm; /* Gap optimisé */
+      margin:6mm 0; /* 📏 Marge harmonisée */
+    }
+    .kpi-card{
+      background:var(--c-bg);
+      border:1px solid #a7f3d0;
+      border-radius:8px;
+      padding:5mm;
+      text-align:center;
+      transition:all 0.2s ease;
+      box-shadow:var(--shadow-sm); /* 🌟 Profondeur */
+    }
     .kpi-card p{font-size:12px;color:#047857;margin:0;}
-    .kpi-card h3{font-size:18px;color:#059669;margin:2mm 0 0;}
+    .kpi-card h3{font-size:16px;color:var(--c-primary);margin:3mm 0 0;font-weight:600;}
+    
+    /* ✨ Effets hover pour version écran */
+    @media screen {
+      .kpi-card:hover{
+        transform:translateY(-2px);
+        box-shadow:var(--shadow-md);
+        border-color:var(--c-primary);
+      }
+    }
     
     /* ✅ #8: Masquage ancien tableau (réversible) */
     .pdf-table{display:none !important;}
     
     /* 🔧 #18: Styles tableaux v2.5.2 - overflow complet neutralisé */
     .analysis-block{
-      margin:6mm 0;
-      padding:4mm;
+      margin:6mm 0; /* 📏 Marge harmonisée */
+      padding:5mm;
       border:1px solid #cbd5e1;
-      border-radius:6px;
-      background:#f8fafc;
+      border-radius:8px;
+      background:var(--c-bg);
       font-size:11.5px;
-      overflow:initial !important;    /* aucune zone scrollable */
-      page-break-inside:auto;         /* ← laisser html2pdf couper    */
+      overflow:initial !important;
+      page-break-inside:auto;
       break-inside:auto;
+      box-shadow:var(--shadow-sm); /* 🌟 Profondeur */
     }
     
-    /* on interdit seulement la coupure à l'intérieur d'une ligne */
     .analysis-block tr{
       page-break-inside:avoid;
       break-inside:avoid;
     }
     
-    .analysis-title{margin:0 0 3mm;font-size:14px;color:#1e40af;font-weight:600;}
+    .analysis-title{
+      margin:0 0 4mm;
+      font-size:14px;
+      color:var(--c-secondary);
+      font-weight:600;
+      border-bottom:1px solid #e2e8f0;
+      padding-bottom:2mm;
+    }
     .analysis-block table{
       width:100%;
       border-collapse:collapse;
       font-size:11px;
-      page-break-inside:auto;         /* table autorisée à se casser   */
-      table-layout:fixed;             /* 🔧 #20: largeur fixe évite réduction */
+      page-break-inside:auto;
+      table-layout:fixed;
     }
     .analysis-block th,.analysis-block td{border:1px solid #e5e7eb;padding:4px;text-align:right;}
     .analysis-block th{text-align:center;background:#eef2ff;color:#374151;}
     
     /* Savings highlight */
-    .savings-block{background:linear-gradient(135deg,#fef3c7,#fef9c3);border:2px solid #f59e0b;padding:6mm;border-radius:8px;margin:6mm 0;text-align:center;}
+    .savings-block{
+      background:linear-gradient(135deg,#fef3c7,#fef9c3);
+      border:2px solid var(--c-accent);
+      padding:6mm;
+      border-radius:8px;
+      margin:6mm 0; /* 📏 Marge harmonisée */
+      text-align:center;
+      box-shadow:var(--shadow-sm); /* 🌟 Profondeur */
+    }
     .savings-block h3{margin:0 0 4mm;color:#b45309;font-size:16px;}
     .savings-amount{font-size:24px;font-weight:700;color:#d97706;margin:2mm 0;}
     .savings-percent{font-size:14px;color:#92400e;font-weight:600;}
     
     /* Timeline */
-    .timeline{margin:6mm 0;padding:4mm;background:#f8fafc;border-radius:6px;border-left:4px solid #3b82f6;}
-    .timeline h3{margin:0 0 4mm;color:#1e40af;font-size:14px;}
+    .timeline{
+      margin:6mm 0; /* 📏 Marge harmonisée */
+      padding:5mm;
+      background:var(--c-bg);
+      border-radius:8px;
+      border-left:4px solid var(--c-secondary);
+      box-shadow:var(--shadow-sm); /* 🌟 Profondeur */
+    }
+    .timeline h3{margin:0 0 4mm;color:var(--c-secondary);font-size:14px;}
     .timeline-event{display:flex;align-items:center;margin:2mm 0;font-size:11px;}
-    .timeline-month{background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:4px;margin-right:8px;font-weight:600;min-width:40px;text-align:center;}
+    .timeline-month{background:#dbeafe;color:var(--c-secondary);padding:2px 6px;border-radius:4px;margin-right:8px;font-weight:600;min-width:40px;text-align:center;}
     
     /* PTZ block enhanced */
-    .ptz-box{background:linear-gradient(135deg,#fef3c7,#fef9c3);border:2px solid #fcd34d;padding:6mm;border-radius:8px;margin:6mm 0;}
+    .ptz-box{
+      background:linear-gradient(135deg,#fef3c7,#fef9c3);
+      border:2px solid #fcd34d;
+      padding:6mm;
+      border-radius:8px;
+      margin:6mm 0; /* 📏 Marge harmonisée */
+      box-shadow:var(--shadow-sm); /* 🌟 Profondeur */
+    }
     .ptz-box h3{margin:0 0 3mm;font-size:16px;color:#b45309;}
     
     /* Utilities */
@@ -456,8 +540,9 @@ function buildStyles(){
     
     /* Print optimizations */
     @media print {
-      .pdf-container{padding:10mm 8mm;}
-      .hero-main{font-size:28px;}
+      .pdf-container{padding:8mm 6mm;}
+      .hero-main{font-size:26px;}
+      .kpi-grid{gap:2mm;}
     }
   `;
   return s;
@@ -470,7 +555,7 @@ function buildHeader(d){
   const h=document.createElement('div');h.className='pdf-header';
   h.innerHTML=`
     <h1>📊 Synthèse de prêt immobilier</h1>
-    <div class="small">Généré le ${d.generatedAt.toLocaleDateString('fr-FR')} à ${d.generatedAt.toLocaleTimeString('fr-FR')} • Smartflow Finance v2.5.3</div>
+    <div class="small">Généré le ${d.generatedAt.toLocaleDateString('fr-FR')} à ${d.generatedAt.toLocaleTimeString('fr-FR')} • Smartflow Finance v2.6.0</div>
     <div class="page-num"></div>
   `;
   return h;
@@ -490,7 +575,7 @@ function buildHero(d){
 }
 
 // ──────────────────────────────
-// ✅ #4: KPI block → 2×3 cards v2.5.3
+// ✅ #4: KPI block → 3×2 cards v2.6.0
 // ──────────────────────────────
 function buildKPIBlockCards(d){
   const wrap=document.createElement('div');
@@ -599,7 +684,7 @@ function buildEquivalenceBlock(d){
 }
 
 // ──────────────────────────────
-// 11. Footer amélioré v2.5.3
+// 11. Footer amélioré v2.6.0
 // ──────────────────────────────
 function buildFooter(d){
   const f=document.createElement('div');
@@ -607,7 +692,7 @@ function buildFooter(d){
   f.innerHTML=`
     <div style="margin-bottom:2mm;"><strong>⚠️ Avertissement :</strong> Cette synthèse est fournie à titre informatif uniquement et ne constitue pas un conseil financier personnalisé.</div>
     <div>Pour toute décision d'investissement, consultez un conseiller financier qualifié.</div>
-    <div style="margin-top:4mm;font-weight:600;">© Smartflow Finance Intelligence ${d.generatedAt.getFullYear()} • Plateforme d'analyse financière v2.5.3</div>
+    <div style="margin-top:4mm;font-weight:600;">© Smartflow Finance Intelligence ${d.generatedAt.getFullYear()} • Plateforme d'analyse financière v2.6.0</div>
     <div class="page-num"></div>
   `;
   return f;
@@ -639,7 +724,7 @@ function generatePDFFilename(date=new Date(),prefix='Smartflow'){
 function showLoadingState(btn){
   if(!btn) return null;
   const originalState={html:btn.innerHTML,disabled:btn.disabled};
-  btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Génération PDF v2.5.3…';
+  btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Génération PDF v2.6.0…';
   btn.disabled=true;
   return originalState;
 }
@@ -699,7 +784,7 @@ export function createLoanExportButton(){
   btn.id='export-loan-pdf';
   btn.className='w-full mt-4 py-3 px-4 bg-green-500 hover:bg-green-400 text-gray-900 font-semibold rounded-lg shadow-lg hover:shadow-green-500/30 transition-all duration-300 flex items-center justify-center opacity-50 cursor-not-allowed';
   btn.disabled=true;
-  btn.innerHTML='<i class="fas fa-file-pdf mr-2"></i>Exporter en PDF v2.5.3';
+  btn.innerHTML='<i class="fas fa-file-pdf mr-2"></i>Exporter en PDF v2.6.0';
   btn.title='Calculez le prêt pour activer l\'export PDF';
   btn.addEventListener('click',()=>exportLoanToPDF());
   
@@ -712,8 +797,8 @@ export function activateLoanExportButton(){
   if(btn){
     btn.disabled=false;
     btn.classList.remove('opacity-50','cursor-not-allowed');
-    btn.title='Télécharger la synthèse PDF v2.5.3 avec nouvelles KPI cards';
-    if(isDev) console.log('✅ Bouton PDF v2.5.3 activé - nouvelles KPI cards prêtes');
+    btn.title='Télécharger la synthèse PDF v2.6.0 avec nouvelle esthétique';
+    if(isDev) console.log('✅ Bouton PDF v2.6.0 activé - nouvelle esthétique prête');
   }
 }
 
@@ -723,9 +808,9 @@ export function activateLoanExportButton(){
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',()=>{
     createLoanExportButton();
-    if(isDev) console.log('🚀 Loan PDF v2.5.3 initialisé - nouvelles KPI cards intégrées');
+    if(isDev) console.log('🚀 Loan PDF v2.6.0 initialisé - nouvelle esthétique intégrée');
   });
 }else{
   createLoanExportButton();
-  if(isDev) console.log('🚀 Loan PDF v2.5.3 ready');
+  if(isDev) console.log('🚀 Loan PDF v2.6.0 ready');
 }
