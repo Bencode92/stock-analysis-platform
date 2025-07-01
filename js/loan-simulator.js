@@ -1,6 +1,6 @@
 /**
  * ============================================
- * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.3.4
+ * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.3.5
  * ============================================
  * 
  * Plan d'action implémenté :
@@ -22,6 +22,7 @@
  * 🔧 v2.3.2 : Restauration gestionnaire remboursements anticipés manquant
  * 🔧 v2.3.3 : Fix PTZ différé - ajout conditionnel mensualité PTZ selon période
  * 🔧 v2.3.4 : Fix calcul coût total - inclusion assurance dans montantTotal
+ * 🔧 v2.3.5 : Fix TAEG renégociation - Reconstruction des flux de trésorerie post-renégociation
  * 
  * Architecture : Flux de trésorerie centralisés pour calculs financiers conformes
  */
@@ -212,7 +213,7 @@ class PTZManager {
 
 /**
  * ==========================================
- * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.3.4
+ * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.3.5
  * ==========================================
  */
 class LoanSimulator {
@@ -276,7 +277,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.3.4
+     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.3.5
      * ==========================================
      */
     
@@ -326,7 +327,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 📊 TABLEAU D'AMORTISSEMENT v2.3.4
+     * 📊 TABLEAU D'AMORTISSEMENT v2.3.5
      * ==========================================
      */
 
@@ -361,7 +362,7 @@ class LoanSimulator {
             }
         }
 
-        // Génération des flux de trésorerie
+        // Génération des flux de trésorerie INITIAUX
         this.cashFlows = this.generateBaseCashFlows();
         
         // Ajout des flux PTZ si activé
@@ -372,13 +373,38 @@ class LoanSimulator {
             }
         }
 
-        // Génération du tableau détaillé
+        // Génération du tableau détaillé avec renégociation
         const tableauResult = this.generateDetailedTable(remboursements, {
             nouveauTaux,
             moisRenegociation,
             modeRemboursement,
             appliquerRenegociation
         });
+
+        // ✨ CORRECTION CRITIQUE v2.3.5: Reconstruction des flux de trésorerie post-renégociation
+        if (appliquerRenegociation && moisRenegociation && nouveauTaux !== null) {
+            console.log('🔄 v2.3.5: Reconstruction des flux de trésorerie avec renégociation...');
+            
+            // Reconstruire flux initial (capital net reçu)
+            const fraisInitiauxFixes = this.fraisDossier + this.fraisGarantie;
+            this.cashFlows = [FLUX_ENTREE * (this.capital - fraisInitiauxFixes)];
+            
+            // Reconstruire flux mensuels depuis le tableau détaillé
+            tableauResult.tableau.forEach(row => {
+                // mensualiteGlobale inclut déjà : crédit + assurance + tenue de compte
+                this.cashFlows.push(FLUX_SORTIE * row.mensualiteGlobale);
+            });
+            
+            // Ajouter flux PTZ corrigés si nécessaire
+            if (this.ptzManager.enabled) {
+                const ptzFlowsCorrects = this.ptzManager.generateCashFlows(tableauResult.tableau.length);
+                for (let i = 1; i < this.cashFlows.length && i < ptzFlowsCorrects.length; i++) {
+                    this.cashFlows[i] += ptzFlowsCorrects[i];
+                }
+            }
+            
+            console.log(`📊 v2.3.5: Flux reconstruits: ${this.cashFlows.length} périodes avec renégociation au mois ${moisRenegociation}`);
+        }
 
         // 🆕 v2.2.1: Calcul scénario de base pour économie d'intérêts exacte
         let baseInterets = 0;
@@ -405,10 +431,11 @@ class LoanSimulator {
             mensualiteApresRenego
         });
         
-        // Calcul TAEG via IRR v2.2.1
+        // Calcul TAEG via IRR v2.3.5
         try {
             const taegPrecis = this.calculateTAEG();
             results.taeg = taegPrecis * 100; // Conversion en pourcentage
+            console.log(`💎 v2.3.5: TAEG corrigé: ${results.taeg.toFixed(2)}% (IRR sur flux post-renégociation)`);
         } catch (error) {
             console.warn('TAEG non calculable via IRR:', error.message);
             results.taeg = this.tauxAnnuel * 1.1; // Fallback approximatif
@@ -568,7 +595,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.3.4
+     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.3.5
      * ==========================================
      */
 
@@ -653,12 +680,12 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 🔍 DEBUG & VALIDATION v2.3.4
+     * 🔍 DEBUG & VALIDATION v2.3.5
      * ==========================================
      */
 
     debugCashFlows() {
-        console.group('💰 Analyse des flux de trésorerie (v2.3.4)');
+        console.group('💰 Analyse des flux de trésorerie (v2.3.5)');
         console.table(this.cashFlows.map((flux, index) => ({
             periode: index === 0 ? 'Initial' : `Mois ${index}`,
             flux: this.formatMontant(flux),
@@ -682,7 +709,7 @@ class LoanSimulator {
             console.warn(`⚠️ Capital amorti insuffisant: ${this.formatMontant(results.totalCapitalAmorti)} vs ${this.formatMontant(this.capital)} initial`);
         }
 
-        console.log('✅ Validation terminée (v2.3.4 - Fix assurance dans coût total)');
+        console.log('✅ Validation terminée (v2.3.5 - Fix TAEG renégociation)');
     }
 
     /**
@@ -959,7 +986,7 @@ function ajoutePTZ(mensu, mois, ptz) {
 
 /**
  * ==========================================
- * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.3.4
+ * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.3.5
  * ==========================================
  */
 
@@ -1296,12 +1323,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.3.4
+     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.3.5
      * ==========================================
      */
     function calculateLoan() {
         try {
-            console.log("🚀 Début du calcul du prêt v2.3.4 (Fix assurance dans coût total)...");
+            console.log("🚀 Début du calcul du prêt v2.3.5 (Fix TAEG renégociation)...");
             
             const loanAmount = parseFloat(document.getElementById('loan-amount').value);
             const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
@@ -1372,7 +1399,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("📋 Remboursements anticipés:", remboursementsAnticipes);
             console.log("🔄 Appliquer renégociation:", applyRenegotiation);
             
-            // Création du simulateur v2.3.4
+            // Création du simulateur v2.3.5
             const simulator = new LoanSimulator({
                 capital: loanAmount,
                 tauxAnnuel: interestRate,
@@ -1453,7 +1480,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('ratio-cout').textContent = montantTotalEmprunte > 0 ? 
                 (coutGlobalAvecPTZ / montantTotalEmprunte).toFixed(3) : '0.000';
 
-            // 🆕 v2.2.1: TAEG sans correction proportionnelle (IRR inclut déjà tout)
+            // 🆕 v2.3.5: TAEG corrigé avec flux post-renégociation
             document.getElementById('taeg').textContent = result.taeg.toFixed(2) + '%';
 
             // 🆕 v2.2.1: Mise à jour des frais annexes avec tenue de compte incluse
@@ -1493,7 +1520,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✅ Bouton PDF activé');
             }
             
-            console.log('🎉 Calcul terminé avec succès (v2.3.4 - Fix assurance dans coût total)');
+            console.log('🎉 Calcul terminé avec succès (v2.3.5 - Fix TAEG renégociation)');
             return true;
         } catch (error) {
             console.error("❌ Erreur lors du calcul:", error);
@@ -1592,7 +1619,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 📋 FONCTIONS D'AFFICHAGE UI v2.3.4
+     * 📋 FONCTIONS D'AFFICHAGE UI v2.3.5
      * ==========================================
      */
 
@@ -1750,7 +1777,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         positive: modeRemboursement === 'mensualite'
                     },
                     {
-                        label: 'TAEG v2.3.4 Corrigé',
+                        label: 'TAEG v2.3.5 Corrigé',
                         base: `${baseResult.taeg.toFixed(2)}%`,
                         current: `${result.taeg.toFixed(2)}%`,
                         diff: `-${Math.max(0, (baseResult.taeg - result.taeg)).toFixed(2)}%`,
@@ -1872,7 +1899,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
                 <i class="fas fa-piggy-bank mr-2"></i>
-                Analyse complète du prêt v2.3.4
+                Analyse complète du prêt v2.3.5
                 <span class="ml-2 text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded">IRR ${result.taeg.toFixed(3)}%</span>
             </h5>
             <ul class="text-sm text-gray-300 space-y-2 pl-4">
@@ -1919,8 +1946,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                    <span>TAEG précis via IRR v2.3.4: ${result.taeg.toFixed(2)}% 
-                    <span class="text-xs text-green-300">(Assurance incluse dans coût total)</span></span>
+                    <span>TAEG précis via IRR v2.3.5: ${result.taeg.toFixed(2)}% 
+                    <span class="text-xs text-green-300">(Fix renégociation - Flux reconstruits)</span></span>
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
@@ -2029,7 +2056,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     title: {
                         display: true,
-                        text: 'Évolution du prêt (v2.3.4 - Assurance incluse dans coût total)',
+                        text: 'Évolution du prêt (v2.3.5 - Fix TAEG renégociation)',
                         color: 'rgba(255, 255, 255, 0.9)'
                     },
                     tooltip: {
@@ -2166,7 +2193,7 @@ document.addEventListener('DOMContentLoaded', function() {
             calculateLoan();
         });
     } else {
-        console.warn('🔧 v2.3.4: Bouton add-repayment-btn non trouvé');
+        console.warn('🔧 v2.3.5: Bouton add-repayment-btn non trouvé');
     }
 
     // 🔧 v2.3.2: FONCTION POUR AFFICHER LA LISTE DES REMBOURSEMENTS (RESTAURÉE)
@@ -2217,5 +2244,5 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialiser l'affichage des remboursements
     renderRepaymentsList();
 
-    console.log('✅ v2.3.4: Fix assurance dans coût total - window.storedRepayments:', window.storedRepayments);
+    console.log('✅ v2.3.5: Fix TAEG renégociation - window.storedRepayments:', window.storedRepayments);
 });
