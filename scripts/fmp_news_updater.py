@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-TradePulse News Updater - Enhanced ML Version with Optimized Configuration
+TradePulse News Updater - Enhanced ML Version with Async Fetching & Smart Filtering
 Script for extracting news and events from Financial Modeling Prep
 - General News API: For general economic news
 - Stock News API: For stocks and ETFs
@@ -12,7 +12,7 @@ Script for extracting news and events from Financial Modeling Prep
 - IPOs Calendar: For upcoming IPOs
 - Mergers & Acquisitions: For M&A operations
 
-🚀 NEW: ML-enhanced classification, FAISS dynamic keywords, observability
+🚀 NEW: Async fetching, hard filtering (IPO/M&A/Economic), language detection
 """
 
 from __future__ import annotations
@@ -24,10 +24,12 @@ import logging
 import hashlib
 import argparse
 import asyncio
+import aiohttp
 import numpy as np
 import subprocess
 import shlex
 import importlib.util
+import time
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 from typing import List, Dict, Literal, Optional, Any, Set
@@ -44,6 +46,18 @@ DAYS_AHEAD: int = int(os.getenv("TP_DAYS_AHEAD", "7"))
 DAYS_BACK: int = int(os.getenv("TP_DAYS_BACK", "30"))
 MAX_WORKERS = int(os.getenv("TP_MAX_WORKERS", "3"))
 LOG_LEVEL = os.getenv("TP_LOG_LEVEL", "INFO").upper()
+
+# Async fetch configuration
+PAGES_PER_RUN = 3
+ITEMS_PER_PAGE = 100
+FMP_BASE_URL = "https://financialmodelingprep.com/stable"
+
+# Hard filtering patterns
+DROP_PATTERN = re.compile(
+    r"\b(ipo|initial public offering|m&a|merger|acquisition|economic\s+(calendar|data|report)|earnings\s+calendar)\b",
+    flags=re.I,
+)
+LANG_WHITELIST = {"en", "fr"}
 
 # Dynamic scoring weights
 _SCORE_WEIGHTS_PATH = os.path.join("models", "score_weights.json")
@@ -194,15 +208,15 @@ BASE_SOURCE_WEIGHTS = {
 CONFIG = {
     "api_key": os.environ.get("FMP_API_KEY", ""),
     "endpoints": {
-        "general_news": "https://financialmodelingprep.com/stable/news/general-latest",
-        "fmp_articles": "https://financialmodelingprep.com/stable/fmp-articles",
-        "stock_news": "https://financialmodelingprep.com/stable/news/stock",
-        "crypto_news": "https://financialmodelingprep.com/stable/news/crypto",
-        "press_releases": "https://financialmodelingprep.com/stable/news/press-releases",
+        "general_news": f"{FMP_BASE_URL}/news/general-latest",
+        "fmp_articles": f"{FMP_BASE_URL}/fmp-articles",
+        "stock_news": f"{FMP_BASE_URL}/news/stock",
+        "crypto_news": f"{FMP_BASE_URL}/news/crypto",
+        "press_releases": f"{FMP_BASE_URL}/news/press-releases",
         "earnings_calendar": "https://financialmodelingprep.com/api/v3/earning_calendar",
         "economic_calendar": "https://financialmodelingprep.com/api/v3/economic_calendar",
-        "ipos_calendar": "https://financialmodelingprep.com/stable/ipos-calendar",
-        "mergers_acquisitions": "https://financialmodelingprep.com/stable/mergers-acquisitions-latest"
+        "ipos_calendar": f"{FMP_BASE_URL}/ipos-calendar",
+        "mergers_acquisitions": f"{FMP_BASE_URL}/mergers-acquisitions-latest"
     },
     "news_limits": allocate_limits(120, BASE_SOURCE_WEIGHTS),
     "output_limits": allocate_limits(MAX_TOTAL, BASE_COUNTRY_WEIGHTS),
@@ -367,6 +381,32 @@ class NewsItem:
 # 🔧 ENHANCED HELPER FUNCTIONS
 # ---------------------------------------------------------------------------
 
+def _is_valid_article(art: dict) -> bool:
+    """Hard filter: unwanted categories + language validation"""
+    # Extract text content
+    title = art.get('title', '')
+    content = art.get('content', '') or art.get('text', '')
+    body = f"{title} {content}".strip()
+    
+    if not body or len(body) < 50:
+        return False
+    
+    # Filter unwanted categories
+    if DROP_PATTERN.search(body):
+        return False
+    
+    # Language detection
+    if ML_ENABLED:
+        try:
+            detected_lang = detect(body[:200])  # Use first 200 chars for speed
+            if detected_lang not in LANG_WHITELIST:
+                return False
+        except:
+            # If detection fails, assume English and continue
+            pass
+    
+    return True
+
 def enhanced_keyword_matching(text: str, weight_class: str) -> int:
     """Enhanced keyword matching using compiled regex patterns"""
     if weight_class not in KEYWORD_PATTERNS:
@@ -427,9 +467,9 @@ def make_uid(title: str, source: str, raw_date: str) -> str:
     """Generate unique identifier for deduplication"""
     return hashlib.sha256(f"{title}{source}{raw_date}".encode()).hexdigest()[:16]
 
-def make_cache_key(endpoint: str, params: Optional[Dict] = None) -> str:
-    """Generate cache key for Redis"""
-    return hashlib.md5(f"{endpoint}|{params}".encode()).hexdigest()
+def make_url_hash(url: str) -> str:
+    """Generate URL-based hash for deduplication"""
+    return hashlib.sha1(url.encode()).hexdigest()
 
 def read_existing_news() -> Optional[Dict]:
     """Reads existing JSON file as fallback"""
@@ -440,14 +480,92 @@ def read_existing_news() -> Optional[Dict]:
         return None
 
 # ---------------------------------------------------------------------------
-# 🌐 ENHANCED API FETCHING
+# 🌐 ENHANCED ASYNC API FETCHING
 # ---------------------------------------------------------------------------
 
+async def _fetch_single(session: aiohttp.ClientSession, url: str, params: Dict) -> List[Dict]:
+    """Fetch single endpoint with error handling"""
+    try:
+        async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                return data if isinstance(data, list) else [data] if data else []
+            else:
+                logger.warning(f"HTTP {resp.status} for {url}")
+                return []
+    except Exception as e:
+        logger.error(f"Error fetching {url}: {str(e)}")
+        return []
+
+async def fetch_fmp_batch_async() -> List[Dict]:
+    """Async batch fetch from all FMP endpoints with filtering"""
+    if not CONFIG["api_key"]:
+        logger.error("FMP API key not defined")
+        return []
+    
+    today = datetime.now().strftime("%Y-%m-%d")
+    start_date = (datetime.now() - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
+    
+    tasks = []
+    
+    async with aiohttp.ClientSession() as session:
+        # News endpoints
+        for endpoint_name, endpoint_url in CONFIG["endpoints"].items():
+            if endpoint_name in ["earnings_calendar", "economic_calendar", "ipos_calendar", "mergers_acquisitions"]:
+                continue  # Skip event endpoints for now
+                
+            for page in range(PAGES_PER_RUN):
+                params = {
+                    "apikey": CONFIG["api_key"],
+                    "page": page,
+                    "limit": ITEMS_PER_PAGE,
+                    "from": start_date,
+                    "to": today
+                }
+                tasks.append(_fetch_single(session, endpoint_url, params))
+        
+        # Execute all requests concurrently
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    # Flatten results and filter
+    articles = []
+    seen_urls = set()
+    
+    for result in results:
+        if isinstance(result, list):
+            for art in result:
+                if not isinstance(art, dict):
+                    continue
+                
+                # Normalize URL field
+                url = art.get('url') or art.get('link', '')
+                if not url:
+                    continue
+                
+                # URL-based deduplication
+                url_hash = make_url_hash(url)
+                if url_hash in seen_urls:
+                    continue
+                
+                # Apply hard filters
+                if not _is_valid_article(art):
+                    continue
+                
+                # Add metadata
+                art["_id"] = url_hash
+                art["fetched_at"] = time.time()
+                seen_urls.add(url_hash)
+                articles.append(art)
+    
+    logger.info(f"✅ Async fetch completed: {len(articles)} valid articles after filtering")
+    return articles
+
+# Fallback sync fetch for events
 @retry(wait=wait_random_exponential(multiplier=1, max=30), stop=stop_after_attempt(5)) if HAS_TENACITY else lambda f: f
 def fetch_api_data(endpoint: str, params: Optional[Dict] = None) -> List[Dict]:
-    """Enhanced API fetching with retry logic"""
+    """Fallback sync API fetching for events"""
     if not CONFIG["api_key"]:
-        logger.error("FMP API key not defined. Please set FMP_API_KEY in environment variables.")
+        logger.error("FMP API key not defined")
         return []
         
     if params is None:
@@ -455,76 +573,27 @@ def fetch_api_data(endpoint: str, params: Optional[Dict] = None) -> List[Dict]:
     params["apikey"] = CONFIG["api_key"]
     
     try:
-        logger.debug(f"Fetching data from {endpoint}")
         response = SESSION.get(endpoint, params=params, timeout=30)
         response.raise_for_status()
         data = response.json()
-        logger.info(f"✅ {len(data) if isinstance(data, list) else 1} items retrieved from {endpoint}")
         return data if isinstance(data, list) else [data] if data else []
     except Exception as e:
         logger.error(f"❌ Error fetching from {endpoint}: {str(e)}")
         return []
 
-def fetch_articles_by_period(endpoint: str, start_date: str, end_date: str, 
-                           source_type: Optional[str] = None, days_interval: int = 7, 
-                           max_pages: int = 5) -> List[Dict]:
-    """Fetches articles over a given period by splitting into intervals"""
-    logger.info(f"Starting extraction from {start_date} to {end_date} in {days_interval} day chunks")
-    
-    per_page = CONFIG["news_limits"].get(source_type, 50) if source_type else 50
-    
-    from_date = datetime.strptime(start_date, "%Y-%m-%d")
-    to_date = datetime.strptime(end_date, "%Y-%m-%d")
-    all_articles = []
-    
-    current_from = from_date
-    while current_from < to_date:
-        current_to = min(current_from + timedelta(days=days_interval), to_date)
-        
-        logger.debug(f"Processing period {current_from.strftime('%Y-%m-%d')} → {current_to.strftime('%Y-%m-%d')}")
-        
-        for page in range(max_pages):
-            params = {
-                "from": current_from.strftime("%Y-%m-%d"),
-                "to": current_to.strftime("%Y-%m-%d"),
-                "page": page,
-                "limit": per_page
-            }
-            
-            articles = fetch_api_data(endpoint, params)
-            
-            if not articles:
-                break
-                
-            logger.debug(f"  Page {page+1}: {len(articles)} articles retrieved")
-            all_articles.extend(articles)
-            
-            if len(articles) < per_page:
-                break
-                
-        current_from = current_to
-    
-    logger.info(f"Total articles retrieved for the period: {len(all_articles)}")
-    return all_articles
-
 # ---------------------------------------------------------------------------
-# 📰 NEWS SOURCE GETTERS
+# 📰 NEWS SOURCE GETTERS (UPDATED)
 # ---------------------------------------------------------------------------
 
-def _make_news_getter(endpoint_key: str):
-    def _getter():
-        today = datetime.today()
-        start = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
-        end = today.strftime("%Y-%m-%d")
-        return fetch_articles_by_period(
-            CONFIG["endpoints"][endpoint_key], start, end, endpoint_key
-        )
-    _getter.__name__ = f"get_{endpoint_key}"
-    return _getter
-
-# Auto-generate getters
-for _key in ("general_news", "fmp_articles", "stock_news", "crypto_news", "press_releases"):
-    globals()[f"get_{_key}"] = _make_news_getter(_key)
+def get_all_news_async():
+    """Get all news using async batch fetch"""
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    return loop.run_until_complete(fetch_fmp_batch_async())
 
 def get_earnings_calendar() -> List[Dict]:
     """Fetches earnings calendar"""
@@ -828,34 +897,8 @@ def remove_duplicates_by_id(news_list: List[Dict]) -> List[Dict]:
     
     return unique_news
 
-def fetch_all_news_sources() -> Dict[str, List[Dict]]:
-    """Fetch all news sources concurrently with enhanced error handling"""
-    endpoint_funcs = {
-        "general_news": get_general_news,
-        "fmp_articles": get_fmp_articles,
-        "stock_news": get_stock_news,
-        "crypto_news": get_crypto_news,
-        "press_releases": get_press_releases
-    }
-    
-    results = {}
-    
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        future_to_name = {executor.submit(func): name for name, func in endpoint_funcs.items()}
-        
-        for future in as_completed(future_to_name):
-            name = future_to_name[future]
-            try:
-                results[name] = future.result()
-                logger.info(f"✅ {name}: {len(results[name])} articles fetched")
-            except Exception as e:
-                logger.error(f"❌ {name} failed: {str(e)}")
-                results[name] = []
-    
-    return results
-
-def process_news_data(news_sources: Dict[str, List[Dict]]) -> Dict:
-    """Enhanced news processing with improved diversity tracking"""
+def process_news_data_async(articles: List[Dict]) -> Dict:
+    """Process async-fetched articles into formatted data"""
     formatted_data = {"lastUpdated": datetime.now().isoformat()}
     
     for country in CONFIG["output_limits"].keys():
@@ -865,51 +908,43 @@ def process_news_data(news_sources: Dict[str, List[Dict]]) -> Dict:
     source_stats = Counter()
     category_stats = Counter()
     
-    for source_type, articles in news_sources.items():
-        for article in articles:
-            normalized = normalize_article(article, source_type)
-            
-            # Enhanced content quality checks
-            if (len(normalized["title"]) < 10 or 
-                len(normalized["text"]) < 50 or
-                not normalized["title"].strip() or
-                not normalized["text"].strip()):
-                continue
-            
-            category = determine_category(normalized, source_type)
-            country = determine_country(normalized)
-            impact = determine_impact(normalized)
-            
-            news_item = {
-                "title": normalized["title"],
-                "content": normalized["text"],
-                "source": normalized["site"],
-                "rawDate": normalized["publishedDate"],
-                "date": format_date(normalized["publishedDate"]),
-                "time": format_time(normalized["publishedDate"]),
-                "category": category,
-                "impact": impact,
-                "country": country,
-                "url": normalized.get("url", ""),
-                "themes": extract_themes(normalized),
-                "source_type": source_type
-            }
-            
-            if "lang" in normalized:
-                news_item["lang"] = normalized["lang"]
-            
-            news_item["id"] = make_uid(news_item["title"], news_item["source"], news_item["rawDate"])
-            news_item["importance_score"] = compute_importance_score(news_item, source_type)
-            
-            all_articles.append(news_item)
-            source_stats[normalized["site"]] += 1
-            category_stats[category] += 1
+    for article in articles:
+        normalized = normalize_article(article, "async_batch")
+        
+        # Content already validated by _is_valid_article
+        category = determine_category(normalized, "async_batch")
+        country = determine_country(normalized)
+        impact = determine_impact(normalized)
+        
+        news_item = {
+            "title": normalized["title"],
+            "content": normalized["text"],
+            "source": normalized["site"],
+            "rawDate": normalized["publishedDate"],
+            "date": format_date(normalized["publishedDate"]),
+            "time": format_time(normalized["publishedDate"]),
+            "category": category,
+            "impact": impact,
+            "country": country,
+            "url": normalized.get("url", ""),
+            "themes": extract_themes(normalized),
+            "source_type": "async_batch"
+        }
+        
+        if "lang" in normalized:
+            news_item["lang"] = normalized["lang"]
+        
+        news_item["id"] = article.get("_id", make_uid(news_item["title"], news_item["source"], news_item["rawDate"]))
+        news_item["importance_score"] = compute_importance_score(news_item, "async_batch")
+        
+        all_articles.append(news_item)
+        source_stats[normalized["site"]] += 1
+        category_stats[category] += 1
     
-    # Remove duplicates and sort by importance
-    all_articles = remove_duplicates_by_id(all_articles)
+    # Sort by importance
     all_articles.sort(key=lambda x: x["importance_score"], reverse=True)
     
-    # Distribute by country with enhanced logic
+    # Distribute by country
     articles_by_country = {}
     for article in all_articles:
         country = article["country"]
@@ -952,10 +987,15 @@ def process_news_data(news_sources: Dict[str, List[Dict]]) -> Dict:
     return formatted_data
 
 def process_events_data(earnings: List[Dict], economic: List[Dict]) -> List[Dict]:
-    """Enhanced event processing"""
+    """Enhanced event processing with filtering"""
     events = []
     
+    # Filter economic events to exclude already filtered categories
     for eco_event in economic:
+        event_name = eco_event.get("event", "").lower()
+        if DROP_PATTERN.search(event_name):
+            continue  # Skip filtered events
+            
         event = {
             "title": eco_event.get("event", ""),
             "date": format_date(eco_event.get("date", "")),
@@ -966,6 +1006,7 @@ def process_events_data(earnings: List[Dict], economic: List[Dict]) -> List[Dict
         }
         events.append(event)
     
+    # Process earnings but filter if needed
     for earning in earnings:
         if earning.get("epsEstimated"):
             symbol = earning.get('symbol', 'Unknown')
@@ -985,7 +1026,7 @@ def process_events_data(earnings: List[Dict], economic: List[Dict]) -> List[Dict
     return events[:20]
 
 def process_ipos_data(ipos: List[Dict]) -> List[Dict]:
-    """Enhanced IPO processing"""
+    """Process IPO data (kept for specific IPO endpoint if needed separately)"""
     formatted_ipos = []
     for ipo in ipos:
         try:
@@ -1009,7 +1050,7 @@ def process_ipos_data(ipos: List[Dict]) -> List[Dict]:
     return formatted_ipos
 
 def process_ma_data(ma_list: List[Dict]) -> List[Dict]:
-    """Enhanced M&A processing"""
+    """Process M&A data (kept for specific M&A endpoint if needed separately)"""
     formatted_ma = []
     for ma in ma_list:
         try:
@@ -1184,9 +1225,11 @@ def generate_themes_json(news_data: Dict) -> bool:
         "themes": themes_data,
         "lastUpdated": datetime.now().isoformat(),
         "analysisCount": sum(len(articles) for articles in news_data.values() if isinstance(articles, list)),
-        "weights_version": "enhanced_v3",
+        "weights_version": "enhanced_v3_async",
         "ml_enabled": ML_ENABLED,
-        "observability_enabled": OBSERVABILITY_ENABLED
+        "observability_enabled": OBSERVABILITY_ENABLED,
+        "async_enabled": True,
+        "filtering_enabled": True
     }
     
     os.makedirs(os.path.dirname(THEMES_JSON_PATH), exist_ok=True)
@@ -1201,14 +1244,16 @@ def generate_themes_json(news_data: Dict) -> bool:
         return False
 
 def main(args) -> bool:
-    """Enhanced main execution function"""
+    """Enhanced main execution function with async news fetching"""
     try:
-        print("\n🚀 TradePulse News Updater - Enhanced ML Version v3.0")
+        print("\n🚀 TradePulse News Updater - Enhanced Async Version v4.0")
         print("=" * 70)
         print(f"📊 ML Features: {'✅ Enabled' if ML_ENABLED else '❌ Disabled'}")
         print(f"📈 Observability: {'✅ Enabled' if OBSERVABILITY_ENABLED else '❌ Disabled'}")
-        print(f"🔄 Cache: {'✅ Redis' if (OBSERVABILITY_ENABLED and redis_cli) else '❌ Memory only'}")
-        print(f"🛡️ Circuit Breaker: {'✅ Active' if (OBSERVABILITY_ENABLED and breaker) else '❌ Disabled'}")
+        print(f"🚀 Async Fetching: ✅ Active")
+        print(f"🔍 Hard Filtering: ✅ Active (IPO/M&A/Economic)")
+        print(f"🌐 Language Filter: ✅ Active (en/fr only)")
+        print(f"⚡ URL Deduplication: ✅ Active")
         print(f"🎯 Enhanced Scoring: ✅ Active")
         print(f"🔍 Semantic Matching: {'✅ FAISS' if faiss_index else '❌ Keyword only'}")
         print(f"⚡ Compiled Patterns: ✅ Active")
@@ -1216,25 +1261,21 @@ def main(args) -> bool:
         
         existing_data = read_existing_news()
         
-        # Fetch news sources concurrently
-        logger.info("🔄 Fetching news from all sources...")
-        news_sources = fetch_all_news_sources()
+        # Fetch news using async batch fetch
+        logger.info("🔄 Fetching news with async batch fetch...")
+        articles = get_all_news_async()
         
-        # Fetch events concurrently
+        # Fetch events concurrently (separate from main news flow)
         logger.info("📅 Fetching economic events...")
         with ThreadPoolExecutor(max_workers=4) as executor:
             earnings_future = executor.submit(get_earnings_calendar)
             economic_future = executor.submit(get_economic_calendar)
-            ipos_future = executor.submit(get_ipos_calendar)
-            ma_future = executor.submit(get_mergers_acquisitions)
             
             earnings = earnings_future.result()
             economic = economic_future.result()
-            ipos = ipos_future.result()
-            mergers = ma_future.result()
         
-        total_news = sum(len(articles) for articles in news_sources.values())
-        logger.info(f"📰 Total raw news retrieved: {total_news}")
+        total_news = len(articles)
+        logger.info(f"📰 Total filtered news retrieved: {total_news}")
         
         if total_news == 0:
             logger.warning("⚠️ No news retrieved, using existing data")
@@ -1242,20 +1283,13 @@ def main(args) -> bool:
                 return True
             return False
         
-        # Process news with enhanced pipeline
-        logger.info("🧠 Processing news with ML-enhanced pipeline...")
-        news_data = process_news_data(news_sources)
+        # Process news with enhanced async pipeline
+        logger.info("🧠 Processing news with async-enhanced pipeline...")
+        news_data = process_news_data_async(articles)
         
-        # Process events
+        # Process events (filtered)
         logger.info("📊 Processing economic events...")
         events = process_events_data(earnings, economic)
-        
-        # Process IPOs and M&A
-        ipos_events = process_ipos_data(ipos)
-        ma_events = process_ma_data(mergers)
-        
-        events.extend(ipos_events)
-        events.extend(ma_events)
         
         # Update files (with dry-run support)
         logger.info("💾 Updating output files...")
@@ -1284,7 +1318,9 @@ def main(args) -> bool:
             "sources_used": len(set(art.get("source", "") for articles in news_data.values() 
                                    if isinstance(articles, list) for art in articles)),
             "ml_enabled": ML_ENABLED,
-            "observability": OBSERVABILITY_ENABLED
+            "observability": OBSERVABILITY_ENABLED,
+            "async_enabled": True,
+            "filtering_enabled": True
         }
         
         print(f"\n✅ Pipeline completed successfully!")
@@ -1292,7 +1328,8 @@ def main(args) -> bool:
         print(f"📅 Events found: {final_stats['events_found']}")
         print(f"🎯 Themes analyzed: {final_stats['themes_analyzed']}")
         print(f"📡 Sources used: {final_stats['sources_used']}")
-        print(f"🚀 Performance: {'🔥 Enhanced' if ML_ENABLED else '⚡ Standard'}")
+        print(f"🚀 Performance: {'🔥 Async Enhanced' if ML_ENABLED else '⚡ Async Standard'}")
+        print(f"🔍 Filtering: ✅ IPO/M&A/Economic excluded")
         
         return success_news and success_themes
         
@@ -1303,7 +1340,7 @@ def main(args) -> bool:
         return False
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="TradePulse News Updater - Enhanced ML Version v3.0")
+    parser = argparse.ArgumentParser(description="TradePulse News Updater - Enhanced Async Version v4.0")
     parser.add_argument("--themes-only", action="store_true", 
                        help="Only regenerate themes.json from existing news data")
     parser.add_argument("--profile", action="store_true", 
@@ -1334,6 +1371,9 @@ if __name__ == "__main__":
         print(f"🎯 ML models: {'✅' if (IMPACT_CLF and CATEGORY_CLF) else '❌'}")
         print(f"🔍 FAISS index: {'✅' if faiss_index else '❌'}")
         print(f"⚡ Compiled patterns: {'✅' if KEYWORD_PATTERNS else '❌'}")
+        print(f"🚀 Async fetch: ✅ aiohttp")
+        print(f"🔍 Hard filtering: ✅ IPO/M&A/Economic")
+        print(f"🌐 Language filter: ✅ {LANG_WHITELIST}")
         exit(0)
     
     if args.themes_only:
