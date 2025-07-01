@@ -1,6 +1,6 @@
 /**
  * ============================================
- * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.3.6
+ * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.3.7
  * ============================================
  * 
  * Plan d'action implémenté :
@@ -24,6 +24,7 @@
  * 🔧 v2.3.4 : Fix calcul coût total - inclusion assurance dans montantTotal
  * 🔧 v2.3.5 : Fix TAEG renégociation - Reconstruction des flux de trésorerie post-renégociation
  * 🔧 v2.3.6 : Fix TAEG explosion - Correction tenue de compte + PTZ dans mensualiteGlobale et flux reconstruction
+ * 🔧 v2.3.7 : Fix TAEG critique - Capital PTZ flux initial + limite durée mensualités PTZ
  * 
  * Architecture : Flux de trésorerie centralisés pour calculs financiers conformes
  */
@@ -214,7 +215,7 @@ class PTZManager {
 
 /**
  * ==========================================
- * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.3.6
+ * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.3.7
  * ==========================================
  */
 class LoanSimulator {
@@ -278,7 +279,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.3.6
+     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.3.7
      * ==========================================
      */
     
@@ -328,7 +329,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 📊 TABLEAU D'AMORTISSEMENT v2.3.6
+     * 📊 TABLEAU D'AMORTISSEMENT v2.3.7
      * ==========================================
      */
 
@@ -382,22 +383,23 @@ class LoanSimulator {
             appliquerRenegociation
         });
 
-        // ✨ CORRECTION CRITIQUE v2.3.6: Reconstruction des flux de trésorerie post-renégociation
+        // ✨ CORRECTION CRITIQUE v2.3.7: Reconstruction des flux de trésorerie post-renégociation avec capital PTZ
         if (appliquerRenegociation && moisRenegociation && nouveauTaux !== null) {
-            console.log('🔄 v2.3.6: Reconstruction des flux de trésorerie avec renégociation...');
+            console.log('🔄 v2.3.7: Reconstruction des flux de trésorerie avec renégociation + capital PTZ...');
             
-            // Reconstruire flux initial (capital net reçu)
+            // 🔧 CORRECTIF 1: Inclure le capital PTZ dans le flux initial reconstruction
             const fraisInitiauxFixes = this.fraisDossier + this.fraisGarantie;
-            this.cashFlows = [FLUX_ENTREE * (this.capital - fraisInitiauxFixes)];
+            const ptzCap = this.ptzManager.enabled ? this.ptzManager.montant : 0;
+            this.cashFlows = [FLUX_ENTREE * (this.capital + ptzCap - fraisInitiauxFixes)];
             
-            // 🔧 v2.3.6: FIX CRITIQUE - Reconstruire flux mensuels avec PTZ intégré via ajoutePTZ
+            // 🔧 v2.3.7: Reconstruire flux mensuels avec PTZ intégré via ajoutePTZ corrigé
             tableauResult.tableau.forEach(row => {
                 // mensualiteGlobale inclut maintenant : crédit + assurance + tenue de compte (v2.3.6)
                 const fluxAvecPTZ = ajoutePTZ(row.mensualiteGlobale, row.mois, this.ptzManager);
                 this.cashFlows.push(FLUX_SORTIE * fluxAvecPTZ);
             });
             
-            console.log(`📊 v2.3.6: Flux reconstruits: ${this.cashFlows.length} périodes avec renégociation + PTZ correct`);
+            console.log(`📊 v2.3.7: Flux reconstruits: ${this.cashFlows.length} périodes avec renégociation + PTZ + capital PTZ inclus`);
         }
 
         // 🆕 v2.2.1: Calcul scénario de base pour économie d'intérêts exacte
@@ -425,11 +427,11 @@ class LoanSimulator {
             mensualiteApresRenego
         });
         
-        // Calcul TAEG via IRR v2.3.6
+        // Calcul TAEG via IRR v2.3.7
         try {
             const taegPrecis = this.calculateTAEG();
             results.taeg = taegPrecis * 100; // Conversion en pourcentage
-            console.log(`💎 v2.3.6: TAEG corrigé: ${results.taeg.toFixed(2)}% (tenue de compte + PTZ fixes)`)
+            console.log(`💎 v2.3.7: TAEG corrigé: ${results.taeg.toFixed(2)}% (capital PTZ + durée limitée)`);
         } catch (error) {
             console.warn('TAEG non calculable via IRR:', error.message);
             results.taeg = this.tauxAnnuel * 1.1; // Fallback approximatif
@@ -589,7 +591,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.3.6
+     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.3.7
      * ==========================================
      */
 
@@ -606,7 +608,7 @@ class LoanSimulator {
     }
 
     /**
-     * 🔧 v2.3.6: Calcul financier avec tenue de compte corrigée
+     * 🔧 v2.3.7: Calcul financier avec capital PTZ corrigé
      */
     calculateFinancialMetrics(tableau, extra = {}) {
         const mensualiteInitiale = this.calculerMensualite();
@@ -674,12 +676,12 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 🔍 DEBUG & VALIDATION v2.3.6
+     * 🔍 DEBUG & VALIDATION v2.3.7
      * ==========================================
      */
 
     debugCashFlows() {
-        console.group('💰 Analyse des flux de trésorerie (v2.3.6)');
+        console.group('💰 Analyse des flux de trésorerie (v2.3.7)');
         console.table(this.cashFlows.map((flux, index) => ({
             periode: index === 0 ? 'Initial' : `Mois ${index}`,
             flux: this.formatMontant(flux),
@@ -703,7 +705,7 @@ class LoanSimulator {
             console.warn(`⚠️ Capital amorti insuffisant: ${this.formatMontant(results.totalCapitalAmorti)} vs ${this.formatMontant(this.capital)} initial`);
         }
 
-        console.log('✅ Validation terminée (v2.3.6 - Fix TAEG explosion)');
+        console.log('✅ Validation terminée (v2.3.7 - Fix capital PTZ + durée limitée)');
     }
 
     /**
@@ -964,23 +966,25 @@ function repaymentLabel(r) {
 }
 
 /**
- * 🔧 v2.3.6: UTILITAIRE CENTRAL PTZ DIFFÉRÉ (CORRIGÉ)
- * Ajoute la mensualité PTZ seulement si le mois courant
- * est au-delà du différé.
+ * 🔧 v2.3.7: UTILITAIRE CENTRAL PTZ DIFFÉRÉ (CORRIGÉ)
+ * CORRECTIF 2: Limiter la mensualité PTZ à sa vraie durée
  * @param {number} mensu - mensualité crédit+assurance+tenue
  * @param {number} mois  - mois concerné (1, 2, …)
  * @param {Object|null} ptz - params PTZ ou null
  * @returns {number}
  */
 function ajoutePTZ(mensu, mois, ptz) {
-    if (!ptz?.enabled) return mensu;
-    const debut = ptz.differeMois + 1;     // ex. 74
-    return mois >= debut ? mensu + ptz.montant / ptz.dureeMois : mensu;
+    if (!ptz?.enabled || ptz.montant <= 0) return mensu;
+    const debut = ptz.differeMois + 1;     // ex. 1
+    const fin = ptz.differeMois + ptz.dureeMois; // ex. 240
+    return (mois >= debut && mois <= fin) 
+        ? mensu + ptz.montant / ptz.dureeMois 
+        : mensu;
 }
 
 /**
  * ==========================================
- * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.3.6
+ * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.3.7
  * ==========================================
  */
 
@@ -1317,12 +1321,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.3.6
+     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.3.7
      * ==========================================
      */
     function calculateLoan() {
         try {
-            console.log("🚀 Début du calcul du prêt v2.3.6 (Fix TAEG explosion)...");
+            console.log("🚀 Début du calcul du prêt v2.3.7 (Fix capital PTZ + durée limitée)...");
             
             const loanAmount = parseFloat(document.getElementById('loan-amount').value);
             const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
@@ -1393,7 +1397,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("📋 Remboursements anticipés:", remboursementsAnticipes);
             console.log("🔄 Appliquer renégociation:", applyRenegotiation);
             
-            // Création du simulateur v2.3.6
+            // Création du simulateur v2.3.7
             const simulator = new LoanSimulator({
                 capital: loanAmount,
                 tauxAnnuel: interestRate,
@@ -1474,7 +1478,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('ratio-cout').textContent = montantTotalEmprunte > 0 ? 
                 (coutGlobalAvecPTZ / montantTotalEmprunte).toFixed(3) : '0.000';
 
-            // 🔧 v2.3.6: TAEG corrigé avec tenue de compte et PTZ fixes
+            // 🔧 v2.3.7: TAEG corrigé avec capital PTZ + durée limitée
             document.getElementById('taeg').textContent = result.taeg.toFixed(2) + '%';
 
             // 🆕 v2.2.1: Mise à jour des frais annexes avec tenue de compte incluse
@@ -1514,7 +1518,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✅ Bouton PDF activé');
             }
             
-            console.log('🎉 Calcul terminé avec succès (v2.3.6 - Fix TAEG explosion)');
+            console.log('🎉 Calcul terminé avec succès (v2.3.7 - Fix capital PTZ + durée limitée)');
             return true;
         } catch (error) {
             console.error("❌ Erreur lors du calcul:", error);
@@ -1613,7 +1617,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 📋 FONCTIONS D'AFFICHAGE UI v2.3.6
+     * 📋 FONCTIONS D'AFFICHAGE UI v2.3.7
      * ==========================================
      */
 
@@ -1740,7 +1744,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 comparisonTableBody.innerHTML = '';
                 
-                // 🔧 v2.3.6: Comparaisons avec TAEG corrigé
+                // 🔧 v2.3.7: Comparaisons avec TAEG corrigé
                 const comparisons = [
                     {
                         label: 'Durée du prêt',
@@ -1771,7 +1775,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         positive: modeRemboursement === 'mensualite'
                     },
                     {
-                        label: 'TAEG v2.3.6 Corrigé',
+                        label: 'TAEG v2.3.7 Corrigé',
                         base: `${baseResult.taeg.toFixed(2)}%`,
                         current: `${result.taeg.toFixed(2)}%`,
                         diff: `-${Math.max(0, (baseResult.taeg - result.taeg)).toFixed(2)}%`,
@@ -1893,7 +1897,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
                 <i class="fas fa-piggy-bank mr-2"></i>
-                Analyse complète du prêt v2.3.6
+                Analyse complète du prêt v2.3.7
                 <span class="ml-2 text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded">IRR ${result.taeg.toFixed(3)}%</span>
             </h5>
             <ul class="text-sm text-gray-300 space-y-2 pl-4">
@@ -1940,8 +1944,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                    <span>TAEG précis via IRR v2.3.6: ${result.taeg.toFixed(2)}% 
-                    <span class="text-xs text-green-300">(Fix tenue de compte + PTZ)</span></span>
+                    <span>TAEG précis via IRR v2.3.7: ${result.taeg.toFixed(2)}% 
+                    <span class="text-xs text-green-300">(Fix capital PTZ + durée limitée)</span></span>
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
@@ -2050,7 +2054,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     title: {
                         display: true,
-                        text: 'Évolution du prêt (v2.3.6 - Fix TAEG explosion)',
+                        text: 'Évolution du prêt (v2.3.7 - Fix capital PTZ + durée limitée)',
                         color: 'rgba(255, 255, 255, 0.9)'
                     },
                     tooltip: {
@@ -2187,7 +2191,7 @@ document.addEventListener('DOMContentLoaded', function() {
             calculateLoan();
         });
     } else {
-        console.warn('🔧 v2.3.6: Bouton add-repayment-btn non trouvé');
+        console.warn('🔧 v2.3.7: Bouton add-repayment-btn non trouvé');
     }
 
     // 🔧 v2.3.2: FONCTION POUR AFFICHER LA LISTE DES REMBOURSEMENTS (RESTAURÉE)
@@ -2205,42 +2209,33 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="font-medium ${cls}">${html}</div>
                     <div class="text-xs text-gray-400 mt-1">Mois ${r.mois}</div>
                 </div>
-                <button class="remove-repayment text-red-400 hover:text-red-300 p-1" data-index="${idx}">
-                    <i class="fas fa-times"></i>
+                <button onclick="window.storedRepayments.splice(${idx}, 1); renderRepaymentsList(); calculateLoan();" 
+                        class="text-red-400 hover:text-red-300 opacity-70 hover:opacity-100 transition p-1">
+                    <i class="fas fa-trash text-sm"></i>
                 </button>
             `;
             list.appendChild(item);
         });
-
-        // Gestionnaires de suppression
-        list.querySelectorAll('.remove-repayment').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const index = parseInt(this.dataset.index);
-                window.storedRepayments.splice(index, 1);
-                renderRepaymentsList();
-                calculateLoan();
-            });
-        });
     }
 
-    // 🆕 v2.3.2: BOUTON RÉINITIALISER TOUS LES REMBOURSEMENTS
+    // 🔧 v2.3.2: BOUTON RESET REMBOURSEMENTS (RESTAURÉ)
     const resetRepaymentsBtn = document.getElementById('reset-repayments');
     if (resetRepaymentsBtn) {
         resetRepaymentsBtn.addEventListener('click', function() {
-            if (confirm('Êtes-vous sûr de vouloir supprimer tous les remboursements anticipés ?')) {
+            if (confirm('Voulez-vous vraiment supprimer tous les remboursements anticipés ?')) {
                 window.storedRepayments = [];
                 renderRepaymentsList();
                 calculateLoan();
-                showNotification('Tous les remboursements anticipés ont été supprimés', 'success');
+                showNotification('Tous les remboursements ont été supprimés', 'success');
             }
         });
     }
 
-    // 🔧 v2.3.2: INITIALISATION DES VALEURS MAX DES SLIDERS
-    updateSliderMaxValues();
-
-    // 🔧 v2.3.2: RENDER INITIAL DE LA LISTE DES REMBOURSEMENTS
+    // Initialiser l'affichage des remboursements au chargement
     renderRepaymentsList();
-
-    console.log('🎉 Simulateur de prêt v2.3.6 initialisé avec succès (Fix TAEG explosion)');
+    
+    // Initialiser les valeurs max des sliders
+    updateSliderMaxValues();
+    
+    console.log("✅ Interface simulateur de prêt v2.3.7 initialisée (Fix capital PTZ + durée limitée)");
 });
