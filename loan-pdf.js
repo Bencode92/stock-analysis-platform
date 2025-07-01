@@ -610,7 +610,7 @@ function buildStyles(){
 function buildHeader(d){
   const h=document.createElement('div');h.className='pdf-header';
   h.innerHTML=`
-    <h1>📊 Synthèse de prêt immobilier</h1>
+    <h1>📊 Synthèse de prêt </h1>
     <div class="small">Généré le ${d.generatedAt.toLocaleDateString('fr-FR')} à ${d.generatedAt.toLocaleTimeString('fr-FR')} • Smartflow Finance v2.6.3</div>
     <div class="page-num"></div>
   `;
