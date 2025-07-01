@@ -1,5 +1,11 @@
 /* ================================================================
- * loan-pdf.js – Export PDF (v2.6.0)  ▸ Smartflow Finance ▸ Juin 2025
+ * loan-pdf.js – Export PDF (v2.6.1)  ▸ Smartflow Finance ▸ Juin 2025
+ *
+ * Nouveautés (v2.6.1) - Fix tableau Comparaison scroll PDF
+ *   • 🔧 Ciblage direct de la <table> pour éviter scroll wrapper
+ *   • 🧹 Nettoyage systématique des classes Tailwind overflow-*
+ *   • 📐 Prévention réduction jsPDF avec width:100%
+ *   • ✅ Tableau Comparaison complet visible dans PDF
  *
  * Nouveautés (v2.6.0) - Refonte esthétique complète
  *   • 🎨 Design tokens CSS pour cohérence couleurs
@@ -29,7 +35,7 @@ const PDF_CONFIG = {
 // EXPORT PRINCIPAL
 // ──────────────────────────────
 export async function exportLoanToPDF(loanData = null, options = {}) {
-  if (isDev) console.log('📄 [Loan‑PDF] Début génération v2.6.0 avec nouvelle esthétique…');
+  if (isDev) console.log('📄 [Loan‑PDF] Début génération v2.6.1 avec fix tableau scroll…');
 
   if (loanData instanceof Event) loanData = null; // sécurité
 
@@ -56,7 +62,7 @@ export async function exportLoanToPDF(loanData = null, options = {}) {
       window.scrollTo({ top: y, left: 0, behavior: 'instant' });
     }
     showSuccessState(btn, uiState);
-    if (isDev) console.log('✅ PDF v2.6.0 généré - nouvelle esthétique active');
+    if (isDev) console.log('✅ PDF v2.6.1 généré - tableau Comparaison fixé');
   } catch (err) {
     console.error('❌ [Loan‑PDF]', err);
     showErrorState(btn, err.message);
@@ -99,16 +105,35 @@ function getPtzHtmlFromWindow() {
   return { exists: false, html: '', source: 'none' };
 }
 
-// 🔧 #15: Fix tableau Comparaison tronqué
+// 🔧 #15: Fix tableau Comparaison tronqué - v2.6.1 amélioration scroll PDF
 function getComparisonHtmlFromDOM () {
-  const el = document.getElementById('comparison-table');
-  if (!el) return '';
+  const wrapper = document.getElementById('comparison-table');
+  if (!wrapper) return '';
 
-  // le tableau réel est dans el.firstElementChild
-  const clone = el.cloneNode(true);
-  clone.classList.remove('overflow-y-auto', 'max-h-80', 'hidden');
-  clone.style.maxHeight = 'none';
-  clone.style.overflow  = 'visible';
+  /* ⚠️ le scroll est porté par le conteneur – on cible la <table> */
+  const target = wrapper.querySelector('table') || wrapper;
+  const clone  = target.cloneNode(true);
+
+  /* ─── Nettoyage Tailwind : overflow-*, max-h-* ─── */
+  clone.querySelectorAll('*').forEach(n => {
+     n.classList.forEach(c => {
+        if (c.startsWith('overflow-') || c.startsWith('max-h-')) {
+           n.classList.remove(c);
+        }
+     });
+     n.style.overflow  = 'visible';
+     n.style.maxHeight = 'none';
+  });
+
+  /* conteneur principal */
+  clone.style.overflow   = 'visible';
+  clone.style.maxHeight  = 'none';
+  clone.style.width      = '100%';   // évite la réduction de jsPDF
+  
+  // Appliquer table-layout seulement si c'est une table
+  if (clone.tagName === 'TABLE') {
+    clone.style.tableLayout = 'fixed';
+  }
 
   return clone.outerHTML;
 }
@@ -170,7 +195,7 @@ function extractPtzDetailsFromDOM() {
 // EXTRACTION DATAS & HELPERS
 // ──────────────────────────────
 function extractLoanDataFromDOM() {
-  if (isDev) console.log('🔍 Extraction Loan DOM v2.6.0 avec nouvelle esthétique');
+  if (isDev) console.log('🔍 Extraction Loan DOM v2.6.1 avec fix tableau scroll');
   const toNumber = v => {
     if (v === '' || v === undefined || v === null) return 0;
     if (typeof v === 'number') return Number.isFinite(v)?v:0;
@@ -237,9 +262,9 @@ function extractLoanDataFromDOM() {
 
   if (isDev) {
     if (ptzHtml.exists) console.log(`🔗 PTZ HTML récupéré via ${ptzHtml.source}`);
-    if (data.comparisonHtml) console.log('🔧 Tableau Comparaison extrait et nettoyé');
+    if (data.comparisonHtml) console.log('🔧 Tableau Comparaison extrait et nettoyé v2.6.1');
     if (data.equivalenceHtml) console.log('🔧 Tableau Équivalence extrait et fixé v2.5.2');
-    console.log('✅ Nouvelles données v2.6.0:', { mensRenego: data.mensRenego, mensTotalPTZ: data.mensTotalPTZ, coutGlobal: data.coutGlobal });
+    console.log('✅ Nouvelles données v2.6.1:', { mensRenego: data.mensRenego, mensTotalPTZ: data.mensTotalPTZ, coutGlobal: data.coutGlobal });
   }
 
   return data;
@@ -332,7 +357,7 @@ function extractKeyEvents() {
 }
 
 // ──────────────────────────────
-// TEMPLATE PDF ENHANCED v2.6.0
+// TEMPLATE PDF ENHANCED v2.6.1
 // ──────────────────────────────
 async function buildLoanPDFTemplate(d){
   const wrap = document.createElement('div');
@@ -366,7 +391,7 @@ async function buildLoanPDFTemplate(d){
 }
 
 // ──────────────────────────────
-// 1. Styles CSS v2.6.0 - Refonte esthétique complète
+// 1. Styles CSS v2.6.1 - Refonte esthétique complète
 // ──────────────────────────────
 function buildStyles(){
   const s=document.createElement('style');
@@ -458,7 +483,7 @@ function buildStyles(){
     /* ✅ #8: Masquage ancien tableau (réversible) */
     .pdf-table{display:none !important;}
     
-    /* 🔧 #18: Styles tableaux v2.5.2 - overflow complet neutralisé */
+    /* 🔧 #18: Styles tableaux v2.6.1 - overflow complet neutralisé */
     .analysis-block{
       margin:6mm 0; /* 📏 Marge harmonisée */
       padding:5mm;
@@ -555,7 +580,7 @@ function buildHeader(d){
   const h=document.createElement('div');h.className='pdf-header';
   h.innerHTML=`
     <h1>📊 Synthèse de prêt immobilier</h1>
-    <div class="small">Généré le ${d.generatedAt.toLocaleDateString('fr-FR')} à ${d.generatedAt.toLocaleTimeString('fr-FR')} • Smartflow Finance v2.6.0</div>
+    <div class="small">Généré le ${d.generatedAt.toLocaleDateString('fr-FR')} à ${d.generatedAt.toLocaleTimeString('fr-FR')} • Smartflow Finance v2.6.1</div>
     <div class="page-num"></div>
   `;
   return h;
@@ -684,7 +709,7 @@ function buildEquivalenceBlock(d){
 }
 
 // ──────────────────────────────
-// 11. Footer amélioré v2.6.0
+// 11. Footer amélioré v2.6.1
 // ──────────────────────────────
 function buildFooter(d){
   const f=document.createElement('div');
@@ -692,7 +717,7 @@ function buildFooter(d){
   f.innerHTML=`
     <div style="margin-bottom:2mm;"><strong>⚠️ Avertissement :</strong> Cette synthèse est fournie à titre informatif uniquement et ne constitue pas un conseil financier personnalisé.</div>
     <div>Pour toute décision d'investissement, consultez un conseiller financier qualifié.</div>
-    <div style="margin-top:4mm;font-weight:600;">© Smartflow Finance Intelligence ${d.generatedAt.getFullYear()} • Plateforme d'analyse financière v2.6.0</div>
+    <div style="margin-top:4mm;font-weight:600;">© Smartflow Finance Intelligence ${d.generatedAt.getFullYear()} • Plateforme d'analyse financière v2.6.1</div>
     <div class="page-num"></div>
   `;
   return f;
@@ -724,7 +749,7 @@ function generatePDFFilename(date=new Date(),prefix='Smartflow'){
 function showLoadingState(btn){
   if(!btn) return null;
   const originalState={html:btn.innerHTML,disabled:btn.disabled};
-  btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Génération PDF v2.6.0…';
+  btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Génération PDF v2.6.1…';
   btn.disabled=true;
   return originalState;
 }
@@ -784,7 +809,7 @@ export function createLoanExportButton(){
   btn.id='export-loan-pdf';
   btn.className='w-full mt-4 py-3 px-4 bg-green-500 hover:bg-green-400 text-gray-900 font-semibold rounded-lg shadow-lg hover:shadow-green-500/30 transition-all duration-300 flex items-center justify-center opacity-50 cursor-not-allowed';
   btn.disabled=true;
-  btn.innerHTML='<i class="fas fa-file-pdf mr-2"></i>Exporter en PDF v2.6.0';
+  btn.innerHTML='<i class="fas fa-file-pdf mr-2"></i>Exporter en PDF v2.6.1';
   btn.title='Calculez le prêt pour activer l\'export PDF';
   btn.addEventListener('click',()=>exportLoanToPDF());
   
@@ -797,8 +822,8 @@ export function activateLoanExportButton(){
   if(btn){
     btn.disabled=false;
     btn.classList.remove('opacity-50','cursor-not-allowed');
-    btn.title='Télécharger la synthèse PDF v2.6.0 avec nouvelle esthétique';
-    if(isDev) console.log('✅ Bouton PDF v2.6.0 activé - nouvelle esthétique prête');
+    btn.title='Télécharger la synthèse PDF v2.6.1 avec fix tableau scroll';
+    if(isDev) console.log('✅ Bouton PDF v2.6.1 activé - fix tableau scroll appliqué');
   }
 }
 
@@ -808,9 +833,9 @@ export function activateLoanExportButton(){
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',()=>{
     createLoanExportButton();
-    if(isDev) console.log('🚀 Loan PDF v2.6.0 initialisé - nouvelle esthétique intégrée');
+    if(isDev) console.log('🚀 Loan PDF v2.6.1 initialisé - fix tableau scroll intégré');
   });
 }else{
   createLoanExportButton();
-  if(isDev) console.log('🚀 Loan PDF v2.6.0 ready');
+  if(isDev) console.log('🚀 Loan PDF v2.6.1 ready');
 }
