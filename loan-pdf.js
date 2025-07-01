@@ -1,10 +1,16 @@
 /* ================================================================
- * loan-pdf.js – Export PDF (v2.6.2)  ▸ Smartflow Finance ▸ Juillet 2025
+ * loan-pdf.js – Export PDF (v2.6.3)  ▸ Smartflow Finance ▸ Juillet 2025
+ *
+ * Nouveautés (v2.6.3) - Optimisation pagination intelligente
+ *   • 📄 Suppression du saut forcé entre tableaux Comparaison/Équivalence
+ *   • 🎯 html2pdf gère naturellement la coupure si débordement
+ *   • 📏 Marges .analysis-block réduites de 6mm à 4mm pour plus d'espace
+ *   • ✅ Les deux tableaux peuvent cohabiter sur la même page
  *
  * Nouveautés (v2.6.2) - Fix tableaux coupés
  *   • 🔧 Helper pageBreak() pour forcer sauts de page
  *   • 📄 Saut de page conditionnel avant tableaux si PTZ activé
- *   • 🔒 Saut systématique entre tableaux Comparaison/Équivalence
+ *   • 🔒 Saut systématique entre tableaux Comparaison/Équivalence (SUPPRIMÉ v2.6.3)
  *   • ✅ page-break-inside: avoid sur .analysis-block
  *
  * Nouveautés (v2.6.1) - Fix tableau Comparaison scroll PDF
@@ -41,7 +47,7 @@ const PDF_CONFIG = {
 // EXPORT PRINCIPAL
 // ──────────────────────────────
 export async function exportLoanToPDF(loanData = null, options = {}) {
-  if (isDev) console.log('📄 [Loan‑PDF] Début génération v2.6.2 avec fix tableaux coupés…');
+  if (isDev) console.log('📄 [Loan‑PDF] Début génération v2.6.3 avec pagination intelligente…');
 
   if (loanData instanceof Event) loanData = null; // sécurité
 
@@ -68,7 +74,7 @@ export async function exportLoanToPDF(loanData = null, options = {}) {
       window.scrollTo({ top: y, left: 0, behavior: 'instant' });
     }
     showSuccessState(btn, uiState);
-    if (isDev) console.log('✅ PDF v2.6.2 généré - tableaux fixes');
+    if (isDev) console.log('✅ PDF v2.6.3 généré - pagination intelligente activée');
   } catch (err) {
     console.error('❌ [Loan‑PDF]', err);
     showErrorState(btn, err.message);
@@ -201,7 +207,7 @@ function extractPtzDetailsFromDOM() {
 // EXTRACTION DATAS & HELPERS
 // ──────────────────────────────
 function extractLoanDataFromDOM() {
-  if (isDev) console.log('🔍 Extraction Loan DOM v2.6.2 avec fix tableaux coupés');
+  if (isDev) console.log('🔍 Extraction Loan DOM v2.6.3 avec pagination intelligente');
   const toNumber = v => {
     if (v === '' || v === undefined || v === null) return 0;
     if (typeof v === 'number') return Number.isFinite(v)?v:0;
@@ -270,7 +276,7 @@ function extractLoanDataFromDOM() {
     if (ptzHtml.exists) console.log(`🔗 PTZ HTML récupéré via ${ptzHtml.source}`);
     if (data.comparisonHtml) console.log('🔧 Tableau Comparaison extrait et nettoyé v2.6.1');
     if (data.equivalenceHtml) console.log('🔧 Tableau Équivalence extrait et fixé v2.5.2');
-    console.log('✅ Nouvelles données v2.6.2:', { mensRenego: data.mensRenego, mensTotalPTZ: data.mensTotalPTZ, coutGlobal: data.coutGlobal });
+    console.log('✅ Nouvelles données v2.6.3:', { mensRenego: data.mensRenego, mensTotalPTZ: data.mensTotalPTZ, coutGlobal: data.coutGlobal });
   }
 
   return data;
@@ -372,7 +378,7 @@ function pageBreak(){
 }
 
 // ──────────────────────────────
-// TEMPLATE PDF ENHANCED v2.6.2
+// TEMPLATE PDF ENHANCED v2.6.3
 // ──────────────────────────────
 async function buildLoanPDFTemplate(d){
   const wrap = document.createElement('div');
@@ -390,18 +396,17 @@ async function buildLoanPDFTemplate(d){
   if (d.ptzEnabled) wrap.appendChild(buildPTZBlock(d));
   
   /* ----------------------------------------------------------------
+     🆕 v2.6.3: PAGINATION INTELLIGENTE
      1️⃣  Si le PTZ est coché, on force un saut avant le tableau
-     2️⃣  On force toujours un saut entre « Comparaison » et
-         « Équivalence » pour éviter la micro-coupure
+     2️⃣  Les deux tableaux peuvent maintenant cohabiter sur la même page
+          html2pdf se charge de la coupure naturelle si nécessaire
   ---------------------------------------------------------------- */
 
   if (d.ptzEnabled) wrap.appendChild(pageBreak());
 
   if (d.comparisonHtml) wrap.appendChild(buildComparisonBlock(d));
 
-  /* petit break systématique – plus simple que de tester la hauteur */
-  wrap.appendChild(pageBreak());
-
+  /* plus de break forcé → html2pdf décidera tout seul s'il faut scinder */
   if (d.equivalenceHtml) wrap.appendChild(buildEquivalenceBlock(d));
   
   wrap.appendChild(buildFooter(d));
@@ -417,7 +422,7 @@ async function buildLoanPDFTemplate(d){
 }
 
 // ──────────────────────────────
-// 1. Styles CSS v2.6.2 - Fix tableaux coupés
+// 1. Styles CSS v2.6.3 - Pagination intelligente
 // ──────────────────────────────
 function buildStyles(){
   const s=document.createElement('style');
@@ -509,9 +514,9 @@ function buildStyles(){
     /* ✅ #8: Masquage ancien tableau (réversible) */
     .pdf-table{display:none !important;}
     
-    /* 🔧 #18: Styles tableaux v2.6.2 - protection coupure complète */
+    /* 🔧 #18: Styles tableaux v2.6.3 - marges optimisées */
     .analysis-block{
-      margin:6mm 0; /* 📏 Marge harmonisée */
+      margin:4mm 0; /* 📏 Réduit de 6mm à 4mm v2.6.3 */
       padding:5mm;
       border:1px solid #cbd5e1;
       border-radius:8px;
@@ -606,7 +611,7 @@ function buildHeader(d){
   const h=document.createElement('div');h.className='pdf-header';
   h.innerHTML=`
     <h1>📊 Synthèse de prêt immobilier</h1>
-    <div class="small">Généré le ${d.generatedAt.toLocaleDateString('fr-FR')} à ${d.generatedAt.toLocaleTimeString('fr-FR')} • Smartflow Finance v2.6.2</div>
+    <div class="small">Généré le ${d.generatedAt.toLocaleDateString('fr-FR')} à ${d.generatedAt.toLocaleTimeString('fr-FR')} • Smartflow Finance v2.6.3</div>
     <div class="page-num"></div>
   `;
   return h;
@@ -735,7 +740,7 @@ function buildEquivalenceBlock(d){
 }
 
 // ──────────────────────────────
-// 11. Footer amélioré v2.6.2
+// 11. Footer amélioré v2.6.3
 // ──────────────────────────────
 function buildFooter(d){
   const f=document.createElement('div');
@@ -743,7 +748,7 @@ function buildFooter(d){
   f.innerHTML=`
     <div style="margin-bottom:2mm;"><strong>⚠️ Avertissement :</strong> Cette synthèse est fournie à titre informatif uniquement et ne constitue pas un conseil financier personnalisé.</div>
     <div>Pour toute décision d'investissement, consultez un conseiller financier qualifié.</div>
-    <div style="margin-top:4mm;font-weight:600;">© Smartflow Finance Intelligence ${d.generatedAt.getFullYear()} • Plateforme d'analyse financière v2.6.2</div>
+    <div style="margin-top:4mm;font-weight:600;">© Smartflow Finance Intelligence ${d.generatedAt.getFullYear()} • Plateforme d'analyse financière v2.6.3</div>
     <div class="page-num"></div>
   `;
   return f;
@@ -775,7 +780,7 @@ function generatePDFFilename(date=new Date(),prefix='Smartflow'){
 function showLoadingState(btn){
   if(!btn) return null;
   const originalState={html:btn.innerHTML,disabled:btn.disabled};
-  btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Génération PDF v2.6.2…';
+  btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Génération PDF v2.6.3…';
   btn.disabled=true;
   return originalState;
 }
@@ -835,7 +840,7 @@ export function createLoanExportButton(){
   btn.id='export-loan-pdf';
   btn.className='w-full mt-4 py-3 px-4 bg-green-500 hover:bg-green-400 text-gray-900 font-semibold rounded-lg shadow-lg hover:shadow-green-500/30 transition-all duration-300 flex items-center justify-center opacity-50 cursor-not-allowed';
   btn.disabled=true;
-  btn.innerHTML='<i class="fas fa-file-pdf mr-2"></i>Exporter en PDF v2.6.2';
+  btn.innerHTML='<i class="fas fa-file-pdf mr-2"></i>Exporter en PDF v2.6.3';
   btn.title='Calculez le prêt pour activer l\'export PDF';
   btn.addEventListener('click',()=>exportLoanToPDF());
   
@@ -848,8 +853,8 @@ export function activateLoanExportButton(){
   if(btn){
     btn.disabled=false;
     btn.classList.remove('opacity-50','cursor-not-allowed');
-    btn.title='Télécharger la synthèse PDF v2.6.2 - tableaux fixes';
-    if(isDev) console.log('✅ Bouton PDF v2.6.2 activé - fix tableaux coupés appliqué');
+    btn.title='Télécharger la synthèse PDF v2.6.3 - pagination intelligente';
+    if(isDev) console.log('✅ Bouton PDF v2.6.3 activé - pagination intelligente appliquée');
   }
 }
 
@@ -859,9 +864,9 @@ export function activateLoanExportButton(){
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',()=>{
     createLoanExportButton();
-    if(isDev) console.log('🚀 Loan PDF v2.6.2 initialisé - fix tableaux coupés intégré');
+    if(isDev) console.log('🚀 Loan PDF v2.6.3 initialisé - pagination intelligente intégrée');
   });
 }else{
   createLoanExportButton();
-  if(isDev) console.log('🚀 Loan PDF v2.6.2 ready');
+  if(isDev) console.log('🚀 Loan PDF v2.6.3 ready');
 }
