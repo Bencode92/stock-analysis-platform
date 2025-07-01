@@ -24,6 +24,9 @@ import hashlib
 import argparse
 import asyncio
 import numpy as np
+import subprocess
+import shlex
+import importlib.util
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 from typing import List, Dict, Literal, Optional, Any, Set
@@ -70,6 +73,30 @@ except ImportError:
         def decorator(func):
             return func
         return decorator
+
+# Security helpers
+def _safe_run(cmd: str) -> bool:
+    """True if command executes with code 0, False otherwise."""
+    try:
+        subprocess.run(shlex.split(cmd), capture_output=True, text=True, check=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        logger.warning(f"Cmd '{cmd}' failed: {e.stderr.strip()}")
+        return False
+
+def _load_spacy_pipelines() -> Dict[str, "Language"]:
+    """
+    Load locally installed spaCy models (no automatic download).
+    Ignores missing models.
+    """
+    wanted = {"en": "en_core_web_sm", "fr": "fr_core_news_sm"}
+    pipelines = {}
+    for lang, pkg in wanted.items():
+        if importlib.util.find_spec(pkg) is None:
+            logger.warning(f"spaCy model {pkg} absent – {lang} ignored")
+            continue
+        pipelines[lang] = spacy.load(pkg)
+    return pipelines
 
 # Type definitions
 Impact = Literal["positive", "neutral", "negative"]
@@ -134,16 +161,9 @@ if ML_ENABLED:
         IMPACT_CLF = CATEGORY_CLF = None
         print("⚠️ ML classifiers not found, using fallback rules")
     
-    # Load spaCy pipelines
-    NLP_PIPELINES = {}
-    try:
-        if os.system("python -m spacy download en_core_web_sm") == 0:
-            NLP_PIPELINES["en"] = spacy.load("en_core_web_sm")
-        if os.system("python -m spacy download fr_core_news_sm") == 0:
-            NLP_PIPELINES["fr"] = spacy.load("fr_core_news_sm")
-        print(f"✅ NLP pipelines loaded: {list(NLP_PIPELINES.keys())}")
-    except Exception as e:
-        print(f"⚠️ Failed to load spaCy pipelines: {e}")
+    # Load spaCy pipelines securely
+    NLP_PIPELINES = _load_spacy_pipelines()
+    print(f"✅ NLP pipelines loaded: {list(NLP_PIPELINES.keys())}")
     
     # Language detection
     DetectorFactory.seed = 0  # reproducibility
@@ -251,52 +271,37 @@ SOURCE_WEIGHTS = {
     "globe newswire": 1
 }
 
-# Keywords with explicit weights and deduplication via sets
-KEYWORD_WEIGHTS = {
-    "high_impact": {
-        # Market crashes & crises
-        "crash", "collapse", "crisis", "recession", "default", "bankruptcy", 
-        "panic", "contagion", "meltdown", "correction",
-        
-        # Central banking & monetary policy
-        "central bank", "fed decision", "rate hike", "rate cut", "rate decision",
+# ───  CONFIG MOTS-CLÉS  ──────────────────────────────────────────────────
+# facile à éditer, aucun import externe nécessaire
+KEYWORDS_CONFIG = {
+    "high_impact": [
+        "crash", "collapse", "crisis", "recession", "default",
+        "bankruptcy", "panic", "meltdown", "correction",
+        "central bank", "fed decision", "rate hike", "rate cut", 
         "inflation", "deflation", "quantitative easing", "tapering",
-        
-        # Market structure
         "bear market", "market crash", "sell-off", "plunge", "tumble",
         "bond yield", "yield curve", "treasury", "sovereign debt",
-        
-        # Regulatory & geopolitical
         "sanctions", "trade war", "regulation", "investigation", "lawsuit"
-    },
-    
-    "medium_impact": {
-        # Economic indicators
-        "gdp", "employment", "unemployment", "job report", "cpi", "pmi",
+    ],
+    "medium_impact": [
+        "gdp", "employment", "unemployment", "cpi", "pmi",
         "retail sales", "consumer confidence", "manufacturing",
-        
-        # Corporate actions
         "earnings", "merger", "acquisition", "ipo", "buyback", "dividend",
         "guidance", "outlook", "profit warning", "restructuring",
-        
-        # Market movements
         "rally", "surge", "jump", "decline", "volatility", "volume"
-    },
-    
-    "low_impact": {
-        # General business
+    ],
+    "low_impact": [
         "announcement", "appointment", "recommendation", "forecast",
         "product launch", "partnership", "collaboration", "expansion",
         "investment", "funding", "conference", "meeting"
-    }
+    ],
 }
 
-# Convert to regex patterns for better matching
-KEYWORD_PATTERNS = {}
-for weight_class, keywords in KEYWORD_WEIGHTS.items():
-    # Create word boundary regex patterns
-    patterns = [re.compile(rf'\b{re.escape(kw)}\b', re.IGNORECASE) for kw in keywords]
-    KEYWORD_PATTERNS[weight_class] = patterns
+# ⇩ conversion en regex (word-boundary, ignore-case)
+KEYWORD_PATTERNS = {
+    level: [re.compile(rf"\b{re.escape(w)}\b", re.I) for w in words]
+    for level, words in KEYWORDS_CONFIG.items()
+}
 
 # Theme classification with sets for faster lookups
 THEMES_DOMINANTS = {
@@ -410,6 +415,15 @@ def allocate_limits(total: int, weights: Dict[str, float]) -> Dict[str, int]:
     
     return allocated
 
+def _quick_self_tests() -> None:
+    """Quick self-tests for core functions"""
+    # Vérifie que la somme des allocations == total
+    test_weights = {"a": 0.5, "b": 0.3, "c": 0.2}
+    alloc = allocate_limits(100, test_weights)
+    assert sum(alloc.values()) == 100, "allocate_limits somme incorrecte"
+    assert all(v > 0 for v in alloc.values()), "Allocation nulle détectée"
+    logger.info("✅ self-test allocate_limits OK")
+
 # Configuration with dynamic allocation
 BASE_COUNTRY_WEIGHTS = {
     "us": 0.30,
@@ -522,7 +536,7 @@ def enhanced_keyword_matching(text: str, weight_class: str) -> int:
     
     # Semantic expansion (if FAISS available)
     if faiss_index is not None:
-        for keyword in KEYWORD_WEIGHTS[weight_class]:
+        for keyword in KEYWORDS_CONFIG[weight_class]:
             expanded = expand_with_faiss(keyword)
             for exp_kw in expanded:
                 if exp_kw in text_lower:
@@ -694,48 +708,24 @@ def fetch_articles_by_period(endpoint: str, start_date: str, end_date: str,
     return all_articles
 
 # -------------------------------------------------
-# === NEWS SOURCE GETTERS ========================
+# === NEWS SOURCE GETTERS (FACTORY PATTERN) ======
 # -------------------------------------------------
 
-def get_general_news() -> List[Dict]:
-    """Fetches general economic news"""
-    today = datetime.today()
-    start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
-    end_date = today.strftime("%Y-%m-%d")
-    
-    return fetch_articles_by_period(CONFIG["endpoints"]["general_news"], start_date, end_date, "general_news")
+def _make_news_getter(endpoint_key: str):
+    def _getter():
+        today = datetime.today()
+        start = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
+        end   = today.strftime("%Y-%m-%d")
+        return fetch_articles_by_period(
+            CONFIG["endpoints"][endpoint_key], start, end, endpoint_key
+        )
+    _getter.__name__ = f"get_{endpoint_key}"
+    return _getter
 
-def get_fmp_articles() -> List[Dict]:
-    """Fetches articles written by FMP"""
-    today = datetime.today()
-    start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
-    end_date = today.strftime("%Y-%m-%d")
-    
-    return fetch_articles_by_period(CONFIG["endpoints"]["fmp_articles"], start_date, end_date, "fmp_articles")
-
-def get_stock_news() -> List[Dict]:
-    """Fetches stock news"""
-    today = datetime.today()
-    start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
-    end_date = today.strftime("%Y-%m-%d")
-    
-    return fetch_articles_by_period(CONFIG["endpoints"]["stock_news"], start_date, end_date, "stock_news")
-
-def get_crypto_news() -> List[Dict]:
-    """Fetches cryptocurrency news"""
-    today = datetime.today()
-    start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
-    end_date = today.strftime("%Y-%m-%d")
-    
-    return fetch_articles_by_period(CONFIG["endpoints"]["crypto_news"], start_date, end_date, "crypto_news")
-
-def get_press_releases() -> List[Dict]:
-    """Fetches press releases"""
-    today = datetime.today()
-    start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
-    end_date = today.strftime("%Y-%m-%d")
-    
-    return fetch_articles_by_period(CONFIG["endpoints"]["press_releases"], start_date, end_date, "press_releases")
+# fabrique automatiquement les getters voulus
+for _key in ("general_news", "fmp_articles",
+             "stock_news", "crypto_news", "press_releases"):
+    globals()[f"get_{_key}"] = _make_news_getter(_key)
 
 def get_earnings_calendar() -> List[Dict]:
     """Fetches earnings calendar"""
@@ -1613,7 +1603,7 @@ def generate_themes_json(news_data: Dict) -> bool:
         logger.error(f"❌ Error updating themes.json file: {str(e)}")
         return False
 
-def main() -> bool:
+def main(args) -> bool:
     """Enhanced main execution function"""
     try:
         print("\n🚀 TradePulse News Updater - Enhanced ML Version v2.0")
@@ -1669,10 +1659,14 @@ def main() -> bool:
         events.extend(ipos_events)
         events.extend(ma_events)
         
-        # Update files
+        # Update files (with dry-run support)
         logger.info("💾 Updating output files...")
-        success_news = update_news_json_file(news_data, events)
-        success_themes = generate_themes_json(news_data)
+        if args.no_write:
+            logger.info("📝 Dry-run : aucun fichier n'a été modifié")
+            success_news = success_themes = True
+        else:
+            success_news = update_news_json_file(news_data, events)
+            success_themes = generate_themes_json(news_data)
         
         # Display enhanced analytics
         top_themes = extract_top_themes(news_data, days=30)
@@ -1720,8 +1714,17 @@ if __name__ == "__main__":
                        help="Benchmark ML vs rule-based classification")
     parser.add_argument("--config-check", action="store_true",
                        help="Validate configuration and show current settings")
+    parser.add_argument("--no-write", action="store_true",
+                       help="Exécute le pipeline sans écrire de fichiers")
+    parser.add_argument("--self-test", action="store_true",
+                       help="Exécute les tests internes et s'arrête")
     
     args = parser.parse_args()
+    
+    if args.self_test:
+        _quick_self_tests()
+        print("Tous les self-tests ont réussi 🎉")
+        exit(0)
     
     if args.config_check:
         print("\n🔧 Configuration Check")
@@ -1751,7 +1754,7 @@ if __name__ == "__main__":
         import pstats
         profiler = cProfile.Profile()
         profiler.enable()
-        success = main()
+        success = main(args)
         profiler.disable()
         
         stats = pstats.Stats(profiler)
@@ -1760,5 +1763,5 @@ if __name__ == "__main__":
         
         exit(0 if success else 1)
     
-    success = main()
+    success = main(args)
     exit(0 if success else 1)
