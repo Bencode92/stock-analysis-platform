@@ -1,6 +1,6 @@
 /**
  * ============================================
- * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.3.3
+ * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.3.4
  * ============================================
  * 
  * Plan d'action implémenté :
@@ -21,6 +21,7 @@
  * 🆕 v2.3.1 : Ajout fonction updateMensualitePTZDisplay pour affichage dual crédit/PTZ
  * 🔧 v2.3.2 : Restauration gestionnaire remboursements anticipés manquant
  * 🔧 v2.3.3 : Fix PTZ différé - ajout conditionnel mensualité PTZ selon période
+ * 🔧 v2.3.4 : Fix calcul coût total - inclusion assurance dans montantTotal
  * 
  * Architecture : Flux de trésorerie centralisés pour calculs financiers conformes
  */
@@ -211,7 +212,7 @@ class PTZManager {
 
 /**
  * ==========================================
- * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.3.0
+ * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.3.4
  * ==========================================
  */
 class LoanSimulator {
@@ -275,7 +276,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.3.0
+     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.3.4
      * ==========================================
      */
     
@@ -325,7 +326,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 📊 TABLEAU D'AMORTISSEMENT v2.3.0
+     * 📊 TABLEAU D'AMORTISSEMENT v2.3.4
      * ==========================================
      */
 
@@ -567,7 +568,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.3.0
+     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.3.4
      * ==========================================
      */
 
@@ -584,7 +585,7 @@ class LoanSimulator {
     }
 
     /**
-     * 🔧 v2.2.1: Calcul financier avec économie exacte d'intérêts
+     * 🔧 v2.3.4: Calcul financier avec assurance incluse dans montantTotal
      */
     calculateFinancialMetrics(tableau, extra = {}) {
         const mensualiteInitiale = this.calculerMensualite();
@@ -596,15 +597,16 @@ class LoanSimulator {
         const totalCapitalAmorti = tableau.reduce((sum, row) => sum + row.capitalAmorti, 0);
         const indemnites = tableau.reduce((sum, row) => sum + (row.indemnites || 0), 0);
         
-        const montantTotal = tableau.reduce((sum, row) => sum + row.mensualite, 0);
+        // 🔧 v2.3.4: CORRECTION CRITIQUE - inclut désormais l'assurance (mensualiteGlobale = crédit + tenue de compte + assurance)
+        const montantTotal = tableau.reduce((sum, row) => sum + row.mensualiteGlobale, 0);
         
         // 🆕 v2.1.3: Séparation des frais pour affichage correct
         const totalTenueCompte = this.fraisTenueCompteFix;   // somme des 2,36 € x 300
         const totalFraisFixes = this.fraisDossier + this.fraisGarantie;
         const totalFraisAffiches = totalFraisFixes + totalTenueCompte; // ✅ 4 355 €
         
-        // 🔧 v2.1.5: CORRECTION - inclure la tenue de compte dans coutGlobalTotal
-        const coutGlobalTotal = montantTotal            // toutes les mensualités (tenue mensuelle déjà dedans)
+        // 🔧 v2.3.4: CORRECTION - montantTotal inclut désormais l'assurance
+        const coutGlobalTotal = montantTotal            // toutes les mensualités (tenue mensuelle + assurance déjà dedans)
                              + indemnites              // pénalités éventuelles
                              + totalFraisAffiches;     // dossier + garantie + tenue de compte
         
@@ -637,7 +639,7 @@ class LoanSimulator {
             totalFraisFixes,          // pour le détail "frais dossier + garantie"
             totalTenueCompte,         // pour l'info bulles
             totalFraisAffiches,       // affiche "Frais annexes" = 4 355 €
-            coutGlobalTotal,          // 🔧 v2.1.5: maintenant avec tenue de compte incluse
+            coutGlobalTotal,          // 🔧 v2.3.4: maintenant avec assurance incluse
             pretSoldeAvantTerme: dureeReelle < dureeInitiale,
             gainTemps: dureeInitiale - dureeReelle,
             // 🆕 v2.2.1: Nouvelles propriétés pour renégociation
@@ -651,12 +653,12 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 🔍 DEBUG & VALIDATION v2.3.0
+     * 🔍 DEBUG & VALIDATION v2.3.4
      * ==========================================
      */
 
     debugCashFlows() {
-        console.group('💰 Analyse des flux de trésorerie (v2.3.0)');
+        console.group('💰 Analyse des flux de trésorerie (v2.3.4)');
         console.table(this.cashFlows.map((flux, index) => ({
             periode: index === 0 ? 'Initial' : `Mois ${index}`,
             flux: this.formatMontant(flux),
@@ -680,7 +682,7 @@ class LoanSimulator {
             console.warn(`⚠️ Capital amorti insuffisant: ${this.formatMontant(results.totalCapitalAmorti)} vs ${this.formatMontant(this.capital)} initial`);
         }
 
-        console.log('✅ Validation terminée (v2.3.3 - Fix PTZ différé)');
+        console.log('✅ Validation terminée (v2.3.4 - Fix assurance dans coût total)');
     }
 
     /**
@@ -941,7 +943,7 @@ function repaymentLabel(r) {
 }
 
 /**
- * 🆕 v2.3.3: UTILITAIRE CENTRAL PTZ DIFFÉRÉ
+ * 🆕 v2.3.4: UTILITAIRE CENTRAL PTZ DIFFÉRÉ
  * Ajoute la mensualité PTZ seulement si le mois courant
  * est au-delà du différé.
  * @param {number} mensu - mensualité crédit+assurance
@@ -957,7 +959,7 @@ function ajoutePTZ(mensu, mois, ptz) {
 
 /**
  * ==========================================
- * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.3.3
+ * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.3.4
  * ==========================================
  */
 
@@ -1294,12 +1296,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.3.3
+     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.3.4
      * ==========================================
      */
     function calculateLoan() {
         try {
-            console.log("🚀 Début du calcul du prêt v2.3.3 (PTZ différé corrigé)...");
+            console.log("🚀 Début du calcul du prêt v2.3.4 (Fix assurance dans coût total)...");
             
             const loanAmount = parseFloat(document.getElementById('loan-amount').value);
             const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
@@ -1370,7 +1372,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("📋 Remboursements anticipés:", remboursementsAnticipes);
             console.log("🔄 Appliquer renégociation:", applyRenegotiation);
             
-            // Création du simulateur v2.3.3
+            // Création du simulateur v2.3.4
             const simulator = new LoanSimulator({
                 capital: loanAmount,
                 tauxAnnuel: interestRate,
@@ -1402,7 +1404,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             console.log("📊 Résultats calculés:", result);
 
-            // 🆕 v2.3.3: NOUVELLE LOGIQUE - Ajout PTZ conditionnel selon période
+            // 🆕 v2.3.4: NOUVELLE LOGIQUE - Ajout PTZ conditionnel selon période
             const mensualiteBase = result.mensualiteInitiale + result.assuranceInitiale;
             
             let mensualiteRenego = mensualiteBase; // valeur par défaut
@@ -1491,7 +1493,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✅ Bouton PDF activé');
             }
             
-            console.log('🎉 Calcul terminé avec succès (v2.3.3 - PTZ différé corrigé)');
+            console.log('🎉 Calcul terminé avec succès (v2.3.4 - Fix assurance dans coût total)');
             return true;
         } catch (error) {
             console.error("❌ Erreur lors du calcul:", error);
@@ -1550,7 +1552,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 🆕 v2.3.3: FONCTION AFFICHAGE DUAL CRÉDIT/PTZ AVEC DIFFÉRÉ
+     * 🆕 v2.3.4: FONCTION AFFICHAGE DUAL CRÉDIT/PTZ AVEC DIFFÉRÉ
      * ==========================================
      */
     function updateMensualitePTZDisplay(result, ptz, moisCourant = 1) {
@@ -1590,7 +1592,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 📋 FONCTIONS D'AFFICHAGE UI v2.3.3
+     * 📋 FONCTIONS D'AFFICHAGE UI v2.3.4
      * ==========================================
      */
 
@@ -1748,7 +1750,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         positive: modeRemboursement === 'mensualite'
                     },
                     {
-                        label: 'TAEG v2.3.3 Corrigé',
+                        label: 'TAEG v2.3.4 Corrigé',
                         base: `${baseResult.taeg.toFixed(2)}%`,
                         current: `${result.taeg.toFixed(2)}%`,
                         diff: `-${Math.max(0, (baseResult.taeg - result.taeg)).toFixed(2)}%`,
@@ -1870,7 +1872,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
                 <i class="fas fa-piggy-bank mr-2"></i>
-                Analyse complète du prêt v2.3.3
+                Analyse complète du prêt v2.3.4
                 <span class="ml-2 text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded">IRR ${result.taeg.toFixed(3)}%</span>
             </h5>
             <ul class="text-sm text-gray-300 space-y-2 pl-4">
@@ -1917,8 +1919,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                    <span>TAEG précis via IRR v2.3.3: ${result.taeg.toFixed(2)}% 
-                    <span class="text-xs text-green-300">(PTZ différé corrigé)</span></span>
+                    <span>TAEG précis via IRR v2.3.4: ${result.taeg.toFixed(2)}% 
+                    <span class="text-xs text-green-300">(Assurance incluse dans coût total)</span></span>
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
@@ -2027,7 +2029,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     title: {
                         display: true,
-                        text: 'Évolution du prêt (v2.3.3 - PTZ différé corrigé)',
+                        text: 'Évolution du prêt (v2.3.4 - Assurance incluse dans coût total)',
                         color: 'rgba(255, 255, 255, 0.9)'
                     },
                     tooltip: {
@@ -2164,7 +2166,7 @@ document.addEventListener('DOMContentLoaded', function() {
             calculateLoan();
         });
     } else {
-        console.warn('🔧 v2.3.3: Bouton add-repayment-btn non trouvé');
+        console.warn('🔧 v2.3.4: Bouton add-repayment-btn non trouvé');
     }
 
     // 🔧 v2.3.2: FONCTION POUR AFFICHER LA LISTE DES REMBOURSEMENTS (RESTAURÉE)
@@ -2215,5 +2217,5 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialiser l'affichage des remboursements
     renderRepaymentsList();
 
-    console.log('✅ v2.3.3: PTZ différé corrigé - window.storedRepayments:', window.storedRepayments);
+    console.log('✅ v2.3.4: Fix assurance dans coût total - window.storedRepayments:', window.storedRepayments);
 });
