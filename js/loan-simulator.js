@@ -606,7 +606,7 @@ class LoanSimulator {
     }
 
     /**
-     * 🔧 v2.3.4: Calcul financier avec assurance incluse dans montantTotal
+     * 🔧 v2.3.6: Calcul financier avec tenue de compte corrigée
      */
     calculateFinancialMetrics(tableau, extra = {}) {
         const mensualiteInitiale = this.calculerMensualite();
@@ -626,8 +626,8 @@ class LoanSimulator {
         const totalFraisFixes = this.fraisDossier + this.fraisGarantie;
         const totalFraisAffiches = totalFraisFixes + totalTenueCompte; // ✅ 4 355 €
         
-        // 🔧 v2.3.6: CORRECTION - montantTotal inclut désormais l'assurance ET la tenue de compte
-        const coutGlobalTotal = montantTotal            // toutes les mensualités (crédit + assurance + tenue mensuelle)
+        // 🔧 v2.3.6: CORRECTION - montantTotal inclut désormais la tenue de compte, évite double comptabilisation
+        const coutGlobalTotal = montantTotal            // toutes les mensualités (crédit + assurance + tenue mensuelle déjà dedans)
                              + indemnites              // pénalités éventuelles
                              + totalFraisFixes;        // dossier + garantie (tenue déjà dans montantTotal)
         
@@ -2205,15 +2205,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="font-medium ${cls}">${html}</div>
                     <div class="text-xs text-gray-400 mt-1">Mois ${r.mois}</div>
                 </div>
-                <button class="remove-repayment text-red-400 hover:text-red-300 px-2 py-1 rounded transition" 
-                        data-index="${idx}" title="Supprimer">
-                    <i class="fas fa-trash-alt"></i>
+                <button class="remove-repayment text-red-400 hover:text-red-300 p-1" data-index="${idx}">
+                    <i class="fas fa-times"></i>
                 </button>
             `;
             list.appendChild(item);
         });
 
-        // Event listeners pour suppression
+        // Gestionnaires de suppression
         list.querySelectorAll('.remove-repayment').forEach(btn => {
             btn.addEventListener('click', function() {
                 const index = parseInt(this.dataset.index);
@@ -2224,24 +2223,24 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 🆕 v2.3.2: Bouton pour réinitialiser tous les remboursements
+    // 🆕 v2.3.2: BOUTON RÉINITIALISER TOUS LES REMBOURSEMENTS
     const resetRepaymentsBtn = document.getElementById('reset-repayments');
     if (resetRepaymentsBtn) {
-        resetRepaymentsBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (window.storedRepayments.length > 0) {
-                if (confirm('Êtes-vous sûr de vouloir supprimer tous les remboursements anticipés ?')) {
-                    window.storedRepayments = [];
-                    renderRepaymentsList();
-                    calculateLoan();
-                }
+        resetRepaymentsBtn.addEventListener('click', function() {
+            if (confirm('Êtes-vous sûr de vouloir supprimer tous les remboursements anticipés ?')) {
+                window.storedRepayments = [];
+                renderRepaymentsList();
+                calculateLoan();
+                showNotification('Tous les remboursements anticipés ont été supprimés', 'success');
             }
         });
     }
 
-    // Initialiser l'affichage des remboursements au chargement
+    // 🔧 v2.3.2: INITIALISATION DES VALEURS MAX DES SLIDERS
+    updateSliderMaxValues();
+
+    // 🔧 v2.3.2: RENDER INITIAL DE LA LISTE DES REMBOURSEMENTS
     renderRepaymentsList();
 
-    // Initialiser les valeurs maximales des sliders
-    updateSliderMaxValues();
+    console.log('🎉 Simulateur de prêt v2.3.6 initialisé avec succès (Fix TAEG explosion)');
 });
