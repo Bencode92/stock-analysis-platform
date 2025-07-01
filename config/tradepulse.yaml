@@ -1,0 +1,71 @@
+api:
+  base_url: "https://financialmodelingprep.com"
+  endpoints:
+    general_news: "/stable/news/general-latest"
+    fmp_articles: "/stable/fmp-articles"
+    stock_news: "/stable/news/stock"
+    crypto_news: "/stable/news/crypto"
+    press_releases: "/stable/news/press-releases"
+    earnings_calendar: "/api/v3/earning_calendar"
+    economic_calendar: "/api/v3/economic_calendar"
+    ipos_calendar: "/stable/ipos-calendar"
+    mergers_acquisitions: "/stable/mergers-acquisitions-latest"
+
+limits:
+  news_per_source:
+    general_news: 20
+    fmp_articles: 15
+    stock_news: 50
+    crypto_news: 20
+    press_releases: 10
+  
+  output_per_country:
+    us: 30
+    france: 20
+    uk: 15
+    germany: 15
+    china: 15
+    japan: 10
+    emerging_markets: 15
+    global: 20
+  
+  category_caps:
+    crypto: 8
+  
+  max_total_articles: 150
+  max_workers: 3
+
+timeframes:
+  days_back: 30
+  days_ahead: 7
+  cache_ttl_seconds: 900  # 15 minutes
+
+scoring:
+  weights:
+    high_keywords: 4.0
+    medium_keywords: 2.0
+    source_premium: 3.0
+    content_length: 1.0
+    impact_sentiment: 2.0
+  
+  source_ratings:
+    bloomberg: 3
+    "financial times": 3
+    "wall street journal": 3
+    reuters: 3
+    cnbc: 2
+    "new york times": 2
+    economist: 2
+    bbc: 2
+    marketwatch: 1
+    "yahoo finance": 1
+
+observability:
+  prometheus_port: 8000
+  redis_host: "localhost"
+  redis_port: 6379
+  circuit_breaker:
+    failure_threshold: 5
+    recovery_timeout: 60
+  rate_limit:
+    requests_per_minute: 60
