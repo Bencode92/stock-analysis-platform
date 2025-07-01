@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
+TradePulse News Updater - Enhanced Version
 Script for extracting news and events from Financial Modeling Prep
 - General News API: For general economic news
 - Stock News API: For stocks and ETFs
@@ -16,13 +17,68 @@ import os
 import json
 import requests
 import logging
+import hashlib
+import argparse
+from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
-import re
+from typing import List, Dict, Literal, Optional, Any
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# Retry logic
+try:
+    from tenacity import retry, wait_random_exponential, stop_after_attempt
+    HAS_TENACITY = True
+except ImportError:
+    HAS_TENACITY = False
+    def retry(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+
+# Type definitions
+Impact = Literal["positive", "neutral", "negative"]
+Category = Literal["economy", "markets", "companies", "crypto", "tech"]
+
+@dataclass
+class NewsItem:
+    """Structured news item with type safety"""
+    id: str
+    title: str
+    content: str
+    source: str
+    raw_date: str
+    date: str
+    time: str
+    category: Category
+    impact: Impact
+    country: str
+    url: str
+    importance_score: float
+    themes: Dict[str, List[str]]
+    source_type: str
+
+# Environment-based configuration
+LOG_LEVEL = os.getenv("TP_LOG_LEVEL", "INFO").upper()
+MAX_TOTAL = int(os.getenv("TP_MAX_TOTAL", "150"))
+DAYS_BACK = int(os.getenv("TP_DAYS_BACK", "30"))
+DAYS_AHEAD = int(os.getenv("TP_DAYS_AHEAD", "7"))
+MAX_WORKERS = int(os.getenv("TP_MAX_WORKERS", "3"))
 
 # Logger configuration
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
+
+# HTTP Session for connection reuse
+SESSION = requests.Session()
+SESSION.headers.update({
+    "User-Agent": "TradePulseBot/1.0",
+    "Accept": "application/json",
+    "Connection": "keep-alive"
+})
 
 # File paths
 NEWS_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "news.json")
@@ -44,10 +100,10 @@ CONFIG = {
     },
     "news_limits": {
         "general_news": 20,
-        "fmp_articles": 1,
+        "fmp_articles": 15,
         "stock_news": 50,
         "crypto_news": 20,
-        "press_releases": 1
+        "press_releases": 10
     },
     "output_limits": {
         "us": 30,
@@ -59,13 +115,12 @@ CONFIG = {
         "emerging_markets": 15,
         "global": 20
     },
-    # Nouvelle configuration pour limiter les articles crypto
     "category_limits": {
-        "crypto": 8  # Maximum 8 articles crypto au total (réduit de 10)
+        "crypto": 8
     },
-    "max_total_articles": 150,  # Maximum total number of articles to keep
-    "days_ahead": 7,
-    "days_back": 30
+    "max_total_articles": MAX_TOTAL,
+    "days_ahead": DAYS_AHEAD,
+    "days_back": DAYS_BACK
 }
 
 # Keywords for news scoring
@@ -109,7 +164,6 @@ THEMES_DOMINANTS = {
         "industry": ["industry", "manufacturing", "factory", "production", "automation", "supply chain", "industrial"],
         "transport": ["logistics", "transport", "shipping", "truck", "port", "airline", "freight", "cargo"],
         "agriculture": ["wheat", "corn", "cocoa", "agriculture", "fertilizer", "commodities", "crop", "farming"],
-        # Nouveau secteur crypto ajouté ici
         "crypto": [
             "crypto", "cryptocurrency", "bitcoin", "ethereum", "blockchain", "altcoin", "token", 
             "defi", "nft", "binance", "coinbase", "web3", "mining", "wallet", "staking", 
@@ -130,7 +184,7 @@ THEMES_DOMINANTS = {
     }
 }
 
-# Important sources by category (for score calculation)
+# Important sources by category
 IMPORTANT_SOURCES = {
     "general_news": [
         "Bloomberg", "Reuters", "Financial Times", "Wall Street Journal", "CNBC", 
@@ -153,7 +207,7 @@ IMPORTANT_SOURCES = {
 # Premium sources that get extra points
 PREMIUM_SOURCES = ["bloomberg", "financial times", "wall street journal", "reuters"]
 
-# High importance keywords by category (for score calculation)
+# High importance keywords by category
 HIGH_IMPORTANCE_KEYWORDS = {
     "general_news": [
         "recession", "inflation", "fed", "central bank", "interest rate", "gdp", 
@@ -197,7 +251,11 @@ MEDIUM_IMPORTANCE_KEYWORDS = {
     ]
 }
 
-def read_existing_news():
+def make_uid(title: str, source: str, raw_date: str) -> str:
+    """Generate unique identifier for deduplication"""
+    return hashlib.sha256(f"{title}{source}{raw_date}".encode()).hexdigest()[:16]
+
+def read_existing_news() -> Optional[Dict]:
     """Reads existing JSON file as fallback"""
     try:
         with open(NEWS_JSON_PATH, 'r', encoding='utf-8') as f:
@@ -205,8 +263,9 @@ def read_existing_news():
     except:
         return None
 
-def fetch_api_data(endpoint, params=None):
-    """Generic function to fetch data from FMP API"""
+@retry(wait=wait_random_exponential(multiplier=1, max=30), stop=stop_after_attempt(5)) if HAS_TENACITY else lambda f: f
+def fetch_api_data(endpoint: str, params: Optional[Dict] = None) -> List[Dict]:
+    """Generic function to fetch data from FMP API with retry logic"""
     if not CONFIG["api_key"]:
         logger.error("FMP API key not defined. Please set FMP_API_KEY in environment variables.")
         return []
@@ -217,38 +276,34 @@ def fetch_api_data(endpoint, params=None):
     params["apikey"] = CONFIG["api_key"]
     
     try:
-        logger.info(f"Fetching data from {endpoint} with params {params}")
-        response = requests.get(endpoint, params=params, timeout=30)
+        logger.debug(f"Fetching data from {endpoint} with params {params}")
+        response = SESSION.get(endpoint, params=params, timeout=30)
         response.raise_for_status()
         data = response.json()
-        logger.info(f"✅ {len(data)} items retrieved from {endpoint}")
-        return data
+        logger.info(f"✅ {len(data) if isinstance(data, list) else 1} items retrieved from {endpoint}")
+        return data if isinstance(data, list) else [data] if data else []
     except Exception as e:
         logger.error(f"❌ Error fetching from {endpoint}: {str(e)}")
         return []
 
-def fetch_articles_by_period(endpoint, start_date, end_date, source_type=None, days_interval=7, max_pages=5):
-    """
-    Fetches articles over a given period by splitting the period into intervals
-    and using pagination to get as many articles as possible
-    """
-    logger.info(f"Starting extraction of articles from {start_date} to {end_date} in {days_interval} day chunks")
+def fetch_articles_by_period(endpoint: str, start_date: str, end_date: str, 
+                           source_type: Optional[str] = None, days_interval: int = 7, 
+                           max_pages: int = 5) -> List[Dict]:
+    """Fetches articles over a given period by splitting into intervals"""
+    logger.info(f"Starting extraction from {start_date} to {end_date} in {days_interval} day chunks")
     
-    # Use the source-specific limit or 50 by default
     per_page = CONFIG["news_limits"].get(source_type, 50) if source_type else 50
     
     from_date = datetime.strptime(start_date, "%Y-%m-%d")
     to_date = datetime.strptime(end_date, "%Y-%m-%d")
     all_articles = []
     
-    # Process period by intervals
     current_from = from_date
     while current_from < to_date:
         current_to = min(current_from + timedelta(days=days_interval), to_date)
         
-        logger.info(f"Processing period {current_from.strftime('%Y-%m-%d')} → {current_to.strftime('%Y-%m-%d')}")
+        logger.debug(f"Processing period {current_from.strftime('%Y-%m-%d')} → {current_to.strftime('%Y-%m-%d')}")
         
-        # Process pages for each interval
         for page in range(max_pages):
             params = {
                 "from": current_from.strftime("%Y-%m-%d"),
@@ -260,67 +315,60 @@ def fetch_articles_by_period(endpoint, start_date, end_date, source_type=None, d
             articles = fetch_api_data(endpoint, params)
             
             if not articles:
-                break  # No more articles for this period
+                break
                 
-            logger.info(f"  Page {page+1}: {len(articles)} articles retrieved")
+            logger.debug(f"  Page {page+1}: {len(articles)} articles retrieved")
             all_articles.extend(articles)
             
-            # If we got fewer articles than the limit, we've reached the end
             if len(articles) < per_page:
                 break
                 
-        # Move to next interval
         current_from = current_to
     
     logger.info(f"Total articles retrieved for the period: {len(all_articles)}")
     return all_articles
 
-def get_general_news():
+def get_general_news() -> List[Dict]:
     """Fetches general economic news"""
-    # Get news from the last 30 days
     today = datetime.today()
     start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
     end_date = today.strftime("%Y-%m-%d")
     
     return fetch_articles_by_period(CONFIG["endpoints"]["general_news"], start_date, end_date, "general_news")
 
-def get_fmp_articles():
+def get_fmp_articles() -> List[Dict]:
     """Fetches articles written by FMP"""
-    # Get articles from the last 30 days
     today = datetime.today()
     start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
     end_date = today.strftime("%Y-%m-%d")
     
     return fetch_articles_by_period(CONFIG["endpoints"]["fmp_articles"], start_date, end_date, "fmp_articles")
 
-def get_stock_news():
+def get_stock_news() -> List[Dict]:
     """Fetches stock news"""
-    # Get news from the last 30 days
     today = datetime.today()
     start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
     end_date = today.strftime("%Y-%m-%d")
     
     return fetch_articles_by_period(CONFIG["endpoints"]["stock_news"], start_date, end_date, "stock_news")
 
-def get_crypto_news():
+def get_crypto_news() -> List[Dict]:
     """Fetches cryptocurrency news"""
-    # Get news from the last 30 days
     today = datetime.today()
     start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
     end_date = today.strftime("%Y-%m-%d")
     
     return fetch_articles_by_period(CONFIG["endpoints"]["crypto_news"], start_date, end_date, "crypto_news")
 
-def get_press_releases():
+def get_press_releases() -> List[Dict]:
     """Fetches press releases"""
-    # Get press releases from the last 30 days
     today = datetime.today()
     start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
     end_date = today.strftime("%Y-%m-%d")
     
     return fetch_articles_by_period(CONFIG["endpoints"]["press_releases"], start_date, end_date, "press_releases")
 
-def get_earnings_calendar():
+def get_earnings_calendar() -> List[Dict]:
     """Fetches earnings calendar"""
     today = datetime.now().strftime("%Y-%m-%d")
     future = (datetime.now() + timedelta(days=CONFIG["days_ahead"])).strftime("%Y-%m-%d")
@@ -331,7 +379,7 @@ def get_earnings_calendar():
     }
     return fetch_api_data(CONFIG["endpoints"]["earnings_calendar"], params)
 
-def get_economic_calendar():
+def get_economic_calendar() -> List[Dict]:
     """Fetches economic calendar"""
     today = datetime.now().strftime("%Y-%m-%d")
     future = (datetime.now() + timedelta(days=CONFIG["days_ahead"])).strftime("%Y-%m-%d")
@@ -342,7 +390,7 @@ def get_economic_calendar():
     }
     return fetch_api_data(CONFIG["endpoints"]["economic_calendar"], params)
 
-def get_ipos_calendar():
+def get_ipos_calendar() -> List[Dict]:
     """Fetches upcoming IPOs"""
     today = datetime.now().strftime("%Y-%m-%d")
     future = (datetime.now() + timedelta(days=CONFIG["days_ahead"])).strftime("%Y-%m-%d")
@@ -354,7 +402,7 @@ def get_ipos_calendar():
 
     return fetch_api_data(CONFIG["endpoints"]["ipos_calendar"], params)
 
-def get_mergers_acquisitions(limit=100):
+def get_mergers_acquisitions(limit: int = 100) -> List[Dict]:
     """Fetches latest M&A operations"""
     params = {
         "page": 0,
@@ -362,7 +410,7 @@ def get_mergers_acquisitions(limit=100):
     }
     return fetch_api_data(CONFIG["endpoints"]["mergers_acquisitions"], params)
 
-def extract_themes(article):
+def extract_themes(article: Dict) -> Dict[str, List[str]]:
     """Identifies dominant themes from title content"""
     text = article.get("title", "").lower()
     themes_detected = {"macroeconomics": [], "sectors": [], "regions": []}
@@ -374,7 +422,7 @@ def extract_themes(article):
 
     return themes_detected
 
-def compute_sentiment_distribution(articles):
+def compute_sentiment_distribution(articles: List[Dict]) -> Dict[str, float]:
     """Calculates sentiment distribution for a set of articles"""
     sentiment_counts = Counter(article["impact"] for article in articles if "impact" in article)
     total = sum(sentiment_counts.values())
@@ -388,25 +436,16 @@ def compute_sentiment_distribution(articles):
         "negative": round(sentiment_counts["negative"] / total * 100, 1)
     }
 
-def determine_category(article, source=None):
-    """
-    Determines the news category:
-    - economy: macroeconomic news
-    - markets: news about indices, ETFs, etc.
-    - companies: news specific to companies
-    - crypto: cryptocurrency news
-    - tech: technology news
-    """
+def determine_category(article: Dict, source: Optional[str] = None) -> Category:
+    """Determines the news category"""
     # Check symbol for crypto
     if article.get("symbol") and any(ticker in str(article.get("symbol")) for ticker in ["BTC", "ETH", "CRYPTO", "COIN"]):
         return "crypto"
         
-    # Analyze text to determine category
     text = (article.get("text", "") + " " + article.get("title", "")).lower()
     
-    # Crypto category (priority 1) - Utiliser les mêmes mots-clés que dans THEMES_DOMINANTS
+    # Crypto category (priority 1)
     crypto_keywords = THEMES_DOMINANTS["sectors"]["crypto"]
-    
     if any(word in text for word in crypto_keywords):
         return "crypto"
     
@@ -416,7 +455,6 @@ def determine_category(article, source=None):
         "software", "hardware", "tech", "technology", "startup", "app", 
         "mobile", "cloud", "computing", "digital", "internet", "online", "web"
     ]
-    
     if any(word in text for word in tech_keywords):
         return "tech"
     
@@ -426,7 +464,6 @@ def determine_category(article, source=None):
         "interest rate", "economic", "unemployment",
         "consumer", "spending", "policy", "fiscal", "monetary", "recession"
     ]
-    
     if any(word in text for word in economy_keywords):
         return "economy"
     
@@ -437,19 +474,13 @@ def determine_category(article, source=None):
         "gold", "market", "stock market", "bull market", 
         "bear market", "rally", "correction", "volatility", "vix"
     ]
-    
     if any(word in text for word in markets_keywords):
         return "markets"
     
-    # Default: companies
     return "companies"
 
-def determine_country(article):
-    """
-    Determines the country/region of the news using more detailed analysis
-    to detect more countries than just france/us
-    """
-    # Check symbol for initial information
+def determine_country(article: Dict) -> str:
+    """Determines the country/region of the news"""
     symbol = article.get("symbol", "")
     if symbol:
         if any(suffix in str(symbol) for suffix in [".PA", ".PAR"]):
@@ -463,53 +494,26 @@ def determine_country(article):
         elif any(suffix in str(symbol) for suffix in [".T", ".JP"]):
             return "japan"
     
-    # Analyze text for more precise detection
     text = (article.get("text", "") + " " + article.get("title", "")).lower()
     
-    # Keywords for different countries/regions
     country_keywords = {
-        "france": [
-            "france", "french", "paris", "cac", "paris stock exchange", "euronext", "amf", 
-            "france", "paris", "french"
-        ],
-        "uk": [
-            "uk", "united kingdom", "britain", "british", "london", "ftse", "bank of england", 
-            "pound sterling", "gbp", "boe", "royal", "london stock exchange", "britain"
-        ],
-        "germany": [
-            "germany", "berlin", "frankfurt", "dax", "deutsche", "euro", "ecb", 
-            "bundesbank", "merkel", "scholz", "german"
-        ],
-        "china": [
-            "china", "chinese", "beijing", "shanghai", "hong kong", "shenzhen", "yuan", "renminbi", 
-            "pboc", "ccp", "xi jinping", "chinese"
-        ],
-        "japan": [
-            "japan", "japanese", "tokyo", "nikkei", "yen", "bank of japan", "boj", "abenomics", 
-            "japan", "japanese", "kishida", "abe", "jpx"
-        ],
-        "emerging_markets": [
-            "emerging markets", "emerging economies", "brics", "brazil", "russia", "india", 
-            "south africa", "indonesia", "turkey", "mexico", "thailand", "vietnam", 
-            "manila", "mumbai", "bovespa", "sensex", "micex"
-        ],
-        "global": [
-            "global", "world", "international", "worldwide", "global economy", "global markets",
-            "world", "international", "all markets", "across markets"
-        ]
+        "france": ["france", "french", "paris", "cac", "paris stock exchange", "euronext", "amf"],
+        "uk": ["uk", "united kingdom", "britain", "british", "london", "ftse", "bank of england", "pound sterling", "gbp"],
+        "germany": ["germany", "berlin", "frankfurt", "dax", "deutsche", "euro", "ecb", "bundesbank", "german"],
+        "china": ["china", "chinese", "beijing", "shanghai", "hong kong", "shenzhen", "yuan", "renminbi", "pboc"],
+        "japan": ["japan", "japanese", "tokyo", "nikkei", "yen", "bank of japan", "boj"],
+        "emerging_markets": ["emerging markets", "brics", "brazil", "russia", "india", "south africa", "indonesia", "turkey", "mexico"],
+        "global": ["global", "world", "international", "worldwide", "global economy", "global markets"]
     }
     
-    # Check each country/region by priority order
     for country, keywords in country_keywords.items():
         if any(keyword in text for keyword in keywords):
             return country
     
-    # Default: "us" (most important market globally)
     return "us"
 
-def determine_impact(article):
+def determine_impact(article: Dict) -> Impact:
     """Determines the impact of news (positive/negative/neutral)"""
-    # If sentiment is provided by the API
     sentiment = article.get("sentiment")
     if sentiment:
         try:
@@ -523,7 +527,6 @@ def determine_impact(article):
         except:
             pass
     
-    # Basic text analysis if no sentiment provided
     text = (article.get("text", "") + " " + article.get("title", "")).lower()
     
     positive_words = [
@@ -550,7 +553,7 @@ def determine_impact(article):
     else:
         return "neutral"
 
-def format_date(date_str):
+def format_date(date_str: str) -> str:
     """Formats a date in YYYY-MM-DD format to DD/MM/YYYY"""
     try:
         date_parts = date_str.split(" ")[0].split("-")
@@ -558,10 +561,9 @@ def format_date(date_str):
             return f"{date_parts[2]}/{date_parts[1]}/{date_parts[0]}"
         return date_str.replace("-", "/")
     except:
-        # Fallback in case of error
         return date_str.replace("-", "/")
 
-def format_time(date_str):
+def format_time(date_str: str) -> str:
     """Extracts time in HH:MM format from a complete date"""
     try:
         time_parts = date_str.split(" ")[1].split(":")
@@ -569,24 +571,18 @@ def format_time(date_str):
             return f"{time_parts[0]}:{time_parts[1]}"
         return "00:00"
     except:
-        # Fallback in case of error
         return "00:00"
 
-def normalize_article(article, source=None):
+def normalize_article(article: Dict, source: Optional[str] = None) -> Dict:
     """Normalizes different FMP article formats into a standard format"""
-    # Handle different formats based on endpoint
-    
-    # Determine key fields
     title = article.get("title", "")
     
-    # For FMP Articles API
     if "date" in article and "content" in article and "tickers" in article:
         text = article.get("content", "")
         date = article.get("date", "")
         symbol = article.get("tickers", "")
         site = article.get("site", "Financial Modeling Prep")
         url = article.get("link", "")
-    # For other endpoints
     else:
         text = article.get("text", "")
         date = article.get("publishedDate", "")
@@ -594,7 +590,6 @@ def normalize_article(article, source=None):
         site = article.get("site", article.get("publisher", ""))
         url = article.get("url", "")
     
-    # Return normalized article
     return {
         "title": title,
         "text": text,
@@ -602,174 +597,97 @@ def normalize_article(article, source=None):
         "symbol": symbol,
         "site": site,
         "url": url,
-        "source_type": source  # Add source type for classification
+        "source_type": source
     }
 
-def remove_duplicates(news_list):
-    """Removes duplicate articles based on title"""
-    seen_titles = set()
+def remove_duplicates_by_id(news_list: List[Dict]) -> List[Dict]:
+    """Removes duplicate articles based on unique ID"""
+    seen_ids = set()
     unique_news = []
     
     for item in news_list:
-        title = item["title"].lower()
-        if title not in seen_titles:
-            seen_titles.add(title)
+        item_id = item.get("id")
+        if item_id and item_id not in seen_ids:
+            seen_ids.add(item_id)
             unique_news.append(item)
     
     return unique_news
 
-def compute_importance_score(article, category):
-    """
-    Calculates an importance score for an article based on its category and content.
-    
-    Args:
-        article (dict): The article containing title, content, source, etc.
-        category (str): The article category (general_news, stock_news, crypto_news, press_releases)
-    
-    Returns:
-        float: Importance score between 0 and 100
-    """
-    # For debug logging of intermediate scores
-    debug_scores = {}
-    
-    # Combination of title and text for analysis
+def compute_importance_score(article: Dict, category: str) -> float:
+    """Calculates an importance score for an article"""
     content = f"{article.get('title', '')} {article.get('content', '')}".lower()
-    title = article.get('title', '').lower()
     article_source = article.get("source", "").lower()
     
-    # 1. Score based on high importance keywords (varying by category)
+    # High importance keywords
     high_keywords = HIGH_IMPORTANCE_KEYWORDS.get(category, [])
     matched_high_keywords = set()
     for keyword in high_keywords:
         if keyword in content:
             matched_high_keywords.add(keyword)
     
-    # Vary the maximum score by category
+    # Category-specific scoring
     if category == "crypto_news":
         high_keyword_score = min(20, len(matched_high_keywords) * 2)
     elif category == "general_news":
         high_keyword_score = min(40, len(matched_high_keywords) * 5)
     elif category == "stock_news":
         high_keyword_score = min(35, len(matched_high_keywords) * 4.5)
-    elif category == "press_releases":
-        high_keyword_score = min(30, len(matched_high_keywords) * 4)
     else:
         high_keyword_score = min(30, len(matched_high_keywords) * 4)
     
-    debug_scores["high_keywords"] = high_keyword_score
-    
-    # 2. Score based on medium importance keywords (max 20 points, adjusted by category)
+    # Medium importance keywords
     medium_keywords = MEDIUM_IMPORTANCE_KEYWORDS.get(category, [])
     matched_medium_keywords = set()
     for keyword in medium_keywords:
         if keyword in content:
             matched_medium_keywords.add(keyword)
     
-    # Adjust medium importance by category
     if category == "crypto_news":
         medium_keyword_score = min(10, len(matched_medium_keywords) * 1.5)
-    elif category == "press_releases":
-        medium_keyword_score = min(15, len(matched_medium_keywords) * 2.0)  # 0.8 factor applied
     else:
         medium_keyword_score = min(20, len(matched_medium_keywords) * 2.5)
     
-    debug_scores["medium_keywords"] = medium_keyword_score
-    
-    # 3. Score based on source (max 20 points, adjusted by category)
+    # Source score
     source_score = 0
     for important_source in IMPORTANT_SOURCES.get(category, []):
         if important_source.lower() in article_source:
-            # Adjust score based on category
-            if category == "crypto_news":
-                source_score = 10
-            elif category == "press_releases":
-                source_score = 15
-            else:
-                source_score = 20
+            source_score = 15 if category == "crypto_news" else 20
             break
     
-    # Extra points for premium sources
     if any(premium in article_source for premium in PREMIUM_SOURCES):
-        source_score = min(25, source_score + 5)  # +5 points for premium sources, max 25
+        source_score = min(25, source_score + 5)
     
-    debug_scores["source"] = source_score
-    
-    # 4. Score based on title and content length (rebalanced to 3 + 7 points)
+    # Content length scores
     title_length = len(article.get("title", ""))
     text_length = len(article.get("content", ""))
     
-    # 3 points max for title
-    title_score = min(3, title_length / 33)  # 3 points max for a title of 100 characters
+    title_score = min(3, title_length / 33)
+    text_score = min(7, text_length / 360)
     
-    # 7 points max for content
-    text_score = min(7, text_length / 360)   # 7 points max for a text of ~2500 characters
-    
-    debug_scores["title_length"] = title_score
-    debug_scores["content_length"] = text_score
-    
-    # 5. Score based on impact (max 10 points, adjusted for crypto and by sentiment value)
+    # Impact score
     impact = article.get("impact", "neutral")
-    
     if category == "crypto_news":
-        if impact == "negative":
-            impact_score = 5  # Reduced from 10
-        elif impact == "positive":
-            impact_score = 4  # Reduced from 7
-        else:
-            impact_score = 3  # Reduced from 5
+        impact_score = {"negative": 5, "positive": 4, "neutral": 3}[impact]
     else:
-        if impact == "negative":
-            impact_score = 10  # Negative news often has more impact
-        elif impact == "positive":
-            impact_score = 7   # Reduced from 8
-        else:
-            impact_score = 5
+        impact_score = {"negative": 10, "positive": 7, "neutral": 5}[impact]
     
-    debug_scores["impact"] = impact_score
-    
-    # Calculate total score
     total_score = high_keyword_score + medium_keyword_score + source_score + title_score + text_score + impact_score
-    
-    # Normalize between 0 and 100
     normalized_score = min(100, total_score)
     
-    # Apply category-specific adjustments
     if category == "crypto_news":
-        normalized_score = normalized_score * 0.9  # 10% de pénalité pour crypto
-    
-    # Add debug logging if needed
-    if logger.level <= logging.DEBUG:
-        title_snippet = article.get('title', '')[:30] + ('...' if len(article.get('title', '')) > 30 else '')
-        logger.debug(f"Article: '{title_snippet}' | Category: {category} | Total: {normalized_score:.1f}")
-        logger.debug(f"  Scores: {debug_scores}")
+        normalized_score *= 0.9
     
     return normalized_score
 
-def calculate_output_limits(articles_by_country, max_total=150):
-    """
-    Calculates output limits for each country/region based on available articles
-    and their importance.
-    
-    Args:
-        articles_by_country (dict): Dictionary of articles by country
-        max_total (int): Maximum total number of articles to keep
-    
-    Returns:
-        dict: Limits for each country/region
-    """
-    # Base configuration of limits by country/region
+def calculate_output_limits(articles_by_country: Dict, max_total: int = 150) -> Dict[str, int]:
+    """Calculates output limits for each country/region"""
     base_limits = CONFIG["output_limits"]
-    
-    # Count articles by country
     country_counts = {country: len(articles) for country, articles in articles_by_country.items()}
     
-    # Adjust limits based on available articles
     adjusted_limits = {}
     remaining_quota = max_total
     
-    # First pass: allocate a minimum for each country with articles
     for country, count in country_counts.items():
-        # If country not defined in base_limits, consider it as global
         if country not in base_limits:
             if "global" not in country_counts:
                 country_counts["global"] = 0
@@ -780,24 +698,19 @@ def calculate_output_limits(articles_by_country, max_total=150):
         adjusted_limits[country] = min_limit
         remaining_quota -= min_limit
     
-    # Ensure global is considered even if it has no articles
     if "global" not in adjusted_limits and "global" in base_limits:
         adjusted_limits["global"] = 0
     
-    # Second pass: distribute remaining quota proportionally
     if remaining_quota > 0:
-        # Calculate total base limits for countries with articles
         total_base = sum(base_limits.get(country, 10) for country in adjusted_limits.keys())
         
-        # Distribute proportionally
-        for country in list(adjusted_limits.keys()):  # Use a copy of keys
+        for country in list(adjusted_limits.keys()):
             if total_base > 0:
                 country_ratio = base_limits.get(country, 10) / total_base
                 additional = int(remaining_quota * country_ratio)
                 adjusted_limits[country] += additional
                 remaining_quota -= additional
         
-        # Assign any remaining quota to global or first country if global doesn't exist
         if "global" in adjusted_limits:
             adjusted_limits["global"] += remaining_quota
         elif adjusted_limits:
@@ -806,9 +719,8 @@ def calculate_output_limits(articles_by_country, max_total=150):
     
     return adjusted_limits
 
-def determine_event_impact(event):
+def determine_event_impact(event: Dict) -> str:
     """Determines the impact level of an economic event"""
-    # High impact events
     high_impact_events = [
         "Interest Rate Decision", "Fed Interest Rate", "ECB Interest Rate", 
         "Inflation Rate", "GDP Growth", "GDP Release", "Employment Change",
@@ -816,14 +728,12 @@ def determine_event_impact(event):
         "FOMC", "FED", "BCE", "ECB", "Fed Chair", "Treasury", "Central Bank"
     ]
     
-    # Medium impact events
     medium_impact_events = [
         "PMI", "Consumer Confidence", "Trade Balance", "Industrial Production",
         "Manufacturing Production", "Housing Starts", "Building Permits",
         "Durable Goods Orders", "Factory Orders", "Earnings Report", "Balance Sheet"
     ]
     
-    # Check event name
     event_name = event.get("event", "").lower()
     
     if any(keyword.lower() in event_name for keyword in high_impact_events):
@@ -832,20 +742,17 @@ def determine_event_impact(event):
     if any(keyword.lower() in event_name for keyword in medium_impact_events):
         return "medium"
     
-    # Check if event is already classified by FMP
     if event.get("impact") == "High":
         return "high"
     elif event.get("impact") == "Medium":
         return "medium"
     
-    # Default, low impact
     return "low"
 
-def calculate_event_score(event):
+def calculate_event_score(event: Dict) -> int:
     """Calculates a score to prioritize economic events"""
     score = 0
     
-    # Event impact
     impact = determine_event_impact(event)
     if impact == "high":
         score += 10
@@ -854,11 +761,9 @@ def calculate_event_score(event):
     else:
         score += 1
     
-    # Bonus for United States (influential market)
-    if event.get("country") == "US" or event.get("country") == "United States":
+    if event.get("country") in ["US", "United States"]:
         score += 3
     
-    # Bonus for events with significant difference vs forecasts
     if event.get("actual") and event.get("forecast"):
         try:
             actual = float(event.get("actual").replace("%", ""))
@@ -866,54 +771,39 @@ def calculate_event_score(event):
             diff = abs(actual - forecast)
             
             if diff > 5:
-                score += 5  # Very significant difference
+                score += 5
             elif diff > 2:
-                score += 3  # Significant difference
+                score += 3
             elif diff > 0.5:
-                score += 1  # Notable difference
+                score += 1
         except (ValueError, AttributeError):
-            # If we can't convert to float, we ignore
             pass
     
-    # Adjustment by event type for earnings results
     if event.get("type") == "earnings":
-        # Try to extract stock symbol from earnings results
         title = event.get("title", "")
-        
-        # Bonus for important companies
         major_companies = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "JPM", "V", "PYPL", "DIS"]
         if any(company in title for company in major_companies):
             score += 3
     
     return score
 
-def extract_top_themes(news_data, days=30, max_examples=3, exclude_themes=None):
-    """
-    Analyzes dominant themes over a given period (e.g., 30 days) with detailed keyword analysis
-    
-    Args:
-        news_data: The news data to analyze
-        days: Number of days to look back
-        max_examples: Maximum examples to include per theme
-        exclude_themes: Dict of axes and themes to exclude, e.g. {"sectors": ["crypto"]}
-    """
+def extract_top_themes(news_data: Dict, days: int = 30, max_examples: int = 3, 
+                      exclude_themes: Optional[Dict] = None) -> Dict:
+    """Analyzes dominant themes over a given period"""
     cutoff_date = datetime.now() - timedelta(days=days)
     
-    # Simple counter for the 5 most frequent themes
     themes_counter = {
         "macroeconomics": Counter(),
         "sectors": Counter(),
         "regions": Counter()
     }
     
-    # Advanced structure to store details of each theme
     themes_details = {
         "macroeconomics": {},
         "sectors": {},
         "regions": {}
     }
     
-    # Collection of articles by theme to calculate sentiment distribution
     theme_articles = {
         "macroeconomics": {},
         "sectors": {},
@@ -930,13 +820,10 @@ def extract_top_themes(news_data, days=30, max_examples=3, exclude_themes=None):
         total_articles += len(country_articles)
         
         for article in country_articles:
-            # Use rawDate if available, otherwise fallback to formatted date
             try:
                 if "rawDate" in article:
-                    # Format YYYY-MM-DD HH:MM:SS
                     article_date = datetime.strptime(article["rawDate"].split(" ")[0], "%Y-%m-%d")
                 else:
-                    # Format DD/MM/YYYY (for compatibility with old data)
                     article_date = datetime.strptime(article["date"], "%d/%m/%Y")
                 
                 if article_date < cutoff_date:
@@ -947,15 +834,12 @@ def extract_top_themes(news_data, days=30, max_examples=3, exclude_themes=None):
                 themes = article.get("themes", {})
                 for axis, subthemes in themes.items():
                     for theme in subthemes:
-                        # Collection for sentiment calculation later
                         if theme not in theme_articles[axis]:
                             theme_articles[axis][theme] = []
                         theme_articles[axis][theme].append(article)
                         
-                        # Update simple counter
                         themes_counter[axis][theme] += 1
                         
-                        # Initialize detailed structure if it doesn't exist yet
                         if theme not in themes_details[axis]:
                             themes_details[axis][theme] = {
                                 "count": 0,
@@ -963,18 +847,14 @@ def extract_top_themes(news_data, days=30, max_examples=3, exclude_themes=None):
                                 "keywords": {}
                             }
                         
-                        # Increment counter in detailed structure
                         themes_details[axis][theme]["count"] += 1
                         
-                        # Add ALL titles associated with the theme
                         title = article.get("title", "")
                         if title and title not in themes_details[axis][theme]["articles"]:
                             themes_details[axis][theme]["articles"].append(title)
                         
-                        # Analyze specific keywords
                         text = (article.get("content", "") or article.get("text", "") + " " + title).lower()
                         
-                        # Get list of keywords for this theme
                         if axis in THEMES_DOMINANTS and theme in THEMES_DOMINANTS[axis]:
                             keywords = THEMES_DOMINANTS[axis][theme]
                             for keyword in keywords:
@@ -984,9 +864,7 @@ def extract_top_themes(news_data, days=30, max_examples=3, exclude_themes=None):
                                             "count": 0,
                                             "examples": []
                                         }
-                                    # Increment keyword counter
                                     themes_details[axis][theme]["keywords"][keyword]["count"] += 1
-                                    # Add example for this specific keyword
                                     if (len(themes_details[axis][theme]["keywords"][keyword]["examples"]) < max_examples and
                                         title not in themes_details[axis][theme]["keywords"][keyword]["examples"]):
                                         themes_details[axis][theme]["keywords"][keyword]["examples"].append(title)
@@ -997,20 +875,16 @@ def extract_top_themes(news_data, days=30, max_examples=3, exclude_themes=None):
     
     logger.info(f"Theme analysis: {processed_articles}/{total_articles} articles used for the {days} day period")
     
-    # Add sentiment stats to details
     for axis, theme_dict in theme_articles.items():
         for theme, articles in theme_dict.items():
             sentiment_stats = compute_sentiment_distribution(articles)
             if theme in themes_details[axis]:
                 themes_details[axis][theme]["sentiment_distribution"] = sentiment_stats
     
-    # Get main themes for each axis with their details
-    # CORRECTION: Use most_common(15) instead of most_common(5) to show more themes
     top_themes_with_details = {}
     for axis in themes_counter:
-        top_themes = themes_counter[axis].most_common(15)  # Show top 15 themes
+        top_themes = themes_counter[axis].most_common(15)
         
-        # Filtrer les thèmes à exclure
         if exclude_themes and axis in exclude_themes:
             top_themes = [(theme, count) for theme, count in top_themes 
                          if theme not in exclude_themes[axis]]
@@ -1021,7 +895,7 @@ def extract_top_themes(news_data, days=30, max_examples=3, exclude_themes=None):
     
     return top_themes_with_details
 
-def build_theme_summary(theme_name, theme_data):
+def build_theme_summary(theme_name: str, theme_data: Dict) -> str:
     """Automatically generates a simple text summary for a theme"""
     count = theme_data.get("count", 0)
     articles = theme_data.get("articles", [])
@@ -1054,9 +928,34 @@ def build_theme_summary(theme_name, theme_data):
         + (f", « {articles[2]} »" if len(articles) > 2 else "") + "."
     )
 
-def process_news_data(news_sources):
+def fetch_all_news_sources() -> Dict[str, List[Dict]]:
+    """Fetch all news sources concurrently"""
+    endpoint_funcs = {
+        "general_news": get_general_news,
+        "fmp_articles": get_fmp_articles,
+        "stock_news": get_stock_news,
+        "crypto_news": get_crypto_news,
+        "press_releases": get_press_releases
+    }
+    
+    results = {}
+    
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        future_to_name = {executor.submit(func): name for name, func in endpoint_funcs.items()}
+        
+        for future in as_completed(future_to_name):
+            name = future_to_name[future]
+            try:
+                results[name] = future.result()
+                logger.info(f"✅ {name}: {len(results[name])} articles fetched")
+            except Exception as e:
+                logger.error(f"❌ {name} failed: {str(e)}")
+                results[name] = []
+    
+    return results
+
+def process_news_data(news_sources: Dict[str, List[Dict]]) -> Dict:
     """Processes and formats FMP news to match TradePulse format"""
-    # Initialize structure for all possible countries/regions
     formatted_data = {
         "lastUpdated": datetime.now().isoformat()
     }
@@ -1064,34 +963,24 @@ def process_news_data(news_sources):
     for country in CONFIG["output_limits"].keys():
         formatted_data[country] = []
     
-    # List of all articles before country separation
     all_articles = []
     
-    # Process each news source
     for source_type, articles in news_sources.items():
         for article in articles:
-            # Normalize article
             normalized = normalize_article(article, source_type)
             
-            # Check if title is long enough to be relevant
-            if len(normalized["title"]) < 10:
-                continue
-                
-            # Check if content is detailed enough
-            if len(normalized["text"]) < 50:
+            if len(normalized["title"]) < 10 or len(normalized["text"]) < 50:
                 continue
             
-            # Determine category and country
             category = determine_category(normalized, source_type)
             country = determine_country(normalized)
             impact = determine_impact(normalized)
             
-            # Essential data
             news_item = {
                 "title": normalized["title"],
                 "content": normalized["text"],
                 "source": normalized["site"],
-                "rawDate": normalized["publishedDate"],  # Keep raw date for filtering
+                "rawDate": normalized["publishedDate"],
                 "date": format_date(normalized["publishedDate"]),
                 "time": format_time(normalized["publishedDate"]),
                 "category": category,
@@ -1102,14 +991,15 @@ def process_news_data(news_sources):
                 "source_type": source_type
             }
             
-            # Calculate importance score
+            # Generate unique ID for deduplication
+            news_item["id"] = make_uid(news_item["title"], news_item["source"], news_item["rawDate"])
+            
             news_item["importance_score"] = compute_importance_score(news_item, source_type)
             
-            # Add to global list
             all_articles.append(news_item)
     
-    # Remove duplicates
-    all_articles = remove_duplicates(all_articles)
+    # Remove duplicates by ID
+    all_articles = remove_duplicates_by_id(all_articles)
     
     # Sort by importance score
     all_articles.sort(key=lambda x: x["importance_score"], reverse=True)
@@ -1122,26 +1012,23 @@ def process_news_data(news_sources):
             articles_by_country[country] = []
         articles_by_country[country].append(article)
     
-    # Calculate appropriate limits for each country
+    # Calculate appropriate limits
     adjusted_limits = calculate_output_limits(articles_by_country, CONFIG["max_total_articles"])
     
     # Apply limits by country
     for country, articles in articles_by_country.items():
         limit = adjusted_limits.get(country, 10)
-        # If country exists in formatted_data
         if country in formatted_data:
             formatted_data[country] = articles[:limit]
         else:
-            # Otherwise, add to global
             if "global" not in formatted_data:
                 formatted_data["global"] = []
             formatted_data["global"].extend(articles[:limit])
             logger.info(f"Country {country} not handled, {len(articles[:limit])} articles added to 'global'")
     
-    # NOUVEAU: Appliquer les limites par catégorie
+    # Apply category limits
     if "category_limits" in CONFIG:
         for category, limit in CONFIG["category_limits"].items():
-            # Compter les articles de cette catégorie dans le résultat final
             category_articles = []
             for country, articles in formatted_data.items():
                 if isinstance(articles, list):
@@ -1149,34 +1036,26 @@ def process_news_data(news_sources):
                         if article.get("category") == category:
                             category_articles.append((country, article))
             
-            # Si le nombre dépasse la limite, supprimer les moins importants
             if len(category_articles) > limit:
-                # Trier par score d'importance (du moins important au plus important)
                 category_articles.sort(key=lambda x: x[1].get("importance_score", 0))
+                articles_to_remove = category_articles[:-limit]
                 
-                # Garder seulement les articles les plus importants
-                articles_to_remove = category_articles[:-limit]  # On garde les "limit" derniers (plus importants)
-                
-                # Supprimer les articles excédentaires
                 for country, article in articles_to_remove:
                     if country in formatted_data and isinstance(formatted_data[country], list):
                         formatted_data[country] = [a for a in formatted_data[country] if a != article]
                 
-                logger.info(f"Limité la catégorie '{category}' à {limit} articles (supprimé {len(articles_to_remove)})")
+                logger.info(f"Limited category '{category}' to {limit} articles (removed {len(articles_to_remove)})")
     
-    # Statistics on data
     total_articles = sum(len(articles) for articles in formatted_data.values() if isinstance(articles, list))
     logger.info(f"Total processed and formatted articles: {total_articles}")
     
     return formatted_data
 
-def process_events_data(earnings, economic):
+def process_events_data(earnings: List[Dict], economic: List[Dict]) -> List[Dict]:
     """Processes and formats event data"""
     events = []
     
-    # Process economic calendar
     for eco_event in economic:
-        # Add impact and score
         impact = determine_event_impact(eco_event)
         score = calculate_event_score(eco_event)
         
@@ -1190,37 +1069,31 @@ def process_events_data(earnings, economic):
         }
         events.append(event)
     
-    # Process earnings calendar
     for earning in earnings:
-        # Only keep results with forecasts
         if earning.get("epsEstimated"):
-            # Create a fake event for score calculation
             temp_event = {
                 "event": f"Earnings {earning.get('symbol')}",
                 "type": "earnings",
                 "title": f"Earnings {earning.get('symbol')} - Forecast: {earning.get('epsEstimated')}$ per share"
             }
             
-            impact = "medium"  # Default for earnings
+            impact = "medium"
             score = calculate_event_score(temp_event)
             
             event = {
                 "title": f"Earnings {earning.get('symbol')} - Forecast: {earning.get('epsEstimated')}$ per share",
                 "date": format_date(earning.get("date", "")),
-                "time": "16:30",  # Typical time for earnings announcements
+                "time": "16:30",
                 "type": "earnings",
                 "importance": impact,
                 "score": score
             }
             events.append(event)
     
-    # Sort events by score then by date
     events.sort(key=lambda x: (x["score"], x["date"]), reverse=True)
-    
-    # Limit to 15 events maximum
     return events[:15]
 
-def process_ipos_data(ipos):
+def process_ipos_data(ipos: List[Dict]) -> List[Dict]:
     """Formats IPO data for display"""
     formatted_ipos = []
     for ipo in ipos:
@@ -1241,7 +1114,7 @@ def process_ipos_data(ipos):
             logger.warning(f"Error processing an IPO: {str(e)}")
     return formatted_ipos
 
-def process_ma_data(ma_list):
+def process_ma_data(ma_list: List[Dict]) -> List[Dict]:
     """Formats M&A data"""
     formatted_ma = []
     for ma in ma_list:
@@ -1261,14 +1134,12 @@ def process_ma_data(ma_list):
             logger.warning(f"Error processing M&A: {str(e)}")
     return formatted_ma
 
-def update_news_json_file(news_data, events):
+def update_news_json_file(news_data: Dict, events: List[Dict]) -> bool:
     """Updates news.json file with formatted data"""
     try:
-        # Create a copy to avoid modifying the original
         output_data = {k: v for k, v in news_data.items()}
         output_data["events"] = events
         
-        # Create data folder if it doesn't exist
         os.makedirs(os.path.dirname(NEWS_JSON_PATH), exist_ok=True)
         
         with open(NEWS_JSON_PATH, 'w', encoding='utf-8') as f:
@@ -1280,41 +1151,33 @@ def update_news_json_file(news_data, events):
         logger.error(f"❌ Error updating file: {str(e)}")
         return False
 
-def generate_themes_json(news_data):
+def generate_themes_json(news_data: Dict) -> bool:
     """Generates a JSON file with dominant themes over different periods"""
-    
-    # Define analysis periods
     periods = {
         "weekly": 7,
         "monthly": 30,
         "quarterly": 90
     }
     
-    # Extract dominant themes for each period
     themes_data = {}
     for period, days in periods.items():
-        # MODIFICATION: Exclure crypto des thèmes dominants pour toutes les périodes
         exclude_themes = {"sectors": ["crypto"]}
         themes_data[period] = extract_top_themes(news_data, days=days, exclude_themes=exclude_themes)
     
-    # Add automated GPT-like summary to each theme
     for period, axes in themes_data.items():
         for axis, themes in axes.items():
             for theme_name, theme_data in themes.items():
                 summary = build_theme_summary(theme_name, theme_data)
                 themes_data[period][axis][theme_name]["gpt_summary"] = summary
     
-    # Add metadata
     themes_output = {
         "themes": themes_data,
         "lastUpdated": datetime.now().isoformat(),
         "analysisCount": sum(len(articles) for articles in news_data.values() if isinstance(articles, list))
     }
     
-    # Create data folder if it doesn't exist
     os.makedirs(os.path.dirname(THEMES_JSON_PATH), exist_ok=True)
     
-    # Write to file
     try:
         with open(THEMES_JSON_PATH, 'w', encoding='utf-8') as f:
             json.dump(themes_output, f, ensure_ascii=False, indent=2)
@@ -1324,78 +1187,56 @@ def generate_themes_json(news_data):
         logger.error(f"❌ Error updating themes.json file: {str(e)}")
         return False
 
-def main():
+def main() -> bool:
     """Main execution function"""
     try:
-        # 0. Read existing data for fallback
         existing_data = read_existing_news()
         
-        # 1. Fetch different news sources (with new period approach)
-        general_news = get_general_news()
-        fmp_articles = get_fmp_articles()
-        stock_news = get_stock_news()
-        crypto_news = get_crypto_news()
-        press_releases = get_press_releases()
+        # Fetch news sources concurrently
+        news_sources = fetch_all_news_sources()
         
-        # 2. Fetch events
-        earnings = get_earnings_calendar()
-        economic = get_economic_calendar()
+        # Fetch events concurrently
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            earnings_future = executor.submit(get_earnings_calendar)
+            economic_future = executor.submit(get_economic_calendar)
+            ipos_future = executor.submit(get_ipos_calendar)
+            ma_future = executor.submit(get_mergers_acquisitions)
+            
+            earnings = earnings_future.result()
+            economic = economic_future.result()
+            ipos = ipos_future.result()
+            mergers = ma_future.result()
         
-        # 2.b Fetch IPOs and M&A
-        ipos = get_ipos_calendar()
-        mergers = get_mergers_acquisitions()
-        
-        # 3. Organize news sources
-        news_sources = {
-            "general_news": general_news,
-            "fmp_articles": fmp_articles,
-            "stock_news": stock_news,
-            "crypto_news": crypto_news,
-            "press_releases": press_releases
-        }
-        
-        # Count total news
         total_news = sum(len(articles) for articles in news_sources.values())
         logger.info(f"Total news retrieved: {total_news}")
         
-        # Check if we have data
         if total_news == 0:
             logger.warning("No news retrieved, using existing data")
             if existing_data:
                 return True
         
-        # 4. Process and format data with new scoring system
         news_data = process_news_data(news_sources)
         events = process_events_data(earnings, economic)
         
-        # 4.b Process IPO and M&A data
         ipos_events = process_ipos_data(ipos)
         ma_events = process_ma_data(mergers)
         
-        # Merge with other events
         events.extend(ipos_events)
         events.extend(ma_events)
         
-        # 5. Update news JSON file
         success_news = update_news_json_file(news_data, events)
-        
-        # 6. Generate dominant themes file
         success_themes = generate_themes_json(news_data)
         
-        # 7. Display dominant themes over 30 days (for log)
+        # Display dominant themes
         top_themes = extract_top_themes(news_data, days=30)
         logger.info("🎯 Dominant themes over 30 days:")
         for axis, themes in top_themes.items():
             logger.info(f"  {axis.capitalize()}:")
             for theme, details in themes.items():
                 logger.info(f"    {theme} ({details['count']})")
-                # Display sentiment distribution if available
                 if "sentiment_distribution" in details:
                     sentiment = details["sentiment_distribution"]
                     logger.info(f"      Sentiment: {sentiment['positive']}% positive, {sentiment['negative']}% negative, {sentiment['neutral']}% neutral")
-                if "keywords" in details and details["keywords"]:
-                    for keyword, kw_details in details["keywords"].items():
-                        logger.info(f"      - {keyword} ({kw_details['count']})")
         
         return success_news and success_themes
     except Exception as e:
@@ -1405,6 +1246,33 @@ def main():
         return False
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="TradePulse News Updater")
+    parser.add_argument("--themes-only", action="store_true", 
+                       help="Only regenerate themes.json from existing news data")
+    parser.add_argument("--profile", action="store_true", 
+                       help="Run with profiling enabled")
+    
+    args = parser.parse_args()
+    
+    if args.themes_only:
+        logger.info("Running themes-only mode")
+        news_json = read_existing_news() or {}
+        success = generate_themes_json(news_json)
+        exit(0 if success else 1)
+    
+    if args.profile:
+        import cProfile
+        import pstats
+        profiler = cProfile.Profile()
+        profiler.enable()
+        success = main()
+        profiler.disable()
+        
+        stats = pstats.Stats(profiler)
+        stats.sort_stats('cumulative')
+        stats.print_stats(20)  # Top 20 functions
+        
+        exit(0 if success else 1)
+    
     success = main()
-    if not success:
-        exit(1)
+    exit(0 if success else 1)
