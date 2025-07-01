@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-TradePulse News Updater - Enhanced ML Version
+TradePulse News Updater - Enhanced ML Version with Optimized Configuration
 Script for extracting news and events from Financial Modeling Prep
 - General News API: For general economic news
 - Stock News API: For stocks and ETFs
@@ -15,6 +15,7 @@ Script for extracting news and events from Financial Modeling Prep
 🚀 NEW: ML-enhanced classification, FAISS dynamic keywords, observability
 """
 
+from __future__ import annotations
 import os
 import re
 import json
@@ -33,7 +34,188 @@ from typing import List, Dict, Literal, Optional, Any, Set
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# ML & NLP imports
+# ---------------------------------------------------------------------------
+# 🎯 ENHANCED CONFIGURATION MODULE (INTEGRATED)
+# ---------------------------------------------------------------------------
+
+# Global defaults (overrideable via environment variables)
+MAX_TOTAL: int = int(os.getenv("TP_MAX_TOTAL", "150"))
+DAYS_AHEAD: int = int(os.getenv("TP_DAYS_AHEAD", "7"))
+DAYS_BACK: int = int(os.getenv("TP_DAYS_BACK", "30"))
+MAX_WORKERS = int(os.getenv("TP_MAX_WORKERS", "3"))
+LOG_LEVEL = os.getenv("TP_LOG_LEVEL", "INFO").upper()
+
+# Dynamic scoring weights
+_SCORE_WEIGHTS_PATH = os.path.join("models", "score_weights.json")
+_DEFAULT_WEIGHTS: Dict[str, float] = {
+    "high_keywords": 4.0,
+    "medium_keywords": 2.0,
+    "low_keywords": 1.0,
+    "source_premium": 3.5,
+    "impact_factor": 2.5,
+    "content_length": 1.0,
+    "recency_boost": 1.3,
+    "novelty_penalty": -2.0,
+}
+
+try:
+    with open(_SCORE_WEIGHTS_PATH, encoding="utf-8") as fh:
+        WEIGHTS: Dict[str, float] = json.load(fh)
+    print("✅ Dynamic scoring weights loaded")
+except FileNotFoundError:
+    WEIGHTS = _DEFAULT_WEIGHTS
+    print("⚠️ Using fallback scoring weights")
+
+# Source tiering
+SOURCE_WEIGHTS: Dict[str, int] = {
+    "bloomberg": 6, "reuters": 6, "financial times": 5, "wall street journal": 5,
+    "cnbc": 4, "marketwatch": 4, "barron's": 4, "seeking alpha": 4,
+    "coindesk": 3, "cointelegraph": 3, "the block": 3, "techcrunch": 3, "oilprice": 3,
+    "yahoo finance": 2, "motley fool": 2, "investor's business daily": 2,
+    "pr newswire": 1, "business wire": 1, "globe newswire": 1,
+}
+
+# Optimized keyword roots
+KEYWORDS_CONFIG: Dict[str, list[str]] = {
+    "high_impact": [
+        "crash", "collapse", "crisis", "recession", "default", "bankruptcy", "panic", "meltdown", 
+        "correction", "bear market", "market crash", "sell-off", "plunge", "tumble", "freefall",
+        "circuit breaker", "debt ceiling", "sovereign debt", "bond rout", "yield curve", 
+        "inverted curve", "treasury spike", "rate hike", "rate cut", "fed decision", 
+        "central bank", "ecb decision", "inflation", "hyperinflation", "stagflation", 
+        "deflation", "quantitative easing", "tapering", "emergency liquidity", "capital controls", 
+        "sanctions", "trade war", "embargo", "nationalisation", "regulation", "investigation", 
+        "lawsuit", "antitrust", "class action", "cyberattack", "downgrade", "bailout", "stress test",
+    ],
+    "medium_impact": [
+        "gdp", "growth", "contraction", "employment", "unemployment", "cpi", "ppi", "pmi", "ism", 
+        "retail sales", "consumer confidence", "manufacturing", "industrial production", 
+        "housing starts", "earnings", "profits", "losses", "guidance", "profit warning", 
+        "dividend", "buyback", "merger", "acquisition", "ipo", "spin-off", "restructuring", 
+        "layoffs", "capex", "deleveraging", "bond issue", "share placement", "secondary offering", 
+        "rights issue", "rating upgrade", "rating downgrade", "volatility", "volume", 
+        "short squeeze", "index reshuffle", "re-weighting", "quantitative tightening", 
+        "currency intervention", "commodity rally", "oil surge", "gas spike", "gold rally",
+    ],
+    "low_impact": [
+        "announcement", "appointment", "price target", "forecast", "preview", "product launch", 
+        "roadmap", "prototype", "partnership", "joint venture", "collaboration", "store opening", 
+        "seed funding", "series a", "series b", "series c", "conference", "summit", "webinar", 
+        "meeting", "fireside chat", "newsletter", "whitepaper", "case study", "award", "patent", 
+        "trade show", "customer win", "milestone", "beta", "update", "patch", "feature",
+    ],
+}
+
+# Compiled regex patterns (performance optimization)
+KEYWORD_PATTERNS: Dict[str, re.Pattern[str]] = {
+    level: re.compile("|".join(rf"\b{re.escape(w)}\b" for w in words), re.I)
+    for level, words in KEYWORDS_CONFIG.items()
+}
+
+# Theme classification
+THEMES_DOMINANTS: Dict[str, dict[str, set[str]]] = {
+    "macroeconomics": {
+        "inflation": {"inflation", "price", "prices", "cpi", "interest rate", "yield", "yields", "consumer price", "cost of living"},
+        "recession": {"recession", "slowdown", "gdp", "contraction", "downturn", "economic decline", "negative growth"},
+        "monetary_policy": {"fed", "ecb", "central bank", "tapering", "quantitative easing", "qe", "rate hike", "rate cut", "monetary policy", "federal reserve"},
+        "geopolitics": {"conflict", "war", "tensions", "geopolitical", "ukraine", "russia", "israel", "china", "taiwan", "middle east", "sanctions", "trade war"},
+        "energy_transition": {"climate", "esg", "biodiversity", "net zero", "carbon neutral", "transition", "sustainable", "green energy", "renewable", "solar", "wind"},
+    },
+    "sectors": {
+        "technology": {"ai", "artificial intelligence", "machine learning", "cloud", "cyber", "tech", "semiconductor", "digital", "data", "computing", "software"},
+        "energy": {"oil", "gas", "uranium", "energy", "barrel", "renewable", "opec", "crude", "petroleum", "natural gas"},
+        "defense": {"defense", "military", "weapons", "nato", "rearmament", "arms", "security", "aerospace"},
+        "finance": {"banks", "insurance", "rates", "bonds", "treasury", "financial", "banking", "credit", "loan"},
+        "real_estate": {"real estate", "property", "epra", "reits", "infrastructure", "construction", "housing", "mortgage"},
+        "consumer": {"retail", "consumer", "luxury", "purchase", "disposable income", "spending", "sales", "e-commerce"},
+        "healthcare": {"health", "biotech", "pharma", "vaccine", "fda", "clinical trial", "medicine", "medical", "drug"},
+        "crypto": {"crypto", "cryptocurrency", "bitcoin", "ethereum", "blockchain", "altcoin", "token", "defi", "nft", "binance", "coinbase", "web3", "mining", "wallet", "staking", "smart contract", "btc", "eth", "xrp", "sol", "solana", "cardano", "dao"},
+    },
+    "regions": {
+        "europe": {"europe", "france", "ecb", "germany", "italy", "eurozone", "eu", "european union", "brussels", "london", "uk"},
+        "usa": {"usa", "fed", "s&p", "nasdaq", "dow jones", "united states", "america", "washington", "wall street"},
+        "asia": {"china", "japan", "korea", "india", "asia", "emerging asia", "beijing", "tokyo", "shanghai", "hong kong"},
+        "global": {"world", "acwi", "international", "global", "worldwide", "emerging markets", "brics"},
+    },
+}
+
+# HTTP Session optimization
+SESSION = requests.Session()
+SESSION.headers.update({
+    "User-Agent": "TradePulseBot/2.0",
+    "Accept": "application/json",
+    "Connection": "keep-alive",
+})
+
+# File paths
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODELS_DIR = os.path.join(BASE_DIR, "models")
+DATA_DIR = os.path.join(BASE_DIR, "data")
+NEWS_JSON_PATH = os.path.join(DATA_DIR, "news.json")
+THEMES_JSON_PATH = os.path.join(DATA_DIR, "themes.json")
+
+# Create directories
+for path in (MODELS_DIR, DATA_DIR):
+    os.makedirs(path, exist_ok=True)
+
+# Helper functions
+def allocate_limits(total: int, weights: Dict[str, float]) -> Dict[str, int]:
+    """Dynamically allocate limits based on weights"""
+    total_weight = sum(weights.values()) or 1
+    allocated = {k: max(1, int(total * w / total_weight)) for k, w in weights.items()}
+    
+    # Adjust for rounding errors
+    diff = total - sum(allocated.values())
+    if diff:
+        max_key = max(allocated, key=allocated.get)
+        allocated[max_key] += diff
+    return allocated
+
+def _quick_self_tests() -> None:
+    """Quick self-tests for core functions"""
+    test_weights = {"a": 0.5, "b": 0.3, "c": 0.2}
+    alloc = allocate_limits(100, test_weights)
+    assert sum(alloc.values()) == 100, "allocate_limits incorrect sum"
+    assert all(v > 0 for v in alloc.values()), "Zero allocation detected"
+    print("✅ self-test allocate_limits OK")
+
+# Dynamic allocation tables
+BASE_COUNTRY_WEIGHTS = {
+    "us": 0.30, "france": 0.15, "uk": 0.12, "germany": 0.12,
+    "china": 0.10, "japan": 0.08, "global": 0.13,
+}
+
+BASE_SOURCE_WEIGHTS = {
+    "general_news": 0.25, "stock_news": 0.40, "crypto_news": 0.15,
+    "fmp_articles": 0.12, "press_releases": 0.08,
+}
+
+# Master CONFIG object
+CONFIG = {
+    "api_key": os.environ.get("FMP_API_KEY", ""),
+    "endpoints": {
+        "general_news": "https://financialmodelingprep.com/stable/news/general-latest",
+        "fmp_articles": "https://financialmodelingprep.com/stable/fmp-articles",
+        "stock_news": "https://financialmodelingprep.com/stable/news/stock",
+        "crypto_news": "https://financialmodelingprep.com/stable/news/crypto",
+        "press_releases": "https://financialmodelingprep.com/stable/news/press-releases",
+        "earnings_calendar": "https://financialmodelingprep.com/api/v3/earning_calendar",
+        "economic_calendar": "https://financialmodelingprep.com/api/v3/economic_calendar",
+        "ipos_calendar": "https://financialmodelingprep.com/stable/ipos-calendar",
+        "mergers_acquisitions": "https://financialmodelingprep.com/stable/mergers-acquisitions-latest"
+    },
+    "news_limits": allocate_limits(120, BASE_SOURCE_WEIGHTS),
+    "output_limits": allocate_limits(MAX_TOTAL, BASE_COUNTRY_WEIGHTS),
+    "category_limits": {"crypto": 8},
+    "max_total_articles": MAX_TOTAL,
+    "days_ahead": DAYS_AHEAD,
+    "days_back": DAYS_BACK
+}
+
+# ---------------------------------------------------------------------------
+# 🧠 ML & NLP IMPORTS (OPTIONAL)
+# ---------------------------------------------------------------------------
+
 try:
     from sentence_transformers import SentenceTransformer
     from sklearn.linear_model import LogisticRegression
@@ -47,9 +229,7 @@ try:
 except ImportError as e:
     ML_ENABLED = False
     print(f"⚠️ ML dependencies not available: {e}")
-    print("📋 To enable ML features, install: pip install sentence-transformers scikit-learn faiss-cpu langdetect spacy orjson")
 
-# Observability & infrastructure imports
 try:
     import structlog
     from prometheus_client import Counter, Histogram, start_http_server
@@ -61,9 +241,7 @@ try:
 except ImportError as e:
     OBSERVABILITY_ENABLED = False
     print(f"⚠️ Observability dependencies not available: {e}")
-    print("📋 To enable observability, install: pip install structlog prometheus-client redis pybreaker httpx")
 
-# Retry logic
 try:
     from tenacity import retry, wait_random_exponential, stop_after_attempt
     HAS_TENACITY = True
@@ -74,37 +252,102 @@ except ImportError:
             return func
         return decorator
 
-# Security helpers
-def _safe_run(cmd: str) -> bool:
-    """True if command executes with code 0, False otherwise."""
+# ---------------------------------------------------------------------------
+# 📊 LOGGING SETUP
+# ---------------------------------------------------------------------------
+
+if OBSERVABILITY_ENABLED:
+    structlog.configure(
+        processors=[structlog.processors.JSONRenderer()],
+        wrapper_class=structlog.make_filtering_bound_logger(LOG_LEVEL),
+    )
+    logger = structlog.get_logger(__name__)
+else:
+    logging.basicConfig(
+        level=getattr(logging, LOG_LEVEL, logging.INFO),
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
+    logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# 🤖 ML MODELS & NLP SETUP
+# ---------------------------------------------------------------------------
+
+if ML_ENABLED:
     try:
-        subprocess.run(shlex.split(cmd), capture_output=True, text=True, check=True)
-        return True
-    except subprocess.CalledProcessError as e:
-        logger.warning(f"Cmd '{cmd}' failed: {e.stderr.strip()}")
-        return False
+        EMBED_MODEL = SentenceTransformer("paraphrase-MiniLM-L6-v2")
+        print("✅ Sentence transformer model loaded")
+    except Exception as e:
+        EMBED_MODEL = None
+        print(f"⚠️ Failed to load embedding model: {e}")
+    
+    try:
+        IMPACT_CLF = joblib.load("models/impact_clf.joblib")
+        CATEGORY_CLF = joblib.load("models/category_clf.joblib")
+        print("✅ ML classifiers loaded")
+    except FileNotFoundError:
+        IMPACT_CLF = CATEGORY_CLF = None
+        print("⚠️ ML classifiers not found, using fallback rules")
+    
+    DetectorFactory.seed = 0
+else:
+    EMBED_MODEL = None
+    IMPACT_CLF = CATEGORY_CLF = None
 
-def _load_spacy_pipelines() -> Dict[str, "Language"]:
-    """
-    Load locally installed spaCy models (no automatic download).
-    Ignores missing models.
-    """
-    wanted = {"en": "en_core_web_sm", "fr": "fr_core_news_sm"}
-    pipelines = {}
-    for lang, pkg in wanted.items():
-        if importlib.util.find_spec(pkg) is None:
-            logger.warning(f"spaCy model {pkg} absent – {lang} ignored")
-            continue
-        pipelines[lang] = spacy.load(pkg)
-    return pipelines
+# ---------------------------------------------------------------------------
+# 🔍 FAISS INDEX
+# ---------------------------------------------------------------------------
 
-# Type definitions
+if ML_ENABLED:
+    try:
+        faiss_index = faiss.read_index("models/keywords.index")
+        kw_tokens = orjson.loads(open("models/keywords.json", "rb").read())
+        print("✅ FAISS keyword index loaded")
+    except FileNotFoundError:
+        faiss_index, kw_tokens = None, []
+        print("⚠️ FAISS index not found, using static keywords")
+else:
+    faiss_index, kw_tokens = None, []
+
+# ---------------------------------------------------------------------------
+# 📈 OBSERVABILITY SETUP
+# ---------------------------------------------------------------------------
+
+if OBSERVABILITY_ENABLED:
+    try:
+        METRIC_LATENCY = Histogram("tp_fetch_latency_seconds", "FMP API latency", ["endpoint"])
+        METRIC_ERRORS = Counter("tp_fetch_errors_total", "FMP API errors", ["endpoint"])
+        METRIC_FETCH_SUCCESS = Counter("tp_fetch_success_total", "Successful API calls", ["endpoint"])
+        
+        start_http_server(8000)
+        print("✅ Prometheus metrics server started on :8000")
+        
+        redis_cli = redis.Redis(host=os.getenv("REDIS_HOST", "localhost"), 
+                               port=int(os.getenv("REDIS_PORT", "6379")), 
+                               decode_responses=False)
+        redis_cli.ping()
+        print("✅ Redis connection established")
+        
+        breaker = pybreaker.CircuitBreaker(fail_max=5, reset_timeout=60)
+        rate_limiter = asyncio.Semaphore(60)
+        print("✅ Observability stack initialized")
+        
+    except Exception as e:
+        print(f"⚠️ Observability setup failed: {e}")
+        OBSERVABILITY_ENABLED = False
+        redis_cli = None
+        breaker = None
+        rate_limiter = None
+
+# ---------------------------------------------------------------------------
+# 🏗️ TYPE DEFINITIONS
+# ---------------------------------------------------------------------------
+
 Impact = Literal["positive", "neutral", "negative"]
 Category = Literal["economy", "markets", "companies", "crypto", "tech"]
 
 @dataclass
 class NewsItem:
-    """Structured news item with type safety"""
     id: str
     title: str
     content: str
@@ -120,355 +363,40 @@ class NewsItem:
     themes: Dict[str, List[str]]
     source_type: str
 
-# Environment-based configuration
-LOG_LEVEL = os.getenv("TP_LOG_LEVEL", "INFO").upper()
-MAX_TOTAL = int(os.getenv("TP_MAX_TOTAL", "150"))
-DAYS_BACK = int(os.getenv("TP_DAYS_BACK", "30"))
-DAYS_AHEAD = int(os.getenv("TP_DAYS_AHEAD", "7"))
-MAX_WORKERS = int(os.getenv("TP_MAX_WORKERS", "3"))
+# ---------------------------------------------------------------------------
+# 🔧 ENHANCED HELPER FUNCTIONS
+# ---------------------------------------------------------------------------
 
-# Logger configuration
-if OBSERVABILITY_ENABLED:
-    structlog.configure(
-        processors=[structlog.processors.JSONRenderer()],
-        wrapper_class=structlog.make_filtering_bound_logger(LOG_LEVEL),
-    )
-    logger = structlog.get_logger(__name__)
-else:
-    logging.basicConfig(
-        level=getattr(logging, LOG_LEVEL, logging.INFO),
-        format='%(asctime)s - %(levelname)s - %(message)s'
-    )
-    logger = logging.getLogger(__name__)
-
-# -------------------------------------------------
-# === ML MODELS & NLP PIPELINES ==================
-# -------------------------------------------------
-if ML_ENABLED:
-    try:
-        EMBED_MODEL = SentenceTransformer("paraphrase-MiniLM-L6-v2")
-        print("✅ Sentence transformer model loaded")
-    except Exception as e:
-        EMBED_MODEL = None
-        print(f"⚠️ Failed to load embedding model: {e}")
+def enhanced_keyword_matching(text: str, weight_class: str) -> int:
+    """Enhanced keyword matching using compiled regex patterns"""
+    if weight_class not in KEYWORD_PATTERNS:
+        return 0
     
-    # Load trained ML classifiers
-    try:
-        IMPACT_CLF = joblib.load("models/impact_clf.joblib")
-        CATEGORY_CLF = joblib.load("models/category_clf.joblib")
-        print("✅ ML classifiers loaded")
-    except FileNotFoundError:
-        IMPACT_CLF = CATEGORY_CLF = None
-        print("⚠️ ML classifiers not found, using fallback rules")
+    matches = len(KEYWORD_PATTERNS[weight_class].findall(text))
     
-    # Load spaCy pipelines securely
-    NLP_PIPELINES = _load_spacy_pipelines()
-    print(f"✅ NLP pipelines loaded: {list(NLP_PIPELINES.keys())}")
+    # Semantic expansion (if FAISS available)
+    if faiss_index is not None:
+        for keyword in KEYWORDS_CONFIG[weight_class]:
+            expanded = expand_with_faiss(keyword)
+            for exp_kw in expanded:
+                if exp_kw in text.lower():
+                    matches += 0.5
     
-    # Language detection
-    DetectorFactory.seed = 0  # reproducibility
-else:
-    EMBED_MODEL = None
-    IMPACT_CLF = CATEGORY_CLF = None
-    NLP_PIPELINES = {}
+    return int(matches)
 
-# -------------------------------------------------
-# === FAISS INDEX for dynamic keywords ===========
-# -------------------------------------------------
-if ML_ENABLED:
-    try:
-        faiss_index = faiss.read_index("models/keywords.index")
-        kw_tokens = orjson.loads(open("models/keywords.json", "rb").read())
-        print("✅ FAISS keyword index loaded")
-    except FileNotFoundError:
-        faiss_index, kw_tokens = None, []
-        print("⚠️ FAISS index not found, using static keywords")
-else:
-    faiss_index, kw_tokens = None, []
-
-# -------------------------------------------------
-# === OBSERVABILITY ==============================
-# -------------------------------------------------
-if OBSERVABILITY_ENABLED:
-    try:
-        # Prometheus metrics
-        METRIC_LATENCY = Histogram("tp_fetch_latency_seconds", "FMP API latency", ["endpoint"])
-        METRIC_ERRORS = Counter("tp_fetch_errors_total", "FMP API errors", ["endpoint"])
-        METRIC_FETCH_SUCCESS = Counter("tp_fetch_success_total", "Successful API calls", ["endpoint"])
+def theme_keyword_matching(text: str, theme_keywords: Set[str]) -> bool:
+    """Enhanced theme matching with word boundaries"""
+    text_lower = text.lower()
+    for keyword in theme_keywords:
+        pattern = re.compile(rf'\b{re.escape(keyword)}\b', re.IGNORECASE)
+        if pattern.search(text):
+            return True
         
-        # Start Prometheus server
-        start_http_server(8000)
-        print("✅ Prometheus metrics server started on :8000")
-        
-        # Redis connection
-        redis_cli = redis.Redis(host=os.getenv("REDIS_HOST", "localhost"), 
-                               port=int(os.getenv("REDIS_PORT", "6379")), 
-                               decode_responses=False)
-        redis_cli.ping()  # Test connection
-        print("✅ Redis connection established")
-        
-        # Circuit breaker
-        breaker = pybreaker.CircuitBreaker(fail_max=5, reset_timeout=60)
-        
-        # Rate limiter
-        rate_limiter = asyncio.Semaphore(60)  # 60 req/min
-        print("✅ Observability stack initialized")
-        
-    except Exception as e:
-        print(f"⚠️ Observability setup failed: {e}")
-        OBSERVABILITY_ENABLED = False
-        redis_cli = None
-        breaker = None
-        rate_limiter = None
-
-# -------------------------------------------------
-# === ENHANCED CONFIGURATION (CLEANED) ===========
-# -------------------------------------------------
-
-# Dynamic scoring weights (externalized, reloadable)
-try:
-    WEIGHTS = json.load(open("models/score_weights.json"))
-    print("✅ Dynamic scoring weights loaded")
-except FileNotFoundError:
-    # Fallback weights with explicit structure
-    WEIGHTS = {
-        "high_keywords": 4.0,
-        "medium_keywords": 2.0,
-        "source_premium": 3.0,
-        "content_length": 1.0,
-        "impact_factor": 2.5,
-        "recency_boost": 1.2
-    }
-    print("⚠️ Using fallback scoring weights")
-
-# Source scoring with explicit weights
-SOURCE_WEIGHTS = {
-    # Premium sources (tier 1)
-    "bloomberg": 5,
-    "reuters": 5,
-    "financial times": 4,
-    "wall street journal": 4,
+        for exp_kw in expand_with_faiss(keyword):
+            if exp_kw in text_lower:
+                return True
     
-    # Major financial media (tier 2)
-    "cnbc": 3,
-    "marketwatch": 3,
-    "seeking alpha": 3,
-    "barron's": 3,
-    
-    # Specialized sources (tier 3)
-    "coindesk": 3,  # crypto
-    "cointelegraph": 3,  # crypto
-    "the block": 3,  # crypto
-    
-    # Standard sources (tier 4)
-    "yahoo finance": 2,
-    "motley fool": 2,
-    "investor's business daily": 2,
-    
-    # Basic sources (tier 5)
-    "pr newswire": 1,
-    "business wire": 1,
-    "globe newswire": 1
-}
-
-# ───  CONFIG MOTS-CLÉS  ──────────────────────────────────────────────────
-# facile à éditer, aucun import externe nécessaire
-KEYWORDS_CONFIG = {
-    "high_impact": [
-        "crash", "collapse", "crisis", "recession", "default",
-        "bankruptcy", "panic", "meltdown", "correction",
-        "central bank", "fed decision", "rate hike", "rate cut", 
-        "inflation", "deflation", "quantitative easing", "tapering",
-        "bear market", "market crash", "sell-off", "plunge", "tumble",
-        "bond yield", "yield curve", "treasury", "sovereign debt",
-        "sanctions", "trade war", "regulation", "investigation", "lawsuit"
-    ],
-    "medium_impact": [
-        "gdp", "employment", "unemployment", "cpi", "pmi",
-        "retail sales", "consumer confidence", "manufacturing",
-        "earnings", "merger", "acquisition", "ipo", "buyback", "dividend",
-        "guidance", "outlook", "profit warning", "restructuring",
-        "rally", "surge", "jump", "decline", "volatility", "volume"
-    ],
-    "low_impact": [
-        "announcement", "appointment", "recommendation", "forecast",
-        "product launch", "partnership", "collaboration", "expansion",
-        "investment", "funding", "conference", "meeting"
-    ],
-}
-
-# ⇩ conversion en regex (word-boundary, ignore-case)
-KEYWORD_PATTERNS = {
-    level: [re.compile(rf"\b{re.escape(w)}\b", re.I) for w in words]
-    for level, words in KEYWORDS_CONFIG.items()
-}
-
-# Theme classification with sets for faster lookups
-THEMES_DOMINANTS = {
-    "macroeconomics": {
-        "inflation": {
-            "inflation", "price", "prices", "cpi", "interest rate", 
-            "yield", "yields", "consumer price", "cost of living"
-        },
-        "recession": {
-            "recession", "slowdown", "gdp", "contraction", "downturn",
-            "economic decline", "negative growth"
-        },
-        "monetary_policy": {
-            "fed", "ecb", "central bank", "tapering", "quantitative easing",
-            "qe", "rate hike", "rate cut", "monetary policy", "federal reserve"
-        },
-        "geopolitics": {
-            "conflict", "war", "tensions", "geopolitical", "ukraine", "russia",
-            "israel", "china", "taiwan", "middle east", "sanctions", "trade war"
-        },
-        "energy_transition": {
-            "climate", "esg", "biodiversity", "net zero", "carbon neutral",
-            "transition", "sustainable", "green energy", "renewable", "solar", "wind"
-        }
-    },
-    "sectors": {
-        "technology": {
-            "ai", "artificial intelligence", "machine learning", "cloud", "cyber",
-            "tech", "semiconductor", "digital", "data", "computing", "software"
-        },
-        "energy": {
-            "oil", "gas", "uranium", "energy", "barrel", "renewable",
-            "opec", "crude", "petroleum", "natural gas"
-        },
-        "defense": {
-            "defense", "military", "weapons", "nato", "rearmament",
-            "arms", "security", "aerospace"
-        },
-        "finance": {
-            "banks", "insurance", "rates", "bonds", "treasury",
-            "financial", "banking", "credit", "loan"
-        },
-        "real_estate": {
-            "real estate", "property", "epra", "reits", "infrastructure",
-            "construction", "housing", "mortgage"
-        },
-        "consumer": {
-            "retail", "consumer", "luxury", "purchase", "disposable income",
-            "spending", "sales", "e-commerce"
-        },
-        "healthcare": {
-            "health", "biotech", "pharma", "vaccine", "fda",
-            "clinical trial", "medicine", "medical", "drug"
-        },
-        "crypto": {
-            "crypto", "cryptocurrency", "bitcoin", "ethereum", "blockchain",
-            "altcoin", "token", "defi", "nft", "binance", "coinbase",
-            "web3", "mining", "wallet", "staking", "smart contract",
-            "btc", "eth", "xrp", "sol", "solana", "cardano", "dao"
-        }
-    },
-    "regions": {
-        "europe": {
-            "europe", "france", "ecb", "germany", "italy", "eurozone",
-            "eu", "european union", "brussels", "london", "uk"
-        },
-        "usa": {
-            "usa", "fed", "s&p", "nasdaq", "dow jones", "united states",
-            "america", "washington", "wall street"
-        },
-        "asia": {
-            "china", "japan", "korea", "india", "asia", "emerging asia",
-            "beijing", "tokyo", "shanghai", "hong kong"
-        },
-        "global": {
-            "world", "acwi", "international", "global", "worldwide",
-            "emerging markets", "brics"
-        }
-    }
-}
-
-# HTTP Session for connection reuse
-SESSION = requests.Session()
-SESSION.headers.update({
-    "User-Agent": "TradePulseBot/1.0",
-    "Accept": "application/json",
-    "Connection": "keep-alive"
-})
-
-# File paths
-MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models")
-NEWS_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "news.json")
-THEMES_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "themes.json")
-
-# Create directories
-os.makedirs(MODELS_DIR, exist_ok=True)
-os.makedirs(os.path.dirname(NEWS_JSON_PATH), exist_ok=True)
-
-# Dynamic limits allocation
-def allocate_limits(total: int, weights: Dict[str, float]) -> Dict[str, int]:
-    """Dynamically allocate limits based on weights"""
-    total_weight = sum(weights.values())
-    allocated = {k: int(total * (w / total_weight)) for k, w in weights.items()}
-    
-    # Adjust for rounding errors
-    diff = total - sum(allocated.values())
-    if diff != 0:
-        # Add difference to largest allocation
-        max_key = max(allocated.keys(), key=lambda k: allocated[k])
-        allocated[max_key] += diff
-    
-    return allocated
-
-def _quick_self_tests() -> None:
-    """Quick self-tests for core functions"""
-    # Vérifie que la somme des allocations == total
-    test_weights = {"a": 0.5, "b": 0.3, "c": 0.2}
-    alloc = allocate_limits(100, test_weights)
-    assert sum(alloc.values()) == 100, "allocate_limits somme incorrecte"
-    assert all(v > 0 for v in alloc.values()), "Allocation nulle détectée"
-    logger.info("✅ self-test allocate_limits OK")
-
-# Configuration with dynamic allocation
-BASE_COUNTRY_WEIGHTS = {
-    "us": 0.30,
-    "france": 0.15,
-    "uk": 0.12,
-    "germany": 0.12,
-    "china": 0.10,
-    "japan": 0.08,
-    "global": 0.13
-}
-
-BASE_SOURCE_WEIGHTS = {
-    "general_news": 0.25,
-    "stock_news": 0.40,
-    "crypto_news": 0.15,
-    "fmp_articles": 0.12,
-    "press_releases": 0.08
-}
-
-CONFIG = {
-    "api_key": os.environ.get("FMP_API_KEY", ""),
-    "endpoints": {
-        "general_news": "https://financialmodelingprep.com/stable/news/general-latest",
-        "fmp_articles": "https://financialmodelingprep.com/stable/fmp-articles",
-        "stock_news": "https://financialmodelingprep.com/stable/news/stock",
-        "crypto_news": "https://financialmodelingprep.com/stable/news/crypto", 
-        "press_releases": "https://financialmodelingprep.com/stable/news/press-releases",
-        "earnings_calendar": "https://financialmodelingprep.com/api/v3/earning_calendar",
-        "economic_calendar": "https://financialmodelingprep.com/api/v3/economic_calendar",
-        "ipos_calendar": "https://financialmodelingprep.com/stable/ipos-calendar",
-        "mergers_acquisitions": "https://financialmodelingprep.com/stable/mergers-acquisitions-latest"
-    },
-    "news_limits": allocate_limits(120, BASE_SOURCE_WEIGHTS),
-    "output_limits": allocate_limits(MAX_TOTAL, BASE_COUNTRY_WEIGHTS),
-    "category_limits": {
-        "crypto": 8
-    },
-    "max_total_articles": MAX_TOTAL,
-    "days_ahead": DAYS_AHEAD,
-    "days_back": DAYS_BACK
-}
-
-# -------------------------------------------------
-# === ENHANCED HELPER FUNCTIONS ==================
-# -------------------------------------------------
+    return False
 
 def embed(text: str) -> Optional[np.ndarray]:
     """Generate embeddings for text"""
@@ -479,32 +407,6 @@ def embed(text: str) -> Optional[np.ndarray]:
     except Exception as e:
         logger.error(f"Embedding error: {e}")
         return None
-
-def ml_predict(text: str, clf):
-    """ML prediction with fallback"""
-    if clf is None or not EMBED_MODEL:
-        return None, 0.0
-    try:
-        vec = embed(text)
-        if vec is None:
-            return None, 0.0
-        vec = vec.reshape(1, -1)
-        prediction = clf.predict(vec)[0]
-        confidence = clf.predict_proba(vec).max()
-        return prediction, confidence
-    except Exception as e:
-        logger.error(f"ML prediction error: {e}")
-        return None, 0.0
-
-def detect_language(text: str) -> str:
-    """Language detection with fallback"""
-    if not ML_ENABLED:
-        return "en"
-    try:
-        lang = detect(text)[:2]
-        return lang if lang in NLP_PIPELINES else "en"
-    except:
-        return "en"
 
 def expand_with_faiss(token: str, topk: int = 3) -> List[str]:
     """Semantic keyword expansion using FAISS"""
@@ -520,45 +422,6 @@ def expand_with_faiss(token: str, topk: int = 3) -> List[str]:
     except Exception as e:
         logger.error(f"FAISS expansion error: {e}")
         return []
-
-def enhanced_keyword_matching(text: str, weight_class: str) -> int:
-    """Enhanced keyword matching with regex and semantic expansion"""
-    if weight_class not in KEYWORD_PATTERNS:
-        return 0
-    
-    matches = 0
-    text_lower = text.lower()
-    
-    # Pattern-based matching
-    for pattern in KEYWORD_PATTERNS[weight_class]:
-        if pattern.search(text):
-            matches += 1
-    
-    # Semantic expansion (if FAISS available)
-    if faiss_index is not None:
-        for keyword in KEYWORDS_CONFIG[weight_class]:
-            expanded = expand_with_faiss(keyword)
-            for exp_kw in expanded:
-                if exp_kw in text_lower:
-                    matches += 0.5  # Lower weight for semantic matches
-    
-    return int(matches)
-
-def theme_keyword_matching(text: str, theme_keywords: Set[str]) -> bool:
-    """Enhanced theme matching with word boundaries"""
-    text_lower = text.lower()
-    for keyword in theme_keywords:
-        # Use regex with word boundaries for more accurate matching
-        pattern = re.compile(rf'\b{re.escape(keyword)}\b', re.IGNORECASE)
-        if pattern.search(text):
-            return True
-        
-        # Semantic expansion
-        for exp_kw in expand_with_faiss(keyword):
-            if exp_kw in text_lower:
-                return True
-    
-    return False
 
 def make_uid(title: str, source: str, raw_date: str) -> str:
     """Generate unique identifier for deduplication"""
@@ -576,94 +439,31 @@ def read_existing_news() -> Optional[Dict]:
     except:
         return None
 
-# -------------------------------------------------
-# === ENHANCED API FETCHING ======================
-# -------------------------------------------------
+# ---------------------------------------------------------------------------
+# 🌐 ENHANCED API FETCHING
+# ---------------------------------------------------------------------------
 
-if OBSERVABILITY_ENABLED and breaker:
-    @breaker
-    async def fetch_api_data_async(endpoint: str, params: Optional[Dict] = None) -> List[Dict]:
-        """Enhanced async API fetching with cache, circuit breaker, and metrics"""
-        cache_key = make_cache_key(endpoint, params)
+@retry(wait=wait_random_exponential(multiplier=1, max=30), stop=stop_after_attempt(5)) if HAS_TENACITY else lambda f: f
+def fetch_api_data(endpoint: str, params: Optional[Dict] = None) -> List[Dict]:
+    """Enhanced API fetching with retry logic"""
+    if not CONFIG["api_key"]:
+        logger.error("FMP API key not defined. Please set FMP_API_KEY in environment variables.")
+        return []
         
-        # Check cache
-        if redis_cli:
-            try:
-                if (cached := redis_cli.get(cache_key)):
-                    return orjson.loads(cached)
-            except Exception as e:
-                logger.warning(f"Cache read error: {e}")
-        
-        if params is None:
-            params = {}
-        params["apikey"] = CONFIG["api_key"]
-        
-        t0 = datetime.now()
-        try:
-            async with rate_limiter:
-                async with httpx.AsyncClient(timeout=20) as client:
-                    r = await client.get(endpoint, params=params, follow_redirects=True)
-                    if r.status_code == 429:
-                        retry_after = int(r.headers.get("Retry-After", 1))
-                        await asyncio.sleep(retry_after)
-                        return await fetch_api_data_async(endpoint, params)
-                    r.raise_for_status()
-            
-            data = r.json()
-            result = data if isinstance(data, list) else [data] if data else []
-            
-            # Cache result
-            if redis_cli:
-                try:
-                    redis_cli.setex(cache_key, 900, orjson.dumps(result))  # 15 min
-                except Exception as e:
-                    logger.warning(f"Cache write error: {e}")
-            
-            METRIC_FETCH_SUCCESS.labels(endpoint=endpoint).inc()
-            return result
-            
-        except Exception as e:
-            METRIC_ERRORS.labels(endpoint=endpoint).inc()
-            logger.error(f"API fetch error", endpoint=endpoint, error=str(e))
-            return []
-        finally:
-            METRIC_LATENCY.labels(endpoint=endpoint).observe(
-                (datetime.now() - t0).total_seconds()
-            )
-
-    def fetch_api_data(endpoint: str, params: Optional[Dict] = None) -> List[Dict]:
-        """Sync wrapper for async API fetching"""
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(fetch_api_data_async(endpoint, params))
-
-else:
-    # Fallback sync implementation
-    @retry(wait=wait_random_exponential(multiplier=1, max=30), stop=stop_after_attempt(5)) if HAS_TENACITY else lambda f: f
-    def fetch_api_data(endpoint: str, params: Optional[Dict] = None) -> List[Dict]:
-        """Fallback sync API fetching"""
-        if not CONFIG["api_key"]:
-            logger.error("FMP API key not defined. Please set FMP_API_KEY in environment variables.")
-            return []
-            
-        if params is None:
-            params = {}
-        params["apikey"] = CONFIG["api_key"]
-        
-        try:
-            logger.debug(f"Fetching data from {endpoint}")
-            response = SESSION.get(endpoint, params=params, timeout=30)
-            response.raise_for_status()
-            data = response.json()
-            logger.info(f"✅ {len(data) if isinstance(data, list) else 1} items retrieved from {endpoint}")
-            return data if isinstance(data, list) else [data] if data else []
-        except Exception as e:
-            logger.error(f"❌ Error fetching from {endpoint}: {str(e)}")
-            return []
+    if params is None:
+        params = {}
+    params["apikey"] = CONFIG["api_key"]
+    
+    try:
+        logger.debug(f"Fetching data from {endpoint}")
+        response = SESSION.get(endpoint, params=params, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+        logger.info(f"✅ {len(data) if isinstance(data, list) else 1} items retrieved from {endpoint}")
+        return data if isinstance(data, list) else [data] if data else []
+    except Exception as e:
+        logger.error(f"❌ Error fetching from {endpoint}: {str(e)}")
+        return []
 
 def fetch_articles_by_period(endpoint: str, start_date: str, end_date: str, 
                            source_type: Optional[str] = None, days_interval: int = 7, 
@@ -707,24 +507,23 @@ def fetch_articles_by_period(endpoint: str, start_date: str, end_date: str,
     logger.info(f"Total articles retrieved for the period: {len(all_articles)}")
     return all_articles
 
-# -------------------------------------------------
-# === NEWS SOURCE GETTERS (FACTORY PATTERN) ======
-# -------------------------------------------------
+# ---------------------------------------------------------------------------
+# 📰 NEWS SOURCE GETTERS
+# ---------------------------------------------------------------------------
 
 def _make_news_getter(endpoint_key: str):
     def _getter():
         today = datetime.today()
         start = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
-        end   = today.strftime("%Y-%m-%d")
+        end = today.strftime("%Y-%m-%d")
         return fetch_articles_by_period(
             CONFIG["endpoints"][endpoint_key], start, end, endpoint_key
         )
     _getter.__name__ = f"get_{endpoint_key}"
     return _getter
 
-# fabrique automatiquement les getters voulus
-for _key in ("general_news", "fmp_articles",
-             "stock_news", "crypto_news", "press_releases"):
+# Auto-generate getters
+for _key in ("general_news", "fmp_articles", "stock_news", "crypto_news", "press_releases"):
     globals()[f"get_{_key}"] = _make_news_getter(_key)
 
 def get_earnings_calendar() -> List[Dict]:
@@ -732,10 +531,7 @@ def get_earnings_calendar() -> List[Dict]:
     today = datetime.now().strftime("%Y-%m-%d")
     future = (datetime.now() + timedelta(days=CONFIG["days_ahead"])).strftime("%Y-%m-%d")
     
-    params = {
-        "from": today,
-        "to": future
-    }
+    params = {"from": today, "to": future}
     return fetch_api_data(CONFIG["endpoints"]["earnings_calendar"], params)
 
 def get_economic_calendar() -> List[Dict]:
@@ -743,10 +539,7 @@ def get_economic_calendar() -> List[Dict]:
     today = datetime.now().strftime("%Y-%m-%d")
     future = (datetime.now() + timedelta(days=CONFIG["days_ahead"])).strftime("%Y-%m-%d")
     
-    params = {
-        "from": today,
-        "to": future
-    }
+    params = {"from": today, "to": future}
     return fetch_api_data(CONFIG["endpoints"]["economic_calendar"], params)
 
 def get_ipos_calendar() -> List[Dict]:
@@ -754,57 +547,60 @@ def get_ipos_calendar() -> List[Dict]:
     today = datetime.now().strftime("%Y-%m-%d")
     future = (datetime.now() + timedelta(days=CONFIG["days_ahead"])).strftime("%Y-%m-%d")
 
-    params = {
-        "from": today,
-        "to": future
-    }
-
+    params = {"from": today, "to": future}
     return fetch_api_data(CONFIG["endpoints"]["ipos_calendar"], params)
 
 def get_mergers_acquisitions(limit: int = 100) -> List[Dict]:
     """Fetches latest M&A operations"""
-    params = {
-        "page": 0,
-        "limit": limit
-    }
+    params = {"page": 0, "limit": limit}
     return fetch_api_data(CONFIG["endpoints"]["mergers_acquisitions"], params)
 
-# -------------------------------------------------
-# === ENHANCED CLASSIFICATION ====================
-# -------------------------------------------------
+# ---------------------------------------------------------------------------
+# 🧠 ENHANCED CLASSIFICATION
+# ---------------------------------------------------------------------------
+
+def ml_predict(text: str, clf):
+    """ML prediction with fallback"""
+    if clf is None or not EMBED_MODEL:
+        return None, 0.0
+    try:
+        vec = embed(text)
+        if vec is None:
+            return None, 0.0
+        vec = vec.reshape(1, -1)
+        prediction = clf.predict(vec)[0]
+        confidence = clf.predict_proba(vec).max()
+        return prediction, confidence
+    except Exception as e:
+        logger.error(f"ML prediction error: {e}")
+        return None, 0.0
 
 def determine_category_ml(article: Dict, source: Optional[str] = None) -> Category:
     """ML-enhanced category determination with fallback"""
     text = f"{article.get('title', '')} {article.get('text', '')}"
     
-    # Try ML first
     ml_cat, confidence = ml_predict(text, CATEGORY_CLF)
     if ml_cat and confidence > 0.55:
         logger.debug(f"ML category: {ml_cat} (confidence: {confidence:.2f})")
         return ml_cat
     
-    # Fallback to rule-based
     return determine_category_fallback(article, source)
 
 def determine_category_fallback(article: Dict, source: Optional[str] = None) -> Category:
     """Enhanced rule-based category determination"""
-    # Check symbol for crypto
     if article.get("symbol") and any(ticker in str(article.get("symbol")) for ticker in ["BTC", "ETH", "CRYPTO", "COIN"]):
         return "crypto"
         
     text = (article.get("text", "") + " " + article.get("title", "")).lower()
     
-    # Use enhanced theme matching
     for theme_category, themes in THEMES_DOMINANTS["sectors"].items():
         if theme_keyword_matching(text, themes):
             return theme_category if theme_category in ["crypto", "tech"] else "companies"
     
-    # Macro themes
     for theme_name, theme_keywords in THEMES_DOMINANTS["macroeconomics"].items():
         if theme_keyword_matching(text, theme_keywords):
             return "economy"
     
-    # Default fallback with keyword enhancement
     if enhanced_keyword_matching(text, "high_impact") > 2:
         return "markets"
     
@@ -814,13 +610,11 @@ def determine_impact_ml(article: Dict) -> Impact:
     """ML-enhanced impact determination with fallback"""
     text = f"{article.get('title', '')} {article.get('text', '')}"
     
-    # Try ML first
     ml_impact, confidence = ml_predict(text, IMPACT_CLF)
     if ml_impact and confidence > 0.55:
         logger.debug(f"ML impact: {ml_impact} (confidence: {confidence:.2f})")
         return ml_impact
     
-    # Fallback to enhanced rule-based
     return determine_impact_fallback(article)
 
 def determine_impact_fallback(article: Dict) -> Impact:
@@ -840,11 +634,6 @@ def determine_impact_fallback(article: Dict) -> Impact:
     
     text = (article.get("text", "") + " " + article.get("title", "")).lower()
     
-    # Use enhanced keyword matching
-    positive_matches = enhanced_keyword_matching(text, "high_impact")  # Assuming positive context
-    negative_matches = enhanced_keyword_matching(text, "medium_impact")  # Mixed sentiment
-    
-    # Simple heuristic based on keyword patterns
     positive_patterns = [
         r'\b(surge|soar|gain|rise|jump|boost|recovery|profit|beat|success|bullish|rally|growth)\b',
         r'\b(positive|optimistic|momentum|exceed|improvement|confidence|strong|upgrade)\b'
@@ -865,35 +654,6 @@ def determine_impact_fallback(article: Dict) -> Impact:
     else:
         return "neutral"
 
-def determine_country_ner(article: Dict) -> str:
-    """NER-enhanced country determination with fallback"""
-    if not NLP_PIPELINES:
-        return determine_country_fallback(article)
-    
-    lang = article.get("lang", "en")
-    nlp = NLP_PIPELINES.get(lang, NLP_PIPELINES.get("en"))
-    
-    if nlp:
-        try:
-            doc = nlp(article.get("title", ""))
-            for ent in doc.ents:
-                if ent.label_ == "GPE":  # Geopolitical entity
-                    ent_text = ent.text.lower()
-                    if "france" in ent_text or "french" in ent_text:
-                        return "france"
-                    elif "germany" in ent_text or "german" in ent_text:
-                        return "germany"
-                    elif "uk" in ent_text or "britain" in ent_text or "british" in ent_text:
-                        return "uk"
-                    elif "china" in ent_text or "chinese" in ent_text:
-                        return "china"
-                    elif "japan" in ent_text or "japanese" in ent_text:
-                        return "japan"
-        except Exception as e:
-            logger.debug(f"NER error: {e}")
-    
-    return determine_country_fallback(article)
-
 def determine_country_fallback(article: Dict) -> str:
     """Enhanced rule-based country determination"""
     symbol = article.get("symbol", "")
@@ -911,17 +671,16 @@ def determine_country_fallback(article: Dict) -> str:
     
     text = (article.get("text", "") + " " + article.get("title", "")).lower()
     
-    # Use enhanced theme matching for regions
     for region_name, region_keywords in THEMES_DOMINANTS["regions"].items():
         if theme_keyword_matching(text, region_keywords):
             return region_name if region_name in ["france", "uk", "germany", "china", "japan"] else "us"
     
     return "us"
 
-# Use ML-enhanced functions
+# Use enhanced functions
 determine_category = determine_category_ml
 determine_impact = determine_impact_ml
-determine_country = determine_country_ner
+determine_country = determine_country_fallback
 
 def extract_themes(article: Dict) -> Dict[str, List[str]]:
     """Enhanced theme identification with improved matching"""
@@ -935,19 +694,70 @@ def extract_themes(article: Dict) -> Dict[str, List[str]]:
 
     return themes_detected
 
-def compute_sentiment_distribution(articles: List[Dict]) -> Dict[str, float]:
-    """Calculates sentiment distribution for a set of articles"""
-    sentiment_counts = Counter(article["impact"] for article in articles if "impact" in article)
-    total = sum(sentiment_counts.values())
+def compute_importance_score(article: Dict, category: str) -> float:
+    """Enhanced importance scoring with optimized weights"""
+    content = f"{article.get('title', '')} {article.get('content', '')}".lower()
+    article_source = article.get("source", "").lower()
+    
+    # Enhanced keyword scoring with compiled patterns
+    high_matches = enhanced_keyword_matching(content, "high_impact")
+    medium_matches = enhanced_keyword_matching(content, "medium_impact")
+    low_matches = enhanced_keyword_matching(content, "low_impact")
+    
+    # Apply dynamic weights
+    high_keyword_score = min(40, high_matches * WEIGHTS.get("high_keywords", 4))
+    medium_keyword_score = min(20, medium_matches * WEIGHTS.get("medium_keywords", 2))
+    low_keyword_score = min(10, low_matches * WEIGHTS.get("low_keywords", 1))
+    
+    # Enhanced source scoring
+    source_score = 0
+    for source, weight in SOURCE_WEIGHTS.items():
+        if source in article_source:
+            source_score = weight * WEIGHTS.get("source_premium", 3.5)
+            break
+    
+    # Content quality scoring
+    title_length = len(article.get("title", ""))
+    text_length = len(article.get("content", ""))
+    
+    content_score = (
+        min(5, title_length / 50) + 
+        min(10, text_length / 500)
+    ) * WEIGHTS.get("content_length", 1)
+    
+    # Impact scoring
+    impact = article.get("impact", "neutral")
+    impact_multiplier = {"negative": 1.2, "positive": 1.1, "neutral": 1.0}[impact]
+    impact_score = 10 * impact_multiplier * WEIGHTS.get("impact_factor", 2.5)
+    
+    # Recency boost
+    try:
+        article_date = datetime.strptime(article.get("rawDate", "").split(" ")[0], "%Y-%m-%d")
+        days_old = (datetime.now() - article_date).days
+        recency_multiplier = max(0.5, 1 - (days_old / 30)) * WEIGHTS.get("recency_boost", 1.3)
+    except:
+        recency_multiplier = 1.0
+    
+    total_score = (
+        high_keyword_score + 
+        medium_keyword_score + 
+        low_keyword_score +
+        source_score + 
+        content_score + 
+        impact_score
+    ) * recency_multiplier
+    
+    # Category-specific adjustments
+    if category == "crypto_news":
+        total_score *= 0.9
+    elif category == "general_news":
+        total_score *= 1.1
+    
+    return min(100, max(0, total_score))
 
-    if total == 0:
-        return {"positive": 0.0, "neutral": 0.0, "negative": 0.0}
-
-    return {
-        "positive": round(sentiment_counts["positive"] / total * 100, 1),
-        "neutral": round(sentiment_counts["neutral"] / total * 100, 1),
-        "negative": round(sentiment_counts["negative"] / total * 100, 1)
-    }
+# ---------------------------------------------------------------------------
+# 📊 DATA PROCESSING FUNCTIONS
+# ---------------------------------------------------------------------------
 
 def format_date(date_str: str) -> str:
     """Formats a date in YYYY-MM-DD format to DD/MM/YYYY"""
@@ -996,9 +806,12 @@ def normalize_article(article: Dict, source: Optional[str] = None) -> Dict:
         "source_type": source
     }
     
-    # Add language detection
+    # Add language detection if ML available
     if ML_ENABLED:
-        normalized["lang"] = detect_language(title + " " + text)
+        try:
+            normalized["lang"] = detect(title + " " + text)[:2]
+        except:
+            normalized["lang"] = "en"
     
     return normalized
 
@@ -1015,150 +828,222 @@ def remove_duplicates_by_id(news_list: List[Dict]) -> List[Dict]:
     
     return unique_news
 
-def compute_importance_score(article: Dict, category: str) -> float:
-    """Enhanced importance scoring with explicit weights and semantic matching"""
-    content = f"{article.get('title', '')} {article.get('content', '')}".lower()
-    article_source = article.get("source", "").lower()
+def fetch_all_news_sources() -> Dict[str, List[Dict]]:
+    """Fetch all news sources concurrently with enhanced error handling"""
+    endpoint_funcs = {
+        "general_news": get_general_news,
+        "fmp_articles": get_fmp_articles,
+        "stock_news": get_stock_news,
+        "crypto_news": get_crypto_news,
+        "press_releases": get_press_releases
+    }
     
-    # Enhanced keyword scoring with regex patterns
-    high_matches = enhanced_keyword_matching(content, "high_impact")
-    medium_matches = enhanced_keyword_matching(content, "medium_impact")
+    results = {}
     
-    # Apply dynamic weights
-    high_keyword_score = min(40, high_matches * WEIGHTS.get("high_keywords", 4))
-    medium_keyword_score = min(20, medium_matches * WEIGHTS.get("medium_keywords", 2))
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        future_to_name = {executor.submit(func): name for name, func in endpoint_funcs.items()}
+        
+        for future in as_completed(future_to_name):
+            name = future_to_name[future]
+            try:
+                results[name] = future.result()
+                logger.info(f"✅ {name}: {len(results[name])} articles fetched")
+            except Exception as e:
+                logger.error(f"❌ {name} failed: {str(e)}")
+                results[name] = []
     
-    # Enhanced source scoring
-    source_score = 0
-    for source, weight in SOURCE_WEIGHTS.items():
-        if source in article_source:
-            source_score = weight * WEIGHTS.get("source_premium", 3)
-            break
-    
-    # Content quality scoring
-    title_length = len(article.get("title", ""))
-    text_length = len(article.get("content", ""))
-    
-    content_score = (
-        min(5, title_length / 50) + 
-        min(10, text_length / 500)
-    ) * WEIGHTS.get("content_length", 1)
-    
-    # Impact scoring with enhanced detection
-    impact = article.get("impact", "neutral")
-    impact_multiplier = {"negative": 1.2, "positive": 1.1, "neutral": 1.0}[impact]
-    impact_score = 10 * impact_multiplier * WEIGHTS.get("impact_factor", 2.5)
-    
-    # Recency boost
-    try:
-        article_date = datetime.strptime(article.get("rawDate", "").split(" ")[0], "%Y-%m-%d")
-        days_old = (datetime.now() - article_date).days
-        recency_multiplier = max(0.5, 1 - (days_old / 30)) * WEIGHTS.get("recency_boost", 1.2)
-    except:
-        recency_multiplier = 1.0
-    
-    total_score = (
-        high_keyword_score + 
-        medium_keyword_score + 
-        source_score + 
-        content_score + 
-        impact_score
-    ) * recency_multiplier
-    
-    # Category-specific adjustments
-    if category == "crypto_news":
-        total_score *= 0.9  # Slightly reduce crypto importance
-    elif category == "general_news":
-        total_score *= 1.1  # Boost general news
-    
-    return min(100, max(0, total_score))
+    return results
 
-def calculate_output_limits(articles_by_country: Dict, max_total: int = 150) -> Dict[str, int]:
-    """Enhanced output limits calculation with dynamic allocation"""
-    if not articles_by_country:
-        return CONFIG["output_limits"]
+def process_news_data(news_sources: Dict[str, List[Dict]]) -> Dict:
+    """Enhanced news processing with improved diversity tracking"""
+    formatted_data = {"lastUpdated": datetime.now().isoformat()}
     
-    # Calculate actual distribution
-    actual_counts = {country: len(articles) for country, articles in articles_by_country.items()}
-    total_actual = sum(actual_counts.values())
+    for country in CONFIG["output_limits"].keys():
+        formatted_data[country] = []
     
-    if total_actual == 0:
-        return CONFIG["output_limits"]
+    all_articles = []
+    source_stats = Counter()
+    category_stats = Counter()
     
-    # Blend base weights with actual distribution
-    adjusted_weights = {}
-    for country in BASE_COUNTRY_WEIGHTS.keys():
-        base_weight = BASE_COUNTRY_WEIGHTS[country]
-        actual_weight = actual_counts.get(country, 0) / total_actual
-        # 70% base, 30% actual distribution
-        adjusted_weights[country] = 0.7 * base_weight + 0.3 * actual_weight
-    
-    # Handle countries not in base weights
-    for country in actual_counts.keys():
-        if country not in adjusted_weights:
-            adjusted_weights[country] = 0.05  # Small allocation
-    
-    return allocate_limits(max_total, adjusted_weights)
-
-def determine_event_impact(event: Dict) -> str:
-    """Enhanced event impact determination"""
-    high_impact_patterns = [
-        r'\b(interest rate|fed interest|ecb interest|inflation rate|gdp|employment)\b',
-        r'\b(non-farm payrolls|cpi|retail sales|fomc|federal reserve)\b'
-    ]
-    
-    medium_impact_patterns = [
-        r'\b(pmi|consumer confidence|trade balance|industrial production)\b',
-        r'\b(housing starts|durable goods|factory orders|earnings report)\b'
-    ]
-    
-    event_name = event.get("event", "").lower()
-    
-    for pattern in high_impact_patterns:
-        if re.search(pattern, event_name, re.IGNORECASE):
-            return "high"
-    
-    for pattern in medium_impact_patterns:
-        if re.search(pattern, event_name, re.IGNORECASE):
-            return "medium"
-    
-    # Check explicit impact field
-    explicit_impact = event.get("impact", "").lower()
-    if explicit_impact in ["high", "medium", "low"]:
-        return explicit_impact
-    
-    return "low"
-
-def calculate_event_score(event: Dict) -> int:
-    """Enhanced event scoring"""
-    score = 0
-    
-    impact = determine_event_impact(event)
-    impact_scores = {"high": 10, "medium": 5, "low": 1}
-    score += impact_scores.get(impact, 1)
-    
-    # Country importance
-    country_weights = {"US": 3, "EU": 2, "UK": 2, "CN": 1, "JP": 1}
-    country = event.get("country", "")
-    score += country_weights.get(country, 0)
-    
-    # Forecast vs actual deviation
-    if event.get("actual") and event.get("forecast"):
-        try:
-            actual = float(re.sub(r'[^\d.-]', '', str(event.get("actual"))))
-            forecast = float(re.sub(r'[^\d.-]', '', str(event.get("forecast"))))
-            deviation = abs((actual - forecast) / forecast) if forecast != 0 else 0
+    for source_type, articles in news_sources.items():
+        for article in articles:
+            normalized = normalize_article(article, source_type)
             
-            if deviation > 0.1:  # 10%+ deviation
-                score += 5
-            elif deviation > 0.05:  # 5%+ deviation
-                score += 3
-            elif deviation > 0.02:  # 2%+ deviation
-                score += 1
-        except (ValueError, TypeError, ZeroDivisionError):
-            pass
+            # Enhanced content quality checks
+            if (len(normalized["title"]) < 10 or 
+                len(normalized["text"]) < 50 or
+                not normalized["title"].strip() or
+                not normalized["text"].strip()):
+                continue
+            
+            category = determine_category(normalized, source_type)
+            country = determine_country(normalized)
+            impact = determine_impact(normalized)
+            
+            news_item = {
+                "title": normalized["title"],
+                "content": normalized["text"],
+                "source": normalized["site"],
+                "rawDate": normalized["publishedDate"],
+                "date": format_date(normalized["publishedDate"]),
+                "time": format_time(normalized["publishedDate"]),
+                "category": category,
+                "impact": impact,
+                "country": country,
+                "url": normalized.get("url", ""),
+                "themes": extract_themes(normalized),
+                "source_type": source_type
+            }
+            
+            if "lang" in normalized:
+                news_item["lang"] = normalized["lang"]
+            
+            news_item["id"] = make_uid(news_item["title"], news_item["source"], news_item["rawDate"])
+            news_item["importance_score"] = compute_importance_score(news_item, source_type)
+            
+            all_articles.append(news_item)
+            source_stats[normalized["site"]] += 1
+            category_stats[category] += 1
     
-    return score
+    # Remove duplicates and sort by importance
+    all_articles = remove_duplicates_by_id(all_articles)
+    all_articles.sort(key=lambda x: x["importance_score"], reverse=True)
+    
+    # Distribute by country with enhanced logic
+    articles_by_country = {}
+    for article in all_articles:
+        country = article["country"]
+        if country not in articles_by_country:
+            articles_by_country[country] = []
+        articles_by_country[country].append(article)
+    
+    # Apply limits by country
+    for country, articles in articles_by_country.items():
+        limit = CONFIG["output_limits"].get(country, 10)
+        if country in formatted_data:
+            formatted_data[country] = articles[:limit]
+        else:
+            if "global" not in formatted_data:
+                formatted_data["global"] = []
+            formatted_data["global"].extend(articles[:limit])
+    
+    # Apply category limits
+    if "category_limits" in CONFIG:
+        for category, limit in CONFIG["category_limits"].items():
+            category_articles = []
+            for country, articles in formatted_data.items():
+                if isinstance(articles, list):
+                    for article in articles:
+                        if article.get("category") == category:
+                            category_articles.append((country, article))
+            
+            if len(category_articles) > limit:
+                category_articles.sort(key=lambda x: x[1].get("importance_score", 0), reverse=True)
+                articles_to_remove = category_articles[limit:]
+                
+                for country, article in articles_to_remove:
+                    if country in formatted_data and isinstance(formatted_data[country], list):
+                        if article in formatted_data[country]:
+                            formatted_data[country].remove(article)
+    
+    final_count = sum(len(articles) for articles in formatted_data.values() if isinstance(articles, list))
+    logger.info(f"📰 Final article count: {final_count}")
+    
+    return formatted_data
+
+def process_events_data(earnings: List[Dict], economic: List[Dict]) -> List[Dict]:
+    """Enhanced event processing"""
+    events = []
+    
+    for eco_event in economic:
+        event = {
+            "title": eco_event.get("event", ""),
+            "date": format_date(eco_event.get("date", "")),
+            "time": eco_event.get("time", "09:00"),
+            "type": "economic",
+            "importance": "medium",
+            "score": 5
+        }
+        events.append(event)
+    
+    for earning in earnings:
+        if earning.get("epsEstimated"):
+            symbol = earning.get('symbol', 'Unknown')
+            eps = earning.get('epsEstimated', 0)
+            
+            event = {
+                "title": f"Earnings {symbol} - Forecast: ${eps} per share",
+                "date": format_date(earning.get("date", "")),
+                "time": "16:30",
+                "type": "earnings",
+                "importance": "medium",
+                "score": 5
+            }
+            events.append(event)
+    
+    events.sort(key=lambda x: (x["score"], x["date"]), reverse=True)
+    return events[:20]
+
+def process_ipos_data(ipos: List[Dict]) -> List[Dict]:
+    """Enhanced IPO processing"""
+    formatted_ipos = []
+    for ipo in ipos:
+        try:
+            company = ipo.get('company', 'Unknown Company')
+            symbol = ipo.get('symbol', 'N/A')
+            
+            formatted_ipos.append({
+                "title": f"IPO: {company} ({symbol})",
+                "date": format_date(ipo.get("date", "")),
+                "time": "09:00",
+                "type": "ipo",
+                "importance": "medium",
+                "score": 6,
+                "exchange": ipo.get("exchange", ""),
+                "priceRange": ipo.get("priceRange", ""),
+                "marketCap": ipo.get("marketCap", ""),
+                "status": ipo.get("actions", "Expected")
+            })
+        except Exception as e:
+            logger.warning(f"Error processing IPO: {str(e)}")
+    return formatted_ipos
+
+def process_ma_data(ma_list: List[Dict]) -> List[Dict]:
+    """Enhanced M&A processing"""
+    formatted_ma = []
+    for ma in ma_list:
+        try:
+            company = ma.get('companyName', 'Unknown Company')
+            target = ma.get('targetedCompanyName', 'Unknown Target')
+            
+            formatted_ma.append({
+                "title": f"M&A: {company} acquires {target}",
+                "date": format_date(ma.get("transactionDate", "")),
+                "time": "10:00",
+                "type": "m&a",
+                "importance": "medium",
+                "score": 7,
+                "source": ma.get("link", ""),
+                "symbol": ma.get("symbol", ""),
+                "targetedSymbol": ma.get("targetedSymbol", "")
+            })
+        except Exception as e:
+            logger.warning(f"Error processing M&A: {str(e)}")
+    return formatted_ma
+
+def compute_sentiment_distribution(articles: List[Dict]) -> Dict[str, float]:
+    """Calculates sentiment distribution for a set of articles"""
+    sentiment_counts = Counter(article["impact"] for article in articles if "impact" in article)
+    total = sum(sentiment_counts.values())
+
+    if total == 0:
+        return {"positive": 0.0, "neutral": 0.0, "negative": 0.0}
+
+    return {
+        "positive": round(sentiment_counts["positive"] / total * 100, 1),
+        "neutral": round(sentiment_counts["neutral"] / total * 100, 1),
+        "negative": round(sentiment_counts["negative"] / total * 100, 1)
+    }
 
 def extract_top_themes(news_data: Dict, days: int = 30, max_examples: int = 3, 
                       exclude_themes: Optional[Dict] = None) -> Dict:
@@ -1194,11 +1079,9 @@ def extract_top_themes(news_data: Dict, days: int = 30, max_examples: int = 3,
         
         for article in country_articles:
             try:
-                # Enhanced date parsing
                 if "rawDate" in article:
                     date_str = article["rawDate"].split(" ")[0]
                 elif "date" in article:
-                    # Handle DD/MM/YYYY format
                     date_parts = article["date"].split("/")
                     if len(date_parts) == 3:
                         date_str = f"{date_parts[2]}-{date_parts[1]}-{date_parts[0]}"
@@ -1267,285 +1150,6 @@ def extract_top_themes(news_data: Dict, days: int = 30, max_examples: int = 3,
     
     return top_themes_with_details
 
-def build_theme_summary(theme_name: str, theme_data: Dict) -> str:
-    """Enhanced theme summary generation"""
-    count = theme_data.get("count", 0)
-    articles = theme_data.get("articles", [])
-    sentiment_distribution = theme_data.get("sentiment_distribution", {})
-
-    if not articles:
-        return f"The theme '{theme_name}' appeared in {count} articles recently."
-
-    sentiment_info = ""
-    if sentiment_distribution:
-        pos = sentiment_distribution.get("positive", 0)
-        neg = sentiment_distribution.get("negative", 0)
-        neu = sentiment_distribution.get("neutral", 0)
-        
-        if pos > neg + 20:
-            sentiment_info = f" Market sentiment is predominantly positive ({pos:.1f}%)."
-        elif neg > pos + 20:
-            sentiment_info = f" Market sentiment is predominantly negative ({neg:.1f}%)."
-        else:
-            sentiment_info = f" Market sentiment is mixed ({pos:.1f}% positive, {neg:.1f}% negative, {neu:.1f}% neutral)."
-
-    examples = articles[:3]  # Top 3 examples
-    examples_text = "Examples: " + " | ".join(f"« {ex} »" for ex in examples)
-
-    return (
-        f"📊 **{theme_name.upper()}** was prominent in **{count} articles** during the analysis period."
-        f"{sentiment_info} {examples_text}"
-    )
-
-def fetch_all_news_sources() -> Dict[str, List[Dict]]:
-    """Fetch all news sources concurrently with enhanced error handling"""
-    endpoint_funcs = {
-        "general_news": get_general_news,
-        "fmp_articles": get_fmp_articles,
-        "stock_news": get_stock_news,
-        "crypto_news": get_crypto_news,
-        "press_releases": get_press_releases
-    }
-    
-    results = {}
-    
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        future_to_name = {executor.submit(func): name for name, func in endpoint_funcs.items()}
-        
-        for future in as_completed(future_to_name):
-            name = future_to_name[future]
-            try:
-                results[name] = future.result()
-                logger.info(f"✅ {name}: {len(results[name])} articles fetched")
-            except Exception as e:
-                logger.error(f"❌ {name} failed: {str(e)}")
-                results[name] = []
-    
-    return results
-
-def process_news_data(news_sources: Dict[str, List[Dict]]) -> Dict:
-    """Enhanced news processing with improved diversity tracking"""
-    formatted_data = {
-        "lastUpdated": datetime.now().isoformat()
-    }
-    
-    for country in CONFIG["output_limits"].keys():
-        formatted_data[country] = []
-    
-    all_articles = []
-    
-    # Enhanced source diversity tracking
-    source_stats = Counter()
-    category_stats = Counter()
-    
-    for source_type, articles in news_sources.items():
-        for article in articles:
-            normalized = normalize_article(article, source_type)
-            
-            # Enhanced content quality checks
-            if (len(normalized["title"]) < 10 or 
-                len(normalized["text"]) < 50 or
-                not normalized["title"].strip() or
-                not normalized["text"].strip()):
-                continue
-            
-            category = determine_category(normalized, source_type)
-            country = determine_country(normalized)
-            impact = determine_impact(normalized)
-            
-            news_item = {
-                "title": normalized["title"],
-                "content": normalized["text"],
-                "source": normalized["site"],
-                "rawDate": normalized["publishedDate"],
-                "date": format_date(normalized["publishedDate"]),
-                "time": format_time(normalized["publishedDate"]),
-                "category": category,
-                "impact": impact,
-                "country": country,
-                "url": normalized.get("url", ""),
-                "themes": extract_themes(normalized),
-                "source_type": source_type
-            }
-            
-            # Add language if detected
-            if "lang" in normalized:
-                news_item["lang"] = normalized["lang"]
-            
-            # Generate unique ID for deduplication
-            news_item["id"] = make_uid(news_item["title"], news_item["source"], news_item["rawDate"])
-            
-            news_item["importance_score"] = compute_importance_score(news_item, source_type)
-            
-            all_articles.append(news_item)
-            source_stats[normalized["site"]] += 1
-            category_stats[category] += 1
-    
-    # Enhanced diversity analysis
-    total_articles = len(all_articles)
-    if total_articles > 0:
-        logger.info(f"📊 Source diversity analysis:")
-        dominant_sources = source_stats.most_common(5)
-        for source, count in dominant_sources:
-            share = count / total_articles * 100
-            logger.info(f"  {source}: {count} articles ({share:.1f}%)")
-            if share > 40:  # Alert for over-dominance
-                logger.warning(f"⚠️ Source over-dominance detected: {source} ({share:.1f}%)")
-        
-        logger.info(f"📈 Category distribution:")
-        for category, count in category_stats.most_common():
-            share = count / total_articles * 100
-            logger.info(f"  {category}: {count} articles ({share:.1f}%)")
-    
-    # Remove duplicates by ID
-    all_articles = remove_duplicates_by_id(all_articles)
-    logger.info(f"Deduplication: {total_articles} → {len(all_articles)} articles")
-    
-    # Sort by importance score
-    all_articles.sort(key=lambda x: x["importance_score"], reverse=True)
-    
-    # Distribute by country
-    articles_by_country = {}
-    for article in all_articles:
-        country = article["country"]
-        if country not in articles_by_country:
-            articles_by_country[country] = []
-        articles_by_country[country].append(article)
-    
-    # Calculate appropriate limits with enhanced logic
-    adjusted_limits = calculate_output_limits(articles_by_country, CONFIG["max_total_articles"])
-    
-    # Apply limits by country
-    for country, articles in articles_by_country.items():
-        limit = adjusted_limits.get(country, 10)
-        if country in formatted_data:
-            formatted_data[country] = articles[:limit]
-        else:
-            if "global" not in formatted_data:
-                formatted_data["global"] = []
-            formatted_data["global"].extend(articles[:limit])
-            logger.info(f"Country {country} not handled, {len(articles[:limit])} articles added to 'global'")
-    
-    # Apply category limits with enhanced balancing
-    if "category_limits" in CONFIG:
-        for category, limit in CONFIG["category_limits"].items():
-            category_articles = []
-            for country, articles in formatted_data.items():
-                if isinstance(articles, list):
-                    for article in articles:
-                        if article.get("category") == category:
-                            category_articles.append((country, article))
-            
-            if len(category_articles) > limit:
-                # Sort by importance score and keep top articles
-                category_articles.sort(key=lambda x: x[1].get("importance_score", 0), reverse=True)
-                articles_to_remove = category_articles[limit:]
-                
-                for country, article in articles_to_remove:
-                    if country in formatted_data and isinstance(formatted_data[country], list):
-                        if article in formatted_data[country]:
-                            formatted_data[country].remove(article)
-                
-                logger.info(f"Limited category '{category}' to {limit} articles (removed {len(articles_to_remove)})")
-    
-    final_count = sum(len(articles) for articles in formatted_data.values() if isinstance(articles, list))
-    logger.info(f"📰 Final article count: {final_count}")
-    
-    return formatted_data
-
-def process_events_data(earnings: List[Dict], economic: List[Dict]) -> List[Dict]:
-    """Enhanced event processing with better scoring"""
-    events = []
-    
-    for eco_event in economic:
-        impact = determine_event_impact(eco_event)
-        score = calculate_event_score(eco_event)
-        
-        event = {
-            "title": eco_event.get("event", ""),
-            "date": format_date(eco_event.get("date", "")),
-            "time": eco_event.get("time", "09:00"),
-            "type": "economic",
-            "importance": impact,
-            "score": score
-        }
-        events.append(event)
-    
-    for earning in earnings:
-        if earning.get("epsEstimated"):
-            symbol = earning.get('symbol', 'Unknown')
-            eps = earning.get('epsEstimated', 0)
-            
-            temp_event = {
-                "event": f"Earnings {symbol}",
-                "type": "earnings",
-                "title": f"Earnings {symbol} - Forecast: ${eps} per share"
-            }
-            
-            impact = "medium"
-            score = calculate_event_score(temp_event)
-            
-            event = {
-                "title": f"Earnings {symbol} - Forecast: ${eps} per share",
-                "date": format_date(earning.get("date", "")),
-                "time": "16:30",
-                "type": "earnings",
-                "importance": impact,
-                "score": score
-            }
-            events.append(event)
-    
-    # Sort by score and date, limit to top events
-    events.sort(key=lambda x: (x["score"], x["date"]), reverse=True)
-    return events[:20]  # Increased limit
-
-def process_ipos_data(ipos: List[Dict]) -> List[Dict]:
-    """Enhanced IPO processing"""
-    formatted_ipos = []
-    for ipo in ipos:
-        try:
-            company = ipo.get('company', 'Unknown Company')
-            symbol = ipo.get('symbol', 'N/A')
-            
-            formatted_ipos.append({
-                "title": f"IPO: {company} ({symbol})",
-                "date": format_date(ipo.get("date", "")),
-                "time": "09:00",
-                "type": "ipo",
-                "importance": "medium",
-                "score": 6,
-                "exchange": ipo.get("exchange", ""),
-                "priceRange": ipo.get("priceRange", ""),
-                "marketCap": ipo.get("marketCap", ""),
-                "status": ipo.get("actions", "Expected")
-            })
-        except Exception as e:
-            logger.warning(f"Error processing IPO: {str(e)}")
-    return formatted_ipos
-
-def process_ma_data(ma_list: List[Dict]) -> List[Dict]:
-    """Enhanced M&A processing"""
-    formatted_ma = []
-    for ma in ma_list:
-        try:
-            company = ma.get('companyName', 'Unknown Company')
-            target = ma.get('targetedCompanyName', 'Unknown Target')
-            
-            formatted_ma.append({
-                "title": f"M&A: {company} acquires {target}",
-                "date": format_date(ma.get("transactionDate", "")),
-                "time": "10:00",
-                "type": "m&a",
-                "importance": "medium",
-                "score": 7,
-                "source": ma.get("link", ""),
-                "symbol": ma.get("symbol", ""),
-                "targetedSymbol": ma.get("targetedSymbol", "")
-            })
-        except Exception as e:
-            logger.warning(f"Error processing M&A: {str(e)}")
-    return formatted_ma
-
 def update_news_json_file(news_data: Dict, events: List[Dict]) -> bool:
     """Updates news.json file with formatted data"""
     try:
@@ -1576,18 +1180,11 @@ def generate_themes_json(news_data: Dict) -> bool:
         exclude_themes = {"sectors": ["crypto"]} if period != "weekly" else {}
         themes_data[period] = extract_top_themes(news_data, days=days, exclude_themes=exclude_themes)
     
-    # Generate enhanced summaries
-    for period, axes in themes_data.items():
-        for axis, themes in axes.items():
-            for theme_name, theme_data in themes.items():
-                summary = build_theme_summary(theme_name, theme_data)
-                themes_data[period][axis][theme_name]["ai_summary"] = summary
-    
     themes_output = {
         "themes": themes_data,
         "lastUpdated": datetime.now().isoformat(),
         "analysisCount": sum(len(articles) for articles in news_data.values() if isinstance(articles, list)),
-        "weights_version": "enhanced_v2",
+        "weights_version": "enhanced_v3",
         "ml_enabled": ML_ENABLED,
         "observability_enabled": OBSERVABILITY_ENABLED
     }
@@ -1606,7 +1203,7 @@ def generate_themes_json(news_data: Dict) -> bool:
 def main(args) -> bool:
     """Enhanced main execution function"""
     try:
-        print("\n🚀 TradePulse News Updater - Enhanced ML Version v2.0")
+        print("\n🚀 TradePulse News Updater - Enhanced ML Version v3.0")
         print("=" * 70)
         print(f"📊 ML Features: {'✅ Enabled' if ML_ENABLED else '❌ Disabled'}")
         print(f"📈 Observability: {'✅ Enabled' if OBSERVABILITY_ENABLED else '❌ Disabled'}")
@@ -1614,6 +1211,7 @@ def main(args) -> bool:
         print(f"🛡️ Circuit Breaker: {'✅ Active' if (OBSERVABILITY_ENABLED and breaker) else '❌ Disabled'}")
         print(f"🎯 Enhanced Scoring: ✅ Active")
         print(f"🔍 Semantic Matching: {'✅ FAISS' if faiss_index else '❌ Keyword only'}")
+        print(f"⚡ Compiled Patterns: ✅ Active")
         print("=" * 70)
         
         existing_data = read_existing_news()
@@ -1673,7 +1271,7 @@ def main(args) -> bool:
         logger.info("🎯 Dominant themes over 30 days:")
         for axis, themes in top_themes.items():
             logger.info(f"  📊 {axis.capitalize()}:")
-            for theme, details in list(themes.items())[:5]:  # Top 5 per axis
+            for theme, details in list(themes.items())[:5]:
                 sentiment = details.get("sentiment_distribution", {})
                 pos = sentiment.get("positive", 0)
                 neg = sentiment.get("negative", 0)
@@ -1705,7 +1303,7 @@ def main(args) -> bool:
         return False
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="TradePulse News Updater - Enhanced ML Version v2.0")
+    parser = argparse.ArgumentParser(description="TradePulse News Updater - Enhanced ML Version v3.0")
     parser.add_argument("--themes-only", action="store_true", 
                        help="Only regenerate themes.json from existing news data")
     parser.add_argument("--profile", action="store_true", 
@@ -1735,6 +1333,7 @@ if __name__ == "__main__":
         print(f"⚖️ Dynamic weights: {WEIGHTS}")
         print(f"🎯 ML models: {'✅' if (IMPACT_CLF and CATEGORY_CLF) else '❌'}")
         print(f"🔍 FAISS index: {'✅' if faiss_index else '❌'}")
+        print(f"⚡ Compiled patterns: {'✅' if KEYWORD_PATTERNS else '❌'}")
         exit(0)
     
     if args.themes_only:
@@ -1759,7 +1358,7 @@ if __name__ == "__main__":
         
         stats = pstats.Stats(profiler)
         stats.sort_stats('cumulative')
-        stats.print_stats(20)  # Top 20 functions
+        stats.print_stats(20)
         
         exit(0 if success else 1)
     
