@@ -1005,7 +1005,7 @@
                                         </div>
                                         
                                         <!-- Indemnités de remboursement anticipé (mode durée) -->
-                                        <div class="parameter-row">
+                                      <div class="parameter-row hidden">
                                             <label class="loan-option-label">
                                                 Indemnités (mois)
                                                 <span class="loan-option-info cursor-help" title="Nombre de mois d'intérêts servant de base au calcul des indemnités de remboursement anticipé (généralement entre 0 et 6 mois). Les IRA sont légalement plafonnées à 6 mois d'intérêts ou 3% du capital remboursé.">
@@ -1033,20 +1033,20 @@
                                         </div>
                                         
  <!-- Option de remboursement total (NOUVEAU) -->
-                                        <div class="mt-3 flex items-center">
-                                            <input id="total-repayment" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
-                                            <label for="total-repayment" class="ml-2 text-sm font-medium text-gray-300">
-                                                Remboursement total (solde du prêt)
-                                                <span class="loan-option-info cursor-help" title="Cochez cette option pour effectuer un remboursement total qui soldera entièrement votre prêt.">
-                                                    <i class="fas fa-info-circle"></i>
-                                                </span>
-                                            </label>
-                                        </div>
-                                        
-                                        <div class="mt-3 flex items-center">
-                                            <input id="include-ptz-total" type="checkbox" class="w-4 h-4">
-                                            <label for="include-ptz-total" class="ml-2 text-sm">Inclure le PTZ</label>
-                                        </div>
+<div class="mt-3 flex items-center">
+    <input id="total-repayment"
+           type="checkbox"
+           class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+    <label for="total-repayment"
+           class="ml-2 text-sm font-medium text-gray-300">
+        Remboursement total (solde du prêt, hors PTZ)
+        <span class="loan-option-info cursor-help"
+              title="Cochez cette option pour effectuer un remboursement total qui soldera entièrement votre prêt.">
+            <i class="fas fa-info-circle"></i>
+        </span>
+    </label>
+</div>
+
                                         
                                         <!-- Mois du remboursement anticipé (mode mensualité) -->
                                         <div class="parameter-row">
