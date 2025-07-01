@@ -1,6 +1,6 @@
 /**
  * ============================================
- * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.3.8
+ * 🚀 SIMULATEUR DE PRÊT REFACTORISÉ - v2.3.9
  * ============================================
  * 
  * Plan d'action implémenté :
@@ -26,6 +26,7 @@
  * 🔧 v2.3.6 : Fix TAEG explosion - Correction tenue de compte + PTZ dans mensualiteGlobale et flux reconstruction
  * 🔧 v2.3.7 : Fix TAEG critique - Capital PTZ flux initial + limite durée mensualités PTZ
  * 🔧 v2.3.8 : Fix scope issue - Exposition renderRepaymentsList et calculateLoan au scope global
+ * 🔧 v2.3.9 : Fix indemnités mode "Réduire la mensualité" - stockage dans tableau + slider spécifique
  * 
  * Architecture : Flux de trésorerie centralisés pour calculs financiers conformes
  */
@@ -216,7 +217,7 @@ class PTZManager {
 
 /**
  * ==========================================
- * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.3.8
+ * 🏦 SIMULATEUR DE PRÊT PRINCIPAL - v2.3.9
  * ==========================================
  */
 class LoanSimulator {
@@ -280,7 +281,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.3.8
+     * 💰 GÉNÉRATION DES FLUX DE TRÉSORERIE v2.3.9
      * ==========================================
      */
     
@@ -330,7 +331,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 📊 TABLEAU D'AMORTISSEMENT v2.3.8
+     * 📊 TABLEAU D'AMORTISSEMENT v2.3.9
      * ==========================================
      */
 
@@ -386,21 +387,21 @@ class LoanSimulator {
 
         // ✨ CORRECTION CRITIQUE v2.3.7: Reconstruction des flux de trésorerie post-renégociation avec capital PTZ
         if (appliquerRenegociation && moisRenegociation && nouveauTaux !== null) {
-            console.log('🔄 v2.3.8: Reconstruction des flux de trésorerie avec renégociation + capital PTZ...');
+            console.log('🔄 v2.3.9: Reconstruction des flux de trésorerie avec renégociation + capital PTZ...');
             
             // 🔧 CORRECTIF 1: Inclure le capital PTZ dans le flux initial reconstruction
             const fraisInitiauxFixes = this.fraisDossier + this.fraisGarantie;
             const ptzCap = this.ptzManager.enabled ? this.ptzManager.montant : 0;
             this.cashFlows = [FLUX_ENTREE * (this.capital + ptzCap - fraisInitiauxFixes)];
             
-            // 🔧 v2.3.8: Reconstruire flux mensuels avec PTZ intégré via ajoutePTZ corrigé
+            // 🔧 v2.3.9: Reconstruire flux mensuels avec PTZ intégré via ajoutePTZ corrigé
             tableauResult.tableau.forEach(row => {
                 // mensualiteGlobale inclut maintenant : crédit + assurance + tenue de compte (v2.3.6)
                 const fluxAvecPTZ = ajoutePTZ(row.mensualiteGlobale, row.mois, this.ptzManager);
                 this.cashFlows.push(FLUX_SORTIE * fluxAvecPTZ);
             });
             
-            console.log(`📊 v2.3.8: Flux reconstruits: ${this.cashFlows.length} périodes avec renégociation + PTZ + capital PTZ inclus`);
+            console.log(`📊 v2.3.9: Flux reconstruits: ${this.cashFlows.length} périodes avec renégociation + PTZ + capital PTZ inclus`);
         }
 
         // 🆕 v2.2.1: Calcul scénario de base pour économie d'intérêts exacte
@@ -428,11 +429,11 @@ class LoanSimulator {
             mensualiteApresRenego
         });
         
-        // Calcul TAEG via IRR v2.3.8
+        // Calcul TAEG via IRR v2.3.9
         try {
             const taegPrecis = this.calculateTAEG();
             results.taeg = taegPrecis * 100; // Conversion en pourcentage
-            console.log(`💎 v2.3.8: TAEG corrigé: ${results.taeg.toFixed(2)}% (scope fix + capital PTZ + durée limitée)`);
+            console.log(`💎 v2.3.9: TAEG corrigé: ${results.taeg.toFixed(2)}% (indemnités stockées + slider spécifique)`);
         } catch (error) {
             console.warn('TAEG non calculable via IRR:', error.message);
             results.taeg = this.tauxAnnuel * 1.1; // Fallback approximatif
@@ -474,6 +475,9 @@ class LoanSimulator {
         let mensualiteApresRenego = null;
 
         for (let mois = 1; mois <= dureeFinale; mois++) {
+            // 🆕 v2.3.9: FIX CRITIQUE - Variable pour stocker les indemnités de la ligne
+            let indemnitesPourLaLigne = 0;
+
             // 🆕 v2.2.1: Capturer mensualité avant renégociation
             if (mois === options.moisRenegociation - 1 && options.appliquerRenegociation) {
                 const assuranceAvant = this.assuranceSurCapitalInitial ? 
@@ -526,6 +530,9 @@ class LoanSimulator {
                         Math.min(plafond3Pourcent, plafond6Mois));
                     indemnites += indemnitesCourantes;
 
+                    // 🆕 v2.3.9: FIX CRITIQUE - Stocker les indemnités pour cette ligne
+                    indemnitesPourLaLigne = indemnitesCourantes;
+
                     if (capitalRestant <= montant) {
                         // Remboursement total
                         const mensualiteGlobale = capitalRestant + interets + assurance + this.fraisTenueMensuel;
@@ -539,7 +546,7 @@ class LoanSimulator {
                             mensualiteGlobale, // 🔧 v2.3.6: crédit + assurance + tenue de compte
                             capitalRestant: 0,
                             remboursementAnticipe: capitalRestant,
-                            indemnites: indemnitesCourantes
+                            indemnites: indemnitesPourLaLigne // 🆕 v2.3.9: Utilise la variable
                         });
 
                         totalInterets += interets;
@@ -577,7 +584,7 @@ class LoanSimulator {
                 mensualiteGlobale, // 🔧 v2.3.6: crédit + assurance + tenue de compte
                 capitalRestant,
                 remboursementAnticipe: remboursementCourant?.montant || 0,
-                indemnites: 0
+                indemnites: indemnitesPourLaLigne // 🆕 v2.3.9: FIX - Utilise la variable au lieu de 0
             });
 
             if (capitalRestant <= 0) break;
@@ -592,7 +599,7 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.3.8
+     * 💎 CALCUL TAEG PRÉCIS VIA IRR v2.3.9
      * ==========================================
      */
 
@@ -609,7 +616,7 @@ class LoanSimulator {
     }
 
     /**
-     * 🔧 v2.3.8: Calcul financier avec capital PTZ corrigé
+     * 🔧 v2.3.9: Calcul financier avec capital PTZ corrigé
      */
     calculateFinancialMetrics(tableau, extra = {}) {
         const mensualiteInitiale = this.calculerMensualite();
@@ -677,12 +684,12 @@ class LoanSimulator {
 
     /**
      * ==========================================
-     * 🔍 DEBUG & VALIDATION v2.3.8
+     * 🔍 DEBUG & VALIDATION v2.3.9
      * ==========================================
      */
 
     debugCashFlows() {
-        console.group('💰 Analyse des flux de trésorerie (v2.3.8)');
+        console.group('💰 Analyse des flux de trésorerie (v2.3.9)');
         console.table(this.cashFlows.map((flux, index) => ({
             periode: index === 0 ? 'Initial' : `Mois ${index}`,
             flux: this.formatMontant(flux),
@@ -706,7 +713,7 @@ class LoanSimulator {
             console.warn(`⚠️ Capital amorti insuffisant: ${this.formatMontant(results.totalCapitalAmorti)} vs ${this.formatMontant(this.capital)} initial`);
         }
 
-        console.log('✅ Validation terminée (v2.3.8 - Scope fix + capital PTZ + durée limitée)');
+        console.log('✅ Validation terminée (v2.3.9 - Indemnités stockées + slider spécifique)');
     }
 
     /**
@@ -967,7 +974,7 @@ function repaymentLabel(r) {
 }
 
 /**
- * 🔧 v2.3.8: UTILITAIRE CENTRAL PTZ DIFFÉRÉ (CORRIGÉ)
+ * 🔧 v2.3.9: UTILITAIRE CENTRAL PTZ DIFFÉRÉ (CORRIGÉ)
  * CORRECTIF 2: Limiter la mensualité PTZ à sa vraie durée
  * @param {number} mensu - mensualité crédit+assurance+tenue
  * @param {number} mois  - mois concerné (1, 2, …)
@@ -985,7 +992,7 @@ function ajoutePTZ(mensu, mois, ptz) {
 
 /**
  * ==========================================
- * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.3.8
+ * 🎮 GESTIONNAIRE D'ÉVÉNEMENTS UI v2.3.9
  * ==========================================
  */
 
@@ -1322,12 +1329,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.3.8
+     * 🎯 FONCTION PRINCIPALE DE CALCUL v2.3.9
      * ==========================================
      */
     function calculateLoan() {
         try {
-            console.log("🚀 Début du calcul du prêt v2.3.8 (Scope fix + capital PTZ + durée limitée)...");
+            console.log("🚀 Début du calcul du prêt v2.3.9 (indemnités stockées + slider spécifique)...");
             
             const loanAmount = parseFloat(document.getElementById('loan-amount').value);
             const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
@@ -1398,13 +1405,18 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("📋 Remboursements anticipés:", remboursementsAnticipes);
             console.log("🔄 Appliquer renégociation:", applyRenegotiation);
             
-            // Création du simulateur v2.3.8
+            // 🆕 v2.3.9: BONUS - Slider spécifique pour les indemnités selon le mode
+            const indemnitesMois = modeRemboursement === 'mensualite'
+                ? parseInt(penaltyMonthsSliderMensualite?.value || 3)
+                : parseInt(penaltyMonthsSliderDuree?.value || 3);
+            
+            // Création du simulateur v2.3.9
             const simulator = new LoanSimulator({
                 capital: loanAmount,
                 tauxAnnuel: interestRate,
                 dureeMois: loanDurationYears * 12,
                 assuranceAnnuelle: insuranceRate,
-                indemnitesMois: penaltyMonthsSliderDuree ? parseInt(penaltyMonthsSliderDuree.value) : 3,
+                indemnitesMois: indemnitesMois, // 🆕 v2.3.9: Utilise le slider spécifique
                 fraisDossier: fraisDossier,
                 fraisTenueCompte: fraisTenueCompte,
                 fraisGarantie: fraisGarantie,
@@ -1479,7 +1491,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('ratio-cout').textContent = montantTotalEmprunte > 0 ? 
                 (coutGlobalAvecPTZ / montantTotalEmprunte).toFixed(3) : '0.000';
 
-            // 🔧 v2.3.8: TAEG corrigé avec scope fix + capital PTZ + durée limitée
+            // 🔧 v2.3.9: TAEG corrigé avec indemnités stockées + slider spécifique
             document.getElementById('taeg').textContent = result.taeg.toFixed(2) + '%';
 
             // 🆕 v2.2.1: Mise à jour des frais annexes avec tenue de compte incluse
@@ -1519,7 +1531,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✅ Bouton PDF activé');
             }
             
-            console.log('🎉 Calcul terminé avec succès (v2.3.8 - Scope fix + capital PTZ + durée limitée)');
+            console.log('🎉 Calcul terminé avec succès (v2.3.9 - indemnités stockées + slider spécifique)');
             return true;
         } catch (error) {
             console.error("❌ Erreur lors du calcul:", error);
@@ -1618,7 +1630,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * ==========================================
-     * 📋 FONCTIONS D'AFFICHAGE UI v2.3.8
+     * 📋 FONCTIONS D'AFFICHAGE UI v2.3.9
      * ==========================================
      */
 
@@ -1745,7 +1757,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 comparisonTableBody.innerHTML = '';
                 
-                // 🔧 v2.3.8: Comparaisons avec TAEG corrigé
+                // 🔧 v2.3.9: Comparaisons avec TAEG corrigé
                 const comparisons = [
                     {
                         label: 'Durée du prêt',
@@ -1776,7 +1788,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         positive: modeRemboursement === 'mensualite'
                     },
                     {
-                        label: 'TAEG v2.3.8 Corrigé',
+                        label: 'TAEG v2.3.9 Corrigé',
                         base: `${baseResult.taeg.toFixed(2)}%`,
                         current: `${result.taeg.toFixed(2)}%`,
                         diff: `-${Math.max(0, (baseResult.taeg - result.taeg)).toFixed(2)}%`,
@@ -1898,7 +1910,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
                 <i class="fas fa-piggy-bank mr-2"></i>
-                Analyse complète du prêt v2.3.8
+                Analyse complète du prêt v2.3.9
                 <span class="ml-2 text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded">IRR ${result.taeg.toFixed(3)}%</span>
             </h5>
             <ul class="text-sm text-gray-300 space-y-2 pl-4">
@@ -1945,8 +1957,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                    <span>TAEG précis via IRR v2.3.8: ${result.taeg.toFixed(2)}% 
-                    <span class="text-xs text-green-300">(Scope fix + capital PTZ + durée limitée)</span></span>
+                    <span>TAEG précis via IRR v2.3.9: ${result.taeg.toFixed(2)}% 
+                    <span class="text-xs text-green-300">(Indemnités stockées + slider spécifique)</span></span>
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
@@ -2055,7 +2067,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     title: {
                         display: true,
-                        text: 'Évolution du prêt (v2.3.8 - Scope fix + capital PTZ + durée limitée)',
+                        text: 'Évolution du prêt (v2.3.9 - indemnités stockées + slider spécifique)',
                         color: 'rgba(255, 255, 255, 0.9)'
                     },
                     tooltip: {
@@ -2192,57 +2204,68 @@ document.addEventListener('DOMContentLoaded', function() {
             calculateLoan();
         });
     } else {
-        console.warn('🔧 v2.3.8: Bouton add-repayment-btn non trouvé');
+        console.warn('🔧 v2.3.9: Bouton add-repayment-btn non trouvé');
     }
 
     // 🔧 v2.3.2: FONCTION POUR AFFICHER LA LISTE DES REMBOURSEMENTS (RESTAURÉE)
     function renderRepaymentsList() {
         const list = document.getElementById('repayments-list');
         if (!list) return;
+
         list.innerHTML = '';
 
-        window.storedRepayments.forEach((r, idx) => {
-            const { html, cls } = repaymentLabel(r);
+        window.storedRepayments.forEach((repayment, index) => {
             const item = document.createElement('div');
             item.className = 'repayment-item';
             
+            const label = repaymentLabel(repayment);
+            
             item.innerHTML = `
                 <div class="repayment-item-header">
-                    <div class="flex items-center">
-                        <span class="${cls}">${html}</span>
-                        <span class="ml-2 text-xs text-gray-400">Mois ${r.mois}</span>
+                    <div class="${label.cls}">
+                        ${label.html}
+                        <span class="text-gray-400 ml-2">- Mois ${repayment.mois}</span>
                     </div>
-                    <button onclick="window.storedRepayments.splice(${idx}, 1); renderRepaymentsList(); calculateLoan();" 
-                            class="remove-repayment text-red-400 hover:text-red-300 p-1">
-                        <i class="fas fa-trash"></i>
+                    <button class="remove-repayment" data-index="${index}">
+                        <i class="fas fa-times"></i>
                     </button>
                 </div>
             `;
             
             list.appendChild(item);
         });
+
+        // Attacher les événements de suppression
+        list.querySelectorAll('.remove-repayment').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                window.storedRepayments.splice(index, 1);
+                renderRepaymentsList();
+                calculateLoan();
+            });
+        });
     }
 
-    // 🔧 v2.3.8: EXPOSITION DES FONCTIONS AU SCOPE GLOBAL POUR ONCLICK HTML
+    // 🔧 v2.3.2: BOUTON RESET REMBOURSEMENTS (RESTAURÉ)
+    const resetRepaymentsBtn = document.getElementById('reset-repayments');
+    if (resetRepaymentsBtn) {
+        resetRepaymentsBtn.addEventListener('click', function() {
+            if (confirm('Êtes-vous sûr de vouloir supprimer tous les remboursements anticipés ?')) {
+                window.storedRepayments = [];
+                renderRepaymentsList();
+                calculateLoan();
+                showNotification('Tous les remboursements ont été supprimés', 'success');
+            }
+        });
+    }
+
+    // 🔧 v2.3.9: EXPOSITION AU SCOPE GLOBAL pour compatibilité
     window.renderRepaymentsList = renderRepaymentsList;
     window.calculateLoan = calculateLoan;
 
-    // 🔧 v2.3.2: GESTIONNAIRE POUR RÉINITIALISER TOUS LES REMBOURSEMENTS
-    const resetRepaymentsBtn = document.getElementById('reset-repayments');
-    if (resetRepaymentsBtn) {
-        resetRepaymentsBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            console.log('🔧 v2.3.8: Réinitialisation des remboursements anticipés');
-            window.storedRepayments = [];
-            renderRepaymentsList();
-            calculateLoan();
-        });
-    } else {
-        console.warn('🔧 v2.3.8: Bouton reset-repayments non trouvé');
-    }
-
-    // Rendu initial
+    // Initialisation
+    updateSliderMaxValues();
     renderRepaymentsList();
-
-    console.log('🎉 v2.3.8: Gestionnaire d\'événements UI initialisé avec scope fix pour boutons suppression');
+    
+    console.log('✅ Simulateur de prêt v2.3.9 initialisé (indemnités stockées + slider spécifique)');
 });
