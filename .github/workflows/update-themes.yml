@@ -27,6 +27,8 @@ jobs:
           pip install sentence-transformers langdetect joblib faiss-cpu
           # 🆕 Dépendances pour la traduction automatique
           pip install deepl langdetect
+          # 🤖 Dépendances FinBERT pour sentiment analysis
+          pip install transformers torch psutil
           # Dépendances optionnelles (ignore les erreurs)
           pip install tenacity structlog orjson || echo "⚠️ Dépendances optionnelles ignorées"
           
@@ -39,6 +41,9 @@ jobs:
           FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
           DEEPL_API_KEY: ${{ secrets.DEEPL_API_KEY }}  # 🆕 Clé API DeepL
           PYTHONPATH: ${{ github.workspace }}  # 🆕 Ajoute la racine du repo
+          # 🤖 Variables FinBERT
+          TRADEPULSE_USE_FINBERT: 1
+          TRADEPULSE_SENTIMENT_PROFILING: 0
           TP_MAX_TOTAL: 150
           TP_MAX_WORKERS: 2  # Limiter pour CI
           TP_LOG_LEVEL: INFO
@@ -65,6 +70,12 @@ jobs:
             else
               echo "⚠️ Aucune actualité trouvée dans le JSON"
             fi
+            # 🤖 Vérification sentiment FinBERT
+            if jq -r '.us[0].impact_prob // empty' data/news.json | grep -q .; then
+              echo "🤖 FinBERT sentiment analysis detected"
+            else
+              echo "📝 Using fallback sentiment analysis"
+            fi
           else
             echo "❌ Erreur: fichiers manquants"
             exit 1
@@ -80,11 +91,12 @@ jobs:
           else
             # Ajouter des statistiques dans le message de commit
             themes_count=$(jq -r '.themes.weekly | length' data/themes.json 2>/dev/null || echo "?")
-            git commit -m "🔄 Update themes and news data with translations [skip ci]
+            git commit -m "🔄 Update themes and news data with FinBERT [skip ci]
 
             📊 Themes analyzed: $themes_count
+            🤖 FinBERT sentiment: enabled
             🌐 Auto-translation: enabled
             🕐 Updated: $(date '+%Y-%m-%d %H:%M:%S UTC')"
             git push
-            echo "✅ Données mises à jour et publiées avec traduction"
+            echo "✅ Données mises à jour et publiées avec FinBERT"
           fi
