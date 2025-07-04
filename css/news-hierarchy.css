@@ -1,110 +1,91 @@
-/* css/news-hierarchy.css - Cartes adaptatives avec layouts différenciés */
+/* Styles pour la hiérarchie des actualités financières - Version harmonisée */
 
+/* 1. Styles de base améliorés pour toutes les cartes harmonisées */
 .news-card {
     position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    border-width: 1px;
+    min-height: 240px;
     display: flex;
     flex-direction: column;
-    width: 100%;                /* S'étire selon la grille */
-    min-width: 280px;           /* Garde un mini format sur mobile */
-    max-width: 100%;            /* Évite de déborder en list-view */
-    min-height: 240px;          /* Hauteur minimale uniforme */
-    padding: 24px;
-    border-radius: 14px;
-    background: #111827;        /* bg-zinc-900 équivalent */
-    transition: all 0.2s ease;
-    cursor: pointer;
 }
 
 .news-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 255, 135, 0.15);
 }
 
-/* ================================ */
-/* GRILLES DIFFÉRENCIÉES PAR SECTION */
-/* ================================ */
-
-/* 🚨 CRITIQUES : List-view (1 colonne pleine largeur) */
-#critical-news-container.news-grid {
-    display: grid;
-    grid-template-columns: 1fr;        /* 100% de la ligne */
-    gap: 16px;                          /* Gap plus petit en list-view */
-    width: 100%;
-}
-
-/* 🔥 IMPORTANTES : Grille compacte (2 colonnes) */
-#important-news-container.news-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-    gap: 32px;
-    width: 100%;
-}
-
-/* 📰 GÉNÉRALES : Grille compacte (2-3 colonnes) */
-#recent-news.news-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-    gap: 32px;
-    width: 100%;
-}
-
-/* Fallback pour les grilles génériques */
-.news-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-    gap: 32px;
-    width: 100%;
-}
-
-/* ================================ */
-/* CONTENU DES CARTES */
-/* ================================ */
-
-.news-card .title {
-    color: #ffffff;
-    font-size: 1.125rem;        /* text-lg */
-    font-weight: 700;           /* font-bold */
-    line-height: 1.75rem;
-    margin-bottom: 12px;
-    /* Line clamp pour 2 lignes */
+/* 2. Support pour line-clamp si Tailwind n'est pas disponible */
+.line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
 
-.news-card .desc {
-    color: #d4d4d8;             /* text-zinc-300 */
-    font-size: 0.875rem;        /* text-sm */
-    line-height: 1.5;
-    flex-grow: 1;               /* Prend l'espace disponible */
-    margin-bottom: 16px;
-    /* Line clamp pour 4 lignes */
+.line-clamp-4 {
     display: -webkit-box;
     -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
 
+/* 3. Styles pour le badge urgent */
+.badge.urgent {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background-color: #ef4444;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+    animation: pulse-badge 2s infinite;
+    z-index: 10;
+}
+
+@keyframes pulse-badge {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* 4. Layout flex pour cartes harmonisées */
+.news-card .title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 0.75rem;
+}
+
+.news-card .desc {
+    font-size: 0.875rem;
+    color: #d4d4d8;
+    flex-grow: 1;
+    margin-bottom: 1rem;
+}
+
 .news-card .footer {
-    margin-top: auto;           /* Pousse vers le bas */
+    margin-top: auto;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.75rem;         /* text-xs */
-    color: #10b981;             /* text-emerald-400 */
+    font-size: 0.75rem;
 }
 
-/* ================================ */
-/* BADGES ET ÉLÉMENTS UI */
-/* ================================ */
-
+/* 5. Styles pour les badges d'impact harmonisés */
 .badge {
+    display: inline-block;
     padding: 4px 8px;
-    border-radius: 6px;
+    border-radius: 4px;
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .badge-negative {
@@ -114,141 +95,280 @@
 }
 
 .badge-positive {
-    background-color: rgba(16, 185, 129, 0.2);
+    background-color: rgba(5, 150, 105, 0.2);
     color: #6ee7b7;
-    border: 1px solid #10b981;
+    border: 1px solid #059669;
 }
 
 .badge-neutral {
-    background-color: rgba(245, 158, 11, 0.2);
-    color: #fcd34d;
-    border: 1px solid #f59e0b;
+    background-color: rgba(161, 161, 170, 0.2);
+    color: #d4d4d8;
+    border: 1px solid #a1a1aa;
 }
 
-/* Chips de catégorie */
+/* 6. Chips pour catégories */
 .chip {
+    background-color: #27272a;
+    color: #d4d4d8;
     padding: 4px 8px;
-    border-radius: 6px;
+    border-radius: 4px;
     font-size: 0.75rem;
-    background-color: #374151;  /* bg-zinc-800 */
-    color: #d1d5db;             /* text-zinc-300 */
+    font-weight: 500;
 }
 
-/* Temps */
-.time {
-    font-size: 0.75rem;
-    color: #6b7280;             /* text-zinc-500 */
-    margin-left: auto;
+/* 7. Styles pour les borders d'impact */
+.border-red-600 {
+    border-color: #dc2626;
 }
 
-/* Badge urgent pour les actualités critiques */
-.badge.urgent {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background-color: #dc2626;
-    color: white;
-    animation: pulse 2s infinite;
+.border-emerald-600 {
+    border-color: #059669;
 }
 
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+.border-yellow-600 {
+    border-color: #ca8a04;
 }
 
-/* ================================ */
-/* RESPONSIVE DESIGN */
-/* ================================ */
-
-/* Tablet (768px - 1024px) */
-@media (max-width: 1024px) {
-    /* Importantes passent en 1-2 colonnes selon l'espace */
-    #important-news-container.news-grid {
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 24px;
-    }
-    
-    /* Générales passent en 1-2 colonnes */
-    #recent-news.news-grid {
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 24px;
-    }
+/* 8. Effet hover distinct pour chaque niveau avec les nouvelles couleurs */
+.news-card.border-red-600:hover {
+    background-color: rgba(220, 38, 38, 0.05);
+    border-color: #dc2626;
+    box-shadow: 0 8px 25px rgba(220, 38, 38, 0.2);
 }
 
-/* Mobile (≤ 768px) */
-@media (max-width: 768px) {
-    .news-card {
-        min-width: 280px;
-        padding: 16px;              /* Padding réduit sur mobile */
-    }
-    
-    /* Toutes les grilles passent en 1 colonne sur mobile */
-    #critical-news-container.news-grid,
-    #important-news-container.news-grid,
-    #recent-news.news-grid,
+.news-card.border-emerald-600:hover {
+    background-color: rgba(5, 150, 105, 0.05);
+    border-color: #059669;
+    box-shadow: 0 8px 25px rgba(5, 150, 105, 0.2);
+}
+
+.news-card.border-yellow-600:hover {
+    background-color: rgba(202, 138, 4, 0.05);
+    border-color: #ca8a04;
+    box-shadow: 0 8px 25px rgba(202, 138, 4, 0.2);
+}
+
+/* 9. Styles pour les grilles d'actualités */
+.news-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
     .news-grid {
-        grid-template-columns: 1fr;
-        gap: 16px;
-    }
-    
-    /* Ajustements texte mobile */
-    .news-card .title {
-        font-size: 1rem;           /* Légèrement plus petit */
-        -webkit-line-clamp: 2;     /* Garde 2 lignes max */
-    }
-    
-    .news-card .desc {
-        font-size: 0.8rem;
-        -webkit-line-clamp: 3;     /* Réduit à 3 lignes sur mobile */
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
-/* ================================ */
-/* ÉTATS DE CHARGEMENT ET ERREURS */
-/* ================================ */
+@media (min-width: 1024px) {
+    .news-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
 
+/* 10. Styles pour les actualités critiques - plus d'emphase */
+#critical-news-container .news-card {
+    border-width: 2px;
+    animation: pulse-border 3s infinite;
+}
+
+#critical-news-container .news-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(to bottom, #ef4444, #dc2626);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+@keyframes pulse-border {
+    0% { border-opacity: 0.8; }
+    50% { border-opacity: 0.4; }
+    100% { border-opacity: 0.8; }
+}
+
+/* 11. Styles pour les actualités importantes */
+#important-news-container .news-card {
+    border-width: 1px;
+}
+
+#important-news-container .news-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: linear-gradient(to bottom, #f59e0b, #d97706);
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
+}
+
+/* 12. Animation de fade-in pour les nouvelles actualités */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* 13. États de chargement et d'erreur améliorés */
 .loading-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: #d4d4d8;
+}
+
+.error-message {
+    background-color: rgba(39, 39, 42, 0.8);
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    border: 1px solid rgba(161, 161, 170, 0.2);
+}
+
+.retry-button {
+    background-color: #059669;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.retry-button:hover {
+    background-color: #047857;
+    transform: translateY(-1px);
+}
+
+/* 14. Message "aucun résultat" */
+.no-data-message {
+    grid-column: 1 / -1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 2rem;
-    color: #9ca3af;
-}
-
-.loading-spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid #374151;
-    border-top: 3px solid #10b981;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 1rem;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.no-data-message {
-    grid-column: 1 / -1;        /* Occupe toute la largeur de la grille */
-    text-align: center;
     padding: 3rem 1rem;
-    color: #6b7280;
+    color: #a1a1aa;
+    text-align: center;
 }
 
-/* ================================ */
-/* DEBUG HELPERS (à supprimer en prod) */
-/* ================================ */
-
-/* Uncomment for grid debugging */
-/*
-.news-grid {
-    outline: 2px dashed rgba(0, 255, 135, 0.3);
+/* 15. Améliorations responsive */
+@media (max-width: 768px) {
+    .news-card {
+        min-height: 200px;
+        padding: 1rem;
+    }
+    
+    .news-card .title {
+        font-size: 1rem;
+    }
+    
+    .news-card .desc {
+        font-size: 0.8rem;
+    }
+    
+    .badge.urgent {
+        top: 4px;
+        right: 4px;
+        padding: 2px 6px;
+        font-size: 0.6rem;
+    }
+    
+    .news-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
 }
 
-.news-card {
-    outline: 1px solid rgba(255, 0, 0, 0.3);
+/* 16. Indicateur cliquable */
+.clickable-news {
+    cursor: pointer;
 }
-*/
+
+.clickable-news::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 20px 20px 0;
+    border-color: transparent #059669 transparent transparent;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.clickable-news:hover::after {
+    opacity: 0.7;
+}
+
+/* 17. Icônes de sentiment */
+.sentiment-icon {
+    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 18. Styles pour les filtres actifs (compatibility) */
+.filter-active {
+    background: rgba(5, 150, 105, 0.2) !important;
+    border-color: rgba(5, 150, 105, 0.6) !important;
+    box-shadow: 0 0 10px rgba(5, 150, 105, 0.3);
+    transform: translateY(-1px);
+}
+
+/* 19. Support pour les anciennes classes (backward compatibility) */
+.glassmorphism {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+/* 20. Amélioration de l'accessibilité */
+.news-card:focus {
+    outline: 2px solid #059669;
+    outline-offset: 2px;
+}
+
+.news-card:focus-visible {
+    outline: 2px solid #059669;
+    outline-offset: 2px;
+}
+
+/* 21. Animation d'apparition progressive */
+.news-card:nth-child(1) { animation-delay: 0.1s; }
+.news-card:nth-child(2) { animation-delay: 0.2s; }
+.news-card:nth-child(3) { animation-delay: 0.3s; }
+.news-card:nth-child(4) { animation-delay: 0.4s; }
+.news-card:nth-child(5) { animation-delay: 0.5s; }
+.news-card:nth-child(6) { animation-delay: 0.6s; }
+
+/* 22. Styles pour dark/light mode compatibility */
+.dark .news-card {
+    background-color: #18181b;
+    border-color: #3f3f46;
+}
+
+.light .news-card {
+    background-color: #fafafa;
+    border-color: #e4e4e7;
+    color: #18181b;
+}
+
+.light .news-card .title {
+    color: #18181b;
+}
+
+.light .news-card .desc {
+    color: #52525b;
+}
