@@ -1,22 +1,37 @@
-/* Styles pour la hiérarchie des actualités financières - Version harmonisée */
+/* Styles pour la hiérarchie des actualités financières - Version Tailwind optimisée */
 
-/* 1. Styles de base améliorés pour toutes les cartes harmonisées */
+/* 1. Styles de base harmonisés avec approche Tailwind native */
 .news-card {
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    border-width: 1px;
-    min-height: 240px;
-    display: flex;
-    flex-direction: column;
+    @apply relative flex flex-col rounded-xl p-6 border 
+           bg-zinc-900 transition hover:shadow-lg 
+           w-full max-w-[360px] min-h-[240px] cursor-pointer;
 }
 
-.news-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(0, 255, 135, 0.15);
+.news-card .title {
+    @apply text-lg font-bold line-clamp-2 text-white mb-3;
 }
 
-/* 2. Support pour line-clamp si Tailwind n'est pas disponible */
+.news-card .desc {
+    @apply text-sm text-zinc-300 line-clamp-4 flex-grow mb-4;
+}
+
+.news-card .footer {
+    @apply mt-auto flex justify-between items-center text-xs;
+}
+
+/* 2. Grid containers optimisés avec auto-fill */
+#critical-news-container,
+#important-news-container {
+    @apply grid gap-6;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+}
+
+#recent-news .news-grid {
+    @apply grid gap-6;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+}
+
+/* 3. Support line-clamp pour navigateurs sans plugin Tailwind */
 .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -31,21 +46,31 @@
     overflow: hidden;
 }
 
-/* 3. Styles pour le badge urgent */
+/* 4. Hover effects améliorés */
+.news-card:hover {
+    @apply transform -translate-y-1;
+}
+
+.border-red-600:hover {
+    @apply shadow-red-500/20;
+    box-shadow: 0 8px 25px theme('colors.red.500' / 20%);
+}
+
+.border-emerald-600:hover {
+    @apply shadow-emerald-500/20;
+    box-shadow: 0 8px 25px theme('colors.emerald.500' / 20%);
+}
+
+.border-yellow-600:hover {
+    @apply shadow-yellow-500/20;
+    box-shadow: 0 8px 25px theme('colors.yellow.500' / 20%);
+}
+
+/* 5. Badge urgent pour actualités critiques */
 .badge.urgent {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background-color: #ef4444;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    font-weight: bold;
-    letter-spacing: 0.5px;
-    box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+    @apply absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 
+           rounded font-bold tracking-wide z-10 animate-pulse;
     animation: pulse-badge 2s infinite;
-    z-index: 10;
 }
 
 @keyframes pulse-badge {
@@ -54,134 +79,43 @@
     100% { opacity: 1; }
 }
 
-/* 4. Layout flex pour cartes harmonisées */
-.news-card .title {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: white;
-    margin-bottom: 0.75rem;
-}
-
-.news-card .desc {
-    font-size: 0.875rem;
-    color: #d4d4d8;
-    flex-grow: 1;
-    margin-bottom: 1rem;
-}
-
-.news-card .footer {
-    margin-top: auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.75rem;
-}
-
-/* 5. Styles pour les badges d'impact harmonisés */
+/* 6. Badges d'impact harmonisés */
 .badge {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    @apply inline-block px-2 py-1 rounded text-xs font-semibold uppercase tracking-wide;
 }
 
 .badge-negative {
-    background-color: rgba(220, 38, 38, 0.2);
-    color: #fca5a5;
-    border: 1px solid #dc2626;
+    @apply bg-red-800/20 text-red-200 border border-red-600;
 }
 
 .badge-positive {
-    background-color: rgba(5, 150, 105, 0.2);
-    color: #6ee7b7;
-    border: 1px solid #059669;
+    @apply bg-emerald-800/20 text-emerald-200 border border-emerald-600;
 }
 
 .badge-neutral {
-    background-color: rgba(161, 161, 170, 0.2);
-    color: #d4d4d8;
-    border: 1px solid #a1a1aa;
+    @apply bg-yellow-800/20 text-yellow-200 border border-yellow-600;
 }
 
-/* 6. Chips pour catégories */
+/* 7. Chips pour catégories */
 .chip {
-    background-color: #27272a;
-    color: #d4d4d8;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
+    @apply bg-zinc-800 text-zinc-300 px-2 py-1 rounded text-xs font-medium;
 }
 
-/* 7. Styles pour les borders d'impact */
-.border-red-600 {
-    border-color: #dc2626;
+/* 8. Styles pour les temps */
+.time {
+    @apply text-zinc-500 text-xs ml-auto;
 }
 
-.border-emerald-600 {
-    border-color: #059669;
-}
-
-.border-yellow-600 {
-    border-color: #ca8a04;
-}
-
-/* 8. Effet hover distinct pour chaque niveau avec les nouvelles couleurs */
-.news-card.border-red-600:hover {
-    background-color: rgba(220, 38, 38, 0.05);
-    border-color: #dc2626;
-    box-shadow: 0 8px 25px rgba(220, 38, 38, 0.2);
-}
-
-.news-card.border-emerald-600:hover {
-    background-color: rgba(5, 150, 105, 0.05);
-    border-color: #059669;
-    box-shadow: 0 8px 25px rgba(5, 150, 105, 0.2);
-}
-
-.news-card.border-yellow-600:hover {
-    background-color: rgba(202, 138, 4, 0.05);
-    border-color: #ca8a04;
-    box-shadow: 0 8px 25px rgba(202, 138, 4, 0.2);
-}
-
-/* 9. Styles pour les grilles d'actualités */
-.news-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-}
-
-@media (min-width: 768px) {
-    .news-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (min-width: 1024px) {
-    .news-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-}
-
-/* 10. Styles pour les actualités critiques - plus d'emphase */
+/* 9. Actualités critiques - emphase supplémentaire */
 #critical-news-container .news-card {
-    border-width: 2px;
+    @apply border-2;
     animation: pulse-border 3s infinite;
 }
 
 #critical-news-container .news-card::before {
     content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    background: linear-gradient(to bottom, #ef4444, #dc2626);
-    box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+    @apply absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-red-400 to-red-600;
+    box-shadow: 0 0 8px theme('colors.red.500' / 60%);
 }
 
 @keyframes pulse-border {
@@ -190,162 +124,30 @@
     100% { border-opacity: 0.8; }
 }
 
-/* 11. Styles pour les actualités importantes */
-#important-news-container .news-card {
-    border-width: 1px;
-}
-
+/* 10. Actualités importantes */
 #important-news-container .news-card::before {
     content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 3px;
-    height: 100%;
-    background: linear-gradient(to bottom, #f59e0b, #d97706);
-    box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
+    @apply absolute top-0 left-0 w-0.5 h-full bg-gradient-to-b from-yellow-400 to-yellow-600;
+    box-shadow: 0 0 6px theme('colors.yellow.500' / 40%);
 }
 
-/* 12. Animation de fade-in pour les nouvelles actualités */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
+/* 11. Animation d'apparition progressive */
 .animate-fadeIn {
     animation: fadeIn 0.5s ease-out forwards;
 }
 
-/* 13. États de chargement et d'erreur améliorés */
-.loading-state {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
-    color: #d4d4d8;
-}
-
-.error-message {
-    background-color: rgba(39, 39, 42, 0.8);
-    border-radius: 8px;
-    padding: 1.5rem;
-    text-align: center;
-    border: 1px solid rgba(161, 161, 170, 0.2);
-}
-
-.retry-button {
-    background-color: #059669;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 500;
-}
-
-.retry-button:hover {
-    background-color: #047857;
-    transform: translateY(-1px);
-}
-
-/* 14. Message "aucun résultat" */
-.no-data-message {
-    grid-column: 1 / -1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 3rem 1rem;
-    color: #a1a1aa;
-    text-align: center;
-}
-
-/* 15. Améliorations responsive */
-@media (max-width: 768px) {
-    .news-card {
-        min-height: 200px;
-        padding: 1rem;
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(10px); 
     }
-    
-    .news-card .title {
-        font-size: 1rem;
-    }
-    
-    .news-card .desc {
-        font-size: 0.8rem;
-    }
-    
-    .badge.urgent {
-        top: 4px;
-        right: 4px;
-        padding: 2px 6px;
-        font-size: 0.6rem;
-    }
-    
-    .news-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
     }
 }
 
-/* 16. Indicateur cliquable */
-.clickable-news {
-    cursor: pointer;
-}
-
-.clickable-news::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 0;
-    height: 0;
-    border-style: solid;
-    border-width: 0 20px 20px 0;
-    border-color: transparent #059669 transparent transparent;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.clickable-news:hover::after {
-    opacity: 0.7;
-}
-
-/* 17. Icônes de sentiment */
-.sentiment-icon {
-    font-size: 1rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* 18. Styles pour les filtres actifs (compatibility) */
-.filter-active {
-    background: rgba(5, 150, 105, 0.2) !important;
-    border-color: rgba(5, 150, 105, 0.6) !important;
-    box-shadow: 0 0 10px rgba(5, 150, 105, 0.3);
-    transform: translateY(-1px);
-}
-
-/* 19. Support pour les anciennes classes (backward compatibility) */
-.glassmorphism {
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-}
-
-/* 20. Amélioration de l'accessibilité */
-.news-card:focus {
-    outline: 2px solid #059669;
-    outline-offset: 2px;
-}
-
-.news-card:focus-visible {
-    outline: 2px solid #059669;
-    outline-offset: 2px;
-}
-
-/* 21. Animation d'apparition progressive */
+/* 12. Délais d'animation pour effet en cascade */
 .news-card:nth-child(1) { animation-delay: 0.1s; }
 .news-card:nth-child(2) { animation-delay: 0.2s; }
 .news-card:nth-child(3) { animation-delay: 0.3s; }
@@ -353,22 +155,122 @@
 .news-card:nth-child(5) { animation-delay: 0.5s; }
 .news-card:nth-child(6) { animation-delay: 0.6s; }
 
-/* 22. Styles pour dark/light mode compatibility */
+/* 13. Indicateur cliquable */
+.clickable-news::after {
+    content: '';
+    @apply absolute top-0 right-0 w-0 h-0 opacity-0 transition-opacity duration-300;
+    border-style: solid;
+    border-width: 0 20px 20px 0;
+    border-color: transparent theme('colors.emerald.600') transparent transparent;
+}
+
+.clickable-news:hover::after {
+    @apply opacity-70;
+}
+
+/* 14. États de chargement et d'erreur */
+.loading-state {
+    @apply flex items-center justify-center p-8 text-zinc-400;
+}
+
+.error-message {
+    @apply bg-zinc-800/80 rounded-lg p-6 text-center border border-zinc-700;
+}
+
+.retry-button {
+    @apply bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 
+           rounded transition font-medium transform hover:-translate-y-0.5;
+}
+
+/* 15. Message "aucun résultat" */
+.no-data-message {
+    @apply col-span-full flex flex-col items-center justify-center 
+           py-12 text-zinc-500 text-center;
+}
+
+/* 16. Responsive amélioré */
+@media (max-width: 768px) {
+    #critical-news-container,
+    #important-news-container,
+    #recent-news .news-grid {
+        grid-template-columns: 1fr;
+        @apply gap-4;
+    }
+    
+    .news-card {
+        @apply max-w-none min-h-[200px] p-4;
+    }
+    
+    .news-card .title {
+        @apply text-base;
+    }
+    
+    .news-card .desc {
+        @apply text-xs;
+    }
+    
+    .badge.urgent {
+        @apply top-1 right-1 px-1.5 py-0.5 text-[10px];
+    }
+}
+
+@media (max-width: 640px) {
+    #critical-news-container,
+    #important-news-container,
+    #recent-news .news-grid {
+        grid-template-columns: 1fr;
+        @apply gap-3;
+    }
+}
+
+/* 17. Support pour thèmes dark/light */
 .dark .news-card {
-    background-color: #18181b;
-    border-color: #3f3f46;
+    @apply bg-zinc-900 border-zinc-700;
 }
 
 .light .news-card {
-    background-color: #fafafa;
-    border-color: #e4e4e7;
-    color: #18181b;
+    @apply bg-white border-zinc-200 text-zinc-900;
 }
 
 .light .news-card .title {
-    color: #18181b;
+    @apply text-zinc-900;
 }
 
 .light .news-card .desc {
-    color: #52525b;
+    @apply text-zinc-600;
+}
+
+.light .chip {
+    @apply bg-zinc-100 text-zinc-700;
+}
+
+.light .time {
+    @apply text-zinc-400;
+}
+
+/* 18. Accessibilité améliorée */
+.news-card:focus {
+    @apply outline-none ring-2 ring-emerald-500 ring-offset-2 ring-offset-zinc-900;
+}
+
+.light .news-card:focus {
+    @apply ring-offset-white;
+}
+
+/* 19. Filtres actifs (rétrocompatibilité) */
+.filter-active {
+    @apply bg-emerald-500/20 border-emerald-500/60 text-emerald-400 
+           transform -translate-y-0.5;
+    box-shadow: 0 0 10px theme('colors.emerald.500' / 30%);
+}
+
+/* 20. Icônes de sentiment */
+.sentiment-icon {
+    @apply text-base flex items-center justify-center;
+}
+
+/* 21. Support rétrocompatibilité glassmorphism */
+.glassmorphism {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
