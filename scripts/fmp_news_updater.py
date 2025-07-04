@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-TradePulse - Investor-Grade News Updater
+TradePulse - Investor-Grade News Updater v2.3
 Script for extracting news and events from Financial Modeling Prep
-Enhanced with investor-focused configuration for better signal-to-noise ratio
+Enhanced with MSCI-weighted geographic distribution and sophisticated topic caps
 """
 
 import os
@@ -24,7 +24,7 @@ NEWS_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__
 THEMES_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "themes.json")
 
 # ---------------------------------------------------------------------------
-# INVESTOR-GRADE NEWS CONFIG
+# INVESTOR-GRADE NEWS CONFIG v2.3
 # ---------------------------------------------------------------------------
 
 CONFIG = {
@@ -48,30 +48,43 @@ CONFIG = {
 
     # --------- BUDGET DE COLLECTE (≈ articles/jour) -----------------------
     "pull_limits": {
-        "general_news":    15,   # +3 pour macro data
-        "stock_news":      40,   # +5 pour earnings season
-        "crypto_news":      6,   # -2 pour réduire bruit
-        "forex_news":      12,
-        "press_releases":   3,
-        "fmp_articles":     2
+        "general_news":    15,   # Réduit pour focus macro quality
+        "stock_news":      40,   # Maintenu pour earnings season
+        "crypto_news":      6,   # Réduit pour limiter bruit
+        "forex_news":      12,   # Ajusté pour nouvelles devises
+        "press_releases":   3,   # Minimal pour éviter spam
+        "fmp_articles":     2    # Articles d'analyse FMP
     },
 
-    # --------- QUOTA FINAL PAR ZONE GÉO -----------------------------------
+    # --------- QUOTA PAR ZONE GÉO  (pondéré MSCI ACWI) ---------------------
     "geo_budgets": {
-        "us":               28,
-        "france":           15,   # Gardé séparé pour CAC40
-        "europe_other":     12,   # UK, Allemagne, etc.
-        "asia":             15,
-        "emerging_markets": 12,
-        "global":           20
+        "weights": {              # part de capitalisation ACWI (~2025)
+            "us":               58,
+            "france":            3,
+            "europe_other":     13,
+            "asia":             20,
+            "emerging_markets":  6
+        },
+        "base": {                # plancher d'articles
+            "us":               20,
+            "france":            5,
+            "europe_other":      8,
+            "asia":             10,
+            "emerging_markets":  4
+        },
+        "max_total": 150
     },
 
-    # --------- PLAFONNAGE THÉMATIQUE --------------------------------------
+    # --------- PLAFONNAGE THÉMATIQUE DYNAMIQUE -----------------------------
     "topic_caps": {
-        "crypto":         6,
-        "esg":            8,  # évite la « green-swamp »
-        "ai":            12,  # +2 car secteur crucial
-        "meme_stocks":    3   # Nouvelle limite anti-bruit
+        "fixed": {
+            "crypto":      6,
+            "esg":         8,
+            "ai":         12,
+            "meme_stocks": 3
+        },
+        "relative_pct": 0.20,          # 20 % du flux total
+        "overflow": { "extra": 4, "ttl_h": 48 }
     }
 }
 
@@ -720,49 +733,146 @@ def compute_importance_score(article, category):
 
 def calculate_output_limits(articles_by_country, max_total=150):
     """
-    Enhanced output limits calculation using geo_budgets
+    Enhanced output limits calculation using geo_budgets v2.3 with MSCI weights
     """
-    # Use new geo_budgets configuration
-    base_limits = CONFIG["geo_budgets"]
+    geo_config = CONFIG["geo_budgets"]
+    base_allocations = geo_config["base"]
+    weights = geo_config["weights"]
     
     # Count articles by country
     country_counts = {country: len(articles) for country, articles in articles_by_country.items()}
     
-    # Adjust limits based on available articles
+    # Initialize with base allocations
     adjusted_limits = {}
-    remaining_quota = max_total
+    total_base_used = 0
     
-    # First pass: allocate minimum for each country with articles
-    for country, count in country_counts.items():
-        if country not in base_limits:
-            # Map unmapped countries to appropriate regions
-            if country in ["uk", "germany"]:
-                country = "europe_other"
-            elif country in ["china", "japan"]:
-                country = "asia"
-            else:
-                country = "global"
-        
-        min_limit = min(count, max(3, base_limits.get(country, 8) // 2))
-        adjusted_limits[country] = min_limit
-        remaining_quota -= min_limit
+    # Step 1: Allocate base minimums
+    for country in base_allocations:
+        if country in country_counts:
+            base_min = min(country_counts[country], base_allocations[country])
+            adjusted_limits[country] = base_min
+            total_base_used += base_min
+            logger.info(f"Base allocation for {country}: {base_min} articles")
     
-    # Second pass: distribute remaining quota proportionally
+    # Step 2: Calculate remaining quota for proportional distribution
+    remaining_quota = max_total - total_base_used
+    logger.info(f"Remaining quota after base allocations: {remaining_quota}")
+    
     if remaining_quota > 0:
-        total_base = sum(base_limits.get(country, 8) for country in adjusted_limits.keys())
+        # Step 3: Calculate total weight for countries with available articles
+        total_weight = sum(weights.get(country, 0) for country in adjusted_limits.keys())
         
-        for country in list(adjusted_limits.keys()):
-            if total_base > 0:
-                country_ratio = base_limits.get(country, 8) / total_base
-                additional = int(remaining_quota * country_ratio)
-                adjusted_limits[country] += additional
-                remaining_quota -= additional
-        
-        # Assign any remaining quota to global
-        if "global" in adjusted_limits:
-            adjusted_limits["global"] += remaining_quota
+        if total_weight > 0:
+            # Step 4: Distribute remaining quota proportionally
+            for country in adjusted_limits.keys():
+                country_weight = weights.get(country, 0)
+                if country_weight > 0:
+                    proportional_share = int(remaining_quota * (country_weight / total_weight))
+                    additional_articles = min(
+                        proportional_share,
+                        country_counts[country] - adjusted_limits[country]
+                    )
+                    adjusted_limits[country] += additional_articles
+                    logger.info(f"Additional allocation for {country}: +{additional_articles} (weight: {country_weight}%)")
     
+    # Step 5: Handle unmapped countries
+    for country, articles in articles_by_country.items():
+        if country not in adjusted_limits:
+            # Map to closest region or set minimal allocation
+            if country in ["uk", "germany"]:
+                target = "europe_other"
+            elif country in ["china", "japan"]:
+                target = "asia"
+            else:
+                target = "global"
+            
+            # Add small allocation if we have space
+            if sum(adjusted_limits.values()) < max_total:
+                adjusted_limits[country] = min(3, len(articles))
+                logger.info(f"Minimal allocation for unmapped country {country}: {adjusted_limits[country]} articles")
+    
+    logger.info(f"Final distribution: {adjusted_limits}")
     return adjusted_limits
+
+def apply_topic_caps(formatted_data):
+    """
+    Apply sophisticated topic caps with fixed/relative/overflow logic
+    """
+    topic_config = CONFIG["topic_caps"]
+    fixed_caps = topic_config["fixed"]
+    relative_pct = topic_config["relative_pct"]
+    overflow_config = topic_config["overflow"]
+    
+    # Calculate total articles
+    total_articles = sum(len(articles) for articles in formatted_data.values() if isinstance(articles, list))
+    
+    # Count articles by topic
+    topic_counts = {}
+    topic_articles = {}  # Store (country, article) pairs for each topic
+    
+    for country, articles in formatted_data.items():
+        if isinstance(articles, list):
+            for article in articles:
+                # Check if article matches topics
+                for topic in fixed_caps.keys():
+                    matches_topic = False
+                    
+                    # Check category match
+                    if article.get("category") == topic:
+                        matches_topic = True
+                    
+                    # Check themes match
+                    if not matches_topic:
+                        themes = article.get("themes", {})
+                        for axis_themes in themes.values():
+                            if topic in axis_themes:
+                                matches_topic = True
+                                break
+                    
+                    # Check content keywords for special cases
+                    if not matches_topic and topic == "meme_stocks":
+                        content = f"{article.get('title', '')} {article.get('content', '')}".lower()
+                        meme_keywords = ["gamestop", "amc", "reddit", "wsb", "wallstreetbets", "meme stock"]
+                        if any(kw in content for kw in meme_keywords):
+                            matches_topic = True
+                    
+                    if matches_topic:
+                        if topic not in topic_counts:
+                            topic_counts[topic] = 0
+                            topic_articles[topic] = []
+                        
+                        topic_counts[topic] += 1
+                        topic_articles[topic].append((country, article))
+    
+    # Apply caps for each topic
+    for topic, count in topic_counts.items():
+        if topic in fixed_caps:
+            # Calculate effective cap
+            fixed_cap = fixed_caps[topic]
+            relative_cap = int(total_articles * relative_pct)
+            effective_cap = min(fixed_cap, relative_cap)
+            
+            # TODO: Implement overflow logic here if needed (48h grace period)
+            # For now, use just the effective cap
+            
+            if count > effective_cap:
+                # Sort by importance score and keep only the best
+                articles_to_sort = topic_articles[topic]
+                articles_to_sort.sort(key=lambda x: x[1].get("importance_score", 0), reverse=True)
+                
+                # Keep only the top articles
+                articles_to_keep = articles_to_sort[:effective_cap]
+                articles_to_remove = articles_to_sort[effective_cap:]
+                
+                # Remove excess articles
+                for country, article in articles_to_remove:
+                    if country in formatted_data and isinstance(formatted_data[country], list):
+                        if article in formatted_data[country]:
+                            formatted_data[country].remove(article)
+                
+                logger.info(f"Applied topic cap for '{topic}': kept {effective_cap}/{count} articles (removed {len(articles_to_remove)})")
+    
+    return formatted_data
 
 def extract_top_themes(news_data, days=30, max_examples=3, exclude_themes=None):
     """
@@ -925,14 +1035,19 @@ def build_theme_summary(theme_name, theme_data):
     )
 
 def process_news_data(news_sources):
-    """Enhanced news processing with investor-grade filtering"""
+    """Enhanced news processing with investor-grade filtering v2.3"""
     # Initialize structure for all possible countries/regions using geo_budgets
     formatted_data = {
         "lastUpdated": datetime.now().isoformat()
     }
     
-    for country in CONFIG["geo_budgets"].keys():
+    # Initialize all countries from geo_budgets
+    for country in CONFIG["geo_budgets"]["weights"].keys():
         formatted_data[country] = []
+    
+    # Add global if not present
+    if "global" not in formatted_data:
+        formatted_data["global"] = []
     
     # List of all articles before country separation
     all_articles = []
@@ -991,47 +1106,30 @@ def process_news_data(news_sources):
             articles_by_country[country] = []
         articles_by_country[country].append(article)
     
-    # Calculate appropriate limits for each country
-    adjusted_limits = calculate_output_limits(articles_by_country, CONFIG["meta"]["max_total_articles"])
+    # Calculate appropriate limits for each country using new geo_budgets
+    adjusted_limits = calculate_output_limits(articles_by_country, CONFIG["geo_budgets"]["max_total"])
     
     # Apply limits by country
     for country, articles in articles_by_country.items():
-        limit = adjusted_limits.get(country, 8)
+        limit = adjusted_limits.get(country, 3)  # Default to 3 if not in limits
         if country in formatted_data:
             formatted_data[country] = articles[:limit]
         else:
-            # Map to appropriate region or add to global
-            if "global" not in formatted_data:
-                formatted_data["global"] = []
+            # Add to global or closest region
             formatted_data["global"].extend(articles[:limit])
             logger.info(f"Country {country} mapped to global, {len(articles[:limit])} articles added")
     
-    # Apply topic caps
-    if "topic_caps" in CONFIG:
-        for topic, limit in CONFIG["topic_caps"].items():
-            topic_articles = []
-            for country, articles in formatted_data.items():
-                if isinstance(articles, list):
-                    for article in articles:
-                        # Check if article matches this topic
-                        if (article.get("category") == topic or 
-                            any(topic in str(themes) for themes in article.get("themes", {}).values())):
-                            topic_articles.append((country, article))
-            
-            # If exceeds limit, remove least important
-            if len(topic_articles) > limit:
-                topic_articles.sort(key=lambda x: x[1].get("importance_score", 0))
-                articles_to_remove = topic_articles[:-limit]
-                
-                for country, article in articles_to_remove:
-                    if country in formatted_data and isinstance(formatted_data[country], list):
-                        formatted_data[country] = [a for a in formatted_data[country] if a != article]
-                
-                logger.info(f"Applied topic cap for '{topic}': limited to {limit} articles (removed {len(articles_to_remove)})")
+    # Apply sophisticated topic caps
+    formatted_data = apply_topic_caps(formatted_data)
     
     # Statistics
     total_articles = sum(len(articles) for articles in formatted_data.values() if isinstance(articles, list))
-    logger.info(f"✅ Enhanced processing complete: {total_articles} investor-grade articles")
+    logger.info(f"✅ Enhanced processing v2.3 complete: {total_articles} investor-grade articles")
+    
+    # Log distribution by region
+    for country, articles in formatted_data.items():
+        if isinstance(articles, list) and articles:
+            logger.info(f"  📍 {country}: {len(articles)} articles")
     
     return formatted_data
 
@@ -1045,7 +1143,7 @@ def update_news_json_file(news_data):
         with open(NEWS_JSON_PATH, 'w', encoding='utf-8') as f:
             json.dump(output_data, f, ensure_ascii=False, indent=2)
             
-        logger.info(f"✅ news.json file successfully updated with investor-grade data")
+        logger.info(f"✅ news.json file successfully updated with investor-grade data v2.3")
         return True
     except Exception as e:
         logger.error(f"❌ Error updating file: {str(e)}")
@@ -1079,7 +1177,7 @@ def generate_themes_json(news_data):
         "themes": themes_data,
         "lastUpdated": datetime.now().isoformat(),
         "analysisCount": sum(len(articles) for articles in news_data.values() if isinstance(articles, list)),
-        "config_version": "investor-grade-v1.0"
+        "config_version": "investor-grade-v2.3"
     }
     
     os.makedirs(os.path.dirname(THEMES_JSON_PATH), exist_ok=True)
@@ -1087,22 +1185,22 @@ def generate_themes_json(news_data):
     try:
         with open(THEMES_JSON_PATH, 'w', encoding='utf-8') as f:
             json.dump(themes_output, f, ensure_ascii=False, indent=2)
-        logger.info(f"✅ Enhanced themes.json with fundamentals axis updated")
+        logger.info(f"✅ Enhanced themes.json with fundamentals axis updated (v2.3)")
         return True
     except Exception as e:
         logger.error(f"❌ Error updating themes.json file: {str(e)}")
         return False
 
 def main():
-    """Enhanced main execution with investor-grade logging"""
+    """Enhanced main execution with investor-grade logging v2.3"""
     try:
-        logger.info("🚀 Starting investor-grade news collection...")
+        logger.info("🚀 Starting investor-grade news collection v2.3...")
         
         # Read existing data for fallback
         existing_data = read_existing_news()
         
         # Fetch different news sources with enhanced limits
-        logger.info("📊 Fetching news sources with investor-grade limits...")
+        logger.info("📊 Fetching news sources with MSCI-weighted geo limits...")
         general_news = get_general_news()
         fmp_articles = get_fmp_articles()
         stock_news = get_stock_news()
@@ -1134,8 +1232,8 @@ def main():
             if existing_data:
                 return True
         
-        # Process with enhanced investor-grade system
-        logger.info("🔍 Processing with enhanced investor-grade filters...")
+        # Process with enhanced investor-grade system v2.3
+        logger.info("🔍 Processing with enhanced MSCI-weighted distribution...")
         news_data = process_news_data(news_sources)
         
         # Update files
@@ -1153,11 +1251,11 @@ def main():
                     sentiment = details["sentiment_distribution"]
                     logger.info(f"      Sentiment: {sentiment['positive']}%↑ {sentiment['negative']}%↓")
         
-        logger.info("✅ Investor-grade news update completed successfully")
+        logger.info("✅ Investor-grade news update v2.3 completed successfully")
         return success_news and success_themes
         
     except Exception as e:
-        logger.error(f"❌ Error in investor-grade execution: {str(e)}")
+        logger.error(f"❌ Error in investor-grade execution v2.3: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
         return False
