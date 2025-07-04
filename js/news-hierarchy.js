@@ -110,10 +110,17 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
         card.addEventListener('click', () => window.open(item.url, '_blank'));
     }
 
-    // Tronquer le contenu si trop long (optionnel avec line-clamp CSS)
-    let content = item.content || '';
-    if (content.length > 280) {
-        content = content.slice(0, 277) + '…';
+    // 🚀 NOUVEAU : Nettoyer le HTML et créer du texte brut
+    let raw = item.content || '';
+    
+    // Utiliser DOMParser pour supprimer toutes les balises HTML
+    const tmp = new DOMParser().parseFromString(raw, 'text/html');
+    let content = (tmp.body.textContent || '').replace(/\s+/g, ' ').trim();
+    
+    // Nouvelles limites plus courtes selon le tier
+    const LIMIT = tier === 'regular' ? 160 : tier === 'important' ? 200 : 220;
+    if (content.length > LIMIT) {
+        content = content.slice(0, LIMIT - 1) + '…';
     }
 
     // Badge urgent pour les actualités critiques
@@ -130,9 +137,7 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
 
         <h3 class="title text-lg font-bold line-clamp-2 text-white mb-3">${item.title}</h3>
 
-        <p class="desc text-sm text-zinc-300 line-clamp-4 flex-grow mb-4">
-            ${content}
-        </p>
+        <p class="desc text-sm text-zinc-300 line-clamp-4 flex-grow mb-4"></p>
 
         <footer class="footer mt-auto flex justify-between items-center text-xs">
             <span class="text-emerald-400 font-medium">${item.source || '—'}</span>
@@ -142,6 +147,9 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
             </div>
         </footer>
     `;
+    
+    // 🎯 CLEF DU FIX : Injecter le texte nettoyé via innerText (pas innerHTML)
+    card.querySelector('.desc').innerText = content;
     
     return card;
 }
