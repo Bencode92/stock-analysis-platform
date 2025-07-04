@@ -8,29 +8,65 @@ on:
 jobs:
   update-themes:
     runs-on: ubuntu-latest
+    timeout-minutes: 30  # Timeout de sécurité
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
+          cache: 'pip'  # Cache des dépendances pip
           
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests pandas scikit-learn nltk
+          # Dépendances de base (obligatoires)
+          pip install aiohttp numpy requests pandas scikit-learn nltk
+          
+          # Dépendances ML/NLP (pour fonctionnalités avancées)
+          pip install sentence-transformers langdetect joblib
+          
+          # FAISS pour recherche sémantique (version CPU pour CI)
+          pip install faiss-cpu
+          
+          # Dépendances optionnelles (amélioration performance/observabilité)
+          pip install tenacity structlog orjson || echo "Dépendances optionnelles ignorées"
+          
+      - name: Create required directories
+        run: |
+          mkdir -p data models
           
       - name: Update themes data
         env:
           FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+          TP_MAX_TOTAL: 150
+          TP_MAX_WORKERS: 2  # Limiter pour CI
+          TP_LOG_LEVEL: INFO
+        timeout-minutes: 20
         run: python scripts/fmp_news_updater.py
         
+      - name: Verify output files
+        run: |
+          if [ -f "data/themes.json" ] && [ -f "data/news.json" ]; then
+            echo "✅ Fichiers générés avec succès"
+            echo "📊 Taille themes.json: $(du -h data/themes.json | cut -f1)"
+            echo "📰 Taille news.json: $(du -h data/news.json | cut -f1)"
+          else
+            echo "❌ Erreur: fichiers manquants"
+            exit 1
+          fi
+          
       - name: Commit changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add data/themes.json data/news.json
-          git commit -m "Update themes and news data [skip ci]" || echo "No changes to commit"
-          git push
+          if git diff --staged --quiet; then
+            echo "📝 Aucun changement détecté"
+          else
+            git commit -m "🔄 Update themes and news data [skip ci]"
+            git push
+            echo "✅ Données mises à jour et publiées"
+          fi
