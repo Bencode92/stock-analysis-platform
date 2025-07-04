@@ -1087,15 +1087,11 @@ def process_news_data(news_sources):
             # Normalize article
             normalized = normalize_article(article, source_type)
             
-            # --- TRADUCTION AUTOMATIQUE VERS LE FRANÇAIS ---
+            # --- TRADUCTION AUTOMATIQUE (titre uniquement) ---
             try:
-                logger.debug(f"Traduction de l'article: {normalized['title'][:50]}...")
                 normalized["title"] = translate_to_fr(normalized["title"])
-                normalized["text"] = translate_to_fr(normalized["text"])
-                logger.debug("✅ Traduction terminée")
             except Exception as e:
-                logger.warning(f"Erreur lors de la traduction: {e}")
-                # Continuer avec le texte original en cas d'erreur
+                logger.warning(f"Erreur lors de la traduction du titre : {e}")
             
             # Check if title is long enough to be relevant
             if len(normalized["title"]) < 10:
