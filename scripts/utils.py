@@ -1,9 +1,10 @@
 # scripts/utils.py
 import os
+import logging
 from functools import lru_cache
 from langdetect import detect
-import logging
 
+# Configuration du logger
 logger = logging.getLogger(__name__)
 
 @lru_cache(maxsize=None)
@@ -13,66 +14,50 @@ def _translator():
         import deepl  # pip install deepl
         api_key = os.environ.get("DEEPL_API_KEY")
         if not api_key:
-            logger.warning("DEEPL_API_KEY non définie, traduction désactivée")
+            logger.warning("DEEPL_API_KEY non définie - traduction désactivée")
             return None
         return deepl.Translator(api_key)
     except ImportError:
-        logger.warning("Module deepl non installé, traduction désactivée")
+        logger.warning("Module deepl non installé - traduction désactivée")
         return None
     except Exception as e:
         logger.error(f"Erreur lors de l'initialisation du traducteur DeepL: {e}")
         return None
 
-def translate_to_fr(text: str) -> str:
-    """
-    Traduit vers le français **uniquement si** le texte détecté est anglais.
-    Sinon, renvoie le texte tel quel.
-    """
-    if not text or len(text.strip()) < 10:  # Texte trop court à traduire
-        return text
-    
-    translator = _translator()
-    if not translator:
-        return text  # Pas de traducteur disponible
-    
-    try:
-        # Détecter la langue du texte
-        detected_lang = detect(text)
-        if detected_lang != "en":
-            logger.debug(f"Texte détecté comme '{detected_lang}', pas de traduction nécessaire")
-            return text
-        
-        # Traduire vers le français
-        logger.debug(f"Traduction en cours: {text[:50]}...")
-        result = translator.translate_text(text, target_lang="FR")
-        translated_text = result.text
-        logger.debug(f"Traduction terminée: {translated_text[:50]}...")
-        return translated_text
-        
-    except Exception as e:
-        logger.warning(f"Erreur lors de la traduction: {e}")
-        return text  # Retourner le texte original en cas d'erreur
-
 def translate_to_fr_safe(text: str) -> str:
     """
-    Version sécurisée de translate_to_fr avec retry automatique.
+    Traduit vers le français **uniquement si** le texte détecté est anglais.
+    Version sécurisée avec gestion d'erreurs complète.
+    Sinon, renvoie le texte tel quel.
     """
-    try:
-        from tenacity import retry, wait_fixed, stop_after_attempt, retry_if_exception_type
-        
-        @retry(
-            wait=wait_fixed(2), 
-            stop=stop_after_attempt(3),
-            retry=retry_if_exception_type(Exception),
-            reraise=True
-        )
-        def _translate_with_retry():
-            return translate_to_fr(text)
-        
-        return _translate_with_retry()
-    except ImportError:
-        # Si tenacity n'est pas installé, utiliser la version simple
-        return translate_to_fr(text)
-    except Exception as e:
-        logger.error(f"Échec de la traduction après plusieurs tentatives: {e}")
+    if not text or not text.strip():
         return text
+    
+    try:
+        # Vérification de la langue
+        detected_lang = detect(text)
+        if detected_lang != "en":
+            logger.debug(f"Langue détectée: {detected_lang} - pas de traduction nécessaire")
+            return text
+    except Exception as e:
+        logger.debug(f"Impossible de détecter la langue: {e} - tentative de traduction quand même")
+    
+    # Tentative de traduction
+    translator = _translator()
+    if not translator:
+        logger.debug("Traducteur non disponible - retour du texte original")
+        return text
+    
+    try:
+        result = translator.translate_text(text, target_lang="FR")
+        logger.debug(f"Traduction réussie: {text[:50]}... -> {result.text[:50]}...")
+        return result.text
+    except Exception as e:
+        logger.warning(f"Erreur lors de la traduction: {e} - retour du texte original")
+        return text
+
+def translate_to_fr(text: str) -> str:
+    """
+    Fonction de traduction principale - alias pour translate_to_fr_safe
+    """
+    return translate_to_fr_safe(text)
