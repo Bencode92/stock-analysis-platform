@@ -48,10 +48,10 @@ CONFIG = {
 
     # --------- BUDGET DE COLLECTE (≈ articles/jour) -----------------------
     "pull_limits": {
-        "general_news":    15,   # Réduit pour focus macro quality
-        "stock_news":      40,   # Maintenu pour earnings season
-        "crypto_news":      6,   # Réduit pour limiter bruit
-        "forex_news":      12,   # Ajusté pour nouvelles devises
+        "general_news":    20,   # Réduit pour focus macro quality
+        "stock_news":      50,   # Maintenu pour earnings season
+        "crypto_news":      8,   # Réduit pour limiter bruit
+        "forex_news":      15,   # Ajusté pour nouvelles devises
         "press_releases":   3,   # Minimal pour éviter spam
         "fmp_articles":     2    # Articles d'analyse FMP
     },
