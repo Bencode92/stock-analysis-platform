@@ -38,6 +38,7 @@ jobs:
         env:
           FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
           DEEPL_API_KEY: ${{ secrets.DEEPL_API_KEY }}  # 🆕 Clé API DeepL
+          PYTHONPATH: ${{ github.workspace }}  # 🆕 Ajoute la racine du repo
           TP_MAX_TOTAL: 150
           TP_MAX_WORKERS: 2  # Limiter pour CI
           TP_LOG_LEVEL: INFO
