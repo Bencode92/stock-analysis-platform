@@ -3,16 +3,15 @@
 
 """
 TradePulse News Updater - Enhanced ML Version with Async Fetching & Smart Filtering
-Script for extracting news and events from Financial Modeling Prep
+Script for extracting news from Financial Modeling Prep
 - General News API: For general economic news
 - Stock News API: For stocks and ETFs
 - Crypto News API: For cryptocurrencies
 - Press Releases API: For company press releases
 - FMP Articles API: For articles written by FMP
-- IPOs Calendar: For upcoming IPOs
-- Mergers & Acquisitions: For M&A operations
+- Forex News API: For forex news
 
-🚀 NEW: Async fetching, hard filtering (IPO/M&A/Economic), language detection
+🚀 Async fetching, hard filtering, language detection, ML classification
 """
 
 from __future__ import annotations
@@ -42,7 +41,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Global defaults (overrideable via environment variables)
 MAX_TOTAL: int = int(os.getenv("TP_MAX_TOTAL", "150"))
-DAYS_AHEAD: int = int(os.getenv("TP_DAYS_AHEAD", "7"))
 DAYS_BACK: int = int(os.getenv("TP_DAYS_BACK", "30"))
 MAX_WORKERS = int(os.getenv("TP_MAX_WORKERS", "3"))
 LOG_LEVEL = os.getenv("TP_LOG_LEVEL", "INFO").upper()
@@ -52,9 +50,9 @@ PAGES_PER_RUN = 3
 ITEMS_PER_PAGE = 100
 FMP_BASE_URL = "https://financialmodelingprep.com/stable"
 
-# Hard filtering patterns
+# Hard filtering patterns (removed event-related patterns)
 DROP_PATTERN = re.compile(
-    r"\b(ipo|initial public offering|m&a|merger|acquisition|economic\s+(calendar|data|report)|earnings\s+calendar)\b",
+    r"\b(ipo|initial public offering|m&a|merger|acquisition)\b",
     flags=re.I,
 )
 LANG_WHITELIST = {"en", "fr"}
@@ -105,7 +103,7 @@ KEYWORDS_CONFIG: Dict[str, list[str]] = {
         "gdp", "growth", "contraction", "employment", "unemployment", "cpi", "ppi", "pmi", "ism", 
         "retail sales", "consumer confidence", "manufacturing", "industrial production", 
         "housing starts", "earnings", "profits", "losses", "guidance", "profit warning", 
-        "dividend", "buyback", "merger", "acquisition", "ipo", "spin-off", "restructuring", 
+        "dividend", "buyback", "spin-off", "restructuring", 
         "layoffs", "capex", "deleveraging", "bond issue", "share placement", "secondary offering", 
         "rights issue", "rating upgrade", "rating downgrade", "volatility", "volume", 
         "short squeeze", "index reshuffle", "re-weighting", "quantitative tightening", 
@@ -200,31 +198,28 @@ BASE_COUNTRY_WEIGHTS = {
 }
 
 BASE_SOURCE_WEIGHTS = {
-    "general_news": 0.25, "stock_news": 0.40, "crypto_news": 0.15,
-    "fmp_articles": 0.12, "press_releases": 0.08,
+    "general_news": 0.25, "stock_news": 0.35, "crypto_news": 0.15,
+    "fmp_articles": 0.12, "press_releases": 0.08, "forex_news": 0.05,
 }
 
-# ---------------------------------------------------------------------------
-# 🛠️  MASTER CONFIG object — URLs complètes (+ forex)
-# ---------------------------------------------------------------------------
-_API_KEY = os.getenv("FMP_API_KEY", "")   # ⚠️ doit être défini dans tes variables d’environnement
+# Master CONFIG object (cleaned from events)
+_API_KEY = os.getenv("FMP_API_KEY", "")
 
 CONFIG = {
     "api_key": _API_KEY,
     "endpoints": {
-        "fmp_articles":      f"https://financialmodelingprep.com/stable/fmp-articles?page=0&limit=20&apikey={_API_KEY}",
-        "general_news":      f"https://financialmodelingprep.com/stable/news/general-latest?page=0&limit=20&apikey={_API_KEY}",
-        "press_releases":    f"https://financialmodelingprep.com/stable/news/press-releases-latest?page=0&limit=20&apikey={_API_KEY}",
-        "stock_news":        f"https://financialmodelingprep.com/stable/news/stock-latest?page=0&limit=20&apikey={_API_KEY}",
-        "crypto_news":       f"https://financialmodelingprep.com/stable/news/crypto-latest?page=0&limit=20&apikey={_API_KEY}",
-        "forex_news":        f"https://financialmodelingprep.com/stable/news/forex-latest?page=0&limit=20&apikey={_API_KEY}",
+        "fmp_articles": f"https://financialmodelingprep.com/stable/fmp-articles?page=0&limit=20&apikey={_API_KEY}",
+        "general_news": f"https://financialmodelingprep.com/stable/news/general-latest?page=0&limit=20&apikey={_API_KEY}",
+        "press_releases": f"https://financialmodelingprep.com/stable/news/press-releases-latest?page=0&limit=20&apikey={_API_KEY}",
+        "stock_news": f"https://financialmodelingprep.com/stable/news/stock-latest?page=0&limit=20&apikey={_API_KEY}",
+        "crypto_news": f"https://financialmodelingprep.com/stable/news/crypto-latest?page=0&limit=20&apikey={_API_KEY}",
+        "forex_news": f"https://financialmodelingprep.com/stable/news/forex-latest?page=0&limit=20&apikey={_API_KEY}",
     },
-    "news_limits":       allocate_limits(120, BASE_SOURCE_WEIGHTS),
-    "output_limits":     allocate_limits(MAX_TOTAL, BASE_COUNTRY_WEIGHTS),
-    "category_limits":   {"crypto": 8},
+    "news_limits": allocate_limits(120, BASE_SOURCE_WEIGHTS),
+    "output_limits": allocate_limits(MAX_TOTAL, BASE_COUNTRY_WEIGHTS),
+    "category_limits": {"crypto": 8},
     "max_total_articles": MAX_TOTAL,
-    "days_ahead":        DAYS_AHEAD,
-    "days_back":         DAYS_BACK,
+    "days_back": DAYS_BACK,
 }
 
 # ---------------------------------------------------------------------------
@@ -510,11 +505,8 @@ async def fetch_fmp_batch_async() -> List[Dict]:
     tasks = []
     
     async with aiohttp.ClientSession() as session:
-        # News endpoints
+        # News endpoints only (no events)
         for endpoint_name, endpoint_url in CONFIG["endpoints"].items():
-            if endpoint_name in ["earnings_calendar", "economic_calendar", "ipos_calendar", "mergers_acquisitions"]:
-                continue  # Skip event endpoints for now
-                
             for page in range(PAGES_PER_RUN):
                 params = {
                     "apikey": CONFIG["api_key"],
@@ -561,10 +553,10 @@ async def fetch_fmp_batch_async() -> List[Dict]:
     logger.info(f"✅ Async fetch completed: {len(articles)} valid articles after filtering")
     return articles
 
-# Fallback sync fetch for events
+# Fallback sync fetch (simplified, no events)
 @retry(wait=wait_random_exponential(multiplier=1, max=30), stop=stop_after_attempt(5)) if HAS_TENACITY else lambda f: f
 def fetch_api_data(endpoint: str, params: Optional[Dict] = None) -> List[Dict]:
-    """Fallback sync API fetching for events"""
+    """Fallback sync API fetching"""
     if not CONFIG["api_key"]:
         logger.error("FMP API key not defined")
         return []
@@ -583,7 +575,7 @@ def fetch_api_data(endpoint: str, params: Optional[Dict] = None) -> List[Dict]:
         return []
 
 # ---------------------------------------------------------------------------
-# 📰 NEWS SOURCE GETTERS (UPDATED)
+# 📰 NEWS SOURCE GETTERS (NEWS ONLY)
 # ---------------------------------------------------------------------------
 
 def get_all_news_async():
@@ -595,35 +587,6 @@ def get_all_news_async():
         asyncio.set_event_loop(loop)
     
     return loop.run_until_complete(fetch_fmp_batch_async())
-
-def get_earnings_calendar() -> List[Dict]:
-    """Fetches earnings calendar"""
-    today = datetime.now().strftime("%Y-%m-%d")
-    future = (datetime.now() + timedelta(days=CONFIG["days_ahead"])).strftime("%Y-%m-%d")
-    
-    params = {"from": today, "to": future}
-    return fetch_api_data(CONFIG["endpoints"]["earnings_calendar"], params)
-
-def get_economic_calendar() -> List[Dict]:
-    """Fetches economic calendar"""
-    today = datetime.now().strftime("%Y-%m-%d")
-    future = (datetime.now() + timedelta(days=CONFIG["days_ahead"])).strftime("%Y-%m-%d")
-    
-    params = {"from": today, "to": future}
-    return fetch_api_data(CONFIG["endpoints"]["economic_calendar"], params)
-
-def get_ipos_calendar() -> List[Dict]:
-    """Fetches upcoming IPOs"""
-    today = datetime.now().strftime("%Y-%m-%d")
-    future = (datetime.now() + timedelta(days=CONFIG["days_ahead"])).strftime("%Y-%m-%d")
-
-    params = {"from": today, "to": future}
-    return fetch_api_data(CONFIG["endpoints"]["ipos_calendar"], params)
-
-def get_mergers_acquisitions(limit: int = 100) -> List[Dict]:
-    """Fetches latest M&A operations"""
-    params = {"page": 0, "limit": limit}
-    return fetch_api_data(CONFIG["endpoints"]["mergers_acquisitions"], params)
 
 # ---------------------------------------------------------------------------
 # 🧠 ENHANCED CLASSIFICATION
@@ -766,7 +729,7 @@ def extract_themes(article: Dict) -> Dict[str, List[str]]:
 
 def compute_importance_score(article: Dict, category: str) -> float:
     """Enhanced importance scoring with optimized weights"""
-    content = f"{article.get('title', '')} {article.get('content', '')}".lower()
+    content = f"{article.get('title', '')} {article.get('content', '')}"
     article_source = article.get("source", "").lower()
     
     # Enhanced keyword scoring with compiled patterns
@@ -987,92 +950,6 @@ def process_news_data_async(articles: List[Dict]) -> Dict:
     
     return formatted_data
 
-def process_events_data(earnings: List[Dict], economic: List[Dict]) -> List[Dict]:
-    """Enhanced event processing with filtering"""
-    events = []
-    
-    # Filter economic events to exclude already filtered categories
-    for eco_event in economic:
-        event_name = eco_event.get("event", "").lower()
-        if DROP_PATTERN.search(event_name):
-            continue  # Skip filtered events
-            
-        event = {
-            "title": eco_event.get("event", ""),
-            "date": format_date(eco_event.get("date", "")),
-            "time": eco_event.get("time", "09:00"),
-            "type": "economic",
-            "importance": "medium",
-            "score": 5
-        }
-        events.append(event)
-    
-    # Process earnings but filter if needed
-    for earning in earnings:
-        if earning.get("epsEstimated"):
-            symbol = earning.get('symbol', 'Unknown')
-            eps = earning.get('epsEstimated', 0)
-            
-            event = {
-                "title": f"Earnings {symbol} - Forecast: ${eps} per share",
-                "date": format_date(earning.get("date", "")),
-                "time": "16:30",
-                "type": "earnings",
-                "importance": "medium",
-                "score": 5
-            }
-            events.append(event)
-    
-    events.sort(key=lambda x: (x["score"], x["date"]), reverse=True)
-    return events[:20]
-
-def process_ipos_data(ipos: List[Dict]) -> List[Dict]:
-    """Process IPO data (kept for specific IPO endpoint if needed separately)"""
-    formatted_ipos = []
-    for ipo in ipos:
-        try:
-            company = ipo.get('company', 'Unknown Company')
-            symbol = ipo.get('symbol', 'N/A')
-            
-            formatted_ipos.append({
-                "title": f"IPO: {company} ({symbol})",
-                "date": format_date(ipo.get("date", "")),
-                "time": "09:00",
-                "type": "ipo",
-                "importance": "medium",
-                "score": 6,
-                "exchange": ipo.get("exchange", ""),
-                "priceRange": ipo.get("priceRange", ""),
-                "marketCap": ipo.get("marketCap", ""),
-                "status": ipo.get("actions", "Expected")
-            })
-        except Exception as e:
-            logger.warning(f"Error processing IPO: {str(e)}")
-    return formatted_ipos
-
-def process_ma_data(ma_list: List[Dict]) -> List[Dict]:
-    """Process M&A data (kept for specific M&A endpoint if needed separately)"""
-    formatted_ma = []
-    for ma in ma_list:
-        try:
-            company = ma.get('companyName', 'Unknown Company')
-            target = ma.get('targetedCompanyName', 'Unknown Target')
-            
-            formatted_ma.append({
-                "title": f"M&A: {company} acquires {target}",
-                "date": format_date(ma.get("transactionDate", "")),
-                "time": "10:00",
-                "type": "m&a",
-                "importance": "medium",
-                "score": 7,
-                "source": ma.get("link", ""),
-                "symbol": ma.get("symbol", ""),
-                "targetedSymbol": ma.get("targetedSymbol", "")
-            })
-        except Exception as e:
-            logger.warning(f"Error processing M&A: {str(e)}")
-    return formatted_ma
-
 def compute_sentiment_distribution(articles: List[Dict]) -> Dict[str, float]:
     """Calculates sentiment distribution for a set of articles"""
     sentiment_counts = Counter(article["impact"] for article in articles if "impact" in article)
@@ -1192,11 +1069,11 @@ def extract_top_themes(news_data: Dict, days: int = 30, max_examples: int = 3,
     
     return top_themes_with_details
 
-def update_news_json_file(news_data: Dict, events: List[Dict]) -> bool:
-    """Updates news.json file with formatted data"""
+def update_news_json_file(news_data: Dict) -> bool:
+    """Updates news.json file with formatted data (no events)"""
     try:
         output_data = {k: v for k, v in news_data.items()}
-        output_data["events"] = events
+        # No events section anymore
         
         os.makedirs(os.path.dirname(NEWS_JSON_PATH), exist_ok=True)
         
@@ -1226,11 +1103,12 @@ def generate_themes_json(news_data: Dict) -> bool:
         "themes": themes_data,
         "lastUpdated": datetime.now().isoformat(),
         "analysisCount": sum(len(articles) for articles in news_data.values() if isinstance(articles, list)),
-        "weights_version": "enhanced_v3_async",
+        "weights_version": "enhanced_v4_async_news_only",
         "ml_enabled": ML_ENABLED,
         "observability_enabled": OBSERVABILITY_ENABLED,
         "async_enabled": True,
-        "filtering_enabled": True
+        "filtering_enabled": True,
+        "events_enabled": False
     }
     
     os.makedirs(os.path.dirname(THEMES_JSON_PATH), exist_ok=True)
@@ -1245,19 +1123,21 @@ def generate_themes_json(news_data: Dict) -> bool:
         return False
 
 def main(args) -> bool:
-    """Enhanced main execution function with async news fetching"""
+    """Enhanced main execution function with async news fetching (no events)"""
     try:
-        print("\n🚀 TradePulse News Updater - Enhanced Async Version v4.0")
+        print("\n🚀 TradePulse News Updater - Enhanced Async Version v4.1 (News Only)")
         print("=" * 70)
         print(f"📊 ML Features: {'✅ Enabled' if ML_ENABLED else '❌ Disabled'}")
         print(f"📈 Observability: {'✅ Enabled' if OBSERVABILITY_ENABLED else '❌ Disabled'}")
         print(f"🚀 Async Fetching: ✅ Active")
-        print(f"🔍 Hard Filtering: ✅ Active (IPO/M&A/Economic)")
+        print(f"🔍 Hard Filtering: ✅ Active (IPO/M&A excluded)")
         print(f"🌐 Language Filter: ✅ Active (en/fr only)")
         print(f"⚡ URL Deduplication: ✅ Active")
         print(f"🎯 Enhanced Scoring: ✅ Active")
         print(f"🔍 Semantic Matching: {'✅ FAISS' if faiss_index else '❌ Keyword only'}")
         print(f"⚡ Compiled Patterns: ✅ Active")
+        print(f"📰 Focus: News Only (No Events/Calendar)")
+        print(f"📊 Sources: General, Stock, Crypto, Press Releases, FMP Articles, Forex")
         print("=" * 70)
         
         existing_data = read_existing_news()
@@ -1265,15 +1145,6 @@ def main(args) -> bool:
         # Fetch news using async batch fetch
         logger.info("🔄 Fetching news with async batch fetch...")
         articles = get_all_news_async()
-        
-        # Fetch events concurrently (separate from main news flow)
-        logger.info("📅 Fetching economic events...")
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            earnings_future = executor.submit(get_earnings_calendar)
-            economic_future = executor.submit(get_economic_calendar)
-            
-            earnings = earnings_future.result()
-            economic = economic_future.result()
         
         total_news = len(articles)
         logger.info(f"📰 Total filtered news retrieved: {total_news}")
@@ -1288,17 +1159,13 @@ def main(args) -> bool:
         logger.info("🧠 Processing news with async-enhanced pipeline...")
         news_data = process_news_data_async(articles)
         
-        # Process events (filtered)
-        logger.info("📊 Processing economic events...")
-        events = process_events_data(earnings, economic)
-        
         # Update files (with dry-run support)
         logger.info("💾 Updating output files...")
         if args.no_write:
             logger.info("📝 Dry-run : aucun fichier n'a été modifié")
             success_news = success_themes = True
         else:
-            success_news = update_news_json_file(news_data, events)
+            success_news = update_news_json_file(news_data)
             success_themes = generate_themes_json(news_data)
         
         # Display enhanced analytics
@@ -1314,23 +1181,23 @@ def main(args) -> bool:
         
         final_stats = {
             "total_processed": sum(len(articles) for articles in news_data.values() if isinstance(articles, list)),
-            "events_found": len(events),
             "themes_analyzed": sum(len(themes) for themes in top_themes.values()),
             "sources_used": len(set(art.get("source", "") for articles in news_data.values() 
                                    if isinstance(articles, list) for art in articles)),
             "ml_enabled": ML_ENABLED,
             "observability": OBSERVABILITY_ENABLED,
             "async_enabled": True,
-            "filtering_enabled": True
+            "filtering_enabled": True,
+            "events_enabled": False
         }
         
         print(f"\n✅ Pipeline completed successfully!")
         print(f"📰 Articles processed: {final_stats['total_processed']}")
-        print(f"📅 Events found: {final_stats['events_found']}")
         print(f"🎯 Themes analyzed: {final_stats['themes_analyzed']}")
         print(f"📡 Sources used: {final_stats['sources_used']}")
         print(f"🚀 Performance: {'🔥 Async Enhanced' if ML_ENABLED else '⚡ Async Standard'}")
-        print(f"🔍 Filtering: ✅ IPO/M&A/Economic excluded")
+        print(f"🔍 Filtering: ✅ IPO/M&A excluded, Events removed")
+        print(f"📰 Focus: Pure News Pipeline")
         
         return success_news and success_themes
         
@@ -1341,7 +1208,7 @@ def main(args) -> bool:
         return False
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="TradePulse News Updater - Enhanced Async Version v4.0")
+    parser = argparse.ArgumentParser(description="TradePulse News Updater - Enhanced Async Version v4.1 (News Only)")
     parser.add_argument("--themes-only", action="store_true", 
                        help="Only regenerate themes.json from existing news data")
     parser.add_argument("--profile", action="store_true", 
@@ -1363,7 +1230,7 @@ if __name__ == "__main__":
         exit(0)
     
     if args.config_check:
-        print("\n🔧 Configuration Check")
+        print("\n🔧 Configuration Check (News Only)")
         print("=" * 50)
         print(f"📊 Total limits: {CONFIG['max_total_articles']}")
         print(f"📈 Country allocation: {CONFIG['output_limits']}")
@@ -1373,8 +1240,10 @@ if __name__ == "__main__":
         print(f"🔍 FAISS index: {'✅' if faiss_index else '❌'}")
         print(f"⚡ Compiled patterns: {'✅' if KEYWORD_PATTERNS else '❌'}")
         print(f"🚀 Async fetch: ✅ aiohttp")
-        print(f"🔍 Hard filtering: ✅ IPO/M&A/Economic")
+        print(f"🔍 Hard filtering: ✅ IPO/M&A")
         print(f"🌐 Language filter: ✅ {LANG_WHITELIST}")
+        print(f"📰 Events: ❌ Disabled (News Only)")
+        print(f"📊 Sources: {list(CONFIG['endpoints'].keys())}")
         exit(0)
     
     if args.themes_only:
