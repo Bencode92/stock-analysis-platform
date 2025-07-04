@@ -1,6 +1,7 @@
 /**
  * news-hierarchy.js
  * Système central de hiérarchisation des actualités financières
+ * Version optimisée avec cartes harmonisées "investisseur"
  */
 
 // Namespace global pour les actualités
@@ -81,6 +82,113 @@ async function initializeNewsData() {
 }
 
 /**
+ * Helper centralisé pour construire les cartes d'actualités harmonisées
+ * @param {Object} item - Données de l'actualité
+ * @param {string} impactText - Texte d'impact affiché
+ * @param {string} impactColor - Couleur de bordure (red-600, emerald-600, etc.)
+ * @param {string} sentimentIcon - Icône de sentiment
+ * @param {number} index - Index pour l'animation
+ * @param {string} tier - Niveau (critical, important, regular)
+ */
+function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier) {
+    const card = document.createElement('div');
+    card.className = `news-card relative flex flex-col rounded-xl p-6 border border-${impactColor} bg-zinc-900 transition hover:shadow-lg min-h-[240px] cursor-pointer`;
+    card.style.animationDelay = `${index * 0.1}s`;
+
+    // Attributs de filtrage
+    ['category', 'impact', 'sentiment', 'country', 'score'].forEach(key => {
+        card.setAttribute(`data-${key}`, item[key] || 'unknown');
+    });
+    
+    // Attribut pour identifier la carte
+    card.setAttribute('data-news-id', `news-${tier}-${index}`);
+
+    // Gestion du clic pour ouvrir l'URL
+    if (item.url) {
+        card.setAttribute('data-url', item.url);
+        card.classList.add('clickable-news');
+        card.addEventListener('click', () => window.open(item.url, '_blank'));
+    }
+
+    // Tronquer le contenu si trop long (optionnel avec line-clamp CSS)
+    let content = item.content || '';
+    if (content.length > 280) {
+        content = content.slice(0, 277) + '…';
+    }
+
+    // Badge urgent pour les actualités critiques
+    const urgentBadge = tier === 'critical' ? '<span class="absolute top-2 right-2 badge urgent bg-red-500 text-white text-xs px-2 py-1 rounded animate-pulse">URGENT</span>' : '';
+
+    card.innerHTML = `
+        ${urgentBadge}
+        
+        <header class="flex items-center gap-2 mb-3 flex-wrap">
+            <span class="badge badge-${item.impact} uppercase text-xs px-2 py-1 rounded font-semibold ${getImpactBadgeClass(item.impact)}">${impactText}</span>
+            <span class="chip text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300">${item.category?.toUpperCase() || 'GENERAL'}</span>
+            <span class="time text-xs text-zinc-500 ml-auto">${item.date || ''} ${item.time || ''}</span>
+        </header>
+
+        <h3 class="title text-lg font-bold line-clamp-2 text-white mb-3">${item.title}</h3>
+
+        <p class="desc text-sm text-zinc-300 line-clamp-4 flex-grow mb-4">
+            ${content}
+        </p>
+
+        <footer class="footer mt-auto flex justify-between items-center text-xs">
+            <span class="text-emerald-400 font-medium">${item.source || '—'}</span>
+            <div class="flex items-center gap-2">
+                <span class="sentiment-icon">${sentimentIcon}</span>
+                ${item.url ? '<span class="text-zinc-500"><i class="fas fa-external-link-alt"></i></span>' : ''}
+            </div>
+        </footer>
+    `;
+    
+    return card;
+}
+
+/**
+ * Retourne les classes CSS pour les badges d'impact
+ */
+function getImpactBadgeClass(impact) {
+    switch(impact) {
+        case 'negative':
+            return 'bg-red-800 text-red-200 border border-red-600';
+        case 'positive':
+            return 'bg-emerald-800 text-emerald-200 border border-emerald-600';
+        default:
+            return 'bg-yellow-800 text-yellow-200 border border-yellow-600';
+    }
+}
+
+/**
+ * Retourne la couleur de bordure selon l'impact
+ */
+function getImpactBorderColor(impact) {
+    switch(impact) {
+        case 'negative':
+            return 'red-600';
+        case 'positive':
+            return 'emerald-600';
+        default:
+            return 'yellow-600';
+    }
+}
+
+/**
+ * Retourne l'icône de sentiment
+ */
+function getSentimentIcon(sentiment) {
+    switch(sentiment) {
+        case 'positive':
+            return '⬆️';
+        case 'negative':
+            return '⬇️';
+        default:
+            return '➖';
+    }
+}
+
+/**
  * Distribue les actualités par niveau d'importance
  * @param {Object} newsData - Données d'actualités
  */
@@ -121,7 +229,17 @@ function distributeNewsByImportance(newsData) {
         news.country = news.country || 'other';
         
         // Hiérarchisation basée sur le score si disponible, sinon utiliser l'ancienne méthode
-        if (!news.hierarchy && news.score !== undefined) {
+        if (!news.hierarchy && news.importance_score !== undefined) {
+            const score = parseFloat(news.importance_score);
+            
+            if (score >= 45) {
+                news.hierarchy = 'critical';
+            } else if (score >= 38) {
+                news.hierarchy = 'important';
+            } else {
+                news.hierarchy = 'normal';
+            }
+        } else if (!news.hierarchy && news.score !== undefined) {
             const score = parseFloat(news.score);
             
             if (score >= 45) {
@@ -156,16 +274,20 @@ function distributeNewsByImportance(newsData) {
         news.hierarchy === 'normal'
     );
     
-    // Tri par date (les plus récentes en premier)
-    const sortByDate = (a, b) => {
+    // Tri par score d'importance puis par date
+    const sortByImportance = (a, b) => {
+        const scoreA = parseFloat(a.importance_score || a.score || 0);
+        const scoreB = parseFloat(b.importance_score || b.score || 0);
+        if (scoreA !== scoreB) return scoreB - scoreA;
+        
         const dateA = a.rawDate || a.date;
         const dateB = b.rawDate || b.date;
         return dateB > dateA ? 1 : -1;
     };
     
-    criticalNews.sort(sortByDate);
-    importantNews.sort(sortByDate);
-    regularNews.sort(sortByDate);
+    criticalNews.sort(sortByImportance);
+    importantNews.sort(sortByImportance);
+    regularNews.sort(sortByImportance);
 
     // Stocker les actualités catégorisées
     window.NewsSystem.categorizedNews = {
@@ -206,78 +328,13 @@ function displayCriticalNews(news) {
         return;
     }
 
-    // Créer les cartes d'actualités critiques
+    // Créer les cartes d'actualités critiques avec le nouveau helper
     news.slice(0, MAX_CRITICAL_NEWS).forEach((item, index) => {
-        // Détermine la classe CSS basée sur l'impact
-        const impactClass = item.impact === 'negative' ? 'bg-red-800 bg-opacity-20 border-red-700' : 
-                            item.impact === 'positive' ? 'bg-green-800 bg-opacity-20 border-green-700' : 
-                            'bg-yellow-800 bg-opacity-20 border-yellow-700';
-                            
-        // Texte descriptif de l'impact
-        const impactText = item.impact === 'negative' ? 'IMPACT NÉGATIF' : 
-                           item.impact === 'positive' ? 'IMPACT POSITIF' : 'IMPACT NEUTRE';
-                           
-        // Classe de l'indicateur d'impact
-        const impactIndicatorClass = `impact-${item.impact}`;
+        const impactText = getImpactText(item.impact);
+        const impactColor = getImpactBorderColor(item.impact);
+        const sentimentIcon = getSentimentIcon(item.sentiment || item.impact);
         
-        // Icône pour le sentiment
-        const sentimentClass = `sentiment-${item.sentiment || 'neutral'}`;
-        const sentimentIcon = item.sentiment === 'positive' ? '<i class="fas fa-arrow-up"></i>' : 
-                             item.sentiment === 'negative' ? '<i class="fas fa-arrow-down"></i>' : 
-                             '<i class="fas fa-minus"></i>';
-
-        const newsCard = document.createElement('div');
-        newsCard.className = `news-card glassmorphism ${impactClass}`;
-        newsCard.style.animationDelay = `${index * 0.1}s`;
-        
-        // Ajouter les attributs pour le filtrage
-        newsCard.setAttribute('data-category', item.category || 'general');
-        newsCard.setAttribute('data-impact', item.impact || 'neutral');
-        newsCard.setAttribute('data-sentiment', item.sentiment || item.impact || 'neutral');
-        newsCard.setAttribute('data-news-id', `news-critical-${index}`);
-        newsCard.setAttribute('data-country', item.country || 'other');
-        newsCard.setAttribute('data-score', item.score || '0');
-        
-        // Ajouter l'URL de l'article comme attribut
-        if (item.url) {
-            newsCard.setAttribute('data-url', item.url);
-            newsCard.style.cursor = 'pointer';
-            
-            // Ajouter un événement click pour ouvrir l'URL
-            newsCard.addEventListener('click', function() {
-                const url = this.getAttribute('data-url');
-                if (url) {
-                    window.open(url, '_blank');
-                }
-            });
-            
-            // Ajouter une indication visuelle pour montrer que c'est cliquable
-            newsCard.classList.add('clickable-news');
-        }
-
-        newsCard.innerHTML = `
-            <span class="badge urgent">URGENT</span>
-            <div class="p-4">
-                <div class="mb-2">
-                    <span class="impact-indicator ${impactIndicatorClass}">${impactText}</span>
-                    <span class="impact-indicator">${(item.category || 'GENERAL').toUpperCase()}</span>
-                    <span class="sentiment-indicator ${sentimentClass}">
-                        ${sentimentIcon}
-                    </span>
-                </div>
-                <h3 class="text-lg font-bold">${item.title}</h3>
-                <p class="text-sm mt-2">${item.content || ''}</p>
-                <div class="news-meta">
-                    <span class="source">${item.source || 'Financial Data'}</span>
-                    <div class="date-time">
-                        <i class="fas fa-clock mr-1"></i>
-                        ${item.date || ''} ${item.time || ''}
-                    </div>
-                    ${item.url ? '<div class="read-more"><i class="fas fa-external-link-alt mr-1"></i> Lire l\'article</div>' : ''}
-                </div>
-            </div>
-        `;
-
+        const newsCard = buildNewsCard(item, impactText, impactColor, sentimentIcon, index, 'critical');
         container.appendChild(newsCard);
     });
 }
@@ -301,77 +358,13 @@ function displayImportantNews(news) {
         return;
     }
 
-    // Créer les cartes d'actualités importantes
+    // Créer les cartes d'actualités importantes avec le nouveau helper
     news.slice(0, MAX_IMPORTANT_NEWS).forEach((item, index) => {
-        // Détermine la classe CSS basée sur l'impact
-        const impactClass = item.impact === 'negative' ? 'bg-red-700 bg-opacity-10 border-red-600' : 
-                            item.impact === 'positive' ? 'bg-green-700 bg-opacity-10 border-green-600' : 
-                            'bg-yellow-700 bg-opacity-10 border-yellow-600';
-                            
-        // Texte descriptif de l'impact
-        const impactText = item.impact === 'negative' ? 'IMPACT NÉGATIF' : 
-                           item.impact === 'positive' ? 'IMPACT POSITIF' : 'IMPACT NEUTRE';
-                           
-        // Classe de l'indicateur d'impact
-        const impactIndicatorClass = `impact-${item.impact}`;
+        const impactText = getImpactText(item.impact);
+        const impactColor = getImpactBorderColor(item.impact);
+        const sentimentIcon = getSentimentIcon(item.sentiment || item.impact);
         
-        // Icône pour le sentiment
-        const sentimentClass = `sentiment-${item.sentiment || 'neutral'}`;
-        const sentimentIcon = item.sentiment === 'positive' ? '<i class="fas fa-arrow-up"></i>' : 
-                             item.sentiment === 'negative' ? '<i class="fas fa-arrow-down"></i>' : 
-                             '<i class="fas fa-minus"></i>';
-
-        const newsCard = document.createElement('div');
-        newsCard.className = `news-card glassmorphism ${impactClass}`;
-        newsCard.style.animationDelay = `${index * 0.1}s`;
-        
-        // Ajouter les attributs pour le filtrage
-        newsCard.setAttribute('data-category', item.category || 'general');
-        newsCard.setAttribute('data-impact', item.impact || 'neutral');
-        newsCard.setAttribute('data-sentiment', item.sentiment || item.impact || 'neutral');
-        newsCard.setAttribute('data-news-id', `news-important-${index}`);
-        newsCard.setAttribute('data-country', item.country || 'other');
-        newsCard.setAttribute('data-score', item.score || '0');
-        
-        // Ajouter l'URL de l'article comme attribut
-        if (item.url) {
-            newsCard.setAttribute('data-url', item.url);
-            newsCard.style.cursor = 'pointer';
-            
-            // Ajouter un événement click pour ouvrir l'URL
-            newsCard.addEventListener('click', function() {
-                const url = this.getAttribute('data-url');
-                if (url) {
-                    window.open(url, '_blank');
-                }
-            });
-            
-            // Ajouter une indication visuelle pour montrer que c'est cliquable
-            newsCard.classList.add('clickable-news');
-        }
-
-        newsCard.innerHTML = `
-            <div class="p-4">
-                <div class="mb-2">
-                    <span class="impact-indicator ${impactIndicatorClass}">${impactText}</span>
-                    <span class="impact-indicator">${(item.category || 'GENERAL').toUpperCase()}</span>
-                    <span class="sentiment-indicator ${sentimentClass}">
-                        ${sentimentIcon}
-                    </span>
-                </div>
-                <h3 class="text-md font-semibold">${item.title}</h3>
-                <p class="text-sm mt-2">${item.content || ''}</p>
-                <div class="news-meta">
-                    <span class="source">${item.source || 'Financial Data'}</span>
-                    <div class="date-time">
-                        <i class="fas fa-clock mr-1"></i>
-                        ${item.date || ''} ${item.time || ''}
-                    </div>
-                    ${item.url ? '<div class="read-more"><i class="fas fa-external-link-alt mr-1"></i> Lire l\'article</div>' : ''}
-                </div>
-            </div>
-        `;
-
+        const newsCard = buildNewsCard(item, impactText, impactColor, sentimentIcon, index, 'important');
         container.appendChild(newsCard);
     });
 }
@@ -403,80 +396,17 @@ function displayRecentNews(news) {
     } else {
         // Sinon, créer une grille pour les actualités
         newsGrid = document.createElement('div');
-        newsGrid.className = 'news-grid';
+        newsGrid.className = 'news-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
         container.appendChild(newsGrid);
     }
 
-    // Créer les cartes d'actualités régulières
+    // Créer les cartes d'actualités régulières avec le nouveau helper
     news.slice(0, MAX_REGULAR_NEWS).forEach((item, index) => {
-        // Détermine la classe CSS basée sur l'impact
-        const impactClass = item.impact === 'negative' ? 'bg-red-700 bg-opacity-10 border-red-600' : 
-                            item.impact === 'positive' ? 'bg-green-700 bg-opacity-10 border-green-600' : 
-                            'bg-yellow-700 bg-opacity-10 border-yellow-600';
-                            
-        // Texte descriptif de l'impact
-        const impactText = item.impact === 'negative' ? 'IMPACT NÉGATIF' : 
-                           item.impact === 'positive' ? 'IMPACT POSITIF' : 'IMPACT NEUTRE';
-                           
-        // Classe de l'indicateur d'impact
-        const impactIndicatorClass = `impact-${item.impact}`;
+        const impactText = getImpactText(item.impact);
+        const impactColor = getImpactBorderColor(item.impact);
+        const sentimentIcon = getSentimentIcon(item.sentiment || item.impact);
         
-        // Icône pour le sentiment
-        const sentimentClass = `sentiment-${item.sentiment || 'neutral'}`;
-        const sentimentIcon = item.sentiment === 'positive' ? '<i class="fas fa-arrow-up"></i>' : 
-                             item.sentiment === 'negative' ? '<i class="fas fa-arrow-down"></i>' : 
-                             '<i class="fas fa-minus"></i>';
-
-        const newsCard = document.createElement('div');
-        newsCard.className = `news-card glassmorphism ${impactClass}`;
-        
-        // Ajouter les attributs pour le filtrage
-        newsCard.setAttribute('data-category', item.category || 'general');
-        newsCard.setAttribute('data-impact', item.impact || 'neutral');
-        newsCard.setAttribute('data-sentiment', item.sentiment || item.impact || 'neutral');
-        newsCard.setAttribute('data-news-id', `news-regular-${index}`);
-        newsCard.setAttribute('data-country', item.country || 'other');
-        newsCard.setAttribute('data-score', item.score || '0');
-        
-        // Ajouter l'URL de l'article comme attribut
-        if (item.url) {
-            newsCard.setAttribute('data-url', item.url);
-            newsCard.style.cursor = 'pointer';
-            
-            // Ajouter un événement click pour ouvrir l'URL
-            newsCard.addEventListener('click', function() {
-                const url = this.getAttribute('data-url');
-                if (url) {
-                    window.open(url, '_blank');
-                }
-            });
-            
-            // Ajouter une indication visuelle pour montrer que c'est cliquable
-            newsCard.classList.add('clickable-news');
-        }
-
-        newsCard.innerHTML = `
-            <div class="p-4">
-                <div class="mb-2">
-                    <span class="impact-indicator ${impactIndicatorClass}">${impactText}</span>
-                    <span class="impact-indicator">${(item.category || 'GENERAL').toUpperCase()}</span>
-                    <span class="sentiment-indicator ${sentimentClass}">
-                        ${sentimentIcon}
-                    </span>
-                </div>
-                <h3 class="text-md font-semibold">${item.title}</h3>
-                <p class="text-sm mt-2">${item.content || ''}</p>
-                <div class="news-meta">
-                    <span class="source">${item.source || 'Financial Data'}</span>
-                    <div class="date-time">
-                        <i class="fas fa-clock mr-1"></i>
-                        ${item.date || ''} ${item.time || ''}
-                    </div>
-                    ${item.url ? '<div class="read-more"><i class="fas fa-external-link-alt mr-1"></i> Lire l\'article</div>' : ''}
-                </div>
-            </div>
-        `;
-
+        const newsCard = buildNewsCard(item, impactText, impactColor, sentimentIcon, index, 'regular');
         newsGrid.appendChild(newsCard);
     });
 }
@@ -490,9 +420,9 @@ function showLoadingState(containerId) {
     if (!container) return;
 
     container.innerHTML = `
-        <div class="loading-state">
-            <div class="loading-spinner"></div>
-            <p>Chargement des actualités...</p>
+        <div class="loading-state flex items-center justify-center p-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-emerald-400 mr-3"></div>
+            <p class="text-zinc-400">Chargement des actualités...</p>
         </div>
     `;
 }
@@ -512,12 +442,12 @@ function displayFallbackData() {
         if (!container) return;
         
         container.innerHTML = `
-            <div class="error-message bg-gray-800 bg-opacity-70 rounded-lg p-4 text-center">
-                <i class="fas fa-exclamation-triangle text-yellow-400 text-2xl mb-2"></i>
+            <div class="error-message bg-zinc-800 bg-opacity-70 rounded-lg p-6 text-center">
+                <i class="fas fa-exclamation-triangle text-yellow-400 text-3xl mb-3"></i>
                 <h3 class="text-white font-medium mb-2">Impossible de charger les actualités</h3>
-                <p class="text-gray-400 mb-3">Nous rencontrons un problème de connexion avec notre service de données.</p>
-                <button class="retry-button" onclick="initializeNewsData()">
-                    <i class="fas fa-sync-alt mr-1"></i> Réessayer
+                <p class="text-zinc-400 mb-4">Nous rencontrons un problème de connexion avec notre service de données.</p>
+                <button class="retry-button bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded transition" onclick="initializeNewsData()">
+                    <i class="fas fa-sync-alt mr-2"></i> Réessayer
                 </button>
             </div>
         `;
@@ -597,11 +527,13 @@ function filterNews(filterType, filterValue) {
         
         // Afficher ou masquer l'élément en fonction des filtres
         if (matchesCategory && matchesImpact && matchesSentiment && matchesCountry) {
-            item.classList.remove('hidden-item');
-            item.classList.add('fade-in');
+            item.classList.remove('hidden');
+            item.style.display = 'flex';
+            item.classList.add('animate-fadeIn');
         } else {
-            item.classList.add('hidden-item');
-            item.classList.remove('fade-in');
+            item.classList.add('hidden');
+            item.style.display = 'none';
+            item.classList.remove('animate-fadeIn');
         }
     });
     
@@ -626,17 +558,17 @@ function checkVisibleItems() {
             
         if (!gridContainer) return;
         
-        const visibleItems = gridContainer.querySelectorAll('.news-card:not(.hidden-item)');
+        const visibleItems = gridContainer.querySelectorAll('.news-card:not(.hidden)');
         
         // Si aucun élément n'est visible, afficher un message
         if (visibleItems.length === 0) {
             if (!gridContainer.querySelector('.no-data-message')) {
                 const noItemsMessage = document.createElement('div');
-                noItemsMessage.className = 'no-data-message flex flex-col items-center justify-center py-10 col-span-3';
+                noItemsMessage.className = 'no-data-message flex flex-col items-center justify-center py-12 col-span-full';
                 noItemsMessage.innerHTML = `
-                    <i class="fas fa-filter text-gray-700 text-4xl mb-4"></i>
+                    <i class="fas fa-filter text-zinc-600 text-4xl mb-4"></i>
                     <h3 class="text-white font-medium mb-2">Aucune actualité ne correspond à vos critères</h3>
-                    <p class="text-gray-400">Veuillez modifier vos filtres pour voir plus d'actualités.</p>
+                    <p class="text-zinc-400">Veuillez modifier vos filtres pour voir plus d'actualités.</p>
                 `;
                 
                 gridContainer.appendChild(noItemsMessage);
