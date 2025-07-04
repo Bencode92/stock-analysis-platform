@@ -1,0 +1,31 @@
+# TradePulse - Dépendances Python
+# Base requirements pour le script fmp_news_updater.py
+
+# === DÉPENDANCES DE BASE (OBLIGATOIRES) ===
+aiohttp>=3.8.0           # Async HTTP client
+numpy>=1.21.0            # Arrays numériques et calculs
+requests>=2.28.0         # HTTP client synchrone
+pandas>=1.5.0            # Manipulation de données
+scikit-learn>=1.2.0      # Machine learning de base
+nltk>=3.7                # Traitement du langage naturel
+
+# === MACHINE LEARNING & NLP (RECOMMANDÉES) ===
+sentence-transformers>=2.2.0  # Embeddings de phrases
+langdetect>=1.0.9            # Détection de langue
+joblib>=1.2.0                # Sérialisation modèles ML
+faiss-cpu>=1.7.0             # Recherche de similarité (version CPU)
+
+# === PERFORMANCE & OBSERVABILITÉ (OPTIONNELLES) ===
+tenacity>=8.0.0              # Retry logic robuste
+structlog>=22.0.0            # Logging structuré
+orjson>=3.8.0               # JSON parsing ultra-rapide
+prometheus-client>=0.15.0    # Métriques Prometheus
+redis>=4.0.0                # Cache Redis
+pybreaker>=0.8.0            # Circuit breaker pattern
+httpx>=0.24.0               # HTTP client async alternatif
+
+# === DÉVELOPPEMENT (OPTIONNELLES) ===
+pytest>=7.0.0               # Tests unitaires
+black>=22.0.0               # Formatage de code
+flake8>=5.0.0               # Linting
+mypy>=1.0.0                 # Type checking
