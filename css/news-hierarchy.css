@@ -206,7 +206,23 @@
     box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
 }
 
-/* 12. Animation de fade-in pour les nouvelles actualités */
+/* 12. Styles pour les actualités générales - MÊME STYLE QUE LES IMPORTANTES */
+#recent-news .news-card {
+    border-width: 1px;
+}
+
+#recent-news .news-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: linear-gradient(to bottom, #f59e0b, #d97706);
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
+}
+
+/* 13. Animation de fade-in pour les nouvelles actualités */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
@@ -216,7 +232,7 @@
     animation: fadeIn 0.5s ease-out forwards;
 }
 
-/* 13. États de chargement et d'erreur améliorés */
+/* 14. États de chargement et d'erreur améliorés */
 .loading-state {
     display: flex;
     align-items: center;
@@ -249,7 +265,7 @@
     transform: translateY(-1px);
 }
 
-/* 14. Message "aucun résultat" */
+/* 15. Message "aucun résultat" */
 .no-data-message {
     grid-column: 1 / -1;
     display: flex;
@@ -261,7 +277,7 @@
     text-align: center;
 }
 
-/* 15. Améliorations responsive */
+/* 16. Améliorations responsive */
 @media (max-width: 768px) {
     .news-card {
         min-height: 200px;
@@ -289,7 +305,7 @@
     }
 }
 
-/* 16. Indicateur cliquable */
+/* 17. Indicateur cliquable */
 .clickable-news {
     cursor: pointer;
 }
@@ -312,7 +328,7 @@
     opacity: 0.7;
 }
 
-/* 17. Icônes de sentiment */
+/* 18. Icônes de sentiment */
 .sentiment-icon {
     font-size: 1rem;
     display: inline-flex;
@@ -320,7 +336,7 @@
     justify-content: center;
 }
 
-/* 18. Styles pour les filtres actifs (compatibility) */
+/* 19. Styles pour les filtres actifs (compatibility) */
 .filter-active {
     background: rgba(5, 150, 105, 0.2) !important;
     border-color: rgba(5, 150, 105, 0.6) !important;
@@ -328,13 +344,13 @@
     transform: translateY(-1px);
 }
 
-/* 19. Support pour les anciennes classes (backward compatibility) */
+/* 20. Support pour les anciennes classes (backward compatibility) */
 .glassmorphism {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
 }
 
-/* 20. Amélioration de l'accessibilité */
+/* 21. Amélioration de l'accessibilité */
 .news-card:focus {
     outline: 2px solid #059669;
     outline-offset: 2px;
@@ -345,7 +361,7 @@
     outline-offset: 2px;
 }
 
-/* 21. Animation d'apparition progressive */
+/* 22. Animation d'apparition progressive */
 .news-card:nth-child(1) { animation-delay: 0.1s; }
 .news-card:nth-child(2) { animation-delay: 0.2s; }
 .news-card:nth-child(3) { animation-delay: 0.3s; }
@@ -353,7 +369,7 @@
 .news-card:nth-child(5) { animation-delay: 0.5s; }
 .news-card:nth-child(6) { animation-delay: 0.6s; }
 
-/* 22. Styles pour dark/light mode compatibility */
+/* 23. Styles pour dark/light mode compatibility */
 .dark .news-card {
     background-color: #18181b;
     border-color: #3f3f46;
