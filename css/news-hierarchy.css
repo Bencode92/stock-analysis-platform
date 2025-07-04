@@ -24,6 +24,13 @@
     overflow: hidden;
 }
 
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
 .line-clamp-4 {
     display: -webkit-box;
     -webkit-line-clamp: 4;
@@ -206,9 +213,10 @@
     box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
 }
 
-/* 12. Styles pour les actualités générales - MÊME STYLE QUE LES IMPORTANTES */
+/* 12. Styles pour les actualités générales - hauteur réduite pour harmonisation */
 #recent-news .news-card {
     border-width: 1px;
+    min-height: 200px; /* Réduit de 240px à 200px pour harmoniser */
 }
 
 #recent-news .news-card::before {
@@ -282,6 +290,11 @@
     .news-card {
         min-height: 200px;
         padding: 1rem;
+    }
+    
+    /* Hauteur encore plus réduite sur mobile pour les cartes regular */
+    #recent-news .news-card {
+        min-height: 180px;
     }
     
     .news-card .title {
