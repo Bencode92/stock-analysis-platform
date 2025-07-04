@@ -25,6 +25,8 @@ jobs:
           # Installation des dépendances de base (obligatoires pour CI)
           pip install aiohttp numpy requests pandas scikit-learn nltk
           pip install sentence-transformers langdetect joblib faiss-cpu
+          # 🆕 Dépendances pour la traduction automatique
+          pip install deepl langdetect
           # Dépendances optionnelles (ignore les erreurs)
           pip install tenacity structlog orjson || echo "⚠️ Dépendances optionnelles ignorées"
           
@@ -35,6 +37,7 @@ jobs:
       - name: Update themes data
         env:
           FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+          DEEPL_API_KEY: ${{ secrets.DEEPL_API_KEY }}  # 🆕 Clé API DeepL
           TP_MAX_TOTAL: 150
           TP_MAX_WORKERS: 2  # Limiter pour CI
           TP_LOG_LEVEL: INFO
@@ -54,6 +57,13 @@ jobs:
               echo "❌ Erreur: fichiers trop petits (potentiellement corrompus)"
               exit 1
             fi
+            # 🆕 Vérification que la traduction fonctionne
+            echo "🌐 Vérification de la traduction..."
+            if jq -r '.france[0].title // .us[0].title // empty' data/news.json | grep -q .; then
+              echo "✅ Données d'actualités trouvées"
+            else
+              echo "⚠️ Aucune actualité trouvée dans le JSON"
+            fi
           else
             echo "❌ Erreur: fichiers manquants"
             exit 1
@@ -69,10 +79,11 @@ jobs:
           else
             # Ajouter des statistiques dans le message de commit
             themes_count=$(jq -r '.themes.weekly | length' data/themes.json 2>/dev/null || echo "?")
-            git commit -m "🔄 Update themes and news data [skip ci]
+            git commit -m "🔄 Update themes and news data with translations [skip ci]
 
             📊 Themes analyzed: $themes_count
+            🌐 Auto-translation: enabled
             🕐 Updated: $(date '+%Y-%m-%d %H:%M:%S UTC')"
             git push
-            echo "✅ Données mises à jour et publiées"
+            echo "✅ Données mises à jour et publiées avec traduction"
           fi
