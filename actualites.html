@@ -16,14 +16,10 @@
     <!-- Autres styles CSS -->
     <link rel="stylesheet" href="css/news-impact-indicators.css">
     <link rel="stylesheet" href="css/ml-sentiment-indicators.css">
-    <link rel="stylesheet" href="events-style.css">
     <link rel="stylesheet" href="css/ml-feedback.css">
     <link rel="stylesheet" href="css/classification-updates.css">
     <link rel="stylesheet" href="css/news-display-fix.css">
-    <link rel="stylesheet" href="css/events-date-filter.css">
     <link rel="stylesheet" href="css/themes-dominant.css">
-    <link rel="stylesheet" href="css/event-filters.css">
-    <link rel="stylesheet" href="css/event-category-filters.css">
     <!-- CSS pour le brief stratégique -->
     <link rel="stylesheet" href="brief-style.css">
     <!-- Animation pour l'affichage des éléments -->
@@ -55,6 +51,46 @@
             border-radius: 2px;
             z-index: 1;
             animation: pulse 2s infinite;
+        }
+
+        /* Enhanced Filters Section Styles */
+        .filters-section {
+            border: 1px solid rgba(0, 255, 135, 0.2);
+            background: rgba(1, 22, 39, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            transition: all 0.3s ease;
+        }
+
+        .filters-section:hover {
+            border-color: rgba(0, 255, 135, 0.4);
+            box-shadow: 0 0 20px rgba(0, 255, 135, 0.1);
+        }
+
+        .filters-section h3 {
+            border-bottom: 1px solid rgba(0, 255, 135, 0.1);
+            padding-bottom: 8px;
+            margin-bottom: 16px;
+        }
+
+        /* Enhanced filter active state */
+        .filter-active {
+            background: rgba(0, 255, 135, 0.2) !important;
+            border-color: rgba(0, 255, 135, 0.6) !important;
+            box-shadow: 0 0 10px rgba(0, 255, 135, 0.3);
+            transform: translateY(-1px);
+        }
+
+        /* Mobile filter improvements */
+        @media (max-width: 768px) {
+            .filters-section {
+                margin: 0 -1rem;
+                border-radius: 0;
+            }
+            
+            .filters-section .flex-wrap {
+                gap: 0.5rem;
+            }
         }
     </style>
     <script>
@@ -923,75 +959,12 @@
                     </div>
                 </div>
                 
-                <!-- Actualités critiques (Breaking News) -->
-                <div class="mb-8">
-                    <h2 class="text-red-500 font-bold text-xl mb-4">🚨 ACTUALITÉS CRITIQUES</h2>
-                    <div id="critical-news-container" class="grid grid-cols-1 gap-4">
-                        <!-- Spinner de chargement -->
-                        <div class="loading-state">
-                            <div class="loading-spinner"></div>
-                            <p>Hiérarchisation des actualités critiques...</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Actualités importantes -->
-                <div class="mb-8">
-                    <h2 class="text-yellow-500 font-bold text-xl mb-4">🔥 ACTUALITÉS IMPORTANTES</h2>
-                    <div id="important-news-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Spinner de chargement -->
-                        <div class="loading-state">
-                            <div class="loading-spinner"></div>
-                            <p>Organisation des actualités importantes...</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Section Événements (améliorée) -->
-                <div class="mb-10 p-4 glassmorphism rounded-xl" id="events-section">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-lg font-semibold text-green-400">
-                            <i class="fas fa-calendar-alt mr-2"></i>ÉVÉNEMENTS À VENIR
-                        </h2>
-                        <!-- Filtres de date -->
-                        <div class="flex gap-2">
-                            <button id="today-filter" class="text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded filter-button active">
-                                Aujourd'hui
-                            </button>
-                            <button id="week-filter" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded filter-button">
-                                Cette semaine
-                            </button>
-                        </div>
-                    </div>
+                <!-- Enhanced Filters Section -->
+                <div class="mb-8 filters-section glassmorphism rounded-xl p-4">
+                    <h3 class="text-lg font-semibold text-green-400 mb-4">
+                        <i class="fas fa-filter mr-2"></i>FILTRES D'ACTUALITÉS
+                    </h3>
                     
-                    <!-- Filtres de catégorie pour les événements -->
-                    <div class="flex flex-wrap gap-2 mb-4" id="event-category-filters">
-                        <button class="text-xs md:text-sm px-3 py-1.5 bg-green-400 bg-opacity-10 text-green-400 border border-green-400 border-opacity-30 rounded-full font-medium filter-active" data-category="all">
-                            <i class="fas fa-filter mr-1"></i> TOUS
-                        </button>
-                        <!-- Bouton US supprimé -->
-                        <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="economic">
-                            <i class="fas fa-chart-line mr-1"></i> ECONOMIC
-                        </button>
-                        <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="ipo">
-                            <i class="fas fa-rocket mr-1"></i> IPO
-                        </button>
-                        <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="m&a">
-                            <i class="fas fa-handshake mr-1"></i> M&A
-                        </button>
-                        <!-- Bouton CN supprimé -->
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="events-container">
-                        <div class="col-span-3 flex items-center justify-center p-6">
-                            <div class="loading-spinner mr-3"></div>
-                            <p class="text-gray-400">Chargement des événements économiques...</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Filtres Simplifiés -->
-                <div class="mb-8">
                     <div class="flex flex-wrap gap-2 md:gap-4 justify-between items-center">
                         <!-- Filtres de catégorie -->
                         <div class="flex gap-2 overflow-x-auto pb-2 md:pb-0" id="category-filters">
@@ -1042,6 +1015,30 @@
                     </div>
                 </div>
                 
+                <!-- Actualités critiques (Breaking News) -->
+                <div class="mb-8">
+                    <h2 class="text-red-500 font-bold text-xl mb-4">🚨 ACTUALITÉS CRITIQUES</h2>
+                    <div id="critical-news-container" class="grid grid-cols-1 gap-4">
+                        <!-- Spinner de chargement -->
+                        <div class="loading-state">
+                            <div class="loading-spinner"></div>
+                            <p>Hiérarchisation des actualités critiques...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Actualités importantes -->
+                <div class="mb-8">
+                    <h2 class="text-yellow-500 font-bold text-xl mb-4">🔥 ACTUALITÉS IMPORTANTES</h2>
+                    <div id="important-news-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Spinner de chargement -->
+                        <div class="loading-state">
+                            <div class="loading-spinner"></div>
+                            <p>Organisation des actualités importantes...</p>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Actualités générales -->
                 <div class="mb-8">
                     <h2 class="text-gray-300 font-bold text-xl mb-4">📰 ACTUALITÉS GÉNÉRALES</h2>
@@ -1083,9 +1080,6 @@
     
     <!-- Script de l'horloge des marchés -->
     <script src="market-clock.js"></script>
-    
-    <!-- Script unifié des événements -->
-    <script src="event-system.js"></script>
     
     <!-- Scripts secondaires -->
     <script src="js/date-normalizer.js"></script>
