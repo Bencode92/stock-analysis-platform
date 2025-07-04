@@ -370,7 +370,7 @@ function displayImportantNews(news) {
 }
 
 /**
- * Fonction pour afficher les actualités régulières
+ * Fonction pour afficher les actualités régulières - VERSION CORRIGÉE
  * @param {Array} news - Actualités régulières
  */
 function displayRecentNews(news) {
@@ -380,35 +380,27 @@ function displayRecentNews(news) {
         return;
     }
 
-    // Vider le conteneur
+    // CORRECTION: Transformation directe en grille uniforme
     container.innerHTML = '';
+    container.className = 'news-grid'; // Classe CSS commune pour toutes les grilles
 
     if (news.length === 0) {
-        container.innerHTML = '<p class="text-center text-gray-400">Aucune actualité récente pour le moment</p>';
+        container.innerHTML = '<p class="text-center text-gray-400 col-span-full">Aucune actualité récente pour le moment</p>';
         return;
     }
 
-    // Vérifier si le conteneur est déjà une news-grid ou s'il faut en créer une
-    let newsGrid;
-    if (container.classList.contains('news-grid')) {
-        // Si le conteneur est déjà une news-grid, l'utiliser directement
-        newsGrid = container;
-    } else {
-        // Sinon, créer une grille pour les actualités
-        newsGrid = document.createElement('div');
-        newsGrid.className = 'news-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
-        container.appendChild(newsGrid);
-    }
-
-    // Créer les cartes d'actualités régulières avec le nouveau helper
+    // Créer les cartes d'actualités générales avec le helper uniforme
     news.slice(0, MAX_REGULAR_NEWS).forEach((item, index) => {
         const impactText = getImpactText(item.impact);
         const impactColor = getImpactBorderColor(item.impact);
         const sentimentIcon = getSentimentIcon(item.sentiment || item.impact);
         
+        // Utiliser le même helper que les autres sections
         const newsCard = buildNewsCard(item, impactText, impactColor, sentimentIcon, index, 'regular');
-        newsGrid.appendChild(newsCard);
+        container.appendChild(newsCard);
     });
+
+    console.log(`✅ ${news.length} actualités générales affichées avec design uniforme`);
 }
 
 /**
