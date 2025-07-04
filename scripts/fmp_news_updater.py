@@ -20,6 +20,16 @@ from datetime import datetime, timedelta
 import re
 from collections import Counter
 
+# Import du module de traduction
+try:
+    from .utils import translate_to_fr_safe as translate_to_fr
+    logger.info("✅ Module de traduction importé avec succès")
+except ImportError:
+    logger.warning("⚠️ Module de traduction non disponible, traduction désactivée")
+    # Fonction de fallback si le module n'est pas disponible
+    def translate_to_fr(text):
+        return text
+
 # Logger configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -1072,6 +1082,16 @@ def process_news_data(news_sources):
         for article in articles:
             # Normalize article
             normalized = normalize_article(article, source_type)
+            
+            # --- TRADUCTION AUTOMATIQUE VERS LE FRANÇAIS ---
+            try:
+                logger.debug(f"Traduction de l'article: {normalized['title'][:50]}...")
+                normalized["title"] = translate_to_fr(normalized["title"])
+                normalized["text"] = translate_to_fr(normalized["text"])
+                logger.debug("✅ Traduction terminée")
+            except Exception as e:
+                logger.warning(f"Erreur lors de la traduction: {e}")
+                # Continuer avec le texte original en cas d'erreur
             
             # Check if title is long enough to be relevant
             if len(normalized["title"]) < 10:
