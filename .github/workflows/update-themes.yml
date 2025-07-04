@@ -22,17 +22,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # Dépendances de base (obligatoires)
+          # Installation des dépendances de base (obligatoires pour CI)
           pip install aiohttp numpy requests pandas scikit-learn nltk
-          
-          # Dépendances ML/NLP (pour fonctionnalités avancées)
-          pip install sentence-transformers langdetect joblib
-          
-          # FAISS pour recherche sémantique (version CPU pour CI)
-          pip install faiss-cpu
-          
-          # Dépendances optionnelles (amélioration performance/observabilité)
-          pip install tenacity structlog orjson || echo "Dépendances optionnelles ignorées"
+          pip install sentence-transformers langdetect joblib faiss-cpu
+          # Dépendances optionnelles (ignore les erreurs)
+          pip install tenacity structlog orjson || echo "⚠️ Dépendances optionnelles ignorées"
           
       - name: Create required directories
         run: |
@@ -53,6 +47,13 @@ jobs:
             echo "✅ Fichiers générés avec succès"
             echo "📊 Taille themes.json: $(du -h data/themes.json | cut -f1)"
             echo "📰 Taille news.json: $(du -h data/news.json | cut -f1)"
+            # Vérifier que les fichiers ne sont pas vides
+            themes_size=$(stat -c%s "data/themes.json")
+            news_size=$(stat -c%s "data/news.json")
+            if [ $themes_size -lt 100 ] || [ $news_size -lt 100 ]; then
+              echo "❌ Erreur: fichiers trop petits (potentiellement corrompus)"
+              exit 1
+            fi
           else
             echo "❌ Erreur: fichiers manquants"
             exit 1
@@ -61,12 +62,17 @@ jobs:
       - name: Commit changes
         run: |
           git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.name "GitHub Action [Bot]"
           git add data/themes.json data/news.json
           if git diff --staged --quiet; then
-            echo "📝 Aucun changement détecté"
+            echo "📝 Aucun changement détecté dans les données"
           else
-            git commit -m "🔄 Update themes and news data [skip ci]"
+            # Ajouter des statistiques dans le message de commit
+            themes_count=$(jq -r '.themes.weekly | length' data/themes.json 2>/dev/null || echo "?")
+            git commit -m "🔄 Update themes and news data [skip ci]
+
+            📊 Themes analyzed: $themes_count
+            🕐 Updated: $(date '+%Y-%m-%d %H:%M:%S UTC')"
             git push
             echo "✅ Données mises à jour et publiées"
           fi
