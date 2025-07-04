@@ -20,23 +20,9 @@ from datetime import datetime, timedelta
 import re
 from collections import Counter
 
-# ----------------------------------------------------------
-# Logger d'abord
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+# Logger configuration
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
-# Import du module de traduction
-try:
-    from scripts.utils import translate_to_fr_safe as translate_to_fr
-    logger.info("✅ Module de traduction importé avec succès")
-except ImportError:
-    logger.warning("⚠️ Module de traduction non disponible, traduction désactivée")
-    def translate_to_fr(text: str) -> str:   # fallback
-        return text
-# ----------------------------------------------------------
 
 # File paths
 NEWS_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "news.json")
@@ -1086,12 +1072,6 @@ def process_news_data(news_sources):
         for article in articles:
             # Normalize article
             normalized = normalize_article(article, source_type)
-            
-            # --- TRADUCTION AUTOMATIQUE (titre uniquement) ---
-            try:
-                normalized["title"] = translate_to_fr(normalized["title"])
-            except Exception as e:
-                logger.warning(f"Erreur lors de la traduction du titre : {e}")
             
             # Check if title is long enough to be relevant
             if len(normalized["title"]) < 10:
