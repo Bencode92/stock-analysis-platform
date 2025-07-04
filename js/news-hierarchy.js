@@ -117,11 +117,18 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
     const tmp = new DOMParser().parseFromString(raw, 'text/html');
     let content = (tmp.body.textContent || '').replace(/\s+/g, ' ').trim();
     
-    // Nouvelles limites plus courtes selon le tier
-    const LIMIT = tier === 'regular' ? 160 : tier === 'important' ? 200 : 220;
-    if (content.length > LIMIT) {
-        content = content.slice(0, LIMIT - 1) + '…';
+    /* Limites adaptées :
+       - regular  : 120 car + clamp 3 lignes
+       - important: 180 car + clamp 4 lignes
+       - critical : 220 car + clamp 4 lignes  */
+    const CHAR_LIMIT = { regular: 120, important: 180, critical: 220 }[tier] ?? 160;
+
+    if (content.length > CHAR_LIMIT) {
+        content = content.slice(0, CHAR_LIMIT - 1) + '…';
     }
+
+    // Classe line-clamp adaptée selon le tier
+    const descClamp = tier === 'regular' ? 'line-clamp-3' : 'line-clamp-4';
 
     // Badge urgent pour les actualités critiques
     const urgentBadge = tier === 'critical' ? '<span class="absolute top-2 right-2 badge urgent bg-red-500 text-white text-xs px-2 py-1 rounded animate-pulse">URGENT</span>' : '';
@@ -137,7 +144,7 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
 
         <h3 class="title text-lg font-bold line-clamp-2 text-white mb-3">${item.title}</h3>
 
-        <p class="desc text-sm text-zinc-300 line-clamp-4 flex-grow mb-4"></p>
+        <p class="desc text-sm text-zinc-300 ${descClamp} flex-grow mb-4"></p>
 
         <footer class="footer mt-auto flex justify-between items-center text-xs">
             <span class="text-emerald-400 font-medium">${item.source || '—'}</span>
