@@ -8,8 +8,7 @@ Script for extracting news and events from Financial Modeling Prep
 - Crypto News API: For cryptocurrencies
 - Press Releases API: For company press releases
 - FMP Articles API: For articles written by FMP
-- IPOs Calendar: For upcoming IPOs
-- Mergers & Acquisitions: For M&A operations
+- Forex News API: For forex/currency market news
 """
 
 import os
@@ -37,17 +36,15 @@ CONFIG = {
         "stock_news": "https://financialmodelingprep.com/stable/news/stock",
         "crypto_news": "https://financialmodelingprep.com/stable/news/crypto", 
         "press_releases": "https://financialmodelingprep.com/stable/news/press-releases",
-        "earnings_calendar": "https://financialmodelingprep.com/api/v3/earning_calendar",
-        "economic_calendar": "https://financialmodelingprep.com/api/v3/economic_calendar",
-        "ipos_calendar": "https://financialmodelingprep.com/stable/ipos-calendar",
-        "mergers_acquisitions": "https://financialmodelingprep.com/stable/mergers-acquisitions-latest"
+        "forex_news": "https://financialmodelingprep.com/stable/news/forex-latest"
     },
     "news_limits": {
         "general_news": 20,
         "fmp_articles": 1,
         "stock_news": 50,
         "crypto_news": 20,
-        "press_releases": 1
+        "press_releases": 1,
+        "forex_news": 20
     },
     "output_limits": {
         "us": 30,
@@ -147,6 +144,10 @@ IMPORTANT_SOURCES = {
     "press_releases": [
         "PR Newswire", "Business Wire", "Globe Newswire", "MarketWatch", "Yahoo Finance",
         "Company Website", "SEC Filing", "Investor Relations"
+    ],
+    "forex_news": [
+        "ForexLive", "DailyFX", "FXStreet", "Investing.com", "Bloomberg", "Reuters",
+        "MarketWatch", "Financial Times", "CNBC", "Yahoo Finance"
     ]
 }
 
@@ -174,6 +175,11 @@ HIGH_IMPORTANCE_KEYWORDS = {
         "announce", "launch", "partnership", "collaboration", "expansion", 
         "appointment", "award", "contract", "patent", "breakthrough", "milestone", 
         "revenue", "financial results", "quarterly", "annual report"
+    ],
+    "forex_news": [
+        "currency", "exchange rate", "forex", "fx", "dollar", "euro", "yen", "pound",
+        "intervention", "parity", "devaluation", "appreciation", "depreciation", 
+        "carry trade", "volatility", "central bank", "fed", "ecb", "boj"
     ]
 }
 
@@ -194,6 +200,10 @@ MEDIUM_IMPORTANCE_KEYWORDS = {
     "press_releases": [
         "report", "update", "invest", "development", "growth", "statement", 
         "comment", "response", "release", "event", "conference", "meeting"
+    ],
+    "forex_news": [
+        "trading", "pair", "cross", "major", "minor", "exotic", "spread", "pip",
+        "technical analysis", "support", "resistance", "trend", "breakout", "pattern"
     ]
 }
 
@@ -320,47 +330,14 @@ def get_press_releases():
     
     return fetch_articles_by_period(CONFIG["endpoints"]["press_releases"], start_date, end_date, "press_releases")
 
-def get_earnings_calendar():
-    """Fetches earnings calendar"""
-    today = datetime.now().strftime("%Y-%m-%d")
-    future = (datetime.now() + timedelta(days=CONFIG["days_ahead"])).strftime("%Y-%m-%d")
+def get_forex_news():
+    """Fetches latest forex-market news"""
+    # Get news from the last 30 days
+    today = datetime.today()
+    start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
+    end_date = today.strftime("%Y-%m-%d")
     
-    params = {
-        "from": today,
-        "to": future
-    }
-    return fetch_api_data(CONFIG["endpoints"]["earnings_calendar"], params)
-
-def get_economic_calendar():
-    """Fetches economic calendar"""
-    today = datetime.now().strftime("%Y-%m-%d")
-    future = (datetime.now() + timedelta(days=CONFIG["days_ahead"])).strftime("%Y-%m-%d")
-    
-    params = {
-        "from": today,
-        "to": future
-    }
-    return fetch_api_data(CONFIG["endpoints"]["economic_calendar"], params)
-
-def get_ipos_calendar():
-    """Fetches upcoming IPOs"""
-    today = datetime.now().strftime("%Y-%m-%d")
-    future = (datetime.now() + timedelta(days=CONFIG["days_ahead"])).strftime("%Y-%m-%d")
-
-    params = {
-        "from": today,
-        "to": future
-    }
-
-    return fetch_api_data(CONFIG["endpoints"]["ipos_calendar"], params)
-
-def get_mergers_acquisitions(limit=100):
-    """Fetches latest M&A operations"""
-    params = {
-        "page": 0,
-        "limit": limit
-    }
-    return fetch_api_data(CONFIG["endpoints"]["mergers_acquisitions"], params)
+    return fetch_articles_by_period(CONFIG["endpoints"]["forex_news"], start_date, end_date, "forex_news")
 
 def extract_themes(article):
     """Identifies dominant themes from title content"""
@@ -396,6 +373,7 @@ def determine_category(article, source=None):
     - companies: news specific to companies
     - crypto: cryptocurrency news
     - tech: technology news
+    - forex: forex/currency news
     """
     # Check symbol for crypto
     if article.get("symbol") and any(ticker in str(article.get("symbol")) for ticker in ["BTC", "ETH", "CRYPTO", "COIN"]):
@@ -404,13 +382,24 @@ def determine_category(article, source=None):
     # Analyze text to determine category
     text = (article.get("text", "") + " " + article.get("title", "")).lower()
     
-    # Crypto category (priority 1) - Utiliser les mêmes mots-clés que dans THEMES_DOMINANTS
+    # Forex category (priority 1) - New category for forex news
+    forex_keywords = [
+        "forex", "currency", "usd", "eur", "jpy", "gbp", "cad", "aud", "chf", "nzd",
+        "exchange rate", "fx", "dollar index", "eurusd", "usdjpy", "gbpusd", "usdcad",
+        "audusd", "usdchf", "nzdusd", "currency pair", "carry trade", "intervention",
+        "parity", "devaluation", "appreciation", "depreciation"
+    ]
+    
+    if any(word in text for word in forex_keywords):
+        return "forex"
+    
+    # Crypto category (priority 2) - Utiliser les mêmes mots-clés que dans THEMES_DOMINANTS
     crypto_keywords = THEMES_DOMINANTS["sectors"]["crypto"]
     
     if any(word in text for word in crypto_keywords):
         return "crypto"
     
-    # Tech category (priority 2)
+    # Tech category (priority 3)
     tech_keywords = [
         "ai", "artificial intelligence", "machine learning", "data science", 
         "software", "hardware", "tech", "technology", "startup", "app", 
@@ -420,7 +409,7 @@ def determine_category(article, source=None):
     if any(word in text for word in tech_keywords):
         return "tech"
     
-    # Economy category (priority 3)
+    # Economy category (priority 4)
     economy_keywords = [
         "economy", "inflation", "gdp", "fed", "central bank",
         "interest rate", "economic", "unemployment",
@@ -430,7 +419,7 @@ def determine_category(article, source=None):
     if any(word in text for word in economy_keywords):
         return "economy"
     
-    # Markets category (priority 4)
+    # Markets category (priority 5)
     markets_keywords = [
         "etf", "fund", "index", "s&p", "dow", "cac", "nasdaq", 
         "bond", "treasury", "yield", "commodities", "oil", 
@@ -624,7 +613,7 @@ def compute_importance_score(article, category):
     
     Args:
         article (dict): The article containing title, content, source, etc.
-        category (str): The article category (general_news, stock_news, crypto_news, press_releases)
+        category (str): The article category (general_news, stock_news, crypto_news, press_releases, forex_news)
     
     Returns:
         float: Importance score between 0 and 100
@@ -653,6 +642,8 @@ def compute_importance_score(article, category):
         high_keyword_score = min(35, len(matched_high_keywords) * 4.5)
     elif category == "press_releases":
         high_keyword_score = min(30, len(matched_high_keywords) * 4)
+    elif category == "forex_news":
+        high_keyword_score = min(32, len(matched_high_keywords) * 4.2)
     else:
         high_keyword_score = min(30, len(matched_high_keywords) * 4)
     
@@ -669,7 +660,9 @@ def compute_importance_score(article, category):
     if category == "crypto_news":
         medium_keyword_score = min(10, len(matched_medium_keywords) * 1.5)
     elif category == "press_releases":
-        medium_keyword_score = min(15, len(matched_medium_keywords) * 2.0)  # 0.8 factor applied
+        medium_keyword_score = min(15, len(matched_medium_keywords) * 2.0)
+    elif category == "forex_news":
+        medium_keyword_score = min(18, len(matched_medium_keywords) * 2.2)
     else:
         medium_keyword_score = min(20, len(matched_medium_keywords) * 2.5)
     
@@ -684,6 +677,8 @@ def compute_importance_score(article, category):
                 source_score = 10
             elif category == "press_releases":
                 source_score = 15
+            elif category == "forex_news":
+                source_score = 18
             else:
                 source_score = 20
             break
@@ -805,87 +800,6 @@ def calculate_output_limits(articles_by_country, max_total=150):
             adjusted_limits[first_country] += remaining_quota
     
     return adjusted_limits
-
-def determine_event_impact(event):
-    """Determines the impact level of an economic event"""
-    # High impact events
-    high_impact_events = [
-        "Interest Rate Decision", "Fed Interest Rate", "ECB Interest Rate", 
-        "Inflation Rate", "GDP Growth", "GDP Release", "Employment Change",
-        "Unemployment Rate", "Non-Farm Payrolls", "CPI", "Retail Sales",
-        "FOMC", "FED", "BCE", "ECB", "Fed Chair", "Treasury", "Central Bank"
-    ]
-    
-    # Medium impact events
-    medium_impact_events = [
-        "PMI", "Consumer Confidence", "Trade Balance", "Industrial Production",
-        "Manufacturing Production", "Housing Starts", "Building Permits",
-        "Durable Goods Orders", "Factory Orders", "Earnings Report", "Balance Sheet"
-    ]
-    
-    # Check event name
-    event_name = event.get("event", "").lower()
-    
-    if any(keyword.lower() in event_name for keyword in high_impact_events):
-        return "high"
-    
-    if any(keyword.lower() in event_name for keyword in medium_impact_events):
-        return "medium"
-    
-    # Check if event is already classified by FMP
-    if event.get("impact") == "High":
-        return "high"
-    elif event.get("impact") == "Medium":
-        return "medium"
-    
-    # Default, low impact
-    return "low"
-
-def calculate_event_score(event):
-    """Calculates a score to prioritize economic events"""
-    score = 0
-    
-    # Event impact
-    impact = determine_event_impact(event)
-    if impact == "high":
-        score += 10
-    elif impact == "medium":
-        score += 5
-    else:
-        score += 1
-    
-    # Bonus for United States (influential market)
-    if event.get("country") == "US" or event.get("country") == "United States":
-        score += 3
-    
-    # Bonus for events with significant difference vs forecasts
-    if event.get("actual") and event.get("forecast"):
-        try:
-            actual = float(event.get("actual").replace("%", ""))
-            forecast = float(event.get("forecast").replace("%", ""))
-            diff = abs(actual - forecast)
-            
-            if diff > 5:
-                score += 5  # Very significant difference
-            elif diff > 2:
-                score += 3  # Significant difference
-            elif diff > 0.5:
-                score += 1  # Notable difference
-        except (ValueError, AttributeError):
-            # If we can't convert to float, we ignore
-            pass
-    
-    # Adjustment by event type for earnings results
-    if event.get("type") == "earnings":
-        # Try to extract stock symbol from earnings results
-        title = event.get("title", "")
-        
-        # Bonus for important companies
-        major_companies = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "JPM", "V", "PYPL", "DIS"]
-        if any(company in title for company in major_companies):
-            score += 3
-    
-    return score
 
 def extract_top_themes(news_data, days=30, max_examples=3, exclude_themes=None):
     """
@@ -1170,103 +1084,11 @@ def process_news_data(news_sources):
     
     return formatted_data
 
-def process_events_data(earnings, economic):
-    """Processes and formats event data"""
-    events = []
-    
-    # Process economic calendar
-    for eco_event in economic:
-        # Add impact and score
-        impact = determine_event_impact(eco_event)
-        score = calculate_event_score(eco_event)
-        
-        event = {
-            "title": eco_event.get("event", ""),
-            "date": format_date(eco_event.get("date", "")),
-            "time": eco_event.get("time", "09:00"),
-            "type": "economic",
-            "importance": impact,
-            "score": score
-        }
-        events.append(event)
-    
-    # Process earnings calendar
-    for earning in earnings:
-        # Only keep results with forecasts
-        if earning.get("epsEstimated"):
-            # Create a fake event for score calculation
-            temp_event = {
-                "event": f"Earnings {earning.get('symbol')}",
-                "type": "earnings",
-                "title": f"Earnings {earning.get('symbol')} - Forecast: {earning.get('epsEstimated')}$ per share"
-            }
-            
-            impact = "medium"  # Default for earnings
-            score = calculate_event_score(temp_event)
-            
-            event = {
-                "title": f"Earnings {earning.get('symbol')} - Forecast: {earning.get('epsEstimated')}$ per share",
-                "date": format_date(earning.get("date", "")),
-                "time": "16:30",  # Typical time for earnings announcements
-                "type": "earnings",
-                "importance": impact,
-                "score": score
-            }
-            events.append(event)
-    
-    # Sort events by score then by date
-    events.sort(key=lambda x: (x["score"], x["date"]), reverse=True)
-    
-    # Limit to 15 events maximum
-    return events[:15]
-
-def process_ipos_data(ipos):
-    """Formats IPO data for display"""
-    formatted_ipos = []
-    for ipo in ipos:
-        try:
-            formatted_ipos.append({
-                "title": f"IPO: {ipo.get('company')} ({ipo.get('symbol')})",
-                "date": format_date(ipo.get("date")),
-                "time": "09:00",
-                "type": "ipo",
-                "importance": "medium",
-                "score": 5,
-                "exchange": ipo.get("exchange", ""),
-                "priceRange": ipo.get("priceRange", ""),
-                "marketCap": ipo.get("marketCap", ""),
-                "status": ipo.get("actions", "Expected")
-            })
-        except Exception as e:
-            logger.warning(f"Error processing an IPO: {str(e)}")
-    return formatted_ipos
-
-def process_ma_data(ma_list):
-    """Formats M&A data"""
-    formatted_ma = []
-    for ma in ma_list:
-        try:
-            formatted_ma.append({
-                "title": f"M&A: {ma.get('companyName')} acquires {ma.get('targetedCompanyName')}",
-                "date": format_date(ma.get("transactionDate")),
-                "time": "10:00",
-                "type": "m&a",
-                "importance": "medium",
-                "score": 6,
-                "source": ma.get("link", ""),
-                "symbol": ma.get("symbol", ""),
-                "targetedSymbol": ma.get("targetedSymbol", "")
-            })
-        except Exception as e:
-            logger.warning(f"Error processing M&A: {str(e)}")
-    return formatted_ma
-
-def update_news_json_file(news_data, events):
+def update_news_json_file(news_data):
     """Updates news.json file with formatted data"""
     try:
         # Create a copy to avoid modifying the original
         output_data = {k: v for k, v in news_data.items()}
-        output_data["events"] = events
         
         # Create data folder if it doesn't exist
         os.makedirs(os.path.dirname(NEWS_JSON_PATH), exist_ok=True)
@@ -1330,28 +1152,22 @@ def main():
         # 0. Read existing data for fallback
         existing_data = read_existing_news()
         
-        # 1. Fetch different news sources (with new period approach)
+        # 1. Fetch different news sources
         general_news = get_general_news()
         fmp_articles = get_fmp_articles()
         stock_news = get_stock_news()
         crypto_news = get_crypto_news()
         press_releases = get_press_releases()
+        forex_news = get_forex_news()
         
-        # 2. Fetch events
-        earnings = get_earnings_calendar()
-        economic = get_economic_calendar()
-        
-        # 2.b Fetch IPOs and M&A
-        ipos = get_ipos_calendar()
-        mergers = get_mergers_acquisitions()
-        
-        # 3. Organize news sources
+        # 2. Organize news sources
         news_sources = {
             "general_news": general_news,
             "fmp_articles": fmp_articles,
             "stock_news": stock_news,
             "crypto_news": crypto_news,
-            "press_releases": press_releases
+            "press_releases": press_releases,
+            "forex_news": forex_news
         }
         
         # Count total news
@@ -1364,25 +1180,16 @@ def main():
             if existing_data:
                 return True
         
-        # 4. Process and format data with new scoring system
+        # 3. Process and format data with new scoring system
         news_data = process_news_data(news_sources)
-        events = process_events_data(earnings, economic)
         
-        # 4.b Process IPO and M&A data
-        ipos_events = process_ipos_data(ipos)
-        ma_events = process_ma_data(mergers)
+        # 4. Update news JSON file
+        success_news = update_news_json_file(news_data)
         
-        # Merge with other events
-        events.extend(ipos_events)
-        events.extend(ma_events)
-        
-        # 5. Update news JSON file
-        success_news = update_news_json_file(news_data, events)
-        
-        # 6. Generate dominant themes file
+        # 5. Generate dominant themes file
         success_themes = generate_themes_json(news_data)
         
-        # 7. Display dominant themes over 30 days (for log)
+        # 6. Display dominant themes over 30 days (for log)
         top_themes = extract_top_themes(news_data, days=30)
         logger.info("🎯 Dominant themes over 30 days:")
         for axis, themes in top_themes.items():
