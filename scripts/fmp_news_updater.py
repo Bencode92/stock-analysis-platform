@@ -13,7 +13,6 @@ Script for extracting news and events from Financial Modeling Prep
 """
 
 import os
-import sys
 import json
 import requests
 import logging
@@ -21,22 +20,23 @@ from datetime import datetime, timedelta
 import re
 from collections import Counter
 
-# Ajouter le répertoire parent au PYTHONPATH pour les imports
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# ----------------------------------------------------------
+# Logger d'abord
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Import du module de traduction
 try:
-    from utils import translate_to_fr_safe as translate_to_fr
-    logging.info("✅ Module de traduction importé avec succès")
-except ImportError as e:
-    logging.warning(f"⚠️ Module de traduction non disponible: {e}, traduction désactivée")
-    # Fonction de fallback si le module n'est pas disponible
-    def translate_to_fr(text):
+    from scripts.utils import translate_to_fr_safe as translate_to_fr
+    logger.info("✅ Module de traduction importé avec succès")
+except ImportError:
+    logger.warning("⚠️ Module de traduction non disponible, traduction désactivée")
+    def translate_to_fr(text: str) -> str:   # fallback
         return text
-
-# Logger configuration
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# ----------------------------------------------------------
 
 # File paths
 NEWS_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "news.json")
