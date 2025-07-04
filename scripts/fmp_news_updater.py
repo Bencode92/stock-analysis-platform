@@ -204,26 +204,27 @@ BASE_SOURCE_WEIGHTS = {
     "fmp_articles": 0.12, "press_releases": 0.08,
 }
 
-# Master CONFIG object
+# ---------------------------------------------------------------------------
+# 🛠️  MASTER CONFIG object — URLs complètes (+ forex)
+# ---------------------------------------------------------------------------
+_API_KEY = os.getenv("FMP_API_KEY", "")   # ⚠️ doit être défini dans tes variables d’environnement
+
 CONFIG = {
-    "api_key": os.environ.get("FMP_API_KEY", ""),
+    "api_key": _API_KEY,
     "endpoints": {
-        "general_news": f"{FMP_BASE_URL}/news/general-latest",
-        "fmp_articles": f"{FMP_BASE_URL}/fmp-articles",
-        "stock_news": f"{FMP_BASE_URL}/news/stock",
-        "crypto_news": f"{FMP_BASE_URL}/news/crypto",
-        "press_releases": f"{FMP_BASE_URL}/news/press-releases",
-        "earnings_calendar": "https://financialmodelingprep.com/api/v3/earning_calendar",
-        "economic_calendar": "https://financialmodelingprep.com/api/v3/economic_calendar",
-        "ipos_calendar": f"{FMP_BASE_URL}/ipos-calendar",
-        "mergers_acquisitions": f"{FMP_BASE_URL}/mergers-acquisitions-latest"
+        "fmp_articles":      f"https://financialmodelingprep.com/stable/fmp-articles?page=0&limit=20&apikey={_API_KEY}",
+        "general_news":      f"https://financialmodelingprep.com/stable/news/general-latest?page=0&limit=20&apikey={_API_KEY}",
+        "press_releases":    f"https://financialmodelingprep.com/stable/news/press-releases-latest?page=0&limit=20&apikey={_API_KEY}",
+        "stock_news":        f"https://financialmodelingprep.com/stable/news/stock-latest?page=0&limit=20&apikey={_API_KEY}",
+        "crypto_news":       f"https://financialmodelingprep.com/stable/news/crypto-latest?page=0&limit=20&apikey={_API_KEY}",
+        "forex_news":        f"https://financialmodelingprep.com/stable/news/forex-latest?page=0&limit=20&apikey={_API_KEY}",
     },
-    "news_limits": allocate_limits(120, BASE_SOURCE_WEIGHTS),
-    "output_limits": allocate_limits(MAX_TOTAL, BASE_COUNTRY_WEIGHTS),
-    "category_limits": {"crypto": 8},
+    "news_limits":       allocate_limits(120, BASE_SOURCE_WEIGHTS),
+    "output_limits":     allocate_limits(MAX_TOTAL, BASE_COUNTRY_WEIGHTS),
+    "category_limits":   {"crypto": 8},
     "max_total_articles": MAX_TOTAL,
-    "days_ahead": DAYS_AHEAD,
-    "days_back": DAYS_BACK
+    "days_ahead":        DAYS_AHEAD,
+    "days_back":         DAYS_BACK,
 }
 
 # ---------------------------------------------------------------------------
