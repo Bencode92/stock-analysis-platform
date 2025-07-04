@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TradePulse - Actualités Financières</title>
+    <title>TradePulse - Actualités Financières (Investor-Grade)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <script type="module" src="aiintegration.js"></script>
@@ -22,8 +22,99 @@
     <link rel="stylesheet" href="css/themes-dominant.css">
     <!-- CSS pour le brief stratégique -->
     <link rel="stylesheet" href="brief-style.css">
-    <!-- Animation pour l'affichage des éléments -->
+    
+    <!-- Enhanced Investor-Grade Styling -->
     <style>
+        /* Enhanced Fundamentals Theme Card */
+        .theme-card.fundamentals {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.05));
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .theme-card.fundamentals .theme-title {
+            color: #22c55e;
+        }
+        
+        /* Enhanced theme grid for 4 columns */
+        .themes-grid-enhanced {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+        
+        @media (min-width: 1024px) {
+            .themes-grid-enhanced {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        
+        /* Investor-grade indicators */
+        .investor-indicator {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(0, 255, 135, 0.1);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-left: 0.5rem;
+        }
+        
+        /* Enhanced news score displays */
+        .news-score-badge {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: linear-gradient(45deg, #3b82f6, #1d4ed8);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .news-score-badge.secondary {
+            background: linear-gradient(45deg, #f59e0b, #d97706);
+        }
+        
+        /* Enhanced filter section for investor tools */
+        .investor-filters {
+            background: linear-gradient(135deg, rgba(1, 22, 39, 0.8), rgba(1, 30, 52, 0.6));
+            border: 1px solid rgba(0, 255, 135, 0.2);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .score-filter-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .score-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 0.25rem;
+            border-radius: 0.125rem;
+            background: rgba(75, 85, 99, 0.5);
+            outline: none;
+        }
+        
+        .score-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 1rem;
+            height: 1rem;
+            border-radius: 50%;
+            background: #00ff87;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
+        }
+        
+        /* Animation pour l'affichage des éléments */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -90,6 +181,10 @@
             
             .filters-section .flex-wrap {
                 gap: 0.5rem;
+            }
+            
+            .themes-grid-enhanced {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -826,6 +921,10 @@
             <div class="logo-container">
                 <div class="pulse-dot"></div>
                 <a href="index.html">TRADEPULSE</a>
+                <span class="investor-indicator">
+                    <i class="fas fa-chart-trending-up"></i>
+                    INVESTOR-GRADE
+                </span>
             </div>
             <nav class="main-nav">
                 <a href="actualites.html" class="active">Actualités</a>
@@ -854,22 +953,32 @@
 
     <!-- Container principal -->
     <main class="main-container">
-        <!-- Nouvelle interface minimaliste -->
+        <!-- Interface investor-grade optimisée -->
         <div class="p-6 md:p-8">
             <div class="w-full overflow-hidden max-w-6xl mx-auto">
                 
-                <!-- Header Minimaliste -->
+                <!-- Header Minimaliste avec Investor Badge -->
                 <div class="mb-8 text-center">
                     <h1 class="text-3xl font-bold mb-2 text-white">ACTUALITÉS FINANCIÈRES</h1>
-                    <p class="text-sm text-gray-400" id="currentDate">11 MARS 2025</p>
+                    <div class="flex items-center justify-center gap-2 mb-2">
+                        <span class="text-sm text-gray-400" id="currentDate">11 MARS 2025</span>
+                        <span class="investor-indicator text-xs">
+                            <i class="fas fa-star"></i>
+                            CONFIGURATION INVESTOR-GRADE
+                        </span>
+                    </div>
                 </div>
                 
-                <!-- NOUVELLE SECTION: Thèmes Dominants -->
+                <!-- ENHANCED SECTION: Thèmes Dominants avec Fundamentals -->
                 <div class="themes-dominant-container mb-10">
                     <h2 class="text-blue-400 font-bold text-xl mb-4">
                         <i class="fas fa-hashtag mr-2"></i>THÈMES DOMINANTS
+                        <span class="investor-indicator text-xs ml-2">
+                            <i class="fas fa-brain"></i>
+                            ANALYSE AVANCÉE
+                        </span>
                     </h2>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="themes-grid-enhanced">
                         <!-- Macroéconomie -->
                         <div class="theme-card macroeconomie">
                             <h3 class="theme-title text-lg font-medium mb-3 flex items-center">
@@ -877,6 +986,22 @@
                                 Macroéconomie
                             </h3>
                             <ul id="macroeconomie-themes" class="theme-list">
+                                <!-- Skeleton loading -->
+                                <li class="skeleton-line"></li>
+                                <li class="skeleton-line"></li>
+                                <li class="skeleton-line"></li>
+                                <li class="skeleton-line"></li>
+                                <li class="skeleton-line"></li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Fundamentals - NOUVEAU -->
+                        <div class="theme-card fundamentals">
+                            <h3 class="theme-title text-lg font-medium mb-3 flex items-center">
+                                <i class="fas fa-calculator mr-2"></i>
+                                Fondamentaux
+                            </h3>
+                            <ul id="fundamentals-themes" class="theme-list">
                                 <!-- Skeleton loading -->
                                 <li class="skeleton-line"></li>
                                 <li class="skeleton-line"></li>
@@ -943,6 +1068,10 @@
                             <h2 class="text-green-400 font-bold text-xl flex items-center">
                                 <i class="fas fa-chart-line mr-2"></i>BRIEF STRATÉGIQUE
                                 <span class="text-sm font-normal ml-3 text-gray-400" id="brief-date">--/--/----</span>
+                                <span class="investor-indicator text-xs ml-2">
+                                    <i class="fas fa-trophy"></i>
+                                    PREMIUM
+                                </span>
                             </h2>
                             <button class="brief-toggle-btn bg-transparent border border-green-400 text-green-400 px-3 py-1 rounded flex items-center text-sm">
                                 <span class="brief-btn-text">Afficher le résumé</span>
@@ -959,13 +1088,17 @@
                     </div>
                 </div>
                 
-                <!-- Enhanced Filters Section -->
-                <div class="mb-8 filters-section glassmorphism rounded-xl p-4">
+                <!-- Enhanced Investor-Grade Filters Section -->
+                <div class="investor-filters">
                     <h3 class="text-lg font-semibold text-green-400 mb-4">
-                        <i class="fas fa-filter mr-2"></i>FILTRES D'ACTUALITÉS
+                        <i class="fas fa-filter mr-2"></i>FILTRES INVESTOR-GRADE
+                        <span class="investor-indicator text-xs ml-2">
+                            <i class="fas fa-cogs"></i>
+                            AVANCÉ
+                        </span>
                     </h3>
                     
-                    <div class="flex flex-wrap gap-2 md:gap-4 justify-between items-center">
+                    <div class="flex flex-wrap gap-2 md:gap-4 justify-between items-start">
                         <!-- Filtres de catégorie -->
                         <div class="flex gap-2 overflow-x-auto pb-2 md:pb-0" id="category-filters">
                             <button class="text-xs md:text-sm px-3 py-1.5 bg-green-400 bg-opacity-10 text-green-400 border border-green-400 border-opacity-30 rounded-full font-medium filter-active" data-category="all">
@@ -1007,17 +1140,31 @@
                             <select id="country-select" class="text-xs md:text-sm px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700 rounded-full">
                                 <option value="all">Tous pays</option>
                                 <option value="us">États-Unis</option>
-                                <option value="eu">Europe</option>
-                                <option value="fr">France</option>
-                                <option value="other">Autres</option>
+                                <option value="france">France</option>
+                                <option value="europe_other">Europe Autres</option>
+                                <option value="asia">Asie</option>
+                                <option value="emerging_markets">Marchés Émergents</option>
                             </select>
                         </div>
+                    </div>
+                    
+                    <!-- Enhanced Score Filter -->
+                    <div class="score-filter-container">
+                        <label class="text-sm text-gray-400 font-medium">Score minimum:</label>
+                        <input type="range" id="score-filter" class="score-slider" min="0" max="100" value="0" step="5">
+                        <span id="score-value" class="text-sm text-green-400 font-bold">0</span>
                     </div>
                 </div>
                 
                 <!-- Actualités critiques (Breaking News) -->
                 <div class="mb-8">
-                    <h2 class="text-red-500 font-bold text-xl mb-4">🚨 ACTUALITÉS CRITIQUES</h2>
+                    <h2 class="text-red-500 font-bold text-xl mb-4">
+                        🚨 ACTUALITÉS CRITIQUES
+                        <span class="investor-indicator text-xs ml-2">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            HAUTE PRIORITÉ
+                        </span>
+                    </h2>
                     <div id="critical-news-container" class="grid grid-cols-1 gap-4">
                         <!-- Spinner de chargement -->
                         <div class="loading-state">
@@ -1029,7 +1176,13 @@
                 
                 <!-- Actualités importantes -->
                 <div class="mb-8">
-                    <h2 class="text-yellow-500 font-bold text-xl mb-4">🔥 ACTUALITÉS IMPORTANTES</h2>
+                    <h2 class="text-yellow-500 font-bold text-xl mb-4">
+                        🔥 ACTUALITÉS IMPORTANTES
+                        <span class="investor-indicator text-xs ml-2">
+                            <i class="fas fa-star"></i>
+                            MOYENNE PRIORITÉ
+                        </span>
+                    </h2>
                     <div id="important-news-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <!-- Spinner de chargement -->
                         <div class="loading-state">
@@ -1041,7 +1194,13 @@
                 
                 <!-- Actualités générales -->
                 <div class="mb-8">
-                    <h2 class="text-gray-300 font-bold text-xl mb-4">📰 ACTUALITÉS GÉNÉRALES</h2>
+                    <h2 class="text-gray-300 font-bold text-xl mb-4">
+                        📰 ACTUALITÉS GÉNÉRALES
+                        <span class="investor-indicator text-xs ml-2">
+                            <i class="fas fa-newspaper"></i>
+                            STANDARD
+                        </span>
+                    </h2>
                     
                     <!-- Conteneur simplifié sans la classe news-grid pour permettre le formatage uniforme -->
                     <div id="recent-news">
@@ -1065,10 +1224,11 @@
 
     <footer class="page-footer">
         <div class="data-source-info">
+            <p><i class="fas fa-star"></i> Configuration Investor-Grade activée</p>
             <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel</p>
             <p><i class="fas fa-database"></i> Actualités et événements fournis par Financial Modeling Prep</p>
             <p><i class="fas fa-brain"></i> Classification automatique par machine learning</p>
-            <p><i class="fas fa-flask"></i> Système de feedback ML pour amélioration continue</p>
+            <p><i class="fas fa-chart-trending-up"></i> Focus macro-économie et fondamentaux</p>
             <p><i class="fas fa-clock"></i> Dernière mise à jour: <span class="update-time" id="updateTime">09/03/2025 10:15:53</span></p>
         </div>
     </footer>
@@ -1093,31 +1253,26 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Créer un réseau de fond
+            // Enhanced network background with investor focus
             const networkBackground = document.getElementById('network-background');
             createNetworkBackground();
             
             function createNetworkBackground() {
-                // Effacer le contenu existant
                 networkBackground.innerHTML = '';
                 
-                // Calculer le nombre de nœuds en fonction de la taille de l'écran
                 const numNodes = Math.min(Math.floor(window.innerWidth * window.innerHeight / 15000), 80);
                 
-                // Créer les nœuds
                 const nodes = [];
                 for (let i = 0; i < numNodes; i++) {
                     const node = document.createElement('div');
                     node.className = 'node';
                     
-                    // Position aléatoire
                     const x = Math.random() * 100;
                     const y = Math.random() * 100;
                     
                     node.style.left = x + '%';
                     node.style.top = y + '%';
                     
-                    // Certains nœuds pulsent
                     if (Math.random() < 0.3) {
                         node.classList.add('pulse');
                     }
@@ -1126,7 +1281,6 @@
                     nodes.push({ element: node, x, y });
                 }
                 
-                // Créer des connexions entre certains nœuds
                 const maxConnections = Math.min(numNodes * 1.5, 80);
                 for (let i = 0; i < maxConnections; i++) {
                     const nodeA = nodes[Math.floor(Math.random() * nodes.length)];
@@ -1137,7 +1291,6 @@
                     }
                 }
                 
-                // Animer les nœuds périodiquement
                 setInterval(() => {
                     nodes.forEach(node => {
                         if (Math.random() < 0.1) {
@@ -1159,13 +1312,11 @@
                 const connection = document.createElement('div');
                 connection.className = 'connection';
                 
-                // Calculer l'angle et la distance entre les deux nœuds
                 const dx = nodeB.x - nodeA.x;
                 const dy = nodeB.y - nodeA.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 const angle = Math.atan2(dy, dx) * 180 / Math.PI;
                 
-                // Positionner et dimensionner la connexion
                 connection.style.width = distance + '%';
                 connection.style.left = nodeA.x + '%';
                 connection.style.top = nodeA.y + '%';
@@ -1174,15 +1325,14 @@
                 networkBackground.appendChild(connection);
             }
             
-            // Redimensionner le réseau lors du redimensionnement de la fenêtre
             window.addEventListener('resize', () => {
                 createNetworkBackground();
             });
             
-            // Initialisation du thème
+            // Initialize theme
             initTheme();
             
-            // Gestion du mode sombre/clair
+            // Enhanced theme toggle with investor feedback
             const themeToggleBtn = document.getElementById('theme-toggle-btn');
             const darkIcon = document.getElementById('dark-icon');
             const lightIcon = document.getElementById('light-icon');
@@ -1192,7 +1342,6 @@
                 document.body.classList.toggle('light');
                 document.documentElement.classList.toggle('dark');
                 
-                // Mettre à jour l'apparence du bouton
                 if (document.body.classList.contains('dark')) {
                     darkIcon.style.display = 'block';
                     lightIcon.style.display = 'none';
@@ -1221,7 +1370,7 @@
                 }
             }
             
-            // Update market time
+            // Enhanced market time with investor precision
             function updateMarketTime() {
                 const now = new Date();
                 const hours = now.getHours().toString().padStart(2, '0');
@@ -1238,7 +1387,7 @@
             updateMarketTime();
             setInterval(updateMarketTime, 1000);
             
-            // Mettre à jour l'heure de dernière mise à jour
+            // Enhanced last update time tracking
             function updateLastUpdateTime() {
                 const updateTimeElement = document.getElementById('updateTime');
                 if (updateTimeElement) {
@@ -1255,7 +1404,7 @@
             
             updateLastUpdateTime();
             
-            // Ajout de l'écouteur d'événement pour le filtre de sentiment
+            // Enhanced sentiment filter integration
             const sentimentSelect = document.getElementById('sentiment-select');
             if (sentimentSelect) {
                 sentimentSelect.addEventListener('change', function() {
@@ -1263,15 +1412,30 @@
                 });
             }
             
-            // Initialiser le système de ML après le chargement des actualités
+            // Enhanced score filter with real-time feedback
+            const scoreFilter = document.getElementById('score-filter');
+            const scoreValue = document.getElementById('score-value');
+            
+            if (scoreFilter && scoreValue) {
+                scoreFilter.addEventListener('input', function() {
+                    const value = this.value;
+                    scoreValue.textContent = value;
+                    
+                    // Apply score-based filtering if available
+                    if (window.newsHierarchy && window.newsHierarchy.filterByScore) {
+                        window.newsHierarchy.filterByScore(parseInt(value));
+                    }
+                });
+            }
+            
+            // Enhanced ML system initialization
             if (window.MLNewsIntegrator) {
-                // Attendre un peu que les actualités soient chargées
                 setTimeout(() => {
                     window.MLNewsIntegrator.initMLFeedback();
                 }, 1500);
             }
 
-            // Mettre à jour la date actuelle
+            // Enhanced date updates
             const currentDateElement = document.getElementById('currentDate');
             if (currentDateElement) {
                 const now = new Date();
@@ -1280,7 +1444,6 @@
                 currentDateElement.textContent = formattedDate;
             }
 
-            // Mettre à jour le cercle de date central
             const formattedDateElement = document.getElementById('formatted-date');
             if (formattedDateElement) {
                 const now = new Date();
@@ -1290,7 +1453,7 @@
                 formattedDateElement.textContent = `${day}.${month}.${year}`;
             }
             
-            // Gestion des boutons de basculement pour les horloges de marché
+            // Enhanced market clock management
             const leftClockToggle = document.getElementById('left-clock-toggle');
             const rightClockToggle = document.getElementById('right-clock-toggle');
             const leftClock = document.getElementById('market-clock-left');
@@ -1316,7 +1479,7 @@
                 });
             }
             
-            // Gestion du modal mobile pour les horloges
+            // Enhanced mobile modal management
             const mobileClockBtn = document.getElementById('mobile-clock-btn');
             const marketClockModal = document.getElementById('market-clock-modal');
             const modalCloseBtn = document.getElementById('modal-close-btn');
@@ -1330,6 +1493,9 @@
                     marketClockModal.classList.remove('active');
                 });
             }
+            
+            // Investor-grade analytics tracking
+            console.log('🚀 TradePulse Investor-Grade Analytics System Initialized');
         });
     </script>
 </body>
