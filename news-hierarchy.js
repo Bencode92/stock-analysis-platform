@@ -1,141 +1,198 @@
 /**
- * TradePulse - Système de hiérarchisation des actualités
- * Ce module organise les actualités et événements par niveau d'importance
+ * TradePulse - Enhanced News Hierarchy System (Investor-Grade)
+ * This module organizes news and events by importance level with enhanced investor focus
  */
 
-// Mots-clés pour évaluer l'importance des actualités
+// Enhanced keywords for evaluating news importance with investor-grade criteria
 const NEWS_KEYWORDS = {
     "high_impact": [
+        // Market & macro shocks - Enhanced for investor relevance
         "crash", "collapse", "crise", "recession", "fail", "bankruptcy", "récession", "banque centrale", 
         "inflation", "hike", "drop", "plunge", "default", "fitch downgrade", "downgrade", "hausse des taux", 
         "bond yield", "yield curve", "sell-off", "bear market", "effondrement", "chute", "krach",
         "dégringolade", "catastrophe", "urgence", "alerte", "défaut", "risque", "choc", "contagion",
-        "panique", "défaillance", "correction", "faillite", "taux directeur"
+        "panique", "défaillance", "correction", "faillite", "taux directeur",
+        // Enhanced macro indicators
+        "cpi", "pce", "core inflation", "stagflation", "volatility spike", "credit spread",
+        // Corporate fundamentals red flags
+        "profit warning", "guidance cut", "eps miss", "dividend cut", "insolvency"
     ],
     "medium_impact": [
         "growth", "expansion", "job report", "fed decision", "quarterly earnings", "acquisition", 
         "ipo", "merger", "partnership", "profit warning", "bond issuance", "croissance", "emploi", 
         "rapport", "BCE", "FED", "résultats trimestriels", "fusion", "acquisition", "partenariat",
         "bénéfices", "émission obligataire", "émission d'obligations", "perspectives", "avertissement",
-        "rachat", "introduction en bourse", "nouveau PDG", "restructuration"
+        "rachat", "introduction en bourse", "nouveau PDG", "restructuration",
+        // Enhanced fundamentals
+        "earnings beat", "revenue beat", "free cash flow", "margin expansion", "buyback",
+        "payrolls", "unemployment rate", "pmi", "ism", "consumer confidence"
     ],
     "low_impact": [
         "recommendation", "stock buyback", "dividend", "announcement", "management change", "forecast",
         "recommandation", "rachat d'actions", "dividende", "annonce", "changement de direction", "prévision",
-        "nomination", "produit", "service", "stratégie", "marché", "plan", "mise à jour", "tendance"
+        "nomination", "produit", "service", "stratégie", "marché", "plan", "mise à jour", "tendance",
+        "product launch", "pilot", "collaboration", "award", "marketing", "prototype"
     ]
 };
 
-// Sources de référence dans le domaine financier
+// Enhanced reference sources with premium tier focus
 const IMPORTANT_SOURCES = [
-    "Bloomberg", "Reuters", "WSJ", "FT", "CNBC", "Financial Times", "Wall Street Journal", 
+    // Premium tier
+    "Bloomberg", "Reuters", "WSJ", "FT", "Financial Times", "Wall Street Journal",
+    // Investment focus
+    "Barron's", "MarketWatch", "Seeking Alpha", "Investor's Business Daily", "Morningstar",
+    // French premium
     "Les Échos", "La Tribune", "Le Figaro", "Le Monde", "Le Revenu", "BFM Business", 
-    "L'AGEFI", "Investir", "Capital"
+    "L'AGEFI", "Investir", "Capital",
+    // International premium
+    "CNBC", "The Economist", "BBC"
+];
+
+// Enhanced premium sources for extra scoring
+const PREMIUM_SOURCES = [
+    "bloomberg", "financial times", "wall street journal", "reuters", "the economist"
 ];
 
 /**
- * Calcule un score d'importance pour une actualité basé sur son contenu et sa source
- * @param {Object} article - L'article d'actualité à évaluer
- * @returns {number} - Score d'importance
+ * Enhanced importance scoring with investor-grade criteria
+ * @param {Object} article - The news article to evaluate
+ * @returns {number} - Importance score (0-100)
  */
 function calculateNewsScore(article) {
-    // Créer un texte combiné pour l'analyse
     const content = `${article.title || ""} ${article.content || ""}`.toLowerCase();
     
     let score = 0;
     
-    // Ajouter des points selon les occurrences de mots-clés
+    // Enhanced keyword scoring with investor focus
     for (const word of NEWS_KEYWORDS.high_impact) {
         if (content.includes(word)) {
-            score += 10;
+            score += 12; // Increased weight for high impact
         }
     }
     
     for (const word of NEWS_KEYWORDS.medium_impact) {
         if (content.includes(word)) {
-            score += 5;
+            score += 6; // Balanced medium impact
         }
     }
     
     for (const word of NEWS_KEYWORDS.low_impact) {
         if (content.includes(word)) {
-            score += 2;
+            score += 2; // Reduced low impact noise
         }
     }
     
-    // Ajustement basé sur la source
-    if (article.source && IMPORTANT_SOURCES.some(source => article.source.includes(source))) {
-        score += 5;
+    // Enhanced source scoring with premium boost
+    const source = (article.source || "").toLowerCase();
+    if (IMPORTANT_SOURCES.some(src => source.includes(src.toLowerCase()))) {
+        score += 8; // Increased source weight
     }
     
-    // Bonus pour les actualités négatives (souvent plus impactantes)
+    // Premium source super-boost
+    if (PREMIUM_SOURCES.some(premium => source.includes(premium))) {
+        score += 12; // Premium source bonus
+    }
+    
+    // Enhanced impact weighting
     if (article.impact === "negative") {
-        score += 3;
+        score += 5; // Negative news often more market-moving
+    } else if (article.impact === "positive") {
+        score += 3; // Positive news moderate boost
     }
     
-    // Bonus pour certaines catégories généralement plus importantes
-    if (article.category === "economie") {
-        score += 3;
-    } else if (article.category === "marches") {
-        score += 2;
+    // Enhanced category scoring for investor relevance
+    if (article.category === "economie" || article.category === "economy") {
+        score += 4; // Macro news critical for investors
+    } else if (article.category === "marches" || article.category === "markets") {
+        score += 3; // Market news important
+    } else if (article.category === "companies") {
+        score += 2; // Company-specific news
     }
     
-    return score;
+    // Fundamentals bonus - New enhancement
+    const fundamentalsKeywords = ["eps", "revenue", "guidance", "margin", "buyback", "dividend", "leverage"];
+    if (fundamentalsKeywords.some(keyword => content.includes(keyword))) {
+        score += 4; // Fundamentals analysis bonus
+    }
+    
+    // Macro indicators bonus - New enhancement  
+    const macroKeywords = ["cpi", "pce", "payrolls", "gdp", "pmi", "ism"];
+    if (macroKeywords.some(keyword => content.includes(keyword))) {
+        score += 6; // Key macro indicators bonus
+    }
+    
+    return Math.min(100, score); // Cap at 100
 }
 
 /**
- * Détermine le niveau d'importance d'un événement économique
- * @param {Object} event - L'événement économique à évaluer
- * @returns {string} - Niveau d'importance (high, medium, low)
+ * Enhanced event impact determination with investor focus
+ * @param {Object} event - The economic event to evaluate
+ * @returns {string} - Impact level (high, medium, low)
  */
 function determineEventImpact(event) {
-    // Événements à fort impact
+    // Enhanced high-impact events for investors
     const highImpactEvents = [
-        "Interest Rate Decision", "Fed Interest Rate", "ECB Interest Rate", 
-        "Inflation Rate", "GDP Growth", "GDP Release", "Employment Change",
-        "Unemployment Rate", "Non-Farm Payrolls", "CPI", "Retail Sales",
+        "Interest Rate Decision", "Fed Interest Rate", "ECB Interest Rate", "BOJ Interest Rate",
+        "Inflation Rate", "CPI", "PCE", "Core CPI", "Core PCE",
+        "GDP Growth", "GDP Release", "GDP Preliminary", "GDP Final",
+        "Employment Change", "Unemployment Rate", "Non-Farm Payrolls", "ADP Employment",
         "FOMC", "FED", "BCE", "ECB", "Fed Chair", "Treasury", "Central Bank",
-        "Federal Reserve", "Banque Centrale"
+        "Federal Reserve", "Banque Centrale", "Retail Sales", "Consumer Spending",
+        // Enhanced fundamentals events
+        "Earnings Season", "Earnings Report", "Quarterly Results", "Annual Results",
+        "Dividend Declaration", "Stock Split", "Share Buyback Announcement"
     ];
     
-    // Événements à impact moyen
+    // Enhanced medium-impact events
     const mediumImpactEvents = [
-        "PMI", "Consumer Confidence", "Trade Balance", "Industrial Production",
-        "Manufacturing Production", "Housing Starts", "Building Permits",
-        "Durable Goods Orders", "Factory Orders", "Earnings Report", "Balance Sheet",
-        "Quarterly Results", "Résultats Trimestriels"
+        "PMI", "ISM", "Consumer Confidence", "Business Confidence", "Trade Balance", 
+        "Industrial Production", "Manufacturing Production", "Housing Starts", "Building Permits",
+        "Durable Goods Orders", "Factory Orders", "Initial Claims", "Continuing Claims",
+        "Producer Price Index", "PPI", "Import Price Index", "Export Price Index",
+        "Consumer Credit", "Business Inventories", "Wholesale Inventories",
+        // Corporate events
+        "Merger Announcement", "Acquisition", "IPO", "Corporate Restructuring"
     ];
     
-    // Vérifier le nom de l'événement
-    const eventName = event.title.toLowerCase();
+    const eventName = (event.title || "").toLowerCase();
     
+    // Check for high impact patterns
     if (highImpactEvents.some(keyword => eventName.includes(keyword.toLowerCase()))) {
         return "high";
     }
     
+    // Check for medium impact patterns
     if (mediumImpactEvents.some(keyword => eventName.includes(keyword.toLowerCase()))) {
         return "medium";
     }
     
-    // Si l'événement est déjà classé
+    // Enhanced pattern matching for investor relevance
+    if (eventName.includes("earnings") || eventName.includes("résultats")) {
+        return "medium"; // Earnings always medium+ importance
+    }
+    
+    if (eventName.includes("fed") || eventName.includes("ecb") || eventName.includes("central bank")) {
+        return "high"; // Central bank communications always high
+    }
+    
+    // Existing classification fallback
     if (event.importance === "high") {
         return "high";
     } else if (event.importance === "medium") {
         return "medium";
     }
     
-    // Par défaut, impact faible
     return "low";
 }
 
 /**
- * Organise les actualités par niveau d'importance
- * @param {Object} newsData - Données d'actualités
- * @returns {Object} - Actualités organisées par niveau d'importance
+ * Enhanced news organization with investor-grade thresholds
+ * @param {Object} newsData - News data
+ * @returns {Object} - Organized news by importance
  */
 function organizeNewsByImportance(newsData) {
-    if (!newsData || (!newsData.us && !newsData.france)) {
-        console.warn("Données d'actualités non valides pour l'organisation");
+    if (!newsData || (!newsData.us && !newsData.france && !newsData.europe_other)) {
+        console.warn("Invalid news data for organization");
         return {
             breakingNews: [],
             importantNews: [],
@@ -143,10 +200,17 @@ function organizeNewsByImportance(newsData) {
         };
     }
     
-    // Combiner toutes les actualités
-    const allNews = [...(newsData.us || []), ...(newsData.france || [])];
+    // Combine all news from enhanced geographic regions
+    const allNews = [
+        ...(newsData.us || []), 
+        ...(newsData.france || []),
+        ...(newsData.europe_other || []),
+        ...(newsData.asia || []),
+        ...(newsData.emerging_markets || []),
+        ...(newsData.global || [])
+    ];
     
-    // Calculer les scores si ce n'est pas déjà fait
+    // Calculate scores with enhanced criteria
     const scoredNews = allNews.map(news => {
         if (typeof news.score === 'undefined') {
             return {
@@ -157,10 +221,10 @@ function organizeNewsByImportance(newsData) {
         return news;
     });
     
-    // Organiser par niveau d'importance basé sur le score
-    const breakingNews = scoredNews.filter(item => item.score >= 15);
-    const importantNews = scoredNews.filter(item => item.score >= 8 && item.score < 15);
-    const standardNews = scoredNews.filter(item => item.score < 8);
+    // Enhanced thresholds for investor-grade filtering
+    const breakingNews = scoredNews.filter(item => item.score >= 20); // Raised threshold
+    const importantNews = scoredNews.filter(item => item.score >= 12 && item.score < 20); // Optimized range
+    const standardNews = scoredNews.filter(item => item.score < 12);
     
     return {
         breakingNews,
@@ -170,13 +234,13 @@ function organizeNewsByImportance(newsData) {
 }
 
 /**
- * Organise les événements par niveau d'impact
- * @param {Array} events - Liste d'événements
- * @returns {Object} - Événements organisés par niveau d'impact
+ * Enhanced event organization with investor focus
+ * @param {Array} events - List of events
+ * @returns {Object} - Events organized by impact level
  */
 function organizeEventsByImpact(events) {
     if (!events || !Array.isArray(events)) {
-        console.warn("Données d'événements non valides pour l'organisation");
+        console.warn("Invalid events data for organization");
         return {
             highImpactEvents: [],
             mediumImpactEvents: [],
@@ -184,7 +248,7 @@ function organizeEventsByImpact(events) {
         };
     }
     
-    // Évaluer l'impact de chaque événement s'il n'est pas déjà défini
+    // Enhanced event processing with investor criteria
     const processedEvents = events.map(event => {
         if (!event.impact) {
             return {
@@ -195,10 +259,18 @@ function organizeEventsByImpact(events) {
         return event;
     });
     
-    // Organiser par niveau d'impact
-    const highImpactEvents = processedEvents.filter(event => event.impact === "high");
-    const mediumImpactEvents = processedEvents.filter(event => event.impact === "medium");
-    const lowImpactEvents = processedEvents.filter(event => event.impact === "low");
+    // Filter and sort by impact with enhanced criteria
+    const highImpactEvents = processedEvents
+        .filter(event => event.impact === "high")
+        .sort((a, b) => (b.importance_score || 0) - (a.importance_score || 0));
+        
+    const mediumImpactEvents = processedEvents
+        .filter(event => event.impact === "medium")
+        .sort((a, b) => (b.importance_score || 0) - (a.importance_score || 0));
+        
+    const lowImpactEvents = processedEvents
+        .filter(event => event.impact === "low")
+        .sort((a, b) => (b.importance_score || 0) - (a.importance_score || 0));
     
     return {
         highImpactEvents,
@@ -208,84 +280,127 @@ function organizeEventsByImpact(events) {
 }
 
 /**
- * Affiche les actualités "Breaking News" (haute importance)
- * @param {Array} breakingNews - Liste des actualités de haute importance
+ * Enhanced display for breaking news with investor focus
+ * @param {Array} breakingNews - List of breaking news
  */
 function displayBreakingNews(breakingNews) {
-    const container = document.getElementById('breaking-news-container');
+    const container = document.getElementById('critical-news-container');
     if (!container) return;
     
-    // Si aucune actualité critique, ne pas afficher la section
+    // Hide section if no critical news
     if (breakingNews.length === 0) {
-        container.style.display = 'none';
+        container.innerHTML = `
+        <div class="no-news-message glassmorphism p-6 rounded-lg text-center">
+            <i class="fas fa-check-circle text-green-400 text-2xl mb-2"></i>
+            <p class="text-gray-400">Aucune actualité critique détectée actuellement</p>
+            <p class="text-sm text-gray-500 mt-1">Les marchés semblent calmes</p>
+        </div>`;
         return;
     }
     
-    container.style.display = 'block';
+    let htmlContent = '';
     
-    // Titre de section
-    let htmlContent = `
-    <div class="section-header">
-        <i class="fas fa-exclamation-triangle section-icon"></i>
-        <h2 class="text-xl font-bold text-red-600">À LA UNE</h2>
-    </div>
-    <div class="grid grid-cols-1 gap-4">
-    `;
-    
-    // Contenu spécial pour les actualités critiques
-    breakingNews.forEach(item => {
+    // Enhanced critical news display
+    breakingNews.forEach((item, index) => {
+        const urgencyClass = item.score >= 30 ? 'critical-urgent' : 'critical-high';
+        const scoreDisplay = Math.round(item.score || 0);
+        
         htmlContent += `
-        <div class="news-card major-news glassmorphism relative" data-category="${item.category || ''}" data-impact="${item.impact || ''}" data-country="${item.country || ''}">
-            <span class="news-importance-tag importance-breaking">URGENT</span>
+        <div class="news-card ${urgencyClass} glassmorphism relative mb-4" 
+             data-category="${item.category || ''}" 
+             data-impact="${item.impact || ''}" 
+             data-country="${item.country || ''}"
+             data-score="${scoreDisplay}">
+            
+            <div class="news-importance-indicators">
+                <span class="news-importance-tag importance-breaking">
+                    🚨 CRITIQUE
+                </span>
+                <span class="news-score-badge">
+                    Score: ${scoreDisplay}
+                </span>
+            </div>
+            
             <div class="news-content">
-                <div class="news-meta">
-                    <span class="news-source">${item.source || ''}</span>
+                <div class="news-meta enhanced">
+                    <span class="news-source premium">${item.source || ''}</span>
                     <div class="news-date-time">
                         <i class="fas fa-calendar-alt"></i>
                         <span class="news-date">${item.date || ''}</span>
                         <span class="news-time">${item.time || ''}</span>
                     </div>
+                    <div class="news-category-tag ${item.category || ''}">
+                        ${item.category || 'Général'}
+                    </div>
                 </div>
-                <h3 class="text-lg font-bold">${item.title || ''}</h3>
-                <p class="mt-2">${item.content || ''}</p>
+                
+                <h3 class="text-lg font-bold text-red-400 leading-tight mb-3">
+                    ${item.title || ''}
+                </h3>
+                
+                <p class="text-gray-300 leading-relaxed mb-3">
+                    ${(item.content || '').substring(0, 200)}${(item.content || '').length > 200 ? '...' : ''}
+                </p>
+                
+                <div class="news-footer enhanced">
+                    <div class="news-themes">
+                        ${Object.entries(item.themes || {}).map(([axis, themes]) => 
+                            themes.map(theme => `<span class="theme-tag ${axis}">${theme}</span>`).join('')
+                        ).join('')}
+                    </div>
+                    
+                    <div class="news-actions">
+                        ${item.url ? `<a href="${item.url}" target="_blank" class="news-link">
+                            <i class="fas fa-external-link-alt"></i> Lire l'article
+                        </a>` : ''}
+                    </div>
+                </div>
             </div>
         </div>`;
     });
     
-    htmlContent += `</div>`;
     container.innerHTML = htmlContent;
 }
 
 /**
- * Affiche les actualités importantes (importance moyenne)
- * @param {Array} importantNews - Liste des actualités importantes
+ * Enhanced display for important news
+ * @param {Array} importantNews - List of important news
  */
 function displayImportantNews(importantNews) {
     const container = document.getElementById('important-news-container');
     if (!container) return;
     
-    // Si aucune actualité importante, ne pas afficher la section
     if (importantNews.length === 0) {
-        container.style.display = 'none';
+        container.innerHTML = `
+        <div class="no-news-message glassmorphism p-4 rounded-lg text-center">
+            <i class="fas fa-info-circle text-blue-400 text-xl mb-2"></i>
+            <p class="text-gray-400">Aucune actualité importante en ce moment</p>
+        </div>`;
         return;
     }
     
-    container.style.display = 'block';
+    let htmlContent = '';
     
-    // Titre de section
-    let htmlContent = `
-    <div class="section-header">
-        <i class="fas fa-fire section-icon text-yellow-500"></i>
-        <h2 class="text-lg font-bold text-yellow-500">ACTUALITÉS IMPORTANTES</h2>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    `;
-    
-    // Contenu pour les actualités importantes
-    importantNews.forEach(item => {
+    // Enhanced important news display with improved layout
+    importantNews.forEach((item, index) => {
+        const scoreDisplay = Math.round(item.score || 0);
+        
         htmlContent += `
-        <div class="news-card important-news glassmorphism relative" data-category="${item.category || ''}" data-impact="${item.impact || ''}" data-country="${item.country || ''}">
-            <span class="news-importance-tag importance-high">Important</span>
+        <div class="news-card important-news glassmorphism relative" 
+             data-category="${item.category || ''}" 
+             data-impact="${item.impact || ''}" 
+             data-country="${item.country || ''}"
+             data-score="${scoreDisplay}">
+            
+            <div class="news-importance-indicators">
+                <span class="news-importance-tag importance-high">
+                    🔥 IMPORTANT
+                </span>
+                <span class="news-score-badge secondary">
+                    ${scoreDisplay}
+                </span>
+            </div>
+            
             <div class="news-content">
                 <div class="news-meta">
                     <span class="news-source">${item.source || ''}</span>
@@ -295,19 +410,36 @@ function displayImportantNews(importantNews) {
                         <span class="news-time">${item.time || ''}</span>
                     </div>
                 </div>
-                <h3 class="text-base font-semibold">${item.title || ''}</h3>
-                <p class="mt-2 text-sm">${item.content || ''}</p>
+                
+                <h3 class="text-base font-semibold text-yellow-400 leading-tight mb-2">
+                    ${item.title || ''}
+                </h3>
+                
+                <p class="text-sm text-gray-400 leading-relaxed mb-3">
+                    ${(item.content || '').substring(0, 150)}${(item.content || '').length > 150 ? '...' : ''}
+                </p>
+                
+                <div class="news-footer">
+                    <div class="news-themes compact">
+                        ${Object.entries(item.themes || {}).map(([axis, themes]) => 
+                            themes.slice(0, 2).map(theme => `<span class="theme-tag ${axis} small">${theme}</span>`).join('')
+                        ).join('')}
+                    </div>
+                    
+                    ${item.url ? `<a href="${item.url}" target="_blank" class="news-link compact">
+                        <i class="fas fa-external-link-alt"></i>
+                    </a>` : ''}
+                </div>
             </div>
         </div>`;
     });
     
-    htmlContent += `</div>`;
     container.innerHTML = htmlContent;
 }
 
 /**
- * Affiche les événements avec un style basé sur leur importance
- * @param {Object} organizedEvents - Événements organisés par niveau d'impact
+ * Enhanced event display with investor-grade styling
+ * @param {Object} organizedEvents - Events organized by impact
  */
 function displayOrganizedEvents(organizedEvents) {
     const { highImpactEvents, mediumImpactEvents, lowImpactEvents } = organizedEvents;
@@ -316,58 +448,63 @@ function displayOrganizedEvents(organizedEvents) {
     
     let htmlContent = '';
     
-    // Événements à fort impact
+    // Enhanced high-impact events with premium styling
     highImpactEvents.forEach(event => {
         htmlContent += `
-        <div class="event-card event-high-impact p-3 rounded-lg shadow-sm relative" data-impact="high">
-            <div class="event-date">
-                <div class="event-day font-bold">${event.date ? event.date.split('/')[0] : ''}</div>
-                <div class="event-month">${event.date ? event.date.split('/')[1] : ''}</div>
+        <div class="event-card event-high-impact p-4 rounded-lg shadow-lg relative border-l-4 border-red-500" data-impact="high">
+            <div class="event-importance-badge high">🚨 CRITIQUE</div>
+            <div class="event-date enhanced">
+                <div class="event-day font-bold text-xl">${event.date ? event.date.split('/')[0] : ''}</div>
+                <div class="event-month text-sm">${event.date ? event.date.split('/')[1] : ''}</div>
             </div>
             <div class="event-content">
-                <div class="event-title font-semibold">${event.title || ''}</div>
-                <div class="event-details mt-2 text-sm">
-                    <span class="event-time"><i class="fas fa-clock"></i> ${event.time || ''}</span>
-                    <span class="event-type ${event.type || ''}">${event.type || ''}</span>
-                    <span class="impact-badge high-badge">critique</span>
+                <div class="event-title font-bold text-lg text-red-400">${event.title || ''}</div>
+                <div class="event-details mt-3 text-sm">
+                    <span class="event-time bg-red-600 text-white px-2 py-1 rounded text-xs">
+                        <i class="fas fa-clock"></i> ${event.time || ''}
+                    </span>
+                    <span class="event-type ${event.type || ''} ml-2">${event.type || ''}</span>
                 </div>
             </div>
         </div>`;
     });
     
-    // Événements à impact moyen
+    // Enhanced medium-impact events
     mediumImpactEvents.forEach(event => {
         htmlContent += `
-        <div class="event-card event-medium-impact p-3 rounded-lg shadow-sm relative" data-impact="medium">
+        <div class="event-card event-medium-impact p-3 rounded-lg shadow-md relative border-l-4 border-yellow-500" data-impact="medium">
+            <div class="event-importance-badge medium">🔔 IMPORTANT</div>
             <div class="event-date">
-                <div class="event-day font-bold">${event.date ? event.date.split('/')[0] : ''}</div>
-                <div class="event-month">${event.date ? event.date.split('/')[1] : ''}</div>
+                <div class="event-day font-bold text-lg">${event.date ? event.date.split('/')[0] : ''}</div>
+                <div class="event-month text-sm">${event.date ? event.date.split('/')[1] : ''}</div>
             </div>
             <div class="event-content">
-                <div class="event-title font-semibold">${event.title || ''}</div>
+                <div class="event-title font-semibold text-yellow-400">${event.title || ''}</div>
                 <div class="event-details mt-2 text-sm">
-                    <span class="event-time"><i class="fas fa-clock"></i> ${event.time || ''}</span>
-                    <span class="event-type ${event.type || ''}">${event.type || ''}</span>
-                    <span class="impact-badge medium-badge">important</span>
+                    <span class="event-time bg-yellow-600 text-white px-2 py-1 rounded text-xs">
+                        <i class="fas fa-clock"></i> ${event.time || ''}
+                    </span>
+                    <span class="event-type ${event.type || ''} ml-2">${event.type || ''}</span>
                 </div>
             </div>
         </div>`;
     });
     
-    // Événements à faible impact
+    // Enhanced low-impact events (simplified display)
     lowImpactEvents.forEach(event => {
         htmlContent += `
-        <div class="event-card event-low-impact p-3 rounded-lg shadow-sm relative" data-impact="low">
-            <div class="event-date">
-                <div class="event-day font-bold">${event.date ? event.date.split('/')[0] : ''}</div>
-                <div class="event-month">${event.date ? event.date.split('/')[1] : ''}</div>
+        <div class="event-card event-low-impact p-3 rounded-lg shadow-sm relative border-l-2 border-gray-600" data-impact="low">
+            <div class="event-importance-badge low">📋 STANDARD</div>
+            <div class="event-date compact">
+                <div class="event-day font-medium">${event.date ? event.date.split('/')[0] : ''}</div>
+                <div class="event-month text-xs">${event.date ? event.date.split('/')[1] : ''}</div>
             </div>
             <div class="event-content">
-                <div class="event-title font-semibold">${event.title || ''}</div>
-                <div class="event-details mt-2 text-sm">
-                    <span class="event-time"><i class="fas fa-clock"></i> ${event.time || ''}</span>
-                    <span class="event-type ${event.type || ''}">${event.type || ''}</span>
-                    <span class="impact-badge low-badge">standard</span>
+                <div class="event-title font-medium text-gray-300 text-sm">${event.title || ''}</div>
+                <div class="event-details mt-1 text-xs">
+                    <span class="event-time text-gray-400">
+                        <i class="fas fa-clock"></i> ${event.time || ''}
+                    </span>
                 </div>
             </div>
         </div>`;
@@ -377,38 +514,47 @@ function displayOrganizedEvents(organizedEvents) {
 }
 
 /**
- * Configure les filtres pour les événements
+ * Enhanced filter setup with investor-grade controls
  */
 function setupEventFilters() {
-    // Boutons de filtrage des événements par impact
+    // Enhanced filter buttons with better UX
     const highImpactBtn = document.getElementById('high-impact-btn');
     const mediumImpactBtn = document.getElementById('medium-impact-btn');
     const allImpactBtn = document.getElementById('all-impact-btn');
     
     if (highImpactBtn && mediumImpactBtn && allImpactBtn) {
-        // Filtre pour n'afficher que les événements à fort impact
+        // Critical events filter
         highImpactBtn.addEventListener('click', function() {
             toggleActiveFilter(this);
             filterEventsByImpact('high');
         });
         
-        // Filtre pour les événements à impact moyen
+        // Important events filter
         mediumImpactBtn.addEventListener('click', function() {
             toggleActiveFilter(this);
             filterEventsByImpact('medium');
         });
         
-        // Filtre pour afficher tous les événements
+        // All events filter
         allImpactBtn.addEventListener('click', function() {
             toggleActiveFilter(this);
             filterEventsByImpact('all');
         });
     }
+    
+    // Enhanced score-based filtering
+    const scoreFilter = document.getElementById('score-filter');
+    if (scoreFilter) {
+        scoreFilter.addEventListener('change', function() {
+            const minScore = parseInt(this.value);
+            filterByScore(minScore);
+        });
+    }
 }
 
 /**
- * Filtre les événements par niveau d'impact
- * @param {string} impactLevel - Niveau d'impact à filtrer
+ * Enhanced event filtering by impact level
+ * @param {string} impactLevel - Impact level to filter
  */
 function filterEventsByImpact(impactLevel) {
     const eventElements = document.querySelectorAll('#events-container .event-card');
@@ -416,65 +562,103 @@ function filterEventsByImpact(impactLevel) {
     eventElements.forEach(element => {
         if (impactLevel === 'all') {
             element.style.display = 'flex';
+            element.style.opacity = '1';
         } else {
             const impact = element.dataset.impact;
-            element.style.display = (impact === impactLevel) ? 'flex' : 'none';
+            if (impact === impactLevel) {
+                element.style.display = 'flex';
+                element.style.opacity = '1';
+            } else {
+                element.style.display = 'none';
+                element.style.opacity = '0.5';
+            }
         }
     });
 }
 
 /**
- * Gère l'activation des filtres
- * @param {HTMLElement} button - Bouton de filtre à activer
+ * New: Filter by importance score
+ * @param {number} minScore - Minimum score threshold
+ */
+function filterByScore(minScore) {
+    const newsElements = document.querySelectorAll('.news-card[data-score]');
+    
+    newsElements.forEach(element => {
+        const score = parseInt(element.dataset.score || 0);
+        if (score >= minScore) {
+            element.style.display = 'block';
+            element.style.opacity = '1';
+        } else {
+            element.style.display = 'none';
+            element.style.opacity = '0.5';
+        }
+    });
+}
+
+/**
+ * Enhanced filter activation with visual feedback
+ * @param {HTMLElement} button - Filter button to activate
  */
 function toggleActiveFilter(button) {
+    // Remove active class from all filters
     document.querySelectorAll('.filter-active').forEach(el => {
         el.classList.remove('filter-active');
     });
+    
+    // Add active class to clicked button
     button.classList.add('filter-active');
+    
+    // Enhanced visual feedback
+    button.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+        button.style.transform = 'scale(1)';
+    }, 150);
 }
 
 /**
- * Initialise le système de hiérarchie des actualités
- * @param {Object} newsData - Données d'actualités (si disponibles)
+ * Enhanced news hierarchy initialization with investor-grade features
+ * @param {Object} newsData - News data (if available)
  */
 function initNewsHierarchy(newsData) {
-    // Si les données sont disponibles, organiser immédiatement
+    console.log("🚀 Initializing enhanced investor-grade news hierarchy...");
+    
+    // If data is available, organize immediately with enhanced criteria
     if (newsData) {
         const { breakingNews, importantNews, standardNews } = organizeNewsByImportance(newsData);
+        
+        console.log(`📊 News organized: ${breakingNews.length} critical, ${importantNews.length} important, ${standardNews.length} standard`);
+        
         displayBreakingNews(breakingNews);
         displayImportantNews(importantNews);
         
-        // Organiser les événements si présents
+        // Organize events if present
         if (newsData.events) {
             const organizedEvents = organizeEventsByImpact(newsData.events);
             displayOrganizedEvents(organizedEvents);
+            console.log(`📅 Events organized: ${organizedEvents.highImpactEvents.length} critical, ${organizedEvents.mediumImpactEvents.length} important`);
         }
     }
     
-    // Configurer les filtres pour les événements
+    // Setup enhanced filters
     setupEventFilters();
     
-    console.log("✅ Système de hiérarchie des actualités initialisé");
+    console.log("✅ Enhanced investor-grade news hierarchy system initialized");
 }
 
-// Si le document est déjà chargé
+// Enhanced initialization with better error handling
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    // Vérifier si les données d'actualités sont déjà disponibles dans window
     if (window.newsData) {
         initNewsHierarchy(window.newsData);
     }
 } else {
-    // Sinon attendre le chargement du document
     document.addEventListener('DOMContentLoaded', function() {
-        // Vérifier si les données d'actualités sont disponibles dans window
         if (window.newsData) {
             initNewsHierarchy(window.newsData);
         }
     });
 }
 
-// Exporter les fonctions pour l'utilisation externe
+// Enhanced API export with new features
 window.newsHierarchy = {
     calculateNewsScore,
     determineEventImpact,
@@ -483,5 +667,17 @@ window.newsHierarchy = {
     displayBreakingNews,
     displayImportantNews,
     displayOrganizedEvents,
-    initNewsHierarchy
+    filterByScore, // New function
+    initNewsHierarchy,
+    // Enhanced utilities
+    getScoreDistribution: function(articles) {
+        const scores = articles.map(a => a.score || 0);
+        return {
+            min: Math.min(...scores),
+            max: Math.max(...scores),
+            avg: scores.reduce((a, b) => a + b, 0) / scores.length,
+            critical: scores.filter(s => s >= 20).length,
+            important: scores.filter(s => s >= 12 && s < 20).length
+        };
+    }
 };
