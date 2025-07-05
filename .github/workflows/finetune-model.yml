@@ -1,4 +1,4 @@
-name: Fine-tune Custom FinBERT Model
+name: 🤖 TradePulse FinBERT Fine-tuning
 
 on:
   workflow_dispatch:
@@ -41,8 +41,9 @@ jobs:
       - name: 📦 Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install torch transformers huggingface_hub datasets accelerate
-          pip install scikit-learn pandas numpy
+          pip install "transformers==4.41.0" "datasets==2.19.1" "torch>=2.0.0"
+          pip install "huggingface_hub>=0.20.0" "accelerate>=0.20.0"
+          pip install "scikit-learn>=1.3.0" "pandas>=2.0.0" "numpy>=1.24.0"
       
       # 🚀 SOLUTION CORRIGÉE : Action officielle HuggingFace
       - name: 🔐 Login to Hugging Face
@@ -54,221 +55,33 @@ jobs:
       - name: 📁 Create directories
         run: |
           mkdir -p models/${{ github.event.inputs.model_name }}
-          mkdir -p logs/${{ github.event.inputs.model_name }}
+          mkdir -p models/${{ github.event.inputs.model_name }}/logs
           mkdir -p ml/feedback
       
-      - name: 🧠 Create fine-tuning script
+      - name: 🔍 Verify script exists
         run: |
-          cat > finetune.py << 'EOF'
-          #!/usr/bin/env python3
-          import os
-          import json
-          import torch
-          from transformers import (
-              AutoTokenizer, AutoModelForSequenceClassification,
-              TrainingArguments, Trainer, DataCollatorWithPadding
-          )
-          from datasets import Dataset
-          import sys
-          from datetime import datetime
-
-          def main():
-              # Configuration depuis les inputs GitHub
-              dataset_path = "${{ github.event.inputs.dataset_path }}"
-              model_name = "${{ github.event.inputs.model_name }}"
-              epochs = int("${{ github.event.inputs.epochs }}")
-              push_to_hub = "${{ github.event.inputs.push_to_hub }}" == "true"
-              base_model = "yiyanghkust/finbert-tone"
-              
-              print(f"🚀 Starting fine-tuning for {model_name}")
-              print(f"📊 Base model: {base_model}")
-              print(f"📚 Dataset: {dataset_path}")
-              print(f"🔢 Epochs: {epochs}")
-              print(f"🔄 Push to Hub: {push_to_hub}")
-              
-              # Charger les données de feedback
-              if not os.path.exists(dataset_path):
-                  print(f"❌ Dataset file not found: {dataset_path}")
-                  # Créer un dataset minimal pour tester
-                  sample_data = [
-                      {"content": "Stock prices are rising significantly", "userFeedback": "positive"},
-                      {"content": "Market crash looms ahead", "userFeedback": "negative"},
-                      {"content": "Neutral market conditions persist", "userFeedback": "neutral"},
-                      {"content": "Strong earnings beat expectations", "userFeedback": "positive"},
-                      {"content": "Economic uncertainty continues", "userFeedback": "negative"},
-                      {"content": "Markets remain stable", "userFeedback": "neutral"},
-                      {"content": "Bullish momentum accelerates", "userFeedback": "positive"},
-                      {"content": "Bearish trends emerge", "userFeedback": "negative"},
-                      {"content": "Trading volumes steady", "userFeedback": "neutral"},
-                      {"content": "Profits surge dramatically", "userFeedback": "positive"},
-                  ]
-                  print(f"📝 Using sample dataset with {len(sample_data)} entries")
-                  feedback_data = sample_data
-              else:
-                  with open(dataset_path, 'r', encoding='utf-8') as f:
-                      feedback_data = json.load(f)
-                  print(f"📚 Loaded {len(feedback_data)} feedback samples from {dataset_path}")
-              
-              if len(feedback_data) < 5:
-                  print(f"⚠️ Not enough data ({len(feedback_data)}), minimum 5 required")
-                  sys.exit(1)
-              
-              # Préparer les données
-              texts = []
-              labels = []
-              label_map = {"positive": 2, "neutral": 1, "negative": 0}
-              
-              for item in feedback_data:
-                  if isinstance(item, dict):
-                      # Format avec userFeedback
-                      if "userFeedback" in item and "content" in item:
-                          texts.append(str(item["content"]))
-                          labels.append(label_map.get(item["userFeedback"], 1))
-                      # Format avec impact
-                      elif "impact" in item and ("content" in item or "title" in item):
-                          content = item.get("content", item.get("title", ""))
-                          texts.append(str(content))
-                          labels.append(label_map.get(item["impact"], 1))
-              
-              if len(texts) < 5:
-                  print(f"⚠️ Insufficient data after filtering: {len(texts)}")
-                  sys.exit(1)
-              
-              print(f"📊 Prepared {len(texts)} training samples")
-              
-              # Créer le dataset
-              dataset = Dataset.from_dict({
-                  "text": texts,
-                  "labels": labels
-              })
-              
-              # Charger le modèle et tokenizer
-              print(f"🤖 Loading model and tokenizer: {base_model}")
-              tokenizer = AutoTokenizer.from_pretrained(base_model)
-              model = AutoModelForSequenceClassification.from_pretrained(base_model)
-              
-              # Function de tokenisation
-              def tokenize_function(examples):
-                  return tokenizer(
-                      examples["text"],
-                      truncation=True,
-                      padding="max_length",
-                      max_length=512
-                  )
-              
-              # Tokeniser le dataset
-              print("🔤 Tokenizing dataset...")
-              tokenized_dataset = dataset.map(tokenize_function, batched=True)
-              
-              # Split train/eval (80/20)
-              train_size = max(1, int(0.8 * len(tokenized_dataset)))
-              train_dataset = tokenized_dataset.select(range(train_size))
-              eval_dataset = tokenized_dataset.select(range(train_size, len(tokenized_dataset)))
-              
-              print(f"🎯 Train samples: {len(train_dataset)}, Eval samples: {len(eval_dataset)}")
-              
-              # Configuration d'entraînement
-              hub_model_id = f"Bencode92/{model_name}" if push_to_hub else None
-              
-              training_args = TrainingArguments(
-                  output_dir=f"./models/{model_name}",
-                  num_train_epochs=epochs,
-                  per_device_train_batch_size=4,  # Réduit pour éviter OOM
-                  per_device_eval_batch_size=4,
-                  warmup_steps=min(100, len(train_dataset) // 4),
-                  weight_decay=0.01,
-                  logging_dir=f"./logs/{model_name}",
-                  logging_steps=max(1, len(train_dataset) // 10),
-                  evaluation_strategy="steps" if len(eval_dataset) > 0 else "no",
-                  eval_steps=max(10, len(train_dataset) // 5) if len(eval_dataset) > 0 else None,
-                  save_steps=max(20, len(train_dataset) // 2),
-                  load_best_model_at_end=len(eval_dataset) > 0,
-                  metric_for_best_model="eval_loss" if len(eval_dataset) > 0 else None,
-                  push_to_hub=push_to_hub,
-                  hub_model_id=hub_model_id,
-                  report_to=None,  # Disable wandb
-                  dataloader_pin_memory=False,
-                  dataloader_num_workers=0,
-              )
-              
-              # Data collator
-              data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
-              
-              # Trainer
-              trainer = Trainer(
-                  model=model,
-                  args=training_args,
-                  train_dataset=train_dataset,
-                  eval_dataset=eval_dataset if len(eval_dataset) > 0 else None,
-                  tokenizer=tokenizer,
-                  data_collator=data_collator,
-              )
-              
-              # Entraînement
-              print("🏋️ Starting training...")
-              trainer.train()
-              
-              # Évaluation finale
-              if len(eval_dataset) > 0:
-                  print("📊 Final evaluation...")
-                  eval_results = trainer.evaluate()
-                  print(f"Final eval loss: {eval_results.get('eval_loss', 'N/A')}")
-              
-              # Sauvegarder le modèle
-              print("💾 Saving model...")
-              trainer.save_model()
-              tokenizer.save_pretrained(f"./models/{model_name}")
-              
-              # Créer le README du modèle
-              readme_content = f"""# {model_name}
-
-              Custom FinBERT model fine-tuned for financial sentiment analysis.
-
-              ## Model Details
-              - Base model: {base_model}
-              - Fine-tuned on: {len(texts)} samples
-              - Training epochs: {epochs}
-              - Created: {datetime.now().isoformat()}
-
-              ## Usage
-              ```python
-              from transformers import AutoTokenizer, AutoModelForSequenceClassification
-              
-              tokenizer = AutoTokenizer.from_pretrained("Bencode92/{model_name}")
-              model = AutoModelForSequenceClassification.from_pretrained("Bencode92/{model_name}")
-              ```
-
-              ## Labels
-              - 0: Negative
-              - 1: Neutral  
-              - 2: Positive
-              """
-              
-              with open(f"./models/{model_name}/README.md", 'w') as f:
-                  f.write(readme_content)
-              
-              if push_to_hub:
-                  print("🚀 Pushing to Hub...")
-                  trainer.push_to_hub(commit_message=f"Fine-tuned {model_name} on financial data")
-                  tokenizer.push_to_hub(hub_model_id, commit_message=f"Add tokenizer for {model_name}")
-                  print(f"✅ Model pushed to: https://huggingface.co/{hub_model_id}")
-              
-              print("✅ Fine-tuning completed successfully!")
-
-          if __name__ == "__main__":
-              main()
-          EOF
-          
-          chmod +x finetune.py
+          if [ ! -f "scripts/finetune.py" ]; then
+            echo "❌ scripts/finetune.py not found!"
+            exit 1
+          fi
+          echo "✅ scripts/finetune.py found"
+          echo "📂 File size: $(wc -c < scripts/finetune.py) bytes"
+          echo "🔍 First few lines:"
+          head -5 scripts/finetune.py
       
       - name: 🏋️ Run fine-tuning
         run: |
-          python finetune.py
+          cd ${{ github.workspace }}
+          python scripts/finetune.py
         env:
+          DATASET_PATH: ${{ github.event.inputs.dataset_path }}
+          MODEL_NAME: ${{ github.event.inputs.model_name }}
+          EPOCHS: ${{ github.event.inputs.epochs }}
+          PUSH_TO_HUB: ${{ github.event.inputs.push_to_hub }}
           TOKENIZERS_PARALLELISM: false
           TRANSFORMERS_CACHE: ./cache
       
-      - name: 📊 Generate training summary
+      - name: 📊 Verify training outputs
         run: |
           echo "=== TradePulse FinBERT Training Summary ===" > training_summary.txt
           echo "Model: ${{ github.event.inputs.model_name }}" >> training_summary.txt
@@ -278,42 +91,92 @@ jobs:
           echo "Timestamp: $(date)" >> training_summary.txt
           echo "" >> training_summary.txt
           
-          if [ -d "models/${{ github.event.inputs.model_name }}" ]; then
-            echo "✅ Model saved locally" >> training_summary.txt
-            echo "Files:" >> training_summary.txt
-            ls -la "models/${{ github.event.inputs.model_name }}" >> training_summary.txt
+          # Vérifier le log principal
+          if [ -f "finetune.log" ]; then
+            echo "✅ Training log found ($(wc -l < finetune.log) lines)" >> training_summary.txt
+            echo "📝 Last 10 lines of log:" >> training_summary.txt
+            tail -10 finetune.log >> training_summary.txt
           else
-            echo "❌ Model save failed" >> training_summary.txt
+            echo "❌ Training log not found" >> training_summary.txt
+          fi
+          echo "" >> training_summary.txt
+          
+          # Vérifier le modèle
+          if [ -d "models/${{ github.event.inputs.model_name }}" ]; then
+            echo "✅ Model directory found" >> training_summary.txt
+            echo "📁 Model files:" >> training_summary.txt
+            ls -la "models/${{ github.event.inputs.model_name }}" >> training_summary.txt
+            
+            # Vérifier les logs du modèle
+            if [ -d "models/${{ github.event.inputs.model_name }}/logs" ]; then
+              echo "📊 Training logs:" >> training_summary.txt
+              ls -la "models/${{ github.event.inputs.model_name }}/logs" >> training_summary.txt
+            fi
+          else
+            echo "❌ Model directory not found" >> training_summary.txt
           fi
           
           echo "" >> training_summary.txt
-          echo "=== Configuration ===" >> training_summary.txt
+          echo "=== Environment Info ===" >> training_summary.txt
           echo "Python version: $(python --version)" >> training_summary.txt
           echo "PyTorch version: $(python -c 'import torch; print(torch.__version__)')" >> training_summary.txt
           echo "Transformers version: $(python -c 'import transformers; print(transformers.__version__)')" >> training_summary.txt
+          echo "CUDA available: $(python -c 'import torch; print(torch.cuda.is_available())')" >> training_summary.txt
           
+          # Afficher le résumé
           cat training_summary.txt
       
-      - name: 🏷️ Commit and upload artifacts
+      - name: 📤 Upload Training Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: training-logs-${{ github.run_id }}
+          path: |
+            finetune.log
+            models/**/logs/**
+            training_summary.txt
+          retention-days: 7
+      
+      - name: 📤 Upload Model Artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tradepulse-finbert-${{ github.run_id }}
+          path: |
+            models/**
+            training_summary.txt
+          retention-days: 30
+      
+      - name: 🏷️ Commit model to repository
+        if: success()
         run: |
           git config --global user.name 'GitHub Actions Bot'
           git config --global user.email 'actions@github.com'
           
           # Ajouter les fichiers de modèle
-          git add models/ logs/ training_summary.txt || true
+          git add models/ || true
+          git add training_summary.txt || true
+          git add finetune.log || true
           
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
             git commit -m "Add fine-tuned model: ${{ github.event.inputs.model_name }} [skip ci]"
-            git push
+            git push || echo "Push failed, but artifacts are still available"
           fi
       
-      - name: 📤 Upload model as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ github.event.inputs.model_name }}
-          path: |
-            models/${{ github.event.inputs.model_name }}/
-            training_summary.txt
-          retention-days: 30
+      - name: 🎉 Success notification
+        if: success()
+        run: |
+          echo "🎉 Fine-tuning completed successfully!"
+          echo "📋 Summary:"
+          echo "  - Model: ${{ github.event.inputs.model_name }}"
+          echo "  - Training completed: ✅"
+          echo "  - Artifacts uploaded: ✅"
+          if [ "${{ github.event.inputs.push_to_hub }}" = "true" ]; then
+            echo "  - HuggingFace Hub: ✅ https://huggingface.co/Bencode92/${{ github.event.inputs.model_name }}"
+          else
+            echo "  - HuggingFace Hub: ❌ (disabled)"
+          fi
+          echo ""
+          echo "📥 Download artifacts from the Actions tab to get your trained model!"
