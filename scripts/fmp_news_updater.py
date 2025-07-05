@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-TradePulse - Investor-Grade News Updater v2.5
+TradePulse - Investor-Grade News Updater v3.0
 Script for extracting news and events from Financial Modeling Prep
-Enhanced with FinBERT sentiment analysis and MSCI-weighted geographic distribution
-Free from external lexicon dependencies
+Enhanced with Custom FinBERT sentiment analysis and MSCI-weighted geographic distribution
+Supports private model loading with secure fallback
 """
 
 import os
@@ -34,50 +34,149 @@ _process = psutil.Process(os.getpid())
 NEWS_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "news.json")
 THEMES_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "themes.json")
 
-# Feature flags
+# 🔑 ENHANCED FEATURE FLAGS v3.0
 USE_FINBERT = os.getenv("TRADEPULSE_USE_FINBERT", "1") == "1"
+USE_CUSTOM_FINBERT = os.getenv("TRADEPULSE_CUSTOM_MODEL", "0") == "1"
+USE_LM_LEXICON = os.getenv("TRADEPULSE_USE_LM", "0") == "1"  # 🚫 Disabled by default
 SENTIMENT_PROFILING = os.getenv("TRADEPULSE_SENTIMENT_PROFILING", "0") == "1"
+ENABLE_MODEL_METRICS = os.getenv("TRADEPULSE_METRICS", "1") == "1"
 
-# ---------------------------------------------------------------------------
-# SENTIMENT MODELS & LEXICONS
-# ---------------------------------------------------------------------------
+# 🤖 MODEL CONFIGURATION v3.0
+_FINBERT_MODEL = os.getenv("TRADEPULSE_MODEL_URL", "yiyanghkust/finbert-tone")
+_FINBERT_FALLBACK = "yiyanghkust/finbert-tone"  # Secure fallback
+MODEL_VERSION = os.getenv("TRADEPULSE_MODEL_VERSION", "base")
+HF_READ_TOKEN = os.getenv("HF_READ_TOKEN", None)
 
-_FINBERT_MODEL = "yiyanghkust/finbert-tone"  # HuggingFace repo
+# Global model cache
 _FINBERT_GLOBAL_LOCK = False
+_MODEL_METADATA = {
+    "version": MODEL_VERSION,
+    "model_url": _FINBERT_MODEL,
+    "is_custom": USE_CUSTOM_FINBERT,
+    "load_time": None,
+    "performance_metrics": {}
+}
+
+# ---------------------------------------------------------------------------
+# 🔒 SECURE MODEL LOADING SYSTEM v3.0
+# ---------------------------------------------------------------------------
 
 @lru_cache(maxsize=1)
-def _load_finbert():
+def _load_finbert_with_fallback():
     """
-    Charge une seule fois tokenizer + modèle FinBERT.
+    Charge le modèle FinBERT avec système de fallback sécurisé
+    1. Tente de charger le modèle custom si configuré
+    2. Se rabat sur le modèle public en cas d'échec
     """
-    global _FINBERT_GLOBAL_LOCK
+    global _FINBERT_GLOBAL_LOCK, _MODEL_METADATA
     if _FINBERT_GLOBAL_LOCK:
         raise RuntimeError("FinBERT already loaded in another worker.")
     _FINBERT_GLOBAL_LOCK = True
     
-    logger.info("🤖 Loading FinBERT model for sentiment analysis...")
-    tokenizer = AutoTokenizer.from_pretrained(_FINBERT_MODEL)
-    model = AutoModelForSequenceClassification.from_pretrained(_FINBERT_MODEL)
-    model.eval()
-    logger.info("✅ FinBERT model loaded successfully")
-    return tokenizer, model
+    start_time = time.time()
+    
+    # Tentative de chargement du modèle custom
+    if USE_CUSTOM_FINBERT and _FINBERT_MODEL != _FINBERT_FALLBACK:
+        try:
+            logger.info(f"🔒 Loading CUSTOM FinBERT model: {_FINBERT_MODEL}")
+            
+            # Configuration des tokens pour HuggingFace Hub privé
+            token_kwargs = {}
+            if "huggingface.co" in _FINBERT_MODEL and HF_READ_TOKEN:
+                token_kwargs["token"] = HF_READ_TOKEN
+                logger.info("🔑 Using HuggingFace read token for private model")
+            
+            tokenizer = AutoTokenizer.from_pretrained(_FINBERT_MODEL, **token_kwargs)
+            model = AutoModelForSequenceClassification.from_pretrained(_FINBERT_MODEL, **token_kwargs)
+            model.eval()
+            
+            # Mise à jour des métadonnées
+            _MODEL_METADATA.update({
+                "version": MODEL_VERSION,
+                "model_url": _FINBERT_MODEL,
+                "is_custom": True,
+                "load_time": time.time() - start_time,
+                "status": "custom_loaded"
+            })
+            
+            logger.info(f"✅ CUSTOM FinBERT model loaded successfully in {_MODEL_METADATA['load_time']:.2f}s")
+            return tokenizer, model
+            
+        except Exception as e:
+            logger.error(f"❌ Custom model loading failed: {e}")
+            logger.warning("🔄 Falling back to public FinBERT model...")
+    
+    # Fallback vers le modèle public
+    try:
+        logger.info(f"🌍 Loading PUBLIC FinBERT model: {_FINBERT_FALLBACK}")
+        tokenizer = AutoTokenizer.from_pretrained(_FINBERT_FALLBACK)
+        model = AutoModelForSequenceClassification.from_pretrained(_FINBERT_FALLBACK)
+        model.eval()
+        
+        # Mise à jour des métadonnées
+        _MODEL_METADATA.update({
+            "version": "fallback",
+            "model_url": _FINBERT_FALLBACK,
+            "is_custom": False,
+            "load_time": time.time() - start_time,
+            "status": "fallback_loaded"
+        })
+        
+        logger.info(f"✅ PUBLIC FinBERT model loaded successfully in {_MODEL_METADATA['load_time']:.2f}s")
+        return tokenizer, model
+        
+    except Exception as e:
+        logger.error(f"❌ Critical: Both custom and fallback models failed: {e}")
+        raise RuntimeError("Cannot load any FinBERT model")
+
+def _validate_custom_model():
+    """Test de santé du modèle custom"""
+    try:
+        # Test avec phrase simple
+        test_text = "Stock market rallies after positive earnings report"
+        tokenizer, model = _load_finbert_with_fallback()
+        
+        inputs = tokenizer(test_text, return_tensors="pt", truncation=True, max_length=512)
+        with torch.no_grad():
+            outputs = model(**inputs)
+            probs = outputs.logits.softmax(-1)
+            
+        # Vérification que les probabilités sont valides
+        if torch.isnan(probs).any() or torch.isinf(probs).any():
+            logger.error("❌ Model health check failed: Invalid probabilities")
+            return False
+            
+        logger.info("✅ Custom model health check passed")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Model health check failed: {e}")
+        return False
 
 def _warm_finbert():
     """
-    Charge FinBERT au démarrage du process pour éviter le cold-start
-    pendant la collecte.
+    Charge FinBERT au démarrage avec validation
     """
     if not USE_FINBERT:
         logger.info("🔧 FinBERT disabled via feature flag")
         return
         
     try:
-        tokenizer, model = _load_finbert()
-        sample = "Initial warm-up sentence for model loading."
+        tokenizer, model = _load_finbert_with_fallback()
+        sample = "Initial warm-up sentence for model loading and validation."
         inputs = tokenizer(sample, return_tensors="pt", truncation=True, max_length=512)
         with torch.no_grad():
             model(**inputs)
+        
+        # Test de santé si modèle custom
+        if USE_CUSTOM_FINBERT:
+            _validate_custom_model()
+            
         logger.info("🚀 FinBERT warm-up completed successfully")
+        
+        # Log des informations du modèle
+        logger.info(f"📊 Model Info: {_MODEL_METADATA['status']} | Version: {_MODEL_METADATA['version']}")
+        
     except Exception as e:
         logger.warning(f"⚠️ FinBERT warm-up failed: {e}")
 
@@ -90,7 +189,26 @@ def profile_step(label: str, start_ts: float):
     logger.info(f"⏱️  {label}: {dur:5.2f}s | RSS={rss:.0f} MB")
 
 # ---------------------------------------------------------------------------
-# INVESTOR-GRADE NEWS CONFIG v2.5
+# 🚫 DISABLED LOUGHRAN-MCDONALD LEXICON (v3.0)
+# ---------------------------------------------------------------------------
+
+@lru_cache(maxsize=1)
+def _load_lm_lexicons():
+    """
+    Lexique Loughran-McDonald (DÉSACTIVÉ par défaut)
+    Retourne des sets vides si USE_LM_LEXICON=0
+    """
+    if not USE_LM_LEXICON:
+        logger.info("🚫 Loughran-McDonald lexicon DISABLED via feature flag")
+        return set(), set()
+    
+    logger.warning("⚠️ Loughran-McDonald lexicon is DEPRECATED in v3.0")
+    # Note: Le code de chargement du lexique a été retiré
+    # pour forcer l'utilisation de FinBERT uniquement
+    return set(), set()
+
+# ---------------------------------------------------------------------------
+# INVESTOR-GRADE NEWS CONFIG v3.0
 # ---------------------------------------------------------------------------
 
 CONFIG = {
@@ -598,10 +716,10 @@ def determine_country(article):
 
 def determine_impact(article):
     """
-    Sentiment cascade (sans Loughran-McDonald) :
-    1) score numérique FMP (>0.2 / <-0.2)
-    2) FinBERT si texte ≥ 20 tokens
-    3) fallback micro-lexique (≈ 30 mots)
+    🚀 ENHANCED SENTIMENT CASCADE v3.0 (Custom FinBERT + Secure Fallback)
+    1) Score numérique FMP (>0.2 / <-0.2)
+    2) Custom FinBERT avec fallback sécurisé
+    3) Mini-lexique de secours (30 mots financiers)
     """
     t0 = time.perf_counter() if SENTIMENT_PROFILING else None
 
@@ -624,42 +742,55 @@ def determine_impact(article):
     if not text:
         return "neutral"
 
-    # 2) FinBERT
+    # 2) 🤖 Custom/Fallback FinBERT Analysis
     if USE_FINBERT:
         try:
-            tok, mdl = _load_finbert()
+            tok, mdl = _load_finbert_with_fallback()
             if len(tok.encode(text, add_special_tokens=False)) >= 20:
                 inputs = tok(text, return_tensors="pt", truncation=True, max_length=512)
                 with torch.no_grad():
                     logits = mdl(**inputs).logits.squeeze()
                 probs = logits.softmax(-1)  # [neg, neu, pos]
                 neg, neu, pos = probs.tolist()
+                
+                # Enregistrement des probabilités pour métriques
                 article["impact_prob"] = {
                     "positive": round(pos, 3),
                     "neutral":  round(neu, 3),
                     "negative": round(neg, 3)
                 }
+                
+                # Ajout des métadonnées du modèle
+                if ENABLE_MODEL_METRICS:
+                    article["model_metadata"] = {
+                        "version": _MODEL_METADATA["version"],
+                        "is_custom": _MODEL_METADATA["is_custom"],
+                        "status": _MODEL_METADATA["status"]
+                    }
+                
+                # Décision basée sur la confiance
                 if max(pos, neg) - neu > 0.10:
                     res = "positive" if pos > neg else "negative"
                     if SENTIMENT_PROFILING:
                         profile_step(f"finbert_{res}", t0)
                     return res
         except Exception as e:
-            logger.warning(f"FinBERT failure → fallback lexicon: {e}")
+            logger.warning(f"FinBERT failure → fallback mini-lexicon: {e}")
 
-    # 3) Fallback mini-lexique
+    # 3) 🔤 Fallback Mini-Lexique Financier (≈30 mots)
     POS = {
-        "surge","soar","gain","rise","jump","boost","recovery","profit","beat",
-        "success","bullish","upward","rally","outperform","growth","optimistic",
-        "momentum","improvement","confidence","upgrade","increase","uptrend"
+        "surge", "soar", "gain", "rise", "jump", "boost", "recovery", "profit", "beat",
+        "success", "bullish", "upward", "rally", "outperform", "growth", "optimistic",
+        "momentum", "improvement", "confidence", "upgrade", "increase", "uptrend"
     }
     NEG = {
-        "drop","fall","decline","loss","plunge","tumble","crisis","risk","warning",
-        "concern","bearish","downward","slump","underperform","recession",
-        "weakness","miss","downgrade","cut","reduction","pressure","slowdown",
-        "decrease","downtrend"
+        "drop", "fall", "decline", "loss", "plunge", "tumble", "crisis", "risk", "warning",
+        "concern", "bearish", "downward", "slump", "underperform", "recession",
+        "weakness", "miss", "downgrade", "cut", "reduction", "pressure", "slowdown",
+        "decrease", "downtrend"
     }
-    words   = re.findall(r"[a-z']+", text.lower())
+    
+    words = re.findall(r"[a-z']+", text.lower())
     pos_cnt = sum(w in POS for w in words)
     neg_cnt = sum(w in NEG for w in words)
 
@@ -741,7 +872,7 @@ def remove_duplicates(news_list):
 
 def compute_importance_score(article, category):
     """
-    Enhanced importance scoring with investor-grade criteria
+    Enhanced importance scoring with investor-grade criteria v3.0
     
     Args:
         article (dict): The article containing title, content, source, etc.
@@ -797,7 +928,7 @@ def compute_importance_score(article, category):
     title_score = min(5, title_length / 20)  # 5 points max for title
     text_score = min(10, text_length / 300)  # 10 points max for content
     
-    # 4. Enhanced impact scoring with FinBERT sentiment
+    # 4. Enhanced impact scoring with Custom FinBERT sentiment
     impact = article.get("impact", "neutral")
     
     if category == "crypto_news":
@@ -816,12 +947,16 @@ def compute_importance_score(article, category):
         else:
             impact_score = 5
     
-    # 5. FinBERT confidence bonus
+    # 5. 🚀 Custom FinBERT Confidence Bonus v3.0
     if "impact_prob" in article:
         probs = article["impact_prob"]
         max_prob = max(probs.values())
         if max_prob > 0.8:  # High confidence
-            impact_score += 3
+            impact_score += 4  # Increased bonus for custom model
+        
+        # Bonus supplémentaire pour modèle custom
+        if article.get("model_metadata", {}).get("is_custom", False):
+            impact_score += 2  # Custom model bonus
     
     # Calculate total score
     total_score = high_keyword_score + medium_keyword_score + source_score + title_score + text_score + impact_score
@@ -841,7 +976,7 @@ def compute_importance_score(article, category):
 
 def calculate_output_limits(articles_by_country, max_total=150):
     """
-    Enhanced output limits calculation using geo_budgets v2.4 with MSCI weights
+    Enhanced output limits calculation using geo_budgets v3.0 with MSCI weights
     """
     geo_config = CONFIG["geo_budgets"]
     base_allocations = geo_config["base"]
@@ -904,7 +1039,7 @@ def calculate_output_limits(articles_by_country, max_total=150):
 
 def apply_topic_caps(formatted_data):
     """
-    Apply sophisticated topic caps with fixed/relative/overflow logic
+    Apply sophisticated topic caps with fixed/relative/overflow logic v3.0
     """
     topic_config = CONFIG["topic_caps"]
     fixed_caps = topic_config["fixed"]
@@ -987,7 +1122,7 @@ def apply_topic_caps(formatted_data):
 
 def extract_top_themes(news_data, days=30, max_examples=3, exclude_themes=None):
     """
-    Enhanced theme analysis with fundamentals axis
+    Enhanced theme analysis with fundamentals axis v3.0
     """
     cutoff_date = datetime.now() - timedelta(days=days)
     
@@ -1114,7 +1249,7 @@ def extract_top_themes(news_data, days=30, max_examples=3, exclude_themes=None):
     return top_themes_with_details
 
 def build_theme_summary(theme_name, theme_data):
-    """Generates investor-focused theme summary"""
+    """Generates investor-focused theme summary v3.0"""
     count = theme_data.get("count", 0)
     articles = theme_data.get("articles", [])
     keywords = theme_data.get("keywords", {})
@@ -1147,7 +1282,7 @@ def build_theme_summary(theme_name, theme_data):
     )
 
 def process_news_data(news_sources):
-    """Enhanced news processing with investor-grade filtering v2.5"""
+    """Enhanced news processing with investor-grade filtering v3.0"""
     # Initialize structure for all possible countries/regions using geo_budgets
     formatted_data = {
         "lastUpdated": datetime.now().isoformat()
@@ -1181,7 +1316,7 @@ def process_news_data(news_sources):
             category = determine_category(normalized, source_type)
             country = determine_country(normalized)
             
-            # Enhanced sentiment analysis with FinBERT
+            # 🚀 Enhanced sentiment analysis with Custom FinBERT v3.0
             impact = determine_impact(normalized)
             
             # Essential data
@@ -1203,6 +1338,10 @@ def process_news_data(news_sources):
             # Copy over sentiment probabilities if available
             if "impact_prob" in normalized:
                 news_item["impact_prob"] = normalized["impact_prob"]
+            
+            # Copy over model metadata if available
+            if "model_metadata" in normalized:
+                news_item["model_metadata"] = normalized["model_metadata"]
             
             # Calculate enhanced importance score
             news_item["importance_score"] = compute_importance_score(news_item, source_type)
@@ -1242,14 +1381,14 @@ def process_news_data(news_sources):
     
     # Statistics
     total_articles = sum(len(articles) for articles in formatted_data.values() if isinstance(articles, list))
-    logger.info(f"✅ Enhanced processing v2.5 complete: {total_articles} investor-grade articles")
+    logger.info(f"✅ Enhanced processing v3.0 complete: {total_articles} investor-grade articles")
     
     # Log distribution by region
     for country, articles in formatted_data.items():
         if isinstance(articles, list) and articles:
             logger.info(f"  📍 {country}: {len(articles)} articles")
     
-    # Sentiment distribution stats
+    # Enhanced sentiment distribution stats with model info
     all_processed_articles = []
     for articles in formatted_data.values():
         if isinstance(articles, list):
@@ -1259,31 +1398,52 @@ def process_news_data(news_sources):
         sentiment_stats = compute_sentiment_distribution(all_processed_articles)
         logger.info(f"📊 Sentiment distribution: {sentiment_stats['positive']}% positive, {sentiment_stats['negative']}% negative, {sentiment_stats['neutral']}% neutral")
         
-        # FinBERT usage stats
+        # 🚀 Enhanced FinBERT usage stats v3.0
         finbert_used = sum(1 for article in all_processed_articles if "impact_prob" in article)
+        custom_used = sum(1 for article in all_processed_articles if article.get("model_metadata", {}).get("is_custom", False))
+        
         if finbert_used > 0:
             logger.info(f"🤖 FinBERT analyzed {finbert_used}/{len(all_processed_articles)} articles ({finbert_used/len(all_processed_articles)*100:.1f}%)")
+            if custom_used > 0:
+                logger.info(f"🔒 Custom model used: {custom_used}/{finbert_used} articles ({custom_used/finbert_used*100:.1f}%)")
+            
+            # Confidence stats
+            confidence_scores = [max(article["impact_prob"].values()) for article in all_processed_articles if "impact_prob" in article]
+            if confidence_scores:
+                avg_confidence = sum(confidence_scores) / len(confidence_scores)
+                logger.info(f"📈 Average sentiment confidence: {avg_confidence:.3f}")
+                
+                # Update model metadata
+                _MODEL_METADATA["performance_metrics"] = {
+                    "avg_confidence": avg_confidence,
+                    "articles_analyzed": finbert_used,
+                    "custom_model_usage": custom_used / finbert_used if finbert_used > 0 else 0
+                }
     
     return formatted_data
 
 def update_news_json_file(news_data):
-    """Updates news.json file with formatted data"""
+    """Updates news.json file with formatted data v3.0"""
     try:
         output_data = {k: v for k, v in news_data.items()}
+        
+        # Add model metadata to output
+        if ENABLE_MODEL_METRICS:
+            output_data["model_metadata"] = _MODEL_METADATA
         
         os.makedirs(os.path.dirname(NEWS_JSON_PATH), exist_ok=True)
         
         with open(NEWS_JSON_PATH, 'w', encoding='utf-8') as f:
             json.dump(output_data, f, ensure_ascii=False, indent=2)
             
-        logger.info(f"✅ news.json file successfully updated with investor-grade data v2.5")
+        logger.info(f"✅ news.json file successfully updated with investor-grade data v3.0")
         return True
     except Exception as e:
         logger.error(f"❌ Error updating file: {str(e)}")
         return False
 
 def generate_themes_json(news_data):
-    """Generates enhanced themes JSON with fundamentals axis"""
+    """Generates enhanced themes JSON with fundamentals axis v3.0"""
     
     periods = {
         "weekly": 7,
@@ -1305,12 +1465,13 @@ def generate_themes_json(news_data):
                 summary = build_theme_summary(theme_name, theme_data)
                 themes_data[period][axis][theme_name]["investor_summary"] = summary
     
-    # Add metadata
+    # Add metadata with model info
     themes_output = {
         "themes": themes_data,
         "lastUpdated": datetime.now().isoformat(),
         "analysisCount": sum(len(articles) for articles in news_data.values() if isinstance(articles, list)),
-        "config_version": "investor-grade-v2.5-finbert-only"
+        "config_version": "investor-grade-v3.0-custom-finbert",
+        "model_info": _MODEL_METADATA if ENABLE_MODEL_METRICS else None
     }
     
     os.makedirs(os.path.dirname(THEMES_JSON_PATH), exist_ok=True)
@@ -1318,18 +1479,19 @@ def generate_themes_json(news_data):
     try:
         with open(THEMES_JSON_PATH, 'w', encoding='utf-8') as f:
             json.dump(themes_output, f, ensure_ascii=False, indent=2)
-        logger.info(f"✅ Enhanced themes.json with fundamentals axis updated (v2.5)")
+        logger.info(f"✅ Enhanced themes.json with fundamentals axis updated (v3.0)")
         return True
     except Exception as e:
         logger.error(f"❌ Error updating themes.json file: {str(e)}")
         return False
 
 def main():
-    """Enhanced main execution with investor-grade logging v2.5"""
+    """🚀 Enhanced main execution with Custom FinBERT v3.0"""
     try:
-        logger.info("🚀 Starting investor-grade news collection v2.5 with FinBERT (no external lexicon)...")
+        logger.info("🚀 Starting TradePulse Investor-Grade News Collection v3.0...")
+        logger.info(f"🔧 Configuration: Custom={USE_CUSTOM_FINBERT}, LM_Lexicon={USE_LM_LEXICON}")
         
-        # Warm up FinBERT model
+        # Warm up FinBERT model with fallback
         _warm_finbert()
         
         # Read existing data for fallback
@@ -1368,8 +1530,8 @@ def main():
             if existing_data:
                 return True
         
-        # Process with enhanced investor-grade system v2.5
-        logger.info("🔍 Processing with enhanced FinBERT sentiment analysis (no external lexicon)...")
+        # 🚀 Process with enhanced Custom FinBERT system v3.0
+        logger.info("🔍 Processing with Custom FinBERT sentiment analysis (secure fallback enabled)...")
         news_data = process_news_data(news_sources)
         
         # Update files
@@ -1387,11 +1549,21 @@ def main():
                     sentiment = details["sentiment_distribution"]
                     logger.info(f"      Sentiment: {sentiment['positive']}%↑ {sentiment['negative']}%↓")
         
-        logger.info("✅ Investor-grade news update v2.5 with FinBERT (license-free) completed successfully")
+        # 🚀 Model performance summary v3.0
+        logger.info("🤖 Custom FinBERT Performance Summary:")
+        logger.info(f"  Model Status: {_MODEL_METADATA['status']}")
+        logger.info(f"  Model Version: {_MODEL_METADATA['version']}")
+        logger.info(f"  Load Time: {_MODEL_METADATA['load_time']:.2f}s")
+        if "performance_metrics" in _MODEL_METADATA:
+            metrics = _MODEL_METADATA["performance_metrics"]
+            logger.info(f"  Avg Confidence: {metrics.get('avg_confidence', 0):.3f}")
+            logger.info(f"  Custom Usage: {metrics.get('custom_model_usage', 0)*100:.1f}%")
+        
+        logger.info("✅ TradePulse v3.0 with Custom FinBERT completed successfully!")
         return success_news and success_themes
         
     except Exception as e:
-        logger.error(f"❌ Error in investor-grade execution v2.5: {str(e)}")
+        logger.error(f"❌ Error in Custom FinBERT execution v3.0: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
         return False
