@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-TradePulse - Investor-Grade News Updater v2.4
+TradePulse - Investor-Grade News Updater v2.5
 Script for extracting news and events from Financial Modeling Prep
 Enhanced with FinBERT sentiment analysis and MSCI-weighted geographic distribution
+Free from external lexicon dependencies
 """
 
 import os
@@ -61,32 +62,6 @@ def _load_finbert():
     logger.info("✅ FinBERT model loaded successfully")
     return tokenizer, model
 
-@lru_cache(maxsize=1)
-def _load_lm_lexicons():
-    """
-    Télécharge et met en cache les listes positives/négatives
-    du lexique Loughran-McDonald.
-    """
-    logger.info("📚 Loading Loughran-McDonald financial lexicon...")
-    try:
-        POS_URL = "https://raw.githubusercontent.com/rafalab/FinanceData/master/Loughran-McDonald_Positive.csv"
-        NEG_URL = "https://raw.githubusercontent.com/rafalab/FinanceData/master/Loughran-McDonald_Negative.csv"
-        
-        pos_response = requests.get(POS_URL, timeout=30)
-        neg_response = requests.get(NEG_URL, timeout=30)
-        
-        pos = set(pos_response.text.lower().splitlines())
-        neg = set(neg_response.text.lower().splitlines())
-        
-        logger.info(f"✅ Loaded LM lexicon: {len(pos)} positive, {len(neg)} negative words")
-        return pos, neg
-    except Exception as e:
-        logger.warning(f"⚠️ Failed to load LM lexicon: {e}, using fallback")
-        # Fallback minimal lexicon
-        pos = {"growth", "profit", "beat", "rise", "gain", "strong", "positive", "boost"}
-        neg = {"loss", "fall", "drop", "decline", "weak", "negative", "crisis", "risk"}
-        return pos, neg
-
 def _warm_finbert():
     """
     Charge FinBERT au démarrage du process pour éviter le cold-start
@@ -115,7 +90,7 @@ def profile_step(label: str, start_ts: float):
     logger.info(f"⏱️  {label}: {dur:5.2f}s | RSS={rss:.0f} MB")
 
 # ---------------------------------------------------------------------------
-# INVESTOR-GRADE NEWS CONFIG v2.4
+# INVESTOR-GRADE NEWS CONFIG v2.5
 # ---------------------------------------------------------------------------
 
 CONFIG = {
@@ -213,7 +188,7 @@ KEYWORD_TIERS = {
 }
 
 # ---------------------------------------------------------------------------
-# THEMES  –  ajout d'un axe "fundamentals" + sous-thème AI
+# THEMES  –  ajout d'un axe « fundamentals » + sous-thème AI
 # ---------------------------------------------------------------------------
 THEMES = {
     "macroeconomics": {
@@ -623,82 +598,79 @@ def determine_country(article):
 
 def determine_impact(article):
     """
-    Enhanced sentiment analysis with FinBERT + Loughran-McDonald cascade:
-    1) sentiment numérique fourni par l'API FMP (> 0.2 / < -0.2)
-    2) modèle FinBERT si le texte est assez long (≥ 20 tokens)
-    3) fallback lexique Loughran-McDonald sinon
+    Sentiment cascade (sans Loughran-McDonald) :
+    1) score numérique FMP (>0.2 / <-0.2)
+    2) FinBERT si texte ≥ 20 tokens
+    3) fallback micro-lexique (≈ 30 mots)
     """
     t0 = time.perf_counter() if SENTIMENT_PROFILING else None
-    
-    # -- 1) Score direct FMP -------------------------------------------------
-    sentiment_api = article.get("sentiment")
-    if sentiment_api:
-        try:
-            v = float(sentiment_api)
-            if v > 0.2:
-                if SENTIMENT_PROFILING:
-                    profile_step("sentiment_api_positive", t0)
-                return "positive"
-            if v < -0.2:
-                if SENTIMENT_PROFILING:
-                    profile_step("sentiment_api_negative", t0)
-                return "negative"
-            if SENTIMENT_PROFILING:
-                profile_step("sentiment_api_neutral", t0)
-            return "neutral"
-        except ValueError:
-            pass  # repart sur FinBERT/lexicon
 
-    # -- Préparation du texte ------------------------------------------------
+    # 1) Sentiment fourni par FMP
+    try:
+        v = float(article.get("sentiment", ""))
+        if v > 0.2:
+            if SENTIMENT_PROFILING:
+                profile_step("fmp_pos", t0)
+            return "positive"
+        if v < -0.2:
+            if SENTIMENT_PROFILING:
+                profile_step("fmp_neg", t0)
+            return "negative"
+    except (ValueError, TypeError):
+        pass  # on continue
+
+    # Texte source
     text = (article.get("text", "") + " " + article.get("title", "")).strip()
     if not text:
         return "neutral"
 
-    # -- 2) FinBERT (NLP deep-learning) --------------------------------------
+    # 2) FinBERT
     if USE_FINBERT:
         try:
-            tokenizer, model = _load_finbert()
-            tokens = tokenizer.encode(text, add_special_tokens=False)
-            
-            if len(tokens) >= 20:  # sinon on passe au lexique
-                inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+            tok, mdl = _load_finbert()
+            if len(tok.encode(text, add_special_tokens=False)) >= 20:
+                inputs = tok(text, return_tensors="pt", truncation=True, max_length=512)
                 with torch.no_grad():
-                    logits = model(**inputs).logits.squeeze()
+                    logits = mdl(**inputs).logits.squeeze()
                 probs = logits.softmax(-1)  # [neg, neu, pos]
                 neg, neu, pos = probs.tolist()
-
-                # Store probabilities for audit
                 article["impact_prob"] = {
                     "positive": round(pos, 3),
-                    "neutral": round(neu, 3),
+                    "neutral":  round(neu, 3),
                     "negative": round(neg, 3)
                 }
-
-                if max(pos, neg) - neu > 0.10:  # marge de confiance
-                    result = "positive" if pos > neg else "negative"
+                if max(pos, neg) - neu > 0.10:
+                    res = "positive" if pos > neg else "negative"
                     if SENTIMENT_PROFILING:
-                        profile_step(f"finbert_{result}", t0)
-                    return result
+                        profile_step(f"finbert_{res}", t0)
+                    return res
         except Exception as e:
-            logger.warning(f"FinBERT analysis failed: {e}, falling back to lexicon")
+            logger.warning(f"FinBERT failure → fallback lexicon: {e}")
 
-    # -- 3) Fallback Loughran-McDonald ---------------------------------------
-    try:
-        pos_set, neg_set = _load_lm_lexicons()
-        words = re.findall(r"[a-z']+", text.lower())
-        pos_hits = sum(w in pos_set for w in words)
-        neg_hits = sum(w in neg_set for w in words)
+    # 3) Fallback mini-lexique
+    POS = {
+        "surge","soar","gain","rise","jump","boost","recovery","profit","beat",
+        "success","bullish","upward","rally","outperform","growth","optimistic",
+        "momentum","improvement","confidence","upgrade","increase","uptrend"
+    }
+    NEG = {
+        "drop","fall","decline","loss","plunge","tumble","crisis","risk","warning",
+        "concern","bearish","downward","slump","underperform","recession",
+        "weakness","miss","downgrade","cut","reduction","pressure","slowdown",
+        "decrease","downtrend"
+    }
+    words   = re.findall(r"[a-z']+", text.lower())
+    pos_cnt = sum(w in POS for w in words)
+    neg_cnt = sum(w in NEG for w in words)
 
-        if abs(pos_hits - neg_hits) >= 2:  # seuil empirique
-            result = "positive" if pos_hits > neg_hits else "negative"
-            if SENTIMENT_PROFILING:
-                profile_step(f"lm_lexicon_{result}", t0)
-            return result
-    except Exception as e:
-        logger.warning(f"LM lexicon analysis failed: {e}")
-    
+    if abs(pos_cnt - neg_cnt) >= 2:
+        res = "positive" if pos_cnt > neg_cnt else "negative"
+        if SENTIMENT_PROFILING:
+            profile_step(f"mini_lex_{res}", t0)
+        return res
+
     if SENTIMENT_PROFILING:
-        profile_step("sentiment_fallback_neutral", t0)
+        profile_step("sentiment_neutral", t0)
     return "neutral"
 
 def format_date(date_str):
@@ -1175,7 +1147,7 @@ def build_theme_summary(theme_name, theme_data):
     )
 
 def process_news_data(news_sources):
-    """Enhanced news processing with investor-grade filtering v2.4"""
+    """Enhanced news processing with investor-grade filtering v2.5"""
     # Initialize structure for all possible countries/regions using geo_budgets
     formatted_data = {
         "lastUpdated": datetime.now().isoformat()
@@ -1270,7 +1242,7 @@ def process_news_data(news_sources):
     
     # Statistics
     total_articles = sum(len(articles) for articles in formatted_data.values() if isinstance(articles, list))
-    logger.info(f"✅ Enhanced processing v2.4 complete: {total_articles} investor-grade articles")
+    logger.info(f"✅ Enhanced processing v2.5 complete: {total_articles} investor-grade articles")
     
     # Log distribution by region
     for country, articles in formatted_data.items():
@@ -1304,7 +1276,7 @@ def update_news_json_file(news_data):
         with open(NEWS_JSON_PATH, 'w', encoding='utf-8') as f:
             json.dump(output_data, f, ensure_ascii=False, indent=2)
             
-        logger.info(f"✅ news.json file successfully updated with investor-grade data v2.4")
+        logger.info(f"✅ news.json file successfully updated with investor-grade data v2.5")
         return True
     except Exception as e:
         logger.error(f"❌ Error updating file: {str(e)}")
@@ -1338,7 +1310,7 @@ def generate_themes_json(news_data):
         "themes": themes_data,
         "lastUpdated": datetime.now().isoformat(),
         "analysisCount": sum(len(articles) for articles in news_data.values() if isinstance(articles, list)),
-        "config_version": "investor-grade-v2.4-finbert"
+        "config_version": "investor-grade-v2.5-finbert-only"
     }
     
     os.makedirs(os.path.dirname(THEMES_JSON_PATH), exist_ok=True)
@@ -1346,16 +1318,16 @@ def generate_themes_json(news_data):
     try:
         with open(THEMES_JSON_PATH, 'w', encoding='utf-8') as f:
             json.dump(themes_output, f, ensure_ascii=False, indent=2)
-        logger.info(f"✅ Enhanced themes.json with fundamentals axis updated (v2.4)")
+        logger.info(f"✅ Enhanced themes.json with fundamentals axis updated (v2.5)")
         return True
     except Exception as e:
         logger.error(f"❌ Error updating themes.json file: {str(e)}")
         return False
 
 def main():
-    """Enhanced main execution with investor-grade logging v2.4"""
+    """Enhanced main execution with investor-grade logging v2.5"""
     try:
-        logger.info("🚀 Starting investor-grade news collection v2.4 with FinBERT...")
+        logger.info("🚀 Starting investor-grade news collection v2.5 with FinBERT (no external lexicon)...")
         
         # Warm up FinBERT model
         _warm_finbert()
@@ -1396,8 +1368,8 @@ def main():
             if existing_data:
                 return True
         
-        # Process with enhanced investor-grade system v2.4
-        logger.info("🔍 Processing with enhanced FinBERT sentiment analysis...")
+        # Process with enhanced investor-grade system v2.5
+        logger.info("🔍 Processing with enhanced FinBERT sentiment analysis (no external lexicon)...")
         news_data = process_news_data(news_sources)
         
         # Update files
@@ -1415,11 +1387,11 @@ def main():
                     sentiment = details["sentiment_distribution"]
                     logger.info(f"      Sentiment: {sentiment['positive']}%↑ {sentiment['negative']}%↓")
         
-        logger.info("✅ Investor-grade news update v2.4 with FinBERT completed successfully")
+        logger.info("✅ Investor-grade news update v2.5 with FinBERT (license-free) completed successfully")
         return success_news and success_themes
         
     except Exception as e:
-        logger.error(f"❌ Error in investor-grade execution v2.4: {str(e)}")
+        logger.error(f"❌ Error in investor-grade execution v2.5: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
         return False
