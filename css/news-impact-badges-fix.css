@@ -1,0 +1,137 @@
+/* 🔧 CORRECTION - Badges d'impact actualités TradePulse
+   Corrige le problème de superposition des badges sur les dates
+   Auteur: Assistant Claude
+   Date: 08/07/2025
+*/
+
+/* === 1. POSITIONNEMENT CORRECT DES BADGES === */
+
+/* Assurer que les cartes sont des conteneurs de positionnement */
+.news-card {
+    position: relative !important;
+    overflow: hidden;
+}
+
+/* Correction principale - Badges d'impact */
+.news-card .badge {
+    position: absolute !important;
+    top: 12px !important;
+    right: 12px !important;
+    z-index: 15 !important;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* === 2. STYLES PAR TYPE DE BADGE === */
+
+.news-card .badge.urgent {
+    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+    color: white !important;
+    animation: pulse-urgent 2s infinite;
+}
+
+.news-card .badge.important {
+    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+    color: white !important;
+}
+
+.news-card .badge.neutral,
+.news-card .badge:contains("NEUTRE") {
+    background: linear-gradient(135deg, #6b7280, #4b5563) !important;
+    color: white !important;
+}
+
+.news-card .badge.positive {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    color: white !important;
+}
+
+.news-card .badge.negative {
+    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+    color: white !important;
+}
+
+/* === 3. ANIMATIONS === */
+
+@keyframes pulse-urgent {
+    0% { 
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+    70% { 
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 8px rgba(239, 68, 68, 0);
+    }
+    100% { 
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+/* === 4. PROTECTION DES DATES === */
+
+/* S'assurer que les éléments de date ne sont pas affectés */
+.news-card .footer,
+.news-card .news-meta,
+.news-card .news-date-time {
+    position: relative;
+    z-index: 5;
+    pointer-events: auto;
+}
+
+/* === 5. RESPONSIVE MOBILE === */
+
+@media (max-width: 768px) {
+    .news-card .badge {
+        top: 8px !important;
+        right: 8px !important;
+        padding: 3px 6px;
+        font-size: 0.65rem;
+    }
+}
+
+/* === 6. EFFETS HOVER === */
+
+.news-card:hover .badge {
+    transform: scale(1.05);
+    transition: transform 0.2s ease;
+}
+
+/* === 7. PRIORITÉ MAXIMALE - SURCHARGE GARANTIE === */
+
+/* Force l'application des styles même si autres CSS conflictuels */
+.news-card .badge.urgent,
+.news-card .badge.important,
+.news-card .badge.neutral,
+.news-card .badge.positive,
+.news-card .badge.negative {
+    position: absolute !important;
+    top: 12px !important;
+    right: 12px !important;
+    z-index: 15 !important;
+}
+
+/* === 8. DARK/LIGHT MODE === */
+
+.dark .news-card .badge {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.light .news-card .badge {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* === 9. AMÉLIORATION VISUELLE === */
+
+/* Petite amélioration pour les badges sans classe spécifique */
+.news-card .badge:not(.urgent):not(.important):not(.neutral):not(.positive):not(.negative) {
+    background: linear-gradient(135deg, #6b7280, #4b5563) !important;
+    color: white !important;
+}
+
+/* FIN DU FICHIER DE CORRECTION */
