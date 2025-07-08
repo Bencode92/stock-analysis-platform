@@ -34,17 +34,17 @@ _process = psutil.Process(os.getpid())
 NEWS_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "news.json")
 THEMES_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "themes.json")
 
-# 🔑 ENHANCED FEATURE FLAGS v3.0
+# 🔑 ENHANCED FEATURE FLAGS v3.0 - PRODUCTION READY
 USE_FINBERT = os.getenv("TRADEPULSE_USE_FINBERT", "1") == "1"
-USE_CUSTOM_FINBERT = os.getenv("TRADEPULSE_CUSTOM_MODEL", "0") == "1"
+USE_CUSTOM_FINBERT = os.getenv("TRADEPULSE_CUSTOM_MODEL", "1") == "1"  # 🚀 Activé par défaut pour production
 USE_LM_LEXICON = os.getenv("TRADEPULSE_USE_LM", "0") == "1"  # 🚫 Disabled by default
 SENTIMENT_PROFILING = os.getenv("TRADEPULSE_SENTIMENT_PROFILING", "0") == "1"
 ENABLE_MODEL_METRICS = os.getenv("TRADEPULSE_METRICS", "1") == "1"
 
-# 🤖 MODEL CONFIGURATION v3.0
-_FINBERT_MODEL = os.getenv("TRADEPULSE_MODEL_URL", "yiyanghkust/finbert-tone")
+# 🤖 MODEL CONFIGURATION v3.0 - PRODUCTION MODEL
+_FINBERT_MODEL = os.getenv("TRADEPULSE_MODEL_URL", "Bencode92/tradepulse-finbert-prod")
 _FINBERT_FALLBACK = "yiyanghkust/finbert-tone"  # Secure fallback
-MODEL_VERSION = os.getenv("TRADEPULSE_MODEL_VERSION", "base")
+MODEL_VERSION = os.getenv("TRADEPULSE_MODEL_VERSION", "production")
 HF_READ_TOKEN = os.getenv("HF_READ_TOKEN", None)
 
 # Global model cache
@@ -53,6 +53,7 @@ _MODEL_METADATA = {
     "version": MODEL_VERSION,
     "model_url": _FINBERT_MODEL,
     "is_custom": USE_CUSTOM_FINBERT,
+    "production_model": "Bencode92/tradepulse-finbert-prod",
     "load_time": None,
     "performance_metrics": {}
 }
@@ -1470,7 +1471,7 @@ def generate_themes_json(news_data):
         "themes": themes_data,
         "lastUpdated": datetime.now().isoformat(),
         "analysisCount": sum(len(articles) for articles in news_data.values() if isinstance(articles, list)),
-        "config_version": "investor-grade-v3.0-custom-finbert",
+        "config_version": "investor-grade-v3.0-production-finbert",
         "model_info": _MODEL_METADATA if ENABLE_MODEL_METRICS else None
     }
     
@@ -1486,10 +1487,10 @@ def generate_themes_json(news_data):
         return False
 
 def main():
-    """🚀 Enhanced main execution with Custom FinBERT v3.0"""
+    """🚀 Enhanced main execution with Production FinBERT v3.0"""
     try:
         logger.info("🚀 Starting TradePulse Investor-Grade News Collection v3.0...")
-        logger.info(f"🔧 Configuration: Custom={USE_CUSTOM_FINBERT}, LM_Lexicon={USE_LM_LEXICON}")
+        logger.info(f"🔧 Configuration: Production Model={USE_CUSTOM_FINBERT}, Model={_FINBERT_MODEL}")
         
         # Warm up FinBERT model with fallback
         _warm_finbert()
@@ -1530,8 +1531,8 @@ def main():
             if existing_data:
                 return True
         
-        # 🚀 Process with enhanced Custom FinBERT system v3.0
-        logger.info("🔍 Processing with Custom FinBERT sentiment analysis (secure fallback enabled)...")
+        # 🚀 Process with enhanced Production FinBERT system v3.0
+        logger.info("🔍 Processing with Production FinBERT sentiment analysis (secure fallback enabled)...")
         news_data = process_news_data(news_sources)
         
         # Update files
@@ -1550,20 +1551,21 @@ def main():
                     logger.info(f"      Sentiment: {sentiment['positive']}%↑ {sentiment['negative']}%↓")
         
         # 🚀 Model performance summary v3.0
-        logger.info("🤖 Custom FinBERT Performance Summary:")
+        logger.info("🤖 Production FinBERT Performance Summary:")
         logger.info(f"  Model Status: {_MODEL_METADATA['status']}")
         logger.info(f"  Model Version: {_MODEL_METADATA['version']}")
+        logger.info(f"  Production Model: {_MODEL_METADATA['production_model']}")
         logger.info(f"  Load Time: {_MODEL_METADATA['load_time']:.2f}s")
         if "performance_metrics" in _MODEL_METADATA:
             metrics = _MODEL_METADATA["performance_metrics"]
             logger.info(f"  Avg Confidence: {metrics.get('avg_confidence', 0):.3f}")
             logger.info(f"  Custom Usage: {metrics.get('custom_model_usage', 0)*100:.1f}%")
         
-        logger.info("✅ TradePulse v3.0 with Custom FinBERT completed successfully!")
+        logger.info("✅ TradePulse v3.0 with Production FinBERT completed successfully!")
         return success_news and success_themes
         
     except Exception as e:
-        logger.error(f"❌ Error in Custom FinBERT execution v3.0: {str(e)}")
+        logger.error(f"❌ Error in Production FinBERT execution v3.0: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
         return False
