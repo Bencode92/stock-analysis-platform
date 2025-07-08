@@ -15,9 +15,6 @@
     <link rel="stylesheet" href="market-clock.css">
     <!-- Autres styles CSS -->
     <link rel="stylesheet" href="css/news-impact-indicators.css">
-    <link rel="stylesheet" href="css/ml-sentiment-indicators.css">
-    <link rel="stylesheet" href="css/ml-feedback.css">
-    <link rel="stylesheet" href="css/classification-updates.css">
     <link rel="stylesheet" href="css/news-display-fix.css">
     <link rel="stylesheet" href="css/themes-dominant.css">
     <!-- CSS pour le brief stratégique -->
@@ -1123,14 +1120,6 @@
                         
                         <!-- Filtres avancés (Impact et Pays) -->
                         <div class="flex flex-wrap gap-2">
-                            <!-- Filtre de sentiment ML -->
-                            <select id="sentiment-select" class="text-xs md:text-sm px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700 rounded-full">
-                                <option value="all">Tous sentiments</option>
-                                <option value="positive">Positif</option>
-                                <option value="negative">Négatif</option>
-                                <option value="neutral">Neutre</option>
-                            </select>
-                            
                             <select id="impact-select" class="text-xs md:text-sm px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700 rounded-full">
                                 <option value="all">Tous impacts</option>
                                 <option value="positive">Positif</option>
@@ -1227,7 +1216,6 @@
             <p><i class="fas fa-star"></i> Configuration Investor-Grade activée</p>
             <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel</p>
             <p><i class="fas fa-database"></i> Actualités et événements fournis par Financial Modeling Prep</p>
-            <p><i class="fas fa-brain"></i> Classification automatique par machine learning</p>
             <p><i class="fas fa-chart-trending-up"></i> Focus macro-économie et fondamentaux</p>
             <p><i class="fas fa-clock"></i> Dernière mise à jour: <span class="update-time" id="updateTime">09/03/2025 10:15:53</span></p>
         </div>
@@ -1243,8 +1231,6 @@
     
     <!-- Scripts secondaires -->
     <script src="js/date-normalizer.js"></script>
-    <script src="js/ml-feedback.js"></script>
-    <script src="js/ml-news-integrator.js"></script>
     <script src="js/news-updates.js"></script>
     <script src="js/themes-visualizer.js"></script>
     
@@ -1404,14 +1390,6 @@
             
             updateLastUpdateTime();
             
-            // Enhanced sentiment filter integration
-            const sentimentSelect = document.getElementById('sentiment-select');
-            if (sentimentSelect) {
-                sentimentSelect.addEventListener('change', function() {
-                    window.NewsSystem.filterNews('sentiment', this.value);
-                });
-            }
-            
             // Enhanced score filter with real-time feedback
             const scoreFilter = document.getElementById('score-filter');
             const scoreValue = document.getElementById('score-value');
@@ -1426,13 +1404,6 @@
                         window.newsHierarchy.filterByScore(parseInt(value));
                     }
                 });
-            }
-            
-            // Enhanced ML system initialization
-            if (window.MLNewsIntegrator) {
-                setTimeout(() => {
-                    window.MLNewsIntegrator.initMLFeedback();
-                }, 1500);
             }
 
             // Enhanced date updates
@@ -1495,7 +1466,7 @@
             }
             
             // Investor-grade analytics tracking
-            console.log('🚀 TradePulse Investor-Grade Analytics System Initialized');
+            console.log('🚀 TradePulse Investor-Grade Analytics System Initialized (ML-Free Version)');
         });
     </script>
 </body>
