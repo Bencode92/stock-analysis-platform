@@ -130,16 +130,13 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
     // Classe line-clamp adaptée selon le tier
     const descClamp = tier === 'regular' ? 'line-clamp-3' : 'line-clamp-4';
 
-    // Badge urgent pour les actualités critiques
-    const urgentBadge = tier === 'critical' ? '<span class="absolute top-2 right-2 badge urgent bg-red-500 text-white text-xs px-2 py-1 rounded animate-pulse">URGENT</span>' : '';
+    // MODIFICATION : Badge urgent supprimé - plus de badge "URGENT"
+    // const urgentBadge = tier === 'critical' ? '<span class="absolute top-2 right-2 badge urgent bg-red-500 text-white text-xs px-2 py-1 rounded animate-pulse">URGENT</span>' : '';
 
     card.innerHTML = `
-        ${urgentBadge}
-        
         <header class="flex items-center gap-2 mb-3 flex-wrap">
             <span class="badge badge-${item.impact} uppercase text-xs px-2 py-1 rounded font-semibold ${getImpactBadgeClass(item.impact)}">${impactText}</span>
             <span class="chip text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300">${item.category?.toUpperCase() || 'GENERAL'}</span>
-            <span class="time text-xs text-zinc-500 ml-auto">${item.date || ''} ${item.time || ''}</span>
         </header>
 
         <h3 class="title text-lg font-bold line-clamp-2 text-white mb-3">${item.title}</h3>
@@ -150,6 +147,7 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
             <span class="text-emerald-400 font-medium">${item.source || '—'}</span>
             <div class="flex items-center gap-2">
                 <span class="sentiment-icon">${sentimentIcon}</span>
+                <span class="date-time text-xs text-zinc-500">${item.date || ''} ${item.time || ''}</span>
                 ${item.url ? '<span class="text-zinc-500"><i class="fas fa-external-link-alt"></i></span>' : ''}
             </div>
         </footer>
