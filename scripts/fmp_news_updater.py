@@ -464,7 +464,7 @@ class EnhancedGitHandler:
 
 📅 Timestamp: {timestamp}
 🔗 Source: Financial Modeling Prep API
-🧠 AI Models: FinBERT Sentiment + Importance (3-classes with argmax)
+🧠 AI Models: FinBERT Sentiment + Importance (3-classes with threshold)
 🌍 Distribution: MSCI-weighted geographic allocation{stats_info}
 
 ✨ Enhanced v4.1 compact format active (axisMax)
@@ -985,6 +985,7 @@ def compute_importance_score(article, category=None) -> dict:
     """
     🎯 Importance 3-classes with simplified argmax decision + aliases FR/EN/Legacy
     Returns probabilities and weighted score with streamlined decision logic.
+    MODIFIED: Added threshold-based decision to preserve "general" articles
     """
     if not USE_FINBERT:
         return {
@@ -1039,20 +1040,28 @@ def compute_importance_score(article, category=None) -> dict:
         elif total == 0:
             normalized_probs = {"general": 1.0, "important": 0.0, "critical": 0.0}
 
-        # ═══ NOUVELLE DÉCISION SIMPLE AVEC ARGMAX ═══════════════════
-        level = max(normalized_probs, key=normalized_probs.get)  # ← argmax direct
-        # ═══════════════════════════════════════════════════════════════
+        # ─── MODIFIED: Décision avec marge minimale ────────────────────────────
+        crit = normalized_probs["critical"]
+        imp  = normalized_probs["important"]
+        gen  = normalized_probs["general"]
+
+        # si la meilleure proba ne dépasse pas "general" d'au moins 10 pts,
+        # on garde le niveau "general"
+        if max(crit, imp) - gen < 0.10:
+            level = "general"
+        else:
+            level = "critical" if crit > imp else "important"
+        # ────────────────────────────────────────────────────────────────────────
         
         # Log de la décision si debug activé
         if SENTIMENT_PROFILING:
-            logger.debug(f"🎯 Décision argmax: {level} (probas: {normalized_probs})")
+            logger.debug(f"🎯 Décision avec seuil: {level} (probas: {normalized_probs})")
         
-        # Score pondéré (25-95 scale) - formule inchangée
+        # Score pondéré (35-90 scale) - MODIFIED: adjusted weights
         score = round(
-            normalized_probs["general"] * 25 +
+            normalized_probs["general"] * 35 +    # +10
             normalized_probs["important"] * 60 +
-            normalized_probs["critical"] * 95, 1
-        )
+            normalized_probs["critical"] * 90, 1)  # -5
 
         return {
             "level": level,
@@ -1066,7 +1075,7 @@ def compute_importance_score(article, category=None) -> dict:
                 "raw_labels": list(probs.keys()),
                 "aliases_used": True,
                 "total_prob": round(sum(normalized_probs.values()), 3),
-                "decision_logic": "argmax",  # ← Nouveau flag simple
+                "decision_logic": "threshold",  # ← Changed from "argmax"
             },
         }
 
@@ -1506,6 +1515,14 @@ def process_news_data(news_sources):
     # Apply limits by country
     for country, articles in articles_by_country.items():
         limit = adjusted_limits.get(country, 3)  # Default to 3 if not in limits
+        
+        # -- MODIFIED: Réserve 1 article "general" si possible --------------------
+        general_keep = next((a for a in articles if a["importance_level"] == "general"), None)
+        if general_keep:
+            # On met l'article "general" au début de la liste pour qu'il passe le slicing
+            articles.insert(0, articles.pop(articles.index(general_keep)))
+        # --------------------------------------------------------------------------
+        
         if country in formatted_data:
             formatted_data[country] = articles[:limit]
         else:
@@ -1558,13 +1575,13 @@ def process_news_data(news_sources):
             # 🔧 DIAGNOSTIC: Compter les articles avec correctifs appliqués
             alias_articles = sum(1 for article in all_processed_articles 
                                if article.get("importance_metadata", {}).get("aliases_used"))
-            argmax_articles = sum(1 for article in all_processed_articles 
-                                if article.get("importance_metadata", {}).get("decision_logic") == "argmax")
+            threshold_articles = sum(1 for article in all_processed_articles 
+                                if article.get("importance_metadata", {}).get("decision_logic") == "threshold")
             
             if alias_articles > 0:
                 logger.info(f"🔧 Articles avec correctif aliases: {alias_articles}/{importance_used} ({alias_articles/importance_used*100:.1f}%)")
-            if argmax_articles > 0:
-                logger.info(f"🎯 Articles avec décision argmax: {argmax_articles}/{importance_used} ({argmax_articles/importance_used*100:.1f}%)")
+            if threshold_articles > 0:
+                logger.info(f"🎯 Articles avec décision threshold: {threshold_articles}/{importance_used} ({threshold_articles/importance_used*100:.1f}%)")
             
             # Average importance scores
             importance_scores = [article["importance_score"] for article in all_processed_articles if "importance_score" in article]
@@ -1580,7 +1597,7 @@ def process_news_data(news_sources):
                     "avg_importance": avg_importance,
                     "importance_distribution": dict(importance_levels),
                     "alias_fix_applied": alias_articles,
-                    "argmax_logic_applied": argmax_articles
+                    "threshold_logic_applied": threshold_articles  # Changed from argmax_logic_applied
                 }
     
     return formatted_data
@@ -1787,7 +1804,7 @@ def main():
     """🚀 Enhanced main execution with Dual Specialized Models + Git Integration v4.1"""
     try:
         logger.info("🚀 Starting TradePulse Investor-Grade News Collection v4.1...")
-        logger.info(f"🎯 Dual Specialized Models: sentiment + importance (3-classes with argmax)")
+        logger.info(f"🎯 Dual Specialized Models: sentiment + importance (3-classes with threshold)")
         logger.info(f"✨ NEW v4.1: Ultra-compact format with axisMax")
         
         # Pré-charge les deux modèles spécialisés
@@ -1833,8 +1850,8 @@ def main():
             if existing_data:
                 return True
         
-        # 🚀 Process with dual specialized models v4.1 + argmax simple
-        logger.info("🔍 Processing with dual specialized models (sentiment + importance with simple argmax)...")
+        # 🚀 Process with dual specialized models v4.1 + threshold logic
+        logger.info("🔍 Processing with dual specialized models (sentiment + importance with threshold logic)...")
         news_data = process_news_data(news_sources)
         
         # 🚀 Update files with NEW v4.1 compact formats
@@ -1877,7 +1894,7 @@ def main():
         # 🚀 Dual specialized models performance summary v4.1 avec compact format
         logger.info("🎯 Dual Specialized Models Performance Summary v4.1:")
         logger.info(f"  Sentiment Model: {_MODEL_METADATA['sentiment_model']}")
-        logger.info(f"  Importance Model: {_MODEL_METADATA['importance_model']} (3-classes with argmax)")
+        logger.info(f"  Importance Model: {_MODEL_METADATA['importance_model']} (3-classes with threshold)")
         logger.info(f"  System Version: {_MODEL_METADATA['version']}")
         logger.info(f"  Load Time: {_MODEL_METADATA['load_time']:.2f}s")
         if "performance_metrics" in _MODEL_METADATA:
@@ -1891,11 +1908,11 @@ def main():
             # 🔧 Logs pour monitoring des correctifs
             if "alias_fix_applied" in metrics:
                 logger.info(f"  🔧 Alias Fix Applied: {metrics['alias_fix_applied']} articles")
-            if "argmax_logic_applied" in metrics:
-                logger.info(f"  🎯 Argmax Logic Applied: {metrics['argmax_logic_applied']} articles")
+            if "threshold_logic_applied" in metrics:
+                logger.info(f"  🎯 Threshold Logic Applied: {metrics['threshold_logic_applied']} articles")
         
         logger.info("✅ TradePulse v4.1 with Ultra-Compact Format completed successfully!")
-        logger.info("🚀 Benefits: ×6-8 smaller files, instant frontend rendering")
+        logger.info("🚀 Benefits: ×6-8 smaller files, instant frontend rendering, preserved article diversity")
         return success_news and success_themes
         
     except Exception as e:
