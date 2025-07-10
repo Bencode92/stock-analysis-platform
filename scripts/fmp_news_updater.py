@@ -981,8 +981,8 @@ def remove_duplicates(news_list):
 
 def compute_importance_score(article, category=None) -> dict:
     """
-    🔧 CORRECTIF: Importance 3-classes avec aliases FR/EN/Legacy : general | important | critical
-    Retourne les probabilités et un score pondéré.
+    🚀 CORRECTIF FINAL: Importance 3-classes avec seuils intelligents + aliases FR/EN/Legacy
+    Retourne les probabilités et un score pondéré avec logique de décision améliorée.
     """
     if not USE_FINBERT:
         return {
@@ -1004,12 +1004,12 @@ def compute_importance_score(article, category=None) -> dict:
                 "metadata": {"fallback": "empty text", "specialized": False},
             }
         
-        probs = _predict_probs(tok, mdl, text)  # ← Mapping dynamique
+        probs = _predict_probs(tok, mdl, text)
         
         if not probs:
             raise ValueError("No probabilities returned")
 
-        # 🔧 CORRECTIF: Table d'alias FR/EN/Legacy pour résoudre le mismatch des labels
+        # 🔧 Table d'alias FR/EN/Legacy pour résoudre le mismatch des labels
         ALIAS = {
             "general":   ("general", "générale", "low", "generale"),
             "important": ("important", "importante", "medium"),
@@ -1019,28 +1019,45 @@ def compute_importance_score(article, category=None) -> dict:
         # 🔧 Reconstruction robuste avec aliases
         normalized_probs = {}
         for target, aliases in ALIAS.items():
-            # Prendre la probabilité maximale parmi tous les alias possibles
             max_prob = max((probs.get(alias, 0.0) for alias in aliases), default=0.0)
             normalized_probs[target] = max_prob
         
-        # Log de debug pour diagnostiquer les labels détectés
+        # Log de debug
         if SENTIMENT_PROFILING:
             detected_labels = list(probs.keys())
             logger.debug(f"🔍 Labels détectés: {detected_labels}")
             logger.debug(f"📊 Probs après alias: {normalized_probs}")
         
-        # Normalisation si nécessaire (au cas où le total != 1.0)
+        # Normalisation si nécessaire
         total = sum(normalized_probs.values())
-        if total > 0 and abs(total - 1.0) > 0.01:  # Seuil de tolérance
+        if total > 0 and abs(total - 1.0) > 0.01:
             normalized_probs = {k: v/total for k, v in normalized_probs.items()}
             if SENTIMENT_PROFILING:
                 logger.debug(f"📏 Normalisation appliquée, nouveau total: {sum(normalized_probs.values()):.3f}")
         elif total == 0:
-            # Fallback complet si aucun alias ne matche
-            logger.warning(f"⚠️ Aucun alias ne matche pour les labels: {list(probs.keys())}")
             normalized_probs = {"general": 1.0, "important": 0.0, "critical": 0.0}
 
-        level = max(normalized_probs, key=normalized_probs.get)
+        # 🚀 LOGIQUE À SEUILS INTELLIGENTS (remplace le simple argmax)
+        critical_prob = normalized_probs["critical"]
+        important_prob = normalized_probs["important"]
+        general_prob = normalized_probs["general"]
+        
+        # Seuils calibrés pour éviter le sur-classement
+        CRITICAL_THRESHOLD = 0.55   # 55% minimum pour être critique
+        IMPORTANT_THRESHOLD = 0.45  # 45% minimum pour être important
+        MIN_DOMINANCE = 0.15        # 15% d'écart minimum avec les autres
+        
+        # Détermination intelligente du niveau
+        if critical_prob >= CRITICAL_THRESHOLD and critical_prob > max(important_prob, general_prob) + MIN_DOMINANCE:
+            level = "critical"
+        elif important_prob >= IMPORTANT_THRESHOLD and important_prob > max(critical_prob, general_prob) + MIN_DOMINANCE:
+            level = "important"
+        else:
+            level = "general"  # Par défaut si aucun seuil n'est atteint ou scores trop proches
+        
+        # Log de la décision si debug activé
+        if SENTIMENT_PROFILING:
+            logger.debug(f"🎯 Décision: {level} (C:{critical_prob:.3f} I:{important_prob:.3f} G:{general_prob:.3f})")
         
         # Score pondéré (25-95 scale) - formule inchangée
         score = round(
@@ -1058,9 +1075,15 @@ def compute_importance_score(article, category=None) -> dict:
                 "version": _MODEL_METADATA["version"],
                 "specialized": True,
                 "classes": list(normalized_probs.keys()),
-                "raw_labels": list(probs.keys()),  # ← Debug info
-                "aliases_used": True,  # ← Nouveau flag pour confirmer le correctif
-                "total_prob": round(sum(normalized_probs.values()), 3)  # ← Vérification de normalisation
+                "raw_labels": list(probs.keys()),
+                "aliases_used": True,
+                "total_prob": round(sum(normalized_probs.values()), 3),
+                "decision_logic": "threshold_based",  # ← Nouveau flag pour indiquer la logique utilisée
+                "thresholds_applied": {  # ← Métadonnées des seuils pour debug
+                    "critical": CRITICAL_THRESHOLD,
+                    "important": IMPORTANT_THRESHOLD,
+                    "min_dominance": MIN_DOMINANCE
+                }
             },
         }
 
@@ -1475,8 +1498,7 @@ def process_news_data(news_sources):
             if "sentiment_metadata" in normalized:
                 news_item["sentiment_metadata"] = normalized["sentiment_metadata"]
             
-            # ⚡ Specialized importance analysis v4.0 (3-classes)
-            # 🔧 CORRECTIF MAJEUR: Propagation correcte du système 3-classes
+            # ⚡ Specialized importance analysis v4.0 (3-classes avec seuils)
             importance_result = compute_importance_score(news_item, source_type)
             news_item["importance_level"] = importance_result["level"]        # general/important/critical
             news_item["importance_prob"] = importance_result["prob"]          # probabilités détaillées
@@ -1551,15 +1573,20 @@ def process_news_data(news_sources):
         if importance_used > 0:
             logger.info(f"⚡ Importance model analyzed {importance_used}/{len(all_processed_articles)} articles ({importance_used/len(all_processed_articles)*100:.1f}%)")
             
-            # Distribution par niveau d'importance avec correctif d'alias
+            # Distribution par niveau d'importance avec correctif d'alias + seuils
             importance_levels = Counter(article["importance_level"] for article in all_processed_articles if "importance_level" in article)
             logger.info(f"📊 Importance levels: {dict(importance_levels)}")
             
-            # 🔧 DIAGNOSTIC: Compter les articles avec aliases_used
+            # 🔧 DIAGNOSTIC: Compter les articles avec correctifs appliqués
             alias_articles = sum(1 for article in all_processed_articles 
                                if article.get("importance_metadata", {}).get("aliases_used"))
+            threshold_articles = sum(1 for article in all_processed_articles 
+                                   if article.get("importance_metadata", {}).get("decision_logic") == "threshold_based")
+            
             if alias_articles > 0:
-                logger.info(f"🔧 Articles traités avec correctif aliases: {alias_articles}/{importance_used} ({alias_articles/importance_used*100:.1f}%)")
+                logger.info(f"🔧 Articles avec correctif aliases: {alias_articles}/{importance_used} ({alias_articles/importance_used*100:.1f}%)")
+            if threshold_articles > 0:
+                logger.info(f"🎯 Articles avec logique seuils: {threshold_articles}/{importance_used} ({threshold_articles/importance_used*100:.1f}%)")
             
             # Average importance scores
             importance_scores = [article["importance_score"] for article in all_processed_articles if "importance_score" in article]
@@ -1574,7 +1601,8 @@ def process_news_data(news_sources):
                     "avg_confidence": avg_confidence if sentiment_used > 0 else 0,
                     "avg_importance": avg_importance,
                     "importance_distribution": dict(importance_levels),
-                    "alias_fix_applied": alias_articles  # 🔧 Nouveau métrique pour tracking
+                    "alias_fix_applied": alias_articles,
+                    "threshold_logic_applied": threshold_articles  # 🔧 Nouveau métrique
                 }
     
     return formatted_data
@@ -1646,7 +1674,7 @@ def main():
     """🚀 Enhanced main execution with Dual Specialized Models + Git Integration v4.0"""
     try:
         logger.info("🚀 Starting TradePulse Investor-Grade News Collection v4.0...")
-        logger.info(f"🎯 Dual Specialized Models: sentiment + importance (3-classes)")
+        logger.info(f"🎯 Dual Specialized Models: sentiment + importance (3-classes avec seuils)")
         
         # Pré-charge les deux modèles spécialisés
         start_time = time.time()
@@ -1694,8 +1722,8 @@ def main():
             if existing_data:
                 return True
         
-        # 🚀 Process with dual specialized models v4.0
-        logger.info("🔍 Processing with dual specialized models (sentiment + importance 3-classes)...")
+        # 🚀 Process with dual specialized models v4.0 + seuils intelligents
+        logger.info("🔍 Processing with dual specialized models (sentiment + importance avec seuils intelligents)...")
         news_data = process_news_data(news_sources)
         
         # Update files
@@ -1734,10 +1762,10 @@ def main():
                     sentiment = details["sentiment_distribution"]
                     logger.info(f"      Sentiment: {sentiment['positive']}%↑ {sentiment['negative']}%↓")
         
-        # 🚀 Dual specialized models performance summary v4.0
+        # 🚀 Dual specialized models performance summary v4.0 avec seuils
         logger.info("🎯 Dual Specialized Models Performance Summary:")
         logger.info(f"  Sentiment Model: {_MODEL_METADATA['sentiment_model']}")
-        logger.info(f"  Importance Model: {_MODEL_METADATA['importance_model']} (3-classes)")
+        logger.info(f"  Importance Model: {_MODEL_METADATA['importance_model']} (3-classes avec seuils)")
         logger.info(f"  System Version: {_MODEL_METADATA['version']}")
         logger.info(f"  Load Time: {_MODEL_METADATA['load_time']:.2f}s")
         if "performance_metrics" in _MODEL_METADATA:
@@ -1748,11 +1776,13 @@ def main():
             logger.info(f"  Avg Importance: {metrics.get('avg_importance', 0):.1f}")
             if "importance_distribution" in metrics:
                 logger.info(f"  Importance Levels: {metrics['importance_distribution']}")
-            # 🔧 Nouveau: Log du correctif d'alias
+            # 🔧 Nouveaux logs pour monitoring des correctifs
             if "alias_fix_applied" in metrics:
                 logger.info(f"  🔧 Alias Fix Applied: {metrics['alias_fix_applied']} articles")
+            if "threshold_logic_applied" in metrics:
+                logger.info(f"  🎯 Threshold Logic Applied: {metrics['threshold_logic_applied']} articles")
         
-        logger.info("✅ TradePulse v4.0 with Dual Specialized Models + Enhanced Git Integration completed successfully!")
+        logger.info("✅ TradePulse v4.0 with Dual Specialized Models + Intelligent Thresholds completed successfully!")
         return success_news and success_themes
         
     except Exception as e:
