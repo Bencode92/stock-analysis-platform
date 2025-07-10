@@ -1,250 +1,554 @@
-/* Style amélioré pour les thèmes dominants */
-
-/* Conteneur global */
-.themes-dominant-container {
-    margin-bottom: 2rem;
+/* ==== 1. Variables & Palette moderne ======================================= */
+:root {
+  /* Couleurs principales */
+  --positive: #24d184;
+  --negative: #ff5c6c;
+  --neutral: #95a5a6;
+  --accent: #00ff87;
+  
+  /* Backgrounds */
+  --bar-bg: rgba(255,255,255,.08);
+  --card-bg: rgba(1,22,39,.72);
+  --tooltip-bg: rgba(5,30,52,.95);
+  
+  /* Textes */
+  --text-primary: #e4eef7;
+  --text-secondary: rgba(255,255,255,.6);
+  --text-muted: rgba(255,255,255,.4);
+  
+  /* Bordures */
+  --border-color: rgba(0,255,135,.10);
+  --border-hover: rgba(0,255,135,.25);
+  
+  /* Espacements */
+  --gap-sm: .45rem;
+  --gap-md: 1rem;
+  --gap-lg: 1.5rem;
 }
 
-/* Cartes de thèmes */
+/* Mode clair automatique */
+@media (prefers-color-scheme: light) {
+  :root {
+    --positive: #0ab665;
+    --negative: #d7323e;
+    --neutral: #47515c;
+    --accent: #00c46b;
+    --bar-bg: rgba(0,0,0,.08);
+    --card-bg: #f7fbff;
+    --tooltip-bg: #fff;
+    --text-primary: #1a202c;
+    --text-secondary: #4a5568;
+    --text-muted: #718096;
+    --border-color: rgba(0,196,107,.15);
+    --border-hover: rgba(0,196,107,.30);
+  }
+}
+
+/* ==== 2. Layout principal & Grille 3 périodes ===================================== */
+.themes-dominant-container {
+  margin-bottom: 2rem;
+}
+
+.themes-dominant-container h2 {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+/* Cartes d'axes */
 .theme-card {
-    padding: 1.5rem;
-    border-radius: 0.75rem;
-    background-color: rgba(1, 22, 39, 0.7);
-    border: 1px solid rgba(0, 255, 135, 0.1);
-    transition: all 0.3s ease;
+  background: var(--card-bg);
+  padding: 1.25rem; /* Réduit de 1.5rem */
+  border-radius: .75rem;
+  border: 1px solid var(--border-color);
+  backdrop-filter: blur(10px);
+  transition: all .3s ease;
+  margin-bottom: 1.5rem;
 }
 
 .theme-card:hover {
-    box-shadow: 0 0 15px rgba(0, 255, 135, 0.2);
+  box-shadow: 0 0 20px rgba(0,255,135,.15);
+  border-color: var(--border-hover);
 }
 
-/* Titre des axes de thèmes */
-.theme-title {
-    color: var(--accent-color);
-    margin-bottom: 1rem;
-    font-weight: 600;
+/* Header d'axe avec icône */
+.axis-header {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: .75rem;
+  border-bottom: 1px solid var(--border-color);
 }
 
-/* Liste des thèmes */
+.axis-icon {
+  font-size: 1.5rem;
+  filter: saturate(1.5);
+}
+
+.axis-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -.02em;
+}
+
+/* Grille responsive 3 colonnes - MODIFIÉE */
+.periods-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* Force 3 colonnes égales */
+  gap: 1rem; /* Réduit de 1.5rem */
+  align-items: start;
+}
+
+.period-column {
+  background: rgba(0,0,0,.15);
+  padding: 1rem; /* Réduit de 1.25rem */
+  border-radius: .625rem;
+  border: 1px solid var(--border-color);
+  min-height: 280px; /* Réduit de 320px */
+  display: flex;
+  flex-direction: column;
+  transition: all .3s ease;
+}
+
+.period-column:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.1);
+}
+
+.period-title {
+  font-size: .8rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.period-title::before {
+  content: '';
+  width: 3px;
+  height: 12px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+/* ==== 3. Liste & items avec barres modernes ============================================= */
 .theme-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem; /* Légèrement augmenté */
+  flex: 1;
 }
 
-/* Éléments individuels des thèmes */
 .theme-item {
-    margin-bottom: 1rem;
-    position: relative;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: fadeInUp .4s ease forwards;
+  transition: all .2s ease;
+  position: relative; /* Pour le point de sentiment */
+  padding-left: 12px; /* Espace pour le point */
 }
 
-/* En-tête de thème (nom + compteur) */
-.theme-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-    cursor: pointer;
+.theme-item:hover {
+  transform: translateX(4px);
 }
 
-/* Nom du thème */
-.theme-name {
-    font-weight: 500;
+/* Animation échelonnée */
+.theme-item:nth-child(1) { animation-delay: 0ms; }
+.theme-item:nth-child(2) { animation-delay: 30ms; }
+.theme-item:nth-child(3) { animation-delay: 60ms; }
+.theme-item:nth-child(4) { animation-delay: 90ms; }
+.theme-item:nth-child(5) { animation-delay: 120ms; }
+.theme-item:nth-child(6) { animation-delay: 150ms; }
+.theme-item:nth-child(7) { animation-delay: 180ms; }
+.theme-item:nth-child(8) { animation-delay: 210ms; }
+.theme-item:nth-child(9) { animation-delay: 240ms; }
+.theme-item:nth-child(10) { animation-delay: 270ms; }
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* Compteur de thème */
-.theme-count {
-    background: rgba(0, 255, 135, 0.1);
-    color: var(--accent-color);
-    padding: 0.15rem 0.5rem;
-    border-radius: 0.25rem;
-    font-size: 0.8rem;
-    font-weight: 600;
+/* Contenu du thème */
+.theme-content {
+  display: flex;
+  align-items: center;
+  gap: .6rem; /* Réduit de .75rem */
+  font-size: .825rem; /* Légèrement réduit */
 }
 
-/* Barre de progression */
+/* Indicateur de sentiment - NOUVEAU */
+.theme-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  opacity: .8;
+}
+
+.theme-item.positive::before {
+  background: var(--positive);
+  box-shadow: 0 0 6px rgba(36,209,132,.5);
+}
+
+.theme-item.negative::before {
+  background: var(--negative);
+  box-shadow: 0 0 6px rgba(255,92,108,.5);
+}
+
+.theme-item.neutral::before {
+  background: var(--neutral);
+  box-shadow: 0 0 6px rgba(149,165,166,.5);
+}
+
+/* Barre de progression moderne */
 .theme-bar {
-    height: 6px;
-    width: 100%;
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
-    overflow: hidden;
+  flex: 1;
+  height: 6px;
+  background: var(--bar-bg);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
 }
 
 .theme-progress {
-    height: 100%;
-    background: linear-gradient(90deg, #00c9ff 0%, #00ff87 100%);
-    border-radius: 3px;
-    transition: width 0.5s ease;
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  width: var(--pct, 0%);
+  transition: width .6s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(90deg, var(--col1), var(--col2));
 }
 
-/* Indicateurs de sentiment */
-.sentiment-indicator {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    margin-left: 8px;
+/* Couleurs par sentiment */
+.theme-item.positive { --col1: var(--positive); --col2: #35ffa4; }
+.theme-item.negative { --col1: var(--negative); --col2: #ff7583; }
+.theme-item.neutral { --col1: var(--neutral); --col2: #b3bec5; }
+
+/* Nom du thème */
+.theme-name {
+  color: var(--text-primary);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px; /* Réduit de 200px */
 }
 
-.sentiment-indicator.positive {
-    background-color: #4caf50;
-    box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+/* Compteur moderne */
+.theme-count {
+  min-width: 24px; /* Réduit de 28px */
+  text-align: center;
+  font-weight: 700;
+  font-size: .7rem; /* Réduit de .75rem */
+  padding: .15rem .35rem; /* Réduit */
+  border-radius: 10px;
+  background: rgba(0,255,135,.12);
+  color: var(--accent);
+  margin-left: auto; /* Pousse le compteur à droite */
 }
 
-.sentiment-indicator.negative {
-    background-color: #f44336;
-    box-shadow: 0 0 8px rgba(244, 67, 54, 0.6);
+/* ==== 4. Contrôles : Recherche & Toggle ============================= */
+.theme-search {
+  flex: 1;
+  max-width: 280px;
+  padding: .6rem 1rem .6rem 2.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-hover);
+  background: rgba(0,0,0,.15) url("data:image/svg+xml,%3csvg fill='%2300ff87' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M11.742 10.344a6.5 6.5 0 10-1.397 1.398h-.001l3.85 3.85a1 1 0 001.415-1.414l-3.85-3.85zm-5.242.656a5 5 0 110-10 5 5 0 010 10z'/%3e%3c/svg%3e") 14px 50%/16px no-repeat;
+  color: var(--text-primary);
+  font-size: .875rem;
+  transition: all .3s ease;
 }
 
-.sentiment-indicator.neutral {
-    background-color: #ff9800;
-    box-shadow: 0 0 8px rgba(255, 152, 0, 0.6);
+.theme-search:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0,255,135,.1);
 }
 
-/* Skeleton loading */
-.skeleton-line {
-    height: 1.5rem;
-    margin-bottom: 1rem;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.05) 100%);
-    border-radius: 3px;
-    animation: skeleton-loading 1.5s infinite;
+.theme-search::placeholder {
+  color: var(--text-muted);
 }
 
-@keyframes skeleton-loading {
-    0% { opacity: 0.6; }
-    50% { opacity: 0.8; }
-    100% { opacity: 0.6; }
+.top-toggle-btn {
+  border: 1px solid var(--border-hover);
+  background: rgba(0,255,135,.05);
+  color: var(--text-primary);
+  border-radius: 999px;
+  padding: .5rem 1.25rem;
+  font-size: .8rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  transition: all .25s ease;
+  cursor: pointer;
 }
 
-/* Sélecteur de période */
-.period-selector {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 1rem;
+.top-toggle-btn:hover {
+  background: rgba(0,255,135,.15);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,.1);
 }
 
-.period-btn {
-    background: none;
-    border: 1px solid rgba(0, 255, 135, 0.3);
-    color: rgba(255, 255, 255, 0.6);
-    padding: 0.25rem 0.75rem;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
+.top-toggle-btn i {
+  font-size: .75rem;
+  color: var(--accent);
 }
 
-.period-btn:first-child {
-    border-radius: 0.25rem 0 0 0.25rem;
-}
-
-.period-btn:last-child {
-    border-radius: 0 0.25rem 0.25rem 0;
-}
-
-.period-btn.active {
-    background-color: rgba(0, 255, 135, 0.2);
-    color: var(--accent-color);
-    font-weight: 600;
-}
-
-/* Info de mise à jour */
-.themes-update-info {
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 0.75rem;
-    text-align: right;
-    margin-top: 0.25rem;
-}
-
-/* Bulle d'information améliorée */
+/* ==== 5. Tooltips améliorés ========================================= */
 .theme-tooltip {
-    position: absolute;
-    top: calc(100% + 10px);
-    left: 0;
-    width: 100%;
-    padding: 1rem;
-    background-color: rgba(5, 30, 52, 0.95);
-    border: 1px solid rgba(0, 255, 135, 0.3);
-    border-radius: 0.5rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 255, 135, 0.2);
-    z-index: 100;
-    opacity: 0;
-    transform: translateY(-10px);
-    pointer-events: none;
-    transition: all 0.3s ease;
-    font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.9);
-    max-width: 350px;
-    min-width: 250px;
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 0;
+  right: 0;
+  max-width: 380px;
+  padding: 1.25rem;
+  background: var(--tooltip-bg);
+  border: 1px solid var(--border-hover);
+  border-radius: .625rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,.3), 0 0 20px rgba(0,255,135,.1);
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(-8px) scale(0.95);
+  pointer-events: none;
+  transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(12px);
 }
 
-/* Amélioration: ajout d'une flèche pour la bulle */
+.theme-tooltip.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* Flèche du tooltip */
 .theme-tooltip::before {
-    content: '';
-    position: absolute;
-    top: -8px;
-    left: 20px;
-    width: 0;
-    height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-bottom: 8px solid rgba(0, 255, 135, 0.3);
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 24px;
+  width: 16px;
+  height: 16px;
+  background: var(--tooltip-bg);
+  border: 1px solid var(--border-hover);
+  border-right: none;
+  border-bottom: none;
+  transform: rotate(45deg);
 }
 
-.theme-tooltip::after {
-    content: '';
-    position: absolute;
-    top: -7px;
-    left: 21px;
-    width: 0;
-    height: 0;
-    border-left: 7px solid transparent;
-    border-right: 7px solid transparent;
-    border-bottom: 7px solid rgba(5, 30, 52, 0.95);
+.tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: .75rem;
+  border-bottom: 1px solid var(--border-color);
 }
 
-/* Afficher la bulle au survol ou au clic */
-.theme-item:hover .theme-tooltip,
-.theme-item.active .theme-tooltip {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
+.tooltip-header strong {
+  font-size: 1rem;
+  color: var(--text-primary);
 }
 
-/* Distribution des sentiments dans la bulle */
-.sentiment-distribution {
-    display: flex;
-    height: 6px;
-    width: 100%;
-    margin-top: 0.75rem;
-    border-radius: 3px;
-    overflow: hidden;
+.tooltip-close {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255,255,255,.05);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all .2s ease;
 }
 
-.sentiment-distribution .positive {
-    background-color: #4caf50;
-    height: 100%;
+.tooltip-close:hover {
+  background: rgba(255,255,255,.1);
+  color: var(--text-primary);
 }
 
-.sentiment-distribution .neutral {
-    background-color: #ff9800;
-    height: 100%;
+/* Section titres */
+.headlines-section h4 {
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-secondary);
+  margin-bottom: .75rem;
 }
 
-.sentiment-distribution .negative {
-    background-color: #f44336;
-    height: 100%;
+.headline-item {
+  padding: .5rem 0;
+  font-size: .875rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+  border-bottom: 1px solid rgba(255,255,255,.05);
 }
 
-/* Pour les écrans plus petits */
+.headline-item:last-child {
+  border-bottom: none;
+}
+
+/* Barre de sentiment */
+.sentiment-bar-container {
+  margin-top: 1.25rem;
+}
+
+.sentiment-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: .5rem;
+}
+
+.sentiment-bar .positive { background: var(--positive); }
+.sentiment-bar .neutral { background: var(--neutral); }
+.sentiment-bar .negative { background: var(--negative); }
+
+.sentiment-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: .7rem;
+  font-weight: 600;
+}
+
+.sentiment-labels .positive { color: var(--positive); }
+.sentiment-labels .neutral { color: var(--neutral); }
+.sentiment-labels .negative { color: var(--negative); }
+
+/* ==== 6. États & Animations ========================================= */
+.error-state {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-secondary);
+}
+
+.error-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: .5;
+}
+
+.retry-btn {
+  margin-top: 1rem;
+  padding: .5rem 1.5rem;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .3s ease;
+}
+
+.retry-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,255,135,.3);
+}
+
+/* Info mise à jour */
+#themes-last-updated {
+  color: var(--text-muted);
+  font-size: .75rem;
+  margin-left: auto;
+}
+
+/* ==== 7. Responsive ================================================= */
+@media (max-width: 1200px) {
+  .periods-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
-    .theme-card {
-        padding: 1rem;
-    }
-    
-    .theme-tooltip {
-        position: fixed;
-        left: 10%;
-        width: 80%;
-        max-width: none;
-    }
+  .periods-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .period-column {
+    min-height: auto;
+  }
+  
+  .theme-search {
+    max-width: 100%;
+    margin: 1rem 0;
+  }
+  
+  .theme-tooltip {
+    position: fixed;
+    left: 1rem;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%) scale(0.95);
+    max-width: none;
+  }
+  
+  .theme-tooltip.open {
+    transform: translateY(-50%) scale(1);
+  }
 }
+
+/* ==== 8. Animations supplémentaires ================================= */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .6; }
+}
+
+.loading .theme-bar {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Effet de survol sur les barres */
+.theme-item:hover .theme-progress {
+  filter: brightness(1.2);
+  box-shadow: 0 2px 8px rgba(0,255,135,.3);
+}
+
+/* Légende de sentiment - NOUVEAU */
+.sentiment-legend {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+  font-size: .75rem;
+  color: var(--text-secondary);
+}
+
+.sentiment-legend-item {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.sentiment-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.sentiment-legend-dot.positive { background: var(--positive); }
+.sentiment-legend-dot.negative { background: var(--negative); }
+.sentiment-legend-dot.neutral { background: var(--neutral); }
