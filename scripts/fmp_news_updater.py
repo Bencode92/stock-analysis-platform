@@ -97,6 +97,54 @@ def profile_step(label: str, start_ts: float):
     logger.info(f"⏱️  {label}: {dur:5.2f}s | RSS={rss:.0f} MB")
 
 # ---------------------------------------------------------------------------
+# 🔍  Utilitaires communs – mapping dynamique id2label → proba
+# ---------------------------------------------------------------------------
+
+def _predict_probs(tokenizer, model, text: str) -> dict[str, float]:
+    """
+    Renvoie un dict {label: probabilité} en s'appuyant sur model.config.id2label.
+    Version robuste avec validation et gestion d'erreurs.
+    """
+    if not text.strip():
+        return {}
+
+    try:
+        inputs = tokenizer(
+            text,
+            return_tensors="pt",
+            truncation=True,
+            max_length=512,
+            padding=True  # Ajout pour la stabilité
+        ).to(model.device)
+
+        with torch.no_grad():
+            logits = model(**inputs).logits.softmax(-1).squeeze()
+
+        # Validation que id2label existe
+        if not hasattr(model.config, 'id2label'):
+            logger.warning("Model missing id2label config, using fallback")
+            return {}
+            
+        id2label = {int(k): v.lower() for k, v in model.config.id2label.items()}
+        
+        # Validation de cohérence
+        if len(id2label) != len(logits):
+            logger.warning(f"Mismatch: {len(id2label)} labels vs {len(logits)} logits")
+            return {}
+            
+        result = {id2label[i]: round(float(logits[i]), 3) for i in range(len(id2label))}
+        
+        # Log debug si activé
+        if SENTIMENT_PROFILING:
+            logger.debug(f"Model predictions: {result}")
+            
+        return result
+        
+    except Exception as e:
+        logger.warning(f"_predict_probs failed: {e}")
+        return {}
+
+# ---------------------------------------------------------------------------
 # INVESTOR-GRADE NEWS CONFIG v4.0
 # ---------------------------------------------------------------------------
 
@@ -799,65 +847,71 @@ def determine_country(article):
 
 def determine_impact(article: dict) -> str:
     """
-    🎯 ANALYSE SENTIMENT SPÉCIALISÉE v4.0 (100% modèle)
-    Utilise exclusivement le modèle Bencode92/tradepulse-finbert-sentiment
-    Retourne 'positive' | 'negative' | 'neutral' + stocke les probabilités.
+    Sentiment 3-classes 100% modèle avec mapping dynamique.
+    Retourne 'positive' | 'negative' | 'neutral'
+    et stocke les probabilités dans article["impact_prob"].
     """
     t0 = time.perf_counter() if SENTIMENT_PROFILING else None
 
-    # 1) Sentiment fourni par FMP (priorité)
+    # 1) Sentiment numérique FMP (priorité si présent)
     try:
         v = float(article.get("sentiment", ""))
         if v > 0.2:
             if SENTIMENT_PROFILING:
-                profile_step("fmp_pos", t0)
+                profile_step("fmp_positive", t0)
             return "positive"
         if v < -0.2:
             if SENTIMENT_PROFILING:
-                profile_step("fmp_neg", t0)
+                profile_step("fmp_negative", t0)
             return "negative"
     except (ValueError, TypeError):
         pass
 
-    # Texte source
+    # 2) Préparation du texte
     text = f"{article.get('title','')} {article.get('text','')}"
     if not text.strip():
         return "neutral"
 
-    # 2) 🎯 Modèle de sentiment spécialisé (100% ML)
-    if USE_FINBERT:
-        try:
-            tok, mdl = _get_dual_models()["sentiment"]
-            inputs = tok(text, return_tensors="pt", truncation=True, max_length=512).to(mdl.device)
+    # 3) Analyse ML avec mapping dynamique
+    if not USE_FINBERT:
+        return "neutral"
 
-            with torch.no_grad():
-                # 🔧 CORRECTIF 1: Mapping sentiment corrigé - ordre neu, pos, neg
-                neu, pos, neg = mdl(**inputs).logits.softmax(-1).squeeze().tolist()
-
-            article["impact_prob"] = {"positive": round(pos, 3), "neutral": round(neu, 3), "negative": round(neg, 3)}
-            
-            # Métadonnées du modèle
-            if ENABLE_MODEL_METRICS:
-                article["sentiment_metadata"] = {
-                    "model": _MODEL_SENTIMENT,
-                    "version": _MODEL_METADATA["version"],
-                    "specialized": True
-                }
-
-            # Seuil simple : on exige 10 pts d'écart avec le neutre
-            if max(pos, neg) - neu > 0.10:
-                res = "positive" if pos > neg else "negative"
-                if SENTIMENT_PROFILING:
-                    profile_step(f"sentiment_specialized_{res}", t0)
-                return res
-                
-        except Exception as e:
-            logger.warning(f"Sentiment model failure: {e}")
+    try:
+        tok, mdl = _get_dual_models()["sentiment"]
+        probs = _predict_probs(tok, mdl, text)  # ← Mapping dynamique
+        
+        if not probs:
             return "neutral"
 
-    if SENTIMENT_PROFILING:
-        profile_step("sentiment_neutral", t0)
-    return "neutral"
+        # Stockage des métadonnées
+        article["impact_prob"] = probs
+        article.setdefault("sentiment_metadata", {
+            "model": _MODEL_SENTIMENT,
+            "version": _MODEL_METADATA["version"],
+            "specialized": True,
+            "labels_detected": list(probs.keys())  # ← Debug info
+        })
+
+        # Seuils adaptatifs basés sur les labels détectés
+        pos = probs.get("positive", 0)
+        neg = probs.get("negative", 0)
+        neu = probs.get("neutral", 0)
+
+        # Seuil : 10 points d'écart avec le neutre
+        max_sentiment = max(pos, neg)
+        if max_sentiment - neu > 0.10:
+            result = "positive" if pos > neg else "negative"
+            if SENTIMENT_PROFILING:
+                profile_step(f"ml_sentiment_{result}", t0)
+            return result
+            
+        if SENTIMENT_PROFILING:
+            profile_step("ml_sentiment_neutral", t0)
+        return "neutral"
+
+    except Exception as e:
+        logger.warning(f"Sentiment model failure: {e}")
+        return "neutral"
 
 def format_date(date_str):
     """Formats a date in YYYY-MM-DD format to DD/MM/YYYY"""
@@ -927,20 +981,17 @@ def remove_duplicates(news_list):
 
 def compute_importance_score(article, category=None) -> dict:
     """
-    ⚡ SCORE D'IMPORTANCE SPÉCIALISÉ v4.0 (MODÈLE 3-CLASSES CORRIGÉ)
-    Utilise le modèle Bencode92/tradepulse-finbert-importance avec 3 niveaux:
-    - general (index 0): bruit, intérêt faible  
-    - important (index 1): info à surveiller
-    - critical (index 2): info potentiellement décisive
+    Importance 3-classes avec mapping dynamique : general | important | critical
+    Retourne les probabilités et un score pondéré.
     """
     if not USE_FINBERT:
         return {
             "level": "general",
             "prob": {"general": 1.0, "important": 0.0, "critical": 0.0},
             "score": 25.0,
-            "metadata": {"fallback": "ML disabled", "specialized": False}
+            "metadata": {"fallback": "ML disabled", "specialized": False},
         }
-        
+
     try:
         tok, mdl = _get_dual_models()["importance"]
         text = f"{article.get('title','')} {article.get('content','') or article.get('text','')}"
@@ -950,48 +1001,91 @@ def compute_importance_score(article, category=None) -> dict:
                 "level": "general",
                 "prob": {"general": 1.0, "important": 0.0, "critical": 0.0},
                 "score": 25.0,
-                "metadata": {"fallback": "empty text", "specialized": False}
+                "metadata": {"fallback": "empty text", "specialized": False},
             }
-            
-        inputs = tok(text, return_tensors="pt", truncation=True, max_length=512).to(mdl.device)
         
-        with torch.no_grad():
-            # 🔧 CORRECTIF MAJEUR: 3 logits → 3 probabilités via softmax
-            p_general, p_important, p_critical = mdl(**inputs).logits.softmax(-1).squeeze().tolist()
+        probs = _predict_probs(tok, mdl, text)  # ← Mapping dynamique
+        
+        if not probs:
+            raise ValueError("No probabilities returned")
 
-        # Probabilités détaillées
-        probs = {
-            "general":   round(p_general,   3),
-            "important": round(p_important, 3),
-            "critical":  round(p_critical,  3)
+        # Garantir les trois niveaux attendus (avec fallbacks)
+        normalized_probs = {
+            "general": probs.get("general", probs.get("low", 0.0)),
+            "important": probs.get("important", probs.get("medium", 0.0)),
+            "critical": probs.get("critical", probs.get("high", 0.0))
         }
         
-        # Niveau dominant
-        level = max(probs, key=probs.get)
+        # Normalisation si besoin
+        total = sum(normalized_probs.values())
+        if total > 0:
+            normalized_probs = {k: v/total for k, v in normalized_probs.items()}
+        else:
+            normalized_probs = {"general": 1.0, "important": 0.0, "critical": 0.0}
+
+        level = max(normalized_probs, key=normalized_probs.get)
         
-        # Score numérique pondéré (optionnel pour compatibilité)
-        score = round(p_general * 25 + p_important * 60 + p_critical * 95, 1)
-        
+        # Score pondéré (25-95 scale)
+        score = round(
+            normalized_probs["general"] * 25 +
+            normalized_probs["important"] * 60 +
+            normalized_probs["critical"] * 95, 1
+        )
+
         return {
             "level": level,
-            "prob": probs,
+            "prob": {k: round(v, 3) for k, v in normalized_probs.items()},
             "score": score,
             "metadata": {
                 "model": _MODEL_IMPORTANCE,
                 "version": _MODEL_METADATA["version"],
                 "specialized": True,
-                "classes": ["general", "important", "critical"]
-            }
+                "classes": list(normalized_probs.keys()),
+                "raw_labels": list(probs.keys()) if probs else []  # ← Debug
+            },
         }
-        
+
     except Exception as e:
         logger.warning(f"Importance model failure: {e}")
         return {
             "level": "general",
             "prob": {"general": 1.0, "important": 0.0, "critical": 0.0},
             "score": 25.0,
-            "metadata": {"fallback": f"error: {str(e)}", "specialized": False}
+            "metadata": {"fallback": f"error: {str(e)}", "specialized": False},
         }
+
+def test_dynamic_mapping():
+    """
+    Teste le mapping dynamique avec différents modèles.
+    """
+    if not USE_FINBERT:
+        logger.info("FinBERT disabled, skipping dynamic mapping test")
+        return
+        
+    try:
+        models = _get_dual_models()
+        
+        # Test sentiment
+        sent_tok, sent_model = models["sentiment"]
+        if hasattr(sent_model.config, 'id2label'):
+            logger.info(f"Sentiment model labels: {sent_model.config.id2label}")
+        
+        # Test importance  
+        imp_tok, imp_model = models["importance"]
+        if hasattr(imp_model.config, 'id2label'):
+            logger.info(f"Importance model labels: {imp_model.config.id2label}")
+            
+        # Test avec phrase d'exemple
+        test_text = "Breaking: Federal Reserve raises interest rates by 0.75%"
+        
+        sent_probs = _predict_probs(sent_tok, sent_model, test_text)
+        imp_probs = _predict_probs(imp_tok, imp_model, test_text)
+        
+        logger.info(f"Test sentiment: {sent_probs}")
+        logger.info(f"Test importance: {imp_probs}")
+        
+    except Exception as e:
+        logger.error(f"Dynamic mapping test failed: {e}")
 
 def calculate_output_limits(articles_by_country, max_total=150):
     """
@@ -1534,6 +1628,9 @@ def main():
         load_time = time.time() - start_time
         _MODEL_METADATA["load_time"] = load_time
         logger.info(f"🤖 Dual specialized models loaded in {load_time:.2f}s")
+        
+        # Test du mapping dynamique si debug activé
+        # test_dynamic_mapping()  # ← Décommenter pour debug
         
         # Read existing data for fallback
         existing_data = read_existing_news()
