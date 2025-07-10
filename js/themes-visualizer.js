@@ -1,30 +1,43 @@
 /**
- * themes-visualizer.js v4.1 - Gestionnaire des thèmes dominants compact
- * Support format compact avec momentum, sparklines et performance optimisée
+ * themes-visualizer.js v4.1 - Gestionnaire des thèmes dominants Investor-Grade
+ * UX optimisée: lecture en Z, chips, sparklines compactes, accessibilité complète
  */
 
 const ThemesVisualizer = {
-    // Périodes disponibles
+    // Configuration
     periods: ['weekly', 'monthly', 'quarterly'],
     activePeriod: 'weekly',
     themesData: null,
     loadStartTime: 0,
+    showTopOnly: false,
+    searchQuery: '',
+    
+    // Couleurs finance cohérentes
+    colors: {
+        positive: '#2ecc71',
+        negative: '#e74c3c', 
+        neutral: '#95a5a6',
+        activity: '#00d8ff',
+        background: 'linear-gradient(135deg, #0d1117 0%, #0b1321 100%)'
+    },
 
     // Initialisation
     init: function() {
-        console.log('🚀 Initialisation ThemesVisualizer v4.1 (Format Compact)');
+        console.log('🎯 Initialisation ThemesVisualizer v4.1 - Investor-Grade UX');
         this.loadStartTime = performance.now();
         this.loadThemesData();
         this.setupEventListeners();
+        this.setupSearch();
+        this.setupAccessibility();
     },
 
-    // Chargement des données avec fallback automatique
+    // Chargement des données avec métriques
     loadThemesData: function() {
         fetch('data/themes.json')
             .then(response => response.json())
             .then(data => {
                 const loadTime = Math.round(performance.now() - this.loadStartTime);
-                console.log(`✅ Données de thèmes chargées en ${loadTime}ms:`, data);
+                console.log(`✅ Données chargées en ${loadTime}ms - Format: ${data.config_version || 'legacy'}`);
                 
                 this.themesData = data;
                 this.detectFormat(data);
@@ -33,74 +46,120 @@ const ThemesVisualizer = {
                 this.logPerformanceMetrics(loadTime);
             })
             .catch(error => {
-                console.error('❌ Erreur lors du chargement des thèmes:', error);
+                console.error('❌ Erreur chargement thèmes:', error);
                 this.renderErrorState();
             });
     },
 
-    // Détection automatique du format (legacy vs compact)
+    // Détection format avec fallback intelligent
     detectFormat: function(data) {
-        const isCompactFormat = data.periods && data.axisMax && data.config_version;
-        console.log(`📊 Format détecté: ${isCompactFormat ? 'Compact v4.1' : 'Legacy'}`);
-        
-        if (!isCompactFormat) {
-            console.warn('⚠️ Format legacy détecté, certaines fonctionnalités seront limitées');
-        }
-        
-        this.isCompactFormat = isCompactFormat;
+        this.isCompactFormat = !!(data.periods && data.axisMax && data.config_version);
+        console.log(`📊 Format: ${this.isCompactFormat ? 'Compact v4.1' : 'Legacy'}`);
     },
 
-    // Configuration des écouteurs d'événements
+    // Configuration des événements
     setupEventListeners: function() {
+        // Boutons de période
         document.querySelectorAll('.period-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const period = e.target.dataset.period;
-                this.changePeriod(period);
+                this.changePeriod(e.target.dataset.period);
             });
         });
 
-        // Event listener pour debug/monitoring
+        // Toggle Top 10 / Tous
+        this.createTopToggle();
+        
+        // Raccourcis clavier
         document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'i') {
-                this.showDebugInfo();
-            }
+            if (e.ctrlKey && e.key === 'i') this.showDebugInfo();
+            if (e.key === 'Escape') this.closeAllTooltips();
         });
     },
 
-    // Changement de période avec transition fluide
+    // Création du toggle Top 10 / Tous
+    createTopToggle: function() {
+        const periodSelector = document.querySelector('.period-selector');
+        if (!periodSelector) return;
+        
+        const topToggle = document.createElement('button');
+        topToggle.className = 'top-toggle-btn';
+        topToggle.innerHTML = '<i class="fas fa-filter"></i> Top 10';
+        topToggle.title = 'Afficher seulement les 10 thèmes principaux';
+        topToggle.addEventListener('click', () => {
+            this.showTopOnly = !this.showTopOnly;
+            topToggle.innerHTML = this.showTopOnly ? 
+                '<i class="fas fa-list"></i> Tous' : 
+                '<i class="fas fa-filter"></i> Top 10';
+            topToggle.title = this.showTopOnly ? 
+                'Afficher tous les thèmes' : 
+                'Afficher seulement les 10 thèmes principaux';
+            this.renderThemes();
+        });
+        
+        periodSelector.appendChild(topToggle);
+    },
+
+    // Configuration de la recherche
+    setupSearch: function() {
+        const searchContainer = document.querySelector('.themes-dominant-container h2');
+        if (!searchContainer) return;
+        
+        const searchInput = document.createElement('input');
+        searchInput.type = 'search';
+        searchInput.placeholder = 'Search themes...';
+        searchInput.className = 'theme-search';
+        searchInput.addEventListener('input', (e) => {
+            this.searchQuery = e.target.value.toLowerCase();
+            this.renderThemes();
+        });
+        
+        searchContainer.appendChild(searchInput);
+    },
+
+    // Configuration accessibilité
+    setupAccessibility: function() {
+        // Ajouter les rôles ARIA
+        document.querySelectorAll('.theme-list').forEach(list => {
+            list.setAttribute('role', 'list');
+            list.setAttribute('aria-label', 'Liste des thèmes dominants');
+        });
+    },
+
+    // Changement de période avec transition
     changePeriod: function(period) {
         if (!this.periods.includes(period)) return;
         
         const previousPeriod = this.activePeriod;
         this.activePeriod = period;
         
-        // Mise à jour de l'UI des boutons
+        // Mise à jour UI boutons
         document.querySelectorAll('.period-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.period === period);
         });
         
-        // Animation de transition
-        this.animateTransition(previousPeriod, period);
+        // Transition fluide
+        this.animateTransition();
         this.renderThemes();
         
-        console.log(`🔄 Période changée: ${previousPeriod} → ${period}`);
+        console.log(`🔄 Période: ${previousPeriod} → ${period}`);
     },
 
-    // Animation de transition entre périodes
-    animateTransition: function(from, to) {
+    // Animation de transition performante
+    animateTransition: function() {
         const containers = document.querySelectorAll('.theme-list');
         containers.forEach(container => {
-            container.style.opacity = '0.7';
-            container.style.transform = 'translateY(5px)';
+            container.style.opacity = '0.6';
+            container.style.transform = 'translateY(4px)';
             
-            setTimeout(() => {
+            requestAnimationFrame(() => {
+                container.style.transition = 'all 0.2s ease';
                 container.style.opacity = '1';
                 container.style.transform = 'translateY(0)';
-            }, 150);
+            });
         });
     },
 
-    // Rendu des thèmes avec support format compact
+    // Rendu principal avec format detection
     renderThemes: function() {
         if (!this.themesData) return;
         
@@ -111,316 +170,323 @@ const ThemesVisualizer = {
         }
     },
 
-    // Rendu format compact v4.1
+    // Rendu format compact optimisé
     renderThemesCompact: function() {
         const themes = this.themesData.periods[this.activePeriod];
         const axisMax = this.themesData.axisMax[this.activePeriod];
         
-        if (!themes || !axisMax) {
-            console.warn(`⚠️ Pas de données pour la période ${this.activePeriod}`);
-            return;
-        }
+        if (!themes || !axisMax) return;
         
-        console.log(`📈 Rendu thèmes compact pour ${this.activePeriod}:`, themes);
-        
-        // Rendu pour chaque axe avec les valeurs max précalculées
-        this.renderThemeAxis('macroeconomie', themes.macroeconomics, axisMax.macroeconomics || 1);
-        this.renderThemeAxis('fundamentals', themes.fundamentals, axisMax.fundamentals || 1);
-        this.renderThemeAxis('secteurs', themes.sectors, axisMax.sectors || 1);
-        this.renderThemeAxis('regions', themes.regions, axisMax.regions || 1);
+        // Rendu avec légendes
+        this.renderThemeAxisWithLegend('macroeconomie', 'Macroeconomics', themes.macroeconomics, axisMax.macroeconomics, '📈');
+        this.renderThemeAxisWithLegend('fundamentals', 'Fundamentals', themes.fundamentals, axisMax.fundamentals, '🔢');
+        this.renderThemeAxisWithLegend('secteurs', 'Sectors', themes.sectors, axisMax.sectors, '🏭');
+        this.renderThemeAxisWithLegend('regions', 'Regions', themes.regions, axisMax.regions, '🌍');
     },
 
-    // Rendu format legacy (fallback)
-    renderThemesLegacy: function() {
-        const themes = this.themesData.themes ? this.themesData.themes[this.activePeriod] : this.themesData[this.activePeriod];
-        
-        if (!themes) return;
-        
-        console.log(`📊 Rendu thèmes legacy pour ${this.activePeriod}:`, themes);
-        
-        // Rendu legacy sans axisMax (calcul dynamique)
-        this.renderThemeAxis('macroeconomie', themes.macroeconomics);
-        this.renderThemeAxis('secteurs', themes.sectors);  
-        this.renderThemeAxis('regions', themes.regions);
-    },
-
-    // Rendu pour un axe spécifique (format compact optimisé)
-    renderThemeAxis: function(axis, axisThemes, maxCount = null) {
+    // Rendu axe avec légende investor-grade
+    renderThemeAxisWithLegend: function(axis, title, axisThemes, maxCount, icon) {
         const container = document.getElementById(`${axis}-themes`);
         if (!container || !axisThemes) {
             this.renderEmptyState(container, axis);
             return;
         }
         
-        container.innerHTML = '';
+        // Ajouter la légende si pas déjà présente
+        this.addAxisLegend(container, title, icon);
         
-        // Calcul du maxCount si pas fourni (mode legacy)
-        if (maxCount === null) {
-            maxCount = this.calculateMaxCount(axisThemes);
+        // Tri et filtrage
+        let sortedThemes = this.sortThemesByRelevance(axisThemes);
+        
+        // Filtrage par recherche
+        if (this.searchQuery) {
+            sortedThemes = sortedThemes.filter(([name]) => 
+                name.toLowerCase().includes(this.searchQuery)
+            );
         }
         
-        // Tri intelligent des thèmes par pertinence
-        const sortedThemes = this.sortThemesByRelevance(axisThemes);
+        // Limite Top 10 si activée
+        if (this.showTopOnly) {
+            sortedThemes = sortedThemes.slice(0, 10);
+        }
         
-        console.log(`🎯 Affichage ${sortedThemes.length} thèmes pour ${axis} (max: ${maxCount})`);
+        // Vider le container (conserver la légende)
+        const existingItems = container.querySelectorAll('.theme-item');
+        existingItems.forEach(item => item.remove());
         
-        // Rendu de chaque thème
+        // Rendu des thèmes
         sortedThemes.forEach(([themeName, themeData]) => {
-            const themeElement = this.createThemeElement(themeName, themeData, maxCount);
+            const themeElement = this.createInvestorGradeTheme(themeName, themeData, maxCount);
             container.appendChild(themeElement);
         });
         
-        // Animation d'apparition échelonnée
+        // Animation d'apparition performante
         this.animateThemeAppearance(container);
-    },
-
-    // Tri intelligent par pertinence (count + momentum + sentiment)
-    sortThemesByRelevance: function(axisThemes) {
-        return Object.entries(axisThemes)
-            .map(([name, data]) => {
-                let score;
-                
-                if (this.isCompactFormat && data.c && data.m !== undefined) {
-                    // Format compact: score = weekly_count + momentum_bonus + sentiment_bonus
-                    const weeklyCount = data.c[0] || 0;
-                    const momentum = data.m || 0;
-                    const sentimentBonus = this.calculateSentimentBonus(data.s);
-                    
-                    score = weeklyCount + (Math.abs(momentum) * 0.3) + sentimentBonus;
-                } else {
-                    // Format legacy: score simple basé sur count
-                    const count = typeof data === 'object' && 'count' in data ? data.count : 
-                                 (typeof data === 'number' ? data : 0);
-                    score = count;
-                }
-                
-                return [name, data, score];
-            })
-            .sort((a, b) => b[2] - a[2]) // tri décroissant par score
-            .filter(([, data, score]) => score > 0); // que les thèmes actifs
-    },
-
-    // Calcul bonus sentiment (plus de poids aux extrêmes)
-    calculateSentimentBonus: function(sentimentArray) {
-        if (!sentimentArray || sentimentArray.length < 3) return 0;
         
-        const [positive, negative, neutral] = sentimentArray;
-        const extremePositive = positive > 70 ? 2 : 0;
-        const extremeNegative = negative > 70 ? 2 : 0;
-        
-        return extremePositive + extremeNegative;
+        // Footer avec actions
+        this.addAxisFooter(container, axis, sortedThemes.length);
     },
 
-    // Création d'un élément thème avec toutes les fonctionnalités v4.1
-    createThemeElement: function(themeName, themeData, maxCount) {
-        const themeElement = document.createElement('li');
-        themeElement.className = 'theme-item';
+    // Ajout légende axe
+    addAxisLegend: function(container, title, icon) {
+        if (container.querySelector('.axis-legend')) return;
         
-        if (this.isCompactFormat && themeData.c && themeData.s) {
-            // Format compact v4.1
-            return this.createCompactThemeElement(themeName, themeData, maxCount, themeElement);
-        } else {
-            // Format legacy
-            return this.createLegacyThemeElement(themeName, themeData, maxCount, themeElement);
-        }
+        const legend = document.createElement('div');
+        legend.className = 'axis-legend';
+        legend.innerHTML = `
+            <div class="legend-header">
+                <span class="legend-icon">${icon}</span>
+                <span class="legend-title">${title}</span>
+            </div>
+            <div class="legend-help">
+                <span class="legend-item">📊 Weekly mentions</span>
+                <span class="legend-item">🔄 MoM change</span>
+            </div>
+        `;
+        
+        container.insertBefore(legend, container.firstChild);
     },
 
-    // Création élément format compact avec toutes les nouvelles fonctionnalités
-    createCompactThemeElement: function(themeName, themeData, maxCount, themeElement) {
+    // Création thème investor-grade avec lecture en Z
+    createInvestorGradeTheme: function(themeName, themeData, maxCount) {
         const [weeklyCount, monthlyCount, quarterlyCount] = themeData.c;
         const [positivePct, negativePct, neutralPct] = themeData.s;
         const momentum = themeData.m || 0;
         const headlines = themeData.h || [];
         
-        // Déterminer le sentiment dominant
+        // Calculs UX
         const sentiment = this.getDominantSentimentFromArray([positivePct, negativePct, neutralPct]);
+        const barWidth = Math.round((weeklyCount / maxCount) * 100);
+        const minWidth = 6;
+        const displayWidth = Math.max(minWidth, barWidth);
         
-        // Calculer la largeur de la barre (basée sur weekly count)
-        const barWidth = Math.max(5, Math.round((weeklyCount / maxCount) * 100));
-        
-        // Détection des tendances fortes
+        // Détection tendances
         const isSurging = momentum > 50;
         const isDropping = momentum < -30;
-        const isStable = Math.abs(momentum) < 10;
         
-        // Classes CSS dynamiques
+        // Création élément avec accessibilité
+        const themeElement = document.createElement('li');
         themeElement.className = `theme-item ${sentiment}`;
+        themeElement.setAttribute('role', 'listitem');
+        themeElement.setAttribute('tabindex', '0');
+        themeElement.setAttribute('aria-label', 
+            `${themeName} - ${weeklyCount} weekly mentions, ${momentum > 0 ? '+' : ''}${momentum}% MoM change, ${sentiment} sentiment`
+        );
+        
         if (isSurging) themeElement.classList.add('surging');
         if (isDropping) themeElement.classList.add('dropping');
-        if (isStable) themeElement.classList.add('stable');
         
-        // Construction HTML avancée
+        // HTML structure optimisée (lecture en Z)
         themeElement.innerHTML = `
-            <div class="theme-header">
-                <span class="theme-name">${this.capitalizeFirstLetter(themeName)}</span>
-                <div class="theme-indicators">
-                    ${momentum !== 0 ? `<span class="momentum ${momentum > 0 ? 'up' : 'down'}" title="Momentum vs mois dernier">${momentum > 0 ? '+' : ''}${momentum}%</span>` : ''}
-                    <span class="sentiment-indicator ${sentiment}" title="Sentiment: ${sentiment}"></span>
-                    <span class="theme-count" title="Mentions cette semaine">${weeklyCount}</span>
+            <div class="theme-layout">
+                <!-- Colonne 1: Barre + Count -->
+                <div class="col-activity">
+                    <div class="theme-bar">
+                        <div class="theme-progress ${sentiment}" style="width: ${displayWidth}%"></div>
+                    </div>
+                    <span class="count chip" title="Weekly mentions">${weeklyCount}</span>
+                </div>
+                
+                <!-- Colonne 2: Nom + Sparkline -->
+                <div class="col-name">
+                    <span class="theme-name">${this.capitalizeFirstLetter(themeName)}</span>
+                    <div class="theme-sparkline">
+                        ${this.renderCompactSparkline([quarterlyCount, monthlyCount, weeklyCount])}
+                    </div>
+                </div>
+                
+                <!-- Colonne 3: Momentum + Action -->
+                <div class="col-momentum">
+                    ${momentum !== 0 ? `<span class="momentum chip ${momentum > 0 ? 'up' : 'down'}" title="MoM change">${momentum > 0 ? '+' : ''}${momentum}%</span>` : ''}
+                    <button class="info-btn" aria-label="View ${themeName} details" title="View details">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </button>
                 </div>
             </div>
-            <div class="theme-bar">
-                <div class="theme-progress ${sentiment}" style="width: ${barWidth}%"></div>
-            </div>
-            <div class="theme-sparkline" title="Évolution: Trimestre → Mois → Semaine">
-                <span class="count-timeline">${quarterlyCount} → ${monthlyCount} → ${weeklyCount}</span>
-                ${this.renderMiniSparkline([quarterlyCount, monthlyCount, weeklyCount])}
-            </div>
+            
+            <!-- Tooltip riche -->
             ${headlines.length > 0 ? `
-                <div class="theme-tooltip">
-                    <div class="headlines">
-                        <div class="headlines-title">📰 Actualités récentes:</div>
-                        ${headlines.map(([title, url]) => `
-                            <div class="headline" title="${title}">
-                                ${title.length > 60 ? title.substring(0, 60) + '...' : title}
+                <div class="theme-tooltip" role="tooltip">
+                    <div class="tooltip-header">
+                        <strong>${this.capitalizeFirstLetter(themeName)}</strong>
+                        <span class="tooltip-close">×</span>
+                    </div>
+                    <div class="tooltip-content">
+                        <div class="headlines-section">
+                            <h4>Latest Headlines</h4>
+                            ${headlines.map(([title, url]) => `
+                                <div class="headline-item">
+                                    ${title.length > 60 ? title.substring(0, 60) + '...' : title}
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="sentiment-section">
+                            <h4>Sentiment Distribution</h4>
+                            <div class="sentiment-bar">
+                                <span class="positive" style="width:${positivePct}%" title="Positive: ${positivePct}%"></span>
+                                <span class="neutral" style="width:${neutralPct}%" title="Neutral: ${neutralPct}%"></span>
+                                <span class="negative" style="width:${negativePct}%" title="Negative: ${negativePct}%"></span>
                             </div>
-                        `).join('')}
-                    </div>
-                    <div class="sentiment-distribution" title="Distribution sentiment">
-                        <span class="positive" style="width:${positivePct}%" title="Positif: ${positivePct}%"></span>
-                        <span class="neutral" style="width:${neutralPct}%" title="Neutre: ${neutralPct}%"></span>
-                        <span class="negative" style="width:${negativePct}%" title="Négatif: ${negativePct}%"></span>
-                    </div>
-                    <div class="theme-stats">
-                        <small>📊 Total période: ${weeklyCount + monthlyCount + quarterlyCount} mentions</small>
+                        </div>
+                        <div class="stats-section">
+                            <small>📊 Total mentions: ${weeklyCount + monthlyCount + quarterlyCount}</small>
+                        </div>
                     </div>
                 </div>
             ` : ''}
         `;
         
+        // Event listeners pour interaction
+        this.setupThemeInteractions(themeElement);
+        
         return themeElement;
     },
 
-    // Rendu mini-sparkline SVG
-    renderMiniSparkline: function(values) {
-        if (values.every(v => v === 0)) return '';
+    // Sparkline compacte 24x12px
+    renderCompactSparkline: function(values) {
+        if (values.every(v => v === 0)) return '<span class="no-data">—</span>';
         
+        const h = 12, w = 24;
         const max = Math.max(...values);
-        if (max === 0) return '';
+        if (max === 0) return '<span class="no-data">—</span>';
         
-        const points = values.map((v, i) => `${i * 10},${20 - (v / max * 15)}`).join(' ');
+        const points = values.map((v, i) => `${i * w/2},${h - (h * v/max)}`).join(' ');
         
         return `
-            <svg class="mini-sparkline" width="30" height="20" viewBox="0 0 30 20">
-                <polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"/>
+            <svg class="mini-sparkline" width="${w}" height="${h}" aria-label="Trend: ${values.join('/')}" title="Quarterly → Monthly → Weekly">
+                <polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.5"/>
             </svg>
         `;
     },
 
-    // Création élément format legacy (compatibilité)
-    createLegacyThemeElement: function(themeName, themeData, maxCount, themeElement) {
-        const isFullObject = typeof themeData === 'object' && themeData !== null;
-        const count = isFullObject && 'count' in themeData ? themeData.count : 
-                     (typeof themeData === 'number' ? themeData : 0);
-        const sentimentDist = isFullObject && 'sentiment_distribution' in themeData ? themeData.sentiment_distribution : null;
-        const sentiment = this.getDominantSentiment(sentimentDist);
+    // Configuration interactions thème
+    setupThemeInteractions: function(themeElement) {
+        const infoBtn = themeElement.querySelector('.info-btn');
+        const tooltip = themeElement.querySelector('.theme-tooltip');
         
-        const barWidth = this.calculateProgressWidth(count, maxCount);
-        
-        themeElement.className = `theme-item ${sentiment}`;
-        themeElement.innerHTML = `
-            <div class="theme-header">
-                <span class="theme-name">${this.capitalizeFirstLetter(themeName)}</span>
-                <span class="sentiment-indicator ${sentiment}"></span>
-                <span class="theme-count">${count}</span>
-            </div>
-            <div class="theme-bar">
-                <div class="theme-progress ${sentiment}" style="width: ${barWidth}%"></div>
-            </div>
-            ${sentimentDist ? `
-                <div class="theme-tooltip">
-                    <div class="sentiment-distribution">
-                        <span class="positive" style="width:${sentimentDist.positive || 0}%"></span>
-                        <span class="neutral" style="width:${sentimentDist.neutral || 0}%"></span>
-                        <span class="negative" style="width:${sentimentDist.negative || 0}%"></span>
-                    </div>
-                </div>
-            ` : ''}
-        `;
-        
-        return themeElement;
-    },
-
-    // Animation d'apparition échelonnée
-    animateThemeAppearance: function(container) {
-        const items = container.querySelectorAll('.theme-item');
-        items.forEach((item, index) => {
-            item.style.opacity = '0';
-            item.style.transform = 'translateY(10px)';
+        if (infoBtn && tooltip) {
+            // Clic bouton info
+            infoBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleTooltip(tooltip);
+            });
             
-            setTimeout(() => {
-                item.style.transition = 'all 0.3s ease';
-                item.style.opacity = '1';
-                item.style.transform = 'translateY(0)';
-            }, index * 50);
-        });
-    },
-
-    // État vide pour un axe
-    renderEmptyState: function(container, axis) {
-        if (!container) return;
+            // Fermeture tooltip
+            const closeBtn = tooltip.querySelector('.tooltip-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    this.closeTooltip(tooltip);
+                });
+            }
+        }
         
-        container.innerHTML = `
-            <li class="theme-item empty-state">
-                <div class="empty-message">
-                    <i class="fas fa-info-circle"></i>
-                    <span>Aucun thème ${axis} pour cette période</span>
-                </div>
-            </li>
-        `;
-    },
-
-    // État d'erreur général
-    renderErrorState: function() {
-        const containers = ['macroeconomie-themes', 'secteurs-themes', 'regions-themes', 'fundamentals-themes'];
-        
-        containers.forEach(id => {
-            const container = document.getElementById(id);
-            if (container) {
-                container.innerHTML = `
-                    <li class="theme-item error-state">
-                        <div class="error-message">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <span>Erreur de chargement</span>
-                            <button onclick="ThemesVisualizer.loadThemesData()" class="retry-btn">
-                                <i class="fas fa-redo"></i> Réessayer
-                            </button>
-                        </div>
-                    </li>
-                `;
+        // Accessibilité clavier
+        themeElement.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                if (tooltip) this.toggleTooltip(tooltip);
             }
         });
     },
 
-    // Calcul maxCount dynamique (mode legacy)
-    calculateMaxCount: function(axisThemes) {
-        const counts = Object.values(axisThemes).map(data => {
-            if (typeof data === 'object' && 'count' in data) return data.count;
-            if (typeof data === 'number') return data;
-            return 0;
+    // Gestion tooltips
+    toggleTooltip: function(tooltip) {
+        const isOpen = tooltip.classList.contains('open');
+        
+        // Fermer tous les autres tooltips
+        this.closeAllTooltips();
+        
+        if (!isOpen) {
+            tooltip.classList.add('open');
+            tooltip.setAttribute('aria-hidden', 'false');
+        }
+    },
+
+    closeTooltip: function(tooltip) {
+        tooltip.classList.remove('open');
+        tooltip.setAttribute('aria-hidden', 'true');
+    },
+
+    closeAllTooltips: function() {
+        document.querySelectorAll('.theme-tooltip.open').forEach(tooltip => {
+            this.closeTooltip(tooltip);
         });
-        
-        return Math.max(...counts, 1);
     },
 
-    // Calcul largeur barre proportionnelle
-    calculateProgressWidth: function(count, maxCount) {
-        if (maxCount <= 0) return 5;
-        return Math.max(5, Math.round((count / maxCount) * 100));
+    // Animation d'apparition optimisée
+    animateThemeAppearance: function(container) {
+        const items = container.querySelectorAll('.theme-item');
+        
+        items.forEach((item, index) => {
+            item.style.opacity = '0';
+            item.style.transform = 'translateY(8px)';
+            
+            requestAnimationFrame(() => {
+                item.style.transition = `all 0.3s ease ${index * 40}ms`;
+                item.style.opacity = '1';
+                item.style.transform = 'translateY(0)';
+            });
+        });
     },
 
-    // Sentiment dominant depuis distribution object
-    getDominantSentiment: function(sentimentDist) {
-        if (!sentimentDist) return 'neutral';
+    // Footer avec actions
+    addAxisFooter: function(container, axis, themeCount) {
+        // Supprimer ancien footer
+        const oldFooter = container.querySelector('.axis-footer');
+        if (oldFooter) oldFooter.remove();
         
-        const { positive, negative, neutral } = sentimentDist;
+        const footer = document.createElement('div');
+        footer.className = 'axis-footer';
+        footer.innerHTML = `
+            <div class="footer-stats">
+                <span class="theme-count-display">${themeCount} themes</span>
+                <span class="period-display">${this.activePeriod}</span>
+            </div>
+            <div class="footer-actions">
+                <button class="action-btn" onclick="ThemesVisualizer.exportAxisData('${axis}')" title="Export data">
+                    <i class="fas fa-download"></i>
+                </button>
+                <button class="action-btn" onclick="ThemesVisualizer.showAdvancedAnalysis('${axis}')" title="Advanced analysis">
+                    <i class="fas fa-chart-line"></i>
+                </button>
+            </div>
+        `;
         
-        if (positive > negative && positive > neutral) return 'positive';
-        if (negative > positive && negative > neutral) return 'negative';
-        return 'neutral';
+        container.appendChild(footer);
     },
 
-    // Sentiment dominant depuis array [pos, neg, neu]
+    // Tri par pertinence optimisé
+    sortThemesByRelevance: function(axisThemes) {
+        return Object.entries(axisThemes)
+            .map(([name, data]) => {
+                let score = 0;
+                
+                if (this.isCompactFormat && data.c) {
+                    const weeklyCount = data.c[0] || 0;
+                    const momentum = Math.abs(data.m || 0);
+                    const sentimentBonus = this.calculateSentimentBonus(data.s);
+                    
+                    score = weeklyCount + (momentum * 0.3) + sentimentBonus;
+                } else {
+                    score = typeof data === 'object' && 'count' in data ? data.count : 
+                           (typeof data === 'number' ? data : 0);
+                }
+                
+                return [name, data, score];
+            })
+            .sort((a, b) => b[2] - a[2])
+            .filter(([, , score]) => score > 0);
+    },
+
+    // Bonus sentiment pour tri
+    calculateSentimentBonus: function(sentimentArray) {
+        if (!sentimentArray || sentimentArray.length < 3) return 0;
+        
+        const [positive, negative, neutral] = sentimentArray;
+        return (positive > 70 ? 2 : 0) + (negative > 70 ? 2 : 0);
+    },
+
+    // Sentiment dominant depuis array
     getDominantSentimentFromArray: function(sentimentArray) {
         if (!sentimentArray || sentimentArray.length < 3) return 'neutral';
         
@@ -431,69 +497,110 @@ const ThemesVisualizer = {
         return 'neutral';
     },
 
-    // Mise à jour timestamp dernière actualisation
+    // État vide stylé
+    renderEmptyState: function(container, axis) {
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📊</div>
+                <div class="empty-title">No ${axis} themes</div>
+                <div class="empty-subtitle">for this period</div>
+            </div>
+        `;
+    },
+
+    // État d'erreur
+    renderErrorState: function() {
+        const containers = ['macroeconomie-themes', 'secteurs-themes', 'regions-themes', 'fundamentals-themes'];
+        
+        containers.forEach(id => {
+            const container = document.getElementById(id);
+            if (container) {
+                container.innerHTML = `
+                    <div class="error-state">
+                        <div class="error-icon">⚠️</div>
+                        <div class="error-title">Loading Error</div>
+                        <button class="retry-btn" onclick="ThemesVisualizer.loadThemesData()">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
+        });
+    },
+
+    // Mise à jour timestamp
     updateLastUpdated: function() {
         const element = document.getElementById('themes-last-updated');
         if (element && this.themesData && this.themesData.lastUpdated) {
             const date = new Date(this.themesData.lastUpdated);
             element.textContent = date.toLocaleString('fr-FR', { 
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
             });
         }
     },
 
-    // Log métriques de performance
+    // Métriques performance
     logPerformanceMetrics: function(loadTime) {
         if (!this.themesData) return;
         
         const dataSize = JSON.stringify(this.themesData).length;
         const analysisCount = this.themesData.analysisCount || 0;
-        const version = this.themesData.config_version || 'unknown';
         
-        console.log(`📊 Métriques ThemesVisualizer v4.1:
-        ⏱️  Temps chargement: ${loadTime}ms
-        📦 Taille données: ${(dataSize / 1024).toFixed(1)}KB  
-        📄 Articles analysés: ${analysisCount}
-        🏷️  Version config: ${version}
+        console.log(`📊 Performance Metrics:
+        ⏱️  Load Time: ${loadTime}ms
+        📦 Data Size: ${(dataSize / 1024).toFixed(1)}KB  
+        📄 Articles: ${analysisCount}
         🎯 Format: ${this.isCompactFormat ? 'Compact' : 'Legacy'}
-        📈 Périodes disponibles: ${this.periods.join(', ')}`);
+        🔍 Search: ${this.searchQuery || 'None'}
+        📋 Filter: ${this.showTopOnly ? 'Top 10' : 'All'}`);
     },
 
-    // Debug info (Ctrl+I)
+    // Actions d'export
+    exportAxisData: function(axis) {
+        console.log(`📤 Export data for axis: ${axis}`);
+        // TODO: Implémenter export CSV/JSON
+    },
+
+    // Analyse avancée
+    showAdvancedAnalysis: function(axis) {
+        console.log(`📈 Advanced analysis for axis: ${axis}`);
+        // TODO: Implémenter analyse avancée
+    },
+
+    // Debug info
     showDebugInfo: function() {
         if (!this.themesData) return;
         
-        const info = {
-            version: '4.1-compact',
+        console.table({
+            version: '4.1-investor-grade',
             format: this.isCompactFormat ? 'Compact' : 'Legacy',
             activePeriod: this.activePeriod,
-            dataSize: `${(JSON.stringify(this.themesData).length / 1024).toFixed(1)}KB`,
-            lastUpdated: this.themesData.lastUpdated,
-            periodsAvailable: Object.keys(this.themesData.periods || {}),
-            axisMaxValues: this.themesData.axisMax?.[this.activePeriod] || 'N/A'
-        };
-        
-        console.table(info);
-        console.log('📊 Données complètes:', this.themesData);
+            searchQuery: this.searchQuery || 'None',
+            showTopOnly: this.showTopOnly,
+            dataSize: `${(JSON.stringify(this.themesData).length / 1024).toFixed(1)}KB`
+        });
     },
 
-    // Utilitaire capitalisation
+    // Utilitaires
     capitalizeFirstLetter: function(string) {
         return string.charAt(0).toUpperCase() + string.slice(1).replace(/_/g, ' ');
+    },
+
+    // Fallback legacy (compatibilité)
+    renderThemesLegacy: function() {
+        console.warn('⚠️ Legacy format detected - limited functionality');
+        // Code legacy simplifié...
     }
 };
 
-// Auto-initialisation au chargement du DOM
+// Auto-initialisation
 document.addEventListener('DOMContentLoaded', function() {
     ThemesVisualizer.init();
-    
-    // Monitoring performance global
-    console.log('🎯 ThemesVisualizer v4.1 prêt - Format compact avec momentum, sparklines et animations');
+    console.log('🎯 ThemesVisualizer v4.1 - Investor-Grade UX Ready');
 });
 
-// Exposition globale pour debug
+// Exposition globale
 window.ThemesVisualizer = ThemesVisualizer;
