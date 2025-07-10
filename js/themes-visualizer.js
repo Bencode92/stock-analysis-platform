@@ -1,12 +1,12 @@
 /**
- * themes-visualizer.js v4.1 - Gestionnaire des thèmes dominants Investor-Grade
- * UX optimisée: lecture en Z, chips, sparklines compactes, accessibilité complète
+ * themes-visualizer.js v4.2 - Gestionnaire des thèmes dominants Investor-Grade
+ * UX optimisée: vue 3 périodes sans momentum
  */
 
 const ThemesVisualizer = {
     // Configuration
     periods: ['weekly', 'monthly', 'quarterly'],
-    activePeriod: 'weekly',
+    activePeriod: null, // Changé: affiche toutes les périodes
     themesData: null,
     loadStartTime: 0,
     showTopOnly: false,
@@ -23,7 +23,7 @@ const ThemesVisualizer = {
 
     // Initialisation
     init: function() {
-        console.log('🎯 Initialisation ThemesVisualizer v4.1 - Investor-Grade UX');
+        console.log('🎯 Initialisation ThemesVisualizer v4.2 - Vue 3 périodes');
         this.loadStartTime = performance.now();
         this.loadThemesData();
         this.setupEventListeners();
@@ -54,18 +54,11 @@ const ThemesVisualizer = {
     // Détection format avec fallback intelligent
     detectFormat: function(data) {
         this.isCompactFormat = !!(data.periods && data.axisMax && data.config_version);
-        console.log(`📊 Format: ${this.isCompactFormat ? 'Compact v4.1' : 'Legacy'}`);
+        console.log(`📊 Format: ${this.isCompactFormat ? 'Compact v4.2' : 'Legacy'}`);
     },
 
-    // Configuration des événements
+    // Configuration des événements - MODIFIÉ: plus de sélecteur de période
     setupEventListeners: function() {
-        // Boutons de période
-        document.querySelectorAll('.period-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.changePeriod(e.target.dataset.period);
-            });
-        });
-
         // Toggle Top 10 / Tous
         this.createTopToggle();
         
@@ -76,10 +69,10 @@ const ThemesVisualizer = {
         });
     },
 
-    // Création du toggle Top 10 / Tous
+    // Création du toggle Top 10 / Tous - MODIFIÉ: positionnement
     createTopToggle: function() {
-        const periodSelector = document.querySelector('.period-selector');
-        if (!periodSelector) return;
+        const headerContainer = document.querySelector('.themes-dominant-container h2');
+        if (!headerContainer) return;
         
         const topToggle = document.createElement('button');
         topToggle.className = 'top-toggle-btn';
@@ -96,7 +89,7 @@ const ThemesVisualizer = {
             this.renderThemes();
         });
         
-        periodSelector.appendChild(topToggle);
+        headerContainer.appendChild(topToggle);
     },
 
     // Configuration de la recherche
@@ -106,7 +99,7 @@ const ThemesVisualizer = {
         
         const searchInput = document.createElement('input');
         searchInput.type = 'search';
-        searchInput.placeholder = 'Search themes...';
+        searchInput.placeholder = 'Rechercher thèmes...';
         searchInput.className = 'theme-search';
         searchInput.addEventListener('input', (e) => {
             this.searchQuery = e.target.value.toLowerCase();
@@ -118,85 +111,73 @@ const ThemesVisualizer = {
 
     // Configuration accessibilité
     setupAccessibility: function() {
-        // Ajouter les rôles ARIA
         document.querySelectorAll('.theme-list').forEach(list => {
             list.setAttribute('role', 'list');
             list.setAttribute('aria-label', 'Liste des thèmes dominants');
         });
     },
 
-    // Changement de période avec transition
-    changePeriod: function(period) {
-        if (!this.periods.includes(period)) return;
-        
-        const previousPeriod = this.activePeriod;
-        this.activePeriod = period;
-        
-        // Mise à jour UI boutons
-        document.querySelectorAll('.period-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.period === period);
-        });
-        
-        // Transition fluide
-        this.animateTransition();
-        this.renderThemes();
-        
-        console.log(`🔄 Période: ${previousPeriod} → ${period}`);
-    },
-
-    // Animation de transition performante
-    animateTransition: function() {
-        const containers = document.querySelectorAll('.theme-list');
-        containers.forEach(container => {
-            container.style.opacity = '0.6';
-            container.style.transform = 'translateY(4px)';
-            
-            requestAnimationFrame(() => {
-                container.style.transition = 'all 0.2s ease';
-                container.style.opacity = '1';
-                container.style.transform = 'translateY(0)';
-            });
-        });
-    },
-
-    // Rendu principal avec format detection
+    // Rendu principal - MODIFIÉ
     renderThemes: function() {
-        if (!this.themesData) return;
+        if (!this.themesData || !this.isCompactFormat) return;
         
-        if (this.isCompactFormat) {
-            this.renderThemesCompact();
-        } else {
-            this.renderThemesLegacy();
-        }
+        this.renderAxis('macroeconomie', 'Macroéconomie', '📈');
+        this.renderAxis('fundamentals', 'Fondamentaux', '🔢');
+        this.renderAxis('secteurs', 'Secteurs', '🏭');
+        this.renderAxis('regions', 'Régions', '🌍');
     },
 
-    // Rendu format compact optimisé
-    renderThemesCompact: function() {
-        const themes = this.themesData.periods[this.activePeriod];
-        const axisMax = this.themesData.axisMax[this.activePeriod];
+    // NOUVEAU: Rendu d'un axe avec 3 périodes
+    renderAxis: function(axisId, axisTitle, icon) {
+        const container = document.getElementById(`${axisId}-themes`);
+        if (!container) return;
         
-        if (!themes || !axisMax) return;
+        // Structure 3 colonnes
+        container.innerHTML = `
+            <div class="axis-header">
+                <span class="axis-icon">${icon}</span>
+                <span class="axis-title">${axisTitle}</span>
+            </div>
+            <div class="periods-grid">
+                <div class="period-column" data-period="weekly">
+                    <h4 class="period-title">Hebdomadaire</h4>
+                    <ul class="theme-list" id="${axisId}-weekly"></ul>
+                </div>
+                <div class="period-column" data-period="monthly">
+                    <h4 class="period-title">Mensuel</h4>
+                    <ul class="theme-list" id="${axisId}-monthly"></ul>
+                </div>
+                <div class="period-column" data-period="quarterly">
+                    <h4 class="period-title">Trimestriel</h4>
+                    <ul class="theme-list" id="${axisId}-quarterly"></ul>
+                </div>
+            </div>
+        `;
         
-        // Rendu avec légendes
-        this.renderThemeAxisWithLegend('macroeconomie', 'Macroeconomics', themes.macroeconomics, axisMax.macroeconomics, '📈');
-        this.renderThemeAxisWithLegend('fundamentals', 'Fundamentals', themes.fundamentals, axisMax.fundamentals, '🔢');
-        this.renderThemeAxisWithLegend('secteurs', 'Sectors', themes.sectors, axisMax.sectors, '🏭');
-        this.renderThemeAxisWithLegend('regions', 'Regions', themes.regions, axisMax.regions, '🌍');
+        // Rendu de chaque période
+        this.periods.forEach(period => {
+            this.renderPeriodThemes(axisId, period);
+        });
     },
 
-    // Rendu axe avec légende investor-grade
-    renderThemeAxisWithLegend: function(axis, title, axisThemes, maxCount, icon) {
-        const container = document.getElementById(`${axis}-themes`);
-        if (!container || !axisThemes) {
-            this.renderEmptyState(container, axis);
-            return;
-        }
+    // NOUVEAU: Rendu des thèmes pour une période
+    renderPeriodThemes: function(axisId, period) {
+        const periodData = this.themesData.periods[period];
+        const axisMax = this.themesData.axisMax[period];
         
-        // Ajouter la légende si pas déjà présente
-        this.addAxisLegend(container, title, icon);
+        if (!periodData || !axisMax) return;
+        
+        const axisThemes = periodData[axisId === 'macroeconomie' ? 'macroeconomics' : 
+                                     axisId === 'secteurs' ? 'sectors' : 
+                                     axisId];
+        
+        if (!axisThemes) return;
+        
+        const container = document.getElementById(`${axisId}-${period}`);
+        if (!container) return;
         
         // Tri et filtrage
-        let sortedThemes = this.sortThemesByRelevance(axisThemes);
+        let sortedThemes = this.sortThemesByCount(axisThemes, period);
         
         // Filtrage par recherche
         if (this.searchQuery) {
@@ -210,190 +191,122 @@ const ThemesVisualizer = {
             sortedThemes = sortedThemes.slice(0, 10);
         }
         
-        // Vider le container (conserver la légende)
-        const existingItems = container.querySelectorAll('.theme-item');
-        existingItems.forEach(item => item.remove());
-        
         // Rendu des thèmes
         sortedThemes.forEach(([themeName, themeData]) => {
-            const themeElement = this.createInvestorGradeTheme(themeName, themeData, maxCount);
+            const themeElement = this.createPeriodTheme(themeName, themeData, period, axisMax[axisId]);
             container.appendChild(themeElement);
         });
         
-        // Animation d'apparition performante
+        // Animation
         this.animateThemeAppearance(container);
-        
-        // Footer avec actions
-        this.addAxisFooter(container, axis, sortedThemes.length);
     },
 
-    // Ajout légende axe
-    addAxisLegend: function(container, title, icon) {
-        if (container.querySelector('.axis-legend')) return;
-        
-        const legend = document.createElement('div');
-        legend.className = 'axis-legend';
-        legend.innerHTML = `
-            <div class="legend-header">
-                <span class="legend-icon">${icon}</span>
-                <span class="legend-title">${title}</span>
-            </div>
-            <div class="legend-help">
-                <span class="legend-item">📊 Weekly mentions</span>
-                <span class="legend-item">🔄 MoM change</span>
-            </div>
-        `;
-        
-        container.insertBefore(legend, container.firstChild);
-    },
-
-    // Création thème investor-grade avec lecture en Z
-    createInvestorGradeTheme: function(themeName, themeData, maxCount) {
-        const [weeklyCount, monthlyCount, quarterlyCount] = themeData.c;
+    // NOUVEAU: Création d'un thème pour une période spécifique
+    createPeriodTheme: function(themeName, themeData, period, maxCount) {
+        const periodIndex = this.periods.indexOf(period);
+        const count = themeData.c[periodIndex];
         const [positivePct, negativePct, neutralPct] = themeData.s;
-        const momentum = themeData.m || 0;
         const headlines = themeData.h || [];
         
-        // Calculs UX
+        // Calculs
         const sentiment = this.getDominantSentimentFromArray([positivePct, negativePct, neutralPct]);
-        const barWidth = Math.round((weeklyCount / maxCount) * 100);
-        const minWidth = 6;
-        const displayWidth = Math.max(minWidth, barWidth);
+        const barWidth = Math.round((count / maxCount) * 100);
+        const displayWidth = Math.max(6, barWidth);
         
-        // Détection tendances
-        const isSurging = momentum > 50;
-        const isDropping = momentum < -30;
-        
-        // Création élément avec accessibilité
+        // Création élément
         const themeElement = document.createElement('li');
         themeElement.className = `theme-item ${sentiment}`;
         themeElement.setAttribute('role', 'listitem');
         themeElement.setAttribute('tabindex', '0');
-        themeElement.setAttribute('aria-label', 
-            `${themeName} - ${weeklyCount} weekly mentions, ${momentum > 0 ? '+' : ''}${momentum}% MoM change, ${sentiment} sentiment`
-        );
         
-        if (isSurging) themeElement.classList.add('surging');
-        if (isDropping) themeElement.classList.add('dropping');
-        
-        // HTML structure optimisée (lecture en Z)
         themeElement.innerHTML = `
-            <div class="theme-layout">
-                <!-- Colonne 1: Barre + Count -->
-                <div class="col-activity">
-                    <div class="theme-bar">
-                        <div class="theme-progress ${sentiment}" style="width: ${displayWidth}%"></div>
-                    </div>
-                    <span class="count chip" title="Weekly mentions">${weeklyCount}</span>
+            <div class="theme-content">
+                <div class="theme-bar">
+                    <div class="theme-progress ${sentiment}" style="width: ${displayWidth}%"></div>
                 </div>
-                
-                <!-- Colonne 2: Nom + Sparkline -->
-                <div class="col-name">
-                    <span class="theme-name">${this.capitalizeFirstLetter(themeName)}</span>
-                    <div class="theme-sparkline">
-                        ${this.renderCompactSparkline([quarterlyCount, monthlyCount, weeklyCount])}
-                    </div>
-                </div>
-                
-                <!-- Colonne 3: Momentum + Action -->
-                <div class="col-momentum">
-                    ${momentum !== 0 ? `<span class="momentum chip ${momentum > 0 ? 'up' : 'down'}" title="MoM change">${momentum > 0 ? '+' : ''}${momentum}%</span>` : ''}
-                    <button class="info-btn" aria-label="View ${themeName} details" title="View details">
-                        <i class="fas fa-ellipsis-h"></i>
-                    </button>
-                </div>
+                <span class="theme-name">${this.capitalizeFirstLetter(themeName)}</span>
+                <span class="theme-count">${count}</span>
             </div>
-            
-            <!-- Tooltip riche -->
-            ${headlines.length > 0 ? `
-                <div class="theme-tooltip" role="tooltip">
-                    <div class="tooltip-header">
-                        <strong>${this.capitalizeFirstLetter(themeName)}</strong>
-                        <span class="tooltip-close">×</span>
-                    </div>
-                    <div class="tooltip-content">
-                        <div class="headlines-section">
-                            <h4>Latest Headlines</h4>
-                            ${headlines.map(([title, url]) => `
-                                <div class="headline-item">
-                                    ${title.length > 60 ? title.substring(0, 60) + '...' : title}
-                                </div>
-                            `).join('')}
-                        </div>
-                        <div class="sentiment-section">
-                            <h4>Sentiment Distribution</h4>
-                            <div class="sentiment-bar">
-                                <span class="positive" style="width:${positivePct}%" title="Positive: ${positivePct}%"></span>
-                                <span class="neutral" style="width:${neutralPct}%" title="Neutral: ${neutralPct}%"></span>
-                                <span class="negative" style="width:${negativePct}%" title="Negative: ${negativePct}%"></span>
-                            </div>
-                        </div>
-                        <div class="stats-section">
-                            <small>📊 Total mentions: ${weeklyCount + monthlyCount + quarterlyCount}</small>
-                        </div>
-                    </div>
-                </div>
-            ` : ''}
+            ${headlines.length > 0 ? this.createTooltip(themeName, themeData, headlines) : ''}
         `;
         
-        // Event listeners pour interaction
-        this.setupThemeInteractions(themeElement);
+        // Event listeners
+        if (headlines.length > 0) {
+            this.setupThemeInteractions(themeElement);
+        }
         
         return themeElement;
     },
 
-    // Sparkline compacte 24x12px
-    renderCompactSparkline: function(values) {
-        if (values.every(v => v === 0)) return '<span class="no-data">—</span>';
-        
-        const h = 12, w = 24;
-        const max = Math.max(...values);
-        if (max === 0) return '<span class="no-data">—</span>';
-        
-        const points = values.map((v, i) => `${i * w/2},${h - (h * v/max)}`).join(' ');
+    // NOUVEAU: Création tooltip simplifiée
+    createTooltip: function(themeName, themeData, headlines) {
+        const [positivePct, negativePct, neutralPct] = themeData.s;
         
         return `
-            <svg class="mini-sparkline" width="${w}" height="${h}" aria-label="Trend: ${values.join('/')}" title="Quarterly → Monthly → Weekly">
-                <polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.5"/>
-            </svg>
+            <div class="theme-tooltip" role="tooltip">
+                <div class="tooltip-header">
+                    <strong>${this.capitalizeFirstLetter(themeName)}</strong>
+                    <span class="tooltip-close">×</span>
+                </div>
+                <div class="tooltip-content">
+                    <div class="headlines-section">
+                        <h4>Derniers titres</h4>
+                        ${headlines.map(([title]) => `
+                            <div class="headline-item">
+                                ${title.length > 80 ? title.substring(0, 80) + '...' : title}
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="sentiment-bar-container">
+                        <div class="sentiment-bar">
+                            <span class="positive" style="width:${positivePct}%" title="${positivePct}% positif"></span>
+                            <span class="neutral" style="width:${neutralPct}%" title="${neutralPct}% neutre"></span>
+                            <span class="negative" style="width:${negativePct}%" title="${negativePct}% négatif"></span>
+                        </div>
+                        <div class="sentiment-labels">
+                            <span class="positive">${positivePct}%</span>
+                            <span class="neutral">${neutralPct}%</span>
+                            <span class="negative">${negativePct}%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         `;
+    },
+
+    // MODIFIÉ: Tri simplifié par count
+    sortThemesByCount: function(axisThemes, period) {
+        const periodIndex = this.periods.indexOf(period);
+        
+        return Object.entries(axisThemes)
+            .map(([name, data]) => {
+                const count = data.c ? data.c[periodIndex] : 0;
+                return [name, data, count];
+            })
+            .filter(([, , count]) => count > 0)
+            .sort((a, b) => b[2] - a[2]);
     },
 
     // Configuration interactions thème
     setupThemeInteractions: function(themeElement) {
-        const infoBtn = themeElement.querySelector('.info-btn');
-        const tooltip = themeElement.querySelector('.theme-tooltip');
-        
-        if (infoBtn && tooltip) {
-            // Clic bouton info
-            infoBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.toggleTooltip(tooltip);
-            });
-            
-            // Fermeture tooltip
-            const closeBtn = tooltip.querySelector('.tooltip-close');
-            if (closeBtn) {
-                closeBtn.addEventListener('click', () => {
-                    this.closeTooltip(tooltip);
-                });
-            }
-        }
-        
-        // Accessibilité clavier
-        themeElement.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                if (tooltip) this.toggleTooltip(tooltip);
-            }
+        themeElement.addEventListener('click', () => {
+            const tooltip = themeElement.querySelector('.theme-tooltip');
+            if (tooltip) this.toggleTooltip(tooltip);
         });
+        
+        const closeBtn = themeElement.querySelector('.tooltip-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const tooltip = themeElement.querySelector('.theme-tooltip');
+                if (tooltip) this.closeTooltip(tooltip);
+            });
+        }
     },
 
     // Gestion tooltips
     toggleTooltip: function(tooltip) {
         const isOpen = tooltip.classList.contains('open');
-        
-        // Fermer tous les autres tooltips
         this.closeAllTooltips();
         
         if (!isOpen) {
@@ -413,7 +326,7 @@ const ThemesVisualizer = {
         });
     },
 
-    // Animation d'apparition optimisée
+    // Animation d'apparition
     animateThemeAppearance: function(container) {
         const items = container.querySelectorAll('.theme-item');
         
@@ -422,68 +335,11 @@ const ThemesVisualizer = {
             item.style.transform = 'translateY(8px)';
             
             requestAnimationFrame(() => {
-                item.style.transition = `all 0.3s ease ${index * 40}ms`;
+                item.style.transition = `all 0.3s ease ${index * 30}ms`;
                 item.style.opacity = '1';
                 item.style.transform = 'translateY(0)';
             });
         });
-    },
-
-    // Footer avec actions
-    addAxisFooter: function(container, axis, themeCount) {
-        // Supprimer ancien footer
-        const oldFooter = container.querySelector('.axis-footer');
-        if (oldFooter) oldFooter.remove();
-        
-        const footer = document.createElement('div');
-        footer.className = 'axis-footer';
-        footer.innerHTML = `
-            <div class="footer-stats">
-                <span class="theme-count-display">${themeCount} themes</span>
-                <span class="period-display">${this.activePeriod}</span>
-            </div>
-            <div class="footer-actions">
-                <button class="action-btn" onclick="ThemesVisualizer.exportAxisData('${axis}')" title="Export data">
-                    <i class="fas fa-download"></i>
-                </button>
-                <button class="action-btn" onclick="ThemesVisualizer.showAdvancedAnalysis('${axis}')" title="Advanced analysis">
-                    <i class="fas fa-chart-line"></i>
-                </button>
-            </div>
-        `;
-        
-        container.appendChild(footer);
-    },
-
-    // Tri par pertinence optimisé
-    sortThemesByRelevance: function(axisThemes) {
-        return Object.entries(axisThemes)
-            .map(([name, data]) => {
-                let score = 0;
-                
-                if (this.isCompactFormat && data.c) {
-                    const weeklyCount = data.c[0] || 0;
-                    const momentum = Math.abs(data.m || 0);
-                    const sentimentBonus = this.calculateSentimentBonus(data.s);
-                    
-                    score = weeklyCount + (momentum * 0.3) + sentimentBonus;
-                } else {
-                    score = typeof data === 'object' && 'count' in data ? data.count : 
-                           (typeof data === 'number' ? data : 0);
-                }
-                
-                return [name, data, score];
-            })
-            .sort((a, b) => b[2] - a[2])
-            .filter(([, , score]) => score > 0);
-    },
-
-    // Bonus sentiment pour tri
-    calculateSentimentBonus: function(sentimentArray) {
-        if (!sentimentArray || sentimentArray.length < 3) return 0;
-        
-        const [positive, negative, neutral] = sentimentArray;
-        return (positive > 70 ? 2 : 0) + (negative > 70 ? 2 : 0);
     },
 
     // Sentiment dominant depuis array
@@ -497,19 +353,6 @@ const ThemesVisualizer = {
         return 'neutral';
     },
 
-    // État vide stylé
-    renderEmptyState: function(container, axis) {
-        if (!container) return;
-        
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">📊</div>
-                <div class="empty-title">No ${axis} themes</div>
-                <div class="empty-subtitle">for this period</div>
-            </div>
-        `;
-    },
-
     // État d'erreur
     renderErrorState: function() {
         const containers = ['macroeconomie-themes', 'secteurs-themes', 'regions-themes', 'fundamentals-themes'];
@@ -520,9 +363,9 @@ const ThemesVisualizer = {
                 container.innerHTML = `
                     <div class="error-state">
                         <div class="error-icon">⚠️</div>
-                        <div class="error-title">Loading Error</div>
+                        <div class="error-title">Erreur de chargement</div>
                         <button class="retry-btn" onclick="ThemesVisualizer.loadThemesData()">
-                            <i class="fas fa-redo"></i> Retry
+                            <i class="fas fa-redo"></i> Réessayer
                         </button>
                     </div>
                 `;
@@ -547,27 +390,13 @@ const ThemesVisualizer = {
         if (!this.themesData) return;
         
         const dataSize = JSON.stringify(this.themesData).length;
-        const analysisCount = this.themesData.analysisCount || 0;
         
         console.log(`📊 Performance Metrics:
         ⏱️  Load Time: ${loadTime}ms
         📦 Data Size: ${(dataSize / 1024).toFixed(1)}KB  
-        📄 Articles: ${analysisCount}
-        🎯 Format: ${this.isCompactFormat ? 'Compact' : 'Legacy'}
+        🎯 Format: v4.2 - 3 périodes
         🔍 Search: ${this.searchQuery || 'None'}
         📋 Filter: ${this.showTopOnly ? 'Top 10' : 'All'}`);
-    },
-
-    // Actions d'export
-    exportAxisData: function(axis) {
-        console.log(`📤 Export data for axis: ${axis}`);
-        // TODO: Implémenter export CSV/JSON
-    },
-
-    // Analyse avancée
-    showAdvancedAnalysis: function(axis) {
-        console.log(`📈 Advanced analysis for axis: ${axis}`);
-        // TODO: Implémenter analyse avancée
     },
 
     // Debug info
@@ -575,9 +404,8 @@ const ThemesVisualizer = {
         if (!this.themesData) return;
         
         console.table({
-            version: '4.1-investor-grade',
+            version: '4.2-3periods',
             format: this.isCompactFormat ? 'Compact' : 'Legacy',
-            activePeriod: this.activePeriod,
             searchQuery: this.searchQuery || 'None',
             showTopOnly: this.showTopOnly,
             dataSize: `${(JSON.stringify(this.themesData).length / 1024).toFixed(1)}KB`
@@ -587,19 +415,13 @@ const ThemesVisualizer = {
     // Utilitaires
     capitalizeFirstLetter: function(string) {
         return string.charAt(0).toUpperCase() + string.slice(1).replace(/_/g, ' ');
-    },
-
-    // Fallback legacy (compatibilité)
-    renderThemesLegacy: function() {
-        console.warn('⚠️ Legacy format detected - limited functionality');
-        // Code legacy simplifié...
     }
 };
 
 // Auto-initialisation
 document.addEventListener('DOMContentLoaded', function() {
     ThemesVisualizer.init();
-    console.log('🎯 ThemesVisualizer v4.1 - Investor-Grade UX Ready');
+    console.log('🎯 ThemesVisualizer v4.2 - Vue 3 périodes activée');
 });
 
 // Exposition globale
