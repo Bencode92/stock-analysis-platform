@@ -1,29 +1,35 @@
 /**
- * themes-visualizer.js v4.2 - Gestionnaire des thèmes dominants Investor-Grade
- * UX optimisée: vue 3 périodes sans momentum
+ * themes-visualizer.js v5.2 - Gestionnaire des thèmes avec sélecteur de période
+ * Affichage d'une seule période à la fois pour éviter la troncature
  */
 
 const ThemesVisualizer = {
     // Configuration
     periods: ['weekly', 'monthly', 'quarterly'],
-    activePeriod: null, // Changé: affiche toutes les périodes
+    activePeriod: 'weekly', // Période active par défaut
     themesData: null,
     loadStartTime: 0,
     showTopOnly: false,
     searchQuery: '',
     
-    // Couleurs finance cohérentes
-    colors: {
-        positive: '#2ecc71',
-        negative: '#e74c3c', 
-        neutral: '#95a5a6',
-        activity: '#00d8ff',
-        background: 'linear-gradient(135deg, #0d1117 0%, #0b1321 100%)'
+    // Mapping des axes pour axisMax
+    axisKeyMap: {
+        'macroeconomie': 'macroeconomics',
+        'fundamentals': 'fundamentals',
+        'secteurs': 'sectors',
+        'regions': 'regions'
+    },
+    
+    // Labels français pour les périodes
+    periodLabels: {
+        'weekly': 'Hebdomadaire',
+        'monthly': 'Mensuel',
+        'quarterly': 'Trimestriel'
     },
 
     // Initialisation
     init: function() {
-        console.log('🎯 Initialisation ThemesVisualizer v4.2 - Vue 3 périodes');
+        console.log('🎨 Initialisation ThemesVisualizer v5.2 - Sélecteur de période');
         this.loadStartTime = performance.now();
         this.loadThemesData();
         this.setupEventListeners();
@@ -31,7 +37,7 @@ const ThemesVisualizer = {
         this.setupAccessibility();
     },
 
-    // Chargement des données avec métriques
+    // Chargement des données
     loadThemesData: function() {
         fetch('data/themes.json')
             .then(response => response.json())
@@ -51,15 +57,15 @@ const ThemesVisualizer = {
             });
     },
 
-    // Détection format avec fallback intelligent
+    // Détection du format
     detectFormat: function(data) {
         this.isCompactFormat = !!(data.periods && data.axisMax && data.config_version);
-        console.log(`📊 Format: ${this.isCompactFormat ? 'Compact v4.2' : 'Legacy'}`);
+        console.log(`📊 Format détecté: ${this.isCompactFormat ? 'Compact v4.1+' : 'Legacy'}`);
     },
 
-    // Configuration des événements - MODIFIÉ: plus de sélecteur de période
+    // Configuration des événements
     setupEventListeners: function() {
-        // Toggle Top 10 / Tous
+        // Toggle Top 10
         this.createTopToggle();
         
         // Raccourcis clavier
@@ -67,9 +73,16 @@ const ThemesVisualizer = {
             if (e.ctrlKey && e.key === 'i') this.showDebugInfo();
             if (e.key === 'Escape') this.closeAllTooltips();
         });
+
+        // Fermer tooltips au clic externe
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.theme-item')) {
+                this.closeAllTooltips();
+            }
+        });
     },
 
-    // Création du toggle Top 10 / Tous - MODIFIÉ: positionnement
+    // Création du toggle Top 10 moderne
     createTopToggle: function() {
         const headerContainer = document.querySelector('.themes-dominant-container h2');
         if (!headerContainer) return;
@@ -78,6 +91,7 @@ const ThemesVisualizer = {
         topToggle.className = 'top-toggle-btn';
         topToggle.innerHTML = '<i class="fas fa-filter"></i> Top 10';
         topToggle.title = 'Afficher seulement les 10 thèmes principaux';
+        
         topToggle.addEventListener('click', () => {
             this.showTopOnly = !this.showTopOnly;
             topToggle.innerHTML = this.showTopOnly ? 
@@ -92,24 +106,29 @@ const ThemesVisualizer = {
         headerContainer.appendChild(topToggle);
     },
 
-    // Configuration de la recherche
+    // Configuration de la recherche moderne
     setupSearch: function() {
-        const searchContainer = document.querySelector('.themes-dominant-container h2');
-        if (!searchContainer) return;
+        const headerContainer = document.querySelector('.themes-dominant-container h2');
+        if (!headerContainer) return;
         
         const searchInput = document.createElement('input');
         searchInput.type = 'search';
-        searchInput.placeholder = 'Rechercher thèmes...';
+        searchInput.placeholder = 'Rechercher un thème...';
         searchInput.className = 'theme-search';
+        
+        let debounceTimer;
         searchInput.addEventListener('input', (e) => {
-            this.searchQuery = e.target.value.toLowerCase();
-            this.renderThemes();
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                this.searchQuery = e.target.value.toLowerCase();
+                this.renderThemes();
+            }, 300);
         });
         
-        searchContainer.appendChild(searchInput);
+        headerContainer.appendChild(searchInput);
     },
 
-    // Configuration accessibilité
+    // Accessibilité
     setupAccessibility: function() {
         document.querySelectorAll('.theme-list').forEach(list => {
             list.setAttribute('role', 'list');
@@ -117,64 +136,83 @@ const ThemesVisualizer = {
         });
     },
 
-    // Rendu principal - MODIFIÉ
+    // Rendu principal
     renderThemes: function() {
         if (!this.themesData || !this.isCompactFormat) return;
         
         this.renderAxis('macroeconomie', 'Macroéconomie', '📈');
-        this.renderAxis('fundamentals', 'Fondamentaux', '🔢');
+        this.renderAxis('fundamentals', 'Fondamentaux', '💰');
         this.renderAxis('secteurs', 'Secteurs', '🏭');
         this.renderAxis('regions', 'Régions', '🌍');
     },
 
-    // NOUVEAU: Rendu d'un axe avec 3 périodes
+    // Rendu d'un axe avec sélecteur de période
     renderAxis: function(axisId, axisTitle, icon) {
         const container = document.getElementById(`${axisId}-themes`);
         if (!container) return;
         
-        // Structure 3 colonnes
+        // Structure avec sélecteur de période
         container.innerHTML = `
             <div class="axis-header">
                 <span class="axis-icon">${icon}</span>
                 <span class="axis-title">${axisTitle}</span>
+                <div class="period-selector">
+                    ${this.periods.map(period => `
+                        <button class="period-btn ${period === this.activePeriod ? 'active' : ''}" 
+                                data-period="${period}" 
+                                data-axis="${axisId}">
+                            ${this.periodLabels[period]}
+                        </button>
+                    `).join('')}
+                </div>
             </div>
-            <div class="periods-grid">
-                <div class="period-column" data-period="weekly">
-                    <h4 class="period-title">Hebdomadaire</h4>
-                    <ul class="theme-list" id="${axisId}-weekly"></ul>
-                </div>
-                <div class="period-column" data-period="monthly">
-                    <h4 class="period-title">Mensuel</h4>
-                    <ul class="theme-list" id="${axisId}-monthly"></ul>
-                </div>
-                <div class="period-column" data-period="quarterly">
-                    <h4 class="period-title">Trimestriel</h4>
-                    <ul class="theme-list" id="${axisId}-quarterly"></ul>
-                </div>
+            <div class="theme-content-area">
+                <ul class="theme-list" id="${axisId}-list"></ul>
             </div>
         `;
         
-        // Rendu de chaque période
-        this.periods.forEach(period => {
-            this.renderPeriodThemes(axisId, period);
+        // Event listeners pour les boutons de période
+        container.querySelectorAll('.period-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const period = e.target.dataset.period;
+                this.switchPeriod(period, axisId);
+            });
         });
+        
+        // Rendu initial
+        this.renderAxisThemes(axisId, this.activePeriod);
     },
 
-    // NOUVEAU: Rendu des thèmes pour une période
-    renderPeriodThemes: function(axisId, period) {
+    // Changement de période
+    switchPeriod: function(period, axisId) {
+        // Mettre à jour le bouton actif pour cet axe seulement
+        const container = document.getElementById(`${axisId}-themes`);
+        container.querySelectorAll('.period-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.period === period);
+        });
+        
+        // Re-render les thèmes pour cette période
+        this.renderAxisThemes(axisId, period);
+    },
+
+    // Rendu des thèmes pour un axe et une période
+    renderAxisThemes: function(axisId, period) {
         const periodData = this.themesData.periods[period];
         const axisMax = this.themesData.axisMax[period];
         
         if (!periodData || !axisMax) return;
         
-        const axisThemes = periodData[axisId === 'macroeconomie' ? 'macroeconomics' : 
-                                     axisId === 'secteurs' ? 'sectors' : 
-                                     axisId];
+        // Utiliser le mapping pour obtenir la bonne clé
+        const axisKey = this.axisKeyMap[axisId] || axisId;
+        const axisThemes = periodData[axisKey];
         
         if (!axisThemes) return;
         
-        const container = document.getElementById(`${axisId}-${period}`);
+        const container = document.getElementById(`${axisId}-list`);
         if (!container) return;
+        
+        // Obtenir le max pour cet axe
+        const maxVal = axisMax[axisKey] || 1;
         
         // Tri et filtrage
         let sortedThemes = this.sortThemesByCount(axisThemes, period);
@@ -186,22 +224,22 @@ const ThemesVisualizer = {
             );
         }
         
-        // Limite Top 10 si activée
+        // Limite Top 10
         if (this.showTopOnly) {
             sortedThemes = sortedThemes.slice(0, 10);
         }
         
+        // Vider le conteneur
+        container.innerHTML = '';
+        
         // Rendu des thèmes
         sortedThemes.forEach(([themeName, themeData]) => {
-            const themeElement = this.createPeriodTheme(themeName, themeData, period, axisMax[axisId]);
+            const themeElement = this.createPeriodTheme(themeName, themeData, period, maxVal);
             container.appendChild(themeElement);
         });
-        
-        // Animation
-        this.animateThemeAppearance(container);
     },
 
-    // NOUVEAU: Création d'un thème pour une période spécifique
+    // Création d'un thème avec nouveau système CSS
     createPeriodTheme: function(themeName, themeData, period, maxCount) {
         const periodIndex = this.periods.indexOf(period);
         const count = themeData.c[periodIndex];
@@ -211,7 +249,7 @@ const ThemesVisualizer = {
         // Calculs
         const sentiment = this.getDominantSentimentFromArray([positivePct, negativePct, neutralPct]);
         const barWidth = Math.round((count / maxCount) * 100);
-        const displayWidth = Math.max(6, barWidth);
+        const displayWidth = Math.max(8, barWidth); // Minimum 8% pour visibilité
         
         // Création élément
         const themeElement = document.createElement('li');
@@ -219,16 +257,21 @@ const ThemesVisualizer = {
         themeElement.setAttribute('role', 'listitem');
         themeElement.setAttribute('tabindex', '0');
         
+        // Structure HTML
         themeElement.innerHTML = `
             <div class="theme-content">
                 <div class="theme-bar">
-                    <div class="theme-progress ${sentiment}" style="width: ${displayWidth}%"></div>
+                    <div class="theme-progress ${sentiment}"></div>
                 </div>
-                <span class="theme-name">${this.capitalizeFirstLetter(themeName)}</span>
+                <span class="theme-name" title="${this.capitalizeFirstLetter(themeName)}">${this.capitalizeFirstLetter(themeName)}</span>
                 <span class="theme-count">${count}</span>
             </div>
             ${headlines.length > 0 ? this.createTooltip(themeName, themeData, headlines) : ''}
         `;
+        
+        // IMPORTANT: Utiliser --pct au lieu de style inline
+        const progressBar = themeElement.querySelector('.theme-progress');
+        progressBar.style.setProperty('--pct', displayWidth + '%');
         
         // Event listeners
         if (headlines.length > 0) {
@@ -238,21 +281,21 @@ const ThemesVisualizer = {
         return themeElement;
     },
 
-    // NOUVEAU: Création tooltip simplifiée
+    // Création du tooltip moderne
     createTooltip: function(themeName, themeData, headlines) {
         const [positivePct, negativePct, neutralPct] = themeData.s;
         
         return `
-            <div class="theme-tooltip" role="tooltip">
+            <div class="theme-tooltip" role="tooltip" aria-hidden="true">
                 <div class="tooltip-header">
                     <strong>${this.capitalizeFirstLetter(themeName)}</strong>
-                    <span class="tooltip-close">×</span>
+                    <span class="tooltip-close" aria-label="Fermer">×</span>
                 </div>
                 <div class="tooltip-content">
                     <div class="headlines-section">
                         <h4>Derniers titres</h4>
-                        ${headlines.map(([title]) => `
-                            <div class="headline-item">
+                        ${headlines.slice(0, 3).map(([title, url]) => `
+                            <div class="headline-item" ${url ? `data-url="${url}"` : ''}>
                                 ${title.length > 80 ? title.substring(0, 80) + '...' : title}
                             </div>
                         `).join('')}
@@ -264,9 +307,9 @@ const ThemesVisualizer = {
                             <span class="negative" style="width:${negativePct}%" title="${negativePct}% négatif"></span>
                         </div>
                         <div class="sentiment-labels">
-                            <span class="positive">${positivePct}%</span>
-                            <span class="neutral">${neutralPct}%</span>
-                            <span class="negative">${negativePct}%</span>
+                            <span class="positive">Positif ${positivePct}%</span>
+                            <span class="neutral">Neutre ${neutralPct}%</span>
+                            <span class="negative">Négatif ${negativePct}%</span>
                         </div>
                     </div>
                 </div>
@@ -274,7 +317,7 @@ const ThemesVisualizer = {
         `;
     },
 
-    // MODIFIÉ: Tri simplifié par count
+    // Tri par count
     sortThemesByCount: function(axisThemes, period) {
         const periodIndex = this.periods.indexOf(period);
         
@@ -284,16 +327,21 @@ const ThemesVisualizer = {
                 return [name, data, count];
             })
             .filter(([, , count]) => count > 0)
-            .sort((a, b) => b[2] - a[2]);
+            .sort((a, b) => b[2] - a[2])
+            .map(([name, data]) => [name, data]);
     },
 
-    // Configuration interactions thème
+    // Interactions thème
     setupThemeInteractions: function(themeElement) {
-        themeElement.addEventListener('click', () => {
-            const tooltip = themeElement.querySelector('.theme-tooltip');
-            if (tooltip) this.toggleTooltip(tooltip);
+        // Click sur le thème
+        themeElement.addEventListener('click', (e) => {
+            if (!e.target.closest('.tooltip-close')) {
+                const tooltip = themeElement.querySelector('.theme-tooltip');
+                if (tooltip) this.toggleTooltip(tooltip);
+            }
         });
         
+        // Fermeture du tooltip
         const closeBtn = themeElement.querySelector('.tooltip-close');
         if (closeBtn) {
             closeBtn.addEventListener('click', (e) => {
@@ -302,6 +350,15 @@ const ThemesVisualizer = {
                 if (tooltip) this.closeTooltip(tooltip);
             });
         }
+
+        // Accessibilité clavier
+        themeElement.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                const tooltip = themeElement.querySelector('.theme-tooltip');
+                if (tooltip) this.toggleTooltip(tooltip);
+            }
+        });
     },
 
     // Gestion tooltips
@@ -312,6 +369,15 @@ const ThemesVisualizer = {
         if (!isOpen) {
             tooltip.classList.add('open');
             tooltip.setAttribute('aria-hidden', 'false');
+            
+            // Ajuster position si déborde
+            requestAnimationFrame(() => {
+                const rect = tooltip.getBoundingClientRect();
+                if (rect.right > window.innerWidth - 20) {
+                    tooltip.style.right = '0';
+                    tooltip.style.left = 'auto';
+                }
+            });
         }
     },
 
@@ -326,23 +392,7 @@ const ThemesVisualizer = {
         });
     },
 
-    // Animation d'apparition
-    animateThemeAppearance: function(container) {
-        const items = container.querySelectorAll('.theme-item');
-        
-        items.forEach((item, index) => {
-            item.style.opacity = '0';
-            item.style.transform = 'translateY(8px)';
-            
-            requestAnimationFrame(() => {
-                item.style.transition = `all 0.3s ease ${index * 30}ms`;
-                item.style.opacity = '1';
-                item.style.transform = 'translateY(0)';
-            });
-        });
-    },
-
-    // Sentiment dominant depuis array
+    // Sentiment dominant
     getDominantSentimentFromArray: function(sentimentArray) {
         if (!sentimentArray || sentimentArray.length < 3) return 'neutral';
         
@@ -364,6 +414,7 @@ const ThemesVisualizer = {
                     <div class="error-state">
                         <div class="error-icon">⚠️</div>
                         <div class="error-title">Erreur de chargement</div>
+                        <div class="error-message">Impossible de charger les données</div>
                         <button class="retry-btn" onclick="ThemesVisualizer.loadThemesData()">
                             <i class="fas fa-redo"></i> Réessayer
                         </button>
@@ -378,10 +429,14 @@ const ThemesVisualizer = {
         const element = document.getElementById('themes-last-updated');
         if (element && this.themesData && this.themesData.lastUpdated) {
             const date = new Date(this.themesData.lastUpdated);
-            element.textContent = date.toLocaleString('fr-FR', { 
-                day: '2-digit', month: '2-digit', year: 'numeric',
-                hour: '2-digit', minute: '2-digit'
+            const formattedDate = date.toLocaleString('fr-FR', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric',
+                hour: '2-digit', 
+                minute: '2-digit'
             });
+            element.textContent = `Mise à jour: ${formattedDate}`;
         }
     },
 
@@ -390,13 +445,19 @@ const ThemesVisualizer = {
         if (!this.themesData) return;
         
         const dataSize = JSON.stringify(this.themesData).length;
+        const themeCount = Object.values(this.themesData.periods || {})
+            .flatMap(period => Object.values(period))
+            .flatMap(axis => Object.keys(axis)).length;
         
-        console.log(`📊 Performance Metrics:
-        ⏱️  Load Time: ${loadTime}ms
-        📦 Data Size: ${(dataSize / 1024).toFixed(1)}KB  
-        🎯 Format: v4.2 - 3 périodes
-        🔍 Search: ${this.searchQuery || 'None'}
-        📋 Filter: ${this.showTopOnly ? 'Top 10' : 'All'}`);
+        console.log(`
+📊 Performance Metrics v5.2:
+⏱️  Load Time: ${loadTime}ms
+📦 Data Size: ${(dataSize / 1024).toFixed(1)}KB  
+🎯 Format: ${this.isCompactFormat ? 'Compact' : 'Legacy'}
+📊 Themes: ${themeCount} total
+🔍 Search: ${this.searchQuery || 'None'}
+📋 Filter: ${this.showTopOnly ? 'Top 10' : 'All'}
+📅 Active Period: ${this.activePeriod}`);
     },
 
     // Debug info
@@ -404,11 +465,13 @@ const ThemesVisualizer = {
         if (!this.themesData) return;
         
         console.table({
-            version: '4.2-3periods',
+            version: '5.2-period-selector',
             format: this.isCompactFormat ? 'Compact' : 'Legacy',
+            activePeriod: this.activePeriod,
             searchQuery: this.searchQuery || 'None',
             showTopOnly: this.showTopOnly,
-            dataSize: `${(JSON.stringify(this.themesData).length / 1024).toFixed(1)}KB`
+            dataSize: `${(JSON.stringify(this.themesData).length / 1024).toFixed(1)}KB`,
+            axisMax: this.themesData.axisMax
         });
     },
 
@@ -421,7 +484,6 @@ const ThemesVisualizer = {
 // Auto-initialisation
 document.addEventListener('DOMContentLoaded', function() {
     ThemesVisualizer.init();
-    console.log('🎯 ThemesVisualizer v4.2 - Vue 3 périodes activée');
 });
 
 // Exposition globale
