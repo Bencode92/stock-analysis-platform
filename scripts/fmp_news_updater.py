@@ -18,6 +18,8 @@ from collections import Counter
 import time
 import psutil
 from functools import lru_cache
+import subprocess
+from pathlib import Path
 
 # Enhanced sentiment analysis imports
 import torch
@@ -276,6 +278,252 @@ THEMES_DOMINANTS = {
 
 IMPORTANT_SOURCES = SOURCES["whitelist"]
 PREMIUM_SOURCES = SOURCES["premium"]
+
+# ---------------------------------------------------------------------------
+# 🔧 ENHANCED GIT HANDLER FOR ROBUST CI/CD OPERATIONS
+# ---------------------------------------------------------------------------
+
+class GitHandlerError(Exception):
+    """Exception personnalisée pour les erreurs Git"""
+    pass
+
+class EnhancedGitHandler:
+    """Gestionnaire Git robuste pour TradePulse CI/CD"""
+    
+    def __init__(self, repo_path="."):
+        self.repo_path = Path(repo_path)
+        self.files_to_commit = ["data/news.json", "data/themes.json"]
+        self.is_ci = os.getenv("CI", "false").lower() == "true"
+        
+    def run_command(self, command, check=True, timeout=60):
+        """Exécute une commande shell avec gestion d'erreurs"""
+        try:
+            logger.info(f"🔧 Git: {command}")
+            result = subprocess.run(
+                command,
+                shell=True,
+                check=check,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=self.repo_path
+            )
+            
+            if result.stdout and result.stdout.strip():
+                logger.info(f"📤 Git output: {result.stdout.strip()}")
+            
+            return result
+            
+        except subprocess.TimeoutExpired:
+            logger.error(f"⏰ Git command timed out: {command}")
+            raise GitHandlerError(f"Command timed out: {command}")
+            
+        except subprocess.CalledProcessError as e:
+            logger.error(f"❌ Git command failed: {command}")
+            if e.stderr:
+                logger.error(f"❌ Error: {e.stderr}")
+            raise GitHandlerError(f"Command failed: {e.stderr}")
+    
+    def configure_git(self):
+        """Configure Git pour l'environnement CI/CD"""
+        logger.info("⚙️ Configuring Git for CI/CD...")
+        
+        commands = [
+            'git config --local user.email "tradepulse-bot@github-actions.com"',
+            'git config --local user.name "TradePulse Bot [Enhanced]"',
+            'git config --local core.autocrlf false',
+            'git config --local pull.rebase true'
+        ]
+        
+        for command in commands:
+            self.run_command(command)
+            
+        logger.info("✅ Git configured successfully")
+    
+    def check_changes(self):
+        """Vérifie s'il y a des changements à committer"""
+        logger.info("🔍 Checking for changes...")
+        
+        changes_detected = False
+        
+        # Ajouter les fichiers s'ils existent
+        for file_path in self.files_to_commit:
+            full_path = self.repo_path / file_path
+            if full_path.exists():
+                self.run_command(f"git add {file_path}")
+                logger.info(f"✅ Added {file_path}")
+                changes_detected = True
+            else:
+                logger.warning(f"⚠️ File not found: {file_path}")
+        
+        if not changes_detected:
+            logger.info("📝 No files to add")
+            return False
+        
+        # Vérifier s'il y a des changements staged
+        result = self.run_command("git diff --staged --quiet", check=False)
+        
+        if result.returncode == 0:
+            logger.info("📝 No changes detected in staged files")
+            return False
+        
+        logger.info("📝 Changes detected and staged")
+        return True
+    
+    def generate_commit_message(self):
+        """Génère un message de commit informatif avec statistiques"""
+        timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+        
+        # Lire les statistiques depuis news.json
+        stats_info = ""
+        try:
+            news_file = self.repo_path / "data/news.json"
+            if news_file.exists():
+                with open(news_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                
+                total_articles = 0
+                countries = []
+                
+                for key, value in data.items():
+                    if isinstance(value, list) and key != 'model_metadata':
+                        total_articles += len(value)
+                        if len(value) > 0:
+                            countries.append(f"{key}: {len(value)}")
+                
+                stats_info = f"""
+📊 Articles collectés: {total_articles}
+📍 Distribution: {', '.join(countries[:3])}{'...' if len(countries) > 3 else ''}"""
+                
+                # Métadonnées des modèles IA
+                if 'model_metadata' in data:
+                    meta = data['model_metadata']
+                    if 'performance_metrics' in meta:
+                        perf = meta['performance_metrics']
+                        sentiment_count = perf.get('sentiment_articles', 0)
+                        importance_count = perf.get('importance_articles', 0)
+                        if sentiment_count > 0 or importance_count > 0:
+                            stats_info += f"""
+🤖 IA - Sentiment: {sentiment_count} articles
+⚡ IA - Importance: {importance_count} articles"""
+                        
+        except Exception as e:
+            logger.warning(f"⚠️ Could not read statistics: {e}")
+        
+        commit_message = f"""🤖 Auto-update: TradePulse news & themes data
+
+📅 Timestamp: {timestamp}
+🔗 Source: Financial Modeling Prep API
+🧠 AI Models: FinBERT Sentiment + Importance (3-classes)
+🌍 Distribution: MSCI-weighted geographic allocation{stats_info}
+
+✨ Enhanced investor-grade configuration active
+[skip ci]"""
+        
+        return commit_message
+    
+    def sync_with_remote(self, max_retries=3):
+        """Synchronise avec le remote de manière robuste"""
+        logger.info("🔄 Syncing with remote repository...")
+        
+        for attempt in range(max_retries):
+            try:
+                # Fetch les derniers changements
+                logger.info(f"📥 Fetching latest changes (attempt {attempt + 1}/{max_retries})")
+                self.run_command("git fetch origin main")
+                
+                # Vérifier s'il y a des changements locaux
+                result = self.run_command("git status --porcelain", check=False)
+                if result.stdout.strip():
+                    logger.info("📝 Local changes detected, preparing rebase...")
+                
+                # Tenter le rebase
+                logger.info("🔄 Attempting rebase...")
+                self.run_command("git pull --rebase --autostash origin main")
+                logger.info("✅ Rebase successful")
+                return True
+                
+            except GitHandlerError as e:
+                logger.warning(f"⚠️ Sync attempt {attempt + 1}/{max_retries} failed: {e}")
+                
+                if attempt < max_retries - 1:
+                    # Annuler le rebase en cours si nécessaire
+                    try:
+                        self.run_command("git rebase --abort", check=False)
+                        logger.info("🔄 Rebase aborted, will retry")
+                    except:
+                        pass
+                    
+                    # Attendre avant le prochain essai
+                    time.sleep(2 ** attempt)  # Backoff exponentiel
+                else:
+                    logger.error("❌ All sync attempts failed")
+                    raise
+        
+        return False
+    
+    def commit_and_push(self, max_retries=3):
+        """Effectue le commit et push de manière sécurisée"""
+        if not self.check_changes():
+            logger.info("📝 No changes to commit")
+            return True
+        
+        try:
+            # Configuration Git
+            self.configure_git()
+            
+            # Créer le commit
+            commit_message = self.generate_commit_message()
+            logger.info("📝 Creating commit...")
+            self.run_command(f'git commit -m "{commit_message}"')
+            
+            # Synchroniser avec le remote
+            if not self.sync_with_remote():
+                logger.error("❌ Failed to sync with remote")
+                return False
+            
+            # Push avec retry
+            for attempt in range(max_retries):
+                try:
+                    logger.info(f"🚀 Pushing changes (attempt {attempt + 1}/{max_retries})")
+                    
+                    if self.is_ci:
+                        # En CI, utiliser push standard après rebase
+                        self.run_command("git push origin HEAD:main")
+                    else:
+                        # En local, utiliser --force-with-lease pour plus de sécurité
+                        self.run_command("git push --force-with-lease origin HEAD:main")
+                    
+                    logger.info("✅ Changes pushed successfully")
+                    return True
+                    
+                except GitHandlerError as e:
+                    logger.warning(f"⚠️ Push attempt {attempt + 1}/{max_retries} failed: {e}")
+                    
+                    if attempt < max_retries - 1:
+                        # Re-sync avant le prochain essai
+                        try:
+                            self.sync_with_remote(max_retries=1)
+                        except:
+                            pass
+                        time.sleep(1)
+                    else:
+                        logger.error("❌ All push attempts failed")
+                        raise
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"❌ Commit and push failed: {e}")
+            return False
+    
+    def get_repo_status(self):
+        """Obtient le statut du repository"""
+        try:
+            result = self.run_command("git status --short", check=False)
+            return result.stdout.strip()
+        except:
+            return "Unable to get status"
 
 def read_existing_news():
     """Reads existing JSON file as fallback"""
@@ -1275,7 +1523,7 @@ def generate_themes_json(news_data):
         return False
 
 def main():
-    """🚀 Enhanced main execution with Dual Specialized Models v4.0"""
+    """🚀 Enhanced main execution with Dual Specialized Models + Git Integration v4.0"""
     try:
         logger.info("🚀 Starting TradePulse Investor-Grade News Collection v4.0...")
         logger.info(f"🎯 Dual Specialized Models: sentiment + importance (3-classes)")
@@ -1331,6 +1579,27 @@ def main():
         success_news = update_news_json_file(news_data)
         success_themes = generate_themes_json(news_data)
         
+        # 🔧 ENHANCED: Git operations with robust conflict handling
+        if success_news and success_themes:
+            logger.info("🔧 Initiating Git operations with enhanced conflict resolution...")
+            
+            # Initialize Git handler
+            git_handler = EnhancedGitHandler()
+            
+            # Check repository status
+            repo_status = git_handler.get_repo_status()
+            if repo_status:
+                logger.info(f"📋 Repository status: {repo_status}")
+            
+            # Attempt commit and push with retry logic
+            git_success = git_handler.commit_and_push()
+            
+            if git_success:
+                logger.info("✅ Git operations completed successfully")
+            else:
+                logger.warning("⚠️ Git operations failed, but data files were updated")
+                # Don't fail the entire process if Git operations fail
+        
         # Enhanced theme analysis logging
         top_themes = extract_top_themes(news_data, days=30)
         logger.info("🎯 Investor-grade dominant themes (30 days):")
@@ -1357,7 +1626,7 @@ def main():
             if "importance_distribution" in metrics:
                 logger.info(f"  Importance Levels: {metrics['importance_distribution']}")
         
-        logger.info("✅ TradePulse v4.0 with Dual Specialized Models (3-classes) completed successfully!")
+        logger.info("✅ TradePulse v4.0 with Dual Specialized Models + Enhanced Git Integration completed successfully!")
         return success_news and success_themes
         
     except Exception as e:
