@@ -210,7 +210,7 @@ function getSentimentIcon(sentiment) {
 }
 
 /**
- * Distribue les actualités par niveau d'importance - VERSION CORRIGÉE
+ * Distribue les actualités par niveau d'importance - VERSION ML-FIRST v3.0
  * @param {Object} newsData - Données d'actualités
  */
 function distributeNewsByImportance(newsData) {
@@ -241,69 +241,38 @@ function distributeNewsByImportance(newsData) {
 
     console.log(`Après filtrage des types exclus: ${allNews.length} actualités restantes`);
 
-    // 🎯 CORRECTIFS DISTRIBUTION v2.0 - Vérifier que tous les champs nécessaires sont présents
+    // 🤖 HIÉRARCHISATION 100% ML - VERSION SIMPLIFIÉE
     allNews.forEach(news => {
-        // Valeurs par défaut si elles sont manquantes
+        // Valeurs par défaut pour les champs nécessaires
         news.impact = news.impact || 'neutral';
         news.sentiment = news.sentiment || news.impact;
         news.category = news.category || 'general';
         news.country = news.country || 'other';
         
-        // 🔧 CORRECTIF 1: Priorité à importance_level du JSON (field direct du Python)
-        if (!news.hierarchy && news.importance_level) {
-            news.hierarchy = news.importance_level;
-            console.log(`📊 Using importance_level: ${news.importance_level} for "${news.title.substring(0, 50)}..."`);
-        } else if (!news.hierarchy && news.importance_score !== undefined) {
-            const score = parseFloat(news.importance_score);
-            
-            if (score >= 45) {
-                news.hierarchy = 'critical';
-            } else if (score >= 38) {
-                news.hierarchy = 'important';
-            } else {
-                news.hierarchy = 'normal';
-            }
-            console.log(`📊 Using importance_score: ${score} → ${news.hierarchy} for "${news.title.substring(0, 50)}..."`);
-        } else if (!news.hierarchy && news.score !== undefined) {
-            const score = parseFloat(news.score);
-            
-            if (score >= 45) {
-                news.hierarchy = 'critical';
-            } else if (score >= 38) {
-                news.hierarchy = 'important';
-            } else {
-                news.hierarchy = 'normal';
-            }
-        } else if (!news.hierarchy) {
-            // Ancienne méthode si pas de score
-            if (news.importance === 'high' || news.impact === 'negative') {
-                news.hierarchy = 'critical';
-            } else if (news.importance === 'medium' || news.impact === 'positive') {
-                news.hierarchy = 'important';
-            } else {
-                news.hierarchy = 'normal';
-            }
-        }
+        // 🎯 CONFIANCE TOTALE AU PIPELINE ML
+        news.hierarchy = (news.importance_level || '').toLowerCase();   // critical | important | general
         
-        // 🔧 CORRECTIF 2: Alias general → normal pour compatibilité JSON
+        // Alias general → normal pour compatibilité interne
         if (news.hierarchy === 'general') {
             news.hierarchy = 'normal';
-            console.log(`🔄 Converted 'general' to 'normal' for "${news.title.substring(0, 50)}..."`);
+        }
+        
+        // Si le label ML manque, fallback sur 'normal'
+        if (!['critical', 'important', 'normal'].includes(news.hierarchy)) {
+            news.hierarchy = 'normal';
+            console.warn('🤖 Article sans label ML, classé en normal:', news.title.substring(0, 60) + '...');
+        }
+        
+        // Log de contrôle pour vérifier la qualité ML
+        if (news.importance_level) {
+            console.log(`🤖 ML Classification: "${news.title.substring(0, 50)}..." → ${news.hierarchy.toUpperCase()}`);
         }
     });
 
-    // Filtrer les actualités par hiérarchie
-    const criticalNews = allNews.filter(news => 
-        news.hierarchy === 'critical'
-    );
-    
-    const importantNews = allNews.filter(news => 
-        news.hierarchy === 'important'
-    );
-    
-    const regularNews = allNews.filter(news => 
-        news.hierarchy === 'normal'
-    );
+    // Filtrer les actualités par hiérarchie (déterminée 100% par ML)
+    const criticalNews = allNews.filter(news => news.hierarchy === 'critical');
+    const importantNews = allNews.filter(news => news.hierarchy === 'important');
+    const regularNews = allNews.filter(news => news.hierarchy === 'normal');
     
     // Tri par score d'importance puis par date
     const sortByImportance = (a, b) => {
@@ -327,17 +296,29 @@ function distributeNewsByImportance(newsData) {
         regular: regularNews
     };
 
-    // 🔧 CORRECTIF 3: Logs de débogage détaillés
-    console.log(`📊 Distribution finale des actualités:`);
-    console.log(`  🔴 Critiques: ${criticalNews.length}`);
-    console.log(`  🟡 Importantes: ${importantNews.length}`);
-    console.log(`  ⚪ Générales: ${regularNews.length}`);
+    // 🤖 Logs de qualité ML
+    console.log(`🤖 Distribution ML-First finale:`);
+    console.log(`  🔴 Critiques (ML): ${criticalNews.length}`);
+    console.log(`  🟡 Importantes (ML): ${importantNews.length}`);
+    console.log(`  ⚪ Générales (ML): ${regularNews.length}`);
     
-    // Debug les titres des importantes pour vérifier
+    // Statistiques de couverture ML
+    const totalWithML = allNews.filter(n => n.importance_level).length;
+    const mlCoverage = ((totalWithML / allNews.length) * 100).toFixed(1);
+    console.log(`📊 Couverture ML: ${totalWithML}/${allNews.length} articles (${mlCoverage}%)`);
+    
+    // Debug échantillons par catégorie
+    if (criticalNews.length > 0) {
+        console.log(`📋 Exemples critiques (ML):`);
+        criticalNews.slice(0, 2).forEach((news, i) => {
+            console.log(`  ${i+1}. "${news.title.substring(0, 60)}..."`);
+        });
+    }
+    
     if (importantNews.length > 0) {
-        console.log(`📋 Exemples d'actualités importantes:`);
-        importantNews.slice(0, 3).forEach((news, i) => {
-            console.log(`  ${i+1}. "${news.title.substring(0, 60)}..." (${news.hierarchy})`);
+        console.log(`📋 Exemples importantes (ML):`);
+        importantNews.slice(0, 2).forEach((news, i) => {
+            console.log(`  ${i+1}. "${news.title.substring(0, 60)}..."`);
         });
     }
 
@@ -346,7 +327,7 @@ function distributeNewsByImportance(newsData) {
     displayImportantNews(importantNews);
     displayRecentNews(regularNews);
 
-    console.log(`Actualités distribuées: ${criticalNews.length} critiques, ${importantNews.length} importantes, ${regularNews.length} régulières`);
+    console.log(`✅ Distribution ML-First terminée: ${criticalNews.length} critiques, ${importantNews.length} importantes, ${regularNews.length} générales`);
 }
 
 /**
