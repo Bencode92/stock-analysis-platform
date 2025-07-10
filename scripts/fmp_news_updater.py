@@ -49,11 +49,17 @@ _HF_TOKEN = os.getenv("HF_READ_TOKEN")
 
 def _load_hf(model_name: str):
     """Charge un modèle HuggingFace avec token si nécessaire"""
-    kw = {"token": _HF_TOKEN} if _HF_TOKEN else {}
-    tok = AutoTokenizer.from_pretrained(model_name, **kw)
-    mdl = AutoModelForSequenceClassification.from_pretrained(model_name, **kw)
-    mdl.eval().to("cuda" if torch.cuda.is_available() else "cpu")
-    return tok, mdl
+    # 🔧 CORRECTIF 2: API HuggingFace corrigée
+    kw = {"use_auth_token": _HF_TOKEN} if _HF_TOKEN else {}
+    try:
+        tok = AutoTokenizer.from_pretrained(model_name, **kw)
+        mdl = AutoModelForSequenceClassification.from_pretrained(model_name, **kw)
+        mdl.eval().to("cuda" if torch.cuda.is_available() else "cpu")
+        logger.info(f"✅ Model {model_name} loaded successfully")
+        return tok, mdl
+    except Exception as e:
+        logger.error(f"❌ Failed to load model {model_name}: {str(e)}")
+        raise
 
 @lru_cache(maxsize=1)
 def _get_dual_models():
@@ -399,7 +405,10 @@ def get_forex_news():
 
 def extract_themes(article):
     """Identifies dominant themes from title content including new fundamentals axis"""
-    text = article.get("title", "").lower()
+    # 🔧 CORRECTIF 3: Extraction thèmes sur title + content (pas juste title)
+    text = (article.get("title", "") + " " + 
+            article.get("content", article.get("text", ""))).lower()
+    
     themes_detected = {"macroeconomics": [], "sectors": [], "regions": [], "fundamentals": []}
     
     for axis, groups in THEMES.items():
@@ -563,8 +572,8 @@ def determine_impact(article: dict) -> str:
         pass
 
     # Texte source
-    text = f"{article.get('title','')} {article.get('text','')}".strip()
-    if not text:
+    text = f"{article.get('title','')} {article.get('text','')}"
+    if not text.strip():
         return "neutral"
 
     # 2) 🎯 Modèle de sentiment spécialisé (100% ML)
@@ -574,7 +583,8 @@ def determine_impact(article: dict) -> str:
             inputs = tok(text, return_tensors="pt", truncation=True, max_length=512).to(mdl.device)
 
             with torch.no_grad():
-                neg, neu, pos = mdl(**inputs).logits.softmax(-1).squeeze().tolist()
+                # 🔧 CORRECTIF 1: Mapping sentiment corrigé - ordre neu, pos, neg
+                neu, pos, neg = mdl(**inputs).logits.softmax(-1).squeeze().tolist()
 
             article["impact_prob"] = {"positive": round(pos, 3), "neutral": round(neu, 3), "negative": round(neg, 3)}
             
@@ -667,20 +677,27 @@ def remove_duplicates(news_list):
     
     return unique_news
 
-def compute_importance_score(article, category=None) -> float:
+def compute_importance_score(article, category=None) -> dict:
     """
     ⚡ SCORE D'IMPORTANCE SPÉCIALISÉ v4.0 (100% modèle ML)
     Utilise exclusivement le modèle Bencode92/tradepulse-finbert-importance
+    🔧 CORRECTIF 4: Retourne dict complet avec métadonnées
     """
     if not USE_FINBERT:
-        return 50.0  # Score neutre si désactivé
+        return {
+            "score": 50.0,
+            "metadata": {"fallback": "ML disabled", "specialized": False}
+        }
         
     try:
         tok, mdl = _get_dual_models()["importance"]
         text = f"{article.get('title','')} {article.get('content','') or article.get('text','')}"
         
         if not text.strip():
-            return 50.0
+            return {
+                "score": 50.0,
+                "metadata": {"fallback": "empty text", "specialized": False}
+            }
             
         inputs = tok(text, return_tensors="pt", truncation=True, max_length=512).to(mdl.device)
         
@@ -689,19 +706,23 @@ def compute_importance_score(article, category=None) -> float:
 
         score_100 = round(score * 100, 1)
         
-        # Métadonnées
-        article["importance_metadata"] = {
-            "model": _MODEL_IMPORTANCE,
-            "ml_score": score_100,
-            "specialized": True,
-            "version": _MODEL_METADATA["version"]
+        # 🔧 CORRECTIF 4: Métadonnées complètes retournées
+        return {
+            "score": score_100,
+            "metadata": {
+                "model": _MODEL_IMPORTANCE,
+                "ml_score": score_100,
+                "specialized": True,
+                "version": _MODEL_METADATA["version"]
+            }
         }
-        
-        return score_100
         
     except Exception as e:
         logger.warning(f"Importance model failure: {e}")
-        return 50.0  # Score neutre en cas d'erreur
+        return {
+            "score": 50.0,
+            "metadata": {"fallback": f"error: {str(e)}", "specialized": False}
+        }
 
 def calculate_output_limits(articles_by_country, max_total=150):
     """
@@ -1073,7 +1094,10 @@ def process_news_data(news_sources):
                 news_item["sentiment_metadata"] = normalized["sentiment_metadata"]
             
             # ⚡ Specialized importance score v4.0
-            news_item["importance_score"] = compute_importance_score(news_item, source_type)
+            # 🔧 CORRECTIF 4: Propagation correcte des métadonnées importance
+            importance_result = compute_importance_score(news_item, source_type)
+            news_item["importance_score"] = importance_result["score"]
+            news_item["importance_metadata"] = importance_result["metadata"]
             
             # Add to global list
             all_articles.append(news_item)
@@ -1144,7 +1168,7 @@ def process_news_data(news_sources):
             logger.info(f"⚡ Importance model analyzed {importance_used}/{len(all_processed_articles)} articles ({importance_used/len(all_processed_articles)*100:.1f}%)")
             
             # Average importance scores
-            importance_scores = [article["importance_metadata"]["ml_score"] for article in all_processed_articles if "importance_metadata" in article]
+            importance_scores = [article["importance_metadata"]["ml_score"] for article in all_processed_articles if "importance_metadata" in article and "ml_score" in article["importance_metadata"]]
             if importance_scores:
                 avg_importance = sum(importance_scores) / len(importance_scores)
                 logger.info(f"📊 Average importance score: {avg_importance:.1f}")
