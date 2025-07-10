@@ -462,7 +462,7 @@ class EnhancedGitHandler:
 
 📅 Timestamp: {timestamp}
 🔗 Source: Financial Modeling Prep API
-🧠 AI Models: FinBERT Sentiment + Importance (3-classes)
+🧠 AI Models: FinBERT Sentiment + Importance (3-classes with argmax)
 🌍 Distribution: MSCI-weighted geographic allocation{stats_info}
 
 ✨ Enhanced investor-grade configuration active
@@ -981,8 +981,8 @@ def remove_duplicates(news_list):
 
 def compute_importance_score(article, category=None) -> dict:
     """
-    🚀 CORRECTIF FINAL: Importance 3-classes avec seuils intelligents + aliases FR/EN/Legacy
-    Retourne les probabilités et un score pondéré avec logique de décision améliorée.
+    🎯 Importance 3-classes with simplified argmax decision + aliases FR/EN/Legacy
+    Returns probabilities and weighted score with streamlined decision logic.
     """
     if not USE_FINBERT:
         return {
@@ -1037,27 +1037,13 @@ def compute_importance_score(article, category=None) -> dict:
         elif total == 0:
             normalized_probs = {"general": 1.0, "important": 0.0, "critical": 0.0}
 
-        # 🚀 LOGIQUE À SEUILS INTELLIGENTS (remplace le simple argmax)
-        critical_prob = normalized_probs["critical"]
-        important_prob = normalized_probs["important"]
-        general_prob = normalized_probs["general"]
-        
-        # Seuils calibrés pour éviter le sur-classement
-        CRITICAL_THRESHOLD = 0.55   # 55% minimum pour être critique
-        IMPORTANT_THRESHOLD = 0.45  # 45% minimum pour être important
-        MIN_DOMINANCE = 0.15        # 15% d'écart minimum avec les autres
-        
-        # Détermination intelligente du niveau
-        if critical_prob >= CRITICAL_THRESHOLD and critical_prob > max(important_prob, general_prob) + MIN_DOMINANCE:
-            level = "critical"
-        elif important_prob >= IMPORTANT_THRESHOLD and important_prob > max(critical_prob, general_prob) + MIN_DOMINANCE:
-            level = "important"
-        else:
-            level = "general"  # Par défaut si aucun seuil n'est atteint ou scores trop proches
+        # ═══ NOUVELLE DÉCISION SIMPLE AVEC ARGMAX ═══════════════════
+        level = max(normalized_probs, key=normalized_probs.get)  # ← argmax direct
+        # ═══════════════════════════════════════════════════════════════
         
         # Log de la décision si debug activé
         if SENTIMENT_PROFILING:
-            logger.debug(f"🎯 Décision: {level} (C:{critical_prob:.3f} I:{important_prob:.3f} G:{general_prob:.3f})")
+            logger.debug(f"🎯 Décision argmax: {level} (probas: {normalized_probs})")
         
         # Score pondéré (25-95 scale) - formule inchangée
         score = round(
@@ -1078,12 +1064,7 @@ def compute_importance_score(article, category=None) -> dict:
                 "raw_labels": list(probs.keys()),
                 "aliases_used": True,
                 "total_prob": round(sum(normalized_probs.values()), 3),
-                "decision_logic": "threshold_based",  # ← Nouveau flag pour indiquer la logique utilisée
-                "thresholds_applied": {  # ← Métadonnées des seuils pour debug
-                    "critical": CRITICAL_THRESHOLD,
-                    "important": IMPORTANT_THRESHOLD,
-                    "min_dominance": MIN_DOMINANCE
-                }
+                "decision_logic": "argmax",  # ← Nouveau flag simple
             },
         }
 
@@ -1498,7 +1479,7 @@ def process_news_data(news_sources):
             if "sentiment_metadata" in normalized:
                 news_item["sentiment_metadata"] = normalized["sentiment_metadata"]
             
-            # ⚡ Specialized importance analysis v4.0 (3-classes avec seuils)
+            # ⚡ Specialized importance analysis v4.0 (3-classes avec argmax)
             importance_result = compute_importance_score(news_item, source_type)
             news_item["importance_level"] = importance_result["level"]        # general/important/critical
             news_item["importance_prob"] = importance_result["prob"]          # probabilités détaillées
@@ -1573,20 +1554,20 @@ def process_news_data(news_sources):
         if importance_used > 0:
             logger.info(f"⚡ Importance model analyzed {importance_used}/{len(all_processed_articles)} articles ({importance_used/len(all_processed_articles)*100:.1f}%)")
             
-            # Distribution par niveau d'importance avec correctif d'alias + seuils
+            # Distribution par niveau d'importance avec correctif d'alias + argmax
             importance_levels = Counter(article["importance_level"] for article in all_processed_articles if "importance_level" in article)
             logger.info(f"📊 Importance levels: {dict(importance_levels)}")
             
             # 🔧 DIAGNOSTIC: Compter les articles avec correctifs appliqués
             alias_articles = sum(1 for article in all_processed_articles 
                                if article.get("importance_metadata", {}).get("aliases_used"))
-            threshold_articles = sum(1 for article in all_processed_articles 
-                                   if article.get("importance_metadata", {}).get("decision_logic") == "threshold_based")
+            argmax_articles = sum(1 for article in all_processed_articles 
+                                if article.get("importance_metadata", {}).get("decision_logic") == "argmax")
             
             if alias_articles > 0:
                 logger.info(f"🔧 Articles avec correctif aliases: {alias_articles}/{importance_used} ({alias_articles/importance_used*100:.1f}%)")
-            if threshold_articles > 0:
-                logger.info(f"🎯 Articles avec logique seuils: {threshold_articles}/{importance_used} ({threshold_articles/importance_used*100:.1f}%)")
+            if argmax_articles > 0:
+                logger.info(f"🎯 Articles avec décision argmax: {argmax_articles}/{importance_used} ({argmax_articles/importance_used*100:.1f}%)")
             
             # Average importance scores
             importance_scores = [article["importance_score"] for article in all_processed_articles if "importance_score" in article]
@@ -1602,7 +1583,7 @@ def process_news_data(news_sources):
                     "avg_importance": avg_importance,
                     "importance_distribution": dict(importance_levels),
                     "alias_fix_applied": alias_articles,
-                    "threshold_logic_applied": threshold_articles  # 🔧 Nouveau métrique
+                    "argmax_logic_applied": argmax_articles  # 🔧 Nouveau métrique
                 }
     
     return formatted_data
@@ -1655,7 +1636,7 @@ def generate_themes_json(news_data):
         "themes": themes_data,
         "lastUpdated": datetime.now().isoformat(),
         "analysisCount": sum(len(articles) for articles in news_data.values() if isinstance(articles, list)),
-        "config_version": "investor-grade-v4.0-dual-specialized-models",
+        "config_version": "investor-grade-v4.0-dual-specialized-models-argmax",
         "model_info": _MODEL_METADATA if ENABLE_MODEL_METRICS else None
     }
     
@@ -1664,7 +1645,7 @@ def generate_themes_json(news_data):
     try:
         with open(THEMES_JSON_PATH, 'w', encoding='utf-8') as f:
             json.dump(themes_output, f, ensure_ascii=False, indent=2)
-        logger.info(f"✅ Enhanced themes.json with dual specialized models updated (v4.0)")
+        logger.info(f"✅ Enhanced themes.json with dual specialized models updated (v4.0 - argmax)")
         return True
     except Exception as e:
         logger.error(f"❌ Error updating themes.json file: {str(e)}")
@@ -1674,7 +1655,7 @@ def main():
     """🚀 Enhanced main execution with Dual Specialized Models + Git Integration v4.0"""
     try:
         logger.info("🚀 Starting TradePulse Investor-Grade News Collection v4.0...")
-        logger.info(f"🎯 Dual Specialized Models: sentiment + importance (3-classes avec seuils)")
+        logger.info(f"🎯 Dual Specialized Models: sentiment + importance (3-classes with argmax)")
         
         # Pré-charge les deux modèles spécialisés
         start_time = time.time()
@@ -1722,8 +1703,8 @@ def main():
             if existing_data:
                 return True
         
-        # 🚀 Process with dual specialized models v4.0 + seuils intelligents
-        logger.info("🔍 Processing with dual specialized models (sentiment + importance avec seuils intelligents)...")
+        # 🚀 Process with dual specialized models v4.0 + argmax simple
+        logger.info("🔍 Processing with dual specialized models (sentiment + importance with simple argmax)...")
         news_data = process_news_data(news_sources)
         
         # Update files
@@ -1762,10 +1743,10 @@ def main():
                     sentiment = details["sentiment_distribution"]
                     logger.info(f"      Sentiment: {sentiment['positive']}%↑ {sentiment['negative']}%↓")
         
-        # 🚀 Dual specialized models performance summary v4.0 avec seuils
+        # 🚀 Dual specialized models performance summary v4.0 avec argmax
         logger.info("🎯 Dual Specialized Models Performance Summary:")
         logger.info(f"  Sentiment Model: {_MODEL_METADATA['sentiment_model']}")
-        logger.info(f"  Importance Model: {_MODEL_METADATA['importance_model']} (3-classes avec seuils)")
+        logger.info(f"  Importance Model: {_MODEL_METADATA['importance_model']} (3-classes with argmax)")
         logger.info(f"  System Version: {_MODEL_METADATA['version']}")
         logger.info(f"  Load Time: {_MODEL_METADATA['load_time']:.2f}s")
         if "performance_metrics" in _MODEL_METADATA:
@@ -1779,10 +1760,10 @@ def main():
             # 🔧 Nouveaux logs pour monitoring des correctifs
             if "alias_fix_applied" in metrics:
                 logger.info(f"  🔧 Alias Fix Applied: {metrics['alias_fix_applied']} articles")
-            if "threshold_logic_applied" in metrics:
-                logger.info(f"  🎯 Threshold Logic Applied: {metrics['threshold_logic_applied']} articles")
+            if "argmax_logic_applied" in metrics:
+                logger.info(f"  🎯 Argmax Logic Applied: {metrics['argmax_logic_applied']} articles")
         
-        logger.info("✅ TradePulse v4.0 with Dual Specialized Models + Intelligent Thresholds completed successfully!")
+        logger.info("✅ TradePulse v4.0 with Dual Specialized Models + Simple Argmax completed successfully!")
         return success_news and success_themes
         
     except Exception as e:
