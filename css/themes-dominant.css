@@ -57,15 +57,15 @@
   margin-bottom: 1.5rem;
 }
 
-/* Cartes d'axes */
+/* Cartes d'axes - AJUSTÉ */
 .theme-card {
   background: var(--card-bg);
-  padding: 1.25rem;
+  padding: 1rem; /* Réduit de 1.25rem */
   border-radius: .75rem;
   border: 1px solid var(--border-color);
   backdrop-filter: blur(10px);
   transition: all .3s ease;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem; /* Réduit de 1.5rem */
 }
 
 .theme-card:hover {
@@ -78,20 +78,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: .75rem;
-  margin-bottom: 1.25rem;
-  padding-bottom: .75rem;
+  gap: .5rem; /* Réduit de .75rem */
+  margin-bottom: 1rem; /* Réduit de 1.25rem */
+  padding-bottom: .65rem; /* Réduit de .75rem */
   border-bottom: 1px solid var(--border-color);
   flex-wrap: wrap;
 }
 
 .axis-icon {
-  font-size: 1.5rem;
+  font-size: 1.3rem; /* Réduit de 1.5rem */
   filter: saturate(1.5);
 }
 
 .axis-title {
-  font-size: 1.1rem;
+  font-size: 1rem; /* Réduit de 1.1rem */
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -.02em;
@@ -111,8 +111,8 @@
   background: none;
   border: none;
   color: var(--text-secondary);
-  padding: .35rem .75rem;
-  font-size: .75rem;
+  padding: .3rem .65rem; /* Réduit de .35rem .75rem */
+  font-size: .7rem; /* Réduit de .75rem */
   font-weight: 500;
   cursor: pointer;
   transition: all .3s ease;
@@ -134,7 +134,7 @@
 
 /* Zone de contenu des thèmes */
 .theme-content-area {
-  min-height: 400px;
+  min-height: 380px; /* Réduit de 400px */
 }
 
 /* ==== 3. Liste & items avec barres modernes ============================================= */
@@ -144,7 +144,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: .5rem;
+  gap: .45rem; /* Réduit de .5rem */
 }
 
 .theme-item {
@@ -154,11 +154,11 @@
   animation: fadeInUp .4s ease forwards;
   transition: all .2s ease;
   position: relative;
-  padding-left: 12px;
+  padding-left: 10px; /* Réduit de 12px */
 }
 
 .theme-item:hover {
-  transform: translateX(4px);
+  transform: translateX(3px); /* Réduit de 4px */
 }
 
 /* Animation échelonnée */
@@ -180,12 +180,12 @@
   }
 }
 
-/* Contenu du thème */
+/* Contenu du thème - AJUSTÉ */
 .theme-content {
   display: flex;
   align-items: center;
-  gap: .75rem;
-  font-size: .875rem;
+  gap: .6rem; /* Réduit de .75rem */
+  font-size: .8rem; /* Réduit de .875rem */
 }
 
 /* Indicateur de sentiment */
@@ -195,8 +195,8 @@
   left: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 6px;
-  height: 6px;
+  width: 5px; /* Réduit de 6px */
+  height: 5px; /* Réduit de 6px */
   border-radius: 50%;
   opacity: .8;
 }
@@ -219,9 +219,9 @@
 /* Barre de progression moderne */
 .theme-bar {
   flex: 1;
-  height: 6px;
+  height: 5px; /* Réduit de 6px */
   background: var(--bar-bg);
-  border-radius: 4px;
+  border-radius: 3px;
   position: relative;
   overflow: hidden;
 }
@@ -229,7 +229,7 @@
 .theme-progress {
   position: absolute;
   inset: 0;
-  border-radius: 4px;
+  border-radius: 3px;
   width: var(--pct, 0%);
   transition: width .6s cubic-bezier(0.4, 0, 0.2, 1);
   background: linear-gradient(90deg, var(--col1), var(--col2));
@@ -240,24 +240,24 @@
 .theme-item.negative { --col1: var(--negative); --col2: #ff7583; }
 .theme-item.neutral { --col1: var(--neutral); --col2: #b3bec5; }
 
-/* Nom du thème */
+/* Nom du thème - AJUSTÉ */
 .theme-name {
   color: var(--text-primary);
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 250px; /* Plus d'espace maintenant */
+  max-width: 200px; /* Réduit de 250px */
 }
 
-/* Compteur moderne */
+/* Compteur moderne - AJUSTÉ */
 .theme-count {
-  min-width: 24px;
+  min-width: 22px; /* Réduit de 24px */
   text-align: center;
   font-weight: 700;
-  font-size: .7rem;
-  padding: .15rem .35rem;
-  border-radius: 10px;
+  font-size: .65rem; /* Réduit de .7rem */
+  padding: .1rem .3rem; /* Réduit de .15rem .35rem */
+  border-radius: 8px;
   background: rgba(0,255,135,.12);
   color: var(--accent);
   margin-left: auto;
@@ -266,13 +266,13 @@
 /* ==== 4. Contrôles : Recherche & Toggle ============================= */
 .theme-search {
   flex: 1;
-  max-width: 280px;
-  padding: .6rem 1rem .6rem 2.5rem;
+  max-width: 260px; /* Réduit de 280px */
+  padding: .55rem .9rem .55rem 2.3rem; /* Ajusté */
   border-radius: 999px;
   border: 1px solid var(--border-hover);
-  background: rgba(0,0,0,.15) url("data:image/svg+xml,%3csvg fill='%2300ff87' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M11.742 10.344a6.5 6.5 0 10-1.397 1.398h-.001l3.85 3.85a1 1 0 001.415-1.414l-3.85-3.85zm-5.242.656a5 5 0 110-10 5 5 0 010 10z'/%3e%3c/svg%3e") 14px 50%/16px no-repeat;
+  background: rgba(0,0,0,.15) url("data:image/svg+xml,%3csvg fill='%2300ff87' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M11.742 10.344a6.5 6.5 0 10-1.397 1.398h-.001l3.85 3.85a1 1 0 001.415-1.414l-3.85-3.85zm-5.242.656a5 5 0 110-10 5 5 0 010 10z'/%3e%3c/svg%3e") 12px 50%/14px no-repeat;
   color: var(--text-primary);
-  font-size: .875rem;
+  font-size: .8rem; /* Réduit de .875rem */
   transition: all .3s ease;
 }
 
@@ -291,12 +291,12 @@
   background: rgba(0,255,135,.05);
   color: var(--text-primary);
   border-radius: 999px;
-  padding: .5rem 1.25rem;
-  font-size: .8rem;
+  padding: .45rem 1rem; /* Réduit de .5rem 1.25rem */
+  font-size: .75rem; /* Réduit de .8rem */
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: .5rem;
+  gap: .4rem; /* Réduit de .5rem */
   transition: all .25s ease;
   cursor: pointer;
 }
@@ -308,7 +308,7 @@
 }
 
 .top-toggle-btn i {
-  font-size: .75rem;
+  font-size: .7rem; /* Réduit de .75rem */
   color: var(--accent);
 }
 
@@ -318,8 +318,8 @@
   top: calc(100% + 12px);
   left: 0;
   right: 0;
-  max-width: 380px;
-  padding: 1.25rem;
+  max-width: 360px; /* Réduit de 380px */
+  padding: 1.1rem; /* Réduit de 1.25rem */
   background: var(--tooltip-bg);
   border: 1px solid var(--border-hover);
   border-radius: .625rem;
@@ -357,19 +357,19 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: .75rem;
+  margin-bottom: .9rem; /* Réduit de 1rem */
+  padding-bottom: .65rem; /* Réduit de .75rem */
   border-bottom: 1px solid var(--border-color);
 }
 
 .tooltip-header strong {
-  font-size: 1rem;
+  font-size: .9rem; /* Réduit de 1rem */
   color: var(--text-primary);
 }
 
 .tooltip-close {
-  width: 24px;
-  height: 24px;
+  width: 22px; /* Réduit de 24px */
+  height: 22px; /* Réduit de 24px */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -387,16 +387,16 @@
 
 /* Section titres */
 .headlines-section h4 {
-  font-size: .75rem;
+  font-size: .7rem; /* Réduit de .75rem */
   text-transform: uppercase;
   letter-spacing: .04em;
   color: var(--text-secondary);
-  margin-bottom: .75rem;
+  margin-bottom: .65rem; /* Réduit de .75rem */
 }
 
 .headline-item {
-  padding: .5rem 0;
-  font-size: .875rem;
+  padding: .45rem 0; /* Réduit de .5rem */
+  font-size: .8rem; /* Réduit de .875rem */
   line-height: 1.5;
   color: var(--text-primary);
   border-bottom: 1px solid rgba(255,255,255,.05);
@@ -408,15 +408,15 @@
 
 /* Barre de sentiment */
 .sentiment-bar-container {
-  margin-top: 1.25rem;
+  margin-top: 1.1rem; /* Réduit de 1.25rem */
 }
 
 .sentiment-bar {
   display: flex;
-  height: 8px;
+  height: 7px; /* Réduit de 8px */
   border-radius: 4px;
   overflow: hidden;
-  margin-bottom: .5rem;
+  margin-bottom: .45rem; /* Réduit de .5rem */
 }
 
 .sentiment-bar .positive { background: var(--positive); }
@@ -426,7 +426,7 @@
 .sentiment-labels {
   display: flex;
   justify-content: space-between;
-  font-size: .7rem;
+  font-size: .65rem; /* Réduit de .7rem */
   font-weight: 600;
 }
 
@@ -437,19 +437,19 @@
 /* ==== 6. États & Animations ========================================= */
 .error-state {
   text-align: center;
-  padding: 3rem;
+  padding: 2.5rem; /* Réduit de 3rem */
   color: var(--text-secondary);
 }
 
 .error-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+  font-size: 2.5rem; /* Réduit de 3rem */
+  margin-bottom: .9rem; /* Réduit de 1rem */
   opacity: .5;
 }
 
 .retry-btn {
-  margin-top: 1rem;
-  padding: .5rem 1.5rem;
+  margin-top: .9rem; /* Réduit de 1rem */
+  padding: .45rem 1.3rem; /* Réduit de .5rem 1.5rem */
   background: var(--accent);
   color: #000;
   border: none;
@@ -467,7 +467,7 @@
 /* Info mise à jour */
 #themes-last-updated {
   color: var(--text-muted);
-  font-size: .75rem;
+  font-size: .7rem; /* Réduit de .75rem */
   margin-left: auto;
 }
 
