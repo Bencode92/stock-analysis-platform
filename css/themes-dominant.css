@@ -44,7 +44,7 @@
   }
 }
 
-/* ==== 2. Layout principal & Grille 3 périodes ===================================== */
+/* ==== 2. Layout principal ===================================== */
 .themes-dominant-container {
   margin-bottom: 2rem;
 }
@@ -60,7 +60,7 @@
 /* Cartes d'axes */
 .theme-card {
   background: var(--card-bg);
-  padding: 1.25rem; /* Réduit de 1.5rem */
+  padding: 1.25rem;
   border-radius: .75rem;
   border: 1px solid var(--border-color);
   backdrop-filter: blur(10px);
@@ -73,14 +73,16 @@
   border-color: var(--border-hover);
 }
 
-/* Header d'axe avec icône */
+/* Header d'axe avec icône et sélecteur de période */
 .axis-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: .75rem;
   margin-bottom: 1.25rem;
   padding-bottom: .75rem;
   border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
 }
 
 .axis-icon {
@@ -93,50 +95,46 @@
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -.02em;
+  margin-right: auto;
 }
 
-/* Grille responsive 3 colonnes - MODIFIÉE */
-.periods-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr); /* Force 3 colonnes égales */
-  gap: 1rem; /* Réduit de 1.5rem */
-  align-items: start;
-}
-
-.period-column {
-  background: rgba(0,0,0,.15);
-  padding: 1rem; /* Réduit de 1.25rem */
-  border-radius: .625rem;
-  border: 1px solid var(--border-color);
-  min-height: 280px; /* Réduit de 320px */
+/* ==== NOUVEAU: Sélecteur de période ============================= */
+.period-selector {
   display: flex;
-  flex-direction: column;
+  gap: 0;
+  border-radius: 999px;
+  background: rgba(0,0,0,.2);
+  padding: 2px;
+}
+
+.period-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  padding: .35rem .75rem;
+  font-size: .75rem;
+  font-weight: 500;
+  cursor: pointer;
   transition: all .3s ease;
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
-.period-column:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,.1);
+.period-btn:hover {
+  color: var(--text-primary);
 }
 
-.period-title {
-  font-size: .8rem;
-  font-weight: 600;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: var(--accent);
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-}
-
-.period-title::before {
-  content: '';
-  width: 3px;
-  height: 12px;
+.period-btn.active {
   background: var(--accent);
-  border-radius: 2px;
+  color: #000;
+  font-weight: 600;
+  transform: scale(1.05);
+  box-shadow: 0 2px 6px rgba(0,255,135,.3);
+}
+
+/* Zone de contenu des thèmes */
+.theme-content-area {
+  min-height: 400px;
 }
 
 /* ==== 3. Liste & items avec barres modernes ============================================= */
@@ -146,8 +144,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: .5rem; /* Légèrement augmenté */
-  flex: 1;
+  gap: .5rem;
 }
 
 .theme-item {
@@ -156,8 +153,8 @@
   transform: translateY(8px);
   animation: fadeInUp .4s ease forwards;
   transition: all .2s ease;
-  position: relative; /* Pour le point de sentiment */
-  padding-left: 12px; /* Espace pour le point */
+  position: relative;
+  padding-left: 12px;
 }
 
 .theme-item:hover {
@@ -187,11 +184,11 @@
 .theme-content {
   display: flex;
   align-items: center;
-  gap: .6rem; /* Réduit de .75rem */
-  font-size: .825rem; /* Légèrement réduit */
+  gap: .75rem;
+  font-size: .875rem;
 }
 
-/* Indicateur de sentiment - NOUVEAU */
+/* Indicateur de sentiment */
 .theme-item::before {
   content: '';
   position: absolute;
@@ -250,20 +247,20 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 150px; /* Réduit de 200px */
+  max-width: 250px; /* Plus d'espace maintenant */
 }
 
 /* Compteur moderne */
 .theme-count {
-  min-width: 24px; /* Réduit de 28px */
+  min-width: 24px;
   text-align: center;
   font-weight: 700;
-  font-size: .7rem; /* Réduit de .75rem */
-  padding: .15rem .35rem; /* Réduit */
+  font-size: .7rem;
+  padding: .15rem .35rem;
   border-radius: 10px;
   background: rgba(0,255,135,.12);
   color: var(--accent);
-  margin-left: auto; /* Pousse le compteur à droite */
+  margin-left: auto;
 }
 
 /* ==== 4. Contrôles : Recherche & Toggle ============================= */
@@ -475,20 +472,20 @@
 }
 
 /* ==== 7. Responsive ================================================= */
-@media (max-width: 1200px) {
-  .periods-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
 @media (max-width: 768px) {
-  .periods-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
+  .axis-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .75rem;
   }
   
-  .period-column {
-    min-height: auto;
+  .axis-title {
+    margin-right: 0;
+  }
+  
+  .period-selector {
+    width: 100%;
+    justify-content: center;
   }
   
   .theme-search {
@@ -525,30 +522,3 @@
   filter: brightness(1.2);
   box-shadow: 0 2px 8px rgba(0,255,135,.3);
 }
-
-/* Légende de sentiment - NOUVEAU */
-.sentiment-legend {
-  display: flex;
-  gap: 1.5rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border-color);
-  font-size: .75rem;
-  color: var(--text-secondary);
-}
-
-.sentiment-legend-item {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-}
-
-.sentiment-legend-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.sentiment-legend-dot.positive { background: var(--positive); }
-.sentiment-legend-dot.negative { background: var(--negative); }
-.sentiment-legend-dot.neutral { background: var(--neutral); }
