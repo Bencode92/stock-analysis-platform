@@ -107,7 +107,7 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
     if (item.url) {
         card.setAttribute('data-url', item.url);
         card.classList.add('clickable-news');
-        card.addEventListener('click', () => window.open(item.url, '_blank'));
+        card.addEventListener('click', () => window.open(item.url, '_blank', 'noopener'));
     }
 
     // 🚀 NOUVEAU : Nettoyer le HTML et créer du texte brut
@@ -160,14 +160,18 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
 }
 
 /**
- * Retourne les classes CSS pour les badges d'impact
+ * Retourne les classes CSS pour les badges d'impact - VERSION AMÉLIORÉE
  */
 function getImpactBadgeClass(impact) {
     switch(impact) {
         case 'negative':
             return 'bg-red-800 text-red-200 border border-red-600';
+        case 'slightly_negative':
+            return 'bg-red-900 text-red-300 border border-red-700';
         case 'positive':
             return 'bg-emerald-800 text-emerald-200 border border-emerald-600';
+        case 'slightly_positive':
+            return 'bg-emerald-900 text-emerald-300 border border-emerald-700';
         default:
             return 'bg-yellow-800 text-yellow-200 border border-yellow-600';
     }
@@ -179,8 +183,10 @@ function getImpactBadgeClass(impact) {
 function getImpactBorderColor(impact) {
     switch(impact) {
         case 'negative':
+        case 'slightly_negative':
             return 'red-600';
         case 'positive':
+        case 'slightly_positive':
             return 'emerald-600';
         default:
             return 'yellow-600';
@@ -193,8 +199,10 @@ function getImpactBorderColor(impact) {
 function getSentimentIcon(sentiment) {
     switch(sentiment) {
         case 'positive':
+        case 'slightly_positive':
             return '⬆️';
         case 'negative':
+        case 'slightly_negative':
             return '⬇️';
         default:
             return '➖';
@@ -202,7 +210,7 @@ function getSentimentIcon(sentiment) {
 }
 
 /**
- * Distribue les actualités par niveau d'importance
+ * Distribue les actualités par niveau d'importance - VERSION CORRIGÉE
  * @param {Object} newsData - Données d'actualités
  */
 function distributeNewsByImportance(newsData) {
@@ -233,7 +241,7 @@ function distributeNewsByImportance(newsData) {
 
     console.log(`Après filtrage des types exclus: ${allNews.length} actualités restantes`);
 
-    // Vérifier que tous les champs nécessaires sont présents
+    // 🎯 CORRECTIFS DISTRIBUTION v2.0 - Vérifier que tous les champs nécessaires sont présents
     allNews.forEach(news => {
         // Valeurs par défaut si elles sont manquantes
         news.impact = news.impact || 'neutral';
@@ -241,8 +249,11 @@ function distributeNewsByImportance(newsData) {
         news.category = news.category || 'general';
         news.country = news.country || 'other';
         
-        // Hiérarchisation basée sur le score si disponible, sinon utiliser l'ancienne méthode
-        if (!news.hierarchy && news.importance_score !== undefined) {
+        // 🔧 CORRECTIF 1: Priorité à importance_level du JSON (field direct du Python)
+        if (!news.hierarchy && news.importance_level) {
+            news.hierarchy = news.importance_level;
+            console.log(`📊 Using importance_level: ${news.importance_level} for "${news.title.substring(0, 50)}..."`);
+        } else if (!news.hierarchy && news.importance_score !== undefined) {
             const score = parseFloat(news.importance_score);
             
             if (score >= 45) {
@@ -252,6 +263,7 @@ function distributeNewsByImportance(newsData) {
             } else {
                 news.hierarchy = 'normal';
             }
+            console.log(`📊 Using importance_score: ${score} → ${news.hierarchy} for "${news.title.substring(0, 50)}..."`);
         } else if (!news.hierarchy && news.score !== undefined) {
             const score = parseFloat(news.score);
             
@@ -271,6 +283,12 @@ function distributeNewsByImportance(newsData) {
             } else {
                 news.hierarchy = 'normal';
             }
+        }
+        
+        // 🔧 CORRECTIF 2: Alias general → normal pour compatibilité JSON
+        if (news.hierarchy === 'general') {
+            news.hierarchy = 'normal';
+            console.log(`🔄 Converted 'general' to 'normal' for "${news.title.substring(0, 50)}..."`);
         }
     });
 
@@ -309,10 +327,19 @@ function distributeNewsByImportance(newsData) {
         regular: regularNews
     };
 
-    // Logs de débogage
-    console.log(`Actualités critiques: ${criticalNews.length}`);
-    console.log(`Actualités importantes: ${importantNews.length}`);
-    console.log(`Actualités générales: ${regularNews.length}`);
+    // 🔧 CORRECTIF 3: Logs de débogage détaillés
+    console.log(`📊 Distribution finale des actualités:`);
+    console.log(`  🔴 Critiques: ${criticalNews.length}`);
+    console.log(`  🟡 Importantes: ${importantNews.length}`);
+    console.log(`  ⚪ Générales: ${regularNews.length}`);
+    
+    // Debug les titres des importantes pour vérifier
+    if (importantNews.length > 0) {
+        console.log(`📋 Exemples d'actualités importantes:`);
+        importantNews.slice(0, 3).forEach((news, i) => {
+            console.log(`  ${i+1}. "${news.title.substring(0, 60)}..." (${news.hierarchy})`);
+        });
+    }
 
     // Afficher dans les sections correspondantes
     displayCriticalNews(criticalNews);
@@ -460,7 +487,7 @@ function displayFallbackData() {
 }
 
 /**
- * Fonctions utilitaires pour les textes
+ * Fonctions utilitaires pour les textes - VERSION AMÉLIORÉE
  */
 function getImpactText(impact) {
     return impact === 'negative' ? 'IMPACT NÉGATIF' : 
@@ -472,7 +499,9 @@ function getImpactText(impact) {
 
 function getSentimentText(sentiment) {
     return sentiment === 'positive' ? 'SENTIMENT POSITIF' : 
-           sentiment === 'negative' ? 'SENTIMENT NÉGATIF' : 
+           sentiment === 'slightly_positive' ? 'SENTIMENT LÉGÈREMENT POSITIF' :
+           sentiment === 'negative' ? 'SENTIMENT NÉGATIF' :
+           sentiment === 'slightly_negative' ? 'SENTIMENT LÉGÈREMENT NÉGATIF' :
            'SENTIMENT NEUTRE';
 }
 
