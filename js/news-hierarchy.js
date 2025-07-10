@@ -410,7 +410,7 @@ function displayImportantNews(news) {
 }
 
 /**
- * Fonction pour afficher les actualités régulières - VERSION CORRIGÉE
+ * Fonction pour afficher les actualités régulières - VERSION CORRIGÉE GRILLE
  * @param {Array} news - Actualités régulières
  */
 function displayRecentNews(news) {
@@ -420,9 +420,9 @@ function displayRecentNews(news) {
         return;
     }
 
-    // CORRECTION: Transformation directe en grille uniforme
+    // 🔧 CORRECTIF FINAL: Utiliser les mêmes classes Tailwind que les autres sections
     container.innerHTML = '';
-    container.className = 'news-grid'; // Classe CSS commune pour toutes les grilles
+    container.className = 'grid grid-cols-1 md:grid-cols-2 gap-4'; // ← HARMONISATION COMPLETE
 
     if (news.length === 0) {
         container.innerHTML = '<p class="text-center text-gray-400 col-span-full">Aucune actualité récente pour le moment</p>';
@@ -440,7 +440,7 @@ function displayRecentNews(news) {
         container.appendChild(newsCard);
     });
 
-    console.log(`✅ ${news.length} actualités générales affichées avec design uniforme`);
+    console.log(`✅ ${news.length} actualités générales affichées avec grille harmonisée (grid grid-cols-1 md:grid-cols-2 gap-4)`);
 }
 
 /**
@@ -586,8 +586,8 @@ function checkVisibleItems() {
         if (!container) return;
         
         // Pour recent-news, chercher dans la grille
-        const gridContainer = containerId === 'recent-news' && !container.classList.contains('news-grid')
-            ? container.querySelector('.news-grid') 
+        const gridContainer = containerId === 'recent-news' && !container.classList.contains('grid')
+            ? container.querySelector('.grid') 
             : container;
             
         if (!gridContainer) return;
