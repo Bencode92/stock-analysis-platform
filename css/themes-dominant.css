@@ -525,3 +525,46 @@
   filter: brightness(1.2);
   box-shadow: 0 2px 8px rgba(0,255,135,.3);
 }
+
+/* ==== 9. FIXES pour doublons et mise en page ======================== */
+
+/* Cacher les titres dupliqués qui apparaissent après les icônes */
+.theme-card > span:not(.axis-icon) {
+  display: none !important;
+}
+
+/* Cacher les boutons de période en bas (garder seulement ceux dans axis-header) */
+.theme-card > .period-selector:not(.axis-header .period-selector) {
+  display: none !important;
+}
+
+/* S'assurer que la grille des cartes utilise toute la largeur */
+.themes-dominant-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+
+/* Ajuster la largeur des cartes pour éviter la troncature */
+.theme-card {
+  min-width: 280px;
+  width: 100%;
+}
+
+/* S'assurer que le titre "Régions" ne soit pas tronqué */
+.axis-title {
+  flex-shrink: 0;
+  min-width: fit-content;
+}
+
+/* Forcer l'affichage correct des éléments dans l'axis-header */
+.axis-header > * {
+  display: flex !important;
+}
+
+/* Cleanup général - supprimer tout texte orphelin */
+.theme-card > text,
+.theme-card > :not(.axis-header):not(.theme-content-area):not(.theme-tooltip) {
+  display: none !important;
+}
