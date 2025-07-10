@@ -21,9 +21,9 @@
   --border-hover: rgba(0,255,135,.25);
   
   /* Espacements */
-  --gap-sm: .4rem;
-  --gap-md: .8rem;
-  --gap-lg: 1.2rem;
+  --gap-sm: .35rem;
+  --gap-md: .7rem;
+  --gap-lg: 1rem;
 }
 
 /* Mode clair automatique */
@@ -57,10 +57,10 @@
   margin-bottom: 1.2rem;
 }
 
-/* Cartes d'axes - PLUS COMPACT */
+/* Cartes d'axes - ULTRA COMPACT */
 .theme-card {
   background: var(--card-bg);
-  padding: .85rem;
+  padding: .7rem;
   border-radius: .6rem;
   border: 1px solid var(--border-color);
   backdrop-filter: blur(10px);
@@ -78,27 +78,27 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: .4rem;
-  margin-bottom: .8rem;
-  padding-bottom: .5rem;
+  gap: .35rem;
+  margin-bottom: .7rem;
+  padding-bottom: .45rem;
   border-bottom: 1px solid var(--border-color);
   flex-wrap: wrap;
 }
 
 .axis-icon {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   filter: saturate(1.5);
 }
 
 .axis-title {
-  font-size: .9rem;
+  font-size: .85rem;
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -.02em;
   margin-right: auto;
 }
 
-/* ==== Sélecteur de période COMPACT ============================= */
+/* ==== Sélecteur de période MINIMAL ============================= */
 .period-selector {
   display: flex;
   gap: 0;
@@ -111,8 +111,8 @@
   background: none;
   border: none;
   color: var(--text-secondary);
-  padding: .25rem .5rem;
-  font-size: .65rem;
+  padding: .2rem .45rem;
+  font-size: .6rem;
   font-weight: 500;
   cursor: pointer;
   transition: all .3s ease;
@@ -134,17 +134,17 @@
 
 /* Zone de contenu des thèmes */
 .theme-content-area {
-  min-height: 360px;
+  min-height: 350px;
 }
 
-/* ==== 3. Liste & items ULTRA COMPACT ============================================= */
+/* ==== 3. Liste & items MINIMAL ============================================= */
 .theme-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: .4rem;
+  gap: .35rem;
 }
 
 .theme-item {
@@ -154,7 +154,7 @@
   animation: fadeInUp .35s ease forwards;
   transition: all .2s ease;
   position: relative;
-  padding-left: 8px;
+  padding-left: 7px;
 }
 
 .theme-item:hover {
@@ -180,46 +180,46 @@
   }
 }
 
-/* Contenu du thème - ULTRA COMPACT */
+/* Contenu du thème - MINIMAL */
 .theme-content {
   display: flex;
   align-items: center;
-  gap: .5rem;
-  font-size: .75rem;
+  gap: .45rem;
+  font-size: .72rem;
 }
 
-/* Indicateur de sentiment RÉDUIT */
+/* Indicateur de sentiment MINIMAL */
 .theme-item::before {
   content: '';
   position: absolute;
   left: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 4px;
-  height: 4px;
+  width: 3px;
+  height: 3px;
   border-radius: 50%;
   opacity: .85;
 }
 
 .theme-item.positive::before {
   background: var(--positive);
-  box-shadow: 0 0 5px rgba(36,209,132,.5);
+  box-shadow: 0 0 4px rgba(36,209,132,.5);
 }
 
 .theme-item.negative::before {
   background: var(--negative);
-  box-shadow: 0 0 5px rgba(255,92,108,.5);
+  box-shadow: 0 0 4px rgba(255,92,108,.5);
 }
 
 .theme-item.neutral::before {
   background: var(--neutral);
-  box-shadow: 0 0 5px rgba(149,165,166,.5);
+  box-shadow: 0 0 4px rgba(149,165,166,.5);
 }
 
 /* Barre de progression FINE */
 .theme-bar {
   flex: 1;
-  height: 4px;
+  height: 3px;
   background: var(--bar-bg);
   border-radius: 2px;
   position: relative;
@@ -247,17 +247,17 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 180px;
+  max-width: 160px;
 }
 
 /* Compteur MINIMAL */
 .theme-count {
-  min-width: 20px;
+  min-width: 18px;
   text-align: center;
   font-weight: 700;
-  font-size: .6rem;
-  padding: .05rem .25rem;
-  border-radius: 6px;
+  font-size: .58rem;
+  padding: .02rem .2rem;
+  border-radius: 5px;
   background: rgba(0,255,135,.12);
   color: var(--accent);
   margin-left: auto;
