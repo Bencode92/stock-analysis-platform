@@ -1,5 +1,5 @@
 /**
- * themes-visualizer.js v5.2 - Gestionnaire des thèmes avec sélecteur de période
+ * themes-visualizer.js v5.3 - Gestionnaire des thèmes avec sélecteur de période global
  * Affichage d'une seule période à la fois pour éviter la troncature
  */
 
@@ -29,7 +29,7 @@ const ThemesVisualizer = {
 
     // Initialisation
     init: function() {
-        console.log('🎨 Initialisation ThemesVisualizer v5.2 - Sélecteur de période');
+        console.log('🎨 Initialisation ThemesVisualizer v5.3 - Sélecteur de période global');
         this.loadStartTime = performance.now();
         this.loadThemesData();
         this.setupEventListeners();
@@ -136,9 +136,12 @@ const ThemesVisualizer = {
         });
     },
 
-    // Rendu principal
+    // Rendu principal avec sélecteur global
     renderThemes: function() {
         if (!this.themesData || !this.isCompactFormat) return;
+        
+        // Créer le sélecteur de période global
+        this.createGlobalPeriodSelector();
         
         this.renderAxis('macroeconomie', 'Macroéconomie', '📈');
         this.renderAxis('fundamentals', 'Fondamentaux', '💰');
@@ -146,53 +149,60 @@ const ThemesVisualizer = {
         this.renderAxis('regions', 'Régions', '🌍');
     },
 
-    // Rendu d'un axe avec sélecteur de période
+    // Création du sélecteur de période global
+    createGlobalPeriodSelector: function() {
+        const container = document.querySelector('.themes-dominant-container');
+        if (!container || container.querySelector('.global-period-selector')) return;
+        
+        const selectorDiv = document.createElement('div');
+        selectorDiv.className = 'global-period-selector';
+        selectorDiv.innerHTML = `
+            <div class="period-selector-global">
+                ${this.periods.map(period => `
+                    <button class="period-btn ${period === this.activePeriod ? 'active' : ''}" 
+                            data-period="${period}">
+                        ${this.periodLabels[period]}
+                    </button>
+                `).join('')}
+            </div>
+        `;
+        
+        // Insérer après le titre
+        const h2 = container.querySelector('h2');
+        h2.parentNode.insertBefore(selectorDiv, h2.nextSibling);
+        
+        // Event listeners
+        selectorDiv.querySelectorAll('.period-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.activePeriod = e.target.dataset.period;
+                // Mettre à jour tous les boutons
+                document.querySelectorAll('.period-btn').forEach(b => {
+                    b.classList.toggle('active', b.dataset.period === this.activePeriod);
+                });
+                // Re-render tous les axes
+                this.renderThemes();
+            });
+        });
+    },
+
+    // Rendu d'un axe sans sélecteur de période individuel
     renderAxis: function(axisId, axisTitle, icon) {
         const container = document.getElementById(`${axisId}-themes`);
         if (!container) return;
         
-        // Structure avec sélecteur de période
+        // Structure sans sélecteur de période
         container.innerHTML = `
             <div class="axis-header">
                 <span class="axis-icon">${icon}</span>
                 <span class="axis-title">${axisTitle}</span>
-                <div class="period-selector">
-                    ${this.periods.map(period => `
-                        <button class="period-btn ${period === this.activePeriod ? 'active' : ''}" 
-                                data-period="${period}" 
-                                data-axis="${axisId}">
-                            ${this.periodLabels[period]}
-                        </button>
-                    `).join('')}
-                </div>
             </div>
             <div class="theme-content-area">
                 <ul class="theme-list" id="${axisId}-list"></ul>
             </div>
         `;
         
-        // Event listeners pour les boutons de période
-        container.querySelectorAll('.period-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const period = e.target.dataset.period;
-                this.switchPeriod(period, axisId);
-            });
-        });
-        
-        // Rendu initial
+        // Rendu initial avec la période active globale
         this.renderAxisThemes(axisId, this.activePeriod);
-    },
-
-    // Changement de période
-    switchPeriod: function(period, axisId) {
-        // Mettre à jour le bouton actif pour cet axe seulement
-        const container = document.getElementById(`${axisId}-themes`);
-        container.querySelectorAll('.period-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.period === period);
-        });
-        
-        // Re-render les thèmes pour cette période
-        this.renderAxisThemes(axisId, period);
     },
 
     // Rendu des thèmes pour un axe et une période
@@ -450,7 +460,7 @@ const ThemesVisualizer = {
             .flatMap(axis => Object.keys(axis)).length;
         
         console.log(`
-📊 Performance Metrics v5.2:
+📊 Performance Metrics v5.3:
 ⏱️  Load Time: ${loadTime}ms
 📦 Data Size: ${(dataSize / 1024).toFixed(1)}KB  
 🎯 Format: ${this.isCompactFormat ? 'Compact' : 'Legacy'}
@@ -465,7 +475,7 @@ const ThemesVisualizer = {
         if (!this.themesData) return;
         
         console.table({
-            version: '5.2-period-selector',
+            version: '5.3-global-period-selector',
             format: this.isCompactFormat ? 'Compact' : 'Legacy',
             activePeriod: this.activePeriod,
             searchQuery: this.searchQuery || 'None',
