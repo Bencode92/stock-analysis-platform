@@ -679,13 +679,17 @@ def remove_duplicates(news_list):
 
 def compute_importance_score(article, category=None) -> dict:
     """
-    ⚡ SCORE D'IMPORTANCE SPÉCIALISÉ v4.0 (100% modèle ML)
-    Utilise exclusivement le modèle Bencode92/tradepulse-finbert-importance
-    🔧 CORRECTIF 4: Retourne dict complet avec métadonnées
+    ⚡ SCORE D'IMPORTANCE SPÉCIALISÉ v4.0 (MODÈLE 3-CLASSES CORRIGÉ)
+    Utilise le modèle Bencode92/tradepulse-finbert-importance avec 3 niveaux:
+    - general (index 0): bruit, intérêt faible  
+    - important (index 1): info à surveiller
+    - critical (index 2): info potentiellement décisive
     """
     if not USE_FINBERT:
         return {
-            "score": 50.0,
+            "level": "general",
+            "prob": {"general": 1.0, "important": 0.0, "critical": 0.0},
+            "score": 25.0,
             "metadata": {"fallback": "ML disabled", "specialized": False}
         }
         
@@ -695,32 +699,49 @@ def compute_importance_score(article, category=None) -> dict:
         
         if not text.strip():
             return {
-                "score": 50.0,
+                "level": "general",
+                "prob": {"general": 1.0, "important": 0.0, "critical": 0.0},
+                "score": 25.0,
                 "metadata": {"fallback": "empty text", "specialized": False}
             }
             
         inputs = tok(text, return_tensors="pt", truncation=True, max_length=512).to(mdl.device)
         
         with torch.no_grad():
-            score = mdl(**inputs).logits.sigmoid().item()   # → [0, 1]
+            # 🔧 CORRECTIF MAJEUR: 3 logits → 3 probabilités via softmax
+            p_general, p_important, p_critical = mdl(**inputs).logits.softmax(-1).squeeze().tolist()
 
-        score_100 = round(score * 100, 1)
+        # Probabilités détaillées
+        probs = {
+            "general":   round(p_general,   3),
+            "important": round(p_important, 3),
+            "critical":  round(p_critical,  3)
+        }
         
-        # 🔧 CORRECTIF 4: Métadonnées complètes retournées
+        # Niveau dominant
+        level = max(probs, key=probs.get)
+        
+        # Score numérique pondéré (optionnel pour compatibilité)
+        score = round(p_general * 25 + p_important * 60 + p_critical * 95, 1)
+        
         return {
-            "score": score_100,
+            "level": level,
+            "prob": probs,
+            "score": score,
             "metadata": {
                 "model": _MODEL_IMPORTANCE,
-                "ml_score": score_100,
+                "version": _MODEL_METADATA["version"],
                 "specialized": True,
-                "version": _MODEL_METADATA["version"]
+                "classes": ["general", "important", "critical"]
             }
         }
         
     except Exception as e:
         logger.warning(f"Importance model failure: {e}")
         return {
-            "score": 50.0,
+            "level": "general",
+            "prob": {"general": 1.0, "important": 0.0, "critical": 0.0},
+            "score": 25.0,
             "metadata": {"fallback": f"error: {str(e)}", "specialized": False}
         }
 
@@ -1093,11 +1114,13 @@ def process_news_data(news_sources):
             if "sentiment_metadata" in normalized:
                 news_item["sentiment_metadata"] = normalized["sentiment_metadata"]
             
-            # ⚡ Specialized importance score v4.0
-            # 🔧 CORRECTIF 4: Propagation correcte des métadonnées importance
+            # ⚡ Specialized importance analysis v4.0 (3-classes)
+            # 🔧 CORRECTIF MAJEUR: Propagation correcte du système 3-classes
             importance_result = compute_importance_score(news_item, source_type)
-            news_item["importance_score"] = importance_result["score"]
-            news_item["importance_metadata"] = importance_result["metadata"]
+            news_item["importance_level"] = importance_result["level"]        # general/important/critical
+            news_item["importance_prob"] = importance_result["prob"]          # probabilités détaillées
+            news_item["importance_score"] = importance_result["score"]        # score numérique pondéré
+            news_item["importance_metadata"] = importance_result["metadata"]  # métadonnées modèle
             
             # Add to global list
             all_articles.append(news_item)
@@ -1153,7 +1176,7 @@ def process_news_data(news_sources):
         
         # 🚀 Dual specialized model usage stats v4.0
         sentiment_used = sum(1 for article in all_processed_articles if "impact_prob" in article)
-        importance_used = sum(1 for article in all_processed_articles if "importance_metadata" in article)
+        importance_used = sum(1 for article in all_processed_articles if "importance_level" in article)
         
         if sentiment_used > 0:
             logger.info(f"🎯 Sentiment model analyzed {sentiment_used}/{len(all_processed_articles)} articles ({sentiment_used/len(all_processed_articles)*100:.1f}%)")
@@ -1167,8 +1190,12 @@ def process_news_data(news_sources):
         if importance_used > 0:
             logger.info(f"⚡ Importance model analyzed {importance_used}/{len(all_processed_articles)} articles ({importance_used/len(all_processed_articles)*100:.1f}%)")
             
+            # Distribution par niveau d'importance
+            importance_levels = Counter(article["importance_level"] for article in all_processed_articles if "importance_level" in article)
+            logger.info(f"📊 Importance levels: {dict(importance_levels)}")
+            
             # Average importance scores
-            importance_scores = [article["importance_metadata"]["ml_score"] for article in all_processed_articles if "importance_metadata" in article and "ml_score" in article["importance_metadata"]]
+            importance_scores = [article["importance_score"] for article in all_processed_articles if "importance_score" in article]
             if importance_scores:
                 avg_importance = sum(importance_scores) / len(importance_scores)
                 logger.info(f"📊 Average importance score: {avg_importance:.1f}")
@@ -1178,7 +1205,8 @@ def process_news_data(news_sources):
                     "sentiment_articles": sentiment_used,
                     "importance_articles": importance_used,
                     "avg_confidence": avg_confidence if sentiment_used > 0 else 0,
-                    "avg_importance": avg_importance
+                    "avg_importance": avg_importance,
+                    "importance_distribution": dict(importance_levels)
                 }
     
     return formatted_data
@@ -1250,7 +1278,7 @@ def main():
     """🚀 Enhanced main execution with Dual Specialized Models v4.0"""
     try:
         logger.info("🚀 Starting TradePulse Investor-Grade News Collection v4.0...")
-        logger.info(f"🎯 Dual Specialized Models: sentiment + importance")
+        logger.info(f"🎯 Dual Specialized Models: sentiment + importance (3-classes)")
         
         # Pré-charge les deux modèles spécialisés
         start_time = time.time()
@@ -1296,7 +1324,7 @@ def main():
                 return True
         
         # 🚀 Process with dual specialized models v4.0
-        logger.info("🔍 Processing with dual specialized models (sentiment + importance)...")
+        logger.info("🔍 Processing with dual specialized models (sentiment + importance 3-classes)...")
         news_data = process_news_data(news_sources)
         
         # Update files
@@ -1317,7 +1345,7 @@ def main():
         # 🚀 Dual specialized models performance summary v4.0
         logger.info("🎯 Dual Specialized Models Performance Summary:")
         logger.info(f"  Sentiment Model: {_MODEL_METADATA['sentiment_model']}")
-        logger.info(f"  Importance Model: {_MODEL_METADATA['importance_model']}")
+        logger.info(f"  Importance Model: {_MODEL_METADATA['importance_model']} (3-classes)")
         logger.info(f"  System Version: {_MODEL_METADATA['version']}")
         logger.info(f"  Load Time: {_MODEL_METADATA['load_time']:.2f}s")
         if "performance_metrics" in _MODEL_METADATA:
@@ -1326,8 +1354,10 @@ def main():
             logger.info(f"  Importance Articles: {metrics.get('importance_articles', 0)}")
             logger.info(f"  Avg Confidence: {metrics.get('avg_confidence', 0):.3f}")
             logger.info(f"  Avg Importance: {metrics.get('avg_importance', 0):.1f}")
+            if "importance_distribution" in metrics:
+                logger.info(f"  Importance Levels: {metrics['importance_distribution']}")
         
-        logger.info("✅ TradePulse v4.0 with Dual Specialized Models completed successfully!")
+        logger.info("✅ TradePulse v4.0 with Dual Specialized Models (3-classes) completed successfully!")
         return success_news and success_themes
         
     except Exception as e:
