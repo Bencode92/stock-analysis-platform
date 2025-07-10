@@ -7,7 +7,7 @@ Script for extracting news and events from Financial Modeling Prep
 Enhanced with Dual Specialized FinBERT models (sentiment + importance) and MSCI-weighted geographic distribution
 Supports private model loading with secure fallback
 
-✨ NEW v4.1: Ultra-compact theme format with momentum and pre-computed axisMax
+✨ NEW v4.1: Ultra-compact theme format with pre-computed axisMax
 """
 
 import os
@@ -467,7 +467,7 @@ class EnhancedGitHandler:
 🧠 AI Models: FinBERT Sentiment + Importance (3-classes with argmax)
 🌍 Distribution: MSCI-weighted geographic allocation{stats_info}
 
-✨ Enhanced v4.1 compact format active (momentum + axisMax)
+✨ Enhanced v4.1 compact format active (axisMax)
 [skip ci]"""
         
         return commit_message
@@ -1365,12 +1365,9 @@ def extract_top_themes(news_data, days=30, max_examples=3, exclude_themes=None):
 
 def pack_theme_compact(theme_data, w_count, m_count, q_count):
     """
-    🚀 NEW v4.1: Pack theme data into ultra-compact format
+    Pack theme data into ultra-compact format (sans momentum)
     """
     w, m, q = w_count, m_count or 1, q_count or 1
-    
-    # Calculate momentum: (Weekly - Monthly) / Monthly * 100
-    momentum = round((w - m) / m * 100) if m > 0 else 0
     
     # Get sentiment distribution
     sentiment_dist = theme_data.get("sentiment_distribution", {"positive": 33, "neutral": 34, "negative": 33})
@@ -1379,7 +1376,6 @@ def pack_theme_compact(theme_data, w_count, m_count, q_count):
     packed = {
         "c": [w, m, q],  # count timeline: [Weekly, Monthly, Quarterly]
         "s": [sentiment_dist["positive"], sentiment_dist["negative"], sentiment_dist["neutral"]],  # sentiment: [pos, neg, neu]
-        "m": momentum,   # momentum percentage vs monthly
         "h": theme_data.get("headlines", [])[:3]  # top-3 headlines with URLs
     }
     
@@ -1682,8 +1678,8 @@ def update_news_json_file(news_data):
 
 def generate_themes_json(news_data):
     """
-    🚀 NEW v4.1: Generates ULTRA-COMPACT themes JSON with momentum + axisMax
-    • Structure: {"c":[W,M,Q], "s":[pos,neg,neu], "m":momentum%, "h":headlines}
+    🚀 NEW v4.1: Generates ULTRA-COMPACT themes JSON with axisMax
+    • Structure: {"c":[W,M,Q], "s":[pos,neg,neu], "h":headlines}
     • Pre-computed axisMax for instant frontend rendering
     • Result: ~8x smaller than v4.0
     """
@@ -1755,7 +1751,7 @@ def generate_themes_json(news_data):
         "axisMax": axis_max_data,  # ← 🚀 Pre-computed for instant frontend rendering
         "config_version": "v4.1-compact",
         "compression_info": {
-            "format": "c=count[W,M,Q], s=sentiment[pos,neg,neu], m=momentum%, h=headlines[[title,url]]",
+            "format": "c=count[W,M,Q], s=sentiment[pos,neg,neu], h=headlines[[title,url]]",
             "estimated_size_reduction": "~8x smaller than v4.0"
         }
     }
@@ -1775,8 +1771,8 @@ def generate_themes_json(news_data):
         file_size = os.path.getsize(THEMES_JSON_PATH) / 1024  # KB
         
         logger.info(f"✅ themes.json v4.1 ultra-compact format updated")
-        logger.info(f"📦 File size: {file_size:.0f}KB (estimated ×8 reduction)")
-        logger.info(f"🎯 Features: momentum tracking, pre-computed axisMax, top-3 headlines")
+        logger.info(f"📦 File size: {file_size:.0f}KB")
+        logger.info(f"🎯 Features: pre-computed axisMax, top-3 headlines")
         
         # Log axis maximums for verification
         for period, axes in axis_max_data.items():
@@ -1792,7 +1788,7 @@ def main():
     try:
         logger.info("🚀 Starting TradePulse Investor-Grade News Collection v4.1...")
         logger.info(f"🎯 Dual Specialized Models: sentiment + importance (3-classes with argmax)")
-        logger.info(f"✨ NEW v4.1: Ultra-compact format with momentum + axisMax")
+        logger.info(f"✨ NEW v4.1: Ultra-compact format with axisMax")
         
         # Pré-charge les deux modèles spécialisés
         start_time = time.time()
@@ -1898,8 +1894,8 @@ def main():
             if "argmax_logic_applied" in metrics:
                 logger.info(f"  🎯 Argmax Logic Applied: {metrics['argmax_logic_applied']} articles")
         
-        logger.info("✅ TradePulse v4.1 with Ultra-Compact Format + Momentum completed successfully!")
-        logger.info("🚀 Benefits: ×6-8 smaller files, instant frontend rendering, momentum tracking")
+        logger.info("✅ TradePulse v4.1 with Ultra-Compact Format completed successfully!")
+        logger.info("🚀 Benefits: ×6-8 smaller files, instant frontend rendering")
         return success_news and success_themes
         
     except Exception as e:
