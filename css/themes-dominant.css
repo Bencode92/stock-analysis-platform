@@ -96,15 +96,38 @@
   color: var(--text-primary);
   letter-spacing: -.02em;
   margin-right: auto;
+  white-space: nowrap;
+  overflow: visible;
+  min-width: fit-content;
 }
 
-/* ==== Sélecteur de période ============================= */
+/* ==== Sélecteur de période GLOBAL ============================= */
+.global-period-selector {
+  text-align: center;
+  margin: 20px 0;
+}
+
+.period-selector-global {
+  display: inline-flex;
+  gap: 10px;
+  background: rgba(10, 25, 47, 0.5);
+  padding: 5px;
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+}
+
+/* ==== Sélecteur de période (pour compatibilité) ============================= */
 .period-selector {
   display: flex;
   gap: 0;
   border-radius: 999px;
   background: rgba(0,0,0,.2);
   padding: 2px;
+}
+
+/* Masquer les sélecteurs individuels */
+.axis-header .period-selector {
+  display: none;
 }
 
 .period-btn {
@@ -524,4 +547,15 @@
 .theme-item:hover .theme-progress {
   filter: brightness(1.2);
   box-shadow: 0 2px 8px rgba(0,255,135,.3);
+}
+
+/* Fix pour les titres des axes */
+#regions-themes .axis-title,
+#fundamentals-themes .axis-title {
+  padding-right: 10px;
+}
+
+/* S'assurer que les conteneurs ont assez d'espace */
+.theme-card {
+  overflow: visible;
 }
