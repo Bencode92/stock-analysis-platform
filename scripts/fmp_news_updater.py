@@ -981,7 +981,7 @@ def remove_duplicates(news_list):
 
 def compute_importance_score(article, category=None) -> dict:
     """
-    Importance 3-classes avec mapping dynamique : general | important | critical
+    🔧 CORRECTIF: Importance 3-classes avec aliases FR/EN/Legacy : general | important | critical
     Retourne les probabilités et un score pondéré.
     """
     if not USE_FINBERT:
@@ -1009,23 +1009,40 @@ def compute_importance_score(article, category=None) -> dict:
         if not probs:
             raise ValueError("No probabilities returned")
 
-        # Garantir les trois niveaux attendus (avec fallbacks)
-        normalized_probs = {
-            "general": probs.get("general", probs.get("low", 0.0)),
-            "important": probs.get("important", probs.get("medium", 0.0)),
-            "critical": probs.get("critical", probs.get("high", 0.0))
+        # 🔧 CORRECTIF: Table d'alias FR/EN/Legacy pour résoudre le mismatch des labels
+        ALIAS = {
+            "general":   ("general", "générale", "low", "generale"),
+            "important": ("important", "importante", "medium"),
+            "critical":  ("critical", "critique", "high"),
         }
+
+        # 🔧 Reconstruction robuste avec aliases
+        normalized_probs = {}
+        for target, aliases in ALIAS.items():
+            # Prendre la probabilité maximale parmi tous les alias possibles
+            max_prob = max((probs.get(alias, 0.0) for alias in aliases), default=0.0)
+            normalized_probs[target] = max_prob
         
-        # Normalisation si besoin
+        # Log de debug pour diagnostiquer les labels détectés
+        if SENTIMENT_PROFILING:
+            detected_labels = list(probs.keys())
+            logger.debug(f"🔍 Labels détectés: {detected_labels}")
+            logger.debug(f"📊 Probs après alias: {normalized_probs}")
+        
+        # Normalisation si nécessaire (au cas où le total != 1.0)
         total = sum(normalized_probs.values())
-        if total > 0:
+        if total > 0 and abs(total - 1.0) > 0.01:  # Seuil de tolérance
             normalized_probs = {k: v/total for k, v in normalized_probs.items()}
-        else:
+            if SENTIMENT_PROFILING:
+                logger.debug(f"📏 Normalisation appliquée, nouveau total: {sum(normalized_probs.values()):.3f}")
+        elif total == 0:
+            # Fallback complet si aucun alias ne matche
+            logger.warning(f"⚠️ Aucun alias ne matche pour les labels: {list(probs.keys())}")
             normalized_probs = {"general": 1.0, "important": 0.0, "critical": 0.0}
 
         level = max(normalized_probs, key=normalized_probs.get)
         
-        # Score pondéré (25-95 scale)
+        # Score pondéré (25-95 scale) - formule inchangée
         score = round(
             normalized_probs["general"] * 25 +
             normalized_probs["important"] * 60 +
@@ -1041,7 +1058,9 @@ def compute_importance_score(article, category=None) -> dict:
                 "version": _MODEL_METADATA["version"],
                 "specialized": True,
                 "classes": list(normalized_probs.keys()),
-                "raw_labels": list(probs.keys()) if probs else []  # ← Debug
+                "raw_labels": list(probs.keys()),  # ← Debug info
+                "aliases_used": True,  # ← Nouveau flag pour confirmer le correctif
+                "total_prob": round(sum(normalized_probs.values()), 3)  # ← Vérification de normalisation
             },
         }
 
@@ -1532,9 +1551,15 @@ def process_news_data(news_sources):
         if importance_used > 0:
             logger.info(f"⚡ Importance model analyzed {importance_used}/{len(all_processed_articles)} articles ({importance_used/len(all_processed_articles)*100:.1f}%)")
             
-            # Distribution par niveau d'importance
+            # Distribution par niveau d'importance avec correctif d'alias
             importance_levels = Counter(article["importance_level"] for article in all_processed_articles if "importance_level" in article)
             logger.info(f"📊 Importance levels: {dict(importance_levels)}")
+            
+            # 🔧 DIAGNOSTIC: Compter les articles avec aliases_used
+            alias_articles = sum(1 for article in all_processed_articles 
+                               if article.get("importance_metadata", {}).get("aliases_used"))
+            if alias_articles > 0:
+                logger.info(f"🔧 Articles traités avec correctif aliases: {alias_articles}/{importance_used} ({alias_articles/importance_used*100:.1f}%)")
             
             # Average importance scores
             importance_scores = [article["importance_score"] for article in all_processed_articles if "importance_score" in article]
@@ -1548,7 +1573,8 @@ def process_news_data(news_sources):
                     "importance_articles": importance_used,
                     "avg_confidence": avg_confidence if sentiment_used > 0 else 0,
                     "avg_importance": avg_importance,
-                    "importance_distribution": dict(importance_levels)
+                    "importance_distribution": dict(importance_levels),
+                    "alias_fix_applied": alias_articles  # 🔧 Nouveau métrique pour tracking
                 }
     
     return formatted_data
@@ -1722,6 +1748,9 @@ def main():
             logger.info(f"  Avg Importance: {metrics.get('avg_importance', 0):.1f}")
             if "importance_distribution" in metrics:
                 logger.info(f"  Importance Levels: {metrics['importance_distribution']}")
+            # 🔧 Nouveau: Log du correctif d'alias
+            if "alias_fix_applied" in metrics:
+                logger.info(f"  🔧 Alias Fix Applied: {metrics['alias_fix_applied']} articles")
         
         logger.info("✅ TradePulse v4.0 with Dual Specialized Models + Enhanced Git Integration completed successfully!")
         return success_news and success_themes
