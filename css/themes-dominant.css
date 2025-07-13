@@ -559,3 +559,81 @@
 .theme-card {
   overflow: visible;
 }
+
+/* ===== CORRECTIONS v2.0 ===== */
+#fundamentals-themes.active {
+  border-color: var(--border-color) !important;
+  box-shadow: none !important;
+}
+
+.headline-item {
+  font-size: 0.95rem;
+  line-height: 1.45;
+  padding: 0.75rem 1rem;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 0.4rem;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.headline-item:hover {
+  background: rgba(0, 255, 135, 0.08);
+  transform: translateX(3px);
+}
+
+.theme-tooltip {
+  max-width: 420px;
+  background: rgba(5, 30, 52, 0.90);
+  backdrop-filter: blur(16px);
+}
+
+.headlines-section {
+  max-height: 200px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.headlines-section::-webkit-scrollbar {
+  width: 6px;
+}
+
+.headlines-section::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border-radius: 3px;
+}
+
+.headlines-section::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.theme-item.selected,
+.theme-item.has-open-tooltip {
+  background: rgba(0, 255, 135, 0.08);
+  border-left: 3px solid var(--accent);
+  padding-left: 7px;
+}
+
+.tooltip-header {
+  background: rgba(0, 255, 135, 0.05);
+  margin: -1.2rem -1.2rem 1rem -1.2rem;
+  padding: 1rem 1.2rem;
+  border-bottom: 2px solid rgba(0, 255, 135, 0.3);
+  border-radius: 0.6rem 0.6rem 0 0;
+}
+
+.tooltip-header strong {
+  font-size: 1.1rem;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+
+@keyframes highlightPulse {
+  0%, 100% { background: rgba(0, 255, 135, 0.08); }
+  50% { background: rgba(0, 255, 135, 0.15); }
+}
+
+.theme-item.newly-selected {
+  animation: highlightPulse 0.6s ease 2;
+}
