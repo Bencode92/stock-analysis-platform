@@ -184,6 +184,15 @@
   transform: translateX(3px);
 }
 
+/* État actif pour les thèmes */
+.theme-item.active {
+  background: rgba(0, 255, 135, 0.08);
+  border-radius: 6px;
+  padding: 4px 10px;
+  margin: -4px -10px;
+  box-shadow: 0 0 15px rgba(0, 255, 135, 0.15);
+}
+
 /* Animation échelonnée */
 .theme-item:nth-child(1) { animation-delay: 0ms; }
 .theme-item:nth-child(2) { animation-delay: 25ms; }
@@ -355,7 +364,13 @@
   backdrop-filter: blur(12px);
 }
 
+/* Force l'invisibilité initiale des tooltips */
+.theme-tooltip:not(.open) {
+  display: none !important;
+}
+
 .theme-tooltip.open {
+  display: block;
   opacity: 1;
   transform: translateY(0) scale(1);
   pointer-events: auto;
