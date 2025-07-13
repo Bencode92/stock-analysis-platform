@@ -147,10 +147,6 @@ const ThemesVisualizer = {
         this.renderAxis('fundamentals', 'Fondamentaux', '💰');
         this.renderAxis('secteurs', 'Secteurs', '🏭');
         this.renderAxis('regions', 'Régions', '🌍');
-        
-        // IMPORTANT: Retirer la classe active de toutes les cartes
-        document.querySelectorAll('.theme-card.active')
-            .forEach(card => card.classList.remove('active'));
     },
 
     // Création du sélecteur de période global
@@ -308,18 +304,11 @@ const ThemesVisualizer = {
                 <div class="tooltip-content">
                     <div class="headlines-section">
                         <h4>Derniers titres</h4>
-                        ${headlines.slice(0, 3).map(([title, url]) => {
-                            // Troncature intelligente au mot complet
-                            const shortTitle = title.length > 90
-                                ? title.match(/^(.{0,87}\b)/)[0] + '…'
-                                : title;
-                            
-                            return `
-                                <div class="headline-item" ${url ? `data-url="${url}"` : ''}>
-                                    ${shortTitle}
-                                </div>
-                            `;
-                        }).join('')}
+                        ${headlines.slice(0, 3).map(([title, url]) => `
+                            <div class="headline-item" ${url ? `data-url="${url}"` : ''}>
+                                ${title.length > 80 ? title.substring(0, 80) + '...' : title}
+                            </div>
+                        `).join('')}
                     </div>
                     <div class="sentiment-bar-container">
                         <div class="sentiment-bar">
@@ -357,22 +346,8 @@ const ThemesVisualizer = {
         // Click sur le thème
         themeElement.addEventListener('click', (e) => {
             if (!e.target.closest('.tooltip-close')) {
-                document.querySelectorAll('.theme-item').forEach(item => {
-                    item.classList.remove('selected', 'has-open-tooltip', 'newly-selected');
-                });
-                
                 const tooltip = themeElement.querySelector('.theme-tooltip');
-                if (tooltip) {
-                    this.toggleTooltip(tooltip);
-                    
-                    if (tooltip.classList.contains('open')) {
-                        themeElement.classList.add('selected', 'has-open-tooltip', 'newly-selected');
-                        
-                        setTimeout(() => {
-                            themeElement.classList.remove('newly-selected');
-                        }, 1200);
-                    }
-                }
+                if (tooltip) this.toggleTooltip(tooltip);
             }
         });
         
@@ -382,40 +357,16 @@ const ThemesVisualizer = {
             closeBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const tooltip = themeElement.querySelector('.theme-tooltip');
-                if (tooltip) {
-                    this.closeTooltip(tooltip);
-                    themeElement.classList.remove('selected', 'has-open-tooltip');
-                }
+                if (tooltip) this.closeTooltip(tooltip);
             });
         }
-
-        // Click sur headline pour ouvrir l'URL
-        themeElement.querySelectorAll('.headline-item[data-url]').forEach(headline => {
-            headline.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const url = headline.dataset.url;
-                if (url) window.open(url, '_blank');
-            });
-        });
 
         // Accessibilité clavier
         themeElement.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                document.querySelectorAll('.theme-item').forEach(item => {
-                    item.classList.remove('selected', 'has-open-tooltip', 'newly-selected');
-                });
-                
                 const tooltip = themeElement.querySelector('.theme-tooltip');
-                if (tooltip) {
-                    this.toggleTooltip(tooltip);
-                    if (tooltip.classList.contains('open')) {
-                        themeElement.classList.add('selected', 'has-open-tooltip', 'newly-selected');
-                        setTimeout(() => {
-                            themeElement.classList.remove('newly-selected');
-                        }, 1200);
-                    }
-                }
+                if (tooltip) this.toggleTooltip(tooltip);
             }
         });
     },
@@ -448,10 +399,6 @@ const ThemesVisualizer = {
     closeAllTooltips: function() {
         document.querySelectorAll('.theme-tooltip.open').forEach(tooltip => {
             this.closeTooltip(tooltip);
-        });
-        
-        document.querySelectorAll('.theme-item').forEach(item => {
-            item.classList.remove('selected', 'has-open-tooltip');
         });
     },
 
