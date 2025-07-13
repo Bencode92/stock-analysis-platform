@@ -221,6 +221,9 @@ const ThemesVisualizer = {
         const container = document.getElementById(`${axisId}-list`);
         if (!container) return;
         
+        // Fermer tous les tooltips au rendu
+        this.closeAllTooltips();
+        
         // Obtenir le max pour cet axe
         const maxVal = axisMax[axisKey] || 1;
         
@@ -380,6 +383,9 @@ const ThemesVisualizer = {
             tooltip.classList.add('open');
             tooltip.setAttribute('aria-hidden', 'false');
             
+            // Ajouter classe active au parent
+            tooltip.closest('.theme-item').classList.add('active');
+            
             // Ajuster position si déborde
             requestAnimationFrame(() => {
                 const rect = tooltip.getBoundingClientRect();
@@ -394,6 +400,8 @@ const ThemesVisualizer = {
     closeTooltip: function(tooltip) {
         tooltip.classList.remove('open');
         tooltip.setAttribute('aria-hidden', 'true');
+        // Retirer classe active
+        tooltip.closest('.theme-item')?.classList.remove('active');
     },
 
     closeAllTooltips: function() {
