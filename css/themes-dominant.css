@@ -8,7 +8,7 @@
   
   /* Backgrounds - OPACITÉ AUGMENTÉE POUR MEILLEURE LISIBILITÉ */
   --bar-bg: rgba(255,255,255,.12);
-  --card-bg: rgba(1,22,39,.97); /* ✅ + opaque */
+  --card-bg: rgba(1,22,39,1); /* ✅ CHANGÉ: 100% opaque */
   --tooltip-bg: rgba(5,30,52,.97); /* idem pour les infobulles */
   
   /* Textes - CONTRASTE AMÉLIORÉ */
@@ -34,7 +34,7 @@
     --neutral: #47515c;
     --accent: #00c46b;
     --bar-bg: rgba(0,0,0,.12);
-    --card-bg: rgba(255,255,255,.98); /* Plus opaque en mode clair aussi */
+    --card-bg: rgba(255,255,255,1); /* ✅ CHANGÉ: 100% opaque en mode clair aussi */
     --tooltip-bg: #fff;
     --text-primary: #1a202c;
     --text-secondary: #4a5568;
@@ -57,46 +57,22 @@
   margin-bottom: 1.2rem;
 }
 
-/* Cartes d'axes - OMBRE AJOUTÉE POUR PROFONDEUR */
+/* Cartes d'axes - FOND OPAQUE PERMANENT */
 .theme-card {
-  background: var(--card-bg);
+  background: var(--card-bg); /* Utilise la variable 100% opaque */
   padding: 1rem;
   border-radius: .6rem;
   border: 1px solid var(--border-color);
-  /* backdrop-filter: blur(10px); */ /* ✅ COMMENTÉ - Le texte était re-flouté */
   transition: all .3s ease;
   margin-bottom: 1rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,.3); /* Nouvelle ombre */
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
   position: relative;
-  isolation: isolate; /* NOUVEAU: Contexte d'empilement isolé */
+  isolation: isolate;
+  overflow: visible;
+  /* backdrop-filter supprimé - plus de flou */
 }
 
-/* ==== NOUVEAU CORRECTIF LISIBILITÉ - Fond opaque dynamique ===== */
-/* Pseudo-élément de couverture qui devient opaque quand la carte est ouverte */
-.theme-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: rgb(1,22,39); /* CHANGÉ: Complètement opaque sans rgba */
-  opacity: 0; /* Invisible par défaut */
-  transition: opacity .25s;
-  pointer-events: none; /* Ne gêne pas les clics */
-  z-index: 1; /* CHANGÉ: Au-dessus du fond mais sous le contenu */
-}
-
-/* Activation du fond opaque quand la carte a un item actif ou un tooltip ouvert */
-.theme-card:has(.theme-item.active)::before,
-.theme-card:has(.theme-tooltip.open)::before {
-  opacity: 1; /* Devient totalement lisible */
-}
-
-/* Support pour navigateurs sans :has() */
-@supports not selector(:has(*)) {
-  .theme-card.has-active-item::before {
-    opacity: 1;
-  }
-}
+/* ✅ SUPPRIMÉ: Tout le pseudo-élément ::before et les règles :has() */
 
 .theme-card:hover {
   box-shadow: 0 0 20px rgba(0,255,135,.15), 0 4px 12px rgba(0,0,0,.4);
@@ -113,8 +89,6 @@
   padding-bottom: .6rem;
   border-bottom: 1px solid var(--border-color);
   flex-wrap: wrap;
-  position: relative; /* AJOUTÉ */
-  z-index: 2; /* AJOUTÉ: Au-dessus du pseudo-élément */
 }
 
 .axis-icon {
@@ -142,11 +116,11 @@
 .period-selector-global {
   display: inline-flex;
   gap: 10px;
-  background: rgba(10, 25, 47, 0.8); /* Plus opaque */
+  background: rgba(10, 25, 47, 0.8);
   padding: 5px;
   border-radius: 10px;
   backdrop-filter: blur(10px);
-  box-shadow: 0 2px 8px rgba(0,0,0,.2); /* Ombre ajoutée */
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
 }
 
 /* ==== Sélecteur de période (pour compatibilité) ============================= */
@@ -154,7 +128,7 @@
   display: flex;
   gap: 0;
   border-radius: 999px;
-  background: rgba(0,0,0,.3); /* Plus opaque */
+  background: rgba(0,0,0,.3);
   padding: 2px;
 }
 
@@ -191,8 +165,6 @@
 /* Zone de contenu des thèmes */
 .theme-content-area {
   min-height: 350px;
-  position: relative; /* AJOUTÉ */
-  z-index: 2; /* AJOUTÉ: Au-dessus du pseudo-élément */
 }
 
 /* ==== 3. Liste & items ============================================= */
@@ -203,8 +175,7 @@
   display: flex;
   flex-direction: column;
   gap: .45rem;
-  position: relative; /* Pour le z-index des items */
-  z-index: 2; /* CHANGÉ: Plus haut que le pseudo-élément */
+  position: relative;
 }
 
 .theme-item {
@@ -223,7 +194,7 @@
 
 /* État actif pour les thèmes */
 .theme-item.active {
-  background: rgba(0, 255, 135, 0.12); /* Plus opaque */
+  background: rgba(0, 255, 135, 0.12);
   border-radius: 6px;
   padding: 4px 10px;
   margin: -4px -10px;
@@ -264,10 +235,10 @@
   left: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 6px; /* Augmenté de 5px */
-  height: 6px; /* Augmenté de 5px */
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  opacity: 1; /* Augmenté de .85 */
+  opacity: 1;
 }
 
 .theme-item.positive::before {
@@ -288,7 +259,7 @@
 /* Barre de progression - PLUS VISIBLE */
 .theme-bar {
   flex: 1;
-  height: 6px; /* Augmenté de 5px */
+  height: 6px;
   background: var(--bar-bg);
   border-radius: 3px;
   position: relative;
@@ -317,7 +288,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 170px;
-  text-shadow: 0 0 2px rgba(0,0,0,.4); /* léger halo foncé */
+  text-shadow: 0 0 2px rgba(0,0,0,.4);
 }
 
 /* Compteur - PLUS VISIBLE */
@@ -328,10 +299,10 @@
   font-size: .75rem;
   padding: .1rem .35rem;
   border-radius: 6px;
-  background: rgba(0,255,135,.18); /* Plus opaque */
+  background: rgba(0,255,135,.18);
   color: var(--accent);
   margin-left: auto;
-  text-shadow: 0 0 2px rgba(0,0,0,.4); /* léger halo foncé */
+  text-shadow: 0 0 2px rgba(0,0,0,.4);
 }
 
 /* ==== 4. Contrôles : Recherche & Toggle ============================= */
@@ -359,7 +330,7 @@
 
 .top-toggle-btn {
   border: 1px solid var(--border-hover);
-  background: rgba(0,255,135,.08); /* Plus opaque */
+  background: rgba(0,255,135,.08);
   color: var(--text-primary);
   border-radius: 999px;
   padding: .5rem 1.1rem;
@@ -394,13 +365,12 @@
   background: var(--tooltip-bg);
   border: 1px solid var(--border-hover);
   border-radius: .6rem;
-  box-shadow: 0 8px 32px rgba(0,0,0,.5), 0 0 20px rgba(0,255,135,.1); /* Ombre plus forte */
+  box-shadow: 0 8px 32px rgba(0,0,0,.5), 0 0 20px rgba(0,255,135,.1);
   z-index: 1000;
   opacity: 0;
   transform: translateY(-8px) scale(0.95);
   pointer-events: none;
   transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
-  /* backdrop-filter: blur(12px); */ /* ✅ OPTIONNEL: Commenté pour encore plus de lisibilité */
 }
 
 /* Force l'invisibilité initiale des tooltips */
@@ -451,7 +421,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(255,255,255,.08); /* Plus opaque */
+  background: rgba(255,255,255,.08);
   color: var(--text-secondary);
   cursor: pointer;
   transition: all .2s ease;
@@ -478,7 +448,7 @@
   font-size: .85rem;
   line-height: 1.5;
   color: var(--text-primary);
-  border-bottom: 1px solid rgba(255,255,255,.08); /* Plus visible */
+  border-bottom: 1px solid rgba(255,255,255,.08);
 }
 
 .headline-item:last-child {
