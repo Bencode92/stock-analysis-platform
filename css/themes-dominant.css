@@ -6,10 +6,10 @@
   --neutral: #95a5a6;
   --accent: #00ff87;
   
-  /* Backgrounds - 100% OPAQUE */
+  /* Backgrounds - OPACITÉ AUGMENTÉE POUR MEILLEURE LISIBILITÉ */
   --bar-bg: rgba(255,255,255,.12);
-  --card-bg: rgba(1,22,39,1); /* 100% opaque */
-  --tooltip-bg: rgba(1,22,39,1); /* 100% opaque */
+  --card-bg: rgba(1,22,39,1); /* ✅ CHANGÉ: 100% opaque */
+  --tooltip-bg: rgba(1,22,39,1); /* ✅ CHANGÉ: 100% opaque pour meilleure lisibilité */
   
   /* Textes - CONTRASTE AMÉLIORÉ */
   --text-primary: #ffffff; /* Plus blanc pour meilleur contraste */
@@ -34,8 +34,8 @@
     --neutral: #47515c;
     --accent: #00c46b;
     --bar-bg: rgba(0,0,0,.12);
-    --card-bg: rgba(255,255,255,1); /* 100% opaque en mode clair */
-    --tooltip-bg: rgba(255,255,255,1); /* 100% opaque en mode clair */
+    --card-bg: rgba(255,255,255,1); /* ✅ CHANGÉ: 100% opaque en mode clair aussi */
+    --tooltip-bg: rgba(255,255,255,1); /* ✅ CHANGÉ: 100% opaque en mode clair */
     --text-primary: #1a202c;
     --text-secondary: #4a5568;
     --text-muted: #718096;
@@ -57,10 +57,9 @@
   margin-bottom: 1.2rem;
 }
 
-/* Cartes d'axes - FOND 100% OPAQUE */
+/* Cartes d'axes - FOND OPAQUE PERMANENT */
 .theme-card {
-  background: rgba(1,22,39,1); /* Fond 100% opaque */
-  backdrop-filter: none; /* Aucun effet de flou */
+  background: var(--card-bg); /* Utilise la variable 100% opaque */
   padding: 1rem;
   border-radius: .6rem;
   border: 1px solid var(--border-color);
@@ -70,7 +69,10 @@
   position: relative;
   isolation: isolate;
   overflow: visible;
+  /* backdrop-filter supprimé - plus de flou */
 }
+
+/* ✅ SUPPRIMÉ: Tout le pseudo-élément ::before et les règles :has() */
 
 .theme-card:hover {
   box-shadow: 0 0 20px rgba(0,255,135,.15), 0 4px 12px rgba(0,0,0,.4);
@@ -114,10 +116,10 @@
 .period-selector-global {
   display: inline-flex;
   gap: 10px;
-  background: rgba(10, 25, 47, 1); /* Fond opaque */
+  background: rgba(10, 25, 47, 0.8);
   padding: 5px;
   border-radius: 10px;
-  backdrop-filter: none; /* Pas de flou */
+  backdrop-filter: blur(10px);
   box-shadow: 0 2px 8px rgba(0,0,0,.2);
 }
 
@@ -184,19 +186,19 @@
   transition: all .2s ease;
   position: relative;
   padding-left: 10px;
-  margin: 0 !important; /* Reset des marges négatives */
 }
 
 .theme-item:hover {
   transform: translateX(3px);
 }
 
-/* État actif pour les thèmes - CORRIGÉ */
+/* État actif pour les thèmes */
 .theme-item.active {
-  outline: 2px solid rgba(0, 255, 135, 0.3);
-  outline-offset: 2px;
-  background: rgba(0, 255, 135, 0.08);
+  background: rgba(0, 255, 135, 0.12);
   border-radius: 6px;
+  padding: 4px 10px;
+  margin: -4px -10px;
+  box-shadow: 0 0 15px rgba(0, 255, 135, 0.15);
 }
 
 /* Animation échelonnée */
@@ -352,155 +354,134 @@
   color: var(--accent);
 }
 
-/* ==== 5. Tooltips DRAWER - Configuration lisible ========================================= */
+/* ==== 5. Tooltips améliorés - FOND 100% OPAQUE ========================================= */
 .theme-tooltip {
-  /* Position fixe en drawer */
-  position: fixed !important;
-  top: 10vh;
-  right: -450px; /* Caché par défaut */
-  bottom: 10vh;
-  width: 420px;
-  max-width: 90vw;
-  
-  /* Fond opaque pour lisibilité maximale */
-  background: rgba(1, 22, 39, 0.98) !important;
-  backdrop-filter: blur(10px);
-  
-  /* Apparence moderne */
-  border-radius: 12px;
-  border: 1px solid rgba(0, 255, 135, 0.2);
-  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
-  
-  /* Comportement */
-  overflow-y: auto;
-  overflow-x: hidden;
-  z-index: 2000;
-  
-  /* Animation fluide */
-  transition: right 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
-  transform: none !important; /* Reset des anciennes transformations */
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  max-width: 360px;
+  padding: 1.2rem;
+  background: rgb(1, 22, 39) !important; /* ✅ CHANGÉ: Fond 100% opaque avec !important */
+  border: 1px solid var(--border-hover);
+  border-radius: .6rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5), 0 0 20px rgba(0,255,135,.1);
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(-8px) scale(0.95);
+  pointer-events: none;
+  transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: none !important; /* ✅ AJOUTÉ: Supprime tout effet de flou */
 }
 
-/* État ouvert du drawer */
-.theme-tooltip.open {
-  right: 2rem !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  display: block !important;
+/* Contenu du tooltip - FOND OPAQUE */
+.theme-tooltip .tooltip-content {
+  background: rgb(1, 22, 39) !important; /* ✅ AJOUTÉ: Fond opaque pour le contenu */
+  backdrop-filter: none !important;
 }
 
-/* Reset de l'ancienne flèche du tooltip */
-.theme-tooltip::before {
+/* Force l'invisibilité initiale des tooltips */
+.theme-tooltip:not(.open) {
   display: none !important;
 }
 
-/* Amélioration du header du tooltip */
-.tooltip-header {
-  font-size: 1.1rem;
-  padding: 1.5rem 1.5rem 1rem;
-  position: sticky;
-  top: 0;
-  background: rgba(1, 22, 39, 0.98);
-  z-index: 10;
-  backdrop-filter: blur(10px);
+.theme-tooltip.open {
+  display: block;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
 }
 
-/* Amélioration de la lisibilité du contenu */
-.theme-tooltip .headline-item {
-  font-size: 0.95rem !important;
-  line-height: 1.55 !important;
-  padding: 1rem 1.5rem !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.theme-tooltip .headline-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.theme-tooltip .headlines-section {
-  padding: 0;
-}
-
-.theme-tooltip .headlines-section h4 {
-  padding: 0 1.5rem;
-  margin: 1rem 0 0.5rem;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  color: var(--text-secondary);
-}
-
-/* Indicateur de scroll */
-.theme-tooltip::after {
+/* Flèche du tooltip */
+.theme-tooltip::before {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 40px;
-  background: linear-gradient(to top, rgba(1, 22, 39, 0.98), transparent);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s;
+  top: -8px;
+  left: 24px;
+  width: 16px;
+  height: 16px;
+  background: rgb(1, 22, 39) !important; /* ✅ CHANGÉ: Même fond opaque pour la flèche */
+  border: 1px solid var(--border-hover);
+  border-right: none;
+  border-bottom: none;
+  transform: rotate(45deg);
 }
 
-.theme-tooltip:not(.at-bottom)::after {
-  opacity: 1;
+.tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: .75rem;
+  border-bottom: 1px solid var(--border-color);
+  background: transparent !important; /* ✅ AJOUTÉ: Pas de fond transparent */
 }
 
-/* Voile d'arrière-plan */
-.tooltip-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 1999;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s, visibility 0.3s;
+.tooltip-header strong {
+  font-size: 1rem;
+  color: var(--text-primary);
 }
 
-.tooltip-backdrop.active {
-  opacity: 1;
-  visibility: visible;
-}
-
-/* Bouton de fermeture amélioré */
-.theme-tooltip .tooltip-close {
-  width: 32px;
-  height: 32px;
-  font-size: 1.4rem;
-  transition: all 0.2s;
-  background: rgba(255,255,255,.08);
+.tooltip-close {
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
+  background: rgba(255,255,255,.08);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all .2s ease;
+  font-size: 1.2rem;
+  line-height: 1;
 }
 
-.theme-tooltip .tooltip-close:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: scale(1.1);
+.tooltip-close:hover {
+  background: rgba(255,255,255,.15);
+  color: var(--text-primary);
 }
 
-/* Barre de sentiment améliorée */
+/* Section titres DANS LE TOOLTIP */
+.theme-tooltip .headlines-section {
+  background: transparent !important; /* ✅ AJOUTÉ: Pas de fond qui s'ajoute */
+  padding: 0;
+  margin: 0;
+}
+
+.theme-tooltip .headlines-section h4 {
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-secondary);
+  margin-bottom: .75rem;
+}
+
+.theme-tooltip .headline-item {
+  padding: .5rem 0;
+  font-size: .85rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  background: transparent !important; /* ✅ AJOUTÉ: Pas de fond */
+}
+
+.theme-tooltip .headline-item:last-child {
+  border-bottom: none;
+}
+
+/* Barre de sentiment DANS LE TOOLTIP */
 .theme-tooltip .sentiment-bar-container {
-  margin: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 1.25rem;
+  background: transparent !important; /* ✅ AJOUTÉ */
 }
 
 .theme-tooltip .sentiment-bar {
   display: flex;
-  height: 10px;
-  border-radius: 5px;
+  height: 8px;
+  border-radius: 4px;
   overflow: hidden;
-  margin-bottom: .75rem;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  margin-bottom: .5rem;
 }
 
 .sentiment-bar .positive { background: var(--positive); }
@@ -510,9 +491,8 @@
 .sentiment-labels {
   display: flex;
   justify-content: space-between;
-  font-size: .75rem;
+  font-size: .7rem;
   font-weight: 600;
-  padding: 0 0.5rem;
 }
 
 .sentiment-labels .positive { color: var(--positive); }
@@ -557,7 +537,7 @@
   margin-left: auto;
 }
 
-/* ==== 7. Responsive DRAWER ================================================= */
+/* ==== 7. Responsive ================================================= */
 @media (max-width: 768px) {
   .axis-header {
     flex-direction: column;
@@ -579,18 +559,18 @@
     margin: 1rem 0;
   }
   
-  /* Drawer mobile pleine largeur */
   .theme-tooltip {
-    right: -100vw;
-    width: calc(100vw - 2rem);
+    position: fixed;
+    left: 1rem;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%) scale(0.95);
     max-width: none;
-    top: 5vh;
-    bottom: 5vh;
-    border-radius: 12px 0 0 12px;
+    background: rgb(1, 22, 39) !important; /* ✅ Fond opaque même en mobile */
   }
   
   .theme-tooltip.open {
-    right: 0 !important;
+    transform: translateY(-50%) scale(1);
   }
 }
 
@@ -621,34 +601,17 @@
   overflow: visible;
 }
 
-/* ==== 9. MODE CLAIR - Drawer ========================= */
+/* ==== 9. MODE CLAIR - Tooltips opaques ========================= */
 @media (prefers-color-scheme: light) {
-  .theme-card {
-    background: rgba(255, 255, 255, 1);
-    border: 1px solid rgba(0,0,0,0.1);
-  }
-  
-  /* Drawer en mode clair */
   .theme-tooltip {
-    background: rgba(255, 255, 255, 0.98) !important;
-    color: #1a202c;
-    box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
+    background: rgb(255, 255, 255) !important;
   }
   
-  .theme-tooltip .tooltip-header {
-    background: rgba(255, 255, 255, 0.98);
+  .theme-tooltip::before {
+    background: rgb(255, 255, 255) !important;
   }
   
-  .theme-tooltip .headline-item {
-    border-bottom-color: rgba(0, 0, 0, 0.08);
-  }
-  
-  .tooltip-backdrop {
-    background: rgba(255, 255, 255, 0.6);
-  }
-  
-  .period-selector-global {
-    background: rgba(255, 255, 255, 1);
-    border: 1px solid rgba(0,0,0,0.1);
+  .theme-tooltip .tooltip-content {
+    background: rgb(255, 255, 255) !important;
   }
 }
