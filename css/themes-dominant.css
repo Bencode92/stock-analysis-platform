@@ -354,7 +354,7 @@
   color: var(--accent);
 }
 
-/* ==== 5. Tooltips améliorés ========================================= */
+/* ==== 5. Tooltips améliorés - FOND 100% OPAQUE ========================================= */
 .theme-tooltip {
   position: absolute;
   top: calc(100% + 10px);
@@ -362,7 +362,7 @@
   right: 0;
   max-width: 360px;
   padding: 1.2rem;
-  background: rgb(1, 22, 39); /* ✅ CHANGÉ: Fond 100% opaque pour meilleure lisibilité */
+  background: rgb(1, 22, 39) !important; /* ✅ CHANGÉ: Fond 100% opaque avec !important */
   border: 1px solid var(--border-hover);
   border-radius: .6rem;
   box-shadow: 0 8px 32px rgba(0,0,0,.5), 0 0 20px rgba(0,255,135,.1);
@@ -371,6 +371,13 @@
   transform: translateY(-8px) scale(0.95);
   pointer-events: none;
   transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: none !important; /* ✅ AJOUTÉ: Supprime tout effet de flou */
+}
+
+/* Contenu du tooltip - FOND OPAQUE */
+.theme-tooltip .tooltip-content {
+  background: rgb(1, 22, 39) !important; /* ✅ AJOUTÉ: Fond opaque pour le contenu */
+  backdrop-filter: none !important;
 }
 
 /* Force l'invisibilité initiale des tooltips */
@@ -393,7 +400,7 @@
   left: 24px;
   width: 16px;
   height: 16px;
-  background: rgb(1, 22, 39); /* ✅ CHANGÉ: Même fond opaque pour la flèche */
+  background: rgb(1, 22, 39) !important; /* ✅ CHANGÉ: Même fond opaque pour la flèche */
   border: 1px solid var(--border-hover);
   border-right: none;
   border-bottom: none;
@@ -407,6 +414,7 @@
   margin-bottom: 1rem;
   padding-bottom: .75rem;
   border-bottom: 1px solid var(--border-color);
+  background: transparent !important; /* ✅ AJOUTÉ: Pas de fond transparent */
 }
 
 .tooltip-header strong {
@@ -434,8 +442,14 @@
   color: var(--text-primary);
 }
 
-/* Section titres */
-.headlines-section h4 {
+/* Section titres DANS LE TOOLTIP */
+.theme-tooltip .headlines-section {
+  background: transparent !important; /* ✅ AJOUTÉ: Pas de fond qui s'ajoute */
+  padding: 0;
+  margin: 0;
+}
+
+.theme-tooltip .headlines-section h4 {
   font-size: .75rem;
   text-transform: uppercase;
   letter-spacing: .04em;
@@ -443,24 +457,26 @@
   margin-bottom: .75rem;
 }
 
-.headline-item {
+.theme-tooltip .headline-item {
   padding: .5rem 0;
   font-size: .85rem;
   line-height: 1.5;
   color: var(--text-primary);
   border-bottom: 1px solid rgba(255,255,255,.08);
+  background: transparent !important; /* ✅ AJOUTÉ: Pas de fond */
 }
 
-.headline-item:last-child {
+.theme-tooltip .headline-item:last-child {
   border-bottom: none;
 }
 
-/* Barre de sentiment */
-.sentiment-bar-container {
+/* Barre de sentiment DANS LE TOOLTIP */
+.theme-tooltip .sentiment-bar-container {
   margin-top: 1.25rem;
+  background: transparent !important; /* ✅ AJOUTÉ */
 }
 
-.sentiment-bar {
+.theme-tooltip .sentiment-bar {
   display: flex;
   height: 8px;
   border-radius: 4px;
@@ -550,6 +566,7 @@
     top: 50%;
     transform: translateY(-50%) scale(0.95);
     max-width: none;
+    background: rgb(1, 22, 39) !important; /* ✅ Fond opaque même en mobile */
   }
   
   .theme-tooltip.open {
@@ -584,62 +601,17 @@
   overflow: visible;
 }
 
-/* ==== 9. Section DERNIERS TITRES - FOND OPAQUE ========================= */
-.theme-details,
-.theme-detail-section,
-.headlines-section,
-.theme-headlines,
-.derniers-titres {
-  background: rgb(1, 22, 39) !important; /* ✅ AJOUTÉ: Fond opaque pour section détails */
-  padding: 1rem;
-  border-radius: .5rem;
-  margin-top: 1rem;
-  border: 1px solid var(--border-color);
-}
-
-/* Mode clair */
+/* ==== 9. MODE CLAIR - Tooltips opaques ========================= */
 @media (prefers-color-scheme: light) {
-  .theme-details,
-  .theme-detail-section,
-  .headlines-section,
-  .theme-headlines,
-  .derniers-titres {
+  .theme-tooltip {
     background: rgb(255, 255, 255) !important;
   }
-}
-
-/* Styles pour le titre DERNIERS TITRES */
-.theme-details h4,
-.derniers-titres h4,
-.headlines-section > h4:first-child {
-  color: var(--text-secondary);
-  font-size: .8rem;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  margin-bottom: .75rem;
-  font-weight: 600;
-}
-
-/* Articles dans la section derniers titres */
-.theme-details .headline-item,
-.derniers-titres .article,
-.derniers-titres .news-item {
-  background: rgba(255,255,255,.05);
-  padding: .75rem;
-  margin-bottom: .5rem;
-  border-radius: .4rem;
-  border: 1px solid rgba(255,255,255,.08);
-  color: var(--text-primary);
-  font-size: .85rem;
-  line-height: 1.5;
-}
-
-/* Mode clair pour les articles */
-@media (prefers-color-scheme: light) {
-  .theme-details .headline-item,
-  .derniers-titres .article,
-  .derniers-titres .news-item {
-    background: rgba(0,0,0,.04);
-    border-color: rgba(0,0,0,.08);
+  
+  .theme-tooltip::before {
+    background: rgb(255, 255, 255) !important;
+  }
+  
+  .theme-tooltip .tooltip-content {
+    background: rgb(255, 255, 255) !important;
   }
 }
