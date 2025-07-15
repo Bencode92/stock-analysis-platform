@@ -15,7 +15,6 @@ const ThemesVisualizer = {
     // Mapping des axes pour axisMax
     axisKeyMap: {
         'macroeconomie': 'macroeconomics',
-        'fundamentals': 'fundamentals',
         'secteurs': 'sectors',
         'regions': 'regions'
     },
@@ -144,7 +143,6 @@ const ThemesVisualizer = {
         this.createGlobalPeriodSelector();
         
         this.renderAxis('macroeconomie', 'Macroéconomie', '📈');
-        this.renderAxis('fundamentals', 'Fondamentaux', '💰');
         this.renderAxis('secteurs', 'Secteurs', '🏭');
         this.renderAxis('regions', 'Régions', '🌍');
     },
@@ -423,7 +421,7 @@ const ThemesVisualizer = {
 
     // État d'erreur
     renderErrorState: function() {
-        const containers = ['macroeconomie-themes', 'secteurs-themes', 'regions-themes', 'fundamentals-themes'];
+        const containers = ['macroeconomie-themes', 'secteurs-themes', 'regions-themes'];
         
         containers.forEach(id => {
             const container = document.getElementById(id);
