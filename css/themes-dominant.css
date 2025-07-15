@@ -199,6 +199,7 @@
   padding: 4px 10px;
   margin: -4px -10px;
   box-shadow: 0 0 15px rgba(0, 255, 135, 0.15);
+  z-index: 15; /* ✅ AJOUTÉ: Pour améliorer la superposition */
 }
 
 /* Animation échelonnée */
@@ -357,10 +358,12 @@
 /* ==== 5. Tooltips améliorés - FOND 100% OPAQUE ========================================= */
 .theme-tooltip {
   position: absolute;
-  top: calc(100% + 10px);
-  left: 0;
-  right: 0;
-  max-width: 360px;
+  top: 100%; /* ✅ CHANGÉ: juste sous la ligne */
+  left: 50%; /* ✅ CHANGÉ: centre horizontalement */
+  right: auto; /* ✅ CHANGÉ: on enlève */
+  transform: translate(-50%, 12px); /* ✅ CHANGÉ: centrage + 12px de marge */
+  width: 360px; /* ✅ CHANGÉ: largeur fixe lisible */
+  max-width: 90vw; /* ✅ CHANGÉ: jamais plus large que l'écran */
   padding: 1.2rem;
   background: rgb(1, 22, 39) !important; /* ✅ CHANGÉ: Fond 100% opaque avec !important */
   border: 1px solid var(--border-hover);
@@ -368,7 +371,7 @@
   box-shadow: 0 8px 32px rgba(0,0,0,.5), 0 0 20px rgba(0,255,135,.1);
   z-index: 1000;
   opacity: 0;
-  transform: translateY(-8px) scale(0.95);
+  transform: translate(-50%, 4px) scale(0.95); /* ✅ CHANGÉ: ajusté pour le nouveau positionnement */
   pointer-events: none;
   transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
   backdrop-filter: none !important; /* ✅ AJOUTÉ: Supprime tout effet de flou */
@@ -388,7 +391,7 @@
 .theme-tooltip.open {
   display: block;
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: translate(-50%, 12px) scale(1); /* ✅ CHANGÉ: ajusté pour le nouveau positionnement */
   pointer-events: auto;
 }
 
@@ -397,14 +400,19 @@
   content: '';
   position: absolute;
   top: -8px;
-  left: 24px;
+  left: 50%; /* ✅ CHANGÉ: centré */
   width: 16px;
   height: 16px;
   background: rgb(1, 22, 39) !important; /* ✅ CHANGÉ: Même fond opaque pour la flèche */
   border: 1px solid var(--border-hover);
   border-right: none;
   border-bottom: none;
-  transform: rotate(45deg);
+  transform: translateX(-50%) rotate(45deg); /* ✅ CHANGÉ: centrage de la flèche */
+}
+
+/* Amélioration de la superposition */
+.theme-card:has(.theme-tooltip.open) {
+  z-index: 20; /* ✅ AJOUTÉ: La carte avec tooltip ouvert passe au-dessus */
 }
 
 .tooltip-header {
