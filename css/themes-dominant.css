@@ -78,12 +78,11 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: rgba(1,22,39,.97); /* Très sombre, quasi opaque */
-  backdrop-filter: blur(16px) saturate(160%);
+  background: rgb(1,22,39); /* CHANGÉ: Complètement opaque sans rgba */
   opacity: 0; /* Invisible par défaut */
   transition: opacity .25s;
   pointer-events: none; /* Ne gêne pas les clics */
-  z-index: 0; /* ✅ CHANGÉ de -1 à 0 - juste sous le contenu */
+  z-index: 1; /* CHANGÉ: Au-dessus du fond mais sous le contenu */
 }
 
 /* Activation du fond opaque quand la carte a un item actif ou un tooltip ouvert */
@@ -114,6 +113,8 @@
   padding-bottom: .6rem;
   border-bottom: 1px solid var(--border-color);
   flex-wrap: wrap;
+  position: relative; /* AJOUTÉ */
+  z-index: 2; /* AJOUTÉ: Au-dessus du pseudo-élément */
 }
 
 .axis-icon {
@@ -190,6 +191,8 @@
 /* Zone de contenu des thèmes */
 .theme-content-area {
   min-height: 350px;
+  position: relative; /* AJOUTÉ */
+  z-index: 2; /* AJOUTÉ: Au-dessus du pseudo-élément */
 }
 
 /* ==== 3. Liste & items ============================================= */
@@ -201,7 +204,7 @@
   flex-direction: column;
   gap: .45rem;
   position: relative; /* Pour le z-index des items */
-  z-index: 1; /* Au-dessus du pseudo-élément de fond */
+  z-index: 2; /* CHANGÉ: Plus haut que le pseudo-élément */
 }
 
 .theme-item {
