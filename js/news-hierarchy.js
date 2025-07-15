@@ -95,9 +95,11 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
     card.className = `news-card relative flex flex-col rounded-xl p-6 border border-${impactColor} bg-zinc-900 transition hover:shadow-lg min-h-[240px] cursor-pointer`;
     card.style.animationDelay = `${index * 0.1}s`;
 
-    // Attributs de filtrage - AJOUT de data-score
+    // Attributs de filtrage - AJOUT de data-score AVANT la boucle
     card.setAttribute('data-score', item.importance_score || item.imp || 0);
-    ['category', 'impact', 'sentiment', 'country', 'score'].forEach(key => {
+    
+    // CORRECTION: Retirer 'score' de la boucle pour ne pas écraser
+    ['category', 'impact', 'sentiment', 'country'].forEach(key => {
         card.setAttribute(`data-${key}`, item[key] || 'unknown');
     });
     
