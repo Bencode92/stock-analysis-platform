@@ -63,7 +63,7 @@
   padding: 1rem;
   border-radius: .6rem;
   border: 1px solid var(--border-color);
-  backdrop-filter: blur(10px);
+  /* backdrop-filter: blur(10px); */ /* ✅ COMMENTÉ - Le texte était re-flouté */
   transition: all .3s ease;
   margin-bottom: 1rem;
   box-shadow: 0 2px 8px rgba(0,0,0,.3); /* Nouvelle ombre */
@@ -83,7 +83,7 @@
   opacity: 0; /* Invisible par défaut */
   transition: opacity .25s;
   pointer-events: none; /* Ne gêne pas les clics */
-  z-index: -1; /* Derrière le contenu */
+  z-index: 0; /* ✅ CHANGÉ de -1 à 0 - juste sous le contenu */
 }
 
 /* Activation du fond opaque quand la carte a un item actif ou un tooltip ouvert */
@@ -397,7 +397,7 @@
   transform: translateY(-8px) scale(0.95);
   pointer-events: none;
   transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(12px);
+  /* backdrop-filter: blur(12px); */ /* ✅ OPTIONNEL: Commenté pour encore plus de lisibilité */
 }
 
 /* Force l'invisibilité initiale des tooltips */
