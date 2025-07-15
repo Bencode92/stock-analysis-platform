@@ -643,18 +643,6 @@ THEMES = {
     }
 }
 
-# Backwards compatibility mappings
-NEWS_KEYWORDS = {
-    "high_impact": KEYWORD_TIERS["high"],
-    "medium_impact": KEYWORD_TIERS["medium"], 
-    "low_impact": KEYWORD_TIERS["low"]
-}
-
-THEMES_DOMINANTS = THEMES
-
-IMPORTANT_SOURCES = SOURCES["whitelist"]
-# PREMIUM_SOURCES = SOURCES["premium"]  # Already defined above
-
 # ---------------------------------------------------------------------------
 # SOURCES  –  premium boost + shortlist par catégorie
 # ---------------------------------------------------------------------------
@@ -683,6 +671,18 @@ SOURCES = {
         ]
     }
 }
+
+# Backwards compatibility mappings
+NEWS_KEYWORDS = {
+    "high_impact": KEYWORD_TIERS["high"],
+    "medium_impact": KEYWORD_TIERS["medium"], 
+    "low_impact": KEYWORD_TIERS["low"]
+}
+
+THEMES_DOMINANTS = THEMES
+
+IMPORTANT_SOURCES = SOURCES["whitelist"]
+# PREMIUM_SOURCES = SOURCES["premium"]  # Already defined above
 
 # ---------------------------------------------------------------------------
 # 🔧 ENHANCED GIT HANDLER FOR ROBUST CI/CD OPERATIONS
