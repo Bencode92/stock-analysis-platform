@@ -1,6 +1,6 @@
 /**
- * themes-visualizer.js v5.4 - Gestionnaire des thèmes avec drawer tooltip
- * Affichage d'une seule période à la fois avec tooltips en drawer latéral
+ * themes-visualizer.js v5.3 - Gestionnaire des thèmes avec sélecteur de période global
+ * Affichage d'une seule période à la fois pour éviter la troncature
  */
 
 const ThemesVisualizer = {
@@ -11,8 +11,6 @@ const ThemesVisualizer = {
     loadStartTime: 0,
     showTopOnly: false,
     searchQuery: '',
-    backdrop: null,
-    currentTooltip: null,
     
     // Mapping des axes pour axisMax
     axisKeyMap: {
@@ -30,23 +28,12 @@ const ThemesVisualizer = {
 
     // Initialisation
     init: function() {
-        console.log('🎨 Initialisation ThemesVisualizer v5.4 - Drawer Tooltip');
+        console.log('🎨 Initialisation ThemesVisualizer v5.3 - Sélecteur de période global');
         this.loadStartTime = performance.now();
-        this.createBackdrop(); // Nouveau: créer le voile
         this.loadThemesData();
         this.setupEventListeners();
         this.setupSearch();
         this.setupAccessibility();
-    },
-
-    // Nouveau: Création du voile d'arrière-plan
-    createBackdrop: function() {
-        this.backdrop = document.createElement('div');
-        this.backdrop.className = 'tooltip-backdrop';
-        document.body.appendChild(this.backdrop);
-        
-        // Fermer au clic sur le voile
-        this.backdrop.addEventListener('click', () => this.closeAllTooltips());
     },
 
     // Chargement des données
@@ -62,34 +49,11 @@ const ThemesVisualizer = {
                 this.renderThemes();
                 this.updateLastUpdated();
                 this.logPerformanceMetrics(loadTime);
-                this.prepareTooltips(); // Nouveau: préparer les tooltips
             })
             .catch(error => {
                 console.error('❌ Erreur chargement thèmes:', error);
                 this.renderErrorState();
             });
-    },
-
-    // Nouveau: Préparer les tooltips pour le drawer
-    prepareTooltips: function() {
-        // Déplacer tous les tooltips dans body après un court délai
-        setTimeout(() => {
-            document.querySelectorAll('.theme-tooltip').forEach(tooltip => {
-                document.body.appendChild(tooltip);
-                tooltip.setAttribute('aria-hidden', 'true');
-                
-                // Ajouter un ID unique si nécessaire
-                if (!tooltip.id) {
-                    tooltip.id = 'tooltip-' + Math.random().toString(36).substr(2, 9);
-                }
-                
-                // Gérer le scroll dans le tooltip
-                tooltip.addEventListener('scroll', () => {
-                    const isAtBottom = tooltip.scrollHeight - tooltip.scrollTop <= tooltip.clientHeight + 5;
-                    tooltip.classList.toggle('at-bottom', isAtBottom);
-                });
-            });
-        }, 100);
     },
 
     // Détection du format
@@ -111,7 +75,7 @@ const ThemesVisualizer = {
 
         // Fermer tooltips au clic externe
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.theme-item') && !e.target.closest('.theme-tooltip')) {
+            if (!e.target.closest('.theme-item')) {
                 this.closeAllTooltips();
             }
         });
@@ -304,12 +268,6 @@ const ThemesVisualizer = {
         themeElement.setAttribute('role', 'listitem');
         themeElement.setAttribute('tabindex', '0');
         
-        // ID unique pour le tooltip
-        const tooltipId = headlines.length > 0 ? `tooltip-${axisId}-${themeName.replace(/\s+/g, '-')}` : '';
-        if (tooltipId) {
-            themeElement.setAttribute('aria-describedby', tooltipId);
-        }
-        
         // Structure HTML
         themeElement.innerHTML = `
             <div class="theme-content">
@@ -319,7 +277,7 @@ const ThemesVisualizer = {
                 <span class="theme-name" title="${this.capitalizeFirstLetter(themeName)}">${this.capitalizeFirstLetter(themeName)}</span>
                 <span class="theme-count">${count}</span>
             </div>
-            ${headlines.length > 0 ? this.createTooltip(themeName, themeData, headlines, tooltipId) : ''}
+            ${headlines.length > 0 ? this.createTooltip(themeName, themeData, headlines) : ''}
         `;
         
         // IMPORTANT: Utiliser --pct au lieu de style inline
@@ -334,12 +292,12 @@ const ThemesVisualizer = {
         return themeElement;
     },
 
-    // Création du tooltip moderne avec ID
-    createTooltip: function(themeName, themeData, headlines, tooltipId) {
+    // Création du tooltip moderne
+    createTooltip: function(themeName, themeData, headlines) {
         const [positivePct, negativePct, neutralPct] = themeData.s;
         
         return `
-            <div id="${tooltipId}" class="theme-tooltip" role="tooltip" aria-hidden="true">
+            <div class="theme-tooltip" role="tooltip" aria-hidden="true">
                 <div class="tooltip-header">
                     <strong>${this.capitalizeFirstLetter(themeName)}</strong>
                     <span class="tooltip-close" aria-label="Fermer">×</span>
@@ -347,9 +305,9 @@ const ThemesVisualizer = {
                 <div class="tooltip-content">
                     <div class="headlines-section">
                         <h4>Derniers titres</h4>
-                        ${headlines.slice(0, 5).map(([title, url]) => `
+                        ${headlines.slice(0, 3).map(([title, url]) => `
                             <div class="headline-item" ${url ? `data-url="${url}"` : ''}>
-                                ${title.length > 100 ? title.substring(0, 100) + '...' : title}
+                                ${title.length > 80 ? title.substring(0, 80) + '...' : title}
                             </div>
                         `).join('')}
                     </div>
@@ -389,96 +347,70 @@ const ThemesVisualizer = {
         // Click sur le thème
         themeElement.addEventListener('click', (e) => {
             if (!e.target.closest('.tooltip-close')) {
-                const tooltipId = themeElement.getAttribute('aria-describedby');
-                if (tooltipId) {
-                    const tooltip = document.getElementById(tooltipId);
-                    if (tooltip) this.toggleTooltip(tooltip);
-                }
+                const tooltip = themeElement.querySelector('.theme-tooltip');
+                if (tooltip) this.toggleTooltip(tooltip);
             }
         });
         
+        // Fermeture du tooltip
+        const closeBtn = themeElement.querySelector('.tooltip-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const tooltip = themeElement.querySelector('.theme-tooltip');
+                if (tooltip) this.closeTooltip(tooltip);
+            });
+        }
+
         // Accessibilité clavier
         themeElement.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                const tooltipId = themeElement.getAttribute('aria-describedby');
-                if (tooltipId) {
-                    const tooltip = document.getElementById(tooltipId);
-                    if (tooltip) this.toggleTooltip(tooltip);
-                }
+                const tooltip = themeElement.querySelector('.theme-tooltip');
+                if (tooltip) this.toggleTooltip(tooltip);
             }
         });
     },
 
-    // Gestion tooltips DRAWER
+    // Gestion tooltips
     toggleTooltip: function(tooltip) {
         const isOpen = tooltip.classList.contains('open');
-        
-        // Fermer tout d'abord
         this.closeAllTooltips();
         
         if (!isOpen) {
-            this.openTooltip(tooltip);
-        }
-    },
-
-    openTooltip: function(tooltip) {
-        // S'assurer que le tooltip est dans body
-        if (tooltip.parentElement !== document.body) {
-            document.body.appendChild(tooltip);
-        }
-        
-        // Activer le voile
-        this.backdrop.classList.add('active');
-        
-        // Ouvrir le tooltip en drawer
-        requestAnimationFrame(() => {
             tooltip.classList.add('open');
             tooltip.setAttribute('aria-hidden', 'false');
-            this.currentTooltip = tooltip;
             
-            // Ajouter classe active au thème
-            const themeItem = document.querySelector(`[aria-describedby="${tooltip.id}"]`);
-            if (themeItem) {
-                themeItem.classList.add('active');
-            }
+            // Ajouter classe active au parent
+            tooltip.closest('.theme-item').classList.add('active');
             
-            // Focus sur le bouton de fermeture pour l'accessibilité
-            const closeBtn = tooltip.querySelector('.tooltip-close');
-            if (closeBtn) {
-                closeBtn.focus();
-                
-                // Event listener pour fermeture
-                closeBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.closeTooltip(tooltip);
-                }, { once: true });
-            }
-        });
+            // ✅ SUPPRIMÉ: Logique has-active-item retirée
+            
+            // Ajuster position si déborde
+            requestAnimationFrame(() => {
+                const rect = tooltip.getBoundingClientRect();
+                if (rect.right > window.innerWidth - 20) {
+                    tooltip.style.right = '0';
+                    tooltip.style.left = 'auto';
+                }
+            });
+        }
     },
 
     closeTooltip: function(tooltip) {
         tooltip.classList.remove('open');
         tooltip.setAttribute('aria-hidden', 'true');
         
-        // Retirer classe active du thème
-        const themeItem = document.querySelector(`[aria-describedby="${tooltip.id}"]`);
-        if (themeItem) {
-            themeItem.classList.remove('active');
-        }
+        // Retirer classe active
+        tooltip.closest('.theme-item')?.classList.remove('active');
+        
+        // ✅ SUPPRIMÉ: Logique has-active-item retirée
     },
 
     closeAllTooltips: function() {
-        // Fermer tous les tooltips
         document.querySelectorAll('.theme-tooltip.open').forEach(tooltip => {
             this.closeTooltip(tooltip);
         });
-        
-        // Masquer le voile
-        if (this.backdrop) {
-            this.backdrop.classList.remove('active');
-        }
-        this.currentTooltip = null;
     },
 
     // Sentiment dominant
@@ -539,15 +471,14 @@ const ThemesVisualizer = {
             .flatMap(axis => Object.keys(axis)).length;
         
         console.log(`
-📊 Performance Metrics v5.4:
+📊 Performance Metrics v5.3:
 ⏱️  Load Time: ${loadTime}ms
 📦 Data Size: ${(dataSize / 1024).toFixed(1)}KB  
 🎯 Format: ${this.isCompactFormat ? 'Compact' : 'Legacy'}
 📊 Themes: ${themeCount} total
 🔍 Search: ${this.searchQuery || 'None'}
 📋 Filter: ${this.showTopOnly ? 'Top 10' : 'All'}
-📅 Active Period: ${this.activePeriod}
-🎨 UI: Drawer Tooltip System`);
+📅 Active Period: ${this.activePeriod}`);
     },
 
     // Debug info
@@ -555,7 +486,7 @@ const ThemesVisualizer = {
         if (!this.themesData) return;
         
         console.table({
-            version: '5.4-drawer-tooltip',
+            version: '5.3-global-period-selector',
             format: this.isCompactFormat ? 'Compact' : 'Legacy',
             activePeriod: this.activePeriod,
             searchQuery: this.searchQuery || 'None',
