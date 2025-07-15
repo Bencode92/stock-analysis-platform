@@ -1,11 +1,12 @@
 /**
- * themes-visualizer.js v5.3 - Gestionnaire des thèmes avec sélecteur de période global
+ * themes-visualizer.js v5.4 - Gestionnaire des thèmes avec sélecteur de période global
  * Affichage d'une seule période à la fois pour éviter la troncature
+ * Mis à jour pour supporter uniquement hebdomadaire et mensuel
  */
 
 const ThemesVisualizer = {
     // Configuration
-    periods: ['weekly', 'monthly', 'quarterly'],
+    periods: ['weekly', 'monthly'],
     activePeriod: 'weekly', // Période active par défaut
     themesData: null,
     loadStartTime: 0,
@@ -22,13 +23,12 @@ const ThemesVisualizer = {
     // Labels français pour les périodes
     periodLabels: {
         'weekly': 'Hebdomadaire',
-        'monthly': 'Mensuel',
-        'quarterly': 'Trimestriel'
+        'monthly': 'Mensuel'
     },
 
     // Initialisation
     init: function() {
-        console.log('🎨 Initialisation ThemesVisualizer v5.3 - Sélecteur de période global');
+        console.log('🎨 Initialisation ThemesVisualizer v5.4 - Sélecteur de période global (hebdo/mensuel)');
         this.loadStartTime = performance.now();
         this.loadThemesData();
         this.setupEventListeners();
@@ -59,7 +59,7 @@ const ThemesVisualizer = {
     // Détection du format
     detectFormat: function(data) {
         this.isCompactFormat = !!(data.periods && data.axisMax && data.config_version);
-        console.log(`📊 Format détecté: ${this.isCompactFormat ? 'Compact v4.1+' : 'Legacy'}`);
+        console.log(`📊 Format détecté: ${this.isCompactFormat ? 'Compact v4.2+' : 'Legacy'}`);
     },
 
     // Configuration des événements
@@ -156,12 +156,14 @@ const ThemesVisualizer = {
         selectorDiv.className = 'global-period-selector';
         selectorDiv.innerHTML = `
             <div class="period-selector-global">
-                ${this.periods.map(period => `
-                    <button class="period-btn ${period === this.activePeriod ? 'active' : ''}" 
-                            data-period="${period}">
-                        ${this.periodLabels[period]}
-                    </button>
-                `).join('')}
+                <button class="period-btn ${this.activePeriod === 'weekly' ? 'active' : ''}" 
+                        data-period="weekly">
+                    Hebdomadaire
+                </button>
+                <button class="period-btn ${this.activePeriod === 'monthly' ? 'active' : ''}" 
+                        data-period="monthly">
+                    Mensuel
+                </button>
             </div>
         `;
         
@@ -384,8 +386,6 @@ const ThemesVisualizer = {
             // Ajouter classe active au parent
             tooltip.closest('.theme-item').classList.add('active');
             
-            // ✅ SUPPRIMÉ: Logique has-active-item retirée
-            
             // Ajuster position si déborde
             requestAnimationFrame(() => {
                 const rect = tooltip.getBoundingClientRect();
@@ -403,8 +403,6 @@ const ThemesVisualizer = {
         
         // Retirer classe active
         tooltip.closest('.theme-item')?.classList.remove('active');
-        
-        // ✅ SUPPRIMÉ: Logique has-active-item retirée
     },
 
     closeAllTooltips: function() {
@@ -471,7 +469,7 @@ const ThemesVisualizer = {
             .flatMap(axis => Object.keys(axis)).length;
         
         console.log(`
-📊 Performance Metrics v5.3:
+📊 Performance Metrics v5.4:
 ⏱️  Load Time: ${loadTime}ms
 📦 Data Size: ${(dataSize / 1024).toFixed(1)}KB  
 🎯 Format: ${this.isCompactFormat ? 'Compact' : 'Legacy'}
@@ -486,7 +484,7 @@ const ThemesVisualizer = {
         if (!this.themesData) return;
         
         console.table({
-            version: '5.3-global-period-selector',
+            version: '5.4-weekly-monthly-only',
             format: this.isCompactFormat ? 'Compact' : 'Legacy',
             activePeriod: this.activePeriod,
             searchQuery: this.searchQuery || 'None',
