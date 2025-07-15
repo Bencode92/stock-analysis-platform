@@ -47,7 +47,7 @@ jobs:
           TP_MAX_TOTAL: 150
           TP_MAX_WORKERS: 2  # Limiter pour CI
           TP_LOG_LEVEL: INFO
-        timeout-minutes: 20
+        timeout-minutes: 40  # 🔧 AUGMENTÉ de 20 à 40 minutes
         run: python scripts/fmp_news_updater.py
         
       - name: Verify output files
