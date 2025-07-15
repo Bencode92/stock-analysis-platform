@@ -384,6 +384,10 @@ const ThemesVisualizer = {
             // Ajouter classe active au parent
             tooltip.closest('.theme-item').classList.add('active');
             
+            // AJOUTE: Gestion de la classe has-active-item pour compatibilité sans :has()
+            const card = tooltip.closest('.theme-card');
+            card?.classList.add('has-active-item');
+            
             // Ajuster position si déborde
             requestAnimationFrame(() => {
                 const rect = tooltip.getBoundingClientRect();
@@ -398,8 +402,13 @@ const ThemesVisualizer = {
     closeTooltip: function(tooltip) {
         tooltip.classList.remove('open');
         tooltip.setAttribute('aria-hidden', 'true');
+        
         // Retirer classe active
         tooltip.closest('.theme-item')?.classList.remove('active');
+        
+        // AJOUTE: Retirer la classe has-active-item
+        const card = tooltip.closest('.theme-card');
+        card?.classList.remove('has-active-item');
     },
 
     closeAllTooltips: function() {
