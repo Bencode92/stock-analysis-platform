@@ -8,6 +8,7 @@ Enhanced with Dual Specialized FinBERT models (sentiment + importance) and MSCI-
 Supports private model loading with secure fallback
 
 ✨ NEW v4.1: Ultra-compact theme format with pre-computed axisMax
+🔧 FIXED: Extended data collection to 90 days for proper quarterly analysis
 """
 
 import os
@@ -147,16 +148,16 @@ def _predict_probs(tokenizer, model, text: str) -> dict[str, float]:
         return {}
 
 # ---------------------------------------------------------------------------
-# INVESTOR-GRADE NEWS CONFIG v4.1
+# INVESTOR-GRADE NEWS CONFIG v4.1 - FIXED FOR 90 DAYS
 # ---------------------------------------------------------------------------
 
 CONFIG = {
     # --------- CONTRAINTES GÉNÉRALES --------------------------------------
     "api_key": os.environ.get("FMP_API_KEY", ""),
     "meta": {
-        "max_total_articles": 150,
-        "days_back":          21,     # 3 semaines = cycle earnings + macro
-        "days_ahead":         10      # pour capter pré-annonces & agendas
+        "max_total_articles": 500,     # 🔧 Augmenté de 150 à 500
+        "days_back":          90,      # 🔧 Augmenté de 21 à 90
+        "days_ahead":         10       # pour capter pré-annonces & agendas
     },
 
     # --------- ENDPOINTS --------------------------------------------------
@@ -195,7 +196,7 @@ CONFIG = {
             "asia":             10,
             "emerging_markets":  4
         },
-        "max_total": 150
+        "max_total": 500       # 🔧 Augmenté pour supporter 90 jours
     },
 
     # --------- PLAFONNAGE THÉMATIQUE DYNAMIQUE -----------------------------
@@ -421,53 +422,65 @@ class EnhancedGitHandler:
         return True
     
     def generate_commit_message(self):
-        """Génère un message de commit informatif avec statistiques"""
+        """Génère un message de commit informatif avec statistiques périodes"""
         timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
         
-        # Lire les statistiques depuis news.json
         stats_info = ""
         try:
             news_file = self.repo_path / "data/news.json"
+            themes_file = self.repo_path / "data/themes.json"
+            
             if news_file.exists():
                 with open(news_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+                    news_data = json.load(f)
                 
-                total_articles = 0
-                countries = []
+                # Stats articles
+                total_articles = sum(len(v) for k, v in news_data.items() if isinstance(v, list))
                 
-                for key, value in data.items():
-                    if isinstance(value, list) and key != 'model_metadata':
-                        total_articles += len(value)
-                        if len(value) > 0:
-                            countries.append(f"{key}: {len(value)}")
+                # Stats dates si disponibles
+                all_dates = []
+                for articles in news_data.values():
+                    if isinstance(articles, list):
+                        for article in articles:
+                            if 'date' in article:
+                                all_dates.append(article['date'])
                 
-                stats_info = f"""
-📊 Articles collectés: {total_articles}
-📍 Distribution: {', '.join(countries[:3])}{'...' if len(countries) > 3 else ''}"""
+                date_range_info = ""
+                if all_dates:
+                    date_range_info = f"\n📅 Période couverte: {min(all_dates)} à {max(all_dates)}"
                 
-                # Métadonnées des modèles IA
-                if 'model_metadata' in data:
-                    meta = data['model_metadata']
-                    if 'performance_metrics' in meta:
-                        perf = meta['performance_metrics']
-                        sentiment_count = perf.get('sentiment_articles', 0)
-                        importance_count = perf.get('importance_articles', 0)
-                        if sentiment_count > 0 or importance_count > 0:
-                            stats_info += f"""
-🤖 IA - Sentiment: {sentiment_count} articles
-⚡ IA - Importance: {importance_count} articles"""
+                stats_info = f"\n📊 Articles collectés: {total_articles}{date_range_info}"
+            
+            if themes_file.exists():
+                with open(themes_file, 'r', encoding='utf-8') as f:
+                    themes_data = json.load(f)
+                
+                # Compter les thèmes par période
+                if 'periods' in themes_data:
+                    theme_counts = {}
+                    for period in ['weekly', 'monthly', 'quarterly']:
+                        if period in themes_data['periods']:
+                            count = sum(
+                                len(themes) 
+                                for axis_themes in themes_data['periods'][period].values() 
+                                for themes in axis_themes.values() if isinstance(themes, dict)
+                            )
+                            theme_counts[period] = count
+                    
+                    if theme_counts:
+                        stats_info += f"\n📈 Thèmes: W={theme_counts.get('weekly', 0)} M={theme_counts.get('monthly', 0)} Q={theme_counts.get('quarterly', 0)}"
                         
         except Exception as e:
             logger.warning(f"⚠️ Could not read statistics: {e}")
         
-        commit_message = f"""🤖 Auto-update: TradePulse news & themes data (v4.1 compact)
+        commit_message = f"""🤖 Auto-update: TradePulse news & themes (90-day window)
 
 📅 Timestamp: {timestamp}
 🔗 Source: Financial Modeling Prep API
-🧠 AI Models: FinBERT Sentiment + Importance (3-classes with threshold)
-🌍 Distribution: MSCI-weighted geographic allocation{stats_info}
+🧠 AI Models: FinBERT Sentiment + Importance
+🌍 Window: 90 days rolling{stats_info}
 
-✨ Enhanced v4.1 compact format active (axisMax)
+✨ Enhanced collection with full quarterly data
 [skip ci]"""
         
         return commit_message
@@ -605,28 +618,28 @@ def fetch_api_data(endpoint, params=None):
         logger.error(f"❌ Error fetching from {endpoint}: {str(e)}")
         return []
 
-def fetch_articles_by_period(endpoint, start_date, end_date, source_type=None, days_interval=7, max_pages=5):
+def fetch_articles_by_period(endpoint, start_date, end_date, source_type=None, days_interval=7, max_pages=25):  # 🔧 max_pages augmenté
     """
-    Fetches articles over a given period by splitting the period into intervals
-    and using pagination to get as many articles as possible
+    Fetches articles with improved pagination and date control
     """
-    logger.info(f"Starting extraction of articles from {start_date} to {end_date} in {days_interval} day chunks")
+    logger.info(f"Starting extraction from {start_date} to {end_date} in {days_interval} day chunks")
     
-    # Use the source-specific limit or 50 by default
     per_page = CONFIG["pull_limits"].get(source_type, 50) if source_type else 50
     
     from_date = datetime.strptime(start_date, "%Y-%m-%d")
     to_date = datetime.strptime(end_date, "%Y-%m-%d")
     all_articles = []
     
-    # Process period by intervals
+    # Stats pour audit
+    oldest_date_seen = None
+    total_api_calls = 0
+    
     current_from = from_date
     while current_from < to_date:
         current_to = min(current_from + timedelta(days=days_interval), to_date)
         
         logger.info(f"Processing period {current_from.strftime('%Y-%m-%d')} → {current_to.strftime('%Y-%m-%d')}")
         
-        # Process pages for each interval
         for page in range(max_pages):
             params = {
                 "from": current_from.strftime("%Y-%m-%d"),
@@ -636,21 +649,30 @@ def fetch_articles_by_period(endpoint, start_date, end_date, source_type=None, d
             }
             
             articles = fetch_api_data(endpoint, params)
+            total_api_calls += 1
             
             if not articles:
-                break  # No more articles for this period
-                
-            logger.info(f"  Page {page+1}: {len(articles)} articles retrieved")
+                break
+            
+            # Tracking de la date la plus ancienne
+            for article in articles:
+                pub_date = article.get("publishedDate", "")
+                if pub_date and (not oldest_date_seen or pub_date < oldest_date_seen):
+                    oldest_date_seen = pub_date
+            
+            logger.info(f"  Page {page+1}: {len(articles)} articles (total API calls: {total_api_calls})")
             all_articles.extend(articles)
             
-            # If we got fewer articles than the limit, we've reached the end
+            # Si on a moins d'articles que la limite, on a tout récupéré
             if len(articles) < per_page:
                 break
-                
-        # Move to next interval
+        
         current_from = current_to
     
-    logger.info(f"Total articles retrieved for the period: {len(all_articles)}")
+    # Log d'audit
+    logger.info(f"✅ Total articles: {len(all_articles)} | API calls: {total_api_calls}")
+    logger.info(f"📅 Date range in data: {oldest_date_seen} to {end_date}")
+    
     return all_articles
 
 def get_general_news():
@@ -1088,7 +1110,7 @@ def compute_importance_score(article, category=None) -> dict:
             "metadata": {"fallback": f"error: {str(e)}", "specialized": False},
         }
 
-def calculate_output_limits(articles_by_country, max_total=150):
+def calculate_output_limits(articles_by_country, max_total=500):  # 🔧 max_total augmenté
     """
     Enhanced output limits calculation using geo_budgets v4.1 with MSCI weights
     """
@@ -1236,7 +1258,7 @@ def apply_topic_caps(formatted_data):
 
 def extract_top_themes(news_data, days=30, max_examples=3, exclude_themes=None):
     """
-    🚀 Enhanced theme analysis v4.1 with fundamentals axis + data for compact format
+    🚀 Enhanced theme analysis v4.1 with diagnostics
     """
     cutoff_date = datetime.now() - timedelta(days=days)
     
@@ -1264,6 +1286,7 @@ def extract_top_themes(news_data, days=30, max_examples=3, exclude_themes=None):
     
     total_articles = 0
     processed_articles = 0
+    article_dates = []  # 🔧 Pour tracking des dates
     
     for country_articles in news_data.values():
         if not isinstance(country_articles, list):
@@ -1278,6 +1301,8 @@ def extract_top_themes(news_data, days=30, max_examples=3, exclude_themes=None):
                     article_date = datetime.strptime(article["rawDate"].split(" ")[0], "%Y-%m-%d")
                 else:
                     article_date = datetime.strptime(article["date"], "%d/%m/%Y")
+                
+                article_dates.append(article_date)  # 🔧 Tracking
                 
                 if article_date < cutoff_date:
                     continue
@@ -1342,7 +1367,16 @@ def extract_top_themes(news_data, days=30, max_examples=3, exclude_themes=None):
                 logger.warning(f"Article ignored for invalid date: {article.get('title')} | Error: {str(e)}")
                 continue
     
-    logger.info(f"Enhanced theme analysis v4.1: {processed_articles}/{total_articles} articles used for the {days} day period")
+    # 🔧 Diagnostic logs
+    logger.info(f"📊 Theme analysis for {days} days:")
+    logger.info(f"  - Total articles in dataset: {total_articles}")
+    logger.info(f"  - Articles within period: {processed_articles} ({processed_articles/total_articles*100:.1f}%)")
+    
+    if article_dates:
+        oldest = min(article_dates)
+        newest = max(article_dates)
+        logger.info(f"  - Date range in data: {oldest.strftime('%Y-%m-%d')} to {newest.strftime('%Y-%m-%d')}")
+        logger.info(f"  - Actual days covered: {(newest - oldest).days}")
     
     # Add sentiment stats to details
     for axis, theme_dict in theme_articles.items():
@@ -1424,7 +1458,7 @@ def build_theme_summary(theme_name, theme_data):
     )
 
 def process_news_data(news_sources):
-    """Enhanced news processing with dual specialized models v4.1"""
+    """Enhanced news processing with deduplication"""
     # Initialize structure for all possible countries/regions using geo_budgets
     formatted_data = {
         "lastUpdated": datetime.now().isoformat()
@@ -1495,8 +1529,22 @@ def process_news_data(news_sources):
             # Add to global list
             all_articles.append(news_item)
     
-    # Remove duplicates
-    all_articles = remove_duplicates(all_articles)
+    # 🔧 Remove duplicates AVANT le tri
+    logger.info(f"Articles avant déduplication: {len(all_articles)}")
+    
+    # Déduplication par URL
+    seen_urls = set()
+    unique_articles = []
+    for article in all_articles:
+        url = article.get("url", "")
+        if url and url not in seen_urls:
+            seen_urls.add(url)
+            unique_articles.append(article)
+        elif not url:  # Si pas d'URL, on garde quand même
+            unique_articles.append(article)
+    
+    all_articles = unique_articles
+    logger.info(f"Articles après déduplication: {len(all_articles)} (-{len(all_articles) - len(unique_articles)} doublons)")
     
     # Sort by importance score
     all_articles.sort(key=lambda x: x["importance_score"], reverse=True)
@@ -1806,6 +1854,7 @@ def main():
         logger.info("🚀 Starting TradePulse Investor-Grade News Collection v4.1...")
         logger.info(f"🎯 Dual Specialized Models: sentiment + importance (3-classes with threshold)")
         logger.info(f"✨ NEW v4.1: Ultra-compact format with axisMax")
+        logger.info(f"🔧 FIXED: 90-day collection window for proper quarterly analysis")
         
         # Pré-charge les deux modèles spécialisés
         start_time = time.time()
@@ -1818,7 +1867,7 @@ def main():
         existing_data = read_existing_news()
         
         # Fetch different news sources with enhanced limits
-        logger.info("📊 Fetching news sources with MSCI-weighted geo limits...")
+        logger.info("📊 Fetching news sources with MSCI-weighted geo limits (90-day window)...")
         general_news = get_general_news()
         fmp_articles = get_fmp_articles()
         stock_news = get_stock_news()
@@ -1911,8 +1960,8 @@ def main():
             if "threshold_logic_applied" in metrics:
                 logger.info(f"  🎯 Threshold Logic Applied: {metrics['threshold_logic_applied']} articles")
         
-        logger.info("✅ TradePulse v4.1 with Ultra-Compact Format completed successfully!")
-        logger.info("🚀 Benefits: ×6-8 smaller files, instant frontend rendering, preserved article diversity")
+        logger.info("✅ TradePulse v4.1 with 90-day window completed successfully!")
+        logger.info("🚀 Benefits: Full quarterly data, proper W/M/Q ratios, preserved article diversity")
         return success_news and success_themes
         
     except Exception as e:
