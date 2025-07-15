@@ -583,3 +583,63 @@
 .theme-card {
   overflow: visible;
 }
+
+/* ==== 9. Section DERNIERS TITRES - FOND OPAQUE ========================= */
+.theme-details,
+.theme-detail-section,
+.headlines-section,
+.theme-headlines,
+.derniers-titres {
+  background: rgb(1, 22, 39) !important; /* ✅ AJOUTÉ: Fond opaque pour section détails */
+  padding: 1rem;
+  border-radius: .5rem;
+  margin-top: 1rem;
+  border: 1px solid var(--border-color);
+}
+
+/* Mode clair */
+@media (prefers-color-scheme: light) {
+  .theme-details,
+  .theme-detail-section,
+  .headlines-section,
+  .theme-headlines,
+  .derniers-titres {
+    background: rgb(255, 255, 255) !important;
+  }
+}
+
+/* Styles pour le titre DERNIERS TITRES */
+.theme-details h4,
+.derniers-titres h4,
+.headlines-section > h4:first-child {
+  color: var(--text-secondary);
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: .75rem;
+  font-weight: 600;
+}
+
+/* Articles dans la section derniers titres */
+.theme-details .headline-item,
+.derniers-titres .article,
+.derniers-titres .news-item {
+  background: rgba(255,255,255,.05);
+  padding: .75rem;
+  margin-bottom: .5rem;
+  border-radius: .4rem;
+  border: 1px solid rgba(255,255,255,.08);
+  color: var(--text-primary);
+  font-size: .85rem;
+  line-height: 1.5;
+}
+
+/* Mode clair pour les articles */
+@media (prefers-color-scheme: light) {
+  .theme-details .headline-item,
+  .derniers-titres .article,
+  .derniers-titres .news-item {
+    background: rgba(0,0,0,.04);
+    border-color: rgba(0,0,0,.08);
+  }
+}
