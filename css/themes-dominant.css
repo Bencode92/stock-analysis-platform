@@ -67,6 +67,36 @@
   transition: all .3s ease;
   margin-bottom: 1rem;
   box-shadow: 0 2px 8px rgba(0,0,0,.3); /* Nouvelle ombre */
+  position: relative;
+  isolation: isolate; /* NOUVEAU: Contexte d'empilement isolé */
+}
+
+/* ==== NOUVEAU CORRECTIF LISIBILITÉ - Fond opaque dynamique ===== */
+/* Pseudo-élément de couverture qui devient opaque quand la carte est ouverte */
+.theme-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(1,22,39,.97); /* Très sombre, quasi opaque */
+  backdrop-filter: blur(16px) saturate(160%);
+  opacity: 0; /* Invisible par défaut */
+  transition: opacity .25s;
+  pointer-events: none; /* Ne gêne pas les clics */
+  z-index: -1; /* Derrière le contenu */
+}
+
+/* Activation du fond opaque quand la carte a un item actif ou un tooltip ouvert */
+.theme-card:has(.theme-item.active)::before,
+.theme-card:has(.theme-tooltip.open)::before {
+  opacity: 1; /* Devient totalement lisible */
+}
+
+/* Support pour navigateurs sans :has() */
+@supports not selector(:has(*)) {
+  .theme-card.has-active-item::before {
+    opacity: 1;
+  }
 }
 
 .theme-card:hover {
@@ -170,6 +200,8 @@
   display: flex;
   flex-direction: column;
   gap: .45rem;
+  position: relative; /* Pour le z-index des items */
+  z-index: 1; /* Au-dessus du pseudo-élément de fond */
 }
 
 .theme-item {
