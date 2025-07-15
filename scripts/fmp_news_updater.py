@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-TradePulse - Investor-Grade News Updater v4.2 OPTIMIZED
+TradePulse - Investor-Grade News Updater v5.0 UNIFIED
 Script for extracting news and events from Financial Modeling Prep
-🚀 OPTIMIZATIONS: Batch inference (4-5x faster), 30-day window, smart caching
-✨ NEW v4.2: Batch processing for FinBERT models
+🚀 NEW v5.0: Unified dual-model ML system (sentiment + importance)
+✨ Features: Quality scoring, confidence thresholds, needs_review flag
 """
 
 import os
@@ -21,6 +21,7 @@ from functools import lru_cache
 import subprocess
 from pathlib import Path
 import hashlib
+from typing import List, Dict, Optional, Tuple
 
 # Enhanced sentiment analysis imports
 import torch
@@ -38,52 +39,32 @@ NEWS_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__
 THEMES_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "themes.json")
 CACHE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", ".ml_cache.json")
 
-# 🔑 ENHANCED FEATURE FLAGS v4.2 - DUAL SPECIALIZED MODELS
+# 🔑 ENHANCED FEATURE FLAGS v5.0 - UNIFIED DUAL MODELS
 USE_FINBERT = os.getenv("TRADEPULSE_USE_FINBERT", "1") == "1"
 SENTIMENT_PROFILING = os.getenv("TRADEPULSE_SENTIMENT_PROFILING", "0") == "1"
 ENABLE_MODEL_METRICS = os.getenv("TRADEPULSE_METRICS", "1") == "1"
 USE_CACHE = os.getenv("TRADEPULSE_USE_CACHE", "1") == "1"
 BATCH_SIZE = int(os.getenv("TRADEPULSE_BATCH_SIZE", "32"))
+CONFIDENCE_THRESHOLD = float(os.getenv("CONFIDENCE_THRESHOLD", "0.65"))
 
 # ---------------------------------------------------------------------------
-# 🚀 DUAL FINBERT (sentiment + importance) – chargement unique
+# 🚀 DUAL FINBERT MODELS CONFIGURATION
 # ---------------------------------------------------------------------------
 
 _MODEL_SENTIMENT = os.getenv("TRADEPULSE_MODEL_SENTIMENT", "Bencode92/tradepulse-finbert-sentiment")
 _MODEL_IMPORTANCE = os.getenv("TRADEPULSE_MODEL_IMPORTANCE", "Bencode92/tradepulse-finbert-importance")
 _HF_TOKEN = os.getenv("HF_READ_TOKEN")
 
-def _load_hf(model_name: str):
-    """Charge un modèle HuggingFace avec token si nécessaire"""
-    kw = {"use_auth_token": _HF_TOKEN} if _HF_TOKEN else {}
-    try:
-        tok = AutoTokenizer.from_pretrained(model_name, **kw)
-        mdl = AutoModelForSequenceClassification.from_pretrained(model_name, **kw)
-        mdl.eval().to("cuda" if torch.cuda.is_available() else "cpu")
-        logger.info(f"✅ Model {model_name} loaded successfully")
-        return tok, mdl
-    except Exception as e:
-        logger.error(f"❌ Failed to load model {model_name}: {str(e)}")
-        raise
-
-@lru_cache(maxsize=1)
-def _get_dual_models():
-    """Charge les deux modèles spécialisés une seule fois"""
-    logger.info(f"🚀 Loading dual specialized models...")
-    logger.info(f"  🎯 Sentiment: {_MODEL_SENTIMENT}")
-    logger.info(f"  ⚡ Importance: {_MODEL_IMPORTANCE}")
-    
-    sent_tok, sent_mdl = _load_hf(_MODEL_SENTIMENT)
-    imp_tok,  imp_mdl  = _load_hf(_MODEL_IMPORTANCE)
-    
-    return {
-        "sentiment":  (sent_tok, sent_mdl),
-        "importance": (imp_tok, imp_mdl)
-    }
+# Importance aliases mapping
+_ALIAS = {
+    "general": ("general", "générale", "low", "generale"),
+    "important": ("important", "importante", "medium"),
+    "critical": ("critical", "critique", "high")
+}
 
 # Global model metadata
 _MODEL_METADATA = {
-    "version": "dual-specialized-v4.2-batch",
+    "version": "unified-dual-model-v5.0",
     "sentiment_model": _MODEL_SENTIMENT,
     "importance_model": _MODEL_IMPORTANCE,
     "dual_model_system": True,
@@ -93,80 +74,252 @@ _MODEL_METADATA = {
 }
 
 # ---------------------------------------------------------------------------
-# 🚀 CACHE SYSTEM v4.2
+# 🚀 UNIFIED DUAL ML LABELER CLASS v5.0
+# ---------------------------------------------------------------------------
+
+class DualMLLabeler:
+    """
+    Unified dual-model ML labeler for sentiment and importance analysis.
+    Loads models once and processes texts in batches with caching.
+    """
+    
+    def __init__(self, 
+                 hf_token: Optional[str] = None,
+                 batch_size: int = BATCH_SIZE,
+                 use_cache: bool = USE_CACHE):
+        """
+        Initialize the dual ML labeler.
+        
+        Args:
+            hf_token: HuggingFace token for private models
+            batch_size: Batch size for inference
+            use_cache: Whether to use prediction caching
+        """
+        self.batch_size = batch_size
+        self.use_cache = use_cache
+        self.cache: Dict[str, Dict] = {}
+        self._cache_hits = 0
+        self._cache_misses = 0
+        self._device = "cuda" if torch.cuda.is_available() else "cpu"
+        
+        logger.info(f"🚀 Loading dual ML models on {self._device}...")
+        self.sent_tok, self.sent_mdl = self._load_model(_MODEL_SENTIMENT, hf_token)
+        self.imp_tok, self.imp_mdl = self._load_model(_MODEL_IMPORTANCE, hf_token)
+        logger.info("✅ Models loaded successfully")
+    
+    def _load_model(self, model_name: str, token: Optional[str]) -> Tuple:
+        """Load a HuggingFace model with optional token."""
+        try:
+            kwargs = {"use_auth_token": token} if token else {}
+            tokenizer = AutoTokenizer.from_pretrained(model_name, **kwargs)
+            model = AutoModelForSequenceClassification.from_pretrained(model_name, **kwargs)
+            model = model.to(self._device).eval()
+            logger.info(f"✅ Loaded {model_name}")
+            return tokenizer, model
+        except Exception as e:
+            logger.error(f"❌ Failed to load {model_name}: {e}")
+            raise
+    
+    def predict(self, texts: List[str]) -> List[Dict]:
+        """
+        Predict sentiment and importance for a list of texts.
+        
+        Args:
+            texts: List of text strings to analyze
+            
+        Returns:
+            List of dicts with keys:
+                - sentiment: "positive", "neutral", or "negative"
+                - sent_conf: sentiment confidence (0-1)
+                - importance: "critical", "important", or "general"
+                - imp_conf: importance confidence (0-1)
+        """
+        if not texts:
+            return []
+        
+        results: List[Optional[Dict]] = [None] * len(texts)
+        uncached_indices = []
+        uncached_texts = []
+        
+        # Check cache
+        for i, text in enumerate(texts):
+            if self.use_cache:
+                cache_key = self._get_cache_key(text)
+                if cache_key in self.cache:
+                    results[i] = self.cache[cache_key]
+                    self._cache_hits += 1
+                else:
+                    uncached_indices.append(i)
+                    uncached_texts.append(text)
+                    self._cache_misses += 1
+            else:
+                uncached_indices.append(i)
+                uncached_texts.append(text)
+        
+        # Process uncached texts
+        if uncached_texts:
+            logger.info(f"🔍 Processing {len(uncached_texts)} uncached texts...")
+            
+            # Get predictions
+            sent_probs = self._batch_predict(uncached_texts, self.sent_tok, self.sent_mdl)
+            imp_probs = self._batch_predict(uncached_texts, self.imp_tok, self.imp_mdl)
+            
+            # Merge results
+            for j, idx in enumerate(uncached_indices):
+                result = self._merge_predictions(sent_probs[j], imp_probs[j])
+                results[idx] = result
+                
+                # Update cache
+                if self.use_cache:
+                    cache_key = self._get_cache_key(texts[idx])
+                    self.cache[cache_key] = result
+        
+        return results
+    
+    def _batch_predict(self, texts: List[str], tokenizer, model) -> List[Dict]:
+        """Run batch prediction on texts."""
+        all_probs = []
+        
+        for i in range(0, len(texts), self.batch_size):
+            batch_texts = texts[i:i + self.batch_size]
+            
+            try:
+                # Tokenize
+                inputs = tokenizer(
+                    batch_texts,
+                    truncation=True,
+                    padding=True,
+                    max_length=512,
+                    return_tensors="pt"
+                ).to(self._device)
+                
+                # Predict
+                with torch.no_grad():
+                    logits = model(**inputs).logits
+                    probs = logits.softmax(dim=-1).cpu()
+                
+                # Convert to dict format
+                id2label = {int(k): v.lower() for k, v in model.config.id2label.items()}
+                
+                for row in probs:
+                    prob_dict = {id2label[k]: float(row[k]) for k in range(len(id2label))}
+                    all_probs.append(prob_dict)
+                    
+            except Exception as e:
+                logger.error(f"Batch prediction error: {e}")
+                # Return neutral predictions on error
+                for _ in batch_texts:
+                    all_probs.append({})
+        
+        return all_probs
+    
+    def _merge_predictions(self, sent_probs: Dict, imp_probs: Dict) -> Dict:
+        """Merge sentiment and importance predictions."""
+        # Process sentiment
+        if sent_probs:
+            # Handle potential label formats
+            if "positive" in sent_probs:
+                sent_label, sent_conf = max(sent_probs.items(), key=lambda x: x[1])
+            else:
+                # Handle label_0, label_1, label_2 format
+                label_map = {"label_0": "negative", "label_1": "neutral", "label_2": "positive"}
+                mapped_probs = {label_map.get(k, k): v for k, v in sent_probs.items()}
+                sent_label, sent_conf = max(mapped_probs.items(), key=lambda x: x[1])
+        else:
+            sent_label, sent_conf = "neutral", 0.33
+        
+        # Process importance with alias normalization
+        if imp_probs:
+            normalized = {}
+            for target, aliases in _ALIAS.items():
+                max_prob = max((imp_probs.get(alias, 0.0) for alias in aliases), default=0.0)
+                normalized[target] = max_prob
+            
+            # Normalize probabilities
+            total = sum(normalized.values())
+            if total > 0:
+                normalized = {k: v/total for k, v in normalized.items()}
+            else:
+                normalized = {"general": 1.0, "important": 0.0, "critical": 0.0}
+            
+            imp_label, imp_conf = max(normalized.items(), key=lambda x: x[1])
+        else:
+            imp_label, imp_conf = "general", 0.5
+        
+        return {
+            "sentiment": sent_label,
+            "sent_conf": round(sent_conf, 3),
+            "importance": imp_label,
+            "imp_conf": round(imp_conf, 3)
+        }
+    
+    def _get_cache_key(self, text: str) -> str:
+        """Generate cache key for text."""
+        return hashlib.sha256(text.encode()).hexdigest()[:16]
+    
+    def get_cache_stats(self) -> Dict:
+        """Get cache statistics."""
+        total = self._cache_hits + self._cache_misses
+        hit_rate = self._cache_hits / total * 100 if total > 0 else 0
+        
+        return {
+            "hits": self._cache_hits,
+            "misses": self._cache_misses,
+            "hit_rate": round(hit_rate, 1),
+            "cache_size": len(self.cache)
+        }
+
+# Singleton instance
+_labeler_instance = None
+
+def get_labeler(hf_token: Optional[str] = None, **kwargs) -> DualMLLabeler:
+    """Get or create singleton labeler instance."""
+    global _labeler_instance
+    if _labeler_instance is None:
+        _labeler_instance = DualMLLabeler(hf_token=hf_token, **kwargs)
+    return _labeler_instance
+
+# ---------------------------------------------------------------------------
+# 🚀 LEGACY MODEL FUNCTIONS (for compatibility)
+# ---------------------------------------------------------------------------
+
+def _load_hf(model_name: str):
+    """Legacy function - now uses DualMLLabeler"""
+    logger.warning("⚠️ _load_hf is deprecated, use DualMLLabeler instead")
+    labeler = get_labeler(_HF_TOKEN)
+    if "sentiment" in model_name.lower():
+        return labeler.sent_tok, labeler.sent_mdl
+    else:
+        return labeler.imp_tok, labeler.imp_mdl
+
+@lru_cache(maxsize=1)
+def _get_dual_models():
+    """Legacy function - returns models from DualMLLabeler"""
+    labeler = get_labeler(_HF_TOKEN)
+    return {
+        "sentiment": (labeler.sent_tok, labeler.sent_mdl),
+        "importance": (labeler.imp_tok, labeler.imp_mdl)
+    }
+
+# ---------------------------------------------------------------------------
+# 🚀 CACHE SYSTEM (kept for backward compatibility)
 # ---------------------------------------------------------------------------
 
 class MLCache:
-    """Simple cache for ML predictions"""
+    """Legacy cache - now uses DualMLLabeler's cache"""
     def __init__(self, cache_path=CACHE_PATH):
-        self.cache_path = cache_path
-        self.cache = self._load_cache()
-        self.hits = 0
-        self.misses = 0
-    
-    def _load_cache(self):
-        """Load cache from disk"""
-        if USE_CACHE and os.path.exists(self.cache_path):
-            try:
-                with open(self.cache_path, 'r') as f:
-                    return json.load(f)
-            except:
-                return {}
-        return {}
-    
-    def _save_cache(self):
-        """Save cache to disk"""
-        if USE_CACHE:
-            try:
-                os.makedirs(os.path.dirname(self.cache_path), exist_ok=True)
-                with open(self.cache_path, 'w') as f:
-                    json.dump(self.cache, f)
-            except:
-                pass
-    
-    def get_hash(self, text):
-        """Generate hash for text"""
-        return hashlib.sha256(text.encode()).hexdigest()[:16]
-    
-    def get(self, text, model_type):
-        """Get cached prediction"""
-        if not USE_CACHE:
-            return None
-        
-        key = f"{model_type}:{self.get_hash(text)}"
-        if key in self.cache:
-            self.hits += 1
-            return self.cache[key]
-        
-        self.misses += 1
-        return None
-    
-    def set(self, text, model_type, result):
-        """Cache prediction"""
-        if not USE_CACHE:
-            return
-        
-        key = f"{model_type}:{self.get_hash(text)}"
-        self.cache[key] = result
-        
-        # Save periodically
-        if (self.hits + self.misses) % 100 == 0:
-            self._save_cache()
+        self.labeler = get_labeler()
     
     def get_stats(self):
         """Get cache statistics"""
-        total = self.hits + self.misses
-        if total == 0:
-            return "Cache: No requests"
-        hit_rate = self.hits / total * 100
-        return f"Cache: {self.hits} hits, {self.misses} misses ({hit_rate:.1f}% hit rate)"
+        stats = self.labeler.get_cache_stats()
+        return f"Cache: {stats['hits']} hits, {stats['misses']} misses ({stats['hit_rate']}% hit rate)"
     
     def finalize(self):
-        """Save cache and log stats"""
-        self._save_cache()
+        """Log stats"""
         logger.info(f"🗄️ {self.get_stats()}")
 
-# Global cache instance
+# Global cache instance (for compatibility)
 _ml_cache = MLCache()
 
 def profile_step(label: str, start_ts: float):
@@ -178,56 +331,58 @@ def profile_step(label: str, start_ts: float):
     logger.info(f"⏱️  {label}: {dur:5.2f}s | RSS={rss:.0f} MB")
 
 # ---------------------------------------------------------------------------
-# 🔍  BATCH INFERENCE UTILITIES v4.2
+# QUALITY SCORING
+# ---------------------------------------------------------------------------
+
+PREMIUM_SOURCES = ["bloomberg", "reuters", "financial times", "wall street journal", "cnbc", "the economist"]
+
+def calculate_quality_score(article):
+    """
+    Calculate quality score (0-100) based on multiple factors.
+    Harmonized with SmartNewsCollector logic.
+    """
+    score = 0
+    
+    # Title length (max 20 points)
+    title_len = len(article.get("title", ""))
+    score += min(20, title_len / 5)
+    
+    # Content length (max 30 points)
+    content = article.get("content", article.get("text", ""))
+    score += min(30, len(content) / 100)
+    
+    # ML confidence scores (max 20 points)
+    if "sentiment_conf" in article:
+        score += article["sentiment_conf"] * 10
+    if "importance_conf" in article:
+        score += article["importance_conf"] * 10
+    
+    # Premium source bonus (25 points)
+    source = article.get("source", "").lower()
+    if any(premium in source for premium in PREMIUM_SOURCES):
+        score += 25
+    
+    # URL presence (5 points)
+    if article.get("url"):
+        score += 5
+    
+    return min(round(score), 100)
+
+# ---------------------------------------------------------------------------
+# 🔍  BATCH INFERENCE UTILITIES (deprecated - kept for compatibility)
 # ---------------------------------------------------------------------------
 
 def batch_predict_probs(tokenizer, model, texts: list, batch_size=BATCH_SIZE) -> list[dict[str, float]]:
     """
-    🚀 NEW v4.2: Batch inference for multiple texts
-    Returns list of probability dicts, one per text
+    Legacy function - now uses DualMLLabeler internally
     """
-    if not texts:
-        return []
-    
-    all_probs = []
-    device = model.device
-    
-    # Process in batches
-    for i in range(0, len(texts), batch_size):
-        batch_texts = texts[i:i+batch_size]
-        
-        try:
-            # Tokenize batch
-            inputs = tokenizer(
-                batch_texts,
-                padding=True,
-                truncation=True,
-                max_length=512,
-                return_tensors="pt"
-            ).to(device)
-            
-            # Run inference
-            with torch.no_grad():
-                logits = model(**inputs).logits.softmax(-1)
-            
-            # Convert to probability dicts
-            id2label = {int(k): v.lower() for k, v in model.config.id2label.items()}
-            
-            for j in range(len(batch_texts)):
-                probs = {id2label[k]: round(float(logits[j][k]), 3) 
-                        for k in range(len(id2label))}
-                all_probs.append(probs)
-                
-        except Exception as e:
-            logger.warning(f"Batch inference failed: {e}")
-            # Fallback: return neutral for failed batch
-            for _ in batch_texts:
-                all_probs.append({})
-    
-    return all_probs
+    logger.warning("⚠️ batch_predict_probs is deprecated, use DualMLLabeler.predict() instead")
+    # This is just a wrapper for compatibility
+    labeler = get_labeler()
+    return labeler._batch_predict(texts, tokenizer, model)
 
 # ---------------------------------------------------------------------------
-# INVESTOR-GRADE NEWS CONFIG v4.2 - OPTIMIZED FOR 30 DAYS
+# INVESTOR-GRADE NEWS CONFIG v5.0 - OPTIMIZED FOR 30 DAYS
 # ---------------------------------------------------------------------------
 
 CONFIG = {
@@ -498,7 +653,7 @@ NEWS_KEYWORDS = {
 THEMES_DOMINANTS = THEMES
 
 IMPORTANT_SOURCES = SOURCES["whitelist"]
-PREMIUM_SOURCES = SOURCES["premium"]
+# PREMIUM_SOURCES = SOURCES["premium"]  # Already defined above
 
 # ---------------------------------------------------------------------------
 # SOURCES  –  premium boost + shortlist par catégorie
@@ -580,7 +735,7 @@ class EnhancedGitHandler:
         
         commands = [
             'git config --local user.email "tradepulse-bot@github-actions.com"',
-            'git config --local user.name "TradePulse Bot [Enhanced v4.2]"',
+            'git config --local user.name "TradePulse Bot [Unified v5.0]"',
             'git config --local core.autocrlf false',
             'git config --local pull.rebase true'
         ]
@@ -672,14 +827,14 @@ class EnhancedGitHandler:
         except Exception as e:
             logger.warning(f"⚠️ Could not read statistics: {e}")
         
-        commit_message = f"""🤖 Auto-update: TradePulse news & themes (30-day optimized)
+        commit_message = f"""🤖 Auto-update: TradePulse news & themes (Unified ML v5.0)
 
 📅 Timestamp: {timestamp}
 🔗 Source: Financial Modeling Prep API
-🧠 AI Models: FinBERT Sentiment + Importance (batch)
+🧠 AI Models: Unified Dual-Model System (sentiment + importance)
 🌍 Window: 30 days rolling{stats_info}
 
-✨ v4.2: Batch inference for 4-5x faster processing
+✨ v5.0: Unified ML with quality scoring & confidence thresholds
 [skip ci]"""
         
         return commit_message
@@ -795,6 +950,25 @@ def read_existing_news():
     except:
         return None
 
+def fetch_api_data_with_retry(endpoint, params=None, max_retries=3):
+    """
+    Fetch API data with retry logic
+    """
+    for attempt in range(max_retries):
+        try:
+            data = fetch_api_data(endpoint, params)
+            if data:
+                return data
+            logger.warning(f"Empty response from {endpoint}, attempt {attempt + 1}/{max_retries}")
+        except Exception as e:
+            logger.warning(f"API call failed, attempt {attempt + 1}/{max_retries}: {e}")
+        
+        if attempt < max_retries - 1:
+            time.sleep(2 ** attempt)  # Exponential backoff
+    
+    logger.error(f"All {max_retries} attempts failed for {endpoint}")
+    return []
+
 def fetch_api_data(endpoint, params=None):
     """Generic function to fetch data from FMP API"""
     if not CONFIG["api_key"]:
@@ -847,7 +1021,7 @@ def fetch_articles_by_period(endpoint, start_date, end_date, source_type=None, d
                 "limit": per_page
             }
             
-            articles = fetch_api_data(endpoint, params)
+            articles = fetch_api_data_with_retry(endpoint, params)
             total_api_calls += 1
             
             if not articles:
@@ -1136,7 +1310,7 @@ def remove_duplicates(news_list):
 
 def calculate_output_limits(articles_by_country, max_total=300):  # 🔧 max_total réduit
     """
-    Enhanced output limits calculation using geo_budgets v4.2 with MSCI weights
+    Enhanced output limits calculation using geo_budgets v5.0 with MSCI weights
     """
     geo_config = CONFIG["geo_budgets"]
     base_allocations = geo_config["base"]
@@ -1199,7 +1373,7 @@ def calculate_output_limits(articles_by_country, max_total=300):  # 🔧 max_tot
 
 def apply_topic_caps(formatted_data):
     """
-    Apply sophisticated topic caps with fixed/relative/overflow logic v4.2
+    Apply sophisticated topic caps with fixed/relative/overflow logic v5.0
     """
     topic_config = CONFIG["topic_caps"]
     fixed_caps = topic_config["fixed"]
@@ -1282,7 +1456,7 @@ def apply_topic_caps(formatted_data):
 
 def extract_top_themes(news_data, days=30, max_examples=3, exclude_themes=None):
     """
-    🚀 Enhanced theme analysis v4.2 with diagnostics
+    🚀 Enhanced theme analysis v5.0 with diagnostics
     """
     cutoff_date = datetime.now() - timedelta(days=days)
     
@@ -1446,7 +1620,7 @@ def pack_theme_compact(theme_data, w_count, m_count):
     return packed
 
 def build_theme_summary(theme_name, theme_data):
-    """Generates investor-focused theme summary v4.2"""
+    """Generates investor-focused theme summary v5.0"""
     count = theme_data.get("count", 0)
     articles = theme_data.get("articles", [])
     keywords = theme_data.get("keywords", {})
@@ -1480,7 +1654,7 @@ def build_theme_summary(theme_name, theme_data):
 
 def process_news_data_batch(news_sources):
     """
-    🚀 NEW v4.2: Enhanced news processing with BATCH INFERENCE
+    🚀 NEW v5.0: Enhanced news processing with UNIFIED DUAL ML SYSTEM
     """
     # Initialize structure for all possible countries/regions using geo_budgets
     formatted_data = {
@@ -1540,138 +1714,60 @@ def process_news_data_batch(news_sources):
     
     logger.info(f"📊 Normalized {len(all_articles)} articles")
     
-    # 🚀 BATCH ML PROCESSING v4.2
+    # 🚀 UNIFIED DUAL ML PROCESSING v5.0
     if USE_FINBERT and all_articles:
-        logger.info("🚀 Starting batch ML processing...")
+        logger.info("🚀 Starting unified dual-model ML processing...")
         
-        # Extract texts for batch processing
+        # Initialize labeler (singleton)
+        labeler = get_labeler(hf_token=_HF_TOKEN)
+        
+        # Extract texts for ML
         texts_for_ml = [article["_text_for_ml"] for article in all_articles]
         
-        # Check cache first
-        cached_sentiments = []
-        cached_importances = []
-        uncached_indices = []
+        # Get predictions in batch
+        t0 = time.time()
+        predictions = labeler.predict(texts_for_ml)
+        logger.info(f"✅ ML processing completed in {time.time() - t0:.1f}s")
         
-        for i, text in enumerate(texts_for_ml):
-            cached_sent = _ml_cache.get(text, "sentiment")
-            cached_imp = _ml_cache.get(text, "importance")
-            
-            if cached_sent and cached_imp:
-                cached_sentiments.append(cached_sent)
-                cached_importances.append(cached_imp)
-            else:
-                uncached_indices.append(i)
-                cached_sentiments.append(None)
-                cached_importances.append(None)
+        # Log cache stats
+        cache_stats = labeler.get_cache_stats()
+        logger.info(f"🗄️ Cache stats: {cache_stats['hits']} hits, {cache_stats['misses']} misses ({cache_stats['hit_rate']}% hit rate)")
         
-        logger.info(f"🗄️ Cache: {len(texts_for_ml) - len(uncached_indices)} hits, {len(uncached_indices)} misses")
-        
-        # Process uncached articles in batch
-        if uncached_indices:
-            uncached_texts = [texts_for_ml[i] for i in uncached_indices]
-            
-            # Load models
-            models = _get_dual_models()
-            sent_tok, sent_mdl = models["sentiment"]
-            imp_tok, imp_mdl = models["importance"]
-            
-            # Batch sentiment analysis
-            logger.info(f"🎯 Batch sentiment analysis for {len(uncached_texts)} articles...")
-            t0 = time.time()
-            sentiment_probs = batch_predict_probs(sent_tok, sent_mdl, uncached_texts)
-            logger.info(f"✅ Sentiment batch completed in {time.time() - t0:.1f}s")
-            
-            # Batch importance analysis
-            logger.info(f"⚡ Batch importance analysis for {len(uncached_texts)} articles...")
-            t0 = time.time()
-            importance_probs = batch_predict_probs(imp_tok, imp_mdl, uncached_texts)
-            logger.info(f"✅ Importance batch completed in {time.time() - t0:.1f}s")
-            
-            # Update cache and results
-            for idx, (sent_prob, imp_prob) in enumerate(zip(sentiment_probs, importance_probs)):
-                original_idx = uncached_indices[idx]
-                text = texts_for_ml[original_idx]
-                
-                # Cache results
-                _ml_cache.set(text, "sentiment", sent_prob)
-                _ml_cache.set(text, "importance", imp_prob)
-                
-                # Update arrays
-                cached_sentiments[original_idx] = sent_prob
-                cached_importances[original_idx] = imp_prob
-        
-        # Apply ML results to articles
+        # Apply predictions to articles
         logger.info("📝 Applying ML results to articles...")
-        for i, article in enumerate(all_articles):
-            # Sentiment
-            sent_probs = cached_sentiments[i]
-            if sent_probs:
-                article["impact_prob"] = sent_probs
-                
-                # Determine sentiment
-                pos = sent_probs.get("positive", 0)
-                neg = sent_probs.get("negative", 0)
-                neu = sent_probs.get("neutral", 0)
-                
-                max_sentiment = max(pos, neg)
-                if max_sentiment - neu > 0.10:
-                    article["impact"] = "positive" if pos > neg else "negative"
-                else:
-                    article["impact"] = "neutral"
-            else:
-                article["impact"] = "neutral"
+        for article, pred in zip(all_articles, predictions):
+            # Sentiment (compatible with existing format)
+            article["impact"] = pred["sentiment"]
+            article["sentiment_conf"] = pred["sent_conf"]
+            article["impact_prob"] = {
+                "positive": pred["sent_conf"] if pred["sentiment"] == "positive" else 0.1,
+                "neutral": pred["sent_conf"] if pred["sentiment"] == "neutral" else 0.1,
+                "negative": pred["sent_conf"] if pred["sentiment"] == "negative" else 0.1
+            }
             
             # Importance
-            imp_probs = cached_importances[i]
-            if imp_probs:
-                # Apply alias mapping
-                ALIAS = {
-                    "general":   ("general", "générale", "low", "generale"),
-                    "important": ("important", "importante", "medium"),
-                    "critical":  ("critical", "critique", "high"),
-                }
-                
-                normalized_probs = {}
-                for target, aliases in ALIAS.items():
-                    max_prob = max((imp_probs.get(alias, 0.0) for alias in aliases), default=0.0)
-                    normalized_probs[target] = max_prob
-                
-                # Normalize if necessary
-                total = sum(normalized_probs.values())
-                if total > 0 and abs(total - 1.0) > 0.01:
-                    normalized_probs = {k: v/total for k, v in normalized_probs.items()}
-                elif total == 0:
-                    normalized_probs = {"general": 1.0, "important": 0.0, "critical": 0.0}
-                
-                # Decision with threshold
-                crit = normalized_probs["critical"]
-                imp  = normalized_probs["important"]
-                gen  = normalized_probs["general"]
-                
-                if max(crit, imp) - gen < 0.10:
-                    level = "general"
-                else:
-                    level = "critical" if crit > imp else "important"
-                
-                # Score
-                score = round(
-                    normalized_probs["general"] * 35 +
-                    normalized_probs["important"] * 60 +
-                    normalized_probs["critical"] * 90, 1
-                )
-                
-                article["importance_level"] = level
-                article["importance_prob"] = {k: round(v, 3) for k, v in normalized_probs.items()}
-                article["importance_score"] = score
-            else:
-                article["importance_level"] = "general"
-                article["importance_score"] = 25.0
+            article["importance_level"] = pred["importance"]
+            article["importance_conf"] = pred["imp_conf"]
+            
+            # Calculate importance score (harmonized with original)
+            importance_scores = {
+                "general": 35,
+                "important": 60,
+                "critical": 90
+            }
+            article["importance_score"] = importance_scores.get(pred["importance"], 50)
+            
+            # NEW v5.0: Quality score
+            article["quality_score"] = calculate_quality_score(article)
+            
+            # NEW v5.0: Review flag (same logic as SmartNewsCollector)
+            article["needs_review"] = (
+                pred["sent_conf"] < CONFIDENCE_THRESHOLD or 
+                pred["imp_conf"] < CONFIDENCE_THRESHOLD
+            )
             
             # Clean up temporary field
             del article["_text_for_ml"]
-        
-        # Save cache
-        _ml_cache.finalize()
     
     # 🔧 Remove duplicates AVANT le tri
     logger.info(f"Articles avant déduplication: {len(all_articles)}")
@@ -1727,7 +1823,7 @@ def process_news_data_batch(news_sources):
     
     # Statistics
     total_articles = sum(len(articles) for articles in formatted_data.values() if isinstance(articles, list))
-    logger.info(f"✅ Enhanced processing v4.2 complete: {total_articles} investor-grade articles")
+    logger.info(f"✅ Enhanced processing v5.0 complete: {total_articles} investor-grade articles")
     
     # Log distribution by region
     for country, articles in formatted_data.items():
@@ -1744,15 +1840,15 @@ def process_news_data_batch(news_sources):
         sentiment_stats = compute_sentiment_distribution(all_processed_articles)
         logger.info(f"📊 Sentiment distribution: {sentiment_stats['positive']}% positive, {sentiment_stats['negative']}% negative, {sentiment_stats['neutral']}% neutral")
         
-        # 🚀 Dual specialized model usage stats v4.2
-        sentiment_used = sum(1 for article in all_processed_articles if "impact_prob" in article)
+        # 🚀 Unified model usage stats v5.0
+        sentiment_used = sum(1 for article in all_processed_articles if "sentiment_conf" in article)
         importance_used = sum(1 for article in all_processed_articles if "importance_level" in article)
         
         if sentiment_used > 0:
             logger.info(f"🎯 Sentiment model analyzed {sentiment_used}/{len(all_processed_articles)} articles ({sentiment_used/len(all_processed_articles)*100:.1f}%)")
             
             # Confidence stats
-            confidence_scores = [max(article["impact_prob"].values()) for article in all_processed_articles if "impact_prob" in article]
+            confidence_scores = [article["sentiment_conf"] for article in all_processed_articles if "sentiment_conf" in article]
             if confidence_scores:
                 avg_confidence = sum(confidence_scores) / len(confidence_scores)
                 logger.info(f"📈 Average sentiment confidence: {avg_confidence:.3f}")
@@ -1760,7 +1856,7 @@ def process_news_data_batch(news_sources):
         if importance_used > 0:
             logger.info(f"⚡ Importance model analyzed {importance_used}/{len(all_processed_articles)} articles ({importance_used/len(all_processed_articles)*100:.1f}%)")
             
-            # Distribution par niveau d'importance avec correctif d'alias + argmax
+            # Distribution par niveau d'importance
             importance_levels = Counter(article["importance_level"] for article in all_processed_articles if "importance_level" in article)
             logger.info(f"📊 Importance levels: {dict(importance_levels)}")
             
@@ -1769,29 +1865,44 @@ def process_news_data_batch(news_sources):
             if importance_scores:
                 avg_importance = sum(importance_scores) / len(importance_scores)
                 logger.info(f"📊 Average importance score: {avg_importance:.1f}")
+            
+            # Quality score stats
+            quality_scores = [article.get("quality_score", 0) for article in all_processed_articles]
+            avg_quality = sum(quality_scores) / len(quality_scores) if quality_scores else 0
+            
+            # Review needed count
+            review_needed = sum(1 for article in all_processed_articles if article.get("needs_review", False))
+            
+            logger.info(f"📊 Quality metrics:")
+            logger.info(f"  Average quality score: {avg_quality:.1f}/100")
+            logger.info(f"  Articles needing review: {review_needed}/{len(all_processed_articles)} ({review_needed/len(all_processed_articles)*100:.1f}%)")
                 
-                # Update model metadata
-                _MODEL_METADATA["performance_metrics"] = {
-                    "sentiment_articles": sentiment_used,
-                    "importance_articles": importance_used,
-                    "avg_confidence": avg_confidence if sentiment_used > 0 else 0,
-                    "avg_importance": avg_importance,
-                    "importance_distribution": dict(importance_levels),
-                    "batch_processing": True
-                }
+            # Update model metadata
+            _MODEL_METADATA["performance_metrics"] = {
+                "sentiment_articles": sentiment_used,
+                "importance_articles": importance_used,
+                "avg_confidence": avg_confidence if sentiment_used > 0 else 0,
+                "avg_importance": avg_importance if importance_used > 0 else 0,
+                "avg_quality": avg_quality,
+                "importance_distribution": dict(importance_levels),
+                "review_needed_count": review_needed,
+                "batch_processing": True,
+                "cache_stats": labeler.get_cache_stats()
+            }
     
     return formatted_data
 
 def update_news_json_file(news_data):
     """
-    🚀 NEW v4.2: Updates news.json with COMPACT lightweight format
-    • Removes: content (full text), sentiment_metadata, importance_metadata
+    🚀 NEW v5.0: Updates news.json with COMPACT lightweight format
+    • Includes: quality_score, needs_review fields
+    • Removes: content (full text), internal ML fields
     • Adds: snippet (180 chars), t (theme tags), imp (importance score)
     • Result: ~6x smaller file size
     """
     try:
         # ═══ COMPACT FORMAT TRANSFORMATION ═══════════════════════════════════
-        keep_fields = ["title", "snippet", "date", "country", "impact", "imp", "t", "url", "source", "category"]
+        keep_fields = ["title", "snippet", "date", "country", "impact", "imp", "t", "url", "source", "category", "quality_score", "needs_review"]
         
         output_data = {}
         total_original_size = 0
@@ -1834,6 +1945,10 @@ def update_news_json_file(news_data):
                     # 🚀 NEW: importance score as float (not full object)
                     compact_article["imp"] = article.get("importance_score", 25.0)
                     
+                    # 🚀 NEW v5.0: quality score and needs_review
+                    compact_article["quality_score"] = article.get("quality_score", 50)
+                    compact_article["needs_review"] = article.get("needs_review", False)
+                    
                     # Calculate compact size for statistics
                     compact_json_size = len(json.dumps(compact_article))
                     total_compact_size += compact_json_size
@@ -1849,7 +1964,7 @@ def update_news_json_file(news_data):
         if ENABLE_MODEL_METRICS:
             output_data["model_metadata"] = _MODEL_METADATA
             # Add compact format info
-            output_data["model_metadata"]["format_version"] = "v4.2-compact"
+            output_data["model_metadata"]["format_version"] = "v5.0-compact-unified"
             output_data["model_metadata"]["size_reduction"] = round(
                 (total_original_size - total_compact_size) / total_original_size * 100, 1
             ) if total_original_size > 0 else 0
@@ -1863,10 +1978,10 @@ def update_news_json_file(news_data):
         # Log compression statistics
         if total_original_size > 0:
             compression_ratio = total_compact_size / total_original_size
-            logger.info(f"✅ news.json v4.2 compact format updated")
+            logger.info(f"✅ news.json v5.0 compact format updated")
             logger.info(f"📦 Size reduction: {total_original_size/1024/1024:.1f}MB → {total_compact_size/1024/1024:.1f}MB (×{1/compression_ratio:.1f} smaller)")
         else:
-            logger.info(f"✅ news.json v4.2 compact format updated")
+            logger.info(f"✅ news.json v5.0 compact format updated")
             
         return True
     except Exception as e:
@@ -1875,13 +1990,13 @@ def update_news_json_file(news_data):
 
 def generate_themes_json(news_data):
     """
-    🚀 NEW v4.2: Generates ULTRA-COMPACT themes JSON (hebdo + mensuel only)
+    🚀 NEW v5.0: Generates ULTRA-COMPACT themes JSON (hebdo + mensuel only)
     • Structure: {"c":[W,M], "s":[pos,neg,neu], "h":headlines}
     • Pre-computed axisMax for instant frontend rendering
     • Result: ~10x smaller than v4.0
     """
     
-    logger.info("🚀 Generating v4.2 ultra-compact themes format (W+M only)...")
+    logger.info("🚀 Generating v5.0 ultra-compact themes format (W+M only)...")
     
     periods = {
         "weekly": 7,
@@ -1940,7 +2055,7 @@ def generate_themes_json(news_data):
         "lastUpdated": datetime.now().isoformat(),
         "periods": compact_periods,
         "axisMax": axis_max_data,  # ← 🚀 Pre-computed for instant frontend rendering
-        "config_version": "v4.2-compact-WM",
+        "config_version": "v5.0-compact-WM",
         "compression_info": {
             "format": "c=count[W,M], s=sentiment[pos,neg,neu], h=headlines[[title,url]]",
             "estimated_size_reduction": "~10x smaller than v4.0"
@@ -1961,7 +2076,7 @@ def generate_themes_json(news_data):
         # Calculate file size for logging
         file_size = os.path.getsize(THEMES_JSON_PATH) / 1024  # KB
         
-        logger.info(f"✅ themes.json v4.2 ultra-compact format updated")
+        logger.info(f"✅ themes.json v5.0 ultra-compact format updated")
         logger.info(f"📦 File size: {file_size:.0f}KB")
         logger.info(f"🎯 Features: pre-computed axisMax, top-3 headlines, W+M only")
         
@@ -1975,19 +2090,19 @@ def generate_themes_json(news_data):
         return False
 
 def main():
-    """🚀 Enhanced main execution with Batch Processing + Git Integration v4.2"""
+    """🚀 Enhanced main execution with Unified Dual ML System v5.0"""
     try:
-        logger.info("🚀 Starting TradePulse Investor-Grade News Collection v4.2 OPTIMIZED...")
-        logger.info(f"🎯 Dual Specialized Models: sentiment + importance (batch processing)")
-        logger.info(f"✨ NEW v4.2: Batch inference for 4-5x faster processing")
-        logger.info(f"🔧 OPTIMIZED: 30-day collection window + smart caching")
+        logger.info("🚀 Starting TradePulse News Collection v5.0 UNIFIED...")
+        logger.info(f"🎯 Unified Dual-Model System: sentiment + importance")
+        logger.info(f"✨ NEW v5.0: Quality scoring, confidence thresholds, needs_review flag")
+        logger.info(f"⚙️ Settings: CONFIDENCE_THRESHOLD={CONFIDENCE_THRESHOLD}")
         
-        # Pré-charge les deux modèles spécialisés
+        # Pré-charge les modèles via DualMLLabeler
         start_time = time.time()
-        _get_dual_models()
+        labeler = get_labeler(_HF_TOKEN)
         load_time = time.time() - start_time
         _MODEL_METADATA["load_time"] = load_time
-        logger.info(f"🤖 Dual specialized models loaded in {load_time:.2f}s")
+        logger.info(f"🤖 Unified dual models loaded in {load_time:.2f}s")
         
         # Read existing data for fallback
         existing_data = read_existing_news()
@@ -2021,16 +2136,18 @@ def main():
         
         # Check if we have data
         if total_news == 0:
-            logger.warning("⚠️ No news retrieved, using existing data")
+            logger.warning("⚠️ No news retrieved - ML processing skipped")
             if existing_data:
+                logger.info("📁 Using existing data as fallback")
                 return True
+            return False
         
-        # 🚀 Process with BATCH INFERENCE v4.2
-        logger.info("🔍 Processing with batch inference (v4.2)...")
+        # 🚀 Process with UNIFIED ML SYSTEM v5.0
+        logger.info("🔍 Processing with unified dual-model system (v5.0)...")
         news_data = process_news_data_batch(news_sources)
         
-        # 🚀 Update files with NEW v4.2 compact formats
-        logger.info("📦 Updating files with v4.2 ultra-compact formats...")
+        # 🚀 Update files with NEW v5.0 compact formats
+        logger.info("📦 Updating files with v5.0 ultra-compact formats...")
         success_news = update_news_json_file(news_data)
         success_themes = generate_themes_json(news_data)
         
@@ -2066,28 +2183,35 @@ def main():
                     sentiment = details["sentiment_distribution"]
                     logger.info(f"      Sentiment: {sentiment['positive']}%↑ {sentiment['negative']}%↓")
         
-        # 🚀 Dual specialized models performance summary v4.2
-        logger.info("🎯 Dual Specialized Models Performance Summary v4.2:")
+        # 🚀 Unified model performance summary v5.0
+        logger.info("🎯 Unified Dual-Model Performance Summary v5.0:")
         logger.info(f"  Sentiment Model: {_MODEL_METADATA['sentiment_model']}")
-        logger.info(f"  Importance Model: {_MODEL_METADATA['importance_model']} (3-classes with threshold)")
+        logger.info(f"  Importance Model: {_MODEL_METADATA['importance_model']}")
         logger.info(f"  System Version: {_MODEL_METADATA['version']}")
         logger.info(f"  Load Time: {_MODEL_METADATA['load_time']:.2f}s")
         logger.info(f"  Batch Processing: ENABLED (size={BATCH_SIZE})")
+        logger.info(f"  Confidence Threshold: {CONFIDENCE_THRESHOLD}")
+        
         if "performance_metrics" in _MODEL_METADATA:
             metrics = _MODEL_METADATA["performance_metrics"]
             logger.info(f"  Sentiment Articles: {metrics.get('sentiment_articles', 0)}")
             logger.info(f"  Importance Articles: {metrics.get('importance_articles', 0)}")
             logger.info(f"  Avg Confidence: {metrics.get('avg_confidence', 0):.3f}")
             logger.info(f"  Avg Importance: {metrics.get('avg_importance', 0):.1f}")
+            logger.info(f"  Avg Quality Score: {metrics.get('avg_quality', 0):.1f}/100")
+            logger.info(f"  Articles Needing Review: {metrics.get('review_needed_count', 0)}")
             if "importance_distribution" in metrics:
                 logger.info(f"  Importance Levels: {metrics['importance_distribution']}")
+            if "cache_stats" in metrics:
+                cache = metrics["cache_stats"]
+                logger.info(f"  Cache Performance: {cache['hit_rate']}% hit rate ({cache['hits']} hits, {cache['misses']} misses)")
         
-        logger.info("✅ TradePulse v4.2 OPTIMIZED completed successfully!")
-        logger.info("🚀 Benefits: 4-5x faster processing, 30-day window, smart caching")
+        logger.info("✅ TradePulse v5.0 UNIFIED completed successfully!")
+        logger.info("🚀 Benefits: Unified ML system, quality scoring, confidence thresholds")
         return success_news and success_themes
         
     except Exception as e:
-        logger.error(f"❌ Error in Dual Specialized Models execution v4.2: {str(e)}")
+        logger.error(f"❌ Error in Unified Dual-Model execution v5.0: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
         return False
