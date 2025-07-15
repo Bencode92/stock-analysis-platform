@@ -95,7 +95,8 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
     card.className = `news-card relative flex flex-col rounded-xl p-6 border border-${impactColor} bg-zinc-900 transition hover:shadow-lg min-h-[240px] cursor-pointer`;
     card.style.animationDelay = `${index * 0.1}s`;
 
-    // Attributs de filtrage
+    // Attributs de filtrage - AJOUT de data-score
+    card.setAttribute('data-score', item.importance_score || item.imp || 0);
     ['category', 'impact', 'sentiment', 'country', 'score'].forEach(key => {
         card.setAttribute(`data-${key}`, item[key] || 'unknown');
     });
@@ -110,8 +111,8 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
         card.addEventListener('click', () => window.open(item.url, '_blank', 'noopener'));
     }
 
-    // 🚀 NOUVEAU : Nettoyer le HTML et créer du texte brut
-    let raw = item.content || '';
+    // 🚀 NOUVEAU : Nettoyer le HTML et créer du texte brut - SUPPORT SNIPPET
+    let raw = item.content || item.snippet || '';
     
     // Utiliser DOMParser pour supprimer toutes les balises HTML
     const tmp = new DOMParser().parseFromString(raw, 'text/html');
@@ -243,10 +244,30 @@ function distributeNewsByImportance(newsData) {
 
     // 🤖 HIÉRARCHISATION 100% ML - VERSION SIMPLIFIÉE
     allNews.forEach(news => {
+        // NOUVEAU MAPPER v5.0 - Adaptation des champs JSON
+        if (!news.importance_level) {
+            const score = parseFloat(news.imp || news.quality_score || 0);
+            news.importance_level = score >= 80 ? 'critical' : 
+                                   score >= 60 ? 'important' : 
+                                   'general';
+        }
+        news.importance_score = news.imp || news.quality_score || 0;
+        news.content = news.snippet || news.content || '';
+        
+        // Traduire les catégories EN->FR
+        const catMap = {
+            'economy': 'economie',
+            'markets': 'marches', 
+            'companies': 'entreprises',
+            'tech': 'tech',
+            'crypto': 'crypto',
+            'forex': 'forex'
+        };
+        news.category = catMap[news.category] || news.category || 'general';
+        
         // Valeurs par défaut pour les champs nécessaires
         news.impact = news.impact || 'neutral';
         news.sentiment = news.sentiment || news.impact;
-        news.category = news.category || 'general';
         news.country = news.country || 'other';
         
         // 🎯 CONFIANCE TOTALE AU PIPELINE ML
