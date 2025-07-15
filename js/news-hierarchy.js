@@ -23,6 +23,9 @@ const MAX_CRITICAL_NEWS = 5;
 const MAX_IMPORTANT_NEWS = 8;
 const MAX_REGULAR_NEWS = 12;
 
+// NOUVEAU: Limite de récence des actualités (en jours)
+const MAX_NEWS_DAYS = 4; // Affiche seulement les actualités des 4 derniers jours
+
 // Initialisation: ajouter cette fonction au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
     // Vérifier si nous sommes sur la page des actualités
@@ -243,6 +246,36 @@ function distributeNewsByImportance(newsData) {
     });
 
     console.log(`Après filtrage des types exclus: ${allNews.length} actualités restantes`);
+
+    //------------------------------------------------------------------
+    // FILTRE DE RÉCENCE (≤ MAX_NEWS_DAYS)
+    //------------------------------------------------------------------
+    const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+    function parseNewsDate(str) {
+        // vos dates sont au format "DD/MM/YYYY"
+        // (on accepte aussi "YYYY-MM-DD" au cas où)
+        if (!str) return null;
+
+        if (str.includes('/')) {           // ex. "18/07/2025"
+            const [d, m, y] = str.split('/');
+            return new Date(`${y}-${m}-${d}T00:00:00`);
+        }
+        // fallback ISO / autre
+        return new Date(str);
+    }
+
+    const today = new Date();
+
+    allNews = allNews.filter(n => {
+        const d = parseNewsDate(n.date);
+        if (!d || isNaN(d)) return false;          // pas de date lisible ⇒ on jette
+        const age = (today - d) / MS_PER_DAY;      // écart en jours
+        return age <= MAX_NEWS_DAYS;
+    });
+
+    console.log(`🕒 ${allNews.length} actus conservées ≤ ${MAX_NEWS_DAYS} jours`);
+    //------------------------------------------------------------------
 
     // 🤖 HIÉRARCHISATION 100% ML - VERSION SIMPLIFIÉE
     allNews.forEach(news => {
