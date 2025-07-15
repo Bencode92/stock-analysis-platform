@@ -325,43 +325,180 @@ KEYWORD_TIERS = {
 }
 
 # ---------------------------------------------------------------------------
-# THEMES  –  ajout d'un axe « fundamentals » + sous-thème AI
+# THEMES v5 – haute précision (≈9-10/10) – fundamentals retiré
 # ---------------------------------------------------------------------------
+
 THEMES = {
     "macroeconomics": {
-        "inflation":        ["cpi", "pce", "inflation", "ppi"],
-        "growth":           ["gdp", "pmi", "industrial production"],
-        "monetary_policy":  ["fed", "ecb", "boj", "rate hike", "qt"],
-        "employment":       ["payrolls", "unemployment", "jobless claims"],
-        "geopolitics":      ["sanction", "embargo", "war", "conflict"],
-        "energy_transition":["esg", "net zero", "carbon", "renewable"]
+        # ───────── Inflation ─────────
+        "inflation": [
+            "cpi", "headline cpi", "core cpi",
+            "pce", "core pce", "hicp",
+            "inflation rate", "inflationary",
+            "sticky prices", "price index"
+        ],
+        # ───────── Croissance ─────────
+        "growth": [
+            "gdp", "gdp growth", "gdp-yoy", "gdp-qoq",
+            "retail sales", "industrial production", "industrial output",
+            "construction spending", "services pmi", "manufacturing pmi",
+            "ism", "business confidence"
+        ],
+        # ───────── Politique monétaire ─────────
+        "monetary_policy": [
+            # banques centrales
+            "fed", "fomc", "ecb", "boj", "pboc", "boe", "snb", "rba",
+            # actions
+            "rate hike", "rate cut", "interest-rate", "policy rate",
+            "quantitative easing", "quantitative tightening", "qe", "qt",
+            "rate decision", "minutes"
+        ],
+        # ───────── Emploi ─────────
+        "employment": [
+            "non-farm payrolls", "nfp", "payrolls",
+            "unemployment rate", "initial jobless claims", "jobless claims",
+            "jolts", "labor market", "employment report",
+            "layoffs", "job additions", "hiring"
+        ],
+        # ───────── Géopolitique ─────────
+        "geopolitics": [
+            "geopolitical", "geopolitical tension",
+            "military conflict", "invasion", "war", "sanction", "embargo",
+            "conflict zone", "ceasefire", "truce"
+        ],
+        # ───────── Transition énergétique / climat ─────────
+        "energy_transition": [
+            "esg", "climate policy", "net zero",
+            "carbon credit", "carbon emission", "carbon market",
+            "renewable", "clean energy", "green transition",
+            "solar", "wind power", "hydrogen",
+            "electric vehicle", "ev adoption"
+        ]
     },
-    "fundamentals": {
-        "earnings":   ["eps", "revenue", "guidance", "margin"],
-        "capital":    ["buyback", "dividend", "capex", "leverage"],
-        "credit":     ["spread", "rating", "cds", "bond issuance"]
-    },
+
     "sectors": {
-        "ai":         ["genai", "chatgpt", "large language model", "copilot", "artificial intelligence"],
-        "technology": ["semiconductor", "cloud", "cybersecurity"],
-        "energy":     ["oil", "lng", "opec"],
-        "finance":    ["banks", "treasury", "insurance"],
-        "defense":    ["military", "nato", "contract"],
-        "healthcare": ["fda", "clinical trial", "biotech"],
-        "consumer":   ["retail", "luxury", "e-commerce"],
-        "industry":   ["manufacturing", "supply chain", "automation"],
-        "transport":  ["shipping", "airline", "logistics"],
-        "agriculture":["crop", "fertilizer", "commodity"],
-        "crypto":     ["bitcoin", "ethereum", "defi", "nft"]
+        # ───────── Intelligence artificielle ─────────
+        "ai": [
+            "artificial intelligence", "ai", "generative ai", "genai",
+            "large language model", "llm", "chatgpt", "gpt-4", "openai",
+            "copilot", "ai chip", "nvidia h100", "tpu", "edge ai"
+        ],
+        # ───────── Technologie hors-AI ─────────
+        "technology": [
+            "semiconductor", "chipmaker", "foundry", "fab",
+            "cloud computing", "saas", "software-as-a-service",
+            "cybersecurity", "5g", "iot", "data center",
+            "consumer electronics", "smartphone", "pc shipments"
+        ],
+        # ───────── Énergie ─────────
+        "energy": [
+            "brent", "wti", "oil prices", "opec", "opec+",
+            "lng", "natural gas", "refinery", "hydrocarbon",
+            "shale", "rig count", "energy sector"
+        ],
+        # ───────── Finance ─────────
+        "finance": [
+            "bank", "banks", "lender", "treasury",
+            "bond yield", "insurance", "brokerage",
+            "asset management", "fintech", "stress test",
+            "net interest margin", "capital ratio", "credit suisse", "regulator"
+        ],
+        # ───────── Défense ─────────
+        "defense": [
+            "military contractor", "defense contract", "pentagon", "dod",
+            "nato", "defense ministry", "missile", "fighter jet",
+            "army procurement", "dapa"
+        ],
+        # ───────── Santé ─────────
+        "healthcare": [
+            "fda", "ema", "mhra",
+            "clinical trial", "phase iii", "phase ii",
+            "biotech", "pharma", "drug approval", "vaccine",
+            "medical device", "healthcare sector"
+        ],
+        # ───────── Consommation ─────────
+        "consumer": [
+            "retail sales", "same-store sales", "foot traffic",
+            "e-commerce", "online shopping", "luxury brand",
+            "consumer spending", "mall operator", "apparel",
+            "brand release", "back-to-school"
+        ],
+        # ───────── Industrie & fabrication ─────────
+        "industry": [
+            "manufacturing", "factory output", "industrial automation",
+            "robotics", "3d printing", "supply chain", "logistics",
+            "industrial production", "capex cycle"
+        ],
+        # ───────── Transport & logistique ─────────
+        "transport": [
+            "shipping", "container rates", "freight", "dry bulk",
+            "airline", "air traffic", "rail", "truck freight",
+            "port backlog", "logistics provider"
+        ],
+        # ───────── Agriculture & matières premières ─────────
+        "agriculture": [
+            "crop", "wheat", "corn", "soybean", "grain",
+            "fertilizer", "agri commodity", "harvest",
+            "usda", "cotton", "coffee", "palm oil"
+        ],
+        # ───────── Crypto ─────────
+        "crypto": [
+            "bitcoin", "btc", "ethereum", "eth",
+            "solana", "sol", "xrp", "doge",
+            "defi", "stablecoin", "nft", "layer 2",
+            "staking", "crypto exchange", "blockchain"
+        ]
     },
+
     "regions": {
-        "us":     ["united states", "washington", "fed"],
-        "europe": ["eurozone", "ecb", "paris", "frankfurt", "london"],
-        "asia":   ["china", "japan", "korea", "india"],
-        "em":     ["brazil", "russia", "south africa", "turkey"],
-        "global": ["global", "worldwide", "international"]
+        # ───────── États-Unis ─────────
+        "us": [
+            "united states", "usa", "us economy",
+            "washington", "white house", "treasury",
+            "federal reserve", "fed", "fomc", "s&p 500"
+        ],
+        # ───────── Europe développée ─────────
+        "europe": [
+            "eurozone", "eu", "european union", "brussels",
+            "ecb", "bank of england", "boe",
+            "paris", "frankfurt", "london",
+            "dax", "cac", "ftse", "stoxx 600"
+        ],
+        # ───────── Asie développée & émergente ─────────
+        "asia": [
+            "china", "beijing", "shanghai", "hong kong", "hsi", "yuan", "pboc",
+            "japan", "tokyo", "nikkei", "yen", "boj",
+            "india", "mumbai", "sensex", "korea", "kospi", "taiwan", "tsec",
+            "singapore", "asean"
+        ],
+        # ───────── Marchés émergents ─────────
+        "em": [
+            "emerging markets", "emerging economy", "brics",
+            "brazil", "bovespa", "rio",
+            "russia", "moscow", "mosbirzha",
+            "south africa", "johannesburg", "turkey", "istanbul", "bist",
+            "mexico", "mexb", "indonesia", "jakarta",
+            "thailand", "bangkok", "vietnam", "ho chi minh"
+        ],
+        # ───────── Global ─────────
+        "global": [
+            "global", "worldwide", "international", "world economy",
+            "global markets", "imf", "world bank", "oecd", "g20", "g7"
+        ]
     }
 }
+
+# Backwards compatibility mappings
+NEWS_KEYWORDS = {
+    "high_impact": KEYWORD_TIERS["high"],
+    "medium_impact": KEYWORD_TIERS["medium"], 
+    "low_impact": KEYWORD_TIERS["low"]
+}
+
+THEMES_DOMINANTS = THEMES
+
+IMPORTANT_SOURCES = SOURCES["whitelist"]
+PREMIUM_SOURCES = SOURCES["premium"]
 
 # ---------------------------------------------------------------------------
 # SOURCES  –  premium boost + shortlist par catégorie
@@ -391,23 +528,6 @@ SOURCES = {
         ]
     }
 }
-
-# Backwards compatibility mappings
-NEWS_KEYWORDS = {
-    "high_impact": KEYWORD_TIERS["high"],
-    "medium_impact": KEYWORD_TIERS["medium"], 
-    "low_impact": KEYWORD_TIERS["low"]
-}
-
-THEMES_DOMINANTS = {
-    "macroeconomics": THEMES["macroeconomics"],
-    "sectors": THEMES["sectors"],
-    "regions": THEMES["regions"],
-    "fundamentals": THEMES["fundamentals"]  # Nouveau axe
-}
-
-IMPORTANT_SOURCES = SOURCES["whitelist"]
-PREMIUM_SOURCES = SOURCES["premium"]
 
 # ---------------------------------------------------------------------------
 # 🔧 ENHANCED GIT HANDLER FOR ROBUST CI/CD OPERATIONS
@@ -808,7 +928,7 @@ def extract_themes(article):
     text = (article.get("title", "") + " " + 
             article.get("content", article.get("text", ""))).lower()
     
-    themes_detected = {"macroeconomics": [], "sectors": [], "regions": [], "fundamentals": []}
+    themes_detected = {"macroeconomics": [], "sectors": [], "regions": []}
     
     for axis, groups in THEMES.items():
         for theme, keywords in groups.items():
@@ -1170,22 +1290,19 @@ def extract_top_themes(news_data, days=30, max_examples=3, exclude_themes=None):
     themes_counter = {
         "macroeconomics": Counter(),
         "sectors": Counter(),
-        "regions": Counter(),
-        "fundamentals": Counter()  # New axis
+        "regions": Counter()
     }
     
     themes_details = {
         "macroeconomics": {},
         "sectors": {},
-        "regions": {},
-        "fundamentals": {}  # New axis
+        "regions": {}
     }
     
     theme_articles = {
         "macroeconomics": {},
         "sectors": {},
-        "regions": {},
-        "fundamentals": {}  # New axis
+        "regions": {}
     }
     
     total_articles = 0
@@ -1795,7 +1912,7 @@ def generate_themes_json(news_data):
         else:
             current_themes = monthly_themes
         
-        # Process each axis (macroeconomics, sectors, regions, fundamentals)
+        # Process each axis (macroeconomics, sectors, regions)
         for axis, themes in current_themes.items():
             compact_periods[period_key][axis] = {}
             axis_counts = []
