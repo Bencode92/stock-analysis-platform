@@ -9,7 +9,7 @@
   /* Backgrounds - OPACITÉ AUGMENTÉE POUR MEILLEURE LISIBILITÉ */
   --bar-bg: rgba(255,255,255,.12);
   --card-bg: rgba(1,22,39,1); /* ✅ CHANGÉ: 100% opaque */
-  --tooltip-bg: rgba(5,30,52,.97); /* idem pour les infobulles */
+  --tooltip-bg: rgba(1,22,39,1); /* ✅ CHANGÉ: 100% opaque pour meilleure lisibilité */
   
   /* Textes - CONTRASTE AMÉLIORÉ */
   --text-primary: #ffffff; /* Plus blanc pour meilleur contraste */
@@ -35,7 +35,7 @@
     --accent: #00c46b;
     --bar-bg: rgba(0,0,0,.12);
     --card-bg: rgba(255,255,255,1); /* ✅ CHANGÉ: 100% opaque en mode clair aussi */
-    --tooltip-bg: #fff;
+    --tooltip-bg: rgba(255,255,255,1); /* ✅ CHANGÉ: 100% opaque en mode clair */
     --text-primary: #1a202c;
     --text-secondary: #4a5568;
     --text-muted: #718096;
@@ -362,7 +362,7 @@
   right: 0;
   max-width: 360px;
   padding: 1.2rem;
-  background: var(--tooltip-bg);
+  background: rgb(1, 22, 39); /* ✅ CHANGÉ: Fond 100% opaque pour meilleure lisibilité */
   border: 1px solid var(--border-hover);
   border-radius: .6rem;
   box-shadow: 0 8px 32px rgba(0,0,0,.5), 0 0 20px rgba(0,255,135,.1);
@@ -393,7 +393,7 @@
   left: 24px;
   width: 16px;
   height: 16px;
-  background: var(--tooltip-bg);
+  background: rgb(1, 22, 39); /* ✅ CHANGÉ: Même fond opaque pour la flèche */
   border: 1px solid var(--border-hover);
   border-right: none;
   border-bottom: none;
