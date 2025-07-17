@@ -1,0 +1,68 @@
+name: Update Commodity Correlations
+
+on:
+  workflow_run:
+    workflows: ["Update Themes Data"]
+    types:
+      - completed
+  workflow_dispatch:
+  schedule:
+    - cron: '30 */4 * * *'  # 30 minutes après l'update des news
+
+jobs:
+  correlate-commodities:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+          
+      - name: Run commodity correlation
+        run: python scripts/commodity_correlator.py
+        
+      - name: Verify output
+        run: |
+          if [ -f "data/commodities.json" ]; then
+            echo "✅ Commodities file generated successfully"
+            echo "📊 File size: $(du -h data/commodities.json | cut -f1)"
+            # Vérifier que le fichier n'est pas vide
+            size=$(stat -c%s "data/commodities.json")
+            if [ $size -lt 100 ]; then
+              echo "❌ Error: commodities.json is too small"
+              exit 1
+            fi
+          else
+            echo "❌ Error: commodities.json not found"
+            exit 1
+          fi
+        
+      - name: Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action [Bot]"
+          git add data/commodities.json
+          if git diff --staged --quiet; then
+            echo "📝 No changes detected"
+          else
+            # Extraire des stats pour le commit message
+            alerts=$(jq -r '.summary.critical_alerts // 0' data/commodities.json)
+            total=$(jq -r '.commodities | length // 0' data/commodities.json)
+            git commit -m "🏗️ Update commodity correlations [skip ci]
+
+            📊 Commodities tracked: $total
+            🚨 Critical alerts: $alerts
+            🕐 Updated: $(date '+%Y-%m-%d %H:%M:%S UTC')"
+            git push
+            echo "✅ Commodity data updated and published"
+          fi
