@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
 Commodity Correlator for TradePulse
-Analyses news impact on commodities based on country export exposure
+Analyzes macro-economic news impact on commodities based on country export exposure
 """
 
 import json
 import logging
+import re
 from datetime import datetime, timedelta
 from collections import defaultdict
 from typing import List, Dict, Tuple
@@ -25,10 +26,54 @@ COMMODITIES_JSON_PATH = os.path.join(BASE_DIR, "data", "commodities.json")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# ──────────────────────────────────────────
+# Macro / micro patterns for filtering
+# ──────────────────────────────────────────
+MACRO_KEYWORDS = [
+    # Trade & geopolitics
+    "tariff", "trade war", "sanctions", "embargo", "export ban", "import restriction",
+    "conflict", "war", "tension", "crisis", "diplomatic", "military",
+    
+    # Economics & policy
+    "recession", "inflation", "gdp", "interest rate", "central bank", "fed", "ecb", "boj",
+    "monetary policy", "fiscal policy", "stimulus", "quantitative",
+    
+    # Energy / supply
+    "oil price", "energy crisis", "supply chain", "production cut", "shortage",
+    "pipeline", "refinery", "opec", "strategic reserve",
+    
+    # Agriculture / climate
+    "drought", "flood", "crop failure", "harvest", "weather", "climate",
+    "frost", "heatwave", "hurricane", "typhoon",
+    
+    # Currency / FX
+    "currency", "devaluation", "dollar", "euro", "yuan", "yen",
+    "exchange rate", "forex", "carry trade",
+    
+    # Raw materials
+    "mining", "ore production", "metal prices", "commodity prices"
+]
+
+COMPANY_KEYWORDS = [
+    r"\b(?:inc|corp|ltd|plc|llc|co|company)\b",
+    r"(?:nyse|nasdaq|tsx|lse):",
+    r"\bearnings?\b", r"\brevenue\b", r"\bquarterly\b", 
+    r"\bguidance\b", r"\bprofit\b", r"\bshares?\b",
+    r"\bIPO\b", r"\bmerger\b", r"\bacquisition\b"
+]
+
+# Pre-compile patterns for performance
+MACRO_PATTERNS = [re.compile(rf"\b{kw}\b", re.I) for kw in MACRO_KEYWORDS]
+COMPANY_PATTERNS = [re.compile(kw, re.I) for kw in COMPANY_KEYWORDS]
+
 class CommodityCorrelator:
     def __init__(self):
         self.exposure_data = self._load_exposure_data()
         self.country_map = self._build_country_map()
+        
+        # Configuration thresholds
+        self.QUALITY_MIN = 40    # Minimum quality score
+        self.SIGNAL_MIN = 0.5    # Minimum signal score
         
     def _load_exposure_data(self):
         """Load export exposure data"""
@@ -77,7 +122,6 @@ class CommodityCorrelator:
             "TR": ["turkey", "turkish", "ankara", "istanbul"],
             "IR": ["iran", "iranian", "tehran"],
             "IQ": ["iraq", "iraqi", "baghdad"],
-            "SA": ["saudi arabia", "saudi", "riyadh"],
             "IL": ["israel", "israeli", "tel aviv", "jerusalem"],
             "UA": ["ukraine", "ukrainian", "kiev", "kyiv"],
             "PL": ["poland", "polish", "warsaw"],
@@ -94,88 +138,67 @@ class CommodityCorrelator:
             "CZ": ["czech", "czech republic", "prague"],
             "HU": ["hungary", "hungarian", "budapest"],
             "RO": ["romania", "romanian", "bucharest"],
-            "BG": ["bulgaria", "bulgarian", "sofia"],
-            "HR": ["croatia", "croatian", "zagreb"],
             "IE": ["ireland", "irish", "dublin"],
             "NZ": ["new zealand", "kiwi", "auckland", "wellington"],
             "QA": ["qatar", "qatari", "doha"],
             "KW": ["kuwait", "kuwaiti"],
-            "OM": ["oman", "omani", "muscat"],
-            "JO": ["jordan", "jordanian", "amman"],
-            "LB": ["lebanon", "lebanese", "beirut"],
             "MA": ["morocco", "moroccan", "rabat", "casablanca"],
-            "TN": ["tunisia", "tunisian", "tunis"],
-            "DZ": ["algeria", "algerian", "algiers"],
-            "LY": ["libya", "libyan", "tripoli"],
-            "SD": ["sudan", "sudanese", "khartoum"],
-            "ET": ["ethiopia", "ethiopian", "addis ababa"],
             "KE": ["kenya", "kenyan", "nairobi"],
             "GH": ["ghana", "ghanaian", "accra"],
-            "CI": ["ivory coast", "cote d'ivoire", "abidjan"],
-            "CM": ["cameroon", "cameroonian", "yaounde"],
-            "AO": ["angola", "angolan", "luanda"],
-            "ZW": ["zimbabwe", "zimbabwean", "harare"],
-            "ZM": ["zambia", "zambian", "lusaka"],
-            "MZ": ["mozambique", "mozambican", "maputo"],
+            "ET": ["ethiopia", "ethiopian", "addis ababa"],
             "TZ": ["tanzania", "tanzanian", "dar es salaam"],
             "UG": ["uganda", "ugandan", "kampala"],
-            "CD": ["congo", "drc", "kinshasa", "democratic republic"],
+            "ZM": ["zambia", "zambian", "lusaka"],
+            "ZW": ["zimbabwe", "zimbabwean", "harare"],
             "VE": ["venezuela", "venezuelan", "caracas"],
             "CO": ["colombia", "colombian", "bogota"],
             "EC": ["ecuador", "ecuadorian", "quito"],
             "BO": ["bolivia", "bolivian", "la paz"],
             "PY": ["paraguay", "paraguayan", "asuncion"],
             "UY": ["uruguay", "uruguayan", "montevideo"],
-            "CU": ["cuba", "cuban", "havana"],
-            "DO": ["dominican republic", "santo domingo"],
-            "GT": ["guatemala", "guatemalan"],
-            "HN": ["honduras", "honduran", "tegucigalpa"],
-            "SV": ["el salvador", "salvadoran", "san salvador"],
-            "NI": ["nicaragua", "nicaraguan", "managua"],
-            "CR": ["costa rica", "costa rican", "san jose"],
-            "PA": ["panama", "panamanian"],
-            "JM": ["jamaica", "jamaican", "kingston"],
-            "TT": ["trinidad", "tobago", "port of spain"],
-            "LK": ["sri lanka", "sri lankan", "colombo"],
-            "MM": ["myanmar", "burma", "burmese", "yangon"],
-            "KH": ["cambodia", "cambodian", "phnom penh"],
-            "LA": ["laos", "laotian", "vientiane"],
-            "MN": ["mongolia", "mongolian", "ulaanbaatar"],
             "KZ": ["kazakhstan", "kazakh", "astana", "almaty"],
             "UZ": ["uzbekistan", "uzbek", "tashkent"],
-            "TM": ["turkmenistan", "turkmen", "ashgabat"],
-            "TJ": ["tajikistan", "tajik", "dushanbe"],
-            "KG": ["kyrgyzstan", "kyrgyz", "bishkek"],
             "AZ": ["azerbaijan", "azerbaijani", "baku"],
-            "AM": ["armenia", "armenian", "yerevan"],
             "GE": ["georgia", "georgian", "tbilisi"],
-            "MD": ["moldova", "moldovan", "chisinau"],
+            "AM": ["armenia", "armenian", "yerevan"],
             "BY": ["belarus", "belarusian", "minsk"],
             "LT": ["lithuania", "lithuanian", "vilnius"],
             "LV": ["latvia", "latvian", "riga"],
             "EE": ["estonia", "estonian", "tallinn"],
             "RS": ["serbia", "serbian", "belgrade"],
-            "BA": ["bosnia", "bosnian", "sarajevo"],
-            "MK": ["macedonia", "macedonian", "skopje"],
-            "AL": ["albania", "albanian", "tirana"],
+            "HR": ["croatia", "croatian", "zagreb"],
             "SI": ["slovenia", "slovenian", "ljubljana"],
             "SK": ["slovakia", "slovak", "bratislava"],
-            "IS": ["iceland", "icelandic", "reykjavik"],
+            "MK": ["macedonia", "macedonian", "skopje"],
+            "AL": ["albania", "albanian", "tirana"],
             "LU": ["luxembourg", "luxembourgish"],
+            "IS": ["iceland", "icelandic", "reykjavik"],
             "MT": ["malta", "maltese", "valletta"],
             "CY": ["cyprus", "cypriot", "nicosia"],
-            "LI": ["liechtenstein"],
-            "AD": ["andorra"],
-            "MC": ["monaco"],
-            "SM": ["san marino"],
-            "VA": ["vatican"],
-            "GN": ["guinea", "guinean", "conakry"],
-            "BF": ["burkina faso", "ouagadougou"],
+            "BH": ["bahrain", "bahraini", "manama"],
+            "OM": ["oman", "omani", "muscat"],
+            "JO": ["jordan", "jordanian", "amman"],
+            "LB": ["lebanon", "lebanese", "beirut"],
+            "SY": ["syria", "syrian", "damascus"],
+            "YE": ["yemen", "yemeni", "sana'a", "sanaa"],
+            "LY": ["libya", "libyan", "tripoli"],
+            "TN": ["tunisia", "tunisian", "tunis"],
+            "DZ": ["algeria", "algerian", "algiers"],
+            "SD": ["sudan", "sudanese", "khartoum"],
+            "CI": ["ivory coast", "cote d'ivoire", "abidjan"],
+            "CM": ["cameroon", "cameroonian", "yaounde"],
+            "AO": ["angola", "angolan", "luanda"],
+            "MZ": ["mozambique", "mozambican", "maputo"],
+            "NA": ["namibia", "namibian", "windhoek"],
+            "BW": ["botswana", "gaborone"],
+            "MU": ["mauritius", "mauritian", "port louis"],
+            "MG": ["madagascar", "malagasy", "antananarivo"],
+            "SN": ["senegal", "senegalese", "dakar"],
             "ML": ["mali", "malian", "bamako"],
+            "BF": ["burkina faso", "ouagadougou"],
             "NE": ["niger", "nigerien", "niamey"],
             "TD": ["chad", "chadian", "n'djamena"],
             "MR": ["mauritania", "mauritanian", "nouakchott"],
-            "SN": ["senegal", "senegalese", "dakar"],
             "GM": ["gambia", "gambian", "banjul"],
             "GW": ["guinea-bissau", "bissau"],
             "SL": ["sierra leone", "freetown"],
@@ -184,6 +207,7 @@ class CommodityCorrelator:
             "BJ": ["benin", "beninese", "porto-novo"],
             "GA": ["gabon", "gabonese", "libreville"],
             "CG": ["congo", "republic of congo", "brazzaville"],
+            "CD": ["congo", "drc", "kinshasa", "democratic republic"],
             "GQ": ["equatorial guinea", "malabo"],
             "CF": ["central african republic", "bangui"],
             "RW": ["rwanda", "rwandan", "kigali"],
@@ -191,52 +215,47 @@ class CommodityCorrelator:
             "DJ": ["djibouti", "djiboutian"],
             "ER": ["eritrea", "eritrean", "asmara"],
             "SO": ["somalia", "somali", "mogadishu"],
-            "SC": ["seychelles"],
-            "MU": ["mauritius", "mauritian", "port louis"],
-            "KM": ["comoros", "comorian", "moroni"],
-            "MG": ["madagascar", "malagasy", "antananarivo"],
+            "MW": ["malawi", "malawian", "lilongwe"],
             "SZ": ["swaziland", "eswatini", "mbabane"],
             "LS": ["lesotho", "maseru"],
-            "BW": ["botswana", "gaborone"],
-            "NA": ["namibia", "namibian", "windhoek"],
-            "MW": ["malawi", "malawian", "lilongwe"],
             "FJ": ["fiji", "fijian", "suva"],
             "PG": ["papua new guinea", "port moresby"],
             "SB": ["solomon islands", "honiara"],
             "VU": ["vanuatu", "port vila"],
             "NC": ["new caledonia", "noumea"],
             "PF": ["french polynesia", "tahiti", "papeete"],
-            "GU": ["guam"],
-            "MP": ["northern mariana", "saipan"],
-            "AS": ["american samoa", "pago pago"],
-            "PW": ["palau", "koror"],
-            "FM": ["micronesia", "palikir"],
-            "MH": ["marshall islands", "majuro"],
-            "KI": ["kiribati", "tarawa"],
-            "NR": ["nauru"],
-            "TV": ["tuvalu", "funafuti"],
-            "TO": ["tonga", "nuku'alofa"],
-            "WS": ["samoa", "apia"],
-            "CK": ["cook islands", "rarotonga"],
-            "NU": ["niue"],
-            "TK": ["tokelau"],
-            "PN": ["pitcairn"],
-            "WF": ["wallis and futuna"],
-            "TL": ["timor-leste", "east timor", "dili"],
+            "LK": ["sri lanka", "sri lankan", "colombo"],
+            "MM": ["myanmar", "burma", "burmese", "yangon"],
+            "KH": ["cambodia", "cambodian", "phnom penh"],
+            "LA": ["laos", "laotian", "vientiane"],
+            "MN": ["mongolia", "mongolian", "ulaanbaatar"],
             "BN": ["brunei", "bandar seri begawan"],
-            "MO": ["macau", "macao"],
-            "HK": ["hong kong"],
-            "TW": ["taiwan", "taipei"],
-            "KP": ["north korea", "pyongyang"],
+            "TL": ["timor-leste", "east timor", "dili"],
             "MV": ["maldives", "male"],
             "BT": ["bhutan", "thimphu"],
             "NP": ["nepal", "nepalese", "kathmandu"],
             "AF": ["afghanistan", "afghan", "kabul"],
-            "YE": ["yemen", "yemeni", "sana'a", "sanaa"],
-            "SY": ["syria", "syrian", "damascus"],
+            "TJ": ["tajikistan", "tajik", "dushanbe"],
+            "KG": ["kyrgyzstan", "kyrgyz", "bishkek"],
+            "TM": ["turkmenistan", "turkmen", "ashgabat"],
             "PS": ["palestine", "palestinian", "ramallah", "gaza"],
-            "BH": ["bahrain", "bahraini", "manama"],
-            "PR": ["puerto rico", "san juan"],
+            "VA": ["vatican"],
+            "SM": ["san marino"],
+            "AD": ["andorra"],
+            "MC": ["monaco"],
+            "LI": ["liechtenstein"],
+            "GI": ["gibraltar"],
+            "FK": ["falkland islands", "stanley"],
+            "GF": ["french guiana", "cayenne"],
+            "GL": ["greenland", "nuuk"],
+            "BM": ["bermuda", "hamilton"],
+            "KY": ["cayman islands", "george town"],
+            "VG": ["british virgin islands"],
+            "TC": ["turks and caicos"],
+            "AI": ["anguilla"],
+            "MS": ["montserrat"],
+            "GP": ["guadeloupe"],
+            "MQ": ["martinique"],
             "BB": ["barbados", "bridgetown"],
             "AG": ["antigua", "barbuda", "st. john's"],
             "DM": ["dominica", "roseau"],
@@ -248,48 +267,55 @@ class CommodityCorrelator:
             "BZ": ["belize", "belmopan"],
             "GY": ["guyana", "georgetown"],
             "SR": ["suriname", "paramaribo"],
-            "GF": ["french guiana", "cayenne"],
-            "FK": ["falkland islands", "stanley"],
-            "GL": ["greenland", "nuuk"],
-            "BM": ["bermuda", "hamilton"],
-            "KY": ["cayman islands", "george town"],
-            "TC": ["turks and caicos"],
-            "VG": ["british virgin islands"],
-            "VI": ["us virgin islands"],
-            "AI": ["anguilla"],
-            "MS": ["montserrat"],
-            "GP": ["guadeloupe"],
-            "MQ": ["martinique"],
+            "JM": ["jamaica", "jamaican", "kingston"],
+            "TT": ["trinidad", "tobago", "port of spain"],
+            "CU": ["cuba", "cuban", "havana"],
+            "DO": ["dominican republic", "santo domingo"],
+            "HT": ["haiti", "haitian", "port-au-prince"],
+            "PR": ["puerto rico", "san juan"],
+            "GT": ["guatemala", "guatemalan"],
+            "HN": ["honduras", "honduran", "tegucigalpa"],
+            "SV": ["el salvador", "salvadoran", "san salvador"],
+            "NI": ["nicaragua", "nicaraguan", "managua"],
+            "CR": ["costa rica", "costa rican", "san jose"],
+            "PA": ["panama", "panamanian"],
             "AW": ["aruba"],
             "CW": ["curacao"],
             "SX": ["sint maarten"],
             "BQ": ["bonaire"],
-            "HT": ["haiti", "haitian", "port-au-prince"],
-            "RE": ["reunion"],
-            "YT": ["mayotte"],
-            "PM": ["st. pierre", "miquelon"],
-            "SH": ["st. helena"],
-            "IO": ["british indian ocean"],
-            "CX": ["christmas island"],
-            "CC": ["cocos islands"],
-            "NF": ["norfolk island"],
-            "HM": ["heard island"],
-            "AQ": ["antarctica"],
-            "BV": ["bouvet island"],
-            "TF": ["french southern"],
-            "GS": ["south georgia"],
-            "UM": ["us minor outlying"],
-            "EH": ["western sahara"],
-            "SJ": ["svalbard"],
-            "AX": ["aland islands"],
-            "FO": ["faroe islands"],
-            "GG": ["guernsey"],
-            "JE": ["jersey"],
-            "IM": ["isle of man"],
-            "GI": ["gibraltar"]
+            "HK": ["hong kong"],
+            "MO": ["macau", "macao"],
+            "TW": ["taiwan", "taipei"],
+            "KP": ["north korea", "pyongyang"],
+            "FM": ["micronesia", "palikir"],
+            "MH": ["marshall islands", "majuro"],
+            "PW": ["palau", "koror"],
+            "NR": ["nauru"],
+            "KI": ["kiribati", "tarawa"],
+            "TV": ["tuvalu", "funafuti"],
+            "TO": ["tonga", "nuku'alofa"],
+            "WS": ["samoa", "apia"],
+            "NU": ["niue"],
+            "CK": ["cook islands", "rarotonga"],
+            "TK": ["tokelau"],
+            "WF": ["wallis and futuna"],
+            "PY": ["paraguay", "paraguayan", "asuncion"],
+            "GN": ["guinea", "guinean", "conakry"]
         }
         
-        return country_patterns
+        # Convert to sets for O(1) lookup
+        return {cc: set(patterns) for cc, patterns in country_patterns.items()}
+    
+    # ---------- Macro/Micro filtering ----------
+    @staticmethod
+    def _is_company_article(text: str) -> bool:
+        """Check if article is about a specific company"""
+        return any(p.search(text) for p in COMPANY_PATTERNS)
+    
+    @staticmethod
+    def _is_macro_article(text: str) -> bool:
+        """Check if article contains macro-economic keywords"""
+        return any(p.search(text) for p in MACRO_PATTERNS)
     
     def detect_countries_from_text(self, text: str) -> List[str]:
         """Detect countries mentioned in text"""
@@ -313,7 +339,7 @@ class CommodityCorrelator:
         return exports
     
     def correlate_news_to_commodities(self, news_data: Dict) -> Dict:
-        """Main correlation engine"""
+        """Main correlation engine with macro filtering"""
         commodity_signals = defaultdict(lambda: {
             "score": 0,
             "trend": "neutral",
@@ -329,9 +355,30 @@ class CommodityCorrelator:
             
             # Process each article
             for article in articles:
+                # Quality filter
+                quality_score = article.get("quality_score", 50)
+                if quality_score < self.QUALITY_MIN:
+                    continue
+                
+                # Build text for analysis
+                text = f"{article.get('title', '')} {article.get('snippet', '')}"
+                
+                # MACRO FILTER: Skip company-specific news
+                if self._is_company_article(text):
+                    logger.debug(f"Skipping company article: {article.get('title', '')}")
+                    continue
+                
+                # MACRO FILTER: Must contain macro keywords
+                if not self._is_macro_article(text):
+                    logger.debug(f"Skipping non-macro article: {article.get('title', '')}")
+                    continue
+                
+                # Check importance level if available
+                if article.get("importance_level") == "general":
+                    continue
+                
                 # Detect countries in article
-                article_text = f"{article.get('title', '')} {article.get('snippet', '')}"
-                detected_countries = self.detect_countries_from_text(article_text)
+                detected_countries = self.detect_countries_from_text(text)
                 
                 # If no countries detected but article is categorized by country, use that
                 if not detected_countries and country_code != "lastUpdated":
@@ -360,18 +407,13 @@ class CommodityCorrelator:
                     for export in country_exports:
                         # Use existing ML analysis
                         sentiment = article.get("impact", "neutral")
-                        quality_score = article.get("quality_score", 50)
-                        
-                        # Skip low quality
-                        if quality_score < 40:
-                            continue
                         
                         # Calculate impact
                         signal = self._calculate_commodity_signal(
                             article, export, sentiment
                         )
                         
-                        if signal["score"] > 0.5:
+                        if signal["score"] > self.SIGNAL_MIN:
                             commodity_code = export["product_code"]
                             
                             # Update commodity signal
@@ -494,6 +536,7 @@ class CommodityCorrelator:
     def run(self):
         """Main execution"""
         logger.info("🏗️ Starting commodity correlation analysis...")
+        logger.info("📋 Filtering: Only macro-economic news will be processed")
         
         # Load latest news
         try:
@@ -514,6 +557,7 @@ class CommodityCorrelator:
             
             logger.info(f"✅ Commodity analysis complete: {len(commodity_signals['commodities'])} commodities tracked")
             logger.info(f"🚨 Alerts: {commodity_signals['summary']['critical_alerts']} critical, {commodity_signals['summary']['important_alerts']} important")
+            logger.info(f"📊 Macro filtering active - company news excluded")
         except Exception as e:
             logger.error(f"Failed to save commodity data: {e}")
             return None
