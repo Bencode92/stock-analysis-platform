@@ -1523,17 +1523,18 @@
         }
         toggleFieldsForRP();
         
-        // Fonction de calcul du coût d'occupation
+        // Fonction de calcul du coût d'occupation corrigée
         function computeOccupationCost(data, partnerContribution = 0) {
-            const brut = 
-                data.mensualite +
-                (data.taxeFonciere || 0) / 12 +
-                (data.chargesCoproNonRecup || 0) +
-                (data.entretienAnnuel || 0) / 12 +
-                (data.assurancePNO || 0) / 12;
+            // Cast sûr → Number(x) renvoie NaN si x est undefined / vide ; "|| 0" neutralise
+            const mensualite = Number(data.mensualite) || 0;
+            const taxeFonciereMensuel = (Number(data.taxeFonciere) || 0) / 12;
+            const chargesCopro = Number(data.chargesCoproNonRecup) || 0;
+            const entretienMensuel = (Number(data.entretienAnnuel) || 0) / 12;
+            const assuranceMensuel = (Number(data.assurancePNO) || 0) / 12;
 
+            const brut = mensualite + taxeFonciereMensuel + chargesCopro + entretienMensuel + assuranceMensuel;
             const netPourVous = Math.max(0, brut - partnerContribution);
-            const loyerPerdu = data.loyerCC || 0;
+            const loyerPerdu = Number(data.loyerCC) || 0;
             const netAvecOpportunite = netPourVous + loyerPerdu;
 
             return { brut, netPourVous, netAvecOpportunite, loyerPerdu };
@@ -2031,10 +2032,10 @@ function generateRecommendations(pricePosition, rentPosition, data) {
 
                     const cout = computeOccupationCost(
                         {
-                            mensualite: bestRegime.mensualite,
+                            mensualite: bestRegime.mensualite || bestRegime.mensualiteMensuelle || 0,
                             taxeFonciere: propertyData.taxeFonciere,
                             chargesCoproNonRecup: propertyData.chargesCoproNonRecup,
-                            entretienAnnuel: propertyData.entretienAnnuel ?? 0,
+                            entretienAnnuel: propertyData.entretienAnnuel || 0,
                             assurancePNO: propertyData.assurancePNO,
                             loyerCC: propertyData.loyerCC
                         },
