@@ -1473,6 +1473,14 @@
         let propertyData = null;
         let analyzer = null;
         
+        // Helper pour calculer la mensualité
+        function calcMensualite(capital, tauxAnnuelPct, dureeAn) {
+            const i = (tauxAnnuelPct / 100) / 12;
+            const n = dureeAn * 12;
+            if (i === 0) return capital / n;
+            return capital * i / (1 - Math.pow(1 + i, -n));
+        }
+        
         // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
             analyzer = new MarketFiscalAnalyzer();
@@ -1523,7 +1531,7 @@
         }
         toggleFieldsForRP();
         
-        // Fonction de calcul du coût d'occupation corrigée
+        // Fonction de calcul du coût d'occupation corrigée et arrondie
         function computeOccupationCost(data, partnerContribution = 0) {
             // Cast sûr → Number(x) renvoie NaN si x est undefined / vide ; "|| 0" neutralise
             const mensualite = Number(data.mensualite) || 0;
@@ -1537,7 +1545,12 @@
             const loyerPerdu = Number(data.loyerCC) || 0;
             const netAvecOpportunite = netPourVous + loyerPerdu;
 
-            return { brut, netPourVous, netAvecOpportunite, loyerPerdu };
+            return { 
+                brut: Math.round(brut),
+                netPourVous: Math.round(netPourVous),
+                netAvecOpportunite: Math.round(netAvecOpportunite),
+                loyerPerdu: Math.round(loyerPerdu)
+            };
         }
         
         // Gestion des étapes
@@ -1625,6 +1638,14 @@ propertyData = {
     honorairesAvocat: typeAchat === 'encheres' ? parseFloat(document.getElementById('honoraires-avocat').value) || 1500 : 0,
     fraisFixes: typeAchat === 'encheres' ? parseFloat(document.getElementById('frais-fixes').value) || 50 : 0
 };
+
+    // Calculer le montant emprunté et la mensualité
+    const montantEmprunte = propertyData.prixPaye - propertyData.apport;
+    propertyData.mensualite = calcMensualite(
+        montantEmprunte,
+        propertyData.taux,
+        propertyData.duree
+    );
  
     // Calculer le prix au m² payé
     propertyData.prixM2Paye = propertyData.prixPaye / propertyData.surface;
@@ -2032,7 +2053,7 @@ function generateRecommendations(pricePosition, rentPosition, data) {
 
                     const cout = computeOccupationCost(
                         {
-                            mensualite: bestRegime.mensualite || bestRegime.mensualiteMensuelle || 0,
+                            mensualite: propertyData.mensualite,  // Utiliser propertyData.mensualite
                             taxeFonciere: propertyData.taxeFonciere,
                             chargesCoproNonRecup: propertyData.chargesCoproNonRecup,
                             entretienAnnuel: propertyData.entretienAnnuel || 0,
