@@ -1613,6 +1613,7 @@ propertyData = {
     vacanceLocative: parseFloat(document.getElementById('vacanceLocative').value ?? 0),
     gestionLocative: document.getElementById('gestionLocative').checked || false,
     travaux: parseFloat(document.getElementById('travaux-renovation').value) || 0,
+    entretienAnnuel: parseFloat(document.getElementById('entretien-annuel').value) || 500,
     chargesCoproNonRecup: parseFloat(document.getElementById('charges-copro-non-recup').value) || 50,
     assurancePNO: parseFloat(document.getElementById('assurance-pno').value) || 15,
     // Paramètres spécifiques selon le type
@@ -2017,22 +2018,30 @@ function generateRecommendations(pricePosition, rentPosition, data) {
                 // Effectuer l'analyse complète
                 const analysis = await analyzer.performCompleteAnalysis(propertyData);
                 
-                // Carte résidence principale
-                if (analysisData.occupationMode === 'residence') {
-                    const bestRegime = analysis.fiscal.reduce((a, b) => 
+                /* -----------------------------------------------------------------
+                   1) Afficher (ou pas) la carte Résidence principale
+                ----------------------------------------------------------------- */
+                const isResidence = propertyData.occupationMode === 'residence';
+                let html = '';
+
+                if (isResidence) {
+                    const bestRegime = analysis.fiscal.reduce((a, b) =>
                         a.cashflowNetAnnuel > b.cashflowNetAnnuel ? a : b
                     );
-                    
-                    const cout = computeOccupationCost({
-                        mensualite: bestRegime.mensualite,
-                        taxeFonciere: analysisData.taxeFonciere,
-                        chargesCoproNonRecup: analysisData.chargesCoproNonRecup,
-                        entretienAnnuel: analysisData.travaux * 0.01, // 1% du montant travaux
-                        assurancePNO: analysisData.assurancePNO,
-                        loyerCC: analysisData.loyerCC
-                    }, analysisData.partnerContribution);
 
-                    const occCard = `
+                    const cout = computeOccupationCost(
+                        {
+                            mensualite: bestRegime.mensualite,
+                            taxeFonciere: propertyData.taxeFonciere,
+                            chargesCoproNonRecup: propertyData.chargesCoproNonRecup,
+                            entretienAnnuel: propertyData.entretienAnnuel ?? 0,
+                            assurancePNO: propertyData.assurancePNO,
+                            loyerCC: propertyData.loyerCC
+                        },
+                        propertyData.partnerContribution
+                    );
+
+                    html += `
                     <div id="occupation-card" class="best-regime-summary">
                         <h2 class="summary-title">
                             <i class="fas fa-home-user"></i>
@@ -2043,18 +2052,19 @@ function generateRecommendations(pricePosition, rentPosition, data) {
                             <span class="summary-highlight">${formatNumber(cout.brut)} €</span> / mois<br>
                             <strong>Après participation du conjoint :</strong>
                             <span class="summary-highlight">${formatNumber(cout.netPourVous)} €</span> / mois<br><br>
-                            Si vous comparez au loyer que vous auriez perçu
+                            En tenant compte du loyer que vous auriez perçu
                             (<span>${formatNumber(cout.loyerPerdu)} €</span> / mois),<br>
-                            le coût total est de :
+                            le coût total est de&nbsp;:
                             <span class="summary-highlight">${formatNumber(cout.netAvecOpportunite)} €</span> / mois.
                         </div>
                     </div>`;
-                    
-                    resultsDiv.innerHTML = occCard;
                 }
-                
-                // Afficher les résultats fiscaux avec les nouvelles fonctions
-                resultsDiv.innerHTML += analyzer.generateFiscalResultsHTML(analysis.fiscal, analysisData);
+
+                /* -----------------------------------------------------------------
+                   2) Résultats des régimes fiscaux (toujours affichés)
+                ----------------------------------------------------------------- */
+                html += analyzer.generateFiscalResultsHTML(analysis.fiscal, analysisData);
+                resultsDiv.innerHTML = html;
                 
                 // Créer les graphiques
                 setTimeout(() => {
