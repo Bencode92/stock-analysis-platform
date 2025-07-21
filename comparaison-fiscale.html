@@ -1021,6 +1021,27 @@
                                 </div>
                                 <span class="form-help">Charges refacturées au locataire</span>
                             </div>
+                            
+                            <!-- Mode d'occupation -->
+                            <div class="form-group">
+                                <label class="form-label">Mode d'occupation</label>
+                                <select id="occupationMode" class="form-input">
+                                    <option value="location" selected>Investissement locatif</option>
+                                    <option value="residence">Résidence principale</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Participation conjoint -->
+                            <div class="form-group" id="partnerContribution-group" style="display:none;">
+                                <label class="form-label" for="partnerContribution">
+                                    Montant payé par le conjoint / co-occupant
+                                </label>
+                                <div class="form-input-wrapper">
+                                    <input type="number" id="partnerContribution" class="form-input" placeholder="300" value="0">
+                                    <span class="form-addon-text">€/mois</span>
+                                </div>
+                                <span class="form-help">Part des charges que la personne qui vit avec vous règle chaque mois</span>
+                            </div>
                         </div>
                     </div>
                     
@@ -1492,6 +1513,32 @@
             });
         });
         
+        // Gestion résidence principale
+        const occupationSelect = document.getElementById('occupationMode');
+        occupationSelect.addEventListener('change', toggleFieldsForRP);
+        
+        function toggleFieldsForRP() {
+            const isRP = occupationSelect.value === 'residence';
+            document.getElementById('partnerContribution-group').style.display = isRP ? '' : 'none';
+        }
+        toggleFieldsForRP();
+        
+        // Fonction de calcul du coût d'occupation
+        function computeOccupationCost(data, partnerContribution = 0) {
+            const brut = 
+                data.mensualite +
+                (data.taxeFonciere || 0) / 12 +
+                (data.chargesCoproNonRecup || 0) +
+                (data.entretienAnnuel || 0) / 12 +
+                (data.assurancePNO || 0) / 12;
+
+            const netPourVous = Math.max(0, brut - partnerContribution);
+            const loyerPerdu = data.loyerCC || 0;
+            const netAvecOpportunite = netPourVous + loyerPerdu;
+
+            return { brut, netPourVous, netAvecOpportunite, loyerPerdu };
+        }
+        
         // Gestion des étapes
         function goToStep(step) {
             // Masquer toutes les sections
@@ -1556,6 +1603,8 @@ propertyData = {
     taux: parseFloat(document.getElementById('loanRate').value),
     tmi: parseFloat(document.getElementById('tmi').value),
     typeAchat: typeAchat,
+    occupationMode: document.getElementById('occupationMode').value,
+    partnerContribution: parseFloat(document.getElementById('partnerContribution').value) || 0,
     // Paramètres avancés
     fraisBancairesDossier: parseFloat(document.getElementById('frais-bancaires-dossier').value) || 900,
     fraisBancairesCompte: parseFloat(document.getElementById('frais-bancaires-compte').value) || 150,
@@ -1968,8 +2017,44 @@ function generateRecommendations(pricePosition, rentPosition, data) {
                 // Effectuer l'analyse complète
                 const analysis = await analyzer.performCompleteAnalysis(propertyData);
                 
+                // Carte résidence principale
+                if (analysisData.occupationMode === 'residence') {
+                    const bestRegime = analysis.fiscal.reduce((a, b) => 
+                        a.cashflowNetAnnuel > b.cashflowNetAnnuel ? a : b
+                    );
+                    
+                    const cout = computeOccupationCost({
+                        mensualite: bestRegime.mensualite,
+                        taxeFonciere: analysisData.taxeFonciere,
+                        chargesCoproNonRecup: analysisData.chargesCoproNonRecup,
+                        entretienAnnuel: analysisData.travaux * 0.01, // 1% du montant travaux
+                        assurancePNO: analysisData.assurancePNO,
+                        loyerCC: analysisData.loyerCC
+                    }, analysisData.partnerContribution);
+
+                    const occCard = `
+                    <div id="occupation-card" class="best-regime-summary">
+                        <h2 class="summary-title">
+                            <i class="fas fa-home-user"></i>
+                            Résidence principale – Coût mensuel réel
+                        </h2>
+                        <div class="summary-content">
+                            <strong>Charges totales du bien :</strong>
+                            <span class="summary-highlight">${formatNumber(cout.brut)} €</span> / mois<br>
+                            <strong>Après participation du conjoint :</strong>
+                            <span class="summary-highlight">${formatNumber(cout.netPourVous)} €</span> / mois<br><br>
+                            Si vous comparez au loyer que vous auriez perçu
+                            (<span>${formatNumber(cout.loyerPerdu)} €</span> / mois),<br>
+                            le coût total est de :
+                            <span class="summary-highlight">${formatNumber(cout.netAvecOpportunite)} €</span> / mois.
+                        </div>
+                    </div>`;
+                    
+                    resultsDiv.innerHTML = occCard;
+                }
+                
                 // Afficher les résultats fiscaux avec les nouvelles fonctions
-                resultsDiv.innerHTML = analyzer.generateFiscalResultsHTML(analysis.fiscal, analysisData);
+                resultsDiv.innerHTML += analyzer.generateFiscalResultsHTML(analysis.fiscal, analysisData);
                 
                 // Créer les graphiques
                 setTimeout(() => {
@@ -2058,77 +2143,6 @@ function generateRecommendations(pricePosition, rentPosition, data) {
             });
             
             return modified;
-        }
-        
-        // Générer les recommandations
-        function generateRecommendations(pricePosition, rentPosition, data) {
-            let recommendations = '';
-            
-            if (pricePosition === 'low' && rentPosition === 'high') {
-                recommendations += `
-                    <div class="recommendation-item">
-                        <div class="recommendation-icon">
-                            <i class="fas fa-star"></i>
-                        </div>
-                        <div class="recommendation-content">
-                            <h4>Excellent investissement !</h4>
-                            <p>Vous avez acheté en dessous du marché et louez au-dessus. C'est une situation idéale.</p>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            if (pricePosition === 'high') {
-                recommendations += `
-                    <div class="recommendation-item">
-                        <div class="recommendation-icon">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                        <div class="recommendation-content">
-                            <h4>Prix d'achat élevé</h4>
-                            <p>Vous avez payé ${Math.round(Math.abs((data.prixM2Paye - data.ville.prix_m2) / data.ville.prix_m2 * 100))}% au-dessus du marché. 
-                            L'optimisation fiscale sera d'autant plus importante.</p>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            if (rentPosition === 'low') {
-                recommendations += `
-                    <div class="recommendation-item">
-                        <div class="recommendation-icon">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                        <div class="recommendation-content">
-                            <h4>Potentiel d'augmentation du loyer</h4>
-                            <p>Votre loyer est ${Math.round(Math.abs((data.loyerM2Actuel - data.ville.loyer_m2) / data.ville.loyer_m2 * 100))}% en dessous du marché. 
-                            Vous pourriez potentiellement augmenter à ${formatNumber(data.ville.loyer_m2 * data.surface)} €/mois.</p>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            recommendations += `
-                <div class="recommendation-item">
-                    <div class="recommendation-icon">
-                        <i class="fas fa-balance-scale"></i>
-                    </div>
-                    <div class="recommendation-content">
-                        <h4>Optimisation fiscale recommandée</h4>
-                        <p>Passez à l'étape suivante pour découvrir le régime fiscal le plus avantageux pour votre situation.</p>
-                    </div>
-                </div>
-            `;
-            
-            return recommendations;
-        }
-        
-        // Fonction pour formater les nombres
-        function formatNumber(num) {
-            return new Intl.NumberFormat('fr-FR', { 
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0 
-            }).format(Math.round(num));
         }
         
         // Script pour l'heure
