@@ -1973,6 +1973,29 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
             });
         }
     }
+
+    // ─────────────────────────────────────────────
+    //  utilitaire n°1 : coût d'occupation (RP)
+    computeOccupationCost(data, partner = 0) {
+        const mensu   = Number(data.monthlyPayment) || 0;
+        const tf      = (Number(data.taxeFonciere) || 0) / 12;
+        const copro   = (Number(data.chargesCoproNonRecup) || 0);
+        const entret  = (Number(data.entretienAnnuel) || 0) / 12;
+        const pno     = (Number(data.assurancePNO) || 0) / 12;
+
+        const brut = +(mensu + tf + copro + entret + pno).toFixed(2);
+        const net  = Math.max(0, brut - partner);
+
+        const loyerPerdu = Number(data.loyerCC) || 0; // opportunité manquée
+        const netOp      = +(net + loyerPerdu).toFixed(2);
+
+        return {
+            brut,               // charges totales
+            netPourVous:       Math.round(net),
+            netAvecOpportunite:Math.round(netOp),
+            loyerPerdu:        Math.round(loyerPerdu)
+        };
+    }
 }
 
 /**
