@@ -1533,8 +1533,8 @@
         
         // Fonction de calcul du coût d'occupation corrigée et arrondie
         function computeOccupationCost(data, partnerContribution = 0) {
-            // Cast sûr → Number(x) renvoie NaN si x est undefined / vide ; "|| 0" neutralise
-            const mensualite = Number(data.mensualite) || 0;
+            // Utilise monthlyPayment (avec frais) si disponible, sinon mensualite (sans frais)
+            const mensualite = Number(data.mensualite ?? data.monthlyPayment) || 0;
             const taxeFonciereMensuel = (Number(data.taxeFonciere) || 0) / 12;
             const chargesCopro = Number(data.chargesCoproNonRecup) || 0;
             const entretienMensuel = (Number(data.entretienAnnuel) || 0) / 12;
@@ -2053,7 +2053,7 @@ function generateRecommendations(pricePosition, rentPosition, data) {
 
                     const cout = computeOccupationCost(
                         {
-                            mensualite: propertyData.mensualite,  // Utiliser propertyData.mensualite
+                            mensualite: analysisData.monthlyPayment,  // Utilise la valeur correcte avec frais inclus
                             taxeFonciere: propertyData.taxeFonciere,
                             chargesCoproNonRecup: propertyData.chargesCoproNonRecup,
                             entretienAnnuel: propertyData.entretienAnnuel || 0,
