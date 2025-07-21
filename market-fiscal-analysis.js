@@ -1982,9 +1982,9 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
         const copro   = (Number(data.chargesCoproNonRecup) || 0);
         const entret  = (Number(data.entretienAnnuel) || 0) / 12;
         const pno     = (Number(data.assurancePNO) || 0) / 12;
-        const chargesRecuperables = Number(data.chargesRecuperables) || 0;
+        const chargesRecup = Number(data.monthlyCharges) || 0;   // FIX: Ajout des charges récupérables
 
-        const brut = +(mensu + tf + copro + entret + pno + chargesRecuperables).toFixed(2);
+        const brut = +(mensu + tf + copro + entret + pno + chargesRecup).toFixed(2);   // FIX: Ajout dans le calcul
         const net  = Math.max(0, brut - partner);
 
         const loyerPerdu = Number(data.loyerCC) || 0; // opportunité manquée
