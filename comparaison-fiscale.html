@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="css/regimes-fiscaux.css">
     <link rel="stylesheet" href="css/immo-comparison-enhanced.css">
     <link rel="stylesheet" href="css/fiscal-optimization.css">
+    <link rel="stylesheet" href="css/buy-rent-widget.css">
     
     <!-- Chart.js pour les graphiques -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
@@ -1653,69 +1654,63 @@ td.neutral {
     };
 
     /* ─────────── rendu du widget ─────────── */
-    function drawBuyRent() {
-      const diff = br.loyerMarché + br.partner
-                 - (br.mensualité + br.charges);
-      const sign = diff > 0 ? '+' : '–';
-      const clr  = diff > 0 ? '#22c55e' : '#ef4444';
+    function drawBuyRent(){
+      const diff = br.loyerMarché + br.partner - (br.mensualité + br.charges);
+      const good = diff > 0;
+      const fmt  = n => (n>0?'+':'') + formatNumber(Math.abs(n));
 
-      /* --------- sous-lignes charges fixes --------- */
-      let rowsCharges = '';
-      for (const [lib,val] of Object.entries(br.details)) {
-        rowsCharges += `
-          <tr class="sub"><td>${lib}</td>
-              <td class="neutral">0</td>
-              <td class="negative">${formatNumber(val)}</td>
-              <td></td></tr>`;
-      }
-
+      /* gabarit HTML */
       document.getElementById('buyRent').innerHTML = `
-        <section class="kpi-card" aria-live="polite">
-          <h2 style="margin-bottom:1rem">
-            💰 Différence de trésorerie :
-            <span style="color:${clr}">${sign} ${formatNumber(Math.abs(diff))} €/mois</span>
-          </h2>
+        <section class="kpi-card buyRentCard" aria-live="polite">
+          <span class="buyRentBadge ${good ? 'profit':'loss'}">
+            ${good?'+':'–'}${formatNumber(Math.abs(diff))} €/mois
+          </span>
 
-          <table style="width:100%;margin:1rem 0">
-            <tr><th></th><th>Rester locataire</th><th>Acheter</th><th>Δ</th></tr>
+          <div class="buyRentFrame">
+            <div class="buyRentGrid">
 
-            <tr><td>Loyer payé</td>
-                <td class="negative">-${formatNumber(br.loyerMarché)}</td>
-                <td>0</td>
-                <td class="positive">+${formatNumber(br.loyerMarché)}</td></tr>
+              <!-- titres -->
+              <div></div>
+              <div style="text-align:right;color:#94a3b8;">Locataire</div>
+              <div style="text-align:right;color:#94a3b8;">Proprio</div>
 
-            <tr><td>Contribution conjoint</td>
-                <td class="positive">+${formatNumber(br.partner)}</td>
-                <td class="positive">+${formatNumber(br.partner)}</td>
-                <td></td></tr>
+              <span class="buyRentLabel">Loyer payé</span>
+              <span class="buyRentLoc buyRentNeg">-${formatNumber(br.loyerMarché)}</span>
+              <span class="buyRentOwn buyRentNeu">—</span>
 
-            <tr><td>Mensualité de crédit</td>
-                <td>0</td>
-                <td class="negative">-${formatNumber(br.mensualité)}</td>
-                <td></td></tr>
+              <span class="buyRentLabel">Part conjoint</span>
+              <span class="buyRentLoc ${br.partner? 'buyRentPos':'buyRentNeu'}">${fmt(br.partner)}</span>
+              <span class="buyRentOwn ${br.partner? 'buyRentPos':'buyRentNeu'}">${fmt(br.partner)}</span>
 
-            ${rowsCharges}
+              <span class="buyRentLabel">Mensualité</span>
+              <span class="buyRentLoc buyRentNeu">—</span>
+              <span class="buyRentOwn buyRentNeg">-${formatNumber(br.mensualité)}</span>
 
-            <tr class="total-row"><td>Total charges fixes</td>
-                <td class="neutral">0</td>
-                <td class="negative">-${formatNumber(br.charges)}</td>
-                <td></td></tr>
+              ${Object.entries(br.details).map(([k,v])=>`
+                <span class="buyRentLabel">${k}</span>
+                <span class="buyRentLoc buyRentNeu">—</span>
+                <span class="buyRentOwn buyRentNeg">${formatNumber(v)}</span>
+              `).join('')}
 
-            <tr><td>Capital remboursé</td>
-                <td>0</td>
-                <td class="positive">+${formatNumber(br.amort)}</td>
-                <td></td></tr>
-          </table>
+              <div class="buyRentSep"></div>
 
-          <label style="display:block;margin-top:1rem">
-            Loyer du marché :
-            <input type="range" min="600" max="2000" step="50"
-                   value="${br.loyerMarché}"
-                   oninput="br.loyerMarché = +this.value;
-                            buyRentOut.value = this.value+' €';
-                            drawBuyRent()">
-            <output id="buyRentOut">${br.loyerMarché} €</o>
-          </label>
+              <span class="buyRentLabel">Capital remboursé</span>
+              <span class="buyRentLoc buyRentNeu">—</span>
+              <span class="buyRentOwn buyRentPos">${formatNumber(br.amort)}</span>
+            </div>
+
+            <!-- slider marché -->
+            <div class="buyRentSlider">
+              <label>Loyer du marché&nbsp;:
+                <input type="range" min="600" max="2000" step="50"
+                       value="${br.loyerMarché}"
+                       oninput="br.loyerMarché = +this.value;
+                                buyRentOut.value = this.value+' €';
+                                drawBuyRent()">
+                <output id="buyRentOut">${br.loyerMarché} €</output>
+              </label>
+            </div>
+          </div>
         </section>`;
     }
     </script>
