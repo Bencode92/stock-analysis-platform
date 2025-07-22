@@ -1539,8 +1539,9 @@
             const chargesCopro = Number(data.chargesCoproNonRecup) || 0;
             const entretienMensuel = (Number(data.entretienAnnuel) || 0) / 12;
             const assuranceMensuel = (Number(data.assurancePNO) || 0) / 12;
+            const chargesRecup = Number(data.monthlyCharges) || 0;
 
-            const brut = mensualite + taxeFonciereMensuel + chargesCopro + entretienMensuel + assuranceMensuel;
+            const brut = mensualite + taxeFonciereMensuel + chargesCopro + entretienMensuel + assuranceMensuel + chargesRecup;
             const netPourVous = Math.max(0, brut - partnerContribution);
             const loyerPerdu = Number(data.loyerCC) || 0;
             const netAvecOpportunite = netPourVous + loyerPerdu;
@@ -1611,6 +1612,7 @@ propertyData = {
     surface: parseFloat(document.getElementById('propertySurface').value),
     loyerActuel: loyerHC,
     charges: charges,
+    monthlyCharges: charges,      // ← AJOUT
     loyerCC: loyerHC + charges, // Ajouter le loyer CC pour l'analyse
     apport: parseFloat(document.getElementById('apport').value),
     duree: parseFloat(document.getElementById('loanDuration').value),
@@ -2058,7 +2060,8 @@ function generateRecommendations(pricePosition, rentPosition, data) {
                             chargesCoproNonRecup: propertyData.chargesCoproNonRecup,
                             entretienAnnuel: propertyData.entretienAnnuel || 0,
                             assurancePNO: propertyData.assurancePNO,
-                            loyerCC: propertyData.loyerCC
+                            loyerCC: propertyData.loyerCC,
+                            monthlyCharges: propertyData.monthlyCharges   // ← AJOUT
                         },
                         propertyData.partnerContribution
                     );
