@@ -1,0 +1,96 @@
+/* ═════════ BUY-RENT 2.0 ═════════ */
+.buyRentCard   {position:relative;border:0;padding:0;background:none;}
+.buyRentFrame  {background:rgba(255,255,255,.05);border:1px solid rgba(0,191,255,.20);
+                border-radius:18px;padding:36px 28px 28px;backdrop-filter:blur(6px);}
+.buyRentBadge  {position:absolute;top:-28px;left:50%;transform:translateX(-50%);
+                width:110px;height:110px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+                font:700 1.1rem/1 'Inter',sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.25);
+                animation: badgePulse 2s ease-in-out infinite;}
+.buyRentBadge.profit {background:#022C19;border:3px solid #22c55e;color:#22c55e;
+                      box-shadow:0 0 0 4px rgba(34,197,94,.2);}
+.buyRentBadge.loss   {background:#2C0D0D;border:3px solid #ef4444;color:#ef4444;
+                      box-shadow:0 0 0 4px rgba(239,68,68,.2);}
+
+@keyframes badgePulse {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.05); }
+}
+
+.buyRentGrid   {display:grid;grid-template-columns:1fr 1fr 80px;gap:12px;margin-top:12px;
+                transition: opacity 0.3s ease;}
+.buyRentLine   {display:contents;font-variant-numeric:tabular-nums;}
+.buyRentLabel  {grid-column:1;color:#e2e8f0;padding:.55rem 0;}
+.buyRentLoc    {grid-column:2;text-align:right;}
+.buyRentOwn    {grid-column:3;text-align:right;}
+.buyRentSep    {grid-column:1/4;height:1px;background:rgba(255,255,255,.07);margin:6px 0;}
+
+.buyRentPos {color:#22c55e;}   /* + */
+.buyRentNeg {color:#ef4444;}   /* – */
+.buyRentNeu {color:#64748b;}   /* 0 */
+
+/* Slider personnalisé */
+.buyRentSlider {
+    margin-top: 20px;
+}
+
+.buyRentSlider label {
+    display: block;
+    color: #e2e8f0;
+    font-weight: 500;
+    margin-bottom: 10px;
+}
+
+.buyRentSlider input[type="range"] {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    outline: none;
+    border-radius: 3px;
+    margin: 10px 0;
+}
+
+.buyRentSlider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #00bfff;
+    cursor: pointer;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
+}
+
+.buyRentSlider input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: #00bfff;
+    cursor: pointer;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
+}
+
+.buyRentSlider output {
+    color: #00bfff;
+    font-weight: 600;
+    font-size: 1.1em;
+}
+
+@media(max-width:480px){
+  .buyRentBadge {
+    width: 90px;
+    height: 90px;
+    font-size: 0.95rem;
+    top: -20px;
+  }
+  .buyRentFrame {
+    padding: 30px 20px 20px;
+  }
+  .buyRentGrid {
+    grid-template-columns: 1.5fr 1fr 1fr;
+    gap: 8px;
+    font-size: 0.9rem;
+  }
+  .buyRentLabel {
+    font-size: 0.85rem;
+  }
+}
