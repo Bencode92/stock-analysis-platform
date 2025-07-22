@@ -1974,29 +1974,32 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
         }
     }
 
-    // ─────────────────────────────────────────────
-    //  utilitaire n°1 : coût d'occupation (RP)
-    computeOccupationCost(data, partner = 0) {
-        const mensu   = Number(data.monthlyPayment) || 0;
-        const tf      = (Number(data.taxeFonciere) || 0) / 12;
-        const copro   = (Number(data.chargesCoproNonRecup) || 0);
-        const entret  = (Number(data.entretienAnnuel) || 0) / 12;
-        const pno     = (Number(data.assurancePNO) || 0) / 12;
-        const chargesRecup = Number(data.monthlyCharges) || 0;   // FIX: Ajout des charges récupérables
-
-        const brut = +(mensu + tf + copro + entret + pno + chargesRecup).toFixed(2);   // FIX: Ajout dans le calcul
-        const net  = Math.max(0, brut - partner);
-
-        const loyerPerdu = Number(data.loyerCC) || 0; // opportunité manquée
-        const netOp      = +(net + loyerPerdu).toFixed(2);
-
-        return {
-            brut,               // charges totales
-            netPourVous:       Math.round(net),
-            netAvecOpportunite:Math.round(netOp),
-            loyerPerdu:        Math.round(loyerPerdu)
-        };
-    }
+ // ─────────────────────────────────────────────
+//  utilitaire n°1 : coût d'occupation (RP)
+computeOccupationCost(data, partner = 0) {
+    const mensu   = Number(data.monthlyPayment) || 0;
+    const tf      = (Number(data.taxeFonciere) || 0) / 12;
+    const copro   = (Number(data.chargesCoproNonRecup) || 0);
+    const entret  = (Number(data.entretienAnnuel) || 0) / 12;
+    const pno     = (Number(data.assurancePNO) || 0) / 12;
+    const chargesRecup = Number(
+        data.monthlyCharges      // nouveau nom
+        || data.charges         // fallback ancien nom
+    ) || 0;
+    
+    const brut = +(mensu + tf + copro + entret + pno + chargesRecup).toFixed(2);
+    const net  = Math.max(0, brut - partner);
+    
+    const loyerPerdu = Number(data.loyerCC) || 0; // opportunité manquée
+    const netOp      = +(net + loyerPerdu).toFixed(2);
+    
+    return {
+        brut,               // charges totales
+        netPourVous:       Math.round(net),
+        netAvecOpportunite:Math.round(netOp),
+        loyerPerdu:        Math.round(loyerPerdu)
+    };
+}
 }
 
 /**
