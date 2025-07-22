@@ -1664,7 +1664,7 @@ td.neutral {
       const table  = [];                 // <tr> <td> à construire
       const fmt    = n => (n>0?'+':'‑') + formatNumber(Math.abs(n));
 
-      /* (a) Loyer / conjointe / mensualité */
+      /* (a) Loyer / conjointe / mensualité - MODIFIÉ : loyer dans colonne locataire */
       table.push(['Loyer payé'          , 'neg' , -br.loyerMarché , null            ]);
       table.push(['Part conjoint'       , br.partner ? 'pos':'neu',
                                    br.partner ,  br.partner       ]);
@@ -1682,7 +1682,7 @@ td.neutral {
       const totalProp  = -br.mensualité + totalCharges + br.partner;   // proprio
       const gap        = totalLoc - totalProp;                         // Δ positif = avantage acheteur
 
-      /* 2. Badge principal ---------------------------------------------------- */
+      /* 2. Badge principal - MODIFIÉ : logique inversée */
       const badgeClass = gap > 0 ? 'profit' : 'loss';
       const badgeTxt   = (gap>0?'+':'‑') + formatNumber(Math.abs(gap)) + ' €/mois';
 
@@ -1727,7 +1727,7 @@ td.neutral {
                      oninput="br.loyerMarché=+this.value;
                               buyRentOut.value=this.value+' €';
                               drawBuyRent()">
-              <output id="buyRentOut">${br.loyerMarché} €</output>
+              <output id="buyRentOut">${br.loyerMarché} €</o>
             </label>
           </div>
         </section>`;
