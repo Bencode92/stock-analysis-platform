@@ -909,6 +909,14 @@
     color: #ef4444;
 }
 
+/* Nouveaux styles pour la synthèse RP */
+.rp-summary {display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:20px}
+.rp-item   {background:rgba(255,255,255,.03);border:1px solid rgba(0,191,255,.2);border-radius:12px;padding:18px;text-align:center}
+.rp-label  {display:block;color:#94a3b8;font-size:.85rem;margin-bottom:6px}
+.rp-val    {font-size:1.4rem;font-weight:700;color:#e2e8f0}
+.rp-val.positive{color:#22c55e}
+.rp-val.negative{color:#ef4444}
+
 @media (max-width: 768px) {
     .kpi-main {
         flex-direction: column;
@@ -2164,7 +2172,7 @@ function generateRecommendations(pricePosition, rentPosition, data) {
 }
 
 /***** ==========  RÉS. PRINCIPALE (widget)  ========== *****/
-function renderRPModule(data) {
+function renderRPModule({ loyerCC, charges, partnerPaid }) {
   // 1. injecte le HTML
   document.getElementById('rp-container').innerHTML = `
     <div class="invest-wrapper" aria-live="polite">
@@ -2208,6 +2216,18 @@ function renderRPModule(data) {
           <tbody id="rpRows"></tbody>
         </table>
       </section>
+      
+      <!-- Nouveau bloc synthèse -->
+      <section class="rp-summary">
+        <div class="rp-item">
+          <span class="rp-label">Contribution conjointe actuelle</span>
+          <span id="rpCurrent" class="rp-val">…</span>
+        </div>
+        <div class="rp-item">
+          <span class="rp-label">Contribution nécessaire pour équilibre</span>
+          <span id="rpNeed" class="rp-val">…</span>
+        </div>
+      </section>
     </div>`;   // fin innerHTML
 
   // 2. enregistre les refs DOM
@@ -2219,34 +2239,51 @@ function renderRPModule(data) {
   const rows  = document.getElementById('rpRows');
 
   // 3. valeur initiale = part du conjoint (%) si déjà fournie
-  let pctConjoint = data.partnerPct ?? 0;
+  let pctConjoint = partnerPaid ? (partnerPaid / loyerCC) * 100 : 0;
   slider.value = pctConjoint;
+  
+  // Calcul du seuil d'équilibre
+  const need = loyerCC + charges;
+  document.getElementById('rpCurrent').textContent = formatNumber(partnerPaid) + ' €/mois';
+  document.getElementById('rpNeed').textContent = formatNumber(need) + ' €/mois';
+  
+  // Indice visuel
+  document.getElementById('rpNeed').classList.toggle('positive', partnerPaid >= need);
+  document.getElementById('rpNeed').classList.toggle('negative', partnerPaid < need);
 
   function refresh() {
-    const eco  = data.loyerCC * (pctConjoint / 100); // économie de loyer
-    const cash = eco - data.loyerCC - data.charges;  // cf. logique précédente
+    const eco  = loyerCC * (pctConjoint / 100); // économie de loyer
+    const cash = partnerPaid - need;  // Calcul simplifié et cohérent
 
     gain.textContent = `${cash >= 0 ? '+' : '−'} ${formatNumber(Math.abs(cash))} €/mois`;
     gain.style.color = cash >= 0 ? '#22c55e' : '#ef4444';
 
     // barre
-    const total = eco + data.loyerCC;
+    const total = eco + loyerCC;
     barC.style.width = `${(eco / total) * 100}%`;
-    barP.style.width = `${(data.loyerCC / total) * 100}%`;
+    barP.style.width = `${(loyerCC / total) * 100}%`;
 
     // slider / legend
-    val.textContent = pctConjoint;
+    val.textContent = Math.round(pctConjoint);
 
     // tableau
     rows.innerHTML = `
-      <tr><td>Économie loyer (part conjoint)</td><td class="positive">+${formatNumber(eco*12)}</td><td>${pctConjoint}% du loyer&nbsp;CC</td></tr>
-      <tr><td>Loyer non perçu</td><td class="negative">−${formatNumber(data.loyerCC*12)}</td><td>Manque à gagner locatif</td></tr>
-      <tr><td>Charges réelles</td><td class="negative">−${formatNumber(data.charges*12)}</td><td>Crédit + TF + entretien + PNO</td></tr>
+      <tr><td>Économie loyer (part conjoint)</td><td class="positive">+${formatNumber(eco*12)}</td><td>${Math.round(pctConjoint)}% du loyer&nbsp;CC</td></tr>
+      <tr><td>Loyer non perçu</td><td class="negative">−${formatNumber(loyerCC*12)}</td><td>Manque à gagner locatif</td></tr>
+      <tr><td>Charges réelles</td><td class="negative">−${formatNumber(charges*12)}</td><td>Crédit + TF + entretien + PNO</td></tr>
       <tr><th>Coût d'opportunité annuel</th><th>${cash>=0?'+':'−'}${formatNumber(Math.abs(cash*12))}</th><th></th></tr>`;
   }
 
   /* events */
-  slider.oninput = e => { pctConjoint = +e.target.value; refresh(); };
+  slider.oninput = e => { 
+    pctConjoint = +e.target.value; 
+    // Recalculer partnerPaid basé sur le nouveau pourcentage
+    const newPartnerPaid = loyerCC * (pctConjoint / 100);
+    document.getElementById('rpCurrent').textContent = formatNumber(newPartnerPaid) + ' €/mois';
+    document.getElementById('rpNeed').classList.toggle('positive', newPartnerPaid >= need);
+    document.getElementById('rpNeed').classList.toggle('negative', newPartnerPaid < need);
+    refresh(); 
+  };
 
   document.getElementById('rpToggle').onclick = e => {
     const blk = document.getElementById('rpDetail');
@@ -2320,11 +2357,11 @@ function renderRPModule(data) {
                         propertyData.partnerContribution
                     );
 
-                    /* Widget Résidence principale */
+                    /* Widget Résidence principale avec partnerPaid */
                     renderRPModule({
-                        loyerCC   : propertyData.loyerCC,          // 1 200 € dans ton exemple
-                        charges   : cout.brut - propertyData.loyerCC, // 386 € → hors loyer
-                        partnerPct: (propertyData.partnerContribution / propertyData.loyerCC) * 100
+                        loyerCC   : propertyData.loyerCC,
+                        charges   : cout.brut - propertyData.loyerCC,
+                        partnerPaid: propertyData.partnerContribution   // Montant en dur
                     });
                 }
 
