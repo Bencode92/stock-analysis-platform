@@ -921,6 +921,17 @@
 .rp-val.positive{color:#22c55e}
 .rp-val.negative{color:#ef4444}
 
+/* ── Sous-lignes du tableau buy-rent ──────────────────────── */
+tr.sub td {
+  font-size: .9rem;
+  color: #94a3b8;          /* gris bleuté discret */
+  padding-left: 2.2rem;    /* indentation visuelle */
+}
+tr.total-row td {
+  border-top: 1px solid rgba(255,255,255,.07);
+  font-weight: 600;
+}
+
 @media (max-width: 768px) {
     .kpi-main {
         flex-direction: column;
@@ -1633,40 +1644,73 @@
       loyerMarché: 1100, // € / mois qu'on paierait en restant locataire
       mensualité:   990, // € / mois pour le prêt
       charges:      260, // TF + copro + entretien
-      amort:        450  // part « capital » dans la mensualité
+      amort:        450, // part « capital » dans la mensualité
+      partner:        0, // nouveau
+      details:       {}  // nouveau (breakdown des charges)
     };
 
     /* ─────────── rendu du widget ─────────── */
     function drawBuyRent() {
-      const diff = br.loyerMarché - (br.mensualité + br.charges);
+      const diff = br.loyerMarché + br.partner
+                 - (br.mensualité + br.charges);
       const sign = diff > 0 ? '+' : '–';
       const clr  = diff > 0 ? '#22c55e' : '#ef4444';
+
+      /* --------- sous-lignes charges fixes --------- */
+      let rowsCharges = '';
+      for (const [lib,val] of Object.entries(br.details)) {
+        rowsCharges += `
+          <tr class="sub"><td>${lib}</td>
+              <td class="negative">${formatNumber(val)}</td>
+              <td class="negative">${formatNumber(val)}</td>
+              <td></td></tr>`;
+      }
 
       document.getElementById('buyRent').innerHTML = `
         <section class="kpi-card" aria-live="polite">
           <h2 style="margin-bottom:1rem">
-            💰 Différence de trésorerie&nbsp;: 
-            <span style="color:${clr}">${sign} ${Math.abs(diff)} €/mois</span>
+            💰 Différence de trésorerie :
+            <span style="color:${clr}">${sign} ${formatNumber(Math.abs(diff))} €/mois</span>
           </h2>
 
           <table style="width:100%;margin:1rem 0">
             <tr><th></th><th>Rester locataire</th><th>Acheter</th><th>Δ</th></tr>
+
             <tr><td>Loyer payé</td>
-                <td style="color:#ef4444">-${formatNumber(br.loyerMarché)}</td><td>0</td>
-                <td style="color:#22c55e">+${formatNumber(br.loyerMarché)}</td></tr>
+                <td class="negative">-${formatNumber(br.loyerMarché)}</td>
+                <td>0</td>
+                <td class="positive">+${formatNumber(br.loyerMarché)}</td></tr>
+
+            <tr><td>Contribution conjoint</td>
+                <td class="positive">+${formatNumber(br.partner)}</td>
+                <td class="positive">+${formatNumber(br.partner)}</td>
+                <td></td></tr>
+
             <tr><td>Mensualité de crédit</td>
-                <td>0</td><td style="color:#ef4444">-${formatNumber(br.mensualité)}</td><td></td></tr>
-            <tr><td>Charges fixes</td>
-                <td>0</td><td style="color:#ef4444">-${formatNumber(br.charges)}</td><td></td></tr>
+                <td>0</td>
+                <td class="negative">-${formatNumber(br.mensualité)}</td>
+                <td></td></tr>
+
+            ${rowsCharges}
+
+            <tr class="total-row"><td>Total charges fixes</td>
+                <td class="negative">-${formatNumber(br.charges)}</td>
+                <td class="negative">-${formatNumber(br.charges)}</td>
+                <td></td></tr>
+
             <tr><td>Capital remboursé</td>
-                <td>0</td><td style="color:#00bfff">+${formatNumber(br.amort)}</td><td></td></tr>
+                <td>0</td>
+                <td class="positive">+${formatNumber(br.amort)}</td>
+                <td></td></tr>
           </table>
 
           <label style="display:block;margin-top:1rem">
-            Loyer du marché&nbsp;:
+            Loyer du marché :
             <input type="range" min="600" max="2000" step="50"
                    value="${br.loyerMarché}"
-                   oninput="br.loyerMarché=+this.value;buyRentOut.value=this.value+' €';drawBuyRent()">
+                   oninput="br.loyerMarché = +this.value;
+                            buyRentOut.value = this.value+' €';
+                            drawBuyRent()">
             <output id="buyRentOut">${br.loyerMarché} €</output>
           </label>
         </section>`;
@@ -1698,6 +1742,21 @@
             const n = dureeAn * 12;
             if (i === 0) return capital / n;
             return capital * i / (1 - Math.pow(1 + i, -n));
+        }
+
+        // Nouvelles fonctions pour le widget Buy vs Rent
+        function buildChargesBreakdown(p) {
+          return {
+            'Taxe foncière'            : -(p.taxeFonciere   / 12),
+            'Charges copro non récup.' : -p.chargesCoproNonRecup,
+            'Entretien annuel'         : -(p.entretienAnnuel / 12),
+            'Assurance PNO'            : -p.assurancePNO,
+            'Charges récupérables'     : -p.monthlyCharges
+          };
+        }
+        
+        function sum(obj) {
+          return Object.values(obj).reduce((a,b)=>a+Number(b),0);
         }
         
         // Initialisation
@@ -2250,12 +2309,13 @@ function generateRecommendations(pricePosition, rentPosition, data) {
                     
                     // Mettre à jour les paramètres du widget
                     br.mensualité = Math.round(propertyData.mensualite);
-                    br.charges = Math.round(
-                        (propertyData.taxeFonciere / 12) +
-                        propertyData.chargesCoproNonRecup +
-                        (propertyData.entretienAnnuel / 12) +
-                        propertyData.assurancePNO
-                    );
+                    
+                    /* ▬▬ charges fixes & conjoint ▬▬ */
+                    const chargesBreak = buildChargesBreakdown(propertyData);
+                    br.charges  = Math.round(sum(chargesBreak));
+                    br.partner  = propertyData.partnerContribution || 0;   // ← new
+                    br.details  = chargesBreak;                            //  ↑↑↑
+                    
                     br.loyerMarché = propertyData.ville ? 
                         Math.round(propertyData.ville.loyer_m2 * propertyData.surface) : 
                         Math.round(propertyData.loyerCC);
