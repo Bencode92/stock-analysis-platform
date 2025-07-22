@@ -1609,6 +1609,9 @@
         </button>
     </div>
     
+    <!-- MODULE RÉSIDENCE PRINCIPALE (injecté JS) -->
+    <div id="occupation-module-placeholder"></div>
+    
     <div id="fiscal-comparison-results">
                 <!-- Les résultats fiscaux seront insérés ici -->
             </div>
@@ -2204,10 +2207,6 @@ function generateRecommendations(pricePosition, rentPosition, data) {
                 let html = '';
 
                 if (isResidence) {
-                    const bestRegime = analysis.fiscal.reduce((a, b) =>
-                        a.cashflowNetAnnuel > b.cashflowNetAnnuel ? a : b
-                    );
-
                     const cout = computeOccupationCost(
                         {
                             mensualite: analysisData.monthlyPayment,  // Utilise la valeur correcte avec frais inclus
@@ -2220,58 +2219,58 @@ function generateRecommendations(pricePosition, rentPosition, data) {
                         },
                         propertyData.partnerContribution
                     );
+                    
+                    // 1. on génère le HTML widget
+                    const rpHTML = `
+                        <div class="invest-wrapper" aria-live="polite">
+                          <section class="kpi-card">
+                            <h2><i class="fas fa-home-user"></i> Résidence principale – Analyse du coût</h2>
+                            <div class="kpi-main">
+                              <p class="kpi-label">Coût d'opportunité total</p>
+                              <p class="kpi-value" id="rp-gain">− ${formatNumber(cout.netAvecOpportunite)} €/mois</p>
+                            </div>
 
-                    html += `
-                    <!-- MODULE RÉSIDENCE PRINCIPALE -->
-                    <div class="invest-wrapper" id="occupation-module" aria-live="polite">
-                      <section class="kpi-card">
-                        <h2><i class="fas fa-home-user"></i> Résidence principale – Analyse du coût</h2>
-                        
-                        <div class="kpi-main">
-                          <p class="kpi-label">Coût d'opportunité total</p>
-                          <p class="kpi-value" id="gainNet">− ${formatNumber(cout.netAvecOpportunite)} €/mois</p>
-                        </div>
-                        
-                        <div class="stacked-bar">
-                          <span id="partConjointBar" class="bar-conjoint" style="width: 0%"></span>
-                          <span id="loyerNonPercuBar" class="bar-perdu" style="width: 100%"></span>
-                        </div>
-                        <div class="bar-legend">
-                          <span><span class="dot dot-conjoint"></span>Économie (part conjoint)</span>
-                          <span><span class="dot dot-perdu"></span>Loyer non perçu</span>
-                        </div>
-                        
-                        <div class="slider-box">
-                          <label for="sliderPart">Participation du conjoint : 
-                            <output id="sliderVal">0</output>%
-                          </label>
-                          <input type="range" id="sliderPart" min="0" max="100" step="5" value="0">
-                        </div>
-                        
-                        <button class="btn-details" aria-expanded="false" aria-controls="detailBlockRP">
-                          Voir le détail <i class="fas fa-chevron-down"></i>
-                        </button>
-                      </section>
-                      
-                      <section class="detail-block" id="detailBlockRP" style="display: none;">
-                        <h3>Détail du calcul</h3>
-                        <table>
-                          <thead><tr><th>Poste</th><th>Montant (€/an)</th><th>Formule</th></tr></thead>
-                          <tbody id="detailRowsRP"></tbody>
-                        </table>
-                      </section>
-                    </div>`;
+                            <div class="stacked-bar">
+                              <span id="rp-bar-conjoint" class="bar-conjoint"></span>
+                              <span id="rp-bar-perdu"    class="bar-perdu"></span>
+                            </div>
+                            <div class="bar-legend">
+                              <span><span class="dot dot-conjoint"></span>Économie (part conjoint)</span>
+                              <span><span class="dot dot-perdu"></span>Loyer non perçu</span>
+                            </div>
+
+                            <div class="slider-box">
+                              <label>Participation du conjoint :
+                                <output id="rp-val">0</output>%</label>
+                              <input type="range" id="rp-slider" min="0" max="100" step="5">
+                            </div>
+
+                            <button class="btn-details" id="rp-toggle" aria-expanded="false"
+                                    aria-controls="rp-detail">Voir le détail
+                              <i class="fas fa-chevron-down"></i></button>
+                          </section>
+
+                          <section class="detail-block" id="rp-detail" hidden>
+                            <h3>Détail du calcul</h3>
+                            <table>
+                              <thead><tr><th>Poste</th><th>Montant (€/an)</th><th>Formule</th></tr></thead>
+                              <tbody id="rp-rows"></tbody>
+                            </table>
+                          </section>
+                        </div>`;
+
+                    // 2. on pousse dans le placeholder
+                    document.getElementById('occupation-module-placeholder').innerHTML = rpHTML;
+                    
+                    // Variables globales pour le module
+                    window.rpData = {
+                        loyerCC: propertyData.loyerCC,
+                        charges: cout.brut - propertyData.loyerCC,
+                        partnerContribution: propertyData.partnerContribution || 0
+                    };
 
                     // Initialiser le module après le rendu
                     setTimeout(() => {
-                        // Variables globales pour le module
-                        window.rpData = {
-                            loyerCC: propertyData.loyerCC,
-                            charges: cout.brut - propertyData.loyerCC,
-                            partnerContribution: propertyData.partnerContribution || 0
-                        };
-                        
-                        // Initialiser le module
                         initRPModule();
                     }, 100);
                 }
@@ -2279,7 +2278,7 @@ function generateRecommendations(pricePosition, rentPosition, data) {
                 /* -----------------------------------------------------------------
                    2) Résultats des régimes fiscaux (toujours affichés)
                 ----------------------------------------------------------------- */
-                html += analyzer.generateFiscalResultsHTML(analysis.fiscal, analysisData);
+                html = analyzer.generateFiscalResultsHTML(analysis.fiscal, analysisData);
                 resultsDiv.innerHTML = html;
                 
                 // Créer les graphiques
@@ -2326,66 +2325,57 @@ function generateRecommendations(pricePosition, rentPosition, data) {
             }
         }
 
-        // Ajouter la fonction initRPModule
+        // Nouvelle fonction initRPModule (remplace l'ancienne)
         function initRPModule() {
-            const data = window.rpData;
-            if (!data) return;
-            
-            const slider = document.getElementById('sliderPart');
-            const gainEl = document.getElementById('gainNet');
-            const partBar = document.getElementById('partConjointBar');
-            const perduBar = document.getElementById('loyerNonPercuBar');
-            const sliderVal = document.getElementById('sliderVal');
-            const btnToggle = document.querySelector('.btn-details');
-            const detailBlk = document.getElementById('detailBlockRP');
-            const detailRows = document.getElementById('detailRowsRP');
-            
-            // Initialiser avec la valeur actuelle
-            let partConjoint = (data.partnerContribution / data.loyerCC) * 100;
-            slider.value = partConjoint;
-            
-            function refresh() {
-                const euroConjoint = data.loyerCC * (partConjoint / 100);
-                const coutTotal = euroConjoint - data.loyerCC - data.charges;
-                
-                // KPI
-                gainEl.textContent = `${coutTotal >= 0 ? '+' : '−'} ${Math.abs(coutTotal).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} €/mois`;
-                gainEl.style.color = coutTotal >= 0 ? '#22c55e' : '#ef4444';
-                
-                // Barres
-                const pctEconomie = Math.abs(euroConjoint / (data.loyerCC + data.charges)) * 100;
-                const pctPerdu = Math.abs(data.loyerCC / (data.loyerCC + data.charges)) * 100;
-                
-                partBar.style.width = `${pctEconomie}%`;
-                perduBar.style.width = `${pctPerdu}%`;
-                
-                sliderVal.textContent = Math.round(partConjoint);
-                
-                // Détails
-                detailRows.innerHTML = `
-                    <tr><td>Économie loyer (part conjoint)</td><td class="positive">+${(euroConjoint * 12).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}</td><td>${Math.round(partConjoint)}% du loyer CC</td></tr>
-                    <tr><td>Loyer non perçu</td><td class="negative">−${(data.loyerCC * 12).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}</td><td>Manque à gagner locatif</td></tr>
-                    <tr><td>Charges réelles</td><td class="negative">−${(data.charges * 12).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}</td><td>Crédit + TF + entretien + PNO</td></tr>
-                    <tr><td><strong>Coût d'opportunité annuel</strong></td><td class="${coutTotal >= 0 ? 'positive' : 'negative'}"><strong>${coutTotal >= 0 ? '+' : '−'}${Math.abs(coutTotal * 12).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}</strong></td><td></td></tr>
-                `;
-            }
-            
-            // Events
-            slider.addEventListener('input', e => {
-                partConjoint = +e.target.value;
-                refresh();
-            });
-            
-            btnToggle.addEventListener('click', () => {
-                const isHidden = detailBlk.style.display === 'none';
-                detailBlk.style.display = isHidden ? 'block' : 'none';
-                btnToggle.setAttribute('aria-expanded', isHidden);
-                btnToggle.querySelector('i').className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
-                btnToggle.firstChild.textContent = isHidden ? 'Masquer le détail ' : 'Voir le détail ';
-                btnToggle.appendChild(btnToggle.querySelector('i'));
-            });
-            
-            refresh();
+          const data     = window.rpData;
+          if (!data) return;
+
+          const slider   = document.getElementById('rp-slider');
+          const gainTxt  = document.getElementById('rp-gain');
+          const barCj    = document.getElementById('rp-bar-conjoint');
+          const barLost  = document.getElementById('rp-bar-perdu');
+          const outPct   = document.getElementById('rp-val');
+          const rows     = document.getElementById('rp-rows');
+          const toggle   = document.getElementById('rp-toggle');
+          const detail   = document.getElementById('rp-detail');
+
+          let pct = (data.partnerContribution / data.loyerCC) * 100 || 0;
+          slider.value = pct;
+
+          function refresh() {
+            const €cj     = data.loyerCC * (pct / 100);
+            const cashM   = €cj - data.loyerCC - data.charges;
+            const baseTot = data.loyerCC + data.charges;
+
+            // KPI
+            gainTxt.textContent = `${cashM >= 0 ? '+' : '−'} ${Math.abs(cashM).toFixed(0)} €/mois`;
+            gainTxt.style.color = cashM >= 0 ? '#22c55e' : '#ef4444';
+
+            // Barres
+            barCj.style.width  = `${(€cj / baseTot) * 100}%`;
+            barLost.style.width= `${(data.loyerCC / baseTot) * 100}%`;
+
+            // Slider output
+            outPct.textContent = Math.round(pct);
+
+            // Tableau
+            rows.innerHTML = `
+              <tr><td>Économie loyer (part conjoint)</td><td class="positive">+${(€cj*12).toFixed(0)}</td><td>${Math.round(pct)} % du loyer CC</td></tr>
+              <tr><td>Loyer non perçu</td><td class="negative">−${(data.loyerCC*12).toFixed(0)}</td><td>Manque à gagner</td></tr>
+              <tr><td>Charges réelles</td><td class="negative">−${(data.charges*12).toFixed(0)}</td><td>Crédit + TF + PNO…</td></tr>
+              <tr><th>Coût d'opportunité annuel</th><th>${cashM >= 0 ? '+' : '−'}${Math.abs(cashM*12).toFixed(0)}</th><th></th></tr>`;
+          }
+
+          slider.oninput = e => { pct = +e.target.value; refresh(); };
+          toggle.onclick = () => {
+            const isOpen = detail.hasAttribute('hidden') === false;
+            detail.toggleAttribute('hidden');
+            toggle.setAttribute('aria-expanded', !isOpen);
+            toggle.querySelector('i').className = `fas fa-chevron-${isOpen?'down':'up'}`;
+            toggle.firstChild.textContent = isOpen ? 'Voir le détail ' : 'Masquer le détail ';
+          };
+
+          refresh();
         }
         
         // Fonction de debug
