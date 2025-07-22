@@ -909,6 +909,10 @@
     color: #ef4444;
 }
 
+.detail-block td.neutral {
+    color: #64748b;
+}
+
 /* Nouveaux styles pour la synthèse RP */
 .rp-summary {display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:20px}
 .rp-item   {background:rgba(255,255,255,.03);border:1px solid rgba(0,191,255,.2);border-radius:12px;padding:18px;text-align:center}
@@ -2176,125 +2180,112 @@ function renderRPModule({ loyerCC, charges, partnerPaid }) {
   // 1. injecte le HTML
   document.getElementById('rp-container').innerHTML = `
     <div class="invest-wrapper" aria-live="polite">
-      <!-- KPI card -->
-      <section class="kpi-card">
-        <h2><i class="fas fa-home-user"></i> Résidence principale – Analyse du coût</h2>
+      <!-- ▬▬▬▬▬▬ HABITER VS LOUER ▬▬▬▬▬▬ -->
+      <section id="dual-scenario" class="kpi-card">
+        <h2><i class="fas fa-exchange-alt"></i> Habiter vs Louer + Loyer équivalent</h2>
 
-        <div class="kpi-main">
-          <p class="kpi-label">Coût d'opportunité total</p>
-          <p class="kpi-value" id="rpGain">…</p>
+        <div class="comparison-input-group" style="grid-template-columns:1fr 140px 1fr">
+          <div class="input-with-label">
+            <label>🏠 Habiter le bien</label>
+            <div id="soldeHabiter" class="market-metric-value">…</div>
+          </div>
+          <div class="vs-separator">VS</div>
+          <div class="input-with-label">
+            <label>🔄 Louer le bien + louer ailleurs</label>
+            <div id="soldeLouer" class="market-metric-value">…</div>
+          </div>
         </div>
 
-        <!-- barre empilée -->
-        <div class="stacked-bar">
-          <span id="rpBarConjoint" class="bar-conjoint"></span>
-          <span id="rpBarPerdu"   class="bar-perdu"></span>
-        </div>
-        <div class="bar-legend">
-          <span><span class="dot dot-conjoint"></span>Économie (part&nbsp;conjoint)</span>
-          <span><span class="dot dot-perdu"></span>Loyer non perçu</span>
-        </div>
-
-        <!-- slider -->
-        <div class="slider-box">
-          <label for="rpSlider">Participation du conjoint :
-            <output id="rpVal"></output>&nbsp;%
-          </label>
-          <input id="rpSlider" type="range" min="0" max="100" step="5">
-        </div>
-
-        <button class="btn-details" id="rpToggle" aria-expanded="false" aria-controls="rpDetail">
+        <button class="btn-details" id="dualToggle" aria-expanded="false" aria-controls="dualDetail">
           Voir le détail&nbsp;<i class="fas fa-chevron-down"></i>
         </button>
-      </section>
 
-      <!-- tableau -->
-      <section class="detail-block" id="rpDetail" hidden>
-        <h3>Détail du calcul</h3>
-        <table>
-          <thead><tr><th>Poste</th><th>Montant (€/an)</th><th>Formule</th></tr></thead>
-          <tbody id="rpRows"></tbody>
-        </table>
-      </section>
-      
-      <!-- Nouveau bloc synthèse -->
-      <section class="rp-summary">
-        <div class="rp-item">
-          <span class="rp-label">Contribution conjointe actuelle</span>
-          <span id="rpCurrent" class="rp-val">…</span>
-        </div>
-        <div class="rp-item">
-          <span class="rp-label">Contribution nécessaire pour équilibre</span>
-          <span id="rpNeed" class="rp-val">…</span>
-        </div>
+        <section id="dualDetail" class="detail-block" hidden>
+          <h3>Détail mensuel des flux</h3>
+          <table>
+            <thead>
+              <tr><th>Poste</th><th>Habiter</th><th>Louer + louer ailleurs</th></tr>
+            </thead>
+            <tbody id="dualRows"></tbody>
+          </table>
+        </section>
       </section>
     </div>`;   // fin innerHTML
 
-  // 2. enregistre les refs DOM
-  const gain  = document.getElementById('rpGain');
-  const slider= document.getElementById('rpSlider');
-  const val   = document.getElementById('rpVal');
-  const barC  = document.getElementById('rpBarConjoint');
-  const barP  = document.getElementById('rpBarPerdu');
-  const rows  = document.getElementById('rpRows');
-
-  // 3. valeur initiale = part du conjoint (%) si déjà fournie
-  let pctConjoint = partnerPaid ? (partnerPaid / loyerCC) * 100 : 0;
-  slider.value = pctConjoint;
+  // Appeler immédiatement la fonction renderDualScenario avec les données
+  // On calcule chargesFixes à partir de charges
+  const chargesFixes = charges;
+  const mensualiteCred = propertyData.mensualite;
   
-  // Calcul du seuil d'équilibre
-  const need = loyerCC + charges;
-  document.getElementById('rpCurrent').textContent = formatNumber(partnerPaid) + ' €/mois';
-  document.getElementById('rpNeed').textContent = formatNumber(need) + ' €/mois';
-  
-  // Indice visuel
-  document.getElementById('rpNeed').classList.toggle('positive', partnerPaid >= need);
-  document.getElementById('rpNeed').classList.toggle('negative', partnerPaid < need);
+  renderDualScenario({
+    loyerCC: loyerCC,
+    partnerPaid: partnerPaid,
+    chargesFixes: chargesFixes,
+    mensualiteCred: mensualiteCred
+  });
+}
 
-  function refresh() {
-    const eco  = loyerCC * (pctConjoint / 100); // économie de loyer
-    const cash = partnerPaid - need;  // Calcul simplifié et cohérent
+function renderDualScenario({ loyerCC, partnerPaid, chargesFixes, mensualiteCred }) {
 
-    gain.textContent = `${cash >= 0 ? '+' : '−'} ${formatNumber(Math.abs(cash))} €/mois`;
-    gain.style.color = cash >= 0 ? '#22c55e' : '#ef4444';
-
-    // barre
-    const total = eco + loyerCC;
-    barC.style.width = `${(eco / total) * 100}%`;
-    barP.style.width = `${(loyerCC / total) * 100}%`;
-
-    // slider / legend
-    val.textContent = Math.round(pctConjoint);
-
-    // tableau
-    rows.innerHTML = `
-      <tr><td>Économie loyer (part conjoint)</td><td class="positive">+${formatNumber(eco*12)}</td><td>${Math.round(pctConjoint)}% du loyer&nbsp;CC</td></tr>
-      <tr><td>Loyer non perçu</td><td class="negative">−${formatNumber(loyerCC*12)}</td><td>Manque à gagner locatif</td></tr>
-      <tr><td>Charges réelles</td><td class="negative">−${formatNumber(charges*12)}</td><td>Crédit + TF + entretien + PNO</td></tr>
-      <tr><th>Coût d'opportunité annuel</th><th>${cash>=0?'+':'−'}${formatNumber(Math.abs(cash*12))}</th><th></th></tr>`;
-  }
-
-  /* events */
-  slider.oninput = e => { 
-    pctConjoint = +e.target.value; 
-    // Recalculer partnerPaid basé sur le nouveau pourcentage
-    const newPartnerPaid = loyerCC * (pctConjoint / 100);
-    document.getElementById('rpCurrent').textContent = formatNumber(newPartnerPaid) + ' €/mois';
-    document.getElementById('rpNeed').classList.toggle('positive', newPartnerPaid >= need);
-    document.getElementById('rpNeed').classList.toggle('negative', newPartnerPaid < need);
-    refresh(); 
+  const habiter = {
+    loyerEncaisse: 0,
+    loyerPayéAilleurs: 0,
+    participation: +partnerPaid,
+    chargesFixes: -chargesFixes,
+    mensualiteCred: -mensualiteCred
   };
 
-  document.getElementById('rpToggle').onclick = e => {
-    const blk = document.getElementById('rpDetail');
-    const open = blk.hasAttribute('hidden');
+  const louer = {
+    loyerEncaisse: +loyerCC,
+    loyerPayéAilleurs: -loyerCC,
+    participation: +partnerPaid,
+    chargesFixes: -chargesFixes,
+    mensualiteCred: -mensualiteCred
+  };
+
+  const somme = o => Object.values(o).reduce((a,b)=>a+b,0);
+  const soldeHabiter = somme(habiter);
+  const soldeLouer   = somme(louer);
+
+  /* Affichage des soldes --------------------------------- */
+  const elH = document.getElementById('soldeHabiter');
+  const elL = document.getElementById('soldeLouer');
+  elH.textContent = (soldeHabiter>=0?'+':'–')+formatNumber(Math.abs(soldeHabiter))+' €/mois';
+  elL.textContent = (soldeLouer >=0?'+':'–')+formatNumber(Math.abs(soldeLouer))+' €/mois';
+
+  /* couleur verte pour le meilleur des deux */
+  elH.style.color = soldeHabiter<=soldeLouer ? '#22c55e' : '#ef4444';
+  elL.style.color = soldeLouer  < soldeHabiter ? '#22c55e' : '#ef4444';
+
+  /* Détail du tableau ------------------------------------ */
+  document.getElementById('dualRows').innerHTML = `
+    <tr><td>Loyer encaissé</td><td class="neutral">0</td>
+        <td class="positive">+${formatNumber(loyerCC)}</td></tr>
+    <tr><td>Loyer payé ailleurs</td><td class="neutral">0</td>
+        <td class="negative">-${formatNumber(loyerCC)}</td></tr>
+    <tr><td>Contribution conjointe</td>
+        <td class="positive">+${formatNumber(partnerPaid)}</td>
+        <td class="positive">+${formatNumber(partnerPaid)}</td></tr>
+    <tr><td>Charges fixes</td>
+        <td class="negative">-${formatNumber(chargesFixes)}</td>
+        <td class="negative">-${formatNumber(chargesFixes)}</td></tr>
+    <tr><td>Mensualité crédit</td>
+        <td class="negative">-${formatNumber(mensualiteCred)}</td>
+        <td class="negative">-${formatNumber(mensualiteCred)}</td></tr>
+    <tr><th>Solde net</th>
+        <th>${soldeHabiter>=0?'+':'–'}${formatNumber(Math.abs(soldeHabiter))}</th>
+        <th>${soldeLouer >=0?'+':'–'}${formatNumber(Math.abs(soldeLouer ))}</th></tr>`;
+
+  /* Toggle détail */
+  document.getElementById('dualToggle').onclick = e=>{
+    const blk=document.getElementById('dualDetail');
+    const open=blk.hasAttribute('hidden');
     blk.toggleAttribute('hidden');
-    e.currentTarget.setAttribute('aria-expanded', open);
-    e.currentTarget.innerHTML = (open ? 'Masquer le détail <i class="fas fa-chevron-up"></i>' :
-                                           'Voir le détail <i class="fas fa-chevron-down"></i>');
+    e.currentTarget.setAttribute('aria-expanded',open);
+    e.currentTarget.innerHTML = open
+      ? 'Masquer le détail <i class="fas fa-chevron-up"></i>'
+      : 'Voir le détail <i class="fas fa-chevron-down"></i>';
   };
-
-  refresh(); // premier rendu
 }
         
         // NOUVELLE FONCTION AMÉLIORÉE - Passer à l'analyse fiscale
