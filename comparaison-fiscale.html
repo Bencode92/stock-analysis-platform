@@ -931,6 +931,9 @@ tr.total-row td {
   border-top: 1px solid rgba(255,255,255,.07);
   font-weight: 600;
 }
+td.neutral { 
+  color: #64748b;       /* gris discret */
+}
 
 @media (max-width: 768px) {
     .kpi-main {
@@ -1661,7 +1664,7 @@ tr.total-row td {
       for (const [lib,val] of Object.entries(br.details)) {
         rowsCharges += `
           <tr class="sub"><td>${lib}</td>
-              <td class="negative">${formatNumber(val)}</td>
+              <td class="neutral">0</td>
               <td class="negative">${formatNumber(val)}</td>
               <td></td></tr>`;
       }
@@ -1694,7 +1697,7 @@ tr.total-row td {
             ${rowsCharges}
 
             <tr class="total-row"><td>Total charges fixes</td>
-                <td class="negative">-${formatNumber(br.charges)}</td>
+                <td class="neutral">0</td>
                 <td class="negative">-${formatNumber(br.charges)}</td>
                 <td></td></tr>
 
@@ -1711,7 +1714,7 @@ tr.total-row td {
                    oninput="br.loyerMarché = +this.value;
                             buyRentOut.value = this.value+' €';
                             drawBuyRent()">
-            <output id="buyRentOut">${br.loyerMarché} €</output>
+            <output id="buyRentOut">${br.loyerMarché} €</o>
           </label>
         </section>`;
     }
