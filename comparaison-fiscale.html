@@ -936,6 +936,10 @@ td.neutral {
   color: #64748b;       /* gris discret */
 }
 
+/* Nouvelles classes pour le widget Buy vs Rent amélioré */
+.buyRentRowTotal { font-weight:600; border-top:1px solid rgba(255,255,255,.08); }
+.buyRentRowGap   { font-weight:700; font-size:1.1rem; }
+
 @media (max-width: 768px) {
     .kpi-main {
         flex-direction: column;
@@ -1654,62 +1658,77 @@ td.neutral {
     };
 
     /* ─────────── rendu du widget ─────────── */
-    function drawBuyRent(){
-      const diff = br.loyerMarché + br.partner - (br.mensualité + br.charges);
-      const good = diff > 0;
-      const fmt  = n => (n>0?'+':'') + formatNumber(Math.abs(n));
+    function drawBuyRent () {
 
-      /* gabarit HTML */
-      document.getElementById('buyRent').innerHTML = `
-        <section class="kpi-card buyRentCard" aria-live="polite">
-          <span class="buyRentBadge ${good ? 'profit':'loss'}">
-            ${good?'+':'–'}${formatNumber(Math.abs(diff))} €/mois
+      /* 1. Calculs de base ---------------------------------------------------- */
+      const table  = [];                 // <tr> <td> à construire
+      const fmt    = n => (n>0?'+':'‑') + formatNumber(Math.abs(n));
+
+      /* (a) Loyer / conjointe / mensualité */
+      table.push(['Loyer payé'          , 'neg' , -br.loyerMarché , null            ]);
+      table.push(['Part conjoint'       , br.partner ? 'pos':'neu',
+                                   br.partner ,  br.partner       ]);
+      table.push(['Mensualité crédit'   , 'neg' , null            , -br.mensualité  ]);
+
+      /* (b) Charges fixes détaillées ----------------------------------------- */
+      let totalCharges = 0;
+      for (const [lib,val] of Object.entries(br.details)) {
+        totalCharges += val;                               // val est déjà négatif
+        table.push([lib, 'neg', null, val]);
+      }
+
+      /* (c) Totaux ------------------------------------------------------------ */
+      const totalLoc   = -br.loyerMarché + br.partner;                 // locataire
+      const totalProp  = -br.mensualité + totalCharges + br.partner;   // proprio
+      const gap        = totalLoc - totalProp;                         // Δ positif = avantage acheteur
+
+      /* 2. Badge principal ---------------------------------------------------- */
+      const badgeClass = gap > 0 ? 'profit' : 'loss';
+      const badgeTxt   = (gap>0?'+':'‑') + formatNumber(Math.abs(gap)) + ' €/mois';
+
+      /* 3. Construction HTML -------------------------------------------------- */
+      const htmlRows = table.map(([lbl,cls,lval,pval]) => `
+          <span class="buyRentLabel">${lbl}</span>
+          <span class="buyRentLoc ${cls&&lval!==null?'buyRent'+cls.charAt(0).toUpperCase()+cls.slice(1):'buyRentNeu'}">
+            ${lval!==null?fmt(lval):'—'}
           </span>
+          <span class="buyRentOwn ${cls&&pval!==null?'buyRent'+cls.charAt(0).toUpperCase()+cls.slice(1):'buyRentNeu'}">
+            ${pval!==null?fmt(pval):'—'}
+          </span>`).join('');
 
-          <div class="buyRentFrame">
-            <div class="buyRentGrid">
+      document.getElementById('buyRent').innerHTML = `
+        <section class="kpi-card buyRentCard">
+          <span class="buyRentBadge ${badgeClass}">${badgeTxt}</span>
 
-              <!-- titres -->
-              <div></div>
-              <div style="text-align:right;color:#94a3b8;">Locataire</div>
-              <div style="text-align:right;color:#94a3b8;">Proprio</div>
+          <div class="buyRentGrid">
+            <!-- en‑têtes -->
+            <div></div><span>Locataire</span><span>Proprio</span>
 
-              <span class="buyRentLabel">Loyer payé</span>
-              <span class="buyRentLoc buyRentNeg">-${formatNumber(br.loyerMarché)}</span>
-              <span class="buyRentOwn buyRentNeu">—</span>
+            ${htmlRows}
 
-              <span class="buyRentLabel">Part conjoint</span>
-              <span class="buyRentLoc ${br.partner? 'buyRentPos':'buyRentNeu'}">${fmt(br.partner)}</span>
-              <span class="buyRentOwn ${br.partner? 'buyRentPos':'buyRentNeu'}">${fmt(br.partner)}</span>
+            <!-- TOTAL CHARGES / SORTIES -->
+            <span class="buyRentLabel buyRentRowTotal">Total sorties mensuelles</span>
+            <span class="buyRentLoc  buyRentRowTotal">${fmt(totalLoc)}</span>
+            <span class="buyRentOwn  buyRentRowTotal">${fmt(totalProp)}</span>
 
-              <span class="buyRentLabel">Mensualité</span>
-              <span class="buyRentLoc buyRentNeu">—</span>
-              <span class="buyRentOwn buyRentNeg">-${formatNumber(br.mensualité)}</span>
+            <!-- ÉCART -->
+            <span class="buyRentLabel buyRentRowGap">Différence</span>
+            <span></span>
+            <span class="buyRentOwn  buyRentRowGap ${gap>0?'buyRentPos':'buyRentNeg'}">
+              ${fmt(gap)}
+            </span>
+          </div>
 
-              ${Object.entries(br.details).map(([k,v])=>`
-                <span class="buyRentLabel">${k}</span>
-                <span class="buyRentLoc buyRentNeu">—</span>
-                <span class="buyRentOwn buyRentNeg">${formatNumber(v)}</span>
-              `).join('')}
-
-              <div class="buyRentSep"></div>
-
-              <span class="buyRentLabel">Capital remboursé</span>
-              <span class="buyRentLoc buyRentNeu">—</span>
-              <span class="buyRentOwn buyRentPos">${formatNumber(br.amort)}</span>
-            </div>
-
-            <!-- slider marché -->
-            <div class="buyRentSlider">
-              <label>Loyer du marché&nbsp;:
-                <input type="range" min="600" max="2000" step="50"
-                       value="${br.loyerMarché}"
-                       oninput="br.loyerMarché = +this.value;
-                                buyRentOut.value = this.value+' €';
-                                drawBuyRent()">
-                <output id="buyRentOut">${br.loyerMarché} €</output>
-              </label>
-            </div>
+          <!-- Slider du loyer marché -->
+          <div class="buyRentSlider">
+            <label>Loyer du marché&nbsp;:
+              <input type="range" min="600" max="2000" step="50"
+                     value="${br.loyerMarché}"
+                     oninput="br.loyerMarché=+this.value;
+                              buyRentOut.value=this.value+' €';
+                              drawBuyRent()">
+              <output id="buyRentOut">${br.loyerMarché} €</output>
+            </label>
           </div>
         </section>`;
     }
