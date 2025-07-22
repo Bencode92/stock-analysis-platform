@@ -848,7 +848,7 @@
     font-weight: 600;
 }
 
-#sliderPart {
+#sliderPart, #rpSlider {
     width: 100%;
     height: 6px;
     background: rgba(255, 255, 255, 0.1);
@@ -1609,6 +1609,9 @@
         </button>
     </div>
     
+    <!-- MODULE RP – conteneur vide ; rempli dynamiquement -->
+    <div id="rp-container"></div>
+    
     <div id="fiscal-comparison-results">
                 <!-- Les résultats fiscaux seront insérés ici -->
             </div>
@@ -2160,6 +2163,102 @@ function generateRecommendations(pricePosition, rentPosition, data) {
     return recommendations;
 }
 
+/***** ==========  RÉS. PRINCIPALE (widget)  ========== *****/
+function renderRPModule(data) {
+  // 1. injecte le HTML
+  document.getElementById('rp-container').innerHTML = `
+    <div class="invest-wrapper" aria-live="polite">
+      <!-- KPI card -->
+      <section class="kpi-card">
+        <h2><i class="fas fa-home-user"></i> Résidence principale – Analyse du coût</h2>
+
+        <div class="kpi-main">
+          <p class="kpi-label">Coût d'opportunité total</p>
+          <p class="kpi-value" id="rpGain">…</p>
+        </div>
+
+        <!-- barre empilée -->
+        <div class="stacked-bar">
+          <span id="rpBarConjoint" class="bar-conjoint"></span>
+          <span id="rpBarPerdu"   class="bar-perdu"></span>
+        </div>
+        <div class="bar-legend">
+          <span><span class="dot dot-conjoint"></span>Économie (part&nbsp;conjoint)</span>
+          <span><span class="dot dot-perdu"></span>Loyer non perçu</span>
+        </div>
+
+        <!-- slider -->
+        <div class="slider-box">
+          <label for="rpSlider">Participation du conjoint :
+            <output id="rpVal"></output>&nbsp;%
+          </label>
+          <input id="rpSlider" type="range" min="0" max="100" step="5">
+        </div>
+
+        <button class="btn-details" id="rpToggle" aria-expanded="false" aria-controls="rpDetail">
+          Voir le détail&nbsp;<i class="fas fa-chevron-down"></i>
+        </button>
+      </section>
+
+      <!-- tableau -->
+      <section class="detail-block" id="rpDetail" hidden>
+        <h3>Détail du calcul</h3>
+        <table>
+          <thead><tr><th>Poste</th><th>Montant (€/an)</th><th>Formule</th></tr></thead>
+          <tbody id="rpRows"></tbody>
+        </table>
+      </section>
+    </div>`;   // fin innerHTML
+
+  // 2. enregistre les refs DOM
+  const gain  = document.getElementById('rpGain');
+  const slider= document.getElementById('rpSlider');
+  const val   = document.getElementById('rpVal');
+  const barC  = document.getElementById('rpBarConjoint');
+  const barP  = document.getElementById('rpBarPerdu');
+  const rows  = document.getElementById('rpRows');
+
+  // 3. valeur initiale = part du conjoint (%) si déjà fournie
+  let pctConjoint = data.partnerPct ?? 0;
+  slider.value = pctConjoint;
+
+  function refresh() {
+    const eco  = data.loyerCC * (pctConjoint / 100); // économie de loyer
+    const cash = eco - data.loyerCC - data.charges;  // cf. logique précédente
+
+    gain.textContent = `${cash >= 0 ? '+' : '−'} ${formatNumber(Math.abs(cash))} €/mois`;
+    gain.style.color = cash >= 0 ? '#22c55e' : '#ef4444';
+
+    // barre
+    const total = eco + data.loyerCC;
+    barC.style.width = `${(eco / total) * 100}%`;
+    barP.style.width = `${(data.loyerCC / total) * 100}%`;
+
+    // slider / legend
+    val.textContent = pctConjoint;
+
+    // tableau
+    rows.innerHTML = `
+      <tr><td>Économie loyer (part conjoint)</td><td class="positive">+${formatNumber(eco*12)}</td><td>${pctConjoint}% du loyer&nbsp;CC</td></tr>
+      <tr><td>Loyer non perçu</td><td class="negative">−${formatNumber(data.loyerCC*12)}</td><td>Manque à gagner locatif</td></tr>
+      <tr><td>Charges réelles</td><td class="negative">−${formatNumber(data.charges*12)}</td><td>Crédit + TF + entretien + PNO</td></tr>
+      <tr><th>Coût d'opportunité annuel</th><th>${cash>=0?'+':'−'}${formatNumber(Math.abs(cash*12))}</th><th></th></tr>`;
+  }
+
+  /* events */
+  slider.oninput = e => { pctConjoint = +e.target.value; refresh(); };
+
+  document.getElementById('rpToggle').onclick = e => {
+    const blk = document.getElementById('rpDetail');
+    const open = blk.hasAttribute('hidden');
+    blk.toggleAttribute('hidden');
+    e.currentTarget.setAttribute('aria-expanded', open);
+    e.currentTarget.innerHTML = (open ? 'Masquer le détail <i class="fas fa-chevron-up"></i>' :
+                                           'Voir le détail <i class="fas fa-chevron-down"></i>');
+  };
+
+  refresh(); // premier rendu
+}
         
         // NOUVELLE FONCTION AMÉLIORÉE - Passer à l'analyse fiscale
         async function proceedToFiscalAnalysis() {
@@ -2221,59 +2320,12 @@ function generateRecommendations(pricePosition, rentPosition, data) {
                         propertyData.partnerContribution
                     );
 
-                    html += `
-                    <!-- MODULE RÉSIDENCE PRINCIPALE -->
-                    <div class="invest-wrapper" id="occupation-module" aria-live="polite">
-                      <section class="kpi-card">
-                        <h2><i class="fas fa-home-user"></i> Résidence principale – Analyse du coût</h2>
-                        
-                        <div class="kpi-main">
-                          <p class="kpi-label">Coût d'opportunité total</p>
-                          <p class="kpi-value" id="gainNet">− ${formatNumber(cout.netAvecOpportunite)} €/mois</p>
-                        </div>
-                        
-                        <div class="stacked-bar">
-                          <span id="partConjointBar" class="bar-conjoint" style="width: 0%"></span>
-                          <span id="loyerNonPercuBar" class="bar-perdu" style="width: 100%"></span>
-                        </div>
-                        <div class="bar-legend">
-                          <span><span class="dot dot-conjoint"></span>Économie (part conjoint)</span>
-                          <span><span class="dot dot-perdu"></span>Loyer non perçu</span>
-                        </div>
-                        
-                        <div class="slider-box">
-                          <label for="sliderPart">Participation du conjoint : 
-                            <output id="sliderVal">0</output>%
-                          </label>
-                          <input type="range" id="sliderPart" min="0" max="100" step="5" value="0">
-                        </div>
-                        
-                        <button class="btn-details" aria-expanded="false" aria-controls="detailBlockRP">
-                          Voir le détail <i class="fas fa-chevron-down"></i>
-                        </button>
-                      </section>
-                      
-                      <section class="detail-block" id="detailBlockRP" style="display: none;">
-                        <h3>Détail du calcul</h3>
-                        <table>
-                          <thead><tr><th>Poste</th><th>Montant (€/an)</th><th>Formule</th></tr></thead>
-                          <tbody id="detailRowsRP"></tbody>
-                        </table>
-                      </section>
-                    </div>`;
-
-                    // Initialiser le module après le rendu
-                    setTimeout(() => {
-                        // Variables globales pour le module
-                        window.rpData = {
-                            loyerCC: propertyData.loyerCC,
-                            charges: cout.brut - propertyData.loyerCC,
-                            partnerContribution: propertyData.partnerContribution || 0
-                        };
-                        
-                        // Initialiser le module
-                        initRPModule();
-                    }, 100);
+                    /* Widget Résidence principale */
+                    renderRPModule({
+                        loyerCC   : propertyData.loyerCC,          // 1 200 € dans ton exemple
+                        charges   : cout.brut - propertyData.loyerCC, // 386 € → hors loyer
+                        partnerPct: (propertyData.partnerContribution / propertyData.loyerCC) * 100
+                    });
                 }
 
                 /* -----------------------------------------------------------------
@@ -2324,68 +2376,6 @@ function generateRecommendations(pricePosition, rentPosition, data) {
                     </div>
                 `;
             }
-        }
-
-        // Ajouter la fonction initRPModule
-        function initRPModule() {
-            const data = window.rpData;
-            if (!data) return;
-            
-            const slider = document.getElementById('sliderPart');
-            const gainEl = document.getElementById('gainNet');
-            const partBar = document.getElementById('partConjointBar');
-            const perduBar = document.getElementById('loyerNonPercuBar');
-            const sliderVal = document.getElementById('sliderVal');
-            const btnToggle = document.querySelector('.btn-details');
-            const detailBlk = document.getElementById('detailBlockRP');
-            const detailRows = document.getElementById('detailRowsRP');
-            
-            // Initialiser avec la valeur actuelle
-            let partConjoint = (data.partnerContribution / data.loyerCC) * 100;
-            slider.value = partConjoint;
-            
-            function refresh() {
-                const euroConjoint = data.loyerCC * (partConjoint / 100);
-                const coutTotal = euroConjoint - data.loyerCC - data.charges;
-                
-                // KPI
-                gainEl.textContent = `${coutTotal >= 0 ? '+' : '−'} ${Math.abs(coutTotal).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} €/mois`;
-                gainEl.style.color = coutTotal >= 0 ? '#22c55e' : '#ef4444';
-                
-                // Barres
-                const pctEconomie = Math.abs(euroConjoint / (data.loyerCC + data.charges)) * 100;
-                const pctPerdu = Math.abs(data.loyerCC / (data.loyerCC + data.charges)) * 100;
-                
-                partBar.style.width = `${pctEconomie}%`;
-                perduBar.style.width = `${pctPerdu}%`;
-                
-                sliderVal.textContent = Math.round(partConjoint);
-                
-                // Détails
-                detailRows.innerHTML = `
-                    <tr><td>Économie loyer (part conjoint)</td><td class="positive">+${(euroConjoint * 12).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}</td><td>${Math.round(partConjoint)}% du loyer CC</td></tr>
-                    <tr><td>Loyer non perçu</td><td class="negative">−${(data.loyerCC * 12).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}</td><td>Manque à gagner locatif</td></tr>
-                    <tr><td>Charges réelles</td><td class="negative">−${(data.charges * 12).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}</td><td>Crédit + TF + entretien + PNO</td></tr>
-                    <tr><td><strong>Coût d'opportunité annuel</strong></td><td class="${coutTotal >= 0 ? 'positive' : 'negative'}"><strong>${coutTotal >= 0 ? '+' : '−'}${Math.abs(coutTotal * 12).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}</strong></td><td></td></tr>
-                `;
-            }
-            
-            // Events
-            slider.addEventListener('input', e => {
-                partConjoint = +e.target.value;
-                refresh();
-            });
-            
-            btnToggle.addEventListener('click', () => {
-                const isHidden = detailBlk.style.display === 'none';
-                detailBlk.style.display = isHidden ? 'block' : 'none';
-                btnToggle.setAttribute('aria-expanded', isHidden);
-                btnToggle.querySelector('i').className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
-                btnToggle.firstChild.textContent = isHidden ? 'Masquer le détail ' : 'Voir le détail ';
-                btnToggle.appendChild(btnToggle.querySelector('i'));
-            });
-            
-            refresh();
         }
         
         // Fonction de debug
