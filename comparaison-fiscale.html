@@ -1624,6 +1624,55 @@
     <!-- MODULE RP – conteneur vide ; rempli dynamiquement -->
     <div id="rp-container"></div>
     
+    <!-- ▬▬▬▬▬▬▬ BUY-RENT WIDGET ▬▬▬▬▬▬▬ -->
+    <div id="buyRent"></div>
+
+    <script>
+    /* Paramètres de départ (ajustés dynamiquement depuis le formulaire) */
+    const br = {
+      loyerMarché: 1100, // € / mois qu'on paierait en restant locataire
+      mensualité:   990, // € / mois pour le prêt
+      charges:      260, // TF + copro + entretien
+      amort:        450  // part « capital » dans la mensualité
+    };
+
+    /* ─────────── rendu du widget ─────────── */
+    function drawBuyRent() {
+      const diff = br.loyerMarché - (br.mensualité + br.charges);
+      const sign = diff > 0 ? '+' : '–';
+      const clr  = diff > 0 ? '#22c55e' : '#ef4444';
+
+      document.getElementById('buyRent').innerHTML = `
+        <section class="kpi-card" aria-live="polite">
+          <h2 style="margin-bottom:1rem">
+            💰 Différence de trésorerie&nbsp;: 
+            <span style="color:${clr}">${sign} ${Math.abs(diff)} €/mois</span>
+          </h2>
+
+          <table style="width:100%;margin:1rem 0">
+            <tr><th></th><th>Rester locataire</th><th>Acheter</th><th>Δ</th></tr>
+            <tr><td>Loyer payé</td>
+                <td style="color:#ef4444">-${formatNumber(br.loyerMarché)}</td><td>0</td>
+                <td style="color:#22c55e">+${formatNumber(br.loyerMarché)}</td></tr>
+            <tr><td>Mensualité de crédit</td>
+                <td>0</td><td style="color:#ef4444">-${formatNumber(br.mensualité)}</td><td></td></tr>
+            <tr><td>Charges fixes</td>
+                <td>0</td><td style="color:#ef4444">-${formatNumber(br.charges)}</td><td></td></tr>
+            <tr><td>Capital remboursé</td>
+                <td>0</td><td style="color:#00bfff">+${formatNumber(br.amort)}</td><td></td></tr>
+          </table>
+
+          <label style="display:block;margin-top:1rem">
+            Loyer du marché&nbsp;:
+            <input type="range" min="600" max="2000" step="50"
+                   value="${br.loyerMarché}"
+                   oninput="br.loyerMarché=+this.value;buyRentOut.value=this.value+' €';drawBuyRent()">
+            <output id="buyRentOut">${br.loyerMarché} €</output>
+          </label>
+        </section>`;
+    }
+    </script>
+    
     <div id="fiscal-comparison-results">
                 <!-- Les résultats fiscaux seront insérés ici -->
             </div>
@@ -1700,29 +1749,6 @@
             document.getElementById('partnerContribution-group').style.display = isRP ? '' : 'none';
         }
         toggleFieldsForRP();
-        
-        // Fonction de calcul du coût d'occupation corrigée et arrondie
-        function computeOccupationCost(data, partnerContribution = 0) {
-            // Utilise monthlyPayment (avec frais) si disponible, sinon mensualite (sans frais)
-            const mensualite = Number(data.mensualite ?? data.monthlyPayment) || 0;
-            const taxeFonciereMensuel = (Number(data.taxeFonciere) || 0) / 12;
-            const chargesCopro = Number(data.chargesCoproNonRecup) || 0;
-            const entretienMensuel = (Number(data.entretienAnnuel) || 0) / 12;
-            const assuranceMensuel = (Number(data.assurancePNO) || 0) / 12;
-            const chargesRecup = Number(data.monthlyCharges) || 0;
-
-            const brut = mensualite + taxeFonciereMensuel + chargesCopro + entretienMensuel + assuranceMensuel + chargesRecup;
-            const netPourVous = Math.max(0, brut - partnerContribution);
-            const loyerPerdu = Number(data.loyerCC) || 0;
-            const netAvecOpportunite = netPourVous + loyerPerdu;
-
-            return { 
-                brut: Math.round(brut),
-                netPourVous: Math.round(netPourVous),
-                netAvecOpportunite: Math.round(netAvecOpportunite),
-                loyerPerdu: Math.round(loyerPerdu)
-            };
-        }
         
         // Gestion des étapes
         function goToStep(step) {
@@ -2174,119 +2200,6 @@ function generateRecommendations(pricePosition, rentPosition, data) {
     
     return recommendations;
 }
-
-/***** ==========  RÉS. PRINCIPALE (widget)  ========== *****/
-function renderRPModule({ loyerCC, charges, partnerPaid }) {
-  // 1. injecte le HTML
-  document.getElementById('rp-container').innerHTML = `
-    <div class="invest-wrapper" aria-live="polite">
-      <!-- ▬▬▬▬▬▬ HABITER VS LOUER ▬▬▬▬▬▬ -->
-      <section id="dual-scenario" class="kpi-card">
-        <h2><i class="fas fa-exchange-alt"></i> Habiter vs Louer + Loyer équivalent</h2>
-
-        <div class="comparison-input-group" style="grid-template-columns:1fr 140px 1fr">
-          <div class="input-with-label">
-            <label>🏠 Habiter le bien</label>
-            <div id="soldeHabiter" class="market-metric-value">…</div>
-          </div>
-          <div class="vs-separator">VS</div>
-          <div class="input-with-label">
-            <label>🔄 Louer le bien + louer ailleurs</label>
-            <div id="soldeLouer" class="market-metric-value">…</div>
-          </div>
-        </div>
-
-        <button class="btn-details" id="dualToggle" aria-expanded="false" aria-controls="dualDetail">
-          Voir le détail&nbsp;<i class="fas fa-chevron-down"></i>
-        </button>
-
-        <section id="dualDetail" class="detail-block" hidden>
-          <h3>Détail mensuel des flux</h3>
-          <table>
-            <thead>
-              <tr><th>Poste</th><th>Habiter</th><th>Louer + louer ailleurs</th></tr>
-            </thead>
-            <tbody id="dualRows"></tbody>
-          </table>
-        </section>
-      </section>
-    </div>`;   // fin innerHTML
-
-  // Appeler immédiatement la fonction renderDualScenario avec les données
-  // On calcule chargesFixes à partir de charges
-  const chargesFixes = charges;
-  const mensualiteCred = propertyData.mensualite;
-  
-  renderDualScenario({
-    loyerCC: loyerCC,
-    partnerPaid: partnerPaid,
-    chargesFixes: chargesFixes,
-    mensualiteCred: mensualiteCred
-  });
-}
-
-function renderDualScenario({ loyerCC, partnerPaid, chargesFixes, mensualiteCred }) {
-
-  const habiter = {
-    loyerEncaisse: 0,
-    loyerPayéAilleurs: 0,
-    participation: +partnerPaid,
-    chargesFixes: -chargesFixes,
-    mensualiteCred: -mensualiteCred
-  };
-
-  const louer = {
-    loyerEncaisse: +loyerCC,
-    loyerPayéAilleurs: -loyerCC,
-    participation: +partnerPaid,
-    chargesFixes: -chargesFixes,
-    mensualiteCred: -mensualiteCred
-  };
-
-  const somme = o => Object.values(o).reduce((a,b)=>a+b,0);
-  const soldeHabiter = somme(habiter);
-  const soldeLouer   = somme(louer);
-
-  /* Affichage des soldes --------------------------------- */
-  const elH = document.getElementById('soldeHabiter');
-  const elL = document.getElementById('soldeLouer');
-  elH.textContent = (soldeHabiter>=0?'+':'–')+formatNumber(Math.abs(soldeHabiter))+' €/mois';
-  elL.textContent = (soldeLouer >=0?'+':'–')+formatNumber(Math.abs(soldeLouer))+' €/mois';
-
-  /* couleur verte pour le meilleur des deux */
-  elH.style.color = soldeHabiter<=soldeLouer ? '#22c55e' : '#ef4444';
-  elL.style.color = soldeLouer  < soldeHabiter ? '#22c55e' : '#ef4444';
-
-  /* Détail du tableau ------------------------------------ */
-  document.getElementById('dualRows').innerHTML = `
-    <tr><td>Loyer encaissé</td><td class="neutral">0</td>
-        <td class="positive">+${formatNumber(loyerCC)}</td></tr>
-    <tr><td>Loyer payé ailleurs</td><td class="neutral">0</td>
-        <td class="negative">-${formatNumber(loyerCC)}</td></tr>
-    <tr><td>Contribution conjointe</td>
-        <td class="positive">+${formatNumber(partnerPaid)}</td>
-        <td class="positive">+${formatNumber(partnerPaid)}</td></tr>
-    <tr><td>Charges fixes</td>
-        <td class="negative">-${formatNumber(chargesFixes)}</td>
-        <td class="negative">-${formatNumber(chargesFixes)}</td></tr>
-    <tr><td>Mensualité crédit</td>
-        <td class="negative">-${formatNumber(mensualiteCred)}</td>
-        <td class="negative">-${formatNumber(mensualiteCred)}</td></tr>
-    <tr><th>Solde net</th>
-        <th>${soldeHabiter>=0?'+':'–'}${formatNumber(Math.abs(soldeHabiter))}</th>
-        <th>${soldeLouer >=0?'+':'–'}${formatNumber(Math.abs(soldeLouer ))}</th></tr>`;
-
-  /* Toggle détail */
-  document.getElementById('dualToggle').onclick = e=>{
-    const blk=document.getElementById('dualDetail');
-    const open=blk.hasAttribute('hidden');
-    blk.toggleAttribute('hidden');
-    e.currentTarget.setAttribute('aria-expanded',open);
-    e.currentTarget.innerHTML = open
-      ? 'Masquer le détail <i class="fas fa-chevron-up"></i>'
-      : 'Voir le détail <i class="fas fa-chevron-down"></i>';
-  };
-}
         
         // NOUVELLE FONCTION AMÉLIORÉE - Passer à l'analyse fiscale
         async function proceedToFiscalAnalysis() {
@@ -2325,41 +2238,37 @@ function renderDualScenario({ loyerCC, partnerPaid, chargesFixes, mensualiteCred
                 const analysis = await analyzer.performCompleteAnalysis(propertyData);
                 
                 /* -----------------------------------------------------------------
-                   1) Afficher (ou pas) la carte Résidence principale
+                   1) Afficher le nouveau widget Buy vs Rent si résidence principale
                 ----------------------------------------------------------------- */
                 const isResidence = propertyData.occupationMode === 'residence';
-                let html = '';
-
+                
                 if (isResidence) {
-                    const bestRegime = analysis.fiscal.reduce((a, b) =>
-                        a.cashflowNetAnnuel > b.cashflowNetAnnuel ? a : b
+                    // Calculer les valeurs pour le widget
+                    const tauxMensuel = propertyData.taux / 100 / 12;
+                    const montantEmprunte = propertyData.prixPaye - propertyData.apport;
+                    const interetsMensuel = montantEmprunte * tauxMensuel;
+                    
+                    // Mettre à jour les paramètres du widget
+                    br.mensualité = Math.round(propertyData.mensualite);
+                    br.charges = Math.round(
+                        (propertyData.taxeFonciere / 12) +
+                        propertyData.chargesCoproNonRecup +
+                        (propertyData.entretienAnnuel / 12) +
+                        propertyData.assurancePNO
                     );
-
-                    const cout = computeOccupationCost(
-                        {
-                            mensualite: analysisData.monthlyPayment,  // Utilise la valeur correcte avec frais inclus
-                            taxeFonciere: propertyData.taxeFonciere,
-                            chargesCoproNonRecup: propertyData.chargesCoproNonRecup,
-                            entretienAnnuel: propertyData.entretienAnnuel || 0,
-                            assurancePNO: propertyData.assurancePNO,
-                            loyerCC: propertyData.loyerCC,
-                            monthlyCharges: propertyData.monthlyCharges   // ← AJOUT
-                        },
-                        propertyData.partnerContribution
-                    );
-
-                    /* Widget Résidence principale avec partnerPaid */
-                    renderRPModule({
-                        loyerCC   : propertyData.loyerCC,
-                        charges   : cout.brut - propertyData.loyerCC,
-                        partnerPaid: propertyData.partnerContribution   // Montant en dur
-                    });
+                    br.loyerMarché = propertyData.ville ? 
+                        Math.round(propertyData.ville.loyer_m2 * propertyData.surface) : 
+                        Math.round(propertyData.loyerCC);
+                    br.amort = Math.round(propertyData.mensualite - interetsMensuel);
+                    
+                    // Afficher le widget
+                    drawBuyRent();
                 }
 
                 /* -----------------------------------------------------------------
                    2) Résultats des régimes fiscaux (toujours affichés)
                 ----------------------------------------------------------------- */
-                html += analyzer.generateFiscalResultsHTML(analysis.fiscal, analysisData);
+                const html = analyzer.generateFiscalResultsHTML(analysis.fiscal, analysisData);
                 resultsDiv.innerHTML = html;
                 
                 // Créer les graphiques
