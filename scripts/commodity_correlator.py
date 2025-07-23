@@ -2,6 +2,7 @@
 """
 Commodity Correlator for TradePulse
 Analyzes macro-economic news impact on commodities based on country export exposure
+Enhanced to focus on major exporters and crisis signals
 """
 
 import json
@@ -54,6 +55,13 @@ MACRO_KEYWORDS = [
     "mining", "ore production", "metal prices", "commodity prices"
 ]
 
+# Crisis-specific keywords for bonus scoring
+CRISIS_KEYWORDS = [
+    "tariff", "embargo", "strike", "drought", "shutdown", 
+    "crisis", "ban", "sanction", "shortage", "collapse",
+    "blockade", "restriction", "disruption", "failure"
+]
+
 COMPANY_KEYWORDS = [
     r"\b(?:inc|corp|ltd|plc|llc|co|company)\b",
     r"(?:nyse|nasdaq|tsx|lse):",
@@ -65,6 +73,7 @@ COMPANY_KEYWORDS = [
 # Pre-compile patterns for performance
 MACRO_PATTERNS = [re.compile(rf"\b{kw}\b", re.I) for kw in MACRO_KEYWORDS]
 COMPANY_PATTERNS = [re.compile(kw, re.I) for kw in COMPANY_KEYWORDS]
+CRISIS_PATTERN = re.compile(r"\b(" + "|".join(CRISIS_KEYWORDS) + r")\b", re.I)
 
 # ──────────────────────────────────────────
 # Product-specific keywords for filtering
@@ -168,9 +177,9 @@ class CommodityCorrelator:
         self.exposure_data = self._load_exposure_data()
         self.country_map = self._build_country_map()
         
-        # Configuration thresholds
+        # Configuration thresholds (adjusted for major exporters focus)
         self.QUALITY_MIN = 40    # Minimum quality score
-        self.SIGNAL_MIN = 0.5    # Minimum signal score
+        self.SIGNAL_MIN = 1.0    # Increased from 0.5 to filter more noise
         
     def _load_exposure_data(self):
         """Load export exposure data"""
@@ -423,6 +432,12 @@ class CommodityCorrelator:
             return True
         return any(p.search(text) for p in PRODUCT_PATTERNS[commodity_code])
     
+    # ---------- Crisis detection ----------
+    @staticmethod
+    def _has_crisis_signal(text: str) -> bool:
+        """Check if article contains crisis keywords"""
+        return bool(CRISIS_PATTERN.search(text))
+    
     def detect_countries_from_text(self, text: str) -> List[str]:
         """Detect countries mentioned in text"""
         detected = set()
@@ -511,18 +526,26 @@ class CommodityCorrelator:
                     
                     # Analyze each export product
                     for export in country_exports:
+                        # FILTER: Only process pivot or major exporters
+                        if export.get("impact") not in ("pivot", "major"):
+                            logger.debug(f"Skipping minor exporter {export['country']} for {export['product_code']}")
+                            continue
+                        
                         commodity_code = export["product_code"]
+                        
+                        # Get export share weight
+                        share = export.get("export_share", 1.0)
                         
                         # Product filtering: reduce score if product not mentioned
                         explicit = self._mentions_product(text, commodity_code)
-                        product_penalty = 1.0 if explicit else 0.33
+                        product_penalty = 1.0 if explicit else 0.2  # Reduced from 0.33 to 0.2
                         
                         # Use existing ML analysis
                         sentiment = article.get("impact", "neutral")
                         
-                        # Calculate impact
+                        # Calculate impact with all factors
                         signal = self._calculate_commodity_signal(
-                            article, export, sentiment, product_penalty
+                            article, export, sentiment, product_penalty, share, text
                         )
                         
                         if signal["score"] > self.SIGNAL_MIN:
@@ -534,7 +557,8 @@ class CommodityCorrelator:
                             country_info = {
                                 "country": export["country"],
                                 "country_name": export["country_name"],
-                                "impact": export["impact"]
+                                "impact": export["impact"],
+                                "export_share": share
                             }
                             if country_info not in commodity_signals[commodity_code]["affected_countries"]:
                                 commodity_signals[commodity_code]["affected_countries"].append(country_info)
@@ -545,19 +569,23 @@ class CommodityCorrelator:
                                 "date": article.get("date", ""),
                                 "url": article.get("url", ""),
                                 "impact": sentiment,
-                                "score": signal["score"]
+                                "score": signal["score"],
+                                "has_crisis_signal": self._has_crisis_signal(text)
                             }
                             commodity_signals[commodity_code]["related_news"].append(news_ref)
         
         return self._finalize_signals(commodity_signals)
     
-    def _calculate_commodity_signal(self, article, export, sentiment, product_penalty=1.0):
+    def _calculate_commodity_signal(self, article, export, sentiment, product_penalty=1.0, share=1.0, text=""):
         """Calculate signal strength for a commodity"""
         # Base score from article quality with product penalty
         base_score = (article.get("quality_score", 50) / 100.0) * product_penalty
         
-        # Impact weight from export data
-        impact_weight = export["impact_weight"]
+        # Impact weight from export data with share weight
+        impact_weight = export["impact_weight"] * share
+        
+        # Crisis bonus if crisis keywords are found
+        crisis_bonus = 1.5 if self._has_crisis_signal(text) else 1.0
         
         # Direction based on sentiment and crisis scenario
         if sentiment == "negative":
@@ -578,7 +606,7 @@ class CommodityCorrelator:
             trend = "neutral"
             multiplier = 0.5
         
-        score = base_score * impact_weight * multiplier
+        score = base_score * impact_weight * multiplier * crisis_bonus
         
         return {
             "score": score,
@@ -648,6 +676,8 @@ class CommodityCorrelator:
         logger.info("🏗️ Starting commodity correlation analysis...")
         logger.info("📋 Filtering: Only macro-economic news will be processed")
         logger.info("🔍 Product filtering: Articles must mention specific commodity keywords")
+        logger.info("🎯 Major exporters focus: Only pivot/major countries will impact scores")
+        logger.info("⚡ Crisis detection: Bonus for tariff/embargo/drought signals")
         
         # Load latest news
         try:
@@ -670,6 +700,7 @@ class CommodityCorrelator:
             logger.info(f"🚨 Alerts: {commodity_signals['summary']['critical_alerts']} critical, {commodity_signals['summary']['important_alerts']} important")
             logger.info(f"📊 Macro filtering active - company news excluded")
             logger.info(f"🎯 Product keyword filtering active - reducing false positives")
+            logger.info(f"💪 Major exporter focus - only pivot/major countries trigger alerts")
         except Exception as e:
             logger.error(f"Failed to save commodity data: {e}")
             return None
