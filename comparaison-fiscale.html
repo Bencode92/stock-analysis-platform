@@ -940,6 +940,27 @@ td.neutral {
 .buyRentRowTotal { font-weight:600; border-top:1px solid rgba(255,255,255,.08); }
 .buyRentRowGap   { font-weight:700; font-size:1.1rem; }
 
+/* NOUVEAUX STYLES pour le widget Buy vs Rent amélioré */
+.br-card     {position:relative;padding:32px 40px;background:#0e1b2d;border:1px solid #1d3c5a;border-radius:18px;}
+.br-title    {margin:0 0 24px;color:#60a5fa;font-size:1.2rem;font-weight:600;text-align:center;}
+
+.br-table            {width:100%;border-collapse:collapse;font-size:0.95rem;}
+.br-table th         {font-weight:500;color:#94a3b8;padding:6px 0;text-align:right;}
+.br-table td         {padding:6px 0;text-align:right;}
+.br-table tr:nth-child(even){background:rgba(255,255,255,.03);}
+.br-table .neg       {color:#ef4444;font-variant-numeric:tabular-nums;}
+.br-table .pos       {color:#22c55e;font-variant-numeric:tabular-nums;}
+.br-table .total td  {border-top:1px solid rgba(255,255,255,.08);font-weight:600;}
+.br-table .gap td    {font-weight:700;font-size:1.05rem;}
+
+.br-badge    {position:absolute;top:-30px;left:50%;transform:translateX(-50%);padding:10px 24px;border-radius:40px;font-weight:700;}
+.br-badge.profit{background:#022c22;color:#22c55e;box-shadow:0 0 18px rgba(34,197,94,.4);}
+.br-badge.loss  {background:#2c0610;color:#ef4444;box-shadow:0 0 18px rgba(239,68,68,.4);}
+
+.br-slider   {margin-top:28px;text-align:center;color:#94a3b8;}
+.br-slider input{width:60%;accent-color:#3b82f6;}
+.br-slider output{margin-left:8px;color:#60a5fa;font-weight:600;}
+
 @media (max-width: 768px) {
     .kpi-main {
         flex-direction: column;
@@ -1661,73 +1682,58 @@ td.neutral {
     function drawBuyRent () {
 
       /* 1. Calculs de base ---------------------------------------------------- */
-      const table  = [];                 // <tr> <td> à construire
-      const fmt    = n => (n>0?'+':'‑') + formatNumber(Math.abs(n));
+      const fmt = n => (n>0?'+':'‑') + formatNumber(Math.abs(n));
 
-      /* (a) Loyer / conjointe / mensualité - MODIFIÉ : loyer dans colonne locataire */
-      table.push(['Loyer payé'          , 'neg' , -br.loyerMarché , null            ]);
-      table.push(['Part conjoint'       , br.partner ? 'pos':'neu',
-                                   br.partner ,  br.partner       ]);
-      table.push(['Mensualité crédit'   , 'neg' , null            , -br.mensualité  ]);
+      /* totaux réels (dépenses positives) */
+      const costLoc  = Math.abs(br.loyerMarché - br.partner);  // 1050 €
+      const costProp = Math.abs(br.mensualité - br.partner + Object.values(br.details).reduce((a,b)=>a+b,0)); // 1066 €
 
-      /* (b) Charges fixes détaillées ----------------------------------------- */
-      let totalCharges = 0;
-      for (const [lib,val] of Object.entries(br.details)) {
-        totalCharges += val;                               // val est déjà négatif
-        table.push([lib, 'neg', null, val]);
-      }
+      const gap      = costProp - costLoc;      // >0  ⇒ proprio plus cher
+      const good     = gap < 0;                 // moins cher ⇒ vert, sinon rouge
 
-      /* (c) Totaux ------------------------------------------------------------ */
-      const totalLoc   = -br.loyerMarché + br.partner;                 // locataire
-      const totalProp  = -br.mensualité + totalCharges + br.partner;   // proprio
-      const gap        = totalLoc - totalProp;                         // Δ positif = avantage acheteur
+      const badgeTxt   = (good?'‑':'‑') + formatNumber(Math.abs(gap)) + ' €/mois';
+      const badgeClass = good ? 'profit' : 'loss';     // green / red
+      const gapClass   = good ? 'pos' : 'neg';
 
-      /* 2. Badge principal - MODIFIÉ : logique inversée */
-      const badgeClass = gap > 0 ? 'profit' : 'loss';
-      const badgeTxt   = (gap>0?'+':'‑') + formatNumber(Math.abs(gap)) + ' €/mois';
-
-      /* 3. Construction HTML -------------------------------------------------- */
-      const htmlRows = table.map(([lbl,cls,lval,pval]) => `
-          <span class="buyRentLabel">${lbl}</span>
-          <span class="buyRentLoc ${cls&&lval!==null?'buyRent'+cls.charAt(0).toUpperCase()+cls.slice(1):'buyRentNeu'}">
-            ${lval!==null?fmt(lval):'—'}
-          </span>
-          <span class="buyRentOwn ${cls&&pval!==null?'buyRent'+cls.charAt(0).toUpperCase()+cls.slice(1):'buyRentNeu'}">
-            ${pval!==null?fmt(pval):'—'}
-          </span>`).join('');
-
+      /* 2. Construction HTML -------------------------------------------------- */
       document.getElementById('buyRent').innerHTML = `
-        <section class="kpi-card buyRentCard">
-          <span class="buyRentBadge ${badgeClass}">${badgeTxt}</span>
+        <section class="br-card">
+          <span class="br-badge ${badgeClass}">${badgeTxt}</span>
+          <h3 class="br-title">Résidence principale – comparaison Loyer / Proprio</h3>
 
-          <div class="buyRentGrid">
-            <!-- en‑têtes -->
-            <div></div><span>Locataire</span><span>Proprio</span>
+          <table class="br-table">
+            <thead>
+              <tr><th></th><th>Locataire</th><th>Propriétaire</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Loyer payé</td>        <td class="neg">‑${formatNumber(br.loyerMarché)}</td> <td>—</td></tr>
+              <tr><td>Part conjoint</td>     <td class="pos">${br.partner?'+'+formatNumber(br.partner):'—'}</td>  <td class="pos">${br.partner?'+'+formatNumber(br.partner):'—'}</td></tr>
+              <tr><td>Mensualité crédit</td> <td>—</td>                  <td class="neg">‑${formatNumber(br.mensualité)}</td></tr>
 
-            ${htmlRows}
+              ${Object.entries(br.details).map(([lib,val]) => 
+                `<tr><td>${lib}</td><td>—</td><td class="neg">‑${formatNumber(Math.abs(val))}</td></tr>`
+              ).join('')}
 
-            <!-- TOTAL CHARGES / SORTIES -->
-            <span class="buyRentLabel buyRentRowTotal">Total sorties mensuelles</span>
-            <span class="buyRentLoc  buyRentRowTotal">${fmt(totalLoc)}</span>
-            <span class="buyRentOwn  buyRentRowTotal">${fmt(totalProp)}</span>
+              <tr class="total">
+                <td>Total sorties mensuelles</td>
+                <td>‑${formatNumber(costLoc)}</td><td>‑${formatNumber(costProp)}</td>
+              </tr>
+              <tr class="gap">
+                <td>Différence</td>
+                <td></td>
+                <td class="gap-cell ${gapClass}">${fmt(gap)}</td>
+              </tr>
+            </tbody>
+          </table>
 
-            <!-- ÉCART -->
-            <span class="buyRentLabel buyRentRowGap">Différence</span>
-            <span></span>
-            <span class="buyRentOwn  buyRentRowGap ${gap>0?'buyRentPos':'buyRentNeg'}">
-              ${fmt(gap)}
-            </span>
-          </div>
-
-          <!-- Slider du loyer marché -->
-          <div class="buyRentSlider">
-            <label>Loyer du marché&nbsp;:
+          <div class="br-slider">
+            <label>Loyer du marché :
               <input type="range" min="600" max="2000" step="50"
                      value="${br.loyerMarché}"
                      oninput="br.loyerMarché=+this.value;
-                              buyRentOut.value=this.value+' €';
+                              document.getElementById('brOutput').textContent=this.value+' €';
                               drawBuyRent()">
-              <output id="buyRentOut">${br.loyerMarché} €</o>
+              <output id="brOutput">${br.loyerMarché} €</o>
             </label>
           </div>
         </section>`;
