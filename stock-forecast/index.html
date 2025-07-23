@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Forecast Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .card {
+            animation: fadeIn 0.5s ease-out;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .buy-signal {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        
+        .hold-signal {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+        
+        .metric-card {
+            transition: transform 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body class="text-white">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <header class="mb-12 text-center">
+            <h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
+                Stock Forecast Dashboard
+            </h1>
+            <p class="text-gray-400 text-lg">Prévisions ML sur 30 jours</p>
+            <p id="lastUpdate" class="text-sm text-gray-500 mt-2"></p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+            <div class="card p-6 rounded-xl metric-card">
+                <h3 class="text-gray-400 text-sm mb-2">Total Analysé</h3>
+                <p id="totalStocks" class="text-3xl font-bold">-</p>
+            </div>
+            <div class="card p-6 rounded-xl metric-card">
+                <h3 class="text-gray-400 text-sm mb-2">Signaux BUY</h3>
+                <p id="buySignals" class="text-3xl font-bold text-green-400">-</p>
+            </div>
+            <div class="card p-6 rounded-xl metric-card">
+                <h3 class="text-gray-400 text-sm mb-2">Rendement Moyen</h3>
+                <p id="avgReturn" class="text-3xl font-bold">-</p>
+            </div>
+            <div class="card p-6 rounded-xl metric-card">
+                <h3 class="text-gray-400 text-sm mb-2">Top Performer</h3>
+                <p id="topStock" class="text-3xl font-bold text-purple-400">-</p>
+            </div>
+        </div>
+
+        <div class="card p-6 rounded-xl mb-8">
+            <div class="flex flex-wrap gap-4 items-center">
+                <button onclick="filterStocks('all')" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition">
+                    Tout
+                </button>
+                <button onclick="filterStocks('buy')" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700 transition">
+                    BUY seulement
+                </button>
+                <button onclick="sortStocks('return')" class="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 transition">
+                    Trier par Rendement
+                </button>
+                <button onclick="sortStocks('sharpe')" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition">
+                    Trier par Sharpe
+                </button>
+            </div>
+        </div>
+
+        <div id="stockGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+        <div class="mt-12 card p-8 rounded-xl">
+            <h2 class="text-2xl font-bold mb-6">Distribution des Rendements Attendus</h2>
+            <canvas id="returnsChart" width="400" height="200"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let stockData = [];
+        let filteredData = [];
+        let chart = null;
+
+        async function loadData() {
+            try {
+                const response = await fetch('data.json');
+                const data = await response.json();
+                stockData = data.stocks;
+                filteredData = [...stockData];
+                
+                document.getElementById('lastUpdate').textContent = 
+                    `Dernière mise à jour: ${new Date(data.last_updated).toLocaleString('fr-FR')}`;
+                
+                updateMetrics();
+                renderStocks();
+                createChart();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                useSampleData();
+            }
+        }
+
+        function useSampleData() {
+            const sampleData = {
+                last_updated: new Date().toISOString(),
+                stocks: [
+                    {ticker: "NVDA", current_price: 135.58, forecast_price: 162.45, expected_return: 19.81, volatility: 35.7, sharpe_ratio: 0.55, momentum_score: 3, rsi: 65.8, recommendation: "BUY"},
+                    {ticker: "AAPL", current_price: 195.83, forecast_price: 215.47, expected_return: 10.02, volatility: 22.5, sharpe_ratio: 0.45, momentum_score: 3, rsi: 58.3, recommendation: "BUY"},
+                    {ticker: "META", current_price: 520.84, forecast_price: 578.93, expected_return: 11.15, volatility: 28.6, sharpe_ratio: 0.39, momentum_score: 3, rsi: 61.2, recommendation: "BUY"},
+                    {ticker: "MSFT", current_price: 420.55, forecast_price: 445.23, expected_return: 5.87, volatility: 18.2, sharpe_ratio: 0.32, momentum_score: 2, rsi: 52.1, recommendation: "HOLD"},
+                    {ticker: "GOOGL", current_price: 172.63, forecast_price: 185.92, expected_return: 7.70, volatility: 24.3, sharpe_ratio: 0.32, momentum_score: 2, rsi: 48.9, recommendation: "HOLD"},
+                    {ticker: "TSLA", current_price: 178.79, forecast_price: 165.32, expected_return: -7.53, volatility: 42.1, sharpe_ratio: -0.18, momentum_score: 1, rsi: 35.6, recommendation: "HOLD"}
+                ]
+            };
+            
+            stockData = sampleData.stocks;
+            filteredData = [...stockData];
+            document.getElementById('lastUpdate').textContent = 
+                `Dernière mise à jour: ${new Date(sampleData.last_updated).toLocaleString('fr-FR')}`;
+            
+            updateMetrics();
+            renderStocks();
+            createChart();
+        }
+
+        function updateMetrics() {
+            document.getElementById('totalStocks').textContent = stockData.length;
+            
+            const buyStocks = stockData.filter(s => s.recommendation === 'BUY');
+            document.getElementById('buySignals').textContent = buyStocks.length;
+            
+            const avgReturn = stockData.reduce((sum, s) => sum + s.expected_return, 0) / stockData.length;
+            document.getElementById('avgReturn').textContent = avgReturn.toFixed(2) + '%';
+            
+            const topStock = stockData.reduce((max, s) => s.expected_return > max.expected_return ? s : max);
+            document.getElementById('topStock').textContent = topStock.ticker;
+        }
+
+        function renderStocks() {
+            const grid = document.getElementById('stockGrid');
+            grid.innerHTML = '';
+            
+            filteredData.forEach((stock, index) => {
+                const card = document.createElement('div');
+                card.className = 'card p-6 rounded-xl';
+                card.style.animationDelay = `${index * 0.1}s`;
+                
+                const signalClass = stock.recommendation === 'BUY' ? 'buy-signal' : 'hold-signal';
+                const returnColor = stock.expected_return > 0 ? 'text-green-400' : 'text-red-400';
+                
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-2xl font-bold">${stock.ticker}</h3>
+                        <span class="px-3 py-1 rounded-full text-sm font-semibold ${signalClass}">
+                            ${stock.recommendation}
+                        </span>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Prix actuel</span>
+                            <span class="font-semibold">$${stock.current_price}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Prévision 30j</span>
+                            <span class="font-semibold">$${stock.forecast_price}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Rendement</span>
+                            <span class="font-bold ${returnColor}">${stock.expected_return > 0 ? '+' : ''}${stock.expected_return}%</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Volatilité</span>
+                            <span>${stock.volatility}%</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Sharpe Ratio</span>
+                            <span>${stock.sharpe_ratio}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">RSI</span>
+                            <span>${stock.rsi}</span>
+                        </div>
+                        
+                        <div class="mt-4 pt-4 border-t border-gray-700">
+                            <div class="flex items-center gap-2">
+                                <span class="text-gray-400 text-sm">Momentum</span>
+                                <div class="flex gap-1">
+                                    ${Array(3).fill(0).map((_, i) => 
+                                        `<div class="w-2 h-2 rounded-full ${i < stock.momentum_score ? 'bg-yellow-400' : 'bg-gray-600'}"></div>`
+                                    ).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+
+        function filterStocks(type) {
+            if (type === 'buy') {
+                filteredData = stockData.filter(s => s.recommendation === 'BUY');
+            } else {
+                filteredData = [...stockData];
+            }
+            renderStocks();
+        }
+
+        function sortStocks(by) {
+            if (by === 'return') {
+                filteredData.sort((a, b) => b.expected_return - a.expected_return);
+            } else if (by === 'sharpe') {
+                filteredData.sort((a, b) => b.sharpe_ratio - a.sharpe_ratio);
+            }
+            renderStocks();
+        }
+
+        function createChart() {
+            const ctx = document.getElementById('returnsChart').getContext('2d');
+            
+            if (chart) {
+                chart.destroy();
+            }
+            
+            const labels = stockData.map(s => s.ticker);
+            const returns = stockData.map(s => s.expected_return);
+            const colors = returns.map(r => r > 0 ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)');
+            
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Rendement Attendu (%)',
+                        data: returns,
+                        backgroundColor: colors,
+                        borderColor: colors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.8)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.8)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
