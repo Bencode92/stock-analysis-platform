@@ -1709,30 +1709,51 @@ function drawBuyRent () {
     <section class="br-card">
       <span class="br-badge ${badgeClass}">${badgeTxt}</span>
       <h3 class="br-title">Résidence principale – comparaison Loyer / Proprio</h3>
+<table class="br-table">
+  <thead>
+    <tr>
+      <th></th><th>Locataire</th><th>Propriétaire</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- Loyer et part conjoint -->
+    <tr>
+      <td>Loyer payé</td>
+      <td class="neg">‑${formatNumber(br.loyerMarché)}</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Part conjoint</td>
+      <td class="pos">${br.partner ? '+' + formatNumber(br.partner) : '—'}</td>
+      <td class="pos">${br.partner ? '+' + formatNumber(br.partner) : '—'}</td>
+    </tr>
 
-      <table class="br-table">
-        <thead>
-          <tr><th></th><th>Locataire</th><th>Propriétaire</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>Loyer payé</td>        <td class="neg">‑${formatNumber(br.loyerMarché)}</td> <td>—</td></tr>
-          <tr><td>Part conjoint</td>     <td class="pos">${br.partner?'+'+formatNumber(br.partner):'—'}</td>  <td class="pos">${br.partner?'+'+formatNumber(br.partner):'—'}</td></tr>
+    <!-- ✅  Mensualité crédit (une seule fois) -->
+    <tr>
+      <td>Mensualité crédit</td>
+      <td>—</td>
+      <td class="neg">‑${formatNumber(br.mensualité)}</td>
+    </tr>
 
-          ${Object.entries(br.details).map(([lib,val]) => 
-            `<tr><td>${lib}</td><td>—</td><td class="neg">‑${formatNumber(Math.abs(val))}</td></tr>`
-          ).join('')}
+    <!-- Autres charges du propriétaire -->
+    ${Object.entries(br.details).map(
+      ([lib, val]) =>
+        `<tr><td>${lib}</td><td>—</td><td class="neg">‑${formatNumber(Math.abs(val))}</td></tr>`
+    ).join('')}
 
-          <tr class="total">
-            <td>Total sorties mensuelles</td>
-            <td class="neg">${fmt(costLoc)}</td><td class="neg">${fmt(costProp)}</td>
-          </tr>
-          <tr class="gap">
-            <td>Différence</td>
-            <td></td>
-            <td class="gap-cell ${gapClass}">${fmt(gap)}</td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- Totaux -->
+    <tr class="total">
+      <td>Total sorties mensuelles</td>
+      <td class="neg">${fmt(costLoc)}</td>
+      <td class="neg">${fmt(costProp)}</td>
+    </tr>
+    <tr class="gap">
+      <td>Différence</td>
+      <td></td>
+      <td class="gap-cell ${gapClass}">${fmt(gap)}</td>
+    </tr>
+  </tbody>
+</table>
 
       <div class="br-slider">
         <label>Loyer du marché :
@@ -1778,7 +1799,6 @@ function drawBuyRent () {
         // Nouvelles fonctions pour le widget Buy vs Rent
 function buildChargesBreakdown(p) {
   return {
-    'Mensualité crédit'      : -p.mensualite,   // ← signe négatif ici
     'Taxe foncière'          : -(p.taxeFonciere / 12),
     'Charges copro non récup': -p.chargesCoproNonRecup,
     'Entretien annuel'       : -(p.entretienAnnuel / 12),
