@@ -66,6 +66,103 @@ COMPANY_KEYWORDS = [
 MACRO_PATTERNS = [re.compile(rf"\b{kw}\b", re.I) for kw in MACRO_KEYWORDS]
 COMPANY_PATTERNS = [re.compile(kw, re.I) for kw in COMPANY_KEYWORDS]
 
+# ──────────────────────────────────────────
+# Product-specific keywords for filtering
+# ──────────────────────────────────────────
+PRODUCT_KEYWORDS = {
+    "CHEMICALS_MISC": [
+        "chemical", "chemicals", "bulk chemical", "petrochemical",
+        "fertilizer", "ethylene", "ammonia", "sulphuric acid",
+        "caustic soda", "chlorine"
+    ],
+    "CHEMICALS_ORGANIC": [
+        "organic chemical", "benzene", "toluene", "xylene",
+        "propylene", "methanol", "acetone", "ethyl acetate", "phenol"
+    ],
+    "CORN": [
+        "corn", "maize", "grain corn", "feed corn",
+        "cornmeal", "ethanol"
+    ],
+    "DIAMONDS": [
+        "diamond", "diamonds", "rough diamond",
+        "polished diamond", "gemstone"
+    ],
+    "EDIBLE_FRUITS": [
+        "fruit", "fruits", "fresh fruit", "banana",
+        "apple", "orange", "mango", "citrus",
+        "berries", "grape"
+    ],
+    "IT_SERVICES": [
+        "it service", "it services", "software outsourcing",
+        "cloud service", "saas", "managed service",
+        "tech support", "bpo"
+    ],
+    "LEAD_ORE": [
+        "lead ore", "galena", "lead concentrate", "lead mine"
+    ],
+    "MEAT": [
+        "meat", "beef", "pork", "poultry",
+        "chicken", "lamb", "livestock", "cattle", "carcass"
+    ],
+    "NATGAS": [
+        "natural gas", "natgas", "lng", "liquefied natural gas",
+        "pipeline gas", "methane", "gas price"
+    ],
+    "OPTICAL_INSTRUMENTS": [
+        "optical instrument", "optical instruments", "lens",
+        "camera lens", "microscope", "spectrometer",
+        "telescope", "binoculars", "fiber optic"
+    ],
+    "PETROLEUM_CRUDE": [
+        "crude oil", "brent", "wti", "sweet crude",
+        "sour crude", "oil barrel", "upstream"
+    ],
+    "PETROLEUM_REFINED": [
+        "refined petroleum", "diesel", "gasoline",
+        "jet fuel", "fuel oil", "naphtha", "kerosene", "distillate"
+    ],
+    "PHARMACEUTICALS": [
+        "pharmaceutical", "pharmaceuticals", "drug", "medicine",
+        "medication", "vaccine", "pharma", "biotech",
+        "generic drug", "api"
+    ],
+    "PLASTICS": [
+        "plastic", "plastics", "polymer", "polyethylene",
+        "polypropylene", "pvc", "polystyrene",
+        "resin", "plastic pellet"
+    ],
+    "PLATINUM": [
+        "platinum", "pt", "platinum group metal",
+        "pgm", "platinum bullion", "autocatalyst"
+    ],
+    "RARE_GASES": [
+        "rare gas", "rare gases", "noble gas",
+        "neon", "argon", "krypton", "xenon", "helium"
+    ],
+    "SOYBEAN": [
+        "soy", "soybean", "soybeans", "soya",
+        "bean meal", "soymeal", "soy oil"
+    ],
+    "TRAVEL": [
+        "travel service", "travel services", "tourism",
+        "tourist", "tour operator", "vacation",
+        "holiday", "air travel", "hotel booking", "hospitality"
+    ],
+    "WHEAT": [
+        "wheat", "durum", "soft wheat", "hard red wheat",
+        "winter wheat", "spring wheat", "wheat flour"
+    ],
+    "ZINC_ORE": [
+        "zinc ore", "sphalerite", "zinc concentrate", "zinc mine"
+    ]
+}
+
+# Compile product patterns for performance
+PRODUCT_PATTERNS = {
+    code: [re.compile(rf"\b{re.escape(kw)}\b", re.I) for kw in kws]
+    for code, kws in PRODUCT_KEYWORDS.items()
+}
+
 class CommodityCorrelator:
     def __init__(self):
         self.exposure_data = self._load_exposure_data()
@@ -317,6 +414,15 @@ class CommodityCorrelator:
         """Check if article contains macro-economic keywords"""
         return any(p.search(text) for p in MACRO_PATTERNS)
     
+    # ---------- Product filtering ----------
+    @staticmethod
+    def _mentions_product(text: str, commodity_code: str) -> bool:
+        """Check if article explicitly mentions the product"""
+        if commodity_code not in PRODUCT_PATTERNS:
+            # If no keyword list, don't filter
+            return True
+        return any(p.search(text) for p in PRODUCT_PATTERNS[commodity_code])
+    
     def detect_countries_from_text(self, text: str) -> List[str]:
         """Detect countries mentioned in text"""
         detected = set()
@@ -405,17 +511,21 @@ class CommodityCorrelator:
                     
                     # Analyze each export product
                     for export in country_exports:
+                        commodity_code = export["product_code"]
+                        
+                        # Product filtering: reduce score if product not mentioned
+                        explicit = self._mentions_product(text, commodity_code)
+                        product_penalty = 1.0 if explicit else 0.33
+                        
                         # Use existing ML analysis
                         sentiment = article.get("impact", "neutral")
                         
                         # Calculate impact
                         signal = self._calculate_commodity_signal(
-                            article, export, sentiment
+                            article, export, sentiment, product_penalty
                         )
                         
                         if signal["score"] > self.SIGNAL_MIN:
-                            commodity_code = export["product_code"]
-                            
                             # Update commodity signal
                             commodity_signals[commodity_code]["score"] += signal["score"]
                             commodity_signals[commodity_code]["trend"] = signal["trend"]
@@ -441,10 +551,10 @@ class CommodityCorrelator:
         
         return self._finalize_signals(commodity_signals)
     
-    def _calculate_commodity_signal(self, article, export, sentiment):
+    def _calculate_commodity_signal(self, article, export, sentiment, product_penalty=1.0):
         """Calculate signal strength for a commodity"""
-        # Base score from article quality
-        base_score = article.get("quality_score", 50) / 100.0
+        # Base score from article quality with product penalty
+        base_score = (article.get("quality_score", 50) / 100.0) * product_penalty
         
         # Impact weight from export data
         impact_weight = export["impact_weight"]
@@ -537,6 +647,7 @@ class CommodityCorrelator:
         """Main execution"""
         logger.info("🏗️ Starting commodity correlation analysis...")
         logger.info("📋 Filtering: Only macro-economic news will be processed")
+        logger.info("🔍 Product filtering: Articles must mention specific commodity keywords")
         
         # Load latest news
         try:
@@ -558,6 +669,7 @@ class CommodityCorrelator:
             logger.info(f"✅ Commodity analysis complete: {len(commodity_signals['commodities'])} commodities tracked")
             logger.info(f"🚨 Alerts: {commodity_signals['summary']['critical_alerts']} critical, {commodity_signals['summary']['important_alerts']} important")
             logger.info(f"📊 Macro filtering active - company news excluded")
+            logger.info(f"🎯 Product keyword filtering active - reducing false positives")
         except Exception as e:
             logger.error(f"Failed to save commodity data: {e}")
             return None
