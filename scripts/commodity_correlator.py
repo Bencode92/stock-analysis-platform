@@ -70,10 +70,18 @@ COMPANY_KEYWORDS = [
     r"\bIPO\b", r"\bmerger\b", r"\bacquisition\b"
 ]
 
+# Market-only pattern to detect pure stock market articles
+MARKET_ONLY_KEYWORDS = [
+    "stocks", "shares", "equities", "index", "indices", 
+    "stoxx", "dax", "cac", "ftse", "s&p", "nasdaq", "dow",
+    "equity market", "stock exchange", "bourse"
+]
+
 # Pre-compile patterns for performance
 MACRO_PATTERNS = [re.compile(rf"\b{kw}\b", re.I) for kw in MACRO_KEYWORDS]
 COMPANY_PATTERNS = [re.compile(kw, re.I) for kw in COMPANY_KEYWORDS]
 CRISIS_PATTERN = re.compile(r"\b(" + "|".join(CRISIS_KEYWORDS) + r")\b", re.I)
+MARKET_ONLY_PATTERN = re.compile(r"\b(" + "|".join(MARKET_ONLY_KEYWORDS) + r")\b", re.I)
 
 # ──────────────────────────────────────────
 # Product-specific keywords for filtering
@@ -438,6 +446,12 @@ class CommodityCorrelator:
         """Check if article contains crisis keywords"""
         return bool(CRISIS_PATTERN.search(text))
     
+    # ---------- Market-only detection ----------
+    @staticmethod
+    def _is_market_only_article(text: str) -> bool:
+        """Check if article is purely about stock markets"""
+        return bool(MARKET_ONLY_PATTERN.search(text))
+    
     def detect_countries_from_text(self, text: str) -> List[str]:
         """Detect countries mentioned in text"""
         detected = set()
@@ -494,6 +508,11 @@ class CommodityCorrelator:
                     logger.debug(f"Skipping non-macro article: {article.get('title', '')}")
                     continue
                 
+                # MARKET FILTER: Skip pure stock market articles unless they have crisis signals
+                if self._is_market_only_article(text) and not self._has_crisis_signal(text):
+                    logger.debug(f"Skipping market-only article without crisis: {article.get('title', '')}")
+                    continue
+                
                 # Check importance level if available
                 if article.get("importance_level") == "general":
                     continue
@@ -538,6 +557,12 @@ class CommodityCorrelator:
                         
                         # Product filtering: reduce score if product not mentioned
                         explicit = self._mentions_product(text, commodity_code)
+                        
+                        # PRODUCT FILTER: Skip if product not mentioned and no crisis signal
+                        if not explicit and not self._has_crisis_signal(text):
+                            logger.debug(f"Skipping {commodity_code}: no product mention and no crisis signal")
+                            continue
+                        
                         product_penalty = 1.0 if explicit else 0.2  # Reduced from 0.33 to 0.2
                         
                         # Use existing ML analysis
@@ -678,6 +703,7 @@ class CommodityCorrelator:
         logger.info("🔍 Product filtering: Articles must mention specific commodity keywords")
         logger.info("🎯 Major exporters focus: Only pivot/major countries will impact scores")
         logger.info("⚡ Crisis detection: Bonus for tariff/embargo/drought signals")
+        logger.info("📊 Market filter: Pure stock market news ignored unless crisis-related")
         
         # Load latest news
         try:
