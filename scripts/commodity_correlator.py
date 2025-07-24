@@ -486,7 +486,7 @@ class CommodityCorrelator:
             "last_update": datetime.now().isoformat()
         })
         
-        # Track processed articles globally
+        # Track processed articles globally with (url, country) tuple
         global_seen = set()
         
         # Process each country's news
@@ -499,12 +499,12 @@ class CommodityCorrelator:
             
             # Process each article
             for article in articles:
-                # 1️⃣ DEDUPLICATION
+                # 1️⃣ DEDUPLICATION - allow same URL for different countries
                 uid = article.get("url") or article.get("title", "")
-                if not uid or uid in global_seen or uid in country_seen:
-                    logger.debug(f"Skipping duplicate: {uid[:50]}...")
+                if not uid or (uid, country_code) in global_seen or uid in country_seen:
+                    logger.debug(f"Skipping duplicate: {uid[:50]}... for {country_code}")
                     continue
-                global_seen.add(uid)
+                global_seen.add((uid, country_code))  # Track (url, country) pair
                 country_seen.add(uid)
                 
                 # Quality filter
@@ -605,8 +605,16 @@ class CommodityCorrelator:
                         )
                         
                         if signal["score"] > self.SIGNAL_MIN:
-                            # 5️⃣ LIMITE 3 NEWS PAR PRODUIT
+                            # Check for duplicate URL in news list
                             news_list = commodity_signals[commodity_code]["related_news"]
+                            article_url = article.get("url", "")
+                            
+                            # Skip if URL already in news list
+                            if any(n["url"] == article_url for n in news_list):
+                                logger.debug(f"Skipping duplicate URL for {commodity_code}: {article_url[:50]}...")
+                                continue
+                            
+                            # 5️⃣ LIMITE 3 NEWS PAR PRODUIT
                             if len(news_list) >= 3:
                                 logger.debug(f"Skipping news for {commodity_code}: already 3 news")
                                 continue
@@ -629,7 +637,7 @@ class CommodityCorrelator:
                             news_ref = {
                                 "title": article.get("title", ""),
                                 "date": article.get("date", ""),
-                                "url": article.get("url", ""),
+                                "url": article_url,
                                 "impact": sentiment,
                                 "score": signal["score"],
                                 "has_crisis_signal": self._has_crisis_signal(text),
@@ -795,7 +803,8 @@ class CommodityCorrelator:
         logger.info("🌊 Spillover boost: x1.4 for agri, x1.2 for others on pivot/major exports")
         logger.info("⏰ Proximity boost: Up to 70% for tariffs within 2 weeks of deadline")
         logger.info("📊 Market filter: Pure stock market news ignored unless crisis-related")
-        logger.info("🔁 Deduplication: Avoiding duplicate news entries")
+        logger.info("🔁 Deduplication: Per-country to allow multi-country analysis")
+        logger.info("🔗 URL deduplication: No duplicate URLs within same commodity")
         logger.info("📉 Stricter penalties: 0.4 for agri, 0.6 for others without explicit mention")
         logger.info("🏠 Domestic filter: Trade policy news without foreign partners excluded")
         logger.info("🌍 Region detection: Asian/European/etc. mapped to specific countries")
@@ -828,6 +837,7 @@ class CommodityCorrelator:
             logger.info(f"🛃 Trade policy spillover active - 40% penalty for agri, 60% for others")
             logger.info(f"🏠 Domestic-only trade news filtered out")
             logger.info(f"🌍 Region detection active for Asian/European/etc. references")
+            logger.info(f"🔗 No duplicate URLs in commodity news lists")
             logger.info(f"📐 Score aggregation: Average × √N for balanced quality")
             
             # Debug: Show top commodities
