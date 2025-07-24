@@ -166,9 +166,9 @@ class CommodityCorrelator:
         self.exposure_data = self._load_exposure_data()
         self.country_map = self._build_country_map()
         
-        # Configuration thresholds (adjusted for better sensitivity)
-        self.QUALITY_MIN = 40    # Back to 40 now that filtering is better
-        self.SIGNAL_MIN = 0.75   # Lowered from 1.0 to match alert_watch threshold
+        # Configuration thresholds (adjusted for better filtering)
+        self.QUALITY_MIN = 50    # Increased from 40 to filter lower quality
+        self.SIGNAL_MIN = 1.1    # Increased from 0.75 to reduce noise
         
     def _load_exposure_data(self):
         """Load export exposure data"""
@@ -525,9 +525,9 @@ class CommodityCorrelator:
                     logger.debug(f"Skipping non-macro article: {article.get('title', '')})")
                     continue
                 
-                # MARKET FILTER: Skip pure stock market articles unless they have crisis signals
-                if self._is_market_only_article(text) and not self._has_crisis_signal(text):
-                    logger.debug(f"Skipping market-only article without crisis: {article.get('title', '')})")
+                # MARKET FILTER: Skip pure stock market articles (removed crisis exception)
+                if self._is_market_only_article(text):
+                    logger.debug(f"Skipping market-only article: {article.get('title', '')})")
                     continue
                 
                 # Check importance level if available
@@ -536,6 +536,12 @@ class CommodityCorrelator:
                 
                 # Check if this is a trade policy crisis
                 is_trade_policy = self._has_trade_policy_signal(text)
+                
+                # ---- Pré-calcul des produits cités ----
+                mentioned_codes = set()
+                for code in PRODUCT_PATTERNS:
+                    if self._mentions_product(text, code):
+                        mentioned_codes.add(code)
                 
                 # Detect countries in article
                 detected_countries = self.detect_countries_from_text(text)
@@ -585,10 +591,25 @@ class CommodityCorrelator:
                         # Get export share weight
                         share = export.get("export_share", 1.0)
                         
-                        # 3️⃣ HARD STOP: pas de produit sans raison
-                        explicit = self._mentions_product(text, commodity_code)
-                        if not explicit and not self._has_crisis_signal(text):
-                            logger.debug(f"Skipping {commodity_code}: no product mention and no crisis signal")
+                        # 3️⃣ HARD STOP amélioré
+                        explicit = commodity_code in mentioned_codes
+                        
+                        # Laisser passer sans mention produit uniquement si :
+                        #   - crise forte ET
+                        #   - exporteur pivot ET part d'exportation > 5%
+                        allow_without_mention = (
+                            self._has_crisis_signal(text)
+                            and export["impact"] == "pivot"
+                            and share >= 0.05
+                        )
+                        
+                        if not explicit and not allow_without_mention:
+                            logger.debug(f"Skipping {commodity_code}: no product mention and insufficient crisis criteria")
+                            continue
+                        
+                        # Filter par mentioned_codes si des produits ont été détectés
+                        if mentioned_codes and commodity_code not in mentioned_codes:
+                            logger.debug(f"Skipping {commodity_code}: not in mentioned products")
                             continue
                         
                         # 4️⃣ PÉNALITÉ DURCIE
@@ -803,7 +824,7 @@ class CommodityCorrelator:
         logger.info("🛃 Trade policy detection: x1.3 multiplier for tariff/sanction/embargo")
         logger.info("🌊 Spillover boost: x1.4 for agri, x1.2 for others on pivot/major exports")
         logger.info("⏰ Proximity boost: Up to 70% for tariffs within 2 weeks of deadline")
-        logger.info("📊 Market filter: Pure stock market news ignored unless crisis-related")
+        logger.info("📊 Market filter: Pure stock market news strictly filtered out")
         logger.info("🔁 Deduplication: Per-country to allow multi-country analysis")
         logger.info("🔗 URL deduplication: No duplicate URLs within same commodity")
         logger.info("📉 Stricter penalties: 0.4 for agri, 0.6 for others without explicit mention")
@@ -813,6 +834,8 @@ class CommodityCorrelator:
         logger.info("📐 Score = Average × √N for quality over quantity")
         logger.info("📈 Showing top 30 commodities (extended from 20)")
         logger.info(f"🎚️ Thresholds: Quality={self.QUALITY_MIN}, Signal={self.SIGNAL_MIN}")
+        logger.info("🔒 Enhanced hard stop: pivot + share > 5% required for crisis without mention")
+        logger.info("🎯 Product basket restriction: only mentioned products are processed")
         
         # Load latest news
         try:
@@ -842,6 +865,7 @@ class CommodityCorrelator:
             logger.info(f"🔗 No duplicate URLs in commodity news lists")
             logger.info(f"📐 Score aggregation: Average × √N for balanced quality")
             logger.info(f"📈 Extended to top 30 to include more commodities like coffee")
+            logger.info(f"🔒 Enhanced filters: market-only strictly blocked, product basket restriction")
             
             # Debug: Show top commodities
             logger.info("📈 Top 10 commodities by score:")
