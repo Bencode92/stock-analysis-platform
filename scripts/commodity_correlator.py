@@ -90,7 +90,7 @@ MACRO_KEYWORDS = [
     "mining", "ore production", "metal prices", "commodity prices"
 ]
 
-# Crisis-specific keywords for bonus scoring
+# Crisis-specific keywords for bonus scoring (includes tariff/embargo for market filter bypass)
 CRISIS_KEYWORDS = [
     "tariff", "embargo", "strike", "drought", "shutdown", 
     "crisis", "ban", "sanction", "shortage", "collapse",
@@ -109,7 +109,7 @@ AGRI_COMMODITIES = {
     "MEAT", "PALM_OIL", "EDIBLE_FRUITS", "FISH", "BEVERAGES", "COCOA"
 }
 
-# Service commodities to exclude from spillover
+# Service commodities to exclude from spillover (removed PHARMACEUTICALS)
 SERVICE_COMMODITIES = {
     "IT_SERVICES", "FINANCIAL_SERVICES", "TRAVEL"
 }
@@ -154,9 +154,9 @@ class CommodityCorrelator:
         self.exposure_data = self._load_exposure_data()
         self.country_map = self._build_country_map()
         
-        # Configuration thresholds (adjusted for major exporters focus)
-        self.QUALITY_MIN = 40    # Minimum quality score
-        self.SIGNAL_MIN = 1.0    # Increased from 0.5 to filter more noise
+        # Configuration thresholds (adjusted for better sensitivity)
+        self.QUALITY_MIN = 35    # Lowered from 40 to include Reuters 38-39
+        self.SIGNAL_MIN = 0.75   # Lowered from 1.0 to match alert_watch threshold
         
     def _load_exposure_data(self):
         """Load export exposure data"""
@@ -177,6 +177,7 @@ class CommodityCorrelator:
             "FR": ["france", "french", "paris", "macron"],
             "DE": ["germany", "german", "berlin", "frankfurt"],
             "GB": ["uk", "united kingdom", "britain", "british", "london"],
+            "EU": ["eu", "european union", "europe", "brussels"],  # Added EU generic
             "JP": ["japan", "japanese", "tokyo", "yen"],
             "CA": ["canada", "canadian", "ottawa", "toronto"],
             "BR": ["brazil", "brazilian", "brasilia", "são paulo"],
@@ -202,7 +203,7 @@ class CommodityCorrelator:
             "PH": ["philippines", "philippine", "manila"],
             "PK": ["pakistan", "pakistani", "islamabad", "karachi"],
             "BD": ["bangladesh", "bangladeshi", "dhaka"],
-            "TR": ["turkey", "turkish", "ankara", "istanbul"],
+            "TR": ["turkey", "turkish", "ankara", "istanbul", "erdogan"],  # Enhanced Turkey detection
             "IR": ["iran", "iranian", "tehran"],
             "IQ": ["iraq", "iraqi", "baghdad"],
             "IL": ["israel", "israeli", "tel aviv", "jerusalem"],
@@ -541,14 +542,14 @@ class CommodityCorrelator:
                         # Product filtering: reduce score if product not mentioned
                         explicit = self._mentions_product(text, commodity_code)
                         
-                        # Enhanced product penalty logic for trade policy crises
+                        # Enhanced product penalty logic for trade policy crises (more permissive)
                         if not explicit:
                             if self._has_crisis_signal(text):
                                 # Higher penalty for agricultural products during crisis
                                 if commodity_code in AGRI_COMMODITIES:
-                                    product_penalty = 0.5  # 50% for agri products
+                                    product_penalty = 0.4  # More permissive: was 0.5
                                 else:
-                                    product_penalty = 0.4  # 40% for other products
+                                    product_penalty = 0.6  # More permissive: was 0.4
                             else:
                                 # Skip if no product mention and no crisis signal
                                 logger.debug(f"Skipping {commodity_code}: no product mention and no crisis signal")
@@ -638,7 +639,28 @@ class CommodityCorrelator:
                 spillover_boost = 1.2  # Standard spillover for other commodities
             logger.debug(f"Applied spillover boost {spillover_boost} to {commodity_code}")
         
-        score = base_score * impact_weight * multiplier * crisis_bonus * spillover_boost
+        # Proximity boost for tariff deadlines
+        proximity_boost = 1.0
+        if is_trade_policy:
+            try:
+                # Parse article date (handle multiple formats)
+                date_str = article.get("date", "")
+                if "/" in date_str:  # Format: DD/MM/YYYY
+                    article_date = datetime.strptime(date_str, "%d/%m/%Y")
+                else:  # Format: YYYY-MM-DD
+                    article_date = datetime.strptime(date_str[:10], "%Y-%m-%d")
+                
+                # Calculate days until August 1st, 2025 deadline
+                deadline = datetime(2025, 8, 1)
+                days_until = (deadline - article_date).days
+                
+                if 0 < days_until <= 14:  # Within 2 weeks of deadline
+                    proximity_boost = 1 + (14 - days_until) * 0.05  # Up to 70% boost
+                    logger.debug(f"Applied proximity boost {proximity_boost:.2f} ({days_until} days until deadline)")
+            except Exception as e:
+                logger.debug(f"Could not parse date for proximity boost: {e}")
+        
+        score = base_score * impact_weight * multiplier * crisis_bonus * spillover_boost * proximity_boost
         
         return {
             "score": score,
@@ -712,7 +734,9 @@ class CommodityCorrelator:
         logger.info("⚡ Crisis detection: Bonus for tariff/embargo/drought signals")
         logger.info("🛃 Trade policy detection: x1.3 multiplier for tariff/sanction/embargo")
         logger.info("🌊 Spillover boost: x1.4 for agri, x1.2 for others on pivot/major exports")
+        logger.info("⏰ Proximity boost: Up to 70% for tariffs within 2 weeks of deadline")
         logger.info("📊 Market filter: Pure stock market news ignored unless crisis-related")
+        logger.info(f"🎚️ Thresholds: Quality={self.QUALITY_MIN}, Signal={self.SIGNAL_MIN}")
         
         # Load latest news
         try:
@@ -736,7 +760,12 @@ class CommodityCorrelator:
             logger.info(f"📊 Macro filtering active - company news excluded")
             logger.info(f"🎯 Product keyword filtering active - reducing false positives")
             logger.info(f"💪 Major exporter focus - only pivot/major countries trigger alerts")
-            logger.info(f"🛃 Trade policy spillover active - 50% penalty for agri, 40% for others")
+            logger.info(f"🛃 Trade policy spillover active - 40% penalty for agri, 60% for others")
+            
+            # Debug: Show top commodities
+            logger.info("📈 Top 5 commodities by score:")
+            for i, commodity in enumerate(commodity_signals["commodities"][:5]):
+                logger.info(f"  {i+1}. {commodity['code']}: {commodity['score']:.2f} ({commodity['alert_level']})")
         except Exception as e:
             logger.error(f"Failed to save commodity data: {e}")
             return None
