@@ -3,6 +3,7 @@
 Commodity Correlator for TradePulse
 Analyzes macro-economic news impact on commodities based on country export exposure
 Enhanced to focus on major exporters and crisis signals
+v2.0 - Added generic trade/energy event detection
 """
 
 import json
@@ -13,6 +14,7 @@ from collections import defaultdict
 from typing import List, Dict, Tuple
 import os
 import sys
+import math
 
 # Ajouter le chemin des scripts pour les imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -82,6 +84,18 @@ MACRO_PATTERNS = [re.compile(rf"\b{kw}\b", re.I) for kw in MACRO_KEYWORDS]
 COMPANY_PATTERNS = [re.compile(kw, re.I) for kw in COMPANY_KEYWORDS]
 CRISIS_PATTERN = re.compile(r"\b(" + "|".join(CRISIS_KEYWORDS) + r")\b", re.I)
 MARKET_ONLY_PATTERN = re.compile(r"\b(" + "|".join(MARKET_ONLY_KEYWORDS) + r")\b", re.I)
+
+# ──────────────────────────────────────────
+# NEW: Generic trade & energy patterns
+# ──────────────────────────────────────────
+GENERIC_TRADE_PATTERN = re.compile(
+    r"\b(trade deal|tariff|sanction|embargo|export ban|import restriction|trade agreement|trade pact|wto)\b",
+    re.I
+)
+GENERIC_ENERGY_PATTERN = re.compile(
+    r"\b(oil prices?|gas prices?|inventor(y|ies) draw|stockpiles?|opec|energy crisis|barrel|crude inventory)\b",
+    re.I
+)
 
 # ──────────────────────────────────────────
 # Product-specific keywords for filtering
@@ -180,6 +194,9 @@ PRODUCT_PATTERNS = {
     for code, kws in PRODUCT_KEYWORDS.items()
 }
 
+# Energy-related commodity codes for bonus
+ENERGY_COMMODITIES = {"PETROLEUM_CRUDE", "PETROLEUM_REFINED", "NATGAS"}
+
 class CommodityCorrelator:
     def __init__(self):
         self.exposure_data = self._load_exposure_data()
@@ -188,6 +205,7 @@ class CommodityCorrelator:
         # Configuration thresholds (adjusted for major exporters focus)
         self.QUALITY_MIN = 40    # Minimum quality score
         self.SIGNAL_MIN = 1.0    # Increased from 0.5 to filter more noise
+        self.MACRO_THRESHOLD = 2  # Minimum macro keyword hits
         
     def _load_exposure_data(self):
         """Load export exposure data"""
@@ -199,16 +217,16 @@ class CommodityCorrelator:
             return {}
     
     def _build_country_map(self):
-        """Build country detection map from news data"""
+        """Build country detection map with compiled regex patterns"""
         # Map des variantes de noms de pays pour la détection
         country_patterns = {
-            "US": ["united states", "usa", "us ", "america", "washington", "white house"],
+            "US": ["united states", "usa", r"\bus\b", "america", "washington", "white house"],
             "CN": ["china", "chinese", "beijing", "shanghai", "hong kong"],
             "AU": ["australia", "australian", "sydney", "melbourne", "canberra"],
             "FR": ["france", "french", "paris", "macron"],
             "DE": ["germany", "german", "berlin", "frankfurt"],
-            "GB": ["uk", "united kingdom", "britain", "british", "london"],
-            "JP": ["japan", "japanese", "tokyo", "yen"],
+            "GB": [r"\buk\b", "united kingdom", "britain", "british", "london"],
+            "JP": ["japan", "japanese", "tokyo", r"\byen\b"],
             "CA": ["canada", "canadian", "ottawa", "toronto"],
             "BR": ["brazil", "brazilian", "brasilia", "são paulo"],
             "IN": ["india", "indian", "delhi", "mumbai"],
@@ -256,169 +274,23 @@ class CommodityCorrelator:
             "NZ": ["new zealand", "kiwi", "auckland", "wellington"],
             "QA": ["qatar", "qatari", "doha"],
             "KW": ["kuwait", "kuwaiti"],
-            "MA": ["morocco", "moroccan", "rabat", "casablanca"],
-            "KE": ["kenya", "kenyan", "nairobi"],
-            "GH": ["ghana", "ghanaian", "accra"],
-            "ET": ["ethiopia", "ethiopian", "addis ababa"],
-            "TZ": ["tanzania", "tanzanian", "dar es salaam"],
-            "UG": ["uganda", "ugandan", "kampala"],
-            "ZM": ["zambia", "zambian", "lusaka"],
-            "ZW": ["zimbabwe", "zimbabwean", "harare"],
-            "VE": ["venezuela", "venezuelan", "caracas"],
-            "CO": ["colombia", "colombian", "bogota"],
-            "EC": ["ecuador", "ecuadorian", "quito"],
-            "BO": ["bolivia", "bolivian", "la paz"],
-            "PY": ["paraguay", "paraguayan", "asuncion"],
-            "UY": ["uruguay", "uruguayan", "montevideo"],
-            "KZ": ["kazakhstan", "kazakh", "astana", "almaty"],
-            "UZ": ["uzbekistan", "uzbek", "tashkent"],
-            "AZ": ["azerbaijan", "azerbaijani", "baku"],
-            "GE": ["georgia", "georgian", "tbilisi"],
-            "AM": ["armenia", "armenian", "yerevan"],
-            "BY": ["belarus", "belarusian", "minsk"],
-            "LT": ["lithuania", "lithuanian", "vilnius"],
-            "LV": ["latvia", "latvian", "riga"],
-            "EE": ["estonia", "estonian", "tallinn"],
-            "RS": ["serbia", "serbian", "belgrade"],
-            "HR": ["croatia", "croatian", "zagreb"],
-            "SI": ["slovenia", "slovenian", "ljubljana"],
-            "SK": ["slovakia", "slovak", "bratislava"],
-            "MK": ["macedonia", "macedonian", "skopje"],
-            "AL": ["albania", "albanian", "tirana"],
-            "LU": ["luxembourg", "luxembourgish"],
-            "IS": ["iceland", "icelandic", "reykjavik"],
-            "MT": ["malta", "maltese", "valletta"],
-            "CY": ["cyprus", "cypriot", "nicosia"],
-            "BH": ["bahrain", "bahraini", "manama"],
-            "OM": ["oman", "omani", "muscat"],
-            "JO": ["jordan", "jordanian", "amman"],
-            "LB": ["lebanon", "lebanese", "beirut"],
-            "SY": ["syria", "syrian", "damascus"],
-            "YE": ["yemen", "yemeni", "sana'a", "sanaa"],
-            "LY": ["libya", "libyan", "tripoli"],
-            "TN": ["tunisia", "tunisian", "tunis"],
-            "DZ": ["algeria", "algerian", "algiers"],
-            "SD": ["sudan", "sudanese", "khartoum"],
-            "CI": ["ivory coast", "cote d'ivoire", "abidjan"],
-            "CM": ["cameroon", "cameroonian", "yaounde"],
-            "AO": ["angola", "angolan", "luanda"],
-            "MZ": ["mozambique", "mozambican", "maputo"],
-            "NA": ["namibia", "namibian", "windhoek"],
-            "BW": ["botswana", "gaborone"],
-            "MU": ["mauritius", "mauritian", "port louis"],
-            "MG": ["madagascar", "malagasy", "antananarivo"],
-            "SN": ["senegal", "senegalese", "dakar"],
-            "ML": ["mali", "malian", "bamako"],
-            "BF": ["burkina faso", "ouagadougou"],
-            "NE": ["niger", "nigerien", "niamey"],
-            "TD": ["chad", "chadian", "n'djamena"],
-            "MR": ["mauritania", "mauritanian", "nouakchott"],
-            "GM": ["gambia", "gambian", "banjul"],
-            "GW": ["guinea-bissau", "bissau"],
-            "SL": ["sierra leone", "freetown"],
-            "LR": ["liberia", "liberian", "monrovia"],
-            "TG": ["togo", "togolese", "lome"],
-            "BJ": ["benin", "beninese", "porto-novo"],
-            "GA": ["gabon", "gabonese", "libreville"],
-            "CG": ["congo", "republic of congo", "brazzaville"],
-            "CD": ["congo", "drc", "kinshasa", "democratic republic"],
-            "GQ": ["equatorial guinea", "malabo"],
-            "CF": ["central african republic", "bangui"],
-            "RW": ["rwanda", "rwandan", "kigali"],
-            "BI": ["burundi", "burundian", "bujumbura"],
-            "DJ": ["djibouti", "djiboutian"],
-            "ER": ["eritrea", "eritrean", "asmara"],
-            "SO": ["somalia", "somali", "mogadishu"],
-            "MW": ["malawi", "malawian", "lilongwe"],
-            "SZ": ["swaziland", "eswatini", "mbabane"],
-            "LS": ["lesotho", "maseru"],
-            "FJ": ["fiji", "fijian", "suva"],
-            "PG": ["papua new guinea", "port moresby"],
-            "SB": ["solomon islands", "honiara"],
-            "VU": ["vanuatu", "port vila"],
-            "NC": ["new caledonia", "noumea"],
-            "PF": ["french polynesia", "tahiti", "papeete"],
-            "LK": ["sri lanka", "sri lankan", "colombo"],
-            "MM": ["myanmar", "burma", "burmese", "yangon"],
-            "KH": ["cambodia", "cambodian", "phnom penh"],
-            "LA": ["laos", "laotian", "vientiane"],
-            "MN": ["mongolia", "mongolian", "ulaanbaatar"],
-            "BN": ["brunei", "bandar seri begawan"],
-            "TL": ["timor-leste", "east timor", "dili"],
-            "MV": ["maldives", "male"],
-            "BT": ["bhutan", "thimphu"],
-            "NP": ["nepal", "nepalese", "kathmandu"],
-            "AF": ["afghanistan", "afghan", "kabul"],
-            "TJ": ["tajikistan", "tajik", "dushanbe"],
-            "KG": ["kyrgyzstan", "kyrgyz", "bishkek"],
-            "TM": ["turkmenistan", "turkmen", "ashgabat"],
-            "PS": ["palestine", "palestinian", "ramallah", "gaza"],
-            "VA": ["vatican"],
-            "SM": ["san marino"],
-            "AD": ["andorra"],
-            "MC": ["monaco"],
-            "LI": ["liechtenstein"],
-            "GI": ["gibraltar"],
-            "FK": ["falkland islands", "stanley"],
-            "GF": ["french guiana", "cayenne"],
-            "GL": ["greenland", "nuuk"],
-            "BM": ["bermuda", "hamilton"],
-            "KY": ["cayman islands", "george town"],
-            "VG": ["british virgin islands"],
-            "TC": ["turks and caicos"],
-            "AI": ["anguilla"],
-            "MS": ["montserrat"],
-            "GP": ["guadeloupe"],
-            "MQ": ["martinique"],
-            "BB": ["barbados", "bridgetown"],
-            "AG": ["antigua", "barbuda", "st. john's"],
-            "DM": ["dominica", "roseau"],
-            "GD": ["grenada", "st. george's"],
-            "KN": ["st. kitts", "nevis", "basseterre"],
-            "LC": ["st. lucia", "castries"],
-            "VC": ["st. vincent", "grenadines", "kingstown"],
-            "BS": ["bahamas", "bahamian", "nassau"],
-            "BZ": ["belize", "belmopan"],
-            "GY": ["guyana", "georgetown"],
-            "SR": ["suriname", "paramaribo"],
-            "JM": ["jamaica", "jamaican", "kingston"],
-            "TT": ["trinidad", "tobago", "port of spain"],
-            "CU": ["cuba", "cuban", "havana"],
-            "DO": ["dominican republic", "santo domingo"],
-            "HT": ["haiti", "haitian", "port-au-prince"],
-            "PR": ["puerto rico", "san juan"],
-            "GT": ["guatemala", "guatemalan"],
-            "HN": ["honduras", "honduran", "tegucigalpa"],
-            "SV": ["el salvador", "salvadoran", "san salvador"],
-            "NI": ["nicaragua", "nicaraguan", "managua"],
-            "CR": ["costa rica", "costa rican", "san jose"],
-            "PA": ["panama", "panamanian"],
-            "AW": ["aruba"],
-            "CW": ["curacao"],
-            "SX": ["sint maarten"],
-            "BQ": ["bonaire"],
-            "HK": ["hong kong"],
-            "MO": ["macau", "macao"],
-            "TW": ["taiwan", "taipei"],
-            "KP": ["north korea", "pyongyang"],
-            "FM": ["micronesia", "palikir"],
-            "MH": ["marshall islands", "majuro"],
-            "PW": ["palau", "koror"],
-            "NR": ["nauru"],
-            "KI": ["kiribati", "tarawa"],
-            "TV": ["tuvalu", "funafuti"],
-            "TO": ["tonga", "nuku'alofa"],
-            "WS": ["samoa", "apia"],
-            "NU": ["niue"],
-            "CK": ["cook islands", "rarotonga"],
-            "TK": ["tokelau"],
-            "WF": ["wallis and futuna"],
-            "PY": ["paraguay", "paraguayan", "asuncion"],
-            "GN": ["guinea", "guinean", "conakry"]
+            "MA": ["morocco", "moroccan", "rabat", "casablanca"]
         }
         
-        # Convert to sets for O(1) lookup
-        return {cc: set(patterns) for cc, patterns in country_patterns.items()}
+        # Compile patterns to regex for better matching
+        compiled_patterns = {}
+        for cc, patterns in country_patterns.items():
+            compiled = []
+            for pattern in patterns:
+                # If pattern already has regex syntax, use it as is
+                if r"\b" in pattern:
+                    compiled.append(re.compile(pattern, re.I))
+                else:
+                    # Otherwise wrap with word boundaries
+                    compiled.append(re.compile(rf"\b{re.escape(pattern)}\b", re.I))
+            compiled_patterns[cc] = compiled
+        
+        return compiled_patterns
     
     # ---------- Macro/Micro filtering ----------
     @staticmethod
@@ -427,9 +299,9 @@ class CommodityCorrelator:
         return any(p.search(text) for p in COMPANY_PATTERNS)
     
     @staticmethod
-    def _is_macro_article(text: str) -> bool:
-        """Check if article contains macro-economic keywords"""
-        return any(p.search(text) for p in MACRO_PATTERNS)
+    def _count_macro_hits(text: str) -> int:
+        """Count how many macro keywords are in the text"""
+        return sum(bool(p.search(text)) for p in MACRO_PATTERNS)
     
     # ---------- Product filtering ----------
     @staticmethod
@@ -452,14 +324,25 @@ class CommodityCorrelator:
         """Check if article is purely about stock markets"""
         return bool(MARKET_ONLY_PATTERN.search(text))
     
+    # ---------- Generic trade/energy detection ----------
+    @staticmethod
+    def _has_generic_trade_signal(text: str) -> bool:
+        """Check if article mentions generic trade events"""
+        return bool(GENERIC_TRADE_PATTERN.search(text))
+    
+    @staticmethod
+    def _has_generic_energy_signal(text: str) -> bool:
+        """Check if article mentions generic energy events"""
+        return bool(GENERIC_ENERGY_PATTERN.search(text))
+    
     def detect_countries_from_text(self, text: str) -> List[str]:
-        """Detect countries mentioned in text"""
+        """Detect countries mentioned in text using regex patterns"""
         detected = set()
         text_lower = text.lower()
         
         for country_code, patterns in self.country_map.items():
             for pattern in patterns:
-                if pattern in text_lower:
+                if pattern.search(text_lower):
                     detected.add(country_code)
                     break
         
@@ -474,7 +357,7 @@ class CommodityCorrelator:
         return exports
     
     def correlate_news_to_commodities(self, news_data: Dict) -> Dict:
-        """Main correlation engine with macro filtering"""
+        """Main correlation engine with macro filtering and generic event detection"""
         commodity_signals = defaultdict(lambda: {
             "score": 0,
             "trend": "neutral",
@@ -498,13 +381,20 @@ class CommodityCorrelator:
                 # Build text for analysis
                 text = f"{article.get('title', '')} {article.get('snippet', '')}"
                 
+                # Detect generic trade/energy events
+                generic_trade = self._has_generic_trade_signal(text)
+                generic_energy = self._has_generic_energy_signal(text)
+                
                 # MACRO FILTER: Skip company-specific news
                 if self._is_company_article(text):
                     logger.debug(f"Skipping company article: {article.get('title', '')}")
                     continue
                 
-                # MACRO FILTER: Must contain macro keywords
-                if not self._is_macro_article(text):
+                # MACRO FILTER: Must contain macro keywords OR be generic trade/energy event
+                macro_hits = self._count_macro_hits(text)
+                if (macro_hits < self.MACRO_THRESHOLD 
+                    and not generic_trade 
+                    and not generic_energy):
                     logger.debug(f"Skipping non-macro article: {article.get('title', '')}")
                     continue
                 
@@ -555,15 +445,24 @@ class CommodityCorrelator:
                         # Get export share weight
                         share = export.get("export_share", 1.0)
                         
-                        # Product filtering: reduce score if product not mentioned
+                        # Product filtering logic enhanced with generic events
                         explicit = self._mentions_product(text, commodity_code)
                         
-                        # PRODUCT FILTER: Skip if product not mentioned and no crisis signal
-                        if not explicit and not self._has_crisis_signal(text):
-                            logger.debug(f"Skipping {commodity_code}: no product mention and no crisis signal")
+                        # Determine product penalty based on context
+                        if explicit:
+                            # Case 1: Product explicitly mentioned
+                            product_penalty = 1.0
+                        elif generic_trade or generic_energy or self._has_crisis_signal(text):
+                            # Case 2: Generic trade/energy event or crisis
+                            product_penalty = 1.0  # No penalty for broad events
+                            
+                            # Bonus for energy commodities in energy events
+                            if generic_energy and commodity_code in ENERGY_COMMODITIES:
+                                product_penalty = 1.2  # 20% bonus
+                        else:
+                            # Case 3: No relevance, skip
+                            logger.debug(f"Skipping {commodity_code}: no product mention and no generic event")
                             continue
-                        
-                        product_penalty = 1.0 if explicit else 0.2  # Reduced from 0.33 to 0.2
                         
                         # Use existing ML analysis
                         sentiment = article.get("impact", "neutral")
@@ -595,16 +494,19 @@ class CommodityCorrelator:
                                 "url": article.get("url", ""),
                                 "impact": sentiment,
                                 "score": signal["score"],
-                                "has_crisis_signal": self._has_crisis_signal(text)
+                                "has_crisis_signal": self._has_crisis_signal(text),
+                                "generic_trade": generic_trade,
+                                "generic_energy": generic_energy
                             }
                             commodity_signals[commodity_code]["related_news"].append(news_ref)
         
         return self._finalize_signals(commodity_signals)
     
     def _calculate_commodity_signal(self, article, export, sentiment, product_penalty=1.0, share=1.0, text=""):
-        """Calculate signal strength for a commodity"""
-        # Base score from article quality with product penalty
-        base_score = (article.get("quality_score", 50) / 100.0) * product_penalty
+        """Calculate signal strength for a commodity with log-scale quality"""
+        # Base score with log-scale quality and product penalty
+        quality = article.get("quality_score", 50)
+        base_score = (math.log1p(quality) / math.log1p(100)) * product_penalty
         
         # Impact weight from export data with share weight
         impact_weight = export["impact_weight"] * share
@@ -698,12 +600,13 @@ class CommodityCorrelator:
     
     def run(self):
         """Main execution"""
-        logger.info("🏗️ Starting commodity correlation analysis...")
+        logger.info("🏗️ Starting commodity correlation analysis v2.0...")
         logger.info("📋 Filtering: Only macro-economic news will be processed")
         logger.info("🔍 Product filtering: Articles must mention specific commodity keywords")
         logger.info("🎯 Major exporters focus: Only pivot/major countries will impact scores")
         logger.info("⚡ Crisis detection: Bonus for tariff/embargo/drought signals")
         logger.info("📊 Market filter: Pure stock market news ignored unless crisis-related")
+        logger.info("🌐 NEW: Generic trade/energy events propagate to all major exports")
         
         # Load latest news
         try:
@@ -727,6 +630,7 @@ class CommodityCorrelator:
             logger.info(f"📊 Macro filtering active - company news excluded")
             logger.info(f"🎯 Product keyword filtering active - reducing false positives")
             logger.info(f"💪 Major exporter focus - only pivot/major countries trigger alerts")
+            logger.info(f"🌐 Generic trade/energy detection active - broad impacts captured")
         except Exception as e:
             logger.error(f"Failed to save commodity data: {e}")
             return None
