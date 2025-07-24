@@ -109,6 +109,11 @@ AGRI_COMMODITIES = {
     "MEAT", "PALM_OIL", "EDIBLE_FRUITS", "FISH", "BEVERAGES", "COCOA"
 }
 
+# Service commodities to exclude from spillover
+SERVICE_COMMODITIES = {
+    "IT_SERVICES", "FINANCIAL_SERVICES", "TRAVEL"
+}
+
 COMPANY_KEYWORDS = [
     r"\b(?:inc|corp|ltd|plc|llc|co|company)\b",
     r"(?:nyse|nasdaq|tsx|lse):",
@@ -525,6 +530,11 @@ class CommodityCorrelator:
                         
                         commodity_code = export["product_code"]
                         
+                        # Skip service commodities for spillover effects
+                        if is_trade_policy and commodity_code in SERVICE_COMMODITIES:
+                            logger.debug(f"Skipping service commodity {commodity_code} for trade spillover")
+                            continue
+                        
                         # Get export share weight
                         share = export.get("export_share", 1.0)
                         
@@ -618,7 +628,17 @@ class CommodityCorrelator:
             multiplier *= 1.3
             logger.debug(f"Applied trade policy multiplier to {export['product_code']}")
         
-        score = base_score * impact_weight * multiplier * crisis_bonus
+        # Apply spillover boost for trade policy affecting pivot/major exporters
+        spillover_boost = 1.0
+        if is_trade_policy and export["impact"] in ("pivot", "major"):
+            commodity_code = export["product_code"]
+            if commodity_code in AGRI_COMMODITIES:
+                spillover_boost = 1.4  # Higher spillover for agricultural exports
+            else:
+                spillover_boost = 1.2  # Standard spillover for other commodities
+            logger.debug(f"Applied spillover boost {spillover_boost} to {commodity_code}")
+        
+        score = base_score * impact_weight * multiplier * crisis_bonus * spillover_boost
         
         return {
             "score": score,
@@ -691,6 +711,7 @@ class CommodityCorrelator:
         logger.info("🎯 Major exporters focus: Only pivot/major countries will impact scores")
         logger.info("⚡ Crisis detection: Bonus for tariff/embargo/drought signals")
         logger.info("🛃 Trade policy detection: x1.3 multiplier for tariff/sanction/embargo")
+        logger.info("🌊 Spillover boost: x1.4 for agri, x1.2 for others on pivot/major exports")
         logger.info("📊 Market filter: Pure stock market news ignored unless crisis-related")
         
         # Load latest news
