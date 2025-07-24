@@ -757,7 +757,8 @@ class CommodityCorrelator:
             reverse=True
         )
         
-        for commodity_code, data in sorted_commodities[:20]:  # Top 20
+        # MODIFIED: Show top 30 instead of top 20
+        for commodity_code, data in sorted_commodities[:30]:  # Changed from 20 to 30
             if data["score"] < self.SIGNAL_MIN:
                 continue
             
@@ -810,6 +811,7 @@ class CommodityCorrelator:
         logger.info("🌍 Region detection: Asian/European/etc. mapped to specific countries")
         logger.info("🎯 Max 3 news per commodity to avoid noise")
         logger.info("📐 Score = Average × √N for quality over quantity")
+        logger.info("📈 Showing top 30 commodities (extended from 20)")
         logger.info(f"🎚️ Thresholds: Quality={self.QUALITY_MIN}, Signal={self.SIGNAL_MIN}")
         
         # Load latest news
@@ -839,10 +841,11 @@ class CommodityCorrelator:
             logger.info(f"🌍 Region detection active for Asian/European/etc. references")
             logger.info(f"🔗 No duplicate URLs in commodity news lists")
             logger.info(f"📐 Score aggregation: Average × √N for balanced quality")
+            logger.info(f"📈 Extended to top 30 to include more commodities like coffee")
             
             # Debug: Show top commodities
-            logger.info("📈 Top 5 commodities by score:")
-            for i, commodity in enumerate(commodity_signals["commodities"][:5]):
+            logger.info("📈 Top 10 commodities by score:")
+            for i, commodity in enumerate(commodity_signals["commodities"][:10]):
                 logger.info(f"  {i+1}. {commodity['code']}: {commodity['score']:.2f} ({commodity['alert_level']})")
         except Exception as e:
             logger.error(f"Failed to save commodity data: {e}")
