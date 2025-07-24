@@ -115,6 +115,17 @@ SERVICE_COMMODITIES = {
     "IT_SERVICES", "FINANCIAL_SERVICES", "TRAVEL"
 }
 
+# Region mappings for generic geographic references
+REGION_MAP = {
+    "asian": ["CN", "VN", "KR", "JP", "TH", "MY", "ID", "PH", "SG", "IN"],
+    "european": ["DE", "FR", "GB", "IT", "ES", "NL", "BE", "PL", "SE", "AT"],
+    "latin american": ["BR", "MX", "AR", "CL", "PE", "CO", "VE", "EC"],
+    "african": ["ZA", "NG", "EG", "KE", "MA", "ET", "GH"],
+    "middle eastern": ["SA", "AE", "IR", "IQ", "IL", "TR", "QA", "KW"],
+    "north american": ["US", "CA", "MX"],
+    "oceanian": ["AU", "NZ", "FJ", "PG"]
+}
+
 COMPANY_KEYWORDS = [
     r"\b(?:inc|corp|ltd|plc|llc|co|company)\b",
     r"(?:nyse|nasdaq|tsx|lse):",
@@ -156,7 +167,7 @@ class CommodityCorrelator:
         self.country_map = self._build_country_map()
         
         # Configuration thresholds (adjusted for better sensitivity)
-        self.QUALITY_MIN = 35    # Lowered from 40 to include Reuters 38-39
+        self.QUALITY_MIN = 40    # Back to 40 now that filtering is better
         self.SIGNAL_MIN = 0.75   # Lowered from 1.0 to match alert_watch threshold
         
     def _load_exposure_data(self):
@@ -429,16 +440,30 @@ class CommodityCorrelator:
         """Check if article is purely about stock markets"""
         return bool(MARKET_ONLY_PATTERN.search(text))
     
+    # ---------- Domestic-only detection ----------
+    def _is_domestic_only(self, text: str, country_code: str) -> bool:
+        """Check if article only mentions the given country (no foreign partners)"""
+        detected = self.detect_countries_from_text(text)
+        # If only one country detected and it's the same as the processing country
+        return len(detected) == 1 and detected[0] == country_code
+    
     def detect_countries_from_text(self, text: str) -> List[str]:
-        """Detect countries mentioned in text"""
+        """Detect countries mentioned in text, including region mappings"""
         detected = set()
         text_lower = text.lower()
         
+        # Direct country detection
         for country_code, patterns in self.country_map.items():
             for pattern in patterns:
                 if pattern in text_lower:
                     detected.add(country_code)
                     break
+        
+        # Region detection
+        for region_name, country_codes in REGION_MAP.items():
+            if region_name in text_lower:
+                detected.update(country_codes)
+                logger.debug(f"Detected region '{region_name}' -> added countries: {country_codes}")
         
         return list(detected)
     
@@ -533,6 +558,11 @@ class CommodityCorrelator:
                 
                 # Process each detected country
                 for detected_country in detected_countries:
+                    # DOMESTIC FILTER: Skip trade policy news without foreign partners
+                    if is_trade_policy and self._is_domestic_only(text, detected_country):
+                        logger.debug(f"Skipping domestic-only trade policy for {detected_country}")
+                        continue
+                    
                     # Get country's export exposure
                     country_exports = self.get_country_exports(detected_country)
                     if not country_exports:
@@ -561,9 +591,9 @@ class CommodityCorrelator:
                             logger.debug(f"Skipping {commodity_code}: no product mention and no crisis signal")
                             continue
                         
-                        # 4️⃣ PÉNALITÉ RÉDUITE
+                        # 4️⃣ PÉNALITÉ DURCIE
                         product_penalty = 1.0 if explicit else (
-                            0.25 if commodity_code in AGRI_COMMODITIES else 0.35
+                            0.4 if commodity_code in AGRI_COMMODITIES else 0.6
                         )
                         
                         # Use existing ML analysis
@@ -766,7 +796,9 @@ class CommodityCorrelator:
         logger.info("⏰ Proximity boost: Up to 70% for tariffs within 2 weeks of deadline")
         logger.info("📊 Market filter: Pure stock market news ignored unless crisis-related")
         logger.info("🔁 Deduplication: Avoiding duplicate news entries")
-        logger.info("📉 Reduced penalties: 0.25 for agri, 0.35 for others without explicit mention")
+        logger.info("📉 Stricter penalties: 0.4 for agri, 0.6 for others without explicit mention")
+        logger.info("🏠 Domestic filter: Trade policy news without foreign partners excluded")
+        logger.info("🌍 Region detection: Asian/European/etc. mapped to specific countries")
         logger.info("🎯 Max 3 news per commodity to avoid noise")
         logger.info("📐 Score = Average × √N for quality over quantity")
         logger.info(f"🎚️ Thresholds: Quality={self.QUALITY_MIN}, Signal={self.SIGNAL_MIN}")
@@ -793,7 +825,9 @@ class CommodityCorrelator:
             logger.info(f"📊 Macro filtering active - company news excluded")
             logger.info(f"🎯 Product keyword filtering active - reducing false positives")
             logger.info(f"💪 Major exporter focus - only pivot/major countries trigger alerts")
-            logger.info(f"🛃 Trade policy spillover active - 25% penalty for agri, 35% for others")
+            logger.info(f"🛃 Trade policy spillover active - 40% penalty for agri, 60% for others")
+            logger.info(f"🏠 Domestic-only trade news filtered out")
+            logger.info(f"🌍 Region detection active for Asian/European/etc. references")
             logger.info(f"📐 Score aggregation: Average × √N for balanced quality")
             
             # Debug: Show top commodities
