@@ -3,6 +3,13 @@
 Commodity Correlator for TradePulse
 Analyzes macro-economic news impact on commodities based on country export exposure
 Enhanced to focus on major exporters and crisis signals
+
+FIXED VERSION - Changes:
+- Eliminated duplicate news articles
+- Reduced product penalty (0.25 instead of 0.4-0.6)
+- Limited to 3 news max per commodity
+- Average score instead of cumulative sum
+- Better filtering of "Wall Street CEOs" type articles
 """
 
 import json
@@ -10,7 +17,7 @@ import logging
 import re
 from datetime import datetime, timedelta
 from collections import defaultdict
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Set
 import os
 import sys
 
@@ -40,6 +47,10 @@ def _load_keyword_files(dir_path: str) -> Dict[str, List[str]]:
         }
     """
     merged: Dict[str, set] = defaultdict(set)
+
+    if not os.path.exists(dir_path):
+        logger.warning(f"Keywords directory not found: {dir_path}")
+        return {}
 
     for fname in os.listdir(dir_path):
         if not fname.lower().endswith(".json"):
@@ -114,19 +125,22 @@ SERVICE_COMMODITIES = {
     "IT_SERVICES", "FINANCIAL_SERVICES", "TRAVEL"
 }
 
+# Enhanced company keywords to filter out more corporate/market articles
 COMPANY_KEYWORDS = [
     r"\b(?:inc|corp|ltd|plc|llc|co|company)\b",
     r"(?:nyse|nasdaq|tsx|lse):",
     r"\bearnings?\b", r"\brevenue\b", r"\bquarterly\b", 
     r"\bguidance\b", r"\bprofit\b", r"\bshares?\b",
-    r"\bIPO\b", r"\bmerger\b", r"\bacquisition\b"
+    r"\bIPO\b", r"\bmerger\b", r"\bacquisition\b",
+    r"\bwall\s+street\b", r"\bceo[s]?\b", r"\bexecutive[s]?\b",  # Added Wall Street CEOs filter
+    r"\bstock\s+market\b", r"\btrading\s+floor\b"
 ]
 
 # Market-only pattern to detect pure stock market articles
 MARKET_ONLY_KEYWORDS = [
     "stocks", "shares", "equities", "index", "indices", 
     "stoxx", "dax", "cac", "ftse", "s&p", "nasdaq", "dow",
-    "equity market", "stock exchange", "bourse"
+    "equity market", "stock exchange", "bourse", "wall street"
 ]
 
 # Pre-compile patterns for performance
@@ -452,12 +466,16 @@ class CommodityCorrelator:
     def correlate_news_to_commodities(self, news_data: Dict) -> Dict:
         """Main correlation engine with macro filtering"""
         commodity_signals = defaultdict(lambda: {
-            "score": 0,
+            "scores": [],  # Changed from "score" to "scores" to collect individual scores
             "trend": "neutral",
             "affected_countries": [],
             "related_news": [],
+            "news_count": 0,  # Track number of news
             "last_update": datetime.now().isoformat()
         })
+        
+        # Track seen articles to avoid duplicates
+        seen_articles: Set[str] = set()
         
         # Process each country's news
         for country_code, articles in news_data.items():
@@ -466,6 +484,13 @@ class CommodityCorrelator:
             
             # Process each article
             for article in articles:
+                # Create unique identifier for article
+                article_id = article.get("url") or article.get("title", "")
+                if article_id in seen_articles:
+                    logger.debug(f"Skipping duplicate article: {article_id}")
+                    continue
+                seen_articles.add(article_id)
+                
                 # Quality filter
                 quality_score = article.get("quality_score", 50)
                 if quality_score < self.QUALITY_MIN:
@@ -531,6 +556,11 @@ class CommodityCorrelator:
                         
                         commodity_code = export["product_code"]
                         
+                        # Limit to 3 news per commodity
+                        if len(commodity_signals[commodity_code]["related_news"]) >= 3:
+                            logger.debug(f"Already have 3 news for {commodity_code}, skipping")
+                            continue
+                        
                         # Skip service commodities for spillover effects
                         if is_trade_policy and commodity_code in SERVICE_COMMODITIES:
                             logger.debug(f"Skipping service commodity {commodity_code} for trade spillover")
@@ -542,14 +572,10 @@ class CommodityCorrelator:
                         # Product filtering: reduce score if product not mentioned
                         explicit = self._mentions_product(text, commodity_code)
                         
-                        # Enhanced product penalty logic for trade policy crises (more permissive)
+                        # FIXED: Much lower product penalty (0.25 instead of 0.4-0.6)
                         if not explicit:
                             if self._has_crisis_signal(text):
-                                # Higher penalty for agricultural products during crisis
-                                if commodity_code in AGRI_COMMODITIES:
-                                    product_penalty = 0.4  # More permissive: was 0.5
-                                else:
-                                    product_penalty = 0.6  # More permissive: was 0.4
+                                product_penalty = 0.25  # Significantly reduced from 0.4-0.6
                             else:
                                 # Skip if no product mention and no crisis signal
                                 logger.debug(f"Skipping {commodity_code}: no product mention and no crisis signal")
@@ -566,9 +592,10 @@ class CommodityCorrelator:
                         )
                         
                         if signal["score"] > self.SIGNAL_MIN:
-                            # Update commodity signal
-                            commodity_signals[commodity_code]["score"] += signal["score"]
+                            # Collect individual scores instead of summing
+                            commodity_signals[commodity_code]["scores"].append(signal["score"])
                             commodity_signals[commodity_code]["trend"] = signal["trend"]
+                            commodity_signals[commodity_code]["news_count"] += 1
                             
                             # Add country if not already there
                             country_info = {
@@ -668,11 +695,19 @@ class CommodityCorrelator:
         }
     
     def _finalize_signals(self, signals):
-        """Aggregate and rank signals"""
-        # Sort by score
+        """Aggregate and rank signals using AVERAGE score instead of sum"""
+        # Calculate average score for each commodity
+        for commodity_code, data in signals.items():
+            if data["scores"]:
+                # Use average instead of sum
+                data["avg_score"] = sum(data["scores"]) / len(data["scores"])
+            else:
+                data["avg_score"] = 0
+        
+        # Sort by average score
         sorted_commodities = sorted(
             signals.items(),
-            key=lambda x: x[1]["score"],
+            key=lambda x: x[1]["avg_score"],
             reverse=True
         )
         
@@ -694,28 +729,31 @@ class CommodityCorrelator:
         product_mapping = self.exposure_data.get("product_mapping", {})
         
         for commodity_code, data in sorted_commodities[:20]:  # Top 20
+            avg_score = data["avg_score"]
+            
             alert_level = "none"
-            if data["score"] >= thresholds["alert_critical"]:
+            if avg_score >= thresholds["alert_critical"]:
                 alert_level = "critical"
                 output["summary"]["critical_alerts"] += 1
-            elif data["score"] >= thresholds["alert_important"]:
+            elif avg_score >= thresholds["alert_important"]:
                 alert_level = "important"
                 output["summary"]["important_alerts"] += 1
-            elif data["score"] >= thresholds["alert_watch"]:
+            elif avg_score >= thresholds["alert_watch"]:
                 alert_level = "watch"
                 output["summary"]["watch_list"] += 1
             
-            # Keep only top 5 news
+            # Already limited to 3 news in correlate_news_to_commodities
+            # Sort by score anyway
             data["related_news"] = sorted(
                 data["related_news"],
                 key=lambda x: x["score"],
                 reverse=True
-            )[:5]
+            )
             
             output["commodities"].append({
                 "code": commodity_code,
                 "name": product_mapping.get(commodity_code, commodity_code),
-                "score": round(data["score"], 2),
+                "score": round(avg_score, 2),  # This is now the average
                 "trend": data["trend"],
                 "alert_level": alert_level,
                 "affected_countries": data["affected_countries"],
@@ -727,7 +765,11 @@ class CommodityCorrelator:
     
     def run(self):
         """Main execution"""
-        logger.info("🏗️ Starting commodity correlation analysis...")
+        logger.info("🏗️ Starting commodity correlation analysis (FIXED VERSION)...")
+        logger.info("🔧 FIX: Duplicate news eliminated")
+        logger.info("🔧 FIX: Product penalty reduced to 0.25")
+        logger.info("🔧 FIX: Max 3 news per commodity")
+        logger.info("🔧 FIX: Average score instead of cumulative")
         logger.info("📋 Filtering: Only macro-economic news will be processed")
         logger.info("🔍 Product filtering: Articles must mention specific commodity keywords")
         logger.info("🎯 Major exporters focus: Only pivot/major countries will impact scores")
@@ -760,12 +802,12 @@ class CommodityCorrelator:
             logger.info(f"📊 Macro filtering active - company news excluded")
             logger.info(f"🎯 Product keyword filtering active - reducing false positives")
             logger.info(f"💪 Major exporter focus - only pivot/major countries trigger alerts")
-            logger.info(f"🛃 Trade policy spillover active - 40% penalty for agri, 60% for others")
+            logger.info(f"🛃 Trade policy spillover active - 25% penalty only")
             
             # Debug: Show top commodities
             logger.info("📈 Top 5 commodities by score:")
             for i, commodity in enumerate(commodity_signals["commodities"][:5]):
-                logger.info(f"  {i+1}. {commodity['code']}: {commodity['score']:.2f} ({commodity['alert_level']})")
+                logger.info(f"  {i+1}. {commodity['code']}: {commodity['score']:.2f} ({commodity['alert_level']}) - {commodity['news_count']} news")
         except Exception as e:
             logger.error(f"Failed to save commodity data: {e}")
             return None
