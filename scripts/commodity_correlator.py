@@ -97,6 +97,18 @@ CRISIS_KEYWORDS = [
     "blockade", "restriction", "disruption", "failure"
 ]
 
+# Trade policy specific keywords (for additional multiplier)
+TRADE_POLICY_KEYWORDS = [
+    "tariff", "sanction", "embargo", "export ban", "import ban",
+    "trade war", "trade restriction", "customs duty", "quota"
+]
+
+# Agricultural commodities (for sector-specific penalty adjustment)
+AGRI_COMMODITIES = {
+    "COFFEE", "SOYBEAN", "SUGAR", "WHEAT", "CORN", "RICE", 
+    "MEAT", "PALM_OIL", "EDIBLE_FRUITS", "FISH", "BEVERAGES", "COCOA"
+}
+
 COMPANY_KEYWORDS = [
     r"\b(?:inc|corp|ltd|plc|llc|co|company)\b",
     r"(?:nyse|nasdaq|tsx|lse):",
@@ -116,6 +128,7 @@ MARKET_ONLY_KEYWORDS = [
 MACRO_PATTERNS = [re.compile(rf"\b{kw}\b", re.I) for kw in MACRO_KEYWORDS]
 COMPANY_PATTERNS = [re.compile(kw, re.I) for kw in COMPANY_KEYWORDS]
 CRISIS_PATTERN = re.compile(r"\b(" + "|".join(CRISIS_KEYWORDS) + r")\b", re.I)
+TRADE_POLICY_PATTERN = re.compile(r"\b(" + "|".join(TRADE_POLICY_KEYWORDS) + r")\b", re.I)
 MARKET_ONLY_PATTERN = re.compile(r"\b(" + "|".join(MARKET_ONLY_KEYWORDS) + r")\b", re.I)
 
 # ------------------------------------------------------------------
@@ -397,6 +410,12 @@ class CommodityCorrelator:
         """Check if article contains crisis keywords"""
         return bool(CRISIS_PATTERN.search(text))
     
+    # ---------- Trade policy detection ----------
+    @staticmethod
+    def _has_trade_policy_signal(text: str) -> bool:
+        """Check if article contains trade policy keywords"""
+        return bool(TRADE_POLICY_PATTERN.search(text))
+    
     # ---------- Market-only detection ----------
     @staticmethod
     def _is_market_only_article(text: str) -> bool:
@@ -468,6 +487,9 @@ class CommodityCorrelator:
                 if article.get("importance_level") == "general":
                     continue
                 
+                # Check if this is a trade policy crisis
+                is_trade_policy = self._has_trade_policy_signal(text)
+                
                 # Detect countries in article
                 detected_countries = self.detect_countries_from_text(text)
                 
@@ -509,19 +531,27 @@ class CommodityCorrelator:
                         # Product filtering: reduce score if product not mentioned
                         explicit = self._mentions_product(text, commodity_code)
                         
-                        # PRODUCT FILTER: Skip if product not mentioned and no crisis signal
-                        if not explicit and not self._has_crisis_signal(text):
-                            logger.debug(f"Skipping {commodity_code}: no product mention and no crisis signal")
-                            continue
-                        
-                        product_penalty = 1.0 if explicit else 0.2  # Reduced from 0.33 to 0.2
+                        # Enhanced product penalty logic for trade policy crises
+                        if not explicit:
+                            if self._has_crisis_signal(text):
+                                # Higher penalty for agricultural products during crisis
+                                if commodity_code in AGRI_COMMODITIES:
+                                    product_penalty = 0.5  # 50% for agri products
+                                else:
+                                    product_penalty = 0.4  # 40% for other products
+                            else:
+                                # Skip if no product mention and no crisis signal
+                                logger.debug(f"Skipping {commodity_code}: no product mention and no crisis signal")
+                                continue
+                        else:
+                            product_penalty = 1.0  # Full score if explicitly mentioned
                         
                         # Use existing ML analysis
                         sentiment = article.get("impact", "neutral")
                         
                         # Calculate impact with all factors
                         signal = self._calculate_commodity_signal(
-                            article, export, sentiment, product_penalty, share, text
+                            article, export, sentiment, product_penalty, share, text, is_trade_policy
                         )
                         
                         if signal["score"] > self.SIGNAL_MIN:
@@ -546,13 +576,14 @@ class CommodityCorrelator:
                                 "url": article.get("url", ""),
                                 "impact": sentiment,
                                 "score": signal["score"],
-                                "has_crisis_signal": self._has_crisis_signal(text)
+                                "has_crisis_signal": self._has_crisis_signal(text),
+                                "is_trade_policy": is_trade_policy
                             }
                             commodity_signals[commodity_code]["related_news"].append(news_ref)
         
         return self._finalize_signals(commodity_signals)
     
-    def _calculate_commodity_signal(self, article, export, sentiment, product_penalty=1.0, share=1.0, text=""):
+    def _calculate_commodity_signal(self, article, export, sentiment, product_penalty=1.0, share=1.0, text="", is_trade_policy=False):
         """Calculate signal strength for a commodity"""
         # Base score from article quality with product penalty
         base_score = (article.get("quality_score", 50) / 100.0) * product_penalty
@@ -581,6 +612,11 @@ class CommodityCorrelator:
         else:
             trend = "neutral"
             multiplier = 0.5
+        
+        # Apply trade policy multiplier if applicable
+        if is_trade_policy:
+            multiplier *= 1.3
+            logger.debug(f"Applied trade policy multiplier to {export['product_code']}")
         
         score = base_score * impact_weight * multiplier * crisis_bonus
         
@@ -654,6 +690,7 @@ class CommodityCorrelator:
         logger.info("🔍 Product filtering: Articles must mention specific commodity keywords")
         logger.info("🎯 Major exporters focus: Only pivot/major countries will impact scores")
         logger.info("⚡ Crisis detection: Bonus for tariff/embargo/drought signals")
+        logger.info("🛃 Trade policy detection: x1.3 multiplier for tariff/sanction/embargo")
         logger.info("📊 Market filter: Pure stock market news ignored unless crisis-related")
         
         # Load latest news
@@ -678,6 +715,7 @@ class CommodityCorrelator:
             logger.info(f"📊 Macro filtering active - company news excluded")
             logger.info(f"🎯 Product keyword filtering active - reducing false positives")
             logger.info(f"💪 Major exporter focus - only pivot/major countries trigger alerts")
+            logger.info(f"🛃 Trade policy spillover active - 50% penalty for agri, 40% for others")
         except Exception as e:
             logger.error(f"Failed to save commodity data: {e}")
             return None
