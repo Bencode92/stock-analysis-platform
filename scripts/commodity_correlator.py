@@ -8,6 +8,7 @@ Enhanced to focus on major exporters and crisis signals
 import json
 import logging
 import re
+import math
 from datetime import datetime, timedelta
 from collections import defaultdict
 from typing import List, Dict, Tuple
@@ -453,19 +454,34 @@ class CommodityCorrelator:
         """Main correlation engine with macro filtering"""
         commodity_signals = defaultdict(lambda: {
             "score": 0,
+            "scores_list": [],  # Pour calculer la moyenne
             "trend": "neutral",
             "affected_countries": [],
             "related_news": [],
             "last_update": datetime.now().isoformat()
         })
         
+        # Track processed articles globally
+        global_seen = set()
+        
         # Process each country's news
         for country_code, articles in news_data.items():
             if not isinstance(articles, list):
                 continue
             
+            # Track duplicates within country
+            country_seen = set()
+            
             # Process each article
             for article in articles:
+                # 1️⃣ DEDUPLICATION
+                uid = article.get("url") or article.get("title", "")
+                if not uid or uid in global_seen or uid in country_seen:
+                    logger.debug(f"Skipping duplicate: {uid[:50]}...")
+                    continue
+                global_seen.add(uid)
+                country_seen.add(uid)
+                
                 # Quality filter
                 quality_score = article.get("quality_score", 50)
                 if quality_score < self.QUALITY_MIN:
@@ -476,17 +492,17 @@ class CommodityCorrelator:
                 
                 # MACRO FILTER: Skip company-specific news
                 if self._is_company_article(text):
-                    logger.debug(f"Skipping company article: {article.get('title', '')}")
+                    logger.debug(f"Skipping company article: {article.get('title', '')})")
                     continue
                 
                 # MACRO FILTER: Must contain macro keywords
                 if not self._is_macro_article(text):
-                    logger.debug(f"Skipping non-macro article: {article.get('title', '')}")
+                    logger.debug(f"Skipping non-macro article: {article.get('title', '')})")
                     continue
                 
                 # MARKET FILTER: Skip pure stock market articles unless they have crisis signals
                 if self._is_market_only_article(text) and not self._has_crisis_signal(text):
-                    logger.debug(f"Skipping market-only article without crisis: {article.get('title', '')}")
+                    logger.debug(f"Skipping market-only article without crisis: {article.get('title', '')})")
                     continue
                 
                 # Check importance level if available
@@ -539,23 +555,16 @@ class CommodityCorrelator:
                         # Get export share weight
                         share = export.get("export_share", 1.0)
                         
-                        # Product filtering: reduce score if product not mentioned
+                        # 3️⃣ HARD STOP: pas de produit sans raison
                         explicit = self._mentions_product(text, commodity_code)
+                        if not explicit and not self._has_crisis_signal(text):
+                            logger.debug(f"Skipping {commodity_code}: no product mention and no crisis signal")
+                            continue
                         
-                        # Enhanced product penalty logic for trade policy crises (more permissive)
-                        if not explicit:
-                            if self._has_crisis_signal(text):
-                                # Higher penalty for agricultural products during crisis
-                                if commodity_code in AGRI_COMMODITIES:
-                                    product_penalty = 0.4  # More permissive: was 0.5
-                                else:
-                                    product_penalty = 0.6  # More permissive: was 0.4
-                            else:
-                                # Skip if no product mention and no crisis signal
-                                logger.debug(f"Skipping {commodity_code}: no product mention and no crisis signal")
-                                continue
-                        else:
-                            product_penalty = 1.0  # Full score if explicitly mentioned
+                        # 4️⃣ PÉNALITÉ RÉDUITE
+                        product_penalty = 1.0 if explicit else (
+                            0.25 if commodity_code in AGRI_COMMODITIES else 0.35
+                        )
                         
                         # Use existing ML analysis
                         sentiment = article.get("impact", "neutral")
@@ -566,8 +575,14 @@ class CommodityCorrelator:
                         )
                         
                         if signal["score"] > self.SIGNAL_MIN:
+                            # 5️⃣ LIMITE 3 NEWS PAR PRODUIT
+                            news_list = commodity_signals[commodity_code]["related_news"]
+                            if len(news_list) >= 3:
+                                logger.debug(f"Skipping news for {commodity_code}: already 3 news")
+                                continue
+                            
                             # Update commodity signal
-                            commodity_signals[commodity_code]["score"] += signal["score"]
+                            commodity_signals[commodity_code]["scores_list"].append(signal["score"])
                             commodity_signals[commodity_code]["trend"] = signal["trend"]
                             
                             # Add country if not already there
@@ -590,7 +605,7 @@ class CommodityCorrelator:
                                 "has_crisis_signal": self._has_crisis_signal(text),
                                 "is_trade_policy": is_trade_policy
                             }
-                            commodity_signals[commodity_code]["related_news"].append(news_ref)
+                            news_list.append(news_ref)
         
         return self._finalize_signals(commodity_signals)
     
@@ -669,13 +684,6 @@ class CommodityCorrelator:
     
     def _finalize_signals(self, signals):
         """Aggregate and rank signals"""
-        # Sort by score
-        sorted_commodities = sorted(
-            signals.items(),
-            key=lambda x: x[1]["score"],
-            reverse=True
-        )
-        
         # Apply thresholds
         thresholds = self.exposure_data["config"]["thresholds"]
         
@@ -693,7 +701,28 @@ class CommodityCorrelator:
         # Get product mapping
         product_mapping = self.exposure_data.get("product_mapping", {})
         
+        # 6️⃣ CALCUL MOYENNE × √N
+        for commodity_code, data in signals.items():
+            if not data["scores_list"]:
+                continue
+            
+            # Calculer la moyenne des scores
+            avg_score = sum(data["scores_list"]) / len(data["scores_list"])
+            # Appliquer le facteur racine carrée
+            final_score = avg_score * math.sqrt(len(data["scores_list"]))
+            data["score"] = final_score
+        
+        # Sort by final score
+        sorted_commodities = sorted(
+            signals.items(),
+            key=lambda x: x[1]["score"],
+            reverse=True
+        )
+        
         for commodity_code, data in sorted_commodities[:20]:  # Top 20
+            if data["score"] < self.SIGNAL_MIN:
+                continue
+            
             alert_level = "none"
             if data["score"] >= thresholds["alert_critical"]:
                 alert_level = "critical"
@@ -705,12 +734,12 @@ class CommodityCorrelator:
                 alert_level = "watch"
                 output["summary"]["watch_list"] += 1
             
-            # Keep only top 5 news
+            # Keep only top 3 news (already limited during collection)
             data["related_news"] = sorted(
                 data["related_news"],
                 key=lambda x: x["score"],
                 reverse=True
-            )[:5]
+            )[:3]
             
             output["commodities"].append({
                 "code": commodity_code,
@@ -736,6 +765,10 @@ class CommodityCorrelator:
         logger.info("🌊 Spillover boost: x1.4 for agri, x1.2 for others on pivot/major exports")
         logger.info("⏰ Proximity boost: Up to 70% for tariffs within 2 weeks of deadline")
         logger.info("📊 Market filter: Pure stock market news ignored unless crisis-related")
+        logger.info("🔁 Deduplication: Avoiding duplicate news entries")
+        logger.info("📉 Reduced penalties: 0.25 for agri, 0.35 for others without explicit mention")
+        logger.info("🎯 Max 3 news per commodity to avoid noise")
+        logger.info("📐 Score = Average × √N for quality over quantity")
         logger.info(f"🎚️ Thresholds: Quality={self.QUALITY_MIN}, Signal={self.SIGNAL_MIN}")
         
         # Load latest news
@@ -760,7 +793,8 @@ class CommodityCorrelator:
             logger.info(f"📊 Macro filtering active - company news excluded")
             logger.info(f"🎯 Product keyword filtering active - reducing false positives")
             logger.info(f"💪 Major exporter focus - only pivot/major countries trigger alerts")
-            logger.info(f"🛃 Trade policy spillover active - 40% penalty for agri, 60% for others")
+            logger.info(f"🛃 Trade policy spillover active - 25% penalty for agri, 35% for others")
+            logger.info(f"📐 Score aggregation: Average × √N for balanced quality")
             
             # Debug: Show top commodities
             logger.info("📈 Top 5 commodities by score:")
