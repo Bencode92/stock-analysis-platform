@@ -23,6 +23,41 @@ NEWS_JSON_PATH = os.path.join(BASE_DIR, "data", "news.json")
 EXPORT_EXPOSURE_PATH = os.path.join(BASE_DIR, "data", "export_exposure.json")
 COMMODITIES_JSON_PATH = os.path.join(BASE_DIR, "data", "commodities.json")
 
+# ------------------------------------------------------------------
+# 🔑  Chargement dynamique des mots‑clés produits (keywords/*.json)
+# ------------------------------------------------------------------
+KEYWORDS_DIR = os.path.join(BASE_DIR, "keywords")
+
+def _load_keyword_files(dir_path: str) -> Dict[str, List[str]]:
+    """
+    Parcourt le dossier keywords/ et fusionne toutes les listes
+    de synonymes par product_code en un seul dictionnaire.
+
+    Structure attendue dans chaque fichier JSON :
+        {
+            "PRODUCT_CODE": ["synonyme 1", "synonyme 2", ...],
+            ...
+        }
+    """
+    merged: Dict[str, set] = defaultdict(set)
+
+    for fname in os.listdir(dir_path):
+        if not fname.lower().endswith(".json"):
+            continue
+        fpath = os.path.join(dir_path, fname)
+        try:
+            with open(fpath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception as exc:
+            logger.warning(f"⚠️  Impossible de lire {fpath}: {exc}")
+            continue
+
+        for code, kw_list in data.items():
+            merged[code].update(map(str.lower, kw_list))
+
+    # Re‑cast en list pour une utilisation plus simple
+    return {code: sorted(list(kw_set)) for code, kw_set in merged.items()}
+
 # Logger configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -83,102 +118,18 @@ COMPANY_PATTERNS = [re.compile(kw, re.I) for kw in COMPANY_KEYWORDS]
 CRISIS_PATTERN = re.compile(r"\b(" + "|".join(CRISIS_KEYWORDS) + r")\b", re.I)
 MARKET_ONLY_PATTERN = re.compile(r"\b(" + "|".join(MARKET_ONLY_KEYWORDS) + r")\b", re.I)
 
-# ──────────────────────────────────────────
-# Product-specific keywords for filtering
-# ──────────────────────────────────────────
-PRODUCT_KEYWORDS = {
-    "CHEMICALS_MISC": [
-        "chemical", "chemicals", "bulk chemical", "petrochemical",
-        "fertilizer", "ethylene", "ammonia", "sulphuric acid",
-        "caustic soda", "chlorine"
-    ],
-    "CHEMICALS_ORGANIC": [
-        "organic chemical", "benzene", "toluene", "xylene",
-        "propylene", "methanol", "acetone", "ethyl acetate", "phenol"
-    ],
-    "CORN": [
-        "corn", "maize", "grain corn", "feed corn",
-        "cornmeal", "ethanol"
-    ],
-    "DIAMONDS": [
-        "diamond", "diamonds", "rough diamond",
-        "polished diamond", "gemstone"
-    ],
-    "EDIBLE_FRUITS": [
-        "fruit", "fruits", "fresh fruit", "banana",
-        "apple", "orange", "mango", "citrus",
-        "berries", "grape"
-    ],
-    "IT_SERVICES": [
-        "it service", "it services", "software outsourcing",
-        "cloud service", "saas", "managed service",
-        "tech support", "bpo"
-    ],
-    "LEAD_ORE": [
-        "lead ore", "galena", "lead concentrate", "lead mine"
-    ],
-    "MEAT": [
-        "meat", "beef", "pork", "poultry",
-        "chicken", "lamb", "livestock", "cattle", "carcass"
-    ],
-    "NATGAS": [
-        "natural gas", "natgas", "lng", "liquefied natural gas",
-        "pipeline gas", "methane", "gas price"
-    ],
-    "OPTICAL_INSTRUMENTS": [
-        "optical instrument", "optical instruments", "lens",
-        "camera lens", "microscope", "spectrometer",
-        "telescope", "binoculars", "fiber optic"
-    ],
-    "PETROLEUM_CRUDE": [
-        "crude oil", "brent", "wti", "sweet crude",
-        "sour crude", "oil barrel", "upstream"
-    ],
-    "PETROLEUM_REFINED": [
-        "refined petroleum", "diesel", "gasoline",
-        "jet fuel", "fuel oil", "naphtha", "kerosene", "distillate"
-    ],
-    "PHARMACEUTICALS": [
-        "pharmaceutical", "pharmaceuticals", "drug", "medicine",
-        "medication", "vaccine", "pharma", "biotech",
-        "generic drug", "api"
-    ],
-    "PLASTICS": [
-        "plastic", "plastics", "polymer", "polyethylene",
-        "polypropylene", "pvc", "polystyrene",
-        "resin", "plastic pellet"
-    ],
-    "PLATINUM": [
-        "platinum", "pt", "platinum group metal",
-        "pgm", "platinum bullion", "autocatalyst"
-    ],
-    "RARE_GASES": [
-        "rare gas", "rare gases", "noble gas",
-        "neon", "argon", "krypton", "xenon", "helium"
-    ],
-    "SOYBEAN": [
-        "soy", "soybean", "soybeans", "soya",
-        "bean meal", "soymeal", "soy oil"
-    ],
-    "TRAVEL": [
-        "travel service", "travel services", "tourism",
-        "tourist", "tour operator", "vacation",
-        "holiday", "air travel", "hotel booking", "hospitality"
-    ],
-    "WHEAT": [
-        "wheat", "durum", "soft wheat", "hard red wheat",
-        "winter wheat", "spring wheat", "wheat flour"
-    ],
-    "ZINC_ORE": [
-        "zinc ore", "sphalerite", "zinc concentrate", "zinc mine"
-    ]
+# ------------------------------------------------------------------
+#  🗄️  Mots‑clés produits (chargés dynamiquement)
+# ------------------------------------------------------------------
+PRODUCT_KEYWORDS = _load_keyword_files(KEYWORDS_DIR)
+
+# Compile les regex une seule fois
+PRODUCT_PATTERNS = {
+    code: [re.compile(rf"\b{re.escape(w)}\b", re.I) for w in words]
+    for code, words in PRODUCT_KEYWORDS.items()
 }
 
-# Compile product patterns for performance
-PRODUCT_PATTERNS = {
-    code: [re.compile(rf"\b{re.escape(kw)}\b", re.I) for kw in kws]
-    for code, kws in PRODUCT_KEYWORDS.items()
-}
+logger.info(f"🔑 {len(PRODUCT_PATTERNS)} product codes chargés depuis {KEYWORDS_DIR}")
 
 class CommodityCorrelator:
     def __init__(self):
