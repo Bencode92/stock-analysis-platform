@@ -74,6 +74,53 @@ _MODEL_METADATA = {
 }
 
 # ---------------------------------------------------------------------------
+# 🚀 ENHANCED CATEGORIZATION SYSTEM v5.1
+# ---------------------------------------------------------------------------
+
+# Endpoint to category mapping - Trust the source first!
+ENDPOINT_TO_CATEGORY = {
+    "crypto_news": "crypto",
+    "stock_news": "companies",
+    "forex_news": "forex",
+    "general_news": "auto",      # Need heuristic
+    "press_releases": "auto",    # Need smart routing
+    "fmp_articles": "auto"       # Need smart routing
+}
+
+# Keywords for heuristic categorization
+FOREX_KEYWORDS = [
+    "forex", "currency", "usd", "eur", "jpy", "gbp", "cad", "aud", "chf", "nzd",
+    "exchange rate", "fx", "dollar index", "eurusd", "usdjpy", "gbpusd", "usdcad",
+    "audusd", "usdchf", "nzdusd", "currency pair", "carry trade", "intervention",
+    "parity", "devaluation", "appreciation", "depreciation"
+]
+
+CRYPTO_KEYWORDS = [
+    "bitcoin", "btc", "ethereum", "eth", "solana", "sol", "xrp", "doge",
+    "defi", "stablecoin", "nft", "layer 2", "staking", "crypto exchange", 
+    "blockchain", "cryptocurrency", "binance", "coinbase", "kraken"
+]
+
+TECH_KEYWORDS = [
+    "artificial intelligence", "ai", "generative ai", "genai", "chatgpt", 
+    "openai", "nvidia", "semiconductor", "software", "hardware", "tech", 
+    "technology", "startup", "cloud", "computing", "digital", "saas"
+]
+
+ECONOMY_KEYWORDS = [
+    "cpi", "pce", "inflation", "gdp", "fed", "ecb", "central bank", 
+    "economic", "consumer", "spending", "policy", "fiscal", "monetary", 
+    "recession", "employment", "jobless claims", "payrolls"
+]
+
+MARKETS_KEYWORDS = [
+    "etf", "fund", "index", "s&p", "dow", "cac", "nasdaq", "bond", 
+    "treasury", "yield", "commodities", "oil", "gold", "market", 
+    "stock market", "bull market", "bear market", "rally", "correction", 
+    "volatility", "vix"
+]
+
+# ---------------------------------------------------------------------------
 # 🚀 UNIFIED DUAL ML LABELER CLASS v5.0
 # ---------------------------------------------------------------------------
 
@@ -1125,71 +1172,87 @@ def compute_sentiment_distribution(articles):
         "negative": round(sentiment_counts["negative"] / total * 100)
     }
 
-def determine_category(article, source=None):
+def heuristic_category(article):
     """
-    Determines the news category with investor-grade focus:
-    - economy: macroeconomic news
-    - markets: news about indices, ETFs, etc.
-    - companies: news specific to companies
-    - crypto: cryptocurrency news
-    - tech: technology news
-    - forex: forex/currency news
+    Heuristic categorization when endpoint is not discriminant
     """
-    # Check symbol for crypto
-    if article.get("symbol") and any(ticker in str(article.get("symbol")) for ticker in ["BTC", "ETH", "CRYPTO", "COIN"]):
-        return "crypto"
-        
-    # Analyze text to determine category
     text = (article.get("text", "") + " " + article.get("title", "")).lower()
     
-    # Forex category (priority 1) - New category for forex news
-    forex_keywords = [
-        "forex", "currency", "usd", "eur", "jpy", "gbp", "cad", "aud", "chf", "nzd",
-        "exchange rate", "fx", "dollar index", "eurusd", "usdjpy", "gbpusd", "usdcad",
-        "audusd", "usdchf", "nzdusd", "currency pair", "carry trade", "intervention",
-        "parity", "devaluation", "appreciation", "depreciation"
-    ]
-    
-    if any(word in text for word in forex_keywords):
+    # Priority order: forex → crypto → tech → economy → markets → companies
+    if any(word in text for word in FOREX_KEYWORDS):
         return "forex"
     
-    # Crypto category (priority 2)
-    crypto_keywords = THEMES["sectors"]["crypto"]
-    
-    if any(word in text for word in crypto_keywords):
+    if any(word in text for word in CRYPTO_KEYWORDS):
         return "crypto"
     
-    # Tech category (priority 3) - Enhanced for AI detection
-    tech_keywords = THEMES["sectors"]["ai"] + THEMES["sectors"]["technology"] + [
-        "software", "hardware", "tech", "technology", "startup", "app", 
-        "mobile", "cloud", "computing", "digital", "internet", "online", "web"
-    ]
-    
-    if any(word in text for word in tech_keywords):
+    if any(word in text for word in TECH_KEYWORDS):
         return "tech"
     
-    # Economy category (priority 4) - Enhanced with macro indicators
-    economy_keywords = THEMES["macroeconomics"]["inflation"] + THEMES["macroeconomics"]["growth"] + [
-        "economy", "fed", "central bank", "economic", "consumer", "spending", 
-        "policy", "fiscal", "monetary", "recession"
-    ]
-    
-    if any(word in text for word in economy_keywords):
+    if any(word in text for word in ECONOMY_KEYWORDS):
         return "economy"
     
-    # Markets category (priority 5)
-    markets_keywords = [
-        "etf", "fund", "index", "s&p", "dow", "cac", "nasdaq", 
-        "bond", "treasury", "yield", "commodities", "oil", 
-        "gold", "market", "stock market", "bull market", 
-        "bear market", "rally", "correction", "volatility", "vix"
-    ]
-    
-    if any(word in text for word in markets_keywords):
+    if any(word in text for word in MARKETS_KEYWORDS):
         return "markets"
     
-    # Default: companies
-    return "companies"
+    return "companies"  # Default
+
+def auto_category_pr(article) -> str:
+    """
+    Smart routing for press releases
+    """
+    # Check for symbol/tickers
+    tickers = article.get("symbol") or article.get("tickers") or []
+    if isinstance(tickers, str):
+        tickers = [tickers] if tickers else []
+    
+    # Single ticker = companies
+    if len(tickers) == 1:
+        return "companies"
+    
+    # Multiple or no tickers = heuristic
+    return heuristic_category(article)
+
+def auto_category_fmp(article) -> str:
+    """
+    Smart routing for FMP articles based on URL/tags
+    """
+    url = article.get("url", "").lower()
+    tags = [t.lower() for t in article.get("tags", [])]
+    
+    clues = tags + [url]
+    
+    # Company-specific clues
+    if any(k in c for c in clues for k in ("earnings", "quarter", "guidance", "analysis", "company", "ticker:")):
+        return "companies"
+    
+    # Macro/economy clues
+    if any(k in c for c in clues for k in ("macro", "economy", "inflation", "fed", "ecb")):
+        return "economy"
+    
+    # Fallback to heuristic
+    return heuristic_category(article)
+
+def determine_category(article, source_type=None):
+    """
+    Enhanced category determination with endpoint priority
+    """
+    # 1. Check endpoint mapping
+    cat = ENDPOINT_TO_CATEGORY.get(source_type)
+    
+    if cat == "auto":
+        # Apply smart routing for ambiguous endpoints
+        if source_type == "press_releases":
+            return auto_category_pr(article)
+        elif source_type == "fmp_articles":
+            return auto_category_fmp(article)
+        # For general_news, use heuristic
+        return heuristic_category(article)
+    
+    if cat:
+        return cat
+    
+    # 2. Fallback to heuristic (shouldn't happen with proper mapping)
+    return heuristic_category(article)
 
 def determine_country(article):
     """
@@ -1713,6 +1776,12 @@ def process_news_data_batch(news_sources):
             all_articles.append(news_item)
     
     logger.info(f"📊 Normalized {len(all_articles)} articles")
+    
+    # Log category distribution
+    category_counts = Counter(article["category"] for article in all_articles)
+    logger.info("📊 Category distribution:")
+    for cat, count in category_counts.most_common():
+        logger.info(f"  {cat}: {count} articles")
     
     # 🚀 UNIFIED DUAL ML PROCESSING v5.0
     if USE_FINBERT and all_articles:
