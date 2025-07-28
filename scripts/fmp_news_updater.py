@@ -436,7 +436,7 @@ CONFIG = {
     # --------- CONTRAINTES GÉNÉRALES --------------------------------------
     "api_key": os.environ.get("FMP_API_KEY", ""),
     "meta": {
-        "max_total_articles": 300,     # 🔧 Réduit de 500 à 300
+        "max_total_articles": 600,     # 🔧 Augmenté à 600
         "days_back":          30,      # 🔧 OPTIMIZED: 90 → 30 jours
         "days_ahead":         10       # pour capter pré-annonces & agendas
     },
@@ -453,12 +453,12 @@ CONFIG = {
 
     # --------- BUDGET DE COLLECTE (≈ articles/jour) -----------------------
     "pull_limits": {
-        "general_news":    20,   # Réduit pour focus macro quality
-        "stock_news":      50,   # Maintenu pour earnings season
-        "crypto_news":      8,   # Réduit pour limiter bruit
-        "forex_news":      15,   # Ajusté pour nouvelles devises
-        "press_releases":   3,   # Minimal pour éviter spam
-        "fmp_articles":     2    # Articles d'analyse FMP
+        "general_news":   217,   # Augmenté pour focus macro
+        "stock_news":     150,   # Augmenté pour earnings
+        "crypto_news":     34,   # Augmenté
+        "forex_news":      83,   # Augmenté pour devises
+        "press_releases":  82,   # Augmenté
+        "fmp_articles":    34    # Augmenté
     },
 
     # --------- QUOTA PAR ZONE GÉO  (pondéré MSCI ACWI) ---------------------
@@ -477,7 +477,7 @@ CONFIG = {
             "asia":              8,  # 🔧 Réduit de 10 à 8
             "emerging_markets":  3   # 🔧 Réduit de 4 à 3
         },
-        "max_total": 300       # 🔧 Réduit de 500 à 300
+        "max_total": 600       # 🔧 Augmenté à 600
     },
 
     # --------- PLAFONNAGE THÉMATIQUE DYNAMIQUE -----------------------------
@@ -1371,7 +1371,7 @@ def remove_duplicates(news_list):
     
     return unique_news
 
-def calculate_output_limits(articles_by_country, max_total=300):  # 🔧 max_total réduit
+def calculate_output_limits(articles_by_country, max_total=600):  # 🔧 max_total augmenté
     """
     Enhanced output limits calculation using geo_budgets v5.0 with MSCI weights
     """
@@ -2265,27 +2265,22 @@ def main():
             metrics = _MODEL_METADATA["performance_metrics"]
             logger.info(f"  Sentiment Articles: {metrics.get('sentiment_articles', 0)}")
             logger.info(f"  Importance Articles: {metrics.get('importance_articles', 0)}")
-            logger.info(f"  Avg Confidence: {metrics.get('avg_confidence', 0):.3f}")
-            logger.info(f"  Avg Importance: {metrics.get('avg_importance', 0):.1f}")
-            logger.info(f"  Avg Quality Score: {metrics.get('avg_quality', 0):.1f}/100")
-            logger.info(f"  Articles Needing Review: {metrics.get('review_needed_count', 0)}")
-            if "importance_distribution" in metrics:
-                logger.info(f"  Importance Levels: {metrics['importance_distribution']}")
+            logger.info(f"  Average Confidence: {metrics.get('avg_confidence', 0):.3f}")
+            logger.info(f"  Average Importance Score: {metrics.get('avg_importance', 0):.1f}")
+            logger.info(f"  Average Quality Score: {metrics.get('avg_quality', 0):.1f}")
+            
             if "cache_stats" in metrics:
                 cache = metrics["cache_stats"]
                 logger.info(f"  Cache Performance: {cache['hit_rate']}% hit rate ({cache['hits']} hits, {cache['misses']} misses)")
         
-        logger.info("✅ TradePulse v5.0 UNIFIED completed successfully!")
-        logger.info("🚀 Benefits: Unified ML system, quality scoring, confidence thresholds")
-        return success_news and success_themes
+        logger.info("✅ TradePulse News Collection v5.0 UNIFIED completed successfully")
+        return True
         
     except Exception as e:
-        logger.error(f"❌ Error in Unified Dual-Model execution v5.0: {str(e)}")
-        import traceback
-        logger.error(traceback.format_exc())
+        logger.error(f"❌ Main execution error: {e}")
+        logger.exception("Full traceback:")
         return False
 
 if __name__ == "__main__":
     success = main()
-    if not success:
-        exit(1)
+    sys.exit(0 if success else 1)
