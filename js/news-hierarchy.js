@@ -26,6 +26,16 @@ const MAX_REGULAR_NEWS = 12;
 // NOUVEAU: Limite de récence des actualités (en jours)
 const MAX_NEWS_DAYS = 4; // Affiche seulement les actualités des 4 derniers jours
 
+// Mapping des catégories backend (anglais) vers frontend (français)
+const CATEGORY_BACKEND_TO_FRONTEND = {
+    'companies': 'entreprises',
+    'economy': 'economie',
+    'markets': 'marches',
+    'tech': 'tech',
+    'crypto': 'crypto',
+    'general': 'general'
+};
+
 // Initialisation: ajouter cette fonction au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
     // Vérifier si nous sommes sur la page des actualités
@@ -98,11 +108,15 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
     card.className = `news-card relative flex flex-col rounded-xl p-6 border border-${impactColor} bg-zinc-900 transition hover:shadow-lg min-h-[240px] cursor-pointer`;
     card.style.animationDelay = `${index * 0.1}s`;
 
+    // Mapper la catégorie anglaise vers française
+    const mappedCategory = CATEGORY_BACKEND_TO_FRONTEND[item.category] || item.category;
+    
     // Attributs de filtrage - AJOUT de data-score AVANT la boucle
     card.setAttribute('data-score', item.importance_score || item.imp || 0);
+    card.setAttribute('data-category', mappedCategory);
     
-    // CORRECTION: Retirer 'score' de la boucle pour ne pas écraser
-    ['category', 'impact', 'sentiment', 'country'].forEach(key => {
+    // Autres attributs
+    ['impact', 'sentiment', 'country'].forEach(key => {
         card.setAttribute(`data-${key}`, item[key] || 'unknown');
     });
     
@@ -172,17 +186,19 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
  * Obtient le label d'affichage pour une catégorie
  */
 function getCategoryLabel(category) {
+    // Mapper d'abord la catégorie backend vers frontend
+    const mappedCategory = CATEGORY_BACKEND_TO_FRONTEND[category] || category;
+    
     const categoryLabels = {
-        'companies': 'ENTREPRISES',
-        'crypto': 'CRYPTO',
-        'forex': 'FOREX',
-        'economy': 'ÉCONOMIE',
-        'markets': 'MARCHÉS',
+        'entreprises': 'ENTREPRISES',
+        'economie': 'ÉCONOMIE',
+        'marches': 'MARCHÉS',
         'tech': 'TECH',
+        'crypto': 'CRYPTO',
         'general': 'GÉNÉRAL'
     };
     
-    return categoryLabels[category] || category?.toUpperCase() || 'GÉNÉRAL';
+    return categoryLabels[mappedCategory] || mappedCategory?.toUpperCase() || 'GÉNÉRAL';
 }
 
 /**
