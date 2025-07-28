@@ -139,10 +139,13 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
     // MODIFICATION : Badge urgent supprimé - plus de badge "URGENT"
     // const urgentBadge = tier === 'critical' ? '<span class="absolute top-2 right-2 badge urgent bg-red-500 text-white text-xs px-2 py-1 rounded animate-pulse">URGENT</span>' : '';
 
+    // Obtenir le label d'affichage pour la catégorie
+    const categoryLabel = getCategoryLabel(item.category);
+
     card.innerHTML = `
         <header class="flex items-center gap-2 mb-3 flex-wrap">
             <span class="badge badge-${item.impact} uppercase text-xs px-2 py-1 rounded font-semibold ${getImpactBadgeClass(item.impact)}">${impactText}</span>
-            <span class="chip text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300">${item.category?.toUpperCase() || 'GENERAL'}</span>
+            <span class="chip text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300">${categoryLabel}</span>
         </header>
 
         <h3 class="title text-lg font-bold line-clamp-2 text-white mb-3">${item.title}</h3>
@@ -163,6 +166,23 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
     card.querySelector('.desc').innerText = content;
     
     return card;
+}
+
+/**
+ * Obtient le label d'affichage pour une catégorie
+ */
+function getCategoryLabel(category) {
+    const categoryLabels = {
+        'companies': 'ENTREPRISES',
+        'crypto': 'CRYPTO',
+        'forex': 'FOREX',
+        'economy': 'ÉCONOMIE',
+        'markets': 'MARCHÉS',
+        'tech': 'TECH',
+        'general': 'GÉNÉRAL'
+    };
+    
+    return categoryLabels[category] || category?.toUpperCase() || 'GÉNÉRAL';
 }
 
 /**
@@ -289,17 +309,7 @@ function distributeNewsByImportance(newsData) {
         news.importance_score = news.imp || news.quality_score || 0;
         news.content = news.snippet || news.content || '';
         
-        // Traduire les catégories EN->FR
-        const catMap = {
-            'economy': 'economie',
-            'markets': 'marches', 
-            'companies': 'entreprises',
-            'tech': 'tech',
-            'crypto': 'crypto',
-            'forex': 'forex'
-        };
-        news.category = catMap[news.category] || news.category || 'general';
-        
+        // IMPORTANT: NE PAS TRADUIRE LES CATÉGORIES - garder celles du backend
         // Valeurs par défaut pour les champs nécessaires
         news.impact = news.impact || 'neutral';
         news.sentiment = news.sentiment || news.impact;
