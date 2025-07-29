@@ -7,7 +7,7 @@
 // (1‑a)  Table mots‑clés → codes ISO‑2
 const COUNTRY_KEYWORDS = [
   // 🇺🇸 United States
-  { iso: 'us', rx: /\b(?:s&p\s*500|dow jones|nasdaq|usd\b|\bu\.s\.?(?:a)?\b|wall street|federal reserve|treasur(?:y|ies)|washington)\b/i },
+  { iso: 'us', rx: /\b(?:s&p\s*500|dow jones|nasdaq|usd\b|\bu\.s\.?(?:a)?\b|wall street|federal reserve|treasur(?:y|ies)|washington(?!\s+(?:state|st\.))|capitol hill|white house|maison blanche)\b/i },
   // 🇫🇷 France
   { iso: 'fr', rx: /\b(?:cac\s*40|euronext paris|banque de france|\beur\b|paris)\b/i },
   // 🇬🇧 United Kingdom
