@@ -1,683 +1,302 @@
-/**
- * TradePulse - Enhanced News Hierarchy System (Investor-Grade)
- * This module organizes news and events by importance level with enhanced investor focus
- */
+/* ---------------------------------------------------------------------
+ * news-hierarchy.js — v2025‑07‑29
+ * Système de hiérarchisation + filtrage géographique intelligent
+ * --------------------------------------------------------------------*/
 
-// Enhanced keywords for evaluating news importance with investor-grade criteria
-const NEWS_KEYWORDS = {
-    "high_impact": [
-        // Market & macro shocks - Enhanced for investor relevance
-        "crash", "collapse", "crise", "recession", "fail", "bankruptcy", "récession", "banque centrale", 
-        "inflation", "hike", "drop", "plunge", "default", "fitch downgrade", "downgrade", "hausse des taux", 
-        "bond yield", "yield curve", "sell-off", "bear market", "effondrement", "chute", "krach",
-        "dégringolade", "catastrophe", "urgence", "alerte", "défaut", "risque", "choc", "contagion",
-        "panique", "défaillance", "correction", "faillite", "taux directeur",
-        // Enhanced macro indicators
-        "cpi", "pce", "core inflation", "stagflation", "volatility spike", "credit spread",
-        // Corporate fundamentals red flags
-        "profit warning", "guidance cut", "eps miss", "dividend cut", "insolvency"
-    ],
-    "medium_impact": [
-        "growth", "expansion", "job report", "fed decision", "quarterly earnings", "acquisition", 
-        "ipo", "merger", "partnership", "profit warning", "bond issuance", "croissance", "emploi", 
-        "rapport", "BCE", "FED", "résultats trimestriels", "fusion", "acquisition", "partenariat",
-        "bénéfices", "émission obligataire", "émission d'obligations", "perspectives", "avertissement",
-        "rachat", "introduction en bourse", "nouveau PDG", "restructuration",
-        // Enhanced fundamentals
-        "earnings beat", "revenue beat", "free cash flow", "margin expansion", "buyback",
-        "payrolls", "unemployment rate", "pmi", "ism", "consumer confidence"
-    ],
-    "low_impact": [
-        "recommendation", "stock buyback", "dividend", "announcement", "management change", "forecast",
-        "recommandation", "rachat d'actions", "dividende", "annonce", "changement de direction", "prévision",
-        "nomination", "produit", "service", "stratégie", "marché", "plan", "mise à jour", "tendance",
-        "product launch", "pilot", "collaboration", "award", "marketing", "prototype"
-    ]
-};
-
-// Enhanced reference sources with premium tier focus
-const IMPORTANT_SOURCES = [
-    // Premium tier
-    "Bloomberg", "Reuters", "WSJ", "FT", "Financial Times", "Wall Street Journal",
-    // Investment focus
-    "Barron's", "MarketWatch", "Seeking Alpha", "Investor's Business Daily", "Morningstar",
-    // French premium
-    "Les Échos", "La Tribune", "Le Figaro", "Le Monde", "Le Revenu", "BFM Business", 
-    "L'AGEFI", "Investir", "Capital",
-    // International premium
-    "CNBC", "The Economist", "BBC"
+/***** 1.  Constantes « géographie » ****************************************/
+// (1‑a)  Table mots‑clés → codes ISO‑2
+const COUNTRY_KEYWORDS = [
+  // 🇺🇸 United States
+  { iso: 'us', rx: /\b(?:s&p\s*500|dow jones|nasdaq|usd\b|\bu\.s\.?(?:a)?\b|wall street|federal reserve|treasur(?:y|ies)|washington)\b/i },
+  // 🇫🇷 France
+  { iso: 'fr', rx: /\b(?:cac\s*40|euronext paris|banque de france|\beur\b|paris)\b/i },
+  // 🇬🇧 United Kingdom
+  { iso: 'gb', rx: /\b(?:ftse(?:\s*100)?|bank of england|london|\bboe\b|\bgbp\b|pound sterling)\b/i },
+  // 🇯🇵 Japan
+  { iso: 'jp', rx: /\b(?:nikkei|topix|tokyo|\bboj\b|\byen\b|\bjpy\b)\b/i },
+  // 🇨🇳 China
+  { iso: 'cn', rx: /\b(?:shanghai composite|shenzhen|csi\s*300|pbo[cs]|yuan\b|cny\b|beijing)\b/i },
+  // …complétez au besoin
 ];
 
-// Enhanced premium sources for extra scoring
-const PREMIUM_SOURCES = [
-    "bloomberg", "financial times", "wall street journal", "reuters", "the economist"
-];
-
-/**
- * Enhanced importance scoring with investor-grade criteria
- * @param {Object} article - The news article to evaluate
- * @returns {number} - Importance score (0-100)
- */
-function calculateNewsScore(article) {
-    const content = `${article.title || ""} ${article.content || ""}`.toLowerCase();
-    
-    let score = 0;
-    
-    // Enhanced keyword scoring with investor focus
-    for (const word of NEWS_KEYWORDS.high_impact) {
-        if (content.includes(word)) {
-            score += 12; // Increased weight for high impact
-        }
-    }
-    
-    for (const word of NEWS_KEYWORDS.medium_impact) {
-        if (content.includes(word)) {
-            score += 6; // Balanced medium impact
-        }
-    }
-    
-    for (const word of NEWS_KEYWORDS.low_impact) {
-        if (content.includes(word)) {
-            score += 2; // Reduced low impact noise
-        }
-    }
-    
-    // Enhanced source scoring with premium boost
-    const source = (article.source || "").toLowerCase();
-    if (IMPORTANT_SOURCES.some(src => source.includes(src.toLowerCase()))) {
-        score += 8; // Increased source weight
-    }
-    
-    // Premium source super-boost
-    if (PREMIUM_SOURCES.some(premium => source.includes(premium))) {
-        score += 12; // Premium source bonus
-    }
-    
-    // Enhanced impact weighting
-    if (article.impact === "negative") {
-        score += 5; // Negative news often more market-moving
-    } else if (article.impact === "positive") {
-        score += 3; // Positive news moderate boost
-    }
-    
-    // Enhanced category scoring for investor relevance
-    if (article.category === "economie" || article.category === "economy") {
-        score += 4; // Macro news critical for investors
-    } else if (article.category === "marches" || article.category === "markets") {
-        score += 3; // Market news important
-    } else if (article.category === "companies") {
-        score += 2; // Company-specific news
-    }
-    
-    // Fundamentals bonus - New enhancement
-    const fundamentalsKeywords = ["eps", "revenue", "guidance", "margin", "buyback", "dividend", "leverage"];
-    if (fundamentalsKeywords.some(keyword => content.includes(keyword))) {
-        score += 4; // Fundamentals analysis bonus
-    }
-    
-    // Macro indicators bonus - New enhancement  
-    const macroKeywords = ["cpi", "pce", "payrolls", "gdp", "pmi", "ism"];
-    if (macroKeywords.some(keyword => content.includes(keyword))) {
-        score += 6; // Key macro indicators bonus
-    }
-    
-    return Math.min(100, score); // Cap at 100
-}
-
-/**
- * Enhanced event impact determination with investor focus
- * @param {Object} event - The economic event to evaluate
- * @returns {string} - Impact level (high, medium, low)
- */
-function determineEventImpact(event) {
-    // Enhanced high-impact events for investors
-    const highImpactEvents = [
-        "Interest Rate Decision", "Fed Interest Rate", "ECB Interest Rate", "BOJ Interest Rate",
-        "Inflation Rate", "CPI", "PCE", "Core CPI", "Core PCE",
-        "GDP Growth", "GDP Release", "GDP Preliminary", "GDP Final",
-        "Employment Change", "Unemployment Rate", "Non-Farm Payrolls", "ADP Employment",
-        "FOMC", "FED", "BCE", "ECB", "Fed Chair", "Treasury", "Central Bank",
-        "Federal Reserve", "Banque Centrale", "Retail Sales", "Consumer Spending",
-        // Enhanced fundamentals events
-        "Earnings Season", "Earnings Report", "Quarterly Results", "Annual Results",
-        "Dividend Declaration", "Stock Split", "Share Buyback Announcement"
-    ];
-    
-    // Enhanced medium-impact events
-    const mediumImpactEvents = [
-        "PMI", "ISM", "Consumer Confidence", "Business Confidence", "Trade Balance", 
-        "Industrial Production", "Manufacturing Production", "Housing Starts", "Building Permits",
-        "Durable Goods Orders", "Factory Orders", "Initial Claims", "Continuing Claims",
-        "Producer Price Index", "PPI", "Import Price Index", "Export Price Index",
-        "Consumer Credit", "Business Inventories", "Wholesale Inventories",
-        // Corporate events
-        "Merger Announcement", "Acquisition", "IPO", "Corporate Restructuring"
-    ];
-    
-    const eventName = (event.title || "").toLowerCase();
-    
-    // Check for high impact patterns
-    if (highImpactEvents.some(keyword => eventName.includes(keyword.toLowerCase()))) {
-        return "high";
-    }
-    
-    // Check for medium impact patterns
-    if (mediumImpactEvents.some(keyword => eventName.includes(keyword.toLowerCase()))) {
-        return "medium";
-    }
-    
-    // Enhanced pattern matching for investor relevance
-    if (eventName.includes("earnings") || eventName.includes("résultats")) {
-        return "medium"; // Earnings always medium+ importance
-    }
-    
-    if (eventName.includes("fed") || eventName.includes("ecb") || eventName.includes("central bank")) {
-        return "high"; // Central bank communications always high
-    }
-    
-    // Existing classification fallback
-    if (event.importance === "high") {
-        return "high";
-    } else if (event.importance === "medium") {
-        return "medium";
-    }
-    
-    return "low";
-}
-
-/**
- * Enhanced news organization with investor-grade thresholds
- * @param {Object} newsData - News data
- * @returns {Object} - Organized news by importance
- */
-function organizeNewsByImportance(newsData) {
-    if (!newsData || (!newsData.us && !newsData.france && !newsData.europe_other)) {
-        console.warn("Invalid news data for organization");
-        return {
-            breakingNews: [],
-            importantNews: [],
-            standardNews: []
-        };
-    }
-    
-    // Combine all news from enhanced geographic regions
-    const allNews = [
-        ...(newsData.us || []), 
-        ...(newsData.france || []),
-        ...(newsData.europe_other || []),
-        ...(newsData.asia || []),
-        ...(newsData.emerging_markets || []),
-        ...(newsData.global || [])
-    ];
-    
-    // Calculate scores with enhanced criteria
-    const scoredNews = allNews.map(news => {
-        if (typeof news.score === 'undefined') {
-            return {
-                ...news,
-                score: calculateNewsScore(news)
-            };
-        }
-        return news;
-    });
-    
-    // Enhanced thresholds for investor-grade filtering
-    const breakingNews = scoredNews.filter(item => item.score >= 20); // Raised threshold
-    const importantNews = scoredNews.filter(item => item.score >= 12 && item.score < 20); // Optimized range
-    const standardNews = scoredNews.filter(item => item.score < 12);
-    
-    return {
-        breakingNews,
-        importantNews,
-        standardNews
-    };
-}
-
-/**
- * Enhanced event organization with investor focus
- * @param {Array} events - List of events
- * @returns {Object} - Events organized by impact level
- */
-function organizeEventsByImpact(events) {
-    if (!events || !Array.isArray(events)) {
-        console.warn("Invalid events data for organization");
-        return {
-            highImpactEvents: [],
-            mediumImpactEvents: [],
-            lowImpactEvents: []
-        };
-    }
-    
-    // Enhanced event processing with investor criteria
-    const processedEvents = events.map(event => {
-        if (!event.impact) {
-            return {
-                ...event,
-                impact: determineEventImpact(event)
-            };
-        }
-        return event;
-    });
-    
-    // Filter and sort by impact with enhanced criteria
-    const highImpactEvents = processedEvents
-        .filter(event => event.impact === "high")
-        .sort((a, b) => (b.importance_score || 0) - (a.importance_score || 0));
-        
-    const mediumImpactEvents = processedEvents
-        .filter(event => event.impact === "medium")
-        .sort((a, b) => (b.importance_score || 0) - (a.importance_score || 0));
-        
-    const lowImpactEvents = processedEvents
-        .filter(event => event.impact === "low")
-        .sort((a, b) => (b.importance_score || 0) - (a.importance_score || 0));
-    
-    return {
-        highImpactEvents,
-        mediumImpactEvents,
-        lowImpactEvents
-    };
-}
-
-/**
- * Enhanced display for breaking news with investor focus
- * @param {Array} breakingNews - List of breaking news
- */
-function displayBreakingNews(breakingNews) {
-    const container = document.getElementById('critical-news-container');
-    if (!container) return;
-    
-    // Hide section if no critical news
-    if (breakingNews.length === 0) {
-        container.innerHTML = `
-        <div class="no-news-message glassmorphism p-6 rounded-lg text-center">
-            <i class="fas fa-check-circle text-green-400 text-2xl mb-2"></i>
-            <p class="text-gray-400">Aucune actualité critique détectée actuellement</p>
-            <p class="text-sm text-gray-500 mt-1">Les marchés semblent calmes</p>
-        </div>`;
-        return;
-    }
-    
-    let htmlContent = '';
-    
-    // Enhanced critical news display
-    breakingNews.forEach((item, index) => {
-        const urgencyClass = item.score >= 30 ? 'critical-urgent' : 'critical-high';
-        const scoreDisplay = Math.round(item.score || 0);
-        
-        htmlContent += `
-        <div class="news-card ${urgencyClass} glassmorphism relative mb-4" 
-             data-category="${item.category || ''}" 
-             data-impact="${item.impact || ''}" 
-             data-country="${item.country || ''}"
-             data-score="${scoreDisplay}">
-            
-            <div class="news-importance-indicators">
-                <span class="news-importance-tag importance-breaking">
-                    🚨 CRITIQUE
-                </span>
-                <span class="news-score-badge">
-                    Score: ${scoreDisplay}
-                </span>
-            </div>
-            
-            <div class="news-content">
-                <div class="news-meta enhanced">
-                    <span class="news-source premium">${item.source || ''}</span>
-                    <div class="news-date-time">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span class="news-date">${item.date || ''}</span>
-                        <span class="news-time">${item.time || ''}</span>
-                    </div>
-                    <div class="news-category-tag ${item.category || ''}">
-                        ${item.category || 'Général'}
-                    </div>
-                </div>
-                
-                <h3 class="text-lg font-bold text-red-400 leading-tight mb-3">
-                    ${item.title || ''}
-                </h3>
-                
-                <p class="text-gray-300 leading-relaxed mb-3">
-                    ${(item.content || '').substring(0, 200)}${(item.content || '').length > 200 ? '...' : ''}
-                </p>
-                
-                <div class="news-footer enhanced">
-                    <div class="news-themes">
-                        ${Object.entries(item.themes || {}).map(([axis, themes]) => 
-                            themes.map(theme => `<span class="theme-tag ${axis}">${theme}</span>`).join('')
-                        ).join('')}
-                    </div>
-                    
-                    <div class="news-actions">
-                        ${item.url ? `<a href="${item.url}" target="_blank" class="news-link">
-                            <i class="fas fa-external-link-alt"></i> Lire l'article
-                        </a>` : ''}
-                    </div>
-                </div>
-            </div>
-        </div>`;
-    });
-    
-    container.innerHTML = htmlContent;
-}
-
-/**
- * Enhanced display for important news
- * @param {Array} importantNews - List of important news
- */
-function displayImportantNews(importantNews) {
-    const container = document.getElementById('important-news-container');
-    if (!container) return;
-    
-    if (importantNews.length === 0) {
-        container.innerHTML = `
-        <div class="no-news-message glassmorphism p-4 rounded-lg text-center">
-            <i class="fas fa-info-circle text-blue-400 text-xl mb-2"></i>
-            <p class="text-gray-400">Aucune actualité importante en ce moment</p>
-        </div>`;
-        return;
-    }
-    
-    let htmlContent = '';
-    
-    // Enhanced important news display with improved layout
-    importantNews.forEach((item, index) => {
-        const scoreDisplay = Math.round(item.score || 0);
-        
-        htmlContent += `
-        <div class="news-card important-news glassmorphism relative" 
-             data-category="${item.category || ''}" 
-             data-impact="${item.impact || ''}" 
-             data-country="${item.country || ''}"
-             data-score="${scoreDisplay}">
-            
-            <div class="news-importance-indicators">
-                <span class="news-importance-tag importance-high">
-                    🔥 IMPORTANT
-                </span>
-                <span class="news-score-badge secondary">
-                    ${scoreDisplay}
-                </span>
-            </div>
-            
-            <div class="news-content">
-                <div class="news-meta">
-                    <span class="news-source">${item.source || ''}</span>
-                    <div class="news-date-time">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span class="news-date">${item.date || ''}</span>
-                        <span class="news-time">${item.time || ''}</span>
-                    </div>
-                </div>
-                
-                <h3 class="text-base font-semibold text-yellow-400 leading-tight mb-2">
-                    ${item.title || ''}
-                </h3>
-                
-                <p class="text-sm text-gray-400 leading-relaxed mb-3">
-                    ${(item.content || '').substring(0, 150)}${(item.content || '').length > 150 ? '...' : ''}
-                </p>
-                
-                <div class="news-footer">
-                    <div class="news-themes compact">
-                        ${Object.entries(item.themes || {}).map(([axis, themes]) => 
-                            themes.slice(0, 2).map(theme => `<span class="theme-tag ${axis} small">${theme}</span>`).join('')
-                        ).join('')}
-                    </div>
-                    
-                    ${item.url ? `<a href="${item.url}" target="_blank" class="news-link compact">
-                        <i class="fas fa-external-link-alt"></i>
-                    </a>` : ''}
-                </div>
-            </div>
-        </div>`;
-    });
-    
-    container.innerHTML = htmlContent;
-}
-
-/**
- * Enhanced event display with investor-grade styling
- * @param {Object} organizedEvents - Events organized by impact
- */
-function displayOrganizedEvents(organizedEvents) {
-    const { highImpactEvents, mediumImpactEvents, lowImpactEvents } = organizedEvents;
-    const container = document.getElementById('events-container');
-    if (!container) return;
-    
-    let htmlContent = '';
-    
-    // Enhanced high-impact events with premium styling
-    highImpactEvents.forEach(event => {
-        htmlContent += `
-        <div class="event-card event-high-impact p-4 rounded-lg shadow-lg relative border-l-4 border-red-500" data-impact="high">
-            <div class="event-importance-badge high">🚨 CRITIQUE</div>
-            <div class="event-date enhanced">
-                <div class="event-day font-bold text-xl">${event.date ? event.date.split('/')[0] : ''}</div>
-                <div class="event-month text-sm">${event.date ? event.date.split('/')[1] : ''}</div>
-            </div>
-            <div class="event-content">
-                <div class="event-title font-bold text-lg text-red-400">${event.title || ''}</div>
-                <div class="event-details mt-3 text-sm">
-                    <span class="event-time bg-red-600 text-white px-2 py-1 rounded text-xs">
-                        <i class="fas fa-clock"></i> ${event.time || ''}
-                    </span>
-                    <span class="event-type ${event.type || ''} ml-2">${event.type || ''}</span>
-                </div>
-            </div>
-        </div>`;
-    });
-    
-    // Enhanced medium-impact events
-    mediumImpactEvents.forEach(event => {
-        htmlContent += `
-        <div class="event-card event-medium-impact p-3 rounded-lg shadow-md relative border-l-4 border-yellow-500" data-impact="medium">
-            <div class="event-importance-badge medium">🔔 IMPORTANT</div>
-            <div class="event-date">
-                <div class="event-day font-bold text-lg">${event.date ? event.date.split('/')[0] : ''}</div>
-                <div class="event-month text-sm">${event.date ? event.date.split('/')[1] : ''}</div>
-            </div>
-            <div class="event-content">
-                <div class="event-title font-semibold text-yellow-400">${event.title || ''}</div>
-                <div class="event-details mt-2 text-sm">
-                    <span class="event-time bg-yellow-600 text-white px-2 py-1 rounded text-xs">
-                        <i class="fas fa-clock"></i> ${event.time || ''}
-                    </span>
-                    <span class="event-type ${event.type || ''} ml-2">${event.type || ''}</span>
-                </div>
-            </div>
-        </div>`;
-    });
-    
-    // Enhanced low-impact events (simplified display)
-    lowImpactEvents.forEach(event => {
-        htmlContent += `
-        <div class="event-card event-low-impact p-3 rounded-lg shadow-sm relative border-l-2 border-gray-600" data-impact="low">
-            <div class="event-importance-badge low">📋 STANDARD</div>
-            <div class="event-date compact">
-                <div class="event-day font-medium">${event.date ? event.date.split('/')[0] : ''}</div>
-                <div class="event-month text-xs">${event.date ? event.date.split('/')[1] : ''}</div>
-            </div>
-            <div class="event-content">
-                <div class="event-title font-medium text-gray-300 text-sm">${event.title || ''}</div>
-                <div class="event-details mt-1 text-xs">
-                    <span class="event-time text-gray-400">
-                        <i class="fas fa-clock"></i> ${event.time || ''}
-                    </span>
-                </div>
-            </div>
-        </div>`;
-    });
-    
-    container.innerHTML = htmlContent;
-}
-
-/**
- * Enhanced filter setup with investor-grade controls
- */
-function setupEventFilters() {
-    // Enhanced filter buttons with better UX
-    const highImpactBtn = document.getElementById('high-impact-btn');
-    const mediumImpactBtn = document.getElementById('medium-impact-btn');
-    const allImpactBtn = document.getElementById('all-impact-btn');
-    
-    if (highImpactBtn && mediumImpactBtn && allImpactBtn) {
-        // Critical events filter
-        highImpactBtn.addEventListener('click', function() {
-            toggleActiveFilter(this);
-            filterEventsByImpact('high');
-        });
-        
-        // Important events filter
-        mediumImpactBtn.addEventListener('click', function() {
-            toggleActiveFilter(this);
-            filterEventsByImpact('medium');
-        });
-        
-        // All events filter
-        allImpactBtn.addEventListener('click', function() {
-            toggleActiveFilter(this);
-            filterEventsByImpact('all');
-        });
-    }
-    
-    // Enhanced score-based filtering
-    const scoreFilter = document.getElementById('score-filter');
-    if (scoreFilter) {
-        scoreFilter.addEventListener('change', function() {
-            const minScore = parseInt(this.value);
-            filterByScore(minScore);
-        });
-    }
-}
-
-/**
- * Enhanced event filtering by impact level
- * @param {string} impactLevel - Impact level to filter
- */
-function filterEventsByImpact(impactLevel) {
-    const eventElements = document.querySelectorAll('#events-container .event-card');
-    
-    eventElements.forEach(element => {
-        if (impactLevel === 'all') {
-            element.style.display = 'flex';
-            element.style.opacity = '1';
-        } else {
-            const impact = element.dataset.impact;
-            if (impact === impactLevel) {
-                element.style.display = 'flex';
-                element.style.opacity = '1';
-            } else {
-                element.style.display = 'none';
-                element.style.opacity = '0.5';
-            }
-        }
-    });
-}
-
-/**
- * New: Filter by importance score
- * @param {number} minScore - Minimum score threshold
- */
-function filterByScore(minScore) {
-    const newsElements = document.querySelectorAll('.news-card[data-score]');
-    
-    newsElements.forEach(element => {
-        const score = parseInt(element.dataset.score || 0);
-        if (score >= minScore) {
-            element.style.display = 'block';
-            element.style.opacity = '1';
-        } else {
-            element.style.display = 'none';
-            element.style.opacity = '0.5';
-        }
-    });
-}
-
-/**
- * Enhanced filter activation with visual feedback
- * @param {HTMLElement} button - Filter button to activate
- */
-function toggleActiveFilter(button) {
-    // Remove active class from all filters
-    document.querySelectorAll('.filter-active').forEach(el => {
-        el.classList.remove('filter-active');
-    });
-    
-    // Add active class to clicked button
-    button.classList.add('filter-active');
-    
-    // Enhanced visual feedback
-    button.style.transform = 'scale(0.95)';
-    setTimeout(() => {
-        button.style.transform = 'scale(1)';
-    }, 150);
-}
-
-/**
- * Enhanced news hierarchy initialization with investor-grade features
- * @param {Object} newsData - News data (if available)
- */
-function initNewsHierarchy(newsData) {
-    console.log("🚀 Initializing enhanced investor-grade news hierarchy...");
-    
-    // If data is available, organize immediately with enhanced criteria
-    if (newsData) {
-        const { breakingNews, importantNews, standardNews } = organizeNewsByImportance(newsData);
-        
-        console.log(`📊 News organized: ${breakingNews.length} critical, ${importantNews.length} important, ${standardNews.length} standard`);
-        
-        displayBreakingNews(breakingNews);
-        displayImportantNews(importantNews);
-        
-        // Organize events if present
-        if (newsData.events) {
-            const organizedEvents = organizeEventsByImpact(newsData.events);
-            displayOrganizedEvents(organizedEvents);
-            console.log(`📅 Events organized: ${organizedEvents.highImpactEvents.length} critical, ${organizedEvents.mediumImpactEvents.length} important`);
-        }
-    }
-    
-    // Setup enhanced filters
-    setupEventFilters();
-    
-    console.log("✅ Enhanced investor-grade news hierarchy system initialized");
-}
-
-// Enhanced initialization with better error handling
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    if (window.newsData) {
-        initNewsHierarchy(window.newsData);
-    }
-} else {
-    document.addEventListener('DOMContentLoaded', function() {
-        if (window.newsData) {
-            initNewsHierarchy(window.newsData);
-        }
-    });
-}
-
-// Enhanced API export with new features
-window.newsHierarchy = {
-    calculateNewsScore,
-    determineEventImpact,
-    organizeNewsByImportance,
-    organizeEventsByImpact,
-    displayBreakingNews,
-    displayImportantNews,
-    displayOrganizedEvents,
-    filterByScore, // New function
-    initNewsHierarchy,
-    // Enhanced utilities
-    getScoreDistribution: function(articles) {
-        const scores = articles.map(a => a.score || 0);
-        return {
-            min: Math.min(...scores),
-            max: Math.max(...scores),
-            avg: scores.reduce((a, b) => a + b, 0) / scores.length,
-            critical: scores.filter(s => s >= 20).length,
-            important: scores.filter(s => s >= 12 && s < 20).length
-        };
-    }
+// (1‑b)  Groupes régionaux qui apparaissent dans le <select>
+const COUNTRY_GROUPS = {
+  eu:   ['de','es','it','nl','be','se','ch','at','fi','dk','pt','ie','no','gr','pl','cz','hu','ro','sk','si','bg','hr','lu'],
+  asia: ['cn','jp','kr','in','id','th','sg','hk','my','tw','vn','ph'],
+  em:   ['br','mx','za','tr','ru','sa','qa','ae','cl','co','pe','eg','ng']
 };
+
+// (1‑c)  Détection rapide
+function detectCountries(text = '') {
+  const found = new Set();
+  for (const { iso, rx } of COUNTRY_KEYWORDS) {
+    if (rx.test(text)) found.add(iso);
+  }
+  return [...found];                // ex. ["us","ca"]
+}
+
+/***** 2.  Namespace principal *********************************************/
+window.NewsSystem = {
+  data: null,
+  isLoading: false,
+  categorizedNews: { critical: [], important: [], regular: [] },
+  dataReadyEvent: new CustomEvent('newsDataReady')
+};
+
+// Limites d'affichage par tier
+const MAX_CRITICAL_NEWS  = 5;
+const MAX_IMPORTANT_NEWS = 8;
+const MAX_REGULAR_NEWS   = 12;
+
+const MAX_NEWS_DAYS = 4;   // récence max affichée
+
+// Traduction des catégories back‑end → front‑end
+const CATEGORY_BACKEND_TO_FRONTEND = {
+  companies: 'entreprises',
+  economy:   'economie',
+  markets:   'marches',
+  tech:      'tech',
+  crypto:    'crypto',
+  general:   'general'
+};
+
+/***** 3.  Boot *************************************************************/
+document.addEventListener('DOMContentLoaded', () => {
+  const anyNewsContainer = document.getElementById('critical-news-container') ||
+                           document.getElementById('important-news-container') ||
+                           document.getElementById('recent-news');
+  if (anyNewsContainer) initializeNewsData();
+});
+
+/***** 4.  Chargement données **********************************************/
+async function initializeNewsData() {
+  if (window.NewsSystem.isLoading) return;
+  window.NewsSystem.isLoading = true;
+
+  try {
+    showLoadingState('critical-news-container');
+    showLoadingState('important-news-container');
+    showLoadingState('recent-news');
+
+    const res = await fetch('data/news.json');
+    if (!res.ok) throw new Error('Impossible de charger les données');
+
+    const data = await res.json();
+    window.NewsSystem.data = data;
+
+    distributeNewsByImportance(data);
+
+    document.dispatchEvent(window.NewsSystem.dataReadyEvent);
+  } catch (err) {
+    console.error(err);
+    displayFallbackData();
+  } finally {
+    window.NewsSystem.isLoading = false;
+  }
+}
+
+/***** 5.  Construction des cartes *****************************************/
+function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier) {
+  const card = document.createElement('div');
+  card.className = `news-card relative flex flex-col rounded-xl p-6 border border-${impactColor} bg-zinc-900 transition hover:shadow-lg min-h-[240px] cursor-pointer`;
+  card.style.animationDelay = `${index * 0.1}s`;
+
+  const mappedCategory = CATEGORY_BACKEND_TO_FRONTEND[item.category] || item.category;
+
+  card.setAttribute('data-score', item.importance_score || item.imp || 0);
+  card.setAttribute('data-category', mappedCategory);
+  ['impact','sentiment','country'].forEach(k => card.setAttribute(`data-${k}`, item[k] || 'unknown'));
+
+  card.setAttribute('data-news-id', `news-${tier}-${index}`);
+  if (item.url) {
+    card.classList.add('clickable-news');
+    card.addEventListener('click', () => window.open(item.url, '_blank', 'noopener'));
+  }
+
+  const tmp = new DOMParser().parseFromString(item.content || item.snippet || '', 'text/html');
+  let content = (tmp.body.textContent || '').replace(/\s+/g,' ').trim();
+  const CHAR_LIMIT = { regular:120, important:180, critical:220 }[tier] ?? 160;
+  if (content.length > CHAR_LIMIT) content = content.slice(0, CHAR_LIMIT-1) + '…';
+  const descClamp = tier==='regular' ? 'line-clamp-3' : 'line-clamp-4';
+
+  const categoryLabel = getCategoryLabel(item.category);
+
+  card.innerHTML = `
+    <header class="flex items-center gap-2 mb-3 flex-wrap">
+      <span class="badge badge-${item.impact} uppercase text-xs px-2 py-1 rounded font-semibold ${getImpactBadgeClass(item.impact)}">${impactText}</span>
+      <span class="chip text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300">${categoryLabel}</span>
+    </header>
+    <h3 class="title text-lg font-bold line-clamp-2 text-white mb-3">${item.title}</h3>
+    <p class="desc text-sm text-zinc-300 ${descClamp} flex-grow mb-4"></p>
+    <footer class="footer mt-auto flex justify-between items-center text-xs">
+      <span class="text-emerald-400 font-medium">${item.source || '—'}</span>
+      <div class="flex items-center gap-2">
+        <span class="sentiment-icon">${sentimentIcon}</span>
+        <span class="date-time text-xs text-zinc-500">${item.date || ''} ${item.time || ''}</span>
+        ${item.url ? '<span class="text-zinc-500"><i class="fas fa-external-link-alt"></i></span>' : ''}
+      </div>
+    </footer>`;
+  card.querySelector('.desc').innerText = content;
+  return card;
+}
+
+function getCategoryLabel(cat){
+  const m = CATEGORY_BACKEND_TO_FRONTEND[cat] || cat;
+  const lbl = { entreprises:'ENTREPRISES', economie:'ÉCONOMIE', marches:'MARCHÉS', tech:'TECH', crypto:'CRYPTO', general:'GÉNÉRAL' };
+  return lbl[m] || (m||'général').toUpperCase();
+}
+function getImpactBadgeClass(impact){
+  switch(impact){
+    case 'negative':            return 'bg-red-800 text-red-200 border border-red-600';
+    case 'slightly_negative':   return 'bg-red-900 text-red-300 border border-red-700';
+    case 'positive':            return 'bg-emerald-800 text-emerald-200 border border-emerald-600';
+    case 'slightly_positive':   return 'bg-emerald-900 text-emerald-300 border border-emerald-700';
+    default:                    return 'bg-yellow-800 text-yellow-200 border border-yellow-600';
+  }
+}
+function getImpactBorderColor(impact){
+  return ['negative','slightly_negative'].includes(impact) ? 'red-600' :
+         ['positive','slightly_positive'].includes(impact) ? 'emerald-600' : 'yellow-600';
+}
+function getSentimentIcon(s){
+  return ['positive','slightly_positive'].includes(s) ? '⬆️' :
+         ['negative','slightly_negative'].includes(s) ? '⬇️' : '➖';
+}
+
+/***** 6.  Hiérarchisation & enrichissement *******************************/
+function distributeNewsByImportance(newsData){
+  if (!newsData){ console.error('No data'); return; }
+
+  // 6‑a. Fusionner toutes les régions
+  let allNews = [];
+  Object.keys(newsData).forEach(k => Array.isArray(newsData[k]) && (allNews = allNews.concat(newsData[k])));
+
+  // 6‑b. Exclude some types
+  const excludedTypes = ['economic','ipo','m&a'];
+  allNews = allNews.filter(n => !excludedTypes.includes((n.type||'').toLowerCase()));
+
+  // 6‑c. Filtre récence ≤ 4 jours
+  const MS_PER_DAY = 864e5, today = new Date();
+  allNews = allNews.filter(n => {
+    const d = n.date?.includes('/')
+      ? new Date(n.date.split('/').reverse().join('-')+'T00:00:00')
+      : new Date(n.date);
+    return d && !isNaN(d) && (today - d)/MS_PER_DAY <= MAX_NEWS_DAYS;
+  });
+
+  // 6‑d. Enrichissement géographie + hiérarchie
+  allNews.forEach(n => {
+    /* geo */
+    if (!n.country || n.country==='other'){
+      const corpus = [n.title,n.snippet,n.content,n.source].filter(Boolean).join('  ');
+      const iso   = detectCountries(corpus);
+      n.country   = iso.length ? iso.join(',') : 'other';
+    } else {
+      n.country = n.country.toLowerCase();
+    }
+
+    /* hiérarchie (simple rule based sur imp / ML) */
+    if (!n.importance_level){
+      const s = parseFloat(n.imp || n.quality_score || 0);
+      n.importance_level = s>=80?'critical': s>=60?'important':'general';
+    }
+    n.hierarchy = (n.importance_level==='general')?'normal':n.importance_level.toLowerCase();
+    n.importance_score = n.imp || n.quality_score || 0;
+    n.impact    = n.impact    || 'neutral';
+    n.sentiment = n.sentiment || n.impact;
+  });
+
+  // 6‑e. Tri + stockage
+  const byTier = tier => allNews.filter(n => n.hierarchy===tier)
+                                .sort((a,b)=>b.importance_score - a.importance_score);
+  const criticalNews = byTier('critical');
+  const importantNews= byTier('important');
+  const regularNews  = byTier('normal');
+  window.NewsSystem.categorizedNews = { critical:criticalNews, important:importantNews, regular:regularNews };
+
+  displayCriticalNews(criticalNews);
+  displayImportantNews(importantNews);
+  displayRecentNews(regularNews);
+}
+
+/***** 7.  Affichage par tier *********************************************/
+function displayCriticalNews(list){ paintTier(list,'critical-news-container','critical',MAX_CRITICAL_NEWS); }
+function displayImportantNews(list){ paintTier(list,'important-news-container','important',MAX_IMPORTANT_NEWS); }
+function displayRecentNews(list){ paintTier(list,'recent-news','regular',MAX_REGULAR_NEWS,true); }
+
+function paintTier(list,containerId,tier,max,grid=false){
+  const c = document.getElementById(containerId);
+  if (!c) return;
+  c.innerHTML='';
+  if (grid){ c.className='grid grid-cols-1 md:grid-cols-2 gap-4'; }
+  if (!list.length){
+    c.innerHTML='<p class="text-center text-gray-400 col-span-full">Aucune actualité</p>';
+    return;
+  }
+  list.slice(0,max).forEach((item,i)=>{
+    const card = buildNewsCard(item,getImpactText(item.impact),getImpactBorderColor(item.impact),getSentimentIcon(item.sentiment),i,tier);
+    c.appendChild(card);
+  });
+}
+
+/***** 8.  Utilitaires divers *********************************************/
+function showLoadingState(id){
+  const c=document.getElementById(id); if(!c)return;
+  c.innerHTML='<div class="flex items-center justify-center p-8"><div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-emerald-400 mr-3"></div><p class="text-zinc-400">Chargement…</p></div>';
+}
+function displayFallbackData(){ ['critical-news-container','important-news-container','recent-news'].forEach(id=>{
+  const c=document.getElementById(id); if(!c)return;
+  c.innerHTML='<div class="bg-zinc-800 bg-opacity-70 rounded-lg p-6 text-center"><i class="fas fa-exclamation-triangle text-yellow-400 text-3xl mb-3"></i><h3 class="text-white font-medium mb-2">Erreur de chargement</h3><p class="text-zinc-400 mb-4">Impossible de récupérer les actualités.</p><button class="retry-button bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded transition" onclick="initializeNewsData()"><i class="fas fa-sync-alt mr-2"></i>Réessayer</button></div>';
+}); }
+function getImpactText(i){return i==='negative'?'IMPACT NÉGATIF':i==='slightly_negative'?'IMPACT LÉGÈREMENT NÉGATIF':i==='positive'?'IMPACT POSITIF':i==='slightly_positive'?'IMPACT LÉGÈREMENT POSITIF':'IMPACT NEUTRE';}
+
+/***** 9.  Filtrage dynamique *********************************************/
+window.NewsSystem.filterNews = filterNews;
+
+// Ecouteur sur le <select id="country-select">
+document.addEventListener('DOMContentLoaded',()=>{
+  const sel=document.getElementById('country-select');
+  if(sel) sel.addEventListener('change',e=>filterNews('country',e.target.value.toLowerCase()));
+});
+
+function filterNews(type,val){
+  const cards=document.querySelectorAll('.news-card');
+  // récupérer filtres actuels
+  const currentCategory = document.querySelector('#category-filters .filter-active')?.getAttribute('data-category') || 'all';
+  const currentImpact   = document.getElementById('impact-select')?.value || 'all';
+  const currentSent     = document.getElementById('sentiment-select')?.value || 'all';
+  const currentCountry  = (type==='country'?val:(document.getElementById('country-select')?.value||'all')).toLowerCase();
+
+  cards.forEach(card=>{
+    const cat = card.getAttribute('data-category');
+    const imp = card.getAttribute('data-impact');
+    const sen = card.getAttribute('data-sentiment');
+    const ctry= card.getAttribute('data-country');      // ex "us" ou "us,gb"
+
+    const matchCat = currentCategory==='all' || cat===currentCategory;
+    const matchImp = currentImpact==='all'  || imp===currentImpact;
+    const matchSen = currentSent==='all'    || sen===currentSent;
+
+    const isoList = ctry.split(',');
+    const matchCtry = currentCountry==='all' ||
+                      isoList.includes(currentCountry) ||
+                      (COUNTRY_GROUPS[currentCountry]||[]).some(x=>isoList.includes(x));
+
+    const visible = matchCat && matchImp && matchSen && matchCtry;
+    card.style.display = visible?'flex':'none';
+    card.classList.toggle('hidden',!visible);
+  });
+  checkVisibleItems();
+}
+
+function checkVisibleItems(){ ['recent-news','important-news-container','critical-news-container'].forEach(id=>{
+  const cont=document.getElementById(id); if(!cont)return;
+  const grid = cont.classList.contains('grid')?cont:cont.querySelector('.grid')||cont;
+  const visible = grid.querySelectorAll('.news-card:not(.hidden)').length;
+  let msg=grid.querySelector('.no-data-message');
+  if(!visible && !msg){ msg=document.createElement('div'); msg.className='no-data-message flex flex-col items-center justify-center py-12 col-span-full'; msg.innerHTML='<i class="fas fa-filter text-zinc-600 text-4xl mb-4"></i><h3 class="text-white font-medium mb-2">Aucune actualité ne correspond à vos critères</h3><p class="text-zinc-400">Modifiez vos filtres pour voir d\'autres articles.</p>'; grid.appendChild(msg); }
+  else if(visible && msg){ msg.remove(); }
+}); }
+
+/***** 10.  Exposition publique *******************************************/
+window.NewsSystem.initializeNewsData = initializeNewsData;
