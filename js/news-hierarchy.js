@@ -167,6 +167,7 @@ function getSentimentIcon(s){
 // Alias simples pour convertir les libellés pays du backend → codes ISO‑2
 const COUNTRY_ALIAS = {
   'united states':'us','u.s.':'us','usa':'us','états-unis':'us','us':'us',
+  'united-states':'us','us-stocks':'us','us_news':'us','us-news':'us',
   'france':'fr','french':'fr','fr':'fr',
   'united kingdom':'gb','great britain':'gb','uk':'gb','gb':'gb',
   'japan':'jp','jp':'jp','japanese':'jp',
@@ -176,8 +177,19 @@ const COUNTRY_ALIAS = {
 
 function normalizeIso(raw){
   if(!raw) return '';
-  const key = raw.trim().toLowerCase();
-  return COUNTRY_ALIAS[key] || key;   // si pas dans le dictionnaire → on garde tel quel
+  const k = raw.trim().toLowerCase();
+  
+  // Si c'est dans le dictionnaire
+  if (k in COUNTRY_ALIAS) return COUNTRY_ALIAS[k];
+  
+  // Règle robuste : tout ce qui commence par "us" → "us"
+  if (k.startsWith('us') || k.startsWith('united states')) return 'us';
+  if (k.startsWith('fr')) return 'fr';
+  if (k.startsWith('gb') || k.startsWith('uk')) return 'gb';
+  if (k.startsWith('jp')) return 'jp';
+  if (k.startsWith('cn') || k.startsWith('china')) return 'cn';
+  
+  return k; // sinon on garde tel quel
 }
 
 function distributeNewsByImportance(newsData){
