@@ -237,7 +237,7 @@ function distributeNewsByImportance(newsData){
   displayRecentNews(regularNews);
 }
 
-/***** 7.  Affichage par tier *********************************************/  Affichage par tier *********************************************/
+/***** 7.  Affichage par tier *********************************************/
 function displayCriticalNews(list){ paintTier(list,'critical-news-container','critical',MAX_CRITICAL_NEWS); }
 function displayImportantNews(list){ paintTier(list,'important-news-container','important',MAX_IMPORTANT_NEWS); }
 function displayRecentNews(list){ paintTier(list,'recent-news','regular',MAX_REGULAR_NEWS,true); }
