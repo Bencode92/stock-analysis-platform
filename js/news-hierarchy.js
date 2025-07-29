@@ -26,33 +26,7 @@ const COUNTRY_GROUPS = {
   em:   ['br','mx','za','tr','ru','sa','qa','ae','cl','co','pe','eg','ng']
 };
 
-// (1‑c)  Dictionnaire de normalisation (au cas où)
-const COUNTRY_NAME_TO_ISO = {
-  'états-unis': 'us',
-  'etats-unis': 'us',
-  'france': 'fr',
-  'royaume-uni': 'gb',
-  'japon': 'jp',
-  'chine': 'cn',
-  'europe': 'eu',
-  'asie': 'asia',
-  'marchés émergents': 'em',
-  'marches emergents': 'em'
-};
-
-// (1‑d)  Fonction de normalisation
-function normalizeCountryCode(value) {
-  if (!value) return 'all';
-  const normalized = value.toLowerCase().trim();
-  // Si c'est déjà un code ISO ou un groupe, on le retourne
-  if (['all', 'us', 'fr', 'gb', 'jp', 'cn', 'eu', 'asia', 'em'].includes(normalized)) {
-    return normalized;
-  }
-  // Sinon on cherche dans le dictionnaire
-  return COUNTRY_NAME_TO_ISO[normalized] || normalized;
-}
-
-// (1‑e)  Détection rapide
+// (1‑c)  Détection rapide
 function detectCountries(text = '') {
   const found = new Set();
   for (const { iso, rx } of COUNTRY_KEYWORDS) {
@@ -190,6 +164,22 @@ function getSentimentIcon(s){
 }
 
 /***** 6.  Hiérarchisation & enrichissement *******************************/
+// Alias simples pour convertir les libellés pays du backend → codes ISO‑2
+const COUNTRY_ALIAS = {
+  'united states':'us','u.s.':'us','usa':'us','états-unis':'us','us':'us',
+  'france':'fr','french':'fr','fr':'fr',
+  'united kingdom':'gb','great britain':'gb','uk':'gb','gb':'gb',
+  'japan':'jp','jp':'jp','japanese':'jp',
+  'china':'cn','cn':'cn','chinese':'cn'
+  // complétez au besoin
+};
+
+function normalizeIso(raw){
+  if(!raw) return '';
+  const key = raw.trim().toLowerCase();
+  return COUNTRY_ALIAS[key] || key;   // si pas dans le dictionnaire → on garde tel quel
+}
+
 function distributeNewsByImportance(newsData){
   if (!newsData){ console.error('No data'); return; }
 
@@ -213,12 +203,14 @@ function distributeNewsByImportance(newsData){
   // 6‑d. Enrichissement géographie + hiérarchie
   allNews.forEach(n => {
     /* geo */
-    if (!n.country || n.country==='other'){
+    let rawCtry = (n.country||'').toLowerCase();
+    if (!rawCtry || rawCtry==='other'){
       const corpus = [n.title,n.snippet,n.content,n.source].filter(Boolean).join('  ');
-      const iso   = detectCountries(corpus);
-      n.country   = iso.length ? iso.join(',') : 'other';
+      const iso = detectCountries(corpus);
+      n.country = iso.length ? iso.join(',') : 'other';
     } else {
-      n.country = n.country.toLowerCase();
+      // on convertit le label fourni par l'API → code ISO‑2 standard
+      n.country = normalizeIso(rawCtry);
     }
 
     /* hiérarchie (simple rule based sur imp / ML) */
@@ -245,7 +237,7 @@ function distributeNewsByImportance(newsData){
   displayRecentNews(regularNews);
 }
 
-/***** 7.  Affichage par tier *********************************************/
+/***** 7.  Affichage par tier *********************************************/  Affichage par tier *********************************************/
 function displayCriticalNews(list){ paintTier(list,'critical-news-container','critical',MAX_CRITICAL_NEWS); }
 function displayImportantNews(list){ paintTier(list,'important-news-container','important',MAX_IMPORTANT_NEWS); }
 function displayRecentNews(list){ paintTier(list,'recent-news','regular',MAX_REGULAR_NEWS,true); }
@@ -287,35 +279,36 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 function filterNews(type,val){
   const cards=document.querySelectorAll('.news-card');
+
   // récupérer filtres actuels
   const currentCategory = document.querySelector('#category-filters .filter-active')?.getAttribute('data-category') || 'all';
   const currentImpact   = document.getElementById('impact-select')?.value || 'all';
   const currentSent     = document.getElementById('sentiment-select')?.value || 'all';
-  let currentCountry  = (type==='country'?val:(document.getElementById('country-select')?.value||'all')).toLowerCase();
-  
-  // Normaliser le pays avec notre dictionnaire
-  currentCountry = normalizeCountryCode(currentCountry);
+
+  // valeur brute du sélecteur « Pays »
+  const rawCountry = (type==='country' ? val : (document.getElementById('country-select')?.value || 'all')).toLowerCase().trim();
+  // 👉 nouvelle étape : on convertit le libellé (ex. « États‑Unis ») → code ISO‑2 normalisé
+  const currentCountry = normalizeIso(rawCountry);   // "us", "fr", "eu", … ou "all"
 
   cards.forEach(card=>{
-    const cat = card.getAttribute('data-category');
-    const imp = card.getAttribute('data-impact');
-    const sen = card.getAttribute('data-sentiment');
-    const ctry= card.getAttribute('data-country');      // ex "us" ou "us,gb"
+    const cat  = card.getAttribute('data-category');
+    const imp  = card.getAttribute('data-impact');
+    const sen  = card.getAttribute('data-sentiment');
+    const ctry = (card.getAttribute('data-country')||'').split(',').map(s=>s.trim()); // ["us","gb"]
 
     const matchCat = currentCategory==='all' || cat===currentCategory;
-    const matchImp = currentImpact==='all'  || imp===currentImpact;
-    const matchSen = currentSent==='all'    || sen===currentSent;
+    const matchImp = currentImpact==='all'   || imp===currentImpact;
+    const matchSen = currentSent==='all'     || sen===currentSent;
 
-    // Trim les espaces dans la liste ISO
-    const isoList = ctry.split(',').map(s => s.trim());
     const matchCtry = currentCountry==='all' ||
-                      isoList.includes(currentCountry) ||
-                      (COUNTRY_GROUPS[currentCountry]||[]).some(x=>isoList.includes(x));
+                      ctry.includes(currentCountry) ||
+                      (COUNTRY_GROUPS[currentCountry]||[]).some(x=>ctry.includes(x));
 
     const visible = matchCat && matchImp && matchSen && matchCtry;
-    card.style.display = visible?'flex':'none';
+    card.style.display = visible ? 'flex' : 'none';
     card.classList.toggle('hidden',!visible);
   });
+
   checkVisibleItems();
 }
 
