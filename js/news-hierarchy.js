@@ -26,7 +26,33 @@ const COUNTRY_GROUPS = {
   em:   ['br','mx','za','tr','ru','sa','qa','ae','cl','co','pe','eg','ng']
 };
 
-// (1‑c)  Détection rapide
+// (1‑c)  Dictionnaire de normalisation (au cas où)
+const COUNTRY_NAME_TO_ISO = {
+  'états-unis': 'us',
+  'etats-unis': 'us',
+  'france': 'fr',
+  'royaume-uni': 'gb',
+  'japon': 'jp',
+  'chine': 'cn',
+  'europe': 'eu',
+  'asie': 'asia',
+  'marchés émergents': 'em',
+  'marches emergents': 'em'
+};
+
+// (1‑d)  Fonction de normalisation
+function normalizeCountryCode(value) {
+  if (!value) return 'all';
+  const normalized = value.toLowerCase().trim();
+  // Si c'est déjà un code ISO ou un groupe, on le retourne
+  if (['all', 'us', 'fr', 'gb', 'jp', 'cn', 'eu', 'asia', 'em'].includes(normalized)) {
+    return normalized;
+  }
+  // Sinon on cherche dans le dictionnaire
+  return COUNTRY_NAME_TO_ISO[normalized] || normalized;
+}
+
+// (1‑e)  Détection rapide
 function detectCountries(text = '') {
   const found = new Set();
   for (const { iso, rx } of COUNTRY_KEYWORDS) {
@@ -265,7 +291,10 @@ function filterNews(type,val){
   const currentCategory = document.querySelector('#category-filters .filter-active')?.getAttribute('data-category') || 'all';
   const currentImpact   = document.getElementById('impact-select')?.value || 'all';
   const currentSent     = document.getElementById('sentiment-select')?.value || 'all';
-  const currentCountry  = (type==='country'?val:(document.getElementById('country-select')?.value||'all')).toLowerCase();
+  let currentCountry  = (type==='country'?val:(document.getElementById('country-select')?.value||'all')).toLowerCase();
+  
+  // Normaliser le pays avec notre dictionnaire
+  currentCountry = normalizeCountryCode(currentCountry);
 
   cards.forEach(card=>{
     const cat = card.getAttribute('data-category');
@@ -277,7 +306,8 @@ function filterNews(type,val){
     const matchImp = currentImpact==='all'  || imp===currentImpact;
     const matchSen = currentSent==='all'    || sen===currentSent;
 
-    const isoList = ctry.split(',');
+    // Trim les espaces dans la liste ISO
+    const isoList = ctry.split(',').map(s => s.trim());
     const matchCtry = currentCountry==='all' ||
                       isoList.includes(currentCountry) ||
                       (COUNTRY_GROUPS[currentCountry]||[]).some(x=>isoList.includes(x));
