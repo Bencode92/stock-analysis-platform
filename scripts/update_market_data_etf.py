@@ -10,8 +10,7 @@ import json
 import datetime as dt
 from typing import Dict, List
 import logging
-import time
-import requests
+from twelvedata import TDClient
 
 # Configuration du logger
 logging.basicConfig(
@@ -24,7 +23,9 @@ logger = logging.getLogger(__name__)
 API_KEY = os.getenv("TWELVE_DATA_API")
 CSV_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "indices_etf_mapping.csv")
 OUTPUT_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "markets.json")
-BASE_URL = "https://api.twelvedata.com"
+
+# Client Twelve Data
+TD = TDClient(apikey=API_KEY)
 
 # Structure de données de sortie
 MARKET_DATA = {
@@ -52,7 +53,7 @@ MARKET_DATA = {
     }
 }
 
-# Liste pour stocker tous les indices avant le filtrage
+# Liste pour stocker tous les indices
 ALL_INDICES = []
 
 def determine_region(country: str) -> str:
@@ -80,79 +81,66 @@ def chunks(lst: List, n: int) -> List[List]:
     for i in range(0, len(lst), n):
         yield lst[i:i+n]
 
-def fetch_quotes_batch(symbols: List[str]) -> Dict[str, Dict]:
+def fetch_quotes(symbols: List[str]) -> Dict[str, Dict]:
     """
-    Récupère les cotations pour un batch de symboles
-    Retourne {symbol: {"close": float, "change_pct": float}}
+    Batch quote : close + var% vs veille pour N symboles.
+    Retourne {sym: {"close": float, "change_pct": float}}
     """
     try:
-        # Appel batch pour les quotes
-        url = f"{BASE_URL}/quote"
-        params = {
-            "symbol": ",".join(symbols),
-            "apikey": API_KEY
-        }
+        r = TD.quote(symbol=",".join(symbols))
+        data = r.as_json()
         
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        
-        data = response.json()
+        # Gérer le cas où data est une liste ou un dict unique
         quotes = {}
-        
-        # Gérer le cas où data est une liste (batch) ou un dict (single)
-        if isinstance(data, list):
-            for quote in data:
-                if quote.get("status") == "ok":
-                    quotes[quote["symbol"]] = {
-                        "close": float(quote.get("close", 0)),
-                        "change_pct": float(quote.get("percent_change", 0))
+        if isinstance(data, dict):
+            # Si c'est un dict avec une clé 'data', c'est un batch
+            if 'data' in data:
+                for q in data['data']:
+                    if q.get('status') == 'ok':
+                        quotes[q['symbol']] = {
+                            'close': float(q.get('close', 0)),
+                            'change_pct': float(q.get('percent_change', 0))
+                        }
+            else:
+                # Si c'est un dict direct, c'est un symbole unique
+                if data.get('status') == 'ok':
+                    quotes[data['symbol']] = {
+                        'close': float(data.get('close', 0)),
+                        'change_pct': float(data.get('percent_change', 0))
                     }
-        elif isinstance(data, dict):
-            if data.get("status") == "ok":
-                quotes[data["symbol"]] = {
-                    "close": float(data.get("close", 0)),
-                    "change_pct": float(data.get("percent_change", 0))
-                }
         
         return quotes
     except Exception as e:
         logger.error(f"Erreur fetch_quotes: {e}")
         return {}
 
-def fetch_ytd_batch(symbols: List[str]) -> Dict[str, float]:
+def fetch_ytd(symbols: List[str]) -> Dict[str, float]:
     """
     Récupère la première valeur de l'année pour calculer le YTD
     Retourne {symbol: first_close_of_year}
     """
     try:
         year = dt.date.today().year
-        start_date = f"{year}-01-01"
+        start = f"{year}-01-01"
         
-        # Appel batch pour les time series
-        url = f"{BASE_URL}/time_series"
-        params = {
-            "symbol": ",".join(symbols),
-            "interval": "1day",
-            "start_date": start_date,
-            "outputsize": 1,
-            "apikey": API_KEY
-        }
+        r = TD.time_series(
+            symbol=",".join(symbols),
+            interval="1day",
+            start_date=start,
+            outputsize=1
+        )
         
-        response = requests.get(url, params=params)
-        response.raise_for_status()
+        out = {}
+        data = r.as_json()
         
-        data = response.json()
-        ytd_bases = {}
-        
-        # Gérer les différents formats de réponse
-        for symbol in symbols:
-            if symbol in data and data[symbol].get("status") == "ok":
-                values = data[symbol].get("values", [])
-                if values:
-                    first_close = float(values[0]["close"])
-                    ytd_bases[symbol] = first_close
-                    
-        return ytd_bases
+        # Pour chaque symbole dans la réponse
+        for sym, ts in data.items():
+            if ts.get("status") == "ok" and ts.get("values"):
+                # La première valeur (la plus ancienne)
+                first_close = float(ts["values"][-1]["close"])
+                out[sym] = first_close
+                
+        return out
     except Exception as e:
         logger.error(f"Erreur fetch_ytd: {e}")
         return {}
@@ -183,10 +171,7 @@ def parse_percentage(percent_str: str) -> float:
     """Convertit une chaîne de pourcentage en nombre flottant"""
     if not percent_str:
         return 0.0
-    
-    # Supprimer les caractères non numériques sauf le point décimal et le signe moins
     clean_str = percent_str.replace('%', '').replace(' ', '').replace(',', '.')
-    
     try:
         return float(clean_str)
     except ValueError:
@@ -202,19 +187,13 @@ def calculate_top_performers():
     
     # Trier par variation quotidienne
     if daily_indices:
-        # Convertir les pourcentages en valeurs numériques pour le tri
         for idx in daily_indices:
             idx["_change_value"] = parse_percentage(idx["changePercent"])
         
-        # Trier et sélectionner les 3 meilleurs et les 3 pires
         sorted_daily = sorted(daily_indices, key=lambda x: x["_change_value"], reverse=True)
-        
-        # Sélectionner les 3 meilleurs
         best_daily = sorted_daily[:3]
-        # Sélectionner les 3 pires
         worst_daily = sorted(sorted_daily, key=lambda x: x["_change_value"])[:3]
         
-        # Ajouter aux résultats en supprimant le champ temporaire
         for idx in best_daily:
             idx_copy = {k: v for k, v in idx.items() if k != "_change_value"}
             MARKET_DATA["top_performers"]["daily"]["best"].append(idx_copy)
@@ -225,19 +204,13 @@ def calculate_top_performers():
     
     # Trier par variation YTD
     if ytd_indices:
-        # Convertir les pourcentages en valeurs numériques pour le tri
         for idx in ytd_indices:
             idx["_ytd_value"] = parse_percentage(idx["ytdChange"])
         
-        # Trier et sélectionner les 3 meilleurs et les 3 pires
         sorted_ytd = sorted(ytd_indices, key=lambda x: x["_ytd_value"], reverse=True)
-        
-        # Sélectionner les 3 meilleurs
         best_ytd = sorted_ytd[:3]
-        # Sélectionner les 3 pires
         worst_ytd = sorted(sorted_ytd, key=lambda x: x["_ytd_value"])[:3]
         
-        # Ajouter aux résultats
         for idx in best_ytd:
             idx_copy = {k: v for k, v in idx.items() if k != "_ytd_value"}
             MARKET_DATA["top_performers"]["ytd"]["best"].append(idx_copy)
@@ -259,7 +232,7 @@ def main():
     
     logger.info(f"📊 {len(symbols)} ETFs à traiter")
     
-    # 2. Récupérer les données par batch de 120 (limite Twelve Data)
+    # 2. Récupérer les données par batch de 120
     all_quotes = {}
     all_ytd_bases = {}
     
@@ -267,17 +240,12 @@ def main():
         logger.info(f"📡 Traitement du batch {i+1}/{(len(symbols)-1)//120 + 1}")
         
         # Quotes (close + change%)
-        quotes = fetch_quotes_batch(batch)
+        quotes = fetch_quotes(batch)
         all_quotes.update(quotes)
         
-        # Attendre un peu entre les requêtes pour respecter les limites
-        time.sleep(0.5)
-        
         # YTD bases
-        ytd_bases = fetch_ytd_batch(batch)
+        ytd_bases = fetch_ytd(batch)
         all_ytd_bases.update(ytd_bases)
-        
-        time.sleep(0.5)
     
     # 3. Construire les données de marché
     processed_count = 0
@@ -300,7 +268,7 @@ def main():
         # Créer l'objet de données
         market_entry = {
             "country": etf["Country"],
-            "index_name": symbol,  # Utiliser le symbole au lieu du nom
+            "index_name": symbol,  # Utiliser le symbole
             "value": format_value(quote["close"], etf["currency"]),
             "changePercent": format_percent(quote["change_pct"]),
             "ytdChange": ytd_change,
@@ -310,7 +278,7 @@ def main():
         # Ajouter à la bonne région
         region = determine_region(etf["Country"])
         MARKET_DATA["indices"][region].append(market_entry)
-        ALL_INDICES.append(market_entry)  # Pour le calcul des top performers
+        ALL_INDICES.append(market_entry)
         processed_count += 1
     
     # 4. Calculer les top performers
