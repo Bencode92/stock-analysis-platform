@@ -77,11 +77,10 @@ def determine_region(country: str) -> str:
         return "other"
 
 def quote_one(sym: str) -> tuple[float, float]:
-    """Récupère la quote d'un symbole - SANS paramètres superflus"""
+    """Récupère la quote d'un symbole"""
     try:
         q_json = TD.quote(symbol=sym).as_json()
         
-        # Déballer le tuple si nécessaire
         if isinstance(q_json, tuple):
             q_json = q_json[0]
         
@@ -94,33 +93,37 @@ def quote_one(sym: str) -> tuple[float, float]:
         raise
 
 def ytd_one(sym: str) -> float:
-    """Première clôture de l'année - gère tous les formats de réponse"""
+    """Première clôture de l'année - SANS outputsize=1"""
     year = dt.date.today().year
     try:
         ts_json = TD.time_series(
             symbol=sym,
             interval="1day",
             start_date=f"{year}-01-01",
-            order="ASC",
-            outputsize=1
+            order="ASC"
+            # outputsize=1 SUPPRIMÉ - retournait la bougie la plus récente
         ).as_json()
 
-        # 1) Si c'est un tuple (data, meta), on prend la première partie
+        # Déballage du tuple si nécessaire
         if isinstance(ts_json, tuple):
             ts_json = ts_json[0]
 
-        # 2) Si c'est un dict avec clé "values"
+        # 1) Format standard avec clé "values"
         if isinstance(ts_json, dict) and ts_json.get("values"):
             return float(ts_json["values"][0]["close"])
 
-        # 3) Si c'est une liste directe
+        # 2) Format compact : dict OHLC direct
+        if isinstance(ts_json, dict) and "close" in ts_json:
+            return float(ts_json["close"])
+
+        # 3) Format liste
         if isinstance(ts_json, list) and ts_json:
             return float(ts_json[0]["close"])
 
-        # Si on arrive ici, log du format reçu pour debug
+        # Debug si format inattendu
         logger.error(f"Format inattendu pour {sym}: {type(ts_json)}")
         logger.error(f"Contenu: {ts_json}")
-        raise ValueError("Unexpected time_series format")
+        raise ValueError("Unrecognised time_series format")
 
     except Exception as e:
         logger.error(f"Erreur YTD pour {sym}: {e}")
@@ -231,7 +234,7 @@ def main():
         sym = etf["symbol"]
         
         try:
-            # Récupérer les données - SANS paramètres superflus
+            # Récupérer les données
             last, day_pct = quote_one(sym)
             jan_close = ytd_one(sym)
             
