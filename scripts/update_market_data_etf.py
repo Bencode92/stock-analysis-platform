@@ -58,12 +58,12 @@ ALL_INDICES = []
 
 def determine_region(country: str) -> str:
     """Détermine la région en fonction du pays"""
-    europe = ["France", "Allemagne", "Royaume-Uni", "Italie", "Espagne", 
-              "Suisse", "Pays-Bas", "Suède", "Zone Euro"]
-    north_america = ["États-Unis", "Canada", "Mexique"]
+    europe = ["France", "Allemagne", "Royaume Uni", "Italie", "Espagne", 
+              "Suisse", "Pays-Bas", "Suède", "Zone Euro", "Europe", "Pays-bas"]
+    north_america = ["États-Unis", "Etats-Unis", "Canada", "Mexique"]
     latin_america = ["Brésil", "Argentine", "Chili", "Colombie", "Pérou"]
     asia = ["Japon", "Chine", "Hong Kong", "Taiwan", "Corée du Sud", 
-            "Singapour", "Inde", "Asie"]
+            "Singapour", "Inde", "Asie", "China"]
     
     if country in europe:
         return "europe"
@@ -76,10 +76,13 @@ def determine_region(country: str) -> str:
     else:
         return "other"
 
-def quote_one(sym: str) -> tuple[float, float]:
+def quote_one(sym: str, exchange: Optional[str] = None) -> tuple[float, float]:
     """Récupère la quote d'un symbole"""
     try:
-        q_json = TD.quote(symbol=sym, type="ETF").as_json()
+        # Construire le symbole avec exchange si fourni
+        symbol = f"{sym}:{exchange}" if exchange else sym
+        
+        q_json = TD.quote(symbol=symbol, type="ETF").as_json()
         if isinstance(q_json, tuple):  # par sécurité
             q_json = q_json[0]
         
@@ -149,9 +152,9 @@ def ytd_one(sym: str, exchange: Optional[str] = None) -> float:
 
 def format_value(value: float, currency: str) -> str:
     """Formate une valeur selon la devise"""
-    if currency in ["EUR", "USD", "GBP", "CHF", "CAD"]:
+    if currency in ["EUR", "USD", "GBP", "GBp", "CHF", "CAD", "AUD", "HKD", "SGD", "ILA", "MXN"]:
         return f"{value:,.2f}"
-    elif currency in ["JPY", "KRW", "TWD"]:
+    elif currency in ["JPY", "KRW", "TWD", "INR", "TRY"]:
         return f"{value:,.0f}"
     else:
         return f"{value:,.2f}"
@@ -235,14 +238,14 @@ def main():
     processed_count = 0
     
     for etf in etf_mapping:
-        symbol_td = etf["symbol_td"]
-        # Récupérer le code MIC/exchange si disponible (par défaut ARCX pour NYSE Arca)
-        exchange = etf.get("mic_code", etf.get("exchange", "ARCX"))
+        # Utiliser "symbol" au lieu de "symbol_td"
+        symbol = etf["symbol"]
+        exchange = etf.get("mic_code") or etf.get("exchange")
         
         try:
-            # Récupérer les données - utiliser SEULEMENT le symbole
-            last, day_pct = quote_one(symbol_td)
-            jan_close = ytd_one(symbol_td, exchange)
+            # Récupérer les données
+            last, day_pct = quote_one(symbol, exchange)
+            jan_close = ytd_one(symbol, exchange)
             
             # Calculer le YTD
             ytd_pct = 100 * (last - jan_close) / jan_close if jan_close > 0 else 0
@@ -250,7 +253,7 @@ def main():
             # Créer l'objet de données
             market_entry = {
                 "country": etf["Country"],
-                "index_name": etf.get("Index", symbol_td),  # Utiliser le nom de l'indice si disponible
+                "index_name": etf["name"],  # Utiliser le nom complet de l'ETF
                 "value": format_value(last, etf["currency"]),
                 "changePercent": format_percent(day_pct),
                 "ytdChange": format_percent(ytd_pct),
@@ -263,10 +266,10 @@ def main():
             ALL_INDICES.append(market_entry)
             processed_count += 1
             
-            logger.info(f"✅ {symbol_td}: {last} ({day_pct:+.2f}%)")
+            logger.info(f"✅ {symbol}: {last} ({day_pct:+.2f}%)")
             
         except Exception as e:
-            logger.warning(f"⚠️  Pas de données pour {symbol_td} - {e}")
+            logger.warning(f"⚠️  Pas de données pour {symbol} - {e}")
             continue
     
     # 3. Calculer les top performers
