@@ -79,11 +79,10 @@ def determine_region(country: str) -> str:
 def quote_one(sym: str, exchange: Optional[str] = None) -> tuple[float, float]:
     """Récupère la quote d'un symbole"""
     try:
-        # Construire le symbole avec exchange si fourni
-        symbol = f"{sym}:{exchange}" if exchange else sym
+        # Passer exchange séparément, pas en suffixe
+        q_json = TD.quote(symbol=sym, exchange=exchange, type="ETF").as_json()
         
-        q_json = TD.quote(symbol=symbol, type="ETF").as_json()
-        if isinstance(q_json, tuple):  # par sécurité
+        if isinstance(q_json, tuple):
             q_json = q_json[0]
         
         if "close" in q_json and "percent_change" in q_json:
@@ -98,43 +97,35 @@ def ytd_one(sym: str, exchange: Optional[str] = None) -> float:
     """Première clôture de l'année pour sym"""
     year = dt.date.today().year
     try:
-        # Construire le symbole avec exchange si fourni
-        symbol = f"{sym}:{exchange}" if exchange else sym
-        
-        # L'objet retourné par le SDK - IMPORTANT: ajouter type="ETF"
+        # Passer exchange séparément
         ts_obj = TD.time_series(
-            symbol=symbol,
+            symbol=sym,
+            exchange=exchange,
             interval="1day",
             start_date=f"{year}-01-01",
             order="ASC",
-            type="ETF"  # <-- Point clé pour les ETFs
+            type="ETF",
+            outputsize=1  # Un seul point suffit
         )
 
-        # .as_json() peut donner (data, meta) ou simplement data
         ts_json = ts_obj.as_json()
-        if isinstance(ts_json, tuple):  # cas le plus fréquent
+        if isinstance(ts_json, tuple):
             ts_json = ts_json[0]
 
-        # Cas 1: La réponse est directement une liste de chandeliers
+        # La réponse est directement une liste
         if isinstance(ts_json, list) and ts_json:
             return float(ts_json[0]["close"])
         
-        # Cas 2: Si on reçoit un dict batché { "SYMBOL": {...} }
-        if isinstance(ts_json, dict) and sym in ts_json:
-            ts_json = ts_json[sym]
-
-        # Cas 3: Dict avec clé "values"
-        if isinstance(ts_json, dict) and "values" in ts_json and ts_json["values"]:
-            return float(ts_json["values"][0]["close"])
-
-        # Si on arrive ici, essayer avec une date légèrement décalée (cas où le 1er janvier est férié)
+        # Si vide, essayer avec une date décalée
         logger.warning(f"Pas de données pour {sym} au 1er janvier, tentative avec le 5 janvier")
         ts_obj_retry = TD.time_series(
-            symbol=symbol,
+            symbol=sym,
+            exchange=exchange,
             interval="1day",
             start_date=f"{year}-01-05",
             order="ASC",
-            type="ETF"
+            type="ETF",
+            outputsize=1
         )
         
         ts_json_retry = ts_obj_retry.as_json()
@@ -164,13 +155,26 @@ def format_percent(value: float) -> str:
     return f"{value:+.2f} %"
 
 def load_etf_mapping() -> List[Dict]:
-    """Charge le mapping des ETFs depuis le CSV"""
-    etf_list = []
-    with open(CSV_FILE, 'r', encoding='utf-8') as f:
+    """Charge le mapping des ETFs depuis le CSV avec nettoyage"""
+    rows = []
+    with open(CSV_FILE, newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
-        for row in reader:
-            etf_list.append(row)
-    return etf_list
+        for r in reader:
+            # Nettoyer tous les espaces dans les clés et valeurs
+            r = {k.strip(): v.strip() for k, v in r.items()}
+            
+            # Récupérer le ticker avec différents noms possibles
+            ticker = r.get("symbol") or r.get("symbol_td") or ""
+            ticker = ticker.strip().upper()
+            
+            if not ticker:
+                logger.warning("Ticker absent, ligne ignorée : %s", r)
+                continue
+                
+            r["symbol"] = ticker
+            rows.append(r)
+    
+    return rows
 
 def parse_percentage(percent_str: str) -> float:
     """Convertit une chaîne de pourcentage en nombre flottant"""
@@ -225,6 +229,7 @@ def calculate_top_performers():
 
 def main():
     logger.info("🚀 Début de la mise à jour des données de marché...")
+    logger.info("API key loaded: %s", bool(API_KEY))
     
     if not API_KEY:
         logger.error("❌ Clé API Twelve Data manquante")
@@ -238,14 +243,16 @@ def main():
     processed_count = 0
     
     for etf in etf_mapping:
-        # Utiliser "symbol" au lieu de "symbol_td"
-        symbol = etf["symbol"]
-        exchange = etf.get("mic_code") or etf.get("exchange")
+        sym = etf["symbol"]
+        exch = etf.get("mic_code") or etf.get("exchange")
         
         try:
+            # Logger la requête pour debug
+            logger.debug(f"Processing {sym} on {exch}")
+            
             # Récupérer les données
-            last, day_pct = quote_one(symbol, exchange)
-            jan_close = ytd_one(symbol, exchange)
+            last, day_pct = quote_one(sym, exch)
+            jan_close = ytd_one(sym, exch)
             
             # Calculer le YTD
             ytd_pct = 100 * (last - jan_close) / jan_close if jan_close > 0 else 0
@@ -253,7 +260,7 @@ def main():
             # Créer l'objet de données
             market_entry = {
                 "country": etf["Country"],
-                "index_name": etf["name"],  # Utiliser le nom complet de l'ETF
+                "index_name": etf["name"],
                 "value": format_value(last, etf["currency"]),
                 "changePercent": format_percent(day_pct),
                 "ytdChange": format_percent(ytd_pct),
@@ -266,10 +273,10 @@ def main():
             ALL_INDICES.append(market_entry)
             processed_count += 1
             
-            logger.info(f"✅ {symbol}: {last} ({day_pct:+.2f}%)")
+            logger.info(f"✅ {sym}: {last} ({day_pct:+.2f}%)")
             
         except Exception as e:
-            logger.warning(f"⚠️  Pas de données pour {symbol} - {e}")
+            logger.warning(f"⚠️  Pas de données pour {sym} - {e}")
             continue
     
     # 3. Calculer les top performers
