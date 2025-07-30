@@ -8,7 +8,7 @@ import os
 import csv
 import json
 import datetime as dt
-from typing import Dict, List, Optional
+from typing import Dict, List
 import logging
 from twelvedata import TDClient
 
@@ -76,12 +76,12 @@ def determine_region(country: str) -> str:
     else:
         return "other"
 
-def quote_one(sym: str, exchange: Optional[str] = None) -> tuple[float, float]:
-    """Récupère la quote d'un symbole"""
+def quote_one(sym: str) -> tuple[float, float]:
+    """Récupère la quote d'un symbole - SANS paramètres superflus"""
     try:
-        # Passer exchange séparément, pas en suffixe
-        q_json = TD.quote(symbol=sym, exchange=exchange, type="ETF").as_json()
+        q_json = TD.quote(symbol=sym).as_json()
         
+        # Déballer le tuple si nécessaire
         if isinstance(q_json, tuple):
             q_json = q_json[0]
         
@@ -93,49 +93,34 @@ def quote_one(sym: str, exchange: Optional[str] = None) -> tuple[float, float]:
         logger.error(f"Erreur quote pour {sym}: {e}")
         raise
 
-def ytd_one(sym: str, exchange: Optional[str] = None) -> float:
-    """Première clôture de l'année pour sym"""
+def ytd_one(sym: str) -> float:
+    """Première clôture de l'année - gère tous les formats de réponse"""
     year = dt.date.today().year
     try:
-        # Passer exchange séparément
-        ts_obj = TD.time_series(
+        ts_json = TD.time_series(
             symbol=sym,
-            exchange=exchange,
             interval="1day",
             start_date=f"{year}-01-01",
             order="ASC",
-            type="ETF",
-            outputsize=1  # Un seul point suffit
-        )
+            outputsize=1
+        ).as_json()
 
-        ts_json = ts_obj.as_json()
+        # 1) Si c'est un tuple (data, meta), on prend la première partie
         if isinstance(ts_json, tuple):
             ts_json = ts_json[0]
 
-        # La réponse est directement une liste
+        # 2) Si c'est un dict avec clé "values"
+        if isinstance(ts_json, dict) and ts_json.get("values"):
+            return float(ts_json["values"][0]["close"])
+
+        # 3) Si c'est une liste directe
         if isinstance(ts_json, list) and ts_json:
             return float(ts_json[0]["close"])
-        
-        # Si vide, essayer avec une date décalée
-        logger.warning(f"Pas de données pour {sym} au 1er janvier, tentative avec le 5 janvier")
-        ts_obj_retry = TD.time_series(
-            symbol=sym,
-            exchange=exchange,
-            interval="1day",
-            start_date=f"{year}-01-05",
-            order="ASC",
-            type="ETF",
-            outputsize=1
-        )
-        
-        ts_json_retry = ts_obj_retry.as_json()
-        if isinstance(ts_json_retry, tuple):
-            ts_json_retry = ts_json_retry[0]
-            
-        if isinstance(ts_json_retry, list) and ts_json_retry:
-            return float(ts_json_retry[0]["close"])
 
-        raise ValueError("No YTD data available")
+        # Si on arrive ici, log du format reçu pour debug
+        logger.error(f"Format inattendu pour {sym}: {type(ts_json)}")
+        logger.error(f"Contenu: {ts_json}")
+        raise ValueError("Unexpected time_series format")
 
     except Exception as e:
         logger.error(f"Erreur YTD pour {sym}: {e}")
@@ -244,15 +229,11 @@ def main():
     
     for etf in etf_mapping:
         sym = etf["symbol"]
-        exch = etf.get("mic_code") or etf.get("exchange")
         
         try:
-            # Logger la requête pour debug
-            logger.debug(f"Processing {sym} on {exch}")
-            
-            # Récupérer les données
-            last, day_pct = quote_one(sym, exch)
-            jan_close = ytd_one(sym, exch)
+            # Récupérer les données - SANS paramètres superflus
+            last, day_pct = quote_one(sym)
+            jan_close = ytd_one(sym)
             
             # Calculer le YTD
             ytd_pct = 100 * (last - jan_close) / jan_close if jan_close > 0 else 0
