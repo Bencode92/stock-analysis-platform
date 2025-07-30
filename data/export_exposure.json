@@ -2,7 +2,7 @@
   "metadata": {
     "version": "1.0.0",
     "lastUpdated": "2025-01-17",
-    "description": "Commodity export exposure by country with crisis scenarios"
+    "description": "Commodity export exposure by country"
   },
   "config": {
     "impact_weights": {
@@ -17,57 +17,34 @@
     }
   },
   "country_mapping": {
-    "Argentina": "AR",
     "Australia": "AU",
-    "Belgium": "BE",
-    "Bolivia, Plurinational State of": "BO",
     "Brazil": "BR",
     "Canada": "CA",
     "Chile": "CL",
     "China": "CN",
     "Congo, Democratic Republic of the": "CD",
-    "Finland": "FI",
     "France": "FR",
     "Germany": "DE",
-    "Guinea": "GN",
     "Hong Kong, China": "HK",
     "India": "IN",
     "Indonesia": "ID",
-    "Korea, Republic of": "KR",
+    "Kazakhstan": "KZ",
     "Luxembourg": "LU",
     "Malaysia": "MY",
-    "Mexico": "MX",
-    "Namibia": "NA",
     "Netherlands": "NL",
-    "Nigeria": "NG",
     "Norway": "NO",
-    "Pakistan": "PK",
     "Peru": "PE",
-    "Philippines": "PH",
-    "Qatar": "QA",
     "Russian Federation": "RU",
     "Singapore": "SG",
-    "South Africa": "ZA",
-    "Sweden": "SE",
     "Switzerland": "CH",
-    "Thailand": "TH",
-    "Ukraine": "UA",
     "United Arab Emirates": "AE",
     "United Kingdom": "GB",
-    "United States of America": "US",
-    "Viet Nam": "VN",
-    "Zambia": "ZM",
-    "Kazakhstan": "KZ"
+    "United States of America": "US"
   },
   "product_mapping": {
-    "CORN": "Maïs",
     "IRON_ORE": "Minerai de fer",
-    "COAL": "Charbon",
     "WHEAT": "Blé",
-    "ALUMINIUM_ORE": "Minerai d'aluminium",
-    "ZINC_ORE": "Minerai de zinc",
     "NATGAS": "Gaz naturel",
-    "ZINC_METAL": "Zinc brut",
     "COFFEE": "Café",
     "SOYBEAN": "Soja",
     "SUGAR": "Sucre",
@@ -75,78 +52,37 @@
     "NICKEL_METAL": "Nickel brut",
     "ALUMINIUM_METAL": "Aluminium brut",
     "COPPER_ORE": "Minerai de cuivre",
-    "COPPER_UNREFINED": "Cuivre non raffiné",
     "COPPER_REFINED": "Cuivre raffiné",
-    "TOYS": "Jouets et jeux",
-    "SHIPS": "Navires",
-    "ELECTRICAL_MACHINERY": "Machines électriques",
-    "MACHINERY": "Machines et équipements",
-    "FOOTWEAR": "Chaussures",
     "APPAREL": "Vêtements",
-    "FURNITURE": "Meubles",
-    "OPTICAL_INSTRUMENTS": "Instruments optiques",
-    "VEHICLES": "Véhicules",
-    "PAPER": "Papier",
-    "RUBBER": "Caoutchouc",
-    "PLASTICS": "Plastiques",
-    "CHEMICALS_MISC": "Produits chimiques divers",
-    "CHEMICALS_ORGANIC": "Produits chimiques organiques",
+    "MACHINERY": "Machines et équipements",
+    "ELECTRICAL_MACHINERY": "Machines électriques",
     "SILVER": "Argent",
-    "RARE_GASES": "Gaz rares",
-    "WOOD": "Bois",
-    "CARBON": "Carbone",
-    "NICKEL_ORE": "Minerai de nickel",
+    "CHEMICALS_ORGANIC": "Produits chimiques organiques",
+    "PLASTICS": "Plastiques",
+    "VEHICLES": "Véhicules",
+    "OPTICAL_INSTRUMENTS": "Instruments optiques",
     "AIRCRAFT": "Aéronefs",
     "ELECTRICITY": "Électricité",
     "BEVERAGES": "Boissons",
-    "COSMETICS": "Cosmétiques",
     "FINANCIAL_SERVICES": "Services financiers",
     "COCOA": "Cacao",
     "PHARMACEUTICALS": "Produits pharmaceutiques",
-    "DIAMONDS": "Diamants",
-    "RICE": "Riz",
     "IT_SERVICES": "Services informatiques",
-    "FERROALLOYS": "Ferro-alliages",
-    "TIN": "Étain",
     "PALM_OIL": "Huile de palme",
-    "LEAD_ORE": "Minerai de plomb",
-    "PRECIOUS_METALS_ORE": "Minerais de métaux précieux",
-    "URANIUM": "Uranium",
     "FISH": "Poisson",
-    "PLATINUM": "Platine",
-    "GOLD": "Or",
-    "EDIBLE_FRUITS": "Fruits comestibles",
-    "PETROLEUM_REFINED": "Pétrole raffiné",
     "PETROLEUM_CRUDE": "Pétrole brut",
-    "TRAVEL": "Services de voyage"
+    "GOLD": "Or",
+    "TRAVEL": "Services de voyage",
+    "URANIUM": "Uranium"
   },
   "mappings": [
-    {
-      "country": "AR",
-      "country_name": "Argentine",
-      "product_code": "CORN",
-      "product_label": "Maïs",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
     {
       "country": "AU",
       "country_name": "Australie",
       "product_code": "IRON_ORE",
       "product_label": "Minerai de fer",
       "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "AU",
-      "country_name": "Australie",
-      "product_code": "COAL",
-      "product_label": "Charbon",
-      "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
+      "impact_weight": 2.0
     },
     {
       "country": "AU",
@@ -154,26 +90,7 @@
       "product_code": "WHEAT",
       "product_label": "Blé",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "AU",
-      "country_name": "Australie",
-      "product_code": "ALUMINIUM_ORE",
-      "product_label": "Minerai d'aluminium",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "AU",
-      "country_name": "Australie",
-      "product_code": "ZINC_ORE",
-      "product_label": "Minerai de zinc",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "AU",
@@ -181,26 +98,7 @@
       "product_code": "NATGAS",
       "product_label": "Gaz naturel",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "BE",
-      "country_name": "Belgique",
-      "product_code": "ZINC_METAL",
-      "product_label": "Zinc brut",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "BO",
-      "country_name": "Bolivie",
-      "product_code": "ZINC_ORE",
-      "product_label": "Minerai de zinc",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "BR",
@@ -208,8 +106,7 @@
       "product_code": "COFFEE",
       "product_label": "Café",
       "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
+      "impact_weight": 2.0
     },
     {
       "country": "BR",
@@ -217,8 +114,7 @@
       "product_code": "SOYBEAN",
       "product_label": "Soja",
       "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
+      "impact_weight": 2.0
     },
     {
       "country": "BR",
@@ -226,17 +122,7 @@
       "product_code": "SUGAR",
       "product_label": "Sucre",
       "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "BR",
-      "country_name": "Brésil",
-      "product_code": "CORN",
-      "product_label": "Maïs",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 2.0
     },
     {
       "country": "BR",
@@ -244,8 +130,7 @@
       "product_code": "IRON_ORE",
       "product_label": "Minerai de fer",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "BR",
@@ -253,8 +138,7 @@
       "product_code": "MEAT",
       "product_label": "Viande",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "CA",
@@ -262,8 +146,7 @@
       "product_code": "WHEAT",
       "product_label": "Blé",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "CA",
@@ -271,8 +154,7 @@
       "product_code": "NICKEL_METAL",
       "product_label": "Nickel brut",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "CA",
@@ -280,8 +162,7 @@
       "product_code": "ALUMINIUM_METAL",
       "product_label": "Aluminium brut",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "CL",
@@ -289,17 +170,7 @@
       "product_code": "COPPER_ORE",
       "product_label": "Minerai de cuivre",
       "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "CL",
-      "country_name": "Chili",
-      "product_code": "COPPER_UNREFINED",
-      "product_label": "Cuivre non raffiné",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 2.0
     },
     {
       "country": "CL",
@@ -307,53 +178,7 @@
       "product_code": "COPPER_REFINED",
       "product_label": "Cuivre raffiné",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "CN",
-      "country_name": "Chine",
-      "product_code": "TOYS",
-      "product_label": "Jouets et jeux",
-      "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "CN",
-      "country_name": "Chine",
-      "product_code": "SHIPS",
-      "product_label": "Navires",
-      "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "CN",
-      "country_name": "Chine",
-      "product_code": "ELECTRICAL_MACHINERY",
-      "product_label": "Machines électriques",
-      "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "CN",
-      "country_name": "Chine",
-      "product_code": "MACHINERY",
-      "product_label": "Machines et équipements",
-      "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "CN",
-      "country_name": "Chine",
-      "product_code": "FOOTWEAR",
-      "product_label": "Chaussures",
-      "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "DOWN"
+      "impact_weight": 1.5
     },
     {
       "country": "CN",
@@ -361,89 +186,23 @@
       "product_code": "APPAREL",
       "product_label": "Vêtements",
       "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "DOWN"
+      "impact_weight": 2.0
     },
     {
       "country": "CN",
       "country_name": "Chine",
-      "product_code": "FURNITURE",
-      "product_label": "Meubles",
+      "product_code": "MACHINERY",
+      "product_label": "Machines et équipements",
       "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "DOWN"
+      "impact_weight": 2.0
     },
     {
       "country": "CN",
       "country_name": "Chine",
-      "product_code": "OPTICAL_INSTRUMENTS",
-      "product_label": "Instruments optiques",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "CN",
-      "country_name": "Chine",
-      "product_code": "VEHICLES",
-      "product_label": "Véhicules",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "CN",
-      "country_name": "Chine",
-      "product_code": "PAPER",
-      "product_label": "Papier",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "CN",
-      "country_name": "Chine",
-      "product_code": "RUBBER",
-      "product_label": "Caoutchouc",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "CN",
-      "country_name": "Chine",
-      "product_code": "PLASTICS",
-      "product_label": "Plastiques",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "CN",
-      "country_name": "Chine",
-      "product_code": "CHEMICALS_MISC",
-      "product_label": "Produits chimiques divers",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "CN",
-      "country_name": "Chine",
-      "product_code": "CHEMICALS_ORGANIC",
-      "product_label": "Produits chimiques organiques",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "CN",
-      "country_name": "Chine",
-      "product_code": "NICKEL_METAL",
-      "product_label": "Nickel brut",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "product_code": "ELECTRICAL_MACHINERY",
+      "product_label": "Machines électriques",
+      "impact": "pivot",
+      "impact_weight": 2.0
     },
     {
       "country": "CN",
@@ -451,35 +210,47 @@
       "product_code": "SILVER",
       "product_label": "Argent",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "CN",
       "country_name": "Chine",
-      "product_code": "RARE_GASES",
-      "product_label": "Gaz rares",
+      "product_code": "NICKEL_METAL",
+      "product_label": "Nickel brut",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "CN",
       "country_name": "Chine",
-      "product_code": "WOOD",
-      "product_label": "Bois",
+      "product_code": "CHEMICALS_ORGANIC",
+      "product_label": "Produits chimiques organiques",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "CN",
       "country_name": "Chine",
-      "product_code": "CARBON",
-      "product_label": "Carbone",
+      "product_code": "PLASTICS",
+      "product_label": "Plastiques",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
+    },
+    {
+      "country": "CN",
+      "country_name": "Chine",
+      "product_code": "VEHICLES",
+      "product_label": "Véhicules",
+      "impact": "major",
+      "impact_weight": 1.5
+    },
+    {
+      "country": "CN",
+      "country_name": "Chine",
+      "product_code": "OPTICAL_INSTRUMENTS",
+      "product_label": "Instruments optiques",
+      "impact": "major",
+      "impact_weight": 1.5
     },
     {
       "country": "CD",
@@ -487,17 +258,7 @@
       "product_code": "COPPER_REFINED",
       "product_label": "Cuivre raffiné",
       "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "FI",
-      "country_name": "Finlande",
-      "product_code": "NICKEL_ORE",
-      "product_label": "Minerai de nickel",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 2.0
     },
     {
       "country": "FR",
@@ -505,8 +266,7 @@
       "product_code": "AIRCRAFT",
       "product_label": "Aéronefs",
       "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "DOWN"
+      "impact_weight": 2.0
     },
     {
       "country": "FR",
@@ -514,8 +274,7 @@
       "product_code": "ELECTRICITY",
       "product_label": "Électricité",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "FR",
@@ -523,17 +282,7 @@
       "product_code": "BEVERAGES",
       "product_label": "Boissons",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "FR",
-      "country_name": "France",
-      "product_code": "COSMETICS",
-      "product_label": "Cosmétiques",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
+      "impact_weight": 1.5
     },
     {
       "country": "FR",
@@ -541,8 +290,7 @@
       "product_code": "FINANCIAL_SERVICES",
       "product_label": "Services financiers",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
+      "impact_weight": 1.5
     },
     {
       "country": "DE",
@@ -550,17 +298,7 @@
       "product_code": "COCOA",
       "product_label": "Cacao",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "DE",
-      "country_name": "Allemagne",
-      "product_code": "RARE_GASES",
-      "product_label": "Gaz rares",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "DE",
@@ -568,26 +306,7 @@
       "product_code": "PHARMACEUTICALS",
       "product_label": "Produits pharmaceutiques",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "DE",
-      "country_name": "Allemagne",
-      "product_code": "CHEMICALS_MISC",
-      "product_label": "Produits chimiques divers",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "DE",
-      "country_name": "Allemagne",
-      "product_code": "PAPER",
-      "product_label": "Papier",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
+      "impact_weight": 1.5
     },
     {
       "country": "DE",
@@ -595,8 +314,7 @@
       "product_code": "VEHICLES",
       "product_label": "Véhicules",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
+      "impact_weight": 1.5
     },
     {
       "country": "DE",
@@ -604,8 +322,7 @@
       "product_code": "AIRCRAFT",
       "product_label": "Aéronefs",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
+      "impact_weight": 1.5
     },
     {
       "country": "DE",
@@ -613,35 +330,7 @@
       "product_code": "OPTICAL_INSTRUMENTS",
       "product_label": "Instruments optiques",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "DE",
-      "country_name": "Allemagne",
-      "product_code": "FINANCIAL_SERVICES",
-      "product_label": "Services financiers",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "GN",
-      "country_name": "Guinée",
-      "product_code": "ALUMINIUM_ORE",
-      "product_label": "Minerai d'aluminium",
-      "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "HK",
-      "country_name": "Hong Kong",
-      "product_code": "DIAMONDS",
-      "product_label": "Diamants",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "HK",
@@ -649,8 +338,7 @@
       "product_code": "SILVER",
       "product_label": "Argent",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "HK",
@@ -658,17 +346,7 @@
       "product_code": "ELECTRICAL_MACHINERY",
       "product_label": "Machines électriques",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "IN",
-      "country_name": "Inde",
-      "product_code": "RICE",
-      "product_label": "Riz",
-      "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "IN",
@@ -676,44 +354,7 @@
       "product_code": "IT_SERVICES",
       "product_label": "Services informatiques",
       "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "IN",
-      "country_name": "Inde",
-      "product_code": "DIAMONDS",
-      "product_label": "Diamants",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "ID",
-      "country_name": "Indonésie",
-      "product_code": "FERROALLOYS",
-      "product_label": "Ferro-alliages",
-      "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "ID",
-      "country_name": "Indonésie",
-      "product_code": "TIN",
-      "product_label": "Étain",
-      "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "ID",
-      "country_name": "Indonésie",
-      "product_code": "COAL",
-      "product_label": "Charbon",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 2.0
     },
     {
       "country": "ID",
@@ -721,17 +362,7 @@
       "product_code": "PALM_OIL",
       "product_label": "Huile de palme",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "KR",
-      "country_name": "Corée du Sud",
-      "product_code": "SHIPS",
-      "product_label": "Navires",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
+      "impact_weight": 1.5
     },
     {
       "country": "LU",
@@ -739,8 +370,7 @@
       "product_code": "FINANCIAL_SERVICES",
       "product_label": "Services financiers",
       "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "DOWN"
+      "impact_weight": 2.0
     },
     {
       "country": "MY",
@@ -748,35 +378,7 @@
       "product_code": "PALM_OIL",
       "product_label": "Huile de palme",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "MX",
-      "country_name": "Mexique",
-      "product_code": "LEAD_ORE",
-      "product_label": "Minerai de plomb",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "MX",
-      "country_name": "Mexique",
-      "product_code": "PRECIOUS_METALS_ORE",
-      "product_label": "Minerais de métaux précieux",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "NA",
-      "country_name": "Namibie",
-      "product_code": "URANIUM",
-      "product_label": "Uranium",
-      "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "NL",
@@ -784,17 +386,7 @@
       "product_code": "COCOA",
       "product_label": "Cacao",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "NG",
-      "country_name": "Nigeria",
-      "product_code": "URANIUM",
-      "product_label": "Uranium",
-      "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "NO",
@@ -802,8 +394,7 @@
       "product_code": "NATGAS",
       "product_label": "Gaz naturel",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "NO",
@@ -811,8 +402,7 @@
       "product_code": "NICKEL_METAL",
       "product_label": "Nickel brut",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "NO",
@@ -820,17 +410,7 @@
       "product_code": "FISH",
       "product_label": "Poisson",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "PK",
-      "country_name": "Pakistan",
-      "product_code": "RICE",
-      "product_label": "Riz",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "PE",
@@ -838,89 +418,7 @@
       "product_code": "COPPER_ORE",
       "product_label": "Minerai de cuivre",
       "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "PE",
-      "country_name": "Pérou",
-      "product_code": "LEAD_ORE",
-      "product_label": "Minerai de plomb",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "PE",
-      "country_name": "Pérou",
-      "product_code": "ZINC_ORE",
-      "product_label": "Minerai de zinc",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "PE",
-      "country_name": "Pérou",
-      "product_code": "PRECIOUS_METALS_ORE",
-      "product_label": "Minerais de métaux précieux",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "PE",
-      "country_name": "Pérou",
-      "product_code": "TIN",
-      "product_label": "Étain",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "PH",
-      "country_name": "Philippines",
-      "product_code": "NICKEL_ORE",
-      "product_label": "Minerai de nickel",
-      "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "QA",
-      "country_name": "Qatar",
-      "product_code": "NATGAS",
-      "product_label": "Gaz naturel",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "RU",
-      "country_name": "Russie",
-      "product_code": "WHEAT",
-      "product_label": "Blé",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "RU",
-      "country_name": "Russie",
-      "product_code": "PRECIOUS_METALS_ORE",
-      "product_label": "Minerais de métaux précieux",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "RU",
-      "country_name": "Russie",
-      "product_code": "COAL",
-      "product_label": "Charbon",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 2.0
     },
     {
       "country": "RU",
@@ -928,8 +426,7 @@
       "product_code": "PETROLEUM_CRUDE",
       "product_label": "Pétrole brut",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "SG",
@@ -937,35 +434,7 @@
       "product_code": "FINANCIAL_SERVICES",
       "product_label": "Services financiers",
       "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "ZA",
-      "country_name": "Afrique du Sud",
-      "product_code": "PLATINUM",
-      "product_label": "Platine",
-      "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "ZA",
-      "country_name": "Afrique du Sud",
-      "product_code": "FERROALLOYS",
-      "product_label": "Ferro-alliages",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "SE",
-      "country_name": "Suède",
-      "product_code": "COPPER_UNREFINED",
-      "product_label": "Cuivre non raffiné",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 2.0
     },
     {
       "country": "CH",
@@ -973,8 +442,7 @@
       "product_code": "GOLD",
       "product_label": "Or",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "CH",
@@ -982,26 +450,7 @@
       "product_code": "PHARMACEUTICALS",
       "product_label": "Produits pharmaceutiques",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "TH",
-      "country_name": "Thaïlande",
-      "product_code": "RICE",
-      "product_label": "Riz",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "UA",
-      "country_name": "Ukraine",
-      "product_code": "CORN",
-      "product_label": "Maïs",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "AE",
@@ -1009,17 +458,7 @@
       "product_code": "PETROLEUM_CRUDE",
       "product_label": "Pétrole brut",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "AE",
-      "country_name": "Émirats arabes unis",
-      "product_code": "DIAMONDS",
-      "product_label": "Diamants",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "GB",
@@ -1027,8 +466,7 @@
       "product_code": "SILVER",
       "product_label": "Argent",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "GB",
@@ -1036,26 +474,7 @@
       "product_code": "GOLD",
       "product_label": "Or",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "GB",
-      "country_name": "Royaume-Uni",
-      "product_code": "PLATINUM",
-      "product_label": "Platine",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "US",
-      "country_name": "États-Unis",
-      "product_code": "CORN",
-      "product_label": "Maïs",
-      "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "US",
@@ -1063,8 +482,7 @@
       "product_code": "SOYBEAN",
       "product_label": "Soja",
       "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
+      "impact_weight": 2.0
     },
     {
       "country": "US",
@@ -1072,107 +490,7 @@
       "product_code": "WHEAT",
       "product_label": "Blé",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "US",
-      "country_name": "États-Unis",
-      "product_code": "PLASTICS",
-      "product_label": "Plastiques",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "US",
-      "country_name": "États-Unis",
-      "product_code": "CHEMICALS_MISC",
-      "product_label": "Produits chimiques divers",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "US",
-      "country_name": "États-Unis",
-      "product_code": "PHARMACEUTICALS",
-      "product_label": "Produits pharmaceutiques",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "US",
-      "country_name": "États-Unis",
-      "product_code": "CHEMICALS_ORGANIC",
-      "product_label": "Produits chimiques organiques",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "US",
-      "country_name": "États-Unis",
-      "product_code": "EDIBLE_FRUITS",
-      "product_label": "Fruits comestibles",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "US",
-      "country_name": "États-Unis",
-      "product_code": "MEAT",
-      "product_label": "Viande",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "US",
-      "country_name": "États-Unis",
-      "product_code": "PLATINUM",
-      "product_label": "Platine",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "US",
-      "country_name": "États-Unis",
-      "product_code": "DIAMONDS",
-      "product_label": "Diamants",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "US",
-      "country_name": "États-Unis",
-      "product_code": "RARE_GASES",
-      "product_label": "Gaz rares",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "US",
-      "country_name": "États-Unis",
-      "product_code": "NATGAS",
-      "product_label": "Gaz naturel",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "US",
-      "country_name": "États-Unis",
-      "product_code": "PETROLEUM_REFINED",
-      "product_label": "Pétrole raffiné",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "US",
@@ -1180,26 +498,47 @@
       "product_code": "PETROLEUM_CRUDE",
       "product_label": "Pétrole brut",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "US",
       "country_name": "États-Unis",
-      "product_code": "ZINC_ORE",
-      "product_label": "Minerai de zinc",
+      "product_code": "NATGAS",
+      "product_label": "Gaz naturel",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "US",
       "country_name": "États-Unis",
-      "product_code": "LEAD_ORE",
-      "product_label": "Minerai de plomb",
+      "product_code": "MEAT",
+      "product_label": "Viande",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
+    },
+    {
+      "country": "US",
+      "country_name": "États-Unis",
+      "product_code": "CHEMICALS_ORGANIC",
+      "product_label": "Produits chimiques organiques",
+      "impact": "major",
+      "impact_weight": 1.5
+    },
+    {
+      "country": "US",
+      "country_name": "États-Unis",
+      "product_code": "PHARMACEUTICALS",
+      "product_label": "Produits pharmaceutiques",
+      "impact": "major",
+      "impact_weight": 1.5
+    },
+    {
+      "country": "US",
+      "country_name": "États-Unis",
+      "product_code": "PLASTICS",
+      "product_label": "Plastiques",
+      "impact": "major",
+      "impact_weight": 1.5
     },
     {
       "country": "US",
@@ -1207,8 +546,7 @@
       "product_code": "OPTICAL_INSTRUMENTS",
       "product_label": "Instruments optiques",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
+      "impact_weight": 1.5
     },
     {
       "country": "US",
@@ -1216,44 +554,15 @@
       "product_code": "TRAVEL",
       "product_label": "Services de voyage",
       "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "VN",
-      "country_name": "Vietnam",
-      "product_code": "RICE",
-      "product_label": "Riz",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "UP"
-    },
-    {
-      "country": "VN",
-      "country_name": "Vietnam",
-      "product_code": "FOOTWEAR",
-      "product_label": "Chaussures",
-      "impact": "major",
-      "impact_weight": 1.5,
-      "crisis_scenario": "DOWN"
-    },
-    {
-      "country": "ZM",
-      "country_name": "Zambie",
-      "product_code": "COPPER_UNREFINED",
-      "product_label": "Cuivre non raffiné",
-      "impact": "pivot",
-      "impact_weight": 2.0,
-      "crisis_scenario": "UP"
+      "impact_weight": 1.5
     },
     {
       "country": "KZ",
       "country_name": "Kazakhstan",
       "product_code": "URANIUM",
       "product_label": "Uranium",
-      "impact": "significant",
-      "impact_weight": 1.0,
-      "crisis_scenario": "UP"
+      "impact": "pivot",
+      "impact_weight": 2.0
     }
   ]
 }
