@@ -3,104 +3,160 @@
 
 """
 TradePulse - Commodity Correlation Mapping
-Based on critical export exposures from export_exposure.json
+Based on critical export exposures from provided data
 """
 
 COMMODITY_CODES = [
     # Energy commodities
-    "US:PETROLEUM_CRUDE",    # Pétrole brut (US, RU, UAE)
-    "US:NATGAS",            # Gaz naturel (AU, NO, QA, US)
+    "US:PETROLEUM_CRUDE",       # Pétrole brut (RU, UAE, US)
+    "US:NATGAS",               # Gaz naturel (AU, NO, US)
+    "FR:ELECTRICITY",          # Électricité (FR)
     
     # Precious metals
-    "US:GOLD",              # Or (CH, GB)
-    "US:SILVER",            # Argent (CN, HK, GB)
+    "US:GOLD",                 # Or (CH, GB)
+    "US:SILVER",               # Argent (CN, HK, GB)
     
     # Base metals
-    "UK:COPPER",            # Cuivre (CL, PE, CD)
-    "CN:IRON_ORE",          # Minerai de fer (AU, BR)
-    "CA:NICKEL",            # Nickel (CA, CN, NO)
-    "CA:ALUMINIUM",         # Aluminium (CA)
+    "UK:COPPER_ORE",           # Minerai de cuivre (CL, PE)
+    "UK:COPPER_REFINED",       # Cuivre raffiné (CL, CD)
+    "CN:IRON_ORE",             # Minerai de fer (AU, BR)
+    "CA:NICKEL",               # Nickel (CA, CN, NO)
+    "CA:ALUMINIUM",            # Aluminium (CA)
     
     # Agricultural - Grains
-    "US:WHEAT",             # Blé (AU, CA, RU, US)
-    "US:CORN",              # Maïs (AR, BR, UA, US)
-    "US:SOYBEANS",          # Soja (BR, US)
-    "IN:RICE",              # Riz (IN, PK, TH, VN)
+    "US:WHEAT",                # Blé (AU, CA, US)
+    "US:SOYBEAN",              # Soja (BR, US)
     
     # Agricultural - Softs
-    "BR:COFFEE",            # Café (BR)
-    "BR:SUGAR",             # Sucre (BR)
-    "NL:COCOA",             # Cacao (DE, NL)
+    "BR:COFFEE",               # Café (BR)
+    "BR:SUGAR",                # Sucre (BR)
+    "NL:COCOA",                # Cacao (DE, NL)
+    "FR:BEVERAGES",            # Boissons (FR)
     
     # Livestock & Food
-    "US:MEAT",              # Viande (BR, US)
-    "NO:FISH",              # Poisson (NO)
-    "MY:PALM_OIL",          # Huile de palme (ID, MY)
+    "US:MEAT",                 # Viande (BR, US)
+    "NO:FISH",                 # Poisson (NO)
+    "MY:PALM_OIL",             # Huile de palme (ID, MY)
     
-    # Energy transition & Strategic
-    "KZ:URANIUM",           # Uranium (KZ, NA, NG)
+    # Industrial & Manufacturing
+    "CN:MACHINERY",            # Machines (CN)
+    "CN:ELECTRICAL_MACHINERY", # Machines électriques (CN, HK)
+    "CN:APPAREL",              # Vêtements (CN)
+    "CN:VEHICLES",             # Véhicules (CN, DE, US)
+    "CN:OPTICAL_INSTRUMENTS",  # Instruments optiques (CN, DE, US)
+    "FR:AIRCRAFT",             # Aéronefs (FR, DE)
     
-    # Services & Manufacturing (non-commodities mais critiques)
-    "CN:ELECTRICAL_MACHINERY",  # Machines électriques (CN, HK)
-    "IN:IT_SERVICES",           # Services IT (IN)
-    "LU:FINANCIAL_SERVICES",    # Services financiers (FR, DE, LU, SG)
-    "CH:PHARMACEUTICALS",       # Produits pharmaceutiques (CH, DE, US)
+    # Chemicals & Materials
+    "CN:PLASTICS",             # Plastiques (CN, US)
+    "CN:CHEMICALS_ORGANIC",    # Produits chimiques organiques (CN, US)
+    "CH:PHARMACEUTICALS",      # Produits pharmaceutiques (CH, DE, US)
+    
+    # Services
+    "IN:IT_SERVICES",          # Services informatiques (IN)
+    "LU:FINANCIAL_SERVICES",   # Services financiers (FR, LU, SG)
+    "US:TRAVEL",               # Services de voyage (US)
+    
+    # Strategic
+    "KZ:URANIUM",              # Uranium (KZ)
 ]
 
 # Mapping par catégories pour faciliter le filtrage
 CATEGORY_MAPPING = {
     "energy": [
         "US:PETROLEUM_CRUDE",
-        "US:NATGAS"
+        "US:NATGAS",
+        "FR:ELECTRICITY"
     ],
     "metals": [
         "US:GOLD",
         "US:SILVER", 
-        "UK:COPPER",
+        "UK:COPPER_ORE",
+        "UK:COPPER_REFINED",
         "CN:IRON_ORE",
         "CA:NICKEL",
         "CA:ALUMINIUM"
     ],
     "agriculture": [
         "US:WHEAT",
-        "US:CORN",
-        "US:SOYBEANS",
-        "IN:RICE",
+        "US:SOYBEAN",
         "BR:COFFEE",
         "BR:SUGAR",
         "NL:COCOA",
+        "FR:BEVERAGES",
         "US:MEAT",
         "NO:FISH",
         "MY:PALM_OIL"
     ],
-    "strategic": [
-        "KZ:URANIUM"
+    "industrial": [
+        "CN:MACHINERY",
+        "CN:ELECTRICAL_MACHINERY",
+        "CN:APPAREL",
+        "CN:VEHICLES",
+        "CN:OPTICAL_INSTRUMENTS",
+        "FR:AIRCRAFT"
+    ],
+    "chemicals": [
+        "CN:PLASTICS",
+        "CN:CHEMICALS_ORGANIC",
+        "CH:PHARMACEUTICALS"
     ],
     "services": [
-        "CN:ELECTRICAL_MACHINERY",
         "IN:IT_SERVICES",
         "LU:FINANCIAL_SERVICES",
-        "CH:PHARMACEUTICALS"
+        "US:TRAVEL"
+    ],
+    "strategic": [
+        "KZ:URANIUM"
     ]
 }
 
-# Mapping des pays principaux par commodité (basé sur impact "pivot")
+# Mapping des pays principaux par commodité (basé sur impact "pivot" et "major")
 PIVOT_EXPORTERS = {
-    "US:PETROLEUM_CRUDE": ["US", "RU", "AE"],
-    "US:NATGAS": ["AU", "NO", "QA", "US"],
+    # Energy
+    "US:PETROLEUM_CRUDE": ["RU", "AE", "US"],
+    "US:NATGAS": ["AU", "NO", "US"],
+    "FR:ELECTRICITY": ["FR"],
+    
+    # Precious metals
     "US:GOLD": ["CH", "GB"],
     "US:SILVER": ["CN", "HK", "GB"],
-    "UK:COPPER": ["CL", "PE", "CD"],
+    
+    # Base metals  
+    "UK:COPPER_ORE": ["CL", "PE"],
+    "UK:COPPER_REFINED": ["CL", "CD"],
     "CN:IRON_ORE": ["AU", "BR"],
-    "US:WHEAT": ["AU", "CA", "RU", "US"],
-    "US:CORN": ["AR", "BR", "UA", "US"],
-    "US:SOYBEANS": ["BR", "US"],
-    "IN:RICE": ["IN", "PK", "TH", "VN"],
+    "CA:NICKEL": ["CA", "CN", "NO"],
+    "CA:ALUMINIUM": ["CA"],
+    
+    # Agricultural
+    "US:WHEAT": ["AU", "CA", "US"],
+    "US:SOYBEAN": ["BR", "US"],
     "BR:COFFEE": ["BR"],
     "BR:SUGAR": ["BR"],
-    "KZ:URANIUM": ["KZ", "NA", "NG"],
-    "CN:ELECTRICAL_MACHINERY": ["CN"],
+    "NL:COCOA": ["DE", "NL"],
+    "FR:BEVERAGES": ["FR"],
+    "US:MEAT": ["BR", "US"],
+    "NO:FISH": ["NO"],
+    "MY:PALM_OIL": ["ID", "MY"],
+    
+    # Industrial
+    "CN:MACHINERY": ["CN"],
+    "CN:ELECTRICAL_MACHINERY": ["CN", "HK"],
+    "CN:APPAREL": ["CN"],
+    "CN:VEHICLES": ["CN", "DE", "US"],
+    "CN:OPTICAL_INSTRUMENTS": ["CN", "DE", "US"],
+    "FR:AIRCRAFT": ["FR", "DE"],
+    
+    # Chemicals
+    "CN:PLASTICS": ["CN", "US"],
+    "CN:CHEMICALS_ORGANIC": ["CN", "US"],
+    "CH:PHARMACEUTICALS": ["CH", "DE", "US"],
+    
+    # Services
     "IN:IT_SERVICES": ["IN"],
-    "LU:FINANCIAL_SERVICES": ["LU", "SG"],
-    "CH:PHARMACEUTICALS": ["CH"]
+    "LU:FINANCIAL_SERVICES": ["FR", "LU", "SG"],
+    "US:TRAVEL": ["US"],
+    
+    # Strategic
+    "KZ:URANIUM": ["KZ"]
 }
