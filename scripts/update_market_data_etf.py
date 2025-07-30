@@ -8,7 +8,7 @@ import os
 import csv
 import json
 import datetime as dt
-from typing import Dict, List, Optional
+from typing import Dict, List
 import logging
 from twelvedata import TDClient
 
@@ -26,22 +26,6 @@ OUTPUT_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 
 # Client Twelve Data
 TD = TDClient(apikey=API_KEY)
-
-# Mapping MIC vers Exchange pour Twelve Data
-MIC2EX = {
-    "XPAR": "PARIS",
-    "XMUN": "XETRA", 
-    "XLON": "LSE",
-    "XSWX": "SWX",
-    "XMIL": "MILAN",
-    "XAMS": "EURONEXT",
-    "XMAD": "BME",
-    "XSTO": "OMX",
-    "XTSE": "TSX",
-    "ARCX": "NYSE",
-    "XNMS": "NASDAQ",
-    "XASX": "ASX"
-}
 
 # Structure de données de sortie
 MARKET_DATA = {
@@ -92,59 +76,40 @@ def determine_region(country: str) -> str:
     else:
         return "other"
 
-def parse_symbol(symbol_td: str, mic_code: str) -> tuple[str, Optional[str]]:
-    """Parse le symbole et retourne (symbol, exchange)"""
-    # Si le symbole contient un point, le séparer
-    if "." in symbol_td:
-        sym, _ = symbol_td.split(".", 1)
-    else:
-        sym = symbol_td
-    
-    # Mapper le MIC code vers l'exchange Twelve Data
-    exchange = MIC2EX.get(mic_code)
-    
-    return sym, exchange
-
-def quote_one(sym: str, exch: Optional[str] = None) -> tuple[float, float]:
+def quote_one(sym: str) -> tuple[float, float]:
     """Récupère la quote d'un symbole"""
     try:
-        if exch:
-            q = TD.quote(symbol=sym, exchange=exch).as_json()
-        else:
-            q = TD.quote(symbol=sym).as_json()
-            
-        if q["status"] != "ok":
-            raise ValueError(q.get("message", "Unknown error"))
-            
-        return float(q["close"]), float(q["percent_change"])
+        q = TD.quote(symbol=sym).as_json()
+        
+        # Quand c'est OK, q contient directement les champs, pas "status"
+        if "close" in q and "percent_change" in q:
+            return float(q["close"]), float(q["percent_change"])
+        
+        # Sinon c'est une erreur
+        raise ValueError(q.get("message", "Unknown error"))
     except Exception as e:
-        logger.error(f"Erreur quote pour {sym} ({exch}): {e}")
+        logger.error(f"Erreur quote pour {sym}: {e}")
         raise
 
-def ytd_one(sym: str, exch: Optional[str] = None) -> float:
+def ytd_one(sym: str) -> float:
     """Récupère la première valeur de l'année"""
     try:
         year = dt.date.today().year
+        ts = TD.time_series(
+            symbol=sym,
+            interval="1day",
+            start_date=f"{year}-01-01",
+            order="ASC",
+            outputsize=1
+        ).as_json()
         
-        params = {
-            "symbol": sym,
-            "interval": "1day",
-            "start_date": f"{year}-01-01",
-            "order": "ASC",  # Plus ancien en premier
-            "outputsize": 1
-        }
-        
-        if exch:
-            params["exchange"] = exch
+        # Vérifier si les données sont disponibles
+        if "values" in ts and ts["values"]:
+            return float(ts["values"][0]["close"])
             
-        ts = TD.time_series(**params).as_json()
-        
-        if ts["status"] != "ok" or not ts["values"]:
-            raise ValueError(ts.get("message", "No data"))
-            
-        return float(ts["values"][0]["close"])
+        raise ValueError(ts.get("message", "No data"))
     except Exception as e:
-        logger.error(f"Erreur YTD pour {sym} ({exch}): {e}")
+        logger.error(f"Erreur YTD pour {sym}: {e}")
         raise
 
 def format_value(value: float, currency: str) -> str:
@@ -236,15 +201,11 @@ def main():
     
     for etf in etf_mapping:
         symbol_td = etf["symbol_td"]
-        mic_code = etf.get("mic_code", "")
-        
-        # Parser le symbole et l'exchange
-        sym, exch = parse_symbol(symbol_td, mic_code)
         
         try:
-            # Récupérer les données
-            last, day_pct = quote_one(sym, exch)
-            jan_close = ytd_one(sym, exch)
+            # Récupérer les données - utiliser SEULEMENT le symbole
+            last, day_pct = quote_one(symbol_td)
+            jan_close = ytd_one(symbol_td)
             
             # Calculer le YTD
             ytd_pct = 100 * (last - jan_close) / jan_close if jan_close > 0 else 0
@@ -252,7 +213,7 @@ def main():
             # Créer l'objet de données
             market_entry = {
                 "country": etf["Country"],
-                "index_name": symbol_td,  # Afficher le symbole original
+                "index_name": symbol_td,  # Afficher le symbole
                 "value": format_value(last, etf["currency"]),
                 "changePercent": format_percent(day_pct),
                 "ytdChange": format_percent(ytd_pct),
