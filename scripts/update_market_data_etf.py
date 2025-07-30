@@ -8,7 +8,7 @@ import os
 import csv
 import json
 import datetime as dt
-from typing import Dict, List
+from typing import Dict, List, Optional
 import logging
 from twelvedata import TDClient
 
@@ -26,6 +26,22 @@ OUTPUT_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 
 # Client Twelve Data
 TD = TDClient(apikey=API_KEY)
+
+# Mapping MIC vers Exchange pour Twelve Data
+MIC2EX = {
+    "XPAR": "PARIS",
+    "XMUN": "XETRA", 
+    "XLON": "LSE",
+    "XSWX": "SWX",
+    "XMIL": "MILAN",
+    "XAMS": "EURONEXT",
+    "XMAD": "BME",
+    "XSTO": "OMX",
+    "XTSE": "TSX",
+    "ARCX": "NYSE",
+    "XNMS": "NASDAQ",
+    "XASX": "ASX"
+}
 
 # Structure de données de sortie
 MARKET_DATA = {
@@ -76,74 +92,60 @@ def determine_region(country: str) -> str:
     else:
         return "other"
 
-def chunks(lst: List, n: int) -> List[List]:
-    """Divise une liste en chunks de taille n"""
-    for i in range(0, len(lst), n):
-        yield lst[i:i+n]
+def parse_symbol(symbol_td: str, mic_code: str) -> tuple[str, Optional[str]]:
+    """Parse le symbole et retourne (symbol, exchange)"""
+    # Si le symbole contient un point, le séparer
+    if "." in symbol_td:
+        sym, _ = symbol_td.split(".", 1)
+    else:
+        sym = symbol_td
+    
+    # Mapper le MIC code vers l'exchange Twelve Data
+    exchange = MIC2EX.get(mic_code)
+    
+    return sym, exchange
 
-def fetch_quotes(symbols: List[str]) -> Dict[str, Dict]:
-    """
-    Batch quote : close + var% vs veille pour N symboles.
-    Retourne {sym: {"close": float, "change_pct": float}}
-    """
+def quote_one(sym: str, exch: Optional[str] = None) -> tuple[float, float]:
+    """Récupère la quote d'un symbole"""
     try:
-        r = TD.quote(symbol=",".join(symbols))
-        data = r.as_json()
-        
-        # Gérer le cas où data est une liste ou un dict unique
-        quotes = {}
-        if isinstance(data, dict):
-            # Si c'est un dict avec une clé 'data', c'est un batch
-            if 'data' in data:
-                for q in data['data']:
-                    if q.get('status') == 'ok':
-                        quotes[q['symbol']] = {
-                            'close': float(q.get('close', 0)),
-                            'change_pct': float(q.get('percent_change', 0))
-                        }
-            else:
-                # Si c'est un dict direct, c'est un symbole unique
-                if data.get('status') == 'ok':
-                    quotes[data['symbol']] = {
-                        'close': float(data.get('close', 0)),
-                        'change_pct': float(data.get('percent_change', 0))
-                    }
-        
-        return quotes
+        if exch:
+            q = TD.quote(symbol=sym, exchange=exch).as_json()
+        else:
+            q = TD.quote(symbol=sym).as_json()
+            
+        if q["status"] != "ok":
+            raise ValueError(q.get("message", "Unknown error"))
+            
+        return float(q["close"]), float(q["percent_change"])
     except Exception as e:
-        logger.error(f"Erreur fetch_quotes: {e}")
-        return {}
+        logger.error(f"Erreur quote pour {sym} ({exch}): {e}")
+        raise
 
-def fetch_ytd(symbols: List[str]) -> Dict[str, float]:
-    """
-    Récupère la première valeur de l'année pour calculer le YTD
-    Retourne {symbol: first_close_of_year}
-    """
+def ytd_one(sym: str, exch: Optional[str] = None) -> float:
+    """Récupère la première valeur de l'année"""
     try:
         year = dt.date.today().year
-        start = f"{year}-01-01"
         
-        r = TD.time_series(
-            symbol=",".join(symbols),
-            interval="1day",
-            start_date=start,
-            outputsize=1
-        )
+        params = {
+            "symbol": sym,
+            "interval": "1day",
+            "start_date": f"{year}-01-01",
+            "order": "ASC",  # Plus ancien en premier
+            "outputsize": 1
+        }
         
-        out = {}
-        data = r.as_json()
+        if exch:
+            params["exchange"] = exch
+            
+        ts = TD.time_series(**params).as_json()
         
-        # Pour chaque symbole dans la réponse
-        for sym, ts in data.items():
-            if ts.get("status") == "ok" and ts.get("values"):
-                # La première valeur (la plus ancienne)
-                first_close = float(ts["values"][-1]["close"])
-                out[sym] = first_close
-                
-        return out
+        if ts["status"] != "ok" or not ts["values"]:
+            raise ValueError(ts.get("message", "No data"))
+            
+        return float(ts["values"][0]["close"])
     except Exception as e:
-        logger.error(f"Erreur fetch_ytd: {e}")
-        return {}
+        logger.error(f"Erreur YTD pour {sym} ({exch}): {e}")
+        raise
 
 def format_value(value: float, currency: str) -> str:
     """Formate une valeur selon la devise"""
@@ -181,7 +183,6 @@ def calculate_top_performers():
     """Calcule les indices avec les meilleures et pires performances"""
     logger.info("Calcul des top performers...")
     
-    # Filtrer les indices avec des valeurs valides
     daily_indices = [idx for idx in ALL_INDICES if idx.get("changePercent")]
     ytd_indices = [idx for idx in ALL_INDICES if idx.get("ytdChange")]
     
@@ -228,67 +229,56 @@ def main():
     
     # 1. Charger le mapping des ETFs
     etf_mapping = load_etf_mapping()
-    symbols = [etf["symbol_td"] for etf in etf_mapping]
+    logger.info(f"📊 {len(etf_mapping)} ETFs à traiter")
     
-    logger.info(f"📊 {len(symbols)} ETFs à traiter")
-    
-    # 2. Récupérer les données par batch de 120
-    all_quotes = {}
-    all_ytd_bases = {}
-    
-    for i, batch in enumerate(chunks(symbols, 120)):
-        logger.info(f"📡 Traitement du batch {i+1}/{(len(symbols)-1)//120 + 1}")
-        
-        # Quotes (close + change%)
-        quotes = fetch_quotes(batch)
-        all_quotes.update(quotes)
-        
-        # YTD bases
-        ytd_bases = fetch_ytd(batch)
-        all_ytd_bases.update(ytd_bases)
-    
-    # 3. Construire les données de marché
+    # 2. Traiter chaque ETF individuellement
     processed_count = 0
     
     for etf in etf_mapping:
-        symbol = etf["symbol_td"]
-        quote = all_quotes.get(symbol)
-        ytd_base = all_ytd_bases.get(symbol)
+        symbol_td = etf["symbol_td"]
+        mic_code = etf.get("mic_code", "")
         
-        if not quote:
-            logger.warning(f"⚠️  Pas de données pour {symbol}")
+        # Parser le symbole et l'exchange
+        sym, exch = parse_symbol(symbol_td, mic_code)
+        
+        try:
+            # Récupérer les données
+            last, day_pct = quote_one(sym, exch)
+            jan_close = ytd_one(sym, exch)
+            
+            # Calculer le YTD
+            ytd_pct = 100 * (last - jan_close) / jan_close if jan_close > 0 else 0
+            
+            # Créer l'objet de données
+            market_entry = {
+                "country": etf["Country"],
+                "index_name": symbol_td,  # Afficher le symbole original
+                "value": format_value(last, etf["currency"]),
+                "changePercent": format_percent(day_pct),
+                "ytdChange": format_percent(ytd_pct),
+                "trend": "down" if day_pct < 0 else "up"
+            }
+            
+            # Ajouter à la bonne région
+            region = determine_region(etf["Country"])
+            MARKET_DATA["indices"][region].append(market_entry)
+            ALL_INDICES.append(market_entry)
+            processed_count += 1
+            
+            logger.info(f"✅ {symbol_td}: {last} ({day_pct:+.2f}%)")
+            
+        except Exception as e:
+            logger.warning(f"⚠️  Pas de données pour {symbol_td} - {e}")
             continue
-        
-        # Calculer le YTD
-        ytd_change = ""
-        if ytd_base and ytd_base > 0:
-            ytd_pct = 100 * (quote["close"] - ytd_base) / ytd_base
-            ytd_change = format_percent(ytd_pct)
-        
-        # Créer l'objet de données
-        market_entry = {
-            "country": etf["Country"],
-            "index_name": symbol,  # Utiliser le symbole
-            "value": format_value(quote["close"], etf["currency"]),
-            "changePercent": format_percent(quote["change_pct"]),
-            "ytdChange": ytd_change,
-            "trend": "down" if quote["change_pct"] < 0 else "up"
-        }
-        
-        # Ajouter à la bonne région
-        region = determine_region(etf["Country"])
-        MARKET_DATA["indices"][region].append(market_entry)
-        ALL_INDICES.append(market_entry)
-        processed_count += 1
     
-    # 4. Calculer les top performers
+    # 3. Calculer les top performers
     calculate_top_performers()
     
-    # 5. Mettre à jour les métadonnées
+    # 4. Mettre à jour les métadonnées
     MARKET_DATA["meta"]["timestamp"] = dt.datetime.utcnow().isoformat() + "Z"
     MARKET_DATA["meta"]["count"] = processed_count
     
-    # 6. Sauvegarder le fichier JSON
+    # 5. Sauvegarder le fichier JSON
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         json.dump(MARKET_DATA, f, ensure_ascii=False, indent=2)
