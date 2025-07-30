@@ -3,34 +3,104 @@
 
 """
 TradePulse - Commodity Correlation Mapping
-Defines commodity codes for multi-label correlation predictions
+Based on critical export exposures from export_exposure.json
 """
 
 COMMODITY_CODES = [
     # Energy commodities
-    "US:WTI", "UK:BRENT", "US:NATGAS", "US:GASOLINE", "US:HEATING_OIL",
+    "US:PETROLEUM_CRUDE",    # Pétrole brut (US, RU, UAE)
+    "US:NATGAS",            # Gaz naturel (AU, NO, QA, US)
     
     # Precious metals
-    "US:GOLD", "US:SILVER", "US:PLATINUM", "US:PALLADIUM",
+    "US:GOLD",              # Or (CH, GB)
+    "US:SILVER",            # Argent (CN, HK, GB)
     
     # Base metals
-    "UK:COPPER", "UK:ALUMINUM", "UK:ZINC", "UK:NICKEL", "UK:LEAD", "UK:TIN",
+    "UK:COPPER",            # Cuivre (CL, PE, CD)
+    "CN:IRON_ORE",          # Minerai de fer (AU, BR)
+    "CA:NICKEL",            # Nickel (CA, CN, NO)
+    "CA:ALUMINIUM",         # Aluminium (CA)
     
     # Agricultural - Grains
-    "US:WHEAT", "US:CORN", "US:SOYBEANS", "US:RICE", "CN:SOY",
+    "US:WHEAT",             # Blé (AU, CA, RU, US)
+    "US:CORN",              # Maïs (AR, BR, UA, US)
+    "US:SOYBEANS",          # Soja (BR, US)
+    "IN:RICE",              # Riz (IN, PK, TH, VN)
     
     # Agricultural - Softs
-    "US:COTTON", "US:SUGAR", "US:COFFEE", "US:COCOA", "US:ORANGE_JUICE",
+    "BR:COFFEE",            # Café (BR)
+    "BR:SUGAR",             # Sucre (BR)
+    "NL:COCOA",             # Cacao (DE, NL)
     
-    # Livestock
-    "US:LIVE_CATTLE", "US:FEEDER_CATTLE", "US:LEAN_HOGS",
+    # Livestock & Food
+    "US:MEAT",              # Viande (BR, US)
+    "NO:FISH",              # Poisson (NO)
+    "MY:PALM_OIL",          # Huile de palme (ID, MY)
     
-    # Industrial
-    "CN:IRON_ORE", "AU:IRON_ORE", "US:LUMBER", "UK:STEEL",
+    # Energy transition & Strategic
+    "KZ:URANIUM",           # Uranium (KZ, NA, NG)
     
-    # Energy transition
-    "CN:LITHIUM", "AU:LITHIUM", "CN:COBALT", "CN:RARE_EARTHS",
-    
-    # Other
-    "US:DXY", "VIX", "US10Y", "CARBON_EU"
+    # Services & Manufacturing (non-commodities mais critiques)
+    "CN:ELECTRICAL_MACHINERY",  # Machines électriques (CN, HK)
+    "IN:IT_SERVICES",           # Services IT (IN)
+    "LU:FINANCIAL_SERVICES",    # Services financiers (FR, DE, LU, SG)
+    "CH:PHARMACEUTICALS",       # Produits pharmaceutiques (CH, DE, US)
 ]
+
+# Mapping par catégories pour faciliter le filtrage
+CATEGORY_MAPPING = {
+    "energy": [
+        "US:PETROLEUM_CRUDE",
+        "US:NATGAS"
+    ],
+    "metals": [
+        "US:GOLD",
+        "US:SILVER", 
+        "UK:COPPER",
+        "CN:IRON_ORE",
+        "CA:NICKEL",
+        "CA:ALUMINIUM"
+    ],
+    "agriculture": [
+        "US:WHEAT",
+        "US:CORN",
+        "US:SOYBEANS",
+        "IN:RICE",
+        "BR:COFFEE",
+        "BR:SUGAR",
+        "NL:COCOA",
+        "US:MEAT",
+        "NO:FISH",
+        "MY:PALM_OIL"
+    ],
+    "strategic": [
+        "KZ:URANIUM"
+    ],
+    "services": [
+        "CN:ELECTRICAL_MACHINERY",
+        "IN:IT_SERVICES",
+        "LU:FINANCIAL_SERVICES",
+        "CH:PHARMACEUTICALS"
+    ]
+}
+
+# Mapping des pays principaux par commodité (basé sur impact "pivot")
+PIVOT_EXPORTERS = {
+    "US:PETROLEUM_CRUDE": ["US", "RU", "AE"],
+    "US:NATGAS": ["AU", "NO", "QA", "US"],
+    "US:GOLD": ["CH", "GB"],
+    "US:SILVER": ["CN", "HK", "GB"],
+    "UK:COPPER": ["CL", "PE", "CD"],
+    "CN:IRON_ORE": ["AU", "BR"],
+    "US:WHEAT": ["AU", "CA", "RU", "US"],
+    "US:CORN": ["AR", "BR", "UA", "US"],
+    "US:SOYBEANS": ["BR", "US"],
+    "IN:RICE": ["IN", "PK", "TH", "VN"],
+    "BR:COFFEE": ["BR"],
+    "BR:SUGAR": ["BR"],
+    "KZ:URANIUM": ["KZ", "NA", "NG"],
+    "CN:ELECTRICAL_MACHINERY": ["CN"],
+    "IN:IT_SERVICES": ["IN"],
+    "LU:FINANCIAL_SERVICES": ["LU", "SG"],
+    "CH:PHARMACEUTICALS": ["CH"]
+}
