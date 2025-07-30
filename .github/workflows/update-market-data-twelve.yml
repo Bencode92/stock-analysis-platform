@@ -1,0 +1,62 @@
+name: 📊 Update Markets via Twelve Data API
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */4 * * *'  # Toutes les 4 heures
+
+permissions:
+  contents: write
+
+jobs:
+  update-markets-twelve-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ github.token }}
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Create data directory if needed
+        run: mkdir -p data
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+        
+      - name: Update market data via Twelve Data API
+        env:
+          TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
+        run: python scripts/update_market_data_etf.py
+        continue-on-error: true
+        
+      - name: Verify data file exists
+        run: |
+          if [ ! -f data/markets.json ]; then
+            echo "Fichier de données non trouvé, création d'un fichier vide"
+            echo "{}" > data/markets.json
+          fi
+        
+      - name: Commit and push if changed
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add data/markets.json
+          
+          if git diff --staged --quiet; then
+            echo "Aucune modification détectée, pas de commit nécessaire"
+          else
+            echo "Modifications détectées, création d'un commit"
+            git commit -m "📊 Update markets.json via Twelve Data API [skip ci]"
+            git push origin HEAD:${GITHUB_REF}
+          fi
