@@ -9,6 +9,7 @@ Script for extracting news and events from Financial Modeling Prep
 """
 
 import os
+import sys   
 import json
 import requests
 import logging
