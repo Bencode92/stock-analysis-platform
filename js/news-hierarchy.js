@@ -4,49 +4,91 @@
  * --------------------------------------------------------------------*/
 
 /***** 1.  Constantes « géographie » ****************************************/
-// (1‑a)  Table mots‑clés → codes ISO‑2
-const COUNTRY_KEYWORDS = [
-  // 🇺🇸 United States
-  { iso: 'us', rx: /\b(?:s&p\s*500|dow jones|nasdaq|usd\b|\bu\.s\.?(?:a)?\b|wall street|federal reserve|treasur(?:y|ies)|washington(?!\s+(?:state|st\.))|capitol hill|white house|maison blanche)\b/i },
-  // 🇫🇷 France
-  { iso: 'fr', rx: /\b(?:cac\s*40|euronext paris|banque de france|\beur\b|paris)\b/i },
-  // 🇬🇧 United Kingdom
-  { iso: 'gb', rx: /\b(?:ftse(?:\s*100)?|bank of england|london|\bboe\b|\bgbp\b|pound sterling)\b/i },
-  // 🇯🇵 Japan
-  { iso: 'jp', rx: /\b(?:nikkei|topix|tokyo|\bboj\b|\byen\b|\bjpy\b)\b/i },
-  // 🇨🇳 China
-  { iso: 'cn', rx: /\b(?:shanghai composite|shenzhen|csi\s*300|pbo[cs]|yuan\b|cny\b|beijing)\b/i },
-  // 🇪🇺 European Union (groupe)
-  { iso: 'eu', rx: /\b(?:european\s+union|union\s+europ[ée]enne|eu(?!r)\b|eu-wide|eu27|eu-27|brussels|european\s+commission|ecb\b|european\s+central\s+bank)\b/i },
+
+// (1‑a) Dictionnaire des mots-clés par pays (plus maintenable)
+const GEO_KEYWORDS = {
+  us: ['s&p 500', 'nasdaq', 'dow jones', 'fomc', 'fed', 'federal reserve', 
+       'washington', 'capitol hill', 'white house', 'irs', 'treasury', 
+       'department of commerce', 'wall street', 'u.s.', 'usa', 'united states'],
+  fr: ['cac 40', 'euronext paris', 'banque de france', 'elysée', 
+       'bourse de paris', 'palais bourbon', 'matignon'],
+  gb: ['ftse', 'bank of england', 'london stock exchange', 'threadneedle street', 
+       'downing street', 'westminster', 'boe', 'gbp', 'pound sterling', 'uk'],
+  jp: ['nikkei', 'topix', 'boj', 'bank of japan', 'tokyo', 'jpy', 'yen'],
+  cn: ['shanghai composite', 'csi 300', 'pboc', 'yuan', 'cny', 'beijing', 'npc'],
+  eu: ['european union', 'union européenne', 'brussels', 'european commission',
+       'ecb', 'european central bank', 'eu-wide', 'eurozone', 'eur'],
+  de: ['dax', 'frankfurt', 'bundesbank', 'berlin', 'munich'],
+  ca: ['tsx', 'toronto stock', 'bank of canada', 'ottawa', 'cad'],
+  au: ['asx', 'sydney', 'melbourne', 'aud', 'rba', 'reserve bank of australia'],
+  in: ['sensex', 'nifty', 'mumbai', 'delhi', 'inr', 'rupee'],
+  kr: ['kospi', 'seoul', 'krw', 'won', 'bank of korea']
+};
+
+// Génération automatique des regex à partir du dictionnaire
+const COUNTRY_KEYWORDS = Object.entries(GEO_KEYWORDS).map(
+  ([iso, list]) => ({
+    iso,
+    rx: new RegExp(`\\b(?:${list.join('|')})\\b`, 'i')
+  })
+);
+
+// (1‑b) Paires de pays courantes (génération automatique)
+const COUNTRY_PAIRS = [
+  ['us', 'eu'], ['us', 'cn'], ['us', 'jp'],
+  ['eu', 'cn'], ['eu', 'gb'], ['gb', 'fr'],
+  ['us', 'ca'], ['cn', 'au'], ['jp', 'kr']
 ];
 
-// (1‑b)  Groupes régionaux qui apparaissent dans le <select>
+const EXTRA_PAIR_RULES = [];
+for (const [a, b] of COUNTRY_PAIRS) {
+  const reg = new RegExp(`(?:${a}\\s*[-–—/&]?(?:and)?\\s*${b}|${b}\\s*[-–—/&]?(?:and)?\\s*${a})`, 'i');
+  EXTRA_PAIR_RULES.push({ a, b, rx: reg });
+}
+
+// (1‑c) Groupes régionaux
 const COUNTRY_GROUPS = {
-  eu:   ['de','es','it','nl','be','se','ch','at','fi','dk','pt','ie','no','gr','pl','cz','hu','ro','sk','si','bg','hr','lu'],
+  eu:   ['fr','de','es','it','nl','be','se','ch','at','fi','dk','pt','ie','no','gr','pl','cz','hu','ro','sk','si','bg','hr','lu'],
   asia: ['cn','jp','kr','in','id','th','sg','hk','my','tw','vn','ph'],
   em:   ['br','mx','za','tr','ru','sa','qa','ae','cl','co','pe','eg','ng']
 };
 
-// (1‑c)  Détection rapide
+// (1‑d) Fonction de déduplication
+const canonicalizeCountries = list =>
+  [...new Set(list.map(c => c.trim().toLowerCase()).filter(Boolean))];
+
+// (1‑e) Détection rapide améliorée
 function detectCountries(text = '') {
   const found = new Set();
+  
+  // Détection standard par mots-clés
   for (const { iso, rx } of COUNTRY_KEYWORDS) {
     if (rx.test(text)) found.add(iso);
   }
   
-  // Repère explicitement les couples « US‑EU », « EU‑US », « US and EU », etc.
-  if (/(?:us[-–—\s]*(?:and|&)?\s*eu|eu[-–—\s]*(?:and|&)?\s*us)/i.test(text)){
-    found.add('us'); found.add('eu');
-  }
-  // Autres paires courantes
-  if (/(?:us[-–—\s]*(?:and|&)?\s*cn|cn[-–—\s]*(?:and|&)?\s*us|china[-–—\s]*(?:and|&)?\s*us)/i.test(text)){
-    found.add('us'); found.add('cn');
-  }
-  if (/(?:us[-–—\s]*(?:and|&)?\s*jp|jp[-–—\s]*(?:and|&)?\s*us|japan[-–—\s]*(?:and|&)?\s*us)/i.test(text)){
-    found.add('us'); found.add('jp');
+  // Détection des paires de pays
+  for (const { a, b, rx } of EXTRA_PAIR_RULES) {
+    if (rx.test(text)) {
+      found.add(a);
+      found.add(b);
+    }
   }
   
-  return [...found];                // ex. ["us","eu"]
+  // Patterns spécifiques pour les relations commerciales
+  if (/trade\s+(?:war|dispute|deal|agreement).*(?:between|avec)/i.test(text)) {
+    const afterBetween = text.match(/(?:between|avec)\s+(\w+\s+(?:and|et)\s+\w+)/i);
+    if (afterBetween) {
+      const countries = afterBetween[1].split(/\s+(?:and|et)\s+/i);
+      countries.forEach(c => {
+        const normalized = normalizeIso(c.trim());
+        if (normalized && normalized !== c.toLowerCase()) {
+          found.add(normalized);
+        }
+      });
+    }
+  }
+  
+  return [...found];
 }
 
 /***** 2.  Namespace principal *********************************************/
@@ -156,18 +198,20 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
   return card;
 }
 
-// Nouvelle fonction pour afficher les badges de pays
+// Fonction pour afficher les badges de pays (avec déduplication)
 function getCountryBadges(countries) {
   if (!countries || countries === 'other') return '';
   
-  const countryList = countries.split(',').map(c => c.trim()).filter(c => c && c !== 'other');
-  if (!countryList.length) return '';
+  const countryList = canonicalizeCountries(countries.split(','));
+  if (!countryList.length || (countryList.length === 1 && countryList[0] === 'other')) return '';
   
   const flags = {
-    us: '🇺🇸', fr: '🇫🇷', gb: '🇬🇧', jp: '🇯🇵', cn: '🇨🇳', eu: '🇪🇺'
+    us: '🇺🇸', fr: '🇫🇷', gb: '🇬🇧', jp: '🇯🇵', cn: '🇨🇳', eu: '🇪🇺',
+    de: '🇩🇪', ca: '🇨🇦', au: '🇦🇺', in: '🇮🇳', kr: '🇰🇷'
   };
   
   return countryList
+    .filter(iso => iso !== 'other')
     .map(iso => {
       const flag = flags[iso] || '';
       const label = iso.toUpperCase();
@@ -209,7 +253,11 @@ const COUNTRY_ALIAS = {
   'japan':'jp','jp':'jp','japanese':'jp',
   'china':'cn','cn':'cn','chinese':'cn',
   'european union':'eu','union européenne':'eu','ue':'eu','eu':'eu',
-  // complétez au besoin
+  'germany':'de','deutschland':'de','allemagne':'de','de':'de',
+  'canada':'ca','ca':'ca','canadian':'ca',
+  'australia':'au','au':'au','australian':'au',
+  'india':'in','in':'in','indian':'in',
+  'south korea':'kr','korea':'kr','kr':'kr','korean':'kr'
 };
 
 function normalizeIso(raw){
@@ -219,13 +267,18 @@ function normalizeIso(raw){
   // Si c'est dans le dictionnaire
   if (k in COUNTRY_ALIAS) return COUNTRY_ALIAS[k];
   
-  // Règle robuste : tout ce qui commence par "us" → "us"
+  // Règles robustes par préfixe
   if (k.startsWith('us') || k.startsWith('united states')) return 'us';
   if (k.startsWith('fr')) return 'fr';
   if (k.startsWith('gb') || k.startsWith('uk')) return 'gb';
   if (k.startsWith('jp')) return 'jp';
   if (k.startsWith('cn') || k.startsWith('china')) return 'cn';
   if (k.startsWith('eu') || k.startsWith('europe')) return 'eu';
+  if (k.startsWith('de') || k.startsWith('german')) return 'de';
+  if (k.startsWith('ca') || k.startsWith('canad')) return 'ca';
+  if (k.startsWith('au') || k.startsWith('austral')) return 'au';
+  if (k.startsWith('in') || k.startsWith('india')) return 'in';
+  if (k.startsWith('kr') || k.startsWith('korea')) return 'kr';
   
   return k; // sinon on garde tel quel
 }
@@ -250,17 +303,19 @@ function distributeNewsByImportance(newsData){
     return d && !isNaN(d) && (today - d)/MS_PER_DAY <= MAX_NEWS_DAYS;
   });
 
-  // 6‑d. Enrichissement géographie + hiérarchie
+  // 6‑d. Enrichissement géographie + hiérarchie (avec déduplication)
   allNews.forEach(n => {
     /* geo */
     let rawCtry = (n.country||'').toLowerCase();
     if (!rawCtry || rawCtry==='other'){
       const corpus = [n.title,n.snippet,n.content,n.source].filter(Boolean).join('  ');
       const iso = detectCountries(corpus);
-      n.country = iso.length ? iso.join(',') : 'other';
+      n.country = iso.length ? canonicalizeCountries(iso).join(',') : 'other';
     } else {
       // on convertit le label fourni par l'API → code ISO‑2 standard
-      n.country = normalizeIso(rawCtry);
+      n.country = canonicalizeCountries(
+        normalizeIso(rawCtry).split(',')
+      ).join(',');
     }
 
     /* hiérarchie (simple rule based sur imp / ML) */
