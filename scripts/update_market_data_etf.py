@@ -79,35 +79,45 @@ def determine_region(country: str) -> str:
 def quote_one(sym: str) -> tuple[float, float]:
     """Récupère la quote d'un symbole"""
     try:
-        q = TD.quote(symbol=sym).as_json()
+        q_json = TD.quote(symbol=sym).as_json()
+        if isinstance(q_json, tuple):  # par sécurité
+            q_json = q_json[0]
         
-        # Quand c'est OK, q contient directement les champs, pas "status"
-        if "close" in q and "percent_change" in q:
-            return float(q["close"]), float(q["percent_change"])
+        if "close" in q_json and "percent_change" in q_json:
+            return float(q_json["close"]), float(q_json["percent_change"])
         
-        # Sinon c'est une erreur
-        raise ValueError(q.get("message", "Unknown error"))
+        raise ValueError(q_json.get("message", "unknown error"))
     except Exception as e:
         logger.error(f"Erreur quote pour {sym}: {e}")
         raise
 
 def ytd_one(sym: str) -> float:
-    """Récupère la première valeur de l'année"""
+    """Première clôture de l'année pour sym"""
+    year = dt.date.today().year
     try:
-        year = dt.date.today().year
-        ts = TD.time_series(
+        # L'objet retourné par le SDK
+        ts_obj = TD.time_series(
             symbol=sym,
             interval="1day",
             start_date=f"{year}-01-01",
             order="ASC",
             outputsize=1
-        ).as_json()
-        
-        # Vérifier si les données sont disponibles
-        if "values" in ts and ts["values"]:
-            return float(ts["values"][0]["close"])
-            
-        raise ValueError(ts.get("message", "No data"))
+        )
+
+        # .as_json() peut donner (data, meta) ou simplement data
+        ts_json = ts_obj.as_json()
+        if isinstance(ts_json, tuple):  # cas le plus fréquent
+            ts_json = ts_json[0]
+
+        # Si on reçoit un dict batché { "SYMBOL": {...} }
+        if sym in ts_json:
+            ts_json = ts_json[sym]
+
+        if "values" in ts_json and ts_json["values"]:
+            return float(ts_json["values"][0]["close"])
+
+        raise ValueError(ts_json.get("message", "No data"))
+
     except Exception as e:
         logger.error(f"Erreur YTD pour {sym}: {e}")
         raise
