@@ -75,32 +75,6 @@
             margin-bottom: 1.5rem;
         }
         
-        .score-filter-container {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-        }
-        
-        .score-slider {
-            flex: 1;
-            -webkit-appearance: none;
-            height: 0.25rem;
-            border-radius: 0.125rem;
-            background: rgba(75, 85, 99, 0.5);
-            outline: none;
-        }
-        
-        .score-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 1rem;
-            height: 1rem;
-            border-radius: 50%;
-            background: #00ff87;
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
-        }
-        
         /* Animation pour l'affichage des éléments */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -1120,7 +1094,7 @@
                             </button>
                         </div>
                         
-                        <!-- Filtres avancés (Impact et Pays) -->
+                        <!-- Filtres avancés (Impact uniquement) -->
                         <div class="flex flex-wrap gap-2">
                             <select id="impact-select" class="text-xs md:text-sm px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700 rounded-full">
                                 <option value="all">Tous impacts</option>
@@ -1128,25 +1102,7 @@
                                 <option value="negative">Négatif</option>
                                 <option value="neutral">Neutre</option>
                             </select>
-                            <select id="country-select" class="text-xs md:text-sm px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700 rounded-full">
-                                <option value="all">Tous pays</option>
-                                <option value="us">États-Unis</option>
-                                <option value="fr">France</option>
-                                <option value="gb">Royaume-Uni</option>
-                                <option value="jp">Japon</option>
-                                <option value="cn">Chine</option>
-                                <option value="eu">Europe</option>
-                                <option value="asia">Asie</option>
-                                <option value="em">Marchés Émergents</option>
-                            </select>
                         </div>
-                    </div>
-                    
-                    <!-- Enhanced Score Filter -->
-                    <div class="score-filter-container">
-                        <label class="text-sm text-gray-400 font-medium">Score minimum:</label>
-                        <input type="range" id="score-filter" class="score-slider" min="0" max="100" value="0" step="5">
-                        <span id="score-value" class="text-sm text-green-400 font-bold">0</span>
                     </div>
                 </div>
                 
@@ -1425,22 +1381,6 @@
             }
             
             updateLastUpdateTime();
-            
-            // Enhanced score filter with real-time feedback
-            const scoreFilter = document.getElementById('score-filter');
-            const scoreValue = document.getElementById('score-value');
-            
-            if (scoreFilter && scoreValue) {
-                scoreFilter.addEventListener('input', function() {
-                    const value = this.value;
-                    scoreValue.textContent = value;
-                    
-                    // Apply score-based filtering if available
-                    if (window.newsHierarchy && window.newsHierarchy.filterByScore) {
-                        window.newsHierarchy.filterByScore(parseInt(value));
-                    }
-                });
-            }
 
             // Enhanced date updates
             const currentDateElement = document.getElementById('currentDate');
