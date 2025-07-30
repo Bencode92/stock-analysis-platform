@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------------------
- * news-hierarchy.js — v2025‑07‑29
+ * news-hierarchy.js — v2025‑07‑30
  * Système de hiérarchisation + filtrage géographique intelligent
  * --------------------------------------------------------------------*/
 
@@ -16,7 +16,8 @@ const COUNTRY_KEYWORDS = [
   { iso: 'jp', rx: /\b(?:nikkei|topix|tokyo|\bboj\b|\byen\b|\bjpy\b)\b/i },
   // 🇨🇳 China
   { iso: 'cn', rx: /\b(?:shanghai composite|shenzhen|csi\s*300|pbo[cs]|yuan\b|cny\b|beijing)\b/i },
-  // …complétez au besoin
+  // 🇪🇺 European Union (groupe)
+  { iso: 'eu', rx: /\b(?:european\s+union|union\s+europ[ée]enne|eu(?!r)\b|eu-wide|eu27|eu-27|brussels|european\s+commission|ecb\b|european\s+central\s+bank)\b/i },
 ];
 
 // (1‑b)  Groupes régionaux qui apparaissent dans le <select>
@@ -32,7 +33,20 @@ function detectCountries(text = '') {
   for (const { iso, rx } of COUNTRY_KEYWORDS) {
     if (rx.test(text)) found.add(iso);
   }
-  return [...found];                // ex. ["us","ca"]
+  
+  // Repère explicitement les couples « US‑EU », « EU‑US », « US and EU », etc.
+  if (/(?:us[-–—\s]*(?:and|&)?\s*eu|eu[-–—\s]*(?:and|&)?\s*us)/i.test(text)){
+    found.add('us'); found.add('eu');
+  }
+  // Autres paires courantes
+  if (/(?:us[-–—\s]*(?:and|&)?\s*cn|cn[-–—\s]*(?:and|&)?\s*us|china[-–—\s]*(?:and|&)?\s*us)/i.test(text)){
+    found.add('us'); found.add('cn');
+  }
+  if (/(?:us[-–—\s]*(?:and|&)?\s*jp|jp[-–—\s]*(?:and|&)?\s*us|japan[-–—\s]*(?:and|&)?\s*us)/i.test(text)){
+    found.add('us'); found.add('jp');
+  }
+  
+  return [...found];                // ex. ["us","eu"]
 }
 
 /***** 2.  Namespace principal *********************************************/
@@ -120,11 +134,13 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
   const descClamp = tier==='regular' ? 'line-clamp-3' : 'line-clamp-4';
 
   const categoryLabel = getCategoryLabel(item.category);
+  const countryBadges = getCountryBadges(item.country);
 
   card.innerHTML = `
     <header class="flex items-center gap-2 mb-3 flex-wrap">
       <span class="badge badge-${item.impact} uppercase text-xs px-2 py-1 rounded font-semibold ${getImpactBadgeClass(item.impact)}">${impactText}</span>
       <span class="chip text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300">${categoryLabel}</span>
+      ${countryBadges}
     </header>
     <h3 class="title text-lg font-bold line-clamp-2 text-white mb-3">${item.title}</h3>
     <p class="desc text-sm text-zinc-300 ${descClamp} flex-grow mb-4"></p>
@@ -138,6 +154,26 @@ function buildNewsCard(item, impactText, impactColor, sentimentIcon, index, tier
     </footer>`;
   card.querySelector('.desc').innerText = content;
   return card;
+}
+
+// Nouvelle fonction pour afficher les badges de pays
+function getCountryBadges(countries) {
+  if (!countries || countries === 'other') return '';
+  
+  const countryList = countries.split(',').map(c => c.trim()).filter(c => c && c !== 'other');
+  if (!countryList.length) return '';
+  
+  const flags = {
+    us: '🇺🇸', fr: '🇫🇷', gb: '🇬🇧', jp: '🇯🇵', cn: '🇨🇳', eu: '🇪🇺'
+  };
+  
+  return countryList
+    .map(iso => {
+      const flag = flags[iso] || '';
+      const label = iso.toUpperCase();
+      return `<span class="text-xs px-1.5 py-0.5 rounded bg-blue-900 bg-opacity-30 text-blue-300 border border-blue-700">${flag} ${label}</span>`;
+    })
+    .join('');
 }
 
 function getCategoryLabel(cat){
@@ -171,7 +207,8 @@ const COUNTRY_ALIAS = {
   'france':'fr','french':'fr','fr':'fr',
   'united kingdom':'gb','great britain':'gb','uk':'gb','gb':'gb',
   'japan':'jp','jp':'jp','japanese':'jp',
-  'china':'cn','cn':'cn','chinese':'cn'
+  'china':'cn','cn':'cn','chinese':'cn',
+  'european union':'eu','union européenne':'eu','ue':'eu','eu':'eu',
   // complétez au besoin
 };
 
@@ -188,6 +225,7 @@ function normalizeIso(raw){
   if (k.startsWith('gb') || k.startsWith('uk')) return 'gb';
   if (k.startsWith('jp')) return 'jp';
   if (k.startsWith('cn') || k.startsWith('china')) return 'cn';
+  if (k.startsWith('eu') || k.startsWith('europe')) return 'eu';
   
   return k; // sinon on garde tel quel
 }
