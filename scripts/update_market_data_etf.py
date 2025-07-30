@@ -8,7 +8,7 @@ import os
 import csv
 import json
 import datetime as dt
-from typing import Dict, List
+from typing import Dict, List, Optional
 import logging
 from twelvedata import TDClient
 
@@ -79,7 +79,7 @@ def determine_region(country: str) -> str:
 def quote_one(sym: str) -> tuple[float, float]:
     """Récupère la quote d'un symbole"""
     try:
-        q_json = TD.quote(symbol=sym).as_json()
+        q_json = TD.quote(symbol=sym, type="ETF").as_json()
         if isinstance(q_json, tuple):  # par sécurité
             q_json = q_json[0]
         
@@ -91,17 +91,20 @@ def quote_one(sym: str) -> tuple[float, float]:
         logger.error(f"Erreur quote pour {sym}: {e}")
         raise
 
-def ytd_one(sym: str) -> float:
+def ytd_one(sym: str, exchange: Optional[str] = None) -> float:
     """Première clôture de l'année pour sym"""
     year = dt.date.today().year
     try:
-        # L'objet retourné par le SDK
+        # Construire le symbole avec exchange si fourni
+        symbol = f"{sym}:{exchange}" if exchange else sym
+        
+        # L'objet retourné par le SDK - IMPORTANT: ajouter type="ETF"
         ts_obj = TD.time_series(
-            symbol=sym,
+            symbol=symbol,
             interval="1day",
             start_date=f"{year}-01-01",
             order="ASC",
-            outputsize=1
+            type="ETF"  # <-- Point clé pour les ETFs
         )
 
         # .as_json() peut donner (data, meta) ou simplement data
@@ -109,14 +112,36 @@ def ytd_one(sym: str) -> float:
         if isinstance(ts_json, tuple):  # cas le plus fréquent
             ts_json = ts_json[0]
 
-        # Si on reçoit un dict batché { "SYMBOL": {...} }
-        if sym in ts_json:
+        # Cas 1: La réponse est directement une liste de chandeliers
+        if isinstance(ts_json, list) and ts_json:
+            return float(ts_json[0]["close"])
+        
+        # Cas 2: Si on reçoit un dict batché { "SYMBOL": {...} }
+        if isinstance(ts_json, dict) and sym in ts_json:
             ts_json = ts_json[sym]
 
-        if "values" in ts_json and ts_json["values"]:
+        # Cas 3: Dict avec clé "values"
+        if isinstance(ts_json, dict) and "values" in ts_json and ts_json["values"]:
             return float(ts_json["values"][0]["close"])
 
-        raise ValueError(ts_json.get("message", "No data"))
+        # Si on arrive ici, essayer avec une date légèrement décalée (cas où le 1er janvier est férié)
+        logger.warning(f"Pas de données pour {sym} au 1er janvier, tentative avec le 5 janvier")
+        ts_obj_retry = TD.time_series(
+            symbol=symbol,
+            interval="1day",
+            start_date=f"{year}-01-05",
+            order="ASC",
+            type="ETF"
+        )
+        
+        ts_json_retry = ts_obj_retry.as_json()
+        if isinstance(ts_json_retry, tuple):
+            ts_json_retry = ts_json_retry[0]
+            
+        if isinstance(ts_json_retry, list) and ts_json_retry:
+            return float(ts_json_retry[0]["close"])
+
+        raise ValueError("No YTD data available")
 
     except Exception as e:
         logger.error(f"Erreur YTD pour {sym}: {e}")
@@ -211,11 +236,13 @@ def main():
     
     for etf in etf_mapping:
         symbol_td = etf["symbol_td"]
+        # Récupérer le code MIC/exchange si disponible (par défaut ARCX pour NYSE Arca)
+        exchange = etf.get("mic_code", etf.get("exchange", "ARCX"))
         
         try:
             # Récupérer les données - utiliser SEULEMENT le symbole
             last, day_pct = quote_one(symbol_td)
-            jan_close = ytd_one(symbol_td)
+            jan_close = ytd_one(symbol_td, exchange)
             
             # Calculer le YTD
             ytd_pct = 100 * (last - jan_close) / jan_close if jan_close > 0 else 0
@@ -223,7 +250,7 @@ def main():
             # Créer l'objet de données
             market_entry = {
                 "country": etf["Country"],
-                "index_name": symbol_td,  # Afficher le symbole
+                "index_name": etf.get("Index", symbol_td),  # Utiliser le nom de l'indice si disponible
                 "value": format_value(last, etf["currency"]),
                 "changePercent": format_percent(day_pct),
                 "ytdChange": format_percent(ytd_pct),
