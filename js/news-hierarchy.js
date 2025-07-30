@@ -1,11 +1,11 @@
 /* ---------------------------------------------------------------------
  * news-hierarchy.js — v2025‑07‑30
- * Système de hiérarchisation + filtrage géographique intelligent
+ * Système de hiérarchisation simplifié
  * --------------------------------------------------------------------*/
 
 /***** 1.  Constantes « géographie » ****************************************/
 
-// (1‑a) Dictionnaire des mots-clés par pays (plus maintenable)
+// (1‑a) Dictionnaire des mots-clés par pays (pour badges uniquement)
 const GEO_KEYWORDS = {
   us: ['s&p 500', 'nasdaq', 'dow jones', 'fomc', 'fed', 'federal reserve', 
        'washington', 'capitol hill', 'white house', 'irs', 'treasury', 
@@ -46,18 +46,11 @@ for (const [a, b] of COUNTRY_PAIRS) {
   EXTRA_PAIR_RULES.push({ a, b, rx: reg });
 }
 
-// (1‑c) Groupes régionaux
-const COUNTRY_GROUPS = {
-  eu:   ['fr','de','es','it','nl','be','se','ch','at','fi','dk','pt','ie','no','gr','pl','cz','hu','ro','sk','si','bg','hr','lu'],
-  asia: ['cn','jp','kr','in','id','th','sg','hk','my','tw','vn','ph'],
-  em:   ['br','mx','za','tr','ru','sa','qa','ae','cl','co','pe','eg','ng']
-};
-
-// (1‑d) Fonction de déduplication
+// (1‑c) Fonction de déduplication
 const canonicalizeCountries = list =>
   [...new Set(list.map(c => c.trim().toLowerCase()).filter(Boolean))];
 
-// (1‑e) Détection rapide améliorée
+// (1‑d) Détection rapide améliorée
 function detectCountries(text = '') {
   const found = new Set();
   
@@ -373,14 +366,8 @@ function displayFallbackData(){ ['critical-news-container','important-news-conta
 }); }
 function getImpactText(i){return i==='negative'?'IMPACT NÉGATIF':i==='slightly_negative'?'IMPACT LÉGÈREMENT NÉGATIF':i==='positive'?'IMPACT POSITIF':i==='slightly_positive'?'IMPACT LÉGÈREMENT POSITIF':'IMPACT NEUTRE';}
 
-/***** 9.  Filtrage dynamique *********************************************/
+/***** 9.  Filtrage dynamique simplifié ***********************************/
 window.NewsSystem.filterNews = filterNews;
-
-// Ecouteur sur le <select id="country-select">
-document.addEventListener('DOMContentLoaded',()=>{
-  const sel=document.getElementById('country-select');
-  if(sel) sel.addEventListener('change',e=>filterNews('country',e.target.value.toLowerCase()));
-});
 
 function filterNews(type,val){
   const cards=document.querySelectorAll('.news-card');
@@ -390,26 +377,16 @@ function filterNews(type,val){
   const currentImpact   = document.getElementById('impact-select')?.value || 'all';
   const currentSent     = document.getElementById('sentiment-select')?.value || 'all';
 
-  // valeur brute du sélecteur « Pays »
-  const rawCountry = (type==='country' ? val : (document.getElementById('country-select')?.value || 'all')).toLowerCase().trim();
-  // 👉 nouvelle étape : on convertit le libellé (ex. « États‑Unis ») → code ISO‑2 normalisé
-  const currentCountry = normalizeIso(rawCountry);   // "us", "fr", "eu", … ou "all"
-
   cards.forEach(card=>{
     const cat  = card.getAttribute('data-category');
     const imp  = card.getAttribute('data-impact');
     const sen  = card.getAttribute('data-sentiment');
-    const ctry = (card.getAttribute('data-country')||'').split(',').map(s=>s.trim()); // ["us","gb"]
 
     const matchCat = currentCategory==='all' || cat===currentCategory;
     const matchImp = currentImpact==='all'   || imp===currentImpact;
     const matchSen = currentSent==='all'     || sen===currentSent;
 
-    const matchCtry = currentCountry==='all' ||
-                      ctry.includes(currentCountry) ||
-                      (COUNTRY_GROUPS[currentCountry]||[]).some(x=>ctry.includes(x));
-
-    const visible = matchCat && matchImp && matchSen && matchCtry;
+    const visible = matchCat && matchImp && matchSen;
     card.style.display = visible ? 'flex' : 'none';
     card.classList.toggle('hidden',!visible);
   });
