@@ -8,6 +8,8 @@ import os
 import csv
 import json
 import datetime as dt
+import io
+import time
 from typing import Dict, List
 import logging
 from twelvedata import TDClient
@@ -25,7 +27,11 @@ CSV_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 OUTPUT_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "sectors.json")
 
 # Client Twelve Data
-TD = TDClient(apikey=API_KEY)
+if API_KEY:
+    TD = TDClient(apikey=API_KEY)
+else:
+    logger.error("❌ Clé API Twelve Data non définie!")
+    TD = None
 
 def create_empty_sectors_data():
     """Crée une structure de données vide pour les secteurs"""
@@ -188,6 +194,8 @@ def determine_index_name(etf_name: str, region: str) -> str:
             return "NASDAQ US Transportation"
         elif "Internet" in etf_name:
             return "NASDAQ US Internet"
+        elif "Technology Dividend" in etf_name:
+            return "NASDAQ US Technology Dividend"
         elif "Artificial Intelligence" in etf_name:
             return "NASDAQ US AI & Robotics"
         else:
@@ -202,6 +210,8 @@ def determine_index_name(etf_name: str, region: str) -> str:
             return "S&P 500 Industrials"
         elif "Consumer Discretionary" in etf_name:
             return "S&P 500 Consumer Discretionary"
+        elif "Utilities" in etf_name:
+            return "S&P 500 Utilities"
         else:
             return etf_name.replace("Select Sector SPDR Fund", "").strip()
     elif "iShares" in etf_name:
@@ -213,22 +223,58 @@ def determine_index_name(etf_name: str, region: str) -> str:
         return etf_name
 
 def load_sectors_etf_mapping() -> List[Dict]:
-    """Charge le mapping des ETFs sectoriels depuis le CSV"""
+    """Charge le mapping des ETFs sectoriels depuis le CSV en gérant les commentaires"""
     rows = []
-    with open(CSV_FILE, newline="", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        for r in reader:
-            # Nettoyer tous les espaces dans les clés et valeurs
-            r = {k.strip(): v.strip() for k, v in r.items()}
+    
+    try:
+        with open(CSV_FILE, newline="", encoding="utf-8-sig") as f:
+            # Lire toutes les lignes et filtrer les commentaires et lignes vides
+            lines = []
+            for line in f:
+                line_stripped = line.strip()
+                if line_stripped and not line_stripped.startswith('#'):
+                    lines.append(line)
             
-            ticker = r.get("symbol", "").strip().upper()
+            # Si aucune ligne de données
+            if not lines:
+                logger.error("❌ Aucune donnée trouvée dans le CSV (seulement des commentaires?)")
+                return rows
             
-            if not ticker:
-                logger.warning("Ticker absent, ligne ignorée : %s", r)
-                continue
-                
-            r["symbol"] = ticker
-            rows.append(r)
+            # Parser le CSV filtré
+            filtered_content = io.StringIO(''.join(lines))
+            reader = csv.DictReader(filtered_content)
+            
+            # Vérifier les colonnes
+            if reader.fieldnames:
+                logger.debug(f"📋 Colonnes CSV: {reader.fieldnames}")
+            
+            for idx, r in enumerate(reader):
+                try:
+                    # Nettoyer les espaces dans les clés et valeurs
+                    r = {k.strip(): v.strip() for k, v in r.items() if k}
+                    
+                    ticker = r.get("symbol", "").strip().upper()
+                    
+                    if not ticker:
+                        logger.warning(f"Ligne {idx+1}: Ticker absent, ignoré")
+                        continue
+                    
+                    # Vérifier les champs requis
+                    if not r.get("category"):
+                        logger.warning(f"Ligne {idx+1}: Catégorie manquante pour {ticker}")
+                        continue
+                    
+                    r["symbol"] = ticker
+                    rows.append(r)
+                    logger.debug(f"✅ ETF chargé: {ticker} - {r.get('name', 'N/A')} ({r.get('category')})")
+                    
+                except Exception as e:
+                    logger.error(f"Erreur ligne {idx+1}: {e}")
+                    
+    except FileNotFoundError:
+        logger.error(f"❌ Fichier CSV non trouvé: {CSV_FILE}")
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de la lecture du CSV: {e}")
     
     return rows
 
@@ -298,10 +344,28 @@ def calculate_top_performers(sectors_data: dict, all_sectors: list):
 
 def main():
     logger.info("🚀 Début de la mise à jour des données sectorielles...")
-    logger.info("API key loaded: %s", bool(API_KEY))
+    logger.info(f"API key loaded: {bool(API_KEY)}")
     
     if not API_KEY:
         logger.error("❌ Clé API Twelve Data manquante")
+        logger.error("Définissez TWELVE_DATA_API dans vos variables d'environnement")
+        return
+    
+    if not TD:
+        logger.error("❌ Client Twelve Data non initialisé")
+        return
+    
+    # Test rapide de l'API
+    try:
+        logger.info("🔍 Test de connexion à l'API...")
+        test_response = TD.quote(symbol="AAPL").as_json()
+        if isinstance(test_response, dict) and "close" in test_response:
+            logger.info("✅ API fonctionnelle")
+        else:
+            logger.error(f"❌ Réponse API invalide: {test_response}")
+            return
+    except Exception as e:
+        logger.error(f"❌ Erreur de connexion API: {e}")
         return
     
     # Créer une structure de données complètement nouvelle
@@ -310,18 +374,29 @@ def main():
     
     # 1. Charger le mapping des ETFs sectoriels
     sectors_mapping = load_sectors_etf_mapping()
+    
+    if not sectors_mapping:
+        logger.error("❌ Aucun ETF trouvé dans le fichier CSV")
+        # Sauvegarder quand même un fichier vide
+        SECTORS_DATA["meta"]["timestamp"] = dt.datetime.utcnow().isoformat() + "Z"
+        os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
+        with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
+            json.dump(SECTORS_DATA, f, ensure_ascii=False, indent=2)
+        return
+    
     logger.info(f"📊 {len(sectors_mapping)} ETFs sectoriels à traiter")
     
     # 2. Traiter chaque ETF individuellement
     processed_count = 0
+    error_count = 0
     
-    for etf in sectors_mapping:
+    for idx, etf in enumerate(sectors_mapping):
         sym = etf["symbol"]
         
         # Ignorer les ETFs de catégorie "broad-market"
         category = etf.get("category", "")
         if category == "broad-market":
-            logger.info(f"⏭️  Ignoré (broad-market): {sym} - {etf['name']}")
+            logger.info(f"⏭️  Ignoré (broad-market): {sym} - {etf.get('name', 'N/A')}")
             continue
             
         # Vérifier que la catégorie existe dans notre structure
@@ -330,21 +405,33 @@ def main():
             continue
         
         try:
+            # Pause entre les appels pour respecter les limites API
+            if idx > 0:
+                time.sleep(0.8)  # 800ms entre chaque appel
+            
+            logger.info(f"📡 Traitement {idx+1}/{len(sectors_mapping)}: {sym}")
+            
             # Récupérer les données
             last, day_pct = quote_one(sym)
+            
+            # Pause avant l'appel YTD
+            time.sleep(0.5)
             jan_close = ytd_one(sym)
             
             # Calculer le YTD
             ytd_pct = 100 * (last - jan_close) / jan_close if jan_close > 0 else 0
             
+            # Déterminer la région pour l'affichage
+            region_display = "US" if etf.get("region", "").lower() == "us" else "Europe"
+            
             # Créer l'objet de données
             sector_entry = {
-                "name": determine_index_name(etf["name"], etf["region"]),
-                "value": format_value(last, etf["currency"]),
+                "name": determine_index_name(etf.get("name", sym), region_display),
+                "value": format_value(last, etf.get("currency", "USD")),
                 "changePercent": format_percent(day_pct),
                 "ytdChange": format_percent(ytd_pct),
                 "trend": "down" if day_pct < 0 else "up",
-                "region": etf["region"].upper() if etf["region"] == "us" else "Europe"
+                "region": region_display
             }
             
             # Ajouter à la bonne catégorie
@@ -352,26 +439,60 @@ def main():
             ALL_SECTORS.append(sector_entry.copy())  # Copie pour éviter les modifications
             processed_count += 1
             
-            logger.info(f"✅ {sym}: {last} ({day_pct:+.2f}%) - {etf['name']}")
+            logger.info(f"✅ {sym}: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}%")
             
         except Exception as e:
-            logger.warning(f"⚠️  Pas de données pour {sym} - {e}")
+            error_count += 1
+            logger.warning(f"⚠️  Échec pour {sym}: {type(e).__name__}: {e}")
+            
+            # Optionnel: ajouter les erreurs dans les métadonnées
+            if "errors" not in SECTORS_DATA["meta"]:
+                SECTORS_DATA["meta"]["errors"] = []
+            
+            SECTORS_DATA["meta"]["errors"].append({
+                "symbol": sym,
+                "name": etf.get("name", "N/A"),
+                "error": str(e),
+                "timestamp": dt.datetime.utcnow().isoformat()
+            })
             continue
     
-    # 3. Calculer les top performers
-    calculate_top_performers(SECTORS_DATA, ALL_SECTORS)
+    # 3. Log du résumé avant calcul des top performers
+    logger.info(f"\n📊 Résumé du traitement:")
+    logger.info(f"  - ETFs traités avec succès: {processed_count}")
+    logger.info(f"  - Erreurs: {error_count}")
     
-    # 4. Mettre à jour les métadonnées
+    # Log par catégorie
+    for category, sectors in SECTORS_DATA["sectors"].items():
+        if sectors:
+            logger.info(f"  - {category}: {len(sectors)} secteurs")
+    
+    # 4. Calculer les top performers seulement s'il y a des données
+    if processed_count > 0:
+        calculate_top_performers(SECTORS_DATA, ALL_SECTORS)
+    else:
+        logger.warning("⚠️  Aucune donnée pour calculer les top performers")
+    
+    # 5. Mettre à jour les métadonnées
     SECTORS_DATA["meta"]["timestamp"] = dt.datetime.utcnow().isoformat() + "Z"
     SECTORS_DATA["meta"]["count"] = processed_count
+    SECTORS_DATA["meta"]["total_etfs"] = len(sectors_mapping)
+    SECTORS_DATA["meta"]["errors_count"] = error_count
     
-    # 5. Sauvegarder le fichier JSON
+    # 6. Sauvegarder le fichier JSON
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         json.dump(SECTORS_DATA, f, ensure_ascii=False, indent=2)
     
-    logger.info(f"✅ Mise à jour terminée : {processed_count} secteurs traités")
+    logger.info(f"\n✅ Mise à jour terminée")
     logger.info(f"📄 Fichier sauvegardé : {OUTPUT_FILE}")
+    logger.info(f"📊 {processed_count}/{len(sectors_mapping)} secteurs traités avec succès")
+    
+    # Afficher quelques erreurs si présentes
+    if error_count > 0 and "errors" in SECTORS_DATA["meta"]:
+        logger.info(f"\n⚠️  Détail des {min(5, error_count)} premières erreurs:")
+        for err in SECTORS_DATA["meta"]["errors"][:5]:
+            logger.info(f"  - {err['symbol']}: {err['error']}")
 
 if __name__ == "__main__":
     main()
