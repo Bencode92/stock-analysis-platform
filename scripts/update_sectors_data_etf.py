@@ -27,40 +27,38 @@ OUTPUT_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 # Client Twelve Data
 TD = TDClient(apikey=API_KEY)
 
-# Structure de données de sortie
-SECTORS_DATA = {
-    "sectors": {
-        "energy": [],
-        "materials": [],
-        "industrials": [],
-        "consumer-discretionary": [],
-        "consumer-staples": [],
-        "healthcare": [],
-        "financials": [],
-        "information-technology": [],
-        "communication-services": [],
-        "utilities": [],
-        "real-estate": []
-    },
-    "top_performers": {
-        "daily": {
-            "best": [],
-            "worst": []
+def create_empty_sectors_data():
+    """Crée une structure de données vide pour les secteurs"""
+    return {
+        "sectors": {
+            "energy": [],
+            "materials": [],
+            "industrials": [],
+            "consumer-discretionary": [],
+            "consumer-staples": [],
+            "healthcare": [],
+            "financials": [],
+            "information-technology": [],
+            "communication-services": [],
+            "utilities": [],
+            "real-estate": []
         },
-        "ytd": {
-            "best": [],
-            "worst": []
+        "top_performers": {
+            "daily": {
+                "best": [],
+                "worst": []
+            },
+            "ytd": {
+                "best": [],
+                "worst": []
+            }
+        },
+        "meta": {
+            "sources": ["STOXX Europe 600", "NASDAQ", "S&P Select Sectors"],
+            "timestamp": None,
+            "count": 0
         }
-    },
-    "meta": {
-        "sources": ["STOXX Europe 600", "NASDAQ", "S&P Select Sectors"],
-        "timestamp": None,
-        "count": 0
     }
-}
-
-# Liste pour stocker tous les secteurs
-ALL_SECTORS = []
 
 def quote_one(sym: str) -> tuple[float, float]:
     """Récupère la quote d'un symbole"""
@@ -244,15 +242,25 @@ def parse_percentage(percent_str: str) -> float:
     except ValueError:
         return 0.0
 
-def calculate_top_performers():
+def clean_sector_data(sector_dict: dict) -> dict:
+    """Nettoie un dictionnaire de secteur en supprimant les propriétés temporaires"""
+    # Créer une copie sans les propriétés temporaires
+    cleaned = {}
+    for key, value in sector_dict.items():
+        if not key.startswith('_'):
+            cleaned[key] = value
+    return cleaned
+
+def calculate_top_performers(sectors_data: dict, all_sectors: list):
     """Calcule les secteurs avec les meilleures et pires performances"""
     logger.info("Calcul des top performers sectoriels...")
     
-    daily_sectors = [s for s in ALL_SECTORS if s.get("changePercent")]
-    ytd_sectors = [s for s in ALL_SECTORS if s.get("ytdChange")]
+    daily_sectors = [s for s in all_sectors if s.get("changePercent")]
+    ytd_sectors = [s for s in all_sectors if s.get("ytdChange")]
     
     # Trier par variation quotidienne
     if daily_sectors:
+        # Ajouter les valeurs numériques pour le tri
         for s in daily_sectors:
             s["_change_value"] = parse_percentage(s["changePercent"])
         
@@ -260,16 +268,18 @@ def calculate_top_performers():
         best_daily = sorted_daily[:3]
         worst_daily = sorted(sorted_daily, key=lambda x: x["_change_value"])[:3]
         
+        # Ajouter au résultat en nettoyant les données
         for s in best_daily:
-            s_copy = {k: v for k, v in s.items() if k != "_change_value"}
-            SECTORS_DATA["top_performers"]["daily"]["best"].append(s_copy)
+            cleaned = clean_sector_data(s)
+            sectors_data["top_performers"]["daily"]["best"].append(cleaned)
         
         for s in worst_daily:
-            s_copy = {k: v for k, v in s.items() if k != "_change_value"}
-            SECTORS_DATA["top_performers"]["daily"]["worst"].append(s_copy)
+            cleaned = clean_sector_data(s)
+            sectors_data["top_performers"]["daily"]["worst"].append(cleaned)
     
     # Trier par variation YTD
     if ytd_sectors:
+        # Ajouter les valeurs numériques pour le tri
         for s in ytd_sectors:
             s["_ytd_value"] = parse_percentage(s["ytdChange"])
         
@@ -277,13 +287,14 @@ def calculate_top_performers():
         best_ytd = sorted_ytd[:3]
         worst_ytd = sorted(sorted_ytd, key=lambda x: x["_ytd_value"])[:3]
         
+        # Ajouter au résultat en nettoyant les données
         for s in best_ytd:
-            s_copy = {k: v for k, v in s.items() if k != "_ytd_value"}
-            SECTORS_DATA["top_performers"]["ytd"]["best"].append(s_copy)
+            cleaned = clean_sector_data(s)
+            sectors_data["top_performers"]["ytd"]["best"].append(cleaned)
         
         for s in worst_ytd:
-            s_copy = {k: v for k, v in s.items() if k != "_ytd_value"}
-            SECTORS_DATA["top_performers"]["ytd"]["worst"].append(s_copy)
+            cleaned = clean_sector_data(s)
+            sectors_data["top_performers"]["ytd"]["worst"].append(cleaned)
 
 def main():
     logger.info("🚀 Début de la mise à jour des données sectorielles...")
@@ -292,6 +303,10 @@ def main():
     if not API_KEY:
         logger.error("❌ Clé API Twelve Data manquante")
         return
+    
+    # Créer une structure de données complètement nouvelle
+    SECTORS_DATA = create_empty_sectors_data()
+    ALL_SECTORS = []
     
     # 1. Charger le mapping des ETFs sectoriels
     sectors_mapping = load_sectors_etf_mapping()
@@ -338,7 +353,7 @@ def main():
             
             # Ajouter à la bonne catégorie
             SECTORS_DATA["sectors"][category].append(sector_entry)
-            ALL_SECTORS.append(sector_entry)
+            ALL_SECTORS.append(sector_entry.copy())  # Copie pour éviter les modifications
             processed_count += 1
             
             logger.info(f"✅ {sym}: {last} ({day_pct:+.2f}%) - {etf['name']}")
@@ -348,7 +363,7 @@ def main():
             continue
     
     # 3. Calculer les top performers
-    calculate_top_performers()
+    calculate_top_performers(SECTORS_DATA, ALL_SECTORS)
     
     # 4. Mettre à jour les métadonnées
     SECTORS_DATA["meta"]["timestamp"] = dt.datetime.utcnow().isoformat() + "Z"
