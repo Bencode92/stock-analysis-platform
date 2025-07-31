@@ -303,6 +303,17 @@ def main():
     for etf in sectors_mapping:
         sym = etf["symbol"]
         
+        # Ignorer les ETFs de catégorie "broad-market"
+        category = etf.get("category", "")
+        if category == "broad-market":
+            logger.info(f"⏭️  Ignoré (broad-market): {sym} - {etf['name']}")
+            continue
+            
+        # Vérifier que la catégorie existe dans notre structure
+        if category not in SECTORS_DATA["sectors"]:
+            logger.warning(f"⚠️  Catégorie inconnue '{category}' pour {sym}, ignoré")
+            continue
+        
         try:
             # Récupérer les données
             last, day_pct = quote_one(sym)
@@ -326,7 +337,6 @@ def main():
             }
             
             # Ajouter à la bonne catégorie
-            category = etf["category"]
             SECTORS_DATA["sectors"][category].append(sector_entry)
             ALL_SECTORS.append(sector_entry)
             processed_count += 1
