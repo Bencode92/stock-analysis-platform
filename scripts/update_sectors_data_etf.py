@@ -54,7 +54,7 @@ def create_empty_sectors_data():
             }
         },
         "meta": {
-            "sources": ["STOXX Europe 600", "NASDAQ", "S&P Select Sectors"],
+            "source": "Twelve Data",
             "timestamp": None,
             "count": 0
         }
@@ -337,9 +337,6 @@ def main():
             # Calculer le YTD
             ytd_pct = 100 * (last - jan_close) / jan_close if jan_close > 0 else 0
             
-            # Déterminer la source en fonction de la région
-            source = "Les Echos" if etf["region"] == "europe" else "Boursorama"
-            
             # Créer l'objet de données
             sector_entry = {
                 "name": determine_index_name(etf["name"], etf["region"]),
@@ -347,8 +344,7 @@ def main():
                 "changePercent": format_percent(day_pct),
                 "ytdChange": format_percent(ytd_pct),
                 "trend": "down" if day_pct < 0 else "up",
-                "region": etf["region"].upper() if etf["region"] == "us" else "Europe",
-                "source": source
+                "region": etf["region"].upper() if etf["region"] == "us" else "Europe"
             }
             
             # Ajouter à la bonne catégorie
