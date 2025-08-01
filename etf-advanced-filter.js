@@ -1,5 +1,5 @@
 // etf-advanced-filter.js
-// Filtre ETF/Bonds sur 5 critères: AUM, liquidité, spread, frais, écart NAV
+// Filtre ETF/Bonds sur 4 critères: AUM, liquidité, spread, écart NAV
 
 const fs = require('fs').promises;
 const axios = require('axios');
@@ -10,7 +10,6 @@ const CONFIG = {
     // Seuils ETF
     MIN_AUM_ETF: 1e9,          // 1 Md$
     MIN_DOLLAR_VOL_ETF: 1e7,   // 10M$ par jour
-    MAX_EXPENSE_RATIO: 0.002,   // 0.20%
     MAX_NAV_DISCOUNT: 0.02,     // 2%
     MIN_VOL_RATIO: 1,          // volume du jour >= moyenne
     // Seuils Bonds (plus souples)
@@ -66,7 +65,6 @@ async function filterETFs() {
     console.log('Critères ETF:');
     console.log(`- AUM >= ${(CONFIG.MIN_AUM_ETF/1e9).toFixed(1)} Md$`);
     console.log(`- Dollar-volume >= ${(CONFIG.MIN_DOLLAR_VOL_ETF/1e6).toFixed(0)}M$/jour`);
-    console.log(`- Expense ratio <= ${(CONFIG.MAX_EXPENSE_RATIO*100).toFixed(2)}%`);
     console.log(`- Écart NAV <= ${(CONFIG.MAX_NAV_DISCOUNT*100).toFixed(0)}%`);
     console.log(`- Volume ratio >= ${CONFIG.MIN_VOL_RATIO}\n`);
     
@@ -99,11 +97,10 @@ async function filterETFs() {
         
         if (!data) continue;
         
-        // Appliquer les 5 filtres
+        // Appliquer les 4 filtres (sans expense ratio)
         const filters = {
             aum: data.net_assets >= CONFIG.MIN_AUM_ETF,
             liquidity: data.avg_dollar_volume >= CONFIG.MIN_DOLLAR_VOL_ETF,
-            expense: !data.expense_ratio || data.expense_ratio <= CONFIG.MAX_EXPENSE_RATIO,
             nav_discount: Math.abs(data.premium_discount) <= CONFIG.MAX_NAV_DISCOUNT,
             vol_ratio: data.vol_ratio >= CONFIG.MIN_VOL_RATIO
         };
@@ -130,11 +127,10 @@ async function filterETFs() {
         
         if (!data) continue;
         
-        // Filtres adaptés pour bonds
+        // Filtres adaptés pour bonds (sans expense ratio)
         const filters = {
             aum: data.net_assets >= CONFIG.MIN_AUM_BOND,
             liquidity: data.avg_dollar_volume >= CONFIG.MIN_DOLLAR_VOL_BOND,
-            expense: !data.expense_ratio || data.expense_ratio <= CONFIG.MAX_EXPENSE_RATIO,
             nav_discount: Math.abs(data.premium_discount) <= CONFIG.MAX_NAV_DISCOUNT
         };
         
