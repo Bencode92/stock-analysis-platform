@@ -59,6 +59,9 @@ class ETFFilter {
     }
 
     async filterETFs(config) {
+        // Créer le dossier data s'il n'existe pas
+        await fs.mkdir('./data', { recursive: true });
+        
         // Charger vos listes complètes
         const etfList = JSON.parse(await fs.readFile(config.ETF_FILE));
         const bondList = JSON.parse(await fs.readFile(config.BOND_FILE));
@@ -116,13 +119,13 @@ class ETFFilter {
             }
         }
 
-        // Sauvegarder les résultats
-        await fs.writeFile('filtered_etfs.json', JSON.stringify(filtered, null, 2));
+        // Sauvegarder les résultats dans le dossier data
+        await fs.writeFile('./data/filtered_etfs.json', JSON.stringify(filtered, null, 2));
         
         console.log(`\n✅ Filtrage terminé!`);
         console.log(`ETFs retenus: ${filtered.etfs.length}/${etfList.length}`);
         console.log(`Bonds retenus: ${filtered.bonds.length}/${bondList.length}`);
-        console.log(`Fichier créé: filtered_etfs.json`);
+        console.log(`Fichier créé: data/filtered_etfs.json`);
     }
 }
 
