@@ -1,21 +1,15 @@
 # ETF Twelve Data System
 
-## Workflow en 3 étapes
+## Workflow en 2 étapes
 
-### 1. Convertir vos données CSV → JSON
-```bash
-node csv-to-json.js etfs.csv all_etfs.json
-node csv-to-json.js bonds.csv all_bonds.json
-```
-
-### 2. Filtrer par volume/market cap (1x/mois)
+### 1. Filtrer par volume/market cap (1x/mois)
 ```bash
 export TWELVE_DATA_API_KEY="your_key"
 node etf-filter.js
 ```
 Génère `filtered_etfs.json` avec ETF/bonds filtrés
 
-### 3. Récupérer performances (quotidien)
+### 2. Récupérer performances (quotidien)
 ```bash
 node etf-performance.js
 ```
@@ -23,9 +17,17 @@ Génère `etf_performance.json` avec YTD et variations
 
 ## Format des données
 
-Vos fichiers CSV doivent avoir ces colonnes:
-```
-symbol  name  name2  Colonne3  currency  exchange  mic_code  country
+Vos fichiers JSON doivent avoir cette structure:
+```json
+{
+  "symbol": "SPY",
+  "name": "SPDR S&P 500 ETF Trust",
+  "name2": "SPDR",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "mic_code": "XNYS",
+  "country": "United States"
+}
 ```
 
 ## Configuration des seuils
