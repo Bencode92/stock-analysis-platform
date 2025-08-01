@@ -1,6 +1,7 @@
 // etf-advanced-filter.js
 // Filtre ETF/Bonds sur 3 critères: AUM, liquidité, écart NAV
 // Version corrigée pour gérer SEDOL, ISIN, permissions API et volumes manquants
+// v3: Ajout règle fallback pour AUM manquants
 
 const fs = require('fs').promises;
 const axios = require('axios');
@@ -19,7 +20,9 @@ const CONFIG = {
     MIN_AUM_BOND: 5e8,            // 500M$
     MIN_DOLLAR_VOL_BOND: 5e6,     // 5M$ par jour
     MAX_NAV_DISCOUNT: 0.02,       // 2%
-    RATE_LIMIT: 800
+    RATE_LIMIT: 800,
+    // Seuil fallback pour AUM manquant
+    MIN_DOLLAR_VOL_FALLBACK: 1e6  // 1M$ par jour
 };
 
 // Cache pour les symboles résolus
@@ -253,7 +256,7 @@ async function getETFData(symbol, exchange, mic_code, isin) {
 }
 
 async function filterETFs() {
-    console.log('📊 Filtrage avancé ETF/Bonds (v2 - gestion permissions)\n');
+    console.log('📊 Filtrage avancé ETF/Bonds (v3 - fallback AUM)\n');
     
     // Lire les CSV
     const etfData = await fs.readFile('data/all_etfs.csv', 'utf8');
@@ -294,17 +297,18 @@ async function filterETFs() {
         
         // Logger les valeurs
         const navInfo = data.nav_available ? `${(data.premium_discount*100).toFixed(2)}%` : 'n/a';
+        const aumInfo = data.net_assets === 0 ? '0 (fallback)' : `${(data.net_assets/1e6).toFixed(0)} M$`;
         console.log(
-            `  ${data.symbolParam}  |  AUM: ${(data.net_assets/1e6).toFixed(0)} M$` +
+            `  ${data.symbolParam}  |  AUM: ${aumInfo}` +
             `  |  $Vol: ${(data.avg_dollar_volume/1e6).toFixed(2)} M$` +
             `  |  ΔNAV: ${navInfo}`
         );
         
-        // Appliquer les filtres
+        // Appliquer les filtres avec règle fallback pour AUM
         const filters = {
-            aum: data.net_assets >= minAUM,
+            aum: data.net_assets >= minAUM ||  // règle normale
+                 (data.net_assets === 0 && data.avg_dollar_volume >= CONFIG.MIN_DOLLAR_VOL_FALLBACK), // règle fallback
             liquidity: data.avg_dollar_volume >= minVolume,
-            // Skip NAV test si pas disponible
             nav_discount: !data.nav_available || Math.abs(data.premium_discount) <= CONFIG.MAX_NAV_DISCOUNT
         };
         
@@ -339,14 +343,17 @@ async function filterETFs() {
         }
         
         const navInfo = data.nav_available ? `${(data.premium_discount*100).toFixed(2)}%` : 'n/a';
+        const aumInfo = data.net_assets === 0 ? '0 (fallback)' : `${(data.net_assets/1e6).toFixed(0)} M$`;
         console.log(
-            `  ${data.symbolParam}  |  AUM: ${(data.net_assets/1e6).toFixed(0)} M$` +
+            `  ${data.symbolParam}  |  AUM: ${aumInfo}` +
             `  |  $Vol: ${(data.avg_dollar_volume/1e6).toFixed(2)} M$` +
             `  |  ΔNAV: ${navInfo}`
         );
         
+        // Appliquer les filtres avec règle fallback pour AUM (bonds aussi)
         const filters = {
-            aum: data.net_assets >= CONFIG.MIN_AUM_BOND,
+            aum: data.net_assets >= CONFIG.MIN_AUM_BOND ||  // règle normale
+                 (data.net_assets === 0 && data.avg_dollar_volume >= CONFIG.MIN_DOLLAR_VOL_FALLBACK), // règle fallback
             liquidity: data.avg_dollar_volume >= CONFIG.MIN_DOLLAR_VOL_BOND,
             nav_discount: !data.nav_available || Math.abs(data.premium_discount) <= CONFIG.MAX_NAV_DISCOUNT
         };
@@ -372,6 +379,8 @@ async function filterETFs() {
     results.stats.bonds_retained = results.bonds.length;
     results.stats.total_retained = results.etfs.length + results.bonds.length;
     results.stats.rejected_count = results.rejected.length;
+    results.stats.aum_fallback_used = results.etfs.filter(e => e.net_assets === 0).length + 
+                                      results.bonds.filter(b => b.net_assets === 0).length;
     
     // Analyser les raisons de rejet
     const rejectionReasons = {};
@@ -394,6 +403,7 @@ async function filterETFs() {
     console.log(`ETFs retenus: ${results.etfs.length}/${etfs.length}`);
     console.log(`Bonds retenus: ${results.bonds.length}/${bonds.length}`);
     console.log(`Rejetés: ${results.rejected.length}`);
+    console.log(`Utilisations fallback AUM: ${results.stats.aum_fallback_used}`);
     console.log('\nRaisons de rejet:');
     Object.entries(rejectionReasons).forEach(([reason, count]) => {
         console.log(`  - ${reason}: ${count}`);
