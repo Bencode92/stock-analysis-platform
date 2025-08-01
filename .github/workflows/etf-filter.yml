@@ -22,7 +22,7 @@ jobs:
     
     - name: Run ETF filter
       env:
-        TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
+        TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
       run: node etf-advanced-filter.js
     
     - name: Commit results
