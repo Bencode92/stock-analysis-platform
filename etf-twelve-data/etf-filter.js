@@ -15,27 +15,45 @@ class ETFFilter {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    async getMarketData(symbol) {
+    async getMarketData(etf) {
         try {
+            // Construire le symbole avec l'exchange si nécessaire
+            const symbol = etf.mic_code ? `${etf.symbol}:${etf.mic_code}` : etf.symbol;
+            
             const [quote, stats] = await Promise.all([
                 axios.get(`${this.baseUrl}/quote`, {
-                    params: { symbol, apikey: this.apiKey }
+                    params: { 
+                        symbol: symbol,
+                        exchange: etf.exchange,
+                        mic_code: etf.mic_code,
+                        apikey: this.apiKey 
+                    }
                 }),
                 axios.get(`${this.baseUrl}/statistics`, {
-                    params: { symbol, apikey: this.apiKey }
+                    params: { 
+                        symbol: symbol,
+                        exchange: etf.exchange,
+                        mic_code: etf.mic_code,
+                        apikey: this.apiKey 
+                    }
                 })
             ]);
 
             return {
-                symbol,
-                name: quote.data.name,
+                symbol: etf.symbol,
+                name: etf.name,
+                name2: etf.name2,
+                currency: etf.currency,
+                exchange: etf.exchange,
+                mic_code: etf.mic_code,
+                country: etf.country,
                 volume: parseInt(quote.data.volume) || 0,
                 average_volume: parseInt(quote.data.average_volume) || 0,
                 market_cap: parseFloat(stats.data?.statistics?.market_capitalization) || 0,
                 price: parseFloat(quote.data.close) || 0
             };
         } catch (error) {
-            console.error(`❌ ${symbol}: ${error.message}`);
+            console.error(`❌ ${etf.symbol} (${etf.exchange}): ${error.message}`);
             return null;
         }
     }
@@ -58,13 +76,13 @@ class ETFFilter {
         console.log('🔍 Filtrage des ETFs...');
         for (let i = 0; i < etfList.length; i++) {
             const etf = etfList[i];
-            console.log(`ETF ${i+1}/${etfList.length}: ${etf.symbol}`);
+            console.log(`ETF ${i+1}/${etfList.length}: ${etf.symbol} - ${etf.name2}`);
             
-            const data = await this.getMarketData(etf.symbol);
+            const data = await this.getMarketData(etf);
             await this.wait(this.rateLimit);
             
             if (data && (data.volume >= config.MIN_VOLUME_ETF || data.market_cap >= config.MIN_MARKET_CAP_ETF)) {
-                filtered.etfs.push({ ...etf, ...data });
+                filtered.etfs.push(data);
                 console.log(`✅ Retenu - Volume: ${data.volume.toLocaleString()}, MCap: ${(data.market_cap/1e9).toFixed(1)}B`);
             } else if (data) {
                 filtered.rejected.push({ ...etf, reason: 'Volume/MCap insuffisant' });
@@ -80,13 +98,13 @@ class ETFFilter {
         console.log('\n🔍 Filtrage des Bonds...');
         for (let i = 0; i < bondList.length; i++) {
             const bond = bondList[i];
-            console.log(`Bond ${i+1}/${bondList.length}: ${bond.symbol}`);
+            console.log(`Bond ${i+1}/${bondList.length}: ${bond.symbol} - ${bond.name2}`);
             
-            const data = await this.getMarketData(bond.symbol);
+            const data = await this.getMarketData(bond);
             await this.wait(this.rateLimit);
             
             if (data && (data.volume >= config.MIN_VOLUME_BOND || data.market_cap >= config.MIN_MARKET_CAP_BOND)) {
-                filtered.bonds.push({ ...bond, ...data });
+                filtered.bonds.push(data);
                 console.log(`✅ Retenu - Volume: ${data.volume.toLocaleString()}, MCap: ${(data.market_cap/1e9).toFixed(1)}B`);
             } else if (data) {
                 filtered.rejected.push({ ...bond, reason: 'Volume/MCap insuffisant' });
