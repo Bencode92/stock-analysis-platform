@@ -1,5 +1,6 @@
 // etf-advanced-filter.js
 // Filtre ETF/Bonds sur 3 critères: AUM, liquidité, écart NAV
+// Version corrigée pour gérer SEDOL, ISIN et symboles avec points
 
 const fs = require('fs').promises;
 const axios = require('axios');
@@ -28,34 +29,69 @@ async function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function resolveSymbol(raw, apiKey) {
+// Nettoyer les symboles avec points
+function cleanSymbol(symbol) {
+    if (symbol.includes('.')) {
+        return symbol.split('.')[0]; // "27IT.EUR" → "27IT"
+    }
+    return symbol;
+}
+
+async function resolveSymbol(raw, isin, apiKey) {
     // Vérifier le cache
-    if (symbolCache.has(raw)) {
-        return symbolCache.get(raw);
+    const cacheKey = `${raw}|${isin || ''}`;
+    if (symbolCache.has(cacheKey)) {
+        return symbolCache.get(cacheKey);
     }
     
     try {
-        const res = await axios.get('https://api.twelvedata.com/symbol_search', {
-            params: { symbol: raw, apikey: apiKey }
+        // Nettoyer le symbole des points
+        const cleanedSymbol = cleanSymbol(raw);
+        
+        // 1️⃣ Essayer symbol_search sur le ticker fourni (nettoyé)
+        let res = await axios.get('https://api.twelvedata.com/symbol_search', {
+            params: { symbol: cleanedSymbol, apikey: apiKey }
         });
         
-        const hit = res.data?.data?.[0];
-        if (hit) {
+        if (res.data?.data?.length > 0) {
+            const hit = res.data.data[0];
             const resolved = `${hit.symbol}:${hit.mic_code}`;
-            symbolCache.set(raw, resolved);
-            console.log(`  → Résolu: ${raw} → ${resolved}`);
+            symbolCache.set(cacheKey, resolved);
+            console.log(`  → Résolu via symbole: ${raw} → ${resolved}`);
             return resolved;
         }
+        
+        // 2️⃣ Si échec et ISIN disponible, résoudre via ISIN
+        if (isin) {
+            res = await axios.get('https://api.twelvedata.com/symbol_search', {
+                params: { isin: isin, apikey: apiKey }
+            });
+            
+            if (res.data?.data?.length > 0) {
+                const hit = res.data.data[0];
+                const resolved = `${hit.symbol}:${hit.mic_code}`;
+                symbolCache.set(cacheKey, resolved);
+                console.log(`  → Résolu via ISIN: ${isin} → ${resolved}`);
+                return resolved;
+            }
+        }
+        
+        // 3️⃣ Si toujours rien, c'est probablement un SEDOL
+        console.warn(`  → Impossible de résoudre ${raw} (ISIN: ${isin || 'N/A'})`);
+        symbolCache.set(cacheKey, null);
+        
     } catch (error) {
         console.error(`  → Échec résolution ${raw}: ${error.message}`);
+        symbolCache.set(cacheKey, null);
     }
     
     return null;
 }
 
-async function getETFData(symbol, exchange, mic_code) {
+async function getETFData(symbol, exchange, mic_code, isin) {
     try {
-        let symbolParam = mic_code ? `${symbol}:${mic_code}` : symbol;
+        // D'abord résoudre le symbole si nécessaire
+        let symbolParam = mic_code ? `${cleanSymbol(symbol)}:${mic_code}` : cleanSymbol(symbol);
         
         // 1) Tentative directe /quote
         let quote = null;
@@ -69,20 +105,26 @@ async function getETFData(symbol, exchange, mic_code) {
             quote = null; 
         }
         
-        // 2) Si échec: résolution du symbole
+        // 2) Si échec: résolution du symbole avec ISIN
         if (!quote) {
-            const resolved = await resolveSymbol(symbol, CONFIG.API_KEY);
+            const resolved = await resolveSymbol(symbol, isin, CONFIG.API_KEY);
             if (resolved) {
                 symbolParam = resolved;
                 const quoteRes = await axios.get('https://api.twelvedata.com/quote', {
                     params: { symbol: resolved, apikey: CONFIG.API_KEY }
                 });
                 quote = quoteRes.data;
+                if (quote.status === 'error') {
+                    console.error(`❌ ${symbol} — Erreur après résolution: ${quote.message}`);
+                    return null;
+                }
+            } else {
+                console.error(`❌ ${symbol} — Impossible de résoudre le symbole`);
+                return null;
             }
         }
         
         if (!quote || quote.status === 'error') {
-            console.error(`❌ ${symbol} — introuvable même après résolution`);
             return null;
         }
         
@@ -96,17 +138,26 @@ async function getETFData(symbol, exchange, mic_code) {
         
         await wait(CONFIG.RATE_LIMIT / 2);
         
-        // 4) Récupérer NAV via /etfs/world/summary
+        // 4) Récupérer NAV via /etfs/world/summary (plan Ultra requis)
         let nav = 0, lastPrice = Number(quote.close) || 0;
         try {
             const sumRes = await axios.get('https://api.twelvedata.com/etfs/world/summary', {
                 params: { symbol: symbolParam, apikey: CONFIG.API_KEY }
             });
-            const sum = sumRes.data?.etf?.summary || {};
-            nav = Number(sum.nav) || 0;
-            if (sum.last_price) lastPrice = Number(sum.last_price);
-        } catch {
-            // Certains ETF n'ont pas de données summary
+            
+            if (sumRes.data?.status === 'error') {
+                if (CONFIG.DEBUG) {
+                    console.warn(`  → /etfs/world/summary erreur: ${sumRes.data.message}`);
+                }
+            } else {
+                const sum = sumRes.data?.etf?.summary || {};
+                nav = Number(sum.nav) || 0;
+                if (sum.last_price) lastPrice = Number(sum.last_price);
+            }
+        } catch (error) {
+            if (CONFIG.DEBUG) {
+                console.warn(`  → /etfs/world/summary exception: ${error.message}`);
+            }
         }
         
         // 5) Calculs
@@ -116,7 +167,8 @@ async function getETFData(symbol, exchange, mic_code) {
         const premiumDiscount = nav ? (lastPrice - nav) / nav : 0;
         
         return {
-            symbol,
+            symbol: symbol,
+            isin: isin,
             symbolParam,
             price: Number(quote.close) || 0,
             volume: Number(quote.volume) || 0,
@@ -134,7 +186,7 @@ async function getETFData(symbol, exchange, mic_code) {
 }
 
 async function filterETFs() {
-    console.log('📊 Filtrage avancé ETF/Bonds\n');
+    console.log('📊 Filtrage avancé ETF/Bonds (version corrigée)\n');
     
     // Lire les CSV
     const etfData = await fs.readFile('data/all_etfs.csv', 'utf8');
@@ -158,9 +210,9 @@ async function filterETFs() {
     console.log('🔍 Analyse des ETFs...\n');
     for (let i = 0; i < etfs.length; i++) {
         const etf = etfs[i];
-        console.log(`${i+1}/${etfs.length}: ${etf.symbol}`);
+        console.log(`${i+1}/${etfs.length}: ${etf.symbol} (ISIN: ${etf.isin || 'N/A'})`);
         
-        const data = await getETFData(etf.symbol, etf.exchange, etf.mic_code);
+        const data = await getETFData(etf.symbol, etf.exchange, etf.mic_code, etf.isin);
         await wait(CONFIG.RATE_LIMIT);
         
         if (!data) {
@@ -207,9 +259,9 @@ async function filterETFs() {
     console.log('🔍 Analyse des Bonds...\n');
     for (let i = 0; i < bonds.length; i++) {
         const bond = bonds[i];
-        console.log(`${i+1}/${bonds.length}: ${bond.symbol}`);
+        console.log(`${i+1}/${bonds.length}: ${bond.symbol} (ISIN: ${bond.isin || 'N/A'})`);
         
-        const data = await getETFData(bond.symbol, bond.exchange, bond.mic_code);
+        const data = await getETFData(bond.symbol, bond.exchange, bond.mic_code, bond.isin);
         await wait(CONFIG.RATE_LIMIT);
         
         if (!data) {
@@ -251,6 +303,20 @@ async function filterETFs() {
     results.stats.total_retained = results.etfs.length + results.bonds.length;
     results.stats.rejected_count = results.rejected.length;
     
+    // Analyser les raisons de rejet
+    const rejectionReasons = {};
+    results.rejected.forEach(item => {
+        if (item.reason) {
+            rejectionReasons[item.reason] = (rejectionReasons[item.reason] || 0) + 1;
+        } else if (item.failed) {
+            item.failed.forEach(f => {
+                rejectionReasons[f] = (rejectionReasons[f] || 0) + 1;
+            });
+        }
+    });
+    
+    results.stats.rejection_reasons = rejectionReasons;
+    
     // Sauvegarder
     await fs.writeFile('data/filtered_advanced.json', JSON.stringify(results, null, 2));
     
@@ -258,6 +324,10 @@ async function filterETFs() {
     console.log(`ETFs retenus: ${results.etfs.length}/${etfs.length}`);
     console.log(`Bonds retenus: ${results.bonds.length}/${bonds.length}`);
     console.log(`Rejetés: ${results.rejected.length}`);
+    console.log('\nRaisons de rejet:');
+    Object.entries(rejectionReasons).forEach(([reason, count]) => {
+        console.log(`  - ${reason}: ${count}`);
+    });
     console.log(`\n✅ Résultats: data/filtered_advanced.json`);
     
     // Pour GitHub Actions
