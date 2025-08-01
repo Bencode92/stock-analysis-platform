@@ -1,40 +1,48 @@
 # ETF Twelve Data System
 
-## Structure du système
+## Système simplifié en 2 étapes
 
-### 1. Collecte mensuelle
-- **Script**: `etf-data-collector.js`
-- **Fréquence**: 1x/mois
-- **Durée**: Plusieurs heures
-- **Output**: `data/all_etf_data_latest.json`
-
-### 2. Traitement quotidien
-- **Script**: `etf-daily-processor.js`
-- **Input**: Vos sélections dans `selected_etfs.json` et `selected_bonds.json`
-- **Output**: `output/etf.json`
-
-## Fichiers de configuration
-
-- `etf_reference.json`: Liste complète de vos 3000 ETF
-- `bond_reference.json`: Liste complète de vos 400 bonds
-- `selected_etfs.json`: ETF sélectionnés manuellement
-- `selected_bonds.json`: Bonds sélectionnés manuellement
-
-## Installation
-
+### Étape 1: Filtrage (1x/mois)
 ```bash
-npm install axios
+node etf-filter.js
 ```
+- Lit `all_etfs.json` (vos 3000 ETF) et `all_bonds.json` (vos 400 bonds)
+- Filtre selon volume et market cap via API
+- Génère `filtered_etfs.json` avec seulement les ETF/bonds retenus
 
-## Utilisation
+### Étape 2: Performances (quotidien)
+```bash
+node etf-performance.js
+```
+- Lit `filtered_etfs.json`
+- Récupère YTD et variation journalière
+- Génère `etf_performance.json` avec toutes les données
 
-### Collecte mensuelle
+## Configuration
+
+1. Ajouter votre clé API:
 ```bash
 export TWELVE_DATA_API_KEY="your_key_here"
-node etf-data-collector.js
 ```
 
-### Traitement quotidien
-```bash
-node etf-daily-processor.js
+2. Compléter vos fichiers:
+- `all_etfs.json`: Tous vos ETF (3000)
+- `all_bonds.json`: Tous vos bonds (400)
+
+3. Ajuster les seuils dans `etf-filter.js`:
+```javascript
+MIN_VOLUME_ETF: 500000,
+MIN_MARKET_CAP_ETF: 100000000,
+MIN_VOLUME_BOND: 100000,
+MIN_MARKET_CAP_BOND: 50000000
 ```
+
+## Workflow
+
+1. **1x/mois**: Lancer le filtrage
+2. **Quotidien**: Lancer la récupération des performances
+
+## Fichiers générés
+
+- `filtered_etfs.json`: Liste des ETF/bonds filtrés
+- `etf_performance.json`: Données complètes avec performances
