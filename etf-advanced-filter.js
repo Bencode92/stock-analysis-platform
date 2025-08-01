@@ -1,5 +1,5 @@
 // etf-advanced-filter.js
-// Filtre ETF/Bonds sur 4 critères: AUM, liquidité, spread, écart NAV
+// Filtre ETF/Bonds sur 3 critères: AUM, liquidité, écart NAV
 
 const fs = require('fs').promises;
 const axios = require('axios');
@@ -11,7 +11,6 @@ const CONFIG = {
     MIN_AUM_ETF: 1e9,          // 1 Md$
     MIN_DOLLAR_VOL_ETF: 1e7,   // 10M$ par jour
     MAX_NAV_DISCOUNT: 0.02,     // 2%
-    MIN_VOL_RATIO: 1,          // volume du jour >= moyenne
     // Seuils Bonds (plus souples)
     MIN_AUM_BOND: 5e8,         // 500M$
     MIN_DOLLAR_VOL_BOND: 5e6,  // 5M$ par jour
@@ -26,33 +25,35 @@ async function getETFData(symbol, exchange, mic_code) {
     try {
         const symbolParam = mic_code ? `${symbol}:${mic_code}` : symbol;
         
-        // Récupérer quote et statistics en parallèle
-        const [quoteRes, statsRes] = await Promise.all([
-            axios.get('https://api.twelvedata.com/quote', {
-                params: { symbol: symbolParam, apikey: CONFIG.API_KEY }
-            }),
-            axios.get('https://api.twelvedata.com/statistics', {
-                params: { symbol: symbolParam, apikey: CONFIG.API_KEY }
-            })
-        ]);
-        
+        // 1) Appel /quote pour volume et prix
+        const quoteRes = await axios.get('https://api.twelvedata.com/quote', {
+            params: { symbol: symbolParam, apikey: CONFIG.API_KEY }
+        });
         const quote = quoteRes.data;
-        const stats = statsRes.data.statistics || {};
+        
+        await wait(CONFIG.RATE_LIMIT / 2);
+        
+        // 2) Appel /etfs/world/summary pour AUM et NAV
+        const sumRes = await axios.get('https://api.twelvedata.com/etfs/world/summary', {
+            params: { symbol: symbol, apikey: CONFIG.API_KEY }
+        });
+        const sum = sumRes.data?.etf?.summary || {};
+        
+        // 3) Calculs
+        const avgDollarVol = (Number(quote.average_volume) || 0) * (Number(quote.close) || 0);
+        const premiumDiscount = sum.nav ? 
+            (Number(sum.last_price || quote.close) - Number(sum.nav)) / Number(sum.nav) : 0;
         
         return {
             symbol,
-            price: parseFloat(quote.close) || 0,
-            volume: parseInt(quote.volume) || 0,
-            average_volume: parseInt(quote.average_volume) || 0,
-            net_assets: parseFloat(stats.net_assets) || 0,
-            expense_ratio: parseFloat(stats.expense_ratio) || null,
-            nav: parseFloat(stats.nav) || parseFloat(quote.close),
-            // Calculer les métriques dérivées
-            dollar_volume: (parseInt(quote.volume) || 0) * (parseFloat(quote.close) || 0),
-            avg_dollar_volume: (parseInt(quote.average_volume) || 0) * (parseFloat(quote.close) || 0),
-            vol_ratio: (parseInt(quote.volume) || 0) / (parseInt(quote.average_volume) || 1),
-            premium_discount: quote.close && stats.nav ? 
-                (parseFloat(quote.close) - parseFloat(stats.nav)) / parseFloat(stats.nav) : 0
+            price: Number(quote.close) || 0,
+            volume: Number(quote.volume) || 0,
+            average_volume: Number(quote.average_volume) || 0,
+            net_assets: Number(sum.net_assets) || 0,
+            nav: Number(sum.nav) || 0,
+            avg_dollar_volume: avgDollarVol,
+            premium_discount: premiumDiscount,
+            vol_ratio: (Number(quote.volume) || 0) / (Number(quote.average_volume) || 1)
         };
     } catch (error) {
         console.error(`❌ ${symbol}: ${error.message}`);
@@ -62,11 +63,10 @@ async function getETFData(symbol, exchange, mic_code) {
 
 async function filterETFs() {
     console.log('📊 Filtrage avancé ETF/Bonds\n');
-    console.log('Critères ETF:');
+    console.log('Critères:');
     console.log(`- AUM >= ${(CONFIG.MIN_AUM_ETF/1e9).toFixed(1)} Md$`);
     console.log(`- Dollar-volume >= ${(CONFIG.MIN_DOLLAR_VOL_ETF/1e6).toFixed(0)}M$/jour`);
-    console.log(`- Écart NAV <= ${(CONFIG.MAX_NAV_DISCOUNT*100).toFixed(0)}%`);
-    console.log(`- Volume ratio >= ${CONFIG.MIN_VOL_RATIO}\n`);
+    console.log(`- Écart NAV <= ${(CONFIG.MAX_NAV_DISCOUNT*100).toFixed(0)}%\n`);
     
     // Lire les CSV
     const etfData = await fs.readFile('data/all_etfs.csv', 'utf8');
@@ -97,12 +97,11 @@ async function filterETFs() {
         
         if (!data) continue;
         
-        // Appliquer les 4 filtres (sans expense ratio)
+        // Appliquer les 3 filtres
         const filters = {
             aum: data.net_assets >= CONFIG.MIN_AUM_ETF,
             liquidity: data.avg_dollar_volume >= CONFIG.MIN_DOLLAR_VOL_ETF,
-            nav_discount: Math.abs(data.premium_discount) <= CONFIG.MAX_NAV_DISCOUNT,
-            vol_ratio: data.vol_ratio >= CONFIG.MIN_VOL_RATIO
+            nav_discount: Math.abs(data.premium_discount) <= CONFIG.MAX_NAV_DISCOUNT
         };
         
         const passAll = Object.values(filters).every(v => v);
@@ -116,7 +115,7 @@ async function filterETFs() {
         }
     }
     
-    // Traiter Bonds (seuils plus souples)
+    // Traiter Bonds
     console.log('\n\n🔍 Analyse des Bonds...');
     for (let i = 0; i < bonds.length; i++) {
         const bond = bonds[i];
@@ -127,7 +126,6 @@ async function filterETFs() {
         
         if (!data) continue;
         
-        // Filtres adaptés pour bonds (sans expense ratio)
         const filters = {
             aum: data.net_assets >= CONFIG.MIN_AUM_BOND,
             liquidity: data.avg_dollar_volume >= CONFIG.MIN_DOLLAR_VOL_BOND,
