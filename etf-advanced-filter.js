@@ -32,23 +32,47 @@ async function getETFData(symbol, exchange, mic_code) {
         });
         const quote = quoteRes.data;
         
+        // Vérifier si erreur API
+        if (quote.status === 'error') {
+            console.error(`❌ ${symbolParam} – Quote error: ${quote.message}`);
+            return null;
+        }
+        
         await wait(CONFIG.RATE_LIMIT / 2);
         
-        // 2) Appel /etfs/world/summary pour AUM et NAV
+        // 2) Appel /etfs/world/summary avec symbolParam
         const sumRes = await axios.get('https://api.twelvedata.com/etfs/world/summary', {
-            params: { symbol: symbol, apikey: CONFIG.API_KEY }
+            params: { symbol: symbolParam, apikey: CONFIG.API_KEY }
         });
         const sum = sumRes.data?.etf?.summary || {};
         
-        // Debug: afficher les données brutes
-        if (CONFIG.DEBUG) {
-            console.log(`\n=== DEBUG ${symbol} ===`);
-            console.log('Quote:', JSON.stringify(quote, null, 2));
-            console.log('Summary:', JSON.stringify(sum, null, 2));
+        // Debug si données manquantes
+        if (!sum.nav || !sum.net_assets) {
+            console.warn(`⚠️  ${symbolParam} — summary incomplet:`, sumRes.data);
         }
         
-        // 3) Calculs
-        const avgDollarVol = (Number(quote.average_volume) || 0) * (Number(quote.close) || 0);
+        // 3) Fallback sur /statistics si net_assets manquant
+        let netAssets = Number(sum.net_assets) || 0;
+        if (!netAssets) {
+            await wait(CONFIG.RATE_LIMIT / 2);
+            const statRes = await axios.get('https://api.twelvedata.com/statistics', {
+                params: { symbol: symbolParam, apikey: CONFIG.API_KEY }
+            });
+            netAssets = Number(statRes.data?.statistics?.market_capitalization) || 0;
+            if (CONFIG.DEBUG) {
+                console.log(`Fallback statistics for ${symbolParam}:`, statRes.data?.statistics);
+            }
+        }
+        
+        // 4) Reconstituer average_volume si absent
+        let avgVolume = Number(quote.average_volume) || 0;
+        if (!avgVolume && quote.volume) {
+            // Approximation: volume du jour * 0.8
+            avgVolume = Number(quote.volume) * 0.8;
+        }
+        
+        // 5) Calculs
+        const avgDollarVol = avgVolume * (Number(quote.close) || 0);
         const premiumDiscount = sum.nav ? 
             (Number(sum.last_price || quote.close) - Number(sum.nav)) / Number(sum.nav) : 0;
         
@@ -56,15 +80,15 @@ async function getETFData(symbol, exchange, mic_code) {
             symbol,
             price: Number(quote.close) || 0,
             volume: Number(quote.volume) || 0,
-            average_volume: Number(quote.average_volume) || 0,
-            net_assets: Number(sum.net_assets) || 0,
+            average_volume: avgVolume,
+            net_assets: netAssets,
             nav: Number(sum.nav) || 0,
             avg_dollar_volume: avgDollarVol,
             premium_discount: premiumDiscount,
-            vol_ratio: (Number(quote.volume) || 0) / (Number(quote.average_volume) || 1)
+            vol_ratio: (Number(quote.volume) || 0) / (avgVolume || 1)
         };
     } catch (error) {
-        console.error(`❌ ${symbol} – API error:`, error.response?.data || error.message);
+        console.error(`❌ ${symbol} – ${error.response?.status} ${error.response?.data?.message || error.message}`);
         return null;
     }
 }
