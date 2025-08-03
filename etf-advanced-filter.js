@@ -1,7 +1,7 @@
 // etf-advanced-filter.js
 // Filtre ETF/Bonds sur 3 critères: AUM, liquidité, écart NAV
 // Version corrigée pour gérer SEDOL, ISIN, permissions API et volumes manquants
-// v3: Ajout règle fallback pour AUM manquants
+// v4: Ajout gestion des crédits API (max 2500/min)
 
 const fs = require('fs').promises;
 const axios = require('axios');
@@ -22,14 +22,61 @@ const CONFIG = {
     MAX_NAV_DISCOUNT: 0.02,       // 2%
     RATE_LIMIT: 800,
     // Seuil fallback pour AUM manquant
-    MIN_DOLLAR_VOL_FALLBACK: 1e6  // 1M$ par jour
+    MIN_DOLLAR_VOL_FALLBACK: 1e6,  // 1M$ par jour
+    // Gestion des crédits API
+    CREDIT_LIMIT: 2500,           // par minute
+    CHUNK_SIZE: 12,               // 12 ETF en parallèle max
+    CREDITS: {
+        ETF_SUMMARY: 200,         // /etfs/world/summary
+        QUOTE: 0,                 // gratuit
+        TIME_SERIES: 5,           // /time_series (1 bar)
+        STATISTICS: 0,            // gratuit sur plan Ultra
+        PRICE: 0,                 // gratuit
+        SYMBOL_SEARCH: 0          // gratuit
+    }
 };
 
 // Cache pour les symboles résolus
 const symbolCache = new Map();
 
+// Gestion des crédits API
+let creditsUsed = 0;
+let windowStart = Date.now();
+const WINDOW_MS = 60_000; // 1 minute
+
 async function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Système de paiement des crédits
+async function pay(cost) {
+    while (true) {
+        const now = Date.now();
+        // Nouvelle minute ?
+        if (now - windowStart > WINDOW_MS) {
+            creditsUsed = 0;
+            windowStart = now;
+            if (CONFIG.DEBUG) {
+                console.log('💳 Nouvelle fenêtre de crédits (2500 disponibles)');
+            }
+        }
+        
+        // Assez de crédits ?
+        if (creditsUsed + cost <= CONFIG.CREDIT_LIMIT) {
+            creditsUsed += cost;
+            if (CONFIG.DEBUG && cost > 0) {
+                console.log(`💳 ${cost} crédits utilisés (${creditsUsed}/${CONFIG.CREDIT_LIMIT})`);
+            }
+            return;
+        }
+        
+        // Sinon attendre
+        const remaining = WINDOW_MS - (now - windowStart);
+        if (CONFIG.DEBUG) {
+            console.log(`⏳ Limite crédit atteinte, attente ${(remaining/1000).toFixed(1)}s...`);
+        }
+        await wait(250);
+    }
 }
 
 // Nettoyer les symboles avec points
@@ -43,6 +90,7 @@ function cleanSymbol(symbol) {
 // Fonction de recherche générique
 async function search(params, apiKey) {
     try {
+        // Symbol search est gratuit
         const { data } = await axios.get('https://api.twelvedata.com/symbol_search', {
             params: { ...params, apikey: apiKey }
         });
@@ -93,6 +141,9 @@ async function resolveSymbol(raw, isin, apiKey) {
 // Calculer le volume moyen sur 30 jours
 async function calculateAverageVolume(symbolParam, apiKey) {
     try {
+        // Time series coûte des crédits
+        await pay(CONFIG.CREDITS.TIME_SERIES);
+        
         const ts = await axios.get('https://api.twelvedata.com/time_series', {
             params: { 
                 symbol: symbolParam, 
@@ -118,7 +169,7 @@ async function getETFData(symbol, exchange, mic_code, isin) {
         // D'abord résoudre le symbole si nécessaire
         let symbolParam = mic_code ? `${cleanSymbol(symbol)}:${mic_code}` : cleanSymbol(symbol);
         
-        // 1) Tentative directe /quote
+        // 1) Tentative directe /quote (GRATUIT)
         let quote = null;
         try {
             const quoteRes = await axios.get('https://api.twelvedata.com/quote', {
@@ -153,9 +204,7 @@ async function getETFData(symbol, exchange, mic_code, isin) {
             return null;
         }
         
-        await wait(CONFIG.RATE_LIMIT / 2);
-        
-        // 3) Récupérer AUM via /statistics
+        // 3) Récupérer AUM via /statistics (GRATUIT sur Ultra)
         let netAssets = 0;
         try {
             const statRes = await axios.get('https://api.twelvedata.com/statistics', {
@@ -177,13 +226,12 @@ async function getETFData(symbol, exchange, mic_code, isin) {
             netAssets = Number(quote.market_capitalization) || 0;
         }
         
-        await wait(CONFIG.RATE_LIMIT / 2);
-        
-        // 4) Récupérer NAV - essayer d'abord /etfs/world/summary
+        // 4) Récupérer NAV - essayer d'abord /etfs/world/summary (200 CRÉDITS)
         let nav = 0, lastPrice = Number(quote.close) || 0;
         let navAvailable = false;
         
         try {
+            await pay(CONFIG.CREDITS.ETF_SUMMARY);
             const sumRes = await axios.get('https://api.twelvedata.com/etfs/world/summary', {
                 params: { symbol: symbolParam, apikey: CONFIG.API_KEY }
             });
@@ -202,7 +250,7 @@ async function getETFData(symbol, exchange, mic_code, isin) {
             // Endpoint non disponible
         }
         
-        // Si pas de NAV via /etfs, essayer /price comme fallback
+        // Si pas de NAV via /etfs, essayer /price comme fallback (GRATUIT)
         if (!navAvailable) {
             try {
                 const priceRes = await axios.get('https://api.twelvedata.com/price', {
@@ -221,9 +269,13 @@ async function getETFData(symbol, exchange, mic_code, isin) {
         // 5) Calculer le volume moyen
         let avgVolume = Number(quote.average_volume) || 0;
         
-        // Si pas de volume moyen, le calculer sur 30 jours
-        if (!avgVolume || avgVolume === 0) {
-            await wait(CONFIG.RATE_LIMIT / 2);
+        // Éviter time_series si possible (économie de crédits)
+        // Pour US/UK/XETR, le volume moyen est généralement fiable dans quote
+        const reliableVolumeMarkets = ['XNAS', 'XNYS', 'ARCX', 'XLON', 'XETR'];
+        const hasReliableVolume = reliableVolumeMarkets.includes(mic_code);
+        
+        // Si pas de volume moyen ET marché peu fiable, calculer sur 30 jours
+        if ((!avgVolume || avgVolume === 0) && !hasReliableVolume) {
             avgVolume = await calculateAverageVolume(symbolParam, CONFIG.API_KEY);
         }
         
@@ -255,8 +307,66 @@ async function getETFData(symbol, exchange, mic_code, isin) {
     }
 }
 
+// Traiter un lot d'ETF en parallèle
+async function processBatch(items, type = 'ETF') {
+    const results = await Promise.all(
+        items.map(async (item) => {
+            const data = await getETFData(item.symbol, item.exchange, item.mic_code, item.isin);
+            
+            if (!data) {
+                return { success: false, item: { ...item, reason: 'SYMBOL_NOT_FOUND' } };
+            }
+            
+            // Déterminer les seuils selon le type et la région
+            let minAUM, minVolume;
+            if (type === 'BOND') {
+                minAUM = CONFIG.MIN_AUM_BOND;
+                minVolume = CONFIG.MIN_DOLLAR_VOL_BOND;
+            } else {
+                const isUS = ['XNAS', 'XNYS', 'ARCX'].includes(item.mic_code);
+                minAUM = isUS ? CONFIG.MIN_AUM_ETF_US : CONFIG.MIN_AUM_ETF_EU;
+                minVolume = isUS ? CONFIG.MIN_DOLLAR_VOL_ETF_US : CONFIG.MIN_DOLLAR_VOL_ETF_EU;
+            }
+            
+            // Logger les valeurs
+            const navInfo = data.nav_available ? `${(data.premium_discount*100).toFixed(2)}%` : 'n/a';
+            const aumInfo = data.net_assets === 0 ? '0 (fallback)' : `${(data.net_assets/1e6).toFixed(0)} M$`;
+            console.log(
+                `  ${data.symbolParam}  |  AUM: ${aumInfo}` +
+                `  |  $Vol: ${(data.avg_dollar_volume/1e6).toFixed(2)} M$` +
+                `  |  ΔNAV: ${navInfo}`
+            );
+            
+            // Appliquer les filtres avec règle fallback pour AUM
+            const filters = {
+                aum: data.net_assets >= minAUM ||  // règle normale
+                     (data.net_assets === 0 && data.avg_dollar_volume >= CONFIG.MIN_DOLLAR_VOL_FALLBACK), // règle fallback
+                liquidity: data.avg_dollar_volume >= minVolume,
+                nav_discount: !data.nav_available || Math.abs(data.premium_discount) <= CONFIG.MAX_NAV_DISCOUNT
+            };
+            
+            const passAll = Object.values(filters).every(v => v);
+            
+            if (passAll) {
+                console.log(`  ✅ PASS\n`);
+                return { success: true, item: { ...item, ...data } };
+            } else {
+                const failed = Object.entries(filters).filter(([k,v]) => !v).map(([k]) => k);
+                console.log(`  ❌ FAIL: ${failed.join(', ')}\n`);
+                return { 
+                    success: false, 
+                    item: { ...item, ...data, failed: failed }
+                };
+            }
+        })
+    );
+    
+    return results;
+}
+
 async function filterETFs() {
-    console.log('📊 Filtrage avancé ETF/Bonds (v3 - fallback AUM)\n');
+    console.log('📊 Filtrage avancé ETF/Bonds (v4 - gestion crédits API)\n');
+    console.log(`⚙️  Limite: ${CONFIG.CREDIT_LIMIT} crédits/min, ${CONFIG.CHUNK_SIZE} ETF en parallèle\n`);
     
     // Lire les CSV
     const etfData = await fs.readFile('data/all_etfs.csv', 'utf8');
@@ -272,109 +382,48 @@ async function filterETFs() {
         stats: {
             total_etfs: etfs.length,
             total_bonds: bonds.length,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            start_time: Date.now()
         }
     };
     
-    // Traiter ETFs
-    console.log('🔍 Analyse des ETFs...\n');
-    for (let i = 0; i < etfs.length; i++) {
-        const etf = etfs[i];
-        console.log(`${i+1}/${etfs.length}: ${etf.symbol} (ISIN: ${etf.isin || 'N/A'})`);
+    // Traiter ETFs par lots
+    console.log(`🔍 Analyse des ETFs (${etfs.length} total)...\n`);
+    for (let i = 0; i < etfs.length; i += CONFIG.CHUNK_SIZE) {
+        const batch = etfs.slice(i, i + CONFIG.CHUNK_SIZE);
+        console.log(`📦 Lot ${Math.floor(i/CONFIG.CHUNK_SIZE) + 1}: ETF ${i+1}-${Math.min(i+CONFIG.CHUNK_SIZE, etfs.length)}`);
         
-        const data = await getETFData(etf.symbol, etf.exchange, etf.mic_code, etf.isin);
-        await wait(CONFIG.RATE_LIMIT);
+        const batchResults = await processBatch(batch, 'ETF');
         
-        if (!data) {
-            results.rejected.push({ ...etf, reason: 'SYMBOL_NOT_FOUND' });
-            continue;
-        }
-        
-        // Déterminer les seuils selon la région
-        const isUS = ['XNAS', 'XNYS', 'ARCX'].includes(etf.mic_code);
-        const minAUM = isUS ? CONFIG.MIN_AUM_ETF_US : CONFIG.MIN_AUM_ETF_EU;
-        const minVolume = isUS ? CONFIG.MIN_DOLLAR_VOL_ETF_US : CONFIG.MIN_DOLLAR_VOL_ETF_EU;
-        
-        // Logger les valeurs
-        const navInfo = data.nav_available ? `${(data.premium_discount*100).toFixed(2)}%` : 'n/a';
-        const aumInfo = data.net_assets === 0 ? '0 (fallback)' : `${(data.net_assets/1e6).toFixed(0)} M$`;
-        console.log(
-            `  ${data.symbolParam}  |  AUM: ${aumInfo}` +
-            `  |  $Vol: ${(data.avg_dollar_volume/1e6).toFixed(2)} M$` +
-            `  |  ΔNAV: ${navInfo}`
-        );
-        
-        // Appliquer les filtres avec règle fallback pour AUM
-        const filters = {
-            aum: data.net_assets >= minAUM ||  // règle normale
-                 (data.net_assets === 0 && data.avg_dollar_volume >= CONFIG.MIN_DOLLAR_VOL_FALLBACK), // règle fallback
-            liquidity: data.avg_dollar_volume >= minVolume,
-            nav_discount: !data.nav_available || Math.abs(data.premium_discount) <= CONFIG.MAX_NAV_DISCOUNT
-        };
-        
-        const passAll = Object.values(filters).every(v => v);
-        
-        if (passAll) {
-            results.etfs.push({ ...etf, ...data });
-            console.log(`  ✅ PASS\n`);
-        } else {
-            const failed = Object.entries(filters).filter(([k,v]) => !v).map(([k]) => k);
-            results.rejected.push({ 
-                ...etf, 
-                ...data,
-                failed: failed
-            });
-            console.log(`  ❌ FAIL: ${failed.join(', ')}\n`);
-        }
+        batchResults.forEach(result => {
+            if (result.success) {
+                results.etfs.push(result.item);
+            } else {
+                results.rejected.push(result.item);
+            }
+        });
     }
     
-    // Traiter Bonds
-    console.log('🔍 Analyse des Bonds...\n');
-    for (let i = 0; i < bonds.length; i++) {
-        const bond = bonds[i];
-        console.log(`${i+1}/${bonds.length}: ${bond.symbol} (ISIN: ${bond.isin || 'N/A'})`);
+    // Traiter Bonds par lots
+    console.log(`🔍 Analyse des Bonds (${bonds.length} total)...\n`);
+    for (let i = 0; i < bonds.length; i += CONFIG.CHUNK_SIZE) {
+        const batch = bonds.slice(i, i + CONFIG.CHUNK_SIZE);
+        console.log(`📦 Lot ${Math.floor(i/CONFIG.CHUNK_SIZE) + 1}: BOND ${i+1}-${Math.min(i+CONFIG.CHUNK_SIZE, bonds.length)}`);
         
-        const data = await getETFData(bond.symbol, bond.exchange, bond.mic_code, bond.isin);
-        await wait(CONFIG.RATE_LIMIT);
+        const batchResults = await processBatch(batch, 'BOND');
         
-        if (!data) {
-            results.rejected.push({ ...bond, reason: 'SYMBOL_NOT_FOUND' });
-            continue;
-        }
-        
-        const navInfo = data.nav_available ? `${(data.premium_discount*100).toFixed(2)}%` : 'n/a';
-        const aumInfo = data.net_assets === 0 ? '0 (fallback)' : `${(data.net_assets/1e6).toFixed(0)} M$`;
-        console.log(
-            `  ${data.symbolParam}  |  AUM: ${aumInfo}` +
-            `  |  $Vol: ${(data.avg_dollar_volume/1e6).toFixed(2)} M$` +
-            `  |  ΔNAV: ${navInfo}`
-        );
-        
-        // Appliquer les filtres avec règle fallback pour AUM (bonds aussi)
-        const filters = {
-            aum: data.net_assets >= CONFIG.MIN_AUM_BOND ||  // règle normale
-                 (data.net_assets === 0 && data.avg_dollar_volume >= CONFIG.MIN_DOLLAR_VOL_FALLBACK), // règle fallback
-            liquidity: data.avg_dollar_volume >= CONFIG.MIN_DOLLAR_VOL_BOND,
-            nav_discount: !data.nav_available || Math.abs(data.premium_discount) <= CONFIG.MAX_NAV_DISCOUNT
-        };
-        
-        const passAll = Object.values(filters).every(v => v);
-        
-        if (passAll) {
-            results.bonds.push({ ...bond, ...data });
-            console.log(`  ✅ PASS\n`);
-        } else {
-            const failed = Object.entries(filters).filter(([k,v]) => !v).map(([k]) => k);
-            results.rejected.push({ 
-                ...bond, 
-                ...data,
-                failed: failed
-            });
-            console.log(`  ❌ FAIL: ${failed.join(', ')}\n`);
-        }
+        batchResults.forEach(result => {
+            if (result.success) {
+                results.bonds.push(result.item);
+            } else {
+                results.rejected.push(result.item);
+            }
+        });
     }
     
     // Statistiques finales
+    const elapsedTime = Date.now() - results.stats.start_time;
+    results.stats.elapsed_seconds = Math.round(elapsedTime / 1000);
     results.stats.etfs_retained = results.etfs.length;
     results.stats.bonds_retained = results.bonds.length;
     results.stats.total_retained = results.etfs.length + results.bonds.length;
@@ -404,6 +453,7 @@ async function filterETFs() {
     console.log(`Bonds retenus: ${results.bonds.length}/${bonds.length}`);
     console.log(`Rejetés: ${results.rejected.length}`);
     console.log(`Utilisations fallback AUM: ${results.stats.aum_fallback_used}`);
+    console.log(`Temps total: ${results.stats.elapsed_seconds}s`);
     console.log('\nRaisons de rejet:');
     Object.entries(rejectionReasons).forEach(([reason, count]) => {
         console.log(`  - ${reason}: ${count}`);
