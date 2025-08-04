@@ -1,7 +1,5 @@
 {
-  "etfs": [],
-  "bonds": [],
-  "rejected": [
+  "etfs": [
     {
       "Classification": "ETF",
       "Country": "United States",
@@ -10,8 +8,39 @@
       "currency": "USD",
       "exchange": "NASDAQ",
       "mic_code": "XNMS",
-      "reason": "SYMBOL_NOT_FOUND"
+      "symbolParam": "AAPD",
+      "price": 17.52,
+      "volume": 11712,
+      "average_volume": 1225131,
+      "net_assets": 0,
+      "nav": 17.402,
+      "nav_available": true,
+      "avg_dollar_volume": 21464295.12,
+      "premium_discount": 0.006780829789679263,
+      "vol_ratio": 0.00955979401386464
     },
+    {
+      "Classification": "ETF",
+      "Country": "United States",
+      "symbol": "AIRR",
+      "name": "First Trust RBA American Industrial Renaissance ETF",
+      "currency": "USD",
+      "exchange": "NASDAQ",
+      "mic_code": "XNMS",
+      "symbolParam": "AIRR",
+      "price": 86.01,
+      "volume": 30528,
+      "average_volume": 504473,
+      "net_assets": 0,
+      "nav": 86.93,
+      "nav_available": true,
+      "avg_dollar_volume": 43389722.730000004,
+      "premium_discount": -0.010583227884504793,
+      "vol_ratio": 0.06051463606575575
+    }
+  ],
+  "bonds": [],
+  "rejected": [
     {
       "Classification": "ETF",
       "Country": "United States",
@@ -135,16 +164,6 @@
     {
       "Classification": "ETF",
       "Country": "United States",
-      "symbol": "AIRR",
-      "name": "First Trust RBA American Industrial Renaissance ETF",
-      "currency": "USD",
-      "exchange": "NASDAQ",
-      "mic_code": "XNMS",
-      "reason": "SYMBOL_NOT_FOUND"
-    },
-    {
-      "Classification": "ETF",
-      "Country": "United States",
       "symbol": "AIS",
       "name": "Vistashares AIS ETF",
       "currency": "USD",
@@ -160,21 +179,7 @@
       "currency": "USD",
       "exchange": "XETR",
       "mic_code": "XETR",
-      "symbolParam": "0NS:XETR",
-      "price": 25.363,
-      "volume": 180,
-      "average_volume": 754,
-      "net_assets": 0,
-      "nav": 32.7174,
-      "nav_available": true,
-      "avg_dollar_volume": 19123.702,
-      "premium_discount": -0.22478558809685362,
-      "vol_ratio": 0.23872679045092837,
-      "failed": [
-        "aum",
-        "liquidity",
-        "nav_discount"
-      ]
+      "reason": "SYMBOL_NOT_FOUND"
     },
     {
       "Classification": "Bond",
@@ -184,20 +189,7 @@
       "currency": "EUR",
       "exchange": "XETR",
       "mic_code": "XETR",
-      "symbolParam": "10AL:XETR",
-      "price": 42.679,
-      "volume": 170,
-      "average_volume": 1134,
-      "net_assets": 0,
-      "nav": 42.6151,
-      "nav_available": true,
-      "avg_dollar_volume": 48397.986000000004,
-      "premium_discount": 0.0014994684982554034,
-      "vol_ratio": 0.14991181657848324,
-      "failed": [
-        "aum",
-        "liquidity"
-      ]
+      "reason": "SYMBOL_NOT_FOUND"
     },
     {
       "Classification": "Bond",
@@ -257,20 +249,7 @@
       "currency": "EUR",
       "exchange": "XETR",
       "mic_code": "XETR",
-      "symbolParam": "34GI:XETR",
-      "price": 5.0452,
-      "volume": 11345,
-      "average_volume": 70370,
-      "net_assets": 0,
-      "nav": 5.0464,
-      "nav_available": true,
-      "avg_dollar_volume": 355030.72400000005,
-      "premium_discount": -0.00023779327837663834,
-      "vol_ratio": 0.16121926957510302,
-      "failed": [
-        "aum",
-        "liquidity"
-      ]
+      "reason": "SYMBOL_NOT_FOUND"
     },
     {
       "Classification": "Bond",
@@ -280,38 +259,22 @@
       "currency": "EUR",
       "exchange": "XETR",
       "mic_code": "XETR",
-      "symbolParam": "36B7:XETR",
-      "price": 4.303,
-      "volume": 22828,
-      "average_volume": 35841,
-      "net_assets": 0,
-      "nav": 4.2739,
-      "nav_available": true,
-      "avg_dollar_volume": 154223.823,
-      "premium_discount": 0.0068087695079434895,
-      "vol_ratio": 0.636924192963366,
-      "failed": [
-        "aum",
-        "liquidity"
-      ]
+      "reason": "SYMBOL_NOT_FOUND"
     }
   ],
   "stats": {
     "total_etfs": 15,
     "total_bonds": 9,
-    "timestamp": "2025-08-03T08:20:08.956Z",
-    "start_time": 1754209208956,
-    "elapsed_seconds": 3,
-    "etfs_retained": 0,
+    "timestamp": "2025-08-04T14:20:35.104Z",
+    "start_time": 1754317235104,
+    "elapsed_seconds": 2,
+    "etfs_retained": 2,
     "bonds_retained": 0,
-    "total_retained": 0,
-    "rejected_count": 24,
-    "aum_fallback_used": 0,
+    "total_retained": 2,
+    "rejected_count": 22,
+    "aum_fallback_used": 2,
     "rejection_reasons": {
-      "SYMBOL_NOT_FOUND": 20,
-      "aum": 4,
-      "liquidity": 4,
-      "nav_discount": 1
+      "SYMBOL_NOT_FOUND": 22
     }
   }
 }
