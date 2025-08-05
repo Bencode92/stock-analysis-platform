@@ -1,7 +1,7 @@
 // etf-advanced-filter.js
 // Filtre ETF/Bonds sur 3 critères: AUM, liquidité, écart NAV
 // Version corrigée pour gérer SEDOL, ISIN, permissions API et volumes manquants
-// v5: Fix symboles US (pas de :MIC) + optimisation ordre des appels
+// v6: Ajout de tous les champs manquants (change, TER, sectors, holdings) via /etfs/world
 
 const fs = require('fs').promises;
 const axios = require('axios');
@@ -27,7 +27,7 @@ const CONFIG = {
     CREDIT_LIMIT: 2500,           // par minute
     CHUNK_SIZE: 12,               // 12 ETF en parallèle max
     CREDITS: {
-        ETF_SUMMARY: 200,         // /etfs/world/summary
+        ETF_WORLD: 200,           // /etfs/world (remplace ETF_SUMMARY)
         QUOTE: 0,                 // gratuit
         TIME_SERIES: 5,           // /time_series (1 bar)
         STATISTICS: 0,            // gratuit sur plan Ultra
@@ -243,12 +243,14 @@ async function getETFData(symbol, exchange, mic_code, isin) {
             }
         }
         
-        // OPTIMISATION: Vérifier d'abord le volume avant d'appeler les endpoints coûteux
+        // Extraire les données de quote (incluant change et percent_change)
         const currentVolume = Number(quote.volume) || 0;
         const avgVolumeQuote = Number(quote.average_volume) || 0;
-        const price = Number(quote.close) || 0;
+        let price = Number(quote.close) || 0;
+        const change = Number(quote.change) || 0;
+        const percentChange = Number(quote.percent_change) || 0;
         
-        // Estimation rapide du volume dollar
+        // OPTIMISATION: Vérifier d'abord le volume avant d'appeler les endpoints coûteux
         const estimatedDollarVol = (avgVolumeQuote || currentVolume * 0.8) * price;
         
         // Si le volume est clairement insuffisant, rejeter tout de suite
@@ -287,7 +289,6 @@ async function getETFData(symbol, exchange, mic_code, isin) {
         let avgVolume = avgVolumeQuote;
         
         // Éviter time_series si possible (économie de crédits)
-        // Pour US/UK/XETR, le volume moyen est généralement fiable dans quote
         const reliableVolumeMarkets = ['XNAS', 'XNYS', 'ARCX', 'XLON', 'XETR'];
         const hasReliableVolume = reliableVolumeMarkets.includes(mic_code);
         
@@ -303,47 +304,137 @@ async function getETFData(symbol, exchange, mic_code, isin) {
         
         const avgDollarVol = avgVolume * price;
         
-        // 5) NAV - seulement si l'ETF a passé les filtres volume et AUM
-        let nav = 0, navAvailable = false;
-        const premiumDiscount = 0;
-        
-        // Vérifier si ça vaut le coup d'appeler /etfs/world/summary (200 crédits)
+        // 5) Vérifier si ça vaut le coup d'appeler /etfs/world (200 crédits)
         const isUS = US_MIC_CODES.includes(mic_code);
         const minAUM = isUS ? CONFIG.MIN_AUM_ETF_US : CONFIG.MIN_AUM_ETF_EU;
         const passesBasicFilters = (netAssets >= minAUM || (netAssets === 0 && avgDollarVol >= CONFIG.MIN_DOLLAR_VOL_FALLBACK)) 
                                   && avgDollarVol >= minVolRequired;
         
+        // Variables pour les données enrichies
+        let nav = 0, navAvailable = false;
+        let fundType = '', expenseRatio = 0, yieldTTM = 0, inceptionDate = '';
+        let trailingReturns = {}, sectors = [], topHoldings = [], countries = [];
+        let risk3Y = {};
+        
         if (passesBasicFilters) {
-            // Récupérer NAV via /etfs/world/summary (200 CRÉDITS)
+            // Récupérer TOUTES les données via /etfs/world (200 CRÉDITS)
             try {
-                await pay(CONFIG.CREDITS.ETF_SUMMARY);
-                const sumRes = await axios.get('https://api.twelvedata.com/etfs/world/summary', {
+                await pay(CONFIG.CREDITS.ETF_WORLD);
+                const worldRes = await axios.get('https://api.twelvedata.com/etfs/world', {
                     params: { symbol: symbolParam, apikey: CONFIG.API_KEY }
                 });
                 
-                if (sumRes.data?.status !== 'error') {
-                    const sum = sumRes.data?.etf?.summary || {};
-                    nav = Number(sum.nav) || 0;
+                if (worldRes.data?.status !== 'error') {
+                    const etf = worldRes.data?.etf || worldRes.data || {};
+                    const summary = etf.summary || {};
+                    const performance = etf.performance || {};
+                    const risk = etf.risk || {};
+                    const composition = etf.composition || {};
+                    
+                    // NAV et mise à jour du prix
+                    nav = Number(summary.nav) || 0;
                     navAvailable = nav > 0;
-                    if (sum.last_price) price = Number(sum.last_price);
+                    if (summary.last_price) price = Number(summary.last_price);
+                    
+                    // Fallback AUM si /statistics a renvoyé 0
+                    if (!netAssets && summary.net_assets) {
+                        netAssets = Number(summary.net_assets) || 0;
+                        if (CONFIG.DEBUG && netAssets > 0) {
+                            console.log(`  → AUM fallback depuis /etfs/world: ${(netAssets/1e6).toFixed(0)}M$`);
+                        }
+                    }
+                    
+                    // Extraire les informations du fonds
+                    fundType = summary.fund_type || '';
+                    expenseRatio = Number(summary.expense_ratio_net) || 0;
+                    yieldTTM = Number(summary.yield) || 0;
+                    inceptionDate = summary.share_class_inception_date || '';
+                    
+                    // Performance trailing returns
+                    if (performance.trailing_returns) {
+                        performance.trailing_returns.forEach(tr => {
+                            if (tr.period && tr.return !== undefined) {
+                                trailingReturns[tr.period] = Number(tr.return) || 0;
+                            }
+                        });
+                    }
+                    
+                    // Métriques de risque 3 ans
+                    const volatilityMeasures = risk.volatility_measures || [];
+                    risk3Y = volatilityMeasures.find(r => r.period === '3_year') || {};
+                    
+                    // Composition
+                    sectors = (composition.major_market_sectors || []).map(s => ({
+                        name: s.name || '',
+                        weight: Number(s.weight) || 0
+                    }));
+                    
+                    topHoldings = (composition.top_holdings || []).slice(0, 10).map(h => ({
+                        symbol: h.symbol || '',
+                        name: h.name || '',
+                        weight: Number(h.weight) || 0
+                    }));
+                    
+                    countries = (composition.country_allocation || []).map(c => ({
+                        name: c.name || '',
+                        weight: Number(c.weight) || 0
+                    }));
                 }
             } catch (error) {
-                // Pas grave, on continue sans NAV
+                if (CONFIG.DEBUG) {
+                    console.warn(`  → /etfs/world exception: ${error.message}`);
+                }
             }
         }
         
+        const premiumDiscount = navAvailable && nav ? (price - nav) / nav : 0;
+        
         return {
+            // Identification
             symbol: symbol,
             isin: isin,
             symbolParam,
+            
+            // Prix et variations
             price: price,
+            change: change,
+            percent_change: percentChange,
             volume: currentVolume,
             average_volume: avgVolume,
+            
+            // Métriques clés
             net_assets: netAssets,
+            avg_dollar_volume: avgDollarVol,
+            
+            // NAV
             nav: nav,
             nav_available: navAvailable,
-            avg_dollar_volume: avgDollarVol,
-            premium_discount: navAvailable && nav ? (price - nav) / nav : 0,
+            premium_discount: premiumDiscount,
+            
+            // Informations du fonds
+            fund_type: fundType,
+            expense_ratio: expenseRatio,
+            yield_ttm: yieldTTM,
+            inception_date: inceptionDate,
+            
+            // Performance
+            trailing_returns: trailingReturns,
+            ytd_return: trailingReturns['ytd'] || 0,
+            one_year_return: trailingReturns['1_year'] || 0,
+            three_year_return: trailingReturns['3_year'] || 0,
+            five_year_return: trailingReturns['5_year'] || 0,
+            
+            // Risque 3 ans
+            volatility_3y: risk3Y.volatility || null,
+            sharpe_3y: risk3Y.sharpe_ratio || null,
+            beta_3y: risk3Y.beta || null,
+            
+            // Composition
+            sectors: sectors,
+            top_holdings: topHoldings,
+            countries: countries,
+            
+            // Ratio pour analyse
             vol_ratio: currentVolume / (avgVolume || 1)
         };
     } catch (error) {
@@ -379,8 +470,20 @@ async function processBatch(items, type = 'ETF') {
             console.log(
                 `  ${data.symbolParam}  |  AUM: ${aumInfo}` +
                 `  |  $Vol: ${(data.avg_dollar_volume/1e6).toFixed(2)} M$` +
-                `  |  ΔNAV: ${navInfo}`
+                `  |  ΔNAV: ${navInfo}` +
+                `  |  Chg: ${data.percent_change.toFixed(2)}%`
             );
+            
+            // Si on a récupéré des données enrichies, les logger
+            if (data.fund_type) {
+                console.log(
+                    `    → Type: ${data.fund_type}` +
+                    `  |  TER: ${(data.expense_ratio*100).toFixed(2)}%` +
+                    `  |  Yield: ${data.yield_ttm.toFixed(2)}%` +
+                    `  |  Sectors: ${data.sectors.length}` +
+                    `  |  Holdings: ${data.top_holdings.length}`
+                );
+            }
             
             // Appliquer les filtres avec règle fallback pour AUM
             const filters = {
@@ -410,8 +513,9 @@ async function processBatch(items, type = 'ETF') {
 }
 
 async function filterETFs() {
-    console.log('📊 Filtrage avancé ETF/Bonds (v5 - fix symboles US)\n');
-    console.log(`⚙️  Limite: ${CONFIG.CREDIT_LIMIT} crédits/min, ${CONFIG.CHUNK_SIZE} ETF en parallèle\n`);
+    console.log('📊 Filtrage avancé ETF/Bonds (v6 - données complètes)\n');
+    console.log(`⚙️  Limite: ${CONFIG.CREDIT_LIMIT} crédits/min, ${CONFIG.CHUNK_SIZE} ETF en parallèle`);
+    console.log(`📝  Collecte: Prix, NAV, TER, Yield, Sectors, Holdings, Risk 3Y\n`);
     
     // Lire les CSV
     const etfData = await fs.readFile('data/all_etfs.csv', 'utf8');
@@ -476,6 +580,16 @@ async function filterETFs() {
     results.stats.aum_fallback_used = results.etfs.filter(e => e.net_assets === 0).length + 
                                       results.bonds.filter(b => b.net_assets === 0).length;
     
+    // Statistiques de qualité des données
+    results.stats.data_quality = {
+        with_nav: results.etfs.filter(e => e.nav_available).length,
+        with_fund_type: results.etfs.filter(e => e.fund_type).length,
+        with_expense_ratio: results.etfs.filter(e => e.expense_ratio > 0).length,
+        with_sectors: results.etfs.filter(e => e.sectors && e.sectors.length > 0).length,
+        with_holdings: results.etfs.filter(e => e.top_holdings && e.top_holdings.length > 0).length,
+        with_risk_metrics: results.etfs.filter(e => e.volatility_3y !== null).length
+    };
+    
     // Analyser les raisons de rejet
     const rejectionReasons = {};
     results.rejected.forEach(item => {
@@ -493,17 +607,35 @@ async function filterETFs() {
     // Sauvegarder
     await fs.writeFile('data/filtered_advanced.json', JSON.stringify(results, null, 2));
     
+    // Créer aussi un CSV détaillé
+    const csvHeader = 'symbol,mic_code,price,change_%,aum_usd,adv_usd,expense_ratio,yield_ttm,nav,premium_discount,sectors,holdings\n';
+    const csvRows = results.etfs.map(etf => 
+        `${etf.symbol},${etf.mic_code},${etf.price},${etf.percent_change},${etf.net_assets},${etf.avg_dollar_volume},${etf.expense_ratio},${etf.yield_ttm},${etf.nav || ''},${etf.premium_discount || ''},${etf.sectors?.length || 0},${etf.top_holdings?.length || 0}`
+    ).join('\n');
+    await fs.writeFile('data/filtered_advanced.csv', csvHeader + csvRows);
+    
     console.log('\n📊 RÉSUMÉ:');
     console.log(`ETFs retenus: ${results.etfs.length}/${etfs.length}`);
     console.log(`Bonds retenus: ${results.bonds.length}/${bonds.length}`);
     console.log(`Rejetés: ${results.rejected.length}`);
     console.log(`Utilisations fallback AUM: ${results.stats.aum_fallback_used}`);
     console.log(`Temps total: ${results.stats.elapsed_seconds}s`);
+    
+    console.log('\n📈 Qualité des données:');
+    console.log(`  - Avec NAV: ${results.stats.data_quality.with_nav}/${results.etfs.length}`);
+    console.log(`  - Avec Fund Type: ${results.stats.data_quality.with_fund_type}/${results.etfs.length}`);
+    console.log(`  - Avec TER: ${results.stats.data_quality.with_expense_ratio}/${results.etfs.length}`);
+    console.log(`  - Avec Sectors: ${results.stats.data_quality.with_sectors}/${results.etfs.length}`);
+    console.log(`  - Avec Holdings: ${results.stats.data_quality.with_holdings}/${results.etfs.length}`);
+    console.log(`  - Avec Risk 3Y: ${results.stats.data_quality.with_risk_metrics}/${results.etfs.length}`);
+    
     console.log('\nRaisons de rejet:');
     Object.entries(rejectionReasons).forEach(([reason, count]) => {
         console.log(`  - ${reason}: ${count}`);
     });
+    
     console.log(`\n✅ Résultats: data/filtered_advanced.json`);
+    console.log(`📊 CSV: data/filtered_advanced.csv`);
     
     // Pour GitHub Actions
     if (process.env.GITHUB_ACTIONS) {
