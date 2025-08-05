@@ -1,0 +1,73 @@
+name: Weekly ETF Data Refresh
+
+on:
+  schedule:
+    # Tous les lundis à 6h UTC (7h/8h Paris selon l'heure d'été)
+    - cron: '0 6 * * 1'
+  workflow_dispatch:  # Permet le lancement manuel
+
+jobs:
+  refresh-etf-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: |
+        npm install axios csv-parse
+    
+    - name: Run weekly refresh script
+      env:
+        TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
+        DEBUG: '0'
+      run: |
+        echo "🚀 Starting weekly ETF data refresh..."
+        node etf-weekly-refresh.js
+      timeout-minutes: 30
+    
+    - name: Commit and push changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add data/weekly_snapshot.json data/weekly_snapshot.csv
+        git diff --quiet && git diff --staged --quiet || (
+          git commit -m "📊 Weekly ETF data refresh - $(date +'%Y-%m-%d')"
+          git push
+        )
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: weekly-snapshot-${{ github.run_number }}
+        path: |
+          data/weekly_snapshot.json
+          data/weekly_snapshot.csv
+        retention-days: 30
+    
+    - name: Create summary
+      if: always()
+      run: |
+        echo "## 📊 Weekly ETF Refresh Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ -f data/weekly_snapshot.json ]; then
+          echo "✅ **Refresh completed successfully**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          # Extract stats from JSON
+          RETAINED=$(jq '.metadata.retained' data/weekly_snapshot.json)
+          REJECTED=$(jq '.metadata.rejected' data/weekly_snapshot.json)
+          TOTAL=$(jq '.metadata.total_etfs' data/weekly_snapshot.json)
+          echo "- **ETFs processed**: $TOTAL" >> $GITHUB_STEP_SUMMARY
+          echo "- **ETFs retained**: $RETAINED" >> $GITHUB_STEP_SUMMARY
+          echo "- **ETFs rejected**: $REJECTED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Refresh failed**" >> $GITHUB_STEP_SUMMARY
+        fi
