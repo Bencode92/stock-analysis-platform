@@ -1,6 +1,7 @@
 // etf-weekly-refresh.js
 // Script optimisé pour la mise à jour hebdomadaire des données ETF
 // Utilise /batch pour minimiser les crédits API et le temps d'exécution
+// v2: Ajout de tous les champs manquants (change, TER, yield, sectors, etc.)
 
 const fs = require('fs').promises;
 const axios = require('axios');
@@ -138,9 +139,11 @@ async function preFilterBatch(items) {
             continue;
         }
         
-        // Extraire les données
+        // Extraire les données de quote (incluant change et percent_change)
         const currency = quote.currency || item.currency || 'USD';
         const price = Number(quote.close) || 0;
+        const change = Number(quote.change) || 0;
+        const percentChange = Number(quote.percent_change) || 0;
         let avgVolume = Number(quote.average_volume) || 0;
         
         // Fallback volume pour marchés non-US si nécessaire
@@ -171,7 +174,7 @@ async function preFilterBatch(items) {
         
         // Logger
         const aumInfo = aumUSD === 0 ? '0 (fallback)' : `${(aumUSD/1e6).toFixed(0)}M$`;
-        console.log(`  ${symbolParam} | AUM: ${aumInfo} | ADV: ${(advUSD/1e6).toFixed(2)}M$`);
+        console.log(`  ${symbolParam} | AUM: ${aumInfo} | ADV: ${(advUSD/1e6).toFixed(2)}M$ | Chg: ${percentChange.toFixed(2)}%`);
         
         if (passAUM && passADV) {
             survivors.push({
@@ -179,6 +182,8 @@ async function preFilterBatch(items) {
                 symbolParam,
                 currency,
                 price,
+                change,
+                percent_change: percentChange,
                 avg_volume: avgVolume,
                 adv_usd: advUSD,
                 aum_usd: aumUSD,
@@ -211,7 +216,7 @@ async function enrichBatch(survivors) {
     
     console.log(`\n🎯 Enrichissement de ${survivors.length} ETF retenus...`);
     
-    // Construire le payload pour /etfs/world
+    // Construire le payload pour /etfs/world (PAS /etfs/world/summary)
     const payload = {};
     survivors.forEach((item, i) => {
         payload[`w_${i}`] = { 
@@ -224,56 +229,128 @@ async function enrichBatch(survivors) {
     
     // Enrichir les données
     const enriched = survivors.map((item, i) => {
-        const worldData = results[`w_${i}`]?.response?.etf || results[`w_${i}`]?.response || {};
+        const worldResponse = results[`w_${i}`]?.response || {};
+        const etf = worldResponse.etf || worldResponse || {};
         
-        // Extraire toutes les données pertinentes
-        const summary = worldData.summary || {};
-        const performance = worldData.performance || {};
-        const composition = worldData.composition || {};
-        const risk = worldData.risk || {};
+        // Extraire toutes les sections
+        const summary = etf.summary || {};
+        const performance = etf.performance || {};
+        const composition = etf.composition || {};
+        const risk = etf.risk || {};
+        
+        // AUM fallback : si stats.net_assets était 0, prendre summary.net_assets
+        let finalAumUsd = item.aum_usd;
+        if (finalAumUsd === 0 && summary.net_assets) {
+            const summaryAum = Number(summary.net_assets) || 0;
+            finalAumUsd = toUSD(summaryAum, summary.currency || item.currency, fxCache);
+            if (CONFIG.DEBUG && finalAumUsd > 0) {
+                console.log(`  → AUM fallback pour ${item.symbolParam}: ${(finalAumUsd/1e6).toFixed(0)}M$`);
+            }
+        }
+        
+        // NAV et premium/discount
+        const nav = Number(summary.nav) || 0;
+        const navAvailable = nav > 0;
+        const lastPrice = Number(summary.last_price) || item.price;
+        const premiumDiscount = navAvailable ? (lastPrice - nav) / nav : 0;
         
         // Trouver les métriques de risque sur 3 ans
         const risk3Y = (risk.volatility_measures || []).find(r => r.period === '3_year') || {};
         
+        // Top 10 holdings avec détails
+        const topHoldings = (composition.top_holdings || []).slice(0, 10).map(holding => ({
+            symbol: holding.symbol || '',
+            name: holding.name || '',
+            weight: Number(holding.weight) || 0,
+            shares: Number(holding.shares) || 0
+        }));
+        
+        // Secteurs avec pourcentages
+        const sectors = (composition.major_market_sectors || []).map(sector => ({
+            name: sector.name || '',
+            weight: Number(sector.weight) || 0
+        }));
+        
+        // Allocation géographique
+        const countries = (composition.country_allocation || []).map(country => ({
+            name: country.name || '',
+            weight: Number(country.weight) || 0
+        }));
+        
+        // Performance trailing returns
+        const trailingReturns = {};
+        (performance.trailing_returns || []).forEach(tr => {
+            if (tr.period && tr.return !== undefined) {
+                trailingReturns[tr.period] = Number(tr.return) || 0;
+            }
+        });
+        
         return {
-            // Identification
+            // === Identification ===
             symbol: item.symbol,
             symbol_param: item.symbolParam,
             mic_code: item.mic_code,
             isin: item.isin || summary.isin || null,
             name: summary.name || item.name || '',
             currency: item.currency,
+            exchange: item.exchange || '',
             
-            // Métriques de base (du pré-filtre)
-            price: item.price,
-            aum_usd: item.aum_usd,
-            adv_usd: item.adv_usd,
+            // === Métriques de marché (temps réel) ===
+            price: lastPrice,
+            change: item.change,
+            percent_change: item.percent_change,
+            volume: Number(item.quote_data.volume) || 0,
             avg_volume: item.avg_volume,
             
-            // Données summary
+            // === Liquidité et AUM ===
+            aum_usd: finalAumUsd,
+            adv_usd: item.adv_usd,
+            
+            // === NAV et Premium/Discount ===
+            nav: nav,
+            nav_available: navAvailable,
+            premium_discount: premiumDiscount,
+            
+            // === Informations du fonds ===
             fund_type: summary.fund_type || '',
+            fund_family: summary.fund_family || '',
             expense_ratio: Number(summary.expense_ratio_net) || 0,
             yield_ttm: Number(summary.yield) || 0,
             inception_date: summary.share_class_inception_date || '',
-            nav: Number(summary.nav) || 0,
             
-            // Performance
-            trailing_returns: performance.trailing_returns || [],
-            ytd_return: performance.ytd_return || null,
+            // === Performance ===
+            trailing_returns: trailingReturns,
+            ytd_return: Number(performance.ytd_return) || trailingReturns['ytd'] || 0,
+            one_day_return: trailingReturns['1_day'] || 0,
+            one_week_return: trailingReturns['1_week'] || 0,
+            one_month_return: trailingReturns['1_month'] || 0,
+            three_month_return: trailingReturns['3_month'] || 0,
+            six_month_return: trailingReturns['6_month'] || 0,
+            one_year_return: trailingReturns['1_year'] || 0,
+            three_year_return: trailingReturns['3_year'] || 0,
+            five_year_return: trailingReturns['5_year'] || 0,
             
-            // Composition
-            sectors: composition.major_market_sectors || [],
-            top_holdings: (composition.top_holdings || []).slice(0, 10),
-            countries: composition.country_allocation || [],
+            // === Composition ===
+            sectors: sectors,
+            top_holdings: topHoldings,
+            countries: countries,
             asset_classes: composition.asset_class || [],
             
-            // Risk metrics (3 ans)
+            // === Métriques de risque (3 ans) ===
             volatility_3y: risk3Y.volatility || null,
             sharpe_3y: risk3Y.sharpe_ratio || null,
             beta_3y: risk3Y.beta || null,
+            standard_deviation_3y: risk3Y.standard_deviation || null,
             
-            // Metadata
-            last_updated: new Date().toISOString()
+            // === Metadata ===
+            last_updated: new Date().toISOString(),
+            data_quality: {
+                has_nav: navAvailable,
+                has_aum: finalAumUsd > 0,
+                has_holdings: topHoldings.length > 0,
+                has_sectors: sectors.length > 0,
+                has_risk_metrics: risk3Y.volatility !== undefined
+            }
         };
     });
     
@@ -282,7 +359,7 @@ async function enrichBatch(survivors) {
 
 // Fonction principale
 async function weeklyRefresh() {
-    console.log('🚀 Mise à jour hebdomadaire des données ETF\n');
+    console.log('🚀 Mise à jour hebdomadaire des données ETF (v2)\n');
     console.log(`⚙️  Configuration:`);
     console.log(`   - Seuils US: AUM ≥ ${CONFIG.THRESHOLDS.US.AUM/1e9}Md$, ADV ≥ ${CONFIG.THRESHOLDS.US.ADV/1e6}M$`);
     console.log(`   - Seuils EU: AUM ≥ ${CONFIG.THRESHOLDS.EU.AUM/1e6}M$, ADV ≥ ${CONFIG.THRESHOLDS.EU.ADV/1e6}M$`);
@@ -334,6 +411,15 @@ async function weeklyRefresh() {
             }
         });
         
+        // Statistiques de qualité des données
+        const dataQualityStats = {
+            with_nav: allSurvivors.filter(e => e.nav_available).length,
+            with_aum: allSurvivors.filter(e => e.aum_usd > 0).length,
+            with_holdings: allSurvivors.filter(e => e.top_holdings.length > 0).length,
+            with_sectors: allSurvivors.filter(e => e.sectors.length > 0).length,
+            with_risk_metrics: allSurvivors.filter(e => e.volatility_3y !== null).length
+        };
+        
         // Créer le snapshot final
         const snapshot = {
             metadata: {
@@ -343,6 +429,7 @@ async function weeklyRefresh() {
                 rejected: allRejected.length,
                 elapsed_seconds: Math.round(elapsedTime / 1000),
                 rejection_reasons: rejectionReasons,
+                data_quality: dataQualityStats,
                 fx_rates: Object.fromEntries(fxCache)
             },
             etfs: allSurvivors,
@@ -356,10 +443,10 @@ async function weeklyRefresh() {
         // Sauvegarder
         await fs.writeFile('data/weekly_snapshot.json', JSON.stringify(snapshot, null, 2));
         
-        // Créer aussi un fichier CSV pour analyse rapide
-        const csvHeader = 'symbol,mic_code,name,aum_usd,adv_usd,expense_ratio,yield_ttm,volatility_3y,sharpe_3y\n';
+        // Créer aussi un fichier CSV détaillé pour analyse rapide
+        const csvHeader = 'symbol,mic_code,name,price,change_%,aum_usd,adv_usd,expense_ratio,yield_ttm,ytd_return,1y_return,volatility_3y,sharpe_3y,nav,premium_discount\n';
         const csvRows = allSurvivors.map(etf => 
-            `${etf.symbol},${etf.mic_code},"${etf.name}",${etf.aum_usd},${etf.adv_usd},${etf.expense_ratio},${etf.yield_ttm},${etf.volatility_3y || ''},${etf.sharpe_3y || ''}`
+            `${etf.symbol},${etf.mic_code},"${etf.name.replace(/"/g, '""')}",${etf.price},${etf.percent_change},${etf.aum_usd},${etf.adv_usd},${etf.expense_ratio},${etf.yield_ttm},${etf.ytd_return},${etf.one_year_return},${etf.volatility_3y || ''},${etf.sharpe_3y || ''},${etf.nav || ''},${etf.premium_discount || ''}`
         ).join('\n');
         await fs.writeFile('data/weekly_snapshot.csv', csvHeader + csvRows);
         
@@ -369,9 +456,17 @@ async function weeklyRefresh() {
         console.log(`   ✅ ETF retenus: ${allSurvivors.length}/${etfs.length}`);
         console.log(`   ❌ ETF rejetés: ${allRejected.length}`);
         console.log(`   ⏱️  Temps total: ${Math.round(elapsedTime/1000)}s`);
+        
+        console.log('\n📈 Qualité des données:');
+        console.log(`   - Avec NAV: ${dataQualityStats.with_nav}/${allSurvivors.length}`);
+        console.log(`   - Avec AUM: ${dataQualityStats.with_aum}/${allSurvivors.length}`);
+        console.log(`   - Avec Holdings: ${dataQualityStats.with_holdings}/${allSurvivors.length}`);
+        console.log(`   - Avec Secteurs: ${dataQualityStats.with_sectors}/${allSurvivors.length}`);
+        console.log(`   - Avec Risk 3Y: ${dataQualityStats.with_risk_metrics}/${allSurvivors.length}`);
+        
         console.log('\n📁 Fichiers générés:');
         console.log('   - data/weekly_snapshot.json (données complètes)');
-        console.log('   - data/weekly_snapshot.csv (résumé)');
+        console.log('   - data/weekly_snapshot.csv (résumé tabulaire)');
         
         if (Object.keys(rejectionReasons).length > 0) {
             console.log('\n❌ Raisons de rejet:');
