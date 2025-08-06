@@ -1,7 +1,7 @@
 // etf-advanced-filter.js
 // Filtre ETF/Bonds sur 3 critères: AUM, liquidité, écart NAV
 // Version corrigée pour gérer SEDOL, ISIN, permissions API et volumes manquants
-// v6: Ajout de tous les champs manquants (change, TER, sectors, holdings) via /etfs/world
+// v7: Distinction claire entre "non trouvé" et "filtré", corrections des mappings
 
 const fs = require('fs').promises;
 const axios = require('axios');
@@ -260,7 +260,15 @@ async function getETFData(symbol, exchange, mic_code, isin) {
             
         if (estimatedDollarVol < minVolRequired * 0.5) { // Marge de 50%
             console.log(`  → Rejet précoce: volume estimé ${(estimatedDollarVol/1e6).toFixed(2)}M$ < ${(minVolRequired*0.5/1e6).toFixed(1)}M$`);
-            return null;
+            // MODIFICATION: Retourner un objet avec marqueur de rejet précoce
+            return {
+                __early_reject: 'liquidity',
+                symbolParam,
+                price,
+                volume: currentVolume,
+                average_volume: avgVolumeQuote || currentVolume * 0.8 || 0,
+                avg_dollar_volume: estimatedDollarVol
+            };
         }
         
         // 3) Récupérer AUM via /statistics (GRATUIT sur Ultra)
@@ -350,24 +358,26 @@ async function getETFData(symbol, exchange, mic_code, isin) {
                     yieldTTM = Number(summary.yield) || 0;
                     inceptionDate = summary.share_class_inception_date || '';
                     
-                    // Performance trailing returns
+                    // CORRECTION: Performance trailing returns avec share_class_return
                     if (performance.trailing_returns) {
                         performance.trailing_returns.forEach(tr => {
-                            if (tr.period && tr.return !== undefined) {
-                                trailingReturns[tr.period] = Number(tr.return) || 0;
+                            if (tr.period && tr.share_class_return !== undefined) {
+                                trailingReturns[tr.period] = Number(tr.share_class_return) || 0;
                             }
                         });
                     }
                     
-                    // Métriques de risque 3 ans
+                    // CORRECTION: Métriques de risque 3 ans avec 'std'
                     const volatilityMeasures = risk.volatility_measures || [];
                     risk3Y = volatilityMeasures.find(r => r.period === '3_year') || {};
                     
-                    // Composition
-                    sectors = (composition.major_market_sectors || []).map(s => ({
-                        name: s.name || '',
-                        weight: Number(s.weight) || 0
-                    }));
+                    // CORRECTION: Composition avec gestion de 'sector' vs 'name'
+                    sectors = (composition.major_market_sectors || [])
+                        .filter(s => (s.weight ?? 0) > 0)
+                        .map(s => ({
+                            name: s.sector || s.name || '',
+                            weight: Number(s.weight) || 0
+                        }));
                     
                     topHoldings = (composition.top_holdings || []).slice(0, 10).map(h => ({
                         symbol: h.symbol || '',
@@ -417,17 +427,20 @@ async function getETFData(symbol, exchange, mic_code, isin) {
             yield_ttm: yieldTTM,
             inception_date: inceptionDate,
             
-            // Performance
+            // Performance (mappage corrigé)
             trailing_returns: trailingReturns,
-            ytd_return: trailingReturns['ytd'] || 0,
-            one_year_return: trailingReturns['1_year'] || 0,
-            three_year_return: trailingReturns['3_year'] || 0,
-            five_year_return: trailingReturns['5_year'] || 0,
+            ytd_return: trailingReturns['ytd'] || null,
+            one_month_return: trailingReturns['1_month'] || null,
+            three_month_return: trailingReturns['3_month'] || null,
+            one_year_return: trailingReturns['1_year'] || null,
+            three_year_return: trailingReturns['3_year'] || null,
+            five_year_return: trailingReturns['5_year'] || null,
+            ten_year_return: trailingReturns['10_year'] || null,
             
-            // Risque 3 ans
-            volatility_3y: risk3Y.volatility || null,
-            sharpe_3y: risk3Y.sharpe_ratio || null,
-            beta_3y: risk3Y.beta || null,
+            // Risque 3 ans (mappage corrigé)
+            volatility_3y: risk3Y.std ?? null,
+            sharpe_3y: risk3Y.sharpe_ratio ?? null,
+            beta_3y: risk3Y.beta ?? null,
             
             // Composition
             sectors: sectors,
@@ -449,8 +462,17 @@ async function processBatch(items, type = 'ETF') {
         items.map(async (item) => {
             const data = await getETFData(item.symbol, item.exchange, item.mic_code, item.isin);
             
+            // MODIFICATION: Distinguer les cas
             if (!data) {
-                return { success: false, item: { ...item, reason: 'SYMBOL_NOT_FOUND' } };
+                return { success: false, item: { ...item, reason: 'UNSUPPORTED_BY_PROVIDER' } };
+            }
+            
+            // MODIFICATION: Gérer le rejet précoce de liquidité
+            if (data.__early_reject === 'liquidity') {
+                return {
+                    success: false,
+                    item: { ...item, ...data, failed: ['liquidity'] }
+                };
             }
             
             // Déterminer les seuils selon le type et la région
@@ -513,7 +535,7 @@ async function processBatch(items, type = 'ETF') {
 }
 
 async function filterETFs() {
-    console.log('📊 Filtrage avancé ETF/Bonds (v6 - données complètes)\n');
+    console.log('📊 Filtrage avancé ETF/Bonds (v7 - distinction claire rejet/filtrage)\n');
     console.log(`⚙️  Limite: ${CONFIG.CREDIT_LIMIT} crédits/min, ${CONFIG.CHUNK_SIZE} ETF en parallèle`);
     console.log(`📝  Collecte: Prix, NAV, TER, Yield, Sectors, Holdings, Risk 3Y\n`);
     
@@ -580,17 +602,17 @@ async function filterETFs() {
     results.stats.aum_fallback_used = results.etfs.filter(e => e.net_assets === 0).length + 
                                       results.bonds.filter(b => b.net_assets === 0).length;
     
-    // Statistiques de qualité des données
+    // Statistiques de qualité des données (CORRECTION: test robuste pour risk metrics)
     results.stats.data_quality = {
         with_nav: results.etfs.filter(e => e.nav_available).length,
         with_fund_type: results.etfs.filter(e => e.fund_type).length,
         with_expense_ratio: results.etfs.filter(e => e.expense_ratio > 0).length,
         with_sectors: results.etfs.filter(e => e.sectors && e.sectors.length > 0).length,
         with_holdings: results.etfs.filter(e => e.top_holdings && e.top_holdings.length > 0).length,
-        with_risk_metrics: results.etfs.filter(e => e.volatility_3y !== null).length
+        with_risk_metrics: results.etfs.filter(e => Number.isFinite(e.volatility_3y) && e.volatility_3y > 0).length
     };
     
-    // Analyser les raisons de rejet
+    // Analyser les raisons de rejet (MODIFICATION: statistiques plus claires)
     const rejectionReasons = {};
     results.rejected.forEach(item => {
         if (item.reason) {
@@ -629,7 +651,7 @@ async function filterETFs() {
     console.log(`  - Avec Holdings: ${results.stats.data_quality.with_holdings}/${results.etfs.length}`);
     console.log(`  - Avec Risk 3Y: ${results.stats.data_quality.with_risk_metrics}/${results.etfs.length}`);
     
-    console.log('\nRaisons de rejet:');
+    console.log('\n📊 Raisons de rejet:');
     Object.entries(rejectionReasons).forEach(([reason, count]) => {
         console.log(`  - ${reason}: ${count}`);
     });
