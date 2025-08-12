@@ -13,10 +13,6 @@ const CONFIG = {
     // Critère unique simplifié
     MIN_ADV_USD: 1_000_000,       // 1M$ pour tous (ETF + Bonds)
     
-    // Optionnel
-    MIN_TRADE_COUNT: 30,          // Min 30 trades/jour (si disponible)
-    MAX_SPREAD_PCT: 0.01,         // Max 1% spread
-    
     // Config API
     DAYS_HISTORY: 30,
     CHUNK_SIZE: 12,
@@ -149,7 +145,7 @@ async function calculate30DayADV(symbol, mic_code, currency = 'USD') {
         const fxRate = await getFxRate(currency, CONFIG.API_KEY);
         const medianUSD = medianLocal * fxRate;
         
-        // Calculer aussi le spread moyen (optionnel)
+        // Calculer aussi le spread moyen (pour info seulement)
         const spreads = data.values.map(day => {
             const high = Number(day.high) || 0;
             const low = Number(day.low) || 0;
@@ -256,17 +252,14 @@ async function processETF(item) {
             days_traded: advData.days_with_data
         };
         
-        // 4) Appliquer le filtre simple
+        // 4) Appliquer le filtre simple - ADV UNIQUEMENT
         const passLiquidity = advData.adv_median_usd >= CONFIG.MIN_ADV_USD;
-        const passSpread = !advData.spread_avg || advData.spread_avg <= CONFIG.MAX_SPREAD_PCT;
         
-        if (passLiquidity && passSpread) {
+        // MODIFICATION: Ignorer complètement le spread
+        if (passLiquidity) {
             return { ...result, passed: true };
         } else {
-            const failed = [];
-            if (!passLiquidity) failed.push('liquidity');
-            if (!passSpread) failed.push('spread');
-            return { ...result, failed };
+            return { ...result, failed: ['liquidity'] };
         }
         
     } catch (error) {
@@ -321,7 +314,7 @@ function aggregateByISIN(results) {
 async function filterETFs() {
     console.log('📊 Filtrage simplifié par ADV médiane 30j\n');
     console.log(`⚙️  Seuil unique: ${(CONFIG.MIN_ADV_USD/1e6).toFixed(1)}M$ ADV`);
-    console.log(`📝  Critères: ADV médiane uniquement (+ spread optionnel)\n`);
+    console.log(`📝  Critère: ADV médiane UNIQUEMENT (spread ignoré)\n`);
     
     // Lire les CSV
     const etfData = await fs.readFile('data/all_etfs.csv', 'utf8');
@@ -345,7 +338,7 @@ async function filterETFs() {
     // Traiter tous les instruments
     const allItems = [
         ...etfs.map(e => ({ ...e, type: 'ETF' })),
-        ...bonds.map(b => ({ ...b, type: 'BOND' }))
+        ...bonds.map(b => ({ ...b, type: 'BOND' })
     ];
     
     console.log(`🔍 Analyse de ${allItems.length} instruments...\n`);
@@ -366,7 +359,7 @@ async function filterETFs() {
                 const advInfo = result.avg_dollar_volume 
                     ? `${(result.avg_dollar_volume/1e6).toFixed(2)}M$`
                     : 'N/A';
-                console.log(`  ${result.symbolParam} | ADV: ${advInfo} | ${result.passed ? '✅ PASS' : '❌ FAIL'}`);
+                console.log(`  ${result.symbolParam} | ADV: ${advInfo} | ${result.passed ? '✅ PASS' : '❌ FAIL'}`));
             }
             
             // Classer
