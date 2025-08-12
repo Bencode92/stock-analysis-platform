@@ -204,6 +204,7 @@ async function processETF(item) {
             name: item.name,
             isin: item.isin,
             mic_code: item.mic_code,
+            type: item.type,  // IMPORTANT: Copier le type !
             symbolParam,
             
             // Prix et variations (depuis quote)
