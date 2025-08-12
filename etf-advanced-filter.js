@@ -338,7 +338,7 @@ async function filterETFs() {
     // Traiter tous les instruments
     const allItems = [
         ...etfs.map(e => ({ ...e, type: 'ETF' })),
-        ...bonds.map(b => ({ ...b, type: 'BOND' })
+        ...bonds.map(b => ({ ...b, type: 'BOND' }))
     ];
     
     console.log(`🔍 Analyse de ${allItems.length} instruments...\n`);
@@ -359,7 +359,7 @@ async function filterETFs() {
                 const advInfo = result.avg_dollar_volume 
                     ? `${(result.avg_dollar_volume/1e6).toFixed(2)}M$`
                     : 'N/A';
-                console.log(`  ${result.symbolParam} | ADV: ${advInfo} | ${result.passed ? '✅ PASS' : '❌ FAIL'}`));
+                console.log(`  ${result.symbolParam} | ADV: ${advInfo} | ${result.passed ? '✅ PASS' : '❌ FAIL'}`);
             }
             
             // Classer
