@@ -1,6 +1,6 @@
 // etf-advanced-filter.js
-// Version simplifiée : Filtrage par ADV médiane 30j uniquement
-// Garde la même structure de sortie pour compatibilité
+// Version simplifiée : Filtrage par ADV médiane 30j avec agrégation ISIN
+// v8: Agrégation avant filtrage + FX correct + seuils adaptés
 
 const fs = require('fs').promises;
 const axios = require('axios');
@@ -10,8 +10,9 @@ const CONFIG = {
     API_KEY: process.env.TWELVE_DATA_API_KEY,
     DEBUG: process.env.DEBUG === '1',
     
-    // Critère unique simplifié
-    MIN_ADV_USD: 1_000_000,       // 1M$ pour tous (ETF + Bonds)
+    // Seuils différenciés
+    MIN_ADV_USD_ETF: 1_000_000,    // 1M$ pour ETF
+    MIN_ADV_USD_BOND: 500_000,      // 500k$ pour Bonds (plus souple)
     
     // Config API
     DAYS_HISTORY: 30,
@@ -20,7 +21,8 @@ const CONFIG = {
     CREDIT_LIMIT: 2500,
     CREDITS: {
         TIME_SERIES: 5,
-        QUOTE: 0
+        QUOTE: 0,
+        PRICE: 0
     }
 };
 
@@ -71,45 +73,140 @@ function cleanSymbol(symbol) {
     return symbol;
 }
 
-function buildSymbolParam(symbol, mic_code) {
-    const cleaned = cleanSymbol(symbol);
-    if (US_MIC_CODES.includes(mic_code)) {
-        return cleaned;
-    }
-    return mic_code ? `${cleaned}:${mic_code}` : cleaned;
-}
-
-// Obtenir le taux de change
-async function getFxRate(currency, apiKey) {
-    if (currency === 'USD') return 1;
+// Conversion FX améliorée avec support GBX
+async function fxToUSD(currency) {
+    if (!currency || currency === 'USD') return 1;
     
-    const cacheKey = `${currency}/USD`;
+    // GBX = pence sterling (GBP/100)
+    if (currency === 'GBX') {
+        const gbpRate = await fxToUSD('GBP');
+        return gbpRate / 100;
+    }
+    
+    const cacheKey = currency;
     if (fxCache.has(cacheKey)) {
         return fxCache.get(cacheKey);
     }
     
+    // Essayer CCY/USD
     try {
-        const { data } = await axios.get('https://api.twelvedata.com/quote', {
+        const { data } = await axios.get('https://api.twelvedata.com/price', {
             params: { 
-                symbol: cacheKey,
-                apikey: apiKey 
+                symbol: `${currency}/USD`,
+                apikey: CONFIG.API_KEY 
             }
         });
-        
-        const rate = Number(data.close) || 1;
-        fxCache.set(cacheKey, rate);
-        return rate;
-    } catch {
-        fxCache.set(cacheKey, 1);
-        return 1;
-    }
+        const rate = Number(data?.price);
+        if (rate > 0) {
+            fxCache.set(cacheKey, rate);
+            return rate;
+        }
+    } catch {}
+    
+    // Essayer USD/CCY (puis inverser)
+    try {
+        const { data } = await axios.get('https://api.twelvedata.com/price', {
+            params: { 
+                symbol: `USD/${currency}`,
+                apikey: CONFIG.API_KEY 
+            }
+        });
+        const rate = Number(data?.price);
+        if (rate > 0) {
+            const inverted = 1 / rate;
+            fxCache.set(cacheKey, inverted);
+            return inverted;
+        }
+    } catch {}
+    
+    // Fallback
+    console.warn(`⚠️ Taux FX ${currency}/USD non trouvé, utilise 1`);
+    fxCache.set(cacheKey, 1);
+    return 1;
 }
 
-// Calculer ADV médiane sur 30 jours
-async function calculate30DayADV(symbol, mic_code, currency = 'USD') {
+// Résolution améliorée des symboles
+async function resolveSymbol(item) {
+    const { symbol, mic_code, isin } = item;
+    const cleaned = cleanSymbol(symbol);
+    
+    // 1) Essayer ticker nu
     try {
-        const symbolParam = buildSymbolParam(symbol, mic_code);
+        const quote = await axios.get('https://api.twelvedata.com/quote', {
+            params: { symbol: cleaned, apikey: CONFIG.API_KEY }
+        }).then(r => r.data);
         
+        if (quote && quote.status !== 'error') {
+            return { symbolParam: cleaned, quote };
+        }
+    } catch {}
+    
+    // 2) Essayer ticker:MIC
+    if (mic_code && !US_MIC_CODES.includes(mic_code)) {
+        try {
+            const symbolWithMic = `${cleaned}:${mic_code}`;
+            const quote = await axios.get('https://api.twelvedata.com/quote', {
+                params: { symbol: symbolWithMic, apikey: CONFIG.API_KEY }
+            }).then(r => r.data);
+            
+            if (quote && quote.status !== 'error') {
+                return { symbolParam: symbolWithMic, quote };
+            }
+        } catch {}
+    }
+    
+    // 3) Symbol search par ticker
+    try {
+        const search = await axios.get('https://api.twelvedata.com/symbol_search', {
+            params: { symbol: cleaned, apikey: CONFIG.API_KEY }
+        }).then(r => r.data);
+        
+        if (search?.data?.[0]) {
+            const result = search.data[0];
+            const resolvedSymbol = US_MIC_CODES.includes(result.mic_code) 
+                ? result.symbol 
+                : `${result.symbol}:${result.mic_code}`;
+            
+            const quote = await axios.get('https://api.twelvedata.com/quote', {
+                params: { symbol: resolvedSymbol, apikey: CONFIG.API_KEY }
+            }).then(r => r.data);
+            
+            if (quote && quote.status !== 'error') {
+                return { symbolParam: resolvedSymbol, quote };
+            }
+        }
+    } catch {}
+    
+    // 4) Symbol search par ISIN
+    if (isin) {
+        try {
+            const search = await axios.get('https://api.twelvedata.com/symbol_search', {
+                params: { isin: isin, apikey: CONFIG.API_KEY }
+            }).then(r => r.data);
+            
+            if (search?.data?.[0]) {
+                const result = search.data[0];
+                const resolvedSymbol = US_MIC_CODES.includes(result.mic_code) 
+                    ? result.symbol 
+                    : `${result.symbol}:${result.mic_code}`;
+                
+                const quote = await axios.get('https://api.twelvedata.com/quote', {
+                    params: { symbol: resolvedSymbol, apikey: CONFIG.API_KEY }
+                }).then(r => r.data);
+                
+                if (quote && quote.status !== 'error') {
+                    return { symbolParam: resolvedSymbol, quote };
+                }
+            }
+        } catch {}
+    }
+    
+    return null;
+}
+
+// Calculer ADV médiane sur 30 jours (retourne en monnaie locale)
+async function calculate30DayADV(symbolParam) {
+    try {
         await pay(CONFIG.CREDITS.TIME_SERIES);
         
         const { data } = await axios.get('https://api.twelvedata.com/time_series', {
@@ -125,7 +222,7 @@ async function calculate30DayADV(symbol, mic_code, currency = 'USD') {
             return null;
         }
         
-        // Extraire les volumes en dollars
+        // Extraire les volumes en monnaie locale
         const advValues = data.values.map(day => {
             const volume = Number(day.volume) || 0;
             const close = Number(day.close) || 0;
@@ -141,181 +238,75 @@ async function calculate30DayADV(symbol, mic_code, currency = 'USD') {
             ? advValues[mid] 
             : (advValues[mid - 1] + advValues[mid]) / 2;
         
-        // Convertir en USD si nécessaire
-        const fxRate = await getFxRate(currency, CONFIG.API_KEY);
-        const medianUSD = medianLocal * fxRate;
-        
-        // Calculer aussi le spread moyen (pour info seulement)
-        const spreads = data.values.map(day => {
-            const high = Number(day.high) || 0;
-            const low = Number(day.low) || 0;
-            const close = Number(day.close) || 0;
-            return close > 0 ? (high - low) / close : null;
-        }).filter(s => s !== null);
-        
-        const avgSpread = spreads.length > 0 
-            ? spreads.reduce((a, b) => a + b) / spreads.length 
-            : null;
-        
         return {
-            adv_median_usd: medianUSD,
-            spread_avg: avgSpread,
-            days_with_data: advValues.length,
-            fx_rate: fxRate
+            adv_median_local: medianLocal,
+            days_with_data: advValues.length
         };
         
     } catch (error) {
         if (CONFIG.DEBUG) {
-            console.error(`Erreur ADV ${symbol}: ${error.message}`);
+            console.error(`Erreur ADV: ${error.message}`);
         }
         return null;
     }
 }
 
-// Traiter un ETF avec structure de sortie identique à l'ancienne version
-async function processETF(item) {
+// Traiter un ETF/Bond individuellement
+async function processListing(item) {
     try {
-        const symbolParam = buildSymbolParam(item.symbol, item.mic_code);
-        
-        // 1) Quote basique pour prix actuel
-        const quote = await axios.get('https://api.twelvedata.com/quote', {
-            params: { symbol: symbolParam, apikey: CONFIG.API_KEY }
-        }).then(r => r.data).catch(() => null);
-        
-        if (!quote || quote.status === 'error') {
+        // Résolution du symbole
+        const resolved = await resolveSymbol(item);
+        if (!resolved) {
             return { ...item, reason: 'UNSUPPORTED_BY_PROVIDER' };
         }
         
-        // 2) Calculer ADV médiane 30j
-        const advData = await calculate30DayADV(
-            item.symbol, 
-            item.mic_code, 
-            item.currency || 'USD'
-        );
+        const { symbolParam, quote } = resolved;
         
-        if (!advData) {
-            return { ...item, reason: 'NO_VOLUME_DATA' };
+        // Obtenir la devise depuis quote
+        const currency = quote.currency || 'USD';
+        const fx = await fxToUSD(currency);
+        
+        // Calculer ADV médiane 30j
+        const advData = await calculate30DayADV(symbolParam);
+        
+        let adv_median_usd;
+        
+        if (advData) {
+            // Convertir en USD
+            adv_median_usd = advData.adv_median_local * fx;
+        } else {
+            // Fallback: utiliser average_volume de quote
+            const avgVolume = Number(quote.average_volume) || Number(quote.volume) || 0;
+            const price = Number(quote.close) || Number(quote.previous_close) || 0;
+            adv_median_usd = avgVolume * price * fx;
         }
         
-        // 3) Construire l'objet de sortie (garde tous les champs pour compatibilité)
-        const result = {
-            // Identification
-            symbol: item.symbol,
-            name: item.name,
-            isin: item.isin,
-            mic_code: item.mic_code,
-            type: item.type,  // IMPORTANT: Copier le type !
+        // Retourner toutes les infos sans décider pass/fail
+        return {
+            ...item,
             symbolParam,
-            
-            // Prix et variations (depuis quote)
+            currency,
+            fx_rate: fx,
             price: Number(quote.close) || 0,
             change: Number(quote.change) || 0,
             percent_change: Number(quote.percent_change) || 0,
             volume: Number(quote.volume) || 0,
             average_volume: Number(quote.average_volume) || 0,
-            
-            // Métriques clés
-            net_assets: Number(quote.market_capitalization) || 0, // Fallback
-            avg_dollar_volume: advData.adv_median_usd,
-            
-            // Champs vides pour compatibilité
-            nav: 0,
-            nav_available: false,
-            premium_discount: 0,
-            fund_type: '',
-            expense_ratio: 0,
-            yield_ttm: 0,
-            inception_date: '',
-            
-            // Performance (vide pour simplifier)
-            trailing_returns: {},
-            ytd_return: null,
-            one_month_return: null,
-            three_month_return: null,
-            one_year_return: null,
-            three_year_return: null,
-            five_year_return: null,
-            ten_year_return: null,
-            
-            // Risque (vide)
-            volatility_3y: null,
-            sharpe_3y: null,
-            beta_3y: null,
-            
-            // Composition (vide)
-            sectors: [],
-            top_holdings: [],
-            countries: [],
-            
-            // Métriques custom
-            vol_ratio: 1,
-            spread_avg: advData.spread_avg,
-            days_traded: advData.days_with_data
+            net_assets: Number(quote.market_capitalization) || 0,
+            adv_median_usd,
+            days_traded: advData?.days_with_data || 0
         };
-        
-        // 4) Appliquer le filtre simple - ADV UNIQUEMENT
-        const passLiquidity = advData.adv_median_usd >= CONFIG.MIN_ADV_USD;
-        
-        // MODIFICATION: Ignorer complètement le spread
-        if (passLiquidity) {
-            return { ...result, passed: true };
-        } else {
-            return { ...result, failed: ['liquidity'] };
-        }
         
     } catch (error) {
         return { ...item, reason: 'API_ERROR' };
     }
 }
 
-// Agréger par ISIN si plusieurs listings
-function aggregateByISIN(results) {
-    const isinGroups = {};
-    
-    results.forEach(item => {
-        const isin = item.isin || `NO_ISIN_${item.symbol}`;
-        if (!isinGroups[isin]) {
-            isinGroups[isin] = [];
-        }
-        isinGroups[isin].push(item);
-    });
-    
-    const aggregated = [];
-    
-    Object.entries(isinGroups).forEach(([isin, group]) => {
-        if (group.length === 1) {
-            aggregated.push(group[0]);
-        } else {
-            // Agréger les volumes
-            const totalADV = group.reduce((sum, item) => {
-                return sum + (item.avg_dollar_volume || 0);
-            }, 0);
-            
-            // Prendre le listing principal (plus gros volume)
-            const main = group.reduce((best, item) => {
-                return (item.avg_dollar_volume || 0) > (best.avg_dollar_volume || 0) ? item : best;
-            });
-            
-            aggregated.push({
-                ...main,
-                avg_dollar_volume: totalADV,
-                listings: group.map(g => ({
-                    symbol: g.symbol,
-                    mic_code: g.mic_code,
-                    adv: g.avg_dollar_volume
-                }))
-            });
-        }
-    });
-    
-    return aggregated;
-}
-
 // Fonction principale
 async function filterETFs() {
-    console.log('📊 Filtrage simplifié par ADV médiane 30j\n');
-    console.log(`⚙️  Seuil unique: ${(CONFIG.MIN_ADV_USD/1e6).toFixed(1)}M$ ADV`);
-    console.log(`📝  Critère: ADV médiane UNIQUEMENT (spread ignoré)\n`);
+    console.log('📊 Filtrage simplifié par ADV médiane 30j avec agrégation ISIN\n');
+    console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
+    console.log(`📝  Agrégation par ISIN AVANT filtrage\n`);
     
     // Lire les CSV
     const etfData = await fs.readFile('data/all_etfs.csv', 'utf8');
@@ -344,39 +335,103 @@ async function filterETFs() {
     
     console.log(`🔍 Analyse de ${allItems.length} instruments...\n`);
     
-    // Traiter par lots
+    // ÉTAPE 1: Calculer ADV pour chaque listing
+    const allListings = [];
+    
     for (let i = 0; i < allItems.length; i += CONFIG.CHUNK_SIZE) {
         const batch = allItems.slice(i, i + CONFIG.CHUNK_SIZE);
         console.log(`📦 Lot ${Math.floor(i/CONFIG.CHUNK_SIZE) + 1}: ${i+1}-${Math.min(i+CONFIG.CHUNK_SIZE, allItems.length)}`);
         
-        const batchPromises = batch.map(item => processETF(item));
+        const batchPromises = batch.map(item => processListing(item));
         const batchResults = await Promise.all(batchPromises);
         
         batchResults.forEach(result => {
-            const isETF = result.type === 'ETF';
-            
-            // Logger
-            if (result.symbolParam) {
-                const advInfo = result.avg_dollar_volume 
-                    ? `${(result.avg_dollar_volume/1e6).toFixed(2)}M$`
-                    : 'N/A';
-                console.log(`  ${result.symbolParam} | ADV: ${advInfo} | ${result.passed ? '✅ PASS' : '❌ FAIL'}`);
-            }
-            
-            // Classer
-            if (result.passed) {
-                if (isETF) results.etfs.push(result);
-                else results.bonds.push(result);
-            } else {
+            if (result.symbolParam && result.adv_median_usd !== undefined) {
+                const advInfo = `${(result.adv_median_usd/1e6).toFixed(2)}M$`;
+                console.log(`  ${result.symbolParam} | ADV: ${advInfo} | FX: ${result.fx_rate.toFixed(4)}`);
+                allListings.push(result);
+            } else if (result.reason) {
+                console.log(`  ${result.symbol} | ❌ ${result.reason}`);
                 results.rejected.push(result);
             }
         });
     }
     
-    // Optionnel : agréger par ISIN
+    // ÉTAPE 2: Agréger par ISIN
     console.log('\n📊 Agrégation par ISIN...');
-    results.etfs = aggregateByISIN(results.etfs);
-    results.bonds = aggregateByISIN(results.bonds);
+    
+    const isinGroups = {};
+    allListings.forEach(listing => {
+        const isin = listing.isin || `NO_ISIN_${listing.symbol}`;
+        if (!isinGroups[isin]) {
+            isinGroups[isin] = [];
+        }
+        isinGroups[isin].push(listing);
+    });
+    
+    // ÉTAPE 3: Décider pass/fail au niveau groupe
+    Object.entries(isinGroups).forEach(([isin, listings]) => {
+        // Sommer les ADV de tous les listings
+        const totalADV = listings.reduce((sum, l) => sum + (l.adv_median_usd || 0), 0);
+        
+        // Prendre le listing principal (plus gros volume)
+        const main = listings.reduce((best, current) => 
+            (current.adv_median_usd || 0) > (best.adv_median_usd || 0) ? current : best
+        );
+        
+        // Déterminer le seuil selon le type
+        const threshold = main.type === 'BOND' ? CONFIG.MIN_ADV_USD_BOND : CONFIG.MIN_ADV_USD_ETF;
+        const passed = totalADV >= threshold;
+        
+        // Construire l'objet final
+        const finalItem = {
+            ...main,
+            avg_dollar_volume: totalADV,
+            listings: listings.map(l => ({
+                symbol: l.symbol,
+                mic_code: l.mic_code,
+                adv: l.adv_median_usd
+            })),
+            // Champs vides pour compatibilité
+            nav: 0,
+            nav_available: false,
+            premium_discount: 0,
+            fund_type: '',
+            expense_ratio: 0,
+            yield_ttm: 0,
+            inception_date: '',
+            trailing_returns: {},
+            ytd_return: null,
+            one_month_return: null,
+            three_month_return: null,
+            one_year_return: null,
+            three_year_return: null,
+            five_year_return: null,
+            ten_year_return: null,
+            volatility_3y: null,
+            sharpe_3y: null,
+            beta_3y: null,
+            sectors: [],
+            top_holdings: [],
+            countries: [],
+            vol_ratio: 1,
+            spread_avg: null
+        };
+        
+        // Logger la décision
+        console.log(`  ${isin} (${listings.length} listing${listings.length > 1 ? 's' : ''}) | Total ADV: ${(totalADV/1e6).toFixed(2)}M$ | ${passed ? '✅ PASS' : '❌ FAIL'}`);
+        
+        // Classer
+        if (passed) {
+            if (main.type === 'ETF') {
+                results.etfs.push(finalItem);
+            } else {
+                results.bonds.push(finalItem);
+            }
+        } else {
+            results.rejected.push({ ...finalItem, failed: ['liquidity'] });
+        }
+    });
     
     // Statistiques finales
     const elapsedTime = Date.now() - results.stats.start_time;
@@ -410,7 +465,7 @@ async function filterETFs() {
     
     results.stats.rejection_reasons = rejectionReasons;
     
-    // Sauvegarder (même nom de fichier pour compatibilité)
+    // Sauvegarder
     await fs.writeFile('data/filtered_advanced.json', JSON.stringify(results, null, 2));
     
     // CSV simplifié
