@@ -3,59 +3,39 @@ name: ETF Advanced Filter
 on:
   workflow_dispatch:
   schedule:
-    # 14:00 UTC = 15:00/16:00 Paris selon DST, jours ouvrés
-    - cron: '0 14 * * 1-5'
-
-permissions:
-  contents: write
-
-concurrency:
-  group: etf-advanced-filter
-  cancel-in-progress: true
+    - cron: '0 14 * * 1-5'  # 14h UTC = 15h Paris (jours ouvrés)
 
 jobs:
   filter-etfs:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund csv-parse axios
-
-      - name: Run ETF filter
-        env:
-          TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
-        run: |
-          mkdir -p data
-          node etf-advanced-filter.js
-
-      - name: Commit results (only if changed)
-        run: |
-          git config user.email "actions@github.com"
-          git config user.name "github-actions[bot]"
-
-          # Ajoute tout le dossier data/ S'IL y a des fichiers
-          if ls data/* >/dev/null 2>&1; then
-            git add -A data/
-          else
-            echo "No files in data/ to add."
-          fi
-
-          # Commit si des changements sont en staging
-          if ! git diff --staged --quiet; then
-            git commit -m "Update filtered ETFs [skip ci]"
-            git pull --rebase origin "${GITHUB_REF_NAME}"
-            git push
-          else
-            echo "No changes to commit."
-          fi
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: npm install csv-parse axios
+    
+    - name: Run ETF filter
+      env:
+        TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
+      run: node etf-advanced-filter.js
+    
+    - name: Commit results
+      run: |
+        git config --local user.email "actions@github.com"
+        git config --local user.name "GitHub Actions"
+        
+        # Ajouter les fichiers générés
+        git add data/filtered_advanced.json data/filtered_advanced.json
+        
+        # Ajouter package.json et package-lock.json si modifiés
+        git add -f package.json package-lock.json || true
+        
+        # Commit seulement s'il y a des changements
+        git diff --quiet && git diff --staged --quiet || git commit -m "Update filtered ETFs [skip ci]"
+        git push
