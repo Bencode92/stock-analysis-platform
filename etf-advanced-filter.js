@@ -1,6 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition
-// v9: Budget 2584 crédits/min, sort uniquement les données hebdo demandées
+// v10: Ajout pickWeekly, fallback géo domicile, détection ETF single-stock
 
 const fs = require('fs').promises;
 const axios = require('axios');
@@ -29,6 +29,26 @@ const CONFIG = {
 
 // MIC codes US
 const US_MIC_CODES = ['ARCX', 'BATS', 'XNAS', 'XNYS', 'XASE', 'XNGS', 'XNMS'];
+
+// Map pour ETF single-stock courants
+const SINGLE_STOCK_SECTORS = {
+    'AAPL': { sector: 'Technology', country: 'United States' },
+    'MSFT': { sector: 'Technology', country: 'United States' },
+    'NVDA': { sector: 'Technology', country: 'United States' },
+    'GOOGL': { sector: 'Technology', country: 'United States' },
+    'GOOG': { sector: 'Technology', country: 'United States' },
+    'AMZN': { sector: 'Consumer Cyclical', country: 'United States' },
+    'TSLA': { sector: 'Consumer Cyclical', country: 'United States' },
+    'META': { sector: 'Technology', country: 'United States' },
+    'FB': { sector: 'Technology', country: 'United States' },
+    'NFLX': { sector: 'Communication Services', country: 'United States' },
+    'JPM': { sector: 'Financial Services', country: 'United States' },
+    'BAC': { sector: 'Financial Services', country: 'United States' },
+    'WMT': { sector: 'Consumer Defensive', country: 'United States' },
+    'JNJ': { sector: 'Healthcare', country: 'United States' },
+    'V': { sector: 'Financial Services', country: 'United States' },
+    'MA': { sector: 'Financial Services', country: 'United States' }
+};
 
 // Cache pour les symboles et FX
 const symbolCache = new Map();
@@ -91,6 +111,56 @@ function cleanSymbol(symbol) {
         return symbol.split('.')[0];
     }
     return symbol;
+}
+
+// Fonction pour filtrer uniquement les champs hebdomadaires
+function pickWeekly(etf) {
+    return {
+        symbol: etf.symbol,
+        isin: etf.isin || null,
+        mic_code: etf.mic_code || null,
+        currency: etf.currency || null,
+        fund_type: etf.fund_type || null,
+        aum_usd: etf.aum_usd ?? null,
+        total_expense_ratio: etf.total_expense_ratio ?? null,
+        yield_ttm: etf.yield_ttm ?? null,
+        objective: etf.objective || '',
+        // Secteurs
+        sectors: etf.sectors || [],
+        sector_top5: etf.sector_top5 || [],
+        sector_top: etf.sector_top || null,
+        // Pays (avec fallback domicile si vide)
+        countries: (etf.countries && etf.countries.length ? etf.countries : []),
+        country_top5: (etf.country_top5 && etf.country_top5.length ? etf.country_top5 : []),
+        country_top: (etf.country_top5 && etf.country_top5[0]) ? etf.country_top5[0] : null,
+        domicile: etf.Country || null,  // Depuis le CSV d'entrée
+        // Indicateurs de qualité
+        is_single_stock: etf.is_single_stock || false,
+        auto_detected_composition: etf.auto_detected_composition || false,
+        data_quality_score: etf.data_quality_score || 0
+    };
+}
+
+// Calculer un score de qualité des données
+function calculateDataQualityScore(etf) {
+    let score = 0;
+    const weights = {
+        aum_usd: 20,
+        total_expense_ratio: 15,
+        yield_ttm: 10,
+        objective: 15,
+        sectors: 20,
+        countries: 20
+    };
+    
+    if (etf.aum_usd != null) score += weights.aum_usd;
+    if (etf.total_expense_ratio != null) score += weights.total_expense_ratio;
+    if (etf.yield_ttm != null) score += weights.yield_ttm;
+    if (etf.objective && etf.objective.length > 20) score += weights.objective;
+    if (etf.sectors && etf.sectors.length > 0) score += weights.sectors;
+    if (etf.countries && etf.countries.length > 0) score += weights.countries;
+    
+    return score;
 }
 
 // Conversion FX améliorée avec support GBX
@@ -272,7 +342,7 @@ async function calculate30DayADV(symbolParam) {
 }
 
 // Pack hebdo : summary + composition (paye 400 crédits d'un coup)
-async function fetchWeeklyPack(symbolParam) {
+async function fetchWeeklyPack(symbolParam, item) {
     // Réserve 400 crédits d'un coup (respecte 2584/min via pay)
     await pay(ENRICH_COST);
 
@@ -296,18 +366,47 @@ async function fetchWeeklyPack(symbolParam) {
         yield_ttm: (s.yield != null) ? Number(s.yield) : null,
         currency: s.currency || null,
         fund_type: s.fund_type || null,
-        objective: sanitizeText(s.overview || '')
+        objective: sanitizeText(s.overview || ''),
+        domicile: s.domicile || item.Country || null  // Récupérer le domicile
     };
 
     // composition (secteurs/pays + top5 & top1)
-    const sectors = (c.major_market_sectors || []).map(x => ({
+    let sectors = (c.major_market_sectors || []).map(x => ({
         sector: x.sector, 
         weight: (x.weight != null) ? Number(x.weight) : null
     }));
-    const countries = (c.country_allocation || []).map(x => ({
+    
+    let countries = (c.country_allocation || []).map(x => ({
         country: x.country, 
         weight: (x.allocation != null) ? Number(x.allocation) : null
     }));
+
+    // Détection automatique pour ETF single-stock si pas de composition
+    let autoDetected = false;
+    if (!sectors.length && pack.objective) {
+        // Chercher un ticker connu dans l'objective
+        const foundTicker = Object.keys(SINGLE_STOCK_SECTORS).find(ticker => 
+            pack.objective.toUpperCase().includes(ticker)
+        );
+        
+        if (foundTicker) {
+            const stockInfo = SINGLE_STOCK_SECTORS[foundTicker];
+            sectors = [{ sector: stockInfo.sector, weight: 1.0 }];
+            countries = [{ country: stockInfo.country, weight: 1.0 }];
+            autoDetected = true;
+            pack.is_single_stock = true;
+        }
+    }
+
+    // Fallback géographique : utiliser le domicile si pas de pays
+    if (!countries.length && pack.domicile) {
+        countries = [{
+            country: pack.domicile,
+            weight: null,  // null indique que c'est le domicile, pas une allocation
+            is_domicile: true
+        }];
+    }
+
     const sector_top5 = topN(sectors, 'weight', 5);
     const country_top5 = topN(countries, 'weight', 5);
 
@@ -318,7 +417,8 @@ async function fetchWeeklyPack(symbolParam) {
         sector_top: sector_top5[0] || null,
         countries,
         country_top5,
-        country_top: country_top5[0] || null
+        country_top: country_top5[0] || null,
+        auto_detected_composition: autoDetected
     };
 }
 
@@ -375,7 +475,7 @@ async function processListing(item) {
 
 // Fonction principale
 async function filterETFs() {
-    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition\n');
+    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition v10\n');
     console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
     console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max\n`);
     
@@ -496,11 +596,14 @@ async function filterETFs() {
         await Promise.all(batch.map(async (it) => {
             const symbolForApi = it.symbolParam || it.symbol;
             try {
-                const weekly = await fetchWeeklyPack(symbolForApi);
+                const weekly = await fetchWeeklyPack(symbolForApi, it);
                 Object.assign(it, weekly);
                 
+                // Calculer le score de qualité des données
+                it.data_quality_score = calculateDataQualityScore(it);
+                
                 if (CONFIG.DEBUG) {
-                    console.log(`  ${symbolForApi} | AUM ${it.aum_usd} | TER ${it.total_expense_ratio} | Yield ${it.yield_ttm} | SectorTop ${it.sector_top?.sector} | CountryTop ${it.country_top?.country}`);
+                    console.log(`  ${symbolForApi} | AUM ${it.aum_usd} | TER ${it.total_expense_ratio} | Yield ${it.yield_ttm} | SectorTop ${it.sector_top?.sector} | CountryTop ${it.country_top?.country} | Quality ${it.data_quality_score}`);
                 }
             } catch (e) {
                 console.log(`  ${symbolForApi} | ⚠️ Enrichissement hebdo KO: ${e.message}`);
@@ -523,7 +626,9 @@ async function filterETFs() {
         with_yield: results.etfs.filter(e => e.yield_ttm != null).length,
         with_sectors: results.etfs.filter(e => e.sectors && e.sectors.length > 0).length,
         with_countries: results.etfs.filter(e => e.countries && e.countries.length > 0).length,
-        with_objective: results.etfs.filter(e => e.objective && e.objective.length > 0).length
+        with_objective: results.etfs.filter(e => e.objective && e.objective.length > 0).length,
+        with_auto_detection: results.etfs.filter(e => e.auto_detected_composition).length,
+        avg_quality_score: Math.round(results.etfs.reduce((acc, e) => acc + (e.data_quality_score || 0), 0) / results.etfs.length)
     };
     
     // Analyser les raisons de rejet
@@ -540,43 +645,50 @@ async function filterETFs() {
     
     results.stats.rejection_reasons = rejectionReasons;
     
-    // Sauvegarder les résultats complets
+    // Sauvegarder les résultats complets (avec tous les champs)
     await fs.writeFile('data/filtered_advanced.json', JSON.stringify(results, null, 2));
     
-    // Snapshot JSON hebdo (sans prix/var)
+    // Snapshot JSON hebdo (UNIQUEMENT les champs hebdo via pickWeekly)
     const weekly = {
         timestamp: new Date().toISOString(),
-        etfs: results.etfs,
-        bonds: results.bonds
+        etfs: results.etfs.map(pickWeekly),
+        bonds: results.bonds.map(pickWeekly),
+        stats: {
+            total_etfs: results.stats.etfs_retained,
+            total_bonds: results.stats.bonds_retained,
+            data_quality: results.stats.data_quality
+        }
     };
     await fs.writeFile('data/weekly_snapshot.json', JSON.stringify(weekly, null, 2));
     
     // CSV hebdo avec les champs demandés
     const csvHeader = [
-        'symbol','mic_code','currency','fund_type',
+        'symbol','isin','mic_code','currency','fund_type',
         'aum_usd','total_expense_ratio','yield_ttm',
         'objective',
         'sector_top','sector_top_weight',
         'country_top','country_top_weight',
-        'sector_top5','country_top5'
+        'sector_top5','country_top5',
+        'data_quality_score'
     ].join(',') + '\n';
     
     const csvRows = results.etfs.map(e => {
         const sectorTop = e.sector_top ? e.sector_top.sector : '';
         const sectorTopW = e.sector_top?.weight != null ? (e.sector_top.weight*100).toFixed(2) : '';
-        const countryTop = e.country_top ? e.country_top.country : '';
+        const countryTop = e.country_top ? e.country_top.country : (e.domicile || '');
         const countryTopW = e.country_top?.weight != null ? (e.country_top.weight*100).toFixed(2) : '';
         const sectorTop5 = JSON.stringify((e.sector_top5 || []).map(x => ({ s: x.sector, w: Number((x.weight*100).toFixed(2)) }))).replace(/"/g,'""');
-        const countryTop5 = JSON.stringify((e.country_top5 || []).map(x => ({ c: x.country, w: Number((x.weight*100).toFixed(2)) }))).replace(/"/g,'""');
+        const countryTop5 = JSON.stringify((e.country_top5 || []).map(x => ({ c: x.country, w: x.weight ? Number((x.weight*100).toFixed(2)) : null }))).replace(/"/g,'""');
         const objective = `"${(e.objective || '').replace(/"/g, '""')}"`;
         
         return [
-            e.symbol, e.mic_code || '', e.currency || '', e.fund_type || '',
+            e.symbol, e.isin || '', e.mic_code || '', e.currency || '', e.fund_type || '',
             e.aum_usd ?? '', e.total_expense_ratio ?? '', e.yield_ttm ?? '',
             objective,
             `"${sectorTop}"`, sectorTopW,
             `"${countryTop}"`, countryTopW,
-            `"${sectorTop5}"`, `"${countryTop5}"`
+            `"${sectorTop5}"`, `"${countryTop5}"`,
+            e.data_quality_score || 0
         ].join(',');
     }).join('\n');
     
@@ -600,7 +712,7 @@ async function filterETFs() {
     });
     
     console.log('\n✅ Résultats complets: data/filtered_advanced.json');
-    console.log('✅ Weekly snapshot JSON: data/weekly_snapshot.json');
+    console.log('✅ Weekly snapshot JSON: data/weekly_snapshot.json (champs hebdo uniquement)');
     console.log('✅ Weekly snapshot CSV: data/weekly_snapshot.csv');
     
     // Pour GitHub Actions
