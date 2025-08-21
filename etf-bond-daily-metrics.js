@@ -207,18 +207,22 @@ function mergeWeeklyDaily(weeklyArr, dailyMapBySymbol){
   });
 }
 
-function writeCSV(filePath, arr, header){
-  const head = header.join(',') + '\n';
-  const rows = arr.map(o => header.map(h => {
-    const v = o[h];
-    if (v==null) return '';
+async function writeCSV(filePath, rows, columns) {
+  const header = columns.join(',') + '\n';
+
+  const safe = v => {
+    if (v === null || v === undefined) return '';
     const s = String(v);
-    if (s.includes('"') || s.includes(',') || s.includes('\n')) {
-      return `"${s.replace(/"/g,'""')}"`;
-    }
-    return s;
-  }).join(',')).join('\n');
-  return fs.writeFile(filePath, head + (rows ? rows + '\n' : ''));
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
+  if (!rows || rows.length === 0) {
+    await fs.writeFile(filePath, header);     // ✅ fichier vide mais présent
+    return;
+  }
+
+  const body = rows.map(r => columns.map(c => safe(r[c])).join(',')).join('\n');
+  await fs.writeFile(filePath, header + body);
 }
 
 async function main(){
@@ -362,8 +366,9 @@ async function main(){
       sector_top_weight: sectorTopW,
       country_top: countryTop,
       country_top_weight: countryTopW,
-      sector_top5,
-      country_top5
+      // ⬇️ Explicit mapping vers les bons noms de colonnes
+      sector_top5: sectorTop5,
+      country_top5: countryTop5
     };
   });
 
