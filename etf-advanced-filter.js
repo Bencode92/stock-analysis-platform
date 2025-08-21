@@ -1,6 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition
-// v11.1: Fix chemins de sortie + support OUT_DIR configurable
+// v11.2: Séparation en 2 CSV distincts (ETFs et Bonds)
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -553,7 +553,7 @@ async function processListing(item) {
 
 // Fonction principale
 async function filterETFs() {
-    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition v11.1\n');
+    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition v11.2\n');
     console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
     console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max`);
     console.log(`📂  Dossier de sortie: ${OUT_DIR}\n`);
@@ -751,8 +751,10 @@ async function filterETFs() {
     const weeklyPath = path.join(OUT_DIR, 'weekly_snapshot.json');
     await fs.writeFile(weeklyPath, JSON.stringify(weekly, null, 2));
     
-    // CSV hebdo avec les champs demandés
-    const csvHeader = [
+    // === CSV EXPORTS (Option A) ===
+
+    // CSV hebdo ETF
+    const csvHeaderEtf = [
         'symbol','isin','mic_code','currency','fund_type','etf_type',
         'aum_usd','total_expense_ratio','yield_ttm',
         'objective',
@@ -761,8 +763,8 @@ async function filterETFs() {
         'sector_top5','country_top5',
         'data_quality_score'
     ].join(',') + '\n';
-    
-    const csvRows = results.etfs.map(e => {
+
+    const csvRowsEtf = results.etfs.map(e => {
         const sectorTop = e.sector_top ? e.sector_top.sector : '';
         const sectorTopW = e.sector_top?.weight != null ? (e.sector_top.weight*100).toFixed(2) : '';
         const countryTop = e.country_top ? e.country_top.country : (e.domicile || '');
@@ -770,7 +772,7 @@ async function filterETFs() {
         const sectorTop5 = JSON.stringify((e.sector_top5 || []).map(x => ({ s: x.sector, w: Number((x.weight*100).toFixed(2)) }))).replace(/"/g,'""');
         const countryTop5 = JSON.stringify((e.country_top5 || []).map(x => ({ c: x.country, w: x.weight ? Number((x.weight*100).toFixed(2)) : null }))).replace(/"/g,'""');
         const objective = `"${(e.objective || '').replace(/"/g, '""')}"`;
-        
+
         return [
             e.symbol, e.isin || '', e.mic_code || '', e.currency || '', e.fund_type || '', e.etf_type || '',
             e.aum_usd ?? '', e.total_expense_ratio ?? '', e.yield_ttm ?? '',
@@ -781,9 +783,28 @@ async function filterETFs() {
             e.data_quality_score || 0
         ].join(',');
     }).join('\n');
-    
-    const csvPath = path.join(OUT_DIR, 'weekly_snapshot.csv');
-    await fs.writeFile(csvPath, csvHeader + csvRows);
+
+    // Toujours écrire le fichier (même si 0 ETF → juste l'entête)
+    const etfCsvPath = path.join(OUT_DIR, 'weekly_snapshot_etfs.csv');
+    await fs.writeFile(etfCsvPath, csvHeaderEtf + (csvRowsEtf ? csvRowsEtf + '\n' : ''));
+    console.log(`📝 CSV ETFs: ${results.etfs.length} ligne(s) → ${etfCsvPath}`);
+
+    // CSV hebdo BONDS (colonnes marché simples)
+    // -> Toujours écrire le fichier (même si 0 bond) : au minimum l'entête
+    const csvHeaderBonds = [
+        'symbol','isin','mic_code','currency',
+        'avg_dollar_volume','price','change','percent_change','volume','average_volume','days_traded'
+    ].join(',') + '\n';
+
+    const csvRowsBonds = results.bonds.map(b => [
+        b.symbol, b.isin || '', b.mic_code || '', b.currency || '',
+        b.avg_dollar_volume ?? '', b.price ?? '', b.change ?? '', b.percent_change ?? '',
+        b.volume ?? '', b.average_volume ?? '', b.days_traded ?? ''
+    ].join(',')).join('\n');
+
+    const bondsCsvPath = path.join(OUT_DIR, 'weekly_snapshot_bonds.csv');
+    await fs.writeFile(bondsCsvPath, csvHeaderBonds + (csvRowsBonds ? csvRowsBonds + '\n' : ''));
+    console.log(`📝 CSV Bonds: ${results.bonds.length} ligne(s) → ${bondsCsvPath}`);
     
     // Résumé
     console.log('\n📊 RÉSUMÉ:');
@@ -811,7 +832,8 @@ async function filterETFs() {
     
     console.log(`\n✅ Résultats complets: ${filteredPath}`);
     console.log(`✅ Weekly snapshot JSON: ${weeklyPath} (champs hebdo uniquement)`);
-    console.log(`✅ Weekly snapshot CSV: ${csvPath}`);
+    console.log(`✅ CSV ETFs: ${etfCsvPath}`);
+    console.log(`✅ CSV Bonds: ${bondsCsvPath}`);
     
     // Pour GitHub Actions
     if (process.env.GITHUB_ACTIONS) {
