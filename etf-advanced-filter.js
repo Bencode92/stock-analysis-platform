@@ -1,10 +1,13 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition
-// v11: Normalisation secteurs, timestamps, détails qualité, regex detection améliorée
+// v11.1: Fix chemins de sortie + support OUT_DIR configurable
 
 const fs = require('fs').promises;
+const path = require('path');
 const axios = require('axios');
 const csv = require('csv-parse/sync');
+
+const OUT_DIR = process.env.OUT_DIR || 'data';
 
 const CONFIG = {
     API_KEY: process.env.TWELVE_DATA_API_KEY,
@@ -550,9 +553,13 @@ async function processListing(item) {
 
 // Fonction principale
 async function filterETFs() {
-    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition v11\n');
+    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition v11.1\n');
     console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
-    console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max\n`);
+    console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max`);
+    console.log(`📂  Dossier de sortie: ${OUT_DIR}\n`);
+    
+    // Garantir que le dossier de sortie existe
+    await fs.mkdir(OUT_DIR, { recursive: true });
     
     // Lire les CSV
     const etfData = await fs.readFile('data/all_etfs.csv', 'utf8');
@@ -727,7 +734,8 @@ async function filterETFs() {
     results.stats.rejection_reasons = rejectionReasons;
     
     // Sauvegarder les résultats complets (avec tous les champs)
-    await fs.writeFile('data/filtered_advanced.json', JSON.stringify(results, null, 2));
+    const filteredPath = path.join(OUT_DIR, 'filtered_advanced.json');
+    await fs.writeFile(filteredPath, JSON.stringify(results, null, 2));
     
     // Snapshot JSON hebdo (UNIQUEMENT les champs hebdo via pickWeekly)
     const weekly = {
@@ -740,7 +748,8 @@ async function filterETFs() {
             data_quality: results.stats.data_quality
         }
     };
-    await fs.writeFile('data/weekly_snapshot.json', JSON.stringify(weekly, null, 2));
+    const weeklyPath = path.join(OUT_DIR, 'weekly_snapshot.json');
+    await fs.writeFile(weeklyPath, JSON.stringify(weekly, null, 2));
     
     // CSV hebdo avec les champs demandés
     const csvHeader = [
@@ -773,7 +782,8 @@ async function filterETFs() {
         ].join(',');
     }).join('\n');
     
-    await fs.writeFile('data/weekly_snapshot.csv', csvHeader + csvRows);
+    const csvPath = path.join(OUT_DIR, 'weekly_snapshot.csv');
+    await fs.writeFile(csvPath, csvHeader + csvRows);
     
     // Résumé
     console.log('\n📊 RÉSUMÉ:');
@@ -799,9 +809,9 @@ async function filterETFs() {
         console.log(`  - ${reason}: ${count}`);
     });
     
-    console.log('\n✅ Résultats complets: data/filtered_advanced.json');
-    console.log('✅ Weekly snapshot JSON: data/weekly_snapshot.json (champs hebdo uniquement)');
-    console.log('✅ Weekly snapshot CSV: data/weekly_snapshot.csv');
+    console.log(`\n✅ Résultats complets: ${filteredPath}`);
+    console.log(`✅ Weekly snapshot JSON: ${weeklyPath} (champs hebdo uniquement)`);
+    console.log(`✅ Weekly snapshot CSV: ${csvPath}`);
     
     // Pour GitHub Actions
     if (process.env.GITHUB_ACTIONS) {
