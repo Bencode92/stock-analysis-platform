@@ -1,0 +1,122 @@
+name: ETF Data Pipeline
+
+on:
+  schedule:
+    # Hebdomadaire : Dimanche 22h UTC
+    - cron: '0 22 * * 0'
+    # Quotidien : 23h UTC
+    - cron: '0 23 * * *'
+  workflow_dispatch:
+    inputs:
+      job_type:
+        description: 'Job à exécuter'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - weekly
+          - daily
+          - both
+
+jobs:
+  weekly-enrichment:
+    if: github.event.schedule == '0 22 * * 0' || github.event.inputs.job_type == 'weekly' || github.event.inputs.job_type == 'both'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: npm install axios csv-parse
+      
+      - name: Run weekly ETF filter
+        env:
+          TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
+          OUT_DIR: data
+        run: node etf-advanced-filter.js
+      
+      - name: Lister les artefacts générés
+        run: |
+          echo "::group::ls -lah data"
+          ls -lah data || true
+          echo "::endgroup::"
+      
+      - name: Commit & push des snapshots hebdo
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "actions@github.com"
+          
+          # Ajouter explicitement les 3 fichiers
+          git add data/filtered_advanced.json data/weekly_snapshot.json data/weekly_snapshot.csv 2>/dev/null || true
+          
+          # Forcer si nécessaire
+          git add -f data/weekly_snapshot.json data/weekly_snapshot.csv 2>/dev/null || true
+          
+          # Debug : montrer ce qui est indexé
+          echo "::group::git status --porcelain"
+          git status --porcelain
+          echo "::endgroup::"
+          
+          if git diff --cached --quiet; then
+            echo "Aucun changement à commit."
+          else
+            git commit -m "chore: update weekly ETF snapshot [skip ci]"
+            git push
+          fi
+
+  daily-metrics:
+    if: github.event.schedule == '0 23 * * *' || github.event.inputs.job_type == 'daily' || github.event.inputs.job_type == 'both'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: npm install axios
+      
+      - name: Check weekly snapshot exists
+        run: |
+          if [ ! -f "data/weekly_snapshot.json" ]; then
+            echo "❌ weekly_snapshot.json manquant - lancer d'abord le job weekly"
+            exit 1
+          fi
+      
+      - name: Run daily metrics
+        env:
+          TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
+        run: |
+          node daily-metrics.js
+          node merge-weekly-daily.js
+      
+      - name: Lister les fichiers daily générés
+        run: |
+          echo "::group::ls -lah data"
+          ls -lah data/*.json || true
+          echo "::endgroup::"
+      
+      - name: Commit daily updates
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "actions@github.com"
+          
+          git add data/daily_metrics.json data/screener_combined.json 2>/dev/null || true
+          
+          # Debug
+          echo "::group::git status --porcelain"
+          git status --porcelain
+          echo "::endgroup::"
+          
+          if git diff --cached --quiet; then
+            echo "Aucun changement à commit"
+          else
+            git commit -m "chore: daily metrics update $(date +'%Y-%m-%d') [skip ci]"
+            git push
+          fi
