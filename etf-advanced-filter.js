@@ -1,6 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition
-// v10: Ajout pickWeekly, fallback géo domicile, détection ETF single-stock
+// v11: Normalisation secteurs, timestamps, détails qualité, regex detection améliorée
 
 const fs = require('fs').promises;
 const axios = require('axios');
@@ -47,7 +47,38 @@ const SINGLE_STOCK_SECTORS = {
     'WMT': { sector: 'Consumer Defensive', country: 'United States' },
     'JNJ': { sector: 'Healthcare', country: 'United States' },
     'V': { sector: 'Financial Services', country: 'United States' },
-    'MA': { sector: 'Financial Services', country: 'United States' }
+    'MA': { sector: 'Financial Services', country: 'United States' },
+    'BRK': { sector: 'Financial Services', country: 'United States' },
+    'XOM': { sector: 'Energy', country: 'United States' },
+    'UNH': { sector: 'Healthcare', country: 'United States' },
+    'PG': { sector: 'Consumer Defensive', country: 'United States' }
+};
+
+// Normalisation des noms de secteurs
+const SECTOR_NORMALIZATION = {
+    'realestate': 'Real Estate',
+    'real-estate': 'Real Estate',
+    'real_estate': 'Real Estate',
+    'financials': 'Financial Services',
+    'finance': 'Financial Services',
+    'tech': 'Technology',
+    'information technology': 'Technology',
+    'consumer discretionary': 'Consumer Cyclical',
+    'consumer staples': 'Consumer Defensive',
+    'health care': 'Healthcare',
+    'industrials': 'Industrial',
+    'materials': 'Basic Materials',
+    'utilities': 'Utilities',
+    'energy': 'Energy',
+    'communication': 'Communication Services',
+    'telecom': 'Communication Services'
+};
+
+// Regex pour détecter les ETF inverse/leveraged
+const LEVERAGE_PATTERNS = {
+    inverse: /(-1X|BEAR|SHORT|INVERSE|SH$|PSQ|DOG|DXD|SDS|SQQQ)/i,
+    leveraged: /(2X|3X|ULTRA|TQQQ|UPRO|SPXL|QLD|SSO|UDOW|UMDD|URTY|TNA)/i,
+    singleStock: new RegExp(`(${Object.keys(SINGLE_STOCK_SECTORS).join('|')})`, 'i')
 };
 
 // Cache pour les symboles et FX
@@ -113,6 +144,33 @@ function cleanSymbol(symbol) {
     return symbol;
 }
 
+// Normaliser un nom de secteur
+function normalizeSector(sector) {
+    if (!sector) return sector;
+    const lower = sector.toLowerCase().trim();
+    return SECTOR_NORMALIZATION[lower] || sector;
+}
+
+// Détecter le type d'ETF spécial
+function detectETFType(symbol, name, objective) {
+    const fullText = `${symbol} ${name || ''} ${objective || ''}`;
+    
+    if (LEVERAGE_PATTERNS.inverse.test(fullText)) {
+        return { type: 'inverse', leverage: -1 };
+    }
+    if (LEVERAGE_PATTERNS.leveraged.test(fullText)) {
+        const match = fullText.match(/([23])X/i);
+        return { type: 'leveraged', leverage: match ? parseInt(match[1]) : 2 };
+    }
+    if (LEVERAGE_PATTERNS.singleStock.test(fullText)) {
+        const ticker = fullText.match(LEVERAGE_PATTERNS.singleStock)?.[0]?.toUpperCase();
+        if (ticker && SINGLE_STOCK_SECTORS[ticker]) {
+            return { type: 'single_stock', ticker };
+        }
+    }
+    return { type: 'standard' };
+}
+
 // Fonction pour filtrer uniquement les champs hebdomadaires
 function pickWeekly(etf) {
     return {
@@ -121,6 +179,7 @@ function pickWeekly(etf) {
         mic_code: etf.mic_code || null,
         currency: etf.currency || null,
         fund_type: etf.fund_type || null,
+        etf_type: etf.etf_type || null,
         aum_usd: etf.aum_usd ?? null,
         total_expense_ratio: etf.total_expense_ratio ?? null,
         yield_ttm: etf.yield_ttm ?? null,
@@ -129,37 +188,48 @@ function pickWeekly(etf) {
         sectors: etf.sectors || [],
         sector_top5: etf.sector_top5 || [],
         sector_top: etf.sector_top || null,
-        // Pays (avec fallback domicile si vide)
+        // Pays
         countries: (etf.countries && etf.countries.length ? etf.countries : []),
         country_top5: (etf.country_top5 && etf.country_top5.length ? etf.country_top5 : []),
         country_top: (etf.country_top5 && etf.country_top5[0]) ? etf.country_top5[0] : null,
-        domicile: etf.Country || null,  // Depuis le CSV d'entrée
+        domicile: etf.Country || null,
+        // Timestamps
+        as_of_summary: etf.as_of_summary || null,
+        as_of_composition: etf.as_of_composition || null,
         // Indicateurs de qualité
         is_single_stock: etf.is_single_stock || false,
         auto_detected_composition: etf.auto_detected_composition || false,
-        data_quality_score: etf.data_quality_score || 0
+        data_quality_score: etf.data_quality_score || 0,
+        data_quality_details: etf.data_quality_details || {}
     };
 }
 
-// Calculer un score de qualité des données
+// Calculer un score de qualité des données avec détails
 function calculateDataQualityScore(etf) {
-    let score = 0;
-    const weights = {
-        aum_usd: 20,
-        total_expense_ratio: 15,
-        yield_ttm: 10,
-        objective: 15,
-        sectors: 20,
-        countries: 20
+    const details = {
+        has_aum: etf.aum_usd != null,
+        has_ter: etf.total_expense_ratio != null,
+        has_yield: etf.yield_ttm != null,
+        has_objective: etf.objective && etf.objective.length > 20,
+        has_sectors: etf.sectors && etf.sectors.length > 0,
+        has_countries: etf.countries && etf.countries.length > 0
     };
     
-    if (etf.aum_usd != null) score += weights.aum_usd;
-    if (etf.total_expense_ratio != null) score += weights.total_expense_ratio;
-    if (etf.yield_ttm != null) score += weights.yield_ttm;
-    if (etf.objective && etf.objective.length > 20) score += weights.objective;
-    if (etf.sectors && etf.sectors.length > 0) score += weights.sectors;
-    if (etf.countries && etf.countries.length > 0) score += weights.countries;
+    const weights = {
+        has_aum: 20,
+        has_ter: 15,
+        has_yield: 10,
+        has_objective: 15,
+        has_sectors: 20,
+        has_countries: 20
+    };
     
+    let score = 0;
+    Object.keys(details).forEach(key => {
+        if (details[key]) score += weights[key];
+    });
+    
+    etf.data_quality_details = details;
     return score;
 }
 
@@ -346,6 +416,8 @@ async function fetchWeeklyPack(symbolParam, item) {
     // Réserve 400 crédits d'un coup (respecte 2584/min via pay)
     await pay(ENRICH_COST);
 
+    const now = new Date().toISOString();
+
     // Appels parallèles (pas de pay() à l'intérieur !)
     const [sumRes, compRes] = await Promise.all([
         axios.get('https://api.twelvedata.com/etfs/world/summary', {
@@ -367,12 +439,19 @@ async function fetchWeeklyPack(symbolParam, item) {
         currency: s.currency || null,
         fund_type: s.fund_type || null,
         objective: sanitizeText(s.overview || ''),
-        domicile: s.domicile || item.Country || null  // Récupérer le domicile
+        domicile: s.domicile || item.Country || null,
+        as_of_summary: now,
+        as_of_composition: now
     };
+
+    // Détecter le type d'ETF (inverse/leveraged/single-stock)
+    const etfTypeInfo = detectETFType(item.symbol, item.name, pack.objective);
+    pack.etf_type = etfTypeInfo.type;
+    if (etfTypeInfo.leverage) pack.leverage = etfTypeInfo.leverage;
 
     // composition (secteurs/pays + top5 & top1)
     let sectors = (c.major_market_sectors || []).map(x => ({
-        sector: x.sector, 
+        sector: normalizeSector(x.sector), 
         weight: (x.weight != null) ? Number(x.weight) : null
     }));
     
@@ -383,14 +462,9 @@ async function fetchWeeklyPack(symbolParam, item) {
 
     // Détection automatique pour ETF single-stock si pas de composition
     let autoDetected = false;
-    if (!sectors.length && pack.objective) {
-        // Chercher un ticker connu dans l'objective
-        const foundTicker = Object.keys(SINGLE_STOCK_SECTORS).find(ticker => 
-            pack.objective.toUpperCase().includes(ticker)
-        );
-        
-        if (foundTicker) {
-            const stockInfo = SINGLE_STOCK_SECTORS[foundTicker];
+    if (!sectors.length && etfTypeInfo.type === 'single_stock' && etfTypeInfo.ticker) {
+        const stockInfo = SINGLE_STOCK_SECTORS[etfTypeInfo.ticker];
+        if (stockInfo) {
             sectors = [{ sector: stockInfo.sector, weight: 1.0 }];
             countries = [{ country: stockInfo.country, weight: 1.0 }];
             autoDetected = true;
@@ -399,11 +473,12 @@ async function fetchWeeklyPack(symbolParam, item) {
     }
 
     // Fallback géographique : utiliser le domicile si pas de pays
+    // Weight null pour domicile, 1.0 pour single-stock auto-détecté
     if (!countries.length && pack.domicile) {
         countries = [{
             country: pack.domicile,
-            weight: null,  // null indique que c'est le domicile, pas une allocation
-            is_domicile: true
+            weight: autoDetected ? 1.0 : null,
+            is_domicile: !autoDetected
         }];
     }
 
@@ -475,7 +550,7 @@ async function processListing(item) {
 
 // Fonction principale
 async function filterETFs() {
-    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition v10\n');
+    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition v11\n');
     console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
     console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max\n`);
     
@@ -603,7 +678,7 @@ async function filterETFs() {
                 it.data_quality_score = calculateDataQualityScore(it);
                 
                 if (CONFIG.DEBUG) {
-                    console.log(`  ${symbolForApi} | AUM ${it.aum_usd} | TER ${it.total_expense_ratio} | Yield ${it.yield_ttm} | SectorTop ${it.sector_top?.sector} | CountryTop ${it.country_top?.country} | Quality ${it.data_quality_score}`);
+                    console.log(`  ${symbolForApi} | Type: ${it.etf_type} | AUM ${it.aum_usd} | TER ${it.total_expense_ratio} | Quality ${it.data_quality_score}`);
                 }
             } catch (e) {
                 console.log(`  ${symbolForApi} | ⚠️ Enrichissement hebdo KO: ${e.message}`);
@@ -628,7 +703,13 @@ async function filterETFs() {
         with_countries: results.etfs.filter(e => e.countries && e.countries.length > 0).length,
         with_objective: results.etfs.filter(e => e.objective && e.objective.length > 0).length,
         with_auto_detection: results.etfs.filter(e => e.auto_detected_composition).length,
-        avg_quality_score: Math.round(results.etfs.reduce((acc, e) => acc + (e.data_quality_score || 0), 0) / results.etfs.length)
+        avg_quality_score: Math.round(results.etfs.reduce((acc, e) => acc + (e.data_quality_score || 0), 0) / results.etfs.length),
+        by_etf_type: {
+            standard: results.etfs.filter(e => e.etf_type === 'standard').length,
+            inverse: results.etfs.filter(e => e.etf_type === 'inverse').length,
+            leveraged: results.etfs.filter(e => e.etf_type === 'leveraged').length,
+            single_stock: results.etfs.filter(e => e.etf_type === 'single_stock').length
+        }
     };
     
     // Analyser les raisons de rejet
@@ -663,7 +744,7 @@ async function filterETFs() {
     
     // CSV hebdo avec les champs demandés
     const csvHeader = [
-        'symbol','isin','mic_code','currency','fund_type',
+        'symbol','isin','mic_code','currency','fund_type','etf_type',
         'aum_usd','total_expense_ratio','yield_ttm',
         'objective',
         'sector_top','sector_top_weight',
@@ -682,7 +763,7 @@ async function filterETFs() {
         const objective = `"${(e.objective || '').replace(/"/g, '""')}"`;
         
         return [
-            e.symbol, e.isin || '', e.mic_code || '', e.currency || '', e.fund_type || '',
+            e.symbol, e.isin || '', e.mic_code || '', e.currency || '', e.fund_type || '', e.etf_type || '',
             e.aum_usd ?? '', e.total_expense_ratio ?? '', e.yield_ttm ?? '',
             objective,
             `"${sectorTop}"`, sectorTopW,
@@ -703,7 +784,14 @@ async function filterETFs() {
     
     console.log('\n📊 Qualité des données:');
     Object.entries(results.stats.data_quality).forEach(([key, count]) => {
-        console.log(`  - ${key}: ${count}/${results.etfs.length}`);
+        if (typeof count === 'object') {
+            console.log(`  - ${key}:`);
+            Object.entries(count).forEach(([subkey, subcount]) => {
+                console.log(`    • ${subkey}: ${subcount}`);
+            });
+        } else {
+            console.log(`  - ${key}: ${count}/${results.etfs.length}`);
+        }
     });
     
     console.log('\n📊 Raisons de rejet:');
