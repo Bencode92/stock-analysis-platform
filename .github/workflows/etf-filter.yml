@@ -31,7 +31,7 @@ jobs:
         git config --local user.name "GitHub Actions"
         
         # Ajouter les fichiers générés
-        git add data/filtered_advanced.json data/filtered_advanced.json
+        git add data/filtered_advanced.json data/weekly_snapshot.json data/weekly_snapshot.csv
         
         # Ajouter package.json et package-lock.json si modifiés
         git add -f package.json package-lock.json || true
