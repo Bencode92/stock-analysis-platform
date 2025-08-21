@@ -3,8 +3,7 @@ name: ETF Advanced Filter
 on:
   workflow_dispatch:
   schedule:
-    # 14:00 UTC les jours ouvrés
-    # = 15:00 Paris (hiver) / 16:00 Paris (été)
+    # 14:00 UTC = 15:00/16:00 Paris selon DST, jours ouvrés
     - cron: '0 14 * * 1-5'
 
 permissions:
@@ -23,7 +22,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -32,29 +30,30 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: |
-          # Installe sans modifier le repo (pas de commit du package.json)
-          npm install --no-audit --no-fund csv-parse axios
+        run: npm install --no-audit --no-fund csv-parse axios
 
       - name: Run ETF filter
         env:
-          TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
+          TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
         run: |
           mkdir -p data
           node etf-advanced-filter.js
 
-      - name: Commit results
+      - name: Commit results (only if changed)
         run: |
           git config user.email "actions@github.com"
           git config user.name "github-actions[bot]"
 
-          # Ajouter les artefacts
-          git add data/filtered_advanced.json data/filtered_advanced.csv
+          # Ajoute tout le dossier data/ S'IL y a des fichiers
+          if ls data/* >/dev/null 2>&1; then
+            git add -A data/
+          else
+            echo "No files in data/ to add."
+          fi
 
-          # Commit uniquement s'il y a des changements
+          # Commit si des changements sont en staging
           if ! git diff --staged --quiet; then
             git commit -m "Update filtered ETFs [skip ci]"
-            # Rebase pour éviter les non-fast-forward si le repo a bougé
             git pull --rebase origin "${GITHUB_REF_NAME}"
             git push
           else
