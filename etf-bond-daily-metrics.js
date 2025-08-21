@@ -200,7 +200,7 @@ function rowsToItems(rows, type){
 }
 
 function mergeWeeklyDaily(weeklyArr, dailyMapBySymbol){
-  // merge shallow: weekly fields + metrics
+  // merge complet: tous les champs weekly + métriques daily
   return weeklyArr.map(w => {
     const d = dailyMapBySymbol.get(w.symbol) || {};
     return { ...w, ...d };
@@ -298,26 +298,37 @@ async function main(){
   console.log('💾 Daily JSON/CSV écrits.');
 
   // 5) Fusion weekly + daily (pour affichage site)
-  //    On récupère aussi le weekly JSON complet si présent pour merger proprement
+  //    On récupère le weekly JSON complet si présent pour merger proprement
   const weeklyJsonPath = path.join(OUT_DIR, 'weekly_snapshot.json');
   const hasWeeklyJson = await fs.access(weeklyJsonPath).then(()=>true).catch(()=>false);
   let weeklyJson = { etfs: [], bonds: [] };
+  
   if (hasWeeklyJson){
-    weeklyJson = JSON.parse(await fs.readFile(weeklyJsonPath, 'utf8'));
+    try {
+      const content = await fs.readFile(weeklyJsonPath, 'utf8');
+      weeklyJson = JSON.parse(content);
+    } catch(e) {
+      console.log('⚠️ Erreur lecture weekly JSON, utilisation des CSV');
+    }
   }
 
-  const etfMerged = mergeWeeklyDaily(weeklyJson.etfs?.length ? weeklyJson.etfs : etfs, new Map(etfDaily.map(x=>[x.symbol,x])));
-  const bondMerged = mergeWeeklyDaily(weeklyJson.bonds?.length ? weeklyJson.bonds : bonds, new Map(bondDaily.map(x=>[x.symbol,x])));
+  // Utiliser le weekly JSON s'il existe et contient des données, sinon fallback sur CSV parsed
+  const weeklyEtfs = (weeklyJson.etfs && weeklyJson.etfs.length > 0) ? weeklyJson.etfs : etfRows;
+  const weeklyBonds = (weeklyJson.bonds && weeklyJson.bonds.length > 0) ? weeklyJson.bonds : bondRows;
+
+  const etfMerged = mergeWeeklyDaily(weeklyEtfs, new Map(etfDaily.map(x=>[x.symbol,x])));
+  const bondMerged = mergeWeeklyDaily(weeklyBonds, new Map(bondDaily.map(x=>[x.symbol,x])));
 
   await fs.writeFile(path.join(OUT_DIR, 'combined_snapshot.json'),
     JSON.stringify({ timestamp: todayISO(), etfs: etfMerged, bonds: bondMerged }, null, 2));
 
-  // CSV combinés
+  // CSV combinés avec toutes les colonnes pertinentes
   await writeCSV(path.join(OUT_DIR, 'combined_etfs.csv'),
     etfMerged, [
       'symbol','isin','mic_code','currency','fund_type','etf_type',
       'aum_usd','total_expense_ratio','yield_ttm','objective',
-      'daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of'
+      'daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of',
+      'data_quality_score'
     ]);
 
   await writeCSV(path.join(OUT_DIR, 'combined_bonds.csv'),
@@ -327,6 +338,7 @@ async function main(){
     ]);
 
   console.log('🔗 Fusions weekly+daily écrites (JSON & CSV).');
+  console.log(`✅ Total: ${etfMerged.length} ETFs, ${bondMerged.length} Bonds traités`);
 }
 
 main().catch(err => {
