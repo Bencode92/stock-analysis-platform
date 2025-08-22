@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradePulse - Simulation v2.0 Demo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Styles existants TradePulse -->
+    <link rel="stylesheet" href="css/simulation.css">
+    <!-- Nouveaux styles v2.0 -->
+    <link rel="stylesheet" href="css/simulation-results-v2.css">
+    
+    <style>
+        /* Styles spécifiques pour la démo */
+        .demo-header {
+            background: linear-gradient(135deg, #1e40af 0%, #10b981 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 16px;
+        }
+        
+        .demo-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            background: rgba(30, 64, 175, 0.1);
+            border-radius: 12px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        
+        .demo-title {
+            color: #10b981;
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .integration-code {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #e2e8f0;
+            overflow-x: auto;
+        }
+        
+        .test-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        
+        .test-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .test-btn:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-ok { background: #10b981; }
+        .status-warning { background: #f59e0b; }
+        .status-error { background: #ef4444; }
+    </style>
+</head>
+<body class="dark">
+    <!-- Header de démo -->
+    <div class="container mx-auto px-4 py-6">
+        <div class="demo-header">
+            <h1 class="text-3xl font-bold mb-2">
+                <i class="fas fa-rocket"></i>
+                TradePulse - Interface Simulation v2.0
+            </h1>
+            <p class="text-xl opacity-90">
+                Démo de la nouvelle interface utilisateur avec carte flip, slider temporel et toggle fiscal
+            </p>
+        </div>
+
+        <!-- Section de test -->
+        <div class="demo-section">
+            <h2 class="demo-title">
+                <i class="fas fa-play-circle"></i>
+                Interface v2.0 en action
+            </h2>
+            
+            <div class="test-controls">
+                <button class="test-btn" onclick="testScenario1()">
+                    <i class="fas fa-chart-line"></i> Scénario PEA 10 ans
+                </button>
+                <button class="test-btn" onclick="testScenario2()">
+                    <i class="fas fa-piggy-bank"></i> Scénario Assurance-vie 20 ans
+                </button>
+                <button class="test-btn" onclick="testScenario3()">
+                    <i class="fas fa-exclamation-triangle"></i> Test dépassement plafond
+                </button>
+                <button class="test-btn" onclick="resetDemo()">
+                    <i class="fas fa-refresh"></i> Reset
+                </button>
+            </div>
+        </div>
+
+        <!-- NOUVELLE INTERFACE V2.0 - ICI -->
+        <div id="simulation-results-v2">
+            <!-- CARTE FLIP PRINCIPALE -->
+            <div class="flip-card-container">
+                <div class="flip-card" id="mainFlipCard" role="button" aria-pressed="false" tabindex="0" aria-label="Cliquez pour voir les détails fiscaux">
+                    <div class="flip-card-face flip-card-front">
+                        <div class="flip-indicator">
+                            <i class="fas fa-mouse-pointer"></i> Cliquez pour voir les détails
+                        </div>
+                        <div class="main-value" id="netAmount">1 801 €</div>
+                        <div class="main-label">Capital net après impôts</div>
+                        <div style="margin-top: 15px; font-size: 1rem; opacity: 0.8;">
+                            <strong id="annualizedReturn">6.1%</strong> de rendement annualisé
+                        </div>
+                    </div>
+                    <div class="flip-card-face flip-card-back">
+                        <div class="flip-indicator">
+                            <i class="fas fa-arrow-left"></i> Cliquez pour revenir
+                        </div>
+                        <div class="secondary-value" id="taxAmount">166 €</div>
+                        <div class="secondary-label">Impôts prélevés</div>
+                        <div style="margin-top: 15px;">
+                            <div class="secondary-value" id="investedAmount">1 000 €</div>
+                            <div class="secondary-label">Montant investi</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SLIDER TEMPOREL -->
+            <div class="timeline-container">
+                <div class="timeline-header">
+                    <h3><i class="fas fa-clock"></i> Projection temporelle</h3>
+                    <div class="year-display">Année <span id="currentYear">10</span></div>
+                </div>
+                
+                <div class="slider-container">
+                    <input type="range" id="timeSlider" class="timeline-slider" min="1" max="30" value="10" aria-label="Nombre d'années d'investissement">
+                </div>
+                
+                <div class="mini-chart">
+                    <canvas id="miniChart"></canvas>
+                </div>
+            </div>
+
+            <!-- TOGGLE IMPÔTS -->
+            <div class="tax-toggle-container">
+                <div class="tax-toggle-header">
+                    <h3><i class="fas fa-receipt"></i> Impact de la fiscalité</h3>
+                    <div class="tax-toggle-buttons" role="tablist">
+                        <button class="tax-toggle-btn active" id="afterTaxBtn" role="tab" aria-selected="true">Après impôt</button>
+                        <button class="tax-toggle-btn" id="beforeTaxBtn" role="tab" aria-selected="false">Avant impôt</button>
+                    </div>
+                </div>
+                
+                <div class="tax-visual">
+                    <div class="tax-bar-container">
+                        <div class="tax-bar-fill" id="taxBarFill">
+                            <div class="tax-bar-reduction" id="taxBarReduction"></div>
+                        </div>
+                    </div>
+                    <div class="tax-amount">
+                        <div id="displayAmount">1 801 €</div>
+                        <div class="tax-reduction-amount" id="reductionAmount">- 166 €</div>
+                        <div class="tax-percentage" id="taxPercentage">-17.2%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ALERTES INTELLIGENTES -->
+            <div class="alerts-container-v2" id="alertsContainer">
+                <!-- Les alertes seront générées dynamiquement -->
+            </div>
+
+            <!-- SECTION DÉTAILS -->
+            <div class="details-section-v2">
+                <div class="details-header-v2" id="detailsToggle" role="button" tabindex="0" aria-expanded="false" aria-label="Afficher les détails de l'analyse">
+                    <h3><i class="fas fa-chart-area"></i> Analyse détaillée</h3>
+                    <i class="fas fa-chevron-down details-chevron-v2" id="detailsChevron"></i>
+                </div>
+                <div class="details-content-v2" id="detailsContent">
+                    <div class="details-inner-v2">
+                        <div class="chart-container-v2">
+                            <canvas id="detailedChart"></canvas>
+                        </div>
+                        
+                        <div class="stats-grid-v2">
+                            <div class="stat-card-v2">
+                                <div class="stat-value-v2" id="grossAmountStat">1 967 €</div>
+                                <div class="stat-label-v2">Capital avant impôt</div>
+                            </div>
+                            <div class="stat-card-v2">
+                                <div class="stat-value-v2" id="gainStat">967 €</div>
+                                <div class="stat-label-v2">Plus-value brute</div>
+                            </div>
+                            <div class="stat-card-v2">
+                                <div class="stat-value-v2" id="growthRateStat">8.4%</div>
+                                <div class="stat-label-v2">Taux de croissance</div>
+                            </div>
+                            <div class="stat-card-v2">
+                                <div class="stat-value-v2" id="effectiveTaxRateStat">17.2%</div>
+                                <div class="stat-label-v2">Taux d'imposition effectif</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Guide d'intégration -->
+        <div class="demo-section">
+            <h2 class="demo-title">
+                <i class="fas fa-code"></i>
+                Guide d'intégration dans simulation.html
+            </h2>
+            
+            <h3 class="text-lg font-semibold text-green-400 mb-3">
+                <span class="status-indicator status-ok"></span>
+                Étape 1 : Ajouter les nouveaux fichiers CSS/JS
+            </h3>
+            <div class="integration-code">
+&lt;!-- Dans la section &lt;head&gt; de simulation.html --&gt;
+&lt;link rel="stylesheet" href="css/simulation-results-v2.css"&gt;
+
+&lt;!-- Avant la fermeture du &lt;/body&gt; --&gt;
+&lt;script src="js/simulation-results-v2.js"&gt;&lt;/script&gt;
+            </div>
+
+            <h3 class="text-lg font-semibold text-green-400 mb-3 mt-6">
+                <span class="status-indicator status-ok"></span>
+                Étape 2 : Remplacer la section résultats existante
+            </h3>
+            <div class="integration-code">
+&lt;!-- Remplacer la div avec les résultats actuels par : --&gt;
+&lt;div id="simulation-results-v2"&gt;
+    &lt;!-- Copier tout le contenu de cette démo --&gt;
+&lt;/div&gt;
+            </div>
+
+            <h3 class="text-lg font-semibold text-green-400 mb-3 mt-6">
+                <span class="status-indicator status-warning"></span>
+                Étape 3 : Connecter à votre fonction runSimulation()
+            </h3>
+            <div class="integration-code">
+// Dans js/simulation.js, modifier la fonction updateResultsDisplay :
+function updateResultsDisplay(results) {
+    // Ancienne méthode (à conserver en fallback)
+    // ... code existant ...
+    
+    // Nouvelle interface v2.0
+    if (window.SimulationResultsV2) {
+        window.SimulationResultsV2.updateResults(results);
+    }
+}
+            </div>
+
+            <h3 class="text-lg font-semibold text-green-400 mb-3 mt-6">
+                <span class="status-indicator status-ok"></span>
+                Étape 4 : Test de fonctionnement
+            </h3>
+            <p class="text-gray-300 mb-3">Vérifiez que tous les modules s'initialisent correctement dans la console :</p>
+            <div class="integration-code">
+✅ FlipCard initialisé
+✅ Timeline initialisé  
+✅ TaxToggle initialisé
+✅ AlertSystem initialisé
+✅ DetailsSection initialisé
+✅ SimulationResults v2.0 prêt !
+            </div>
+        </div>
+
+        <!-- Statut technique -->
+        <div class="demo-section">
+            <h2 class="demo-title">
+                <i class="fas fa-cog"></i>
+                Statut technique
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-green-900 bg-opacity-20 p-4 rounded-lg border border-green-600">
+                    <h3 class="text-green-400 font-semibold mb-2">
+                        <span class="status-indicator status-ok"></span>
+                        Fonctionnalités prêtes
+                    </h3>
+                    <ul class="text-sm text-gray-300 space-y-1">
+                        <li>✅ Carte flip interactive</li>
+                        <li>✅ Slider temporel avec throttling</li>
+                        <li>✅ Toggle fiscal animé</li>
+                        <li>✅ Alertes intelligentes</li>
+                        <li>✅ Section détails pliable</li>
+                        <li>✅ Accessibilité ARIA</li>
+                        <li>✅ Optimisation mobile</li>
+                    </ul>
+                </div>
+                
+                <div class="bg-blue-900 bg-opacity-20 p-4 rounded-lg border border-blue-600">
+                    <h3 class="text-blue-400 font-semibold mb-2">
+                        <span class="status-indicator status-warning"></span>
+                        À adapter
+                    </h3>
+                    <ul class="text-sm text-gray-300 space-y-1">
+                        <li>🔧 Connexion aux calculs fiscaux existants</li>
+                        <li>🔧 Mapping des véhicules d'investissement</li>
+                        <li>🔧 Alertes spécifiques par profil</li>
+                        <li>🔧 Thème clair/sombre toggle</li>
+                        <li>🔧 Export PDF intégré</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/simulation-results-v2.js"></script>
+    
+    <!-- Script de démo -->
+    <script>
+        // Fonctions de test pour la démo
+        function testScenario1() {
+            console.log('🧪 Test scénario PEA 10 ans');
+            window.SimulationResultsV2.updateResults({
+                initialDeposit: 1000,
+                finalAmount: 1967,
+                afterTaxAmount: 1801,
+                taxAmount: 166,
+                years: 10,
+                vehicleId: 'pea',
+                annualReturn: 0.07
+            });
+        }
+        
+        function testScenario2() {
+            console.log('🧪 Test scénario Assurance-vie 20 ans');
+            window.SimulationResultsV2.updateResults({
+                initialDeposit: 5000,
+                finalAmount: 19348,
+                afterTaxAmount: 17890,
+                taxAmount: 1458,
+                years: 20,
+                vehicleId: 'assurance-vie',
+                annualReturn: 0.07
+            });
+        }
+        
+        function testScenario3() {
+            console.log('🧪 Test dépassement plafond PEA');
+            window.SimulationResultsV2.updateResults({
+                initialDeposit: 160000,
+                finalAmount: 314567,
+                afterTaxAmount: 288234,
+                taxAmount: 26333,
+                years: 15,
+                vehicleId: 'pea',
+                annualReturn: 0.05
+            });
+        }
+        
+        function resetDemo() {
+            console.log('🔄 Reset démo');
+            testScenario1(); // Retour au scénario par défaut
+        }
+        
+        // Auto-test au chargement
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🎬 Démo prête ! Testez les boutons ci-dessus.');
+        });
+    </script>
+</body>
+</html>
