@@ -1,5 +1,5 @@
 // stock-advanced-filter.js
-// Version corrigée avec tous les patchs
+// Version corrigée avec patchs v2
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -37,10 +37,16 @@ const EXCHANGE_MAPPING = {
     'royaume-uni': 'XLON',
     'switzerland': 'XSWX',
     'suisse': 'XSWX',
+    'netherlands': 'XAMS',
+    'pays-bas': 'XAMS',
     'south korea': 'XKRX',
     'corée': 'XKRX',
     'india': 'XBOM',
-    'inde': 'XBOM'
+    'inde': 'XBOM',
+    'spain': 'XMAD',
+    'espagne': 'XMAD',
+    'italy': 'XMIL',
+    'italie': 'XMIL'
 };
 
 let creditsUsed = 0;
@@ -151,8 +157,8 @@ async function getPerformanceData(symbol, stock) {
             params: {
                 symbol: withXchg(symbol, stock),
                 interval: '1day',
-                outputsize: 756,
-                order: 'ASC', // Important: ordre croissant
+                outputsize: 900, // Marge de sécurité
+                order: 'ASC',
                 apikey: CONFIG.API_KEY
             }
         });
@@ -166,7 +172,7 @@ async function getPerformanceData(symbol, stock) {
         
         if (prices.length === 0) return {};
         
-        const current = prices.at(-1)?.close || 0; // Dernier = plus récent (ASC)
+        const current = prices.at(-1)?.close || 0;
         const prev = prices.at(-2)?.close || null;
         const perf = {};
         
@@ -177,11 +183,18 @@ async function getPerformanceData(symbol, stock) {
         const atFromEnd = (n) => prices.at(-1 - n)?.close ?? null;
         
         // Performances sur différentes périodes
-        const p21 = atFromEnd(21), p63 = atFromEnd(63), p252 = atFromEnd(252), p756 = atFromEnd(756);
+        const p21 = atFromEnd(21), p63 = atFromEnd(63), p252 = atFromEnd(252);
         if (p21) perf.month_1 = ((current - p21) / p21 * 100).toFixed(2);
         if (p63) perf.month_3 = ((current - p63) / p63 * 100).toFixed(2);
         if (p252) perf.year_1 = ((current - p252) / p252 * 100).toFixed(2);
-        if (p756) perf.year_3 = ((current - p756) / p756 * 100).toFixed(2);
+        
+        // Performance 3 ans avec ancrage calendaire
+        const now = new Date();
+        const y3ISO = new Date(now.getFullYear() - 3, now.getMonth(), now.getDate()).toISOString().slice(0, 10);
+        const y3Bar = prices.find(p => p.date >= y3ISO);
+        if (y3Bar && y3Bar.close !== current) {
+            perf.year_3 = ((current - y3Bar.close) / y3Bar.close * 100).toFixed(2);
+        }
         
         // YTD
         const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10);
@@ -296,12 +309,12 @@ async function getStatisticsData(symbol, stock) {
 }
 
 async function getOptionsData(symbol, stock) {
-    if (!process.env.INCLUDE_OPTIONS) return {};
+    if (process.env.INCLUDE_OPTIONS !== '1') return {};
     
     try {
         await pay(CONFIG.CREDITS.OPTIONS);
         
-        // 1) Liste des expirations
+        // 1) Expirations sur le symbole local
         const exp = await axios.get('https://api.twelvedata.com/options_expiration', {
             params: { 
                 symbol: withXchg(symbol, stock), 
@@ -309,14 +322,35 @@ async function getOptionsData(symbol, stock) {
             }
         });
         
-        const dates = exp.data?.dates || exp.data?.expirations || [];
-        if (!dates.length) return {};
+        let dates = exp.data?.dates || exp.data?.expirations || [];
+        let optSymbol = withXchg(symbol, stock);
         
-        // 2) Prendre la plus proche et récupérer la chaîne
+        // 1bis) Aucun résultat ? On tente de trouver un listing US (XNYS/XNAS)
+        if (!dates.length) {
+            const srch = await axios.get('https://api.twelvedata.com/symbol_search', {
+                params: { symbol, outputsize: 50, apikey: CONFIG.API_KEY }
+            });
+            const candidates = (srch.data?.data || srch.data || []).filter(
+                s => ['XNYS','XNAS','XASE','ARCX','BATS'].includes(s.exchange) && 
+                     /stock/i.test(s.instrument_type || '')
+            );
+            
+            if (candidates.length) {
+                optSymbol = `${candidates[0].symbol}:${candidates[0].exchange}`;
+                const expUS = await axios.get('https://api.twelvedata.com/options_expiration', {
+                    params: { symbol: optSymbol, apikey: CONFIG.API_KEY }
+                });
+                dates = expUS.data?.dates || expUS.data?.expirations || [];
+            }
+            
+            if (!dates.length) return {}; // pas de couverture options
+        }
+        
+        // 2) On prend la plus proche et récupère la chaîne
         const ed = dates[0];
         const { data } = await axios.get('https://api.twelvedata.com/options_chain', {
             params: { 
-                symbol: withXchg(symbol, stock), 
+                symbol: optSymbol, 
                 expiration_date: ed, 
                 apikey: CONFIG.API_KEY 
             }
@@ -390,6 +424,7 @@ async function enrichStock(stock) {
 }
 
 function standardDeviation(values) {
+    if (!values.length) return 0;
     const avg = values.reduce((a, b) => a + b, 0) / values.length;
     const squareDiffs = values.map(value => Math.pow(value - avg, 2));
     return Math.sqrt(squareDiffs.reduce((a, b) => a + b, 0) / values.length);
@@ -400,7 +435,6 @@ function calculateDrawdowns(prices) {
     let maxDD_ytd = 0, maxDD_3y = 0;
     const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10);
     
-    // Parcourir du plus récent au plus ancien
     for (let i = prices.length - 1; i >= 0; i--) {
         const p = prices[i];
         if (p.close > peak) peak = p.close;
