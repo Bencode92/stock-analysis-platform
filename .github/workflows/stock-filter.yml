@@ -18,30 +18,26 @@ jobs:
         node-version: '18'
     
     - name: Install dependencies
-      run: |
-        npm install csv-parse axios papaparse
-        npm install --save-dev @types/node
+      run: npm install csv-parse axios
     
-    - name: Run Stock filter for all regions
+    - name: Run Stock Advanced Filter
       env:
         TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
-        MIN_ADV_USD: 500000  # 500k$ seuil liquidité
-        DEBUG: 0
-      run: node stock-data-enricher.js
+      run: node stock-advanced-filter.js
     
     - name: Commit results
       run: |
         git config --local user.email "actions@github.com"
         git config --local user.name "GitHub Actions"
         
-        # Ajouter les fichiers générés (JSON enrichis et CSV par région)
-        git add data/stocks_us_enriched.json data/stocks_europe_enriched.json data/stocks_asia_enriched.json
-        git add data/stocks_global_snapshot.json
-        git add data/stocks_us_filtered.csv data/stocks_europe_filtered.csv data/stocks_asia_filtered.csv
+        # Ajouter les fichiers générés (JSON et CSV par région)
+        git add data/stocks_filtered_advanced.json data/stocks_weekly_snapshot.json \
+                data/stocks_top_performers.json \
+                data/stocks_us_filtered.csv data/stocks_europe_filtered.csv data/stocks_asia_filtered.csv
         
         # Ajouter package.json et package-lock.json si modifiés
         git add -f package.json package-lock.json || true
         
         # Commit seulement s'il y a des changements
-        git diff --quiet && git diff --staged --quiet || git commit -m "Update enriched stocks data [skip ci]"
+        git diff --quiet && git diff --staged --quiet || git commit -m "Update filtered stocks data [skip ci]"
         git push
