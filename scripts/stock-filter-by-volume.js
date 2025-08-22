@@ -1,456 +1,187 @@
 // stock-filter-by-volume.js
-// Filtrage par volume avec API Twelve Data et gestion des crédits
-// Compatible GitHub Actions v4
-
+// npm i csv-parse axios
 const fs = require('fs').promises;
 const path = require('path');
 const { parse } = require('csv-parse/sync');
 const axios = require('axios');
 
-// Configuration
-const CONFIG = {
-    API_KEY: process.env.TWELVE_DATA_API_KEY,
-    DEBUG: process.env.DEBUG === '1',
-    
-    // Seuils de volume
-    VOLUME_MIN: {
-        US: 500_000,
-        EUROPE: 50_000,
-        ASIA: 100_000
-    },
-    
-    VOLUME_MIN_BY_EXCHANGE: {
-        // US
-        'NYSE': 500_000,
-        'NASDAQ': 500_000,
-        'NEW YORK STOCK EXCHANGE': 500_000,
-        
-        // Europe  
-        'XETR': 100_000,
-        'EURONEXT PARIS': 80_000,
-        'LONDON STOCK EXCHANGE': 120_000,
-        'BORSA ITALIANA': 80_000,
-        'BME SPANISH EXCHANGES': 80_000,
-        'EURONEXT AMSTERDAM': 50_000,
-        
-        // Asie
-        'HONG KONG EXCHANGES AND CLEARING LTD': 100_000,
-        'KOREA EXCHANGE (STOCK MARKET)': 100_000,
-        'NATIONAL STOCK EXCHANGE OF INDIA': 50_000,
-        'TAIWAN STOCK EXCHANGE': 60_000
-    },
-    
-    // Config API
-    DAYS_HISTORY: 30,
-    CHUNK_SIZE: 12,
-    CREDIT_LIMIT: 2584,
-    CREDITS: {
-        TIME_SERIES: 5,
-        QUOTE: 0,
-        PRICE: 0
-    }
-};
+const API_KEY = process.env.TWELVE_DATA_API_KEY;
+if (!API_KEY) { console.error('❌ TWELVE_DATA_API_KEY manquante'); process.exit(1); }
 
 const DATA_DIR = process.env.DATA_DIR || 'data';
-const OUTPUT_DIR = process.env.OUTPUT_DIR || 'data/filtered';
+const OUT_DIR = process.env.OUTPUT_DIR || 'data/filtered';
+const INPUTS = [
+  { file: 'Actions_US.csv',     region: 'US' },
+  { file: 'Actions_Europe.csv', region: 'EUROPE' },
+  { file: 'Actions_Asie.csv',   region: 'ASIA' },
+];
 
-// Gestion des crédits API
-let creditsUsed = 0;
-let windowStart = Date.now();
-const WINDOW_MS = 60_000;
+// Seuils par région
+const VOL_MIN = { US: 500_000, EUROPE: 50_000, ASIA: 100_000 };
 
-async function wait(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+// Seuils plus fins par MIC (prioritaires sur la région)
+const VOL_MIN_BY_MIC = {
+  // US
+  XNAS: 500_000, XNYS: 500_000,
+  // Europe
+  XETR: 100_000, XPAR: 80_000, XLON: 120_000, XMIL: 80_000, XMAD: 80_000,
+  XAMS: 50_000, XSTO: 60_000, XCSE: 40_000, XHEL: 40_000, XBRU: 30_000,
+  XLIS: 20_000, XSWX: 20_000,
+  // Asie
+  XHKG: 100_000, XKRX: 100_000, XNSE: 50_000, XBOM: 50_000, XTAI: 60_000
+};
+
+// Mapping Exchange → MIC (insensible à la casse)
+const EX2MIC = Object.entries({
+  'nyse':'XNYS','new york stock exchange':'XNYS',
+  'nasdaq':'XNAS',
+  'xetra':'XETR','six swiss exchange':'XSWX',
+  'london stock exchange':'XLON',
+  'euronext paris':'XPAR','euronext amsterdam':'XAMS',
+  'borsa italiana':'XMIL','bme spanish exchanges':'XMAD',
+  'nasdaq stockholm':'XSTO','nasdaq copenhagen':'XCSE','nasdaq helsinki':'XHEL',
+  'euronext brussels':'XBRU','euronext lisbon':'XLIS',
+  'hong kong exchanges and clearing ltd':'XHKG',
+  'korea exchange (stock market)':'XKRX',
+  'national stock exchange of india':'XNSE','bombay stock exchange':'XBOM',
+  'taiwan stock exchange':'XTAI'
+}).reduce((m,[k,v]) => (m[k]=v,m), {});
+
+const toMIC = ex => EX2MIC[(ex||'').toLowerCase().trim()] || null;
+
+const HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché'];
+
+const csvLine = obj => HEADER.map(h => `"${String(obj[h] ?? '').replace(/"/g,'""')}"`).join(',');
+
+async function readCSV(file) {
+  const txt = await fs.readFile(file,'utf8');
+  return parse(txt, { columns:true, skip_empty_lines:true, bom:true });
 }
 
-async function pay(cost) {
-    while (true) {
-        const now = Date.now();
-        if (now - windowStart > WINDOW_MS) {
-            creditsUsed = 0;
-            windowStart = now;
-            if (CONFIG.DEBUG) {
-                console.log('💳 Nouvelle fenêtre de crédits');
-            }
-        }
-        
-        if (creditsUsed + cost <= CONFIG.CREDIT_LIMIT) {
-            creditsUsed += cost;
-            return;
-        }
-        
-        const remaining = WINDOW_MS - (now - windowStart);
-        if (CONFIG.DEBUG) {
-            console.log(`⏳ Attente ${(remaining/1000).toFixed(1)}s...`);
-        }
-        await wait(250);
-    }
+async function writeCSV(file, rows) {
+  const out = [HEADER.join(','), ...rows.map(csvLine)].join('\n');
+  await fs.mkdir(path.dirname(file), { recursive:true });
+  await fs.writeFile(file, out, 'utf8');
 }
 
-// Cache FX
-const fxCache = new Map();
-
-async function fxToUSD(currency) {
-    if (!currency || currency === 'USD') return 1;
-    
-    if (currency === 'GBX') {
-        const gbpRate = await fxToUSD('GBP');
-        return gbpRate / 100;
-    }
-    
-    if (fxCache.has(currency)) {
-        return fxCache.get(currency);
-    }
-    
+async function resolveSymbol(ticker, exchange) {
+  // 1) essai brut
+  const trySymbol = async (sym) => {
     try {
-        const { data } = await axios.get('https://api.twelvedata.com/price', {
-            params: { 
-                symbol: `${currency}/USD`,
-                apikey: CONFIG.API_KEY 
-            }
-        });
-        const rate = Number(data?.price);
-        if (rate > 0) {
-            fxCache.set(currency, rate);
-            return rate;
-        }
+      const { data } = await axios.get('https://api.twelvedata.com/quote', { params:{ symbol:sym, apikey:API_KEY }});
+      if (data && data.status !== 'error') return { sym, quote:data };
     } catch {}
-    
-    try {
-        const { data } = await axios.get('https://api.twelvedata.com/price', {
-            params: { 
-                symbol: `USD/${currency}`,
-                apikey: CONFIG.API_KEY 
-            }
-        });
-        const rate = Number(data?.price);
-        if (rate > 0) {
-            const inverted = 1 / rate;
-            fxCache.set(currency, inverted);
-            return inverted;
-        }
-    } catch {}
-    
-    console.warn(`⚠️ Taux FX ${currency}/USD non trouvé`);
-    fxCache.set(currency, 1);
-    return 1;
-}
-
-// Mapper les exchanges pour l'API (MIC codes corrigés)
-function mapExchangeToMIC(exchange) {
-    const mapping = {
-        'NYSE': 'XNYS',
-        'NEW YORK STOCK EXCHANGE': 'XNYS',
-        'NASDAQ': 'XNAS',
-        'HONG KONG EXCHANGES AND CLEARING LTD': 'XHKG',
-        'KOREA EXCHANGE (STOCK MARKET)': 'XKRX',
-        'NATIONAL STOCK EXCHANGE OF INDIA': 'XNSE',
-        'TAIWAN STOCK EXCHANGE': 'XTAI',
-        'LONDON STOCK EXCHANGE': 'XLON',
-        'EURONEXT PARIS': 'XPAR',
-        'BORSA ITALIANA': 'XMIL',
-        'BME SPANISH EXCHANGES': 'XMAD',
-        'EURONEXT AMSTERDAM': 'XAMS'
-    };
-    const upperExchange = (exchange || '').toUpperCase();
-    return mapping[upperExchange] || null;
-}
-
-// Obtenir le seuil de volume (case-insensitive)
-function getVolumeThreshold(exchange, region) {
-    const upperExchange = (exchange || '').toUpperCase();
-    return CONFIG.VOLUME_MIN_BY_EXCHANGE[upperExchange] || CONFIG.VOLUME_MIN[region] || 0;
-}
-
-// Résoudre le symbole pour l'API
-async function resolveSymbol(ticker, exchange, currency) {
-    const mic = mapExchangeToMIC(exchange);
-    
-    // Essayer ticker simple
-    try {
-        const { data } = await axios.get('https://api.twelvedata.com/quote', {
-            params: { symbol: ticker, apikey: CONFIG.API_KEY }
-        });
-        
-        if (data && data.status !== 'error') {
-            return { symbolParam: ticker, quote: data };
-        }
-    } catch {}
-    
-    // Essayer avec MIC
-    if (mic) {
-        try {
-            const symbolWithMic = `${ticker}:${mic}`;
-            const { data } = await axios.get('https://api.twelvedata.com/quote', {
-                params: { symbol: symbolWithMic, apikey: CONFIG.API_KEY }
-            });
-            
-            if (data && data.status !== 'error') {
-                return { symbolParam: symbolWithMic, quote: data };
-            }
-        } catch {}
-    }
-    
     return null;
+  };
+  let r = await trySymbol(ticker);
+  if (r) return r;
+
+  // 2) essai avec MIC
+  const mic = toMIC(exchange);
+  if (mic) {
+    r = await trySymbol(`${ticker}:${mic}`);
+    if (r) return r;
+  }
+  // 3) dernier recours : rien trouvé
+  return { sym: ticker, quote: null };
 }
 
-// Calculer ADV médiane sur 30 jours
-async function calculate30DayADV(symbolParam, fxRate) {
-    try {
-        await pay(CONFIG.CREDITS.TIME_SERIES);
-        
-        const { data } = await axios.get('https://api.twelvedata.com/time_series', {
-            params: {
-                symbol: symbolParam,
-                interval: '1day',
-                outputsize: CONFIG.DAYS_HISTORY,
-                apikey: CONFIG.API_KEY
-            }
+async function fetchVolume(symbol) {
+  try {
+    const { data } = await axios.get('https://api.twelvedata.com/quote', { params:{ symbol, apikey:API_KEY }});
+    const v = Number(data?.volume) || Number(data?.average_volume) || 0;
+    return v;
+  } catch { return 0; }
+}
+
+// Gestion des crédits API (simple rate limiting)
+let lastRequest = 0;
+const MIN_DELAY = 25; // ms entre requêtes
+
+async function throttle() {
+  const now = Date.now();
+  const elapsed = now - lastRequest;
+  if (elapsed < MIN_DELAY) {
+    await new Promise(r => setTimeout(r, MIN_DELAY - elapsed));
+  }
+  lastRequest = Date.now();
+}
+
+(async ()=>{
+  console.log('🚀 Démarrage du filtrage par volume\n');
+  const allOutputs = [];
+  const stats = { total: 0, passed: 0, failed: 0 };
+
+  for (const {file, region} of INPUTS) {
+    const src = path.join(DATA_DIR, file);
+    const rows = await readCSV(src);
+    console.log(`\n📊 ${region}: ${rows.length} stocks à analyser`);
+
+    const filtered = [];
+    let processed = 0;
+    
+    for (const r of rows) {
+      await throttle(); // Rate limiting simple
+      
+      const ticker = (r['Ticker']||'').trim();
+      const exch   = r['Bourse de valeurs'] || '';
+      const mic    = toMIC(exch);
+      const { sym, quote } = await resolveSymbol(ticker, exch);
+      const vol = quote ? (Number(quote.volume)||Number(quote.average_volume)||0) : await fetchVolume(sym);
+
+      const thr = VOL_MIN_BY_MIC[mic || ''] ?? VOL_MIN[region] ?? 0;
+      stats.total++;
+      
+      if (vol >= thr) {
+        filtered.push({
+          'Ticker': ticker,
+          'Stock': r['Stock']||'',
+          'Secteur': r['Secteur']||'',
+          'Pays': r['Pays']||'',
+          'Bourse de valeurs': r['Bourse de valeurs']||'',
+          'Devise de marché': r['Devise de marché']||'',
         });
-        
-        if (!data.values || data.status === 'error') {
-            return null;
+        stats.passed++;
+        console.log(`  ✅ ${ticker}: ${vol.toLocaleString()} >= ${thr.toLocaleString()}`);
+      } else {
+        stats.failed++;
+        if (process.env.DEBUG === '1') {
+          console.log(`  ❌ ${ticker}: ${vol.toLocaleString()} < ${thr.toLocaleString()}`);
         }
-        
-        const advValues = data.values.map(day => {
-            const volume = Number(day.volume) || 0;
-            const close = Number(day.close) || 0;
-            return volume * close * fxRate; // Convertir en USD
-        }).filter(v => v > 0);
-        
-        if (advValues.length === 0) return null;
-        
-        // Médiane
-        advValues.sort((a, b) => a - b);
-        const mid = Math.floor(advValues.length / 2);
-        const medianUSD = advValues.length % 2 
-            ? advValues[mid] 
-            : (advValues[mid - 1] + advValues[mid]) / 2;
-        
-        return {
-            adv_median_usd: medianUSD,
-            days_with_data: advValues.length,
-            latest_price: Number(data.values[0]?.close) || 0,
-            latest_volume: Number(data.values[0]?.volume) || 0
-        };
-        
-    } catch (error) {
-        if (CONFIG.DEBUG) {
-            console.error(`Erreur ADV: ${error.message}`);
-        }
-        return null;
+      }
+      
+      processed++;
+      if (processed % 10 === 0) {
+        console.log(`  Progression: ${processed}/${rows.length}`);
+      }
     }
-}
 
-// Traiter un stock
-async function processStock(stock) {
-    const ticker = stock.Ticker;
-    const exchange = stock['Bourse de valeurs'];
-    const currency = stock['Devise de marché'] || 'USD';
-    
-    try {
-        // Résoudre le symbole
-        const resolved = await resolveSymbol(ticker, exchange, currency);
-        if (!resolved) {
-            return { ...stock, reason: 'SYMBOL_NOT_FOUND', volume: 0 };
-        }
-        
-        const { symbolParam, quote } = resolved;
-        
-        // Obtenir le taux de change
-        const fx = await fxToUSD(currency);
-        
-        // Calculer ADV
-        const advData = await calculate30DayADV(symbolParam, fx);
-        
-        let adv_median_usd = 0;
-        let volume = 0;
-        let price = 0;
-        
-        if (advData) {
-            adv_median_usd = advData.adv_median_usd;
-            volume = advData.latest_volume;
-            price = advData.latest_price;
-        } else {
-            // Fallback sur quote
-            volume = Number(quote.volume) || Number(quote.average_volume) || 0;
-            price = Number(quote.close) || Number(quote.previous_close) || 0;
-            adv_median_usd = volume * price * fx;
-        }
-        
-        return {
-            ...stock,
-            symbolParam,
-            price,
-            volume,
-            adv_median_usd,
-            change: Number(quote.change) || 0,
-            percent_change: Number(quote.percent_change) || 0,
-            market_cap: Number(quote.market_capitalization) || 0,
-            currency,
-            fx_rate: fx,
-            days_traded: advData?.days_with_data || 0
-        };
-        
-    } catch (error) {
-        return { ...stock, reason: 'API_ERROR', volume: 0 };
-    }
-}
+    const outFile = path.join(OUT_DIR, file.replace('.csv','_filtered.csv'));
+    await writeCSV(outFile, filtered);
+    allOutputs.push({ title: `${region}`, file: outFile, rows: filtered });
 
-// Fonction principale
-async function filterStocks() {
-    console.log('📊 Filtrage des stocks par volume avec API Twelve Data\n');
-    console.log(`⚙️  API Key: ${CONFIG.API_KEY ? '✓' : '✗ MANQUANTE'}`);
-    
-    if (!CONFIG.API_KEY) {
-        console.error('❌ TWELVE_DATA_API_KEY manquante');
-        process.exit(1);
-    }
-    
-    console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min`);
-    console.log(`📂  Dossier source: ${DATA_DIR}`);
-    console.log(`📂  Dossier sortie: ${OUTPUT_DIR}\n`);
-    
-    // Créer le dossier de sortie
-    await fs.mkdir(OUTPUT_DIR, { recursive: true });
-    
-    // Charger les CSV
-    const csvFiles = ['Actions_US.csv', 'Actions_Europe.csv', 'Actions_Asie.csv'];
-    const allStocks = [];
-    
-    for (const file of csvFiles) {
-        try {
-            const content = await fs.readFile(path.join(DATA_DIR, file), 'utf8');
-            const rows = parse(content, { 
-                columns: true, 
-                skip_empty_lines: true,
-                bom: true
-            });
-            
-            const region = file.includes('US') ? 'US' :
-                          file.includes('Europe') ? 'EUROPE' : 'ASIA';
-            
-            rows.forEach(row => {
-                allStocks.push({
-                    ...row,
-                    __region: region,
-                    __source_file: file
-                });
-            });
-            
-            console.log(`📚 ${file}: ${rows.length} stocks`);
-        } catch (error) {
-            console.warn(`⚠️ Impossible de charger ${file}: ${error.message}`);
-        }
-    }
-    
-    console.log(`\n🔍 Analyse de ${allStocks.length} stocks...\n`);
-    
-    // Traiter par lots
-    const results = {
-        US: [],
-        EUROPE: [],
-        ASIA: [],
-        rejected: []
-    };
-    
-    for (let i = 0; i < allStocks.length; i += CONFIG.CHUNK_SIZE) {
-        const batch = allStocks.slice(i, i + CONFIG.CHUNK_SIZE);
-        console.log(`📦 Lot ${Math.floor(i/CONFIG.CHUNK_SIZE) + 1}: ${i+1}-${Math.min(i+CONFIG.CHUNK_SIZE, allStocks.length)}`);
-        
-        const batchPromises = batch.map(stock => processStock(stock));
-        const batchResults = await Promise.all(batchPromises);
-        
-        batchResults.forEach(result => {
-            const region = result.__region;
-            const threshold = getVolumeThreshold(result['Bourse de valeurs'], region);
-            
-            if (result.reason) {
-                console.log(`  ${result.Ticker} | ❌ ${result.reason}`);
-                results.rejected.push(result);
-            } else if (result.volume >= threshold) {
-                console.log(`  ${result.symbolParam} | Volume: ${result.volume.toLocaleString()} | ADV: ${(result.adv_median_usd/1e6).toFixed(2)}M$ | ✅ PASS`);
-                results[region].push(result);
-            } else {
-                console.log(`  ${result.symbolParam} | Volume: ${result.volume.toLocaleString()} | ❌ < ${threshold.toLocaleString()}`);
-                results.rejected.push({...result, failed: 'LOW_VOLUME'});
-            }
-        });
-    }
-    
-    // Sauvegarder les résultats par région
-    console.log('\n📊 Sauvegarde des résultats...\n');
-    
-    for (const region of ['US', 'EUROPE', 'ASIA']) {
-        const stocks = results[region];
-        
-        // Trier par ADV
-        stocks.sort((a, b) => (b.adv_median_usd || 0) - (a.adv_median_usd || 0));
-        
-        const output = {
-            region,
-            timestamp: new Date().toISOString(),
-            stats: {
-                total_stocks: stocks.length,
-                avg_volume: Math.round(stocks.reduce((sum, s) => sum + s.volume, 0) / stocks.length || 0),
-                avg_adv_usd: Math.round(stocks.reduce((sum, s) => sum + s.adv_median_usd, 0) / stocks.length || 0)
-            },
-            stocks: stocks.map(s => ({
-                ticker: s.Ticker,
-                name: s.Stock,
-                sector: s.Secteur,
-                country: s.Pays,
-                exchange: s['Bourse de valeurs'],
-                currency: s.currency,
-                price: s.price,
-                volume: s.volume,
-                adv_median_usd: s.adv_median_usd,
-                change_percent: s.percent_change,
-                market_cap: s.market_cap
-            }))
-        };
-        
-        const outputFile = path.join(OUTPUT_DIR, `stocks_${region.toLowerCase()}_filtered.json`);
-        await fs.writeFile(outputFile, JSON.stringify(output, null, 2));
-        console.log(`✅ ${region}: ${stocks.length} stocks → ${outputFile}`);
-    }
-    
-    // CSV combiné
-    const allFiltered = [...results.US, ...results.EUROPE, ...results.ASIA];
-    const csvHeader = 'Ticker,Stock,Secteur,Pays,Bourse de valeurs,Devise de marché,Volume,ADV USD\n';
-    const csvRows = allFiltered.map(s => 
-        `"${s.Ticker}","${s.Stock}","${s.Secteur}","${s.Pays}","${s['Bourse de valeurs']}","${s['Devise de marché']}",${s.volume},${Math.round(s.adv_median_usd)}`
-    ).join('\n');
-    
-    await fs.writeFile(
-        path.join(OUTPUT_DIR, 'Actions_filtrees_par_volume.csv'), 
-        csvHeader + csvRows
-    );
-    
-    // Résumé
-    console.log('\n📊 RÉSUMÉ:');
-    console.log(`  - Stocks traités: ${allStocks.length}`);
-    console.log(`  - US retenus: ${results.US.length}`);
-    console.log(`  - Europe retenus: ${results.EUROPE.length}`);
-    console.log(`  - Asie retenus: ${results.ASIA.length}`);
-    console.log(`  - Rejetés: ${results.rejected.length}`);
-    console.log(`\n✅ Terminé! Résultats dans: ${OUTPUT_DIR}`);
-    
-    // Pour GitHub Actions (nouvelle méthode)
-    if (process.env.GITHUB_OUTPUT) {
-        const fsSync = require('fs');
-        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `stocks_us=${results.US.length}\n`);
-        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `stocks_europe=${results.EUROPE.length}\n`);
-        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `stocks_asia=${results.ASIA.length}\n`);
-    }
-}
+    console.log(`✅ ${region}: ${filtered.length}/${rows.length} stocks retenus → ${outFile}`);
+  }
 
-// Exécution
-if (require.main === module) {
-    filterStocks().catch(error => {
-        console.error('❌ Erreur:', error);
-        process.exit(1);
+  // CSV combiné
+  const combined = allOutputs.flatMap(o => o.rows);
+  await writeCSV(path.join(OUT_DIR,'Actions_filtrees_par_volume.csv'), combined);
+  
+  // Résumé final
+  console.log('\n' + '='.repeat(50));
+  console.log('📊 RÉSUMÉ FINAL');
+  console.log('='.repeat(50));
+  console.log(`Total analysés: ${stats.total}`);
+  console.log(`Retenus: ${stats.passed} (${(stats.passed/stats.total*100).toFixed(1)}%)`);
+  console.log(`Rejetés: ${stats.failed} (${(stats.failed/stats.total*100).toFixed(1)}%)`);
+  console.log(`\n✅ Terminé. Fichiers filtrés dans ${OUT_DIR}/`);
+  
+  // Pour GitHub Actions
+  if (process.env.GITHUB_OUTPUT) {
+    const fsSync = require('fs');
+    allOutputs.forEach(o => {
+      fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `stocks_${o.title.toLowerCase()}=${o.rows.length}\n`);
     });
-}
-
-module.exports = { filterStocks };
+    fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `total_filtered=${combined.length}\n`);
+  }
+})();
