@@ -1,5 +1,5 @@
 // stock-advanced-filter.js
-// Version fiabilisée sans options - v3
+// Version fiabilisée sans options avec smart resolver - v3.1
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -42,7 +42,7 @@ async function pay(cost) {
     }
 }
 
-// Fonction améliorée pour résoudre le symbole avec exchange
+// Fonction de résolution locale avec mapping des exchanges
 function resolveSymbol(symbol, stock) {
     if (/:/.test(symbol)) return symbol; // déjà suffixé
     
@@ -98,6 +98,48 @@ function resolveSymbol(symbol, stock) {
     return symbol; // fallback sans suffixe
 }
 
+// Smart resolver avec fallback
+async function resolveSymbolSmart(symbol, stock) {
+    // Helper pour tester un symbole
+    const trySymbol = async (sym) => {
+        try {
+            const { data } = await axios.get('https://api.twelvedata.com/quote', {
+                params: { symbol: sym, apikey: CONFIG.API_KEY }
+            });
+            if (data && data.status !== 'error') return sym;
+        } catch {}
+        return null;
+    };
+    
+    // 1) Essai local: SYM:MIC
+    const local = resolveSymbol(symbol, stock);
+    let ok = await trySymbol(local);
+    if (ok) return ok;
+    
+    // 2) SYM brut (sans suffixe)
+    ok = await trySymbol(symbol);
+    if (ok) return ok;
+    
+    // 3) Recherche via /stocks pour trouver la forme supportée
+    try {
+        const { data } = await axios.get('https://api.twelvedata.com/stocks', {
+            params: {
+                symbol,
+                exchange: (stock.exchange || '').split(' ')[0]
+            }
+        });
+        const arr = data?.data || data;
+        const first = Array.isArray(arr) ? arr.find(s => (s.symbol || '').toUpperCase().startsWith(symbol.toUpperCase())) : null;
+        if (first?.symbol && first?.exchange) {
+            const guess = `${first.symbol}:${first.exchange}`;
+            ok = await trySymbol(guess);
+            if (ok) return ok;
+        }
+    } catch {}
+    
+    return null; // rien trouvé
+}
+
 function parseCSV(csvText) {
     const firstLine = csvText.split('\n')[0];
     const delimiter = firstLine.includes('\t') ? '\t' : ',';
@@ -129,14 +171,19 @@ async function loadStockCSV(filepath) {
 async function getQuoteData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.QUOTE);
+        const resolved = typeof stock === 'string' ? symbol : resolveSymbol(symbol, stock);
         const { data } = await axios.get('https://api.twelvedata.com/quote', {
             params: { 
-                symbol: resolveSymbol(symbol, stock), 
+                symbol: resolved, 
                 apikey: CONFIG.API_KEY 
             }
         });
         
-        if (data.status === 'error') return null;
+        if (CONFIG.DEBUG) console.log('[QUOTE]', resolved, data?.status || 'ok');
+        if (data.status === 'error') {
+            if (CONFIG.DEBUG) console.error('[QUOTE ERR]', resolved, data?.message);
+            return null;
+        }
         
         return {
             price: Number(data.close) || 0,
@@ -149,7 +196,8 @@ async function getQuoteData(symbol, stock) {
                 range: data.fifty_two_week?.range || null
             }
         };
-    } catch {
+    } catch (error) {
+        if (CONFIG.DEBUG) console.error('[QUOTE EXCEPTION]', symbol, error.message);
         return null;
     }
 }
@@ -157,18 +205,23 @@ async function getQuoteData(symbol, stock) {
 async function getPerformanceData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.TIME_SERIES);
+        const resolved = typeof stock === 'string' ? symbol : resolveSymbol(symbol, stock);
         
         const { data } = await axios.get('https://api.twelvedata.com/time_series', {
             params: {
-                symbol: resolveSymbol(symbol, stock),
+                symbol: resolved,
                 interval: '1day',
-                outputsize: 900, // Marge de sécurité
+                outputsize: 900,
                 order: 'ASC',
                 apikey: CONFIG.API_KEY
             }
         });
         
-        if (!data.values || data.status === 'error') return {};
+        if (CONFIG.DEBUG) console.log('[TIME_SERIES]', resolved, data?.status || 'ok');
+        if (!data.values || data.status === 'error') {
+            if (CONFIG.DEBUG) console.error('[TIME_SERIES ERR]', resolved, data?.message);
+            return {};
+        }
         
         const prices = (data.values || []).map(v => ({
             date: v.datetime.slice(0, 10),
@@ -230,9 +283,15 @@ async function getPerformanceData(symbol, stock) {
             max_drawdown_ytd: drawdowns.ytd,
             max_drawdown_3y: drawdowns.year3,
             distance_52w_high: high52 ? ((current - high52) / current * 100).toFixed(2) : null,
-            distance_52w_low: low52 ? ((current - low52) / current * 100).toFixed(2) : null
+            distance_52w_low: low52 ? ((current - low52) / current * 100).toFixed(2) : null,
+            // Expose pour fallback
+            __last_close: current,
+            __prev_close: prev,
+            __hi52: high52,
+            __lo52: low52
         };
-    } catch {
+    } catch (error) {
+        if (CONFIG.DEBUG) console.error('[TIME_SERIES EXCEPTION]', symbol, error.message);
         return {};
     }
 }
@@ -240,6 +299,7 @@ async function getPerformanceData(symbol, stock) {
 async function getDividendData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.DIVIDENDS);
+        const resolved = typeof stock === 'string' ? symbol : resolveSymbol(symbol, stock);
         
         const todayISO = new Date().toISOString().slice(0, 10);
         const threeY = new Date();
@@ -247,14 +307,18 @@ async function getDividendData(symbol, stock) {
         
         const { data } = await axios.get('https://api.twelvedata.com/dividends', {
             params: {
-                symbol: resolveSymbol(symbol, stock),
+                symbol: resolved,
                 start_date: threeY.toISOString().slice(0, 10),
                 end_date: todayISO,
                 apikey: CONFIG.API_KEY
             }
         });
         
-        if (data?.status === 'error') return {};
+        if (CONFIG.DEBUG) console.log('[DIVIDENDS]', resolved, data?.status || 'ok');
+        if (data?.status === 'error') {
+            if (CONFIG.DEBUG) console.error('[DIVIDENDS ERR]', resolved, data?.message);
+            return {};
+        }
         
         const arr = Array.isArray(data) ? data : (data.values || data.data || data.dividends || []);
         const dividends = arr.map(d => ({
@@ -280,7 +344,8 @@ async function getDividendData(symbol, stock) {
             avg_dividend_per_year: avgPerYear.toFixed(2),
             total_dividends_ttm: total.toFixed(2)
         };
-    } catch {
+    } catch (error) {
+        if (CONFIG.DEBUG) console.error('[DIVIDENDS EXCEPTION]', symbol, error.message);
         return {};
     }
 }
@@ -288,14 +353,20 @@ async function getDividendData(symbol, stock) {
 async function getStatisticsData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.STATISTICS);
+        const resolved = typeof stock === 'string' ? symbol : resolveSymbol(symbol, stock);
+        
         const { data } = await axios.get('https://api.twelvedata.com/statistics', {
             params: { 
-                symbol: resolveSymbol(symbol, stock), 
+                symbol: resolved, 
                 apikey: CONFIG.API_KEY 
             }
         });
         
-        if (data.status === 'error') return {};
+        if (CONFIG.DEBUG) console.log('[STATISTICS]', resolved, data?.status || 'ok');
+        if (data.status === 'error') {
+            if (CONFIG.DEBUG) console.error('[STATISTICS ERR]', resolved, data?.message);
+            return {};
+        }
         
         const root = data?.statistics || data || {};
         const mc = Number(root.market_cap ?? root.market_capitalization ?? root?.financials?.market_capitalization);
@@ -308,7 +379,8 @@ async function getStatisticsData(symbol, stock) {
             beta: Number(root.beta ?? root?.risk_metrics?.beta) || null,
             shares_outstanding: Number.isFinite(so) ? so : null
         };
-    } catch {
+    } catch (error) {
+        if (CONFIG.DEBUG) console.error('[STATISTICS EXCEPTION]', symbol, error.message);
         return {};
     }
 }
@@ -316,14 +388,36 @@ async function getStatisticsData(symbol, stock) {
 async function enrichStock(stock) {
     console.log(`  📊 ${stock.symbol}...`);
     
-    const [quote, perf, dividends, stats] = await Promise.all([
-        getQuoteData(stock.symbol, stock),
-        getPerformanceData(stock.symbol, stock),
-        getDividendData(stock.symbol, stock),
-        getStatisticsData(stock.symbol, stock)
+    // Résolution robuste une fois pour toutes
+    const resolved = await resolveSymbolSmart(stock.symbol, stock);
+    if (CONFIG.DEBUG) console.log('[RESOLVED]', stock.symbol, '→', resolved || '(none)');
+    
+    // On calcule d'abord la série (souvent dispo même si quote rate)
+    const [perf, quote, dividends, stats] = await Promise.all([
+        getPerformanceData(resolved || stock.symbol, resolved ? 'resolved' : stock),
+        resolved ? getQuoteData(resolved, 'resolved') : getQuoteData(stock.symbol, stock),
+        getDividendData(resolved || stock.symbol, resolved ? 'resolved' : stock),
+        getStatisticsData(resolved || stock.symbol, resolved ? 'resolved' : stock)
     ]);
     
-    if (!quote) {
+    // Fallback prix & range depuis la série si quote indisponible
+    let price = quote?.price ?? null;
+    let change_percent = quote?.percent_change ?? null;
+    let range_52w = quote?.fifty_two_week?.range ?? null;
+    
+    // Si pas de quote, mais time_series OK
+    if (!quote && perf && perf.volatility_3y) {
+        const p = perf.__last_close;
+        const prev = perf.__prev_close;
+        price = p ?? null;
+        change_percent = (p && prev) ? ((p - prev) / prev * 100) : null;
+        if (!range_52w && perf.__hi52 && perf.__lo52) {
+            range_52w = `${Number(perf.__lo52).toFixed(6)} - ${Number(perf.__hi52).toFixed(6)}`;
+        }
+    }
+    
+    if (!price) {
+        // Vraiment rien → on retourne l'erreur
         return { ...stock, error: 'NO_DATA' };
     }
     
@@ -333,11 +427,11 @@ async function enrichStock(stock) {
         sector: stock.sector,
         country: stock.country,
         
-        price: quote.price,
-        change_percent: quote.percent_change,
-        volume: quote.volume,
+        price,
+        change_percent: (typeof change_percent === 'number') ? Number(change_percent.toFixed(2)) : null,
+        volume: quote?.volume ?? null,
         market_cap: stats.market_cap,
-        range_52w: quote.fifty_two_week.range,
+        range_52w,
         
         perf_1d: perf.performances?.day_1 || null,
         perf_1m: perf.performances?.month_1 || null,
