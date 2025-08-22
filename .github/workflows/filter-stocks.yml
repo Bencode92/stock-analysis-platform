@@ -1,0 +1,78 @@
+name: Filter Stocks by Volume
+
+on:
+  schedule:
+    # Exécute tous les jours à 2h UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: 'Enable debug mode'
+        required: false
+        default: '0'
+
+jobs:
+  filter-stocks:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run stock filtering
+      env:
+        TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
+        DEBUG: ${{ github.event.inputs.debug || '0' }}
+        DATA_DIR: data
+        OUTPUT_DIR: data/filtered
+      run: |
+        echo "🚀 Démarrage du filtrage des stocks"
+        node scripts/stock-filter-by-volume.js
+    
+    - name: Upload filtered data
+      uses: actions/upload-artifact@v3
+      with:
+        name: filtered-stocks
+        path: |
+          data/filtered/stocks_*.json
+          data/filtered/Actions_filtrees_par_volume.csv
+        retention-days: 30
+    
+    - name: Commit filtered data
+      if: success()
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add data/filtered/
+        git diff --staged --quiet || git commit -m "Update filtered stocks data [skip ci]"
+    
+    - name: Push changes
+      if: success()
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ github.ref }}
+    
+    - name: Summary
+      if: always()
+      run: |
+        echo "## 📊 Résumé du filtrage" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ -f data/filtered/stocks_us_filtered.json ]; then
+          echo "- ✅ US: $(jq '.stats.total_stocks' data/filtered/stocks_us_filtered.json) stocks" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ -f data/filtered/stocks_europe_filtered.json ]; then
+          echo "- ✅ Europe: $(jq '.stats.total_stocks' data/filtered/stocks_europe_filtered.json) stocks" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ -f data/filtered/stocks_asia_filtered.json ]; then
+          echo "- ✅ Asie: $(jq '.stats.total_stocks' data/filtered/stocks_asia_filtered.json) stocks" >> $GITHUB_STEP_SUMMARY
+        fi
