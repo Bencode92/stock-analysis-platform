@@ -1,5 +1,5 @@
 // stock-advanced-filter.js
-// Version fiabilisée sans options avec smart resolver - v3.1
+// Version 3.2 - Smart resolver + Market Cap amélioré
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -16,7 +16,8 @@ const CONFIG = {
         QUOTE: 1,
         TIME_SERIES: 5,
         STATISTICS: 25,
-        DIVIDENDS: 10
+        DIVIDENDS: 10,
+        MARKET_CAP: 1
     }
 };
 
@@ -40,6 +41,39 @@ async function pay(cost) {
         }
         await wait(250);
     }
+}
+
+// Parser robuste pour nombres avec formats variés
+function parseNumberLoose(val) {
+    if (val == null) return null;
+    if (typeof val === 'number') return Number.isFinite(val) ? val : null;
+    let s = String(val).trim();
+    if (!s) return null;
+    
+    // Multiplicateur suffixe
+    let mult = 1;
+    const suf = s.match(/([kmbt])\s*$/i);
+    if (suf) {
+        const x = suf[1].toLowerCase();
+        mult = x === 'k' ? 1e3 : x === 'm' ? 1e6 : x === 'b' ? 1e9 : 1e12;
+        s = s.slice(0, -1);
+    }
+    
+    // Enlève devises/lettres/espaces fines
+    s = s.replace(/[^\d.,\-]/g, '');
+    
+    // Normalise séparateurs (gère décimale "," européenne)
+    const lastDot = s.lastIndexOf('.');
+    const lastComma = s.lastIndexOf(',');
+    if (lastComma > lastDot) {         // décimale = ","
+        s = s.replace(/\./g, '');        // retire points des milliers
+        s = s.replace(',', '.');         // décimale en point
+    } else {
+        s = s.replace(/,/g, '');         // retire virgules des milliers
+    }
+    
+    const n = Number(s);
+    return Number.isFinite(n) ? n * mult : null;
 }
 
 // Fonction de résolution locale avec mapping des exchanges
@@ -186,13 +220,13 @@ async function getQuoteData(symbol, stock) {
         }
         
         return {
-            price: Number(data.close) || 0,
-            change: Number(data.change) || 0,
-            percent_change: Number(data.percent_change) || 0,
-            volume: Number(data.volume) || 0,
+            price: parseNumberLoose(data.close) || 0,
+            change: parseNumberLoose(data.change) || 0,
+            percent_change: parseNumberLoose(data.percent_change) || 0,
+            volume: parseNumberLoose(data.volume) || 0,
             fifty_two_week: {
-                high: Number(data.fifty_two_week?.high) || null,
-                low: Number(data.fifty_two_week?.low) || null,
+                high: parseNumberLoose(data.fifty_two_week?.high) || null,
+                low: parseNumberLoose(data.fifty_two_week?.low) || null,
                 range: data.fifty_two_week?.range || null
             }
         };
@@ -323,7 +357,7 @@ async function getDividendData(symbol, stock) {
         const arr = Array.isArray(data) ? data : (data.values || data.data || data.dividends || []);
         const dividends = arr.map(d => ({
             ex_date: d.ex_date || d.date,
-            amount: Number(d.amount) || 0,
+            amount: parseNumberLoose(d.amount) || 0,
             payment_date: d.payment_date
         })).filter(d => d.ex_date);
         
@@ -339,7 +373,7 @@ async function getDividendData(symbol, stock) {
         const avgPerYear = years > 0 ? dividends.reduce((sum, d) => sum + d.amount, 0) / years : 0;
         
         return {
-            dividend_yield_ttm: data.meta?.dividend_yield || null,
+            dividend_yield_ttm: parseNumberLoose(data.meta?.dividend_yield) || null,
             dividends_history: dividends.slice(0, 10),
             avg_dividend_per_year: avgPerYear.toFixed(2),
             total_dividends_ttm: total.toFixed(2)
@@ -369,19 +403,53 @@ async function getStatisticsData(symbol, stock) {
         }
         
         const root = data?.statistics || data || {};
-        const mc = Number(root.market_cap ?? root.market_capitalization ?? root?.financials?.market_capitalization);
-        const pe = Number(root.pe_ratio ?? root?.valuations_metrics?.pe_ratio);
-        const so = Number(root.shares_outstanding ?? root?.overview?.shares_outstanding ?? root?.financials?.shares_outstanding);
+        const mc = parseNumberLoose(
+            root.market_cap ??
+            root.market_capitalization ??
+            root?.financials?.market_capitalization ??
+            root?.overview?.market_cap
+        );
+        const pe = parseNumberLoose(root.pe_ratio ?? root?.valuations_metrics?.pe_ratio);
+        const so = parseNumberLoose(
+            root.shares_outstanding ??
+            root?.overview?.shares_outstanding ??
+            root?.financials?.shares_outstanding
+        );
         
         return {
             market_cap: Number.isFinite(mc) ? mc : null,
             pe_ratio: Number.isFinite(pe) ? pe : null,
-            beta: Number(root.beta ?? root?.risk_metrics?.beta) || null,
+            beta: parseNumberLoose(root.beta ?? root?.risk_metrics?.beta) || null,
             shares_outstanding: Number.isFinite(so) ? so : null
         };
     } catch (error) {
         if (CONFIG.DEBUG) console.error('[STATISTICS EXCEPTION]', symbol, error.message);
         return {};
+    }
+}
+
+// Nouveau endpoint dédié pour market_cap
+async function getMarketCapDirect(symbolOrResolved, stock) {
+    try {
+        await pay(CONFIG.CREDITS.MARKET_CAP);
+        const sym = /:/.test(symbolOrResolved) ? symbolOrResolved : resolveSymbol(symbolOrResolved, stock);
+        const { data } = await axios.get('https://api.twelvedata.com/market_cap', {
+            params: { symbol: sym, apikey: CONFIG.API_KEY }
+        });
+        
+        if (CONFIG.DEBUG) console.log('[MARKET_CAP]', sym, data?.status || 'ok');
+        if (data?.status === 'error') {
+            if (CONFIG.DEBUG) console.error('[MARKET_CAP ERR]', sym, data?.message);
+            return null;
+        }
+        
+        // L'API peut renvoyer {market_cap: "..."} ou {value: "..."}
+        const raw = data?.market_cap ?? data?.value;
+        const mc = parseNumberLoose(raw);
+        return Number.isFinite(mc) ? mc : null;
+    } catch (e) {
+        if (CONFIG.DEBUG) console.error('[MARKET_CAP EXC]', symbolOrResolved, e.message);
+        return null;
     }
 }
 
@@ -392,12 +460,13 @@ async function enrichStock(stock) {
     const resolved = await resolveSymbolSmart(stock.symbol, stock);
     if (CONFIG.DEBUG) console.log('[RESOLVED]', stock.symbol, '→', resolved || '(none)');
     
-    // On calcule d'abord la série (souvent dispo même si quote rate)
-    const [perf, quote, dividends, stats] = await Promise.all([
+    // On calcule tout en parallèle
+    const [perf, quote, dividends, stats, mcDirect] = await Promise.all([
         getPerformanceData(resolved || stock.symbol, resolved ? 'resolved' : stock),
         resolved ? getQuoteData(resolved, 'resolved') : getQuoteData(stock.symbol, stock),
         getDividendData(resolved || stock.symbol, resolved ? 'resolved' : stock),
-        getStatisticsData(resolved || stock.symbol, resolved ? 'resolved' : stock)
+        getStatisticsData(resolved || stock.symbol, resolved ? 'resolved' : stock),
+        getMarketCapDirect(resolved || stock.symbol, resolved ? 'resolved' : stock)
     ]);
     
     // Fallback prix & range depuis la série si quote indisponible
@@ -421,6 +490,15 @@ async function enrichStock(stock) {
         return { ...stock, error: 'NO_DATA' };
     }
     
+    // Market cap avec priorités
+    const market_cap = 
+        (typeof mcDirect === 'number' ? mcDirect : null) ??
+        (typeof stats.market_cap === 'number' ? stats.market_cap : null) ??
+        // Dernier recours : SO * prix
+        ((typeof stats.shares_outstanding === 'number' && typeof price === 'number')
+            ? stats.shares_outstanding * price
+            : null);
+    
     return {
         ticker: stock.symbol,
         name: stock.name,
@@ -430,7 +508,7 @@ async function enrichStock(stock) {
         price,
         change_percent: (typeof change_percent === 'number') ? Number(change_percent.toFixed(2)) : null,
         volume: quote?.volume ?? null,
-        market_cap: stats.market_cap,
+        market_cap,
         range_52w,
         
         perf_1d: perf.performances?.day_1 || null,
