@@ -1,5 +1,5 @@
 // stock-advanced-filter.js
-// Version corrigée avec patchs v2
+// Version fiabilisée sans options - v3
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -16,37 +16,8 @@ const CONFIG = {
         QUOTE: 1,
         TIME_SERIES: 5,
         STATISTICS: 25,
-        DIVIDENDS: 10,
-        OPTIONS: 50
+        DIVIDENDS: 10
     }
-};
-
-// Mapping des exchanges par pays
-const EXCHANGE_MAPPING = {
-    'taiwan': 'XTAI',
-    'taïwan': 'XTAI',
-    'hong kong': 'XHKG',
-    'singapore': 'XSES',
-    'japan': 'XTKS',
-    'japon': 'XTKS',
-    'germany': 'XETR',
-    'allemagne': 'XETR',
-    'france': 'XPAR',
-    'united kingdom': 'XLON',
-    'uk': 'XLON',
-    'royaume-uni': 'XLON',
-    'switzerland': 'XSWX',
-    'suisse': 'XSWX',
-    'netherlands': 'XAMS',
-    'pays-bas': 'XAMS',
-    'south korea': 'XKRX',
-    'corée': 'XKRX',
-    'india': 'XBOM',
-    'inde': 'XBOM',
-    'spain': 'XMAD',
-    'espagne': 'XMAD',
-    'italy': 'XMIL',
-    'italie': 'XMIL'
 };
 
 let creditsUsed = 0;
@@ -71,26 +42,60 @@ async function pay(cost) {
     }
 }
 
-// Ajouter l'exchange au symbole si nécessaire
-function withXchg(symbol, stock) {
-    if (/:/.test(symbol)) return symbol;
+// Fonction améliorée pour résoudre le symbole avec exchange
+function resolveSymbol(symbol, stock) {
+    if (/:/.test(symbol)) return symbol; // déjà suffixé
     
+    const ex = (stock.exchange || '').toLowerCase();
     const country = (stock.country || '').toLowerCase();
-    const exchange = stock.exchange || '';
     
-    // Si on a déjà un code exchange valide
-    if (exchange && exchange.length === 4 && exchange.startsWith('X')) {
-        return `${symbol}:${exchange}`;
+    // Mapping par nom d'exchange
+    const byExchange = {
+        'euronext amsterdam': 'XAMS',
+        'xetra': 'XETR',
+        'six swiss exchange': 'XSWX',
+        'london stock exchange': 'XLON',
+        'euronext paris': 'XPAR',
+        'euronext brussels': 'XBRU',
+        'euronext milan': 'XMIL',
+        'euronext lisbon': 'XLIS',
+        'nasdaq stockholm': 'XSTO',
+        'nasdaq copenhagen': 'XCSE',
+        'nasdaq helsinki': 'XHEL',
+        'madrid stock exchange': 'XMAD'
+    };
+    
+    for (const k in byExchange) {
+        if (ex.includes(k)) return `${symbol}:${byExchange[k]}`;
     }
     
     // Mapping par pays
-    for (const [key, xchg] of Object.entries(EXCHANGE_MAPPING)) {
-        if (country.includes(key)) {
-            return `${symbol}:${xchg}`;
-        }
+    const byCountry = {
+        'pays-bas': 'XAMS', 'netherlands': 'XAMS',
+        'allemagne': 'XETR', 'germany': 'XETR',
+        'suisse': 'XSWX', 'switzerland': 'XSWX',
+        'royaume-uni': 'XLON', 'united kingdom': 'XLON', 'uk': 'XLON',
+        'france': 'XPAR',
+        'belgique': 'XBRU', 'belgium': 'XBRU',
+        'italie': 'XMIL', 'italy': 'XMIL',
+        'portugal': 'XLIS',
+        'espagne': 'XMAD', 'spain': 'XMAD',
+        'suède': 'XSTO', 'sweden': 'XSTO',
+        'danemark': 'XCSE', 'denmark': 'XCSE',
+        'finlande': 'XHEL', 'finland': 'XHEL',
+        'taiwan': 'XTAI', 'taïwan': 'XTAI',
+        'hong kong': 'XHKG',
+        'singapore': 'XSES',
+        'japan': 'XTKS', 'japon': 'XTKS',
+        'south korea': 'XKRX', 'corée': 'XKRX',
+        'india': 'XBOM', 'inde': 'XBOM'
+    };
+    
+    for (const k in byCountry) {
+        if (country.includes(k)) return `${symbol}:${byCountry[k]}`;
     }
     
-    return symbol;
+    return symbol; // fallback sans suffixe
 }
 
 function parseCSV(csvText) {
@@ -126,7 +131,7 @@ async function getQuoteData(symbol, stock) {
         await pay(CONFIG.CREDITS.QUOTE);
         const { data } = await axios.get('https://api.twelvedata.com/quote', {
             params: { 
-                symbol: withXchg(symbol, stock), 
+                symbol: resolveSymbol(symbol, stock), 
                 apikey: CONFIG.API_KEY 
             }
         });
@@ -155,7 +160,7 @@ async function getPerformanceData(symbol, stock) {
         
         const { data } = await axios.get('https://api.twelvedata.com/time_series', {
             params: {
-                symbol: withXchg(symbol, stock),
+                symbol: resolveSymbol(symbol, stock),
                 interval: '1day',
                 outputsize: 900, // Marge de sécurité
                 order: 'ASC',
@@ -242,7 +247,7 @@ async function getDividendData(symbol, stock) {
         
         const { data } = await axios.get('https://api.twelvedata.com/dividends', {
             params: {
-                symbol: withXchg(symbol, stock),
+                symbol: resolveSymbol(symbol, stock),
                 start_date: threeY.toISOString().slice(0, 10),
                 end_date: todayISO,
                 apikey: CONFIG.API_KEY
@@ -285,7 +290,7 @@ async function getStatisticsData(symbol, stock) {
         await pay(CONFIG.CREDITS.STATISTICS);
         const { data } = await axios.get('https://api.twelvedata.com/statistics', {
             params: { 
-                symbol: withXchg(symbol, stock), 
+                symbol: resolveSymbol(symbol, stock), 
                 apikey: CONFIG.API_KEY 
             }
         });
@@ -308,80 +313,14 @@ async function getStatisticsData(symbol, stock) {
     }
 }
 
-async function getOptionsData(symbol, stock) {
-    if (process.env.INCLUDE_OPTIONS !== '1') return {};
-    
-    try {
-        await pay(CONFIG.CREDITS.OPTIONS);
-        
-        // 1) Expirations sur le symbole local
-        const exp = await axios.get('https://api.twelvedata.com/options_expiration', {
-            params: { 
-                symbol: withXchg(symbol, stock), 
-                apikey: CONFIG.API_KEY 
-            }
-        });
-        
-        let dates = exp.data?.dates || exp.data?.expirations || [];
-        let optSymbol = withXchg(symbol, stock);
-        
-        // 1bis) Aucun résultat ? On tente de trouver un listing US (XNYS/XNAS)
-        if (!dates.length) {
-            const srch = await axios.get('https://api.twelvedata.com/symbol_search', {
-                params: { symbol, outputsize: 50, apikey: CONFIG.API_KEY }
-            });
-            const candidates = (srch.data?.data || srch.data || []).filter(
-                s => ['XNYS','XNAS','XASE','ARCX','BATS'].includes(s.exchange) && 
-                     /stock/i.test(s.instrument_type || '')
-            );
-            
-            if (candidates.length) {
-                optSymbol = `${candidates[0].symbol}:${candidates[0].exchange}`;
-                const expUS = await axios.get('https://api.twelvedata.com/options_expiration', {
-                    params: { symbol: optSymbol, apikey: CONFIG.API_KEY }
-                });
-                dates = expUS.data?.dates || expUS.data?.expirations || [];
-            }
-            
-            if (!dates.length) return {}; // pas de couverture options
-        }
-        
-        // 2) On prend la plus proche et récupère la chaîne
-        const ed = dates[0];
-        const { data } = await axios.get('https://api.twelvedata.com/options_chain', {
-            params: { 
-                symbol: optSymbol, 
-                expiration_date: ed, 
-                apikey: CONFIG.API_KEY 
-            }
-        });
-        
-        if (!data.calls || data.status === 'error') return {};
-        
-        const totalOI = (data.calls || []).reduce((sum, c) => sum + (c.open_interest || 0), 0) +
-                       (data.puts || []).reduce((sum, p) => sum + (p.open_interest || 0), 0);
-        const totalVolume = (data.calls || []).reduce((sum, c) => sum + (c.volume || 0), 0) +
-                           (data.puts || []).reduce((sum, p) => sum + (p.volume || 0), 0);
-        
-        return {
-            options_total_oi: totalOI,
-            options_total_volume: totalVolume,
-            put_call_ratio: data.meta?.put_call_ratio || null
-        };
-    } catch {
-        return {};
-    }
-}
-
 async function enrichStock(stock) {
     console.log(`  📊 ${stock.symbol}...`);
     
-    const [quote, perf, dividends, stats, options] = await Promise.all([
+    const [quote, perf, dividends, stats] = await Promise.all([
         getQuoteData(stock.symbol, stock),
         getPerformanceData(stock.symbol, stock),
         getDividendData(stock.symbol, stock),
-        getStatisticsData(stock.symbol, stock),
-        getOptionsData(stock.symbol, stock)
+        getStatisticsData(stock.symbol, stock)
     ]);
     
     if (!quote) {
@@ -416,8 +355,6 @@ async function enrichStock(stock) {
         distance_52w_low: perf.distance_52w_low,
         max_drawdown_ytd: perf.max_drawdown_ytd,
         max_drawdown_3y: perf.max_drawdown_3y,
-        
-        ...options,
         
         last_updated: new Date().toISOString()
     };
