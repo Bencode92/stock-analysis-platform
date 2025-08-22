@@ -1,0 +1,47 @@
+name: Stock Advanced Filter
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 14 * * 1-5'  # 14h UTC = 15h Paris (jours ouvrés)
+
+jobs:
+  filter-stocks:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: |
+        npm install csv-parse axios papaparse
+        npm install --save-dev @types/node
+    
+    - name: Run Stock filter for all regions
+      env:
+        TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
+        MIN_ADV_USD: 500000  # 500k$ seuil liquidité
+        DEBUG: 0
+      run: node stock-data-enricher.js
+    
+    - name: Commit results
+      run: |
+        git config --local user.email "actions@github.com"
+        git config --local user.name "GitHub Actions"
+        
+        # Ajouter les fichiers générés (JSON enrichis et CSV par région)
+        git add data/stocks_us_enriched.json data/stocks_europe_enriched.json data/stocks_asia_enriched.json
+        git add data/stocks_global_snapshot.json
+        git add data/stocks_us_filtered.csv data/stocks_europe_filtered.csv data/stocks_asia_filtered.csv
+        
+        # Ajouter package.json et package-lock.json si modifiés
+        git add -f package.json package-lock.json || true
+        
+        # Commit seulement s'il y a des changements
+        git diff --quiet && git diff --staged --quiet || git commit -m "Update enriched stocks data [skip ci]"
+        git push
