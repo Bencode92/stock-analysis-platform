@@ -1,6 +1,6 @@
 // stock-filter-by-volume.js
 // Filtrage par volume avec API Twelve Data et gestion des crédits
-// Compatible GitHub Actions
+// Compatible GitHub Actions v4
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -23,20 +23,21 @@ const CONFIG = {
         // US
         'NYSE': 500_000,
         'NASDAQ': 500_000,
+        'NEW YORK STOCK EXCHANGE': 500_000,
         
-        // Europe
+        // Europe  
         'XETR': 100_000,
-        'Euronext Paris': 80_000,
-        'London Stock Exchange': 120_000,
-        'Borsa Italiana': 80_000,
-        'BME Spanish Exchanges': 80_000,
-        'Euronext Amsterdam': 50_000,
+        'EURONEXT PARIS': 80_000,
+        'LONDON STOCK EXCHANGE': 120_000,
+        'BORSA ITALIANA': 80_000,
+        'BME SPANISH EXCHANGES': 80_000,
+        'EURONEXT AMSTERDAM': 50_000,
         
         // Asie
-        'Hong Kong Exchanges And Clearing Ltd': 100_000,
-        'Korea Exchange (Stock Market)': 100_000,
-        'National Stock Exchange Of India': 50_000,
-        'Taiwan Stock Exchange': 60_000
+        'HONG KONG EXCHANGES AND CLEARING LTD': 100_000,
+        'KOREA EXCHANGE (STOCK MARKET)': 100_000,
+        'NATIONAL STOCK EXCHANGE OF INDIA': 50_000,
+        'TAIWAN STOCK EXCHANGE': 60_000
     },
     
     // Config API
@@ -135,23 +136,30 @@ async function fxToUSD(currency) {
     return 1;
 }
 
-// Mapper les exchanges pour l'API
+// Mapper les exchanges pour l'API (MIC codes corrigés)
 function mapExchangeToMIC(exchange) {
     const mapping = {
         'NYSE': 'XNYS',
-        'New York Stock Exchange': 'XNYS',
+        'NEW YORK STOCK EXCHANGE': 'XNYS',
         'NASDAQ': 'XNAS',
-        'Hong Kong Exchanges And Clearing Ltd': 'HKEX',
-        'Korea Exchange (Stock Market)': 'XKRX',
-        'National Stock Exchange Of India': 'XNSE',
-        'Taiwan Stock Exchange': 'XTAI',
-        'London Stock Exchange': 'XLON',
-        'Euronext Paris': 'XPAR',
-        'Borsa Italiana': 'XMIL',
-        'BME Spanish Exchanges': 'XMAD',
-        'Euronext Amsterdam': 'XAMS'
+        'HONG KONG EXCHANGES AND CLEARING LTD': 'XHKG',
+        'KOREA EXCHANGE (STOCK MARKET)': 'XKRX',
+        'NATIONAL STOCK EXCHANGE OF INDIA': 'XNSE',
+        'TAIWAN STOCK EXCHANGE': 'XTAI',
+        'LONDON STOCK EXCHANGE': 'XLON',
+        'EURONEXT PARIS': 'XPAR',
+        'BORSA ITALIANA': 'XMIL',
+        'BME SPANISH EXCHANGES': 'XMAD',
+        'EURONEXT AMSTERDAM': 'XAMS'
     };
-    return mapping[exchange] || null;
+    const upperExchange = (exchange || '').toUpperCase();
+    return mapping[upperExchange] || null;
+}
+
+// Obtenir le seuil de volume (case-insensitive)
+function getVolumeThreshold(exchange, region) {
+    const upperExchange = (exchange || '').toUpperCase();
+    return CONFIG.VOLUME_MIN_BY_EXCHANGE[upperExchange] || CONFIG.VOLUME_MIN[region] || 0;
 }
 
 // Résoudre le symbole pour l'API
@@ -355,8 +363,7 @@ async function filterStocks() {
         
         batchResults.forEach(result => {
             const region = result.__region;
-            const threshold = CONFIG.VOLUME_MIN_BY_EXCHANGE[result['Bourse de valeurs']] || 
-                            CONFIG.VOLUME_MIN[region] || 0;
+            const threshold = getVolumeThreshold(result['Bourse de valeurs'], region);
             
             if (result.reason) {
                 console.log(`  ${result.Ticker} | ❌ ${result.reason}`);
@@ -429,11 +436,12 @@ async function filterStocks() {
     console.log(`  - Rejetés: ${results.rejected.length}`);
     console.log(`\n✅ Terminé! Résultats dans: ${OUTPUT_DIR}`);
     
-    // Pour GitHub Actions
-    if (process.env.GITHUB_ACTIONS) {
-        console.log(`::set-output name=stocks_us::${results.US.length}`);
-        console.log(`::set-output name=stocks_europe::${results.EUROPE.length}`);
-        console.log(`::set-output name=stocks_asia::${results.ASIA.length}`);
+    // Pour GitHub Actions (nouvelle méthode)
+    if (process.env.GITHUB_OUTPUT) {
+        const fsSync = require('fs');
+        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `stocks_us=${results.US.length}\n`);
+        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `stocks_europe=${results.EUROPE.length}\n`);
+        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `stocks_asia=${results.ASIA.length}\n`);
     }
 }
 
