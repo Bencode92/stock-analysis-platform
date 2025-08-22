@@ -247,6 +247,26 @@ async function main(){
   const bonds = rowsToItems(bondRows, 'BOND');
   const all = [...etfs, ...bonds];
 
+  // -- Inject leverage depuis filtered_advanced.json (si présent)
+  const filteredPath = path.join(OUT_DIR, 'filtered_advanced.json');
+
+  let leverageByKey = new Map();
+  try {
+    const filtered = JSON.parse(await fs.readFile(filteredPath, 'utf8'));
+    // index par symbol ET par isin pour éviter les collisions
+    (filtered.etfs || []).forEach(e => {
+      const lev = (typeof e.leverage === 'number' ? e.leverage : '');
+      if (e.symbol) leverageByKey.set(`SYM:${e.symbol}`, lev);
+      if (e.isin)   leverageByKey.set(`ISIN:${e.isin}`, lev);
+    });
+  } catch (e) {
+    console.log('ℹ️  filtered_advanced.json absent ou illisible — leverage non injecté.');
+  }
+
+  const findLeverage = (row) =>
+    leverageByKey.get(`SYM:${row.symbol}`) ??
+    (row.isin ? leverageByKey.get(`ISIN:${row.isin}`) : '') ?? '';
+
   if (all.length === 0) {
     console.log('ℹ️  Aucune ligne dans les CSV weekly — je crée des fichiers daily vides.');
     // Fichiers vides (entêtes)
@@ -258,14 +278,14 @@ async function main(){
                    [], ['symbol','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of']);
     await fs.writeFile(path.join(OUT_DIR, 'combined_snapshot.json'), JSON.stringify({ timestamp: todayISO(), etfs: [], bonds: [] }, null, 2));
     await writeCSV(path.join(OUT_DIR, 'combined_etfs.csv'),
-                   [], ['symbol','isin','mic_code','currency','fund_type','etf_type','aum_usd','total_expense_ratio','yield_ttm',
+                   [], ['symbol','isin','mic_code','currency','fund_type','etf_type','leverage','aum_usd','total_expense_ratio','yield_ttm',
                         'objective','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of',
                         'sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5','data_quality_score']);
     await writeCSV(path.join(OUT_DIR, 'combined_bonds.csv'),
                    [], ['symbol','isin','mic_code','currency','fund_type','etf_type','aum_usd','total_expense_ratio','yield_ttm',
                         'objective','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of','data_quality_score']);
     await writeCSV(path.join(OUT_DIR, 'combined_etfs_exposure.csv'),
-                   [], ['symbol','isin','mic_code','currency','fund_type','etf_type','aum_usd','total_expense_ratio','yield_ttm',
+                   [], ['symbol','isin','mic_code','currency','fund_type','etf_type','leverage','aum_usd','total_expense_ratio','yield_ttm',
                         'objective','sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5','data_quality_score']);
     return;
   }
@@ -318,6 +338,8 @@ async function main(){
   // (les champs sector_top5 / country_top5 y sont des chaînes JSON)
   const weeklyEtfs = etfRows.map(r => ({
     ...r,
+    // <-- ajoute cette ligne
+    leverage: findLeverage(r),
     // normalisation des champs d'expo
     sector_top5: parseMaybeJSON(r.sector_top5) || [],
     country_top5: parseMaybeJSON(r.country_top5) || [],
@@ -355,6 +377,7 @@ async function main(){
     currency: e.currency || '',
     fund_type: e.fund_type || '',
     etf_type: e.etf_type || '',
+    leverage: e.leverage ?? '',   // <-- ajouté
     aum_usd: e.aum_usd ?? '',
     total_expense_ratio: e.total_expense_ratio ?? '',
     yield_ttm: e.yield_ttm ?? '',
@@ -380,7 +403,7 @@ async function main(){
 
   await writeCSV(path.join(OUT_DIR, 'combined_etfs_exposure.csv'),
     etfExposure, [
-      'symbol','isin','mic_code','currency','fund_type','etf_type',
+      'symbol','isin','mic_code','currency','fund_type','etf_type','leverage',
       'aum_usd','total_expense_ratio','yield_ttm','objective',
       'sector_top','sector_top_weight','country_top','country_top_weight',
       'sector_top5','country_top5','data_quality_score'
@@ -405,7 +428,7 @@ async function main(){
 
   await writeCSV(path.join(OUT_DIR, 'combined_etfs.csv'),
     etfMergedWithExposure, [
-      'symbol','isin','mic_code','currency','fund_type','etf_type',
+      'symbol','isin','mic_code','currency','fund_type','etf_type','leverage',
       'aum_usd','total_expense_ratio','yield_ttm','objective',
       'daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of',
       'sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5',
@@ -416,6 +439,9 @@ async function main(){
   console.log('🔗 Fusions weekly+daily écrites (JSON & CSV).');
   console.log(`✅ Total: ${etfMergedWithExposure.length} ETFs, ${bondMerged.length} Bonds traités`);
   console.log(`📊 CSV Exposure créé avec ${etfExposure.length} ETFs`);
+  if (leverageByKey.size > 0) {
+    console.log(`💪 Leverage injecté pour ${leverageByKey.size/2} ETFs`);
+  }
 }
 
 main().catch(err => {
