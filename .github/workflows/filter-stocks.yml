@@ -32,7 +32,7 @@ jobs:
     - name: Run stock filtering
       id: filter
       env:
-        TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
+        TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
         DEBUG: ${{ github.event.inputs.debug || '0' }}
         DATA_DIR: data
         OUTPUT_DIR: data/filtered
@@ -54,13 +54,7 @@ jobs:
         git config --local user.name "GitHub Actions"
         git add data/filtered/*.json data/filtered/*.csv || true
         git diff --staged --quiet || git commit -m "Update filtered stocks data [skip ci]"
-    
-    - name: Push changes
-      if: success()
-      uses: ad-m/github-push-action@master
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: ${{ github.ref }}
+        git push
     
     - name: Summary
       if: always()
