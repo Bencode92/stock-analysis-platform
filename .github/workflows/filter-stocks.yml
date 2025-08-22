@@ -2,7 +2,6 @@ name: Filter Stocks by Volume
 
 on:
   schedule:
-    # Exécute tous les jours à 2h UTC
     - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
@@ -14,21 +13,24 @@ on:
 jobs:
   filter-stocks:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
     - name: Setup Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
     
     - name: Install dependencies
       run: npm ci
     
     - name: Run stock filtering
+      id: filter
       env:
         TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
         DEBUG: ${{ github.event.inputs.debug || '0' }}
@@ -39,20 +41,18 @@ jobs:
         node scripts/stock-filter-by-volume.js
     
     - name: Upload filtered data
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: filtered-stocks
-        path: |
-          data/filtered/stocks_*.json
-          data/filtered/Actions_filtrees_par_volume.csv
+        path: data/filtered/**
         retention-days: 30
     
     - name: Commit filtered data
       if: success()
       run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add data/filtered/
+        git config --local user.email "actions@github.com"
+        git config --local user.name "GitHub Actions"
+        git add data/filtered/*.json data/filtered/*.csv || true
         git diff --staged --quiet || git commit -m "Update filtered stocks data [skip ci]"
     
     - name: Push changes
