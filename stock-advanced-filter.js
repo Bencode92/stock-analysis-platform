@@ -1,5 +1,5 @@
 // stock-advanced-filter.js
-// Version 3.2 - Smart resolver + Market Cap amélioré
+// Version 3.3 - Fix market_cap series format
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -428,7 +428,7 @@ async function getStatisticsData(symbol, stock) {
     }
 }
 
-// Nouveau endpoint dédié pour market_cap
+// Nouveau endpoint dédié pour market_cap - FIX pour gérer format série
 async function getMarketCapDirect(symbolOrResolved, stock) {
     try {
         await pay(CONFIG.CREDITS.MARKET_CAP);
@@ -443,7 +443,26 @@ async function getMarketCapDirect(symbolOrResolved, stock) {
             return null;
         }
         
-        // L'API peut renvoyer {market_cap: "..."} ou {value: "..."}
+        // Debug pour voir le format exact
+        if (CONFIG.DEBUG && data) {
+            console.log('[MARKET_CAP RAW]', JSON.stringify(data).slice(0, 300) + '...');
+        }
+        
+        // 1) Format "série": { market_cap: [{date, value}, ...] }
+        const series = Array.isArray(data?.market_cap) ? data.market_cap
+                     : Array.isArray(data?.values)     ? data.values
+                     : Array.isArray(data?.data)       ? data.data
+                     : null;
+        
+        if (series && series.length) {
+            // On choisit la plus récente par date
+            const sorted = series.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+            const last = sorted.at(-1);
+            const mc = parseNumberLoose(last?.value ?? last?.market_cap ?? last?.close);
+            return Number.isFinite(mc) ? mc : null;
+        }
+        
+        // 2) Format "valeur simple": { market_cap: "..." } ou { value: "..." }
         const raw = data?.market_cap ?? data?.value;
         const mc = parseNumberLoose(raw);
         return Number.isFinite(mc) ? mc : null;
