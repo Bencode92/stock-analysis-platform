@@ -23,6 +23,7 @@ jobs:
     - name: Run Stock Advanced Filter
       env:
         TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
+        INCLUDE_OPTIONS: '1'  # Activer les options
       run: node stock-advanced-filter.js
     
     - name: Commit results
