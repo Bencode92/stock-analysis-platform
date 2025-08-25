@@ -1,5 +1,5 @@
 /**
- * marches-script.js - Version corrigée qui correspond à la structure de Boursorama
+ * marches-script.js - Version compatible Twelve Data avec corrections majeures
  * Les données sont mises à jour régulièrement par GitHub Actions
  */
 
@@ -14,69 +14,57 @@ document.addEventListener('DOMContentLoaded', function() {
             other: []
         },
         meta: {
-            source: 'Boursorama',
+            source: 'Twelve Data',
             timestamp: null,
             count: 0,
             isStale: false
         }
     };
     
-    // Mapping des continents pour le tri
-    const continentOrder = {
-        // Europe
-        "France": "europe", 
-        "Allemagne": "europe", 
-        "Royaume-Uni": "europe", 
-        "Italie": "europe", 
-        "Espagne": "europe", 
-        "Suisse": "europe", 
-        "Pays-Bas": "europe", 
-        "Belgique": "europe", 
-        "Autriche": "europe", 
-        "Portugal": "europe", 
-        "Irlande": "europe", 
-        "Danemark": "europe",
-        "Finlande": "europe", 
-        "Norvège": "europe", 
-        "Suède": "europe", 
-        "Pologne": "europe", 
-        "Zone Euro": "europe",
-        
-        // Amérique du Nord
-        "États-Unis": "north-america", 
-        "Canada": "north-america",
-        
-        // Amérique Latine
-        "Brésil": "latin-america", 
-        "Mexique": "latin-america",
-        "Argentine": "latin-america", 
-        "Chili": "latin-america", 
-        "Colombie": "latin-america", 
-        "Pérou": "latin-america",
-        
-        // Asie
-        "Japon": "asia", 
-        "Chine": "asia", 
-        "Hong Kong": "asia", 
-        "Taïwan": "asia",
-        "Corée du Sud": "asia", 
-        "Singapour": "asia", 
-        "Inde": "asia", 
-        "Indonésie": "asia",
-        "Malaisie": "asia", 
-        "Philippines": "asia", 
-        "Thaïlande": "asia",
-        
-        // Océanie
-        "Australie": "other", 
-        "Nouvelle-Zélande": "other",
-        
-        // Moyen-Orient et Afrique
-        "Israël": "other", 
-        "Émirats Arabes Unis": "other", 
-        "Qatar": "other", 
-        "Afrique du Sud": "other", 
-        "Maroc": "other"
+    // Mapping des aliases pour l'aperçu des marchés (ETF → Indices)
+    const OVERVIEW_ALIASES = {
+        'europe': {
+            'CAC 40':       [/CAC\s*40/i, /France ETF/i],
+            'DAX':          [/DAX/i, /Germany ETF/i],
+            'FTSE 100':     [/FTSE\s*100/i, /United Kingdom ETF/i],
+            'EURO STOXX 50':[/EURO\s*STOXX\s*50/i, /Europe 50/i, /SPDR EURO STOXX 50/i],
+        },
+        'north-america': {
+            'S&P 500':         [/S&P\s*500/i, /SPDR S&P 500/i, /\bSPY\b/i],
+            'DOW JONES':       [/Dow\s*Jones/i, /SPDR Dow Jones/i],
+            'NASDAQ Composite':[/NASDAQ\s*(Composite|100)?/i, /\bQQQ\b/i, /Invesco QQQ/i],
+            'VIX':             [/\bVIX\b/i, /Volatility/i, /iPath.*VIX/i],
+        },
+        'latin-america': {
+            'MERVAL': [/MERVAL/i, /Argentina/i],
+            'Brazil': [/Brazil/i, /Brésil/i],
+            'Chile':  [/Chile/i, /Chili/i],
+            'Mexico': [/Mexico/i, /Mexique/i],
+        },
+        'asia': {
+            'NIKKEI 225':       [/NIKKEI\s*225/i, /Japan ETF/i, /Japon/i],
+            'HANG SENG':        [/HANG\s*SENG/i, /Hong Kong/i],
+            'SHANGHAI':         [/SHANGHAI/i],
+            'CSI (China)':      [/CSI\s*(100|300|500)/i, /China A-?Shares?/i, /Harvest CSI/i]
+        },
+        'other': {
+            'South Africa': [/South\s*Africa/i, /Afrique du Sud/i],
+            'Australia':    [/Australia/i, /Australie/i],
+            'Israel':       [/Israel/i, /Israël/i],
+            'Turkey':       [/Turkey/i, /Turquie/i, /Morocco/i, /Maroc/i]
+        }
+    };
+    
+    // Mapping de normalisation des pays
+    const COUNTRY_NORMALIZATION = {
+        'Etats-Unis': 'États-Unis',
+        'Royaume Uni': 'Royaume-Uni',
+        'Saudi Arabia': 'Arabie Saoudite',
+        'South Africa': 'Afrique du Sud',
+        'Israel': 'Israël',
+        'China': 'Chine',
+        'Taiwan': 'Taïwan',
+        'Turkey': 'Turquie'
     };
     
     // État du scraper
@@ -107,16 +95,83 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     /**
+     * Convertit un pourcentage string en nombre
+     */
+    function parsePercentToNumber(pct) {
+        if (pct == null) return 0;
+        const s = String(pct).replace('%','').replace(/\s/g,'').replace(',', '.');
+        const m = s.match(/-?\d+(\.\d+)?/);
+        return m ? parseFloat(m[0]) : 0;
+    }
+    
+    /**
+     * Convertit une valeur string en nombre
+     */
+    function toNumber(val) {
+        if (val == null) return null;
+        // Gère "55,400.00" ou "55 400,00"
+        const s = String(val).replace(/\s/g,'').replace(/,/g,'.');
+        const m = s.match(/-?\d+(\.\d+)?/);
+        return m ? parseFloat(m[0]) : null;
+    }
+    
+    /**
+     * Formate un nombre en pourcentage FR
+     */
+    function formatPercent(n) {
+        if (n == null || isNaN(n)) return '-';
+        const sign = n > 0 ? '+' : '';
+        return `${sign}${new Intl.NumberFormat('fr-FR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(n)} %`;
+    }
+    
+    /**
+     * Normalise un enregistrement de données
+     */
+    function normalizeRecord(rec) {
+        const r = {...rec};
+        r.country = COUNTRY_NORMALIZATION[r.country] || r.country;
+        r.value_num = toNumber(r.value);
+        r.change_num = parsePercentToNumber(r.changePercent);
+        r.ytd_num = parsePercentToNumber(r.ytdChange);
+        r.trend = r.change_num > 0 ? 'up' : r.change_num < 0 ? 'down' : 'flat';
+        return r;
+    }
+    
+    /**
+     * Trouve un indice par alias avec regex
+     */
+    function findIndexByAlias(region, label) {
+        const patterns = OVERVIEW_ALIASES[region]?.[label] || [];
+        return (indicesData.indices[region] || []).find(idx =>
+            patterns.some(rx => 
+                rx.test(idx.index_name || '') || 
+                rx.test(idx.country || '')
+            )
+        );
+    }
+    
+    /**
+     * Crée une cellule de tableau de manière sécurisée
+     */
+    function createTableCell(text, className) {
+        const td = document.createElement('td');
+        if (className) td.className = className;
+        td.textContent = text ?? '-';
+        return td;
+    }
+    
+    /**
      * Ajoute les étiquettes VAR % et YTD au-dessus des valeurs
      */
     function addDataLabels() {
-        // Sélectionner toutes les cellules d'indices
         const indexCols = document.querySelectorAll('.market-index-col');
         
         indexCols.forEach(col => {
             const dataContainer = col.querySelector('.market-index-data');
-            if (dataContainer) {
-                // Créer le conteneur pour les étiquettes
+            if (dataContainer && !col.querySelector('.market-index-labels')) {
                 const labelsContainer = document.createElement('div');
                 labelsContainer.className = 'market-index-labels';
                 labelsContainer.style.display = 'flex';
@@ -125,13 +180,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 labelsContainer.style.color = 'rgba(255, 255, 255, 0.5)';
                 labelsContainer.style.marginBottom = '2px';
                 
-                // Créer les étiquettes
                 labelsContainer.innerHTML = `
                     <div style="min-width: 62px; text-align: right;">VAR %</div>
                     <div style="min-width: 62px; text-align: right;">YTD</div>
                 `;
                 
-                // Insérer les étiquettes avant les données
                 col.insertBefore(labelsContainer, dataContainer);
             }
         });
@@ -145,11 +198,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         tabs.forEach(tab => {
             tab.addEventListener('click', function() {
-                // Mettre à jour les onglets actifs
                 tabs.forEach(t => t.classList.remove('active'));
                 this.classList.add('active');
                 
-                // Afficher le contenu correspondant
                 const region = this.getAttribute('data-region');
                 const contents = document.querySelectorAll('.region-content');
                 
@@ -166,7 +217,6 @@ document.addEventListener('DOMContentLoaded', function() {
      * Charge les données d'indices depuis le fichier JSON
      */
     async function loadIndicesData(forceRefresh = false) {
-        // Éviter les chargements multiples simultanés
         if (isLoading) {
             console.log('⚠️ Chargement déjà en cours, opération ignorée');
             return;
@@ -174,14 +224,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         isLoading = true;
         
-        // Afficher le loader
         showElement('indices-loading');
         hideElement('indices-error');
         hideElement('indices-container');
         
         try {
-            // Récupérer les données depuis le fichier JSON
-            // Pour éviter le cache du navigateur en cas de forceRefresh
             const cacheBuster = forceRefresh ? `?t=${Date.now()}` : '';
             const response = await fetch(`data/markets.json${cacheBuster}`);
             
@@ -189,37 +236,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(`Erreur de chargement: ${response.status}`);
             }
             
-            // Charger les données
             const rawData = await response.json();
             
-            // S'assurer que toutes les régions existent dans les données
-            // Utiliser directement les données comme elles sont déjà structurées
-            indicesData = {
-                indices: {
-                    europe: rawData.indices.europe || [],
-                    "north-america": rawData.indices["north-america"] || [],
-                    "latin-america": rawData.indices["latin-america"] || [],
-                    asia: rawData.indices.asia || [],
-                    other: rawData.indices.other || []
-                },
-                meta: rawData.meta
-            };
+            // Normaliser toutes les données
+            ['europe', 'north-america', 'latin-america', 'asia', 'other'].forEach(region => {
+                indicesData.indices[region] = (rawData.indices[region] || []).map(normalizeRecord);
+            });
+            
+            indicesData.meta = rawData.meta;
             
             // Vérifier la fraîcheur des données
             const dataTimestamp = new Date(indicesData.meta.timestamp);
             const now = new Date();
             const dataAge = now - dataTimestamp;
-            const MAX_DATA_AGE = 60 * 60 * 1000; // 1 heure en millisecondes
+            const MAX_DATA_AGE = 60 * 60 * 1000; // 1 heure
             
-            // Marquer les données comme périmées si plus vieilles que MAX_DATA_AGE
             indicesData.meta.isStale = dataAge > MAX_DATA_AGE;
             
-            // Afficher une notification si les données sont périmées
             if (indicesData.meta.isStale) {
                 showNotification('Les données affichées datent de plus d\'une heure', 'warning');
             }
             
-            // Afficher les données
             renderIndicesData();
             lastUpdate = new Date();
         } catch (error) {
@@ -228,7 +265,6 @@ document.addEventListener('DOMContentLoaded', function() {
             hideElement('indices-loading');
             hideElement('indices-container');
         } finally {
-            // Réinitialiser l'état
             isLoading = false;
         }
     }
@@ -238,27 +274,22 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     function renderIndicesData() {
         try {
-            // Mettre à jour l'horodatage
+            // Mettre à jour l'horodatage avec le bon fuseau horaire
             const timestamp = new Date(indicesData.meta.timestamp);
+            const formattedDate = new Intl.DateTimeFormat('fr-FR', {
+                dateStyle: 'long',
+                timeStyle: 'medium',
+                timeZone: 'Europe/Paris'
+            }).format(timestamp);
             
-            // Ajuster l'heure pour le fuseau horaire français (UTC+1)
-            timestamp.setHours(timestamp.getHours() + 1);
+            document.getElementById('last-update-time').textContent = 
+                formattedDate + (indicesData.meta.isStale ? ' (anciennes données)' : '');
             
-            let formattedDate = timestamp.toLocaleDateString('fr-FR', {
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            
-            // Ajouter un indicateur si les données sont périmées
-            if (indicesData.meta.isStale) {
-                formattedDate += ' (anciennes données)';
+            // Mettre à jour la source dynamiquement
+            const sourceLink = document.querySelector('a[href*="boursorama"]');
+            if (sourceLink && indicesData.meta.source) {
+                sourceLink.textContent = indicesData.meta.source;
             }
-            
-            document.getElementById('last-update-time').textContent = formattedDate;
             
             // Générer le HTML pour chaque région
             const regions = ['europe', 'north-america', 'latin-america', 'asia', 'other'];
@@ -268,10 +299,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const tableBody = document.getElementById(`${region}-indices-body`);
                 
                 if (tableBody) {
-                    // Vider le corps du tableau
                     tableBody.innerHTML = '';
                     
-                    // Si pas d'indices, afficher un message
                     if (indices.length === 0) {
                         const emptyRow = document.createElement('tr');
                         emptyRow.innerHTML = `
@@ -282,53 +311,42 @@ document.addEventListener('DOMContentLoaded', function() {
                         `;
                         tableBody.appendChild(emptyRow);
                     } else {
-                        // Trier les indices par pays puis par nom d'indice
                         const sortedIndices = [...indices].sort((a, b) => {
-                            // D'abord trier par pays
                             if (a.country !== b.country) {
                                 return (a.country || "").localeCompare(b.country || "");
                             }
-                            
-                            // Ensuite par nom d'indice
                             return (a.index_name || "").localeCompare(b.index_name || "");
                         });
                         
-                        // Remplir avec les données
                         sortedIndices.forEach(index => {
-                            const row = document.createElement('tr');
+                            const tr = document.createElement('tr');
                             
-                            // Déterminer la classe CSS pour les valeurs (positif/négatif)
-                            const changeClass = index.changePercent && index.changePercent.includes('-') ? 'negative' : 'positive';
-                            const ytdClass = index.ytdChange && index.ytdChange.includes('-') ? 'negative' : 'positive';
+                            const changeClass = index.change_num < -0.01 ? 'negative' : 
+                                              index.change_num > 0.01 ? 'positive' : 'neutral';
+                            const ytdClass = index.ytd_num < -0.01 ? 'negative' : 
+                                           index.ytd_num > 0.01 ? 'positive' : 'neutral';
                             
-                            // Création de la ligne avec la structure correcte (comme sur Boursorama)
-                            row.innerHTML = `
-                                <td class="font-medium">${index.country || '-'}</td>
-                                <td>${index.index_name || '-'}</td>
-                                <td>${index.value || '-'}</td>
-                                <td class="${changeClass}">${index.changePercent || '-'}</td>
-                                <td class="${ytdClass}">${index.ytdChange || '-'}</td>
-                                <td>
-                                    <button class="p-1 px-3 rounded bg-green-400 bg-opacity-10 text-green-400 text-xs">Voir</button>
-                                </td>
-                            `;
+                            tr.appendChild(createTableCell(index.country, 'font-medium'));
+                            tr.appendChild(createTableCell(index.index_name));
+                            tr.appendChild(createTableCell(index.value));
+                            tr.appendChild(createTableCell(formatPercent(index.change_num), changeClass));
+                            tr.appendChild(createTableCell(formatPercent(index.ytd_num), ytdClass));
                             
-                            tableBody.appendChild(row);
+                            const actionsCell = document.createElement('td');
+                            actionsCell.innerHTML = `<button class="p-1 px-3 rounded bg-green-400 bg-opacity-10 text-green-400 text-xs">Voir</button>`;
+                            tr.appendChild(actionsCell);
+                            
+                            tableBody.appendChild(tr);
                         });
                     }
                     
-                    // Mettre à jour le résumé
                     updateRegionSummary(region, indices);
                 }
             });
             
-            // Calculer et afficher les top performers
             updateTopPerformers();
-            
-            // Mettre à jour l'aperçu des marchés mondiaux
             updateMarketOverview();
             
-            // Masquer le loader et afficher les données
             hideElement('indices-loading');
             hideElement('indices-error');
             showElement('indices-container');
@@ -349,42 +367,42 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Europe
             updateMarketOverviewRegion('europe', [
-                { name: 'CAC 40', selector: '.market-index-col[data-index="cac40"]' },
-                { name: 'DAX', selector: '.market-index-col[data-index="dax"]' },
-                { name: 'FTSE 100', selector: '.market-index-col[data-index="ftse100"]' },
-                { name: 'EURO STOXX 50', selector: '.market-index-col[data-index="eurostoxx50"]' }
+                { label: 'CAC 40', selector: '.market-index-col[data-index="cac40"]' },
+                { label: 'DAX', selector: '.market-index-col[data-index="dax"]' },
+                { label: 'FTSE 100', selector: '.market-index-col[data-index="ftse100"]' },
+                { label: 'EURO STOXX 50', selector: '.market-index-col[data-index="eurostoxx50"]' }
             ]);
             
-            // Amérique du Nord - Remplacer S&P/TSX 60 par CBOE VIX INDEX
+            // Amérique du Nord
             updateMarketOverviewRegion('north-america', [
-                { name: 'S&P 500', selector: '.market-index-col[data-index="sp500"]' },
-                { name: 'DOW JONES', selector: '.market-index-col[data-index="dowjones"]' },
-                { name: 'NASDAQ Composite', selector: '.market-index-col[data-index="nasdaq"]' },
-                { name: 'CBOE VIX INDEX', selector: '.market-index-col[data-index="sptsx"]' } // Changé ici
+                { label: 'S&P 500', selector: '.market-index-col[data-index="sp500"]' },
+                { label: 'DOW JONES', selector: '.market-index-col[data-index="dowjones"]' },
+                { label: 'NASDAQ Composite', selector: '.market-index-col[data-index="nasdaq"]' },
+                { label: 'VIX', selector: '.market-index-col[data-index="sptsx"]' }
             ]);
             
-            // Amérique Latine - NOUVEAU
+            // Amérique Latine
             updateMarketOverviewRegion('latin-america', [
-                { name: 'BUENOS AIRES MERVAL', selector: '.market-index-col[data-index="merval"]' },
-                { name: 'NASDAQ Brazil', selector: '.market-index-col[data-index="brazil"]' },
-                { name: 'NASDAQ Chile', selector: '.market-index-col[data-index="chile"]' },
-                { name: 'NASDAQ Mexico', selector: '.market-index-col[data-index="mexico"]' }
+                { label: 'MERVAL', selector: '.market-index-col[data-index="merval"]' },
+                { label: 'Brazil', selector: '.market-index-col[data-index="brazil"]' },
+                { label: 'Chile', selector: '.market-index-col[data-index="chile"]' },
+                { label: 'Mexico', selector: '.market-index-col[data-index="mexico"]' }
             ]);
             
-            // Asie - Remplacer BSE SENSEX par CSI 100 INDEX
+            // Asie
             updateMarketOverviewRegion('asia', [
-                { name: 'NIKKEI 225', selector: '.market-index-col[data-index="nikkei"]' },
-                { name: 'HANG SENG', selector: '.market-index-col[data-index="hangseng"]' },
-                { name: 'SHANGHAI COMPOSITE', selector: '.market-index-col[data-index="shanghai"]' },
-                { name: 'CSI 100 INDEX', selector: '.market-index-col[data-index="sensex"]' } // Changé ici
+                { label: 'NIKKEI 225', selector: '.market-index-col[data-index="nikkei"]' },
+                { label: 'HANG SENG', selector: '.market-index-col[data-index="hangseng"]' },
+                { label: 'SHANGHAI', selector: '.market-index-col[data-index="shanghai"]' },
+                { label: 'CSI (China)', selector: '.market-index-col[data-index="sensex"]' }
             ]);
             
             // Autres régions
             updateMarketOverviewRegion('other', [
-                { name: 'South Africa', selector: '.market-index-col[data-index="southafrica"]' },
-                { name: 'Australia', selector: '.market-index-col[data-index="australia"]' },
-                { name: 'Israel', selector: '.market-index-col[data-index="israel"]' },
-                { name: 'Morocco', selector: '.market-index-col[data-index="morocco"]' }
+                { label: 'South Africa', selector: '.market-index-col[data-index="southafrica"]' },
+                { label: 'Australia', selector: '.market-index-col[data-index="australia"]' },
+                { label: 'Israel', selector: '.market-index-col[data-index="israel"]' },
+                { label: 'Turkey', selector: '.market-index-col[data-index="morocco"]' }
             ]);
             
             console.log('Mise à jour de l\'aperçu des marchés terminée');
@@ -399,301 +417,128 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateMarketOverviewRegion(region, indicesInfo) {
         indicesInfo.forEach(indexInfo => {
             try {
-                // Trouver l'élément dans le DOM
                 const container = document.querySelector(indexInfo.selector);
                 if (!container) {
-                    console.warn(`Élément non trouvé pour le sélecteur: ${indexInfo.selector}`);
+                    console.warn(`Élément non trouvé: ${indexInfo.selector}`);
                     return;
                 }
                 
-                // Trouver l'indice correspondant dans les données
-                const index = findIndexByName(region, indexInfo.name);
+                const index = findIndexByAlias(region, indexInfo.label);
                 if (!index) {
-                    console.warn(`Indice non trouvé: ${indexInfo.name} dans la région ${region}`);
+                    console.warn(`Indice non trouvé: ${indexInfo.label} dans ${region}`);
                     return;
                 }
                 
-                // Mettre à jour les valeurs
                 const nameElement = container.querySelector('.market-index-name');
                 const valueElement = container.querySelector('.market-value');
                 const ytdElement = container.querySelector('.market-ytd');
                 
                 if (nameElement) {
-                    nameElement.textContent = index.index_name;
+                    // Afficher le label au lieu du nom ETF complet
+                    nameElement.textContent = indexInfo.label;
                 }
                 
                 if (valueElement) {
-                    valueElement.textContent = index.changePercent || '0,00 %';
-                    valueElement.className = 'market-value ' + (index.changePercent && index.changePercent.includes('-') ? 'negative' : 'positive');
+                    valueElement.textContent = formatPercent(index.change_num);
+                    valueElement.className = 'market-value ' + 
+                        (index.change_num < -0.01 ? 'negative' : 
+                         index.change_num > 0.01 ? 'positive' : 'neutral');
                 }
                 
                 if (ytdElement) {
-                    ytdElement.textContent = index.ytdChange || '0,00 %';
-                    ytdElement.className = 'market-ytd ' + (index.ytdChange && index.ytdChange.includes('-') ? 'negative' : 'positive');
+                    ytdElement.textContent = formatPercent(index.ytd_num);
+                    ytdElement.className = 'market-ytd ' + 
+                        (index.ytd_num < -0.01 ? 'negative' : 
+                         index.ytd_num > 0.01 ? 'positive' : 'neutral');
                 }
             } catch (error) {
-                console.error(`Erreur lors de la mise à jour de ${indexInfo.name}:`, error);
+                console.error(`Erreur lors de la mise à jour de ${indexInfo.label}:`, error);
             }
         });
-    }
-    
-    /**
-     * Trouve un indice par son nom
-     */
-    function findIndexByName(region, name) {
-        if (!indicesData.indices[region]) return null;
-        
-        return indicesData.indices[region].find(index => 
-            index.index_name && index.index_name.includes(name)
-        );
     }
     
     /**
      * Met à jour le résumé des indices pour une région donnée
      */
     function updateRegionSummary(region, indices) {
-        const summaryContainer = document.getElementById(`${region}-indices-summary`);
         const trendElement = document.getElementById(`${region}-trend`);
         
         if (!trendElement) return;
         
-        // Si pas d'indices, afficher un message
         if (!indices.length) {
-            if (summaryContainer) {
-                summaryContainer.innerHTML = `
-                    <div class="col-span-2 text-center text-gray-400">
-                        Aucune donnée disponible
-                    </div>
-                `;
-            }
-            
-            // Masquer la tendance
             trendElement.innerHTML = '';
             return;
         }
         
-        // Sélectionner les indices importants pour cette région
-        let importantIndices = [];
+        // Sélectionner les indices importants avec les aliases
+        const labels = Object.keys(OVERVIEW_ALIASES[region] || {});
+        const importantIndices = labels.map(label => findIndexByAlias(region, label)).filter(Boolean);
         
-        switch (region) {
-            case 'europe':
-                importantIndices = indices.filter(index => 
-                    (index.index_name || "").includes('CAC 40') || 
-                    (index.index_name || "").includes('DAX') || 
-                    (index.index_name || "").includes('FTSE 100') ||
-                    (index.index_name || "").includes('EURO STOXX 50')
-                );
-                break;
-            case 'north-america':
-                importantIndices = indices.filter(index => 
-                    (index.index_name || "").includes('S&P 500') || 
-                    (index.index_name || "").includes('DOW JONES INDUSTRIAL') || 
-                    (index.index_name || "").includes('NASDAQ Composite') ||
-                    (index.index_name || "").includes('CBOE VIX INDEX') // Modifié ici (S&P/TSX 60 -> CBOE VIX INDEX)
-                );
-                break;
-            case 'latin-america':
-                importantIndices = indices.filter(index => 
-                    (index.index_name || "").includes('MERVAL') || 
-                    (index.index_name || "").includes('Brazil') || 
-                    (index.index_name || "").includes('Chile') ||
-                    (index.index_name || "").includes('Mexico')
-                );
-                break;
-            case 'asia':
-                importantIndices = indices.filter(index => 
-                    (index.index_name || "").includes('NIKKEI 225') || 
-                    (index.index_name || "").includes('HANG SENG HK COMPOSITE') || 
-                    (index.index_name || "").includes('SHANGHAI COMPOSITE') ||
-                    (index.index_name || "").includes('CSI 100 INDEX') // Modifié ici (BSE SENSEX -> CSI 100 INDEX)
-                );
-                break;
-            case 'other':
-                importantIndices = indices.filter(index => 
-                    (index.index_name || "").includes('NASDAQ South Africa Large Mid Cap') || 
-                    (index.index_name || "").includes('NASDAQ Australia Large Mid Cap') || 
-                    (index.index_name || "").includes('NASDAQ Israel Large Mid Cap') ||
-                    (index.index_name || "").includes('NASDAQ Morocco Large Mid Cap')
-                );
-                break;
-        }
-        
-        // Limiter à 4 indices
-        importantIndices = importantIndices.slice(0, 4);
-        
-        // Si nous n'avons pas 4 indices, prendre les premiers
+        // Si pas assez d'indices importants, prendre les premiers
         while (importantIndices.length < 4 && indices.length > importantIndices.length) {
-            const remainingIndices = indices.filter(index => !importantIndices.includes(index));
-            importantIndices.push(remainingIndices[0]);
+            const remainingIndices = indices.filter(idx => !importantIndices.includes(idx));
+            if (remainingIndices.length > 0) {
+                importantIndices.push(remainingIndices[0]);
+            }
         }
         
-        // Compter les indices positifs, négatifs et neutres (0,00%)
-        const positiveIndices = importantIndices.filter(index => {
-            const changePercent = index.changePercent || "";
-            return !changePercent.includes('-') && changePercent.trim() !== '0,00 %' && changePercent.trim() !== '0.00 %' && changePercent.trim() !== '0 %';
-        }).length;
+        // Calculer la moyenne des variations pour déterminer la tendance
+        const avgChange = importantIndices.reduce((sum, idx) => 
+            sum + (idx.change_num || 0), 0) / Math.max(1, importantIndices.length);
         
-        const negativeIndices = importantIndices.filter(index => {
-            const changePercent = index.changePercent || "";
-            return changePercent.includes('-') && changePercent.trim() !== '0,00 %' && changePercent.trim() !== '0.00 %' && changePercent.trim() !== '0 %';
-        }).length;
+        let trendClass = Math.abs(avgChange) <= 0.01 ? 'neutral' : 
+                        (avgChange > 0 ? 'positive' : 'negative');
         
-        const neutralIndices = importantIndices.filter(index => {
-            const changePercent = index.changePercent || "";
-            return changePercent.trim() === '0,00 %' || changePercent.trim() === '0.00 %' || changePercent.trim() === '0 %';
-        }).length;
-        
-        console.log(`Région ${region}: ${positiveIndices} positifs, ${negativeIndices} négatifs, ${neutralIndices} neutres`);
-        
-        // Déterminer la tendance générale en fonction du décompte
-        let trendClass = 'neutral';
-        let trendIcon = '';
-        
-        // Règle mise à jour : si au moins 3 indices sont négatifs, tendance négative
-        if (negativeIndices >= 3) {
-            trendClass = 'negative';
-            trendIcon = '<i class="fas fa-arrow-down"></i>';
-        }
-        // Si au moins 3 indices sont positifs, tendance positive
-        else if (positiveIndices >= 3) {
-            trendClass = 'positive';
-            trendIcon = '<i class="fas fa-arrow-up"></i>';
-        } 
-        // Sinon (mix d'indices positifs, négatifs et neutres), tendance neutre
-        else {
-            trendClass = 'neutral';
-            trendIcon = '<i class="fas fa-arrows-alt-h"></i>';
-        }
-        
-        // Mettre à jour la tendance
         trendElement.className = `text-sm ${trendClass}`;
-        trendElement.innerHTML = trendIcon;
-        
-        // Générer le HTML
-        if (summaryContainer) {
-            summaryContainer.innerHTML = '';
-            
-            importantIndices.forEach(index => {
-                // Déterminer la classe pour la variation
-                let changeClass = 'neutral';
-                const changePercent = index.changePercent || "";
-                
-                if (changePercent.includes('-')) {
-                    changeClass = 'negative';
-                } else if (changePercent !== '0,00 %' && changePercent !== '0.00 %' && changePercent !== '0 %') {
-                    changeClass = 'positive';
-                }
-                
-                // Déterminer la classe pour YTD
-                let ytdClass = 'neutral';
-                const ytdChange = index.ytdChange || "";
-                
-                if (ytdChange.includes('-')) {
-                    ytdClass = 'negative';
-                } else if (ytdChange !== '0,00 %' && ytdChange !== '0.00 %' && ytdChange !== '0 %') {
-                    ytdClass = 'positive';
-                }
-                
-                const div = document.createElement('div');
-                div.innerHTML = `
-                    <div class="font-medium">${index.index_name || ""}</div>
-                    <div class="${changeClass}">
-                        ${index.changePercent || '-'} 
-                        ${index.ytdChange ? `/ <span class="${ytdClass}">${index.ytdChange}</span>` : ''}
-                    </div>
-                `;
-                summaryContainer.appendChild(div);
-            });
-        }
-    }
-    
-    /**
-     * Fonction pour extraire la valeur numérique d'un pourcentage
-     */
-    function extractPercentageValue(percentStr) {
-        if (!percentStr) return 0;
-        
-        // Enlever le symbole % et autres caractères non numériques, sauf le - et le .
-        const value = percentStr.replace(/[^0-9\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\.\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\-]/g, '');
-        return parseFloat(value) || 0;
+        trendElement.innerHTML = trendClass === 'positive' ? '<i class="fas fa-arrow-up"></i>' :
+                                trendClass === 'negative' ? '<i class="fas fa-arrow-down"></i>' :
+                                '<i class="fas fa-arrows-alt-h"></i>';
     }
     
     /**
      * Calcule et affiche les top performers
      */
     function updateTopPerformers() {
-        // Collecter tous les indices de toutes les régions
-        const allIndices = [];
         const regions = ['europe', 'north-america', 'latin-america', 'asia', 'other'];
+        const allIndices = regions.flatMap(r => indicesData.indices[r] || []);
         
-        regions.forEach(region => {
-            if (indicesData.indices[region] && indicesData.indices[region].length) {
-                allIndices.push(...indicesData.indices[region]);
-            }
-        });
+        if (allIndices.length < 3) return;
         
-        // Si pas assez d'indices, ne rien faire
-        if (allIndices.length < 3) {
-            return;
-        }
-        
-        // Préparer les indices avec des valeurs numériques pour les classements
-        const preparedIndices = allIndices.map(index => {
-            const changePercentValue = extractPercentageValue(index.changePercent);
-            const ytdChangeValue = extractPercentageValue(index.ytdChange);
-            
-            return {
-                ...index,
-                changePercentValue,
-                ytdChangeValue
-            };
-        });
-        
-        // Filtrer les indices sans données numériques valides
-        const filteredIndices = preparedIndices.filter(
-            index => !isNaN(index.changePercentValue) && !isNaN(index.ytdChangeValue)
+        // Trier par variation quotidienne et YTD
+        const byDaily = [...allIndices].sort((a, b) => 
+            b.change_num - a.change_num || b.ytd_num - a.ytd_num
+        );
+        const byYTD = [...allIndices].sort((a, b) => 
+            b.ytd_num - a.ytd_num || b.change_num - a.change_num
         );
         
-        // Obtenir les tops et flops pour var%
-        const topDaily = [...filteredIndices].sort((a, b) => b.changePercentValue - a.changePercentValue).slice(0, 3);
-        const bottomDaily = [...filteredIndices].sort((a, b) => a.changePercentValue - b.changePercentValue).slice(0, 3);
-        
-        // Obtenir les tops et flops pour YTD
-        const topYTD = [...filteredIndices].sort((a, b) => b.ytdChangeValue - a.ytdChangeValue).slice(0, 3);
-        const bottomYTD = [...filteredIndices].sort((a, b) => a.ytdChangeValue - b.ytdChangeValue).slice(0, 3);
-        
-        // Mettre à jour le HTML
-        updateTopPerformersHTML('daily-top', topDaily, 'changePercent');
-        updateTopPerformersHTML('daily-bottom', bottomDaily, 'changePercent');
-        updateTopPerformersHTML('ytd-top', topYTD, 'ytdChange');
-        updateTopPerformersHTML('ytd-bottom', bottomYTD, 'ytdChange');
+        updateTopPerformersHTML('daily-top', byDaily.slice(0, 3), 'change_num');
+        updateTopPerformersHTML('daily-bottom', byDaily.slice(-3).reverse(), 'change_num');
+        updateTopPerformersHTML('ytd-top', byYTD.slice(0, 3), 'ytd_num');
+        updateTopPerformersHTML('ytd-bottom', byYTD.slice(-3).reverse(), 'ytd_num');
     }
     
     /**
      * Met à jour le HTML pour une section de top performers
      */
-    function updateTopPerformersHTML(containerId, indices, valueField) {
+    function updateTopPerformersHTML(containerId, items, field) {
         const container = document.getElementById(containerId);
         if (!container) return;
         
-        // Vider le conteneur
         container.innerHTML = '';
         
-        // Générer le HTML pour chaque indice
-        indices.forEach((index, i) => {
+        items.forEach(idx => {
+            const val = idx[field] ?? 0;
+            const css = val < -0.01 ? 'negative' : val > 0.01 ? 'positive' : 'neutral';
+            
             const row = document.createElement('div');
-            row.className = 'flex justify-between items-center py-2 border-b border-gray-700 last:border-0';
-            
-            const valueClass = (index[valueField] || "").includes('-') ? 'negative' : 'positive';
-            
+            row.className = 'performer-row';
             row.innerHTML = `
-                <div class="flex-1">
-                    <div class="font-medium">${index.index_name || ""}</div>
-                    <div class="text-xs text-gray-400">${index.country || ""}</div>
+                <div class="performer-info">
+                    <div class="performer-index">${idx.index_name || ''}</div>
+                    <div class="performer-country">${idx.country || ''}</div>
                 </div>
-                <div class="text-right ${valueClass} font-bold">
-                    ${index[valueField] || "-"}
-                </div>
+                <div class="performer-value ${css}">${formatPercent(val)}</div>
             `;
             
             container.appendChild(row);
@@ -718,20 +563,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function showNotification(message, type = 'info') {
-        // Vérifier si une notification existe déjà
         let notification = document.querySelector('.notification-popup');
         if (!notification) {
             notification = document.createElement('div');
             notification.className = 'notification-popup';
-            notification.style.position = 'fixed';
-            notification.style.bottom = '20px';
-            notification.style.right = '20px';
-            notification.style.padding = '15px 25px';
-            notification.style.borderRadius = '4px';
-            notification.style.zIndex = '1000';
-            notification.style.opacity = '0';
-            notification.style.transform = 'translateY(20px)';
-            notification.style.transition = 'opacity 0.3s, transform 0.3s';
+            notification.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                padding: 15px 25px;
+                border-radius: 4px;
+                z-index: 1000;
+                opacity: 0;
+                transform: translateY(20px);
+                transition: opacity 0.3s, transform 0.3s;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            `;
             
             if (type === 'warning') {
                 notification.style.backgroundColor = 'rgba(255, 193, 7, 0.1)';
@@ -743,24 +590,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 notification.style.color = 'var(--text-color)';
             }
             
-            notification.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.2)';
-            
             document.body.appendChild(notification);
         }
         
         notification.textContent = message;
         
-        // Animer la notification
         setTimeout(() => {
             notification.style.opacity = '1';
             notification.style.transform = 'translateY(0)';
             
-            // Masquer automatiquement après 4 secondes
             setTimeout(() => {
                 notification.style.opacity = '0';
                 notification.style.transform = 'translateY(20px)';
                 
-                // Supprimer après la transition
                 setTimeout(() => {
                     if (notification.parentNode) {
                         notification.parentNode.removeChild(notification);
@@ -809,7 +651,7 @@ document.addEventListener('DOMContentLoaded', function() {
             lightIcon.style.display = 'none';
         }
         
-        themeToggleBtn.addEventListener('click', function() {
+        themeToggleBtn?.addEventListener('click', function() {
             document.body.classList.toggle('dark');
             document.body.classList.toggle('light');
             document.documentElement.classList.toggle('dark');
