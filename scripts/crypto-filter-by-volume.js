@@ -75,59 +75,81 @@ function quoteCode(label){
 let lastReq = 0; const MIN_DELAY = Number(process.env.MIN_DELAY_MS || 60);
 async function throttle(){ const d = Date.now() - lastReq; if (d < MIN_DELAY) await new Promise(r=>setTimeout(r, MIN_DELAY-d)); lastReq = Date.now(); }
 
-// 1) Essaie /quote (volume 24h + close). 2) Fallback /time_series pour avg7d.
-async function fetchVolumes(symbol, exchange, quoteCcyCode){
-  // --- Quote 24h ---
-  let volUnits = 0, lastClose = 0, lastDt = '', stale = false, usedExchange = exchange || '';
-  try {
-    await throttle();
-    const { data } = await axios.get('https://api.twelvedata.com/quote', { params: { symbol, apikey: API_KEY, ...(exchange ? {exchange} : {}) }});
-    if (data && data.status !== 'error') {
-      volUnits  = Number(data.volume) || 0;       // unités base (généralement)
-      lastClose = Number(data.close)  || 0;
-      lastDt    = data.datetime || data.timestamp || '';
-      if (lastDt) stale = ((Date.now() - new Date(lastDt).getTime())/36e5) > 48;
-    } else if (exchange) {
-      // retry sans exchange
-      usedExchange = ''; 
-      await throttle();
-      const { data: d2 } = await axios.get('https://api.twelvedata.com/quote', { params: { symbol, apikey: API_KEY }});
-      volUnits  = Number(d2?.volume) || 0;
-      lastClose = Number(d2?.close)  || 0;
-      lastDt    = d2?.datetime || '';
-      if (lastDt) stale = ((Date.now() - new Date(lastDt).getTime())/36e5) > 48;
-    }
-  } catch {}
+// Helper pour lire des séries intraday
+async function fetchIntradaySeries(symbol, exchange, interval, outputsize) {
+  const params = {
+    symbol,
+    interval,                 // '1h'
+    outputsize,               // ex. 24*7 + 2
+    order: 'asc',
+    timezone: 'UTC',
+    apikey: API_KEY,
+    ...(exchange ? { exchange } : {})
+  };
+  await throttle();
+  const { data } = await axios.get('https://api.twelvedata.com/time_series', { params });
+  const vals = Array.isArray(data?.values) ? data.values : [];
+  if (!vals.length && exchange) {
+    // retry sans exchange si vide
+    return fetchIntradaySeries(symbol, null, interval, outputsize);
+  }
+  return vals;
+}
 
-  // --- Fallback avg7d via time_series ---
-  let avg7 = 0;
-  try {
-    await throttle();
-    const params = { symbol, interval:'1day', outputsize:10, order:'asc', timezone:'UTC', apikey:API_KEY, ...(usedExchange?{exchange:usedExchange}:{}) };
-    const { data } = await axios.get('https://api.twelvedata.com/time_series', { params });
-    const vals = Array.isArray(data?.values) ? data.values : [];
-    const tail = vals.slice(-7);
-    if (tail.length) {
-      avg7 = tail.reduce((s,v)=> (s + (Number(v.close)||0) * (Number(v.volume)||0)), 0) / tail.length;
-      // si le quote ne nous a pas donné de prix/heure corrects, récupère depuis TS
-      if (!lastClose && vals.length) lastClose = Number(vals[vals.length-1].close)||0;
-      if (!lastDt    && vals.length) lastDt    = vals[vals.length-1].datetime||'';
-    }
-  } catch {}
+// Nouvelle fonction fetchVolumes utilisant les données intraday (1h)
+async function fetchVolumes(symbol, exchange, quoteCcyCode) {
+  // 1) séries 1h sur 7 jours (168 bougies + marge)
+  const HOURS_1D = 24;
+  const DAYS_7D  = 7;
+  const vals = await fetchIntradaySeries(symbol, exchange, '1h', HOURS_1D * DAYS_7D + 4);
 
-  // notionnels en USD (convertit si EUR)
-  const fx = await fxToUSD(quoteCcyCode); // 1 si USD/USDT
-  const usd1d = Math.round(volUnits * lastClose * fx);
-  const usd7  = Math.round(avg7 * fx);
+  if (!vals.length) {
+    // aucune data exploitable → tout à 0
+    return { usd1d: 0, avg7: 0, lastClose: 0, lastDt: '', stale: true, usedExchange: exchange || '' };
+  }
 
-  return { usd1d, avg7: usd7, lastClose, lastDt, stale, usedExchange: usedExchange || exchange || '' };
+  // Mode verbose pour debug (optionnel)
+  if (process.env.TD_VERBOSE === '1' && vals.length > 0) {
+    console.log(`    📊 ${symbol}: ${vals.length} bougies 1h récupérées`);
+    const sample = vals.slice(-3);
+    sample.forEach(v => {
+      console.log(`       ${v.datetime}: close=${v.close} volume=${v.volume}`);
+    });
+  }
+
+  // close/volume → notionnel par bougie
+  const notional = vals.map(v => (Number(v.close) || 0) * (Number(v.volume) || 0));
+
+  const lastIdx = vals.length - 1;
+  const lastClose = Number(vals[lastIdx]?.close) || 0;
+  const lastDt    = vals[lastIdx]?.datetime || '';
+  const stale     = lastDt ? ((Date.now() - new Date(lastDt).getTime())/36e5) > 48 : true;
+
+  const last24  = notional.slice(-HOURS_1D);
+  const last168 = notional.slice(-HOURS_1D * DAYS_7D);
+
+  const sum = arr => arr.reduce((s,x)=>s + x, 0);
+  let usd1d = Math.round(sum(last24));
+  let avg7  = Math.round(sum(last168) / DAYS_7D);
+
+  // conversion si quote ≠ USD/USDT (ex. EUR)
+  const fx = await fxToUSD(quoteCcyCode);
+  usd1d = Math.round(usd1d * fx);
+  avg7  = Math.round(avg7  * fx);
+
+  // si on a dû retomber sans exchange, signale-le
+  return { usd1d, avg7, lastClose, lastDt, stale, usedExchange: exchange || '' };
 }
 
 (async ()=>{
-  console.log('🚀 Démarrage du filtrage des crypto-monnaies');
+  console.log('🚀 Démarrage du filtrage des crypto-monnaies (données intraday 1h)');
   console.log('📊 Configuration:');
   console.log(`  - Volume 24h min: ${MIN_USD_DAY.toLocaleString()} USD`);
-  console.log(`  - Volume 7j moy min: ${MIN_USD_AVG7D.toLocaleString()} USD\n`);
+  console.log(`  - Volume 7j moy min: ${MIN_USD_AVG7D.toLocaleString()} USD`);
+  if (process.env.TD_VERBOSE === '1') {
+    console.log(`  - Mode verbose activé (TD_VERBOSE=1)`);
+  }
+  console.log('');
 
   const rows = await readCSV(path.join(DATA_DIR, INPUT));
   console.log(`📄 Source: ${path.join(DATA_DIR, INPUT)} (${rows.length} lignes)\n`);
