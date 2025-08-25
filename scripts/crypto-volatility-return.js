@@ -9,18 +9,12 @@ const API_KEY = process.env.TWELVE_DATA_API_KEY;
 if (!API_KEY) { console.error('❌ TWELVE_DATA_API_KEY manquante'); process.exit(1); }
 
 const DATA_DIR = process.env.DATA_DIR || 'data';
-const OUT_DIR  = process.env.OUTPUT_DIR || 'data/filtered';
+const OUT_DIR  = process.env.OUTPUT_DIR || 'data/metrics';
 const INPUT    = 'Crypto.csv';
 
 // Configuration
 const INTERVAL = (process.env.VOL_INTERVAL || '1day').toLowerCase(); // '1day' | '1h'
 const LOOKBACK_DAYS = Number(process.env.LOOKBACK_DAYS || 120);
-
-// Seuils de filtrage
-const MIN_VOL_30D = Number(process.env.MIN_VOL_30D || 30);    // Volatilité min 30% annualisée
-const MAX_VOL_30D = Number(process.env.MAX_VOL_30D || 500);   // Volatilité max 500% annualisée
-const MIN_RET_7D = Number(process.env.MIN_RET_7D || -50);     // Rendement 7j min -50%
-const MAX_STALE_HOURS = Number(process.env.MAX_STALE_HOURS || 48); // Max 48h de données périmées
 
 // Fenêtres de calcul
 const WIN_RET_1D  = 1;
@@ -128,23 +122,14 @@ function atrPct(candles, n=14){
   return (atr / lastClose) * 100;
 }
 
-// Vérifier si les données sont périmées
-function isStale(lastDt) {
-  if (!lastDt) return true;
-  const hoursOld = (Date.now() - new Date(lastDt).getTime()) / 36e5;
-  return hoursOld > MAX_STALE_HOURS;
-}
-
 // --- MAIN ---
 (async ()=>{
-  console.log('🚀 Analyse Crypto - Rendements & Volatilité');
+  console.log('🚀 Analyse Crypto - Calcul des Rendements & Volatilité');
   console.log('=' .repeat(60));
   console.log('📊 Configuration:');
   console.log(`  - Intervalle: ${INTERVAL}`);
   console.log(`  - Lookback: ${LOOKBACK_DAYS} jours`);
-  console.log(`  - Volatilité 30j requise: ${MIN_VOL_30D}% - ${MAX_VOL_30D}%`);
-  console.log(`  - Rendement 7j minimum: ${MIN_RET_7D}%`);
-  console.log(`  - Données max âge: ${MAX_STALE_HOURS}h`);
+  console.log(`  - Pas de filtrage - Analyse de TOUTES les cryptos`);
   console.log('=' .repeat(60) + '\n');
   
   const rows = await readCSV(path.join(DATA_DIR, INPUT));
@@ -154,20 +139,16 @@ function isStale(lastDt) {
     ? Math.max(24*WIN_VOL_30D + 24, 24*LOOKBACK_DAYS)
     : Math.max(WIN_VOL_30D + 10, LOOKBACK_DAYS);
 
-  const accepted = [];
-  const rejected = [];
+  const results = [];
   let i = 0;
   let stats = {
     total: rows.length,
-    accepted: 0,
-    rejected_stale: 0,
-    rejected_history: 0,
-    rejected_volatility: 0,
-    rejected_return: 0,
+    success: 0,
+    insufficient_data: 0,
     errors: 0
   };
 
-  console.log('🔄 Traitement en cours...\n');
+  console.log('🔄 Analyse en cours...\n');
 
   for (const r of rows){
     i++;
@@ -180,18 +161,25 @@ function isStale(lastDt) {
     try {
       const candles = await fetchCloses(symbol, useEx, INTERVAL, barsNeeded);
       
-      // Vérification historique suffisant
+      // Si pas assez de données, on met des valeurs vides mais on garde la ligne
       if (candles.length < (INTERVAL==='1h'? 24*7 : 14)) {
-        stats.rejected_history++;
-        rejected.push({
-          symbol, base, quote,
+        stats.insufficient_data++;
+        results.push({
+          symbol, 
+          currency_base: base,
+          currency_quote: quote,
           exchange_used: useEx||'',
-          reason: 'insufficient_history',
-          last_close: '', last_datetime: '',
-          ret_1d_pct: '', ret_7d_pct: '', ret_30d_pct: '',
-          vol_7d_annual_pct: '', vol_30d_annual_pct: '', atr14_pct: ''
+          last_close: '',
+          last_datetime: '',
+          ret_1d_pct: '',
+          ret_7d_pct: '',
+          ret_30d_pct: '',
+          vol_7d_annual_pct: '',
+          vol_30d_annual_pct: '',
+          atr14_pct: '',
+          data_status: 'insufficient_history'
         });
-        console.log(`  ❌ ${symbol.padEnd(16)} Historique insuffisant`);
+        console.log(`  ⚠️  ${symbol.padEnd(16)} Données insuffisantes`);
         continue;
       }
 
@@ -199,21 +187,9 @@ function isStale(lastDt) {
       const last = closes[closes.length-1];
       const lastDt = candles[candles.length-1].t;
       
-      // Vérification données périmées
-      if (isStale(lastDt)) {
-        stats.rejected_stale++;
-        rejected.push({
-          symbol, base, quote,
-          exchange_used: useEx||'',
-          reason: 'stale_data',
-          last_close: last.toFixed(6),
-          last_datetime: lastDt,
-          ret_1d_pct: '', ret_7d_pct: '', ret_30d_pct: '',
-          vol_7d_annual_pct: '', vol_30d_annual_pct: '', atr14_pct: ''
-        });
-        console.log(`  ❌ ${symbol.padEnd(16)} Données périmées (${lastDt})`);
-        continue;
-      }
+      // Vérification si données périmées
+      const hoursOld = lastDt ? (Date.now() - new Date(lastDt).getTime()) / 36e5 : 999;
+      const isStale = hoursOld > 48;
 
       // Calcul des métriques
       const prev1 = closes[closes.length-2];
@@ -238,8 +214,7 @@ function isStale(lastDt) {
       
       const atr = atrPct(candles, 14);
 
-      // Objet de données complet
-      const cryptoData = {
+      results.push({
         symbol,
         currency_base: base,
         currency_quote: quote,
@@ -251,80 +226,71 @@ function isStale(lastDt) {
         ret_30d_pct: ret30d.toFixed(2),
         vol_7d_annual_pct: vol7Ann.toFixed(2),
         vol_30d_annual_pct: vol30Ann.toFixed(2),
-        atr14_pct: atr.toFixed(2)
-      };
+        atr14_pct: atr.toFixed(2),
+        data_status: isStale ? 'stale' : 'ok'
+      });
 
-      // Application des filtres
-      let rejectReason = null;
+      stats.success++;
       
-      if (vol30Ann < MIN_VOL_30D) {
-        rejectReason = `low_volatility (${vol30Ann.toFixed(1)}% < ${MIN_VOL_30D}%)`;
-        stats.rejected_volatility++;
-      } else if (vol30Ann > MAX_VOL_30D) {
-        rejectReason = `extreme_volatility (${vol30Ann.toFixed(1)}% > ${MAX_VOL_30D}%)`;
-        stats.rejected_volatility++;
-      } else if (ret7d < MIN_RET_7D) {
-        rejectReason = `poor_performance (R7d=${ret7d.toFixed(1)}% < ${MIN_RET_7D}%)`;
-        stats.rejected_return++;
-      }
-
-      if (rejectReason) {
-        rejected.push({ ...cryptoData, reason: rejectReason });
-        console.log(`  ❌ ${symbol.padEnd(16)} ${rejectReason}`);
-      } else {
-        accepted.push(cryptoData);
-        stats.accepted++;
-        console.log(`  ✅ ${symbol.padEnd(16)} ${useEx?('('+useEx+') ').padEnd(14):''}`+
-                    `R7d=${ret7d.toFixed(1)}% R30d=${ret30d.toFixed(1)}% Vol30d=${vol30Ann.toFixed(0)}%`);
-      }
+      const statusIcon = isStale ? '🕐' : '✅';
+      console.log(`  ${statusIcon} ${symbol.padEnd(16)} ${useEx?('('+useEx+') ').padEnd(14):''}`+
+                  `R7d=${ret7d.toFixed(1)}% R30d=${ret30d.toFixed(1)}% Vol30d=${vol30Ann.toFixed(0)}%`);
 
     } catch(e) {
       stats.errors++;
-      rejected.push({
+      results.push({
         symbol, 
         currency_base: base,
         currency_quote: quote,
         exchange_used: useEx||'',
-        reason: `error: ${e?.message||e}`,
-        last_close: '', last_datetime: '',
-        ret_1d_pct: '', ret_7d_pct: '', ret_30d_pct: '',
-        vol_7d_annual_pct: '', vol_30d_annual_pct: '', atr14_pct: ''
+        last_close: '',
+        last_datetime: '',
+        ret_1d_pct: '',
+        ret_7d_pct: '',
+        ret_30d_pct: '',
+        vol_7d_annual_pct: '',
+        vol_30d_annual_pct: '',
+        atr14_pct: '',
+        data_status: 'error'
       });
-      console.log(`  ⚠️  ${symbol}: ${e?.message||e}`);
+      console.log(`  ❌ ${symbol}: ${e?.message||e}`);
     }
 
     if (i % 10 === 0) {
-      console.log(`  📊 Progression: ${i}/${rows.length} (${stats.accepted} acceptées)`);
+      console.log(`  📊 Progression: ${i}/${rows.length}`);
     }
   }
-
-  // Tri des résultats acceptés
-  accepted.sort((a, b) => {
-    // Tri par volatilité 30j décroissante puis par rendement 30j
-    const volDiff = Number(b.vol_30d_annual_pct) - Number(a.vol_30d_annual_pct);
-    if (Math.abs(volDiff) > 1) return volDiff;
-    return Number(b.ret_30d_pct) - Number(a.ret_30d_pct);
-  });
 
   // Headers
   const header = [
     'symbol','currency_base','currency_quote','exchange_used',
     'last_close','last_datetime',
     'ret_1d_pct','ret_7d_pct','ret_30d_pct',
-    'vol_7d_annual_pct','vol_30d_annual_pct','atr14_pct'
+    'vol_7d_annual_pct','vol_30d_annual_pct','atr14_pct',
+    'data_status'
   ];
-  const headerRej = [...header, 'reason'];
 
-  // Sauvegarde des fichiers
-  const acceptedFile = path.join(OUT_DIR, `Crypto_filtered_volatility.csv`);
-  const rejectedFile = path.join(OUT_DIR, `Crypto_rejected_volatility.csv`);
+  // Fichier principal avec TOUTES les cryptos
+  const mainFile = path.join(OUT_DIR, `Crypto_volatility_metrics.csv`);
+  await writeCSV(mainFile, results, header);
+
+  // Filtrer les résultats valides pour les tops
+  const validResults = results.filter(r => 
+    r.ret_30d_pct !== '' && 
+    r.vol_30d_annual_pct !== '' &&
+    !isNaN(Number(r.ret_30d_pct)) &&
+    !isNaN(Number(r.vol_30d_annual_pct))
+  );
+
+  // Top 10 momentum (meilleurs rendements 30j)
+  const topMomentum = [...validResults]
+    .sort((a,b) => Number(b.ret_30d_pct) - Number(a.ret_30d_pct))
+    .slice(0,10);
   
-  await writeCSV(acceptedFile, accepted, header);
-  await writeCSV(rejectedFile, rejected, headerRej);
-
-  // Top performers
-  const topMomentum = [...accepted].sort((a,b) => Number(b.ret_30d_pct) - Number(a.ret_30d_pct)).slice(0,10);
-  const topVolatility = [...accepted].sort((a,b) => Number(b.vol_30d_annual_pct) - Number(a.vol_30d_annual_pct)).slice(0,10);
+  // Top 10 volatilité
+  const topVolatility = [...validResults]
+    .sort((a,b) => Number(b.vol_30d_annual_pct) - Number(a.vol_30d_annual_pct))
+    .slice(0,10);
   
   await writeCSV(path.join(OUT_DIR, 'Top10_momentum.csv'), topMomentum, header);
   await writeCSV(path.join(OUT_DIR, 'Top10_volatility.csv'), topVolatility, header);
@@ -334,22 +300,19 @@ function isStale(lastDt) {
   console.log('📊 RÉSUMÉ FINAL');
   console.log('='.repeat(60));
   console.log(`Total analysés: ${stats.total}`);
-  console.log(`✅ Acceptées: ${stats.accepted} (${(stats.accepted/stats.total*100).toFixed(1)}%)`);
-  console.log(`❌ Rejetées total: ${stats.total - stats.accepted}`);
-  console.log(`   - Données périmées: ${stats.rejected_stale}`);
-  console.log(`   - Historique insuffisant: ${stats.rejected_history}`);
-  console.log(`   - Volatilité hors limites: ${stats.rejected_volatility}`);
-  console.log(`   - Performance faible: ${stats.rejected_return}`);
-  console.log(`   - Erreurs API: ${stats.errors}`);
+  console.log(`✅ Analyse réussie: ${stats.success}`);
+  console.log(`⚠️  Données insuffisantes: ${stats.insufficient_data}`);
+  console.log(`❌ Erreurs: ${stats.errors}`);
   console.log('='.repeat(60));
   
-  if (accepted.length > 0) {
-    const avgRet30 = accepted.reduce((s,x) => s + Number(x.ret_30d_pct), 0) / accepted.length;
-    const avgVol30 = accepted.reduce((s,x) => s + Number(x.vol_30d_annual_pct), 0) / accepted.length;
+  if (validResults.length > 0) {
+    const avgRet30 = validResults.reduce((s,x) => s + Number(x.ret_30d_pct), 0) / validResults.length;
+    const avgVol30 = validResults.reduce((s,x) => s + Number(x.vol_30d_annual_pct), 0) / validResults.length;
     
-    console.log('\n📈 Moyennes des cryptos acceptées:');
+    console.log('\n📈 Statistiques du marché:');
     console.log(`  - Rendement 30j moyen: ${avgRet30.toFixed(2)}%`);
     console.log(`  - Volatilité 30j moyenne: ${avgVol30.toFixed(2)}%`);
+    console.log(`  - Cryptos avec données valides: ${validResults.length}`);
   }
   
   console.log('\n🎯 Top 5 Momentum (30j):');
@@ -363,16 +326,15 @@ function isStale(lastDt) {
   });
   
   console.log('\n📁 Fichiers générés:');
-  console.log(`  ✅ ${acceptedFile}`);
-  console.log(`  ❌ ${rejectedFile}`);
+  console.log(`  📊 ${mainFile} (${results.length} cryptos)`);
   console.log(`  🎯 ${path.join(OUT_DIR, 'Top10_momentum.csv')}`);
   console.log(`  ⚡ ${path.join(OUT_DIR, 'Top10_volatility.csv')}`);
   
   // GitHub Actions output
   if (process.env.GITHUB_OUTPUT) {
     const fsSync = require('fs');
-    fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `cryptos_accepted=${stats.accepted}\n`);
-    fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `cryptos_rejected=${stats.total - stats.accepted}\n`);
+    fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `cryptos_analyzed=${stats.success}\n`);
     fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `cryptos_total=${stats.total}\n`);
+    fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `cryptos_valid=${validResults.length}\n`);
   }
 })();
