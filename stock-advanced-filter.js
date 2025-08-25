@@ -575,14 +575,14 @@ function calculateDrawdowns(prices) {
     return { ytd: maxDD_ytd.toFixed(2), year3: maxDD_3y.toFixed(2) };
 }
 
-async function main() {
+async function main() { 
     console.log('📊 Enrichissement complet des stocks\n');
     await fs.mkdir(OUT_DIR, { recursive: true });
     
     const [usStocks, europeStocks, asiaStocks] = await Promise.all([
-        loadStockCSV('data/Actions_US.csv'),
-        loadStockCSV('data/Actions_Europe.csv'),
-        loadStockCSV('data/Actions_Asie.csv')
+        loadStockCSV('data/filtered/Actions_US_filtered.csv'),
+        loadStockCSV('data/filtered/Actions_Europe_filtered.csv'),
+        loadStockCSV('data/filtered/Actions_Asie_filtered.csv')
     ]);
     
     console.log(`Stocks: US ${usStocks.length} | Europe ${europeStocks.length} | Asie ${asiaStocks.length}\n`);
