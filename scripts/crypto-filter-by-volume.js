@@ -12,200 +12,194 @@ const DATA_DIR = process.env.DATA_DIR || 'data';
 const OUT_DIR  = process.env.OUTPUT_DIR || 'data/filtered';
 const INPUT    = 'Crypto.csv';
 
-// Seuils (volume notionnel USD)
-const MIN_USD_DAY   = Number(process.env.MIN_USD_DAY   || 1_000_000); // 1M$ dernière journée
-const MIN_USD_AVG7D = Number(process.env.MIN_USD_AVG7D || 2_000_000); // 2M$ moyenne 7j
+// Seuils (notionnel USD)
+const MIN_USD_DAY   = Number(process.env.MIN_USD_DAY   || 1_000_000);
+const MIN_USD_AVG7D = Number(process.env.MIN_USD_AVG7D || 2_000_000);
 
-// Exchanges préférés (ordre)
-const EX_PREF = [
-  "Binance","Coinbase Pro","Kraken","BitStamp","Bitfinex",
-  "Bybit","OKX","OKEx","Gate.io","KuCoin","Crypto.com Exchange"
-];
+const EX_PREF = ["Binance","Coinbase Pro","Kraken","BitStamp","Bitfinex","Bybit","OKX","OKEx","Gate.io","KuCoin","Crypto.com Exchange"];
+const HEADER_OUT = ['symbol','currency_base','currency_quote','exchange_used','vol_usd_1d','vol_usd_avg7d','last_close','last_datetime','stale'];
+const HEADER_REJ = [...HEADER_OUT,'reason'];
 
-const HEADER_OUT = [
-  'symbol','currency_base','currency_quote','exchange_used',
-  'vol_usd_1d','vol_usd_avg7d','last_close','last_datetime'
-];
-
-function parseCSV(text){ return parse(text, { columns:true, skip_empty_lines:true, bom:true }); }
-
-async function readCSV(file){
-  const txt = await fs.readFile(file, 'utf8');
-  return parseCSV(txt);
-}
-
+function parseCSV(t){ return parse(t, { columns:true, skip_empty_lines:true, bom:true }); }
+async function readCSV(f){ return parseCSV(await fs.readFile(f,'utf8')); }
 async function writeCSV(file, rows, header){
   const esc = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
-  const line = obj => header.map(h => esc(obj[h])).join(',');
-  const out = [header.join(','), ...rows.map(line)].join('\n');
+  const out = [header.join(','), ...rows.map(o => header.map(h => esc(o[h])).join(','))].join('\n');
   await fs.mkdir(path.dirname(file), { recursive:true });
   await fs.writeFile(file, out, 'utf8');
 }
 
-// normalisation de quelques labels
-function normalizeExchange(name){
-  if (!name) return null;
-  const n = String(name).trim();
-  if (!n) return null;
+function normalizeExchange(n){
+  if (!n) return null; n = String(n).trim();
   if (/^okex$/i.test(n)) return 'OKX';
   if (/^coinbase$/i.test(n)) return 'Coinbase Pro';
-  return n;
+  return n || null;
 }
-
-// accepte JSON ["Binance","Kraken"], ou "Binance;Kraken", ou "Binance, Kraken"
 function toExchangeList(str){
   if (!str) return [];
   const s = String(str).trim();
-  // JSON ?
-  try {
-    const arr = JSON.parse(s);
-    if (Array.isArray(arr)) return arr.map(normalizeExchange).filter(Boolean);
-  } catch {}
-  // enlève crochets éventuels puis split ; ou ,
+  try { const a = JSON.parse(s); if (Array.isArray(a)) return a.map(normalizeExchange).filter(Boolean); } catch {}
   const stripped = s.replace(/^\[|\]$/g,'').replace(/'/g,'"');
   const parts = stripped.split(/[;,]/).map(x => normalizeExchange(x)).filter(Boolean);
-  if (parts.length) return parts;
-  // sinon valeur unique
-  return normalizeExchange(s) ? [normalizeExchange(s)] : [];
+  return parts.length ? parts : (normalizeExchange(s) ? [normalizeExchange(s)] : []);
 }
+function pickPreferredExchange(list){ for (const e of EX_PREF) if (list.includes(e)) return e; return list[0] || null; }
 
-function pickPreferredExchange(availEx){
-  if (!Array.isArray(availEx) || !availEx.length) return null;
-  for (const e of EX_PREF) if (availEx.includes(e)) return e;
-  return availEx[0] || null;
-}
-
-// Rate limit simple
-let lastReq = 0;
-const MIN_DELAY = Number(process.env.MIN_DELAY_MS || 60); // ~16 req/s
-async function throttle(){
-  const now = Date.now();
-  const delta = now - lastReq;
-  if (delta < MIN_DELAY) await new Promise(r => setTimeout(r, MIN_DELAY - delta));
-  lastReq = Date.now();
-}
-
-// Séries daily récentes → notionnel USD
-async function fetchDailyVolumesUSD(symbol, exchange){
-  const params = {
-    symbol,
-    interval: '1day',
-    outputsize: 10,
-    order: 'asc',
-    timezone: 'Europe/Paris',
-    apikey: API_KEY
-  };
-  if (exchange) params.exchange = exchange;
-
-  await throttle();
-  const { data } = await axios.get('https://api.twelvedata.com/time_series', { params });
-  const values = data?.values;
-  if (!Array.isArray(values) || !values.length) {
-    if (exchange) return fetchDailyVolumesUSD(symbol, null); // retry sans exchange
-    return { ok:false, reason:'no_data' };
+// FX cache pour convertir les quotes non-USD (on n'a que EUR dans ton flux)
+const fxCache = {};
+async function fxToUSD(code){ // code ex: 'USD','USDT','EUR'
+  if (!code || code === 'USD' || code === 'USDT') return 1;
+  if (fxCache[code]) return fxCache[code];
+  const pair = `${code}/USD`;
+  try {
+    const { data } = await axios.get('https://api.twelvedata.com/price', { params:{ symbol: pair, apikey: API_KEY }});
+    const rate = Number(data?.price) || 0;
+    fxCache[code] = rate || 1; // fallback 1 si indispo
+    return fxCache[code];
+  } catch {
+    fxCache[code] = 1;
+    return 1;
   }
+}
 
-  const last = values[values.length-1];
-  const lastClose = Number(last?.close) || 0;
-  const lastVol   = Number(last?.volume) || 0;   // unités base
-  const lastDt    = last?.datetime || null;
+// map libellés → codes
+function quoteCode(label){
+  const x = (label||'').toLowerCase();
+  if (x.includes('usdt')) return 'USDT';
+  if (x.includes('us dollar') || x === 'usd') return 'USD';
+  if (x.includes('euro') || x === 'eur') return 'EUR';
+  return 'USD'; // par sécurité
+}
 
-  const usd1d = lastClose * lastVol;
-  const tail = values.slice(-7);
-  const avg7 = tail.reduce((s,v)=>{
-    const c = Number(v.close)||0, vol = Number(v.volume)||0;
-    return s + c*vol;
-  },0) / (tail.length || 1);
+// Rate limit
+let lastReq = 0; const MIN_DELAY = Number(process.env.MIN_DELAY_MS || 60);
+async function throttle(){ const d = Date.now() - lastReq; if (d < MIN_DELAY) await new Promise(r=>setTimeout(r, MIN_DELAY-d)); lastReq = Date.now(); }
 
-  let stale = true;
-  if (lastDt) {
-    const h = (Date.now() - new Date(lastDt).getTime())/36e5;
-    stale = h > 48;
-  }
+// 1) Essaie /quote (volume 24h + close). 2) Fallback /time_series pour avg7d.
+async function fetchVolumes(symbol, exchange, quoteCcyCode){
+  // --- Quote 24h ---
+  let volUnits = 0, lastClose = 0, lastDt = '', stale = false, usedExchange = exchange || '';
+  try {
+    await throttle();
+    const { data } = await axios.get('https://api.twelvedata.com/quote', { params: { symbol, apikey: API_KEY, ...(exchange ? {exchange} : {}) }});
+    if (data && data.status !== 'error') {
+      volUnits  = Number(data.volume) || 0;       // unités base (généralement)
+      lastClose = Number(data.close)  || 0;
+      lastDt    = data.datetime || data.timestamp || '';
+      if (lastDt) stale = ((Date.now() - new Date(lastDt).getTime())/36e5) > 48;
+    } else if (exchange) {
+      // retry sans exchange
+      usedExchange = ''; 
+      await throttle();
+      const { data: d2 } = await axios.get('https://api.twelvedata.com/quote', { params: { symbol, apikey: API_KEY }});
+      volUnits  = Number(d2?.volume) || 0;
+      lastClose = Number(d2?.close)  || 0;
+      lastDt    = d2?.datetime || '';
+      if (lastDt) stale = ((Date.now() - new Date(lastDt).getTime())/36e5) > 48;
+    }
+  } catch {}
 
-  return { ok:true, lastClose, usd1d:Math.round(usd1d), avg7:Math.round(avg7), lastDt, stale };
+  // --- Fallback avg7d via time_series ---
+  let avg7 = 0;
+  try {
+    await throttle();
+    const params = { symbol, interval:'1day', outputsize:10, order:'asc', timezone:'UTC', apikey:API_KEY, ...(usedExchange?{exchange:usedExchange}:{}) };
+    const { data } = await axios.get('https://api.twelvedata.com/time_series', { params });
+    const vals = Array.isArray(data?.values) ? data.values : [];
+    const tail = vals.slice(-7);
+    if (tail.length) {
+      avg7 = tail.reduce((s,v)=> (s + (Number(v.close)||0) * (Number(v.volume)||0)), 0) / tail.length;
+      // si le quote ne nous a pas donné de prix/heure corrects, récupère depuis TS
+      if (!lastClose && vals.length) lastClose = Number(vals[vals.length-1].close)||0;
+      if (!lastDt    && vals.length) lastDt    = vals[vals.length-1].datetime||'';
+    }
+  } catch {}
+
+  // notionnels en USD (convertit si EUR)
+  const fx = await fxToUSD(quoteCcyCode); // 1 si USD/USDT
+  const usd1d = Math.round(volUnits * lastClose * fx);
+  const usd7  = Math.round(avg7 * fx);
+
+  return { usd1d, avg7: usd7, lastClose, lastDt, stale, usedExchange: usedExchange || exchange || '' };
 }
 
 (async ()=>{
-  console.log('🚀 Filtrage crypto par volume (Twelve Data)\n');
-  const inputPath = path.join(DATA_DIR, INPUT);
-  const rows = await readCSV(inputPath);
-  console.log(`📄 Source: ${inputPath} (${rows.length} lignes)`);
-  console.log(`📊 Seuils: Volume 24h ≥ $${MIN_USD_DAY.toLocaleString()} OU Moyenne 7j ≥ $${MIN_USD_AVG7D.toLocaleString()}\n`);
+  console.log('🚀 Démarrage du filtrage des crypto-monnaies');
+  console.log('📊 Configuration:');
+  console.log(`  - Volume 24h min: ${MIN_USD_DAY.toLocaleString()} USD`);
+  console.log(`  - Volume 7j moy min: ${MIN_USD_AVG7D.toLocaleString()} USD\n`);
 
-  const accepted = [];
-  const rejected = [];
-  const stats = { total: rows.length, passed: 0, failed: 0, errors: 0, stale: 0 };
+  const rows = await readCSV(path.join(DATA_DIR, INPUT));
+  console.log(`📄 Source: ${path.join(DATA_DIR, INPUT)} (${rows.length} lignes)\n`);
+  console.log(`🔎 Seuils: Volume 24h ≥ $${MIN_USD_DAY.toLocaleString()} OU Moyenne 7j ≥ $${MIN_USD_AVG7D.toLocaleString()}\n`);
 
+  const accepted = [], rejected = [];
   let i = 0;
+
   for (const r of rows){
     i++;
     const symbol = (r.symbol||'').trim();
-    const base   = (r.currency_base||'').trim();
-    const quote  = (r.currency_quote||'').trim();
+    const quoteLabel = (r.currency_quote||'').trim();
     const exList = toExchangeList(r.available_exchanges);
     const useEx  = pickPreferredExchange(exList);
+    const qCode  = quoteCode(quoteLabel);
 
     try{
-      const res = await fetchDailyVolumesUSD(symbol, useEx);
-      if (!res.ok){
-        stats.failed++;
-        console.log(`  ❌ ${symbol.padEnd(16)} - ${res.reason || 'no_data'}`);
-        continue;
-      }
-
-      if (res.stale) {
-        stats.stale++;
-      }
+      const res = await fetchVolumes(symbol, useEx, qCode);
+      const rowOut = {
+        symbol,
+        currency_base: (r.currency_base||'').trim(),
+        currency_quote: quoteLabel,
+        exchange_used: res.usedExchange || '',
+        vol_usd_1d: res.usd1d,
+        vol_usd_avg7d: res.avg7,
+        last_close: res.lastClose,
+        last_datetime: res.lastDt || '',
+        stale: res.stale ? 'yes' : 'no'
+      };
 
       const pass = (!res.stale) && (res.usd1d >= MIN_USD_DAY || res.avg7 >= MIN_USD_AVG7D);
-      
+
       if (pass){
-        accepted.push({
-          symbol, 
-          currency_base: base, 
-          currency_quote: quote, 
-          exchange_used: useEx || '',
-          vol_usd_1d: res.usd1d, 
-          vol_usd_avg7d: res.avg7, 
-          last_close: res.lastClose,
-          last_datetime: res.lastDt || ''
-        });
-        stats.passed++;
-        console.log(`  ✅ ${symbol.padEnd(16)} ${useEx?('('+useEx+') ').padEnd(14):''}` +
-                    `1d=$${res.usd1d.toLocaleString().padEnd(15)} avg7=$${res.avg7.toLocaleString()}`);
+        accepted.push(rowOut);
+        console.log(`  ✅ ${symbol.padEnd(16)} ${res.usedExchange?('('+res.usedExchange+') ').padEnd(14):''}`+
+                    `1d≈$${res.usd1d.toLocaleString()} avg7≈$${res.avg7.toLocaleString()}`);
       } else {
-        stats.failed++;
-        const why = res.stale ? 'stale>48h' : 
-          `volume faible (1d=$${res.usd1d.toLocaleString()} < $${MIN_USD_DAY.toLocaleString()} ET avg7=$${res.avg7.toLocaleString()} < $${MIN_USD_AVG7D.toLocaleString()})`;
-        console.log(`  ❌ ${symbol.padEnd(16)} ${useEx?('('+useEx+') ').padEnd(14):''}${why}`);
+        const why = res.stale ? 'stale>48h'
+          : `volume faible (1d=$${res.usd1d.toLocaleString()} ET avg7=$${res.avg7.toLocaleString()})`;
+        rejected.push({ ...rowOut, reason: why });
+        console.log(`  ❌ ${symbol.padEnd(16)} ${res.usedExchange?('('+res.usedExchange+') ').padEnd(14):''}${why}`);
       }
     } catch(e){
-      stats.errors++;
+      rejected.push({
+        symbol,
+        currency_base: (r.currency_base||'').trim(),
+        currency_quote: quoteLabel,
+        exchange_used: useEx || '',
+        vol_usd_1d: 0, vol_usd_avg7d: 0, last_close: '', last_datetime: '', stale: '',
+        reason: `error:${e?.message||e}`
+      });
       console.log(`  ⚠️  ${symbol}: ${e?.message||e}`);
     }
 
     if (i % 10 === 0) console.log(`  Progression: ${i}/${rows.length}`);
   }
 
-  const outFile = path.join(OUT_DIR, 'Crypto_filtered_by_volume.csv');
-  await writeCSV(outFile, accepted, HEADER_OUT);
+  const ok  = path.join(OUT_DIR, 'Crypto_filtered_by_volume.csv');
+  const rej = path.join(OUT_DIR, 'Crypto_rejected_by_volume.csv');
+  await writeCSV(ok,  accepted, HEADER_OUT);
+  await writeCSV(rej, rejected, HEADER_REJ);
 
   console.log('\n' + '='.repeat(60));
-  console.log('📊 RÉSUMÉ FINAL');
+  console.log(`✅ Acceptées : ${accepted.length}`);
+  console.log(`❌ Rejetées  : ${rejected.length}`);
   console.log('='.repeat(60));
-  console.log(`Total analysés: ${stats.total}`);
-  console.log(`✅ Acceptées: ${stats.passed} (${(stats.passed/stats.total*100).toFixed(1)}%)`);
-  console.log(`❌ Rejetées: ${stats.failed} (${(stats.failed/stats.total*100).toFixed(1)}%)`);
-  if (stats.errors > 0) console.log(`⚠️  Erreurs: ${stats.errors}`);
-  if (stats.stale > 0) console.log(`🕐 Données obsolètes: ${stats.stale}`);
-  console.log('='.repeat(60));
-  console.log(`\n📁 Fichier généré: ${outFile}\n`);
+  console.log(`Fichiers: ${ok}\n          ${rej}\n`);
   
   // GitHub Actions output
   if (process.env.GITHUB_OUTPUT) {
     const fsSync = require('fs');
-    fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `cryptos_filtered=${stats.passed}\n`);
-    fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `cryptos_total=${stats.total}\n`);
+    fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `cryptos_filtered=${accepted.length}\n`);
+    fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `cryptos_total=${rows.length}\n`);
   }
 })();
