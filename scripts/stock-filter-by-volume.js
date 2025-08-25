@@ -50,6 +50,7 @@ const EX2MIC = Object.entries({
 const toMIC = ex => EX2MIC[(ex||'').toLowerCase().trim()] || null;
 
 const HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché'];
+const REJ_HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché','Volume','Seuil','MIC','Symbole','Raison'];
 
 const csvLine = obj => HEADER.map(h => `"${String(obj[h] ?? '').replace(/"/g,'""')}"`).join(',');
 
@@ -60,6 +61,13 @@ async function readCSV(file) {
 
 async function writeCSV(file, rows) {
   const out = [HEADER.join(','), ...rows.map(csvLine)].join('\n');
+  await fs.mkdir(path.dirname(file), { recursive:true });
+  await fs.writeFile(file, out, 'utf8');
+}
+
+async function writeCSVGeneric(file, rows, header) {
+  const line = obj => header.map(h => `"${String(obj[h] ?? '').replace(/"/g,'""')}"`).join(',');
+  const out = [header.join(','), ...rows.map(line)].join('\n');
   await fs.mkdir(path.dirname(file), { recursive:true });
   await fs.writeFile(file, out, 'utf8');
 }
@@ -110,6 +118,7 @@ async function throttle() {
 (async ()=>{
   console.log('🚀 Démarrage du filtrage par volume\n');
   const allOutputs = [];
+  const allRejected = [];
   const stats = { total: 0, passed: 0, failed: 0 };
 
   for (const {file, region} of INPUTS) {
@@ -118,6 +127,7 @@ async function throttle() {
     console.log(`\n📊 ${region}: ${rows.length} stocks à analyser`);
 
     const filtered = [];
+    const rejected = [];
     let processed = 0;
     
     for (const r of rows) {
@@ -145,9 +155,20 @@ async function throttle() {
         console.log(`  ✅ ${ticker}: ${vol.toLocaleString()} >= ${thr.toLocaleString()}`);
       } else {
         stats.failed++;
-        if (process.env.DEBUG === '1') {
-          console.log(`  ❌ ${ticker}: ${vol.toLocaleString()} < ${thr.toLocaleString()}`);
-        }
+        console.log(`  ❌ ${ticker}: ${vol.toLocaleString()} < ${thr.toLocaleString()}`);
+        rejected.push({
+          'Ticker': ticker,
+          'Stock': r['Stock']||'',
+          'Secteur': r['Secteur']||'',
+          'Pays': r['Pays']||'',
+          'Bourse de valeurs': r['Bourse de valeurs']||'',
+          'Devise de marché': r['Devise de marché']||'',
+          'Volume': vol,
+          'Seuil': thr,
+          'MIC': mic || '',
+          'Symbole': sym,
+          'Raison': `Volume ${vol} < Seuil ${thr}`
+        });
       }
       
       processed++;
@@ -156,25 +177,37 @@ async function throttle() {
       }
     }
 
+    // Sauvegarder les stocks acceptés
     const outFile = path.join(OUT_DIR, file.replace('.csv','_filtered.csv'));
     await writeCSV(outFile, filtered);
     allOutputs.push({ title: `${region}`, file: outFile, rows: filtered });
 
+    // Sauvegarder les stocks rejetés
+    const rejFile = path.join(OUT_DIR, file.replace('.csv','_rejected.csv'));
+    await writeCSVGeneric(rejFile, rejected, REJ_HEADER);
+    allRejected.push(...rejected);
+
     console.log(`✅ ${region}: ${filtered.length}/${rows.length} stocks retenus → ${outFile}`);
+    console.log(`❌ ${region}: ${rejected.length} stocks rejetés → ${rejFile}`);
   }
 
-  // CSV combiné
+  // CSV combiné des acceptés
   const combined = allOutputs.flatMap(o => o.rows);
   await writeCSV(path.join(OUT_DIR,'Actions_filtrees_par_volume.csv'), combined);
+  
+  // CSV combiné des rejetés
+  await writeCSVGeneric(path.join(OUT_DIR,'Actions_rejetes_par_volume.csv'), allRejected, REJ_HEADER);
   
   // Résumé final
   console.log('\n' + '='.repeat(50));
   console.log('📊 RÉSUMÉ FINAL');
   console.log('='.repeat(50));
   console.log(`Total analysés: ${stats.total}`);
-  console.log(`Retenus: ${stats.passed} (${(stats.passed/stats.total*100).toFixed(1)}%)`);
-  console.log(`Rejetés: ${stats.failed} (${(stats.failed/stats.total*100).toFixed(1)}%)`);
-  console.log(`\n✅ Terminé. Fichiers filtrés dans ${OUT_DIR}/`);
+  console.log(`✅ Retenus: ${stats.passed} (${(stats.passed/stats.total*100).toFixed(1)}%)`);
+  console.log(`❌ Rejetés: ${stats.failed} (${(stats.failed/stats.total*100).toFixed(1)}%)`);
+  console.log('='.repeat(50));
+  console.log(`Fichiers acceptés dans: ${OUT_DIR}/`);
+  console.log(`Fichiers rejetés dans: ${OUT_DIR}/`);
   
   // Pour GitHub Actions
   if (process.env.GITHUB_OUTPUT) {
@@ -183,5 +216,6 @@ async function throttle() {
       fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `stocks_${o.title.toLowerCase()}=${o.rows.length}\n`);
     });
     fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `total_filtered=${combined.length}\n`);
+    fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `total_rejected=${allRejected.length}\n`);
   }
 })();
