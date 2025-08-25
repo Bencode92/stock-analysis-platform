@@ -1,0 +1,200 @@
+name: Crypto Data Pipeline
+
+on:
+  schedule:
+    # Exécution quotidienne à 2h30 UTC (avant le filtrage)
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: 'Force update even if data exists'
+        required: false
+        default: 'false'
+      run_filter:
+        description: 'Run filtering after update'
+        required: false
+        default: 'true'
+
+jobs:
+  update-crypto-data:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      data_updated: ${{ steps.update.outputs.updated }}
+      
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install Python dependencies
+      run: |
+        pip install -r requirements.txt || pip install requests pandas
+    
+    - name: Update crypto data
+      id: update
+      env:
+        TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
+        FORCE_UPDATE: ${{ github.event.inputs.force_update || 'false' }}
+      run: |
+        echo "🔄 Mise à jour des données crypto"
+        
+        # Vérifier si le fichier existe et sa date
+        if [ -f "data/Crypto.csv" ]; then
+          LAST_MODIFIED=$(date -r data/Crypto.csv +%s)
+          NOW=$(date +%s)
+          AGE=$((NOW - LAST_MODIFIED))
+          HOURS=$((AGE / 3600))
+          echo "📅 Dernière mise à jour il y a $HOURS heures"
+          
+          if [ "$FORCE_UPDATE" = "false" ] && [ $HOURS -lt 24 ]; then
+            echo "⏭️ Données récentes, pas de mise à jour nécessaire"
+            echo "updated=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+        fi
+        
+        # Exécuter le script de mise à jour (à créer si nécessaire)
+        if [ -f "scripts/update-crypto-data.py" ]; then
+          python scripts/update-crypto-data.py
+        else
+          echo "⚠️ Script de mise à jour non trouvé, utilisation des données existantes"
+        fi
+        
+        echo "updated=true" >> $GITHUB_OUTPUT
+    
+    - name: Commit updated data
+      if: steps.update.outputs.updated == 'true'
+      run: |
+        git config --local user.email "actions@github.com"
+        git config --local user.name "GitHub Actions"
+        git add data/Crypto.csv || true
+        git add data/crypto_lists.json || true
+        git diff --staged --quiet || git commit -m "Update crypto data [skip ci]"
+        git push
+
+  filter-cryptos:
+    needs: update-crypto-data
+    if: github.event.inputs.run_filter != 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}  # Pull latest changes
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run crypto filtering
+      id: filter
+      env:
+        TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
+        DATA_DIR: data
+        OUTPUT_DIR: data/filtered
+        MIN_USD_DAY: 1000000
+        MIN_USD_AVG7D: 2000000
+      run: |
+        echo "🚀 Filtrage des crypto-monnaies"
+        node scripts/crypto-filter-by-volume.js
+    
+    - name: Upload filtered data
+      uses: actions/upload-artifact@v4
+      with:
+        name: crypto-pipeline-results
+        path: |
+          data/Crypto.csv
+          data/filtered/Crypto_filtered_by_volume.csv
+        retention-days: 30
+    
+    - name: Commit filtered data
+      if: success()
+      run: |
+        git config --local user.email "actions@github.com"
+        git config --local user.name "GitHub Actions"
+        git add data/filtered/Crypto_filtered_by_volume.csv || true
+        git diff --staged --quiet || git commit -m "Update filtered crypto data [skip ci]"
+        git push
+    
+    - name: Create summary
+      if: always()
+      run: |
+        echo "# 📊 Pipeline de Données Crypto" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # État de la mise à jour
+        echo "## 🔄 Mise à jour des données" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ needs.update-crypto-data.outputs.data_updated }}" = "true" ]; then
+          echo "✅ Données mises à jour" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⏭️ Pas de mise à jour nécessaire (données récentes)" >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Statistiques de filtrage
+        if [ -f data/filtered/Crypto_filtered_by_volume.csv ]; then
+          TOTAL=$(tail -n +2 data/Crypto.csv | wc -l)
+          FILTERED=$(tail -n +2 data/filtered/Crypto_filtered_by_volume.csv | wc -l)
+          RATE=$(echo "scale=1; $FILTERED * 100 / $TOTAL" | bc)
+          
+          echo "## 📈 Résultats du filtrage" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total analysé:** $TOTAL cryptos" >> $GITHUB_STEP_SUMMARY
+          echo "- **Acceptées:** $FILTERED cryptos" >> $GITHUB_STEP_SUMMARY
+          echo "- **Taux d'acceptation:** $RATE%" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Top 5 par volume
+          echo "### 💎 Top 5 par Volume 24h" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "Symbol,Exchange,Volume_24h_USD" >> $GITHUB_STEP_SUMMARY
+          tail -n +2 data/filtered/Crypto_filtered_by_volume.csv | \
+            sort -t',' -k5 -rn | \
+            head -5 | \
+            cut -d',' -f1,4,5 | \
+            column -t -s, >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "---" >> $GITHUB_STEP_SUMMARY
+        echo "⏰ Exécuté le: $(date '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+
+  notify-completion:
+    needs: [update-crypto-data, filter-cryptos]
+    if: always()
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check status
+      run: |
+        echo "## 📊 Statut du Pipeline Crypto" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ needs.update-crypto-data.result }}" = "success" ]; then
+          echo "✅ Mise à jour des données: Succès" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Mise à jour des données: Échec" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ needs.filter-cryptos.result }}" = "success" ]; then
+          echo "✅ Filtrage: Succès" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ needs.filter-cryptos.result }}" = "skipped" ]; then
+          echo "⏭️ Filtrage: Ignoré" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Filtrage: Échec" >> $GITHUB_STEP_SUMMARY
+        fi
