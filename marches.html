@@ -1,1409 +1,1492 @@
 <!DOCTYPE html>
- <html lang="fr" class="dark">
- <head>
-     <meta charset="UTF-8">
-     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <title>TradePulse - Marchés</title>
-     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-     <script src="https://cdn.tailwindcss.com"></script>
-     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-     <script>
-         tailwind.config = {
-             darkMode: 'class',
-             theme: {
-                 extend: {
-                     colors: {
-                         green: {
-                             400: '#00FF87'
-                         }
-                     }
-                 },
-                 fontFamily: {
-                     sans: ['Inter', 'sans-serif']
-                 }
-             }
-         }
-     </script>
-     <style>
-         :root {
-             --background-color: #0a1929; /* Bleu nuit plus profond */
-             --light-background-color: #f0f5ff;
-             --text-color: #FFFFFF;
-             --light-text-color: #1a202c;
-             --accent-color: #00FF87; /* Vert néon */
-             --accent-subtle: rgba(0, 255, 135, 0.15);
-             --accent-medium: rgba(0, 255, 135, 0.3);
-             --accent-strong: rgba(0, 255, 135, 0.6);
-             --card-bg: rgba(10, 30, 50, 0.6);
-             --card-header: rgba(15, 40, 65, 0.8);
-             --card-border: rgba(0, 255, 135, 0.2);
-             --accent-glow: 0 0 15px rgba(0, 255, 135, 0.2);
-             --accent-glow-strong: 0 0 20px rgba(0, 255, 135, 0.3);
-             --transition-time: 0.3s;
-             --header-height: 70px;
-             --sidebar-width: 80px;
-             --negative-color: #ff4757;
-             --neutral-color: #aaaaaa;
-             --separator-color: rgba(255, 255, 255, 0.07);
-         }
-         
-         body {
-             margin: 0;
-             padding: 0;
-             font-family: 'Inter', sans-serif;
-             transition: background-color 0.3s ease, color 0.3s ease;
-             overflow-x: hidden;
-             letter-spacing: 0.01em;
-             line-height: 1.6;
-         }
-         
-         body.dark {
-             background-color: var(--background-color);
-             background-image: 
-                 radial-gradient(circle at 15% 50%, rgba(0, 255, 135, 0.08) 0%, transparent 25%),
-                 radial-gradient(circle at 85% 30%, rgba(0, 100, 255, 0.05) 0%, transparent 20%);
-             color: var(--text-color);
-         }
-         
-         body.light {
-             background-color: var(--light-background-color);
-             color: var(--light-text-color);
-         }
-         
-         /* Header */
-         .main-header {
-             position: fixed;
-             top: 0;
-             left: var(--sidebar-width);
-             right: 0;
-             height: var(--header-height);
-             backdrop-filter: blur(10px);
-             -webkit-backdrop-filter: blur(10px);
-             display: flex;
-             justify-content: space-between;
-             align-items: center;
-             padding: 0 40px;
-             z-index: 100;
-             transition: all 0.3s ease;
-         }
-         
-         .dark .main-header {
-             background-color: rgba(10, 25, 41, 0.85);
-             border-bottom: 1px solid var(--card-border);
-             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-         }
-         
-         .light .main-header {
-             background-color: rgba(240, 245, 255, 0.9);
-             border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-         }
-         
-         .header-left {
-             display: flex;
-             align-items: center;
-         }
-         
-         .logo-container {
-             display: flex;
-             align-items: center;
-             font-weight: 900;
-             font-size: 1.5rem;
-             letter-spacing: 1px;
-         }
-         
-         .logo-container a {
-             text-decoration: none;
-             $transition: color 0.3s ease;
-         }
-         
-         .dark .logo-container a {
-             color: var(--text-color);
-             text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
-         }
-         
-         .light .logo-container a {
-             color: var(--light-text-color);
-         }
-         
-         .pulse-dot {
-             width: 12px;
-             height: 12px;
-             background-color: var(--accent-color);
-             border-radius: 50%;
-             margin-right: 10px;
-             box-shadow: 0 0 10px var(--accent-color);
-             animation: pulse 2s infinite;
-         }
-         
-         .main-nav {
-             display: flex;
-             margin-left: 40px;
-         }
-         
-         .main-nav a {
-             margin-right: 30px;
-             padding: 8px 5px;
-             font-weight: 500;
-             position: relative;
-             transition: color 0.3s;
-             text-decoration: none;
-         }
-         
-         .dark .main-nav a {
-             color: rgba(255, 255, 255, 0.8);
-         }
-         
-         .light .main-nav a {
-             color: var(--light-text-color);
-         }
-         
-         .main-nav a::after {
-             content: '';
-             position: absolute;
-             bottom: 0;
-             left: 0;
-             width: 0;
-             height: 2px;
-             background-color: var(--accent-color);
-             transition: width 0.3s;
-         }
-         
-         .main-nav a:hover::after,
-         .main-nav a.active::after {
-             width: 100%;
-         }
-         
-         .main-nav a.active {
-             color: var(--accent-color);
-         }
-         
-         .header-right {
-             display: flex;
-             align-items: center;
-         }
-         
-         .market-status {
-             display: flex;
-             align-items: center;
-             margin-right: 30px;
-             font-size: 0.875rem;
-             transition: color 0.3s ease;
-         }
-         
-         .dark .market-status {
-             color: var(--text-color);
-         }
-         
-         .light .market-status {
-             color: var(--light-text-color);
-         }
-         
-         .market-indicator {
-             width: 10px;
-             height: 10px;
-             border-radius: 50%;
-             margin-right: 8px;
-         }
-         
-         .market-indicator.green {
-             background-color: #4CAF50;
-             box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
-         }
-         
-         .market-time {
-             margin-left: 10px;
-             font-weight: 600;
-             color: var(--accent-color);
-         }
-         
-         .search-button {
-             padding: 10px 20px;
-             border-radius: 8px;
-             display: flex;
-             align-items: center;
-             transition: all 0.3s;
-             text-decoration: none;
-         }
-         
-         .dark .search-button {
-             background-color: var(--accent-subtle);
-             border: 1px solid var(--accent-medium);
-             color: var(--text-color);
-         }
-         
-         .light .search-button {
-             background-color: rgba(0, 210, 110, 0.1);
-             border: 1px solid rgba(0, 210, 110, 0.3);
-             color: var(--light-text-color);
-         }
-         
-         .search-button:hover {
-             transform: translateY(-2px);
-             box-shadow: var(--accent-glow);
-         }
-         
-         .dark .search-button:hover {
-             background-color: var(--accent-medium);
-         }
-         
-         .light .search-button:hover {
-             background-color: rgba(0, 210, 110, 0.2);
-         }
-         
-         .search-button i {
-             margin-right: 8px;
-             color: var(--accent-color);
-         }
-         
-         /* Sidebar de navigation verticale */
-         .sidebar {
-             position: fixed;
-             top: 0;
-             left: 0;
-             width: var(--sidebar-width);
-             height: 100vh;
-             display: flex;
-             flex-direction: column;
-             align-items: center;
-             padding: 20px 0;
-             z-index: 101;
-             transition: background-color 0.3s ease, border-right 0.3s ease, box-shadow 0.3s ease;
-         }
-         
-         .dark .sidebar {
-             background-color: rgba(8, 20, 35, 0.95);
-             border-right: 1px solid var(--card-border);
-             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
-         }
-         
-         .light .sidebar {
-             background-color: rgba(230, 240, 255, 0.95);
-             border-right: 1px solid rgba(0, 0, 0, 0.1);
-             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-         }
-         
-         .sidebar-logo {
-             font-size: 1.5rem;
-             font-weight: 900;
-             color: var(--accent-color);
-             margin-bottom: 40px;
-             text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
-         }
-         
-         .sidebar-nav {
-             display: flex;
-             flex-direction: column;
-             align-items: center;
-             flex-grow: 1;
-         }
-         
-         .nav-item {
-             margin-bottom: 24px;
-             width: 42px;
-             height: 42px;
-             display: flex;
-             justify-content: center;
-             align-items: center;
-             border-radius: 10px;
-             transition: all 0.3s;
-             position: relative;
-             text-decoration: none;
-         }
- 
-         /* Notification badge for alerts */
-         .notification-badge {
-             position: absolute;
-             top: -5px;
-             right: -5px;
-             width: 10px;
-             height: 10px;
-             background-color: #ff4757;
-             border-radius: 50%;
-             box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
-         }
-         
-         .dark .nav-item {
-             color: rgba(255, 255, 255, 0.7);
-         }
-         
-         .light .nav-item {
-             color: rgba(0, 0, 0, 0.7);
-         }
-         
-         .dark .nav-item:hover, .dark .nav-item.active {
-             background-color: var(--accent-subtle);
-             color: var(--accent-color);
-             box-shadow: var(--accent-glow);
-             transform: translateY(-2px);
-         }
-         
-         .light .nav-item:hover, .light .nav-item.active {
-             background-color: rgba(0, 210, 110, 0.1);
-             color: var(--accent-color);
-         }
-         
-         .nav-item i {
-             font-size: 1.2rem;
-         }
-         
-         /* Mode sombre/clair toggle */
-         .theme-toggle {
-             position: fixed;
-             top: 20px;
-             right: 20px;
-             z-index: 1000;
-         }
-         
-         .theme-toggle-btn {
-             background: none;
-             border: none;
-             cursor: pointer;
-             width: 40px;
-             height: 40px;
-             border-radius: 50%;
-             display: flex;
-             align-items: center;
-             justify-content: center;
-             font-size: 1.2rem;
-             transition: all 0.3s ease;
-         }
-         
-         .dark .theme-toggle-btn {
-             color: var(--text-color);
-             background-color: rgba(255, 255, 255, 0.1);
-         }
-         
-         .light .theme-toggle-btn {
-             color: var(--light-text-color);
-             background-color: rgba(0, 0, 0, 0.1);
-         }
-         
-         .theme-toggle-btn:hover {
-             transform: scale(1.1);
-         }
-         
-         /* Main container */
-         .main-container {
-             margin-left: var(--sidebar-width);
-             margin-top: var(--header-height);
-             padding: 24px;
-             min-height: calc(100vh - var(--header-height));
-             transition: background-color 0.3s ease;
-         }
- 
-         /* Glassmorphism cards */
-         .glassmorphism {
-             backdrop-filter: blur(12px);
-             -webkit-backdrop-filter: blur(12px);
-             border: 1px solid var(--card-border);
-             box-shadow: var(--accent-glow);
-             transition: transform 0.3s ease, box-shadow 0.3s ease;
-         }
-         
-         .dark .glassmorphism {
-             background-color: var(--card-bg);
-         }
-         
-         .light .glassmorphism {
-             background-color: rgba(240, 245, 255, 0.8);
-         }
-         
-         .glassmorphism:hover {
-             box-shadow: var(--accent-glow-strong);
-         }
- 
-         /* Data table styles */
-         .data-table {
-             width: 100%;
-             border-collapse: separate;
-             border-spacing: 0;
-         }
-         
-         .data-table th {
-             padding: 14px 16px;
-             font-weight: 600;
-             font-size: 0.8rem;
-             text-align: left;
-             border-bottom: 1px solid var(--card-border);
-             text-transform: uppercase;
-             letter-spacing: 0.05em;
-             color: rgba(255, 255, 255, 0.8);
-             background-color: var(--card-header);
-         }
-         
-         .data-table td {
-             padding: 16px;
-             font-size: 0.9rem;
-             border-bottom: 1px solid var(--separator-color);
-         }
-         
-         .data-table tr:last-child td {
-             border-bottom: none;
-         }
-         
-         .data-table tr:hover td {
-             background-color: var(--accent-subtle);
-         }
- 
-         /* Positive, negative, and neutral values */
-         .positive {
-             color: var(--accent-color);
-             font-weight: 600;
-         }
-         
-         .negative {
-             color: var(--negative-color);
-             font-weight: 600;
-         }
-         
-         .neutral {
-             color: var(--neutral-color);
-             font-weight: 600;
-         }
- 
-         /* Aperçu des marchés mondiaux spécifique */
-         .market-overview-section {
-             margin-bottom: 2rem;
-         }
-         
-         .market-overview-title {
-             font-size: 1.4rem;
-             font-weight: 700;
-             margin-bottom: 1.5rem;
-             color: white;
-             display: flex;
-             align-items: center;
-         }
-         
-         .market-overview-title::before {
-             content: '';
-             display: inline-block;
-             width: 24px;
-             height: 3px;
-             background-color: var(--accent-color);
-             margin-right: 10px;
-             border-radius: 2px;
-             box-shadow: 0 0 8px var(--accent-color);
-         }
-         
-         /* Nouvelle mise en page pour l'aperçu des marchés */
-         .market-overview-grid {
-             display: grid;
-             grid-template-columns: repeat(4, 1fr);
-             grid-gap: 0;
-             border-radius: 12px;
-             overflow: hidden;
-             margin-bottom: 1px;
-         }
-         
-         .market-overview-row {
-             display: contents;
-         }
-         
-         .market-region-header {
-             background-color: rgba(25, 45, 70, 0.9);
-             padding: 12px 16px;
-             display: flex;
-             justify-content: space-between;
-             align-items: center;
-             font-weight: 600;
-             font-size: 0.95rem;
-             color: white;
-             border-bottom: 1px solid var(--card-border);
-             grid-column: span 4;
-         }
-         
-         .market-index-col {
-             padding: 12px 16px;
-             background-color: var(--card-bg);
-             border-right: 1px solid var(--separator-color);
-             transition: background-color 0.2s;
-         }
-         
-         .market-index-col:hover {
-             background-color: rgba(15, 40, 70, 0.8);
-         }
-         
-         .market-index-col:last-child {
-             border-right: none;
-         }
-         
-         .market-index-name {
-             font-weight: 600;
-             font-size: 0.9rem;
-             margin-bottom: 6px;
-             color: rgba(255, 255, 255, 0.9);
-         }
-         
-         .market-index-data {
-             display: flex;
-             justify-content: space-between;
-             gap: 8px;
-         }
-         
-         .market-value {
-             font-weight: 700;
-             text-align: right;
-             min-width: 62px;
-         }
-         
-         .market-ytd {
-             opacity: 0.8;
-             text-align: right;
-             min-width: 62px;
-         }
-         
-         /* Autres régions */
-         .others-grid {
-             display: grid;
-             grid-template-columns: repeat(4, 1fr);
-             grid-gap: 0;
-             border-radius: 12px;
-             overflow: hidden;
-             margin-top: 1px;
-         }
-         
-         /* Top performers */
-         .top-performers-section {
-             margin-bottom: 2rem;
-         }
-         
-         .top-performers-title {
-             font-size: 1.4rem;
-             font-weight: 700;
-             margin-bottom: 1.5rem;
-             color: white;
-             display: flex;
-             align-items: center;
-         }
-         
-         .top-performers-title::before {
-             content: '';
-             display: inline-block;
-             width: 24px;
-             height: 3px;
-             background-color: var(--accent-color);
-             margin-right: 10px;
-             border-radius: 2px;
-             box-shadow: 0 0 8px var(--accent-color);
-         }
-         
-         .top-performers-grid {
-             display: grid;
-             grid-template-columns: repeat(4, 1fr);
-             grid-gap: 1px;
-         }
-         
-         .performer-card {
-             background-color: var(--card-bg);
-             border-radius: 12px;
-             overflow: hidden;
-         }
-         
-         .performer-header {
-             background-color: rgba(25, 45, 70, 0.9);
-             padding: 12px 16px;
-             display: flex;
-             justify-content: space-between;
-             align-items: center;
-             font-weight: 600;
-             color: white;
-             border-bottom: 1px solid var(--card-border);
-         }
-         
-         .performer-row {
-             padding: 12px 16px;
-             border-bottom: 1px solid var(--separator-color);
-             display: flex;
-             justify-content: space-between;
-             transition: background-color 0.2s;
-         }
-         
-         .performer-row:hover {
-             background-color: rgba(15, 40, 70, 0.8);
-         }
-         
-         .performer-row:last-child {
-             border-bottom: none;
-         }
-         
-         .performer-info {
-             flex: 1;
-         }
-         
-         .performer-index {
-             font-weight: 600;
-             font-size: 0.9rem;
-             margin-bottom: 3px;
-             color: rgba(255, 255, 255, 0.9);
-         }
-         
-         .performer-country {
-             font-size: 0.8rem;
-             color: rgba(255, 255, 255, 0.6);
-         }
-         
-         .performer-value {
-             font-weight: 700;
-             text-align: right;
-             min-width: 62px;
-         }
- 
-         /* Autres styles */
-         .section-title {
-             font-size: 1.4rem;
-             font-weight: 700;
-             margin-bottom: 1.5rem;
-             color: white;
-             display: flex;
-             align-items: center;
-         }
-         
-         .section-title::before {
-             content: '';
-             display: inline-block;
-             width: 24px;
-             height: 3px;
-             background-color: var(--accent-color);
-             margin-right: 10px;
-             border-radius: 2px;
-             box-shadow: 0 0 8px var(--accent-color);
-         }
- 
-         /* Cards with consistent headers */
-         .card-header {
-             padding: 12px 16px;
-             border-bottom: 1px solid var(--card-border);
-             background-color: var(--card-header);
-             border-top-left-radius: 0.5rem;
-             border-top-right-radius: 0.5rem;
-             display: flex;
-             justify-content: space-between;
-             align-items: center;
-         }
-         
-         .card-header h3 {
-             font-weight: 600;
-             font-size: 1rem;
-             color: rgba(255, 255, 255, 0.9);
-         }
-         
-         .card-body {
-             padding: 16px;
-         }
- 
-         /* Animations */
-         @keyframes pulse {
-             0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
-             70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
-             100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
-         }
- 
-         /* Loader */
-         .loader {
-             display: inline-block;
-             width: 50px;
-             height: 50px;
-             border: 3px solid rgba(0, 255, 135, 0.2);
-             border-radius: 50%;
-             border-top-color: var(--accent-color);
-             animation: spin 1s ease-in-out infinite;
-         }
- 
-         @keyframes spin {
-             0% { transform: rotate(0deg); }
-             100% { transform: rotate(360deg); }
-         }
-         
-         /* Region Tabs */
-         .region-tabs {
-             display: flex;
-             border-bottom: 1px solid var(--card-border);
-             margin-bottom: 24px;
-             background-color: var(--card-header);
-             border-radius: 8px;
-             overflow: hidden;
-         }
-         
-         .region-tab {
-             padding: 14px 24px;
-             cursor: pointer;
-             position: relative;
-             font-weight: 500;
-             opacity: 0.7;
-             transition: all 0.3s ease;
-             letter-spacing: 0.02em;
-         }
-         
-         .region-tab:hover {
-             background-color: var(--accent-subtle);
-             opacity: 0.9;
-         }
-         
-         .region-tab.active {
-             opacity: 1;
-             color: var(--accent-color);
-             background-color: var(--accent-subtle);
-         }
-         
-         .region-tab::after {
-             content: '';
-             position: absolute;
-             bottom: 0;
-             left: 0;
-             width: 0;
-             height: 3px;
-             background-color: var(--accent-color);
-             transition: width 0.3s ease;
-             box-shadow: 0 0 8px var(--accent-color);
-         }
-         
-         .region-tab.active::after {
-             width: 100%;
-         }
- 
-         /* Button styling */
-         .action-button {
-             padding: 6px 14px;
-             border-radius: 6px;
-             font-size: 0.8rem;
-             font-weight: 500;
-             transition: all 0.2s ease;
-             background-color: var(--accent-subtle);
-             color: var(--accent-color);
-             border: 1px solid var(--accent-medium);
-         }
-         
-         .action-button:hover {
-             background-color: var(--accent-medium);
-             transform: translateY(-1px);
-         }
- 
-         /* Responsive */
-         @media (max-width: 768px) {
-             .main-header {
-                 left: 0;
-                 padding: 0 20px;
-             }
-             
-             .sidebar {
-                 width: 100%;
-                 height: auto;
-                 flex-direction: row;
-                 padding: 10px 20px;
-                 justify-content: space-between;
-                 position: fixed;
-                 bottom: 0;
-                 top: auto;
-                 border-top: 1px solid var(--card-border);
-                 border-right: none;
-             }
-             
-             .sidebar-logo {
-                 display: none;
-             }
-             
-             .sidebar-nav {
-                 flex-direction: row;
-                 justify-content: space-around;
-                 width: 100%;
-                 margin: 0;
-             }
-             
-             .nav-item {
-                 margin: 0;
-             }
-             
-             .main-container {
-                 margin-left: 0;
-                 margin-top: calc(var(--header-height));
-                 margin-bottom: 60px;
-             }
-             
-             .main-nav {
-                 display: none;
-             }
-             
-             .region-tabs {
-                 overflow-x: auto;
-                 white-space: nowrap;
-             }
-             
-             .market-overview-grid {
-                 display: block;
-             }
-             
-             .market-region-header {
-                 grid-column: 1;
-             }
-             
-             .market-index-col {
-                 display: flex;
-                 justify-content: space-between;
-                 border-right: none;
-                 border-bottom: 1px solid var(--separator-color);
-             }
-             
-             .top-performers-grid {
-                 grid-template-columns: 1fr;
-                 gap: 12px;
-             }
-         }
-     </style>
- </head>
- <body class="dark">
-     <!-- Bouton du sélecteur de thème -->
-     <div class="theme-toggle">
-         <button id="theme-toggle-btn" class="theme-toggle-btn">
-             <i class="fas fa-moon" id="dark-icon"></i>
-             <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
-         </button>
-     </div>
- 
-     <!-- Sidebar de navigation verticale -->
-     <aside class="sidebar">
-         <div class="sidebar-logo">TP</div>
-         <nav class="sidebar-nav">
-             <a href="actualites.html" class="nav-item" title="Actualités">
-                 <i class="fas fa-newspaper"></i>
-             </a>
-             <a href="portefeuille.html" class="nav-item" title="Portefeuilles">
-                 <i class="fas fa-chart-pie"></i>
-             </a>
-             <a href="dashboard.html" class="nav-item" title="Tableau de bord">
-                 <i class="fas fa-tachometer-alt"></i>
-             </a>
-             <a href="marches.html" class="nav-item active" title="Marchés">
-                 <i class="fas fa-chart-line"></i>
-             </a>
-             <a href="email-preview.html" class="nav-item" title="Alertes">
-                 <i class="fas fa-bell"></i>
-                 <span class="notification-badge"></span>
-             </a>
-             <a href="parametres.html" class="nav-item" title="Paramètres">
-                 <i class="fas fa-cog"></i>
-             </a>
-         </nav>
-     </aside>
- 
-     <!-- Header principal -->
-     <header class="main-header">
-         <div class="header-left">
-             <div class="logo-container">
-                 <div class="pulse-dot"></div>
-                 <a href="index.html">TRADEPULSE</a>
-             </div>
-             <nav class="main-nav">
-                 <a href="actualites.html">Actualités</a>
-                 <a href="portefeuille.html">Portefeuilles</a>
-                 <a href="dashboard.html">Tableau de bord</a>
-                 <a href="marches.html" class="active">Marchés</a>
-             </nav>
-         </div>
-         <div class="header-right">
-             <div class="market-status">
-                 <div class="market-indicator green"></div>
-                 <span>Marché ouvert</span>
-                 <span class="market-time" id="marketTime">09:45:22</span>
-             </div>
-             <a href="recherche.html" class="search-button ripple">
-                 <i class="fas fa-search"></i>
-                 <span>Ma question</span>
-             </a>
-         </div>
-     </header>
- 
-     <!-- Container principal -->
-     <main class="main-container">
-         <div class="p-6">
-             <div class="max-w-7xl mx-auto">
-                 <!-- Header avec titre et dernière mise à jour -->
-                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-                     <div>
-                         <h1 class="text-3xl font-bold mb-2">Indices Boursiers Internationaux</h1>
-                         <p class="text-gray-400">Dernière mise à jour: <span id="last-update-time" class="font-medium">Chargement...</span></p>
-                     </div>
-                 </div>
-                 
-                 <!-- Aperçu des marchés mondiaux (nouvelle version) -->
-                 <div class="market-overview-section mb-10">
-                     <h2 class="market-overview-title mb-6">Aperçu des marchés mondiaux</h2>
-                     
-                     <div class="market-overview-grid">
-                         <!-- EUROPE -->
-                         <div class="market-region-header">
-                             <span>Europe</span>
-                             <span id="europe-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="cac40">
-                             <div class="market-index-name">CAC 40</div>
-                             <div class="market-index-data">
-                                 <div class="market-value negative">-0,35 %</div>
-                                 <div class="market-ytd positive">7,87 %</div>
-                             </div>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="dax">
-                             <div class="market-index-name">DAX</div>
-                             <div class="market-index-data">
-                                 <div class="market-value negative">-0,55 %</div>
-                                 <div class="market-ytd positive">13,27 %</div>
-                             </div>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="ftse100">
-                             <div class="market-index-name">FTSE 100</div>
-                             <div class="market-index-data">
-                                 <div class="market-value positive">0,20 %</div>
-                                 <div class="market-ytd positive">4,71 %</div>
-                             </div>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="eurostoxx50">
-                             <div class="market-index-name">EURO STOXX 50</div>
-                             <div class="market-index-data">
-                                 <div class="market-value negative">-0,25 %</div>
-                                 <div class="market-ytd positive">9,19 %</div>
-                             </div>
-                         </div>
-                         
-                         <!-- AMÉRIQUE DU NORD -->
-                         <div class="market-region-header">
-                             <span>Amérique du Nord</span>
-                             <span id="north-america-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="sp500">
-                             <div class="market-index-name">S&P 500 INDEX</div>
-                             <div class="market-index-data">
-                                 <div class="market-value positive">0,49 %</div>
-                                 <div class="market-ytd negative">-4,80 %</div>
-                             </div>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="dowjones">
-                             <div class="market-index-name">DOW JONES INDUSTRIAL</div>
-                             <div class="market-index-data">
-                                 <div class="market-value negative">-0,20 %</div>
-                                 <div class="market-ytd negative">-2,80 %</div>
-                             </div>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="nasdaq">
-                             <div class="market-index-name">NASDAQ Composite</div>
-                             <div class="market-index-data">
-                                 <div class="market-value positive">1,22 %</div>
-                                 <div class="market-ytd negative">-8,61 %</div>
-                             </div>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="sptsx">
-                             <div class="market-index-name">S&P/TSX 60</div>
-                             <div class="market-index-data">
-                                 <div class="market-value positive">0,82 %</div>
-                                 <div class="market-ytd positive">4,95 %</div>
-                             </div>
-                         </div>
-                         
-                         <!-- AMÉRIQUE LATINE -->
-                         <div class="market-region-header">
-                             <span>Amérique Latine</span>
-                             <span id="latin-america-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="merval">
-                             <div class="market-index-name">BUENOS AIRES MERVAL</div>
-                             <div class="market-index-data">
-                                 <div class="market-value negative">-1,79 %</div>
-                                 <div class="market-ytd negative">-11,90 %</div>
-                             </div>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="brazil">
-                             <div class="market-index-name">NASDAQ Brazil Large Mid Cap</div>
-                             <div class="market-index-data">
-                                 <div class="market-value positive">1,42 %</div>
-                                 <div class="market-ytd positive">9,15 %</div>
-                             </div>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="chile">
-                             <div class="market-index-name">NASDAQ Chile Large Mid Cap</div>
-                             <div class="market-index-data">
-                                 <div class="market-value positive">0,38 %</div>
-                                 <div class="market-ytd positive">17,11 %</div>
-                             </div>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="mexico">
-                             <div class="market-index-name">NASDAQ Mexico Large Mid Cap</div>
-                             <div class="market-index-data">
-                                 <div class="market-value positive">0,15 %</div>
-                                 <div class="market-ytd positive">9,20 %</div>
-                             </div>
-                         </div>
-                         
-                         <!-- ASIE -->
-                         <div class="market-region-header">
-                             <span>Asie</span>
-                             <span id="asia-trend" class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="nikkei">
-                             <div class="market-index-name">NIKKEI 225</div>
-                             <div class="market-index-data">
-                                 <div class="market-value negative">-0,08 %</div>
-                                 <div class="market-ytd negative">-7,78 %</div>
-                             </div>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="hangseng">
-                             <div class="market-index-name">HANG SENG HK COMPOSITE</div>
-                             <div class="market-index-data">
-                                 <div class="market-value negative">-0,65 %</div>
-                                 <div class="market-ytd positive">16,28 %</div>
-                             </div>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="shanghai">
-                             <div class="market-index-name">SHANGHAI COMPOSITE</div>
-                             <div class="market-index-data">
-                                 <div class="market-value negative">-0,39 %</div>
-                                 <div class="market-ytd positive">0,21 %</div>
-                             </div>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="sensex">
-                             <div class="market-index-name">BSE SENSEX</div>
-                             <div class="market-index-data">
-                                 <div class="market-value positive">0,14 %</div>
-                                 <div class="market-ytd positive">2,86 %</div>
-                             </div>
-                         </div>
-                     </div>
-                     
-                     <!-- AUTRES RÉGIONS -->
-                     <div class="others-grid">
-                         <div class="market-region-header">
-                             <span>Autres régions</span>
-                             <span id="other-trend" class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="southafrica">
-                             <div class="market-index-name">NASDAQ South Africa</div>
-                             <div class="market-index-data">
-                                 <div class="market-value negative">-1,24 %</div>
-                                 <div class="market-ytd positive">6,81 %</div>
-                             </div>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="australia">
-                             <div class="market-index-name">NASDAQ Australia</div>
-                             <div class="market-index-data">
-                                 <div class="market-value negative">-1,03 %</div>
-                                 <div class="market-ytd negative">-3,57 %</div>
-                             </div>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="israel">
-                             <div class="market-index-name">NASDAQ Israel</div>
-                             <div class="market-index-data">
-                                 <div class="market-value positive">2,13 %</div>
-                                 <div class="market-ytd negative">-0,79 %</div>
-                             </div>
-                         </div>
-                         
-                         <div class="market-index-col" data-index="morocco">
-                             <div class="market-index-name">NASDAQ Morocco</div>
-                             <div class="market-index-data">
-                                 <div class="market-value negative">-0,81 %</div>
-                                 <div class="market-ytd positive">9,82 %</div>
-                             </div>
-                         </div>
-                     </div>
-                 </div>
-                 
-                 <!-- Top Performers -->
-                 <div class="top-performers-section mb-10">
-                     <h2 class="top-performers-title mb-6">Top Performers</h2>
-                     
-                     <div class="top-performers-grid">
-                         <!-- Top 3 Hausse Quotidienne -->
-                         <div class="performer-card">
-                             <div class="performer-header">
-                                 <span>Top 3 Hausse (VAR %)</span>
-                                 <span class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
-                             </div>
-                             <div id="daily-top">
-                                 <div class="performer-row">
-                                     <div class="performer-info">
-                                         <div class="performer-index">BUENOS AIRES MERVAL</div>
-                                         <div class="performer-country">Argentine</div>
-                                     </div>
-                                     <div class="performer-value positive">5,25 %</div>
-                                 </div>
-                                 
-                                 <div class="performer-row">
-                                     <div class="performer-info">
-                                         <div class="performer-index">NASDAQ Korea Large Mid Cap</div>
-                                         <div class="performer-country">Corée du Sud</div>
-                                     </div>
-                                     <div class="performer-value positive">2,63 %</div>
-                                 </div>
-                                 
-                                 <div class="performer-row">
-                                     <div class="performer-info">
-                                         <div class="performer-index">CBOE VIX INDEX</div>
-                                         <div class="performer-country">États-Unis</div>
-                                     </div>
-                                     <div class="performer-value positive">2,52 %</div>
-                                 </div>
-                             </div>
-                         </div>
-                         
-                         <!-- Top 3 Baisse Quotidienne -->
-                         <div class="performer-card">
-                             <div class="performer-header">
-                                 <span>Top 3 Baisse (VAR %)</span>
-                                 <span class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
-                             </div>
-                             <div id="daily-bottom">
-                                 <div class="performer-row">
-                                     <div class="performer-info">
-                                         <div class="performer-index">NASDAQ New Zealand Large Mid Cap</div>
-                                         <div class="performer-country">Nouvelle-Zélande</div>
-                                     </div>
-                                     <div class="performer-value negative">-1,90 %</div>
-                                 </div>
-                                 
-                                 <div class="performer-row">
-                                     <div class="performer-info">
-                                         <div class="performer-index">TAIEX</div>
-                                         <div class="performer-country">Taiwan</div>
-                                     </div>
-                                     <div class="performer-value negative">-1,42 %</div>
-                                 </div>
-                                 
-                                 <div class="performer-row">
-                                     <div class="performer-info">
-                                         <div class="performer-index">NASDAQ South Africa Large Mid Cap</div>
-                                         <div class="performer-country">Afrique du Sud</div>
-                                     </div>
-                                     <div class="performer-value negative">-1,24 %</div>
-                                 </div>
-                             </div>
-                         </div>
-                         
-                         <!-- Top 3 Hausse YTD -->
-                         <div class="performer-card">
-                             <div class="performer-header">
-                                 <span>Top 3 Hausse (YTD)</span>
-                                 <span class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
-                             </div>
-                             <div id="ytd-top">
-                                 <div class="performer-row">
-                                     <div class="performer-info">
-                                         <div class="performer-index">CBOE VIX INDEX</div>
-                                         <div class="performer-country">États-Unis</div>
-                                     </div>
-                                     <div class="performer-value positive">43,17 %</div>
-                                 </div>
-                                 
-                                 <div class="performer-row">
-                                     <div class="performer-info">
-                                         <div class="performer-index">HONG KONG HANG SENG INDIC</div>
-                                         <div class="performer-country">Hong Kong</div>
-                                     </div>
-                                     <div class="performer-value positive">16,96 %</div>
-                                 </div>
-                                 
-                                 <div class="performer-row">
-                                     <div class="performer-info">
-                                         <div class="performer-index">NASDAQ Chile Large Mid Cap</div>
-                                         <div class="performer-country">Chili</div>
-                                     </div>
-                                     <div class="performer-value positive">16,67 %</div>
-                                 </div>
-                             </div>
-                         </div>
-                         
-                         <!-- Top 3 Baisse YTD -->
-                         <div class="performer-card">
-                             <div class="performer-header">
-                                 <span>Top 3 Baisse (YTD)</span>
-                                 <span class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
-                             </div>
-                             <div id="ytd-bottom">
-                                 <div class="performer-row">
-                                     <div class="performer-info">
-                                         <div class="performer-index">BUENOS AIRES MERVAL</div>
-                                         <div class="performer-country">Argentine</div>
-                                     </div>
-                                     <div class="performer-value negative">-10,29 %</div>
-                                 </div>
-                                 
-                                 <div class="performer-row">
-                                     <div class="performer-info">
-                                         <div class="performer-index">NASDAQ Composite</div>
-                                         <div class="performer-country">États-Unis</div>
-                                     </div>
-                                     <div class="performer-value negative">-8,61 %</div>
-                                 </div>
-                                 
-                                 <div class="performer-row">
-                                     <div class="performer-info">
-                                         <div class="performer-index">Nikkei 225</div>
-                                         <div class="performer-country">Japon</div>
-                                     </div>
-                                     <div class="performer-value negative">-7,78 %</div>
-                                 </div>
-                             </div>
-                         </div>
-                     </div>
-                 </div>
-                 
-                 <!-- Onglets des régions -->
-                 <div class="mb-8">
-                     <h2 class="section-title mb-6">Indices par région</h2>
-                     <div class="region-tabs mb-6">
-                         <div class="region-tab active" data-region="europe">Europe</div>
-                         <div class="region-tab" data-region="north-america">Amérique du Nord</div>
-                         <div class="region-tab" data-region="latin-america">Amérique Latine</div>
-                         <div class="region-tab" data-region="asia">Asie</div>
-                         <div class="region-tab" data-region="other">Autres</div>
-                     </div>
-                     
-                     <!-- Conteneur pour le tableau des indices -->
-                     <div class="glassmorphism rounded-lg overflow-hidden">
-                         <div id="indices-loading" class="py-16 flex justify-center">
-                             <div class="loader"></div>
-                         </div>
-                         
-                         <div id="indices-error" class="py-16 text-center hidden">
-                             <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
-                             <p class="text-lg">Impossible de charger les données des indices.</p>
-                             <button id="retry-button" class="mt-4 search-button inline-flex items-center">
-                                 <i class="fas fa-sync-alt mr-2"></i>
-                                 Réessayer
-                             </button>
-                         </div>
-                         
-                         <div id="indices-container" class="hidden">
-                             <div id="europe-indices" class="region-content">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>PAYS</th>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR. %</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>Actions</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="europe-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <div id="north-america-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>PAYS</th>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR. %</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>Actions</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="north-america-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <div id="latin-america-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>PAYS</th>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR. %</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>Actions</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="latin-america-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <div id="asia-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>PAYS</th>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR. %</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>Actions</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="asia-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <div id="other-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>PAYS</th>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR. %</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>Actions</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="other-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                         </div>
-                     </div>
-                 </div>
-                 
-                 <!-- Source et avertissement -->
-                 <div class="text-center text-sm text-gray-400 mb-6 p-4 glassmorphism rounded-lg bg-opacity-50">
-                     <p>Sources: <a href="https://www.boursorama.com/bourse/indices/internationaux" target="_blank" class="text-green-400 hover:underline">Boursorama</a></p>
-                     <p class="mt-2">Les données sont actualisées régulièrement mais peuvent accuser un retard par rapport aux marchés en temps réel.</p>
-                 </div>
-             </div>
-         </div>
-     </main>
- 
-     <script src="marches-script.js"></script>
- </body>
- </html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradePulse - Marchés</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        green: {
+                            400: '#00FF87'
+                        }
+                    }
+                },
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif']
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --background-color: #0a1929; /* Bleu nuit plus profond */
+            --light-background-color: #f0f5ff;
+            --text-color: #FFFFFF;
+            --light-text-color: #1a202c;
+            --accent-color: #00FF87; /* Vert néon */
+            --accent-subtle: rgba(0, 255, 135, 0.15);
+            --accent-medium: rgba(0, 255, 135, 0.3);
+            --accent-strong: rgba(0, 255, 135, 0.6);
+            --card-bg: rgba(10, 30, 50, 0.6);
+            --card-header: rgba(15, 40, 65, 0.8);
+            --card-border: rgba(0, 255, 135, 0.2);
+            --accent-glow: 0 0 15px rgba(0, 255, 135, 0.2);
+            --accent-glow-strong: 0 0 20px rgba(0, 255, 135, 0.3);
+            --transition-time: 0.3s;
+            --header-height: 70px;
+            --sidebar-width: 80px;
+            --negative-color: #ff4757;
+            --neutral-color: #aaaaaa;
+            --separator-color: rgba(255, 255, 255, 0.07);
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+            letter-spacing: 0.01em;
+            line-height: 1.6;
+        }
+        
+        body.dark {
+            background-color: var(--background-color);
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 255, 135, 0.08) 0%, transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(0, 100, 255, 0.05) 0%, transparent 20%);
+            color: var(--text-color);
+        }
+        
+        body.light {
+            background-color: var(--light-background-color);
+            color: var(--light-text-color);
+        }
+        
+        /* Header */
+        .main-header {
+            position: fixed;
+            top: 0;
+            left: var(--sidebar-width);
+            right: 0;
+            height: var(--header-height);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+        
+        .dark .main-header {
+            background-color: rgba(10, 25, 41, 0.85);
+            border-bottom: 1px solid var(--card-border);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .light .main-header {
+            background-color: rgba(240, 245, 255, 0.9);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            font-weight: 900;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+        }
+        
+        .logo-container a {
+            text-decoration: none;
+            $transition: color 0.3s ease;
+        }
+        
+        .dark .logo-container a {
+            color: var(--text-color);
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+        }
+        
+        .light .logo-container a {
+            color: var(--light-text-color);
+        }
+        
+        .pulse-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 10px var(--accent-color);
+            animation: pulse 2s infinite;
+        }
+        
+        .main-nav {
+            display: flex;
+            margin-left: 40px;
+        }
+        
+        .main-nav a {
+            margin-right: 30px;
+            padding: 8px 5px;
+            font-weight: 500;
+            position: relative;
+            transition: color 0.3s;
+            text-decoration: none;
+        }
+        
+        .dark .main-nav a {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .light .main-nav a {
+            color: var(--light-text-color);
+        }
+        
+        .main-nav a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--accent-color);
+            transition: width 0.3s;
+        }
+        
+        .main-nav a:hover::after,
+        .main-nav a.active::after {
+            width: 100%;
+        }
+        
+        .main-nav a.active {
+            color: var(--accent-color);
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+        }
+        
+        .market-status {
+            display: flex;
+            align-items: center;
+            margin-right: 30px;
+            font-size: 0.875rem;
+            transition: color 0.3s ease;
+        }
+        
+        .dark .market-status {
+            color: var(--text-color);
+        }
+        
+        .light .market-status {
+            color: var(--light-text-color);
+        }
+        
+        .market-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .market-indicator.green {
+            background-color: #4CAF50;
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+        }
+        
+        .market-time {
+            margin-left: 10px;
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+        
+        .search-button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+        
+        .dark .search-button {
+            background-color: var(--accent-subtle);
+            border: 1px solid var(--accent-medium);
+            color: var(--text-color);
+        }
+        
+        .light .search-button {
+            background-color: rgba(0, 210, 110, 0.1);
+            border: 1px solid rgba(0, 210, 110, 0.3);
+            color: var(--light-text-color);
+        }
+        
+        .search-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--accent-glow);
+        }
+        
+        .dark .search-button:hover {
+            background-color: var(--accent-medium);
+        }
+        
+        .light .search-button:hover {
+            background-color: rgba(0, 210, 110, 0.2);
+        }
+        
+        .search-button i {
+            margin-right: 8px;
+            color: var(--accent-color);
+        }
+        
+        /* Sidebar de navigation verticale */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            z-index: 101;
+            transition: background-color 0.3s ease, border-right 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .dark .sidebar {
+            background-color: rgba(8, 20, 35, 0.95);
+            border-right: 1px solid var(--card-border);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .light .sidebar {
+            background-color: rgba(230, 240, 255, 0.95);
+            border-right: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--accent-color);
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
+        }
+        
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+        }
+        
+        .nav-item {
+            margin-bottom: 24px;
+            width: 42px;
+            height: 42px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            transition: all 0.3s;
+            position: relative;
+            text-decoration: none;
+        }
+
+        /* Notification badge for alerts */
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 10px;
+            height: 10px;
+            background-color: #ff4757;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
+        }
+        
+        .dark .nav-item {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .light .nav-item {
+            color: rgba(0, 0, 0, 0.7);
+        }
+        
+        .dark .nav-item:hover, .dark .nav-item.active {
+            background-color: var(--accent-subtle);
+            color: var(--accent-color);
+            box-shadow: var(--accent-glow);
+            transform: translateY(-2px);
+        }
+        
+        .light .nav-item:hover, .light .nav-item.active {
+            background-color: rgba(0, 210, 110, 0.1);
+            color: var(--accent-color);
+        }
+        
+        .nav-item i {
+            font-size: 1.2rem;
+        }
+        
+        /* Mode sombre/clair toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .theme-toggle-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+        
+        .dark .theme-toggle-btn {
+            color: var(--text-color);
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .light .theme-toggle-btn {
+            color: var(--light-text-color);
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+        
+        .theme-toggle-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Main container */
+        .main-container {
+            margin-left: var(--sidebar-width);
+            margin-top: var(--header-height);
+            padding: 24px;
+            min-height: calc(100vh - var(--header-height));
+            transition: background-color 0.3s ease;
+        }
+
+        /* Glassmorphism cards */
+        .glassmorphism {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            box-shadow: var(--accent-glow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .dark .glassmorphism {
+            background-color: var(--card-bg);
+        }
+        
+        .light .glassmorphism {
+            background-color: rgba(240, 245, 255, 0.8);
+        }
+        
+        .glassmorphism:hover {
+            box-shadow: var(--accent-glow-strong);
+        }
+
+        /* Data table styles */
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        .data-table th {
+            padding: 14px 16px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-align: left;
+            border-bottom: 1px solid var(--card-border);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: rgba(255, 255, 255, 0.8);
+            background-color: var(--card-header);
+        }
+        
+        .data-table td {
+            padding: 16px;
+            font-size: 0.9rem;
+            border-bottom: 1px solid var(--separator-color);
+        }
+        
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .data-table tr:hover td {
+            background-color: var(--accent-subtle);
+        }
+
+        /* Positive, negative, and neutral values */
+        .positive {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+        
+        .negative {
+            color: var(--negative-color);
+            font-weight: 600;
+        }
+        
+        .neutral {
+            color: var(--neutral-color);
+            font-weight: 600;
+        }
+
+        /* Aperçu des marchés mondiaux spécifique */
+        .market-overview-section {
+            margin-bottom: 2rem;
+        }
+        
+        .market-overview-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: center;
+        }
+        
+        .market-overview-title::before {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 3px;
+            background-color: var(--accent-color);
+            margin-right: 10px;
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+        
+        /* Nouvelle mise en page pour l'aperçu des marchés */
+        .market-overview-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-gap: 0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 1px;
+        }
+        
+        .market-overview-row {
+            display: contents;
+        }
+        
+        .market-region-header {
+            background-color: rgba(25, 45, 70, 0.9);
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: white;
+            border-bottom: 1px solid var(--card-border);
+            grid-column: span 4;
+        }
+        
+        .market-index-col {
+            padding: 12px 16px;
+            background-color: var(--card-bg);
+            border-right: 1px solid var(--separator-color);
+            transition: background-color 0.2s;
+        }
+        
+        .market-index-col:hover {
+            background-color: rgba(15, 40, 70, 0.8);
+        }
+        
+        .market-index-col:last-child {
+            border-right: none;
+        }
+        
+        .market-index-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .market-index-data {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        
+        .market-value {
+            font-weight: 700;
+            text-align: right;
+            min-width: 62px;
+        }
+        
+        .market-ytd {
+            opacity: 0.8;
+            text-align: right;
+            min-width: 62px;
+        }
+        
+        /* Autres régions */
+        .others-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-gap: 0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 1px;
+        }
+        
+        /* Top performers */
+        .top-performers-section {
+            margin-bottom: 2rem;
+        }
+        
+        .top-performers-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: center;
+        }
+        
+        .top-performers-title::before {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 3px;
+            background-color: var(--accent-color);
+            margin-right: 10px;
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+        
+        .top-performers-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-gap: 1px;
+        }
+        
+        .performer-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .performer-header {
+            background-color: rgba(25, 45, 70, 0.9);
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: white;
+            border-bottom: 1px solid var(--card-border);
+        }
+        
+        .performer-row {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--separator-color);
+            display: flex;
+            justify-content: space-between;
+            transition: background-color 0.2s;
+        }
+        
+        .performer-row:hover {
+            background-color: rgba(15, 40, 70, 0.8);
+        }
+        
+        .performer-row:last-child {
+            border-bottom: none;
+        }
+        
+        .performer-info {
+            flex: 1;
+        }
+        
+        .performer-index {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 3px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .performer-country {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .performer-value {
+            font-weight: 700;
+            text-align: right;
+            min-width: 62px;
+        }
+
+        /* Autres styles */
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 3px;
+            background-color: var(--accent-color);
+            margin-right: 10px;
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+
+        /* Cards with consistent headers */
+        .card-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--card-border);
+            background-color: var(--card-header);
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card-header h3 {
+            font-weight: 600;
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .card-body {
+            padding: 16px;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
+        }
+
+        /* Loader */
+        .loader {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(0, 255, 135, 0.2);
+            border-radius: 50%;
+            border-top-color: var(--accent-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Region Tabs */
+        .region-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--card-border);
+            margin-bottom: 24px;
+            background-color: var(--card-header);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .region-tab {
+            padding: 14px 24px;
+            cursor: pointer;
+            position: relative;
+            font-weight: 500;
+            opacity: 0.7;
+            transition: all 0.3s ease;
+            letter-spacing: 0.02em;
+        }
+        
+        .region-tab:hover {
+            background-color: var(--accent-subtle);
+            opacity: 0.9;
+        }
+        
+        .region-tab.active {
+            opacity: 1;
+            color: var(--accent-color);
+            background-color: var(--accent-subtle);
+        }
+        
+        .region-tab::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 3px;
+            background-color: var(--accent-color);
+            transition: width 0.3s ease;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+        
+        .region-tab.active::after {
+            width: 100%;
+        }
+
+        /* Button styling */
+        .action-button {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            background-color: var(--accent-subtle);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-medium);
+        }
+        
+        .action-button:hover {
+            background-color: var(--accent-medium);
+            transform: translateY(-1px);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-header {
+                left: 0;
+                padding: 0 20px;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                flex-direction: row;
+                padding: 10px 20px;
+                justify-content: space-between;
+                position: fixed;
+                bottom: 0;
+                top: auto;
+                border-top: 1px solid var(--card-border);
+                border-right: none;
+            }
+            
+            .sidebar-logo {
+                display: none;
+            }
+            
+            .sidebar-nav {
+                flex-direction: row;
+                justify-content: space-around;
+                width: 100%;
+                margin: 0;
+            }
+            
+            .nav-item {
+                margin: 0;
+            }
+            
+            .main-container {
+                margin-left: 0;
+                margin-top: calc(var(--header-height));
+                margin-bottom: 60px;
+            }
+            
+            .main-nav {
+                display: none;
+            }
+            
+            .region-tabs {
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+            
+            .market-overview-grid {
+                display: block;
+            }
+            
+            .market-region-header {
+                grid-column: 1;
+            }
+            
+            .market-index-col {
+                display: flex;
+                justify-content: space-between;
+                border-right: none;
+                border-bottom: 1px solid var(--separator-color);
+            }
+            
+            .top-performers-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body class="dark">
+    <!-- Bouton du sélecteur de thème -->
+    <div class="theme-toggle">
+        <button id="theme-toggle-btn" class="theme-toggle-btn">
+            <i class="fas fa-moon" id="dark-icon"></i>
+            <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar de navigation verticale -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">TP</div>
+        <nav class="sidebar-nav">
+            <a href="actualites.html" class="nav-item" title="Actualités">
+                <i class="fas fa-newspaper"></i>
+            </a>
+            <a href="portefeuille.html" class="nav-item" title="Portefeuilles">
+                <i class="fas fa-chart-pie"></i>
+            </a>
+            <a href="dashboard.html" class="nav-item" title="Tableau de bord">
+                <i class="fas fa-tachometer-alt"></i>
+            </a>
+            <a href="marches.html" class="nav-item active" title="Marchés">
+                <i class="fas fa-chart-line"></i>
+            </a>
+            <a href="email-preview.html" class="nav-item" title="Alertes">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge"></span>
+            </a>
+            <a href="parametres.html" class="nav-item" title="Paramètres">
+                <i class="fas fa-cog"></i>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Header principal -->
+    <header class="main-header">
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="pulse-dot"></div>
+                <a href="index.html">TRADEPULSE</a>
+            </div>
+            <nav class="main-nav">
+                <a href="actualites.html">Actualités</a>
+                <a href="portefeuille.html">Portefeuilles</a>
+                <a href="dashboard.html">Tableau de bord</a>
+                <a href="marches.html" class="active">Marchés</a>
+            </nav>
+        </div>
+        <div class="header-right">
+            <div class="market-status">
+                <div class="market-indicator green"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time" id="marketTime">09:45:22</span>
+            </div>
+            <a href="recherche.html" class="search-button ripple">
+                <i class="fas fa-search"></i>
+                <span>Ma question</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Container principal -->
+    <main class="main-container">
+        <div class="p-6">
+            <div class="max-w-7xl mx-auto">
+                <!-- Header avec titre et dernière mise à jour -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+                    <div>
+                        <h1 class="text-3xl font-bold mb-2">Indices Boursiers Internationaux</h1>
+                        <p class="text-gray-400">Dernière mise à jour: <span id="last-update-time" class="font-medium">Chargement...</span></p>
+                    </div>
+                </div>
+                
+                <!-- Aperçu des marchés mondiaux (nouvelle version) -->
+                <div class="market-overview-section mb-10">
+                    <h2 class="market-overview-title mb-6">Aperçu des marchés mondiaux</h2>
+                    
+                    <div class="market-overview-grid">
+                        <!-- EUROPE -->
+                        <div class="market-region-header">
+                            <span>Europe</span>
+                            <span id="europe-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="cac40">
+                            <div class="market-index-name">CAC 40</div>
+                            <div class="market-index-data">
+                                <div class="market-value negative">-0,35 %</div>
+                                <div class="market-ytd positive">7,87 %</div>
+                            </div>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="dax">
+                            <div class="market-index-name">DAX</div>
+                            <div class="market-index-data">
+                                <div class="market-value negative">-0,55 %</div>
+                                <div class="market-ytd positive">13,27 %</div>
+                            </div>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="ftse100">
+                            <div class="market-index-name">FTSE 100</div>
+                            <div class="market-index-data">
+                                <div class="market-value positive">0,20 %</div>
+                                <div class="market-ytd positive">4,71 %</div>
+                            </div>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="eurostoxx50">
+                            <div class="market-index-name">EURO STOXX 50</div>
+                            <div class="market-index-data">
+                                <div class="market-value negative">-0,25 %</div>
+                                <div class="market-ytd positive">9,19 %</div>
+                            </div>
+                        </div>
+                        
+                        <!-- AMÉRIQUE DU NORD -->
+                        <div class="market-region-header">
+                            <span>Amérique du Nord</span>
+                            <span id="north-america-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="sp500">
+                            <div class="market-index-name">S&P 500 INDEX</div>
+                            <div class="market-index-data">
+                                <div class="market-value positive">0,49 %</div>
+                                <div class="market-ytd negative">-4,80 %</div>
+                            </div>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="dowjones">
+                            <div class="market-index-name">DOW JONES INDUSTRIAL</div>
+                            <div class="market-index-data">
+                                <div class="market-value negative">-0,20 %</div>
+                                <div class="market-ytd negative">-2,80 %</div>
+                            </div>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="nasdaq">
+                            <div class="market-index-name">NASDAQ Composite</div>
+                            <div class="market-index-data">
+                                <div class="market-value positive">1,22 %</div>
+                                <div class="market-ytd negative">-8,61 %</div>
+                            </div>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="sptsx">
+                            <div class="market-index-name">S&P/TSX 60</div>
+                            <div class="market-index-data">
+                                <div class="market-value positive">0,82 %</div>
+                                <div class="market-ytd positive">4,95 %</div>
+                            </div>
+                        </div>
+                        
+                        <!-- AMÉRIQUE LATINE -->
+                        <div class="market-region-header">
+                            <span>Amérique Latine</span>
+                            <span id="latin-america-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="merval">
+                            <div class="market-index-name">BUENOS AIRES MERVAL</div>
+                            <div class="market-index-data">
+                                <div class="market-value negative">-1,79 %</div>
+                                <div class="market-ytd negative">-11,90 %</div>
+                            </div>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="brazil">
+                            <div class="market-index-name">NASDAQ Brazil Large Mid Cap</div>
+                            <div class="market-index-data">
+                                <div class="market-value positive">1,42 %</div>
+                                <div class="market-ytd positive">9,15 %</div>
+                            </div>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="chile">
+                            <div class="market-index-name">NASDAQ Chile Large Mid Cap</div>
+                            <div class="market-index-data">
+                                <div class="market-value positive">0,38 %</div>
+                                <div class="market-ytd positive">17,11 %</div>
+                            </div>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="mexico">
+                            <div class="market-index-name">NASDAQ Mexico Large Mid Cap</div>
+                            <div class="market-index-data">
+                                <div class="market-value positive">0,15 %</div>
+                                <div class="market-ytd positive">9,20 %</div>
+                            </div>
+                        </div>
+                        
+                        <!-- ASIE -->
+                        <div class="market-region-header">
+                            <span>Asie</span>
+                            <span id="asia-trend" class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="nikkei">
+                            <div class="market-index-name">NIKKEI 225</div>
+                            <div class="market-index-data">
+                                <div class="market-value negative">-0,08 %</div>
+                                <div class="market-ytd negative">-7,78 %</div>
+                            </div>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="hangseng">
+                            <div class="market-index-name">HANG SENG HK COMPOSITE</div>
+                            <div class="market-index-data">
+                                <div class="market-value negative">-0,65 %</div>
+                                <div class="market-ytd positive">16,28 %</div>
+                            </div>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="shanghai">
+                            <div class="market-index-name">SHANGHAI COMPOSITE</div>
+                            <div class="market-index-data">
+                                <div class="market-value negative">-0,39 %</div>
+                                <div class="market-ytd positive">0,21 %</div>
+                            </div>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="sensex">
+                            <div class="market-index-name">BSE SENSEX</div>
+                            <div class="market-index-data">
+                                <div class="market-value positive">0,14 %</div>
+                                <div class="market-ytd positive">2,86 %</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- AUTRES RÉGIONS -->
+                    <div class="others-grid">
+                        <div class="market-region-header">
+                            <span>Autres régions</span>
+                            <span id="other-trend" class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="southafrica">
+                            <div class="market-index-name">NASDAQ South Africa</div>
+                            <div class="market-index-data">
+                                <div class="market-value negative">-1,24 %</div>
+                                <div class="market-ytd positive">6,81 %</div>
+                            </div>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="australia">
+                            <div class="market-index-name">NASDAQ Australia</div>
+                            <div class="market-index-data">
+                                <div class="market-value negative">-1,03 %</div>
+                                <div class="market-ytd negative">-3,57 %</div>
+                            </div>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="israel">
+                            <div class="market-index-name">NASDAQ Israel</div>
+                            <div class="market-index-data">
+                                <div class="market-value positive">2,13 %</div>
+                                <div class="market-ytd negative">-0,79 %</div>
+                            </div>
+                        </div>
+                        
+                        <div class="market-index-col" data-index="morocco">
+                            <div class="market-index-name">NASDAQ Morocco</div>
+                            <div class="market-index-data">
+                                <div class="market-value negative">-0,81 %</div>
+                                <div class="market-ytd positive">9,82 %</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Top Performers -->
+                <div class="top-performers-section mb-10">
+                    <h2 class="top-performers-title mb-6">Top Performers</h2>
+                    
+                    <div class="top-performers-grid">
+                        <!-- Top 3 Hausse Quotidienne -->
+                        <div class="performer-card">
+                            <div class="performer-header">
+                                <span>Top 3 Hausse (VAR %)</span>
+                                <span class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                            </div>
+                            <div id="daily-top">
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">BUENOS AIRES MERVAL</div>
+                                        <div class="performer-country">Argentine</div>
+                                    </div>
+                                    <div class="performer-value positive">5,25 %</div>
+                                </div>
+                                
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">NASDAQ Korea Large Mid Cap</div>
+                                        <div class="performer-country">Corée du Sud</div>
+                                    </div>
+                                    <div class="performer-value positive">2,63 %</div>
+                                </div>
+                                
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">CBOE VIX INDEX</div>
+                                        <div class="performer-country">États-Unis</div>
+                                    </div>
+                                    <div class="performer-value positive">2,52 %</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Top 3 Baisse Quotidienne -->
+                        <div class="performer-card">
+                            <div class="performer-header">
+                                <span>Top 3 Baisse (VAR %)</span>
+                                <span class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
+                            </div>
+                            <div id="daily-bottom">
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">NASDAQ New Zealand Large Mid Cap</div>
+                                        <div class="performer-country">Nouvelle-Zélande</div>
+                                    </div>
+                                    <div class="performer-value negative">-1,90 %</div>
+                                </div>
+                                
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">TAIEX</div>
+                                        <div class="performer-country">Taiwan</div>
+                                    </div>
+                                    <div class="performer-value negative">-1,42 %</div>
+                                </div>
+                                
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">NASDAQ South Africa Large Mid Cap</div>
+                                        <div class="performer-country">Afrique du Sud</div>
+                                    </div>
+                                    <div class="performer-value negative">-1,24 %</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Top 3 Hausse YTD -->
+                        <div class="performer-card">
+                            <div class="performer-header">
+                                <span>Top 3 Hausse (YTD)</span>
+                                <span class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                            </div>
+                            <div id="ytd-top">
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">CBOE VIX INDEX</div>
+                                        <div class="performer-country">États-Unis</div>
+                                    </div>
+                                    <div class="performer-value positive">43,17 %</div>
+                                </div>
+                                
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">HONG KONG HANG SENG INDIC</div>
+                                        <div class="performer-country">Hong Kong</div>
+                                    </div>
+                                    <div class="performer-value positive">16,96 %</div>
+                                </div>
+                                
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">NASDAQ Chile Large Mid Cap</div>
+                                        <div class="performer-country">Chili</div>
+                                    </div>
+                                    <div class="performer-value positive">16,67 %</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Top 3 Baisse YTD -->
+                        <div class="performer-card">
+                            <div class="performer-header">
+                                <span>Top 3 Baisse (YTD)</span>
+                                <span class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
+                            </div>
+                            <div id="ytd-bottom">
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">BUENOS AIRES MERVAL</div>
+                                        <div class="performer-country">Argentine</div>
+                                    </div>
+                                    <div class="performer-value negative">-10,29 %</div>
+                                </div>
+                                
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">NASDAQ Composite</div>
+                                        <div class="performer-country">États-Unis</div>
+                                    </div>
+                                    <div class="performer-value negative">-8,61 %</div>
+                                </div>
+                                
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">Nikkei 225</div>
+                                        <div class="performer-country">Japon</div>
+                                    </div>
+                                    <div class="performer-value negative">-7,78 %</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Onglets des régions -->
+                <div class="mb-8">
+                    <h2 class="section-title mb-6">Indices par région</h2>
+                    <div class="region-tabs mb-6">
+                        <div class="region-tab active" data-region="europe">Europe</div>
+                        <div class="region-tab" data-region="north-america">Amérique du Nord</div>
+                        <div class="region-tab" data-region="latin-america">Amérique Latine</div>
+                        <div class="region-tab" data-region="asia">Asie</div>
+                        <div class="region-tab" data-region="other">Autres</div>
+                    </div>
+                    
+                    <!-- Conteneur pour le tableau des indices -->
+                    <div class="glassmorphism rounded-lg overflow-hidden">
+                        <div id="indices-loading" class="py-16 flex justify-center">
+                            <div class="loader"></div>
+                        </div>
+                        
+                        <div id="indices-error" class="py-16 text-center hidden">
+                            <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                            <p class="text-lg">Impossible de charger les données des indices.</p>
+                            <button id="retry-button" class="mt-4 search-button inline-flex items-center">
+                                <i class="fas fa-sync-alt mr-2"></i>
+                                Réessayer
+                            </button>
+                        </div>
+                        
+                        <div id="indices-container" class="hidden">
+                            <div id="europe-indices" class="region-content">
+                                <div class="overflow-x-auto">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>PAYS</th>
+                                                <th>LIBELLÉ</th>
+                                                <th>DERNIER</th>
+                                                <th>VAR. %</th>
+                                                <th>VAR/1JANV</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="europe-indices-body">
+                                            <!-- Les données seront injectées ici -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div id="north-america-indices" class="region-content hidden">
+                                <div class="overflow-x-auto">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>PAYS</th>
+                                                <th>LIBELLÉ</th>
+                                                <th>DERNIER</th>
+                                                <th>VAR. %</th>
+                                                <th>VAR/1JANV</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="north-america-indices-body">
+                                            <!-- Les données seront injectées ici -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div id="latin-america-indices" class="region-content hidden">
+                                <div class="overflow-x-auto">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>PAYS</th>
+                                                <th>LIBELLÉ</th>
+                                                <th>DERNIER</th>
+                                                <th>VAR. %</th>
+                                                <th>VAR/1JANV</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="latin-america-indices-body">
+                                            <!-- Les données seront injectées ici -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div id="asia-indices" class="region-content hidden">
+                                <div class="overflow-x-auto">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>PAYS</th>
+                                                <th>LIBELLÉ</th>
+                                                <th>DERNIER</th>
+                                                <th>VAR. %</th>
+                                                <th>VAR/1JANV</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="asia-indices-body">
+                                            <!-- Les données seront injectées ici -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div id="other-indices" class="region-content hidden">
+                                <div class="overflow-x-auto">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>PAYS</th>
+                                                <th>LIBELLÉ</th>
+                                                <th>DERNIER</th>
+                                                <th>VAR. %</th>
+                                                <th>VAR/1JANV</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="other-indices-body">
+                                            <!-- Les données seront injectées ici -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER sans cookies -->
+    <footer class="mt-10 px-6 mb-20 md:mb-0">
+        <div class="max-w-7xl mx-auto">
+            <div class="glassmorphism rounded-xl p-6">
+                <div class="grid gap-8 md:grid-cols-3">
+                    <!-- Col 1: identité + avertissement -->
+                    <div>
+                        <div class="flex items-center font-extrabold text-xl tracking-wide mb-3">
+                            <span class="w-2 h-2 rounded-full mr-2" style="background-color: var(--accent-color); box-shadow: 0 0 10px var(--accent-color);"></span>
+                            TRADEPULSE
+                        </div>
+                        <p class="text-sm opacity-80 mb-3">
+                            Projet de démonstration<br>
+                            Développé par Benoit COMAS<br>
+                            Hébergé sur GitHub Pages
+                        </p>
+                        <p class="text-xs opacity-70 leading-relaxed">
+                            <strong>Avertissement :</strong>
+                            Les informations présentées le sont à titre purement informatif et général.
+                            Elles ne constituent ni une recommandation personnalisée ni un conseil en investissement.
+                            L'investissement en instruments financiers comporte un risque de perte en capital.
+                            Les performances passées ne préjugent pas des performances futures.
+                        </p>
+                        <p class="mt-3 text-xs opacity-70">
+                            <span class="inline-block px-2 py-1 rounded border border-gray-600">
+                                Zéro cookie marketing • Zéro traceur tiers
+                            </span>
+                        </p>
+                    </div>
+
+                    <!-- Col 2: navigation légale -->
+                    <div>
+                        <h3 class="font-semibold mb-3">Informations légales</h3>
+                        <ul class="space-y-2 text-sm">
+                            <li><a href="mentions-legales.html" class="hover:underline opacity-80 hover:opacity-100">Mentions légales</a></li>
+                            <li><a href="cgu.html" class="hover:underline opacity-80 hover:opacity-100">Conditions générales d'utilisation</a></li>
+                            <li><a href="confidentialite.html" class="hover:underline opacity-80 hover:opacity-100">Politique de confidentialité</a></li>
+                            <li><a href="cookies.html" class="hover:underline opacity-80 hover:opacity-100">Cookies : nous n'en utilisons pas</a></li>
+                            <li><a href="accessibilite.html" class="hover:underline opacity-80 hover:opacity-100">Accessibilité</a></li>
+                            <li><a href="https://github.com/bencode92/stock-analysis-platform" target="_blank" class="hover:underline opacity-80 hover:opacity-100">Code source sur GitHub</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- Col 3: source & statut données -->
+                    <div>
+                        <h3 class="font-semibold mb-3">Données & attribution</h3>
+                        <p class="text-sm opacity-80">
+                            Cours et données susceptibles d'être retardés ou incomplets.
+                            Source : <a href="https://twelvedata.com" target="_blank" rel="noopener" class="text-green-400 hover:underline">Twelve Data</a>.
+                            © Les marques citées appartiennent à leurs propriétaires respectifs.
+                        </p>
+                        <div class="mt-4 text-sm">
+                            <span class="opacity-70">Dernière mise à jour</span>
+                            <span class="ml-2 font-medium" id="footer-last-update">–</span>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-6 border-gray-700 opacity-50">
+
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs opacity-70">
+                    <div>© 2025 TRADEPULSE — Projet de démonstration</div>
+                    <div class="flex items-center gap-4">
+                        <a href="https://github.com/bencode92" target="_blank" class="hover:underline">GitHub @bencode92</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="marches-script.js"></script>
+    <script>
+        // Mise à jour de la date dans le footer
+        (function(){
+            try {
+                // Attendre que les données soient chargées
+                setTimeout(function() {
+                    const ts = window.indicesData?.meta?.timestamp;
+                    const el = document.getElementById('footer-last-update');
+                    if (ts && el) {
+                        el.textContent = new Intl.DateTimeFormat('fr-FR', {
+                            dateStyle: 'long',
+                            timeStyle: 'medium',
+                            timeZone: 'Europe/Paris'
+                        }).format(new Date(ts));
+                    }
+                }, 2000);
+            } catch(e) {}
+        })();
+    </script>
+</body>
+</html>
