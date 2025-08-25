@@ -14,7 +14,7 @@
                 extend: {
                     colors: {
                         green: {
-                            400: '#00FF87'
+                            400: '#22c55e'
                         }
                     },
                     maxWidth: {
@@ -35,19 +35,21 @@
             --light-background-color: #f0f5ff;
             --text-color: #FFFFFF;
             --light-text-color: #1a202c;
-            --accent-color: #00FF87;
-            --accent-subtle: rgba(0, 255, 135, 0.05);
-            --accent-medium: rgba(0, 255, 135, 0.15);
-            --accent-strong: rgba(0, 255, 135, 0.3);
+            /* Vert plus doux (moins néon) */
+            --accent-color: #22c55e;
+            --accent-subtle: rgba(34, 197, 94, 0.08);
+            --accent-medium: rgba(34, 197, 94, 0.18);
+            --accent-strong: rgba(34, 197, 94, 0.3);
             --card-bg: rgba(10, 30, 50, 0.4);
             --card-header: linear-gradient(180deg, rgba(15, 40, 65, 0.9) 0%, rgba(10, 25, 45, 0.95) 100%);
-            --card-border: rgba(0, 255, 135, 0.12);
-            --accent-glow: 0 0 10px rgba(0, 255, 135, 0.1);
-            --accent-glow-strong: 0 0 15px rgba(0, 255, 135, 0.2);
+            --card-border: rgba(34, 197, 94, 0.12);
+            --accent-glow: 0 0 10px rgba(34, 197, 94, 0.1);
+            --accent-glow-strong: 0 0 15px rgba(34, 197, 94, 0.2);
             --transition-time: 0.3s;
             --header-height: 70px;
             --sidebar-width: 80px;
-            --negative-color: #ff4757;
+            /* Rouge moins saturé */
+            --negative-color: #ef4444;
             --neutral-color: #999999;
             --separator-color: rgba(255, 255, 255, 0.04);
         }
@@ -65,7 +67,7 @@
         body.dark {
             background-color: var(--background-color);
             background-image: 
-                radial-gradient(circle at 15% 50%, rgba(0, 255, 135, 0.04) 0%, transparent 25%),
+                radial-gradient(circle at 15% 50%, rgba(34, 197, 94, 0.04) 0%, transparent 25%),
                 radial-gradient(circle at 85% 30%, rgba(0, 100, 255, 0.02) 0%, transparent 20%);
             color: var(--text-color);
         }
@@ -75,16 +77,33 @@
             color: var(--light-text-color);
         }
         
-        /* Densité confortable */
-        body.density-comfortable .data-table td { padding: 20px 18px; }
-        body.density-comfortable .card-body { padding: 20px; }
-        body.density-comfortable .market-index-col { padding: 18px 20px; }
+        /* Densité confortable (par défaut) */
+        .data-table td { padding: 20px 18px; }
+        .card-body { padding: 18px; }
+        .market-index-col { padding: 18px 20px; }
+        .market-overview-grid { gap: 20px; }
+        
+        /* Densité compacte */
+        body.density-compact .data-table td { padding: 12px 14px; }
+        body.density-compact .card-body { padding: 12px; }
+        body.density-compact .market-index-col { padding: 12px 14px; }
+        body.density-compact .market-overview-grid { gap: 12px; }
+        body.density-compact .performer-card { padding: 0; }
+        body.density-compact .performer-row { padding: 10px 14px; }
         
         /* Animation pour les changements de valeurs */
         @keyframes valueFlash {
             0% { background-color: transparent; }
             50% { background-color: var(--accent-subtle); }
             100% { background-color: transparent; }
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
         }
         
         .value-change {
@@ -155,12 +174,6 @@
             margin-right: 10px;
             box-shadow: 0 0 8px var(--accent-color);
             animation: pulse 2s infinite;
-        }
-        
-        @media (prefers-reduced-motion: reduce) {
-            .pulse-dot {
-                animation: none;
-            }
         }
         
         .main-nav {
@@ -261,8 +274,8 @@
         }
         
         .light .search-button {
-            background-color: rgba(0, 210, 110, 0.08);
-            border: 1px solid rgba(0, 210, 110, 0.2);
+            background-color: rgba(34, 197, 94, 0.08);
+            border: 1px solid rgba(34, 197, 94, 0.2);
             color: var(--light-text-color);
         }
         
@@ -276,7 +289,7 @@
         }
         
         .light .search-button:hover {
-            background-color: rgba(0, 210, 110, 0.15);
+            background-color: rgba(34, 197, 94, 0.15);
         }
         
         .search-button i {
@@ -316,7 +329,7 @@
             font-weight: 900;
             color: var(--accent-color);
             margin-bottom: 40px;
-            text-shadow: 0 0 8px rgba(0, 255, 135, 0.3);
+            text-shadow: 0 0 8px rgba(34, 197, 94, 0.3);
         }
         
         .sidebar-nav {
@@ -346,9 +359,9 @@
             right: -5px;
             width: 10px;
             height: 10px;
-            background-color: #ff4757;
+            background-color: #ef4444;
             border-radius: 50%;
-            box-shadow: 0 0 6px rgba(255, 71, 87, 0.4);
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
         }
         
         .dark .nav-item {
@@ -367,7 +380,7 @@
         }
         
         .light .nav-item:hover, .light .nav-item.active {
-            background-color: rgba(0, 210, 110, 0.08);
+            background-color: rgba(34, 197, 94, 0.08);
             color: var(--accent-color);
         }
         
@@ -411,13 +424,19 @@
             transform: scale(1.1);
         }
         
-        /* Main container */
+        /* Main container avec plus d'air */
         .main-container {
             margin-left: var(--sidebar-width);
             margin-top: var(--header-height);
-            padding: 32px 24px;
+            padding: 40px 24px;
             min-height: calc(100vh - var(--header-height));
             transition: background-color 0.3s ease;
+        }
+        
+        @media (min-width: 1280px) {
+            .main-container {
+                padding: 48px 32px;
+            }
         }
 
         /* Glassmorphism cards avec blur réduit */
@@ -441,7 +460,7 @@
             box-shadow: var(--accent-glow-strong);
         }
 
-        /* Data table styles améliorés */
+        /* Data table styles améliorés avec zebra stripes */
         .data-table {
             width: 100%;
             border-collapse: separate;
@@ -461,13 +480,26 @@
             position: sticky;
             top: 0;
             z-index: 10;
+            cursor: pointer;
+        }
+        
+        .data-table th:hover {
+            background: linear-gradient(180deg, rgba(20, 50, 75, 0.95) 0%, rgba(15, 35, 55, 0.95) 100%);
         }
         
         .data-table td {
-            padding: 18px;
+            padding: 20px 18px;
             font-size: 0.925rem;
             border-bottom: 1px solid var(--separator-color);
             transition: background-color 0.2s ease;
+        }
+        
+        .data-table tbody tr:nth-child(odd) td {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+        
+        .data-table tbody tr:hover td {
+            background-color: rgba(255, 255, 255, 0.04);
         }
         
         .data-table td:nth-child(2) {
@@ -481,16 +513,24 @@
         .data-table td:nth-child(4),
         .data-table td:nth-child(5) {
             font-variant-numeric: tabular-nums;
-            letter-spacing: -0.02em;
+            letter-spacing: -0.01em;
             text-align: right;
+        }
+        
+        /* Sticky first column sur desktop */
+        @media (min-width: 1024px) {
+            .data-table th:first-child,
+            .data-table td:first-child {
+                position: sticky;
+                left: 0;
+                z-index: 1;
+                background: linear-gradient(180deg, rgba(15, 40, 65, 0.95) 0%, rgba(10, 25, 45, 0.95) 100%);
+                backdrop-filter: blur(4px);
+            }
         }
         
         .data-table tr:last-child td {
             border-bottom: none;
-        }
-        
-        .data-table tr:hover td {
-            background-color: rgba(255, 255, 255, 0.03);
         }
 
         /* Positive, negative, and neutral values avec meilleur contraste */
@@ -554,7 +594,7 @@
         .market-overview-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 14px;
+            gap: 20px;
             margin-bottom: 14px;
         }
         
@@ -573,7 +613,7 @@
         }
         
         .market-index-col {
-            padding: 16px 18px;
+            padding: 18px 20px;
             background-color: var(--card-bg);
             border: 1px solid rgba(255, 255, 255, 0.06);
             border-radius: 10px;
@@ -583,7 +623,7 @@
         
         .market-index-col:hover {
             background-color: rgba(15, 40, 70, 0.6);
-            box-shadow: inset 0 0 15px rgba(0, 255, 135, 0.02);
+            box-shadow: inset 0 0 15px rgba(34, 197, 94, 0.02);
             transform: translateY(-1px);
         }
         
@@ -603,7 +643,7 @@
         
         .market-value {
             font-weight: 700;
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             font-variant-numeric: tabular-nums;
             letter-spacing: -0.02em;
             transition: color 0.3s ease;
@@ -620,19 +660,17 @@
             transition: all 0.3s ease;
         }
         
-        /* Top performers en sidebar */
-        .aside-container {
-            position: sticky;
-            top: calc(var(--header-height) + 16px);
-            height: fit-content;
+        /* Top performers en bandeau horizontal */
+        .tp-strip {
+            margin-bottom: 2.5rem;
         }
         
-        .performer-card {
+        .tp-strip .performer-card {
             background-color: var(--card-bg);
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            margin-bottom: 16px;
+            margin: 0;
         }
         
         .performer-header {
@@ -653,6 +691,7 @@
             display: flex;
             justify-content: space-between;
             transition: background-color 0.2s;
+            cursor: pointer;
         }
         
         .performer-row:hover {
@@ -686,7 +725,7 @@
             text-align: right;
             min-width: 65px;
             font-variant-numeric: tabular-nums;
-            letter-spacing: -0.02em;
+            letter-spacing: -0.01em;
             font-size: 0.9rem;
         }
 
@@ -731,14 +770,14 @@
         }
         
         .card-body {
-            padding: 16px;
+            padding: 18px;
         }
 
         /* Animations */
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.6); }
-            70% { box-shadow: 0 0 0 8px rgba(0, 255, 135, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6); }
+            70% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
         }
 
         /* Loader */
@@ -746,7 +785,7 @@
             display: inline-block;
             width: 50px;
             height: 50px;
-            border: 3px solid rgba(0, 255, 135, 0.15);
+            border: 3px solid rgba(34, 197, 94, 0.15);
             border-radius: 50%;
             border-top-color: var(--accent-color);
             animation: spin 1s ease-in-out infinite;
@@ -813,7 +852,7 @@
         .nav-item:focus-visible,
         .search-button:focus-visible {
             outline: 2px solid var(--accent-color);
-            outline-offset: 2px;
+            outline-offset: 3px;
         }
 
         /* Button styling */
@@ -826,11 +865,34 @@
             background-color: var(--accent-subtle);
             color: var(--accent-color);
             border: 1px solid var(--accent-medium);
+            cursor: pointer;
         }
         
         .action-button:hover {
             background-color: var(--accent-medium);
             transform: translateY(-1px);
+        }
+        
+        /* Search input */
+        .table-search-input {
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            width: 100%;
+            max-width: 600px;
+            transition: all 0.3s ease;
+        }
+        
+        .table-search-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+        }
+        
+        .table-search-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
         }
 
         /* Responsive */
@@ -892,6 +954,7 @@
                 margin-left: 0;
                 margin-top: calc(var(--header-height));
                 margin-bottom: 60px;
+                padding: 24px 16px;
             }
             
             .main-nav {
@@ -988,6 +1051,12 @@
                     <h1 class="text-3xl font-bold tracking-tight mb-3">Indices Boursiers Internationaux</h1>
                     <p class="text-gray-400">Dernière mise à jour: <span id="last-update-time" class="font-medium" aria-live="polite">Chargement...</span></p>
                 </div>
+                <div class="mt-4 md:mt-0">
+                    <button id="density-toggle" class="action-button">
+                        <i class="fas fa-compress-alt mr-2"></i>
+                        Densité : Confort
+                    </button>
+                </div>
             </div>
             
             <!-- Aperçu des marchés mondiaux compact -->
@@ -1004,32 +1073,32 @@
                     <div class="market-index-col" data-index="cac40">
                         <div class="market-index-name">CAC 40</div>
                         <div class="market-index-data">
-                            <div class="market-value negative">-0,35 %</div>
-                            <div class="market-ytd positive">YTD 7,87 %</div>
+                            <div class="market-value negative">−0,35%</div>
+                            <div class="market-ytd positive">YTD 7,87%</div>
                         </div>
                     </div>
                     
                     <div class="market-index-col" data-index="dax">
                         <div class="market-index-name">DAX</div>
                         <div class="market-index-data">
-                            <div class="market-value negative">-0,55 %</div>
-                            <div class="market-ytd positive">YTD 13,27 %</div>
+                            <div class="market-value negative">−0,55%</div>
+                            <div class="market-ytd positive">YTD 13,27%</div>
                         </div>
                     </div>
                     
                     <div class="market-index-col" data-index="ftse100">
                         <div class="market-index-name">FTSE 100</div>
                         <div class="market-index-data">
-                            <div class="market-value positive">0,20 %</div>
-                            <div class="market-ytd positive">YTD 4,71 %</div>
+                            <div class="market-value positive">0,20%</div>
+                            <div class="market-ytd positive">YTD 4,71%</div>
                         </div>
                     </div>
                     
                     <div class="market-index-col" data-index="eurostoxx50">
-                        <div class="market-index-name">EURO STOXX 50</div>
+                        <div class="market-index-name">Euro Stoxx 50</div>
                         <div class="market-index-data">
-                            <div class="market-value negative">-0,25 %</div>
-                            <div class="market-ytd positive">YTD 9,19 %</div>
+                            <div class="market-value negative">−0,25%</div>
+                            <div class="market-ytd positive">YTD 9,19%</div>
                         </div>
                     </div>
                     
@@ -1042,32 +1111,32 @@
                     <div class="market-index-col" data-index="sp500">
                         <div class="market-index-name">S&P 500</div>
                         <div class="market-index-data">
-                            <div class="market-value positive">0,49 %</div>
-                            <div class="market-ytd negative">YTD -4,80 %</div>
+                            <div class="market-value positive">0,49%</div>
+                            <div class="market-ytd negative">YTD −4,80%</div>
                         </div>
                     </div>
                     
                     <div class="market-index-col" data-index="dowjones">
-                        <div class="market-index-name">DOW JONES</div>
+                        <div class="market-index-name">Dow Jones</div>
                         <div class="market-index-data">
-                            <div class="market-value negative">-0,20 %</div>
-                            <div class="market-ytd negative">YTD -2,80 %</div>
+                            <div class="market-value negative">−0,20%</div>
+                            <div class="market-ytd negative">YTD −2,80%</div>
                         </div>
                     </div>
                     
                     <div class="market-index-col" data-index="nasdaq">
-                        <div class="market-index-name">NASDAQ</div>
+                        <div class="market-index-name">Nasdaq</div>
                         <div class="market-index-data">
-                            <div class="market-value positive">1,22 %</div>
-                            <div class="market-ytd negative">YTD -8,61 %</div>
+                            <div class="market-value positive">1,22%</div>
+                            <div class="market-ytd negative">YTD −8,61%</div>
                         </div>
                     </div>
                     
                     <div class="market-index-col" data-index="vix">
                         <div class="market-index-name">VIX</div>
                         <div class="market-index-data">
-                            <div class="market-value positive">0,82 %</div>
-                            <div class="market-ytd positive">YTD 4,95 %</div>
+                            <div class="market-value positive">0,82%</div>
+                            <div class="market-ytd positive">YTD 4,95%</div>
                         </div>
                     </div>
                     
@@ -1078,34 +1147,34 @@
                     </div>
                     
                     <div class="market-index-col" data-index="brazil">
-                        <div class="market-index-name">BRAZIL</div>
+                        <div class="market-index-name">Brazil</div>
                         <div class="market-index-data">
-                            <div class="market-value positive">1,42 %</div>
-                            <div class="market-ytd positive">YTD 9,15 %</div>
+                            <div class="market-value positive">1,42%</div>
+                            <div class="market-ytd positive">YTD 9,15%</div>
                         </div>
                     </div>
                     
                     <div class="market-index-col" data-index="mexico">
-                        <div class="market-index-name">MEXICO</div>
+                        <div class="market-index-name">Mexico</div>
                         <div class="market-index-data">
-                            <div class="market-value positive">0,15 %</div>
-                            <div class="market-ytd positive">YTD 9,20 %</div>
+                            <div class="market-value positive">0,15%</div>
+                            <div class="market-ytd positive">YTD 9,20%</div>
                         </div>
                     </div>
                     
                     <div class="market-index-col" data-index="chile">
-                        <div class="market-index-name">CHILE</div>
+                        <div class="market-index-name">Chile</div>
                         <div class="market-index-data">
-                            <div class="market-value positive">0,38 %</div>
-                            <div class="market-ytd positive">YTD 17,11 %</div>
+                            <div class="market-value positive">0,38%</div>
+                            <div class="market-ytd positive">YTD 17,11%</div>
                         </div>
                     </div>
                     
                     <div class="market-index-col" data-index="merval">
-                        <div class="market-index-name">MERVAL</div>
+                        <div class="market-index-name">Merval</div>
                         <div class="market-index-data">
-                            <div class="market-value negative">-1,79 %</div>
-                            <div class="market-ytd negative">YTD -11,90 %</div>
+                            <div class="market-value negative">−1,79%</div>
+                            <div class="market-ytd negative">YTD −11,90%</div>
                         </div>
                     </div>
                     
@@ -1116,219 +1185,217 @@
                     </div>
                     
                     <div class="market-index-col" data-index="nikkei">
-                        <div class="market-index-name">NIKKEI 225</div>
+                        <div class="market-index-name">Nikkei 225</div>
                         <div class="market-index-data">
-                            <div class="market-value negative">-0,08 %</div>
-                            <div class="market-ytd negative">YTD -7,78 %</div>
+                            <div class="market-value negative">−0,08%</div>
+                            <div class="market-ytd negative">YTD −7,78%</div>
                         </div>
                     </div>
                     
                     <div class="market-index-col" data-index="hangseng">
-                        <div class="market-index-name">HANG SENG</div>
+                        <div class="market-index-name">Hang Seng</div>
                         <div class="market-index-data">
-                            <div class="market-value negative">-0,65 %</div>
-                            <div class="market-ytd positive">YTD 16,28 %</div>
+                            <div class="market-value negative">−0,65%</div>
+                            <div class="market-ytd positive">YTD 16,28%</div>
                         </div>
                     </div>
                     
                     <div class="market-index-col" data-index="shanghai">
-                        <div class="market-index-name">SHANGHAI</div>
+                        <div class="market-index-name">Shanghai</div>
                         <div class="market-index-data">
-                            <div class="market-value negative">-0,39 %</div>
-                            <div class="market-ytd positive">YTD 0,21 %</div>
+                            <div class="market-value negative">−0,39%</div>
+                            <div class="market-ytd positive">YTD 0,21%</div>
                         </div>
                     </div>
                     
                     <div class="market-index-col" data-index="sensex">
-                        <div class="market-index-name">BSE SENSEX</div>
+                        <div class="market-index-name">BSE Sensex</div>
                         <div class="market-index-data">
-                            <div class="market-value positive">0,14 %</div>
-                            <div class="market-ytd positive">YTD 2,86 %</div>
+                            <div class="market-value positive">0,14%</div>
+                            <div class="market-ytd positive">YTD 2,86%</div>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Layout 2 colonnes : Table + Aside -->
-            <div class="grid grid-cols-12 gap-8">
-                <!-- Colonne principale : Table -->
-                <div class="col-span-12 xl:col-span-9">
-                    <!-- Onglets des régions sticky -->
-                    <div class="mb-12">
-                        <h2 class="section-title">Indices par région</h2>
-                        <div class="region-tabs" role="tablist">
-                            <div class="region-tab active" data-region="europe" role="tab" aria-selected="true" tabindex="0">Europe</div>
-                            <div class="region-tab" data-region="north-america" role="tab" aria-selected="false" tabindex="0">Amérique du Nord</div>
-                            <div class="region-tab" data-region="latin-america" role="tab" aria-selected="false" tabindex="0">Amérique Latine</div>
-                            <div class="region-tab" data-region="asia" role="tab" aria-selected="false" tabindex="0">Asie</div>
-                            <div class="region-tab" data-region="other" role="tab" aria-selected="false" tabindex="0">Autres</div>
+            <!-- Top Performers en bandeau horizontal -->
+            <section class="tp-strip mb-10" aria-labelledby="tp-title">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 id="tp-title" class="section-title !mb-0">Top performers</h2>
+                </div>
+
+                <div id="tp-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <div class="performer-card">
+                        <div class="performer-header">
+                            <span>Top 3 Hausse (Jour)</span>
+                            <span class="text-sm positive" aria-label="Hausse"><i class="fas fa-arrow-up"></i></span>
+                        </div>
+                        <div id="daily-top">
+                            <!-- Données injectées par JS -->
+                        </div>
+                    </div>
+                    
+                    <div class="performer-card">
+                        <div class="performer-header">
+                            <span>Top 3 Baisse (Jour)</span>
+                            <span class="text-sm negative" aria-label="Baisse"><i class="fas fa-arrow-down"></i></span>
+                        </div>
+                        <div id="daily-bottom">
+                            <!-- Données injectées par JS -->
+                        </div>
+                    </div>
+                    
+                    <div class="performer-card">
+                        <div class="performer-header">
+                            <span>Top 3 Hausse (YTD)</span>
+                            <span class="text-sm positive" aria-label="Hausse YTD"><i class="fas fa-arrow-up"></i></span>
+                        </div>
+                        <div id="ytd-top">
+                            <!-- Données injectées par JS -->
+                        </div>
+                    </div>
+                    
+                    <div class="performer-card">
+                        <div class="performer-header">
+                            <span>Top 3 Baisse (YTD)</span>
+                            <span class="text-sm negative" aria-label="Baisse YTD"><i class="fas fa-arrow-down"></i></span>
+                        </div>
+                        <div id="ytd-bottom">
+                            <!-- Données injectées par JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Onglets des régions sticky -->
+            <div class="mb-12">
+                <h2 class="section-title">Indices par région</h2>
+                
+                <!-- Barre de recherche seule -->
+                <div class="mb-4">
+                    <input id="table-search" type="text" placeholder="Rechercher pays ou libellé..." class="table-search-input">
+                </div>
+                
+                <div class="region-tabs" role="tablist">
+                    <div class="region-tab active" data-region="europe" role="tab" aria-selected="true" tabindex="0">Europe</div>
+                    <div class="region-tab" data-region="north-america" role="tab" aria-selected="false" tabindex="0">Amérique du Nord</div>
+                    <div class="region-tab" data-region="latin-america" role="tab" aria-selected="false" tabindex="0">Amérique Latine</div>
+                    <div class="region-tab" data-region="asia" role="tab" aria-selected="false" tabindex="0">Asie</div>
+                    <div class="region-tab" data-region="other" role="tab" aria-selected="false" tabindex="0">Autres</div>
+                </div>
+                
+                <!-- Conteneur pour le tableau des indices -->
+                <div class="glassmorphism rounded-lg overflow-hidden">
+                    <div id="indices-loading" class="py-16 flex justify-center">
+                        <div class="loader"></div>
+                    </div>
+                    
+                    <div id="indices-error" class="py-16 text-center hidden">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                        <p class="text-lg">Impossible de charger les données des indices.</p>
+                        <button id="retry-button" class="mt-4 search-button inline-flex items-center">
+                            <i class="fas fa-sync-alt mr-2"></i>
+                            Réessayer
+                        </button>
+                    </div>
+                    
+                    <div id="indices-container" class="hidden">
+                        <div id="europe-indices" class="region-content" role="tabpanel">
+                            <div class="overflow-x-auto">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th data-column="0">PAYS</th>
+                                            <th data-column="1">LIBELLÉ</th>
+                                            <th data-column="2">DERNIER</th>
+                                            <th data-column="3">VAR. %</th>
+                                            <th data-column="4">VAR/1JANV</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="europe-indices-body">
+                                        <!-- Les données seront injectées ici -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                         
-                        <!-- Conteneur pour le tableau des indices -->
-                        <div class="glassmorphism rounded-lg overflow-hidden">
-                            <div id="indices-loading" class="py-16 flex justify-center">
-                                <div class="loader"></div>
+                        <div id="north-america-indices" class="region-content hidden" role="tabpanel">
+                            <div class="overflow-x-auto">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th data-column="0">PAYS</th>
+                                            <th data-column="1">LIBELLÉ</th>
+                                            <th data-column="2">DERNIER</th>
+                                            <th data-column="3">VAR. %</th>
+                                            <th data-column="4">VAR/1JANV</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="north-america-indices-body">
+                                        <!-- Les données seront injectées ici -->
+                                    </tbody>
+                                </table>
                             </div>
-                            
-                            <div id="indices-error" class="py-16 text-center hidden">
-                                <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
-                                <p class="text-lg">Impossible de charger les données des indices.</p>
-                                <button id="retry-button" class="mt-4 search-button inline-flex items-center">
-                                    <i class="fas fa-sync-alt mr-2"></i>
-                                    Réessayer
-                                </button>
+                        </div>
+                        
+                        <div id="latin-america-indices" class="region-content hidden" role="tabpanel">
+                            <div class="overflow-x-auto">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th data-column="0">PAYS</th>
+                                            <th data-column="1">LIBELLÉ</th>
+                                            <th data-column="2">DERNIER</th>
+                                            <th data-column="3">VAR. %</th>
+                                            <th data-column="4">VAR/1JANV</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="latin-america-indices-body">
+                                        <!-- Les données seront injectées ici -->
+                                    </tbody>
+                                </table>
                             </div>
-                            
-                            <div id="indices-container" class="hidden">
-                                <div id="europe-indices" class="region-content" role="tabpanel">
-                                    <div class="overflow-x-auto">
-                                        <table class="data-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>PAYS</th>
-                                                    <th>LIBELLÉ</th>
-                                                    <th>DERNIER</th>
-                                                    <th>VAR. %</th>
-                                                    <th>VAR/1JANV</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="europe-indices-body">
-                                                <!-- Les données seront injectées ici -->
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                                
-                                <div id="north-america-indices" class="region-content hidden" role="tabpanel">
-                                    <div class="overflow-x-auto">
-                                        <table class="data-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>PAYS</th>
-                                                    <th>LIBELLÉ</th>
-                                                    <th>DERNIER</th>
-                                                    <th>VAR. %</th>
-                                                    <th>VAR/1JANV</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="north-america-indices-body">
-                                                <!-- Les données seront injectées ici -->
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                                
-                                <div id="latin-america-indices" class="region-content hidden" role="tabpanel">
-                                    <div class="overflow-x-auto">
-                                        <table class="data-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>PAYS</th>
-                                                    <th>LIBELLÉ</th>
-                                                    <th>DERNIER</th>
-                                                    <th>VAR. %</th>
-                                                    <th>VAR/1JANV</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="latin-america-indices-body">
-                                                <!-- Les données seront injectées ici -->
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                                
-                                <div id="asia-indices" class="region-content hidden" role="tabpanel">
-                                    <div class="overflow-x-auto">
-                                        <table class="data-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>PAYS</th>
-                                                    <th>LIBELLÉ</th>
-                                                    <th>DERNIER</th>
-                                                    <th>VAR. %</th>
-                                                    <th>VAR/1JANV</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="asia-indices-body">
-                                                <!-- Les données seront injectées ici -->
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                                
-                                <div id="other-indices" class="region-content hidden" role="tabpanel">
-                                    <div class="overflow-x-auto">
-                                        <table class="data-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>PAYS</th>
-                                                    <th>LIBELLÉ</th>
-                                                    <th>DERNIER</th>
-                                                    <th>VAR. %</th>
-                                                    <th>VAR/1JANV</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="other-indices-body">
-                                                <!-- Les données seront injectées ici -->
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
+                        </div>
+                        
+                        <div id="asia-indices" class="region-content hidden" role="tabpanel">
+                            <div class="overflow-x-auto">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th data-column="0">PAYS</th>
+                                            <th data-column="1">LIBELLÉ</th>
+                                            <th data-column="2">DERNIER</th>
+                                            <th data-column="3">VAR. %</th>
+                                            <th data-column="4">VAR/1JANV</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="asia-indices-body">
+                                        <!-- Les données seront injectées ici -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div id="other-indices" class="region-content hidden" role="tabpanel">
+                            <div class="overflow-x-auto">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th data-column="0">PAYS</th>
+                                            <th data-column="1">LIBELLÉ</th>
+                                            <th data-column="2">DERNIER</th>
+                                            <th data-column="3">VAR. %</th>
+                                            <th data-column="4">VAR/1JANV</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="other-indices-body">
+                                        <!-- Les données seront injectées ici -->
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Colonne latérale : Top Performers -->
-                <aside class="col-span-12 xl:col-span-3">
-                    <div class="aside-container">
-                        <h2 class="text-lg font-bold mb-6 tracking-tight">Top Performers</h2>
-                        
-                        <!-- Top 3 Hausse Quotidienne -->
-                        <div class="performer-card">
-                            <div class="performer-header">
-                                <span>Top 3 Hausse (Jour)</span>
-                                <span class="text-sm positive" aria-label="Hausse"><i class="fas fa-arrow-up"></i></span>
-                            </div>
-                            <div id="daily-top">
-                                <!-- Données injectées par JS -->
-                            </div>
-                        </div>
-                        
-                        <!-- Top 3 Baisse Quotidienne -->
-                        <div class="performer-card">
-                            <div class="performer-header">
-                                <span>Top 3 Baisse (Jour)</span>
-                                <span class="text-sm negative" aria-label="Baisse"><i class="fas fa-arrow-down"></i></span>
-                            </div>
-                            <div id="daily-bottom">
-                                <!-- Données injectées par JS -->
-                            </div>
-                        </div>
-                        
-                        <!-- Top 3 Hausse YTD -->
-                        <div class="performer-card">
-                            <div class="performer-header">
-                                <span>Top 3 Hausse (YTD)</span>
-                                <span class="text-sm positive" aria-label="Hausse YTD"><i class="fas fa-arrow-up"></i></span>
-                            </div>
-                            <div id="ytd-top">
-                                <!-- Données injectées par JS -->
-                            </div>
-                        </div>
-                        
-                        <!-- Top 3 Baisse YTD -->
-                        <div class="performer-card">
-                            <div class="performer-header">
-                                <span>Top 3 Baisse (YTD)</span>
-                                <span class="text-sm negative" aria-label="Baisse YTD"><i class="fas fa-arrow-down"></i></span>
-                            </div>
-                            <div id="ytd-bottom">
-                                <!-- Données injectées par JS -->
-                            </div>
-                        </div>
-                    </div>
-                </aside>
             </div>
         </div>
     </main>
@@ -1405,10 +1472,129 @@
 
     <script src="marches-script.js"></script>
     <script>
+        // Toggle densité
+        const densityBtn = document.getElementById('density-toggle');
+        const saved = localStorage.getItem('density') || 'comfort';
+        document.body.classList.toggle('density-compact', saved === 'compact');
+        densityBtn.innerHTML = `<i class="fas fa-compress-alt mr-2"></i>Densité : ${saved === 'compact' ? 'Compact' : 'Confort'}`;
+
+        densityBtn.addEventListener('click', () => {
+            const isCompact = document.body.classList.toggle('density-compact');
+            localStorage.setItem('density', isCompact ? 'compact' : 'comfort');
+            densityBtn.innerHTML = `<i class="fas fa-compress-alt mr-2"></i>Densité : ${isCompact ? 'Compact' : 'Confort'}`;
+        });
+
+        // Recherche globale sur toutes les régions
+        const searchInput = document.getElementById('table-search');
+        searchInput.addEventListener('input', () => {
+            const value = searchInput.value.toLowerCase().trim();
+            
+            if (!value) {
+                // Si recherche vide, afficher seulement la région active
+                document.querySelectorAll('.region-content').forEach(content => {
+                    const isActive = document.querySelector(`.region-tab.active[data-region="${content.id.replace('-indices', '')}"]`);
+                    content.classList.toggle('hidden', !isActive);
+                    content.querySelectorAll('tbody tr').forEach(tr => {
+                        tr.style.display = '';
+                    });
+                });
+                return;
+            }
+            
+            // Recherche globale dans toutes les régions
+            const regions = ['europe', 'north-america', 'latin-america', 'asia', 'other'];
+            let hasResults = false;
+            
+            regions.forEach(region => {
+                const indices = window.indicesData?.indices[region] || [];
+                const tbody = document.getElementById(`${region}-indices-body`);
+                
+                if (!tbody) return;
+                
+                const rows = tbody.querySelectorAll('tr');
+                let regionHasMatch = false;
+                
+                rows.forEach(tr => {
+                    const text = tr.innerText.toLowerCase();
+                    const isMatch = text.includes(value);
+                    tr.style.display = isMatch ? '' : 'none';
+                    if (isMatch) regionHasMatch = true;
+                });
+                
+                // Afficher/masquer la région entière selon les résultats
+                document.getElementById(`${region}-indices`).classList.toggle('hidden', !regionHasMatch);
+                if (regionHasMatch) hasResults = true;
+            });
+            
+            // Si aucun résultat, afficher un message
+            if (!hasResults && value) {
+                // Optionnel : afficher un message "aucun résultat"
+            }
+        });
+
+        // Navigation clavier pour les tabs
+        document.querySelectorAll('.region-tab').forEach((tab, i, all) => {
+            tab.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight') all[(i + 1) % all.length].focus();
+                if (e.key === 'ArrowLeft') all[(i - 1 + all.length) % all.length].focus();
+            });
+        });
+
+        // Tri par colonnes
+        const thAscState = new Map();
+        
+        function sortTableByColumn(table, column) {
+            const tbody = table.tBodies[0];
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const asc = !thAscState.get(column);
+            thAscState.set(column, asc);
+            
+            rows.sort((a, b) => {
+                const av = a.children[column].innerText.replace(/[^\d,\-−]/g, '').replace(',', '.');
+                const bv = b.children[column].innerText.replace(/[^\d,\-−]/g, '').replace(',', '.');
+                const na = parseFloat(av);
+                const nb = parseFloat(bv);
+                
+                if (!isNaN(na) && !isNaN(nb)) {
+                    return asc ? na - nb : nb - na;
+                }
+                return asc ? a.children[column].innerText.localeCompare(b.children[column].innerText)
+                           : b.children[column].innerText.localeCompare(a.children[column].innerText);
+            });
+            
+            rows.forEach(r => tbody.appendChild(r));
+        }
+
+        // Attacher les gestionnaires de tri après chargement
+        setTimeout(() => {
+            document.querySelectorAll('.data-table thead th').forEach((th, idx) => {
+                th.addEventListener('click', () => {
+                    sortTableByColumn(th.closest('table'), idx);
+                });
+            });
+        }, 1000);
+
+        // Clic sur Top Performers pour filtrer le tableau
+        function wireTpClicks() {
+            document.querySelectorAll('#tp-grid .performer-row').forEach(row => {
+                row.addEventListener('click', () => {
+                    const label = row.querySelector('.performer-index')?.textContent.trim();
+                    if (label) {
+                        searchInput.value = label;
+                        searchInput.dispatchEvent(new Event('input'));
+                        document.querySelector('.region-content:not(.hidden)')?.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+        }
+        setTimeout(wireTpClicks, 1000);
+
         // Mise à jour de la date dans le footer
         (function(){
             try {
-                // Attendre que les données soient chargées
                 setTimeout(function() {
                     const ts = window.indicesData?.meta?.timestamp;
                     const el = document.getElementById('footer-last-update');
