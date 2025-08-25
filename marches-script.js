@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${sign}${new Intl.NumberFormat('fr-FR', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
-        }).format(n)} %`;
+        }).format(n)}%`;
     }
     
     /**
@@ -582,7 +582,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 notification.style.borderLeft = '3px solid #FFC107';
                 notification.style.color = '#FFC107';
             } else {
-                notification.style.backgroundColor = 'rgba(0, 255, 135, 0.1)';
+                notification.style.backgroundColor = 'rgba(34, 197, 94, 0.1)';
                 notification.style.borderLeft = '3px solid var(--accent-color)';
                 notification.style.color = 'var(--text-color)';
             }
@@ -664,4 +664,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // Expose data globally for search
+    window.indicesData = indicesData;
 });
