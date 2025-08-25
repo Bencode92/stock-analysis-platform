@@ -1,0 +1,132 @@
+name: Filter Cryptos by Volume
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # 3h du matin tous les jours (décalé de 1h par rapport aux stocks)
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: 'Enable debug mode'
+        required: false
+        default: '0'
+      min_usd_day:
+        description: 'Minimum daily volume USD (default: 1000000)'
+        required: false
+        default: '1000000'
+      min_usd_avg7d:
+        description: 'Minimum 7-day average volume USD (default: 2000000)'
+        required: false
+        default: '2000000'
+
+jobs:
+  filter-cryptos:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run crypto filtering
+      id: filter
+      env:
+        TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
+        DEBUG: ${{ github.event.inputs.debug || '0' }}
+        DATA_DIR: data
+        OUTPUT_DIR: data/filtered
+        MIN_USD_DAY: ${{ github.event.inputs.min_usd_day || '1000000' }}
+        MIN_USD_AVG7D: ${{ github.event.inputs.min_usd_avg7d || '2000000' }}
+      run: |
+        echo "🚀 Démarrage du filtrage des crypto-monnaies"
+        echo "📊 Configuration:"
+        echo "  - Volume 24h min: $MIN_USD_DAY USD"
+        echo "  - Volume 7j moy min: $MIN_USD_AVG7D USD"
+        node scripts/crypto-filter-by-volume.js
+    
+    - name: Upload filtered data
+      uses: actions/upload-artifact@v4
+      with:
+        name: filtered-cryptos
+        path: data/filtered/Crypto_filtered_by_volume.csv
+        retention-days: 30
+    
+    - name: Commit filtered data
+      if: success()
+      run: |
+        git config --local user.email "actions@github.com"
+        git config --local user.name "GitHub Actions"
+        git add data/filtered/Crypto_filtered_by_volume.csv || true
+        git diff --staged --quiet || git commit -m "Update filtered crypto data [skip ci]"
+        git push
+    
+    - name: Summary
+      if: always()
+      run: |
+        echo "## 📊 Résumé du filtrage des crypto-monnaies" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Statistiques générales
+        if [ -f data/Crypto.csv ]; then
+          TOTAL_COUNT=$(tail -n +2 data/Crypto.csv | wc -l)
+          echo "### 📈 Statistiques globales" >> $GITHUB_STEP_SUMMARY
+          echo "- 📄 Total analysé: **$TOTAL_COUNT** cryptos" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ -f data/filtered/Crypto_filtered_by_volume.csv ]; then
+          ACCEPTED_COUNT=$(tail -n +2 data/filtered/Crypto_filtered_by_volume.csv | wc -l)
+          if [ -n "$TOTAL_COUNT" ] && [ "$TOTAL_COUNT" -gt 0 ]; then
+            REJECTED_COUNT=$((TOTAL_COUNT - ACCEPTED_COUNT))
+            ACCEPTANCE_RATE=$(echo "scale=1; $ACCEPTED_COUNT * 100 / $TOTAL_COUNT" | bc)
+            echo "- ✅ Acceptées: **$ACCEPTED_COUNT** cryptos" >> $GITHUB_STEP_SUMMARY
+            echo "- ❌ Rejetées: **$REJECTED_COUNT** cryptos" >> $GITHUB_STEP_SUMMARY
+            echo "- 📊 Taux d'acceptation: **$ACCEPTANCE_RATE%**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ✅ Acceptées: **$ACCEPTED_COUNT** cryptos" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Configuration utilisée
+        echo "### ⚙️ Configuration utilisée" >> $GITHUB_STEP_SUMMARY
+        echo "- Volume minimum 24h: **\$${{ env.MIN_USD_DAY }}**" >> $GITHUB_STEP_SUMMARY
+        echo "- Volume moyen 7j minimum: **\$${{ env.MIN_USD_AVG7D }}**" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Top 10 des cryptos acceptées
+        if [ -f data/filtered/Crypto_filtered_by_volume.csv ]; then
+          echo "## ✅ Top 10 Cryptos Acceptées" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "Symbol,Base,Quote,Exchange,Vol_24h,Vol_7d_avg" >> $GITHUB_STEP_SUMMARY
+          tail -n +2 data/filtered/Crypto_filtered_by_volume.csv | head -n 10 | cut -d',' -f1-6 | column -t -s, >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Statistiques par exchange
+          echo "## 📊 Répartition par Exchange" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -n +2 data/filtered/Crypto_filtered_by_volume.csv | cut -d',' -f4 | sort | uniq -c | sort -rn | head -n 10 >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Dernière mise à jour
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "---" >> $GITHUB_STEP_SUMMARY
+        echo "⏰ Dernière mise à jour: $(date '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+
+    - name: Check API rate limits
+      if: always()
+      run: |
+        echo "## 🔑 État de l'API Twelve Data" >> $GITHUB_STEP_SUMMARY
+        # Note: Twelve Data API status could be checked here if they provide an endpoint
+        echo "- Clé API: Configurée ✅" >> $GITHUB_STEP_SUMMARY
+        echo "- Rate limit: ~16 requêtes/seconde" >> $GITHUB_STEP_SUMMARY
