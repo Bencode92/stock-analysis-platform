@@ -36,15 +36,16 @@ document.addEventListener('DOMContentLoaded', function() {
             'VIX':             [/\bVIX\b/i, /Volatility/i, /iPath.*VIX/i],
         },
         'latin-america': {
-            'MERVAL': [/MERVAL/i, /Argentina/i],
-            'Brazil': [/Brazil/i, /Brésil/i],
-            'Chile':  [/Chile/i, /Chili/i],
-            'Mexico': [/Mexico/i, /Mexique/i],
+            'BRAZIL': [/Brazil/i, /Brésil/i],
+            'MEXICO': [/Mexico/i, /Mexique/i],
+            'CHILE':  [/Chile/i, /Chili/i],
+            'MERVAL': [/MERVAL/i, /Argentina/i, /Argentine/i],
         },
         'asia': {
             'NIKKEI 225':       [/NIKKEI\s*225/i, /Japan ETF/i, /Japon/i],
             'HANG SENG':        [/HANG\s*SENG/i, /Hong Kong/i],
             'SHANGHAI':         [/SHANGHAI/i],
+            'BSE SENSEX':       [/SENSEX/i, /India ETF/i, /Inde/i],
             'CSI (China)':      [/CSI\s*(100|300|500)/i, /China A-?Shares?/i, /Harvest CSI/i]
         },
         'other': {
@@ -304,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (indices.length === 0) {
                         const emptyRow = document.createElement('tr');
                         emptyRow.innerHTML = `
-                            <td colspan="6" class="text-center py-4 text-gray-400">
+                            <td colspan="5" class="text-center py-4 text-gray-400">
                                 <i class="fas fa-info-circle mr-2"></i>
                                 Aucune donnée disponible pour cette région
                             </td>
@@ -331,10 +332,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             tr.appendChild(createTableCell(index.value));
                             tr.appendChild(createTableCell(formatPercent(index.change_num), changeClass));
                             tr.appendChild(createTableCell(formatPercent(index.ytd_num), ytdClass));
-                            
-                            const actionsCell = document.createElement('td');
-                            actionsCell.innerHTML = `<button class="p-1 px-3 rounded bg-green-400 bg-opacity-10 text-green-400 text-xs">Voir</button>`;
-                            tr.appendChild(actionsCell);
                             
                             tableBody.appendChild(tr);
                         });
@@ -378,15 +375,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 { label: 'S&P 500', selector: '.market-index-col[data-index="sp500"]' },
                 { label: 'DOW JONES', selector: '.market-index-col[data-index="dowjones"]' },
                 { label: 'NASDAQ Composite', selector: '.market-index-col[data-index="nasdaq"]' },
-                { label: 'VIX', selector: '.market-index-col[data-index="sptsx"]' }
+                { label: 'VIX', selector: '.market-index-col[data-index="vix"]' }
             ]);
             
-            // Amérique Latine
+            // Amérique Latine - Mise à jour avec les nouveaux indices
             updateMarketOverviewRegion('latin-america', [
-                { label: 'MERVAL', selector: '.market-index-col[data-index="merval"]' },
-                { label: 'Brazil', selector: '.market-index-col[data-index="brazil"]' },
-                { label: 'Chile', selector: '.market-index-col[data-index="chile"]' },
-                { label: 'Mexico', selector: '.market-index-col[data-index="mexico"]' }
+                { label: 'BRAZIL', selector: '.market-index-col[data-index="brazil"]' },
+                { label: 'MEXICO', selector: '.market-index-col[data-index="mexico"]' },
+                { label: 'CHILE', selector: '.market-index-col[data-index="chile"]' },
+                { label: 'MERVAL', selector: '.market-index-col[data-index="merval"]' }
             ]);
             
             // Asie
@@ -394,7 +391,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 { label: 'NIKKEI 225', selector: '.market-index-col[data-index="nikkei"]' },
                 { label: 'HANG SENG', selector: '.market-index-col[data-index="hangseng"]' },
                 { label: 'SHANGHAI', selector: '.market-index-col[data-index="shanghai"]' },
-                { label: 'CSI (China)', selector: '.market-index-col[data-index="sensex"]' }
+                { label: 'BSE SENSEX', selector: '.market-index-col[data-index="sensex"]' }
             ]);
             
             // Autres régions
@@ -446,7 +443,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 if (ytdElement) {
-                    ytdElement.textContent = formatPercent(index.ytd_num);
+                    ytdElement.textContent = `YTD ${formatPercent(index.ytd_num)}`;
                     ytdElement.className = 'market-ytd ' + 
                         (index.ytd_num < -0.01 ? 'negative' : 
                          index.ytd_num > 0.01 ? 'positive' : 'neutral');
