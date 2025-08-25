@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Novis - Marchés</title>
+    <title>TradePulse - Marchés</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -481,6 +481,13 @@
             top: 0;
             z-index: 10;
             cursor: pointer;
+        }
+        
+        /* Alignement à droite pour les colonnes numériques */
+        .data-table th:nth-child(3),
+        .data-table th:nth-child(4),
+        .data-table th:nth-child(5) {
+            text-align: right;
         }
         
         .data-table th:hover {
@@ -991,7 +998,7 @@
 
     <!-- Sidebar de navigation verticale -->
     <aside class="sidebar">
-        <div class="sidebar-logo">Ns</div>
+        <div class="sidebar-logo">TP</div>
         <nav class="sidebar-nav" role="navigation">
             <a href="actualites.html" class="nav-item" title="Actualités" aria-label="Actualités">
                 <i class="fas fa-newspaper"></i>
@@ -1020,7 +1027,7 @@
         <div class="header-left">
             <div class="logo-container">
                 <div class="pulse-dot"></div>
-                <a href="index.html">NOVIS</a>
+                <a href="index.html">TRADEPULSE</a>
             </div>
             <nav class="main-nav">
                 <a href="actualites.html">Actualités</a>
@@ -1409,7 +1416,7 @@
                     <div>
                         <div class="flex items-center font-extrabold text-xl tracking-wide mb-3">
                             <span class="w-2 h-2 rounded-full mr-2" style="background-color: var(--accent-color); box-shadow: 0 0 8px var(--accent-color);"></span>
-                            NOVIS
+                            TRADEPULSE
                         </div>
                         <p class="text-sm opacity-80 mb-3">
                             Projet de démonstration<br>
@@ -1461,7 +1468,7 @@
                 <hr class="my-6 border-gray-700 opacity-50">
 
                 <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs opacity-70">
-                    <div>© 2025 NOVIS — Projet de démonstration</div>
+                    <div>© 2025 TRADEPULSE — Projet de démonstration</div>
                     <div class="flex items-center gap-4">
                         <a href="https://github.com/bencode92" target="_blank" class="hover:underline">GitHub @bencode92</a>
                     </div>
@@ -1484,7 +1491,7 @@
             densityBtn.innerHTML = `<i class="fas fa-compress-alt mr-2"></i>Densité : ${isCompact ? 'Compact' : 'Confort'}`;
         });
 
-        // Recherche globale sur toutes les régions
+        // Recherche globale sur toutes les régions avec activation de l'onglet
         const searchInput = document.getElementById('table-search');
         searchInput.addEventListener('input', () => {
             const value = searchInput.value.toLowerCase().trim();
@@ -1504,6 +1511,7 @@
             // Recherche globale dans toutes les régions
             const regions = ['europe', 'north-america', 'latin-america', 'asia', 'other'];
             let hasResults = false;
+            let firstMatchRegion = null;
             
             regions.forEach(region => {
                 const indices = window.indicesData?.indices[region] || [];
@@ -1518,7 +1526,12 @@
                     const text = tr.innerText.toLowerCase();
                     const isMatch = text.includes(value);
                     tr.style.display = isMatch ? '' : 'none';
-                    if (isMatch) regionHasMatch = true;
+                    if (isMatch) {
+                        regionHasMatch = true;
+                        if (!firstMatchRegion) {
+                            firstMatchRegion = region;
+                        }
+                    }
                 });
                 
                 // Afficher/masquer la région entière selon les résultats
@@ -1526,9 +1539,18 @@
                 if (regionHasMatch) hasResults = true;
             });
             
-            // Si aucun résultat, afficher un message
-            if (!hasResults && value) {
-                // Optionnel : afficher un message "aucun résultat"
+            // Activer automatiquement l'onglet de la première région avec résultat
+            if (firstMatchRegion) {
+                document.querySelectorAll('.region-tab').forEach(tab => {
+                    tab.classList.remove('active');
+                    tab.setAttribute('aria-selected', 'false');
+                });
+                
+                const targetTab = document.querySelector(`.region-tab[data-region="${firstMatchRegion}"]`);
+                if (targetTab) {
+                    targetTab.classList.add('active');
+                    targetTab.setAttribute('aria-selected', 'true');
+                }
             }
         });
 
