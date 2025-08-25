@@ -2,7 +2,7 @@ name: Crypto Data Pipeline
 
 on:
   schedule:
-    # Exécution quotidienne à 2h30 UTC (avant le filtrage)
+    # Exécution quotidienne à 2h30 UTC
     - cron: '30 2 * * *'
   workflow_dispatch:
     inputs:
@@ -10,18 +10,22 @@ on:
         description: 'Force update even if data exists'
         required: false
         default: 'false'
-      run_filter:
-        description: 'Run volume filtering after update'
-        required: false
-        default: 'true'
-      run_volatility:
-        description: 'Run volatility analysis after update'
-        required: false
-        default: 'true'
       vol_interval:
         description: 'Volatility calculation interval (1day or 1h)'
         required: false
         default: '1day'
+      min_vol_30d:
+        description: 'Minimum 30d volatility % (default: 30)'
+        required: false
+        default: '30'
+      max_vol_30d:
+        description: 'Maximum 30d volatility % (default: 500)'
+        required: false
+        default: '500'
+      min_ret_7d:
+        description: 'Minimum 7d return % (default: -50)'
+        required: false
+        default: '-50'
 
 jobs:
   update-crypto-data:
@@ -87,9 +91,8 @@ jobs:
         git diff --staged --quiet || git commit -m "Update crypto data [skip ci]"
         git push
 
-  filter-cryptos-volume:
+  analyze-and-filter-cryptos:
     needs: update-crypto-data
-    if: github.event.inputs.run_filter != 'false'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -109,173 +112,148 @@ jobs:
     - name: Install dependencies
       run: npm ci
     
-    - name: Run crypto volume filtering
-      id: filter
+    - name: Run crypto volatility analysis and filtering
+      id: analyze
       env:
         TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
         DATA_DIR: data
         OUTPUT_DIR: data/filtered
-        MIN_USD_DAY: 1000000
-        MIN_USD_AVG7D: 2000000
-      run: |
-        echo "🚀 Filtrage des crypto-monnaies par volume"
-        node scripts/crypto-filter-by-volume.js
-    
-    - name: Upload filtered data
-      uses: actions/upload-artifact@v4
-      with:
-        name: crypto-volume-results
-        path: |
-          data/filtered/Crypto_filtered_by_volume.csv
-          data/filtered/Crypto_rejected_by_volume.csv
-        retention-days: 30
-    
-    - name: Commit filtered data
-      if: success()
-      run: |
-        git config --local user.email "actions@github.com"
-        git config --local user.name "GitHub Actions"
-        git add data/filtered/Crypto_filtered_by_volume.csv || true
-        git add data/filtered/Crypto_rejected_by_volume.csv || true
-        git diff --staged --quiet || git commit -m "Update filtered crypto data (volume) [skip ci]"
-        git push
-
-  analyze-crypto-volatility:
-    needs: update-crypto-data
-    if: github.event.inputs.run_volatility != 'false'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ github.ref }}  # Pull latest changes
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-    
-    - name: Install dependencies
-      run: npm ci
-    
-    - name: Run crypto volatility analysis
-      id: volatility
-      env:
-        TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
-        DATA_DIR: data
-        OUTPUT_DIR: data/metrics
         VOL_INTERVAL: ${{ github.event.inputs.vol_interval || '1day' }}
+        MIN_VOL_30D: ${{ github.event.inputs.min_vol_30d || '30' }}
+        MAX_VOL_30D: ${{ github.event.inputs.max_vol_30d || '500' }}
+        MIN_RET_7D: ${{ github.event.inputs.min_ret_7d || '-50' }}
         LOOKBACK_DAYS: 120
+        MAX_STALE_HOURS: 48
       run: |
-        echo "📊 Analyse de volatilité et rendements (interval: $VOL_INTERVAL)"
+        echo "📊 Analyse de volatilité et filtrage (interval: $VOL_INTERVAL)"
+        echo "   Seuils: Vol30d=$MIN_VOL_30D-$MAX_VOL_30D%, Ret7d>$MIN_RET_7D%"
         node scripts/crypto-volatility-return.js
     
-    - name: Upload volatility results
+    - name: Upload results
       uses: actions/upload-artifact@v4
       with:
-        name: crypto-volatility-results
+        name: crypto-analysis-results
         path: |
-          data/metrics/Crypto_returns_vol_*.csv
-          data/metrics/TopVol_*.csv
-          data/metrics/TopRet30d_*.csv
+          data/filtered/Crypto_filtered_volatility.csv
+          data/filtered/Crypto_rejected_volatility.csv
+          data/filtered/Top10_momentum.csv
+          data/filtered/Top10_volatility.csv
         retention-days: 30
     
-    - name: Commit volatility data
+    - name: Commit results
       if: success()
       run: |
         git config --local user.email "actions@github.com"
         git config --local user.name "GitHub Actions"
-        git add data/metrics/*.csv || true
-        git diff --staged --quiet || git commit -m "Update crypto volatility metrics [skip ci]"
+        git add data/filtered/*.csv || true
+        git diff --staged --quiet || git commit -m "Update crypto analysis results [skip ci]"
         git push
     
-    - name: Generate volatility summary
-      if: success()
+    - name: Generate summary
+      if: always()
       run: |
-        INTERVAL="${{ github.event.inputs.vol_interval || '1day' }}"
-        echo "## 📈 Analyse de Volatilité ($INTERVAL)" >> $GITHUB_STEP_SUMMARY
+        echo "# 📊 Analyse Crypto - Rendements & Volatilité" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
-        if [ -f "data/metrics/Crypto_returns_vol_${INTERVAL}.csv" ]; then
-          TOTAL=$(tail -n +2 data/metrics/Crypto_returns_vol_${INTERVAL}.csv | wc -l)
-          VALID=$(tail -n +2 data/metrics/Crypto_returns_vol_${INTERVAL}.csv | grep -v "insufficient_history" | grep -v "error:" | wc -l)
+        INTERVAL="${{ github.event.inputs.vol_interval || '1day' }}"
+        echo "## ⚙️ Configuration" >> $GITHUB_STEP_SUMMARY
+        echo "- **Intervalle:** $INTERVAL" >> $GITHUB_STEP_SUMMARY
+        echo "- **Volatilité 30j:** ${{ github.event.inputs.min_vol_30d || '30' }}-${{ github.event.inputs.max_vol_30d || '500' }}%" >> $GITHUB_STEP_SUMMARY
+        echo "- **Rendement 7j min:** ${{ github.event.inputs.min_ret_7d || '-50' }}%" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f "data/filtered/Crypto_filtered_volatility.csv" ]; then
+          TOTAL=$(tail -n +2 data/Crypto.csv 2>/dev/null | wc -l || echo "0")
+          ACCEPTED=$(tail -n +2 data/filtered/Crypto_filtered_volatility.csv 2>/dev/null | wc -l || echo "0")
+          REJECTED=$(tail -n +2 data/filtered/Crypto_rejected_volatility.csv 2>/dev/null | wc -l || echo "0")
           
+          if [ "$TOTAL" -gt 0 ]; then
+            RATE=$(echo "scale=1; $ACCEPTED * 100 / $TOTAL" | bc)
+          else
+            RATE="0"
+          fi
+          
+          echo "## 📈 Résultats" >> $GITHUB_STEP_SUMMARY
           echo "- **Total analysé:** $TOTAL cryptos" >> $GITHUB_STEP_SUMMARY
-          echo "- **Analyses valides:** $VALID cryptos" >> $GITHUB_STEP_SUMMARY
+          echo "- **✅ Acceptées:** $ACCEPTED cryptos ($RATE%)" >> $GITHUB_STEP_SUMMARY
+          echo "- **❌ Rejetées:** $REJECTED cryptos" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           # Top 5 momentum
-          echo "### 🚀 Top 5 Momentum (30j)" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          if [ -f "data/metrics/TopRet30d_${INTERVAL}.csv" ]; then
-            echo "Symbol,Exchange,Return_30d,Volatility_30d" >> $GITHUB_STEP_SUMMARY
-            tail -n +2 data/metrics/TopRet30d_${INTERVAL}.csv | \
+          if [ -f "data/filtered/Top10_momentum.csv" ]; then
+            echo "### 🚀 Top 5 Momentum (30j)" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "Symbol        Exchange      Ret_30d  Vol_30d" >> $GITHUB_STEP_SUMMARY
+            tail -n +2 data/filtered/Top10_momentum.csv | \
               head -5 | \
-              cut -d',' -f1,4,9,11 | \
-              column -t -s, >> $GITHUB_STEP_SUMMARY
+              awk -F',' '{printf "%-12s %-12s %7s%% %6s%%\n", $1, $4, $9, $11}' >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
           fi
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
           
           # Top 5 volatilité
-          echo "### ⚡ Top 5 Volatilité (30j annualisée)" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          if [ -f "data/metrics/TopVol_${INTERVAL}.csv" ]; then
-            echo "Symbol,Exchange,Volatility_30d,Return_30d" >> $GITHUB_STEP_SUMMARY
-            tail -n +2 data/metrics/TopVol_${INTERVAL}.csv | \
+          if [ -f "data/filtered/Top10_volatility.csv" ]; then
+            echo "### ⚡ Top 5 Volatilité (30j annualisée)" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "Symbol        Exchange      Vol_30d  Ret_30d" >> $GITHUB_STEP_SUMMARY
+            tail -n +2 data/filtered/Top10_volatility.csv | \
               head -5 | \
-              cut -d',' -f1,4,11,9 | \
-              column -t -s, >> $GITHUB_STEP_SUMMARY
+              awk -F',' '{printf "%-12s %-12s %6s%% %7s%%\n", $1, $4, $11, $9}' >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
           fi
-          echo '```' >> $GITHUB_STEP_SUMMARY
-        fi
-
-  create-summary:
-    needs: [update-crypto-data, filter-cryptos-volume, analyze-crypto-volatility]
-    if: always()
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Create final summary
-      run: |
-        echo "# 📊 Pipeline de Données Crypto - Résumé" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        # État de la mise à jour
-        echo "## 🔄 État des Jobs" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        if [ "${{ needs.update-crypto-data.result }}" = "success" ]; then
-          echo "✅ **Mise à jour des données:** Succès" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ **Mise à jour des données:** Échec" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        if [ "${{ needs.filter-cryptos-volume.result }}" = "success" ]; then
-          echo "✅ **Filtrage par volume:** Succès" >> $GITHUB_STEP_SUMMARY
-        elif [ "${{ needs.filter-cryptos-volume.result }}" = "skipped" ]; then
-          echo "⏭️ **Filtrage par volume:** Ignoré" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ **Filtrage par volume:** Échec" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        if [ "${{ needs.analyze-crypto-volatility.result }}" = "success" ]; then
-          echo "✅ **Analyse volatilité:** Succès" >> $GITHUB_STEP_SUMMARY
-        elif [ "${{ needs.analyze-crypto-volatility.result }}" = "skipped" ]; then
-          echo "⏭️ **Analyse volatilité:** Ignoré" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ **Analyse volatilité:** Échec" >> $GITHUB_STEP_SUMMARY
+          
+          # Raisons de rejet
+          if [ -f "data/filtered/Crypto_rejected_volatility.csv" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ❌ Raisons de rejet" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -n +2 data/filtered/Crypto_rejected_volatility.csv | \
+              cut -d',' -f13 | \
+              sed 's/"//g' | \
+              sort | uniq -c | sort -rn | \
+              head -10 >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
         fi
         
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "---" >> $GITHUB_STEP_SUMMARY
         echo "⏰ **Exécuté le:** $(date '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
-        echo "🔧 **Déclenché par:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
         
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
           echo "👤 **Par:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
         fi
+
+  notify-completion:
+    needs: [update-crypto-data, analyze-and-filter-cryptos]
+    if: always()
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check status
+      run: |
+        echo "## 📊 Statut du Pipeline Crypto" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ needs.update-crypto-data.result }}" = "success" ]; then
+          if [ "${{ needs.update-crypto-data.outputs.data_updated }}" = "true" ]; then
+            echo "✅ **Mise à jour des données:** Nouvelles données récupérées" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⏭️ **Mise à jour des données:** Données déjà récentes" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "❌ **Mise à jour des données:** Échec" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ needs.analyze-and-filter-cryptos.result }}" = "success" ]; then
+          echo "✅ **Analyse et filtrage:** Succès" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Analyse et filtrage:** Échec" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📁 **Fichiers générés:**" >> $GITHUB_STEP_SUMMARY
+        echo "- data/filtered/Crypto_filtered_volatility.csv" >> $GITHUB_STEP_SUMMARY
+        echo "- data/filtered/Crypto_rejected_volatility.csv" >> $GITHUB_STEP_SUMMARY
+        echo "- data/filtered/Top10_momentum.csv" >> $GITHUB_STEP_SUMMARY
+        echo "- data/filtered/Top10_volatility.csv" >> $GITHUB_STEP_SUMMARY
