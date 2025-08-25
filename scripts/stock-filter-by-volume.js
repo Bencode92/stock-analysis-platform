@@ -50,7 +50,7 @@ const EX2MIC = Object.entries({
 const toMIC = ex => EX2MIC[(ex||'').toLowerCase().trim()] || null;
 
 const HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché'];
-const REJ_HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché','Volume','Seuil','MIC','Symbole','Raison'];
+const REJ_HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché','Volume','Seuil','MIC','Symbole','Source','Raison'];
 
 const csvLine = obj => HEADER.map(h => `"${String(obj[h] ?? '').replace(/"/g,'""')}"`).join(',');
 
@@ -140,6 +140,7 @@ async function throttle() {
       const vol = quote ? (Number(quote.volume)||Number(quote.average_volume)||0) : await fetchVolume(sym);
 
       const thr = VOL_MIN_BY_MIC[mic || ''] ?? VOL_MIN[region] ?? 0;
+      const source = VOL_MIN_BY_MIC[mic || ''] ? `MIC:${mic}` : `REGION:${region}`;
       stats.total++;
       
       if (vol >= thr) {
@@ -152,10 +153,10 @@ async function throttle() {
           'Devise de marché': r['Devise de marché']||'',
         });
         stats.passed++;
-        console.log(`  ✅ ${ticker}: ${vol.toLocaleString()} >= ${thr.toLocaleString()}`);
+        console.log(`  ✅ ${ticker}: ${vol.toLocaleString()} >= ${thr.toLocaleString()} (${source})`);
       } else {
         stats.failed++;
-        console.log(`  ❌ ${ticker}: ${vol.toLocaleString()} < ${thr.toLocaleString()}`);
+        console.log(`  ❌ ${ticker}: ${vol.toLocaleString()} < ${thr.toLocaleString()} (${source})`);
         rejected.push({
           'Ticker': ticker,
           'Stock': r['Stock']||'',
@@ -167,6 +168,7 @@ async function throttle() {
           'Seuil': thr,
           'MIC': mic || '',
           'Symbole': sym,
+          'Source': source,
           'Raison': `Volume ${vol} < Seuil ${thr}`
         });
       }
@@ -206,6 +208,51 @@ async function throttle() {
   console.log(`✅ Retenus: ${stats.passed} (${(stats.passed/stats.total*100).toFixed(1)}%)`);
   console.log(`❌ Rejetés: ${stats.failed} (${(stats.failed/stats.total*100).toFixed(1)}%)`);
   console.log('='.repeat(50));
+  
+  // Résumé par bourse (MIC) pour les rejets
+  console.log('\n📈 ANALYSE DES REJETS PAR BOURSE:');
+  const byMic = {};
+  const bySource = { MIC: 0, REGION: 0 };
+  
+  allRejected.forEach(r => {
+    const micKey = r.MIC || 'N/A';
+    byMic[micKey] = (byMic[micKey] || 0) + 1;
+    
+    if (r.Source && r.Source.startsWith('MIC:')) {
+      bySource.MIC++;
+    } else {
+      bySource.REGION++;
+    }
+  });
+  
+  // Trier par nombre de rejets décroissant
+  const sortedMics = Object.entries(byMic).sort((a, b) => b[1] - a[1]);
+  
+  console.log('\nPar code MIC:');
+  sortedMics.forEach(([mic, count]) => {
+    const pct = ((count / stats.failed) * 100).toFixed(1);
+    console.log(`  ${mic.padEnd(8)} : ${count.toString().padStart(4)} rejets (${pct}%)`);
+  });
+  
+  console.log('\nPar source de seuil:');
+  console.log(`  Seuil MIC    : ${bySource.MIC} rejets (${(bySource.MIC/stats.failed*100).toFixed(1)}%)`);
+  console.log(`  Seuil REGION : ${bySource.REGION} rejets (${(bySource.REGION/stats.failed*100).toFixed(1)}%)`);
+  
+  // Statistiques acceptés par bourse
+  console.log('\n📊 ANALYSE DES ACCEPTÉS PAR BOURSE:');
+  const acceptedByExchange = {};
+  combined.forEach(s => {
+    const exchange = s['Bourse de valeurs'] || 'N/A';
+    acceptedByExchange[exchange] = (acceptedByExchange[exchange] || 0) + 1;
+  });
+  
+  const sortedExchanges = Object.entries(acceptedByExchange).sort((a, b) => b[1] - a[1]);
+  sortedExchanges.slice(0, 10).forEach(([exchange, count]) => {
+    const pct = ((count / stats.passed) * 100).toFixed(1);
+    console.log(`  ${exchange.padEnd(40)} : ${count.toString().padStart(4)} acceptés (${pct}%)`);
+  });
+  
+  console.log('\n' + '='.repeat(50));
   console.log(`Fichiers acceptés dans: ${OUT_DIR}/`);
   console.log(`Fichiers rejetés dans: ${OUT_DIR}/`);
   
