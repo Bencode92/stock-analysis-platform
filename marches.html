@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -27,25 +26,25 @@
     </script>
     <style>
         :root {
-            --background-color: #0a1929; /* Bleu nuit plus profond */
+            --background-color: #0a1929;
             --light-background-color: #f0f5ff;
             --text-color: #FFFFFF;
             --light-text-color: #1a202c;
-            --accent-color: #00FF87; /* Vert néon */
-            --accent-subtle: rgba(0, 255, 135, 0.15);
-            --accent-medium: rgba(0, 255, 135, 0.3);
-            --accent-strong: rgba(0, 255, 135, 0.6);
-            --card-bg: rgba(10, 30, 50, 0.6);
-            --card-header: rgba(15, 40, 65, 0.8);
-            --card-border: rgba(0, 255, 135, 0.2);
-            --accent-glow: 0 0 15px rgba(0, 255, 135, 0.2);
-            --accent-glow-strong: 0 0 20px rgba(0, 255, 135, 0.3);
+            --accent-color: #00FF87;
+            --accent-subtle: rgba(0, 255, 135, 0.08);
+            --accent-medium: rgba(0, 255, 135, 0.2);
+            --accent-strong: rgba(0, 255, 135, 0.4);
+            --card-bg: rgba(10, 30, 50, 0.5);
+            --card-header: linear-gradient(180deg, rgba(15, 40, 65, 0.9) 0%, rgba(10, 25, 45, 0.95) 100%);
+            --card-border: rgba(0, 255, 135, 0.15);
+            --accent-glow: 0 0 10px rgba(0, 255, 135, 0.15);
+            --accent-glow-strong: 0 0 15px rgba(0, 255, 135, 0.25);
             --transition-time: 0.3s;
             --header-height: 70px;
             --sidebar-width: 80px;
             --negative-color: #ff4757;
-            --neutral-color: #aaaaaa;
-            --separator-color: rgba(255, 255, 255, 0.07);
+            --neutral-color: #999999;
+            --separator-color: rgba(255, 255, 255, 0.05);
         }
         
         body {
@@ -61,14 +60,25 @@
         body.dark {
             background-color: var(--background-color);
             background-image: 
-                radial-gradient(circle at 15% 50%, rgba(0, 255, 135, 0.08) 0%, transparent 25%),
-                radial-gradient(circle at 85% 30%, rgba(0, 100, 255, 0.05) 0%, transparent 20%);
+                radial-gradient(circle at 15% 50%, rgba(0, 255, 135, 0.06) 0%, transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(0, 100, 255, 0.03) 0%, transparent 20%);
             color: var(--text-color);
         }
         
         body.light {
             background-color: var(--light-background-color);
             color: var(--light-text-color);
+        }
+        
+        /* Animation pour les changements de valeurs */
+        @keyframes valueFlash {
+            0% { background-color: transparent; }
+            50% { background-color: var(--accent-subtle); }
+            100% { background-color: transparent; }
+        }
+        
+        .value-change {
+            animation: valueFlash 0.3s ease-out;
         }
         
         /* Header */
@@ -78,8 +88,8 @@
             left: var(--sidebar-width);
             right: 0;
             height: var(--header-height);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -89,15 +99,15 @@
         }
         
         .dark .main-header {
-            background-color: rgba(10, 25, 41, 0.85);
+            background: linear-gradient(180deg, rgba(10, 25, 41, 0.9) 0%, rgba(8, 20, 35, 0.85) 100%);
             border-bottom: 1px solid var(--card-border);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
         
         .light .main-header {
             background-color: rgba(240, 245, 255, 0.9);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
         }
         
         .header-left {
@@ -115,12 +125,12 @@
         
         .logo-container a {
             text-decoration: none;
-            $transition: color 0.3s ease;
+            transition: color 0.3s ease;
         }
         
         .dark .logo-container a {
             color: var(--text-color);
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.08);
         }
         
         .light .logo-container a {
@@ -133,8 +143,14 @@
             background-color: var(--accent-color);
             border-radius: 50%;
             margin-right: 10px;
-            box-shadow: 0 0 10px var(--accent-color);
+            box-shadow: 0 0 8px var(--accent-color);
             animation: pulse 2s infinite;
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+            .pulse-dot {
+                animation: none;
+            }
         }
         
         .main-nav {
@@ -152,7 +168,7 @@
         }
         
         .dark .main-nav a {
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(255, 255, 255, 0.85);
         }
         
         .light .main-nav a {
@@ -209,12 +225,13 @@
         
         .market-indicator.green {
             background-color: #4CAF50;
-            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+            box-shadow: 0 0 6px rgba(76, 175, 80, 0.5);
         }
         
         .market-time {
             margin-left: 10px;
             font-weight: 600;
+            font-variant-numeric: tabular-nums;
             color: var(--accent-color);
         }
         
@@ -234,8 +251,8 @@
         }
         
         .light .search-button {
-            background-color: rgba(0, 210, 110, 0.1);
-            border: 1px solid rgba(0, 210, 110, 0.3);
+            background-color: rgba(0, 210, 110, 0.08);
+            border: 1px solid rgba(0, 210, 110, 0.2);
             color: var(--light-text-color);
         }
         
@@ -249,7 +266,7 @@
         }
         
         .light .search-button:hover {
-            background-color: rgba(0, 210, 110, 0.2);
+            background-color: rgba(0, 210, 110, 0.15);
         }
         
         .search-button i {
@@ -273,15 +290,15 @@
         }
         
         .dark .sidebar {
-            background-color: rgba(8, 20, 35, 0.95);
+            background: linear-gradient(180deg, rgba(8, 20, 35, 0.98) 0%, rgba(6, 15, 28, 0.95) 100%);
             border-right: 1px solid var(--card-border);
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
         }
         
         .light .sidebar {
             background-color: rgba(230, 240, 255, 0.95);
-            border-right: 1px solid rgba(0, 0, 0, 0.1);
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            border-right: 1px solid rgba(0, 0, 0, 0.08);
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
         }
         
         .sidebar-logo {
@@ -289,7 +306,7 @@
             font-weight: 900;
             color: var(--accent-color);
             margin-bottom: 40px;
-            text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
+            text-shadow: 0 0 8px rgba(0, 255, 135, 0.4);
         }
         
         .sidebar-nav {
@@ -321,15 +338,15 @@
             height: 10px;
             background-color: #ff4757;
             border-radius: 50%;
-            box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
+            box-shadow: 0 0 6px rgba(255, 71, 87, 0.5);
         }
         
         .dark .nav-item {
-            color: rgba(255, 255, 255, 0.7);
+            color: rgba(255, 255, 255, 0.75);
         }
         
         .light .nav-item {
-            color: rgba(0, 0, 0, 0.7);
+            color: rgba(0, 0, 0, 0.65);
         }
         
         .dark .nav-item:hover, .dark .nav-item.active {
@@ -340,7 +357,7 @@
         }
         
         .light .nav-item:hover, .light .nav-item.active {
-            background-color: rgba(0, 210, 110, 0.1);
+            background-color: rgba(0, 210, 110, 0.08);
             color: var(--accent-color);
         }
         
@@ -372,12 +389,12 @@
         
         .dark .theme-toggle-btn {
             color: var(--text-color);
-            background-color: rgba(255, 255, 255, 0.1);
+            background-color: rgba(255, 255, 255, 0.08);
         }
         
         .light .theme-toggle-btn {
             color: var(--light-text-color);
-            background-color: rgba(0, 0, 0, 0.1);
+            background-color: rgba(0, 0, 0, 0.08);
         }
         
         .theme-toggle-btn:hover {
@@ -393,10 +410,10 @@
             transition: background-color 0.3s ease;
         }
 
-        /* Glassmorphism cards */
+        /* Glassmorphism cards avec blur réduit */
         .glassmorphism {
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             border: 1px solid var(--card-border);
             box-shadow: var(--accent-glow);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -407,14 +424,14 @@
         }
         
         .light .glassmorphism {
-            background-color: rgba(240, 245, 255, 0.8);
+            background-color: rgba(240, 245, 255, 0.75);
         }
         
         .glassmorphism:hover {
             box-shadow: var(--accent-glow-strong);
         }
 
-        /* Data table styles */
+        /* Data table styles améliorés */
         .data-table {
             width: 100%;
             border-collapse: separate;
@@ -429,14 +446,26 @@
             border-bottom: 1px solid var(--card-border);
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            color: rgba(255, 255, 255, 0.8);
-            background-color: var(--card-header);
+            color: rgba(255, 255, 255, 0.85);
+            background: var(--card-header);
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
         
         .data-table td {
             padding: 16px;
             font-size: 0.9rem;
             border-bottom: 1px solid var(--separator-color);
+            transition: background-color 0.2s ease;
+        }
+        
+        .data-table td:nth-child(3),
+        .data-table td:nth-child(4),
+        .data-table td:nth-child(5) {
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+            text-align: right;
         }
         
         .data-table tr:last-child td {
@@ -447,10 +476,15 @@
             background-color: var(--accent-subtle);
         }
 
-        /* Positive, negative, and neutral values */
+        /* Positive, negative, and neutral values avec meilleur contraste */
         .positive {
             color: var(--accent-color);
             font-weight: 600;
+        }
+        
+        .positive::before {
+            content: "▲ ";
+            font-size: 0.8em;
         }
         
         .negative {
@@ -458,12 +492,22 @@
             font-weight: 600;
         }
         
+        .negative::before {
+            content: "▼ ";
+            font-size: 0.8em;
+        }
+        
         .neutral {
             color: var(--neutral-color);
             font-weight: 600;
         }
+        
+        .neutral::before {
+            content: "➝ ";
+            font-size: 0.8em;
+        }
 
-        /* Aperçu des marchés mondiaux spécifique */
+        /* Aperçu des marchés mondiaux amélioré */
         .market-overview-section {
             margin-bottom: 2rem;
         }
@@ -485,7 +529,7 @@
             background-color: var(--accent-color);
             margin-right: 10px;
             border-radius: 2px;
-            box-shadow: 0 0 8px var(--accent-color);
+            box-shadow: 0 0 6px var(--accent-color);
         }
         
         /* Nouvelle mise en page pour l'aperçu des marchés */
@@ -496,6 +540,7 @@
             border-radius: 12px;
             overflow: hidden;
             margin-bottom: 1px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
         }
         
         .market-overview-row {
@@ -503,7 +548,7 @@
         }
         
         .market-region-header {
-            background-color: rgba(25, 45, 70, 0.9);
+            background: var(--card-header);
             padding: 12px 16px;
             display: flex;
             justify-content: space-between;
@@ -519,11 +564,13 @@
             padding: 12px 16px;
             background-color: var(--card-bg);
             border-right: 1px solid var(--separator-color);
-            transition: background-color 0.2s;
+            transition: all 0.2s ease;
+            position: relative;
         }
         
         .market-index-col:hover {
-            background-color: rgba(15, 40, 70, 0.8);
+            background-color: rgba(15, 40, 70, 0.7);
+            box-shadow: inset 0 0 15px rgba(0, 255, 135, 0.03);
         }
         
         .market-index-col:last-child {
@@ -534,7 +581,7 @@
             font-weight: 600;
             font-size: 0.9rem;
             margin-bottom: 6px;
-            color: rgba(255, 255, 255, 0.9);
+            color: rgba(255, 255, 255, 0.95);
         }
         
         .market-index-data {
@@ -546,13 +593,19 @@
         .market-value {
             font-weight: 700;
             text-align: right;
-            min-width: 62px;
+            min-width: 72px;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+            transition: color 0.3s ease;
         }
         
         .market-ytd {
-            opacity: 0.8;
+            opacity: 0.85;
             text-align: right;
-            min-width: 62px;
+            min-width: 72px;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+            transition: color 0.3s ease;
         }
         
         /* Autres régions */
@@ -563,9 +616,10 @@
             border-radius: 12px;
             overflow: hidden;
             margin-top: 1px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
         }
         
-        /* Top performers */
+        /* Top performers amélioré */
         .top-performers-section {
             margin-bottom: 2rem;
         }
@@ -587,7 +641,7 @@
             background-color: var(--accent-color);
             margin-right: 10px;
             border-radius: 2px;
-            box-shadow: 0 0 8px var(--accent-color);
+            box-shadow: 0 0 6px var(--accent-color);
         }
         
         .top-performers-grid {
@@ -600,10 +654,11 @@
             background-color: var(--card-bg);
             border-radius: 12px;
             overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
         
         .performer-header {
-            background-color: rgba(25, 45, 70, 0.9);
+            background: var(--card-header);
             padding: 12px 16px;
             display: flex;
             justify-content: space-between;
@@ -622,7 +677,7 @@
         }
         
         .performer-row:hover {
-            background-color: rgba(15, 40, 70, 0.8);
+            background-color: rgba(15, 40, 70, 0.6);
         }
         
         .performer-row:last-child {
@@ -637,18 +692,20 @@
             font-weight: 600;
             font-size: 0.9rem;
             margin-bottom: 3px;
-            color: rgba(255, 255, 255, 0.9);
+            color: rgba(255, 255, 255, 0.95);
         }
         
         .performer-country {
             font-size: 0.8rem;
-            color: rgba(255, 255, 255, 0.6);
+            color: rgba(255, 255, 255, 0.65);
         }
         
         .performer-value {
             font-weight: 700;
             text-align: right;
-            min-width: 62px;
+            min-width: 72px;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
         }
 
         /* Autres styles */
@@ -669,14 +726,14 @@
             background-color: var(--accent-color);
             margin-right: 10px;
             border-radius: 2px;
-            box-shadow: 0 0 8px var(--accent-color);
+            box-shadow: 0 0 6px var(--accent-color);
         }
 
         /* Cards with consistent headers */
         .card-header {
             padding: 12px 16px;
             border-bottom: 1px solid var(--card-border);
-            background-color: var(--card-header);
+            background: var(--card-header);
             border-top-left-radius: 0.5rem;
             border-top-right-radius: 0.5rem;
             display: flex;
@@ -687,7 +744,7 @@
         .card-header h3 {
             font-weight: 600;
             font-size: 1rem;
-            color: rgba(255, 255, 255, 0.9);
+            color: rgba(255, 255, 255, 0.95);
         }
         
         .card-body {
@@ -696,8 +753,8 @@
 
         /* Animations */
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.6); }
+            70% { box-shadow: 0 0 0 8px rgba(0, 255, 135, 0); }
             100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
         }
 
@@ -706,7 +763,7 @@
             display: inline-block;
             width: 50px;
             height: 50px;
-            border: 3px solid rgba(0, 255, 135, 0.2);
+            border: 3px solid rgba(0, 255, 135, 0.15);
             border-radius: 50%;
             border-top-color: var(--accent-color);
             animation: spin 1s ease-in-out infinite;
@@ -717,14 +774,15 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Region Tabs */
+        /* Region Tabs avec accessibilité */
         .region-tabs {
             display: flex;
             border-bottom: 1px solid var(--card-border);
             margin-bottom: 24px;
-            background-color: var(--card-header);
+            background: var(--card-header);
             border-radius: 8px;
             overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
         
         .region-tab {
@@ -732,7 +790,7 @@
             cursor: pointer;
             position: relative;
             font-weight: 500;
-            opacity: 0.7;
+            opacity: 0.75;
             transition: all 0.3s ease;
             letter-spacing: 0.02em;
         }
@@ -757,11 +815,19 @@
             height: 3px;
             background-color: var(--accent-color);
             transition: width 0.3s ease;
-            box-shadow: 0 0 8px var(--accent-color);
+            box-shadow: 0 0 6px var(--accent-color);
         }
         
         .region-tab.active::after {
             width: 100%;
+        }
+        
+        /* Focus visible pour accessibilité */
+        .region-tab:focus-visible,
+        .nav-item:focus-visible,
+        .search-button:focus-visible {
+            outline: 2px solid var(--accent-color);
+            outline-offset: 2px;
         }
 
         /* Button styling */
@@ -856,7 +922,7 @@
 <body class="dark">
     <!-- Bouton du sélecteur de thème -->
     <div class="theme-toggle">
-        <button id="theme-toggle-btn" class="theme-toggle-btn">
+        <button id="theme-toggle-btn" class="theme-toggle-btn" aria-label="Basculer le thème">
             <i class="fas fa-moon" id="dark-icon"></i>
             <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
         </button>
@@ -865,24 +931,24 @@
     <!-- Sidebar de navigation verticale -->
     <aside class="sidebar">
         <div class="sidebar-logo">TP</div>
-        <nav class="sidebar-nav">
-            <a href="actualites.html" class="nav-item" title="Actualités">
+        <nav class="sidebar-nav" role="navigation">
+            <a href="actualites.html" class="nav-item" title="Actualités" aria-label="Actualités">
                 <i class="fas fa-newspaper"></i>
             </a>
-            <a href="portefeuille.html" class="nav-item" title="Portefeuilles">
+            <a href="portefeuille.html" class="nav-item" title="Portefeuilles" aria-label="Portefeuilles">
                 <i class="fas fa-chart-pie"></i>
             </a>
-            <a href="dashboard.html" class="nav-item" title="Tableau de bord">
+            <a href="dashboard.html" class="nav-item" title="Tableau de bord" aria-label="Tableau de bord">
                 <i class="fas fa-tachometer-alt"></i>
             </a>
-            <a href="marches.html" class="nav-item active" title="Marchés">
+            <a href="marches.html" class="nav-item active" title="Marchés" aria-label="Marchés" aria-current="page">
                 <i class="fas fa-chart-line"></i>
             </a>
-            <a href="email-preview.html" class="nav-item" title="Alertes">
+            <a href="email-preview.html" class="nav-item" title="Alertes" aria-label="Alertes">
                 <i class="fas fa-bell"></i>
                 <span class="notification-badge"></span>
             </a>
-            <a href="parametres.html" class="nav-item" title="Paramètres">
+            <a href="parametres.html" class="nav-item" title="Paramètres" aria-label="Paramètres">
                 <i class="fas fa-cog"></i>
             </a>
         </nav>
@@ -906,7 +972,7 @@
             <div class="market-status">
                 <div class="market-indicator green"></div>
                 <span>Marché ouvert</span>
-                <span class="market-time" id="marketTime">09:45:22</span>
+                <span class="market-time" id="marketTime" aria-live="polite">09:45:22</span>
             </div>
             <a href="recherche.html" class="search-button ripple">
                 <i class="fas fa-search"></i>
@@ -923,7 +989,7 @@
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
                     <div>
                         <h1 class="text-3xl font-bold mb-2">Indices Boursiers Internationaux</h1>
-                        <p class="text-gray-400">Dernière mise à jour: <span id="last-update-time" class="font-medium">Chargement...</span></p>
+                        <p class="text-gray-400">Dernière mise à jour: <span id="last-update-time" class="font-medium" aria-live="polite">Chargement...</span></p>
                     </div>
                 </div>
                 
@@ -935,7 +1001,7 @@
                         <!-- EUROPE -->
                         <div class="market-region-header">
                             <span>Europe</span>
-                            <span id="europe-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                            <span id="europe-trend" class="text-sm positive" aria-label="Tendance Europe"><i class="fas fa-arrow-up"></i></span>
                         </div>
                         
                         <div class="market-index-col" data-index="cac40">
@@ -973,7 +1039,7 @@
                         <!-- AMÉRIQUE DU NORD -->
                         <div class="market-region-header">
                             <span>Amérique du Nord</span>
-                            <span id="north-america-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                            <span id="north-america-trend" class="text-sm positive" aria-label="Tendance Amérique du Nord"><i class="fas fa-arrow-up"></i></span>
                         </div>
                         
                         <div class="market-index-col" data-index="sp500">
@@ -1011,7 +1077,7 @@
                         <!-- AMÉRIQUE LATINE -->
                         <div class="market-region-header">
                             <span>Amérique Latine</span>
-                            <span id="latin-america-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                            <span id="latin-america-trend" class="text-sm positive" aria-label="Tendance Amérique Latine"><i class="fas fa-arrow-up"></i></span>
                         </div>
                         
                         <div class="market-index-col" data-index="merval">
@@ -1049,7 +1115,7 @@
                         <!-- ASIE -->
                         <div class="market-region-header">
                             <span>Asie</span>
-                            <span id="asia-trend" class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
+                            <span id="asia-trend" class="text-sm negative" aria-label="Tendance Asie"><i class="fas fa-arrow-down"></i></span>
                         </div>
                         
                         <div class="market-index-col" data-index="nikkei">
@@ -1089,7 +1155,7 @@
                     <div class="others-grid">
                         <div class="market-region-header">
                             <span>Autres régions</span>
-                            <span id="other-trend" class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
+                            <span id="other-trend" class="text-sm negative" aria-label="Tendance Autres régions"><i class="fas fa-arrow-down"></i></span>
                         </div>
                         
                         <div class="market-index-col" data-index="southafrica">
@@ -1135,7 +1201,7 @@
                         <div class="performer-card">
                             <div class="performer-header">
                                 <span>Top 3 Hausse (VAR %)</span>
-                                <span class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                                <span class="text-sm positive" aria-label="Hausse"><i class="fas fa-arrow-up"></i></span>
                             </div>
                             <div id="daily-top">
                                 <div class="performer-row">
@@ -1168,7 +1234,7 @@
                         <div class="performer-card">
                             <div class="performer-header">
                                 <span>Top 3 Baisse (VAR %)</span>
-                                <span class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
+                                <span class="text-sm negative" aria-label="Baisse"><i class="fas fa-arrow-down"></i></span>
                             </div>
                             <div id="daily-bottom">
                                 <div class="performer-row">
@@ -1201,7 +1267,7 @@
                         <div class="performer-card">
                             <div class="performer-header">
                                 <span>Top 3 Hausse (YTD)</span>
-                                <span class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                                <span class="text-sm positive" aria-label="Hausse YTD"><i class="fas fa-arrow-up"></i></span>
                             </div>
                             <div id="ytd-top">
                                 <div class="performer-row">
@@ -1234,7 +1300,7 @@
                         <div class="performer-card">
                             <div class="performer-header">
                                 <span>Top 3 Baisse (YTD)</span>
-                                <span class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
+                                <span class="text-sm negative" aria-label="Baisse YTD"><i class="fas fa-arrow-down"></i></span>
                             </div>
                             <div id="ytd-bottom">
                                 <div class="performer-row">
@@ -1268,12 +1334,12 @@
                 <!-- Onglets des régions -->
                 <div class="mb-8">
                     <h2 class="section-title mb-6">Indices par région</h2>
-                    <div class="region-tabs mb-6">
-                        <div class="region-tab active" data-region="europe">Europe</div>
-                        <div class="region-tab" data-region="north-america">Amérique du Nord</div>
-                        <div class="region-tab" data-region="latin-america">Amérique Latine</div>
-                        <div class="region-tab" data-region="asia">Asie</div>
-                        <div class="region-tab" data-region="other">Autres</div>
+                    <div class="region-tabs mb-6" role="tablist">
+                        <div class="region-tab active" data-region="europe" role="tab" aria-selected="true" tabindex="0">Europe</div>
+                        <div class="region-tab" data-region="north-america" role="tab" aria-selected="false" tabindex="0">Amérique du Nord</div>
+                        <div class="region-tab" data-region="latin-america" role="tab" aria-selected="false" tabindex="0">Amérique Latine</div>
+                        <div class="region-tab" data-region="asia" role="tab" aria-selected="false" tabindex="0">Asie</div>
+                        <div class="region-tab" data-region="other" role="tab" aria-selected="false" tabindex="0">Autres</div>
                     </div>
                     
                     <!-- Conteneur pour le tableau des indices -->
@@ -1292,7 +1358,7 @@
                         </div>
                         
                         <div id="indices-container" class="hidden">
-                            <div id="europe-indices" class="region-content">
+                            <div id="europe-indices" class="region-content" role="tabpanel">
                                 <div class="overflow-x-auto">
                                     <table class="data-table">
                                         <thead>
@@ -1312,7 +1378,7 @@
                                 </div>
                             </div>
                             
-                            <div id="north-america-indices" class="region-content hidden">
+                            <div id="north-america-indices" class="region-content hidden" role="tabpanel">
                                 <div class="overflow-x-auto">
                                     <table class="data-table">
                                         <thead>
@@ -1332,7 +1398,7 @@
                                 </div>
                             </div>
                             
-                            <div id="latin-america-indices" class="region-content hidden">
+                            <div id="latin-america-indices" class="region-content hidden" role="tabpanel">
                                 <div class="overflow-x-auto">
                                     <table class="data-table">
                                         <thead>
@@ -1352,7 +1418,7 @@
                                 </div>
                             </div>
                             
-                            <div id="asia-indices" class="region-content hidden">
+                            <div id="asia-indices" class="region-content hidden" role="tabpanel">
                                 <div class="overflow-x-auto">
                                     <table class="data-table">
                                         <thead>
@@ -1372,7 +1438,7 @@
                                 </div>
                             </div>
                             
-                            <div id="other-indices" class="region-content hidden">
+                            <div id="other-indices" class="region-content hidden" role="tabpanel">
                                 <div class="overflow-x-auto">
                                     <table class="data-table">
                                         <thead>
@@ -1406,7 +1472,7 @@
                     <!-- Col 1: identité + avertissement -->
                     <div>
                         <div class="flex items-center font-extrabold text-xl tracking-wide mb-3">
-                            <span class="w-2 h-2 rounded-full mr-2" style="background-color: var(--accent-color); box-shadow: 0 0 10px var(--accent-color);"></span>
+                            <span class="w-2 h-2 rounded-full mr-2" style="background-color: var(--accent-color); box-shadow: 0 0 8px var(--accent-color);"></span>
                             TRADEPULSE
                         </div>
                         <p class="text-sm opacity-80 mb-3">
@@ -1451,7 +1517,7 @@
                         </p>
                         <div class="mt-4 text-sm">
                             <span class="opacity-70">Dernière mise à jour</span>
-                            <span class="ml-2 font-medium" id="footer-last-update">–</span>
+                            <span class="ml-2 font-medium" id="footer-last-update" aria-live="polite">–</span>
                         </div>
                     </div>
                 </div>
