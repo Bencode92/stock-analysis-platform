@@ -52,7 +52,7 @@ jobs:
       run: |
         git config --local user.email "actions@github.com"
         git config --local user.name "GitHub Actions"
-        git add data/filtered/*.json data/filtered/*.csv || true
+        git add data/filtered/*.csv || true
         git diff --staged --quiet || git commit -m "Update filtered stocks data [skip ci]"
         git push
     
@@ -61,12 +61,48 @@ jobs:
       run: |
         echo "## 📊 Résumé du filtrage" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        if [ -f data/filtered/stocks_us_filtered.json ]; then
-          echo "- ✅ US: $(jq '.stats.total_stocks' data/filtered/stocks_us_filtered.json) stocks" >> $GITHUB_STEP_SUMMARY
+        
+        # Statistiques par région
+        if [ -f data/filtered/Actions_US_filtered.csv ]; then
+          US_COUNT=$(tail -n +2 data/filtered/Actions_US_filtered.csv | wc -l)
+          US_REJ=$(tail -n +2 data/filtered/Actions_US_rejected.csv | wc -l || echo 0)
+          echo "### 🇺🇸 États-Unis" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Acceptés: **$US_COUNT** stocks" >> $GITHUB_STEP_SUMMARY
+          echo "- ❌ Rejetés: **$US_REJ** stocks" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
         fi
-        if [ -f data/filtered/stocks_europe_filtered.json ]; then
-          echo "- ✅ Europe: $(jq '.stats.total_stocks' data/filtered/stocks_europe_filtered.json) stocks" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f data/filtered/Actions_Europe_filtered.csv ]; then
+          EU_COUNT=$(tail -n +2 data/filtered/Actions_Europe_filtered.csv | wc -l)
+          EU_REJ=$(tail -n +2 data/filtered/Actions_Europe_rejected.csv | wc -l || echo 0)
+          echo "### 🇪🇺 Europe" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Acceptés: **$EU_COUNT** stocks" >> $GITHUB_STEP_SUMMARY
+          echo "- ❌ Rejetés: **$EU_REJ** stocks" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
         fi
-        if [ -f data/filtered/stocks_asia_filtered.json ]; then
-          echo "- ✅ Asie: $(jq '.stats.total_stocks' data/filtered/stocks_asia_filtered.json) stocks" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f data/filtered/Actions_Asie_filtered.csv ]; then
+          ASIA_COUNT=$(tail -n +2 data/filtered/Actions_Asie_filtered.csv | wc -l)
+          ASIA_REJ=$(tail -n +2 data/filtered/Actions_Asie_rejected.csv | wc -l || echo 0)
+          echo "### 🌏 Asie" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Acceptés: **$ASIA_COUNT** stocks" >> $GITHUB_STEP_SUMMARY
+          echo "- ❌ Rejetés: **$ASIA_REJ** stocks" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Aperçu des acceptés
+        if [ -f data/filtered/Actions_filtrees_par_volume.csv ]; then
+          echo "## ✅ Stocks Acceptés (Top 20)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          head -n 21 data/filtered/Actions_filtrees_par_volume.csv | column -t -s, >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Aperçu des rejetés
+        if [ -f data/filtered/Actions_rejetes_par_volume.csv ]; then
+          echo "## ❌ Stocks Rejetés (Top 20)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          head -n 21 data/filtered/Actions_rejetes_par_volume.csv | column -t -s, >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
         fi
