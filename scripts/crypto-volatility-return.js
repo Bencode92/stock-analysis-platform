@@ -22,12 +22,17 @@ const INTERVAL       = (process.env.VOL_INTERVAL || '1day').toLowerCase(); // '1
 const LOOKBACK_DAYS  = Number(process.env.LOOKBACK_DAYS || 120);
 const STALE_HOURS    = Number(process.env.STALE_HOURS || 48); // seuil d'obsolescence
 
-// Fenêtres de calcul
+// Fenêtres de calcul (ret/vol)
 const WIN_RET_1D   = 1;
 const WIN_RET_7D   = 7;
 const WIN_RET_30D  = 30;
 const WIN_VOL_7D   = 7;
 const WIN_VOL_30D  = 30;
+
+// Fenêtres tendance & drawdown (configurables)
+const TREND_SHORT_D       = Number(process.env.TREND_SHORT_D || 30);
+const TREND_LONG_D        = Number(process.env.TREND_LONG_D  || 90);
+const DRAWDOWN_LOOKBACK_D = Number(process.env.DRAWDOWN_LOOKBACK_D || 90);
 
 // Exchanges préférés pour choisir la source
 const EX_PREF = ["Binance","Coinbase Pro","Kraken","BitStamp","Bitfinex","Bybit","OKX","Gate.io","KuCoin"];
@@ -166,25 +171,73 @@ function atrPct(candles, n = 14) {
   return (atr / lastClose) * 100;
 }
 
+// Moyenne simple
+function sma(arr, n) {
+  if (!arr || arr.length < n) return null;
+  let s = 0;
+  for (let i = arr.length - n; i < arr.length; i++) s += arr[i];
+  return s / n;
+}
+
+// Bars nécessaires pour X jours selon l'intervalle
+const barsForDays = d => (INTERVAL === '1h' ? 24 * d : d);
+
+// Max drawdown (%) sur N jours (valeur positive, ex: 8.6 = -8.6%)
+function maxDrawdownPct(closes, days) {
+  const N = Math.min(barsForDays(days), closes.length);
+  if (N <= 1) return null;
+  const arr = closes.slice(-N);
+  let peak = arr[0];
+  let mdd  = 0; // en ratio négatif min
+  for (let i = 1; i < arr.length; i++) {
+    if (arr[i] > peak) peak = arr[i];
+    const dd = arr[i] / peak - 1;
+    if (dd < mdd) mdd = dd;
+  }
+  return Math.abs(mdd) * 100; // % positif
+}
+
+// Regime de tendance: bull / bear / neutral (SMA 30 vs SMA 90 + position du cours)
+function computeTrendRegime(closes) {
+  const shortBars = barsForDays(TREND_SHORT_D);
+  const longBars  = barsForDays(TREND_LONG_D);
+  if (closes.length < longBars) return null;
+
+  const last = closes[closes.length - 1];
+  const s = sma(closes, shortBars);
+  const l = sma(closes, longBars);
+  if (s == null || l == null) return null;
+
+  if (last > l && s > l) return 'bull';
+  if (last < l && s < l) return 'bear';
+  return 'neutral';
+}
+
 // =====================
 // MAIN
 // =====================
 (async () => {
-  console.log('🚀 Analyse Crypto - TOUTES les cryptos (retour & volatilité)');
+  console.log('🚀 Analyse Crypto - TOUTES les cryptos (retour, volatilité, tendance)');
   console.log('============================================================');
   console.log('📊 Configuration:');
   console.log(`  - Intervalle: ${INTERVAL}`);
   console.log(`  - Lookback: ${LOOKBACK_DAYS} jours`);
   console.log(`  - STALE_HOURS: ${STALE_HOURS}h`);
+  console.log(`  - Trend short/long: ${TREND_SHORT_D}/${TREND_LONG_D} jours`);
+  console.log(`  - Drawdown lookback: ${DRAWDOWN_LOOKBACK_D} jours`);
   console.log('  - Sortie: UN SEUL fichier CSV');
   console.log('============================================================\n');
 
   const rows = await readCSV(path.join(DATA_DIR, INPUT));
   console.log(`📄 Source: ${INPUT} (${rows.length} cryptos)\n`);
 
-  const barsNeeded = INTERVAL === '1h'
+  // Bars nécessaires pour toutes les métriques
+  const needTrendLong = barsForDays(TREND_LONG_D);
+  const needDD        = barsForDays(DRAWDOWN_LOOKBACK_D);
+  const baseBars = (INTERVAL === '1h')
     ? Math.max(24 * WIN_VOL_30D + 24, 24 * LOOKBACK_DAYS)
     : Math.max(WIN_VOL_30D + 10, LOOKBACK_DAYS);
+  const barsNeeded = Math.max(baseBars, needTrendLong + 5, needDD + 5);
 
   const results = [];
   let i = 0;
@@ -214,6 +267,8 @@ function atrPct(candles, n = 14) {
       vol_7d_annual_pct: '',
       vol_30d_annual_pct: '',
       atr14_pct: '',
+      trend_regime: '',
+      drawdown_90d_pct: '',
       tier1_listed: hasTier1(exList) ? 'true' : 'false',
       stale: '',
       data_points: '0'
@@ -234,24 +289,24 @@ function atrPct(candles, n = 14) {
           isStale = ageH > STALE_HOURS;
         }
 
-        result.last_close   = last.toFixed(6);
-        result.last_datetime= lastDt || '';
-        result.stale        = isStale ? 'true' : 'false';
-        result.data_points  = String(candles.length);
+        result.last_close    = last.toFixed(6);
+        result.last_datetime = lastDt || '';
+        result.stale         = isStale ? 'true' : 'false';
+        result.data_points   = String(candles.length);
 
         // ret 1d = dernier vs barre précédente
-        if (closes.length >= (INTERVAL === '1h' ? 2 : 2)) {
+        if (closes.length >= 2) {
           const prev1 = closes[closes.length - 2];
           result.ret_1d_pct = (pct(last, prev1) * 100).toFixed(2);
         }
 
-        // ret 7d = dernier vs N barres plus tôt (N = 7 jours ou 24*7 heures) — index corrigé
+        // ret 7d
         const N7 = (INTERVAL === '1h') ? 24 * WIN_RET_7D : WIN_RET_7D;
         if (closes.length >= N7 + 1) {
-          const prev7 = closes[closes.length - N7 - 0]; // <- pas de -1
+          const prev7 = closes[closes.length - N7 - 0];
           result.ret_7d_pct = (pct(last, prev7) * 100).toFixed(2);
 
-          // Volatilité 7j (log-returns)
+          // Volatilité 7j
           const start7 = Math.max(1, closes.length - N7);
           const rets7 = [];
           for (let k = start7; k < closes.length; k++) rets7.push(logret(closes[k], closes[k - 1]));
@@ -259,13 +314,12 @@ function atrPct(candles, n = 14) {
           result.vol_7d_annual_pct = (annualizeStd(vol7, INTERVAL) * 100).toFixed(2);
         }
 
-        // ret 30d
+        // ret 30d + vol 30d
         const N30 = (INTERVAL === '1h') ? 24 * WIN_RET_30D : WIN_RET_30D;
         if (closes.length >= N30 + 1) {
           const prev30 = closes[closes.length - N30 - 0];
           result.ret_30d_pct = (pct(last, prev30) * 100).toFixed(2);
 
-          // Volatilité 30j
           const start30 = Math.max(1, closes.length - N30);
           const rets30 = [];
           for (let k = start30; k < closes.length; k++) rets30.push(logret(closes[k], closes[k - 1]));
@@ -277,6 +331,14 @@ function atrPct(candles, n = 14) {
         if (candles.length >= 14) {
           result.atr14_pct = atrPct(candles, 14).toFixed(2);
         }
+
+        // Trend regime (SMA 30 / 90)
+        const regime = computeTrendRegime(closes);
+        if (regime) result.trend_regime = regime;
+
+        // Max drawdown 90j
+        const dd = maxDrawdownPct(closes, DRAWDOWN_LOOKBACK_D);
+        if (dd != null) result.drawdown_90d_pct = dd.toFixed(2);
 
         stats.with_data++;
         console.log(`  ✅ ${symbol.padEnd(16)} ${useEx ? ('(' + useEx + ')').padEnd(14) : ''} ${candles.length} points`);
@@ -304,6 +366,7 @@ function atrPct(candles, n = 14) {
     'last_close','last_datetime',
     'ret_1d_pct','ret_7d_pct','ret_30d_pct',
     'vol_7d_annual_pct','vol_30d_annual_pct','atr14_pct',
+    'trend_regime','drawdown_90d_pct',
     'tier1_listed','stale','data_points'
   ];
 
