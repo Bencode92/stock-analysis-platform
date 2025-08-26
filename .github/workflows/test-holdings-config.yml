@@ -1,0 +1,73 @@
+name: Test Holdings Configuration
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-config:
+    name: Test Configuration
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: 📦 Install Dependencies
+        run: |
+          pip install requests
+      
+      - name: 🔍 Check Files
+        run: |
+          echo "📁 Vérification des fichiers..."
+          echo ""
+          
+          # Vérifier sectors.json
+          if [ -f "data/sectors.json" ]; then
+            echo "✅ data/sectors.json existe"
+            echo "   Taille: $(du -h data/sectors.json | cut -f1)"
+          else
+            echo "❌ data/sectors.json manquant"
+          fi
+          
+          # Vérifier le script
+          if [ -f "scripts/update_holdings.py" ]; then
+            echo "✅ scripts/update_holdings.py existe"
+          else
+            echo "❌ scripts/update_holdings.py manquant"
+          fi
+          
+          # Vérifier holdings existants
+          if [ -f "data/etf_holdings.json" ]; then
+            echo "✅ data/etf_holdings.json existe"
+            echo "   Taille: $(du -h data/etf_holdings.json | cut -f1)"
+          else
+            echo "ℹ️ data/etf_holdings.json n'existe pas encore"
+          fi
+      
+      - name: 🔑 Check API Key
+        run: |
+          if [ -n "${{ secrets.TWELVE_DATA_API }}" ]; then
+            echo "✅ Clé API configurée"
+            echo "   Longueur: ${#TWELVE_DATA_API} caractères"
+          else
+            echo "❌ Clé API non configurée dans les secrets GitHub"
+            echo "   Allez dans Settings > Secrets > Actions"
+            echo "   Créez un secret nommé TWELVE_DATA_API"
+          fi
+        env:
+          TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
+      
+      - name: 🧪 Run Test Script
+        run: |
+          if [ -f "scripts/test_config.py" ]; then
+            python scripts/test_config.py
+          else
+            echo "Script de test non trouvé"
+          fi
+        env:
+          TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
