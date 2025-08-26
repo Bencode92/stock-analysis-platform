@@ -26,6 +26,18 @@ API_KEY = os.getenv("TWELVE_DATA_API")
 CSV_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "sectors_etf_mapping.csv")
 OUTPUT_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "sectors.json")
 
+# Référentiel sectoriel:
+#  - "ICB" (STOXX/FTSE) : Construction & Materials -> Industrials
+#  - "GICS" (S&P/MSCI)  : Construction Materials    -> Materials
+TAXONOMY = os.getenv("SECTOR_TAXONOMY", "ICB").upper()
+
+VALID_CATEGORIES = {
+    "energy", "materials", "industrials",
+    "consumer-discretionary", "consumer-staples",
+    "healthcare", "financials", "information-technology",
+    "communication-services", "utilities", "real-estate"
+}
+
 # Client Twelve Data
 if API_KEY:
     TD = TDClient(apikey=API_KEY)
@@ -222,6 +234,33 @@ def determine_index_name(etf_name: str, region: str) -> str:
     else:
         return etf_name
 
+def normalise_category(raw_category: str, symbol: str, etf_name: str) -> str:
+    """Applique les overrides et la logique ICB/GICS pour retourner une catégorie valide."""
+    c = (raw_category or "").strip().lower()
+    sym = (symbol or "").upper()
+    name = (etf_name or "").lower()
+
+    # Overrides par symbole (prioritaires)
+    symbol_overrides = {
+        "P3WK": "communication-services",  # Invesco NASDAQ Internet -> Com Services
+    }
+    if sym in symbol_overrides:
+        return symbol_overrides[sym]
+
+    # Heuristiques par libellé
+    if any(w in name for w in ["internet", "media", "telecom", "telecommunications"]):
+        return "communication-services"
+
+    # Construction & Materials -> dépend du référentiel choisi
+    if "construction & materials" in name or "construction and materials" in name:
+        return "industrials" if TAXONOMY == "ICB" else "materials"
+
+    # Si déjà correcte
+    if c in VALID_CATEGORIES:
+        return c
+
+    return None
+
 def load_sectors_etf_mapping() -> List[Dict]:
     """Charge le mapping des ETFs sectoriels depuis le CSV en gérant les commentaires"""
     rows = []
@@ -278,16 +317,6 @@ def load_sectors_etf_mapping() -> List[Dict]:
     
     return rows
 
-def parse_percentage(percent_str: str) -> float:
-    """Convertit une chaîne de pourcentage en nombre flottant"""
-    if not percent_str:
-        return 0.0
-    clean_str = percent_str.replace('%', '').replace(' ', '').replace(',', '.')
-    try:
-        return float(clean_str)
-    except ValueError:
-        return 0.0
-
 def clean_sector_data(sector_dict: dict) -> dict:
     """Nettoie un dictionnaire de secteur en supprimant les propriétés temporaires"""
     # Créer une copie sans les propriétés temporaires
@@ -298,53 +327,32 @@ def clean_sector_data(sector_dict: dict) -> dict:
     return cleaned
 
 def calculate_top_performers(sectors_data: dict, all_sectors: list):
-    """Calcule les secteurs avec les meilleures et pires performances"""
+    """Calcule top/bottom jour et YTD à partir des champs numériques."""
     logger.info("Calcul des top performers sectoriels...")
-    
-    daily_sectors = [s for s in all_sectors if s.get("changePercent")]
-    ytd_sectors = [s for s in all_sectors if s.get("ytdChange")]
-    
-    # Trier par variation quotidienne
-    if daily_sectors:
-        # Ajouter les valeurs numériques pour le tri
-        for s in daily_sectors:
-            s["_change_value"] = parse_percentage(s["changePercent"])
-        
-        sorted_daily = sorted(daily_sectors, key=lambda x: x["_change_value"], reverse=True)
-        best_daily = sorted_daily[:3]
-        worst_daily = sorted(sorted_daily, key=lambda x: x["_change_value"])[:3]
-        
-        # Ajouter au résultat en nettoyant les données
-        for s in best_daily:
-            cleaned = clean_sector_data(s)
-            sectors_data["top_performers"]["daily"]["best"].append(cleaned)
-        
-        for s in worst_daily:
-            cleaned = clean_sector_data(s)
-            sectors_data["top_performers"]["daily"]["worst"].append(cleaned)
-    
-    # Trier par variation YTD
-    if ytd_sectors:
-        # Ajouter les valeurs numériques pour le tri
-        for s in ytd_sectors:
-            s["_ytd_value"] = parse_percentage(s["ytdChange"])
-        
-        sorted_ytd = sorted(ytd_sectors, key=lambda x: x["_ytd_value"], reverse=True)
-        best_ytd = sorted_ytd[:3]
-        worst_ytd = sorted(sorted_ytd, key=lambda x: x["_ytd_value"])[:3]
-        
-        # Ajouter au résultat en nettoyant les données
-        for s in best_ytd:
-            cleaned = clean_sector_data(s)
-            sectors_data["top_performers"]["ytd"]["best"].append(cleaned)
-        
-        for s in worst_ytd:
-            cleaned = clean_sector_data(s)
-            sectors_data["top_performers"]["ytd"]["worst"].append(cleaned)
+
+    daily = [s for s in all_sectors if isinstance(s.get("change_num"), (int, float))]
+    ytd   = [s for s in all_sectors if isinstance(s.get("ytd_num"), (int, float))]
+
+    if daily:
+        daily_sorted = sorted(daily, key=lambda x: x["change_num"], reverse=True)
+        best_daily   = daily_sorted[:3]
+        worst_daily  = sorted(daily, key=lambda x: x["change_num"])[:3]
+
+        sectors_data["top_performers"]["daily"]["best"]  = [clean_sector_data(s) for s in best_daily]
+        sectors_data["top_performers"]["daily"]["worst"] = [clean_sector_data(s) for s in worst_daily]
+
+    if ytd:
+        ytd_sorted  = sorted(ytd, key=lambda x: x["ytd_num"], reverse=True)
+        best_ytd    = ytd_sorted[:3]
+        worst_ytd   = sorted(ytd, key=lambda x: x["ytd_num"])[:3]
+
+        sectors_data["top_performers"]["ytd"]["best"]  = [clean_sector_data(s) for s in best_ytd]
+        sectors_data["top_performers"]["ytd"]["worst"] = [clean_sector_data(s) for s in worst_ytd]
 
 def main():
     logger.info("🚀 Début de la mise à jour des données sectorielles...")
     logger.info(f"API key loaded: {bool(API_KEY)}")
+    logger.info(f"📊 Référentiel sectoriel: {TAXONOMY}")
     
     if not API_KEY:
         logger.error("❌ Clé API Twelve Data manquante")
@@ -393,15 +401,19 @@ def main():
     for idx, etf in enumerate(sectors_mapping):
         sym = etf["symbol"]
         
-        # Ignorer les ETFs de catégorie "broad-market"
-        category = etf.get("category", "")
-        if category == "broad-market":
+        # Catégorie brute du CSV
+        raw_category = etf.get("category", "")
+        # Normalisation (overrides + ICB/GICS)
+        category = normalise_category(raw_category, sym, etf.get("name", sym))
+        
+        # Ignorer les broad-market
+        if raw_category == "broad-market":
             logger.info(f"⏭️  Ignoré (broad-market): {sym} - {etf.get('name', 'N/A')}")
             continue
             
-        # Vérifier que la catégorie existe dans notre structure
-        if category not in SECTORS_DATA["sectors"]:
-            logger.warning(f"⚠️  Catégorie inconnue '{category}' pour {sym}, ignoré")
+        # Vérifier que la catégorie finale est utilisable
+        if not category or category not in SECTORS_DATA["sectors"]:
+            logger.warning(f"⚠️  Catégorie invalide '{raw_category}' → '{category}' pour {sym}, ignoré")
             continue
         
         try:
@@ -419,19 +431,32 @@ def main():
             jan_close = ytd_one(sym)
             
             # Calculer le YTD
-            ytd_pct = 100 * (last - jan_close) / jan_close if jan_close > 0 else 0
+            ytd_pct = 100 * (last - jan_close) / jan_close if jan_close > 0 else 0.0
             
             # Déterminer la région pour l'affichage
             region_display = "US" if etf.get("region", "").lower() == "us" else "Europe"
             
-            # Créer l'objet de données avec le VRAI NOM DE L'ETF
+            # ➕ Numériques (pour le front & les tops)
+            value_num = float(last)
+            change_num = float(day_pct)
+            ytd_num = float(ytd_pct)
+            
+            # Créer l'objet de données avec le VRAI NOM DE L'ETF et les valeurs numériques
             sector_entry = {
-                "symbol": sym,  # ✅ Ajout du symbole
-                "name": etf.get("name", sym),  # ✅ nom COMPLET de l'ETF (celui du CSV)
-                "indexName": determine_index_name(etf.get("name", sym), region_display),  # libellé indice
+                "symbol": sym,
+                "name": etf.get("name", sym),
+                "indexName": determine_index_name(etf.get("name", sym), region_display),
+                
+                # Affichages formatés
                 "value": format_value(last, etf.get("currency", "USD")),
                 "changePercent": format_percent(day_pct),
                 "ytdChange": format_percent(ytd_pct),
+                
+                # ➕ Valeurs numériques fiables
+                "value_num": value_num,
+                "change_num": change_num,
+                "ytd_num": ytd_num,
+                
                 "trend": "down" if day_pct < 0 else "up",
                 "region": region_display
             }
@@ -441,7 +466,7 @@ def main():
             ALL_SECTORS.append(sector_entry.copy())  # Copie pour éviter les modifications
             processed_count += 1
             
-            logger.info(f"✅ {sym}: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}%")
+            logger.info(f"✅ {sym} [{category}]: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}%")
             
         except Exception as e:
             error_count += 1
@@ -475,11 +500,12 @@ def main():
     else:
         logger.warning("⚠️  Aucune donnée pour calculer les top performers")
     
-    # 5. Mettre à jour les métadonnées
+    # 5. Mettre à jour les métadonnées avec le référentiel utilisé
     SECTORS_DATA["meta"]["timestamp"] = dt.datetime.utcnow().isoformat() + "Z"
     SECTORS_DATA["meta"]["count"] = processed_count
     SECTORS_DATA["meta"]["total_etfs"] = len(sectors_mapping)
     SECTORS_DATA["meta"]["errors_count"] = error_count
+    SECTORS_DATA["meta"]["taxonomy"] = TAXONOMY  # Garder la trace du référentiel
     
     # 6. Sauvegarder le fichier JSON
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
