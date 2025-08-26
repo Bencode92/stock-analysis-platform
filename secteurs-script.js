@@ -2,6 +2,7 @@
  * secteurs-script.js - Version alignée avec marches-script.js
  * Scripts pour la page des secteurs boursiers avec UX améliorée
  * Affiche les vrais noms d'ETF au lieu des noms génériques
+ * Utilise la médiane pour agréger les valeurs des secteurs
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -92,6 +93,32 @@ document.addEventListener('DOMContentLoaded', function() {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         }).format(n)}%`;
+    }
+    
+    /**
+     * Calcule la médiane d'un tableau de nombres
+     * Plus robuste que la moyenne face aux valeurs extrêmes
+     */
+    function median(nums) {
+        const arr = nums.filter(n => Number.isFinite(n)).sort((a, b) => a - b);
+        const n = arr.length;
+        if (!n) return 0;
+        const mid = Math.floor(n / 2);
+        return n % 2 ? arr[mid] : (arr[mid - 1] + arr[mid]) / 2;
+    }
+    
+    /**
+     * Agrège les données d'une catégorie en calculant la médiane
+     * des variations quotidiennes et YTD
+     */
+    function aggregateCategory(list) {
+        const changes = list.map(s => s.change_num).filter(n => n != null);
+        const ytds = list.map(s => s.ytd_num).filter(n => n != null);
+        return {
+            change: median(changes),
+            ytd: median(ytds),
+            count: list.length
+        };
     }
     
     /**
@@ -361,6 +388,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     /**
      * Met à jour une région spécifique de l'aperçu des secteurs
+     * Utilise la médiane pour agréger les valeurs de plusieurs ETFs
      */
     function updateSectorOverviewRegion(region, sectorsInfo) {
         sectorsInfo.forEach(sectorInfo => {
@@ -371,13 +399,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                const sector = (sectorsData.sectors[region] || [])
-                    .find(s => s.category === sectorInfo.category);
+                // ✅ Récupère TOUS les ETFs de cette catégorie (pas juste le premier)
+                const list = (sectorsData.sectors[region] || [])
+                    .filter(s => s.category === sectorInfo.category);
                 
-                if (!sector) {
-                    console.warn(`Secteur non trouvé: ${sectorInfo.category} dans ${region}`);
+                if (!list.length) {
+                    console.warn(`Aucun secteur trouvé: ${sectorInfo.category} dans ${region}`);
                     return;
                 }
+                
+                // ✅ Calcule la médiane des variations jour et YTD
+                const { change, ytd, count } = aggregateCategory(list);
                 
                 const nameElement = container.querySelector('.sector-name');
                 const valueElement = container.querySelector('.sector-value');
@@ -385,22 +417,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (nameElement) {
                     // Pour l'aperçu, on garde les noms français simplifiés
-                    nameElement.textContent = SECTOR_MAPPINGS[sectorInfo.category] || sector.displayName;
+                    nameElement.textContent = SECTOR_MAPPINGS[sectorInfo.category] || list[0].displayName;
                 }
                 
                 if (valueElement) {
-                    valueElement.textContent = formatPercent(sector.change_num);
+                    valueElement.textContent = formatPercent(change);
                     valueElement.className = 'sector-value ' + 
-                        (sector.change_num < -0.01 ? 'negative' : 
-                         sector.change_num > 0.01 ? 'positive' : 'neutral');
+                        (change < -0.01 ? 'negative' : 
+                         change > 0.01 ? 'positive' : 'neutral');
                 }
                 
                 if (ytdElement) {
-                    ytdElement.textContent = `YTD ${formatPercent(sector.ytd_num)}`;
+                    ytdElement.textContent = `YTD ${formatPercent(ytd)}`;
                     ytdElement.className = 'sector-ytd ' + 
-                        (sector.ytd_num < -0.01 ? 'negative' : 
-                         sector.ytd_num > 0.01 ? 'positive' : 'neutral');
+                        (ytd < -0.01 ? 'negative' : 
+                         ytd > 0.01 ? 'positive' : 'neutral');
                 }
+                
+                // ✅ Ajoute un tooltip listant les ETFs contributifs (optionnel)
+                if (count > 1) {
+                    const etfNames = list.map(s => s.name || s.indexName).join(' • ');
+                    container.title = `Médiane de ${count} ETFs:\n${etfNames}`;
+                } else {
+                    container.title = list[0].name || list[0].indexName || '';
+                }
+                
             } catch (error) {
                 console.error(`Erreur lors de la mise à jour de ${sectorInfo.category}:`, error);
             }
