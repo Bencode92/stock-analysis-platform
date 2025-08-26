@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -15,8 +14,13 @@
                 extend: {
                     colors: {
                         green: {
-                            400: '#00FF87'
+                            400: '#22c55e'
                         }
+                    },
+                    maxWidth: {
+                        '8xl': '1200px',
+                        '9xl': '1440px',
+                        '10xl': '1600px'
                     }
                 },
                 fontFamily: {
@@ -27,25 +31,27 @@
     </script>
     <style>
         :root {
-            --background-color: #0a1929; /* Bleu nuit plus profond */
+            --background-color: #0a1929;
             --light-background-color: #f0f5ff;
             --text-color: #FFFFFF;
             --light-text-color: #1a202c;
-            --accent-color: #00FF87; /* Vert néon */
-            --accent-subtle: rgba(0, 255, 135, 0.15);
-            --accent-medium: rgba(0, 255, 135, 0.3);
-            --accent-strong: rgba(0, 255, 135, 0.6);
-            --card-bg: rgba(10, 30, 50, 0.6);
-            --card-header: rgba(15, 40, 65, 0.8);
-            --card-border: rgba(0, 255, 135, 0.2);
-            --accent-glow: 0 0 15px rgba(0, 255, 135, 0.2);
-            --accent-glow-strong: 0 0 20px rgba(0, 255, 135, 0.3);
+            /* Vert plus doux (moins néon) */
+            --accent-color: #22c55e;
+            --accent-subtle: rgba(34, 197, 94, 0.08);
+            --accent-medium: rgba(34, 197, 94, 0.18);
+            --accent-strong: rgba(34, 197, 94, 0.3);
+            --card-bg: rgba(10, 30, 50, 0.4);
+            --card-header: linear-gradient(180deg, rgba(15, 40, 65, 0.9) 0%, rgba(10, 25, 45, 0.95) 100%);
+            --card-border: rgba(34, 197, 94, 0.12);
+            --accent-glow: 0 0 10px rgba(34, 197, 94, 0.1);
+            --accent-glow-strong: 0 0 15px rgba(34, 197, 94, 0.2);
             --transition-time: 0.3s;
             --header-height: 70px;
             --sidebar-width: 80px;
-            --negative-color: #ff4757;
-            --neutral-color: #aaaaaa;
-            --separator-color: rgba(255, 255, 255, 0.07);
+            /* Rouge moins saturé */
+            --negative-color: #ef4444;
+            --neutral-color: #999999;
+            --separator-color: rgba(255, 255, 255, 0.04);
         }
         
         body {
@@ -55,20 +61,53 @@
             transition: background-color 0.3s ease, color 0.3s ease;
             overflow-x: hidden;
             letter-spacing: 0.01em;
-            line-height: 1.6;
+            line-height: 1.75;
         }
         
         body.dark {
             background-color: var(--background-color);
             background-image: 
-                radial-gradient(circle at 15% 50%, rgba(0, 255, 135, 0.08) 0%, transparent 25%),
-                radial-gradient(circle at 85% 30%, rgba(0, 100, 255, 0.05) 0%, transparent 20%);
+                radial-gradient(circle at 15% 50%, rgba(34, 197, 94, 0.04) 0%, transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(0, 100, 255, 0.02) 0%, transparent 20%);
             color: var(--text-color);
         }
         
         body.light {
             background-color: var(--light-background-color);
             color: var(--light-text-color);
+        }
+        
+        /* Densité confortable (par défaut) */
+        .data-table td { padding: 20px 18px; }
+        .card-body { padding: 18px; }
+        .sector-col { padding: 18px 20px; }
+        .sector-overview-grid { gap: 20px; }
+        
+        /* Densité compacte */
+        body.density-compact .data-table td { padding: 12px 14px; }
+        body.density-compact .card-body { padding: 12px; }
+        body.density-compact .sector-col { padding: 12px 14px; }
+        body.density-compact .sector-overview-grid { gap: 12px; }
+        body.density-compact .performer-card { padding: 0; }
+        body.density-compact .performer-row { padding: 10px 14px; }
+        
+        /* Animation pour les changements de valeurs */
+        @keyframes valueFlash {
+            0% { background-color: transparent; }
+            50% { background-color: var(--accent-subtle); }
+            100% { background-color: transparent; }
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+        
+        .value-change {
+            animation: valueFlash 0.3s ease-out;
         }
         
         /* Header */
@@ -78,8 +117,8 @@
             left: var(--sidebar-width);
             right: 0;
             height: var(--header-height);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -89,15 +128,15 @@
         }
         
         .dark .main-header {
-            background-color: rgba(10, 25, 41, 0.85);
+            background: linear-gradient(180deg, rgba(10, 25, 41, 0.9) 0%, rgba(8, 20, 35, 0.85) 100%);
             border-bottom: 1px solid var(--card-border);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
         
         .light .main-header {
             background-color: rgba(240, 245, 255, 0.9);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
         }
         
         .header-left {
@@ -115,12 +154,12 @@
         
         .logo-container a {
             text-decoration: none;
-            $transition: color 0.3s ease;
+            transition: color 0.3s ease;
         }
         
         .dark .logo-container a {
             color: var(--text-color);
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.05);
         }
         
         .light .logo-container a {
@@ -133,7 +172,7 @@
             background-color: var(--accent-color);
             border-radius: 50%;
             margin-right: 10px;
-            box-shadow: 0 0 10px var(--accent-color);
+            box-shadow: 0 0 8px var(--accent-color);
             animation: pulse 2s infinite;
         }
         
@@ -152,7 +191,7 @@
         }
         
         .dark .main-nav a {
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(255, 255, 255, 0.85);
         }
         
         .light .main-nav a {
@@ -209,12 +248,13 @@
         
         .market-indicator.green {
             background-color: #4CAF50;
-            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+            box-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
         }
         
         .market-time {
             margin-left: 10px;
             font-weight: 600;
+            font-variant-numeric: tabular-nums;
             color: var(--accent-color);
         }
         
@@ -234,8 +274,8 @@
         }
         
         .light .search-button {
-            background-color: rgba(0, 210, 110, 0.1);
-            border: 1px solid rgba(0, 210, 110, 0.3);
+            background-color: rgba(34, 197, 94, 0.08);
+            border: 1px solid rgba(34, 197, 94, 0.2);
             color: var(--light-text-color);
         }
         
@@ -249,7 +289,7 @@
         }
         
         .light .search-button:hover {
-            background-color: rgba(0, 210, 110, 0.2);
+            background-color: rgba(34, 197, 94, 0.15);
         }
         
         .search-button i {
@@ -273,15 +313,15 @@
         }
         
         .dark .sidebar {
-            background-color: rgba(8, 20, 35, 0.95);
+            background: linear-gradient(180deg, rgba(8, 20, 35, 0.98) 0%, rgba(6, 15, 28, 0.95) 100%);
             border-right: 1px solid var(--card-border);
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
         }
         
         .light .sidebar {
             background-color: rgba(230, 240, 255, 0.95);
-            border-right: 1px solid rgba(0, 0, 0, 0.1);
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            border-right: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
         }
         
         .sidebar-logo {
@@ -289,7 +329,7 @@
             font-weight: 900;
             color: var(--accent-color);
             margin-bottom: 40px;
-            text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
+            text-shadow: 0 0 8px rgba(34, 197, 94, 0.3);
         }
         
         .sidebar-nav {
@@ -319,17 +359,17 @@
             right: -5px;
             width: 10px;
             height: 10px;
-            background-color: #ff4757;
+            background-color: #ef4444;
             border-radius: 50%;
-            box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
         }
         
         .dark .nav-item {
-            color: rgba(255, 255, 255, 0.7);
+            color: rgba(255, 255, 255, 0.75);
         }
         
         .light .nav-item {
-            color: rgba(0, 0, 0, 0.7);
+            color: rgba(0, 0, 0, 0.65);
         }
         
         .dark .nav-item:hover, .dark .nav-item.active {
@@ -340,7 +380,7 @@
         }
         
         .light .nav-item:hover, .light .nav-item.active {
-            background-color: rgba(0, 210, 110, 0.1);
+            background-color: rgba(34, 197, 94, 0.08);
             color: var(--accent-color);
         }
         
@@ -372,33 +412,39 @@
         
         .dark .theme-toggle-btn {
             color: var(--text-color);
-            background-color: rgba(255, 255, 255, 0.1);
+            background-color: rgba(255, 255, 255, 0.08);
         }
         
         .light .theme-toggle-btn {
             color: var(--light-text-color);
-            background-color: rgba(0, 0, 0, 0.1);
+            background-color: rgba(0, 0, 0, 0.08);
         }
         
         .theme-toggle-btn:hover {
             transform: scale(1.1);
         }
         
-        /* Main container */
+        /* Main container avec plus d'air */
         .main-container {
             margin-left: var(--sidebar-width);
             margin-top: var(--header-height);
-            padding: 24px;
+            padding: 40px 24px;
             min-height: calc(100vh - var(--header-height));
             transition: background-color 0.3s ease;
         }
+        
+        @media (min-width: 1280px) {
+            .main-container {
+                padding: 48px 32px;
+            }
+        }
 
-        /* Glassmorphism cards */
+        /* Glassmorphism cards avec blur réduit */
         .glassmorphism {
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
             border: 1px solid var(--card-border);
-            box-shadow: var(--accent-glow);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
         
@@ -407,14 +453,14 @@
         }
         
         .light .glassmorphism {
-            background-color: rgba(240, 245, 255, 0.8);
+            background-color: rgba(240, 245, 255, 0.75);
         }
         
         .glassmorphism:hover {
             box-shadow: var(--accent-glow-strong);
         }
 
-        /* Data table styles */
+        /* Data table styles améliorés avec zebra stripes */
         .data-table {
             width: 100%;
             border-collapse: separate;
@@ -422,35 +468,88 @@
         }
         
         .data-table th {
-            padding: 14px 16px;
+            padding: 14px 18px;
             font-weight: 600;
             font-size: 0.8rem;
             text-align: left;
             border-bottom: 1px solid var(--card-border);
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            color: rgba(255, 255, 255, 0.8);
-            background-color: var(--card-header);
+            color: rgba(255, 255, 255, 0.85);
+            background: var(--card-header);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px;
+        }
+        
+        /* Indicateurs visuels de tri */
+        .data-table th.sorted-asc::after,
+        .data-table th.sorted-desc::after {
+            position: absolute;
+            right: 8px;
+            color: var(--accent-color);
+            font-size: 0.8em;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .data-table th.sorted-asc::after  { content: "▲"; }
+        .data-table th.sorted-desc::after { content: "▼"; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-2px); }
+            to   { opacity: 0.7; transform: translateY(0); }
+        }
+        
+        /* Alignement à droite pour les colonnes numériques */
+        .data-table th:nth-child(2),
+        .data-table th:nth-child(3),
+        .data-table th:nth-child(4) {
+            text-align: right;
+        }
+        
+        .data-table th:hover {
+            background: linear-gradient(180deg, rgba(20, 50, 75, 0.95) 0%, rgba(15, 35, 55, 0.95) 100%);
         }
         
         .data-table td {
-            padding: 16px;
-            font-size: 0.9rem;
+            padding: 20px 18px;
+            font-size: 0.925rem;
             border-bottom: 1px solid var(--separator-color);
+            transition: background-color 0.2s ease;
+        }
+        
+        .data-table tbody tr:nth-child(odd) td {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+        
+        .data-table tbody tr:hover td {
+            background-color: rgba(255, 255, 255, 0.04);
+        }
+        
+        .data-table td:nth-child(2),
+        .data-table td:nth-child(3),
+        .data-table td:nth-child(4) {
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.01em;
+            text-align: right;
         }
         
         .data-table tr:last-child td {
             border-bottom: none;
         }
-        
-        .data-table tr:hover td {
-            background-color: var(--accent-subtle);
-        }
 
-        /* Positive, negative, and neutral values */
+        /* Positive, negative, and neutral values avec meilleur contraste */
         .positive {
             color: var(--accent-color);
             font-weight: 600;
+        }
+        
+        .positive::before {
+            content: "▲ ";
+            font-size: 0.8em;
         }
         
         .negative {
@@ -458,23 +557,34 @@
             font-weight: 600;
         }
         
+        .negative::before {
+            content: "▼ ";
+            font-size: 0.8em;
+        }
+        
         .neutral {
             color: var(--neutral-color);
             font-weight: 600;
         }
+        
+        .neutral::before {
+            content: "➝ ";
+            font-size: 0.8em;
+        }
 
-        /* Aperçu des secteurs boursiers */
+        /* Aperçu des secteurs amélioré */
         .sector-overview-section {
-            margin-bottom: 2rem;
+            margin-bottom: 3rem;
         }
         
         .sector-overview-title {
             font-size: 1.4rem;
             font-weight: 700;
-            margin-bottom: 1.5rem;
+            margin-bottom: 2rem;
             color: white;
             display: flex;
             align-items: center;
+            letter-spacing: -0.025em;
         }
         
         .sector-overview-title::before {
@@ -483,136 +593,119 @@
             width: 24px;
             height: 3px;
             background-color: var(--accent-color);
-            margin-right: 10px;
+            margin-right: 12px;
             border-radius: 2px;
-            box-shadow: 0 0 8px var(--accent-color);
+            box-shadow: 0 0 6px var(--accent-color);
         }
         
-        /* Nouvelle mise en page pour l'aperçu des secteurs */
+        /* Nouvelle mise en page pour l'aperçu des secteurs - plus aéré */
         .sector-overview-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            grid-gap: 0;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 1px;
-        }
-        
-        .sector-overview-row {
-            display: contents;
+            gap: 20px;
+            margin-bottom: 14px;
         }
         
         .sector-group-header {
-            background-color: rgba(25, 45, 70, 0.9);
-            padding: 12px 16px;
+            background: var(--card-header);
+            padding: 14px 18px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-weight: 600;
             font-size: 0.95rem;
             color: white;
-            border-bottom: 1px solid var(--card-border);
+            border-radius: 10px;
             grid-column: span 4;
+            margin-bottom: 4px;
         }
         
         .sector-col {
-            padding: 12px 16px;
+            padding: 18px 20px;
             background-color: var(--card-bg);
-            border-right: 1px solid var(--separator-color);
-            transition: background-color 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            position: relative;
         }
         
         .sector-col:hover {
-            background-color: rgba(15, 40, 70, 0.8);
-        }
-        
-        .sector-col:last-child {
-            border-right: none;
+            background-color: rgba(15, 40, 70, 0.6);
+            box-shadow: inset 0 0 15px rgba(34, 197, 94, 0.02);
+            transform: translateY(-1px);
         }
         
         .sector-name {
             font-weight: 600;
             font-size: 0.9rem;
-            margin-bottom: 6px;
-            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 8px;
+            color: rgba(255, 255, 255, 0.95);
+            display: flex;
+            align-items: center;
         }
         
         .sector-data {
             display: flex;
+            align-items: center;
             justify-content: space-between;
             gap: 8px;
         }
         
         .sector-value {
             font-weight: 700;
-            text-align: right;
-            min-width: 62px;
+            font-size: 1.2rem;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+            transition: color 0.3s ease;
         }
         
         .sector-ytd {
-            opacity: 0.8;
-            text-align: right;
-            min-width: 62px;
+            font-size: 0.75rem;
+            opacity: 0.85;
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+            transition: all 0.3s ease;
         }
         
-        /* Top performers */
-        .top-performers-section {
-            margin-bottom: 2rem;
+        /* Top performers en bandeau horizontal */
+        .tp-strip {
+            margin-bottom: 2.5rem;
         }
         
-        .top-performers-title {
-            font-size: 1.4rem;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-            color: white;
-            display: flex;
-            align-items: center;
-        }
-        
-        .top-performers-title::before {
-            content: '';
-            display: inline-block;
-            width: 24px;
-            height: 3px;
-            background-color: var(--accent-color);
-            margin-right: 10px;
-            border-radius: 2px;
-            box-shadow: 0 0 8px var(--accent-color);
-        }
-        
-        .top-performers-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            grid-gap: 1px;
-        }
-        
-        .performer-card {
+        .tp-strip .performer-card {
             background-color: var(--card-bg);
             border-radius: 12px;
             overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            margin: 0;
         }
         
         .performer-header {
-            background-color: rgba(25, 45, 70, 0.9);
+            background: var(--card-header);
             padding: 12px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-weight: 600;
+            font-size: 0.9rem;
             color: white;
             border-bottom: 1px solid var(--card-border);
         }
         
         .performer-row {
-            padding: 12px 16px;
+            padding: 14px 16px;
             border-bottom: 1px solid var(--separator-color);
             display: flex;
             justify-content: space-between;
             transition: background-color 0.2s;
+            cursor: pointer;
         }
         
         .performer-row:hover {
-            background-color: rgba(15, 40, 70, 0.8);
+            background-color: rgba(255, 255, 255, 0.02);
         }
         
         .performer-row:last-child {
@@ -621,34 +714,40 @@
         
         .performer-info {
             flex: 1;
+            margin-right: 8px;
         }
         
         .performer-index {
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             margin-bottom: 3px;
-            color: rgba(255, 255, 255, 0.9);
+            color: rgba(255, 255, 255, 0.95);
+            line-height: 1.2;
         }
         
         .performer-region {
-            font-size: 0.8rem;
-            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.65);
         }
         
         .performer-value {
             font-weight: 700;
             text-align: right;
-            min-width: 62px;
+            min-width: 65px;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.01em;
+            font-size: 0.9rem;
         }
 
         /* Autres styles */
         .section-title {
             font-size: 1.4rem;
             font-weight: 700;
-            margin-bottom: 1.5rem;
+            margin-bottom: 2rem;
             color: white;
             display: flex;
             align-items: center;
+            letter-spacing: -0.025em;
         }
         
         .section-title::before {
@@ -657,16 +756,16 @@
             width: 24px;
             height: 3px;
             background-color: var(--accent-color);
-            margin-right: 10px;
+            margin-right: 12px;
             border-radius: 2px;
-            box-shadow: 0 0 8px var(--accent-color);
+            box-shadow: 0 0 6px var(--accent-color);
         }
 
         /* Cards with consistent headers */
         .card-header {
             padding: 12px 16px;
             border-bottom: 1px solid var(--card-border);
-            background-color: var(--card-header);
+            background: var(--card-header);
             border-top-left-radius: 0.5rem;
             border-top-right-radius: 0.5rem;
             display: flex;
@@ -677,18 +776,18 @@
         .card-header h3 {
             font-weight: 600;
             font-size: 1rem;
-            color: rgba(255, 255, 255, 0.9);
+            color: rgba(255, 255, 255, 0.95);
         }
         
         .card-body {
-            padding: 16px;
+            padding: 18px;
         }
 
         /* Animations */
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6); }
+            70% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
         }
 
         /* Loader */
@@ -696,7 +795,7 @@
             display: inline-block;
             width: 50px;
             height: 50px;
-            border: 3px solid rgba(0, 255, 135, 0.2);
+            border: 3px solid rgba(34, 197, 94, 0.15);
             border-radius: 50%;
             border-top-color: var(--accent-color);
             animation: spin 1s ease-in-out infinite;
@@ -707,24 +806,28 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Region Tabs */
+        /* Region Tabs sticky avec accessibilité */
         .region-tabs {
             display: flex;
-            border-bottom: 1px solid var(--card-border);
-            margin-bottom: 24px;
-            background-color: var(--card-header);
-            border-radius: 8px;
-            overflow: hidden;
+            margin-bottom: 20px;
+            background: var(--card-header);
+            border-radius: 10px;
+            overflow-x: auto;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: calc(var(--header-height) + 8px);
+            z-index: 20;
         }
         
         .region-tab {
-            padding: 14px 24px;
+            padding: 14px 28px;
             cursor: pointer;
             position: relative;
             font-weight: 500;
-            opacity: 0.7;
+            opacity: 0.75;
             transition: all 0.3s ease;
             letter-spacing: 0.02em;
+            white-space: nowrap;
         }
         
         .region-tab:hover {
@@ -747,11 +850,19 @@
             height: 3px;
             background-color: var(--accent-color);
             transition: width 0.3s ease;
-            box-shadow: 0 0 8px var(--accent-color);
+            box-shadow: 0 0 6px var(--accent-color);
         }
         
         .region-tab.active::after {
             width: 100%;
+        }
+        
+        /* Focus visible pour accessibilité */
+        .region-tab:focus-visible,
+        .nav-item:focus-visible,
+        .search-button:focus-visible {
+            outline: 2px solid var(--accent-color);
+            outline-offset: 3px;
         }
 
         /* Button styling */
@@ -764,14 +875,57 @@
             background-color: var(--accent-subtle);
             color: var(--accent-color);
             border: 1px solid var(--accent-medium);
+            cursor: pointer;
         }
         
         .action-button:hover {
             background-color: var(--accent-medium);
             transform: translateY(-1px);
         }
+        
+        /* Search input */
+        .table-search-input {
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            width: 100%;
+            max-width: 600px;
+            transition: all 0.3s ease;
+        }
+        
+        .table-search-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+        }
+        
+        .table-search-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
 
         /* Responsive */
+        @media (max-width: 1280px) {
+            .sector-overview-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .sector-group-header {
+                grid-column: span 3;
+            }
+        }
+        
+        @media (max-width: 1024px) {
+            .sector-overview-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .sector-group-header {
+                grid-column: span 2;
+            }
+        }
+        
         @media (max-width: 768px) {
             .main-header {
                 left: 0;
@@ -810,6 +964,7 @@
                 margin-left: 0;
                 margin-top: calc(var(--header-height));
                 margin-bottom: 60px;
+                padding: 24px 16px;
             }
             
             .main-nav {
@@ -817,8 +972,7 @@
             }
             
             .region-tabs {
-                overflow-x: auto;
-                white-space: nowrap;
+                position: static;
             }
             
             .sector-overview-grid {
@@ -827,18 +981,11 @@
             
             .sector-group-header {
                 grid-column: 1;
+                margin-bottom: 8px;
             }
             
             .sector-col {
-                display: flex;
-                justify-content: space-between;
-                border-right: none;
-                border-bottom: 1px solid var(--separator-color);
-            }
-            
-            .top-performers-grid {
-                grid-template-columns: 1fr;
-                gap: 12px;
+                margin-bottom: 8px;
             }
         }
     </style>
@@ -846,7 +993,7 @@
 <body class="dark">
     <!-- Bouton du sélecteur de thème -->
     <div class="theme-toggle">
-        <button id="theme-toggle-btn" class="theme-toggle-btn">
+        <button id="theme-toggle-btn" class="theme-toggle-btn" aria-label="Basculer le thème">
             <i class="fas fa-moon" id="dark-icon"></i>
             <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
         </button>
@@ -855,27 +1002,27 @@
     <!-- Sidebar de navigation verticale -->
     <aside class="sidebar">
         <div class="sidebar-logo">TP</div>
-        <nav class="sidebar-nav">
-            <a href="actualites.html" class="nav-item" title="Actualités">
+        <nav class="sidebar-nav" role="navigation">
+            <a href="actualites.html" class="nav-item" title="Actualités" aria-label="Actualités">
                 <i class="fas fa-newspaper"></i>
             </a>
-            <a href="portefeuille.html" class="nav-item" title="Portefeuilles">
+            <a href="portefeuille.html" class="nav-item" title="Portefeuilles" aria-label="Portefeuilles">
                 <i class="fas fa-chart-pie"></i>
             </a>
-            <a href="dashboard.html" class="nav-item" title="Tableau de bord">
+            <a href="dashboard.html" class="nav-item" title="Tableau de bord" aria-label="Tableau de bord">
                 <i class="fas fa-tachometer-alt"></i>
             </a>
-            <a href="marches.html" class="nav-item" title="Marchés">
+            <a href="marches.html" class="nav-item" title="Marchés" aria-label="Marchés">
                 <i class="fas fa-chart-line"></i>
             </a>
-            <a href="secteurs.html" class="nav-item active" title="Secteurs">
+            <a href="secteurs.html" class="nav-item active" title="Secteurs" aria-label="Secteurs" aria-current="page">
                 <i class="fas fa-industry"></i>
             </a>
-            <a href="email-preview.html" class="nav-item" title="Alertes">
+            <a href="email-preview.html" class="nav-item" title="Alertes" aria-label="Alertes">
                 <i class="fas fa-bell"></i>
                 <span class="notification-badge"></span>
             </a>
-            <a href="parametres.html" class="nav-item" title="Paramètres">
+            <a href="parametres.html" class="nav-item" title="Paramètres" aria-label="Paramètres">
                 <i class="fas fa-cog"></i>
             </a>
         </nav>
@@ -900,7 +1047,7 @@
             <div class="market-status">
                 <div class="market-indicator green"></div>
                 <span>Marché ouvert</span>
-                <span class="market-time" id="marketTime">09:45:22</span>
+                <span class="market-time" id="marketTime" aria-live="polite">09:45:22</span>
             </div>
             <a href="recherche.html" class="search-button ripple">
                 <i class="fas fa-search"></i>
@@ -911,312 +1058,492 @@
 
     <!-- Container principal -->
     <main class="main-container">
-        <div class="p-6">
-            <div class="max-w-7xl mx-auto">
-                <!-- Header avec titre et dernière mise à jour -->
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-                    <div>
-                        <h1 class="text-3xl font-bold mb-2">Indices Sectoriels</h1>
-                        <p class="text-gray-400">Dernière mise à jour: <span id="last-update-time" class="font-medium">Chargement...</span></p>
-                    </div>
+        <div class="mx-auto xl:max-w-8xl 2xl:max-w-9xl 3xl:max-w-10xl px-6 md:px-8 xl:px-12">
+            <!-- Header avec titre et dernière mise à jour -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10">
+                <div>
+                    <h1 class="text-3xl font-bold tracking-tight mb-3">Indices Sectoriels</h1>
+                    <p class="text-gray-400">Dernière mise à jour: <span id="last-update-time" class="font-medium" aria-live="polite">Chargement...</span></p>
                 </div>
-                
-                <!-- Aperçu des secteurs -->
-                <div class="sector-overview-section mb-10">
-                    <h2 class="sector-overview-title mb-6">Aperçu des secteurs</h2>
-                    
-                    <div class="sector-overview-grid">
-                        <!-- EUROPE -->
-                        <div class="sector-group-header">
-                            <span>Europe (STOXX 600)</span>
-                            <span id="europe-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
-                        </div>
-                        
-                        <div class="sector-col" data-sector="energy">
-                            <div class="sector-name">Énergie</div>
-                            <div class="sector-data">
-                                <div class="sector-value negative">-0,35 %</div>
-                                <div class="sector-ytd positive">7,87 %</div>
-                            </div>
-                        </div>
-                        
-                        <div class="sector-col" data-sector="financials">
-                            <div class="sector-name">Finance</div>
-                            <div class="sector-data">
-                                <div class="sector-value negative">-0,55 %</div>
-                                <div class="sector-ytd positive">13,27 %</div>
-                            </div>
-                        </div>
-                        
-                        <div class="sector-col" data-sector="technology">
-                            <div class="sector-name">Technologie</div>
-                            <div class="sector-data">
-                                <div class="sector-value positive">0,20 %</div>
-                                <div class="sector-ytd positive">4,71 %</div>
-                            </div>
-                        </div>
-                        
-                        <div class="sector-col" data-sector="healthcare">
-                            <div class="sector-name">Santé</div>
-                            <div class="sector-data">
-                                <div class="sector-value negative">-0,25 %</div>
-                                <div class="sector-ytd positive">9,19 %</div>
-                            </div>
-                        </div>
-                        
-                        <!-- USA -->
-                        <div class="sector-group-header">
-                            <span>États-Unis (NASDAQ)</span>
-                            <span id="us-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
-                        </div>
-                        
-                        <div class="sector-col" data-sector="energy-us">
-                            <div class="sector-name">Énergie</div>
-                            <div class="sector-data">
-                                <div class="sector-value positive">0,49 %</div>
-                                <div class="sector-ytd negative">-4,80 %</div>
-                            </div>
-                        </div>
-                        
-                        <div class="sector-col" data-sector="financials-us">
-                            <div class="sector-name">Finance</div>
-                            <div class="sector-data">
-                                <div class="sector-value negative">-0,20 %</div>
-                                <div class="sector-ytd negative">-2,80 %</div>
-                            </div>
-                        </div>
-                        
-                        <div class="sector-col" data-sector="technology-us">
-                            <div class="sector-name">Technologie</div>
-                            <div class="sector-data">
-                                <div class="sector-value positive">1,22 %</div>
-                                <div class="sector-ytd negative">-8,61 %</div>
-                            </div>
-                        </div>
-                        
-                        <div class="sector-col" data-sector="healthcare-us">
-                            <div class="sector-name">Santé</div>
-                            <div class="sector-data">
-                                <div class="sector-value positive">0,82 %</div>
-                                <div class="sector-ytd positive">4,95 %</div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="mt-4 md:mt-0">
+                    <button id="density-toggle" class="action-button">
+                        <i class="fas fa-compress-alt mr-2"></i>
+                        Densité : Confort
+                    </button>
                 </div>
+            </div>
+            
+            <!-- Aperçu des secteurs amélioré -->
+            <div class="sector-overview-section mb-12">
+                <h2 class="sector-overview-title">Aperçu des secteurs</h2>
                 
-                <!-- Top Performers -->
-                <div class="top-performers-section mb-10">
-                    <h2 class="top-performers-title mb-6">Top Performers</h2>
-                    
-                    <div class="top-performers-grid">
-                        <!-- Top 3 Hausse Quotidienne -->
-                        <div class="performer-card">
-                            <div class="performer-header">
-                                <span>Top 3 Hausse (VAR %)</span>
-                                <span class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
-                            </div>
-                            <div id="daily-top">
-                                <div class="performer-row">
-                                    <div class="performer-info">
-                                        <div class="performer-index">Technologie</div>
-                                        <div class="performer-region">STOXX Europe 600</div>
-                                    </div>
-                                    <div class="performer-value positive">5,25 %</div>
-                                </div>
-                                
-                                <div class="performer-row">
-                                    <div class="performer-info">
-                                        <div class="performer-index">Énergie</div>
-                                        <div class="performer-region">S&P 500</div>
-                                    </div>
-                                    <div class="performer-value positive">2,63 %</div>
-                                </div>
-                                
-                                <div class="performer-row">
-                                    <div class="performer-info">
-                                        <div class="performer-index">Immobilier</div>
-                                        <div class="performer-region">STOXX Europe 600</div>
-                                    </div>
-                                    <div class="performer-value positive">2,52 %</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Top 3 Baisse Quotidienne -->
-                        <div class="performer-card">
-                            <div class="performer-header">
-                                <span>Top 3 Baisse (VAR %)</span>
-                                <span class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
-                            </div>
-                            <div id="daily-bottom">
-                                <div class="performer-row">
-                                    <div class="performer-info">
-                                        <div class="performer-index">Services Publics</div>
-                                        <div class="performer-region">STOXX Europe 600</div>
-                                    </div>
-                                    <div class="performer-value negative">-1,90 %</div>
-                                </div>
-                                
-                                <div class="performer-row">
-                                    <div class="performer-info">
-                                        <div class="performer-index">Matériaux</div>
-                                        <div class="performer-region">S&P 500</div>
-                                    </div>
-                                    <div class="performer-value negative">-1,42 %</div>
-                                </div>
-                                
-                                <div class="performer-row">
-                                    <div class="performer-info">
-                                        <div class="performer-index">Finance</div>
-                                        <div class="performer-region">STOXX Europe 600</div>
-                                    </div>
-                                    <div class="performer-value negative">-1,24 %</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Top 3 Hausse YTD -->
-                        <div class="performer-card">
-                            <div class="performer-header">
-                                <span>Top 3 Hausse (YTD)</span>
-                                <span class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
-                            </div>
-                            <div id="ytd-top">
-                                <div class="performer-row">
-                                    <div class="performer-info">
-                                        <div class="performer-index">Technologie</div>
-                                        <div class="performer-region">S&P 500</div>
-                                    </div>
-                                    <div class="performer-value positive">43,17 %</div>
-                                </div>
-                                
-                                <div class="performer-row">
-                                    <div class="performer-info">
-                                        <div class="performer-index">Communication</div>
-                                        <div class="performer-region">STOXX Europe 600</div>
-                                    </div>
-                                    <div class="performer-value positive">16,96 %</div>
-                                </div>
-                                
-                                <div class="performer-row">
-                                    <div class="performer-info">
-                                        <div class="performer-index">Énergie</div>
-                                        <div class="performer-region">STOXX Europe 600</div>
-                                    </div>
-                                    <div class="performer-value positive">16,67 %</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Top 3 Baisse YTD -->
-                        <div class="performer-card">
-                            <div class="performer-header">
-                                <span>Top 3 Baisse (YTD)</span>
-                                <span class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
-                            </div>
-                            <div id="ytd-bottom">
-                                <div class="performer-row">
-                                    <div class="performer-info">
-                                        <div class="performer-index">Services Publics</div>
-                                        <div class="performer-region">S&P 500</div>
-                                    </div>
-                                    <div class="performer-value negative">-10,29 %</div>
-                                </div>
-                                
-                                <div class="performer-row">
-                                    <div class="performer-info">
-                                        <div class="performer-index">Santé</div>
-                                        <div class="performer-region">S&P 500</div>
-                                    </div>
-                                    <div class="performer-value negative">-8,61 %</div>
-                                </div>
-                                
-                                <div class="performer-row">
-                                    <div class="performer-info">
-                                        <div class="performer-index">Consommation de Base</div>
-                                        <div class="performer-region">STOXX Europe 600</div>
-                                    </div>
-                                    <div class="performer-value negative">-7,78 %</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Onglets des régions -->
-                <div class="mb-8">
-                    <h2 class="section-title mb-6">Secteurs par région</h2>
-                    <div class="region-tabs mb-6">
-                        <div class="region-tab active" data-region="europe">Europe (STOXX 600)</div>
-                        <div class="region-tab" data-region="us">États-Unis (NASDAQ)</div>
+                <div class="sector-overview-grid">
+                    <!-- EUROPE (STOXX 600) -->
+                    <div class="sector-group-header">
+                        <span>Europe (STOXX 600)</span>
+                        <span id="europe-trend" class="text-sm positive" aria-label="Tendance Europe"><i class="fas fa-arrow-up"></i></span>
                     </div>
                     
-                    <!-- Conteneur pour le tableau des secteurs -->
-                    <div class="glassmorphism rounded-lg overflow-hidden">
-                        <div id="sectors-loading" class="py-16 flex justify-center">
-                            <div class="loader"></div>
+                    <div class="sector-col" data-sector="energy">
+                        <div class="sector-name">Énergie</div>
+                        <div class="sector-data">
+                            <div class="sector-value negative">−0,35%</div>
+                            <div class="sector-ytd positive">YTD 7,87%</div>
                         </div>
-                        
-                        <div id="sectors-error" class="py-16 text-center hidden">
-                            <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
-                            <p class="text-lg">Impossible de charger les données des secteurs.</p>
-                            <button id="retry-button" class="mt-4 search-button inline-flex items-center">
-                                <i class="fas fa-sync-alt mr-2"></i>
-                                Réessayer
-                            </button>
+                    </div>
+                    
+                    <div class="sector-col" data-sector="financials">
+                        <div class="sector-name">Finance</div>
+                        <div class="sector-data">
+                            <div class="sector-value negative">−0,55%</div>
+                            <div class="sector-ytd positive">YTD 13,27%</div>
                         </div>
-                        
-                        <div id="sectors-container" class="hidden">
-                            <div id="europe-sectors" class="region-content">
-                                <div class="overflow-x-auto">
-                                    <table class="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>SECTEUR</th>
-                                                <th>COURS</th>
-                                                <th>VAR. %</th>
-                                                <th>VAR/1JANV</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="europe-sectors-body">
-                                            <!-- Les données seront injectées ici -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            
-                            <div id="us-sectors" class="region-content hidden">
-                                <div class="overflow-x-auto">
-                                    <table class="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>SECTEUR</th>
-                                                <th>COURS</th>
-                                                <th>VAR. %</th>
-                                                <th>VAR/1JANV</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="us-sectors-body">
-                                            <!-- Les données seront injectées ici -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                    </div>
+                    
+                    <div class="sector-col" data-sector="technology">
+                        <div class="sector-name">Technologie</div>
+                        <div class="sector-data">
+                            <div class="sector-value positive">0,20%</div>
+                            <div class="sector-ytd positive">YTD 4,71%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="sector-col" data-sector="healthcare">
+                        <div class="sector-name">Santé</div>
+                        <div class="sector-data">
+                            <div class="sector-value negative">−0,25%</div>
+                            <div class="sector-ytd positive">YTD 9,19%</div>
+                        </div>
+                    </div>
+                    
+                    <!-- USA (NASDAQ) -->
+                    <div class="sector-group-header">
+                        <span>États-Unis (NASDAQ)</span>
+                        <span id="us-trend" class="text-sm positive" aria-label="Tendance USA"><i class="fas fa-arrow-up"></i></span>
+                    </div>
+                    
+                    <div class="sector-col" data-sector="energy-us">
+                        <div class="sector-name">Énergie</div>
+                        <div class="sector-data">
+                            <div class="sector-value positive">0,49%</div>
+                            <div class="sector-ytd negative">YTD −4,80%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="sector-col" data-sector="financials-us">
+                        <div class="sector-name">Finance</div>
+                        <div class="sector-data">
+                            <div class="sector-value negative">−0,20%</div>
+                            <div class="sector-ytd negative">YTD −2,80%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="sector-col" data-sector="technology-us">
+                        <div class="sector-name">Technologie</div>
+                        <div class="sector-data">
+                            <div class="sector-value positive">1,22%</div>
+                            <div class="sector-ytd negative">YTD −8,61%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="sector-col" data-sector="healthcare-us">
+                        <div class="sector-name">Santé</div>
+                        <div class="sector-data">
+                            <div class="sector-value positive">0,82%</div>
+                            <div class="sector-ytd positive">YTD 4,95%</div>
                         </div>
                     </div>
                 </div>
+            </div>
+            
+            <!-- Top Performers en bandeau horizontal -->
+            <section class="tp-strip mb-10" aria-labelledby="tp-title">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 id="tp-title" class="section-title !mb-0">Top performers</h2>
+                </div>
+
+                <div id="tp-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <div class="performer-card">
+                        <div class="performer-header">
+                            <span>Top 3 Hausse (Jour)</span>
+                            <span class="text-sm positive" aria-label="Hausse"><i class="fas fa-arrow-up"></i></span>
+                        </div>
+                        <div id="daily-top">
+                            <!-- Données injectées par JS -->
+                        </div>
+                    </div>
+                    
+                    <div class="performer-card">
+                        <div class="performer-header">
+                            <span>Top 3 Baisse (Jour)</span>
+                            <span class="text-sm negative" aria-label="Baisse"><i class="fas fa-arrow-down"></i></span>
+                        </div>
+                        <div id="daily-bottom">
+                            <!-- Données injectées par JS -->
+                        </div>
+                    </div>
+                    
+                    <div class="performer-card">
+                        <div class="performer-header">
+                            <span>Top 3 Hausse (YTD)</span>
+                            <span class="text-sm positive" aria-label="Hausse YTD"><i class="fas fa-arrow-up"></i></span>
+                        </div>
+                        <div id="ytd-top">
+                            <!-- Données injectées par JS -->
+                        </div>
+                    </div>
+                    
+                    <div class="performer-card">
+                        <div class="performer-header">
+                            <span>Top 3 Baisse (YTD)</span>
+                            <span class="text-sm negative" aria-label="Baisse YTD"><i class="fas fa-arrow-down"></i></span>
+                        </div>
+                        <div id="ytd-bottom">
+                            <!-- Données injectées par JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Onglets des régions sticky -->
+            <div class="mb-12">
+                <h2 class="section-title">Secteurs par région</h2>
                 
-                <!-- Source et avertissement -->
-                <div class="text-center text-sm text-gray-400 mb-6 p-4 glassmorphism rounded-lg bg-opacity-50">
-                    <p>Sources: <a href="https://stoxx.com" target="_blank" class="text-green-400 hover:underline">STOXX.com</a> et <a href="https://www.boursorama.com/bourse/indices/internationaux" target="_blank" class="text-green-400 hover:underline">Boursorama</a></p>
-                    <p class="mt-2">Les données sont actualisées régulièrement mais peuvent accuser un retard par rapport aux marchés en temps réel.</p>
+                <!-- Barre de recherche seule -->
+                <div class="mb-4">
+                    <input id="table-search" type="text" placeholder="Rechercher secteur ou libellé..." class="table-search-input">
+                </div>
+                
+                <div class="region-tabs" role="tablist">
+                    <div class="region-tab active" data-region="europe" role="tab" aria-selected="true" tabindex="0">Europe (STOXX 600)</div>
+                    <div class="region-tab" data-region="us" role="tab" aria-selected="false" tabindex="0">États-Unis (NASDAQ)</div>
+                </div>
+                
+                <!-- Conteneur pour le tableau des secteurs -->
+                <div class="glassmorphism rounded-lg overflow-hidden">
+                    <div id="sectors-loading" class="py-16 flex justify-center">
+                        <div class="loader"></div>
+                    </div>
+                    
+                    <div id="sectors-error" class="py-16 text-center hidden">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                        <p class="text-lg">Impossible de charger les données des secteurs.</p>
+                        <button id="retry-button" class="mt-4 search-button inline-flex items-center">
+                            <i class="fas fa-sync-alt mr-2"></i>
+                            Réessayer
+                        </button>
+                    </div>
+                    
+                    <div id="sectors-container" class="hidden">
+                        <div id="europe-sectors" class="region-content" role="tabpanel">
+                            <div class="overflow-x-auto">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th data-column="0">SECTEUR</th>
+                                            <th data-column="1">DERNIER</th>
+                                            <th data-column="2">VAR. %</th>
+                                            <th data-column="3">VAR/1JANV</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="europe-sectors-body">
+                                        <!-- Les données seront injectées ici -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div id="us-sectors" class="region-content hidden" role="tabpanel">
+                            <div class="overflow-x-auto">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th data-column="0">SECTEUR</th>
+                                            <th data-column="1">DERNIER</th>
+                                            <th data-column="2">VAR. %</th>
+                                            <th data-column="3">VAR/1JANV</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="us-sectors-body">
+                                        <!-- Les données seront injectées ici -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
 
+    <!-- FOOTER sans cookies -->
+    <footer class="mt-16 px-6 mb-20 md:mb-0">
+        <div class="mx-auto xl:max-w-8xl 2xl:max-w-9xl 3xl:max-w-10xl px-6 md:px-8 xl:px-12">
+            <div class="glassmorphism rounded-xl p-6">
+                <div class="grid gap-8 md:grid-cols-3">
+                    <!-- Col 1: identité + avertissement -->
+                    <div>
+                        <div class="flex items-center font-extrabold text-xl tracking-wide mb-3">
+                            <span class="w-2 h-2 rounded-full mr-2" style="background-color: var(--accent-color); box-shadow: 0 0 8px var(--accent-color);"></span>
+                            TRADEPULSE
+                        </div>
+                        <p class="text-sm opacity-80 mb-3">
+                            Projet de démonstration<br>
+                            Développé par Benoit COMAS<br>
+                            Hébergé sur GitHub Pages
+                        </p>
+                        <p class="text-xs opacity-70 leading-relaxed">
+                            <strong>Avertissement :</strong>
+                            Les informations présentées le sont à titre purement informatif et général.
+                            Elles ne constituent ni une recommandation personnalisée ni un conseil en investissement.
+                            L'investissement en instruments financiers comporte un risque de perte en capital.
+                            Les performances passées ne préjugent pas des performances futures.
+                        </p>
+                        <p class="mt-3 text-xs opacity-70">
+                            <span class="inline-block px-2 py-1 rounded border border-gray-600">
+                                Zéro cookie marketing • Zéro traceur tiers
+                            </span>
+                        </p>
+                    </div>
+
+                    <!-- Col 2: navigation légale -->
+                    <div>
+                        <h3 class="font-semibold mb-3">Informations légales</h3>
+                        <ul class="space-y-2 text-sm">
+                            <li><a href="mentions-legales.html" class="hover:underline opacity-80 hover:opacity-100">Mentions légales</a></li>
+                            <li><a href="cgu.html" class="hover:underline opacity-80 hover:opacity-100">Conditions générales d'utilisation</a></li>
+                            <li><a href="confidentialite.html" class="hover:underline opacity-80 hover:opacity-100">Politique de confidentialité</a></li>
+                            <li><a href="cookies.html" class="hover:underline opacity-80 hover:opacity-100">Cookies : nous n'en utilisons pas</a></li>
+                            <li><a href="accessibilite.html" class="hover:underline opacity-80 hover:opacity-100">Accessibilité</a></li>
+                            <li><a href="https://github.com/bencode92/stock-analysis-platform" target="_blank" class="hover:underline opacity-80 hover:opacity-100">Code source sur GitHub</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- Col 3: source & statut données -->
+                    <div>
+                        <h3 class="font-semibold mb-3">Données & attribution</h3>
+                        <p class="text-sm opacity-80">
+                            Cours et données susceptibles d'être retardés ou incomplets.
+                            Sources: <a href="https://stoxx.com" target="_blank" rel="noopener" class="text-green-400 hover:underline">STOXX</a> et <a href="https://www.boursorama.com" target="_blank" rel="noopener" class="text-green-400 hover:underline">Boursorama</a>.
+                            © Les marques citées appartiennent à leurs propriétaires respectifs.
+                        </p>
+                        <div class="mt-4 text-sm">
+                            <span class="opacity-70">Dernière mise à jour</span>
+                            <span class="ml-2 font-medium" id="footer-last-update" aria-live="polite">–</span>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-6 border-gray-700 opacity-50">
+
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs opacity-70">
+                    <div>© 2025 TRADEPULSE — Projet de démonstration</div>
+                    <div class="flex items-center gap-4">
+                        <a href="https://github.com/bencode92" target="_blank" class="hover:underline">GitHub @bencode92</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
     <script src="secteurs-script.js"></script>
+    <script>
+        // Toggle densité
+        const densityBtn = document.getElementById('density-toggle');
+        const saved = localStorage.getItem('density') || 'comfort';
+        document.body.classList.toggle('density-compact', saved === 'compact');
+        densityBtn.innerHTML = `<i class="fas fa-compress-alt mr-2"></i>Densité : ${saved === 'compact' ? 'Compact' : 'Confort'}`;
+
+        densityBtn.addEventListener('click', () => {
+            const isCompact = document.body.classList.toggle('density-compact');
+            localStorage.setItem('density', isCompact ? 'compact' : 'comfort');
+            densityBtn.innerHTML = `<i class="fas fa-compress-alt mr-2"></i>Densité : ${isCompact ? 'Compact' : 'Confort'}`;
+        });
+
+        // Recherche globale sur toutes les régions avec activation de l'onglet
+        const searchInput = document.getElementById('table-search');
+        searchInput.addEventListener('input', () => {
+            const value = searchInput.value.toLowerCase().trim();
+            
+            if (!value) {
+                // Si recherche vide, afficher seulement la région active
+                document.querySelectorAll('.region-content').forEach(content => {
+                    const isActive = document.querySelector(`.region-tab.active[data-region="${content.id.replace('-sectors', '')}"]`);
+                    content.classList.toggle('hidden', !isActive);
+                    content.querySelectorAll('tbody tr').forEach(tr => {
+                        tr.style.display = '';
+                    });
+                });
+                return;
+            }
+            
+            // Recherche globale dans toutes les régions
+            const regions = ['europe', 'us'];
+            let hasResults = false;
+            let firstMatchRegion = null;
+            
+            regions.forEach(region => {
+                const tbody = document.getElementById(`${region}-sectors-body`);
+                
+                if (!tbody) return;
+                
+                const rows = tbody.querySelectorAll('tr');
+                let regionHasMatch = false;
+                
+                rows.forEach(tr => {
+                    const text = tr.innerText.toLowerCase();
+                    const isMatch = text.includes(value);
+                    tr.style.display = isMatch ? '' : 'none';
+                    if (isMatch) {
+                        regionHasMatch = true;
+                        if (!firstMatchRegion) {
+                            firstMatchRegion = region;
+                        }
+                    }
+                });
+                
+                // Afficher/masquer la région entière selon les résultats
+                document.getElementById(`${region}-sectors`).classList.toggle('hidden', !regionHasMatch);
+                if (regionHasMatch) hasResults = true;
+            });
+            
+            // Activer automatiquement l'onglet de la première région avec résultat
+            if (firstMatchRegion) {
+                document.querySelectorAll('.region-tab').forEach(tab => {
+                    tab.classList.remove('active');
+                    tab.setAttribute('aria-selected', 'false');
+                });
+                
+                const targetTab = document.querySelector(`.region-tab[data-region="${firstMatchRegion}"]`);
+                if (targetTab) {
+                    targetTab.classList.add('active');
+                    targetTab.setAttribute('aria-selected', 'true');
+                }
+            }
+        });
+
+        // Navigation clavier pour les tabs
+        document.querySelectorAll('.region-tab').forEach((tab, i, all) => {
+            tab.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight') all[(i + 1) % all.length].focus();
+                if (e.key === 'ArrowLeft') all[(i - 1 + all.length) % all.length].focus();
+            });
+        });
+
+        // === TRI PAR COLONNES — valable pour TOUTES les régions ===
+        const tableSortState = new WeakMap(); // table -> { col: number, asc: boolean }
+
+        function parseCellNumber(text) {
+            if (!text) return null;
+            // gère "−1,74%" "55 340,00" "642.47" etc.
+            const s = String(text)
+                .replace(/\u2212/g, '-')       // signe "−" Unicode -> "-"
+                .replace(/\s/g, '')            // espaces
+                .replace(/[^\d,\.\-\+]/g, '')  // enlève tout sauf chiffres, , . + -
+                .replace(/,/g, '.');           // , -> .
+            const n = parseFloat(s);
+            return Number.isFinite(n) ? n : null;
+        }
+
+        function sortTable(table, colIdx, asc) {
+            const tbody = table.tBodies[0];
+            if (!tbody) return;
+
+            const rows = Array.from(tbody.rows).map((tr, i) => ({ tr, i })); // tri stable
+            rows.sort((a, b) => {
+                const A = a.tr.cells[colIdx]?.innerText || '';
+                const B = b.tr.cells[colIdx]?.innerText || '';
+
+                const na = parseCellNumber(A);
+                const nb = parseCellNumber(B);
+
+                let cmp;
+                if (na !== null && nb !== null) {
+                    cmp = na - nb;
+                } else {
+                    cmp = A.localeCompare(B, 'fr', { sensitivity: 'base' });
+                }
+                if (!asc) cmp = -cmp;
+                // tri stable
+                return cmp || (a.i - b.i);
+            });
+
+            rows.forEach(({ tr }) => tbody.appendChild(tr));
+            updateSortIndicators(table, colIdx, asc);
+        }
+
+        function updateSortIndicators(table, colIdx, asc) {
+            const ths = table.tHead?.rows[0]?.cells || [];
+            [...ths].forEach((th, i) => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+                th.setAttribute('aria-sort', 'none');
+                if (i === colIdx) {
+                    th.classList.add(asc ? 'sorted-asc' : 'sorted-desc');
+                    th.setAttribute('aria-sort', asc ? 'ascending' : 'descending');
+                }
+            });
+        }
+
+        function attachTableSorters() {
+            document.querySelectorAll('#sectors-container table.data-table').forEach(table => {
+                const ths = table.tHead?.rows[0]?.cells || [];
+                [...ths].forEach((th, idx) => {
+                    th.style.cursor = 'pointer';
+                    th.addEventListener('click', () => {
+                        const state = tableSortState.get(table) || { col: -1, asc: true };
+                        const asc = state.col === idx ? !state.asc : true;
+                        tableSortState.set(table, { col: idx, asc });
+                        sortTable(table, idx, asc);
+                    });
+                    // accessibilité clavier
+                    th.tabIndex = 0;
+                    th.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            th.click();
+                        }
+                    });
+                });
+            });
+        }
+
+        // Expose pour être rappelé après rendu des données
+        window.attachTableSorters = attachTableSorters;
+
+        // Clic sur Top Performers pour filtrer le tableau
+        function wireTpClicks() {
+            document.querySelectorAll('#tp-grid .performer-row').forEach(row => {
+                row.addEventListener('click', () => {
+                    const label = row.querySelector('.performer-index')?.textContent.trim();
+                    if (label) {
+                        searchInput.value = label;
+                        searchInput.dispatchEvent(new Event('input'));
+                        document.querySelector('.region-content:not(.hidden)')?.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+        }
+        setTimeout(wireTpClicks, 1000);
+
+        // Mise à jour de la date dans le footer
+        (function(){
+            try {
+                setTimeout(function() {
+                    const ts = window.sectorsData?.meta?.timestamp;
+                    const el = document.getElementById('footer-last-update');
+                    if (ts && el) {
+                        el.textContent = new Intl.DateTimeFormat('fr-FR', {
+                            dateStyle: 'long',
+                            timeStyle: 'medium',
+                            timeZone: 'Europe/Paris'
+                        }).format(new Date(ts));
+                    }
+                }, 2000);
+            } catch(e) {}
+        })();
+    </script>
 </body>
 </html>
