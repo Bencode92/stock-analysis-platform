@@ -13,6 +13,7 @@ import time
 import re
 import logging
 import requests
+import random
 from typing import Dict, List, Optional
 
 # Configuration du logger
@@ -33,6 +34,38 @@ HOLDINGS_STALE_DAYS = int(os.getenv("HOLDINGS_STALE_DAYS", "7"))  # Rafraîchir 
 HOLDINGS_SLEEP = float(os.getenv("HOLDINGS_SLEEP", "0.5"))  # Pause entre appels API
 FORCE_UPDATE = os.getenv("FORCE_UPDATE", "false").lower() == "true"  # Force la mise à jour
 API_BASE = "https://api.twelvedata.com"
+
+# Rate limiting par crédits
+TD_CREDIT_LIMIT = int(os.getenv("TD_CREDIT_LIMIT", "2584"))
+TD_COST_COMPOSITION = int(os.getenv("TD_COST_COMPOSITION", "200"))
+TD_BUFFER_CREDITS = int(os.getenv("TD_BUFFER_CREDITS", "50"))  # marge de sécurité
+
+class CreditLimiter:
+    """Gestionnaire de limite de crédits API par minute"""
+    def __init__(self, limit_per_min):
+        self.limit = limit_per_min
+        self.window_start = time.monotonic()
+        self.used = 0
+
+    def _reset_if_needed(self):
+        now = time.monotonic()
+        if now - self.window_start >= 60:
+            self.window_start = now
+            self.used = 0
+
+    def pay(self, cost):
+        self._reset_if_needed()
+        if self.used + cost > self.limit - TD_BUFFER_CREDITS:
+            # attendre jusqu'à la prochaine minute + petite marge
+            sleep_s = 60 - (time.monotonic() - self.window_start) + 0.25
+            sleep_s = max(sleep_s, 0.25)
+            logger.info(f"⏳ Crédit {self.used}/{self.limit} – pause {sleep_s:.1f}s pour éviter le plafond")
+            time.sleep(sleep_s)
+            self.window_start = time.monotonic()
+            self.used = 0
+        self.used += cost
+
+credit_limiter = CreditLimiter(TD_CREDIT_LIMIT)
 
 def _num(x):
     """Convertit un pourcentage en nombre 0..1"""
@@ -90,6 +123,9 @@ def fetch_etf_holdings(symbol: str, apikey: str, maxn: int = 10) -> Optional[Dic
     Endpoint: /etfs/world/composition (200 crédits)
     """
     try:
+        # Payer les crédits avant l'appel
+        credit_limiter.pay(TD_COST_COMPOSITION)
+        
         url = f"{API_BASE}/etfs/world/composition"
         params = {
             "symbol": symbol,
@@ -97,9 +133,23 @@ def fetch_etf_holdings(symbol: str, apikey: str, maxn: int = 10) -> Optional[Dic
             "dp": 5  # decimal places
         }
         
+        # Petit jitter pour éviter l'alignement pile
+        time.sleep(random.uniform(0.05, 0.15))
+        
         logger.info(f"📡 Récupération holdings pour {symbol}...")
         r = requests.get(url, params=params, timeout=20)
         j = r.json()
+        
+        # Limite atteinte côté serveur → attendre et RETRY 1 fois
+        if isinstance(j, dict) and j.get("status") == "error" and "run out of API credits" in j.get("message", "").lower():
+            wait = max(0.8, 60 - (time.monotonic() - credit_limiter.window_start) + 0.25)
+            logger.warning(f"⚠️ Crédit minute épuisé. Attente {wait:.1f}s puis retry…")
+            time.sleep(wait)
+            credit_limiter.window_start = time.monotonic()
+            credit_limiter.used = 0
+            credit_limiter.pay(TD_COST_COMPOSITION)
+            r = requests.get(url, params=params, timeout=20)
+            j = r.json()
         
         # Vérifier les erreurs et retry avec symbole résolu si nécessaire
         if j.get("status") == "error":
@@ -113,6 +163,7 @@ def fetch_etf_holdings(symbol: str, apikey: str, maxn: int = 10) -> Optional[Dic
                 if resolved != symbol:
                     logger.info(f"   Retry avec {resolved}...")
                     params["symbol"] = resolved
+                    time.sleep(random.uniform(0.05, 0.15))
                     r = requests.get(url, params=params, timeout=20)
                     j = r.json()
                     
@@ -172,6 +223,7 @@ def fetch_etf_holdings(symbol: str, apikey: str, maxn: int = 10) -> Optional[Dic
             "holdings_count": len(holdings),
             "top_weight": round(total_weight * 100, 2),  # % du top N
             "holdings": holdings,
+            "provider_coverage": len(holdings_raw) > 0,  # false si l'ETF n'est pas couvert
             "updated_at": dt.datetime.utcnow().isoformat() + "Z"
         }
         
@@ -270,12 +322,17 @@ def main():
         sys.exit(4)  # Code d'erreur spécifique pour sectors.json vide
     
     logger.info(f"📊 Traitement de {len(symbols)} ETFs...")
-    logger.info(f"⚙️ Paramètres: max={HOLDINGS_MAX} holdings/ETF, pause={HOLDINGS_SLEEP}s")
+    logger.info(f"⚙️ Paramètres:")
+    logger.info(f"   - Max holdings/ETF: {HOLDINGS_MAX}")
+    logger.info(f"   - Limite crédits/min: {TD_CREDIT_LIMIT}")
+    logger.info(f"   - Coût par appel: {TD_COST_COMPOSITION}")
+    logger.info(f"   - Buffer sécurité: {TD_BUFFER_CREDITS}")
     
     # Traiter chaque ETF
     processed = 0
     errors = 0
     api_credits = 0
+    no_coverage = 0
     
     for idx, symbol in enumerate(symbols, 1):
         logger.info(f"\n[{idx}/{len(symbols)}] Traitement {symbol}...")
@@ -287,16 +344,20 @@ def main():
             if etf_data:
                 holdings_data["etfs"][symbol] = etf_data
                 processed += 1
-                api_credits += 200  # Chaque appel coûte ~200 crédits
+                api_credits += TD_COST_COMPOSITION
+                
+                # Compter les ETFs sans couverture
+                if not etf_data.get("provider_coverage", True):
+                    no_coverage += 1
             else:
                 errors += 1
                 # Garder les anciennes données si elles existent
                 if symbol in holdings_data["etfs"]:
                     logger.info(f"↻ Conservation des données précédentes pour {symbol}")
             
-            # Pause entre les appels (respect rate limit)
+            # Mini pause avec jitter entre les appels
             if idx < len(symbols):
-                time.sleep(HOLDINGS_SLEEP)
+                time.sleep(random.uniform(0.05, 0.15))
                 
         except KeyboardInterrupt:
             logger.warning("\n⚠️ Interruption utilisateur")
@@ -325,6 +386,8 @@ def main():
         "max_holdings_per_etf": HOLDINGS_MAX,
         "stale_days": HOLDINGS_STALE_DAYS,
         "force_update": FORCE_UPDATE,
+        "credit_limit": TD_CREDIT_LIMIT,
+        "no_coverage_count": no_coverage,
         "data_source": "Twelve Data ETF Composition API"
     }
     
@@ -340,6 +403,7 @@ def main():
     logger.info(f"📊 Statistiques:")
     logger.info(f"   - ETFs traités: {processed}/{len(symbols)}")
     logger.info(f"   - Erreurs: {errors}")
+    logger.info(f"   - Sans couverture: {no_coverage}")
     logger.info(f"   - Holdings totaux: {total_holdings}")
     logger.info(f"   - Crédits API utilisés: ~{api_credits}")
     logger.info(f"   - Taille fichier: {os.path.getsize(HOLDINGS_FILE) / 1024:.1f} KB")
