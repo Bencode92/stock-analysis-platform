@@ -254,67 +254,81 @@ def quote_one(sym: str, region_display: str) -> Tuple[float, float, str]:
         logger.error(f"Erreur quote pour {sym}: {e}")
         raise
 
-def first_close_of_year(sym: str, region_display: str) -> Tuple[float, str]:
-    """Close de la première séance ouvrée de l'année (price-only) - CORRIGÉ avec outputsize=5000."""
+def baseline_last_close_prev_year(sym: str, region_display: str) -> Tuple[float, str]:
+    """
+    Close de référence YTD = dernier jour ouvré de l'année N-1
+    Retourne (close, 'YYYY-MM-DD') en timezone locale.
+    """
     year = dt.date.today().year
     tz = TZ_BY_REGION.get(region_display, "UTC")
     
     try:
-        # IMPORTANT: outputsize=5000 pour récupérer toute l'année
+        # Récupérer les données de fin d'année précédente
         ts_json = TD.time_series(
             symbol=sym,
             interval="1day",
-            start_date=f"{year}-01-01 00:00:00",
-            end_date=f"{year}-12-31 23:59:59",
+            start_date=f"{year-1}-12-15",  # petit tampon pour être sûr
+            end_date=f"{year}-01-10",      # inclure début janvier au cas où
             order="ASC",
-            outputsize=5000,  # ⚠️ CRITIQUE: doit être grand pour avoir janvier
             timezone=tz,
+            outputsize=50                   # suffisant pour cette période
         ).as_json()
 
         if isinstance(ts_json, tuple):
             ts_json = ts_json[0]
-
-        # Normalise les différents formats possibles
+            
+        # Normaliser les données
         values = []
         if isinstance(ts_json, dict) and ts_json.get("values"):
             values = ts_json["values"]
         elif isinstance(ts_json, list):
             values = ts_json
-        elif isinstance(ts_json, dict) and all(k in ts_json for k in ("datetime", "close")):
+        elif isinstance(ts_json, dict) and {"datetime", "close"} <= set(ts_json):
             values = [ts_json]
-        else:
-            logger.error(f"Format time_series inattendu pour {sym}: {type(ts_json)}")
-            raise ValueError(f"Format time_series inattendu pour {sym}")
 
         if not values:
             raise ValueError(f"Aucune donnée historique pour {sym}")
 
-        # Prend la première bougie qui a un 'close' numérique
+        # Chercher la DERNIÈRE bougie de l'année N-1
+        baseline_row = None
         for row in values:
-            # Préférer adjusted_close si disponible (pour le total return)
-            close_key = "adjusted_close" if "adjusted_close" in row and row["adjusted_close"] not in (None, "None", "") else "close"
+            date_str = str(row.get("datetime", ""))[:10]
+            close_val = row.get("close")
             
-            if close_key in row and row[close_key] not in (None, "None", ""):
+            # Si c'est bien une date de l'année N-1 avec un close valide
+            if date_str.startswith(str(year-1)) and close_val not in (None, "None", ""):
                 try:
-                    close_val = float(row[close_key])
-                    date_str = str(row.get("datetime", row.get("date", row.get("time", f"{year}-01-XX"))))
-                    
-                    # VÉRIFICATION CRITIQUE: La date doit être en janvier
-                    if not date_str.startswith(f"{year}-01"):
-                        logger.warning(f"⚠️ YTD ref date pour {sym} n'est pas en janvier: {date_str}")
-                        logger.warning(f"   L'API a peut-être tronqué la série. Vérifiez votre abonnement Twelve Data.")
-                    
-                    logger.debug(f"Premier close {sym}: {close_val} le {date_str} (timezone: {tz}, type: {close_key})")
-                    return close_val, date_str
-                    
-                except (ValueError, TypeError) as e:
-                    logger.warning(f"Erreur conversion close pour {sym}: {e}")
+                    baseline_row = {
+                        "date": date_str,
+                        "close": float(close_val)
+                    }
+                    # On continue pour prendre la dernière de l'année
+                except (ValueError, TypeError):
                     continue
+        
+        if baseline_row:
+            logger.debug(f"Baseline YTD {sym}: {baseline_row['close']} le {baseline_row['date']} (timezone: {tz})")
+            
+            # Vérifier que c'est bien fin décembre
+            if not baseline_row["date"].startswith(f"{year-1}-12"):
+                logger.warning(f"⚠️ {sym}: Baseline YTD n'est pas en décembre ({baseline_row['date']})")
+            
+            return baseline_row["close"], baseline_row["date"]
 
-        raise ValueError(f"Aucun close utilisable pour {sym} depuis {year}-01-01")
+        # Fallback: si on n'a pas trouvé de données pour l'année N-1
+        # on prend la première bougie disponible (mais on loggue un warning)
+        if values:
+            first_row = values[0]
+            date_str = str(first_row.get("datetime", ""))[:10]
+            close_val = float(first_row.get("close"))
+            
+            logger.warning(f"⚠️ {sym}: Pas de données pour {year-1}, utilisation de {date_str} comme baseline")
+            return close_val, date_str
+
+        raise ValueError(f"Aucune donnée YTD utilisable pour {sym}")
 
     except Exception as e:
-        logger.error(f"Erreur YTD pour {sym}: {e}")
+        logger.error(f"Erreur baseline YTD pour {sym}: {e}")
         raise
 
 def format_value(value: float, currency: str) -> str:
@@ -494,6 +508,7 @@ def main():
     processed_count = 0
     error_count = 0
     ytd_warnings = 0  # Compteur d'avertissements YTD
+    year = dt.date.today().year
     
     for idx, etf in enumerate(sectors_mapping):
         sym = etf["symbol"]
@@ -529,16 +544,17 @@ def main():
             
             # Pause avant l'appel YTD
             time.sleep(0.5)
-            jan_close, jan_date = first_close_of_year(sym, region_display)
             
-            # Vérifier si la date YTD est bien en janvier
-            year = dt.date.today().year
-            if not jan_date.startswith(f"{year}-01"):
+            # IMPORTANT: Utiliser le dernier close de l'année N-1 comme baseline
+            base_close, base_date = baseline_last_close_prev_year(sym, region_display)
+            
+            # Vérifier que la date baseline est bien dans l'année N-1
+            if not base_date.startswith(str(year-1)):
                 ytd_warnings += 1
-                logger.warning(f"⚠️ {sym}: YTD ref date incorrecte ({jan_date}), série peut-être tronquée")
+                logger.warning(f"⚠️ {sym}: YTD baseline incorrecte ({base_date}), devrait être en {year-1}")
             
             # Calculer le YTD
-            ytd_pct = 100 * (last - jan_close) / jan_close if jan_close > 0 else 0.0
+            ytd_pct = 100 * (last - base_close) / base_close if base_close > 0 else 0.0
             
             # Valeurs numériques (pour le front & les tops)
             value_num = float(last)
@@ -567,8 +583,8 @@ def main():
                 
                 # Métadonnées pour traçabilité YTD
                 "last_price_source": last_src,
-                "ytd_ref_date": jan_date,
-                "ytd_method": "price_close_to_close",
+                "ytd_ref_date": base_date,
+                "ytd_method": "price_last_close_prev_year_to_last_close",
                 
                 "trend": "down" if day_pct < 0 else "up",
                 "region": region_display      # 'Europe' / 'US'
@@ -579,7 +595,7 @@ def main():
             ALL_SECTORS.append(sector_entry.copy())  # Copie pour éviter les modifications
             processed_count += 1
             
-            logger.info(f"✅ {sym} [{category}]: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}% (ref: {jan_date})")
+            logger.info(f"✅ {sym} [{category}]: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}% (base: {base_date})")
             
         except Exception as e:
             error_count += 1
@@ -602,8 +618,8 @@ def main():
     logger.info(f"  - ETFs traités avec succès: {processed_count}")
     logger.info(f"  - Erreurs: {error_count}")
     if ytd_warnings > 0:
-        logger.warning(f"  - ⚠️ Avertissements YTD (dates hors janvier): {ytd_warnings}")
-        logger.warning(f"    → Vérifiez votre abonnement Twelve Data (série peut-être tronquée)")
+        logger.warning(f"  - ⚠️ Avertissements YTD (dates hors {year-1}): {ytd_warnings}")
+        logger.warning(f"    → Vérifiez les données historiques disponibles")
     
     # Log par catégorie
     for category, sectors in SECTORS_DATA["sectors"].items():
@@ -623,10 +639,11 @@ def main():
     SECTORS_DATA["meta"]["errors_count"] = error_count
     SECTORS_DATA["meta"]["taxonomy"] = TAXONOMY  # Garder la trace du référentiel
     SECTORS_DATA["meta"]["ytd_calculation"] = {
-        "method": "price_close_to_close",
+        "method": "price_last_close_prev_year_to_last_close",
+        "baseline_year": year - 1,
         "timezone_mapping": TZ_BY_REGION,
-        "outputsize": 5000,
-        "note": "YTD basé sur le premier close de l'année dans le fuseau local"
+        "outputsize": 50,
+        "note": f"YTD basé sur le dernier close de {year-1} dans le fuseau local"
     }
     if ytd_warnings > 0:
         SECTORS_DATA["meta"]["ytd_warnings"] = ytd_warnings
