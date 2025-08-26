@@ -50,6 +50,7 @@
             --sidebar-width: 80px;
             /* Rouge moins saturé */
             --negative-color: #ef4444;
+            --negative-subtle: rgba(239, 68, 68, 0.08);
             --neutral-color: #999999;
             --separator-color: rgba(255, 255, 255, 0.04);
         }
@@ -659,6 +660,7 @@
             transition: color 0.3s ease;
         }
         
+        /* Chips YTD avec fonds teintés pour meilleure lisibilité */
         .sector-ytd {
             font-size: 0.75rem;
             opacity: 0.85;
@@ -668,6 +670,17 @@
             font-variant-numeric: tabular-nums;
             letter-spacing: -0.02em;
             transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.03);
+        }
+        
+        .sector-ytd.positive {
+            background: var(--accent-subtle);
+            border-color: rgba(34, 197, 94, 0.25);
+        }
+        
+        .sector-ytd.negative {
+            background: var(--negative-subtle);
+            border-color: rgba(239, 68, 68, 0.25);
         }
         
         /* Top performers en bandeau horizontal */
@@ -790,20 +803,29 @@
             100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
         }
 
-        /* Loader */
-        .loader {
-            display: inline-block;
-            width: 50px;
-            height: 50px;
-            border: 3px solid rgba(34, 197, 94, 0.15);
-            border-radius: 50%;
-            border-top-color: var(--accent-color);
-            animation: spin 1s ease-in-out infinite;
+        /* Loader remplacé par des skeleton rows */
+        .skeleton-rows {
+            padding: 16px;
         }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        
+        .skeleton-row {
+            height: 42px;
+            border-radius: 8px;
+            opacity: 0.5;
+            background: linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0.06) 25%,
+                rgba(255, 255, 255, 0.12) 37%,
+                rgba(255, 255, 255, 0.06) 63%
+            );
+            background-size: 400% 100%;
+            animation: shimmer 1.2s infinite;
+            margin-bottom: 8px;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: 100% 0; }
+            100% { background-position: -100% 0; }
         }
         
         /* Region Tabs sticky avec accessibilité */
@@ -1220,8 +1242,12 @@
                 
                 <!-- Conteneur pour le tableau des secteurs -->
                 <div class="glassmorphism rounded-lg overflow-hidden">
-                    <div id="sectors-loading" class="py-16 flex justify-center">
-                        <div class="loader"></div>
+                    <div id="sectors-loading" class="skeleton-rows">
+                        <div class="skeleton-row"></div>
+                        <div class="skeleton-row"></div>
+                        <div class="skeleton-row"></div>
+                        <div class="skeleton-row"></div>
+                        <div class="skeleton-row"></div>
                     </div>
                     
                     <div id="sectors-error" class="py-16 text-center hidden">
