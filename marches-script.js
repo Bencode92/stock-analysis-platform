@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'BRAZIL': [/Brazil/i, /Brésil/i],
             'MEXICO': [/Mexico/i, /Mexique/i],
             'CHILE':  [/Chile/i, /Chili/i],
-            'MERVAL': [/MERVAL/i, /Argentina/i, /Argentine/i],
+            'MERVAL': [/MERVAL/i, /Argentina/i, /Argentine/i, /Global X MSCI Argentina/i],
         },
         'asia': {
             'NIKKEI 225':       [/NIKKEI\s*225/i, /Japan ETF/i, /Japon/i],
@@ -65,7 +65,8 @@ document.addEventListener('DOMContentLoaded', function() {
         'Israel': 'Israël',
         'China': 'Chine',
         'Taiwan': 'Taïwan',
-        'Turkey': 'Turquie'
+        'Turkey': 'Turquie',
+        'Chilie': 'Chili'  // Correction du typo
     };
     
     // État du scraper
@@ -343,6 +344,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
             updateTopPerformers();
             updateMarketOverview();
+            
+            // Activer le tri sur toutes les tables après le rendu
+            if (window.attachTableSorters) {
+                window.attachTableSorters();
+            }
             
             hideElement('indices-loading');
             hideElement('indices-error');
