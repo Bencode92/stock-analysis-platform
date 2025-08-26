@@ -2,6 +2,7 @@
 """
 Script de mise à jour des données sectorielles via Twelve Data API
 Utilise des ETFs sectoriels pour représenter les performances des secteurs
+Génère des libellés normalisés bilingues pour l'affichage
 """
 
 import os
@@ -10,6 +11,7 @@ import json
 import datetime as dt
 import io
 import time
+import re
 from typing import Dict, List
 import logging
 from twelvedata import TDClient
@@ -44,6 +46,127 @@ if API_KEY:
 else:
     logger.error("❌ Clé API Twelve Data non définie!")
     TD = None
+
+# ==== Normalisation libellés affichage (à partir de TON CSV) ====
+CAT_FR = {
+    "energy": "Énergie",
+    "materials": "Matériaux",
+    "industrials": "Industriels",
+    "consumer-discretionary": "Consommation discrétionnaire",
+    "consumer-staples": "Consommation de base",
+    "healthcare": "Santé",
+    "financials": "Finance",
+    "information-technology": "Technologie",
+    "communication-services": "Communication",
+    "utilities": "Services publics",
+    "real-estate": "Immobilier",
+}
+
+# Sous-secteurs à extraire depuis le nom (ordre du +spécifique au +général)
+SS_PATTERNS = [
+    (re.compile(r"semiconductors?", re.I), ("Semiconductor", "Semi-conducteurs")),
+    (re.compile(r"cyber\s*security", re.I), ("Cybersecurity", "Cybersécurité")),
+    (re.compile(r"\bfintech\b", re.I), ("FinTech", "FinTech")),
+    (re.compile(r"biotech(nology|)", re.I), ("Biotechnology", "Biotechnologie")),
+    (re.compile(r"pharmaceuticals?", re.I), ("Pharmaceuticals", "Pharmaceutiques")),
+    (re.compile(r"oil\s*&\s*gas", re.I), ("Oil & Gas", "Pétrole & Gaz")),
+    (re.compile(r"food\s*&\s*beverage", re.I), ("Food & Beverage", "Alimentation & Boissons")),
+    (re.compile(r"retail", re.I), ("Retail", "Distribution")),
+    (re.compile(r"internet", re.I), ("Internet", "Internet")),
+    (re.compile(r"ai\s*&\s*robotics|artificial\s*intelligence", re.I), ("AI & Robotics", "IA & Robotique")),
+    (re.compile(r"banks?", re.I), ("Banks", "Banques")),
+    (re.compile(r"insurance", re.I), ("Insurance", "Assurance")),
+    (re.compile(r"financial\s*services?", re.I), ("Financial Services", "Services financiers")),
+    (re.compile(r"media", re.I), ("Media", "Médias")),
+    (re.compile(r"telecommunications?", re.I), ("Telecommunications", "Télécommunications")),
+    (re.compile(r"construction\s*&\s*materials?", re.I), ("Construction & Materials", "Construction & Matériaux")),
+    (re.compile(r"basic\s*resources?", re.I), ("Basic Resources", "Ressources de base")),
+    (re.compile(r"chemicals?", re.I), ("Chemicals", "Chimie")),
+    (re.compile(r"automobiles?|autos?", re.I), ("Automobiles", "Automobiles")),
+    (re.compile(r"smart\s*grid", re.I), ("Smart Grid Infrastructure", "Infrastructures réseaux intelligents")),
+    (re.compile(r"transportation", re.I), ("Transportation", "Transports")),
+    (re.compile(r"technology\s*dividend", re.I), ("Technology Dividend", "Dividendes technologiques")),
+]
+
+def _family_from_row(name: str, symbol: str, region_display: str) -> str:
+    """Détermine la famille d'indices (STOXX Europe 600, NASDAQ US, S&P 500) depuis les infos ETF"""
+    n = name.lower()
+    sym = symbol.upper()
+    
+    # Forçages spécifiques par symbole
+    FORCE_FAMILY = {
+        "IYH": "Dow Jones US",  # iShares U.S. Healthcare
+    }
+    fam = FORCE_FAMILY.get(sym)
+    if fam:
+        return fam
+    
+    # Europe
+    if region_display == "Europe":
+        return "STOXX Europe 600"
+    
+    # US - détection par nom
+    if "nasdaq" in n:
+        return "NASDAQ US"
+    if "select sector spdr" in n or re.match(r"^XL[A-Z]{1,2}$", sym, re.I):
+        return "S&P 500"
+    if "dow jones" in n or "dj " in n:
+        return "Dow Jones US"
+    
+    # Fallback US
+    return "NASDAQ US"
+
+def _sector_from_name_or_category(etf_name: str, category: str) -> tuple[str, str]:
+    """Extrait le secteur/sous-secteur depuis le nom ETF ou retombe sur la catégorie"""
+    # Tente un sous-secteur via le nom
+    for rx, (en, fr) in SS_PATTERNS:
+        if rx.search(etf_name or ""):
+            return en, fr
+    
+    # Sinon retombe sur la catégorie générale
+    fr = CAT_FR.get(category, "Composite")
+    
+    # EN "générique" aligné
+    en = {
+        "energy": "Energy",
+        "materials": "Materials",
+        "industrials": "Industrials",
+        "consumer-discretionary": "Consumer Discretionary",
+        "consumer-staples": "Consumer Staples",
+        "healthcare": "Health Care",
+        "financials": "Finance",
+        "information-technology": "Technology",
+        "communication-services": "Communication Services",
+        "utilities": "Utilities",
+        "real-estate": "Real Estate"
+    }.get(category, "Composite")
+    
+    return en, fr
+
+def region_display_from_code(code: str) -> str:
+    """Convertit le code région du CSV en affichage normalisé"""
+    return "Europe" if str(code).lower() in ("eu", "europe", "eur") else "US"
+
+def make_display_payload(etf_row: dict) -> dict:
+    """
+    À partir des colonnes CSV + nom ETF, retourne:
+    - indexFamily (STOXX Europe 600 / NASDAQ US / S&P 500)
+    - sector_en / sector_fr
+    - display_fr  (ex: 'NASDAQ US — Semi-conducteurs')
+    - indexName   (ex: 'NASDAQ US Semiconductor')
+    """
+    region_disp = region_display_from_code(etf_row.get("region", "us"))
+    family = _family_from_row(etf_row.get("name", ""), etf_row.get("symbol", ""), region_disp)
+    sec_en, sec_fr = _sector_from_name_or_category(etf_row.get("name", ""), etf_row.get("category", ""))
+    
+    return {
+        "indexFamily": family,
+        "sector_en": sec_en,
+        "sector_fr": sec_fr,
+        "display_fr": f"{family} — {sec_fr}",
+        "indexName": f"{family} {sec_en}",
+        "region_display": region_disp,
+    }
 
 def create_empty_sectors_data():
     """Crée une structure de données vide pour les secteurs"""
@@ -141,98 +264,6 @@ def format_value(value: float, currency: str) -> str:
 def format_percent(value: float) -> str:
     """Formate un pourcentage avec signe"""
     return f"{value:+.2f} %"
-
-def determine_index_name(etf_name: str, region: str) -> str:
-    """Détermine le nom de l'indice basé sur le nom de l'ETF"""
-    if "STOXX Europe 600" in etf_name:
-        # Extraire le nom du secteur
-        if "Real Estate" in etf_name:
-            return "STOXX Europe 600 Real Estate"
-        elif "Construction" in etf_name:
-            return "STOXX Europe 600 Construction & Materials"
-        elif "Financial Services" in etf_name:
-            return "STOXX Europe 600 Financial Services"
-        elif "Chemicals" in etf_name:
-            return "STOXX Europe 600 Chemicals"
-        elif "Finance" in etf_name:
-            return "STOXX Europe 600 Finance"
-        elif "Media" in etf_name:
-            return "STOXX Europe 600 Media"
-        elif "Autos" in etf_name:
-            return "STOXX Europe 600 Automobiles"
-        elif "Telecommunications" in etf_name:
-            return "STOXX Europe 600 Telecommunications"
-        elif "Industrials" in etf_name:
-            return "STOXX Europe 600 Industrials"
-        elif "Health Care" in etf_name:
-            return "STOXX Europe 600 Health Care"
-        elif "Banks" in etf_name:
-            return "STOXX Europe 600 Banks"
-        elif "Oil & Gas" in etf_name:
-            return "STOXX Europe 600 Oil & Gas"
-        elif "Basic Resources" in etf_name:
-            return "STOXX Europe 600 Basic Resources"
-        elif "Technology" in etf_name:
-            return "STOXX Europe 600 Technology"
-        elif "Insurance" in etf_name:
-            return "STOXX Europe 600 Insurance"
-        elif "Utilities" in etf_name:
-            return "STOXX Europe 600 Utilities"
-        else:
-            return "STOXX Europe 600"
-    elif "Nasdaq" in etf_name or "NASDAQ" in etf_name:
-        # Extraire le nom du secteur NASDAQ
-        if "Oil & Gas" in etf_name:
-            return "NASDAQ US Oil & Gas"
-        elif "Semiconductor" in etf_name:
-            return "NASDAQ US Semiconductor"
-        elif "Cybersecurity" in etf_name:
-            return "NASDAQ US Cybersecurity"
-        elif "Smart Grid" in etf_name:
-            return "NASDAQ US Smart Grid Infrastructure"
-        elif "FINTECH" in etf_name:
-            return "NASDAQ US FinTech"
-        elif "BIOTECH" in etf_name:
-            return "NASDAQ US Biotechnology"
-        elif "Retail" in etf_name:
-            return "NASDAQ US Retail"
-        elif "Food & Beverage" in etf_name:
-            return "NASDAQ US Food & Beverage"
-        elif "Pharmaceuticals" in etf_name:
-            return "NASDAQ US Pharmaceuticals"
-        elif "Bank" in etf_name:
-            return "NASDAQ US Banks"
-        elif "Transportation" in etf_name:
-            return "NASDAQ US Transportation"
-        elif "Internet" in etf_name:
-            return "NASDAQ US Internet"
-        elif "Technology Dividend" in etf_name:
-            return "NASDAQ US Technology Dividend"
-        elif "Artificial Intelligence" in etf_name:
-            return "NASDAQ US AI & Robotics"
-        else:
-            return etf_name
-    elif "Select Sector SPDR" in etf_name:
-        # Extraire le nom du secteur S&P
-        if "Materials" in etf_name:
-            return "S&P 500 Materials"
-        elif "Real Estate" in etf_name:
-            return "S&P 500 Real Estate"
-        elif "Industrial" in etf_name:
-            return "S&P 500 Industrials"
-        elif "Consumer Discretionary" in etf_name:
-            return "S&P 500 Consumer Discretionary"
-        elif "Utilities" in etf_name:
-            return "S&P 500 Utilities"
-        else:
-            return etf_name.replace("Select Sector SPDR Fund", "").strip()
-    elif "iShares" in etf_name:
-        if "Healthcare" in etf_name:
-            return "S&P 500 Health Care"
-        else:
-            return etf_name
-    else:
-        return etf_name
 
 def normalise_category(raw_category: str, symbol: str, etf_name: str) -> str:
     """Applique les overrides et la logique ICB/GICS pour retourner une catégorie valide."""
@@ -433,32 +464,36 @@ def main():
             # Calculer le YTD
             ytd_pct = 100 * (last - jan_close) / jan_close if jan_close > 0 else 0.0
             
-            # Déterminer la région pour l'affichage
-            region_display = "US" if etf.get("region", "").lower() == "us" else "Europe"
+            # Normalisation libellé d'affichage à partir des colonnes CSV
+            norm = make_display_payload(etf)
             
-            # ➕ Numériques (pour le front & les tops)
+            # Valeurs numériques (pour le front & les tops)
             value_num = float(last)
             change_num = float(day_pct)
             ytd_num = float(ytd_pct)
             
-            # Créer l'objet de données avec le VRAI NOM DE L'ETF et les valeurs numériques
+            # Créer l'objet de données avec les libellés normalisés
             sector_entry = {
                 "symbol": sym,
-                "name": etf.get("name", sym),
-                "indexName": determine_index_name(etf.get("name", sym), region_display),
+                "name": etf.get("name", sym),          # nom complet ETF (tooltip front)
+                "indexFamily": norm["indexFamily"],    # ex: 'STOXX Europe 600' / 'NASDAQ US' / 'S&P 500'
+                "indexName": norm["indexName"],        # ex: 'NASDAQ US Semiconductor'
+                "display_fr": norm["display_fr"],      # ex: 'NASDAQ US — Semi-conducteurs'
+                "sector_en": norm["sector_en"],
+                "sector_fr": norm["sector_fr"],
                 
                 # Affichages formatés
                 "value": format_value(last, etf.get("currency", "USD")),
                 "changePercent": format_percent(day_pct),
                 "ytdChange": format_percent(ytd_pct),
                 
-                # ➕ Valeurs numériques fiables
+                # Valeurs numériques fiables
                 "value_num": value_num,
                 "change_num": change_num,
                 "ytd_num": ytd_num,
                 
                 "trend": "down" if day_pct < 0 else "up",
-                "region": region_display
+                "region": norm["region_display"]      # 'Europe' / 'US'
             }
             
             # Ajouter à la bonne catégorie
