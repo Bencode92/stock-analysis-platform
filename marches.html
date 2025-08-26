@@ -639,6 +639,18 @@
             font-size: 0.9rem;
             margin-bottom: 8px;
             color: rgba(255, 255, 255, 0.95);
+            display: flex;
+            align-items: center;
+        }
+        
+        .market-index-name .etf-badge {
+            font-size: 0.65rem;
+            opacity: 0.6;
+            margin-left: 6px;
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            font-weight: 500;
         }
         
         .market-index-data {
@@ -1077,32 +1089,32 @@
                         <span id="europe-trend" class="text-sm positive" aria-label="Tendance Europe"><i class="fas fa-arrow-up"></i></span>
                     </div>
                     
-                    <div class="market-index-col" data-index="cac40">
-                        <div class="market-index-name">CAC 40</div>
+                    <div class="market-index-col" data-index="germany">
+                        <div class="market-index-name">Allemagne</div>
                         <div class="market-index-data">
                             <div class="market-value negative">−0,35%</div>
                             <div class="market-ytd positive">YTD 7,87%</div>
                         </div>
                     </div>
                     
-                    <div class="market-index-col" data-index="dax">
-                        <div class="market-index-name">DAX</div>
+                    <div class="market-index-col" data-index="france">
+                        <div class="market-index-name">France</div>
                         <div class="market-index-data">
                             <div class="market-value negative">−0,55%</div>
                             <div class="market-ytd positive">YTD 13,27%</div>
                         </div>
                     </div>
                     
-                    <div class="market-index-col" data-index="ftse100">
-                        <div class="market-index-name">FTSE 100</div>
+                    <div class="market-index-col" data-index="uk">
+                        <div class="market-index-name">Royaume-Uni</div>
                         <div class="market-index-data">
                             <div class="market-value positive">0,20%</div>
                             <div class="market-ytd positive">YTD 4,71%</div>
                         </div>
                     </div>
                     
-                    <div class="market-index-col" data-index="eurostoxx50">
-                        <div class="market-index-name">Euro Stoxx 50</div>
+                    <div class="market-index-col" data-index="switzerland">
+                        <div class="market-index-name">Suisse</div>
                         <div class="market-index-data">
                             <div class="market-value negative">−0,25%</div>
                             <div class="market-ytd positive">YTD 9,19%</div>
@@ -1131,8 +1143,8 @@
                         </div>
                     </div>
                     
-                    <div class="market-index-col" data-index="nasdaq">
-                        <div class="market-index-name">Nasdaq</div>
+                    <div class="market-index-col" data-index="canada">
+                        <div class="market-index-name">Canada</div>
                         <div class="market-index-data">
                             <div class="market-value positive">1,22%</div>
                             <div class="market-ytd negative">YTD −8,61%</div>
@@ -1154,7 +1166,7 @@
                     </div>
                     
                     <div class="market-index-col" data-index="brazil">
-                        <div class="market-index-name">Brazil</div>
+                        <div class="market-index-name">Brésil</div>
                         <div class="market-index-data">
                             <div class="market-value positive">1,42%</div>
                             <div class="market-ytd positive">YTD 9,15%</div>
@@ -1162,7 +1174,7 @@
                     </div>
                     
                     <div class="market-index-col" data-index="mexico">
-                        <div class="market-index-name">Mexico</div>
+                        <div class="market-index-name">Mexique</div>
                         <div class="market-index-data">
                             <div class="market-value positive">0,15%</div>
                             <div class="market-ytd positive">YTD 9,20%</div>
@@ -1170,15 +1182,15 @@
                     </div>
                     
                     <div class="market-index-col" data-index="chile">
-                        <div class="market-index-name">Chile</div>
+                        <div class="market-index-name">Chili</div>
                         <div class="market-index-data">
                             <div class="market-value positive">0,38%</div>
                             <div class="market-ytd positive">YTD 17,11%</div>
                         </div>
                     </div>
                     
-                    <div class="market-index-col" data-index="merval">
-                        <div class="market-index-name">Merval</div>
+                    <div class="market-index-col" data-index="argentina">
+                        <div class="market-index-name">Argentine</div>
                         <div class="market-index-data">
                             <div class="market-value negative">−1,79%</div>
                             <div class="market-ytd negative">YTD −11,90%</div>
@@ -1191,32 +1203,32 @@
                         <span id="asia-trend" class="text-sm negative" aria-label="Tendance Asie"><i class="fas fa-arrow-down"></i></span>
                     </div>
                     
-                    <div class="market-index-col" data-index="nikkei">
-                        <div class="market-index-name">Nikkei 225</div>
+                    <div class="market-index-col" data-index="china">
+                        <div class="market-index-name">Chine</div>
                         <div class="market-index-data">
                             <div class="market-value negative">−0,08%</div>
                             <div class="market-ytd negative">YTD −7,78%</div>
                         </div>
                     </div>
                     
-                    <div class="market-index-col" data-index="hangseng">
-                        <div class="market-index-name">Hang Seng</div>
+                    <div class="market-index-col" data-index="japan">
+                        <div class="market-index-name">Japon</div>
                         <div class="market-index-data">
                             <div class="market-value negative">−0,65%</div>
                             <div class="market-ytd positive">YTD 16,28%</div>
                         </div>
                     </div>
                     
-                    <div class="market-index-col" data-index="shanghai">
-                        <div class="market-index-name">Shanghai</div>
+                    <div class="market-index-col" data-index="india">
+                        <div class="market-index-name">Inde</div>
                         <div class="market-index-data">
                             <div class="market-value negative">−0,39%</div>
                             <div class="market-ytd positive">YTD 0,21%</div>
                         </div>
                     </div>
                     
-                    <div class="market-index-col" data-index="sensex">
-                        <div class="market-index-name">BSE Sensex</div>
+                    <div class="market-index-col" data-index="taiwan">
+                        <div class="market-index-name">Taïwan</div>
                         <div class="market-index-data">
                             <div class="market-value positive">0,14%</div>
                             <div class="market-ytd positive">YTD 2,86%</div>
