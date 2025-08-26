@@ -2,6 +2,7 @@
  * secteurs-script.js - Version avec libellés normalisés ET traduction FR
  * Utilise prioritairement les libellés display_fr du JSON
  * Garde la traduction française côté client pour flexibilité
+ * Intègre l'affichage des holdings ETF depuis un fichier consolidé
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -75,6 +76,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
     
+    // Cache pour les holdings ETF
+    let etfHoldingsData = null;
+    let holdingsLoadPromise = null;
+    
     // Mapping des catégories sectorielles vers régions (pour l'aperçu uniquement)
     const SECTOR_MAPPINGS = {
         'energy': 'Énergie',
@@ -110,12 +115,313 @@ document.addEventListener('DOMContentLoaded', function() {
     // Premier chargement des données
     loadSectorsData();
     
+    // Charger les holdings en arrière-plan
+    loadETFHoldings();
+    
+    // Ajouter les styles CSS pour la modal holdings
+    injectHoldingsStyles();
+    
     // Ajouter les gestionnaires d'événements
     document.getElementById('retry-button')?.addEventListener('click', function() {
         hideElement('sectors-error');
         showElement('sectors-loading');
         loadSectorsData(true);
     });
+    
+    /**
+     * Injecte les styles CSS pour la modal holdings
+     */
+    function injectHoldingsStyles() {
+        const style = document.createElement('style');
+        style.textContent = `
+            .holdings-modal-backdrop {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.6);
+                backdrop-filter: blur(4px);
+                z-index: 9998;
+                animation: fadeIn 0.2s ease;
+            }
+            
+            .holdings-modal {
+                position: fixed;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                width: min(600px, 90vw);
+                max-height: 80vh;
+                background: linear-gradient(180deg, rgba(15, 40, 65, 0.98) 0%, rgba(10, 25, 45, 0.98) 100%);
+                color: #e5e7eb;
+                border-radius: 12px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+                z-index: 9999;
+                animation: modalSlideIn 0.3s ease;
+                border: 1px solid rgba(34, 197, 94, 0.2);
+            }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            
+            @keyframes modalSlideIn {
+                from {
+                    opacity: 0;
+                    transform: translate(-50%, -40%);
+                }
+                to {
+                    opacity: 1;
+                    transform: translate(-50%, -50%);
+                }
+            }
+            
+            .holdings-modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 16px 20px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 12px 12px 0 0;
+            }
+            
+            .holdings-modal-title {
+                font-weight: 600;
+                font-size: 1.1rem;
+            }
+            
+            .holdings-close {
+                width: 32px;
+                height: 32px;
+                border-radius: 6px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                background: transparent;
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 1.2rem;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            
+            .holdings-close:hover {
+                background: rgba(255, 255, 255, 0.05);
+                border-color: rgba(255, 255, 255, 0.2);
+                color: white;
+            }
+            
+            .holdings-modal-body {
+                padding: 20px;
+                max-height: calc(80vh - 80px);
+                overflow-y: auto;
+            }
+            
+            .holdings-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            
+            .holding-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 16px;
+                margin-bottom: 8px;
+                background: rgba(255, 255, 255, 0.03);
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.05);
+                transition: all 0.2s;
+            }
+            
+            .holding-item:hover {
+                background: rgba(255, 255, 255, 0.05);
+                border-color: rgba(34, 197, 94, 0.2);
+            }
+            
+            .holding-info {
+                flex: 1;
+            }
+            
+            .holding-name {
+                font-weight: 500;
+                margin-bottom: 2px;
+            }
+            
+            .holding-symbol {
+                font-size: 0.85rem;
+                color: rgba(255, 255, 255, 0.6);
+            }
+            
+            .holding-weight {
+                font-weight: 700;
+                font-size: 1.1rem;
+                color: var(--accent-color);
+                min-width: 60px;
+                text-align: right;
+            }
+            
+            .holdings-meta {
+                margin-top: 16px;
+                padding-top: 16px;
+                border-top: 1px solid rgba(255, 255, 255, 0.08);
+                font-size: 0.85rem;
+                color: rgba(255, 255, 255, 0.5);
+                display: flex;
+                justify-content: space-between;
+            }
+            
+            .btn-holdings {
+                font-size: 0.75rem;
+                padding: 3px 10px;
+                margin-left: 10px;
+                border: 1px solid rgba(34, 197, 94, 0.3);
+                border-radius: 6px;
+                background: rgba(34, 197, 94, 0.08);
+                color: var(--accent-color);
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            
+            .btn-holdings:hover {
+                background: rgba(34, 197, 94, 0.15);
+                border-color: rgba(34, 197, 94, 0.5);
+                transform: translateY(-1px);
+            }
+            
+            .holdings-loading {
+                text-align: center;
+                padding: 40px;
+                color: rgba(255, 255, 255, 0.5);
+            }
+            
+            .holdings-error {
+                text-align: center;
+                padding: 40px;
+                color: #ef4444;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    /**
+     * Charge le fichier consolidé des holdings ETF
+     */
+    async function loadETFHoldings() {
+        if (holdingsLoadPromise) return holdingsLoadPromise;
+        
+        holdingsLoadPromise = fetch('data/etf_holdings.json')
+            .then(response => {
+                if (!response.ok) throw new Error('Holdings file not found');
+                return response.json();
+            })
+            .then(data => {
+                etfHoldingsData = data;
+                console.log(`Holdings chargés: ${Object.keys(data.etfs || {}).length} ETFs`);
+                return data;
+            })
+            .catch(error => {
+                console.warn('Holdings non disponibles:', error);
+                return null;
+            });
+        
+        return holdingsLoadPromise;
+    }
+    
+    /**
+     * Affiche la modal avec les holdings d'un ETF
+     */
+    async function showHoldingsModal(sector) {
+        // S'assurer que les holdings sont chargés
+        await loadETFHoldings();
+        
+        const symbol = sector.symbol;
+        const etfData = etfHoldingsData?.etfs?.[symbol];
+        
+        // Créer le contenu HTML
+        let content = '';
+        
+        if (!etfHoldingsData) {
+            content = '<div class="holdings-error">Holdings non disponibles (fichier manquant)</div>';
+        } else if (!etfData) {
+            content = '<div class="holdings-error">Aucune donnée de composition pour cet ETF</div>';
+        } else if (!etfData.holdings || etfData.holdings.length === 0) {
+            content = '<div class="holdings-error">Liste des holdings vide</div>';
+        } else {
+            // Créer la liste des holdings
+            const holdingsList = etfData.holdings.map((h, idx) => {
+                const weight = h.weight != null ? (h.weight * 100).toFixed(2) + '%' : '—';
+                const name = h.name || 'N/A';
+                const ticker = h.symbol ? `(${h.symbol})` : '';
+                const country = h.country ? ` • ${h.country}` : '';
+                
+                return `
+                    <li class="holding-item">
+                        <div class="holding-info">
+                            <div class="holding-name">${idx + 1}. ${name}</div>
+                            <div class="holding-symbol">${ticker}${country}</div>
+                        </div>
+                        <div class="holding-weight">${weight}</div>
+                    </li>
+                `;
+            }).join('');
+            
+            const totalWeight = etfData.top_weight || 
+                               (etfData.holdings.reduce((sum, h) => sum + (h.weight || 0), 0) * 100).toFixed(1);
+            
+            content = `
+                <ul class="holdings-list">
+                    ${holdingsList}
+                </ul>
+                <div class="holdings-meta">
+                    <span>Top ${etfData.holdings.length} positions = ${totalWeight}%</span>
+                    <span>${etfData.as_of ? `MAJ: ${etfData.as_of}` : ''}</span>
+                </div>
+            `;
+        }
+        
+        // Créer la modal
+        const modalHtml = `
+            <div class="holdings-modal-wrapper">
+                <div class="holdings-modal-backdrop"></div>
+                <div class="holdings-modal">
+                    <div class="holdings-modal-header">
+                        <div class="holdings-modal-title">
+                            ${sector.display_fr || sector.indexName || sector.name}
+                            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.6); margin-top: 2px">
+                                Composition ${symbol}
+                            </div>
+                        </div>
+                        <button class="holdings-close">×</button>
+                    </div>
+                    <div class="holdings-modal-body">
+                        ${content}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = modalHtml;
+        document.body.appendChild(wrapper);
+        
+        // Gérer la fermeture
+        const closeModal = () => {
+            wrapper.querySelector('.holdings-modal').style.animation = 'modalSlideIn 0.3s ease reverse';
+            wrapper.querySelector('.holdings-modal-backdrop').style.animation = 'fadeIn 0.2s ease reverse';
+            setTimeout(() => wrapper.remove(), 300);
+        };
+        
+        wrapper.querySelector('.holdings-close').onclick = closeModal;
+        wrapper.querySelector('.holdings-modal-backdrop').onclick = closeModal;
+        
+        // Fermer avec Escape
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    }
     
     /**
      * Convertit un pourcentage string en nombre
@@ -411,11 +717,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             const ytdClass = sector.ytd_num < -0.01 ? 'negative' : 
                                            sector.ytd_num > 0.01 ? 'positive' : 'neutral';
                             
-                            // Priorité : 1) display_fr du JSON, 2) traduction FR du name, 3) indexName
+                            // Priorité : display_fr du JSON, puis traduction FR, puis fallback
                             const rawName = sector.name || '';  // nom complet ETF pour tooltip
                             let label = sector.display_fr;
                             
-                            // Si pas de display_fr, essayer de traduire le nom
+                            // Si pas de display_fr, traduire
                             if (!label && LOCALE === 'fr') {
                                 label = translateSectorLabel(sector.indexName || rawName, LOCALE);
                             }
@@ -426,8 +732,31 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                             
                             const nameTd = document.createElement('td');
-                            nameTd.innerHTML = `<div style="font-weight:600">${label}</div>`;
-                            nameTd.title = rawName; // nom complet ETF au survol
+                            
+                            // Créer un conteneur pour le nom et le bouton
+                            const nameContainer = document.createElement('div');
+                            nameContainer.style.cssText = 'display: flex; align-items: center; justify-content: space-between;';
+                            
+                            const nameSpan = document.createElement('span');
+                            nameSpan.style.fontWeight = '600';
+                            nameSpan.textContent = label;
+                            nameSpan.title = rawName;
+                            
+                            nameContainer.appendChild(nameSpan);
+                            
+                            // Ajouter le bouton Holdings si disponible
+                            if (sector.symbol) {
+                                const btnHoldings = document.createElement('button');
+                                btnHoldings.className = 'btn-holdings';
+                                btnHoldings.textContent = 'Composition';
+                                btnHoldings.onclick = (e) => {
+                                    e.stopPropagation();
+                                    showHoldingsModal(sector);
+                                };
+                                nameContainer.appendChild(btnHoldings);
+                            }
+                            
+                            nameTd.appendChild(nameContainer);
                             
                             tr.appendChild(nameTd);
                             tr.appendChild(createTableCell(sector.value));
