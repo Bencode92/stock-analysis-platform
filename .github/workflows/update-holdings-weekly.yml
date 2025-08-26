@@ -1,0 +1,199 @@
+name: Update Holdings Weekly
+
+on:
+  schedule:
+    # Tous les dimanches à 6h UTC
+    - cron: '0 6 * * 0'
+  
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: 'Forcer la mise à jour même si le fichier est récent'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  update-holdings:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-holdings-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-holdings-
+            ${{ runner.os }}-pip-
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+      
+      - name: Check if update needed
+        id: check_update
+        if: github.event_name == 'schedule'
+        run: |
+          if [ -f "data/etf_holdings.json" ]; then
+            # Vérifier l'âge du fichier
+            FILE_AGE=$((($(date +%s) - $(date -r data/etf_holdings.json +%s)) / 86400))
+            echo "📁 Fichier holdings existant: ${FILE_AGE} jours"
+            
+            if [ $FILE_AGE -lt 6 ]; then
+              echo "skip_update=true" >> $GITHUB_OUTPUT
+              echo "ℹ️ Fichier récent, pas de mise à jour nécessaire"
+            else
+              echo "skip_update=false" >> $GITHUB_OUTPUT
+              echo "🔄 Fichier périmé, mise à jour nécessaire"
+            fi
+          else
+            echo "skip_update=false" >> $GITHUB_OUTPUT
+            echo "📝 Fichier inexistant, création nécessaire"
+          fi
+      
+      - name: Force update if requested
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.force_update == 'true'
+        run: |
+          echo "🔧 Suppression du fichier pour forcer la mise à jour..."
+          rm -f data/etf_holdings.json
+      
+      - name: Update ETF holdings
+        if: steps.check_update.outputs.skip_update != 'true' || github.event_name == 'workflow_dispatch'
+        env:
+          TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
+          HOLDINGS_MAX: '10'
+          HOLDINGS_STALE_DAYS: '7'
+          HOLDINGS_SLEEP: '1.0'
+        run: |
+          echo "📊 Mise à jour des holdings ETF..."
+          echo "⚙️ Configuration:"
+          echo "   - Top holdings par ETF: $HOLDINGS_MAX"
+          echo "   - Pause entre requêtes: ${HOLDINGS_SLEEP}s"
+          echo ""
+          
+          # Lancer le script
+          python scripts/update_holdings.py
+          
+          # Afficher les statistiques
+          if [ -f data/etf_holdings.json ]; then
+            echo ""
+            echo "📈 Résultat:"
+            ls -lh data/etf_holdings.json
+            
+            # Extraire quelques stats du JSON
+            python -c "
+import json
+with open('data/etf_holdings.json') as f:
+    data = json.load(f)
+    meta = data.get('meta', {})
+    print(f'   - ETFs avec holdings: {meta.get(\"etf_count\", 0)}')
+    print(f'   - Holdings totaux: {meta.get(\"total_holdings\", 0)}')
+    print(f'   - Crédits API utilisés: ~{meta.get(\"api_credits_used\", 0)}')
+            "
+          fi
+      
+      - name: Check for changes
+        id: verify_changes
+        run: |
+          if [[ -n $(git status -s data/etf_holdings.json) ]]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "✅ Modifications détectées"
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Aucune modification"
+          fi
+      
+      - name: Commit and push changes
+        if: steps.verify_changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add data/etf_holdings.json
+          
+          # Message de commit avec date
+          COMMIT_MSG="📈 Update ETF holdings [$(date -u +'%Y-%m-%d %H:%M UTC')]"
+          
+          git commit -m "$COMMIT_MSG"
+          git push
+          
+          echo "✅ Holdings mis à jour et pushés"
+      
+      - name: Summary
+        if: always()
+        run: |
+          echo "## 📊 Résumé de l'exécution" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "🎯 **Déclenchement:** Manuel" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ github.event.inputs.force_update }}" == "true" ]; then
+              echo "🔧 **Mode:** Mise à jour forcée" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "🎯 **Déclenchement:** Planifié (hebdomadaire)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f data/etf_holdings.json ]; then
+            echo "### 📈 Fichier généré" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            ls -lh data/etf_holdings.json >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⏰ **Prochaine exécution:** Dimanche prochain 6h UTC" >> $GITHUB_STEP_SUMMARY
+
+  notify-error:
+    runs-on: ubuntu-latest
+    needs: update-holdings
+    if: failure()
+    
+    steps:
+      - name: Create issue on failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date().toISOString().split('T')[0];
+            const title = `⚠️ Holdings update failed - ${date}`;
+            
+            const body = `
+            ## Holdings update failure
+            
+            **Workflow run:** [#${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            **Triggered by:** ${{ github.event_name }}
+            
+            ### Possible causes:
+            - API key expired or invalid
+            - API rate limits exceeded (200 crédits/ETF × 40 ETFs = 8000 crédits)
+            - Network connectivity issues
+            - Changes in Twelve Data API format
+            
+            ### Action required:
+            1. Check the workflow logs
+            2. Verify API key validity
+            3. Check API usage limits
+            4. Run manually if needed
+            `;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['automated', 'holdings-update-failure']
+            });
