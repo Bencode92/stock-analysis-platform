@@ -8,7 +8,7 @@ on:
         required: false
         default: 'false'
         type: choice
-        options: ['true', 'false']
+        options: ['true','false']
       max_holdings:
         description: 'Max holdings/ETF'
         required: false
@@ -28,70 +28,54 @@ jobs:
   update-holdings:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
-      - name: Check prerequisites
+
+      - name: Preflight checks
         run: |
           if [ -z "${{ secrets.TWELVE_DATA_API }}" ]; then
             echo "::error::Secret TWELVE_DATA_API missing"
             exit 1
           fi
           if [ ! -f "data/sectors.json" ]; then
-            echo "::error::data/sectors.json not found"
+            echo "::error::data/sectors.json not found (run sectors workflow first)"
             exit 1
           fi
-          echo "✅ Prerequisites OK"
-          
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          
-      - name: Install dependencies
+
+      - name: Install deps
         run: |
           python -m pip install --upgrade pip
           pip install requests
-          
+
       - name: Check holdings status
         id: check_status
-        shell: bash
         run: |
-          set -euo pipefail
-          if [[ -f data/etf_holdings.json ]]; then
-            MTIME=$(stat -c %Y data/etf_holdings.json)
-            NOW=$(date +%s)
-            FILE_AGE=$(( (NOW - MTIME) / 86400 ))
-            echo "📁 Fichier existant, âge: ${FILE_AGE} jours"
-            
-            if [[ "$FILE_AGE" -lt 6 && "${{ github.event.inputs.force_update }}" != "true" ]]; then
-              echo "ℹ️ Fichier récent (< 6 jours) et pas de force_update"
-              echo "skip_update=true" >> "$GITHUB_OUTPUT"
+          if [ -f "data/etf_holdings.json" ]; then
+            FILE_AGE=$((($(date +%s) - $(date -r data/etf_holdings.json +%s)) / 86400))
+            echo "Current file age: ${FILE_AGE}d"
+            if [ $FILE_AGE -lt 6 ] && [ "${{ github.event.inputs.force_update }}" != "true" ]; then
+              echo "skip_update=true" >> $GITHUB_OUTPUT
+              echo "Skipping (fresh file, use force_update=true to override)."
             else
-              echo "🔄 Mise à jour nécessaire (âge >= 6 jours ou force_update=true)"
-              echo "skip_update=false" >> "$GITHUB_OUTPUT"
+              echo "skip_update=false" >> $GITHUB_OUTPUT
+              echo "Updating (stale or forced)."
             fi
           else
-            echo "📝 Aucun fichier existant - création nécessaire"
-            echo "skip_update=false" >> "$GITHUB_OUTPUT"
+            echo "skip_update=false" >> $GITHUB_OUTPUT
+            echo "No existing file — will generate."
           fi
-          
-      - name: Debug skip flag
-        run: |
-          echo "================================"
-          echo "skip_update = ${{ steps.check_status.outputs.skip_update }}"
-          echo "force_update = ${{ github.event.inputs.force_update }}"
-          echo "================================"
-          
-      - name: Force update if requested
+
+      - name: Force delete existing file (if requested)
         if: github.event.inputs.force_update == 'true'
-        run: |
-          echo "🔧 Force update demandé - suppression du fichier existant"
-          rm -f data/etf_holdings.json || true
-          ls -la data/ || true
-          
+        run: rm -f data/etf_holdings.json || true
+
       - name: Update holdings
         if: steps.check_status.outputs.skip_update != 'true'
         env:
@@ -99,63 +83,21 @@ jobs:
           HOLDINGS_MAX: ${{ github.event.inputs.max_holdings || '10' }}
           HOLDINGS_STALE_DAYS: '7'
           HOLDINGS_SLEEP: '1.0'
-        run: |
-          echo "🚀 Lancement du script Python"
-          echo "   HOLDINGS_MAX=$HOLDINGS_MAX"
-          echo "   HOLDINGS_STALE_DAYS=$HOLDINGS_STALE_DAYS"
-          python scripts/update_holdings.py
-          
+        run: python scripts/update_holdings.py
+
       - name: Verify results
         if: steps.check_status.outputs.skip_update != 'true'
         run: |
-          echo "📊 Vérification des résultats..."
-          if [ ! -f "data/etf_holdings.json" ]; then
-            echo "::error::File not generated"
-            exit 1
-          fi
-          echo "✅ Fichier généré:"
+          test -f data/etf_holdings.json || (echo "::error::File not generated"; exit 1)
           ls -lh data/etf_holdings.json
-          
-          # Afficher un résumé
-          python -c "
-import json
-with open('data/etf_holdings.json') as f:
-    data = json.load(f)
-    print(f'ETFs: {len(data.get(\"etfs\", {}))}')
-    print(f'Holdings: {data[\"meta\"].get(\"total_holdings\", 0)}')
-          "
-          
-      - name: Commit and push
+
+      - name: Commit & push
         if: steps.check_status.outputs.skip_update != 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          
-          # Vérifier s'il y a des changements
           git add data/etf_holdings.json
-          
-          if git diff --cached --quiet; then
-            echo "ℹ️ Aucun changement à commiter"
-          else
-            TIMESTAMP=$(TZ=${{ env.TZ }} date '+%Y-%m-%d %H:%M')
-            git commit -m "📈 Update ETF holdings [$TIMESTAMP]"
+          git diff --cached --quiet || {
+            git commit -m "Update ETF holdings [$(date -u +'%F %H:%M')]"
             git push
-            echo "✅ Modifications pushées"
-          fi
-          
-      - name: Summary
-        if: always()
-        run: |
-          echo "## Résumé" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [ "${{ steps.check_status.outputs.skip_update }}" == "true" ]; then
-            echo "ℹ️ **Mise à jour ignorée** - Fichier récent" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Pour forcer: Run workflow avec force_update=true" >> $GITHUB_STEP_SUMMARY
-          elif [ -f "data/etf_holdings.json" ]; then
-            echo "✅ **Mise à jour réussie**" >> $GITHUB_STEP_SUMMARY
-            ls -lh data/etf_holdings.json >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ **Échec**" >> $GITHUB_STEP_SUMMARY
-          fi
+          }
