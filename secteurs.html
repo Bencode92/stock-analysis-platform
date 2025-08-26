@@ -605,6 +605,23 @@
             grid-template-columns: repeat(4, 1fr);
             gap: 20px;
             margin-bottom: 14px;
+            transition: opacity 0.3s ease;
+        }
+        
+        /* Skeleton loading state for overview */
+        .sector-overview-grid.loading .sector-value,
+        .sector-overview-grid.loading .sector-ytd {
+            background: linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0.06) 25%,
+                rgba(255, 255, 255, 0.12) 37%,
+                rgba(255, 255, 255, 0.06) 63%
+            );
+            background-size: 400% 100%;
+            animation: shimmer 1.2s infinite;
+            color: transparent;
+            min-width: 60px;
+            min-height: 1.2em;
         }
         
         .sector-group-header {
@@ -1094,11 +1111,11 @@
                 </div>
             </div>
             
-            <!-- Aperçu des secteurs amélioré -->
+            <!-- Aperçu des secteurs avec placeholders -->
             <div class="sector-overview-section mb-12">
                 <h2 class="sector-overview-title">Aperçu des secteurs</h2>
                 
-                <div class="sector-overview-grid">
+                <div class="sector-overview-grid loading" id="overview-container" style="visibility:hidden">
                     <!-- EUROPE (STOXX 600) -->
                     <div class="sector-group-header">
                         <span>Europe (STOXX 600)</span>
@@ -1108,32 +1125,32 @@
                     <div class="sector-col" data-sector="energy">
                         <div class="sector-name">Énergie</div>
                         <div class="sector-data">
-                            <div class="sector-value negative">−0,35%</div>
-                            <div class="sector-ytd positive">YTD 7,87%</div>
+                            <div class="sector-value">—</div>
+                            <div class="sector-ytd">YTD —</div>
                         </div>
                     </div>
                     
                     <div class="sector-col" data-sector="financials">
                         <div class="sector-name">Finance</div>
                         <div class="sector-data">
-                            <div class="sector-value negative">−0,55%</div>
-                            <div class="sector-ytd positive">YTD 13,27%</div>
+                            <div class="sector-value">—</div>
+                            <div class="sector-ytd">YTD —</div>
                         </div>
                     </div>
                     
                     <div class="sector-col" data-sector="technology">
                         <div class="sector-name">Technologie</div>
                         <div class="sector-data">
-                            <div class="sector-value positive">0,20%</div>
-                            <div class="sector-ytd positive">YTD 4,71%</div>
+                            <div class="sector-value">—</div>
+                            <div class="sector-ytd">YTD —</div>
                         </div>
                     </div>
                     
                     <div class="sector-col" data-sector="healthcare">
                         <div class="sector-name">Santé</div>
                         <div class="sector-data">
-                            <div class="sector-value negative">−0,25%</div>
-                            <div class="sector-ytd positive">YTD 9,19%</div>
+                            <div class="sector-value">—</div>
+                            <div class="sector-ytd">YTD —</div>
                         </div>
                     </div>
                     
@@ -1146,32 +1163,32 @@
                     <div class="sector-col" data-sector="energy-us">
                         <div class="sector-name">Énergie</div>
                         <div class="sector-data">
-                            <div class="sector-value positive">0,49%</div>
-                            <div class="sector-ytd negative">YTD −4,80%</div>
+                            <div class="sector-value">—</div>
+                            <div class="sector-ytd">YTD —</div>
                         </div>
                     </div>
                     
                     <div class="sector-col" data-sector="financials-us">
                         <div class="sector-name">Finance</div>
                         <div class="sector-data">
-                            <div class="sector-value negative">−0,20%</div>
-                            <div class="sector-ytd negative">YTD −2,80%</div>
+                            <div class="sector-value">—</div>
+                            <div class="sector-ytd">YTD —</div>
                         </div>
                     </div>
                     
                     <div class="sector-col" data-sector="technology-us">
                         <div class="sector-name">Technologie</div>
                         <div class="sector-data">
-                            <div class="sector-value positive">1,22%</div>
-                            <div class="sector-ytd negative">YTD −8,61%</div>
+                            <div class="sector-value">—</div>
+                            <div class="sector-ytd">YTD —</div>
                         </div>
                     </div>
                     
                     <div class="sector-col" data-sector="healthcare-us">
                         <div class="sector-name">Santé</div>
                         <div class="sector-data">
-                            <div class="sector-value positive">0,82%</div>
-                            <div class="sector-ytd positive">YTD 4,95%</div>
+                            <div class="sector-value">—</div>
+                            <div class="sector-ytd">YTD —</div>
                         </div>
                     </div>
                 </div>
