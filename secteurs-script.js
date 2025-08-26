@@ -287,6 +287,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 transform: translateY(-1px);
             }
             
+            .btn-holdings.disabled {
+                background: rgba(107, 114, 128, 0.08);   /* gris neutre */
+                border-color: rgba(107, 114, 128, 0.35);
+                color: #6b7280;                          /* texte gris */
+                cursor: not-allowed;
+                pointer-events: none;                     /* INCliquable */
+                opacity: 0.95;
+            }
+            
+            .btn-holdings.disabled:hover {
+                transform: none;
+            }
+            
             .holdings-loading {
                 text-align: center;
                 padding: 40px;
@@ -303,6 +316,53 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
+     * Vérifie si un ETF a des holdings
+     */
+    function hasHoldings(symbol) {
+        return !!(
+            etfHoldingsData &&
+            etfHoldingsData.etfs &&
+            etfHoldingsData.etfs[symbol] &&
+            Array.isArray(etfHoldingsData.etfs[symbol].holdings) &&
+            etfHoldingsData.etfs[symbol].holdings.length > 0
+        );
+    }
+    
+    /**
+     * Applique l'état activé/désactivé à un bouton holdings
+     */
+    function applyHoldingsState(btn, symbol) {
+        // Si les holdings ne sont pas encore chargés, on attend puis on ré-applique
+        if (!etfHoldingsData) {
+            loadETFHoldings().then(() => applyHoldingsState(btn, symbol));
+            return;
+        }
+        
+        if (hasHoldings(symbol)) {
+            btn.classList.remove('disabled');
+            btn.disabled = false;
+            btn.setAttribute('aria-disabled', 'false');
+            btn.textContent = 'Composition';
+            btn.title = `Voir la composition de ${symbol}`;
+        } else {
+            btn.classList.add('disabled');
+            btn.disabled = true;
+            btn.setAttribute('aria-disabled', 'true');
+            btn.textContent = 'Pas de données';
+            btn.title = `Aucune donnée de composition disponible pour ${symbol}`;
+        }
+    }
+    
+    /**
+     * Met à jour tous les boutons holdings de la page
+     */
+    function updateAllHoldingsButtons() {
+        document.querySelectorAll('.btn-holdings[data-symbol]').forEach(btn => {
+            applyHoldingsState(btn, btn.dataset.symbol);
+        });
+    }
+    
+    /**
      * Charge le fichier consolidé des holdings ETF
      */
     async function loadETFHoldings() {
@@ -316,10 +376,14 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 etfHoldingsData = data;
                 console.log(`Holdings chargés: ${Object.keys(data.etfs || {}).length} ETFs`);
+                // Mettre à jour tous les boutons après le chargement
+                updateAllHoldingsButtons();
                 return data;
             })
             .catch(error => {
                 console.warn('Holdings non disponibles:', error);
+                // Même en cas d'erreur, on met à jour les boutons pour les désactiver
+                updateAllHoldingsButtons();
                 return null;
             });
         
@@ -749,10 +813,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const btnHoldings = document.createElement('button');
                                 btnHoldings.className = 'btn-holdings';
                                 btnHoldings.textContent = 'Composition';
+                                btnHoldings.dataset.symbol = sector.symbol;  // Ajout du data-symbol
                                 btnHoldings.onclick = (e) => {
                                     e.stopPropagation();
                                     showHoldingsModal(sector);
                                 };
+                                
+                                // Applique l'état (gris/disabled si vide)
+                                applyHoldingsState(btnHoldings, sector.symbol);
+                                
                                 nameContainer.appendChild(btnHoldings);
                             }
                             
