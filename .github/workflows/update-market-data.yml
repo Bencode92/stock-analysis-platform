@@ -1,78 +1,192 @@
-name: 📈 Update Markets Data Only
+name: Update Market Data
 
 on:
-  # Déclenchement manuel
-  workflow_dispatch:
-  # Ajout d'un déclenchement automatique toutes les 30 minutes
   schedule:
-    - cron: '0,30 * * * *'  # Exécuter à minuit et à la 30e minute de chaque heure
-
-# Configuration des permissions
-permissions:
-  contents: write
+    # Mise à jour horaire des secteurs (toutes les heures)
+    - cron: '0 * * * *'
+    # Mise à jour hebdomadaire des holdings (dimanche à 3h15 UTC)
+    - cron: '15 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      update_type:
+        description: 'Type de mise à jour'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - sectors
+          - holdings
+          - both
 
 jobs:
-  # Nom de job clarifié pour éviter toute confusion
-  update-markets-json-only:
+  update-sectors:
     runs-on: ubuntu-latest
-    # Définir un timeout plus court pour éviter les longues exécutions
-    timeout-minutes: 10
+    # S'exécute toutes les heures OU manuellement avec 'sectors' ou 'both'
+    if: |
+      github.event_name == 'schedule' && contains(github.event.schedule, '0 * * * *') ||
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.update_type == 'sectors' || github.event.inputs.update_type == 'both')
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          # S'assurer que l'action checkout récupère l'historique complet
-          fetch-depth: 0
-          # S'assurer que le token GitHub est utilisé pour l'authentification
-          token: ${{ github.token }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-          
-      - name: Create data directory if needed
-        run: mkdir -p data
-          
+      
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests beautifulsoup4
-          # Désactiver les avertissements de certificat pour urllib3
-          pip install urllib3
-        
-      - name: Scrape market data
-        run: python scripts/scrape_markets.py
-        continue-on-error: true  # Ne pas faire échouer le workflow si le scraping échoue
-        
-      - name: Add missing indices
-        run: python scripts/scrape_markets_stocks.py
-        continue-on-error: true  # Ne pas faire échouer le workflow si l'ajout échoue
-        
-      - name: Verify data file exists
+          pip install twelvedata requests
+      
+      - name: Update sectors data
+        env:
+          TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
+          SECTOR_TAXONOMY: ICB
         run: |
-          if [ ! -f data/markets.json ]; then
-            echo "Fichier de données non trouvé, création d'un fichier vide"
-            echo "{}" > data/markets.json
-          fi
-        
-      - name: Commit and push if changed
+          echo "🚀 Mise à jour des données sectorielles..."
+          python scripts/update_sectors_data_etf.py
+      
+      - name: Check for changes
+        id: verify_changes
         run: |
-          # Configuration de git avec le token explicite
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          
-          # Ajouter UNIQUEMENT le fichier data/markets.json
-          git add data/markets.json
-          
-          # Vérifier s'il y a des modifications à commiter
-          if git diff --staged --quiet; then
-            echo "Aucune modification détectée, pas de commit nécessaire"
+          if [[ -n $(git status -s data/sectors.json) ]]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "✅ Modifications détectées dans sectors.json"
           else
-            echo "Modifications détectées, création d'un commit"
-            git commit -m "📈 Update markets.json data only [skip ci]"
-            
-            # Utiliser le token GITHUB_TOKEN pour l'authentification
-            git push origin HEAD:${GITHUB_REF}
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Aucune modification dans sectors.json"
           fi
+      
+      - name: Commit and push sectors changes
+        if: steps.verify_changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/sectors.json
+          git commit -m "🔄 Update sectors data [$(date -u +'%Y-%m-%d %H:%M UTC')]"
+          git push
+
+  update-holdings:
+    runs-on: ubuntu-latest
+    # S'exécute le dimanche OU manuellement avec 'holdings' ou 'both'
+    if: |
+      github.event_name == 'schedule' && contains(github.event.schedule, '15 3 * * 0') ||
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.update_type == 'holdings' || github.event.inputs.update_type == 'both')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+      
+      - name: Update ETF holdings
+        env:
+          TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
+          HOLDINGS_MAX: '10'
+          HOLDINGS_STALE_DAYS: '7'
+          HOLDINGS_SLEEP: '0.5'
+        run: |
+          echo "📊 Mise à jour hebdomadaire des holdings ETF..."
+          python scripts/update_etf_holdings.py
+      
+      - name: Check for changes
+        id: verify_changes
+        run: |
+          if [[ -n $(git status -s data/etf_holdings.json) ]]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "✅ Modifications détectées dans etf_holdings.json"
+            # Afficher la taille du fichier
+            ls -lh data/etf_holdings.json
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Aucune modification dans etf_holdings.json"
+          fi
+      
+      - name: Commit and push holdings changes
+        if: steps.verify_changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/etf_holdings.json
+          git commit -m "📈 Update ETF holdings [Weekly - $(date -u +'%Y-%m-%d')]"
+          git push
+
+  notify-errors:
+    runs-on: ubuntu-latest
+    needs: [update-sectors, update-holdings]
+    if: failure()
+    
+    steps:
+      - name: Create issue on failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date().toISOString().split('T')[0];
+            const title = `⚠️ Market data update failed - ${date}`;
+            const body = `
+            ## Update failure detected
+            
+            **Workflow:** ${{ github.workflow }}
+            **Run:** ${{ github.run_id }}
+            **Triggered by:** ${{ github.event_name }}
+            
+            Please check the [workflow logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
+            
+            ### Possible causes:
+            - API key expired or invalid
+            - API rate limits exceeded
+            - Network connectivity issues
+            - Changes in API response format
+            `;
+            
+            // Check if issue already exists for today
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'automated,data-update-failure'
+            });
+            
+            const existingIssue = issues.data.find(issue => 
+              issue.title.includes(date)
+            );
+            
+            if (!existingIssue) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['automated', 'data-update-failure']
+              });
+            }
