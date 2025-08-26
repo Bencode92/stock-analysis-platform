@@ -1020,7 +1020,6 @@
             </a>
             <a href="email-preview.html" class="nav-item" title="Alertes" aria-label="Alertes">
                 <i class="fas fa-bell"></i>
-                <span class="notification-badge"></span>
             </a>
             <a href="parametres.html" class="nav-item" title="Paramètres" aria-label="Paramètres">
                 <i class="fas fa-cog"></i>
@@ -1348,7 +1347,7 @@
 
     <script src="secteurs-script.js"></script>
     <script>
-        // Toggle densité
+        // Toggle densité - Confort par défaut
         const densityBtn = document.getElementById('density-toggle');
         const saved = localStorage.getItem('density') || 'comfort';
         document.body.classList.toggle('density-compact', saved === 'compact');
