@@ -111,12 +111,24 @@ document.addEventListener('DOMContentLoaded', function() {
      * Agrège les données d'une catégorie en calculant la médiane
      * des variations quotidiennes et YTD
      */
-    function aggregateCategory(list) {
-        const changes = list.map(s => s.change_num).filter(n => n != null);
-        const ytds = list.map(s => s.ytd_num).filter(n => n != null);
+    function aggregateCategory(list, label = '') {
+        const changes = list.map(s => s.change_num).filter(Number.isFinite);
+        const ytds = list.map(s => s.ytd_num).filter(Number.isFinite);
+        const mChange = median(changes);
+        const mYTD = median(ytds);
+        
+        // Debug log pour vérifier le calcul de la médiane
+        console.debug('[MEDIAN]', label, {
+            count: list.length,
+            changes: changes,
+            medianChange: mChange,
+            ytds: ytds,
+            medianYTD: mYTD
+        });
+        
         return {
-            change: median(changes),
-            ytd: median(ytds),
+            change: mChange,
+            ytd: mYTD,
             count: list.length
         };
     }
@@ -135,6 +147,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // ✅ On privilégie le vrai nom d'ETF, puis l'index si dispo
         if (!r.displayName) {
             r.displayName = r.name || r.etfName || r.indexName;
+        }
+        
+        // Fallback pour la région si non définie
+        if (!r.region) {
+            const n = (r.name || '').toLowerCase();
+            r.region = n.includes('stoxx europe 600') ? 'Europe' : 'US';
         }
         
         return r;
@@ -214,6 +232,12 @@ document.addEventListener('DOMContentLoaded', function() {
         showElement('sectors-loading');
         hideElement('sectors-error');
         hideElement('sectors-container');
+        
+        // Ajouter la classe loading à l'aperçu
+        const overviewContainer = document.getElementById('overview-container');
+        if (overviewContainer) {
+            overviewContainer.classList.add('loading');
+        }
         
         try {
             const cacheBuster = forceRefresh ? `?t=${Date.now()}` : '';
@@ -341,6 +365,13 @@ document.addEventListener('DOMContentLoaded', function() {
             updateTopPerformers();
             updateSectorOverview();
             
+            // Rendre l'aperçu visible et retirer la classe loading
+            const overviewContainer = document.getElementById('overview-container');
+            if (overviewContainer) {
+                overviewContainer.classList.remove('loading');
+                overviewContainer.style.visibility = 'visible';
+            }
+            
             // Activer le tri sur toutes les tables après le rendu
             if (window.attachTableSorters) {
                 window.attachTableSorters();
@@ -408,8 +439,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                // ✅ Calcule la médiane des variations jour et YTD
-                const { change, ytd, count } = aggregateCategory(list);
+                // ✅ Calcule la médiane des variations jour et YTD avec label pour debug
+                const { change, ytd, count } = aggregateCategory(list, `${region}/${sectorInfo.category}`);
                 
                 const nameElement = container.querySelector('.sector-name');
                 const valueElement = container.querySelector('.sector-value');
