@@ -56,17 +56,71 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
     
-    // Mapping de normalisation des pays
+    // Mapping de normalisation des pays - ÉTENDU
     const COUNTRY_NORMALIZATION = {
+        // Amérique Latine
+        'Mexico': 'Mexique',
+        'Mexique': 'Mexique',
+        'Chilie': 'Chili',
+        'Chile': 'Chili',
+        'Chili': 'Chili',
+        'Brazil': 'Brésil',
+        'Brésil': 'Brésil',
+        'Argentina': 'Argentine',
+        'Argentine': 'Argentine',
+        
+        // Amérique du Nord
         'Etats-Unis': 'États-Unis',
+        'United States': 'États-Unis',
+        'États-Unis': 'États-Unis',
+        'Canada': 'Canada',
+        
+        // Europe
+        'France': 'France',
+        'Germany': 'Allemagne',
+        'Allemagne': 'Allemagne',
+        'Italy': 'Italie',
+        'Italie': 'Italie',
+        'Spain': 'Espagne',
+        'Espagne': 'Espagne',
+        'Netherlands': 'Pays-Bas',
+        'Pays-Bas': 'Pays-Bas',
+        'Switzerland': 'Suisse',
+        'Suisse': 'Suisse',
+        'Sweden': 'Suède',
+        'Suède': 'Suède',
         'Royaume Uni': 'Royaume-Uni',
-        'Saudi Arabia': 'Arabie Saoudite',
-        'South Africa': 'Afrique du Sud',
-        'Israel': 'Israël',
+        'United Kingdom': 'Royaume-Uni',
+        'Royaume-Uni': 'Royaume-Uni',
+        'Zone Euro': 'Zone Euro',
+        
+        // Asie
+        'Japan': 'Japon',
+        'Japon': 'Japon',
         'China': 'Chine',
+        'Chine': 'Chine',
+        'India': 'Inde',
+        'Inde': 'Inde',
         'Taiwan': 'Taïwan',
+        'Taïwan': 'Taïwan',
+        'Hong Kong': 'Hong Kong',
+        'Singapore': 'Singapour',
+        'Singapour': 'Singapour',
+        'South Korea': 'Corée du Sud',
+        'Corée du Sud': 'Corée du Sud',
+        'Asie': 'Asie',
+        
+        // Autres
+        'Saudi Arabia': 'Arabie Saoudite',
+        'Arabie Saoudite': 'Arabie Saoudite',
+        'South Africa': 'Afrique du Sud',
+        'Afrique du Sud': 'Afrique du Sud',
+        'Israel': 'Israël',
+        'Israël': 'Israël',
         'Turkey': 'Turquie',
-        'Chilie': 'Chili'  // Correction du typo
+        'Turquie': 'Turquie',
+        'Australia': 'Australie',
+        'Australie': 'Australie'
     };
     
     // État du scraper
@@ -140,6 +194,75 @@ document.addEventListener('DOMContentLoaded', function() {
         r.ytd_num = parsePercentToNumber(r.ytdChange);
         r.trend = r.change_num > 0 ? 'up' : r.change_num < 0 ? 'down' : 'flat';
         return r;
+    }
+    
+    /**
+     * Réorganise les indices par pays dans les bonnes régions
+     */
+    function rebalanceRegionsByCountry() {
+        const REGION_BY_COUNTRY = {
+            // Amérique Latine
+            'Mexique': 'latin-america',
+            'Chili': 'latin-america',
+            'Brésil': 'latin-america',
+            'Argentine': 'latin-america',
+            
+            // Amérique du Nord
+            'Canada': 'north-america',
+            'États-Unis': 'north-america',
+            
+            // Europe
+            'France': 'europe',
+            'Allemagne': 'europe',
+            'Italie': 'europe',
+            'Suisse': 'europe',
+            'Pays-Bas': 'europe',
+            'Espagne': 'europe',
+            'Suède': 'europe',
+            'Royaume-Uni': 'europe',
+            'Zone Euro': 'europe',
+            
+            // Asie
+            'Japon': 'asia',
+            'Chine': 'asia',
+            'Inde': 'asia',
+            'Taïwan': 'asia',
+            'Corée du Sud': 'asia',
+            'Hong Kong': 'asia',
+            'Singapour': 'asia',
+            'Asie': 'asia',
+            
+            // Autres
+            'Turquie': 'other',
+            'Arabie Saoudite': 'other',
+            'Australie': 'other',
+            'Afrique du Sud': 'other',
+            'Israël': 'other'
+        };
+        
+        const buckets = {
+            europe: [],
+            'north-america': [],
+            'latin-america': [],
+            asia: [],
+            other: []
+        };
+        
+        const regions = ['europe', 'north-america', 'latin-america', 'asia', 'other'];
+        
+        // Reconstitue les seaux en fonction du pays normalisé
+        for (const region of regions) {
+            for (const rec of indicesData.indices[region]) {
+                const country = rec.country; // Déjà normalisé
+                const target = REGION_BY_COUNTRY[country] || region; // défaut = région d'origine
+                buckets[target].push(rec);
+            }
+        }
+        
+        // Remplace les données par les nouveaux seaux
+        indicesData.indices = buckets;
+        
+        console.log('Réorganisation des indices par pays effectuée');
     }
     
     /**
@@ -244,6 +367,9 @@ document.addEventListener('DOMContentLoaded', function() {
             ['europe', 'north-america', 'latin-america', 'asia', 'other'].forEach(region => {
                 indicesData.indices[region] = (rawData.indices[region] || []).map(normalizeRecord);
             });
+            
+            // Réorganiser les indices par pays dans les bonnes régions
+            rebalanceRegionsByCountry();
             
             indicesData.meta = rawData.meta;
             
