@@ -6,6 +6,7 @@ Génère un fichier consolidé data/etf_holdings.json
 """
 
 import os
+import sys
 import json
 import datetime as dt
 import time
@@ -55,6 +56,33 @@ def is_stale(filepath: str) -> bool:
     logger.info(f"Fichier {os.path.basename(filepath)} a {age_days} jours (limite: {HOLDINGS_STALE_DAYS})")
     return age_days >= HOLDINGS_STALE_DAYS
 
+def resolve_symbol(symbol: str, apikey: str) -> str:
+    """
+    Résout un symbole pour les ETFs européens qui nécessitent parfois TICKER:MIC
+    """
+    try:
+        r = requests.get(
+            f"{API_BASE}/symbol_search",
+            params={"symbol": symbol, "apikey": apikey},
+            timeout=15
+        ).json()
+        
+        if r.get("data") and len(r["data"]) > 0:
+            best = r["data"][0]
+            mic = best.get("mic_code", "")
+            
+            # Pour les marchés US, on garde le symbole simple
+            if mic in {"ARCX", "XNAS", "XNYS", "BATS", "XASE"}:
+                return best["symbol"]
+            # Pour les autres (européens), on utilise SYMBOL:MIC
+            elif mic:
+                return f"{best['symbol']}:{mic}"
+                
+    except Exception as e:
+        logger.debug(f"Impossible de résoudre {symbol}: {e}")
+    
+    return symbol
+
 def fetch_etf_holdings(symbol: str, apikey: str, maxn: int = 10) -> Optional[Dict]:
     """
     Récupère les holdings d'un ETF via l'API Twelve Data
@@ -72,11 +100,30 @@ def fetch_etf_holdings(symbol: str, apikey: str, maxn: int = 10) -> Optional[Dic
         r = requests.get(url, params=params, timeout=20)
         j = r.json()
         
-        # Vérifier les erreurs
+        # Vérifier les erreurs et retry avec symbole résolu si nécessaire
         if j.get("status") == "error":
             error_msg = j.get("message", "composition error")
-            logger.error(f"❌ Erreur API pour {symbol}: {error_msg}")
-            return None
+            
+            # Si symbole non supporté, essayer de le résoudre
+            if "not supported" in error_msg.lower() or "symbol" in error_msg.lower():
+                logger.info(f"   Résolution du symbole {symbol}...")
+                resolved = resolve_symbol(symbol, apikey)
+                
+                if resolved != symbol:
+                    logger.info(f"   Retry avec {resolved}...")
+                    params["symbol"] = resolved
+                    r = requests.get(url, params=params, timeout=20)
+                    j = r.json()
+                    
+                    if j.get("status") == "error":
+                        logger.error(f"❌ Erreur API pour {symbol}/{resolved}: {j.get('message', 'error')}")
+                        return None
+                else:
+                    logger.error(f"❌ Erreur API pour {symbol}: {error_msg}")
+                    return None
+            else:
+                logger.error(f"❌ Erreur API pour {symbol}: {error_msg}")
+                return None
         
         # Extraire les données de composition
         etf_data = j.get("etf", {})
@@ -188,9 +235,16 @@ def main():
     logger.info("🚀 Début de la mise à jour hebdomadaire des holdings ETF")
     logger.info("=" * 60)
     
+    # VÉRIFICATIONS CRITIQUES - Échouer proprement si prérequis manquants
     if not API_KEY:
-        logger.error("❌ Clé API Twelve Data manquante (TWELVE_DATA_API)")
-        return
+        logger.error("❌ ERREUR FATALE: Clé API Twelve Data manquante (TWELVE_DATA_API)")
+        logger.error("   Définissez la variable d'environnement: export TWELVE_DATA_API=votre_clé")
+        sys.exit(2)  # Code d'erreur spécifique pour API key manquante
+    
+    if not os.path.exists(SECTORS_FILE):
+        logger.error(f"❌ ERREUR FATALE: Fichier sectors.json introuvable: {SECTORS_FILE}")
+        logger.error("   Lancez d'abord la mise à jour des secteurs: python scripts/update_sectors_data_etf.py")
+        sys.exit(3)  # Code d'erreur spécifique pour sectors.json manquant
     
     # Vérifier si mise à jour nécessaire
     if not is_stale(HOLDINGS_FILE):
@@ -205,8 +259,9 @@ def main():
     symbols = extract_etf_symbols()
     
     if not symbols:
-        logger.error("❌ Aucun symbole ETF trouvé")
-        return
+        logger.error("❌ ERREUR: Aucun symbole ETF trouvé dans sectors.json")
+        logger.error("   Le fichier existe mais semble vide ou mal formaté")
+        sys.exit(4)  # Code d'erreur spécifique pour sectors.json vide
     
     logger.info(f"📊 Traitement de {len(symbols)} ETFs...")
     logger.info(f"⚙️ Paramètres: max={HOLDINGS_MAX} holdings/ETF, pause={HOLDINGS_SLEEP}s")
@@ -243,6 +298,12 @@ def main():
         except Exception as e:
             logger.error(f"❌ Erreur pour {symbol}: {e}")
             errors += 1
+    
+    # Vérifier qu'on a au moins quelques données
+    if processed == 0 and len(holdings_data["etfs"]) == 0:
+        logger.error("❌ ERREUR: Aucun holding n'a pu être récupéré")
+        logger.error("   Vérifiez votre clé API et votre connexion internet")
+        sys.exit(5)  # Code d'erreur spécifique pour aucune donnée récupérée
     
     # Mettre à jour les métadonnées
     total_holdings = sum(
