@@ -31,6 +31,7 @@ HOLDINGS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 HOLDINGS_MAX = int(os.getenv("HOLDINGS_MAX", "10"))  # Top 10 holdings par ETF
 HOLDINGS_STALE_DAYS = int(os.getenv("HOLDINGS_STALE_DAYS", "7"))  # Rafraîchir si > 7 jours
 HOLDINGS_SLEEP = float(os.getenv("HOLDINGS_SLEEP", "0.5"))  # Pause entre appels API
+FORCE_UPDATE = os.getenv("FORCE_UPDATE", "false").lower() == "true"  # Force la mise à jour
 API_BASE = "https://api.twelvedata.com"
 
 def _num(x):
@@ -246,10 +247,15 @@ def main():
         logger.error("   Lancez d'abord la mise à jour des secteurs: python scripts/update_sectors_data_etf.py")
         sys.exit(3)  # Code d'erreur spécifique pour sectors.json manquant
     
-    # Vérifier si mise à jour nécessaire
-    if not is_stale(HOLDINGS_FILE):
-        logger.info(f"ℹ️ Fichier holdings encore valide, pas de mise à jour nécessaire")
-        logger.info(f"   Pour forcer la mise à jour, supprimez {HOLDINGS_FILE}")
+    # Vérifier si mise à jour nécessaire (avec respect de FORCE_UPDATE)
+    if FORCE_UPDATE:
+        logger.info("🔧 FORCE_UPDATE=true → on ignore la fenêtre de fraîcheur")
+        if os.path.exists(HOLDINGS_FILE):
+            logger.info(f"   Suppression du fichier existant pour forcer la régénération...")
+            os.remove(HOLDINGS_FILE)
+    elif not is_stale(HOLDINGS_FILE):
+        logger.info("ℹ️ Fichier holdings encore valide, pas de mise à jour nécessaire (FORCE_UPDATE=false)")
+        logger.info(f"   Pour forcer: export FORCE_UPDATE=true ou supprimez {HOLDINGS_FILE}")
         return
     
     # Charger les données existantes (pour mise à jour incrémentale si besoin)
@@ -318,6 +324,7 @@ def main():
         "api_credits_used": api_credits,
         "max_holdings_per_etf": HOLDINGS_MAX,
         "stale_days": HOLDINGS_STALE_DAYS,
+        "force_update": FORCE_UPDATE,
         "data_source": "Twelve Data ETF Composition API"
     }
     
@@ -336,6 +343,7 @@ def main():
     logger.info(f"   - Holdings totaux: {total_holdings}")
     logger.info(f"   - Crédits API utilisés: ~{api_credits}")
     logger.info(f"   - Taille fichier: {os.path.getsize(HOLDINGS_FILE) / 1024:.1f} KB")
+    logger.info(f"   - Force update: {FORCE_UPDATE}")
     logger.info("=" * 60)
 
 if __name__ == "__main__":
