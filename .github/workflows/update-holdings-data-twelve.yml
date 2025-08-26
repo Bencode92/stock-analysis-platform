@@ -1,10 +1,12 @@
 name: Update Holdings via Twelve Data API
 
+permissions:
+  contents: write   # Nécessaire pour git push
+  actions: read
+
 on:
   schedule:
-    # Exécution hebdomadaire - Dimanche à 3h00 UTC (4h00 Paris, 23h00 NYC samedi)
-    - cron: '0 3 * * 0'
-  
+    - cron: '0 3 * * 0'  # Dimanche 3h UTC
   workflow_dispatch:
     inputs:
       force_update:
@@ -12,9 +14,7 @@ on:
         required: false
         default: 'false'
         type: choice
-        options:
-          - 'true'
-          - 'false'
+        options: ['true', 'false']
       max_holdings:
         description: 'Nombre max de holdings par ETF (défaut: 10)'
         required: false
@@ -24,105 +24,80 @@ on:
 env:
   PYTHON_VERSION: '3.10'
   TZ: 'Europe/Paris'
-  # ⚠️ SCRIPT PRINCIPAL UTILISÉ PAR CE WORKFLOW
   HOLDINGS_SCRIPT: 'scripts/update_holdings.py'
 
 jobs:
   update-holdings:
-    name: Update ETF Holdings Data
     runs-on: ubuntu-latest
     timeout-minutes: 30
     
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
+        
+      - name: 🔑 Preflight Checks
+        run: |
+          echo "🔍 Vérification des prérequis..."
+          
+          # Vérifier le secret API
+          if [ -z "${{ secrets.TWELVE_DATA_API }}" ]; then
+            echo "::error::Secret TWELVE_DATA_API manquant. Configurez-le dans Settings > Secrets > Actions"
+            exit 1
+          fi
+          echo "✅ Clé API configurée"
+          
+          # Vérifier sectors.json
+          if [ ! -f "data/sectors.json" ]; then
+            echo "::error::data/sectors.json introuvable. Lancez d'abord update-sectors-data-twelve.yml"
+            echo "Contenu du dossier data:"
+            ls -la data/ || echo "Dossier data inexistant"
+            exit 1
+          fi
+          echo "✅ sectors.json trouvé"
+          
+          # Vérifier le script Python
+          if [ ! -f "${{ env.HOLDINGS_SCRIPT }}" ]; then
+            echo "::error::Script ${{ env.HOLDINGS_SCRIPT }} introuvable"
+            exit 1
+          fi
+          echo "✅ Script Python trouvé"
+          
+      - name: 🐍 Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      
-      - name: 📦 Cache Python Dependencies
-        uses: actions/cache@v3
-        id: cache-pip
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-holdings-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-holdings-
-            ${{ runner.os }}-pip-
-      
-      - name: 📚 Install Dependencies
+          
+      - name: 📦 Install Dependencies
         run: |
-          echo "📦 Installation des dépendances Python..."
           python -m pip install --upgrade pip
           pip install requests
-          echo "✅ Dépendances installées"
-      
-      - name: 🔍 Check Script Exists
-        run: |
-          echo "🔍 Vérification du script principal..."
-          if [ -f "${{ env.HOLDINGS_SCRIPT }}" ]; then
-            echo "✅ Script trouvé: ${{ env.HOLDINGS_SCRIPT }}"
-            echo "   Taille: $(du -h ${{ env.HOLDINGS_SCRIPT }} | cut -f1)"
-            echo "   Lignes: $(wc -l < ${{ env.HOLDINGS_SCRIPT }}) lignes"
-          else
-            echo "❌ ERREUR: Script non trouvé: ${{ env.HOLDINGS_SCRIPT }}"
-            echo "   Vérifiez que le fichier existe dans le repository"
-            exit 1
-          fi
-      
+          
       - name: 🔍 Check Current Holdings Status
         id: check_status
         run: |
-          echo "🔍 Vérification du statut actuel des holdings..."
-          
           if [ -f "data/etf_holdings.json" ]; then
-            FILE_SIZE=$(du -h data/etf_holdings.json | cut -f1)
-            FILE_DATE=$(date -r data/etf_holdings.json '+%Y-%m-%d %H:%M:%S')
             FILE_AGE=$((($(date +%s) - $(date -r data/etf_holdings.json +%s)) / 86400))
-            
-            echo "📁 Fichier existant trouvé:"
-            echo "   - Taille: $FILE_SIZE"
-            echo "   - Date: $FILE_DATE"
-            echo "   - Âge: $FILE_AGE jours"
-            
-            # Extraire les stats du JSON
-            python -c "
-import json
-try:
-    with open('data/etf_holdings.json') as f:
-        data = json.load(f)
-        meta = data.get('meta', {})
-        print(f'   - ETFs: {meta.get(\"etf_count\", 0)}')
-        print(f'   - Holdings totaux: {meta.get(\"total_holdings\", 0)}')
-        print(f'   - Dernière génération: {meta.get(\"generated_at\", \"N/A\")}')
-except:
-    pass
-            "
+            echo "📁 Holdings existants (âge: $FILE_AGE jours)"
             
             if [ $FILE_AGE -lt 6 ] && [ "${{ github.event.inputs.force_update }}" != "true" ]; then
               echo "skip_update=true" >> $GITHUB_OUTPUT
-              echo "ℹ️ Fichier récent, mise à jour non nécessaire"
+              echo "ℹ️ Fichier récent, pas de mise à jour nécessaire"
             else
               echo "skip_update=false" >> $GITHUB_OUTPUT
-              echo "🔄 Mise à jour nécessaire (âge > 6 jours ou forcée)"
+              echo "🔄 Mise à jour nécessaire"
             fi
           else
             echo "skip_update=false" >> $GITHUB_OUTPUT
             echo "📝 Aucun fichier existant, création nécessaire"
           fi
-      
+          
       - name: 🗑️ Force Update if requested
         if: github.event.inputs.force_update == 'true'
         run: |
-          echo "🔧 Suppression du fichier existant pour forcer la mise à jour..."
-          rm -f data/etf_holdings.json
-          echo "✅ Fichier supprimé"
-      
-      - name: 📊 Update Holdings Data - EXECUTE PYTHON SCRIPT
+          echo "🔧 Suppression forcée du fichier existant..."
+          rm -f data/etf_holdings.json || true
+          
+      - name: 📊 Update Holdings Data
         if: steps.check_status.outputs.skip_update != 'true'
         env:
           TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
@@ -130,140 +105,52 @@ except:
           HOLDINGS_STALE_DAYS: '7'
           HOLDINGS_SLEEP: '1.0'
         run: |
-          echo "═══════════════════════════════════════════════════════"
-          echo "🚀 EXÉCUTION DU SCRIPT PYTHON PRINCIPAL"
-          echo "═══════════════════════════════════════════════════════"
-          echo ""
-          echo "📄 Script: ${{ env.HOLDINGS_SCRIPT }}"
-          echo ""
-          echo "⚙️ Configuration:"
-          echo "   - API: Twelve Data"
-          echo "   - Max holdings/ETF: $HOLDINGS_MAX"
-          echo "   - Pause entre requêtes: ${HOLDINGS_SLEEP}s"
-          echo "   - Péremption: $HOLDINGS_STALE_DAYS jours"
-          echo ""
-          echo "═══════════════════════════════════════════════════════"
-          echo "▶️  LANCEMENT DU SCRIPT..."
-          echo "═══════════════════════════════════════════════════════"
-          echo ""
-          
-          # ⚠️ EXÉCUTION DU SCRIPT PYTHON PRINCIPAL
+          echo "🚀 Lancement du script Python..."
           python ${{ env.HOLDINGS_SCRIPT }}
           
-          echo ""
-          echo "═══════════════════════════════════════════════════════"
-          echo "✅ SCRIPT TERMINÉ"
-          echo "═══════════════════════════════════════════════════════"
-      
       - name: 📈 Verify Update Results
         if: steps.check_status.outputs.skip_update != 'true'
-        id: verify_results
         run: |
-          echo "📊 Vérification des résultats..."
+          if [ ! -f "data/etf_holdings.json" ]; then
+            echo "::error::Le script n'a pas généré data/etf_holdings.json"
+            echo "Vérifiez les logs de l'étape précédente"
+            exit 1
+          fi
           
-          if [ -f "data/etf_holdings.json" ]; then
-            echo "✅ Fichier généré avec succès par le script"
-            
-            # Afficher les statistiques
-            echo ""
-            echo "📈 Statistiques du fichier généré:"
-            ls -lh data/etf_holdings.json
-            
-            python -c "
+          echo "✅ Fichier généré avec succès:"
+          ls -lh data/etf_holdings.json
+          
+          # Afficher un résumé
+          python -c "
 import json
 with open('data/etf_holdings.json') as f:
     data = json.load(f)
     meta = data.get('meta', {})
-    etfs = data.get('etfs', {})
-    
-    print(f'')
-    print(f'📊 Contenu:')
-    print(f'   - ETFs avec holdings: {len(etfs)}')
-    print(f'   - Holdings totaux: {meta.get(\"total_holdings\", 0)}')
-    print(f'   - Crédits API utilisés: ~{meta.get(\"api_credits_used\", 0)}')
-    print(f'   - Timestamp: {meta.get(\"generated_at\", \"N/A\")}')
-    
-    # Afficher les 5 premiers ETFs comme exemple
-    print(f'')
-    print(f'📋 Exemples d\\'ETFs traités:')
-    for symbol in list(etfs.keys())[:5]:
-        etf = etfs[symbol]
-        holdings_count = len(etf.get('holdings', []))
-        print(f'   - {symbol}: {holdings_count} holdings')
-            "
-            
-            echo "update_success=true" >> $GITHUB_OUTPUT
-          else
-            echo "❌ Erreur: Fichier non généré par le script"
-            echo "   Vérifiez les logs du script Python ci-dessus"
-            echo "update_success=false" >> $GITHUB_OUTPUT
-            exit 1
-          fi
-      
+    print(f'ETFs: {len(data.get(\"etfs\", {}))}')
+    print(f'Holdings totaux: {meta.get(\"total_holdings\", 0)}')
+    print(f'Crédits utilisés: ~{meta.get(\"api_credits_used\", 0)}')
+          "
+          
       - name: 💾 Commit and Push Changes
-        if: steps.verify_results.outputs.update_success == 'true'
+        if: steps.check_status.outputs.skip_update != 'true'
         run: |
-          # Configuration Git
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          # Vérifier s'il y a des changements
-          if [[ -n $(git status -s data/etf_holdings.json) ]]; then
-            echo "📝 Préparation du commit..."
-            
-            git add data/etf_holdings.json
-            
-            # Message de commit avec date et heure
+          git add data/etf_holdings.json
+          
+          # Commit seulement s'il y a des changements
+          git diff --cached --quiet || {
             TIMESTAMP=$(TZ=${{ env.TZ }} date '+%Y-%m-%d %H:%M')
-            COMMIT_MSG="📈 Update ETF holdings data [${TIMESTAMP}]"
-            
-            if [ "${{ github.event.inputs.force_update }}" == "true" ]; then
-              COMMIT_MSG="${COMMIT_MSG} (forced update)"
-            fi
-            
-            git commit -m "$COMMIT_MSG"
-            
-            echo "🚀 Push des modifications..."
+            git commit -m "📈 Update ETF holdings data [$TIMESTAMP]"
             git push
-            
-            echo "✅ Modifications pushées avec succès"
-          else
-            echo "ℹ️ Aucune modification détectée (données identiques)"
-          fi
-      
+            echo "✅ Modifications pushées"
+          } || echo "ℹ️ Aucun changement à commiter"
+          
       - name: 📝 Generate Summary
         if: always()
         run: |
-          echo "# 📊 Rapport de mise à jour des Holdings ETF" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          echo "## 📄 Script exécuté" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "${{ env.HOLDINGS_SCRIPT }}" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          # Informations d'exécution
-          echo "## 🎯 Contexte d'exécution" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "- **Type:** Déclenchement manuel" >> $GITHUB_STEP_SUMMARY
-            if [ "${{ github.event.inputs.force_update }}" == "true" ]; then
-              echo "- **Mode:** Mise à jour forcée" >> $GITHUB_STEP_SUMMARY
-            fi
-            if [ -n "${{ github.event.inputs.max_holdings }}" ]; then
-              echo "- **Holdings/ETF:** ${{ github.event.inputs.max_holdings }}" >> $GITHUB_STEP_SUMMARY
-            fi
-          else
-            echo "- **Type:** Planifié (hebdomadaire)" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          echo "- **Date:** $(TZ=${{ env.TZ }} date '+%Y-%m-%d %H:%M:%S %Z')" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          # Résultats
-          echo "## 📈 Résultats" >> $GITHUB_STEP_SUMMARY
+          echo "# 📊 Rapport Holdings ETF" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [ "${{ steps.check_status.outputs.skip_update }}" == "true" ]; then
@@ -271,15 +158,19 @@ with open('data/etf_holdings.json') as f:
           elif [ -f "data/etf_holdings.json" ]; then
             echo "✅ **Mise à jour réussie**" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 📁 Fichier généré" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            ls -lh data/etf_holdings.json >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "### Statistiques" >> $GITHUB_STEP_SUMMARY
+            python -c "
+import json
+with open('data/etf_holdings.json') as f:
+    data = json.load(f)
+    meta = data.get('meta', {})
+    etfs = data.get('etfs', {})
+    print(f'- ETFs traités: {len(etfs)}')
+    print(f'- Holdings totaux: {meta.get(\"total_holdings\", 0)}')
+    print(f'- Crédits API: ~{meta.get(\"api_credits_used\", 0)}')
+    print(f'- Généré à: {meta.get(\"generated_at\", \"N/A\")}')
+            " >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **Échec de la mise à jour**" >> $GITHUB_STEP_SUMMARY
-            echo "   Script utilisé: ${{ env.HOLDINGS_SCRIPT }}" >> $GITHUB_STEP_SUMMARY
+            echo "Consultez les logs pour plus de détails" >> $GITHUB_STEP_SUMMARY
           fi
-          
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "⏰ **Prochaine exécution planifiée:** Dimanche prochain 3h00 UTC" >> $GITHUB_STEP_SUMMARY
