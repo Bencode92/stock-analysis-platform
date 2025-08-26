@@ -1,0 +1,98 @@
+name: Deploy to GitHub Pages
+
+on:
+  # Se déclenche après la mise à jour des données
+  workflow_run:
+    workflows: ["Update Market Data (Optimized)"]
+    types:
+      - completed
+  
+  # Déclenchement manuel
+  workflow_dispatch:
+  
+  # Push sur main
+  push:
+    branches:
+      - main
+    paths:
+      - '*.html'
+      - '*.js'
+      - '*.css'
+      - 'data/**'
+      - '.github/workflows/deploy-pages.yml'
+
+# Permissions pour GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Éviter les déploiements concurrents
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      
+      - name: Verify data files
+        run: |
+          echo "📁 Vérification des fichiers de données..."
+          
+          if [ -f "data/sectors.json" ]; then
+            echo "✅ sectors.json trouvé"
+            echo "   Taille: $(du -h data/sectors.json | cut -f1)"
+            echo "   Dernière modification: $(date -r data/sectors.json '+%Y-%m-%d %H:%M:%S')"
+          else
+            echo "⚠️ sectors.json manquant - création d'un fichier vide"
+            mkdir -p data
+            echo '{"sectors":{},"meta":{"timestamp":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}}' > data/sectors.json
+          fi
+          
+          if [ -f "data/etf_holdings.json" ]; then
+            echo "✅ etf_holdings.json trouvé"
+            echo "   Taille: $(du -h data/etf_holdings.json | cut -f1)"
+          else
+            echo "ℹ️ etf_holdings.json manquant (optionnel)"
+          fi
+          
+          # Lister tous les fichiers HTML
+          echo ""
+          echo "📄 Pages HTML disponibles:"
+          ls -la *.html 2>/dev/null || echo "Aucune page HTML trouvée"
+      
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+      
+      - name: Show deployment info
+        run: |
+          echo "✅ Déploiement réussi!"
+          echo "🌐 URL: ${{ steps.deployment.outputs.page_url }}"
+          echo ""
+          echo "📊 Pages disponibles:"
+          echo "  - Accueil: ${{ steps.deployment.outputs.page_url }}"
+          echo "  - Secteurs: ${{ steps.deployment.outputs.page_url }}secteurs.html"
+          echo ""
+          echo "💡 Note: Les données sont mises à jour automatiquement"
+          echo "   - Secteurs: 4×/jour en semaine"
+          echo "   - Holdings: 1×/semaine le dimanche"
