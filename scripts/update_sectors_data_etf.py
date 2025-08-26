@@ -3,6 +3,7 @@
 Script de mise à jour des données sectorielles via Twelve Data API
 Utilise des ETFs sectoriels pour représenter les performances des secteurs
 Génère des libellés normalisés bilingues pour l'affichage
+Calculs YTD fiabilisés avec fuseaux horaires et close de référence
 """
 
 import os
@@ -12,7 +13,7 @@ import datetime as dt
 import io
 import time
 import re
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import logging
 from twelvedata import TDClient
 
@@ -38,6 +39,12 @@ VALID_CATEGORIES = {
     "consumer-discretionary", "consumer-staples",
     "healthcare", "financials", "information-technology",
     "communication-services", "utilities", "real-estate"
+}
+
+# Mapping des fuseaux horaires par région
+TZ_BY_REGION = {
+    "US": "America/New_York",
+    "Europe": "Europe/Zurich"  # ou Europe/Paris selon préférence
 }
 
 # Client Twelve Data
@@ -201,52 +208,95 @@ def create_empty_sectors_data():
         }
     }
 
-def quote_one(sym: str) -> tuple[float, float]:
-    """Récupère la quote d'un symbole"""
+def quote_one(sym: str, region_display: str) -> Tuple[float, float, str]:
+    """Dernier close 'propre' + var jour; privilégie previous_close si marché ouvert."""
     try:
-        q_json = TD.quote(symbol=sym).as_json()
+        timezone = TZ_BY_REGION.get(region_display, "UTC")
+        q_json = TD.quote(symbol=sym, timezone=timezone).as_json()
         
         if isinstance(q_json, tuple):
             q_json = q_json[0]
         
-        if "close" in q_json and "percent_change" in q_json:
-            return float(q_json["close"]), float(q_json["percent_change"])
+        # Par sécurité - récupérer les valeurs
+        close = None
+        pc = None
         
-        raise ValueError(q_json.get("message", "unknown error"))
+        if q_json.get("close") not in (None, "None", ""):
+            try:
+                close = float(q_json.get("close"))
+            except (ValueError, TypeError):
+                pass
+                
+        if q_json.get("previous_close") not in (None, "None", ""):
+            try:
+                pc = float(q_json.get("previous_close"))
+            except (ValueError, TypeError):
+                pass
+        
+        is_open = q_json.get("is_market_open", False) == "true" if isinstance(q_json.get("is_market_open"), str) else bool(q_json.get("is_market_open", False))
+        
+        # Si le marché est ouvert et que previous_close existe -> on prend previous_close
+        last_close = pc if (is_open and pc is not None) else close
+        
+        if last_close is None:
+            raise ValueError(f"Quote sans close valide pour {sym}: {q_json}")
+        
+        day_pct = float(q_json.get("percent_change", 0))
+        
+        # Informe la source pour debug
+        source = "previous_close" if (is_open and pc is not None) else "close"
+        
+        logger.debug(f"Quote {sym}: {last_close} ({day_pct:+.2f}%), source: {source}, timezone: {timezone}")
+        
+        return last_close, day_pct, source
+        
     except Exception as e:
         logger.error(f"Erreur quote pour {sym}: {e}")
         raise
 
-def ytd_one(sym: str) -> float:
-    """Première clôture de l'année"""
+def first_close_of_year(sym: str, region_display: str) -> Tuple[float, str]:
+    """Close de la première séance ouvrée de l'année (price-only)."""
     year = dt.date.today().year
+    tz = TZ_BY_REGION.get(region_display, "UTC")
+    
     try:
         ts_json = TD.time_series(
             symbol=sym,
             interval="1day",
             start_date=f"{year}-01-01",
-            order="ASC"
+            order="ASC",
+            outputsize=10,  # on prend un petit tampon
+            timezone=tz,    # important pour le bon fuseau
         ).as_json()
 
-        # Déballage du tuple si nécessaire
         if isinstance(ts_json, tuple):
             ts_json = ts_json[0]
 
-        # 1) Format standard avec clé "values"
+        # Normalise
+        values = []
         if isinstance(ts_json, dict) and ts_json.get("values"):
-            return float(ts_json["values"][0]["close"])
+            values = ts_json["values"]
+        elif isinstance(ts_json, list):
+            values = ts_json
+        elif isinstance(ts_json, dict) and all(k in ts_json for k in ("datetime", "close")):
+            values = [ts_json]
+        else:
+            logger.error(f"Format time_series inattendu pour {sym}: {type(ts_json)}")
+            raise ValueError(f"Format time_series inattendu pour {sym}")
 
-        # 2) Format compact : dict OHLC direct
-        if isinstance(ts_json, dict) and "close" in ts_json:
-            return float(ts_json["close"])
+        # Prend la première bougie qui a un 'close' numérique
+        for row in values:
+            if "close" in row and row["close"] not in (None, "None", ""):
+                try:
+                    close_val = float(row["close"])
+                    date_str = str(row.get("datetime", f"{year}-01-XX"))
+                    logger.debug(f"Premier close {sym}: {close_val} le {date_str} (timezone: {tz})")
+                    return close_val, date_str
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Erreur conversion close pour {sym}: {e}")
+                    continue
 
-        # 3) Format liste
-        if isinstance(ts_json, list) and ts_json:
-            return float(ts_json[0]["close"])
-
-        logger.error(f"Format inattendu pour {sym}: {type(ts_json)}")
-        logger.error(f"Contenu: {ts_json}")
-        raise ValueError("Unrecognised time_series format")
+        raise ValueError(f"Aucun close utilisable pour {sym} depuis {year}-01-01")
 
     except Exception as e:
         logger.error(f"Erreur YTD pour {sym}: {e}")
@@ -454,25 +504,26 @@ def main():
             
             logger.info(f"📡 Traitement {idx+1}/{len(sectors_mapping)}: {sym}")
             
-            # Récupérer les données
-            last, day_pct = quote_one(sym)
+            # Normalisation libellé d'affichage à partir des colonnes CSV
+            norm = make_display_payload(etf)
+            region_display = norm["region_display"]
+            
+            # Récupérer les données avec le bon fuseau horaire
+            last, day_pct, last_src = quote_one(sym, region_display)
             
             # Pause avant l'appel YTD
             time.sleep(0.5)
-            jan_close = ytd_one(sym)
+            jan_close, jan_date = first_close_of_year(sym, region_display)
             
             # Calculer le YTD
             ytd_pct = 100 * (last - jan_close) / jan_close if jan_close > 0 else 0.0
-            
-            # Normalisation libellé d'affichage à partir des colonnes CSV
-            norm = make_display_payload(etf)
             
             # Valeurs numériques (pour le front & les tops)
             value_num = float(last)
             change_num = float(day_pct)
             ytd_num = float(ytd_pct)
             
-            # Créer l'objet de données avec les libellés normalisés
+            # Créer l'objet de données avec les libellés normalisés et métadonnées de calcul
             sector_entry = {
                 "symbol": sym,
                 "name": etf.get("name", sym),          # nom complet ETF (tooltip front)
@@ -492,8 +543,13 @@ def main():
                 "change_num": change_num,
                 "ytd_num": ytd_num,
                 
+                # Métadonnées pour traçabilité YTD
+                "last_price_source": last_src,
+                "ytd_ref_date": jan_date,
+                "ytd_method": "price_close_to_close",
+                
                 "trend": "down" if day_pct < 0 else "up",
-                "region": norm["region_display"]      # 'Europe' / 'US'
+                "region": region_display      # 'Europe' / 'US'
             }
             
             # Ajouter à la bonne catégorie
@@ -501,7 +557,7 @@ def main():
             ALL_SECTORS.append(sector_entry.copy())  # Copie pour éviter les modifications
             processed_count += 1
             
-            logger.info(f"✅ {sym} [{category}]: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}%")
+            logger.info(f"✅ {sym} [{category}]: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}% (ref: {jan_date})")
             
         except Exception as e:
             error_count += 1
@@ -541,6 +597,11 @@ def main():
     SECTORS_DATA["meta"]["total_etfs"] = len(sectors_mapping)
     SECTORS_DATA["meta"]["errors_count"] = error_count
     SECTORS_DATA["meta"]["taxonomy"] = TAXONOMY  # Garder la trace du référentiel
+    SECTORS_DATA["meta"]["ytd_calculation"] = {
+        "method": "price_close_to_close",
+        "timezone_mapping": TZ_BY_REGION,
+        "note": "YTD basé sur le premier close de l'année dans le fuseau local"
+    }
     
     # 6. Sauvegarder le fichier JSON
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
