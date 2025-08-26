@@ -256,76 +256,81 @@ def quote_one(sym: str, region_display: str) -> Tuple[float, float, str]:
 
 def baseline_last_close_prev_year(sym: str, region_display: str) -> Tuple[float, str]:
     """
-    Close de référence YTD = dernier jour ouvré de l'année N-1
+    Close de référence YTD = DERNIER jour ouvré de l'année N-1
     Retourne (close, 'YYYY-MM-DD') en timezone locale.
+    Utilise max() pour garantir de prendre la dernière date de trading.
     """
     year = dt.date.today().year
     tz = TZ_BY_REGION.get(region_display, "UTC")
     
     try:
-        # Récupérer les données de fin d'année précédente
+        # Récupérer une fenêtre large de décembre à janvier
         ts_json = TD.time_series(
             symbol=sym,
             interval="1day",
-            start_date=f"{year-1}-12-15",  # petit tampon pour être sûr
-            end_date=f"{year}-01-10",      # inclure début janvier au cas où
+            start_date=f"{year-1}-12-01",   # fenêtre large depuis début décembre
+            end_date=f"{year}-01-10",       # jusqu'à mi-janvier année courante
             order="ASC",
             timezone=tz,
-            outputsize=50                   # suffisant pour cette période
+            outputsize=200                   # suffisant pour cette période
         ).as_json()
 
         if isinstance(ts_json, tuple):
             ts_json = ts_json[0]
             
-        # Normaliser les données
-        values = []
+        # Normaliser les données -> liste
+        vals = []
         if isinstance(ts_json, dict) and ts_json.get("values"):
-            values = ts_json["values"]
+            vals = ts_json["values"]
         elif isinstance(ts_json, list):
-            values = ts_json
+            vals = ts_json
         elif isinstance(ts_json, dict) and {"datetime", "close"} <= set(ts_json):
-            values = [ts_json]
+            vals = [ts_json]
 
-        if not values:
+        if not vals:
             raise ValueError(f"Aucune donnée historique pour {sym}")
 
-        # Chercher la DERNIÈRE bougie de l'année N-1
-        baseline_row = None
-        for row in values:
-            date_str = str(row.get("datetime", ""))[:10]
-            close_val = row.get("close")
+        # Parser toutes les lignes et créer des tuples (date, close)
+        rows = []
+        for r in vals:
+            date_str = str(r.get("datetime", ""))[:10]
+            close_val = r.get("close")
             
-            # Si c'est bien une date de l'année N-1 avec un close valide
-            if date_str.startswith(str(year-1)) and close_val not in (None, "None", ""):
-                try:
-                    baseline_row = {
-                        "date": date_str,
-                        "close": float(close_val)
-                    }
-                    # On continue pour prendre la dernière de l'année
-                except (ValueError, TypeError):
-                    continue
+            if not date_str or close_val in (None, "None", ""):
+                continue
+                
+            try:
+                date_obj = dt.date.fromisoformat(date_str)
+                rows.append((date_obj, float(close_val)))
+            except Exception:
+                continue
         
-        if baseline_row:
-            logger.debug(f"Baseline YTD {sym}: {baseline_row['close']} le {baseline_row['date']} (timezone: {tz})")
-            
-            # Vérifier que c'est bien fin décembre
-            if not baseline_row["date"].startswith(f"{year-1}-12"):
-                logger.warning(f"⚠️ {sym}: Baseline YTD n'est pas en décembre ({baseline_row['date']})")
-            
-            return baseline_row["close"], baseline_row["date"]
-
-        # Fallback: si on n'a pas trouvé de données pour l'année N-1
-        # on prend la première bougie disponible (mais on loggue un warning)
-        if values:
-            first_row = values[0]
-            date_str = str(first_row.get("datetime", ""))[:10]
-            close_val = float(first_row.get("close"))
-            
-            logger.warning(f"⚠️ {sym}: Pas de données pour {year-1}, utilisation de {date_str} comme baseline")
-            return close_val, date_str
-
-        raise ValueError(f"Aucune donnée YTD utilisable pour {sym}")
+        # Garder uniquement les dates de l'année N-1
+        prev_year_rows = [(d, c) for (d, c) in rows if d.year == year-1]
+        
+        if not prev_year_rows:
+            # Si pas de données pour l'année N-1, prendre la première disponible
+            if rows:
+                first_date, first_close = rows[0]
+                logger.warning(f"⚠️ {sym}: Pas de données pour {year-1}, utilisation de {first_date}")
+                return first_close, first_date.isoformat()
+            else:
+                raise ValueError(f"Aucune donnée YTD utilisable pour {sym}")
+        
+        # IMPORTANT: Prendre la DERNIÈRE date de l'année N-1 avec max()
+        base_date, base_close = max(prev_year_rows, key=lambda x: x[0])
+        
+        # Garde-fou : si la date est avant le 20 décembre, logguer un warning
+        if base_date.month == 12 and base_date.day < 20:
+            logger.warning(f"⚠️ {sym}: Baseline tôt ({base_date}), vérifiez le calendrier de l'échange")
+        
+        # Vérifier que c'est bien fin décembre (idéalement >= 28 décembre)
+        if base_date.month == 12 and base_date.day >= 28:
+            logger.debug(f"✅ {sym}: Baseline YTD correcte au {base_date} (close: {base_close})")
+        else:
+            logger.info(f"ℹ️ {sym}: Baseline YTD au {base_date} (échange peut-être fermé fin décembre)")
+        
+        return base_close, base_date.isoformat()
 
     except Exception as e:
         logger.error(f"Erreur baseline YTD pour {sym}: {e}")
@@ -548,10 +553,13 @@ def main():
             # IMPORTANT: Utiliser le dernier close de l'année N-1 comme baseline
             base_close, base_date = baseline_last_close_prev_year(sym, region_display)
             
-            # Vérifier que la date baseline est bien dans l'année N-1
+            # Vérifier que la date baseline est bien dans l'année N-1 et fin décembre
             if not base_date.startswith(str(year-1)):
                 ytd_warnings += 1
                 logger.warning(f"⚠️ {sym}: YTD baseline incorrecte ({base_date}), devrait être en {year-1}")
+            elif base_date[5:7] == "12" and int(base_date[8:10]) < 20:
+                ytd_warnings += 1
+                logger.warning(f"⚠️ {sym}: YTD baseline trop tôt ({base_date}), devrait être fin décembre")
             
             # Calculer le YTD
             ytd_pct = 100 * (last - base_close) / base_close if base_close > 0 else 0.0
@@ -618,8 +626,8 @@ def main():
     logger.info(f"  - ETFs traités avec succès: {processed_count}")
     logger.info(f"  - Erreurs: {error_count}")
     if ytd_warnings > 0:
-        logger.warning(f"  - ⚠️ Avertissements YTD (dates hors {year-1}): {ytd_warnings}")
-        logger.warning(f"    → Vérifiez les données historiques disponibles")
+        logger.warning(f"  - ⚠️ Avertissements YTD: {ytd_warnings}")
+        logger.warning(f"    → Vérifiez les dates de baseline (devraient être fin {year-1})")
     
     # Log par catégorie
     for category, sectors in SECTORS_DATA["sectors"].items():
@@ -642,8 +650,8 @@ def main():
         "method": "price_last_close_prev_year_to_last_close",
         "baseline_year": year - 1,
         "timezone_mapping": TZ_BY_REGION,
-        "outputsize": 50,
-        "note": f"YTD basé sur le dernier close de {year-1} dans le fuseau local"
+        "outputsize": 200,
+        "note": f"YTD basé sur le dernier close de {year-1} dans le fuseau local (max date)"
     }
     if ytd_warnings > 0:
         SECTORS_DATA["meta"]["ytd_warnings"] = ytd_warnings
