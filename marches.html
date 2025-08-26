@@ -481,6 +481,26 @@
             top: 0;
             z-index: 10;
             cursor: pointer;
+            position: relative;
+            padding-right: 20px;
+        }
+        
+        /* Indicateurs visuels de tri */
+        .data-table th.sorted-asc::after,
+        .data-table th.sorted-desc::after {
+            position: absolute;
+            right: 8px;
+            color: var(--accent-color);
+            font-size: 0.8em;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .data-table th.sorted-asc::after  { content: "▲"; }
+        .data-table th.sorted-desc::after { content: "▼"; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-2px); }
+            to   { opacity: 0.7; transform: translateY(0); }
         }
         
         /* Alignement à droite pour les colonnes numériques */
@@ -1574,39 +1594,85 @@
             });
         });
 
-        // Tri par colonnes
-        const thAscState = new Map();
-        
-        function sortTableByColumn(table, column) {
-            const tbody = table.tBodies[0];
-            const rows = Array.from(tbody.querySelectorAll('tr'));
-            const asc = !thAscState.get(column);
-            thAscState.set(column, asc);
-            
-            rows.sort((a, b) => {
-                const av = a.children[column].innerText.replace(/[^\d,\-−]/g, '').replace(',', '.');
-                const bv = b.children[column].innerText.replace(/[^\d,\-−]/g, '').replace(',', '.');
-                const na = parseFloat(av);
-                const nb = parseFloat(bv);
-                
-                if (!isNaN(na) && !isNaN(nb)) {
-                    return asc ? na - nb : nb - na;
-                }
-                return asc ? a.children[column].innerText.localeCompare(b.children[column].innerText)
-                           : b.children[column].innerText.localeCompare(a.children[column].innerText);
-            });
-            
-            rows.forEach(r => tbody.appendChild(r));
+        // === TRI PAR COLONNES — valable pour TOUTES les régions ===
+        const tableSortState = new WeakMap(); // table -> { col: number, asc: boolean }
+
+        function parseCellNumber(text) {
+            if (!text) return null;
+            // gère "−1,74%" "55 340,00" "642.47" etc.
+            const s = String(text)
+                .replace(/\u2212/g, '-')       // signe "−" Unicode -> "-"
+                .replace(/\s/g, '')            // espaces
+                .replace(/[^\d,\.\-\+]/g, '')  // enlève tout sauf chiffres, , . + -
+                .replace(/,/g, '.');           // , -> .
+            const n = parseFloat(s);
+            return Number.isFinite(n) ? n : null;
         }
 
-        // Attacher les gestionnaires de tri après chargement
-        setTimeout(() => {
-            document.querySelectorAll('.data-table thead th').forEach((th, idx) => {
-                th.addEventListener('click', () => {
-                    sortTableByColumn(th.closest('table'), idx);
+        function sortTable(table, colIdx, asc) {
+            const tbody = table.tBodies[0];
+            if (!tbody) return;
+
+            const rows = Array.from(tbody.rows).map((tr, i) => ({ tr, i })); // tri stable
+            rows.sort((a, b) => {
+                const A = a.tr.cells[colIdx]?.innerText || '';
+                const B = b.tr.cells[colIdx]?.innerText || '';
+
+                const na = parseCellNumber(A);
+                const nb = parseCellNumber(B);
+
+                let cmp;
+                if (na !== null && nb !== null) {
+                    cmp = na - nb;
+                } else {
+                    cmp = A.localeCompare(B, 'fr', { sensitivity: 'base' });
+                }
+                if (!asc) cmp = -cmp;
+                // tri stable
+                return cmp || (a.i - b.i);
+            });
+
+            rows.forEach(({ tr }) => tbody.appendChild(tr));
+            updateSortIndicators(table, colIdx, asc);
+        }
+
+        function updateSortIndicators(table, colIdx, asc) {
+            const ths = table.tHead?.rows[0]?.cells || [];
+            [...ths].forEach((th, i) => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+                th.setAttribute('aria-sort', 'none');
+                if (i === colIdx) {
+                    th.classList.add(asc ? 'sorted-asc' : 'sorted-desc');
+                    th.setAttribute('aria-sort', asc ? 'ascending' : 'descending');
+                }
+            });
+        }
+
+        function attachTableSorters() {
+            document.querySelectorAll('#indices-container table.data-table').forEach(table => {
+                const ths = table.tHead?.rows[0]?.cells || [];
+                [...ths].forEach((th, idx) => {
+                    th.style.cursor = 'pointer';
+                    th.addEventListener('click', () => {
+                        const state = tableSortState.get(table) || { col: -1, asc: true };
+                        const asc = state.col === idx ? !state.asc : true;
+                        tableSortState.set(table, { col: idx, asc });
+                        sortTable(table, idx, asc);
+                    });
+                    // accessibilité clavier
+                    th.tabIndex = 0;
+                    th.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            th.click();
+                        }
+                    });
                 });
             });
-        }, 1000);
+        }
+
+        // Expose pour être rappelé après rendu des données
+        window.attachTableSorters = attachTableSorters;
 
         // Clic sur Top Performers pour filtrer le tableau
         function wireTpClicks() {
