@@ -24,6 +24,8 @@ on:
 env:
   PYTHON_VERSION: '3.10'
   TZ: 'Europe/Paris'
+  # ⚠️ SCRIPT PRINCIPAL UTILISÉ PAR CE WORKFLOW
+  HOLDINGS_SCRIPT: 'scripts/update_holdings.py'
 
 jobs:
   update-holdings:
@@ -58,6 +60,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests
           echo "✅ Dépendances installées"
+      
+      - name: 🔍 Check Script Exists
+        run: |
+          echo "🔍 Vérification du script principal..."
+          if [ -f "${{ env.HOLDINGS_SCRIPT }}" ]; then
+            echo "✅ Script trouvé: ${{ env.HOLDINGS_SCRIPT }}"
+            echo "   Taille: $(du -h ${{ env.HOLDINGS_SCRIPT }} | cut -f1)"
+            echo "   Lignes: $(wc -l < ${{ env.HOLDINGS_SCRIPT }}) lignes"
+          else
+            echo "❌ ERREUR: Script non trouvé: ${{ env.HOLDINGS_SCRIPT }}"
+            echo "   Vérifiez que le fichier existe dans le repository"
+            exit 1
+          fi
       
       - name: 🔍 Check Current Holdings Status
         id: check_status
@@ -107,7 +122,7 @@ except:
           rm -f data/etf_holdings.json
           echo "✅ Fichier supprimé"
       
-      - name: 📊 Update Holdings Data
+      - name: 📊 Update Holdings Data - EXECUTE PYTHON SCRIPT
         if: steps.check_status.outputs.skip_update != 'true'
         env:
           TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
@@ -115,7 +130,11 @@ except:
           HOLDINGS_STALE_DAYS: '7'
           HOLDINGS_SLEEP: '1.0'
         run: |
-          echo "🚀 Lancement de la mise à jour des holdings ETF..."
+          echo "═══════════════════════════════════════════════════════"
+          echo "🚀 EXÉCUTION DU SCRIPT PYTHON PRINCIPAL"
+          echo "═══════════════════════════════════════════════════════"
+          echo ""
+          echo "📄 Script: ${{ env.HOLDINGS_SCRIPT }}"
           echo ""
           echo "⚙️ Configuration:"
           echo "   - API: Twelve Data"
@@ -123,12 +142,18 @@ except:
           echo "   - Pause entre requêtes: ${HOLDINGS_SLEEP}s"
           echo "   - Péremption: $HOLDINGS_STALE_DAYS jours"
           echo ""
+          echo "═══════════════════════════════════════════════════════"
+          echo "▶️  LANCEMENT DU SCRIPT..."
+          echo "═══════════════════════════════════════════════════════"
+          echo ""
           
-          # Exécuter le script
-          python scripts/update_holdings.py
+          # ⚠️ EXÉCUTION DU SCRIPT PYTHON PRINCIPAL
+          python ${{ env.HOLDINGS_SCRIPT }}
           
           echo ""
-          echo "✅ Script terminé"
+          echo "═══════════════════════════════════════════════════════"
+          echo "✅ SCRIPT TERMINÉ"
+          echo "═══════════════════════════════════════════════════════"
       
       - name: 📈 Verify Update Results
         if: steps.check_status.outputs.skip_update != 'true'
@@ -137,11 +162,11 @@ except:
           echo "📊 Vérification des résultats..."
           
           if [ -f "data/etf_holdings.json" ]; then
-            echo "✅ Fichier généré avec succès"
+            echo "✅ Fichier généré avec succès par le script"
             
             # Afficher les statistiques
             echo ""
-            echo "📈 Statistiques du fichier:"
+            echo "📈 Statistiques du fichier généré:"
             ls -lh data/etf_holdings.json
             
             python -c "
@@ -169,7 +194,8 @@ with open('data/etf_holdings.json') as f:
             
             echo "update_success=true" >> $GITHUB_OUTPUT
           else
-            echo "❌ Erreur: Fichier non généré"
+            echo "❌ Erreur: Fichier non généré par le script"
+            echo "   Vérifiez les logs du script Python ci-dessus"
             echo "update_success=false" >> $GITHUB_OUTPUT
             exit 1
           fi
@@ -211,6 +237,12 @@ with open('data/etf_holdings.json') as f:
           echo "# 📊 Rapport de mise à jour des Holdings ETF" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
+          echo "## 📄 Script exécuté" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ env.HOLDINGS_SCRIPT }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
           # Informations d'exécution
           echo "## 🎯 Contexte d'exécution" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -245,6 +277,7 @@ with open('data/etf_holdings.json') as f:
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **Échec de la mise à jour**" >> $GITHUB_STEP_SUMMARY
+            echo "   Script utilisé: ${{ env.HOLDINGS_SCRIPT }}" >> $GITHUB_STEP_SUMMARY
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
