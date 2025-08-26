@@ -424,9 +424,11 @@ def main():
             # Déterminer la région pour l'affichage
             region_display = "US" if etf.get("region", "").lower() == "us" else "Europe"
             
-            # Créer l'objet de données
+            # Créer l'objet de données avec le VRAI NOM DE L'ETF
             sector_entry = {
-                "name": determine_index_name(etf.get("name", sym), region_display),
+                "symbol": sym,  # ✅ Ajout du symbole
+                "name": etf.get("name", sym),  # ✅ nom COMPLET de l'ETF (celui du CSV)
+                "indexName": determine_index_name(etf.get("name", sym), region_display),  # libellé indice
                 "value": format_value(last, etf.get("currency", "USD")),
                 "changePercent": format_percent(day_pct),
                 "ytdChange": format_percent(ytd_pct),
