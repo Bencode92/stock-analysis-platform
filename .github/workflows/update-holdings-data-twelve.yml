@@ -100,7 +100,7 @@ except:
             echo "📝 Aucun fichier existant, création nécessaire"
           fi
       
-      - name: 🗑️ Force Update (if requested)
+      - name: 🗑️ Force Update if requested
         if: github.event.inputs.force_update == 'true'
         run: |
           echo "🔧 Suppression du fichier existant pour forcer la mise à jour..."
@@ -113,7 +113,7 @@ except:
           TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
           HOLDINGS_MAX: ${{ github.event.inputs.max_holdings || '10' }}
           HOLDINGS_STALE_DAYS: '7'
-          HOLDINGS_SLEEP: '1.0'  # Pause d'1 seconde entre les requêtes
+          HOLDINGS_SLEEP: '1.0'
         run: |
           echo "🚀 Lancement de la mise à jour des holdings ETF..."
           echo ""
@@ -250,72 +250,3 @@ with open('data/etf_holdings.json') as f:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
           echo "⏰ **Prochaine exécution planifiée:** Dimanche prochain 3h00 UTC" >> $GITHUB_STEP_SUMMARY
-
-  notify-failure:
-    name: Notify on Failure
-    runs-on: ubuntu-latest
-    needs: update-holdings
-    if: failure()
-    
-    steps:
-      - name: 🚨 Create Issue for Failure
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const date = new Date().toISOString().split('T')[0];
-            const title = `🚨 Holdings Update Failed - ${date}`;
-            
-            const body = `
-            ## ⚠️ Échec de la mise à jour des Holdings ETF
-            
-            **Date:** ${new Date().toISOString()}
-            **Workflow:** [Run #${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            **Déclenché par:** ${{ github.event_name }}
-            
-            ### 🔍 Causes possibles
-            
-            - [ ] Clé API Twelve Data invalide ou expirée
-            - [ ] Limites API dépassées (200 crédits/ETF)
-            - [ ] Problème de connectivité réseau
-            - [ ] Changement dans le format de l'API
-            - [ ] Erreur dans le script Python
-            
-            ### 📋 Actions requises
-            
-            1. Consulter les [logs du workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            2. Vérifier la validité de la clé API
-            3. Contrôler les limites d'utilisation Twelve Data
-            4. Relancer manuellement si nécessaire
-            
-            ### 💡 Commande de debug
-            
-            \`\`\`bash
-            export TWELVE_DATA_API=your_api_key
-            python scripts/update_holdings.py
-            \`\`\`
-            
-            ---
-            *Issue créée automatiquement par GitHub Actions*
-            `;
-            
-            // Vérifier si une issue similaire existe déjà aujourd'hui
-            const issues = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: 'automated,holdings-update-failure'
-            });
-            
-            const existingIssue = issues.data.find(issue => 
-              issue.title.includes(date)
-            );
-            
-            if (!existingIssue) {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: title,
-                body: body,
-                labels: ['automated', 'holdings-update-failure', 'bug']
-              });
-            }
