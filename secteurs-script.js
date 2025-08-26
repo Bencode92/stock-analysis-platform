@@ -1,10 +1,66 @@
 /**
- * secteurs-script.js - Version avec libellés normalisés
- * Utilise les libellés display_fr générés côté Python
- * Format uniforme : FAMILLE — SECTEUR FR
+ * secteurs-script.js - Version avec libellés normalisés ET traduction FR
+ * Utilise prioritairement les libellés display_fr du JSON
+ * Garde la traduction française côté client pour flexibilité
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+    // === Localisation FR des libellés d'indices/ETF ===
+    const LOCALE = (document.documentElement.lang || 'fr').startsWith('fr') ? 'fr' : 'en';
+    
+    // Remplacements "token → traduction". On ne touche pas aux marques (iShares, Invesco…)
+    const FR_TOKENS = [
+        [/Oil\s*&\s*Gas/i, 'Pétrole & Gaz'],
+        [/Basic\s*Resources?/i, 'Ressources de base'],
+        [/Materials?/i, 'Matériaux'],
+        [/Construction\s*&\s*Materials?/i, 'Construction & Matériaux'],
+        [/Industrials?/i, 'Industriels'],
+        [/Industrial/i, 'Industriel'],
+        [/Banks?/i, 'Banques'],
+        [/Financial\s*Services?/i, 'Services financiers'],
+        [/Finance/i, 'Finance'],
+        [/Insurance/i, 'Assurance'],
+        [/Real\s*Estate/i, 'Immobilier'],
+        [/Utilities/i, 'Services publics'],
+        [/Health\s*Care/i, 'Santé'],
+        [/Pharmaceuticals?/i, 'Pharmaceutiques'],
+        [/Biotechnolog(y|ies)/i, 'Biotechnologie'],
+        [/Technology/i, 'Technologie'],
+        [/Semiconductors?/i, 'Semi-conducteurs'],
+        [/Media/i, 'Médias'],
+        [/Telecommunications?/i, 'Télécommunications'],
+        [/Communication\s*Services?/i, 'Communication'],
+        [/Consumer\s*Discretionary/i, 'Consommation discrétionnaire'],
+        [/Consumer\s*Staples/i, 'Consommation de base'],
+        [/Food\s*&\s*Beverage/i, 'Alimentation & Boissons'],
+        [/Retail/i, 'Distribution'],
+        [/Transportation/i, 'Transports'],
+        [/Internet/i, 'Internet'],
+        [/Cybersecurity/i, 'Cybersécurité'],
+        [/Smart\s*Grid\s*Infrastructure/i, 'Infrastructures réseaux intelligents'],
+        [/AI\s*&\s*Robotics/i, 'IA & Robotique'],
+        [/Artificial\s*Intelligence/i, 'Intelligence artificielle'],
+        [/Automobiles?/i, 'Automobiles'],
+        [/Chemicals?/i, 'Chimie'],
+        [/Autos?/i, 'Auto'],
+        [/Technology\s*Dividend/i, 'Dividendes technologiques'],
+        [/FinTech/i, 'FinTech'],
+        [/FINTECH/i, 'FinTech'],
+        [/BIOTECH/i, 'Biotech']
+    ];
+    
+    // Traduit uniquement les morceaux sectoriels, conserve les marques/suffixes (UCITS ETF, ETF…)
+    function translateSectorLabel(name, locale = 'fr') {
+        if (!name || locale !== 'fr') return name;
+        let out = String(name);
+        for (const [re, fr] of FR_TOKENS) {
+            out = out.replace(re, fr);
+        }
+        // Harmonise le "&"
+        out = out.replace(/\s*&\s*/g, ' & ');
+        return out;
+    }
+    
     // Variables globales pour stocker les données
     let sectorsData = {
         sectors: {
@@ -355,9 +411,19 @@ document.addEventListener('DOMContentLoaded', function() {
                             const ytdClass = sector.ytd_num < -0.01 ? 'negative' : 
                                            sector.ytd_num > 0.01 ? 'positive' : 'neutral';
                             
-                            // Utiliser display_fr généré côté Python
+                            // Priorité : 1) display_fr du JSON, 2) traduction FR du name, 3) indexName
                             const rawName = sector.name || '';  // nom complet ETF pour tooltip
-                            const label = sector.display_fr || sector.indexName || rawName;
+                            let label = sector.display_fr;
+                            
+                            // Si pas de display_fr, essayer de traduire le nom
+                            if (!label && LOCALE === 'fr') {
+                                label = translateSectorLabel(sector.indexName || rawName, LOCALE);
+                            }
+                            
+                            // Fallback final
+                            if (!label) {
+                                label = sector.indexName || rawName;
+                            }
                             
                             const nameTd = document.createElement('td');
                             nameTd.innerHTML = `<div style="font-weight:600">${label}</div>`;
@@ -559,9 +625,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const regionDisplay = sector.indexFamily || 
                 (sectorsData.sectors.europe.includes(sector) ? "STOXX Europe 600" : "NASDAQ US");
             
-            // Utiliser display_fr généré côté Python
+            // Priorité : display_fr du JSON, puis traduction FR, puis fallback
             const rawName = sector.name || '';
-            const label = sector.display_fr || sector.indexName || rawName;
+            let label = sector.display_fr;
+            
+            // Si pas de display_fr, traduire
+            if (!label && LOCALE === 'fr') {
+                label = translateSectorLabel(sector.indexName || rawName, LOCALE);
+            }
+            
+            // Fallback final
+            if (!label) {
+                label = sector.indexName || rawName;
+            }
             
             const row = document.createElement('div');
             row.className = 'performer-row';
