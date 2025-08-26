@@ -6,7 +6,7 @@ on:
       force_update:
         description: 'Forcer la mise à jour'
         required: false
-        default: 'false'
+        default: 'true'  # Manuel = force par défaut
         type: choice
         options: ['true','false']
       max_holdings:
@@ -77,22 +77,23 @@ jobs:
         run: rm -f data/etf_holdings.json || true
 
       - name: Update holdings
-        if: steps.check_status.outputs.skip_update != 'true'
+        if: ${{ github.event_name == 'workflow_dispatch' || steps.check_status.outputs.skip_update != 'true' }}
         env:
           TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
           HOLDINGS_MAX: ${{ github.event.inputs.max_holdings || '10' }}
           HOLDINGS_STALE_DAYS: '7'
           HOLDINGS_SLEEP: '1.0'
+          FORCE_UPDATE: ${{ github.event.inputs.force_update || 'false' }}
         run: python scripts/update_holdings.py
 
       - name: Verify results
-        if: steps.check_status.outputs.skip_update != 'true'
+        if: ${{ github.event_name == 'workflow_dispatch' || steps.check_status.outputs.skip_update != 'true' }}
         run: |
           test -f data/etf_holdings.json || (echo "::error::File not generated"; exit 1)
           ls -lh data/etf_holdings.json
 
       - name: Commit & push
-        if: steps.check_status.outputs.skip_update != 'true'
+        if: ${{ github.event_name == 'workflow_dispatch' || steps.check_status.outputs.skip_update != 'true' }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
