@@ -1,67 +1,10 @@
 /**
- * secteurs-script.js - Version alignée avec marches-script.js
- * Scripts pour la page des secteurs boursiers avec UX améliorée
- * Affiche les vrais noms d'ETF avec traduction française des termes sectoriels
- * Utilise la médiane pour agréger les valeurs des secteurs
+ * secteurs-script.js - Version avec libellés normalisés
+ * Utilise les libellés display_fr générés côté Python
+ * Format uniforme : FAMILLE — SECTEUR FR
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // === Localisation FR des libellés d'indices/ETF ===
-    const LOCALE = (document.documentElement.lang || 'fr').startsWith('fr') ? 'fr' : 'en';
-    
-    // Remplacements "token → traduction". On ne touche pas aux marques (iShares, Invesco…)
-    const FR_TOKENS = [
-        [/Oil\s*&\s*Gas/i, 'Pétrole & Gaz'],
-        [/Basic\s*Resources?/i, 'Ressources de base'],
-        [/Materials?/i, 'Matériaux'],
-        [/Construction\s*&\s*Materials?/i, 'Construction & Matériaux'],
-        [/Industrials?/i, 'Industriels'],
-        [/Industrial/i, 'Industriel'],
-        [/Banks?/i, 'Banques'],
-        [/Financial\s*Services?/i, 'Services financiers'],
-        [/Finance/i, 'Finance'],
-        [/Insurance/i, 'Assurance'],
-        [/Real\s*Estate/i, 'Immobilier'],
-        [/Utilities/i, 'Services publics'],
-        [/Health\s*Care/i, 'Santé'],
-        [/Pharmaceuticals?/i, 'Pharmaceutiques'],
-        [/Biotechnolog(y|ies)/i, 'Biotechnologie'],
-        [/Technology/i, 'Technologie'],
-        [/Semiconductors?/i, 'Semi-conducteurs'],
-        [/Media/i, 'Médias'],
-        [/Telecommunications?/i, 'Télécommunications'],
-        [/Communication\s*Services?/i, 'Communication'],
-        [/Consumer\s*Discretionary/i, 'Consommation discrétionnaire'],
-        [/Consumer\s*Staples/i, 'Consommation de base'],
-        [/Food\s*&\s*Beverage/i, 'Alimentation & Boissons'],
-        [/Retail/i, 'Distribution'],
-        [/Transportation/i, 'Transports'],
-        [/Internet/i, 'Internet'],
-        [/Cybersecurity/i, 'Cybersécurité'],
-        [/Smart\s*Grid\s*Infrastructure/i, 'Infrastructures réseaux intelligents'],
-        [/AI\s*&\s*Robotics/i, 'IA & Robotique'],
-        [/Automobiles?/i, 'Automobiles'],
-        [/Chemicals?/i, 'Chimie'],
-        [/Autos?/i, 'Auto'],
-        [/Technology\s*Dividend/i, 'Dividendes technologiques'],
-        [/Artificial\s*Intelligence/i, 'Intelligence artificielle'],
-        [/FinTech/i, 'FinTech'],
-        [/FINTECH/i, 'FinTech'],
-        [/BIOTECH/i, 'Biotech']
-    ];
-    
-    // Traduit uniquement les morceaux sectoriels, conserve les marques/suffixes (UCITS ETF, ETF…)
-    function translateSectorLabel(name, locale = 'fr') {
-        if (!name || locale !== 'fr') return name;
-        let out = String(name);
-        for (const [re, fr] of FR_TOKENS) {
-            out = out.replace(re, fr);
-        }
-        // Harmonise le "&"
-        out = out.replace(/\s*&\s*/g, ' & ');
-        return out;
-    }
-    
     // Variables globales pour stocker les données
     let sectorsData = {
         sectors: {
@@ -195,15 +138,21 @@ document.addEventListener('DOMContentLoaded', function() {
     function normalizeRecord(rec, category) {
         const r = {...rec};
         r.category = category;
-        r.value_num = toNumber(r.value);
-        r.change_num = parsePercentToNumber(r.changePercent);
-        r.ytd_num = parsePercentToNumber(r.ytdChange);
-        r.trend = r.change_num > 0 ? 'up' : r.change_num < 0 ? 'down' : 'flat';
         
-        // ✅ On privilégie le vrai nom d'ETF, puis l'index si dispo
-        if (!r.displayName) {
-            r.displayName = r.name || r.etfName || r.indexName;
+        // Utiliser les valeurs numériques du JSON si disponibles
+        if ('value_num' in r && 'change_num' in r && 'ytd_num' in r) {
+            // Les valeurs numériques sont déjà dans le JSON
+            r.value_num = r.value_num;
+            r.change_num = r.change_num;
+            r.ytd_num = r.ytd_num;
+        } else {
+            // Fallback : parser les valeurs formatées (ancienne méthode)
+            r.value_num = toNumber(r.value);
+            r.change_num = parsePercentToNumber(r.changePercent);
+            r.ytd_num = parsePercentToNumber(r.ytdChange);
         }
+        
+        r.trend = r.change_num > 0 ? 'up' : r.change_num < 0 ? 'down' : 'flat';
         
         // Fallback pour la région si non définie
         if (!r.region) {
@@ -314,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 sectors.forEach(sector => {
                     const normalizedSector = normalizeRecord(sector, category);
                     
-                    // ✅ Classifier par région basé sur le champ JSON region (plus robuste)
+                    // Classifier par région
                     if (normalizedSector.region === "Europe") {
                         europeData.push(normalizedSector);
                     } else if (normalizedSector.region === "US") {
@@ -391,9 +340,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         `;
                         tableBody.appendChild(emptyRow);
                     } else {
-                        // ✅ Tri par nom d'ETF (pas par displayName)
+                        // Tri par nom d'affichage
                         const sortedSectors = [...sectors].sort((a, b) => {
-                            return (a.name || a.displayName || "").localeCompare(b.name || b.displayName || "");
+                            const labelA = a.display_fr || a.indexName || a.name || "";
+                            const labelB = b.display_fr || b.indexName || b.name || "";
+                            return labelA.localeCompare(labelB);
                         });
                         
                         sortedSectors.forEach(sector => {
@@ -404,21 +355,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             const ytdClass = sector.ytd_num < -0.01 ? 'negative' : 
                                            sector.ytd_num > 0.01 ? 'positive' : 'neutral';
                             
-                            // ✅ Affiche le nom traduit en FR avec l'original en dessous
-                            const rawName = sector.name || sector.displayName || sector.indexName || '';
-                            const frName = translateSectorLabel(rawName, LOCALE);
+                            // Utiliser display_fr généré côté Python
+                            const rawName = sector.name || '';  // nom complet ETF pour tooltip
+                            const label = sector.display_fr || sector.indexName || rawName;
                             
                             const nameTd = document.createElement('td');
-                            if (LOCALE === 'fr' && frName !== rawName) {
-                                // Affiche la version FR en gros et l'original en petit
-                                nameTd.innerHTML = `
-                                    <div style="font-weight:600; line-height:1.3">${frName}</div>
-                                    <div style="opacity:.65; font-size:.85em; margin-top:2px">${rawName}</div>
-                                `;
-                            } else {
-                                // Affiche seulement le nom original
-                                nameTd.innerHTML = `<div style="font-weight:600">${rawName}</div>`;
-                            }
+                            nameTd.innerHTML = `<div style="font-weight:600">${label}</div>`;
+                            nameTd.title = rawName; // nom complet ETF au survol
                             
                             tr.appendChild(nameTd);
                             tr.appendChild(createTableCell(sector.value));
@@ -501,7 +444,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                // ✅ Récupère TOUS les ETFs de cette catégorie (pas juste le premier)
+                // Récupère TOUS les ETFs de cette catégorie
                 const list = (sectorsData.sectors[region] || [])
                     .filter(s => s.category === sectorInfo.category);
                 
@@ -510,7 +453,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                // ✅ Calcule la médiane des variations jour et YTD avec label pour debug
+                // Calcule la médiane des variations jour et YTD
                 const { change, ytd, count } = aggregateCategory(list, `${region}/${sectorInfo.category}`);
                 
                 const nameElement = container.querySelector('.sector-name');
@@ -519,7 +462,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (nameElement) {
                     // Pour l'aperçu, on garde les noms français simplifiés
-                    nameElement.textContent = SECTOR_MAPPINGS[sectorInfo.category] || list[0].displayName;
+                    nameElement.textContent = SECTOR_MAPPINGS[sectorInfo.category] || list[0].sector_fr || 'Secteur';
                 }
                 
                 if (valueElement) {
@@ -536,12 +479,12 @@ document.addEventListener('DOMContentLoaded', function() {
                          ytd > 0.01 ? 'positive' : 'neutral');
                 }
                 
-                // ✅ Ajoute un tooltip listant les ETFs contributifs (optionnel)
+                // Ajoute un tooltip listant les ETFs contributifs
                 if (count > 1) {
-                    const etfNames = list.map(s => s.name || s.indexName).join(' • ');
+                    const etfNames = list.map(s => s.display_fr || s.indexName || s.name).join(' • ');
                     container.title = `Médiane de ${count} ETFs:\n${etfNames}`;
-                } else {
-                    container.title = list[0].name || list[0].indexName || '';
+                } else if (list[0]) {
+                    container.title = list[0].display_fr || list[0].indexName || list[0].name || '';
                 }
                 
             } catch (error) {
@@ -613,17 +556,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const css = val < -0.01 ? 'negative' : val > 0.01 ? 'positive' : 'neutral';
             
             // Déterminer la région d'affichage
-            const regionDisplay = sectorsData.sectors.europe.includes(sector) ? "STOXX Europe 600" : "NASDAQ US";
+            const regionDisplay = sector.indexFamily || 
+                (sectorsData.sectors.europe.includes(sector) ? "STOXX Europe 600" : "NASDAQ US");
             
-            // Traduire le nom pour l'affichage
-            const rawName = sector.name || sector.displayName || '';
-            const frName = translateSectorLabel(rawName, LOCALE);
+            // Utiliser display_fr généré côté Python
+            const rawName = sector.name || '';
+            const label = sector.display_fr || sector.indexName || rawName;
             
             const row = document.createElement('div');
             row.className = 'performer-row';
+            row.title = rawName; // nom complet ETF au survol
             row.innerHTML = `
                 <div class="performer-info">
-                    <div class="performer-index">${LOCALE === 'fr' ? frName : rawName}</div>
+                    <div class="performer-index">${label}</div>
                     <div class="performer-region">${regionDisplay}</div>
                 </div>
                 <div class="performer-value ${css}">${formatPercent(val)}</div>
