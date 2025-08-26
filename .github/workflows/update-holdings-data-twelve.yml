@@ -1,30 +1,28 @@
 name: Update Holdings via Twelve Data API
 
-permissions:
-  contents: write   # Nécessaire pour git push
-  actions: read
-
 on:
-  schedule:
-    - cron: '0 3 * * 0'  # Dimanche 3h UTC
   workflow_dispatch:
     inputs:
       force_update:
-        description: 'Forcer la mise à jour même si le fichier est récent'
+        description: 'Forcer la mise à jour'
         required: false
         default: 'false'
         type: choice
         options: ['true', 'false']
       max_holdings:
-        description: 'Nombre max de holdings par ETF (défaut: 10)'
+        description: 'Max holdings/ETF'
         required: false
         default: '10'
         type: string
+  schedule:
+    - cron: '0 3 * * 0'
+
+permissions:
+  contents: write
 
 env:
   PYTHON_VERSION: '3.10'
   TZ: 'Europe/Paris'
-  HOLDINGS_SCRIPT: 'scripts/update_holdings.py'
 
 jobs:
   update-holdings:
@@ -32,145 +30,73 @@ jobs:
     timeout-minutes: 30
     
     steps:
-      - name: 📥 Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
         
-      - name: 🔑 Preflight Checks
+      - name: Check prerequisites
         run: |
-          echo "🔍 Vérification des prérequis..."
-          
-          # Vérifier le secret API
           if [ -z "${{ secrets.TWELVE_DATA_API }}" ]; then
-            echo "::error::Secret TWELVE_DATA_API manquant. Configurez-le dans Settings > Secrets > Actions"
+            echo "::error::Secret TWELVE_DATA_API missing"
             exit 1
           fi
-          echo "✅ Clé API configurée"
-          
-          # Vérifier sectors.json
           if [ ! -f "data/sectors.json" ]; then
-            echo "::error::data/sectors.json introuvable. Lancez d'abord update-sectors-data-twelve.yml"
-            echo "Contenu du dossier data:"
-            ls -la data/ || echo "Dossier data inexistant"
+            echo "::error::data/sectors.json not found"
             exit 1
           fi
-          echo "✅ sectors.json trouvé"
           
-          # Vérifier le script Python
-          if [ ! -f "${{ env.HOLDINGS_SCRIPT }}" ]; then
-            echo "::error::Script ${{ env.HOLDINGS_SCRIPT }} introuvable"
-            exit 1
-          fi
-          echo "✅ Script Python trouvé"
-          
-      - name: 🐍 Setup Python
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           
-      - name: 📦 Install Dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests
           
-      - name: 🔍 Check Current Holdings Status
+      - name: Check holdings status
         id: check_status
         run: |
           if [ -f "data/etf_holdings.json" ]; then
             FILE_AGE=$((($(date +%s) - $(date -r data/etf_holdings.json +%s)) / 86400))
-            echo "📁 Holdings existants (âge: $FILE_AGE jours)"
-            
             if [ $FILE_AGE -lt 6 ] && [ "${{ github.event.inputs.force_update }}" != "true" ]; then
               echo "skip_update=true" >> $GITHUB_OUTPUT
-              echo "ℹ️ Fichier récent, pas de mise à jour nécessaire"
             else
               echo "skip_update=false" >> $GITHUB_OUTPUT
-              echo "🔄 Mise à jour nécessaire"
             fi
           else
             echo "skip_update=false" >> $GITHUB_OUTPUT
-            echo "📝 Aucun fichier existant, création nécessaire"
           fi
           
-      - name: 🗑️ Force Update if requested
+      - name: Force update if requested
         if: github.event.inputs.force_update == 'true'
-        run: |
-          echo "🔧 Suppression forcée du fichier existant..."
-          rm -f data/etf_holdings.json || true
+        run: rm -f data/etf_holdings.json || true
           
-      - name: 📊 Update Holdings Data
+      - name: Update holdings
         if: steps.check_status.outputs.skip_update != 'true'
         env:
           TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
           HOLDINGS_MAX: ${{ github.event.inputs.max_holdings || '10' }}
           HOLDINGS_STALE_DAYS: '7'
           HOLDINGS_SLEEP: '1.0'
-        run: |
-          echo "🚀 Lancement du script Python..."
-          python ${{ env.HOLDINGS_SCRIPT }}
+        run: python scripts/update_holdings.py
           
-      - name: 📈 Verify Update Results
+      - name: Verify results
         if: steps.check_status.outputs.skip_update != 'true'
         run: |
           if [ ! -f "data/etf_holdings.json" ]; then
-            echo "::error::Le script n'a pas généré data/etf_holdings.json"
-            echo "Vérifiez les logs de l'étape précédente"
+            echo "::error::File not generated"
             exit 1
           fi
-          
-          echo "✅ Fichier généré avec succès:"
           ls -lh data/etf_holdings.json
           
-          # Afficher un résumé
-          python -c "
-import json
-with open('data/etf_holdings.json') as f:
-    data = json.load(f)
-    meta = data.get('meta', {})
-    print(f'ETFs: {len(data.get(\"etfs\", {}))}')
-    print(f'Holdings totaux: {meta.get(\"total_holdings\", 0)}')
-    print(f'Crédits utilisés: ~{meta.get(\"api_credits_used\", 0)}')
-          "
-          
-      - name: 💾 Commit and Push Changes
+      - name: Commit and push
         if: steps.check_status.outputs.skip_update != 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          
           git add data/etf_holdings.json
-          
-          # Commit seulement s'il y a des changements
           git diff --cached --quiet || {
-            TIMESTAMP=$(TZ=${{ env.TZ }} date '+%Y-%m-%d %H:%M')
-            git commit -m "📈 Update ETF holdings data [$TIMESTAMP]"
+            git commit -m "Update ETF holdings [$(date -u +'%F %H:%M')]"
             git push
-            echo "✅ Modifications pushées"
-          } || echo "ℹ️ Aucun changement à commiter"
-          
-      - name: 📝 Generate Summary
-        if: always()
-        run: |
-          echo "# 📊 Rapport Holdings ETF" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [ "${{ steps.check_status.outputs.skip_update }}" == "true" ]; then
-            echo "ℹ️ **Mise à jour ignorée** - Fichier déjà récent" >> $GITHUB_STEP_SUMMARY
-          elif [ -f "data/etf_holdings.json" ]; then
-            echo "✅ **Mise à jour réussie**" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Statistiques" >> $GITHUB_STEP_SUMMARY
-            python -c "
-import json
-with open('data/etf_holdings.json') as f:
-    data = json.load(f)
-    meta = data.get('meta', {})
-    etfs = data.get('etfs', {})
-    print(f'- ETFs traités: {len(etfs)}')
-    print(f'- Holdings totaux: {meta.get(\"total_holdings\", 0)}')
-    print(f'- Crédits API: ~{meta.get(\"api_credits_used\", 0)}')
-    print(f'- Généré à: {meta.get(\"generated_at\", \"N/A\")}')
-            " >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ **Échec de la mise à jour**" >> $GITHUB_STEP_SUMMARY
-            echo "Consultez les logs pour plus de détails" >> $GITHUB_STEP_SUMMARY
-          fi
+          }
