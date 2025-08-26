@@ -1,11 +1,67 @@
 /**
  * secteurs-script.js - Version alignée avec marches-script.js
  * Scripts pour la page des secteurs boursiers avec UX améliorée
- * Affiche les vrais noms d'ETF au lieu des noms génériques
+ * Affiche les vrais noms d'ETF avec traduction française des termes sectoriels
  * Utilise la médiane pour agréger les valeurs des secteurs
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+    // === Localisation FR des libellés d'indices/ETF ===
+    const LOCALE = (document.documentElement.lang || 'fr').startsWith('fr') ? 'fr' : 'en';
+    
+    // Remplacements "token → traduction". On ne touche pas aux marques (iShares, Invesco…)
+    const FR_TOKENS = [
+        [/Oil\s*&\s*Gas/i, 'Pétrole & Gaz'],
+        [/Basic\s*Resources?/i, 'Ressources de base'],
+        [/Materials?/i, 'Matériaux'],
+        [/Construction\s*&\s*Materials?/i, 'Construction & Matériaux'],
+        [/Industrials?/i, 'Industriels'],
+        [/Industrial/i, 'Industriel'],
+        [/Banks?/i, 'Banques'],
+        [/Financial\s*Services?/i, 'Services financiers'],
+        [/Finance/i, 'Finance'],
+        [/Insurance/i, 'Assurance'],
+        [/Real\s*Estate/i, 'Immobilier'],
+        [/Utilities/i, 'Services publics'],
+        [/Health\s*Care/i, 'Santé'],
+        [/Pharmaceuticals?/i, 'Pharmaceutiques'],
+        [/Biotechnolog(y|ies)/i, 'Biotechnologie'],
+        [/Technology/i, 'Technologie'],
+        [/Semiconductors?/i, 'Semi-conducteurs'],
+        [/Media/i, 'Médias'],
+        [/Telecommunications?/i, 'Télécommunications'],
+        [/Communication\s*Services?/i, 'Communication'],
+        [/Consumer\s*Discretionary/i, 'Consommation discrétionnaire'],
+        [/Consumer\s*Staples/i, 'Consommation de base'],
+        [/Food\s*&\s*Beverage/i, 'Alimentation & Boissons'],
+        [/Retail/i, 'Distribution'],
+        [/Transportation/i, 'Transports'],
+        [/Internet/i, 'Internet'],
+        [/Cybersecurity/i, 'Cybersécurité'],
+        [/Smart\s*Grid\s*Infrastructure/i, 'Infrastructures réseaux intelligents'],
+        [/AI\s*&\s*Robotics/i, 'IA & Robotique'],
+        [/Automobiles?/i, 'Automobiles'],
+        [/Chemicals?/i, 'Chimie'],
+        [/Autos?/i, 'Auto'],
+        [/Technology\s*Dividend/i, 'Dividendes technologiques'],
+        [/Artificial\s*Intelligence/i, 'Intelligence artificielle'],
+        [/FinTech/i, 'FinTech'],
+        [/FINTECH/i, 'FinTech'],
+        [/BIOTECH/i, 'Biotech']
+    ];
+    
+    // Traduit uniquement les morceaux sectoriels, conserve les marques/suffixes (UCITS ETF, ETF…)
+    function translateSectorLabel(name, locale = 'fr') {
+        if (!name || locale !== 'fr') return name;
+        let out = String(name);
+        for (const [re, fr] of FR_TOKENS) {
+            out = out.replace(re, fr);
+        }
+        // Harmonise le "&"
+        out = out.replace(/\s*&\s*/g, ' & ');
+        return out;
+    }
+    
     // Variables globales pour stocker les données
     let sectorsData = {
         sectors: {
@@ -348,8 +404,23 @@ document.addEventListener('DOMContentLoaded', function() {
                             const ytdClass = sector.ytd_num < -0.01 ? 'negative' : 
                                            sector.ytd_num > 0.01 ? 'positive' : 'neutral';
                             
-                            // ✅ Affiche l'ETF en priorité dans la colonne SECTEUR
-                            tr.appendChild(createTableCell(sector.name || sector.displayName || sector.indexName));
+                            // ✅ Affiche le nom traduit en FR avec l'original en dessous
+                            const rawName = sector.name || sector.displayName || sector.indexName || '';
+                            const frName = translateSectorLabel(rawName, LOCALE);
+                            
+                            const nameTd = document.createElement('td');
+                            if (LOCALE === 'fr' && frName !== rawName) {
+                                // Affiche la version FR en gros et l'original en petit
+                                nameTd.innerHTML = `
+                                    <div style="font-weight:600; line-height:1.3">${frName}</div>
+                                    <div style="opacity:.65; font-size:.85em; margin-top:2px">${rawName}</div>
+                                `;
+                            } else {
+                                // Affiche seulement le nom original
+                                nameTd.innerHTML = `<div style="font-weight:600">${rawName}</div>`;
+                            }
+                            
+                            tr.appendChild(nameTd);
                             tr.appendChild(createTableCell(sector.value));
                             tr.appendChild(createTableCell(formatPercent(sector.change_num), changeClass));
                             tr.appendChild(createTableCell(formatPercent(sector.ytd_num), ytdClass));
@@ -544,11 +615,15 @@ document.addEventListener('DOMContentLoaded', function() {
             // Déterminer la région d'affichage
             const regionDisplay = sectorsData.sectors.europe.includes(sector) ? "STOXX Europe 600" : "NASDAQ US";
             
+            // Traduire le nom pour l'affichage
+            const rawName = sector.name || sector.displayName || '';
+            const frName = translateSectorLabel(rawName, LOCALE);
+            
             const row = document.createElement('div');
             row.className = 'performer-row';
             row.innerHTML = `
                 <div class="performer-info">
-                    <div class="performer-index">${sector.name || sector.displayName || ''}</div>
+                    <div class="performer-index">${LOCALE === 'fr' ? frName : rawName}</div>
                     <div class="performer-region">${regionDisplay}</div>
                 </div>
                 <div class="performer-value ${css}">${formatPercent(val)}</div>
