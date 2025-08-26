@@ -510,12 +510,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 { label: 'VIX', selector: '.market-index-col[data-index="vix"]' }
             ]);
             
-            // Amérique Latine - Mise à jour avec les nouveaux indices
+            // Amérique Latine - avec libellés français
             updateMarketOverviewRegion('latin-america', [
-                { label: 'BRAZIL', selector: '.market-index-col[data-index="brazil"]' },
-                { label: 'MEXICO', selector: '.market-index-col[data-index="mexico"]' },
-                { label: 'CHILE', selector: '.market-index-col[data-index="chile"]' },
-                { label: 'MERVAL', selector: '.market-index-col[data-index="merval"]' }
+                { label: 'BRAZIL',  display: 'Brésil',    selector: '.market-index-col[data-index="brazil"]' },
+                { label: 'MEXICO',  display: 'Mexique',   selector: '.market-index-col[data-index="mexico"]' },
+                { label: 'CHILE',   display: 'Chili',     selector: '.market-index-col[data-index="chile"]'  },
+                { label: 'MERVAL',  display: 'Argentine', selector: '.market-index-col[data-index="argentina"]' }
             ]);
             
             // Asie
@@ -526,12 +526,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 { label: 'BSE SENSEX', selector: '.market-index-col[data-index="sensex"]' }
             ]);
             
-            // Autres régions
+            // Autres régions - avec libellés français
             updateMarketOverviewRegion('other', [
-                { label: 'South Africa', selector: '.market-index-col[data-index="southafrica"]' },
-                { label: 'Australia', selector: '.market-index-col[data-index="australia"]' },
-                { label: 'Israel', selector: '.market-index-col[data-index="israel"]' },
-                { label: 'Turkey', selector: '.market-index-col[data-index="morocco"]' }
+                { label: 'South Africa', display: 'Afrique du Sud', selector: '.market-index-col[data-index="southafrica"]' },
+                { label: 'Australia',    display: 'Australie',      selector: '.market-index-col[data-index="australia"]'   },
+                { label: 'Israel',       display: 'Israël',         selector: '.market-index-col[data-index="israel"]'      },
+                { label: 'Turkey',       display: 'Turquie',        selector: '.market-index-col[data-index="morocco"]'     }
             ]);
             
             console.log('Mise à jour de l\'aperçu des marchés terminée');
@@ -563,8 +563,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const ytdElement = container.querySelector('.market-ytd');
                 
                 if (nameElement) {
-                    // Afficher le label au lieu du nom ETF complet
-                    nameElement.textContent = indexInfo.label;
+                    // Utilise le libellé FR si présent, sinon la clé technique
+                    nameElement.textContent = indexInfo.display || indexInfo.label;
                 }
                 
                 if (valueElement) {
