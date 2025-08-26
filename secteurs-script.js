@@ -1,6 +1,7 @@
 /**
  * secteurs-script.js - Version alignée avec marches-script.js
  * Scripts pour la page des secteurs boursiers avec UX améliorée
+ * Affiche les vrais noms d'ETF au lieu des noms génériques
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -18,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
     
-    // Mapping des catégories sectorielles vers régions
+    // Mapping des catégories sectorielles vers régions (pour l'aperçu uniquement)
     const SECTOR_MAPPINGS = {
         'energy': 'Énergie',
         'materials': 'Matériaux',
@@ -104,9 +105,9 @@ document.addEventListener('DOMContentLoaded', function() {
         r.ytd_num = parsePercentToNumber(r.ytdChange);
         r.trend = r.change_num > 0 ? 'up' : r.change_num < 0 ? 'down' : 'flat';
         
-        // Normaliser le nom du secteur
+        // ✅ On privilégie le vrai nom d'ETF, puis l'index si dispo
         if (!r.displayName) {
-            r.displayName = SECTOR_MAPPINGS[category] || r.name;
+            r.displayName = r.name || r.etfName || r.indexName;
         }
         
         return r;
@@ -206,15 +207,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 sectors.forEach(sector => {
                     const normalizedSector = normalizeRecord(sector, category);
                     
-                    // Classifier par région basé sur le nom ou la source
-                    if (normalizedSector.name && 
-                        (normalizedSector.name.includes("Stoxx Europe 600") || 
-                         normalizedSector.name.includes("STOXX Europe 600") ||
-                         normalizedSector.source === "Les Echos")) {
+                    // ✅ Classifier par région basé sur le champ JSON region (plus robuste)
+                    if (normalizedSector.region === "Europe") {
                         europeData.push(normalizedSector);
-                    } else if (normalizedSector.name && 
-                               (normalizedSector.name.includes("NASDAQ US") || 
-                                normalizedSector.source === "Boursorama")) {
+                    } else if (normalizedSector.region === "US") {
                         usData.push(normalizedSector);
                     }
                 });
@@ -288,8 +284,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         `;
                         tableBody.appendChild(emptyRow);
                     } else {
+                        // ✅ Tri par nom d'ETF (pas par displayName)
                         const sortedSectors = [...sectors].sort((a, b) => {
-                            return (a.displayName || "").localeCompare(b.displayName || "");
+                            return (a.name || a.displayName || "").localeCompare(b.name || b.displayName || "");
                         });
                         
                         sortedSectors.forEach(sector => {
@@ -300,7 +297,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             const ytdClass = sector.ytd_num < -0.01 ? 'negative' : 
                                            sector.ytd_num > 0.01 ? 'positive' : 'neutral';
                             
-                            tr.appendChild(createTableCell(sector.displayName || sector.name));
+                            // ✅ Affiche l'ETF en priorité dans la colonne SECTEUR
+                            tr.appendChild(createTableCell(sector.name || sector.displayName || sector.indexName));
                             tr.appendChild(createTableCell(sector.value));
                             tr.appendChild(createTableCell(formatPercent(sector.change_num), changeClass));
                             tr.appendChild(createTableCell(formatPercent(sector.ytd_num), ytdClass));
@@ -386,6 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const ytdElement = container.querySelector('.sector-ytd');
                 
                 if (nameElement) {
+                    // Pour l'aperçu, on garde les noms français simplifiés
                     nameElement.textContent = SECTOR_MAPPINGS[sectorInfo.category] || sector.displayName;
                 }
                 
@@ -477,7 +476,7 @@ document.addEventListener('DOMContentLoaded', function() {
             row.className = 'performer-row';
             row.innerHTML = `
                 <div class="performer-info">
-                    <div class="performer-index">${sector.displayName || sector.name || ''}</div>
+                    <div class="performer-index">${sector.name || sector.displayName || ''}</div>
                     <div class="performer-region">${regionDisplay}</div>
                 </div>
                 <div class="performer-value ${css}">${formatPercent(val)}</div>
