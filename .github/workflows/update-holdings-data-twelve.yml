@@ -8,7 +8,7 @@ on:
         required: false
         default: 'true'  # Manuel = force par défaut
         type: choice
-        options: ['true','false']
+        options: ['true', 'false']
       max_holdings:
         description: 'Max holdings/ETF'
         required: false
@@ -82,15 +82,33 @@ jobs:
           TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
           HOLDINGS_MAX: ${{ github.event.inputs.max_holdings || '10' }}
           HOLDINGS_STALE_DAYS: '7'
-          HOLDINGS_SLEEP: '1.0'
+          HOLDINGS_SLEEP: '0.0'          # on laisse le rate-limiter gérer
           FORCE_UPDATE: ${{ github.event.inputs.force_update || 'false' }}
-        run: python scripts/update_holdings.py
+          TD_CREDIT_LIMIT: '2584'        # Limite de crédits par minute
+          TD_COST_COMPOSITION: '200'     # Coût par appel composition
+          TD_BUFFER_CREDITS: '84'        # Marge de sécurité (12 appels/min = 2400, marge 84)
+        run: |
+          echo "🚀 Lancement avec rate limiting intelligent"
+          echo "   Max: 12 appels/min (2400 crédits sur 2584)"
+          python scripts/update_holdings.py
 
       - name: Verify results
         if: ${{ github.event_name == 'workflow_dispatch' || steps.check_status.outputs.skip_update != 'true' }}
         run: |
           test -f data/etf_holdings.json || (echo "::error::File not generated"; exit 1)
           ls -lh data/etf_holdings.json
+          
+          # Afficher les stats
+          python -c "
+import json
+with open('data/etf_holdings.json') as f:
+    data = json.load(f)
+    meta = data.get('meta', {})
+    print(f'✅ ETFs: {meta.get(\"etf_count\", 0)}')
+    print(f'📊 Holdings: {meta.get(\"total_holdings\", 0)}')
+    print(f'💳 Crédits: {meta.get(\"api_credits_used\", 0)}')
+    print(f'⚠️ Sans couverture: {meta.get(\"no_coverage_count\", 0)}')
+          "
 
       - name: Commit & push
         if: ${{ github.event_name == 'workflow_dispatch' || steps.check_status.outputs.skip_update != 'true' }}
@@ -99,6 +117,6 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add data/etf_holdings.json
           git diff --cached --quiet || {
-            git commit -m "Update ETF holdings [$(date -u +'%F %H:%M')]"
+            git commit -m "📈 Update ETF holdings [$(date -u +'%F %H:%M')]"
             git push
           }
