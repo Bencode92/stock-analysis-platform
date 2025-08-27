@@ -54,6 +54,94 @@ else:
     logger.error("❌ Clé API Twelve Data non définie!")
     TD = None
 
+# ==== Helpers pour la résolution des symboles ====
+US_MIC = {"ARCX","BATS","XNAS","XNYS","XASE","XNGS","XNMS"}
+
+# Nettoyage basique des champs CSV
+def _clean(v: str | None) -> str | None:
+    if v is None:
+        return None
+    s = str(v).strip()
+    if s == "" or s == "0" or s.upper() in {"NA","N/A","NONE","NULL"}:
+        return None
+    return s
+
+# Mapping MIC -> nom d'exchange attendu par Twelve Data
+TD_EXCHANGE_BY_MIC = {
+    "XWBO": "VSE",        # Vienna
+    "XETR": "XETR",       # Deutsche Börse XETRA
+    "XFRA": "FSE",        # Frankfurt Stock Exchange
+    "FSX":  "FSE",        # idem
+    "XLON": "LSE",        # London
+    "XMEX": "BMV",        # Bolsa Mexicana
+    "XPAR": "EURONEXT",
+    "XAMS": "EURONEXT",
+    "XBRU": "EURONEXT",
+    "XSWX": "SIX",
+    "XNMS": "NASDAQ",     # US
+    "XNGS": "NASDAQ",     # US
+    "XNAS": "NASDAQ",     # US
+    "XNYS": "NYSE",       # US
+    "ARCX": "NYSE ARCA",  # US
+    "BATS": "BATS",       # US
+}
+
+# Canonicalisation de la colonne "exchange" du CSV vers ce qu'attend Twelve Data
+def canon_exchange_from_row(row: dict) -> str | None:
+    mic = _clean(row.get("mic_code"))
+    exch_raw = _clean(row.get("exchange"))
+    # 1) priorité au MIC si on sait le convertir
+    if mic and mic in TD_EXCHANGE_BY_MIC:
+        return TD_EXCHANGE_BY_MIC[mic]
+    # 2) sinon essaye l'alias venant de la colonne exchange
+    if not exch_raw:
+        return None
+    e = exch_raw.upper()
+    if e in {"NASDAQ","XNAS","XNMS","XNGS"}: return "NASDAQ"
+    if e in {"NYSE","XNYS"}:                 return "NYSE"
+    if e in {"NYSE ARCA","ARCX"}:            return "NYSE ARCA"
+    if e in {"LSE","XLON"}:                  return "LSE"
+    if e in {"XETR"}:                        return "XETR"
+    if e in {"FSE","XFRA","FSX"}:            return "FSE"
+    if e in {"VSE","XWBO"}:                  return "VSE"
+    if e in {"BMV","XMEX"}:                  return "BMV"
+    if e in {"EURONEXT","XPAR","XAMS","XBRU"}: return "EURONEXT"
+    if e in {"SIX","XSWX"}:                  return "SIX"
+    return None
+
+def build_symbol_candidates(row: dict) -> list[tuple[str, dict]]:
+    """
+    Renvoie une liste ordonnée de (symbol, params) à essayer:
+      1) symbol:MIC (si MIC non-US)
+      2) symbol + exchange=...
+      3) symbol seul
+    """
+    sym = (_clean(row.get("symbol")) or "").split(".")[0].upper()
+    mic = _clean(row.get("mic_code"))
+    candidates: list[tuple[str, dict]] = []
+
+    # 1) symbol:MIC si MIC non-US (évite symbol:ARCX/XNAS... qui cassent souvent)
+    if mic and mic not in US_MIC:
+        candidates.append((f"{sym}:{mic}", {}))
+
+    # 2) symbol + exchange=canon
+    exch = canon_exchange_from_row(row)
+    if exch:
+        candidates.append((sym, {"exchange": exch}))
+
+    # 3) symbol seul
+    candidates.append((sym, {}))
+
+    # dédoublonnage en gardant l'ordre
+    seen = set()
+    uniq = []
+    for s, p in candidates:
+        key = (s, tuple(sorted(p.items())))
+        if key not in seen:
+            seen.add(key)
+            uniq.append((s, p))
+    return uniq
+
 # ==== Normalisation libellés affichage (à partir de TON CSV) ====
 CAT_FR = {
     "energy": "Énergie",
@@ -208,126 +296,105 @@ def create_empty_sectors_data():
         }
     }
 
-def quote_one(sym: str, region_display: str) -> Tuple[float, float, str]:
-    """Dernier close 'propre' + var jour; privilégie previous_close si marché ouvert."""
-    try:
-        timezone = TZ_BY_REGION.get(region_display, "UTC")
-        q_json = TD.quote(symbol=sym, timezone=timezone).as_json()
-        
-        if isinstance(q_json, tuple):
-            q_json = q_json[0]
-        
-        # Par sécurité - récupérer les valeurs
-        close = None
-        pc = None
-        
-        if q_json.get("close") not in (None, "None", ""):
-            try:
-                close = float(q_json.get("close"))
-            except (ValueError, TypeError):
-                pass
-                
-        if q_json.get("previous_close") not in (None, "None", ""):
-            try:
-                pc = float(q_json.get("previous_close"))
-            except (ValueError, TypeError):
-                pass
-        
-        is_open = q_json.get("is_market_open", False) == "true" if isinstance(q_json.get("is_market_open"), str) else bool(q_json.get("is_market_open", False))
-        
-        # Si le marché est ouvert et que previous_close existe -> on prend previous_close
-        last_close = pc if (is_open and pc is not None) else close
-        
-        if last_close is None:
-            raise ValueError(f"Quote sans close valide pour {sym}: {q_json}")
-        
-        day_pct = float(q_json.get("percent_change", 0))
-        
-        # Informe la source pour debug
-        source = "previous_close" if (is_open and pc is not None) else "close"
-        
-        logger.debug(f"Quote {sym}: {last_close} ({day_pct:+.2f}%), source: {source}, timezone: {timezone}")
-        
-        return last_close, day_pct, source
-        
-    except Exception as e:
-        logger.error(f"Erreur quote pour {sym}: {e}")
-        raise
-
-def baseline_last_close_prev_year(sym: str, region_display: str) -> Tuple[float, str]:
+def quote_one(symbol_plans: list[tuple[str, dict]], region_display: str) -> Tuple[float, float, str, str]:
     """
-    Baseline YTD = dernier jour ouvré de l'année N-1.
-    Si aucune barre N-1, fallback = 1er jour ouvré de N.
+    Essaie successivement (symbol, params) pour obtenir:
+    - last_close (close ou previous_close si marché ouvert)
+    - percent_change
+    Retourne (last_close, day_pct, source, used_desc).
+    """
+    tz = TZ_BY_REGION.get(region_display, "UTC")
+    last_exc = None
+    for sym, extra in symbol_plans:
+        try:
+            q_json = TD.quote(symbol=sym, timezone=tz, **extra).as_json()
+            if isinstance(q_json, tuple): q_json = q_json[0]
+
+            close = None; pc = None
+            if q_json.get("close") not in (None, "None", ""):
+                try: close = float(q_json.get("close"))
+                except: pass
+            if q_json.get("previous_close") not in (None, "None", ""):
+                try: pc = float(q_json.get("previous_close"))
+                except: pass
+
+            is_open = q_json.get("is_market_open", False)
+            if isinstance(is_open, str): is_open = (is_open == "true")
+
+            last_close = pc if (is_open and pc is not None) else close
+            if last_close is None:
+                raise ValueError(f"Quote sans close valide: {q_json}")
+
+            day_pct = float(q_json.get("percent_change", 0))
+            src = "previous_close" if (is_open and pc is not None) else "close"
+            used = f"{sym}" + (f" [exchange={extra.get('exchange')}]" if extra.get('exchange') else "")
+            return last_close, day_pct, src, used
+        except Exception as e:
+            last_exc = e
+            continue
+    raise last_exc or RuntimeError("Quote introuvable pour toutes les routes")
+
+def baseline_first_trading_day_of_year(symbol_plans: list[tuple[str, dict]], region_display: str) -> Tuple[float, str, str]:
+    """
+    YTD baseline = 1er jour ouvré de l'année en cours.
+    Essaie symbol:MIC → symbol+exchange → symbol.
+    Retourne (base_close, base_date, used_desc).
     """
     year = dt.date.today().year
     tz = TZ_BY_REGION.get(region_display, "UTC")
-    
-    try:
-        ts_json = TD.time_series(
-            symbol=sym,
-            interval="1day",
-            start_date=f"{year-1}-12-01",
-            end_date=f"{year}-01-15",
-            order="ASC",
-            timezone=tz,
-            outputsize=250
-        ).as_json()
+    last_exc = None
 
-        if isinstance(ts_json, tuple):
-            ts_json = ts_json[0]
-            
-        vals = []
-        if isinstance(ts_json, dict) and ts_json.get("values"):
-            vals = ts_json["values"]
-        elif isinstance(ts_json, list):
-            vals = ts_json
-        elif isinstance(ts_json, dict) and {"datetime", "close"} <= set(ts_json):
-            vals = [ts_json]
+    for sym, extra in symbol_plans:
+        try:
+            ts_json = TD.time_series(
+                symbol=sym,
+                interval="1day",
+                start_date=f"{year}-01-01",
+                order="ASC",
+                timezone=tz,
+                **extra
+            ).as_json()
 
-        if not vals:
-            raise ValueError(f"Aucune donnée historique pour {sym}")
+            if isinstance(ts_json, tuple): ts_json = ts_json[0]
+            vals = []
+            if isinstance(ts_json, dict) and ts_json.get("values"):
+                vals = ts_json["values"]
+            elif isinstance(ts_json, list):
+                vals = ts_json
+            elif isinstance(ts_json, dict) and {"datetime","close"} <= set(ts_json):
+                vals = [ts_json]
 
-        rows = []
-        for r in vals:
-            date_str = str(r.get("datetime", ""))[:10]
-            close_val = r.get("close")
-            
-            if not date_str or close_val in (None, "None", ""):
-                continue
-                
-            try:
-                date_obj = dt.date.fromisoformat(date_str)
-                rows.append((date_obj, float(close_val)))
-            except Exception:
-                continue
-        
-        if not rows:
-            raise ValueError(f"Aucune donnée valide pour {sym}")
-        
-        # 1) Chercher dernier jour ouvré de N-1
-        prev_year_rows = [(d, c) for (d, c) in rows if d.year == year-1]
-        
-        if prev_year_rows:
-            base_date, base_close = max(prev_year_rows, key=lambda x: x[0])
-            logger.debug(f"✅ {sym}: Baseline YTD au {base_date} (close: {base_close})")
-            return base_close, base_date.isoformat()
-        
-        # 2) Fallback: premier jour ouvré de N
-        current_year_rows = [(d, c) for (d, c) in rows if d.year == year]
-        
-        if current_year_rows:
-            first_date, first_close = min(current_year_rows, key=lambda x: x[0])
-            logger.warning(f"⚠️ {sym}: Pas de clôture {year-1}, baseline = 1er jour {year}: {first_date}")
-            return first_close, first_date.isoformat()
-        
-        # 3) Dernier recours: dernière date disponible
-        last_date, last_close = max(rows, key=lambda x: x[0])
-        logger.warning(f"⚠️ {sym}: Aucune donnée {year-1}/{year}, fallback = {last_date}")
-        return last_close, last_date.isoformat()
+            rows = []
+            for r in vals:
+                ds = str(r.get("datetime",""))[:10]
+                cv = r.get("close")
+                if ds and cv not in (None,"","None"):
+                    try:
+                        rows.append((dt.date.fromisoformat(ds), float(cv)))
+                    except:
+                        pass
 
-    except Exception as e:
-        logger.error(f"Erreur baseline YTD pour {sym}: {e}")
-        raise
+            if not rows:
+                raise ValueError("Aucune barre renvoyée")
+
+            # 1er jour ouvré de l'année
+            curr = [(d,c) for (d,c) in rows if d.year == year]
+            if curr:
+                base_date, base_close = min(curr, key=lambda x: x[0])
+                used = f"{sym}" + (f" [exchange={extra.get('exchange')}]" if extra.get('exchange') else "")
+                return base_close, base_date.isoformat(), used
+
+            # Fallback: première observation
+            base_date, base_close = rows[0]
+            used = f"{sym}" + (f" [exchange={extra.get('exchange')}]" if extra.get('exchange') else "")
+            logger.warning(f"⚠️ {sym}: pas de barre {year}; fallback={base_date}")
+            return base_close, base_date.isoformat(), used
+
+        except Exception as e:
+            last_exc = e
+            continue
+
+    raise last_exc or RuntimeError("Time series indisponible pour toutes les routes")
 
 def format_value(value: float, currency: str) -> str:
     """Formate une valeur selon la devise"""
@@ -505,7 +572,6 @@ def main():
     # 2. Traiter chaque ETF individuellement
     processed_count = 0
     error_count = 0
-    ytd_warnings = 0  # Compteur d'avertissements YTD
     year = dt.date.today().year
     
     for idx, etf in enumerate(sectors_mapping):
@@ -537,60 +603,54 @@ def main():
             norm = make_display_payload(etf)
             region_display = norm["region_display"]
             
-            # Récupérer les données avec le bon fuseau horaire
-            last, day_pct, last_src = quote_one(sym, region_display)
+            # 🔗 NEW: prépare les routes symbol/échange/MIC
+            plans = build_symbol_candidates(etf)
             
-            # Pause avant l'appel YTD
+            # 🔎 QUOTE avec fallbacks
+            last, day_pct, last_src, used_quote = quote_one(plans, region_display)
+            
             time.sleep(0.5)
             
-            # Utiliser la fonction améliorée avec fallback
-            base_close, base_date = baseline_last_close_prev_year(sym, region_display)
+            # 🧮 Baseline YTD = 1er jour ouvré N (style JS)
+            base_close, base_date, used_ts = baseline_first_trading_day_of_year(plans, region_display)
             
-            # Vérifier que la date baseline est cohérente
-            if base_date.startswith(str(year)):
-                ytd_warnings += 1
-                logger.info(f"ℹ️ {sym}: YTD baseline début {year} (pas de clôture {year-1})")
-            
-            # Calculer le YTD
             ytd_pct = 100 * (last - base_close) / base_close if base_close > 0 else 0.0
             
-            # Valeurs numériques (pour le front & les tops)
             value_num = float(last)
             change_num = float(day_pct)
             ytd_num = float(ytd_pct)
             
-            # Créer l'objet de données avec les libellés normalisés et métadonnées de calcul
             sector_entry = {
                 "symbol": sym,
-                "name": etf.get("name", sym),          # nom complet ETF (tooltip front)
-                "indexFamily": norm["indexFamily"],    # ex: 'STOXX Europe 600' / 'NASDAQ US' / 'S&P 500'
-                "indexName": norm["indexName"],        # ex: 'NASDAQ US Semiconductor'
-                "display_fr": norm["display_fr"],      # ex: 'NASDAQ US — Semi-conducteurs'
+                "name": etf.get("name", sym),
+                "indexFamily": norm["indexFamily"],
+                "indexName": norm["indexName"],
+                "display_fr": norm["display_fr"],
                 "sector_en": norm["sector_en"],
                 "sector_fr": norm["sector_fr"],
                 
-                # Affichages formatés
                 "value": format_value(last, etf.get("currency", "USD")),
                 "changePercent": format_percent(day_pct),
                 "ytdChange": format_percent(ytd_pct),
                 
-                # Valeurs numériques fiables
                 "value_num": value_num,
                 "change_num": change_num,
                 "ytd_num": ytd_num,
                 
-                # Métadonnées pour traçabilité YTD
                 "last_price_source": last_src,
                 "ytd_ref_date": base_date,
-                "ytd_method": "price_last_close_prev_year_to_last_close",
+                "ytd_method": "price_first_trading_day_of_year_to_last_close",
+                
+                # debug internes utiles
+                "_used_quote_symbol": used_quote,
+                "_used_ts_symbol": used_ts,
                 
                 "trend": "down" if day_pct < 0 else "up",
-                "region": region_display      # 'Europe' / 'US'
+                "region": region_display
             }
             
-            # Ajouter à la bonne catégorie
             SECTORS_DATA["sectors"][category].append(sector_entry)
-            ALL_SECTORS.append(sector_entry.copy())  # Copie pour éviter les modifications
+            ALL_SECTORS.append(sector_entry.copy())
             processed_count += 1
             
             logger.info(f"✅ {sym} [{category}]: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}% (base: {base_date})")
@@ -598,12 +658,7 @@ def main():
         except Exception as e:
             error_count += 1
             logger.warning(f"⚠️  Échec pour {sym}: {type(e).__name__}: {e}")
-            
-            # Optionnel: ajouter les erreurs dans les métadonnées
-            if "errors" not in SECTORS_DATA["meta"]:
-                SECTORS_DATA["meta"]["errors"] = []
-            
-            SECTORS_DATA["meta"]["errors"].append({
+            SECTORS_DATA.setdefault("meta", {}).setdefault("errors", []).append({
                 "symbol": sym,
                 "name": etf.get("name", "N/A"),
                 "error": str(e),
@@ -615,9 +670,6 @@ def main():
     logger.info(f"\n📊 Résumé du traitement:")
     logger.info(f"  - ETFs traités avec succès: {processed_count}")
     logger.info(f"  - Erreurs: {error_count}")
-    if ytd_warnings > 0:
-        logger.info(f"  - ℹ️ Baselines YTD début {year}: {ytd_warnings}")
-        logger.info(f"    → Normal pour les ETFs sans clôture fin {year-1}")
     
     # Log par catégorie
     for category, sectors in SECTORS_DATA["sectors"].items():
@@ -637,14 +689,10 @@ def main():
     SECTORS_DATA["meta"]["errors_count"] = error_count
     SECTORS_DATA["meta"]["taxonomy"] = TAXONOMY  # Garder la trace du référentiel
     SECTORS_DATA["meta"]["ytd_calculation"] = {
-        "method": "price_last_close_prev_year_to_last_close_with_fallback",
-        "baseline_year": year - 1,
+        "method": "price_first_trading_day_of_year_to_last_close",
         "timezone_mapping": TZ_BY_REGION,
-        "outputsize": 250,
-        "note": f"YTD basé sur le dernier close de {year-1} ou fallback 1er jour {year}"
+        "note": "Résolution multi-route: symbol:MIC (si non-US) → symbol+exchange → symbol"
     }
-    if ytd_warnings > 0:
-        SECTORS_DATA["meta"]["ytd_fallback_count"] = ytd_warnings
     
     # 6. Sauvegarder le fichier JSON
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
@@ -663,5 +711,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
