@@ -256,29 +256,26 @@ def quote_one(sym: str, region_display: str) -> Tuple[float, float, str]:
 
 def baseline_last_close_prev_year(sym: str, region_display: str) -> Tuple[float, str]:
     """
-    Close de référence YTD = DERNIER jour ouvré de l'année N-1
-    Retourne (close, 'YYYY-MM-DD') en timezone locale.
-    Utilise max() pour garantir de prendre la dernière date de trading.
+    Baseline YTD = dernier jour ouvré de l'année N-1.
+    Si aucune barre N-1, fallback = 1er jour ouvré de N.
     """
     year = dt.date.today().year
     tz = TZ_BY_REGION.get(region_display, "UTC")
     
     try:
-        # Récupérer une fenêtre large de décembre à janvier
         ts_json = TD.time_series(
             symbol=sym,
             interval="1day",
-            start_date=f"{year-1}-12-01",   # fenêtre large depuis début décembre
-            end_date=f"{year}-01-10",       # jusqu'à mi-janvier année courante
+            start_date=f"{year-1}-12-01",
+            end_date=f"{year}-01-15",
             order="ASC",
             timezone=tz,
-            outputsize=200                   # suffisant pour cette période
+            outputsize=250
         ).as_json()
 
         if isinstance(ts_json, tuple):
             ts_json = ts_json[0]
             
-        # Normaliser les données -> liste
         vals = []
         if isinstance(ts_json, dict) and ts_json.get("values"):
             vals = ts_json["values"]
@@ -290,7 +287,6 @@ def baseline_last_close_prev_year(sym: str, region_display: str) -> Tuple[float,
         if not vals:
             raise ValueError(f"Aucune donnée historique pour {sym}")
 
-        # Parser toutes les lignes et créer des tuples (date, close)
         rows = []
         for r in vals:
             date_str = str(r.get("datetime", ""))[:10]
@@ -305,32 +301,29 @@ def baseline_last_close_prev_year(sym: str, region_display: str) -> Tuple[float,
             except Exception:
                 continue
         
-        # Garder uniquement les dates de l'année N-1
+        if not rows:
+            raise ValueError(f"Aucune donnée valide pour {sym}")
+        
+        # 1) Chercher dernier jour ouvré de N-1
         prev_year_rows = [(d, c) for (d, c) in rows if d.year == year-1]
         
-        if not prev_year_rows:
-            # Si pas de données pour l'année N-1, prendre la première disponible
-            if rows:
-                first_date, first_close = rows[0]
-                logger.warning(f"⚠️ {sym}: Pas de données pour {year-1}, utilisation de {first_date}")
-                return first_close, first_date.isoformat()
-            else:
-                raise ValueError(f"Aucune donnée YTD utilisable pour {sym}")
+        if prev_year_rows:
+            base_date, base_close = max(prev_year_rows, key=lambda x: x[0])
+            logger.debug(f"✅ {sym}: Baseline YTD au {base_date} (close: {base_close})")
+            return base_close, base_date.isoformat()
         
-        # IMPORTANT: Prendre la DERNIÈRE date de l'année N-1 avec max()
-        base_date, base_close = max(prev_year_rows, key=lambda x: x[0])
+        # 2) Fallback: premier jour ouvré de N
+        current_year_rows = [(d, c) for (d, c) in rows if d.year == year]
         
-        # Garde-fou : si la date est avant le 20 décembre, logguer un warning
-        if base_date.month == 12 and base_date.day < 20:
-            logger.warning(f"⚠️ {sym}: Baseline tôt ({base_date}), vérifiez le calendrier de l'échange")
+        if current_year_rows:
+            first_date, first_close = min(current_year_rows, key=lambda x: x[0])
+            logger.warning(f"⚠️ {sym}: Pas de clôture {year-1}, baseline = 1er jour {year}: {first_date}")
+            return first_close, first_date.isoformat()
         
-        # Vérifier que c'est bien fin décembre (idéalement >= 28 décembre)
-        if base_date.month == 12 and base_date.day >= 28:
-            logger.debug(f"✅ {sym}: Baseline YTD correcte au {base_date} (close: {base_close})")
-        else:
-            logger.info(f"ℹ️ {sym}: Baseline YTD au {base_date} (échange peut-être fermé fin décembre)")
-        
-        return base_close, base_date.isoformat()
+        # 3) Dernier recours: dernière date disponible
+        last_date, last_close = max(rows, key=lambda x: x[0])
+        logger.warning(f"⚠️ {sym}: Aucune donnée {year-1}/{year}, fallback = {last_date}")
+        return last_close, last_date.isoformat()
 
     except Exception as e:
         logger.error(f"Erreur baseline YTD pour {sym}: {e}")
@@ -550,16 +543,13 @@ def main():
             # Pause avant l'appel YTD
             time.sleep(0.5)
             
-            # IMPORTANT: Utiliser le dernier close de l'année N-1 comme baseline
+            # Utiliser la fonction améliorée avec fallback
             base_close, base_date = baseline_last_close_prev_year(sym, region_display)
             
-            # Vérifier que la date baseline est bien dans l'année N-1 et fin décembre
-            if not base_date.startswith(str(year-1)):
+            # Vérifier que la date baseline est cohérente
+            if base_date.startswith(str(year)):
                 ytd_warnings += 1
-                logger.warning(f"⚠️ {sym}: YTD baseline incorrecte ({base_date}), devrait être en {year-1}")
-            elif base_date[5:7] == "12" and int(base_date[8:10]) < 20:
-                ytd_warnings += 1
-                logger.warning(f"⚠️ {sym}: YTD baseline trop tôt ({base_date}), devrait être fin décembre")
+                logger.info(f"ℹ️ {sym}: YTD baseline début {year} (pas de clôture {year-1})")
             
             # Calculer le YTD
             ytd_pct = 100 * (last - base_close) / base_close if base_close > 0 else 0.0
@@ -626,8 +616,8 @@ def main():
     logger.info(f"  - ETFs traités avec succès: {processed_count}")
     logger.info(f"  - Erreurs: {error_count}")
     if ytd_warnings > 0:
-        logger.warning(f"  - ⚠️ Avertissements YTD: {ytd_warnings}")
-        logger.warning(f"    → Vérifiez les dates de baseline (devraient être fin {year-1})")
+        logger.info(f"  - ℹ️ Baselines YTD début {year}: {ytd_warnings}")
+        logger.info(f"    → Normal pour les ETFs sans clôture fin {year-1}")
     
     # Log par catégorie
     for category, sectors in SECTORS_DATA["sectors"].items():
@@ -647,14 +637,14 @@ def main():
     SECTORS_DATA["meta"]["errors_count"] = error_count
     SECTORS_DATA["meta"]["taxonomy"] = TAXONOMY  # Garder la trace du référentiel
     SECTORS_DATA["meta"]["ytd_calculation"] = {
-        "method": "price_last_close_prev_year_to_last_close",
+        "method": "price_last_close_prev_year_to_last_close_with_fallback",
         "baseline_year": year - 1,
         "timezone_mapping": TZ_BY_REGION,
-        "outputsize": 200,
-        "note": f"YTD basé sur le dernier close de {year-1} dans le fuseau local (max date)"
+        "outputsize": 250,
+        "note": f"YTD basé sur le dernier close de {year-1} ou fallback 1er jour {year}"
     }
     if ytd_warnings > 0:
-        SECTORS_DATA["meta"]["ytd_warnings"] = ytd_warnings
+        SECTORS_DATA["meta"]["ytd_fallback_count"] = ytd_warnings
     
     # 6. Sauvegarder le fichier JSON
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
