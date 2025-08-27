@@ -82,44 +82,63 @@ SS_PATTERNS = [
     (re.compile(r"internet", re.I), ("Internet", "Internet")),
     (re.compile(r"ai\s*&\s*robotics|artificial\s*intelligence", re.I), ("AI & Robotics", "IA & Robotique")),
     (re.compile(r"banks?", re.I), ("Banks", "Banques")),
-    (re.compile(r"insurance", re.I), ("Insurance", "Assurance")),
+    (re.compile(r"insurance", re.I), ("Insurance", "Assurances")),
     (re.compile(r"financial\s*services?", re.I), ("Financial Services", "Services financiers")),
     (re.compile(r"media", re.I), ("Media", "Médias")),
     (re.compile(r"telecommunications?", re.I), ("Telecommunications", "Télécommunications")),
     (re.compile(r"construction\s*&\s*materials?", re.I), ("Construction & Materials", "Construction & Matériaux")),
     (re.compile(r"basic\s*resources?", re.I), ("Basic Resources", "Ressources de base")),
     (re.compile(r"chemicals?", re.I), ("Chemicals", "Chimie")),
+    (re.compile(r"automobiles?\s*&\s*(parts|components?|equip(men)?t(ier)?s?)", re.I),
+        ("Automobiles & Parts", "Automobiles & Équipementiers")),
     (re.compile(r"automobiles?|autos?", re.I), ("Automobiles", "Automobiles")),
     (re.compile(r"smart\s*grid", re.I), ("Smart Grid Infrastructure", "Infrastructures réseaux intelligents")),
     (re.compile(r"transportation", re.I), ("Transportation", "Transports")),
+    (re.compile(r"(personal\s*&\s*household\s*goods|household\s*&\s*personal\s*products?)", re.I),
+        ("Personal & Household Goods", "Biens personnels & ménagers")),
+    (re.compile(r"travel\s*&\s*leisure", re.I), ("Travel & Leisure", "Voyages & Loisirs")),
     (re.compile(r"technology\s*dividend", re.I), ("Technology Dividend", "Dividendes technologiques")),
 ]
 
 def _family_from_row(name: str, symbol: str, region_display: str) -> str:
-    """Détermine la famille d'indices (STOXX Europe 600, NASDAQ US, S&P 500) depuis les infos ETF"""
-    n = name.lower()
-    sym = symbol.upper()
-    
-    # Forçages spécifiques par symbole
+    """Détermine la famille d'indices pour l'affichage."""
+    n = (name or "").lower()
+    sym = (symbol or "").upper()
+
+    # Forçages par symbole (cas ambigus)
     FORCE_FAMILY = {
-        "IYH": "Dow Jones US",  # iShares U.S. Healthcare
+        "IYH": "Dow Jones US",   # iShares U.S. Healthcare
+        "IYW": "Dow Jones US",   # iShares U.S. Technology
+        "IYG": "Dow Jones US",   # iShares U.S. Financial Services
+        "XBI": "S&P US",         # SPDR S&P Biotech (pas Select Sector)
     }
-    fam = FORCE_FAMILY.get(sym)
-    if fam:
-        return fam
-    
-    # Europe
+    if sym in FORCE_FAMILY:
+        return FORCE_FAMILY[sym]
+
+    # Europe simple
     if region_display == "Europe":
         return "STOXX Europe 600"
-    
-    # US - détection par nom
+
+    # US — heuristiques par nom
+    if "dow jones" in n or n.startswith("dj "):
+        return "Dow Jones US"
+
+    # SPDR Select Sector (tickers XL*) => S&P 500
+    if "select sector spdr" in n or re.match(r"^XL[A-Z]{1,2}$", sym):
+        return "S&P 500"
+
+    # SPDR S&P (hors Select Sector) => S&P US
+    if "spdr s&p" in n and "select sector spdr" not in n:
+        return "S&P US"
+
+    # iShares U.S. <sector> => généralement des indices Dow Jones US
+    if re.search(r"\bishares\s+u\.s\.\b", n):
+        return "Dow Jones US"
+
+    # NASDAQ évidence
     if "nasdaq" in n:
         return "NASDAQ US"
-    if "select sector spdr" in n or re.match(r"^XL[A-Z]{1,2}$", sym, re.I):
-        return "S&P 500"
-    if "dow jones" in n or "dj " in n:
-        return "Dow Jones US"
-    
+
     # Fallback US
     return "NASDAQ US"
 
