@@ -1,5 +1,5 @@
 // stock-advanced-filter.js
-// Version 3.3 - Fix market_cap series format
+// Version 3.4 - Add tops_overview.json generation
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -523,6 +523,7 @@ async function enrichStock(stock) {
         name: stock.name,
         sector: stock.sector,
         country: stock.country,
+        exchange: stock.exchange, // Ajout de l'exchange
         
         price,
         change_percent: (typeof change_percent === 'number') ? Number(change_percent.toFixed(2)) : null,
@@ -575,6 +576,69 @@ function calculateDrawdowns(prices) {
     return { ytd: maxDD_ytd.toFixed(2), year3: maxDD_3y.toFixed(2) };
 }
 
+// ---------- TOPS HELPERS ----------
+function cmpCore(a, b, field, dir){
+  const s = dir === 'asc' ? 1 : -1;
+  const av = a[field], bv = b[field];
+  if (av == null && bv == null) return 0;
+  if (av == null) return 1;
+  if (bv == null) return -1;
+  const d = (av - bv) * s;
+  if (d) return d;
+
+  const d52a = a.distance_52w_high == null ? Infinity : Math.abs(a.distance_52w_high);
+  const d52b = b.distance_52w_high == null ? Infinity : Math.abs(b.distance_52w_high);
+  if (d52a !== d52b) return d52a - d52b;
+
+  const mca = a.market_cap == null ? -Infinity : a.market_cap;
+  const mcb = b.market_cap == null ? -Infinity : b.market_cap;
+  return mcb - mca;
+}
+
+// Top N générique (direction: 'desc' = hausses, 'asc' = baisses)
+function getTopN(stocks, { field, direction='desc', n=10 }={}){
+  return (stocks||[])
+    .filter(s => !s.error)
+    .sort((a,b) => cmpCore(a,b,field,direction))
+    .slice(0, n);
+}
+
+function buildOverview(byRegion){
+  const pick = s => ({
+    ticker: s.ticker, name: s.name, sector: s.sector, country: s.country,
+    price: s.price, market_cap: s.market_cap,
+    change_percent: s.change_percent == null ? null : Number(s.change_percent),
+    perf_ytd: s.perf_ytd == null ? null : Number(s.perf_ytd),
+  });
+
+  const sets = {
+    US: byRegion.US || [],
+    EUROPE: byRegion.EUROPE || [],
+    ASIA: byRegion.ASIA || [],
+  };
+  sets.GLOBAL       = [...sets.US, ...sets.EUROPE, ...sets.ASIA];
+  sets.US_EUROPE    = [...sets.US, ...sets.EUROPE];
+  sets.US_ASIA      = [...sets.US, ...sets.ASIA];
+  sets.EUROPE_ASIA  = [...sets.EUROPE, ...sets.ASIA];
+
+  const out = { generated_at: new Date().toISOString(), sets: {} };
+
+  for (const key of Object.keys(sets)) {
+    const arr = sets[key];
+    out.sets[key] = {
+      day: {
+        up:   getTopN(arr, { field: 'change_percent', direction: 'desc', n: 10 }).map(pick),
+        down: getTopN(arr, { field: 'change_percent', direction: 'asc',  n: 10 }).map(pick),
+      },
+      ytd: {
+        up:   getTopN(arr, { field: 'perf_ytd',      direction: 'desc', n: 10 }).map(pick),
+        down: getTopN(arr, { field: 'perf_ytd',      direction: 'asc',  n: 10 }).map(pick),
+      }
+    };
+  }
+  return out;
+}
+
 async function main() { 
     console.log('📊 Enrichissement complet des stocks\n');
     await fs.mkdir(OUT_DIR, { recursive: true });
@@ -593,6 +657,8 @@ async function main() {
         { name: 'asia', stocks: asiaStocks }
     ];
     
+    const byRegion = {}; // Ajout pour stocker les données par région
+    
     for (const region of regions) {
         console.log(`\n🌍 ${region.name.toUpperCase()}`);
         const enrichedStocks = [];
@@ -603,6 +669,8 @@ async function main() {
             enrichedStocks.push(...enrichedBatch);
         }
         
+        byRegion[region.name.toUpperCase()] = enrichedStocks; // Enregistrement dans la map
+        
         const filepath = path.join(OUT_DIR, `stocks_${region.name}.json`);
         await fs.writeFile(filepath, JSON.stringify({
             region: region.name.toUpperCase(),
@@ -612,6 +680,12 @@ async function main() {
         
         console.log(`✅ ${filepath}`);
     }
+    
+    // --------- TOPS OVERVIEW ----------
+    const overview = buildOverview(byRegion);
+    const topsPath = path.join(OUT_DIR, 'tops_overview.json');
+    await fs.writeFile(topsPath, JSON.stringify(overview, null, 2));
+    console.log(`🏁 ${topsPath}`);
 }
 
 if (!CONFIG.API_KEY) {
