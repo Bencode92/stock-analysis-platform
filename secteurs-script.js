@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
         [/Banks?/i, 'Banques'],
         [/Financial\s*Services?/i, 'Services financiers'],
         [/Finance/i, 'Finance'],
-        [/Insurance/i, 'Assurance'],
+        [/Insurance/i, 'Assurances'],
         [/Real\s*Estate/i, 'Immobilier'],
         [/Utilities/i, 'Services publics'],
         [/Health\s*Care/i, 'Santé'],
@@ -41,10 +41,13 @@ document.addEventListener('DOMContentLoaded', function() {
         [/Smart\s*Grid\s*Infrastructure/i, 'Infrastructures réseaux intelligents'],
         [/AI\s*&\s*Robotics/i, 'IA & Robotique'],
         [/Artificial\s*Intelligence/i, 'Intelligence artificielle'],
+        [/Automobiles?\s*&\s*(Parts|Components?|Equip(men)?t(ier)?s?)/i, 'Automobiles & Équipementiers'],
         [/Automobiles?/i, 'Automobiles'],
         [/Chemicals?/i, 'Chimie'],
         [/Autos?/i, 'Auto'],
         [/Technology\s*Dividend/i, 'Dividendes technologiques'],
+        [/(Personal\s*&\s*Household\s*Goods|Household\s*&\s*Personal\s*Products?)/i, 'Biens personnels & ménagers'],
+        [/Travel\s*&\s*Leisure/i, 'Voyages & Loisirs'],
         [/FinTech/i, 'FinTech'],
         [/FINTECH/i, 'FinTech'],
         [/BIOTECH/i, 'Biotech']
@@ -84,14 +87,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const SECTOR_MAPPINGS = {
         'energy': 'Énergie',
         'materials': 'Matériaux',
-        'industrials': 'Industrie',
-        'consumer-discretionary': 'Consommation Discrétionnaire',
-        'consumer-staples': 'Consommation de Base',
+        'industrials': 'Industriels',
+        'consumer-discretionary': 'Consommation discrétionnaire',
+        'consumer-staples': 'Consommation de base',
         'healthcare': 'Santé',
         'financials': 'Finance',
         'information-technology': 'Technologie',
         'communication-services': 'Communication',
-        'utilities': 'Services Publics',
+        'utilities': 'Services publics',
         'real-estate': 'Immobilier'
     };
     
