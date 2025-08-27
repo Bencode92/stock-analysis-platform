@@ -3,7 +3,7 @@
 Script de mise à jour des données sectorielles via Twelve Data API
 Utilise des ETFs sectoriels pour représenter les performances des secteurs
 Génère des libellés normalisés bilingues pour l'affichage
-Calculs YTD fiabilisés avec fuseaux horaires et close de référence
+Calculs YTD fiabilisés avec fuseaux horaires, MIC codes et fallback intelligent
 """
 
 import os
@@ -254,87 +254,67 @@ def quote_one(sym: str, region_display: str) -> Tuple[float, float, str]:
         logger.error(f"Erreur quote pour {sym}: {e}")
         raise
 
-def baseline_last_close_prev_year(sym: str, region_display: str) -> Tuple[float, str]:
+def baseline_last_close_prev_year(sym: str, region_display: str) -> tuple[float, str]:
     """
-    Close de référence YTD = DERNIER jour ouvré de l'année N-1
-    Retourne (close, 'YYYY-MM-DD') en timezone locale.
-    Utilise max() pour garantir de prendre la dernière date de trading.
+    Baseline YTD = dernier jour ouvré de l'année N-1.
+    Si aucune barre N-1 (fériés / place), fallback = 1er jour ouvré de N.
+    Dernier recours: dernière date dispo dans la fenêtre.
     """
     year = dt.date.today().year
     tz = TZ_BY_REGION.get(region_display, "UTC")
-    
-    try:
-        # Récupérer une fenêtre large de décembre à janvier
-        ts_json = TD.time_series(
-            symbol=sym,
-            interval="1day",
-            start_date=f"{year-1}-12-01",   # fenêtre large depuis début décembre
-            end_date=f"{year}-01-10",       # jusqu'à mi-janvier année courante
-            order="ASC",
-            timezone=tz,
-            outputsize=200                   # suffisant pour cette période
-        ).as_json()
 
-        if isinstance(ts_json, tuple):
-            ts_json = ts_json[0]
-            
-        # Normaliser les données -> liste
-        vals = []
-        if isinstance(ts_json, dict) and ts_json.get("values"):
-            vals = ts_json["values"]
-        elif isinstance(ts_json, list):
-            vals = ts_json
-        elif isinstance(ts_json, dict) and {"datetime", "close"} <= set(ts_json):
-            vals = [ts_json]
+    ts_json = TD.time_series(
+        symbol=sym,
+        interval="1day",
+        start_date=f"{year-1}-12-01",   # fenêtre large
+        end_date=f"{year}-01-15",       # un peu plus large qu'avant
+        order="ASC",
+        timezone=tz,
+        outputsize=250
+    ).as_json()
 
-        if not vals:
-            raise ValueError(f"Aucune donnée historique pour {sym}")
+    # Normalisation -> liste de {datetime, close}
+    if isinstance(ts_json, tuple):
+        ts_json = ts_json[0]
+    vals = []
+    if isinstance(ts_json, dict) and ts_json.get("values"):
+        vals = ts_json["values"]
+    elif isinstance(ts_json, list):
+        vals = ts_json
+    elif isinstance(ts_json, dict) and {"datetime", "close"} <= set(ts_json):
+        vals = [ts_json]
 
-        # Parser toutes les lignes et créer des tuples (date, close)
-        rows = []
-        for r in vals:
-            date_str = str(r.get("datetime", ""))[:10]
-            close_val = r.get("close")
-            
-            if not date_str or close_val in (None, "None", ""):
-                continue
-                
-            try:
-                date_obj = dt.date.fromisoformat(date_str)
-                rows.append((date_obj, float(close_val)))
-            except Exception:
-                continue
-        
-        # Garder uniquement les dates de l'année N-1
-        prev_year_rows = [(d, c) for (d, c) in rows if d.year == year-1]
-        
-        if not prev_year_rows:
-            # Si pas de données pour l'année N-1, prendre la première disponible
-            if rows:
-                first_date, first_close = rows[0]
-                logger.warning(f"⚠️ {sym}: Pas de données pour {year-1}, utilisation de {first_date}")
-                return first_close, first_date.isoformat()
-            else:
-                raise ValueError(f"Aucune donnée YTD utilisable pour {sym}")
-        
-        # IMPORTANT: Prendre la DERNIÈRE date de l'année N-1 avec max()
-        base_date, base_close = max(prev_year_rows, key=lambda x: x[0])
-        
-        # Garde-fou : si la date est avant le 20 décembre, logguer un warning
-        if base_date.month == 12 and base_date.day < 20:
-            logger.warning(f"⚠️ {sym}: Baseline tôt ({base_date}), vérifiez le calendrier de l'échange")
-        
-        # Vérifier que c'est bien fin décembre (idéalement >= 28 décembre)
-        if base_date.month == 12 and base_date.day >= 28:
-            logger.debug(f"✅ {sym}: Baseline YTD correcte au {base_date} (close: {base_close})")
-        else:
-            logger.info(f"ℹ️ {sym}: Baseline YTD au {base_date} (échange peut-être fermé fin décembre)")
-        
+    rows = []
+    for r in vals:
+        ds = str(r.get("datetime", ""))[:10]
+        cv = r.get("close")
+        if not ds or cv in (None, "None", ""):
+            continue
+        try:
+            rows.append((dt.date.fromisoformat(ds), float(cv)))
+        except Exception:
+            continue
+
+    if not rows:
+        raise ValueError(f"Aucune donnée Dec/Jan pour {sym}")
+
+    # 1) Dernier jour ouvré de N-1
+    prev = [(d, c) for d, c in rows if d.year == year-1]
+    if prev:
+        base_date, base_close = max(prev, key=lambda x: x[0])
         return base_close, base_date.isoformat()
 
-    except Exception as e:
-        logger.error(f"Erreur baseline YTD pour {sym}: {e}")
-        raise
+    # 2) 1er jour ouvré de N
+    curr = [(d, c) for d, c in rows if d.year == year]
+    if curr:
+        first_date, first_close = min(curr, key=lambda x: x[0])
+        logger.warning(f"⚠️ {sym}: pas de clôture {year-1}; baseline = 1er jour ouvré {year}: {first_date}")
+        return first_close, first_date.isoformat()
+
+    # 3) Dernier recours
+    last_date, last_close = max(rows, key=lambda x: x[0])
+    logger.warning(f"⚠️ {sym}: aucune barre N-1/N; fallback = {last_date}")
+    return last_close, last_date.isoformat()
 
 def format_value(value: float, currency: str) -> str:
     """Formate une valeur selon la devise"""
@@ -517,6 +497,10 @@ def main():
     
     for idx, etf in enumerate(sectors_mapping):
         sym = etf["symbol"]
+        mic = (etf.get("mic_code") or "").strip()
+        
+        # NOUVEAU: Construire le symbole API avec MIC si disponible
+        api_sym = f"{sym}:{mic}" if mic else sym
         
         # Catégorie brute du CSV
         raw_category = etf.get("category", "")
@@ -538,20 +522,20 @@ def main():
             if idx > 0:
                 time.sleep(0.8)  # 800ms entre chaque appel
             
-            logger.info(f"📡 Traitement {idx+1}/{len(sectors_mapping)}: {sym}")
+            logger.info(f"📡 Traitement {idx+1}/{len(sectors_mapping)}: {sym}{' (' + api_sym + ')' if mic else ''}")
             
             # Normalisation libellé d'affichage à partir des colonnes CSV
             norm = make_display_payload(etf)
             region_display = norm["region_display"]
             
-            # Récupérer les données avec le bon fuseau horaire
-            last, day_pct, last_src = quote_one(sym, region_display)
+            # NOUVEAU: Utiliser api_sym pour l'appel API
+            last, day_pct, last_src = quote_one(api_sym, region_display)
             
             # Pause avant l'appel YTD
             time.sleep(0.5)
             
-            # IMPORTANT: Utiliser le dernier close de l'année N-1 comme baseline
-            base_close, base_date = baseline_last_close_prev_year(sym, region_display)
+            # NOUVEAU: Utiliser api_sym pour la baseline YTD aussi
+            base_close, base_date = baseline_last_close_prev_year(api_sym, region_display)
             
             # Vérifier que la date baseline est bien dans l'année N-1 et fin décembre
             if not base_date.startswith(str(year-1)):
@@ -571,7 +555,8 @@ def main():
             
             # Créer l'objet de données avec les libellés normalisés et métadonnées de calcul
             sector_entry = {
-                "symbol": sym,
+                "symbol": sym,  # Garder le symbole simple pour l'affichage
+                "_symbol_api": api_sym,  # Meta debug (facultatif)
                 "name": etf.get("name", sym),          # nom complet ETF (tooltip front)
                 "indexFamily": norm["indexFamily"],    # ex: 'STOXX Europe 600' / 'NASDAQ US' / 'S&P 500'
                 "indexName": norm["indexName"],        # ex: 'NASDAQ US Semiconductor'
@@ -615,6 +600,7 @@ def main():
             
             SECTORS_DATA["meta"]["errors"].append({
                 "symbol": sym,
+                "symbol_api": api_sym,
                 "name": etf.get("name", "N/A"),
                 "error": str(e),
                 "timestamp": dt.datetime.utcnow().isoformat()
@@ -646,12 +632,14 @@ def main():
     SECTORS_DATA["meta"]["total_etfs"] = len(sectors_mapping)
     SECTORS_DATA["meta"]["errors_count"] = error_count
     SECTORS_DATA["meta"]["taxonomy"] = TAXONOMY  # Garder la trace du référentiel
+    SECTORS_DATA["meta"]["used_mic_code"] = True  # NOUVEAU
     SECTORS_DATA["meta"]["ytd_calculation"] = {
         "method": "price_last_close_prev_year_to_last_close",
         "baseline_year": year - 1,
         "timezone_mapping": TZ_BY_REGION,
-        "outputsize": 200,
-        "note": f"YTD basé sur le dernier close de {year-1} dans le fuseau local (max date)"
+        "outputsize": 250,
+        "fallback_first_business_day": True,  # NOUVEAU
+        "note": f"YTD basé sur le dernier close de {year-1} avec fallback au 1er jour ouvré de {year} si nécessaire"
     }
     if ytd_warnings > 0:
         SECTORS_DATA["meta"]["ytd_warnings"] = ytd_warnings
