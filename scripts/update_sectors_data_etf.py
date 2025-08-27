@@ -54,7 +54,8 @@ else:
     logger.error("❌ Clé API Twelve Data non définie!")
     TD = None
 
-# ==== Helpers pour la résolution des symboles ====
+# --- helpers symbol/exchange/MIC ---
+
 US_MIC = {"ARCX","BATS","XNAS","XNYS","XASE","XNGS","XNMS"}
 
 TD_EXCHANGE_BY_MIC = {
@@ -86,27 +87,47 @@ def canon_exchange_from_row(row: dict) -> str | None:
     if e in {"XMEX","BMV"}: return "BMV"
     return None
 
-def build_symbol_candidates(row: dict) -> list[tuple[str, dict]]:
-    # priorités: 1) symbol:MIC (si non-US), 2) symbol + exchange=..., 3) symbol nu
+def build_quote_plans(row: dict) -> list[tuple[str, dict]]:
+    """Plans pour QUOTE (exchange autorisé)."""
     sym = (_clean(row.get("symbol")) or "").split(".")[0].upper()
     mic = _clean(row.get("mic_code"))
-    cands = []
-    if mic and mic not in US_MIC:
-        cands.append((f"{sym}:{mic}", {}))              # EX37:XWBO
+    plans: list[tuple[str,dict]] = []
+    if mic:  # symbol:MIC d'abord (marche aussi pour US)
+        plans.append((f"{sym}:{mic}", {}))
     exch = canon_exchange_from_row(row)
     if exch:
-        cands.append((sym, {"exchange": exch}))         # EX37 + exchange=VSE
-    cands.append((sym, {}))                             # EX37
+        plans.append((sym, {"exchange": exch}))
+    plans.append((sym, {}))  # nu en dernier
     # dédoublonne
     seen=set(); out=[]
-    for s,p in cands:
+    for s,p in plans:
         k=(s,tuple(sorted(p.items())))
         if k not in seen:
             seen.add(k); out.append((s,p))
     return out
 
+def build_ts_symbols(row: dict) -> list[str]:
+    """Plans pour TIME_SERIES (⚠️ pas d'`exchange=` ici)."""
+    sym = (_clean(row.get("symbol")) or "").split(".")[0].upper()
+    mic = _clean(row.get("mic_code"))
+    cands = []
+    if mic:
+        cands.append(f"{sym}:{mic}")   # EX37:XWBO (et US: XLB:ARCX si besoin)
+    cands.append(sym)                  # fallback symbole nu
+    # unique
+    out=[]; seen=set()
+    for s in cands:
+        if s not in seen:
+            seen.add(s); out.append(s)
+    return out
+
 def _parse_ts(ts_json):
-    if isinstance(ts_json, tuple): ts_json = ts_json[0]
+    # log erreurs explicites de l'API
+    if isinstance(ts_json, dict) and ts_json.get("status") == "error":
+        logger.debug(f"TwelveData error: code={ts_json.get('code')} msg={ts_json.get('message')}")
+        return []
+    if isinstance(ts_json, tuple):
+        ts_json = ts_json[0]
     vals = ts_json.get("values", []) if isinstance(ts_json, dict) else (ts_json if isinstance(ts_json, list) else [])
     rows=[]
     for r in vals:
@@ -123,8 +144,11 @@ def quote_one_with_plans(plans, region_display: str):
         try:
             q=TD.quote(symbol=sym, timezone=tz, **extra).as_json()
             if isinstance(q, tuple): q=q[0]
+            if isinstance(q, dict) and q.get("status") == "error":
+                logger.debug(f"QUOTE error on {sym} {extra}: {q.get('message')}")
+                continue
             close = float(q["close"]) if q.get("close") not in (None,"","None") else None
-            pc    = float(q["previous_close"]) if q.get("previous_close") not in (None,"","None") else None
+            pc    = float(q.get("previous_close")) if q.get("previous_close") not in (None,"","None") else None
             is_open = q.get("is_market_open", False)
             if isinstance(is_open,str): is_open=(is_open=="true")
             last = pc if (is_open and pc is not None) else close
@@ -139,43 +163,56 @@ def quote_one_with_plans(plans, region_display: str):
     raise last_exc or RuntimeError("quote failed")
 
 def baseline_ytd_with_plans(row: dict, region_display: str):
+    """Cherche close du dernier ouvré N-1, sinon 1er ouvré N, via symbol:MIC puis symbol nu."""
     year = dt.date.today().year
-    tz = TZ_BY_REGION.get(region_display, "UTC")
-    plans = build_symbol_candidates(row)
+    # ⚠️ pour TS, pas de timezone custom ⇒ laisse l'exchange TZ natif
+    symbols = build_ts_symbols(row)
 
-    # Fenêtre ciblée Déc N-1 → Jan N (ce qu'on veut pour la baseline)
-    for sym, extra in plans:
+    # Fenêtre généreuse: 1 déc N-1 → 5 fév N
+    for sym in symbols:
         try:
-            ts = TD.time_series(symbol=sym, interval="1day",
-                                start_date=f"{year-1}-12-01", end_date=f"{year}-01-31",
-                                order="ASC", timezone=tz, outputsize=5000, **extra).as_json()
+            ts = TD.time_series(
+                symbol=sym,
+                interval="1day",
+                start_date=f"{year-1}-12-01",
+                end_date=f"{year}-02-05",
+                order="ASC",
+            ).as_json()
             rows = _parse_ts(ts)
-            if not rows: continue
+            if not rows:
+                continue
             prev = [(d,c) for d,c in rows if d.year==year-1]
             if prev:
                 base_date, base_close = max(prev, key=lambda x: x[0])
             else:
                 curr = [(d,c) for d,c in rows if d.year==year]
-                if not curr: continue
+                if not curr: 
+                    continue
                 base_date, base_close = min(curr, key=lambda x: x[0])
-            used = f"{sym}" + (f" [exchange={extra.get('exchange')}]" if extra.get("exchange") else "")
-            return base_close, base_date.isoformat(), used
-        except Exception:
+            return base_close, base_date.isoformat(), sym
+        except Exception as e:
+            logger.debug(f"time_series error on {sym}: {e}")
             continue
-    # dernier recours: Jan 1 → …
-    for sym, extra in plans:
+
+    # Dernier secours: re-tentative YTD pur (depuis le 1er janv)
+    for sym in symbols:
         try:
-            ts = TD.time_series(symbol=sym, interval="1day",
-                                start_date=f"{year}-01-01",
-                                order="ASC", timezone=tz, outputsize=5000, **extra).as_json()
+            ts = TD.time_series(
+                symbol=sym,
+                interval="1day",
+                start_date=f"{year}-01-01",
+                order="ASC",
+            ).as_json()
             rows = _parse_ts(ts)
             curr = [(d,c) for d,c in rows if d.year==year]
-            if not curr: continue
+            if not curr:
+                continue
             base_date, base_close = min(curr, key=lambda x: x[0])
-            used = f"{sym}" + (f" [exchange={extra.get('exchange')}]" if extra.get("exchange") else "")
-            return base_close, base_date.isoformat(), used
-        except Exception:
+            return base_close, base_date.isoformat(), sym
+        except Exception as e:
+            logger.debug(f"time_series fallback error on {sym}: {e}")
             continue
+
     raise RuntimeError("baseline failed on all routes")
 
 # ==== Normalisation libellés affichage (à partir de TON CSV) ====
@@ -539,15 +576,15 @@ def main():
             norm = make_display_payload(etf)
             region_display = norm["region_display"]
             
-            # 🔗 NEW: prépare les routes symbol/échange/MIC
-            plans = build_symbol_candidates(etf)
+            # 🔗 Prépare les routes pour quote et time series séparément
+            plans_q = build_quote_plans(etf)
             
             # 🔎 QUOTE avec fallbacks
-            last, day_pct, last_src, used_q = quote_one_with_plans(plans, region_display)
+            last, day_pct, last_src, used_q = quote_one_with_plans(plans_q, region_display)
             
             time.sleep(0.5)
             
-            # 🧮 Baseline YTD avec fenêtre ciblée Déc N-1 → Jan N
+            # 🧮 Baseline YTD avec fenêtre ciblée (sans exchange= pour time_series)
             base_close, base_date, used_ts = baseline_ytd_with_plans(etf, region_display)
             
             ytd_pct = 100 * (last - base_close) / base_close if base_close > 0 else 0.0
@@ -575,7 +612,7 @@ def main():
                 
                 "last_price_source": last_src,
                 "ytd_ref_date": base_date,
-                "ytd_method": "prev_year_close_or_first_trading_day",
+                "ytd_method": "prev_year_close_or_first_trading_day_fixed_api",
                 
                 # debug internes utiles
                 "_used_quote_symbol": used_q,
@@ -626,11 +663,13 @@ def main():
     SECTORS_DATA["meta"]["errors_count"] = error_count
     SECTORS_DATA["meta"]["taxonomy"] = TAXONOMY  # Garder la trace du référentiel
     SECTORS_DATA["meta"]["ytd_calculation"] = {
-        "method": "prev_year_close_or_first_trading_day_with_targeted_window",
-        "window_primary": f"Dec {year-1} → Jan {year}",
+        "method": "prev_year_close_or_first_trading_day_with_correct_api_usage",
+        "quote_supports": "exchange parameter + symbol:MIC",
+        "time_series_supports": "symbol:MIC only (no exchange parameter)",
+        "window_primary": f"Dec {year-1} → Feb {year}",
         "window_fallback": f"Jan {year} → ...",
         "timezone_mapping": TZ_BY_REGION,
-        "note": "Résolution multi-route: symbol:MIC (si non-US) → symbol+exchange → symbol"
+        "note": "Fixed: time_series doesn't support exchange= parameter in Python SDK"
     }
     
     # 6. Sauvegarder le fichier JSON
