@@ -26,13 +26,23 @@ jobs:
         INCLUDE_OPTIONS: '1'  # Activer les options
       run: node stock-advanced-filter.js
     
+    - name: Debug - Check generated files
+      run: |
+        echo "📂 Vérification des fichiers générés:"
+        ls -la data/
+        git status --porcelain
+    
     - name: Commit results
       run: |
         git config --local user.email "actions@github.com"
         git config --local user.name "GitHub Actions"
         
-        # Ajouter les 3 JSON générés
-        git add data/stocks_us.json data/stocks_europe.json data/stocks_asia.json
+        # Ajouter tous les JSON générés (Option B robuste)
+        git add data/*.json
+        
+        # Alternative Option A (plus ciblée):
+        # git add data/stocks_us.json data/stocks_europe.json data/stocks_asia.json
+        # git add data/tops_overview.json
         
         # Ajouter package.json et package-lock.json si modifiés
         git add -f package.json package-lock.json || true
