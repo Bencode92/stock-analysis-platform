@@ -995,7 +995,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (stocks.length === 0) {
                         const emptyRow = document.createElement('tr');
                         emptyRow.innerHTML = `
-                            <td colspan="8" class="text-center py-4 text-gray-400">
+                            <td colspan="9" class="text-center py-4 text-gray-400">
                                 <i class="fas fa-info-circle mr-2"></i>
                                 Aucune action disponible pour cette lettre
                             </td>
@@ -1052,7 +1052,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             detailsRow.setAttribute('data-for', stockKey);
                             detailsRow.innerHTML = `
                                 <td colspan="9" style="background:rgba(0,255,135,0.02); border-top: 1px solid var(--card-border);">
-                                    <div class="grid md:grid-cols-4 gap-6 p-4">
+                                    <div class="grid md:grid-cols-3 gap-6 p-4">
                                         <div>
                                             <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Informations</div>
                                             <div class="space-y-1 text-sm">
@@ -1079,15 +1079,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 <div><span class="opacity-60">Rendement:</span> ${stock.dividend_yield || '–'}</div>
                                                 <div><span class="opacity-60">52 semaines:</span> ${stock.range_52w || '–'}</div>
                                                 <div><span class="opacity-60">Max Drawdown 3Y:</span> <span class="negative">${stock.max_drawdown_3y || '–'}</span></div>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Trading</div>
-                                            <div class="space-y-1 text-sm">
                                                 <div><span class="opacity-60">Volume:</span> ${stock.volume || '–'}</div>
-                                                <div><span class="opacity-60">Ouverture:</span> ${stock.open || '–'}</div>
-                                                <div><span class="opacity-60">Plus haut:</span> ${stock.high || '–'}</div>
-                                                <div><span class="opacity-60">Plus bas:</span> ${stock.low || '–'}</div>
                                             </div>
                                         </div>
                                     </div>
