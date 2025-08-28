@@ -45,7 +45,7 @@
              --transition-time: 0.3s;
              --header-height: 70px;
              --sidebar-width: 80px;
-             --negative-color: #ff4757;
+             --negative-color: #ff4d4f; /* Meilleur contraste */
              --neutral-color: #aaaaaa;
              --separator-color: rgba(255, 255, 255, 0.07);
          }
@@ -421,6 +421,10 @@
              width: 100%;
              border-collapse: separate;
              border-spacing: 0;
+         }
+         
+         .data-table th, .data-table td {
+             font-variant-numeric: tabular-nums; /* Chiffres tabulaires */
          }
          
          .data-table th {
@@ -919,20 +923,36 @@
              width: 100%;
          }
          
+         /* Cartes Top 10 améliorées avec grid */
          .stock-cards-container {
              display: grid;
-             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
              gap: 16px;
+             grid-auto-rows: 1fr; /* hauteurs égales */
+             grid-template-columns: repeat(2, minmax(280px, 1fr));
+         }
+         
+         @media (min-width: 1024px) { 
+             .stock-cards-container { 
+                 grid-template-columns: repeat(3, 1fr); 
+             } 
+         }
+         
+         @media (min-width: 1280px) { 
+             .stock-cards-container { 
+                 grid-template-columns: repeat(4, 1fr); 
+             } 
          }
          
          .stock-card {
-             display: flex;
+             display: grid;
+             grid-template-columns: 40px 1fr auto; /* #, infos, valeur */
              align-items: center;
              background-color: var(--card-bg);
              border-radius: 12px;
-             padding: 16px;
+             padding: 14px 16px;
              transition: transform 0.3s ease, box-shadow 0.3s ease;
              border: 1px solid var(--card-border);
+             height: 100%;
          }
          
          .stock-card:hover {
@@ -941,8 +961,8 @@
          }
          
          .rank {
-             width: 30px;
-             height: 30px;
+             width: 36px;
+             height: 36px;
              display: flex;
              justify-content: center;
              align-items: center;
@@ -964,22 +984,29 @@
              margin-bottom: 4px;
              display: flex;
              align-items: center;
+             line-height: 1;
          }
          
          .stock-fullname {
              font-size: 0.85rem;
              opacity: 0.7;
-             white-space: nowrap;
+             line-height: 1.2;
+             display: -webkit-box;
+             -webkit-line-clamp: 1;
+             -webkit-box-orient: vertical;
              overflow: hidden;
              text-overflow: ellipsis;
-             max-width: 180px;
+             max-width: 100%;
          }
          
          .stock-performance {
              padding: 6px 12px;
              border-radius: 6px;
-             font-weight: 600;
-             margin-left: 10px;
+             font-weight: 700;
+             font-variant-numeric: tabular-nums; /* chiffres monospaces */
+             min-width: 7ch; /* largeur stable */
+             text-align: right;
+             white-space: nowrap;
          }
          
          /* Top 3 en évidence */
@@ -1264,6 +1291,17 @@
              .pills-separator {
                  display: none;
              }
+             
+             /* Grille mobile optimisée */
+             .stock-cards-container { 
+                 grid-template-columns: repeat(2, minmax(0, 1fr)); 
+             }
+             
+             @media (max-width: 520px) { 
+                 .stock-cards-container { 
+                     grid-template-columns: 1fr; 
+                 } 
+             }
          }
 
          /* Responsive général */
@@ -1323,10 +1361,6 @@
              
              .market-selector-buttons {
                  flex-direction: column;
-             }
-             
-             .stock-cards-container {
-                 grid-template-columns: 1fr;
              }
              
              .index-tabs {
@@ -1463,7 +1497,7 @@
                      </div>
                      
                      <!-- Conteneurs pour chaque vue (dynamique basé sur les filtres sélectionnés) -->
-                     <div id="top-global-container" class="top-stocks-content mt-4">
+                     <div id="top-global-container" class="top-stocks-content mt-4" aria-live="polite">
                          <div class="stock-cards-container">
                              <!-- Les cartes seront générées dynamiquement ici basées sur les filtres -->
                              <div class="stock-card">
@@ -2326,244 +2360,130 @@
             let currentTimeframe = 'daily'; // 'daily' ou 'ytd'
 
             // Underline animée pour les pills
-            function moveUnderline() {
+            function updatePillUnderline() {
                 const activePill = pillBar.querySelector('.pill[aria-selected="true"]');
-                if (!activePill) return;
-                
-                const rect = activePill.getBoundingClientRect();
-                const barRect = pillBar.getBoundingClientRect();
-                
-                pillBar.style.setProperty('--x', (rect.left - barRect.left) + 'px');
-                pillBar.style.setProperty('--w', rect.width + 'px');
-            }
-
-            // Gestion des régions (GLOBAL exclusif, max 2 régions sinon)
-            function refreshRegionsUI() {
-                regionBtns.forEach(btn => {
-                    const region = btn.dataset.region;
-                    const isSelected = selectedRegions.has(region);
-                    
-                    btn.setAttribute('aria-selected', isSelected);
-                    
-                    // Désactiver les boutons si 2 régions déjà sélectionnées (sauf celles déjà sélectionnées)
-                    if (!selectedRegions.has('GLOBAL') && selectedRegions.size >= 2 && !isSelected) {
-                        btn.disabled = true;
-                    } else {
-                        btn.disabled = false;
-                    }
-                });
-                
-                // Mettre à jour le label et le hint
-                if (selectedRegions.has('GLOBAL')) {
-                    hint.textContent = 'GLOBAL exclusif';
-                    scopeLabel.textContent = 'GLOBAL';
-                } else {
-                    const count = selectedRegions.size;
-                    hint.textContent = `${count}/2 régions`;
-                    const ordered = Array.from(selectedRegions).sort();
-                    scopeLabel.textContent = ordered.join(' + ');
+                if (activePill) {
+                    const rect = activePill.getBoundingClientRect();
+                    const barRect = pillBar.getBoundingClientRect();
+                    const x = rect.left - barRect.left;
+                    const w = rect.width;
+                    pillBar.style.setProperty('--x', `${x}px`);
+                    pillBar.style.setProperty('--w', `${w}px`);
                 }
             }
 
-            // Gestionnaire de clic sur les régions
+            // Gestion des boutons de région
             regionBtns.forEach(btn => {
                 btn.addEventListener('click', () => {
                     const region = btn.dataset.region;
                     
+                    // GLOBAL est exclusif
                     if (region === 'GLOBAL') {
-                        // GLOBAL est exclusif
-                        selectedRegions = new Set(['GLOBAL']);
+                        selectedRegions.clear();
+                        selectedRegions.add('GLOBAL');
+                        regionBtns.forEach(b => {
+                            b.setAttribute('aria-selected', b.dataset.region === 'GLOBAL' ? 'true' : 'false');
+                        });
                     } else {
-                        // Retirer GLOBAL si présent
-                        selectedRegions.delete('GLOBAL');
+                        // Si GLOBAL est actif, le retirer
+                        if (selectedRegions.has('GLOBAL')) {
+                            selectedRegions.delete('GLOBAL');
+                            regionBtns.find(b => b.dataset.region === 'GLOBAL').setAttribute('aria-selected', 'false');
+                        }
                         
-                        // Toggle la région
+                        // Toggle de la région
                         if (selectedRegions.has(region)) {
                             selectedRegions.delete(region);
-                        } else if (selectedRegions.size < 2) {
-                            selectedRegions.add(region);
+                            btn.setAttribute('aria-selected', 'false');
                         } else {
-                            // Feedback visuel si on essaie d'ajouter une 3e région
-                            showToast('Maximum 2 régions simultanément');
-                            return;
+                            // Maximum 2 régions simultanément
+                            if (selectedRegions.size < 2) {
+                                selectedRegions.add(region);
+                                btn.setAttribute('aria-selected', 'true');
+                            } else {
+                                // Animation de refus
+                                btn.style.animation = 'pulse 0.3s';
+                                setTimeout(() => btn.style.animation = '', 300);
+                                return;
+                            }
                         }
                         
-                        // Si aucune région sélectionnée, revenir à GLOBAL
+                        // Si plus aucune région, remettre GLOBAL
                         if (selectedRegions.size === 0) {
                             selectedRegions.add('GLOBAL');
+                            regionBtns.find(b => b.dataset.region === 'GLOBAL').setAttribute('aria-selected', 'true');
                         }
                     }
                     
-                    refreshRegionsUI();
-                    loadTopData(); // Recharger les données
+                    updateScopeLabel();
+                    updateHint();
+                    triggerDataRefresh();
                 });
             });
 
-            // Gestion des pills (direction et timeframe)
+            // Gestion des pills
             pills.forEach(pill => {
                 pill.addEventListener('click', () => {
-                    if (pill.dataset.dir) {
-                        // Direction (hausses/baisses)
-                        pills.filter(p => p.dataset.dir).forEach(p => p.setAttribute('aria-selected', 'false'));
-                        pill.setAttribute('aria-selected', 'true');
-                        currentDirection = pill.dataset.dir;
-                    } else if (pill.dataset.frame) {
-                        // Timeframe (jour/YTD)
-                        pills.filter(p => p.dataset.frame).forEach(p => p.setAttribute('aria-selected', 'false'));
-                        pill.setAttribute('aria-selected', 'true');
-                        currentTimeframe = pill.dataset.frame;
+                    const dir = pill.dataset.dir;
+                    const frame = pill.dataset.frame;
+                    
+                    if (dir) {
+                        // Direction pills
+                        pills.filter(p => p.dataset.dir).forEach(p => {
+                            p.setAttribute('aria-selected', p === pill ? 'true' : 'false');
+                        });
+                        currentDirection = dir;
+                    } else if (frame) {
+                        // Timeframe pills
+                        pills.filter(p => p.dataset.frame).forEach(p => {
+                            p.setAttribute('aria-selected', p === pill ? 'true' : 'false');
+                        });
+                        currentTimeframe = frame;
                     }
                     
-                    moveUnderline();
-                    loadTopData(); // Recharger les données avec les nouveaux filtres
+                    updatePillUnderline();
+                    triggerDataRefresh();
                 });
             });
 
-            // Fonction pour charger les données en fonction des filtres
-            function loadTopData() {
-                // Déterminer la clé de données à charger
-                const regionKey = selectedRegions.has('GLOBAL') ? 'global' : 
-                                 Array.from(selectedRegions).join('-').toLowerCase();
-                const directionKey = currentDirection === 'up' ? 'gainers' : 'losers';
-                const timeframeKey = currentTimeframe === 'daily' ? '' : 'ytd-';
-                
-                const dataKey = `${timeframeKey}${directionKey}`;
-                
-                // Simuler le chargement (sera remplacé par l'appel réel dans liste-script.js)
-                container.classList.add('loading-state');
-                
-                // Déclencher un événement personnalisé pour liste-script.js
-                const event = new CustomEvent('topFiltersChanged', {
+            // Mise à jour du label
+            function updateScopeLabel() {
+                if (selectedRegions.has('GLOBAL')) {
+                    scopeLabel.textContent = 'GLOBAL';
+                } else {
+                    const regions = Array.from(selectedRegions).sort();
+                    scopeLabel.textContent = regions.join(' + ');
+                }
+            }
+
+            // Mise à jour du hint
+            function updateHint() {
+                if (selectedRegions.has('GLOBAL')) {
+                    hint.textContent = 'GLOBAL exclusif';
+                } else if (selectedRegions.size === 1) {
+                    hint.textContent = `${Array.from(selectedRegions)[0]} uniquement`;
+                } else {
+                    hint.textContent = 'Combo régional';
+                }
+            }
+
+            // Trigger du rafraîchissement des données
+            function triggerDataRefresh() {
+                // Émettre un événement personnalisé pour liste-script.js
+                window.dispatchEvent(new CustomEvent('topFiltersChanged', {
                     detail: {
                         regions: Array.from(selectedRegions),
                         direction: currentDirection,
-                        timeframe: currentTimeframe,
-                        dataKey: dataKey
+                        timeframe: currentTimeframe
                     }
-                });
-                window.dispatchEvent(event);
-                
-                setTimeout(() => {
-                    container.classList.remove('loading-state');
-                }, 500);
+                }));
             }
 
-            // Toast notification
-            function showToast(message) {
-                const toast = document.createElement('div');
-                toast.className = 'toast-notification';
-                toast.textContent = message;
-                document.body.appendChild(toast);
-                
-                setTimeout(() => {
-                    toast.classList.add('show');
-                }, 10);
-                
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                    setTimeout(() => toast.remove(), 300);
-                }, 2000);
-            }
-
-            // Initialisation
-            refreshRegionsUI();
-            moveUnderline();
-
-            // Redimensionnement
-            window.addEventListener('resize', moveUnderline);
-
-            // Keyboard shortcuts
-            document.addEventListener('keydown', (e) => {
-                if (e.target.tagName === 'INPUT') return;
-                
-                switch(e.key.toLowerCase()) {
-                    case 'g':
-                        document.querySelector('[data-region="GLOBAL"]').click();
-                        break;
-                    case '1':
-                        document.querySelector('[data-region="US"]').click();
-                        break;
-                    case '2':
-                        document.querySelector('[data-region="EUROPE"]').click();
-                        break;
-                    case '3':
-                        document.querySelector('[data-region="ASIA"]').click();
-                        break;
-                    case 'arrowup':
-                        document.querySelector('[data-dir="up"]').click();
-                        break;
-                    case 'arrowdown':
-                        document.querySelector('[data-dir="down"]').click();
-                        break;
-                    case 'd':
-                        document.querySelector('[data-frame="daily"]').click();
-                        break;
-                    case 'y':
-                        document.querySelector('[data-frame="ytd"]').click();
-                        break;
-                }
-            });
-
-            // Feedback haptique sur mobile
-            if ('vibrate' in navigator) {
-                [...regionBtns, ...pills].forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        navigator.vibrate(10);
-                    });
-                });
-            }
+            // Init
+            updatePillUnderline();
+            updateScopeLabel();
+            updateHint();
         })();
-        
-        // Script existant pour les onglets du top 10
-        document.addEventListener('DOMContentLoaded', function() {
-            // Gestion des onglets pour le top 10 principal
-            const topTabsButtons = document.querySelectorAll('.top-tab-btn');
-            
-            topTabsButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    // Identifier le groupe d'onglets (s'il y a plusieurs sections)
-                    const parentContainer = this.closest('.top-stocks-container');
-                    
-                    // Désactiver tous les boutons du même groupe
-                    const buttons = parentContainer.querySelectorAll('.top-tab-btn');
-                    buttons.forEach(btn => btn.classList.remove('active'));
-                    
-                    // Activer le bouton actuel
-                    this.classList.add('active');
-                    
-                    // Récupérer l'identifiant de l'onglet
-                    const tabId = this.getAttribute('data-index');
-                    
-                    // Masquer tous les contenus du même groupe
-                    const contents = parentContainer.querySelectorAll('.top-stocks-content');
-                    contents.forEach(content => content.classList.add('hidden'));
-                    
-                    // Afficher le contenu correspondant
-                    const targetContent = document.getElementById(`top-${tabId}`);
-                    if (targetContent) {
-                        targetContent.classList.remove('hidden');
-                    }
-                });
-            });
-            
-            // Mettre à jour le nom du marché actuel
-            function updateMarketName() {
-                const marketNameElement = document.getElementById('current-market-name');
-                if (marketNameElement) {
-                    const nasdaqActive = document.getElementById('market-nasdaq')?.classList.contains('active');
-                    marketNameElement.textContent = nasdaqActive ? 'NASDAQ' : 'DJ STOXX';
-                }
-            }
-            
-            // Observer les changements sur les boutons de marché
-            const marketButtons = document.querySelectorAll('.market-btn');
-            marketButtons.forEach(button => {
-                button.addEventListener('click', updateMarketName);
-            });
-            
-            // Initialisation
-            updateMarketName();
-        });
      </script>
  </body>
  </html>
