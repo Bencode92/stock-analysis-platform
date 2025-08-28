@@ -3,7 +3,7 @@
  <head>
      <meta charset="UTF-8">
      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <title>TradePulse - Actions NASDAQ Composite</title>
+     <title>TradePulse - Actions (Global, par lettre)</title>
      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
      <script src="https://cdn.tailwindcss.com"></script>
@@ -117,7 +117,7 @@
          
          .logo-container a {
              text-decoration: none;
-             $transition: color 0.3s ease;
+             transition: color 0.3s ease;
          }
          
          .dark .logo-container a {
@@ -700,6 +700,7 @@
              flex-grow: 1;
              text-align: center;
              border: 2px solid transparent;
+             cursor: pointer;
          }
          
          .dark .market-btn {
@@ -1131,7 +1132,7 @@
                  <!-- Header avec titre et dernière mise à jour -->
                  <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
                      <div>
-                         <h1 class="text-3xl font-bold mb-2" id="market-title">Actions NASDAQ Composite (États-Unis)</h1>
+                         <h1 class="text-3xl font-bold mb-2" id="market-title">Actions (Global, par lettre)</h1>
                          <p class="text-gray-400">
                             <span id="stocks-count" class="font-semibold">0</span> actions listées | 
                             Dernière mise à jour: <span id="last-update-time" class="font-medium">Chargement...</span>
@@ -1139,9 +1140,29 @@
                      </div>
                  </div>
                  
-                 <!-- Top 10 Global Redessiné (PREMIER) -->
+                 <!-- Top 10 Global Redessiné avec sélecteur multi-régions (PREMIER) -->
                  <div class="top-stocks-container mb-10">
-                     <h2 class="section-title mb-4">Top 10 Performance Globale (NASDAQ + STOXX)</h2>
+                     <!-- Sélecteur de portée du Top (1 ou 2 régions max ; GLOBAL exclusif) -->
+                     <div class="market-selector mb-2">
+                       <div class="flex items-center justify-between mb-2">
+                         <h2 class="section-title m-0">Top 10 — <span id="top-scope-label">GLOBAL</span></h2>
+                         <div class="text-xs opacity-70">Choisis jusqu'à 2 régions (GLOBAL est exclusif)</div>
+                       </div>
+                       <div class="market-selector-buttons gap-3" id="top-scope">
+                         <button class="market-btn active" data-scope="GLOBAL">
+                           <i class="fas fa-globe mr-2"></i> Global
+                         </button>
+                         <button class="market-btn" data-scope="US">
+                           <i class="fas fa-flag-usa mr-2"></i> US
+                         </button>
+                         <button class="market-btn" data-scope="EUROPE">
+                           <i class="fas fa-globe-europe mr-2"></i> Europe
+                         </button>
+                         <button class="market-btn" data-scope="ASIA">
+                           <i class="fas fa-globe-asia mr-2"></i> Asie
+                         </button>
+                       </div>
+                     </div>
                      
                      <!-- Onglets pour changer de vue -->
                      <div class="index-tabs">
