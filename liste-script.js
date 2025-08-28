@@ -279,13 +279,15 @@ document.addEventListener('DOMContentLoaded', function() {
             exchange: r.exchange || null,
             data_exchange: r.data_exchange || 'Boursorama',
             sector: r.sector || null,
-            volatility_3y: r.volatility_3y ? pctToStr(r.volatility_3y) : null,
-            dividend_yield: r.dividend_yield ? pctToStr(r.dividend_yield) : null,
+            volatility_3y: r.volatility_3y ? pctToStr(r.volatility_3y) : '-',
+            dividend_yield: r.dividend_yield ? pctToStr(r.dividend_yield) : '-',
             market_cap: r.market_cap ? Number(r.market_cap).toLocaleString('fr-FR') : null,
             range_52w: r.range_52w || null,
             perf_1m: r.perf_1m ? pctToStr(r.perf_1m) : null,
             perf_3m: r.perf_3m ? pctToStr(r.perf_3m) : null,
-            perf_1y: r.perf_1y ? pctToStr(r.perf_1y) : null
+            perf_1y: r.perf_1y ? pctToStr(r.perf_1y) : '-',
+            perf_3y: r.perf_3y ? pctToStr(r.perf_3y) : '-',
+            max_drawdown_3y: r.max_drawdown_3y ? pctToStr(r.max_drawdown_3y) : '-'
         };
     }
     
@@ -993,7 +995,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (stocks.length === 0) {
                         const emptyRow = document.createElement('tr');
                         emptyRow.innerHTML = `
-                            <td colspan="9" class="text-center py-4 text-gray-400">
+                            <td colspan="8" class="text-center py-4 text-gray-400">
                                 <i class="fas fa-info-circle mr-2"></i>
                                 Aucune action disponible pour cette lettre
                             </td>
@@ -1012,13 +1014,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         sortedStocks.forEach(stock => {
                             const stockKey = `${stock.name||''}|${stock.ticker||''}`;
                             
-                            // Ligne principale
+                            // Ligne principale avec colonnes directement visibles
                             const row = document.createElement('tr');
                             row.setAttribute('data-region', stock.region);
                             row.className = 'border-b border-white/5 hover:bg-white/5 transition-colors';
                             
                             const changeClass = stock.change && stock.change.includes('-') ? 'negative' : 'positive';
                             const ytdClass = stock.ytd && stock.ytd.includes('-') ? 'negative' : 'positive';
+                            const perf1yClass = stock.perf_1y && stock.perf_1y.includes('-') ? 'negative' : 'positive';
                             
                             row.innerHTML = `
                                 <td class="py-2 px-3">
@@ -1031,10 +1034,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </td>
                                 <td class="text-right">${stock.last || '-'}</td>
                                 <td class="text-right ${changeClass}">${stock.change || '-'}</td>
-                                <td class="text-right">${stock.open || '-'}</td>
-                                <td class="text-right">${stock.high || '-'}</td>
-                                <td class="text-right">${stock.low || '-'}</td>
                                 <td class="text-right ${ytdClass}">${stock.ytd || '-'}</td>
+                                <td class="text-right ${perf1yClass}">${stock.perf_1y || '-'}</td>
+                                <td class="text-right">${stock.volatility_3y || '-'}</td>
+                                <td class="text-right">${stock.dividend_yield || '-'}</td>
                                 <td class="text-right">${stock.volume || '-'}</td>
                                 <td class="text-center">
                                     <button onclick="toggleDetailsRow(this)" class="action-button details-toggle" data-key="${stockKey}">
@@ -1064,7 +1067,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <div class="space-y-1 text-sm">
                                                 <div><span class="opacity-60">1 mois:</span> <span class="${stock.perf_1m && stock.perf_1m.includes('-') ? 'negative' : 'positive'}">${stock.perf_1m||'–'}</span></div>
                                                 <div><span class="opacity-60">3 mois:</span> <span class="${stock.perf_3m && stock.perf_3m.includes('-') ? 'negative' : 'positive'}">${stock.perf_3m||'–'}</span></div>
-                                                <div><span class="opacity-60">1 an:</span> <span class="${stock.perf_1y && stock.perf_1y.includes('-') ? 'negative' : 'positive'}">${stock.perf_1y||'–'}</span></div>
+                                                <div><span class="opacity-60">1 an:</span> <span class="${perf1yClass}">${stock.perf_1y||'–'}</span></div>
+                                                <div><span class="opacity-60">3 ans:</span> <span class="${stock.perf_3y && stock.perf_3y.includes('-') ? 'negative' : 'positive'}">${stock.perf_3y||'–'}</span></div>
                                                 <div><span class="opacity-60">YTD:</span> <span class="${ytdClass}">${stock.ytd||'–'}</span></div>
                                             </div>
                                         </div>
@@ -1074,6 +1078,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 <div><span class="opacity-60">Volatilité 3Y:</span> ${stock.volatility_3y || '–'}</div>
                                                 <div><span class="opacity-60">Rendement:</span> ${stock.dividend_yield || '–'}</div>
                                                 <div><span class="opacity-60">52 semaines:</span> ${stock.range_52w || '–'}</div>
+                                                <div><span class="opacity-60">Max Drawdown 3Y:</span> <span class="negative">${stock.max_drawdown_3y || '–'}</span></div>
                                             </div>
                                         </div>
                                         <div>
