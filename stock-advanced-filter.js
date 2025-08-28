@@ -1,5 +1,10 @@
 // stock-advanced-filter.js
-// Version 3.4 - Add tops_overview.json generation
+// Version 3.5 - Fix YTD, dividendes et formules 52w
+// Corrections appliquées : 
+// - YTD sans toISOString() pour éviter bug UTC
+// - Fallback dividende TTM/price si meta absente
+// - Logs DEBUG enrichis pour YTD
+// - Formules 52w conventionnelles
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -247,6 +252,7 @@ async function getPerformanceData(symbol, stock) {
                 interval: '1day',
                 outputsize: 900,
                 order: 'ASC',
+                adjusted: true,  // Ajout pour éviter les problèmes de split
                 apikey: CONFIG.API_KEY
             }
         });
@@ -288,9 +294,23 @@ async function getPerformanceData(symbol, stock) {
             perf.year_3 = ((current - y3Bar.close) / y3Bar.close * 100).toFixed(2);
         }
         
-        // YTD
-        const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10);
-        const ytdBar = prices.find(p => p.date >= yearStart);
+        // YTD - FIX: éviter toISOString() qui cause des bugs UTC
+        const yearStart = `${new Date().getFullYear()}-01-01`;
+        const ytdIdx = prices.findIndex(p => p.date >= yearStart);
+        const ytdBar = ytdIdx !== -1 ? prices[ytdIdx] : null;
+        
+        // Logs DEBUG enrichis pour YTD
+        if (CONFIG.DEBUG) {
+            const prev = ytdIdx > 0 ? prices[ytdIdx - 1] : null;
+            console.log(
+                `[YTD] ${resolved} | yearStart=${yearStart} | basis=${ytdBar?.date ?? 'N/A'} close=${ytdBar?.close ?? 'N/A'} | ` +
+                `prev=${prev?.date ?? 'N/A'} closePrev=${prev?.close ?? 'N/A'} | current=${current}`
+            );
+            if (ytdBar && ytdBar.date.endsWith('12-31')) {
+                console.warn(`[YTD WARN] ${resolved} basis is 12-31 (UTC drift suspected).`);
+            }
+        }
+        
         if (ytdBar && ytdBar.close !== current) {
             perf.ytd = ((current - ytdBar.close) / ytdBar.close * 100).toFixed(2);
         }
@@ -316,8 +336,15 @@ async function getPerformanceData(symbol, stock) {
             volatility_3y: vol.toFixed(2),
             max_drawdown_ytd: drawdowns.ytd,
             max_drawdown_3y: drawdowns.year3,
-            distance_52w_high: high52 ? ((current - high52) / current * 100).toFixed(2) : null,
-            distance_52w_low: low52 ? ((current - low52) / current * 100).toFixed(2) : null,
+            // FIX: formules conventionnelles avec high52/low52 au dénominateur
+            distance_52w_high: high52 ? ((current - high52) / high52 * 100).toFixed(2) : null,
+            distance_52w_low: low52 ? ((current - low52) / low52 * 100).toFixed(2) : null,
+            // Métadonnées YTD pour debugging
+            ytd_meta: { 
+                year_start: yearStart, 
+                basis_date: ytdBar?.date ?? null, 
+                basis_close: ytdBar?.close ?? null 
+            },
             // Expose pour fallback
             __last_close: current,
             __prev_close: prev,
@@ -368,15 +395,16 @@ async function getDividendData(symbol, stock) {
             return date > yearAgo;
         });
         
-        const total = lastYear.reduce((sum, d) => sum + d.amount, 0);
+        // FIX: garder les nombres, pas des strings - on formatera dans enrichStock
+        const totalTTM = lastYear.reduce((sum, d) => sum + d.amount, 0);
         const years = new Set(dividends.map(d => new Date(d.ex_date).getFullYear())).size;
         const avgPerYear = years > 0 ? dividends.reduce((sum, d) => sum + d.amount, 0) / years : 0;
         
         return {
-            dividend_yield_ttm: parseNumberLoose(data.meta?.dividend_yield) || null,
-            dividends_history: dividends.slice(0, 10),
-            avg_dividend_per_year: avgPerYear.toFixed(2),
-            total_dividends_ttm: total.toFixed(2)
+            dividend_yield_ttm: parseNumberLoose(data.meta?.dividend_yield) ?? null,
+            dividends_history: dividends.sort((a,b) => b.ex_date.localeCompare(a.ex_date)).slice(0, 10),
+            avg_dividend_per_year: avgPerYear,    // nombre
+            total_dividends_ttm: totalTTM         // nombre
         };
     } catch (error) {
         if (CONFIG.DEBUG) console.error('[DIVIDENDS EXCEPTION]', symbol, error.message);
@@ -518,6 +546,20 @@ async function enrichStock(stock) {
             ? stats.shares_outstanding * price
             : null);
     
+    // FIX dividendes: Fallback TTM/price si yield absent
+    const dividendYield = 
+        (dividends?.total_dividends_ttm && price)
+            ? Number((dividends.total_dividends_ttm / price * 100).toFixed(2))
+            : (dividends?.dividend_yield_ttm ?? null);
+    
+    // Logs DEBUG pour métadonnées YTD
+    if (CONFIG.DEBUG && perf?.ytd_meta) {
+        console.log(
+            `[YTD META] ${stock.symbol} → start=${perf.ytd_meta.year_start} ` +
+            `basis=${perf.ytd_meta.basis_date} close=${perf.ytd_meta.basis_close}`
+        );
+    }
+    
     return {
         ticker: stock.symbol,
         name: stock.name,
@@ -538,9 +580,9 @@ async function enrichStock(stock) {
         perf_1y: perf.performances?.year_1 || null,
         perf_3y: perf.performances?.year_3 || null,
         
-        dividend_yield: dividends.dividend_yield_ttm,
-        dividends_history: dividends.dividends_history || [],
-        avg_dividend_year: dividends.avg_dividend_per_year,
+        dividend_yield: dividendYield,
+        dividends_history: dividends?.dividends_history || [],
+        avg_dividend_year: Number(dividends?.avg_dividend_per_year?.toFixed?.(2) ?? dividends?.avg_dividend_per_year ?? null),
         
         volatility_3y: perf.volatility_3y,
         distance_52w_high: perf.distance_52w_high,
@@ -562,7 +604,8 @@ function standardDeviation(values) {
 function calculateDrawdowns(prices) {
     let peak = prices[prices.length - 1]?.close || 0;
     let maxDD_ytd = 0, maxDD_3y = 0;
-    const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10);
+    // FIX: éviter toISOString() ici aussi
+    const yearStart = `${new Date().getFullYear()}-01-01`;
     
     for (let i = prices.length - 1; i >= 0; i--) {
         const p = prices[i];
