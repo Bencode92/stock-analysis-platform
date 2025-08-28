@@ -308,14 +308,17 @@ document.addEventListener('DOMContentLoaded', function() {
         hideElement('indices-error');
         hideElement('indices-container');
         
-        // Afficher quelles régions on charge
+        // Afficher quelles régions on charge (éviter l'accumulation de messages)
         const loadingText = document.querySelector('#indices-loading .loader');
         if (loadingText) {
+            const parent = loadingText.parentElement;
+            parent?.querySelector('.loading-msg')?.remove(); // Supprimer l'ancien message
+            
             const regionsText = regions.join(' + ');
             const loadingMessage = document.createElement('p');
-            loadingMessage.className = 'mt-4 text-sm text-gray-400';
+            loadingMessage.className = 'loading-msg mt-4 text-sm text-gray-400';
             loadingMessage.textContent = `Chargement des données ${regionsText}...`;
-            loadingText.parentElement.appendChild(loadingMessage);
+            parent.appendChild(loadingMessage);
         }
         
         try {
@@ -482,20 +485,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     /**
      * Render des cartes directement dans un container
+     * PATCH 1: Passer directement le container element
      */
-    function renderTopTenCardsInContainer(container, stocks, valueField, marketSource) {
-        if (!container) return;
-        
-        // Chercher ou créer le conteneur des cartes
-        let cardsContainer = container.querySelector('.stock-cards-container');
-        if (!cardsContainer) {
-            cardsContainer = document.createElement('div');
-            cardsContainer.className = 'stock-cards-container';
-            container.appendChild(cardsContainer);
-        }
-        
-        // Utiliser la fonction existante
-        renderTopTenCards(container.id.replace('top-', ''), stocks, valueField, marketSource);
+    function renderTopTenCardsInContainer(containerEl, stocks, valueField, marketSource) {
+        if (!containerEl) return;
+        // Déléguer à la version robuste de renderTopTenCards
+        renderTopTenCards(containerEl, stocks, valueField, marketSource);
     }
     
     /**
@@ -868,6 +863,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     /**
      * Charge les données pour le Top 10 global
+     * PATCH 3: Correction de la variable response -> globalResponse
      */
     async function loadGlobalData() {
         try {
@@ -876,7 +872,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const globalResponse = await fetch('data/global_top_performers.json');
             
             if (globalResponse.ok) {
-                const globalData = await response.json();
+                const globalData = await globalResponse.json(); // FIX: globalResponse au lieu de response
                 console.log("✅ Données du top 10 global chargées avec succès");
                 
                 // Déduplication des données globales
@@ -1183,18 +1179,20 @@ document.addEventListener('DOMContentLoaded', function() {
     
     /**
      * Fonction améliorée pour afficher les cartes du top 10 avec un meilleur design
+     * PATCH 2: Version robuste qui accepte ID string ou Element
      */
-    function renderTopTenCards(containerId, stocks, valueField, marketSource) {
-        const container = document.getElementById(containerId);
-        if (!container) {
-            // Chercher dans le container des cartes
-            const cardsContainer = document.querySelector(`#${containerId} .stock-cards-container`);
-            if (cardsContainer) {
-                container = cardsContainer;
-            } else {
-                return;
-            }
+    function renderTopTenCards(target, stocks, valueField, marketSource) {
+        // target peut être un ID ou un Element
+        let root = null;
+        if (typeof target === 'string') {
+            root = document.getElementById(target) || document.querySelector(target);
+        } else {
+            root = target;
         }
+        if (!root) return;
+        
+        // Si on a un wrapper, prendre son .stock-cards-container ; sinon utiliser root
+        let container = root.querySelector?.('.stock-cards-container') || root;
         
         // Vider le conteneur
         container.innerHTML = '';
