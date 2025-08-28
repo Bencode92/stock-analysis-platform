@@ -1,10 +1,11 @@
 // stock-advanced-filter.js
-// Version 3.5 - Fix YTD, dividendes et formules 52w
+// Version 3.6 - Ajout métadonnées marché (exchange/devise/MIC)
 // Corrections appliquées : 
 // - YTD sans toISOString() pour éviter bug UTC
 // - Fallback dividende TTM/price si meta absente
 // - Logs DEBUG enrichis pour YTD
 // - Formules 52w conventionnelles
+// - Métadonnées marché pour tracer source exacte (exchange, devise, MIC)
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -211,6 +212,7 @@ async function getQuoteData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.QUOTE);
         const resolved = typeof stock === 'string' ? symbol : resolveSymbol(symbol, stock);
+        
         const { data } = await axios.get('https://api.twelvedata.com/quote', {
             params: { 
                 symbol: resolved, 
@@ -224,7 +226,7 @@ async function getQuoteData(symbol, stock) {
             return null;
         }
         
-        return {
+        const out = {
             price: parseNumberLoose(data.close) || 0,
             change: parseNumberLoose(data.change) || 0,
             percent_change: parseNumberLoose(data.percent_change) || 0,
@@ -233,8 +235,20 @@ async function getQuoteData(symbol, stock) {
                 high: parseNumberLoose(data.fifty_two_week?.high) || null,
                 low: parseNumberLoose(data.fifty_two_week?.low) || null,
                 range: data.fifty_two_week?.range || null
+            },
+            _meta: {
+                symbol_used: resolved,                 // ex: "ASML:XAMS"
+                exchange: data.exchange ?? null,       // ex: "London Stock Exchange"
+                mic_code: data.mic_code ?? null,       // ex: "XLON"
+                currency: data.currency ?? null        // ex: "USD", "EUR", "GBX"...
             }
         };
+        
+        if (CONFIG.DEBUG) {
+            console.log(`[SOURCE] ${symbol} -> ${out._meta.symbol_used} | ${out._meta.exchange} (${out._meta.mic_code}) | ${out._meta.currency}`);
+        }
+        
+        return out;
     } catch (error) {
         if (CONFIG.DEBUG) console.error('[QUOTE EXCEPTION]', symbol, error.message);
         return null;
@@ -263,6 +277,7 @@ async function getPerformanceData(symbol, stock) {
             return {};
         }
         
+        const meta = data?.meta || {};
         const prices = (data.values || []).map(v => ({
             date: v.datetime.slice(0, 10),
             close: Number(v.close)
@@ -344,6 +359,13 @@ async function getPerformanceData(symbol, stock) {
                 year_start: yearStart, 
                 basis_date: ytdBar?.date ?? null, 
                 basis_close: ytdBar?.close ?? null 
+            },
+            // Métadonnées de série
+            _series_meta: {
+                symbol_used: resolved,
+                exchange: meta.exchange ?? null,
+                currency: meta.currency ?? null,
+                timezone: meta.exchange_timezone ?? meta.timezone ?? null
             },
             // Expose pour fallback
             __last_close: current,
@@ -552,6 +574,17 @@ async function enrichStock(stock) {
             ? Number((dividends.total_dividends_ttm / price * 100).toFixed(2))
             : (dividends?.dividend_yield_ttm ?? null);
     
+    // Métadonnées de marché
+    const usedEx =  quote?._meta?.exchange ?? perf?._series_meta?.exchange ?? null;
+    const usedMic = quote?._meta?.mic_code ?? null;
+    const usedCur = quote?._meta?.currency ?? perf?._series_meta?.currency ?? null;
+    const usedTz  = perf?._series_meta?.timezone ?? null;
+    const symUsed = quote?._meta?.symbol_used || perf?._series_meta?.symbol_used || (resolved || stock.symbol);
+    
+    if (CONFIG.DEBUG) {
+        console.log(`[DATA CTX] ${stock.symbol} -> ${symUsed} | ${usedEx} (${usedMic}) | ${usedCur} | ${usedTz || 'tz?'}`);
+    }
+    
     // Logs DEBUG pour métadonnées YTD
     if (CONFIG.DEBUG && perf?.ytd_meta) {
         console.log(
@@ -565,7 +598,14 @@ async function enrichStock(stock) {
         name: stock.name,
         sector: stock.sector,
         country: stock.country,
-        exchange: stock.exchange, // Ajout de l'exchange
+        exchange: stock.exchange, // Exchange du CSV (intention)
+        
+        // Métadonnées source réelle
+        resolved_symbol: symUsed,
+        data_exchange: usedEx,
+        data_mic: usedMic,
+        data_currency: usedCur,
+        data_timezone: usedTz,
         
         price,
         change_percent: (typeof change_percent === 'number') ? Number(change_percent.toFixed(2)) : null,
