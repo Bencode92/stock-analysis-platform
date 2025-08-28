@@ -2,6 +2,7 @@
  * liste-script.js - Script pour afficher les actions du NASDAQ Composite et DJ STOXX 600
  * Données mises à jour régulièrement par GitHub Actions
  * Version améliorée avec chargement dynamique des données par marché et sélection multi-régions
+ * Ajout de panneaux détails extensibles pour chaque action
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -275,7 +276,16 @@ document.addEventListener('DOMContentLoaded', function() {
             volume: r.volume == null ? '-' : Number(r.volume).toLocaleString('fr-FR'),
             marketIcon,
             regionBadgeClass: `region-${region.toLowerCase()}`,
-            exchange: r.exchange // Ajouter l'exchange si disponible
+            exchange: r.exchange || null,
+            data_exchange: r.data_exchange || 'Boursorama',
+            sector: r.sector || null,
+            volatility_3y: r.volatility_3y ? pctToStr(r.volatility_3y) : null,
+            dividend_yield: r.dividend_yield ? pctToStr(r.dividend_yield) : null,
+            market_cap: r.market_cap ? Number(r.market_cap).toLocaleString('fr-FR') : null,
+            range_52w: r.range_52w || null,
+            perf_1m: r.perf_1m ? pctToStr(r.perf_1m) : null,
+            perf_3m: r.perf_3m ? pctToStr(r.perf_3m) : null,
+            perf_1y: r.perf_1y ? pctToStr(r.perf_1y) : null
         };
     }
     
@@ -914,6 +924,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
+     * Toggle les détails d'une action
+     */
+    function toggleDetailsRow(button) {
+        const stockKey = button.dataset.key;
+        const detailsRow = document.querySelector(`.details-row[data-for="${CSS.escape(stockKey)}"]`);
+        
+        if (detailsRow) {
+            const isHidden = detailsRow.classList.contains('hidden');
+            detailsRow.classList.toggle('hidden');
+            
+            // Mettre à jour l'icône du bouton
+            const icon = button.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('fa-chevron-down', !isHidden);
+                icon.classList.toggle('fa-chevron-up', isHidden);
+            }
+            
+            // Mettre à jour le texte du bouton si texte visible
+            if (button.textContent.includes('Détails') || button.textContent.includes('Masquer')) {
+                button.textContent = isHidden ? 'Masquer ▴' : 'Détails ▾';
+            }
+        }
+    }
+    
+    /**
      * Affiche les données d'actions dans l'interface
      */
     function renderStocksData() {
@@ -958,7 +993,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (stocks.length === 0) {
                         const emptyRow = document.createElement('tr');
                         emptyRow.innerHTML = `
-                            <td colspan="8" class="text-center py-4 text-gray-400">
+                            <td colspan="9" class="text-center py-4 text-gray-400">
                                 <i class="fas fa-info-circle mr-2"></i>
                                 Aucune action disponible pour cette lettre
                             </td>
@@ -975,32 +1010,87 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         // Remplir avec les données
                         sortedStocks.forEach(stock => {
+                            const stockKey = `${stock.name||''}|${stock.ticker||''}`;
+                            
+                            // Ligne principale
                             const row = document.createElement('tr');
                             row.setAttribute('data-region', stock.region);
+                            row.className = 'border-b border-white/5 hover:bg-white/5 transition-colors';
                             
-                            // Déterminer la classe CSS pour les valeurs (positif/négatif)
                             const changeClass = stock.change && stock.change.includes('-') ? 'negative' : 'positive';
                             const ytdClass = stock.ytd && stock.ytd.includes('-') ? 'negative' : 'positive';
                             
-                            // Création de la ligne avec région/pays
                             row.innerHTML = `
-                                <td>
+                                <td class="py-2 px-3">
                                     <div class="font-medium">${stock.name || '-'} ${stock.marketIcon}</div>
-                                    <div class="text-xs opacity-70">
+                                    <div class="text-xs opacity-70 mt-1">
                                         <span class="px-2 py-0.5 rounded border border-white/10 mr-1 ${stock.regionBadgeClass}">${stock.region || 'GLOBAL'}</span>
                                         ${stock.country || ''}
+                                        ${stock.exchange ? `<span class="ml-1 px-2 py-0.5 rounded border border-white/10">${stock.exchange}</span>` : ''}
                                     </div>
                                 </td>
-                                <td>${stock.last || '-'}</td>
-                                <td class="${changeClass}">${stock.change || '-'}</td>
-                                <td>${stock.open || '-'}</td>
-                                <td>${stock.high || '-'}</td>
-                                <td>${stock.low || '-'}</td>
-                                <td class="${ytdClass}">${stock.ytd || '-'}</td>
-                                <td>${stock.volume || '-'}</td>
+                                <td class="text-right">${stock.last || '-'}</td>
+                                <td class="text-right ${changeClass}">${stock.change || '-'}</td>
+                                <td class="text-right">${stock.open || '-'}</td>
+                                <td class="text-right">${stock.high || '-'}</td>
+                                <td class="text-right">${stock.low || '-'}</td>
+                                <td class="text-right ${ytdClass}">${stock.ytd || '-'}</td>
+                                <td class="text-right">${stock.volume || '-'}</td>
+                                <td class="text-center">
+                                    <button onclick="toggleDetailsRow(this)" class="action-button details-toggle" data-key="${stockKey}">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
+                                </td>
+                            `;
+                            
+                            // Ligne de détails (cachée par défaut)
+                            const detailsRow = document.createElement('tr');
+                            detailsRow.className = 'details-row hidden';
+                            detailsRow.setAttribute('data-for', stockKey);
+                            detailsRow.innerHTML = `
+                                <td colspan="9" style="background:rgba(0,255,135,0.02); border-top: 1px solid var(--card-border);">
+                                    <div class="grid md:grid-cols-4 gap-6 p-4">
+                                        <div>
+                                            <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Informations</div>
+                                            <div class="space-y-1 text-sm">
+                                                <div><span class="opacity-60">Ticker:</span> <strong>${stock.ticker||'–'}</strong></div>
+                                                <div><span class="opacity-60">Secteur:</span> ${stock.sector||'–'}</div>
+                                                <div><span class="opacity-60">Source:</span> ${stock.data_exchange||'–'}</div>
+                                                <div><span class="opacity-60">Cap. Marché:</span> ${stock.market_cap||'–'}</div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Performances</div>
+                                            <div class="space-y-1 text-sm">
+                                                <div><span class="opacity-60">1 mois:</span> <span class="${stock.perf_1m && stock.perf_1m.includes('-') ? 'negative' : 'positive'}">${stock.perf_1m||'–'}</span></div>
+                                                <div><span class="opacity-60">3 mois:</span> <span class="${stock.perf_3m && stock.perf_3m.includes('-') ? 'negative' : 'positive'}">${stock.perf_3m||'–'}</span></div>
+                                                <div><span class="opacity-60">1 an:</span> <span class="${stock.perf_1y && stock.perf_1y.includes('-') ? 'negative' : 'positive'}">${stock.perf_1y||'–'}</span></div>
+                                                <div><span class="opacity-60">YTD:</span> <span class="${ytdClass}">${stock.ytd||'–'}</span></div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Métriques</div>
+                                            <div class="space-y-1 text-sm">
+                                                <div><span class="opacity-60">Volatilité 3Y:</span> ${stock.volatility_3y || '–'}</div>
+                                                <div><span class="opacity-60">Rendement:</span> ${stock.dividend_yield || '–'}</div>
+                                                <div><span class="opacity-60">52 semaines:</span> ${stock.range_52w || '–'}</div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Trading</div>
+                                            <div class="space-y-1 text-sm">
+                                                <div><span class="opacity-60">Volume:</span> ${stock.volume || '–'}</div>
+                                                <div><span class="opacity-60">Ouverture:</span> ${stock.open || '–'}</div>
+                                                <div><span class="opacity-60">Plus haut:</span> ${stock.high || '–'}</div>
+                                                <div><span class="opacity-60">Plus bas:</span> ${stock.low || '–'}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
                             `;
                             
                             tableBody.appendChild(row);
+                            tableBody.appendChild(detailsRow);
                         });
                     }
                 }
@@ -1015,6 +1105,9 @@ document.addEventListener('DOMContentLoaded', function() {
             hideElement('indices-loading');
             hideElement('indices-error');
             showElement('indices-container');
+            
+            // Réassigner la fonction toggle au window pour permettre l'accès global
+            window.toggleDetailsRow = toggleDetailsRow;
             
         } catch (error) {
             console.error('❌ Erreur lors de l\'affichage des données:', error);
@@ -1498,7 +1591,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!tableBody) return;
                 
                 let regionResults = 0;
-                const rows = tableBody.querySelectorAll('tr');
+                const rows = tableBody.querySelectorAll('tr:not(.details-row)');
                 
                 rows.forEach(row => {
                     // Ne pas rechercher dans les lignes vides ou messages
@@ -1530,7 +1623,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         noResultsRow = document.createElement('tr');
                         noResultsRow.className = 'no-results-row';
                         noResultsRow.innerHTML = `
-                            <td colspan="8" class="no-results">
+                            <td colspan="9" class="no-results">
                                 <i class="fas fa-search mr-2"></i>
                                 Aucun résultat pour "${searchTerm}" dans cette section
                             </td>
