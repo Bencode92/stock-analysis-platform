@@ -1,7 +1,7 @@
 /**
  * liste-script.js - Script pour afficher les actions du NASDAQ Composite et DJ STOXX 600
  * Données mises à jour régulièrement par GitHub Actions
- * Version améliorée avec chargement dynamique des données par marché
+ * Version améliorée avec chargement dynamique des données par marché et sélection multi-régions
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -31,6 +31,22 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentPage = 1;
     let totalPages = 1;
     
+    // État pour la sélection multi-régions des Top 10
+    let topScope = 'GLOBAL';                  // clé utilisée dans tops_overview.sets
+    let selectedRegions = new Set(['GLOBAL']); // ensemble des boutons actifs (GLOBAL exclusif)
+    const REGION_ORDER = ['US','EUROPE','ASIA']; // pour ordonner les combos
+    const COMBO_MAP = {
+      'US,EUROPE': 'US_EUROPE',
+      'EUROPE,US': 'US_EUROPE',
+      'US,ASIA': 'US_ASIA',
+      'ASIA,US': 'US_ASIA',
+      'EUROPE,ASIA': 'EUROPE_ASIA',
+      'ASIA,EUROPE': 'EUROPE_ASIA'
+    };
+    
+    // Données des tops overview
+    let topsOverview = null;
+    
     // Initialiser les onglets alphabet
     initAlphabetTabs();
     
@@ -50,11 +66,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialiser le thème
     initTheme();
     
+    // Initialiser les boutons de sélection multi-régions
+    wireScopeButtons();
+    
     // Premier chargement des données
     loadStocksData();
     
     // Charger les données globales
     loadGlobalData();
+    
+    // Charger les données tops_overview.json
+    loadTopsOverview();
     
     // Ajouter les gestionnaires d'événements
     document.getElementById('retry-button')?.addEventListener('click', function() {
@@ -62,6 +84,149 @@ document.addEventListener('DOMContentLoaded', function() {
         showElement('indices-loading');
         loadStocksData(true);
     });
+    
+    /**
+     * Initialise les boutons de sélection multi-régions pour les Top 10
+     */
+    function wireScopeButtons() {
+      const box = document.getElementById('top-scope');
+      if (!box) return;
+      const btns = [...box.querySelectorAll('.market-btn')];
+
+      const updateButtonsUI = () => {
+        // Active visuellement les bons boutons
+        btns.forEach(b => {
+          const k = b.dataset.scope;
+          b.classList.toggle('active', selectedRegions.has(k));
+        });
+        // Met l'étiquette avec ordre cohérent
+        const lab = document.getElementById('top-scope-label');
+        if (lab) {
+          if (selectedRegions.has('GLOBAL') || selectedRegions.size === 0) {
+            lab.textContent = 'GLOBAL';
+          } else {
+            // Toujours ordonner selon REGION_ORDER pour le label
+            const ordered = Array.from(selectedRegions).sort(
+              (a,b) => REGION_ORDER.indexOf(a) - REGION_ORDER.indexOf(b)
+            );
+            lab.textContent = ordered.join(' + ');
+          }
+        }
+      };
+
+      const computeTopKey = () => {
+        if (selectedRegions.has('GLOBAL') || selectedRegions.size === 0) return 'GLOBAL';
+        if (selectedRegions.size === 1) return Array.from(selectedRegions)[0];
+        // 2 régions → clé combo
+        const arr = Array.from(selectedRegions).sort(
+          (a,b) => REGION_ORDER.indexOf(a) - REGION_ORDER.indexOf(b)
+        );
+        const key = COMBO_MAP[`${arr[0]},${arr[1]}`] || COMBO_MAP[`${arr[1]},${arr[0]}`];
+        if (!key) {
+          console.warn(`Combo non trouvée: ${arr.join(',')}`);
+          return 'GLOBAL'; // fallback
+        }
+        return key;
+      };
+
+      btns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.dataset.scope;
+
+          if (key === 'GLOBAL') {
+            // GLOBAL = exclusif
+            selectedRegions.clear();
+            selectedRegions.add('GLOBAL');
+          } else {
+            // Si GLOBAL était actif → on le retire
+            if (selectedRegions.has('GLOBAL')) selectedRegions.delete('GLOBAL');
+
+            // Toggle sur la région
+            if (selectedRegions.has(key)) {
+              selectedRegions.delete(key);
+            } else {
+              // Ajout avec limite 2
+              if (selectedRegions.size >= 2) {
+                // petit feedback visuel si on tente >2
+                btn.classList.add('ring-2','ring-red-400');
+                setTimeout(() => btn.classList.remove('ring-2','ring-red-400'), 400);
+                showToast('Maximum 2 régions simultanément');
+                return;
+              }
+              selectedRegions.add(key);
+            }
+
+            // Si plus rien de sélectionné → repasser en GLOBAL
+            if (selectedRegions.size === 0) selectedRegions.add('GLOBAL');
+          }
+
+          updateButtonsUI();
+          topScope = computeTopKey();
+          renderTop(); // recharge les tops depuis tops_overview.sets[topScope]
+        });
+      });
+
+      // init
+      updateButtonsUI();
+      topScope = 'GLOBAL';
+    }
+    
+    /**
+     * Mini toast notification
+     */
+    function showToast(msg) {
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-pulse';
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2000);
+    }
+    
+    /**
+     * Charge les données tops_overview.json
+     */
+    async function loadTopsOverview() {
+      try {
+        console.log("🔍 Chargement des données tops_overview.json...");
+        const response = await fetch('data/tops_overview.json');
+        
+        if (response.ok) {
+          topsOverview = await response.json();
+          console.log("✅ Données tops_overview chargées avec succès");
+          renderTop();
+        } else {
+          console.warn("⚠️ Fichier tops_overview.json non trouvé");
+        }
+      } catch (error) {
+        console.error('❌ Erreur lors du chargement de tops_overview:', error);
+      }
+    }
+    
+    /**
+     * Affiche les tops depuis tops_overview.json
+     */
+    function renderTop() {
+      if (!topsOverview?.sets?.[topScope]) {
+        console.warn(`Pas de données pour topScope: ${topScope}`);
+        return;
+      }
+      
+      const set = topsOverview.sets[topScope];
+      
+      // Mise à jour des 4 sections
+      if (set.day?.up) {
+        renderTopTenCards('top-global-gainers', set.day.up, 'change_percent', 'global');
+      }
+      if (set.day?.down) {
+        renderTopTenCards('top-global-losers', set.day.down, 'change_percent', 'global');
+      }
+      if (set.ytd?.up) {
+        renderTopTenCards('top-global-ytd-gainers', set.ytd.up, 'perf_ytd', 'global');
+      }
+      if (set.ytd?.down) {
+        renderTopTenCards('top-global-ytd-losers', set.ytd.down, 'perf_ytd', 'global');
+      }
+    }
     
     /**
      * Initialise les onglets alphabet
@@ -516,8 +681,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     /**
      * Déduplique les actions en utilisant le nom et le symbole
-     * @param {Array} stocks 
-     * @returns {Array} stocks dédupliqués
      */
     function dedupStocks(stocks) {
         if (!stocks || !Array.isArray(stocks)) return [];
@@ -528,8 +691,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     /**
      * Déduplique les actions de manière plus approfondie en utilisant tous les attributs
-     * @param {Array} stocks 
-     * @returns {Array} stocks dédupliqués
      */
     function dedupStocksThoroughly(stocks) {
         if (!stocks || !Array.isArray(stocks)) return [];
@@ -1175,8 +1336,7 @@ document.addEventListener('DOMContentLoaded', function() {
      * Convertit le volume en nombre pour le tri
      */
     function parseVolumeToNumber(volumeStr) {
-        if (!volumeStr || volumeStr === '-') return
- 0;
+        if (!volumeStr || volumeStr === '-') return 0;
         
         // Supprimer les espaces, les points et les virgules pour normaliser
         const cleanedStr = volumeStr.replace(/\s+/g, '').replace(/\./g, '').replace(/,/g, '');
@@ -1219,14 +1379,27 @@ document.addEventListener('DOMContentLoaded', function() {
         const displayStocks = uniqueStocks.slice(0, 10);
         
         // Assurer qu'il y a 10 éléments
-        ensureAtLeastTenItems(displayStocks, marketSource === 'global' ? 'mixed' : marketSource, valueField === 'ytd');
+        ensureAtLeastTenItems(displayStocks, marketSource === 'global' ? 'mixed' : marketSource, valueField === 'ytd' || valueField === 'perf_ytd');
         
         displayStocks.forEach((stock, index) => {
             // Déterminer le signe et la classe pour la valeur
             let value = stock[valueField] || '-';
+            // Gérer les deux formats de champ
+            if (valueField === 'change_percent' && !stock.change_percent && stock.change) {
+                value = stock.change;
+            }
+            if (valueField === 'perf_ytd' && !stock.perf_ytd && stock.ytd) {
+                value = stock.ytd;
+            }
+            
             let valueClass = 'positive';
             
-            if (value.includes('-')) {
+            // Convertir en string si c'est un nombre
+            if (typeof value === 'number') {
+                value = value.toFixed(2) + '%';
+            }
+            
+            if (value.toString().includes('-')) {
                 valueClass = 'negative';
             }
             
@@ -1266,10 +1439,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const card = document.createElement('div');
             card.className = 'stock-card';
             
+            // Utiliser ticker si disponible, sinon symbole extrait du nom
+            const ticker = stock.ticker || stock.symbol || stock.name?.split(' ')[0] || '-';
+            
             card.innerHTML = `
                 <div class="rank ${rankBg} ${rankStyle} ${glowEffect}">#${index + 1}</div>
                 <div class="stock-info ${specialClass}">
-                    <div class="stock-name">${stock.symbol || stock.name.split(' ')[0] || '-'} ${marketIcon}</div>
+                    <div class="stock-name">${ticker} ${marketIcon}</div>
                     <div class="stock-fullname">${stock.name || '-'}</div>
                 </div>
                 <div class="stock-performance ${valueClass}">
