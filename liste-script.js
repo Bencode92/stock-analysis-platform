@@ -275,8 +275,7 @@ document.addEventListener('DOMContentLoaded', function() {
             volume: r.volume == null ? '-' : Number(r.volume).toLocaleString('fr-FR'),
             marketIcon,
             regionBadgeClass: `region-${region.toLowerCase()}`,
-            exchange: r.exchange,  // place de cotation
-            data_exchange: r.data_exchange || r.resolved_symbol || 'Boursorama' // source des données
+            exchange: r.exchange // Ajouter l'exchange si disponible
         };
     }
     
@@ -959,7 +958,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (stocks.length === 0) {
                         const emptyRow = document.createElement('tr');
                         emptyRow.innerHTML = `
-                            <td colspan="9" class="text-center py-4 text-gray-400">
+                            <td colspan="8" class="text-center py-4 text-gray-400">
                                 <i class="fas fa-info-circle mr-2"></i>
                                 Aucune action disponible pour cette lettre
                             </td>
@@ -978,89 +977,34 @@ document.addEventListener('DOMContentLoaded', function() {
                         sortedStocks.forEach(stock => {
                             const row = document.createElement('tr');
                             row.setAttribute('data-region', stock.region);
-                            row.className = 'tp-row';
                             
                             // Déterminer la classe CSS pour les valeurs (positif/négatif)
                             const changeClass = stock.change && stock.change.includes('-') ? 'negative' : 'positive';
                             const ytdClass = stock.ytd && stock.ytd.includes('-') ? 'negative' : 'positive';
                             
-                            // Vérifier dividende imminent
-                            const exDivSoon = checkExDividendSoon(stock.dividends_history || []);
-                            
-                            // Création de la ligne avec région/pays et bouton détails
+                            // Création de la ligne avec région/pays
                             row.innerHTML = `
                                 <td>
-                                    <div class="font-medium">${stock.name || '-'} ${stock.marketIcon || ''} ${exDivSoon ? '<span title="Ex-dividende sous 7 jours">💸</span>' : ''}</div>
-                                    <div class="text-xs opacity-70 mt-1">
+                                    <div class="font-medium">${stock.name || '-'} ${stock.marketIcon}</div>
+                                    <div class="text-xs opacity-70">
                                         <span class="px-2 py-0.5 rounded border border-white/10 mr-1 ${stock.regionBadgeClass}">${stock.region || 'GLOBAL'}</span>
                                         ${stock.country || ''}
-                                        ${stock.data_exchange ? `<span class="ml-1 px-2 py-0.5 rounded border border-white/10">${stock.data_exchange}</span>` : ''}
-                                        ${stock.exchange ? `<span class="ml-1 px-2 py-0.5 rounded border border-white/10">${stock.exchange}</span>` : ''}
                                     </div>
                                 </td>
-                                <td class="text-right">${stock.last || '-'}</td>
-                                <td class="text-right ${changeClass}">${stock.change || '-'}</td>
-                                <td class="text-right">${stock.open || '-'}</td>
-                                <td class="text-right">${stock.high || '-'}</td>
-                                <td class="text-right">${stock.low || '-'}</td>
-                                <td class="text-right ${ytdClass}">${stock.ytd || '-'}</td>
-                                <td class="text-right">${stock.volume || '-'}</td>
-                                <td class="text-right">
-                                    <button class="action-button tp-details-btn" data-key="${(stock.name || '') + '|' + (stock.ticker || '')}">Détails ▾</button>
-                                </td>
+                                <td>${stock.last || '-'}</td>
+                                <td class="${changeClass}">${stock.change || '-'}</td>
+                                <td>${stock.open || '-'}</td>
+                                <td>${stock.high || '-'}</td>
+                                <td>${stock.low || '-'}</td>
+                                <td class="${ytdClass}">${stock.ytd || '-'}</td>
+                                <td>${stock.volume || '-'}</td>
                             `;
                             
                             tableBody.appendChild(row);
-                            
-                            // Ajouter la ligne détails juste après
-                            const details = document.createElement('tr');
-                            details.className = 'tp-details hidden';
-                            details.setAttribute('data-for', (stock.name || '') + '|' + (stock.ticker || ''));
-                            details.innerHTML = `
-                                <td colspan="9" style="background:rgba(255,255,255,0.04); border-left: 3px solid var(--accent-color);">
-                                    <div class="grid lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2 gap-6 p-6">
-                                        <div>
-                                            <div class="text-xs opacity-70 mb-3 font-semibold text-green-400">📊 PROFIL & MARCHÉ</div>
-                                            <div class="space-y-1 text-sm">
-                                                <div><b>Ticker:</b> ${stock.ticker || '–'}</div>
-                                                <div><b>Secteur:</b> ${stock.sector || '–'}</div>
-                                                <div><b>Cotation (exchange):</b> ${stock.exchange || '–'}</div>
-                                                <div><b>Source données:</b> ${stock.data_exchange || '–'}</div>
-                                                <div><b>Région:</b> ${stock.region || '–'}</div>
-                                                <div><b>Pays:</b> ${stock.country || '–'}</div>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div class="text-xs opacity-70 mb-3 font-semibold text-blue-400">💰 PRIX & VOLUMES</div>
-                                            <div class="space-y-1 text-sm">
-                                                <div><b>Dernier:</b> ${stock.last || '-'}</div>
-                                                <div><b>Ouverture:</b> ${stock.open || '-'}</div>
-                                                <div><b>Plus haut:</b> ${stock.high || '-'}</div>
-                                                <div><b>Plus bas:</b> ${stock.low || '-'}</div>
-                                                <div><b>Volume:</b> ${stock.volume || '-'}</div>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div class="text-xs opacity-70 mb-3 font-semibold text-yellow-400">📈 PERFORMANCES</div>
-                                            <div class="space-y-1 text-sm">
-                                                <div><b>Jour:</b> <span class="${changeClass}">${stock.change || '-'}</span></div>
-                                                <div><b>YTD:</b> <span class="${ytdClass}">${stock.ytd || '-'}</span></div>
-                                            </div>
-                                        </div>
-                                        <div class="opacity-70 text-xs">
-                                            <div><i>MAJ liste :</i> ${new Date().toISOString()}</div>
-                                        </div>
-                                    </div>
-                                </td>
-                            `;
-                            tableBody.appendChild(details);
                         });
                     }
                 }
             });
-            
-            // Activer les boutons détails après le rendu
-            wireDetailsToggles();
             
             // Mettre à jour les top performers
             if (stocksData.top_performers) {
@@ -1073,41 +1017,10 @@ document.addEventListener('DOMContentLoaded', function() {
             showElement('indices-container');
             
         } catch (error) {
-            console.error('❌ Erreur lors de l\\'affichage des données:', error);
+            console.error('❌ Erreur lors de l\'affichage des données:', error);
             hideElement('indices-loading');
             showElement('indices-error');
         }
-    }
-    
-    /**
-     * Active les boutons toggle de détails
-     */
-    function wireDetailsToggles() {
-        document.querySelectorAll('.tp-details-btn').forEach(btn => {
-            btn.onclick = function() {
-                const k = this.dataset.key;
-                const row = document.querySelector(`.tp-details[data-for="${CSS.escape(k)}"]`);
-                if (!row) return;
-                row.classList.toggle('hidden');
-                this.textContent = row.classList.contains('hidden') ? 'Détails ▾' : 'Masquer ▴';
-            };
-        });
-    }
-    
-    /**
-     * Vérifier si un dividende est imminent (dans les 7 jours)
-     */
-    function checkExDividendSoon(dividends) {
-        if (!dividends || dividends.length === 0) return false;
-        const nextDiv = dividends[0];
-        if (!nextDiv.ex_date) return false;
-        
-        const exDate = new Date(nextDiv.ex_date);
-        const today = new Date();
-        const diffTime = exDate - today;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        return diffDays >= 0 && diffDays <= 7;
     }
     
     /**
@@ -1525,7 +1438,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Si la pagination est active (STOXX), on ne peut pas tout montrer
             if (currentMarket === 'stoxx') {
                 // Afficher une notification
-                showNotification('La vue "TOUS" n\\'est pas disponible pour ce marché en raison de la pagination.', 'warning');
+                showNotification('La vue "TOUS" n\'est pas disponible pour ce marché en raison de la pagination.', 'warning');
                 return;
             }
             
@@ -1617,7 +1530,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         noResultsRow = document.createElement('tr');
                         noResultsRow.className = 'no-results-row';
                         noResultsRow.innerHTML = `
-                            <td colspan="9" class="no-results">
+                            <td colspan="8" class="no-results">
                                 <i class="fas fa-search mr-2"></i>
                                 Aucun résultat pour "${searchTerm}" dans cette section
                             </td>
