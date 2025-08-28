@@ -274,7 +274,8 @@ document.addEventListener('DOMContentLoaded', function() {
             ytd: pctToStr(ytd),
             volume: r.volume == null ? '-' : Number(r.volume).toLocaleString('fr-FR'),
             marketIcon,
-            regionBadgeClass: `region-${region.toLowerCase()}`
+            regionBadgeClass: `region-${region.toLowerCase()}`,
+            exchange: r.exchange // Ajouter l'exchange si disponible
         };
     }
     
@@ -451,6 +452,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     /**
      * Affiche les tops depuis tops_overview.json
+     * MODIFIÉ: Passe le trend (up/down) selon le filtre actif
      */
     function renderTop() {
       if (!topsOverview?.sets?.[topScope]) {
@@ -478,19 +480,25 @@ document.addEventListener('DOMContentLoaded', function() {
       const valueField = timeframeDaily ? 'change_percent' : 'perf_ytd';
       
       if (data) {
-        // Créer les cartes directement dans le container global
-        renderTopTenCardsInContainer(container, data, valueField, 'global');
+        // Passer le trend (up ou down) selon le filtre actif
+        renderTopTenCardsInContainer(
+          container, 
+          data, 
+          valueField, 
+          'global',
+          { trend: directionUp ? 'up' : 'down' }
+        );
       }
     }
     
     /**
      * Render des cartes directement dans un container
-     * PATCH 1: Passer directement le container element
+     * MODIFIÉ: Accepte opts en paramètre supplémentaire
      */
-    function renderTopTenCardsInContainer(containerEl, stocks, valueField, marketSource) {
+    function renderTopTenCardsInContainer(containerEl, stocks, valueField, marketSource, opts = {}) {
         if (!containerEl) return;
-        // Déléguer à la version robuste de renderTopTenCards
-        renderTopTenCards(containerEl, stocks, valueField, marketSource);
+        // Déléguer à la version robuste de renderTopTenCards avec opts
+        renderTopTenCards(containerEl, stocks, valueField, marketSource, opts);
     }
     
     /**
@@ -1017,6 +1025,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     /**
      * Met à jour le top 10 des actions
+     * MODIFIÉ: Passe trend aux appels renderTopTenCards
      */
     function updateTopTenStocks(data) {
         // Vérifier d'abord si les données et top_performers existent
@@ -1046,7 +1055,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const displayStocks = filteredBest.slice(0, 10);
             ensureAtLeastTenItems(displayStocks, currentMarket, true);
             
-            renderTopTenCards('top-daily-gainers', displayStocks, 'change', currentMarket);
+            renderTopTenCards('top-daily-gainers', displayStocks, 'change', currentMarket, {trend: 'up'});
         }
         
         // Mise à jour du top 10 Baisse quotidienne
@@ -1068,7 +1077,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const displayStocks = filteredWorst.slice(0, 10);
             ensureAtLeastTenItems(displayStocks, currentMarket, false);
             
-            renderTopTenCards('top-daily-losers', displayStocks, 'change', currentMarket);
+            renderTopTenCards('top-daily-losers', displayStocks, 'change', currentMarket, {trend: 'down'});
         }
         
         // Mise à jour du top 10 Hausse YTD
@@ -1090,7 +1099,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const displayStocks = filteredBestYtd.slice(0, 10);
             ensureAtLeastTenItems(displayStocks, currentMarket, true);
             
-            renderTopTenCards('top-ytd-gainers', displayStocks, 'ytd', currentMarket);
+            renderTopTenCards('top-ytd-gainers', displayStocks, 'ytd', currentMarket, {trend: 'up'});
         }
         
         // Mise à jour du top 10 Baisse YTD
@@ -1112,13 +1121,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const displayStocks = filteredWorstYtd.slice(0, 10);
             ensureAtLeastTenItems(displayStocks, currentMarket, false);
             
-            renderTopTenCards('top-ytd-losers', displayStocks, 'ytd', currentMarket);
+            renderTopTenCards('top-ytd-losers', displayStocks, 'ytd', currentMarket, {trend: 'down'});
         }
     }
     
     /**
      * Met à jour le top 10 global directement à partir des données pré-combinées
-     * @param {Object} globalData
+     * MODIFIÉ: Passe trend aux appels renderTopTenCards
      */
     function updateGlobalTopTen(globalData = null) {
         // Si nous avons des données globales pré-combinées, les utiliser directement
@@ -1131,28 +1140,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 const uniqueGainers = dedupFunction(globalData.daily.best);
                 // Filtrer les variations extrêmes
                 const filteredGainers = filterExtremeVariations(uniqueGainers, 'change', true);
-                renderTopTenCards('top-global-gainers', filteredGainers, 'change', 'global');
+                renderTopTenCards('top-global-gainers', filteredGainers, 'change', 'global', {trend: 'up'});
             }
             
             if (globalData.daily && globalData.daily.worst) {
                 const uniqueLosers = dedupFunction(globalData.daily.worst);
                 // Filtrer les variations extrêmes
                 const filteredLosers = filterExtremeVariations(uniqueLosers, 'change', false);
-                renderTopTenCards('top-global-losers', filteredLosers, 'change', 'global');
+                renderTopTenCards('top-global-losers', filteredLosers, 'change', 'global', {trend: 'down'});
             }
             
             if (globalData.ytd && globalData.ytd.best) {
                 const uniqueYtdGainers = dedupFunction(globalData.ytd.best);
                 // Filtrer les variations extrêmes
                 const filteredYtdGainers = filterExtremeVariations(uniqueYtdGainers, 'ytd', true);
-                renderTopTenCards('top-global-ytd-gainers', filteredYtdGainers, 'ytd', 'global');
+                renderTopTenCards('top-global-ytd-gainers', filteredYtdGainers, 'ytd', 'global', {trend: 'up'});
             }
             
             if (globalData.ytd && globalData.ytd.worst) {
                 const uniqueYtdLosers = dedupFunction(globalData.ytd.worst);
                 // Filtrer les variations extrêmes
                 const filteredYtdLosers = filterExtremeVariations(uniqueYtdLosers, 'ytd', false);
-                renderTopTenCards('top-global-ytd-losers', filteredYtdLosers, 'ytd', 'global');
+                renderTopTenCards('top-global-ytd-losers', filteredYtdLosers, 'ytd', 'global', {trend: 'down'});
             }
             
             return;
@@ -1179,9 +1188,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     /**
      * Fonction améliorée pour afficher les cartes du top 10 avec un meilleur design
-     * PATCH 2: Version robuste qui accepte ID string ou Element
+     * MODIFIÉ: Accepte opts pour gérer le trend (up/down) et forcer le signe/couleur
      */
-    function renderTopTenCards(target, stocks, valueField, marketSource) {
+    function renderTopTenCards(target, stocks, valueField, marketSource, opts = {}) {
         // target peut être un ID ou un Element
         let root = null;
         if (typeof target === 'string') {
@@ -1220,7 +1229,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         displayStocks.forEach((stock, index) => {
             // Déterminer le signe et la classe pour la valeur
-            let value = stock[valueField] || '-';
+            let value = stock[valueField] || stock.change || stock.ytd || '-';
             // Gérer les deux formats de champ
             if (valueField === 'change_percent' && !stock.change_percent && stock.change) {
                 value = stock.change;
@@ -1229,24 +1238,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 value = stock.ytd;
             }
             
-            let valueClass = 'positive';
-            
             // Convertir en string si c'est un nombre
-            if (typeof value === 'number') {
-                value = value.toFixed(2) + '%';
-            }
+            let text = typeof value === 'number' ? value.toFixed(2) + '%' : String(value);
             
-            if (value.toString().includes('-')) {
+            // Déterminer la classe de couleur
+            let valueClass = /-/.test(text) ? 'negative' : 'positive';
+            
+            // NOUVEAU: Forcer le signe/couleur selon le filtre (up/down)
+            if (opts.trend === 'down' && !/-/.test(text)) {
+                // Si on affiche des baisses mais que la valeur n'a pas de signe négatif
                 valueClass = 'negative';
+                text = text.replace(/^\+?/, '-'); // Forcer le signe -
+            } else if (opts.trend === 'up' && /^-/.test(text)) {
+                // Si on affiche des hausses mais que la valeur a un signe négatif
+                valueClass = 'positive';
+                text = text.replace(/^-/, '+'); // Forcer le signe +
+            } else if (opts.trend === 'up' && !text.startsWith('+') && !text.startsWith('-') && text !== '-') {
+                // Ajouter le + si manquant pour les hausses
+                text = '+' + text;
             }
             
-            // Déterminer l'icône du marché
-            let marketIcon = '';
-            if (marketSource === 'global') {
-                marketIcon = stock.marketIcon || '';
-            } else {
-                marketIcon = stock.marketIcon || '';
-            }
+            // Déterminer l'icône du marché et tag d'exchange pour l'Asie
+            let marketIcon = stock.marketIcon || '';
+            const exTag = stock.exchange && ['HK', 'TW', 'KR', 'IN', 'JP', 'SG'].includes(stock.exchange) 
+                ? `<span class="ml-1 text-xs opacity-60">${stock.exchange}</span>` 
+                : '';
             
             // Ajouter une animation subtile pour les 3 premiers
             let specialClass = '';
@@ -1282,11 +1298,11 @@ document.addEventListener('DOMContentLoaded', function() {
             card.innerHTML = `
                 <div class="rank ${rankBg} ${rankStyle} ${glowEffect}">#${index + 1}</div>
                 <div class="stock-info ${specialClass}">
-                    <div class="stock-name">${ticker} ${marketIcon}</div>
-                    <div class="stock-fullname">${stock.name || '-'}</div>
+                    <div class="stock-name">${ticker} ${marketIcon} ${exTag}</div>
+                    <div class="stock-fullname" title="${stock.name || ''}">${stock.name || '-'}</div>
                 </div>
                 <div class="stock-performance ${valueClass}">
-                    ${value}
+                    ${text}
                     ${index < 3 ? '<div class="trend-arrow"></div>' : ''}
                 </div>
             `;
