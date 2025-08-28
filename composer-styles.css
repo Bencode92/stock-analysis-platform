@@ -1,0 +1,159 @@
+/* Styles pour le Composer Multi-critères */
+.mini-input, .mini-select {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
+    background: rgba(255,255,255,0.05);
+    font-size: 0.9rem;
+    color: var(--text-color);
+}
+
+.mini-input {
+    width: 110px;
+}
+
+.mc-pill {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 10px;
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.04);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.mc-pill:hover {
+    background: rgba(0,255,135,0.08);
+    border-color: var(--accent-medium);
+}
+
+.mc-pill input[type="checkbox"],
+.mc-pill input[type="radio"] {
+    accent-color: #00FF87;
+}
+
+.mc-pill input:checked + span {
+    color: var(--accent-color);
+}
+
+.mc-mode-btn {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 14px;
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.04);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.mc-mode-btn:hover {
+    background: rgba(0,255,135,0.08);
+}
+
+.mc-mode-btn.active {
+    background: var(--accent-subtle);
+    border-color: var(--accent-medium);
+}
+
+.mc-mode-btn input {
+    display: none;
+}
+
+.mc-filter {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 4px 0;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.mc-filter input {
+    accent-color: #00FF87;
+}
+
+.mc-chip {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    padding: 4px 8px;
+    border: 1px solid var(--card-border);
+    border-radius: 999px;
+    background: rgba(0,255,135,0.06);
+    margin-right: 6px;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+}
+
+.mc-chip button {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    opacity: 0.7;
+    color: var(--text-color);
+    font-size: 1.2rem;
+    line-height: 1;
+    padding: 0;
+    margin: 0;
+}
+
+.mc-chip button:hover {
+    opacity: 1;
+    color: var(--negative-color);
+}
+
+.mc-score {
+    font-weight: 800;
+    font-size: 0.95rem;
+}
+
+.composer-section {
+    margin-bottom: 2.5rem;
+}
+
+#mc-summary {
+    padding: 8px 12px;
+    background: rgba(0,255,135,0.06);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    font-size: 0.85rem;
+}
+
+/* Dark mode specific styles */
+.dark .mini-input, .dark .mini-select {
+    color: var(--text-color);
+    background: rgba(255,255,255,0.05);
+}
+
+.dark .mini-select option {
+    background: var(--background-color);
+    color: var(--text-color);
+}
+
+/* Light mode specific styles */
+.light .mini-input, .light .mini-select {
+    color: var(--light-text-color);
+    background: rgba(0,0,0,0.05);
+    border-color: rgba(0,0,0,0.1);
+}
+
+.light .mc-pill {
+    border-color: rgba(0,0,0,0.1);
+    background: rgba(0,0,0,0.02);
+}
+
+.light .mc-mode-btn {
+    border-color: rgba(0,0,0,0.1);
+    background: rgba(0,0,0,0.02);
+}
+
+.light .mc-chip {
+    border-color: rgba(0,210,110,0.3);
+    background: rgba(0,210,110,0.08);
+}
