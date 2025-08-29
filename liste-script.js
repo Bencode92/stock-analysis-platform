@@ -4,6 +4,7 @@
  * Version améliorée avec chargement dynamique des données par marché et sélection multi-régions
  * Ajout de panneaux détails extensibles pour chaque action
  * MODIFIÉ: Section A→Z indépendante des filtres Top 10
+ * AJOUT: Filtres région, pays et secteur pour la section A→Z
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -38,6 +39,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
     
+    // Données complètes non filtrées pour la section A→Z
+    let stocksDataUnfiltered = null;
+    
     // Données des deux marchés pour le classement global
     let globalData = {
         nasdaq: null,
@@ -66,6 +70,25 @@ document.addEventListener('DOMContentLoaded', function() {
       'ASIA,EUROPE': 'EUROPE_ASIA'
     };
     
+    // État pour les filtres A→Z (séparé du Top 10)
+    let azSelectedRegions = new Set(['GLOBAL']);
+    let azScope = 'GLOBAL';
+    let azCountryFilter = '';
+    let azSectorFilter = '';
+    
+    // Mapping pays par région
+    const COUNTRIES_BY_REGION = {
+        US: ['États-Unis', 'USA', 'United States'],
+        EUROPE: ['Allemagne', 'France', 'Suisse', 'Pays-Bas', 'Royaume-Uni', 'Espagne', 'Italie', 'Belgique', 'Suède', 'Norvège', 'Danemark', 'Finlande', 'Autriche', 'Portugal', 'Irlande', 'Luxembourg'],
+        ASIA: ['Chine', 'Japon', 'Corée', 'Taïwan', 'Inde', 'Singapour', 'Hong Kong', 'Malaisie', 'Thaïlande', 'Indonésie', 'Philippines', 'Vietnam']
+    };
+    
+    // Liste des secteurs disponibles
+    const AVAILABLE_SECTORS = [
+        'Technologie', 'Finance', 'Santé', 'Industrie', 'Consommation', 'Énergie', 
+        'Matériaux', 'Services publics', 'Immobilier', 'Télécommunications', 'Services'
+    ];
+    
     // Données des tops overview
     let topsOverview = null;
     
@@ -80,6 +103,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialiser la barre de recherche
     initSearchFunctionality();
+    
+    // Initialiser les filtres A→Z
+    initAZFilters();
     
     // Mettre à jour l'horloge du marché
     updateMarketTime();
@@ -130,6 +156,200 @@ document.addEventListener('DOMContentLoaded', function() {
         renderTop();
         // SUPPRIMÉ: loadAZDataForCurrentSelection(true);
     });
+    
+    /**
+     * Initialise les filtres A→Z
+     */
+    function initAZFilters() {
+        const azScopeBox = document.getElementById('az-scope');
+        if (!azScopeBox) return;
+        
+        const btns = [...azScopeBox.querySelectorAll('.market-btn')];
+        
+        const updateAZButtonsUI = () => {
+            btns.forEach(b => {
+                const k = b.dataset.scope;
+                b.classList.toggle('active', azSelectedRegions.has(k));
+            });
+        };
+        
+        btns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.dataset.scope;
+                
+                // Même logique que Top 10
+                if (key === 'GLOBAL') {
+                    azSelectedRegions.clear();
+                    azSelectedRegions.add('GLOBAL');
+                } else {
+                    if (azSelectedRegions.has('GLOBAL')) azSelectedRegions.delete('GLOBAL');
+                    
+                    if (azSelectedRegions.has(key)) {
+                        azSelectedRegions.delete(key);
+                    } else {
+                        if (azSelectedRegions.size >= 2) {
+                            showToast('Maximum 2 régions simultanément');
+                            return;
+                        }
+                        azSelectedRegions.add(key);
+                    }
+                    
+                    if (azSelectedRegions.size === 0) azSelectedRegions.add('GLOBAL');
+                }
+                
+                updateAZButtonsUI();
+                updateCountryDropdown();
+                filterAZStocks();
+            });
+        });
+        
+        // Initialiser les dropdowns
+        initSectorDropdown();
+        
+        // Filtres dropdown
+        document.getElementById('az-country-filter')?.addEventListener('change', (e) => {
+            azCountryFilter = e.target.value;
+            filterAZStocks();
+        });
+        
+        document.getElementById('az-sector-filter')?.addEventListener('change', (e) => {
+            azSectorFilter = e.target.value;
+            filterAZStocks();
+        });
+        
+        // Initialisation
+        updateCountryDropdown();
+    }
+    
+    /**
+     * Initialise le dropdown des secteurs
+     */
+    function initSectorDropdown() {
+        const select = document.getElementById('az-sector-filter');
+        if (!select) return;
+        
+        select.innerHTML = '<option value="">Tous secteurs</option>';
+        
+        // Récupérer les secteurs uniques depuis les données si disponibles
+        if (stocksDataUnfiltered) {
+            const sectors = new Set();
+            Object.values(stocksDataUnfiltered.indices).forEach(letterStocks => {
+                letterStocks.forEach(stock => {
+                    if (stock.sector) sectors.add(stock.sector);
+                });
+            });
+            
+            [...sectors].sort().forEach(sector => {
+                const option = document.createElement('option');
+                option.value = sector;
+                option.textContent = sector;
+                select.appendChild(option);
+            });
+        } else {
+            // Utiliser la liste par défaut
+            AVAILABLE_SECTORS.forEach(sector => {
+                const option = document.createElement('option');
+                option.value = sector;
+                option.textContent = sector;
+                select.appendChild(option);
+            });
+        }
+    }
+    
+    /**
+     * Mettre à jour la liste de pays selon les régions
+     */
+    function updateCountryDropdown() {
+        const select = document.getElementById('az-country-filter');
+        if (!select) return;
+        
+        select.innerHTML = '<option value="">Tous pays</option>';
+        
+        const regions = azSelectedRegions.has('GLOBAL') 
+            ? ['US', 'EUROPE', 'ASIA'] 
+            : Array.from(azSelectedRegions);
+        
+        const countries = new Set();
+        
+        // Si on a les données, récupérer les pays réels
+        if (stocksDataUnfiltered) {
+            Object.values(stocksDataUnfiltered.indices).forEach(letterStocks => {
+                letterStocks.forEach(stock => {
+                    if (regions.includes(stock.region) && stock.country) {
+                        countries.add(stock.country);
+                    }
+                });
+            });
+        } else {
+            // Sinon utiliser le mapping par défaut
+            regions.forEach(r => {
+                COUNTRIES_BY_REGION[r]?.forEach(c => countries.add(c));
+            });
+        }
+        
+        [...countries].sort().forEach(country => {
+            const option = document.createElement('option');
+            option.value = country;
+            option.textContent = country;
+            select.appendChild(option);
+        });
+    }
+    
+    /**
+     * Filtrer les stocks A→Z
+     */
+    function filterAZStocks() {
+        if (!stocksDataUnfiltered) return;
+        
+        const alphabet = "abcdefghijklmnopqrstuvwxyz".split('');
+        let totalVisible = 0;
+        
+        // Créer les indices filtrés
+        const filteredIndices = {};
+        alphabet.forEach(l => filteredIndices[l] = []);
+        
+        // Appliquer les filtres
+        Object.entries(stocksDataUnfiltered.indices).forEach(([letter, stocks]) => {
+            stocks.forEach(stock => {
+                let show = true;
+                
+                // Filtre région
+                if (!azSelectedRegions.has('GLOBAL')) {
+                    if (!azSelectedRegions.has(stock.region)) show = false;
+                }
+                
+                // Filtre pays
+                if (azCountryFilter && stock.country !== azCountryFilter) show = false;
+                
+                // Filtre secteur  
+                if (azSectorFilter && stock.sector !== azSectorFilter) show = false;
+                
+                if (show) {
+                    filteredIndices[letter].push(stock);
+                    totalVisible++;
+                }
+            });
+        });
+        
+        // Mettre à jour stocksData avec les données filtrées
+        stocksData = {
+            ...stocksDataUnfiltered,
+            indices: filteredIndices,
+            meta: {
+                ...stocksDataUnfiltered.meta,
+                count: totalVisible
+            }
+        };
+        
+        // Mettre à jour le compteur
+        const countElement = document.getElementById('az-filtered-count');
+        if (countElement) {
+            countElement.textContent = totalVisible;
+        }
+        
+        // Re-render les données
+        renderStocksData();
+    }
     
     /**
      * Initialise les boutons de sélection multi-régions pour les Top 10
@@ -414,8 +634,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 stats.byRegion[r] = uniq.filter(s => s.region === r).length;
             });
             
-            // Mettre à jour stocksData
-            stocksData = {
+            // Sauvegarder les données non filtrées
+            stocksDataUnfiltered = {
                 indices,
                 meta: {
                     source: 'TradePulse',
@@ -426,6 +646,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             };
             
+            // Copier vers stocksData pour l'affichage initial
+            stocksData = { ...stocksDataUnfiltered };
+            
             console.log(`✅ Section A→Z: ${stats.total} actions globales chargées`);
             
             // Afficher les statistiques dans l'UI
@@ -434,6 +657,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 regionBreakdown.textContent = Object.entries(stats.byRegion)
                     .map(([r, c]) => `${r}: ${c}`)
                     .join(' | ');
+            }
+            
+            // Mettre à jour les dropdowns
+            updateCountryDropdown();
+            initSectorDropdown();
+            
+            // Mettre à jour le compteur filtré
+            const countElement = document.getElementById('az-filtered-count');
+            if (countElement) {
+                countElement.textContent = stats.total;
             }
             
             // Afficher les données
@@ -1024,6 +1257,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             // Ligne principale avec colonnes directement visibles
                             const row = document.createElement('tr');
                             row.setAttribute('data-region', stock.region);
+                            row.setAttribute('data-country', stock.country || '');
+                            row.setAttribute('data-sector', stock.sector || '');
                             row.className = 'border-b border-white/5 hover:bg-white/5 transition-colors';
                             
                             const changeClass = stock.change && stock.change.includes('-') ? 'negative' : 'positive';
