@@ -1,181 +1,313 @@
 /**
- * Script amélioré pour les sélecteurs pays/secteurs
- * Inclut la logique de filtrage et de mise à jour
+ * Sélecteurs pays/secteurs INTELLIGENTS - Approche dynamique
+ * Extraction automatique depuis les données, filtrage contextuel
  */
 
-// Données disponibles pour les filtres
-const AVAILABLE_COUNTRIES = [
-    { value: 'US', label: '🇺🇸 États-Unis' },
-    { value: 'FR', label: '🇫🇷 France' },
-    { value: 'DE', label: '🇩🇪 Allemagne' },
-    { value: 'UK', label: '🇬🇧 Royaume-Uni' },
-    { value: 'JP', label: '🇯🇵 Japon' },
-    { value: 'CN', label: '🇨🇳 Chine' },
-    { value: 'IN', label: '🇮🇳 Inde' },
-    { value: 'CH', label: '🇨🇭 Suisse' },
-    { value: 'NL', label: '🇳🇱 Pays-Bas' },
-    { value: 'KR', label: '🇰🇷 Corée du Sud' },
-    { value: 'TW', label: '🇹🇼 Taiwan' },
-    { value: 'SG', label: '🇸🇬 Singapour' },
-    { value: 'HK', label: '🇭🇰 Hong Kong' },
-    { value: 'SE', label: '🇸🇪 Suède' },
-    { value: 'NO', label: '🇳🇴 Norvège' },
-    { value: 'DK', label: '🇩🇰 Danemark' },
-    { value: 'ES', label: '🇪🇸 Espagne' },
-    { value: 'IT', label: '🇮🇹 Italie' },
-    { value: 'BE', label: '🇧🇪 Belgique' },
-    { value: 'AU', label: '🇦🇺 Australie' },
-    { value: 'CA', label: '🇨🇦 Canada' },
-    { value: 'BR', label: '🇧🇷 Brésil' },
-    { value: 'MX', label: '🇲🇽 Mexique' },
-    { value: 'RU', label: '🇷🇺 Russie' },
-    { value: 'SA', label: '🇸🇦 Arabie Saoudite' },
-    { value: 'AE', label: '🇦🇪 Émirats' },
-    { value: 'ZA', label: '🇿🇦 Afrique du Sud' }
-];
-
-const AVAILABLE_SECTORS = [
-    { value: 'TECH', label: '💻 Technologie' },
-    { value: 'FINANCE', label: '🏦 Finance' },
-    { value: 'HEALTH', label: '🏥 Santé' },
-    { value: 'ENERGY', label: '⚡ Énergie' },
-    { value: 'CONSUMER', label: '🛒 Consommation' },
-    { value: 'INDUSTRIAL', label: '🏭 Industrie' },
-    { value: 'MATERIALS', label: '🏗️ Matériaux' },
-    { value: 'REALESTATE', label: '🏢 Immobilier' },
-    { value: 'UTILITIES', label: '💡 Services publics' },
-    { value: 'TELECOM', label: '📱 Télécoms' },
-    { value: 'MEDIA', label: '📺 Médias' },
-    { value: 'TRANSPORT', label: '✈️ Transport' },
-    { value: 'FOOD', label: '🍕 Alimentation' },
-    { value: 'RETAIL', label: '🛍️ Distribution' },
-    { value: 'AUTO', label: '🚗 Automobile' },
-    { value: 'PHARMA', label: '💊 Pharmacie' },
-    { value: 'BIOTECH', label: '🧬 Biotechnologie' },
-    { value: 'AEROSPACE', label: '🚀 Aérospatiale' },
-    { value: 'DEFENSE', label: '🛡️ Défense' },
-    { value: 'LUXURY', label: '💎 Luxe' },
-    { value: 'GAMING', label: '🎮 Jeux vidéo' },
-    { value: 'CRYPTO', label: '₿ Crypto' },
-    { value: 'INSURANCE', label: '🛡️ Assurance' },
-    { value: 'EDUCATION', label: '🎓 Éducation' },
-    { value: 'HOSPITALITY', label: '🏨 Hôtellerie' }
-];
-
-// État des filtres
-let activeFilters = {
+// État global des filtres et données
+const FilterState = {
+    // Filtres actifs
     top: {
-        countries: [],
-        sectors: []
+        regions: new Set(['GLOBAL']),
+        countries: new Set(),
+        sectors: new Set()
     },
     az: {
-        countries: [],
-        sectors: []
-    }
+        regions: new Set(['GLOBAL']),
+        countries: new Set(),
+        sectors: new Set()
+    },
+    
+    // Données extraites dynamiquement
+    data: {
+        regions: new Map(), // région -> Set de pays
+        countries: new Map(), // pays -> Set de secteurs
+        sectors: new Set(),
+        allStocks: []
+    },
+    
+    // État de chargement
+    loading: false,
+    initialized: false
 };
 
-// Fonction pour peupler les sélecteurs
-function populateSelectors() {
-    // Top 10 - Pays
-    const topCountrySelect = document.getElementById('top-country-filter');
-    if (topCountrySelect) {
-        topCountrySelect.innerHTML = '<option disabled>— Pays (multi) —</option>';
-        AVAILABLE_COUNTRIES.forEach(country => {
-            const option = document.createElement('option');
-            option.value = country.value;
-            option.textContent = country.label;
-            topCountrySelect.appendChild(option);
+/**
+ * Extraction intelligente des données géographiques depuis les stocks
+ */
+async function extractGeoData() {
+    if (FilterState.loading || FilterState.initialized) return;
+    FilterState.loading = true;
+    
+    try {
+        // Charger toutes les sources de données
+        const sources = [
+            { file: 'data/stocks_us.json', region: 'US' },
+            { file: 'data/stocks_europe.json', region: 'EUROPE' },
+            { file: 'data/stocks_asia.json', region: 'ASIA' }
+        ];
+        
+        const allStocks = [];
+        const regionMap = new Map();
+        const countryMap = new Map();
+        const sectorsSet = new Set();
+        
+        for (const source of sources) {
+            try {
+                const response = await fetch(source.file);
+                if (!response.ok) continue;
+                
+                const data = await response.json();
+                if (!data?.stocks) continue;
+                
+                const regionCountries = new Set();
+                
+                data.stocks.forEach(stock => {
+                    // Enrichir avec région
+                    stock.region = source.region;
+                    
+                    // Extraction intelligente du pays
+                    let country = stock.country;
+                    if (!country) {
+                        // Déduction depuis exchange ou autres indices
+                        const exchange = stock.exchange?.toLowerCase() || '';
+                        const name = stock.name?.toLowerCase() || '';
+                        
+                        if (source.region === 'US') {
+                            country = '🇺🇸 États-Unis';
+                        } else if (source.region === 'EUROPE') {
+                            if (exchange.includes('london') || exchange.includes('lse')) country = '🇬🇧 UK';
+                            else if (exchange.includes('paris') || exchange.includes('euronext')) country = '🇫🇷 France';
+                            else if (exchange.includes('frankfurt') || exchange.includes('xetra')) country = '🇩🇪 Allemagne';
+                            else if (exchange.includes('milan')) country = '🇮🇹 Italie';
+                            else if (exchange.includes('madrid')) country = '🇪🇸 Espagne';
+                            else if (exchange.includes('amsterdam')) country = '🇳🇱 Pays-Bas';
+                            else if (exchange.includes('swiss') || exchange.includes('six')) country = '🇨🇭 Suisse';
+                            else if (exchange.includes('stockholm')) country = '🇸🇪 Suède';
+                            else if (exchange.includes('copenhagen')) country = '🇩🇰 Danemark';
+                            else if (exchange.includes('oslo')) country = '🇳🇴 Norvège';
+                            else country = '🇪🇺 Europe';
+                        } else if (source.region === 'ASIA') {
+                            if (exchange.includes('tokyo') || exchange.includes('japan')) country = '🇯🇵 Japon';
+                            else if (exchange.includes('shanghai') || exchange.includes('shenzhen') || exchange.includes('china')) country = '🇨🇳 Chine';
+                            else if (exchange.includes('hong') || exchange.includes('hkex')) country = '🇭🇰 Hong Kong';
+                            else if (exchange.includes('korea') || exchange.includes('kospi')) country = '🇰🇷 Corée';
+                            else if (exchange.includes('taiwan')) country = '🇹🇼 Taiwan';
+                            else if (exchange.includes('singapore') || exchange.includes('sgx')) country = '🇸🇬 Singapour';
+                            else if (exchange.includes('india') || exchange.includes('nse') || exchange.includes('bse')) country = '🇮🇳 Inde';
+                            else if (exchange.includes('australia') || exchange.includes('asx')) country = '🇦🇺 Australie';
+                            else country = '🌏 Asie';
+                        }
+                    }
+                    stock.country = country;
+                    
+                    // Extraction intelligente du secteur
+                    let sector = stock.sector;
+                    if (!sector) {
+                        const name = stock.name?.toLowerCase() || '';
+                        const ticker = stock.ticker?.toLowerCase() || '';
+                        
+                        // Détection par mots-clés
+                        if (name.includes('bank') || name.includes('financial') || name.includes('capital')) {
+                            sector = '🏦 Finance';
+                        } else if (name.includes('tech') || name.includes('software') || name.includes('semi') || name.includes('microsoft') || name.includes('apple')) {
+                            sector = '💻 Technologie';
+                        } else if (name.includes('pharma') || name.includes('health') || name.includes('medical') || name.includes('bio')) {
+                            sector = '🏥 Santé';
+                        } else if (name.includes('energy') || name.includes('oil') || name.includes('gas') || name.includes('petroleum')) {
+                            sector = '⚡ Énergie';
+                        } else if (name.includes('retail') || name.includes('consumer') || name.includes('amazon') || name.includes('walmart')) {
+                            sector = '🛒 Consommation';
+                        } else if (name.includes('industrial') || name.includes('manufacturing') || name.includes('machinery')) {
+                            sector = '🏭 Industrie';
+                        } else if (name.includes('real estate') || name.includes('reit') || name.includes('property')) {
+                            sector = '🏢 Immobilier';
+                        } else if (name.includes('telecom') || name.includes('communication')) {
+                            sector = '📱 Télécoms';
+                        } else if (name.includes('auto') || name.includes('motor') || name.includes('tesla') || name.includes('volkswagen')) {
+                            sector = '🚗 Automobile';
+                        } else if (name.includes('aerospace') || name.includes('defense') || name.includes('boeing') || name.includes('airbus')) {
+                            sector = '✈️ Aérospatiale';
+                        } else if (name.includes('material') || name.includes('chemical') || name.includes('mining')) {
+                            sector = '⚒️ Matériaux';
+                        } else if (name.includes('utility') || name.includes('electric') || name.includes('water')) {
+                            sector = '💡 Services publics';
+                        } else {
+                            sector = '📊 Autres';
+                        }
+                    }
+                    stock.sector = sector;
+                    
+                    // Ajouter aux collections
+                    regionCountries.add(country);
+                    sectorsSet.add(sector);
+                    
+                    // Ajouter au mapping pays -> secteurs
+                    if (!countryMap.has(country)) {
+                        countryMap.set(country, new Set());
+                    }
+                    countryMap.get(country).add(sector);
+                    
+                    allStocks.push(stock);
+                });
+                
+                regionMap.set(source.region, regionCountries);
+                
+            } catch (err) {
+                console.warn(`Erreur chargement ${source.file}:`, err);
+            }
+        }
+        
+        // Ajouter une option GLOBAL qui contient tous les pays
+        const allCountries = new Set();
+        regionMap.forEach(countries => {
+            countries.forEach(c => allCountries.add(c));
         });
-    }
-
-    // Top 10 - Secteurs
-    const topSectorSelect = document.getElementById('top-sector-filter');
-    if (topSectorSelect) {
-        topSectorSelect.innerHTML = '<option disabled>— Secteur (multi) —</option>';
-        AVAILABLE_SECTORS.forEach(sector => {
-            const option = document.createElement('option');
-            option.value = sector.value;
-            option.textContent = sector.label;
-            topSectorSelect.appendChild(option);
+        regionMap.set('GLOBAL', allCountries);
+        
+        // Stocker les données extraites
+        FilterState.data = {
+            regions: regionMap,
+            countries: countryMap,
+            sectors: sectorsSet,
+            allStocks: allStocks
+        };
+        
+        FilterState.initialized = true;
+        console.log('✅ Données géographiques extraites:', {
+            régions: regionMap.size,
+            pays: countryMap.size,
+            secteurs: sectorsSet.size,
+            stocks: allStocks.length
         });
-    }
-
-    // A→Z - Pays
-    const azCountrySelect = document.getElementById('az-country-filter');
-    if (azCountrySelect) {
-        azCountrySelect.innerHTML = '<option disabled>— Pays (multi) —</option>';
-        AVAILABLE_COUNTRIES.forEach(country => {
-            const option = document.createElement('option');
-            option.value = country.value;
-            option.textContent = country.label;
-            azCountrySelect.appendChild(option);
-        });
-    }
-
-    // A→Z - Secteurs
-    const azSectorSelect = document.getElementById('az-sector-filter');
-    if (azSectorSelect) {
-        azSectorSelect.innerHTML = '<option disabled>— Secteur (multi) —</option>';
-        AVAILABLE_SECTORS.forEach(sector => {
-            const option = document.createElement('option');
-            option.value = sector.value;
-            option.textContent = sector.label;
-            azSectorSelect.appendChild(option);
-        });
+        
+    } catch (err) {
+        console.error('❌ Erreur extraction données:', err);
+    } finally {
+        FilterState.loading = false;
     }
 }
 
-// Fonction pour gérer les changements de sélection
-function handleSelectionChange(selectId, filterType, section) {
+/**
+ * Créer les sélecteurs de façon dynamique
+ */
+function createDynamicSelectors(section) {
+    const container = document.getElementById(`${section}-facets-container`);
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="pills facets-pills" role="group" aria-label="Filtres ${section === 'top' ? 'Top 10' : 'A→Z'}">
+            <div class="select-wrapper">
+                <select id="${section}-country-filter" class="pill mini-select" multiple aria-label="Pays">
+                    <option disabled>— Chargement pays... —</option>
+                </select>
+            </div>
+            <div class="select-wrapper">
+                <select id="${section}-sector-filter" class="pill mini-select" multiple aria-label="Secteur">
+                    <option disabled>— Chargement secteurs... —</option>
+                </select>
+            </div>
+            <button id="${section}-clear-facets" class="action-button" aria-label="Réinitialiser">
+                <i class="fas fa-times"></i> Effacer
+            </button>
+        </div>
+    `;
+}
+
+/**
+ * Mettre à jour les options selon la région active
+ */
+function updateSelectorsForRegion(section) {
+    const activeRegions = FilterState[section].regions;
+    const countrySelect = document.getElementById(`${section}-country-filter`);
+    const sectorSelect = document.getElementById(`${section}-sector-filter`);
+    
+    if (!countrySelect || !sectorSelect) return;
+    
+    // Déterminer les pays disponibles selon les régions actives
+    const availableCountries = new Set();
+    activeRegions.forEach(region => {
+        const countries = FilterState.data.regions.get(region);
+        if (countries) {
+            countries.forEach(c => availableCountries.add(c));
+        }
+    });
+    
+    // Trier les pays
+    const sortedCountries = Array.from(availableCountries).sort((a, b) => {
+        // Retirer les emojis pour le tri
+        const cleanA = a.replace(/[^\w\s]/gi, '').trim();
+        const cleanB = b.replace(/[^\w\s]/gi, '').trim();
+        return cleanA.localeCompare(cleanB);
+    });
+    
+    // Mettre à jour le sélecteur pays
+    countrySelect.innerHTML = `
+        <option disabled>— Pays (${sortedCountries.length}) —</option>
+        ${sortedCountries.map(country => 
+            `<option value="${country}">${country}</option>`
+        ).join('')}
+    `;
+    
+    // Mettre à jour le sélecteur secteurs
+    const sortedSectors = Array.from(FilterState.data.sectors).sort();
+    sectorSelect.innerHTML = `
+        <option disabled>— Secteurs (${sortedSectors.length}) —</option>
+        ${sortedSectors.map(sector => 
+            `<option value="${sector}">${sector}</option>`
+        ).join('')}
+    `;
+    
+    // Restaurer les sélections précédentes si elles existent encore
+    Array.from(FilterState[section].countries).forEach(country => {
+        const option = countrySelect.querySelector(`option[value="${country}"]`);
+        if (option) option.selected = true;
+    });
+    
+    Array.from(FilterState[section].sectors).forEach(sector => {
+        const option = sectorSelect.querySelector(`option[value="${sector}"]`);
+        if (option) option.selected = true;
+    });
+    
+    // Mettre à jour les badges
+    updateSelectBadge(`${section}-country-filter`, FilterState[section].countries.size);
+    updateSelectBadge(`${section}-sector-filter`, FilterState[section].sectors.size);
+}
+
+/**
+ * Gérer les changements de sélection
+ */
+function handleFacetChange(selectId, section, filterType) {
     const select = document.getElementById(selectId);
     if (!select) return;
-
+    
     const selectedOptions = Array.from(select.selectedOptions)
         .filter(opt => !opt.disabled)
         .map(opt => opt.value);
-
-    activeFilters[section][filterType] = selectedOptions;
-
-    // Mettre à jour le badge de compteur
+    
+    FilterState[section][filterType] = new Set(selectedOptions);
+    
     updateSelectBadge(selectId, selectedOptions.length);
-
-    // Déclencher l'événement de mise à jour
-    if (section === 'top') {
-        window.dispatchEvent(new CustomEvent('topFiltersChanged', {
-            detail: {
-                ...activeFilters.top,
-                source: 'facets'
-            }
-        }));
-    } else {
-        window.dispatchEvent(new CustomEvent('azFiltersChanged', {
-            detail: {
-                ...activeFilters.az,
-                source: 'facets'
-            }
-        }));
-    }
-
-    // Animation de mise à jour
-    select.classList.add('updating');
-    setTimeout(() => select.classList.remove('updating'), 500);
+    
+    // Émettre l'événement de mise à jour
+    window.dispatchEvent(new CustomEvent(`${section}FiltersChanged`, {
+        detail: {
+            regions: Array.from(FilterState[section].regions),
+            countries: Array.from(FilterState[section].countries),
+            sectors: Array.from(FilterState[section].sectors),
+            source: 'dynamic-facets'
+        }
+    }));
 }
 
-// Fonction pour mettre à jour le badge de compteur
+/**
+ * Badge de compteur sur les sélecteurs
+ */
 function updateSelectBadge(selectId, count) {
     const select = document.getElementById(selectId);
     if (!select) return;
-
+    
     let wrapper = select.parentElement;
-    if (!wrapper.classList.contains('select-wrapper')) {
-        // Créer le wrapper s'il n'existe pas
-        wrapper = document.createElement('div');
-        wrapper.className = 'select-wrapper';
-        select.parentNode.insertBefore(wrapper, select);
-        wrapper.appendChild(select);
-    }
-
-    // Gérer le badge
+    if (!wrapper.classList.contains('select-wrapper')) return;
+    
     let badge = wrapper.querySelector('.select-count');
     if (count > 0) {
         if (!badge) {
@@ -189,107 +321,117 @@ function updateSelectBadge(selectId, count) {
     }
 }
 
-// Fonction pour réinitialiser les filtres
-function clearFilters(section) {
-    if (section === 'top') {
-        const topCountry = document.getElementById('top-country-filter');
-        const topSector = document.getElementById('top-sector-filter');
-        if (topCountry) topCountry.selectedIndex = -1;
-        if (topSector) topSector.selectedIndex = -1;
-        activeFilters.top = { countries: [], sectors: [] };
-        updateSelectBadge('top-country-filter', 0);
-        updateSelectBadge('top-sector-filter', 0);
-    } else {
-        const azCountry = document.getElementById('az-country-filter');
-        const azSector = document.getElementById('az-sector-filter');
-        if (azCountry) azCountry.selectedIndex = -1;
-        if (azSector) azSector.selectedIndex = -1;
-        activeFilters.az = { countries: [], sectors: [] };
-        updateSelectBadge('az-country-filter', 0);
-        updateSelectBadge('az-sector-filter', 0);
-    }
-
-    // Déclencher l'événement de mise à jour
-    const eventName = section === 'top' ? 'topFiltersChanged' : 'azFiltersChanged';
-    window.dispatchEvent(new CustomEvent(eventName, {
-        detail: section === 'top' ? activeFilters.top : activeFilters.az
+/**
+ * Réinitialiser les filtres
+ */
+function clearFacets(section) {
+    FilterState[section].countries.clear();
+    FilterState[section].sectors.clear();
+    
+    const countrySelect = document.getElementById(`${section}-country-filter`);
+    const sectorSelect = document.getElementById(`${section}-sector-filter`);
+    
+    if (countrySelect) countrySelect.selectedIndex = -1;
+    if (sectorSelect) sectorSelect.selectedIndex = -1;
+    
+    updateSelectBadge(`${section}-country-filter`, 0);
+    updateSelectBadge(`${section}-sector-filter`, 0);
+    
+    window.dispatchEvent(new CustomEvent(`${section}FiltersChanged`, {
+        detail: {
+            regions: Array.from(FilterState[section].regions),
+            countries: [],
+            sectors: [],
+            source: 'dynamic-facets'
+        }
     }));
 }
 
-// Initialisation au chargement
-function initEnhancedFilters() {
-    // Peupler les sélecteurs
-    populateSelectors();
-
-    // Ajouter les gestionnaires d'événements pour Top 10
-    const topCountrySelect = document.getElementById('top-country-filter');
-    const topSectorSelect = document.getElementById('top-sector-filter');
-    const topClearBtn = document.getElementById('top-clear-facets');
-
-    if (topCountrySelect) {
-        topCountrySelect.addEventListener('change', () => 
-            handleSelectionChange('top-country-filter', 'countries', 'top')
-        );
-    }
-
-    if (topSectorSelect) {
-        topSectorSelect.addEventListener('change', () => 
-            handleSelectionChange('top-sector-filter', 'sectors', 'top')
-        );
-    }
-
-    if (topClearBtn) {
-        topClearBtn.addEventListener('click', () => clearFilters('top'));
-    }
-
-    // Ajouter les gestionnaires d'événements pour A→Z
-    const azCountrySelect = document.getElementById('az-country-filter');
-    const azSectorSelect = document.getElementById('az-sector-filter');
-    const azClearBtn = document.getElementById('az-clear-facets');
-
-    if (azCountrySelect) {
-        azCountrySelect.addEventListener('change', () => 
-            handleSelectionChange('az-country-filter', 'countries', 'az')
-        );
-    }
-
-    if (azSectorSelect) {
-        azSectorSelect.addEventListener('change', () => 
-            handleSelectionChange('az-sector-filter', 'sectors', 'az')
-        );
-    }
-
-    if (azClearBtn) {
-        azClearBtn.addEventListener('click', () => clearFilters('az'));
-    }
-
-    // Support du ctrl+click pour sélection multiple
-    [topCountrySelect, topSectorSelect, azCountrySelect, azSectorSelect].forEach(select => {
-        if (select) {
-            select.addEventListener('mousedown', (e) => {
-                if (e.ctrlKey || e.metaKey || e.shiftKey) {
-                    e.preventDefault();
-                    const option = e.target;
-                    if (option.tagName === 'OPTION' && !option.disabled) {
-                        option.selected = !option.selected;
-                        const event = new Event('change', { bubbles: true });
-                        select.dispatchEvent(event);
-                    }
-                }
-            });
+/**
+ * Initialisation principale
+ */
+async function initDynamicFilters() {
+    // D'abord extraire les données
+    await extractGeoData();
+    
+    // Créer les conteneurs si nécessaire
+    ['top', 'az'].forEach(section => {
+        const toolbar = document.querySelector(section === 'top' ? '.tp-toolbar' : '#az-toolbar');
+        if (!toolbar) return;
+        
+        // Vérifier si le conteneur existe déjà
+        let container = document.getElementById(`${section}-facets-container`);
+        if (!container) {
+            container = document.createElement('div');
+            container.id = `${section}-facets-container`;
+            container.className = 'facets-container';
+            
+            // Insérer après les boutons de région
+            const regions = toolbar.querySelector(section === 'top' ? '.tp-regions' : '.az-regions');
+            if (regions && regions.nextSibling) {
+                toolbar.insertBefore(container, regions.nextSibling);
+            } else {
+                toolbar.appendChild(container);
+            }
+        }
+        
+        // Créer les sélecteurs
+        createDynamicSelectors(section);
+        
+        // Mettre à jour selon les régions actives
+        updateSelectorsForRegion(section);
+        
+        // Event listeners
+        const countrySelect = document.getElementById(`${section}-country-filter`);
+        const sectorSelect = document.getElementById(`${section}-sector-filter`);
+        const clearBtn = document.getElementById(`${section}-clear-facets`);
+        
+        if (countrySelect) {
+            countrySelect.addEventListener('change', () => 
+                handleFacetChange(`${section}-country-filter`, section, 'countries')
+            );
+        }
+        
+        if (sectorSelect) {
+            sectorSelect.addEventListener('change', () => 
+                handleFacetChange(`${section}-sector-filter`, section, 'sectors')
+            );
+        }
+        
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => clearFacets(section));
         }
     });
+    
+    // Écouter les changements de région pour mettre à jour les sélecteurs
+    window.addEventListener('topFiltersChanged', (e) => {
+        if (e.detail.source !== 'dynamic-facets' && e.detail.regions) {
+            FilterState.top.regions = new Set(e.detail.regions);
+            updateSelectorsForRegion('top');
+        }
+    });
+    
+    window.addEventListener('azFiltersChanged', (e) => {
+        if (e.detail.source !== 'dynamic-facets' && e.detail.regions) {
+            FilterState.az.regions = new Set(e.detail.regions);
+            updateSelectorsForRegion('az');
+        }
+    });
+    
+    console.log('✅ Filtres dynamiques initialisés');
 }
 
-// Exposer les fonctions globalement
-window.activeFilters = activeFilters;
-window.clearFilters = clearFilters;
+// Exposer l'API globale
+window.DynamicFilters = {
+    init: initDynamicFilters,
+    state: FilterState,
+    updateRegion: updateSelectorsForRegion,
+    clear: clearFacets
+};
 
-// Initialisation différée pour s'assurer que le DOM est prêt
+// Auto-initialisation
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(initEnhancedFilters, 200);
-    });
+    document.addEventListener('DOMContentLoaded', initDynamicFilters);
 } else {
-    setTimeout(initEnhancedFilters, 200);
+    setTimeout(initDynamicFilters, 100);
 }
