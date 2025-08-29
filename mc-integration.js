@@ -116,6 +116,105 @@ if (!document.getElementById('mc-styles')) {
     padding: 0;
     margin-bottom: 0.5rem;
   }
+  
+  /* === NOUVEAUX STYLES POUR AFFICHAGE VERTICAL === */
+  
+  /* Conteneur de résultats verticaux */
+  #mc-results .space-y-2 > div {
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Carte de résultat améliorée */
+  #mc-results .glassmorphism {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+  }
+  
+  #mc-results .glassmorphism:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--accent-color);
+    transform: translateX(2px);
+  }
+  
+  /* Rang avec style accent */
+  #mc-results .rank {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--accent-color);
+    opacity: 0.9;
+    min-width: 50px;
+  }
+  
+  /* Priorités dynamiques */
+  .priority-item {
+    cursor: move;
+    transition: all 0.2s ease;
+  }
+  
+  .priority-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  
+  .priority-number {
+    min-width: 20px;
+  }
+  
+  .remove-priority {
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+  }
+  
+  .remove-priority:hover {
+    opacity: 1;
+  }
+  
+  /* Sélecteur d'ajout de priorité */
+  #add-priority {
+    margin-top: 0.5rem;
+  }
+  
+  /* Explications des modes */
+  #mode-explanation {
+    background: rgba(0, 255, 135, 0.05);
+    border-left: 2px solid var(--accent-color);
+    font-size: 0.75rem;
+  }
+  
+  #mode-explanation strong {
+    color: var(--accent-color);
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+  
+  /* Colonnes de métriques dans les résultats */
+  #mc-results .flex.gap-4 {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+  
+  #mc-results .flex.gap-4 > div {
+    min-width: 60px;
+  }
+  
+  /* Couleurs pour les valeurs */
+  .text-green-400 { color: #4ade80; }
+  .text-red-400 { color: #f87171; }
+  .text-yellow-400 { color: #facc15; }
+  .text-blue-400 { color: #60a5fa; }
+  
+  /* Icônes de région */
+  #mc-results .fa-flag-usa,
+  #mc-results .fa-globe-europe,
+  #mc-results .fa-globe-asia {
+    margin-left: 0.25rem;
+    opacity: 0.7;
+  }
   `;
   document.head.appendChild(mcStyles);
 }
@@ -179,7 +278,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <legend class="text-sm opacity-70 mb-2">Critères (sans pondération)</legend>
         <div class="flex flex-wrap gap-2">
           <label class="mc-pill"><input id="m-perf_1y" type="checkbox" checked aria-label="Performance 1 an"> Perf 1Y ↑</label>
-          <label class="mc-pill"><input id="m-ytd" type="checkbox" aria-label="Year to date"> YTD ↑</label>
+          <label class="mc-pill"><input id="m-ytd" type="checkbox" checked aria-label="Year to date"> YTD ↑</label>
           <label class="mc-pill"><input id="m-perf_3m" type="checkbox" aria-label="Performance 3 mois"> Perf 3M ↑</label>
           <label class="mc-pill"><input id="m-perf_1m" type="checkbox" aria-label="Performance 1 mois"> Perf 1M ↑</label>
           <label class="mc-pill"><input id="m-volatility_3y" type="checkbox" checked aria-label="Volatilité 3 ans"> Vol 3Y ↓</label>
@@ -195,11 +294,8 @@ document.addEventListener('DOMContentLoaded', function() {
           <label class="mc-pill"><input type="radio" name="mc-mode" value="lexico"> Priorités</label>
         </div>
         <div id="mc-lexico" class="mt-2 hidden" aria-hidden="true">
-          <div class="text-xs opacity-70 mb-1">Ordre des priorités</div>
-          <div class="grid grid-cols-3 gap-2">
-            <select id="mc-prio1" class="mini-select" aria-label="Priorité 1"></select>
-            <select id="mc-prio2" class="mini-select" aria-label="Priorité 2"></select>
-            <select id="mc-prio3" class="mini-select" aria-label="Priorité 3"></select>
+          <div class="grid grid-cols-1 gap-2">
+            <!-- Interface dynamique des priorités sera générée par JS -->
           </div>
         </div>
       </fieldset>
@@ -227,14 +323,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div>
       <div id="mc-results" class="glassmorphism rounded-lg p-4" aria-live="polite" aria-label="Résultats du composeur">
         <div class="stock-cards-container">
-          <div class="stock-card">
-            <div class="rank">#1</div>
-            <div class="stock-info">
-              <div class="stock-name">En attente <i class="fas fa-spinner fa-spin ml-1"></i></div>
-              <div class="stock-fullname">Configure et clique "Appliquer"</div>
-            </div>
-            <div class="stock-performance neutral">—</div>
-          </div>
+          <!-- Les résultats seront générés ici en affichage vertical -->
         </div>
       </div>
     </div>
