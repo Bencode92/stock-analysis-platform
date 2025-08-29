@@ -149,8 +149,14 @@ if (!document.getElementById('mc-styles')) {
   }
   
   /* Effet cyan au clic */
-  .mc-pill:active,
-  .mc-pill input:checked + .mc-pill {
+  .mc-pill:active {
+    background:rgba(0, 255, 255, 0.25) !important;
+    border-color: #00ffff !important;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+  }
+  
+  /* Style pour les pills cochées (via classe JS) */
+  .mc-pill.is-checked {
     background:rgba(0, 255, 255, 0.2) !important;
     border-color: #00ffff !important;
     box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
