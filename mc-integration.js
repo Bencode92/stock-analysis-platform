@@ -5,38 +5,50 @@
 const mcStyles = document.createElement('style');
 mcStyles.textContent = `
 /* ===== STYLES POUR LE COMPOSEUR MULTI-CRITÈRES ===== */
-:root { --section-gap: 56px; }
+:root { --section-gap: 80px; }
 .section { margin-bottom: var(--section-gap); }
 
-/* Diviseur étiqueté */
+/* Diviseur étiqueté PLUS VISIBLE */
 .section-divider {
   position: relative;
-  height: 1px;
-  margin: 40px 0 28px;
-  background: linear-gradient(90deg, transparent, var(--card-border), transparent);
+  height: 2px;
+  margin: 60px 0 40px;
+  background: linear-gradient(90deg, 
+    transparent, 
+    var(--accent-color) 20%, 
+    var(--accent-color) 80%, 
+    transparent);
+  opacity: 0.3;
 }
 .section-divider::before {
   content: attr(data-label);
   position: absolute;
-  top: 0; left: 0;
+  top: 50%; 
+  left: 20px;
   transform: translateY(-50%);
-  padding: 6px 12px;
+  padding: 8px 20px;
   border-radius: 999px;
-  font-weight: 700;
-  letter-spacing: .02em;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 .dark .section-divider::before {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  color: rgba(255,255,255,.9);
-  box-shadow: var(--accent-glow);
+  background: linear-gradient(135deg, 
+    rgba(0,255,135,0.1), 
+    rgba(0,255,135,0.05));
+  border: 1.5px solid var(--accent-color);
+  color: var(--accent-color);
+  box-shadow: 0 0 20px rgba(0,255,135,0.2);
 }
 .light .section-divider::before {
-  background: rgba(255,255,255,.8);
-  border: 1px solid rgba(0,0,0,.08);
-  color: var(--light-text-color);
+  background: linear-gradient(135deg, 
+    rgba(0,200,100,0.1), 
+    rgba(0,200,100,0.05));
+  border: 1.5px solid rgba(0,200,100,0.8);
+  color: rgba(0,150,75,1);
 }
 
 /* Grille Composer : filtres à gauche, résultats à droite */
