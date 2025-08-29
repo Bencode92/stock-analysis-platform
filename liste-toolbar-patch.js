@@ -1,10 +1,32 @@
 /**
- * Patch simplifié - Uniquement les boutons de région pour A→Z
+ * Patch minimal - Seulement les boutons de région, sans filtres pays/secteurs
  */
 
 // États pour A→Z
 window.azScope = 'GLOBAL';
 window.azSelectedRegions = new Set(['GLOBAL']);
+
+// Supprimer tous les containers de facettes au chargement
+function removeAllFacets() {
+    // Supprimer les containers de facettes s'ils existent
+    const topFacets = document.getElementById('top-facets-container');
+    const azFacets = document.getElementById('az-facets-container');
+    
+    if (topFacets) topFacets.remove();
+    if (azFacets) azFacets.remove();
+    
+    // Supprimer tous les selects de type pays/secteurs
+    document.querySelectorAll('select.pill').forEach(select => {
+        select.remove();
+    });
+    
+    // Supprimer les labels associés
+    document.querySelectorAll('label').forEach(label => {
+        if (label.textContent.includes('Pays') || label.textContent.includes('Secteurs')) {
+            label.remove();
+        }
+    });
+}
 
 // Initialiser uniquement les boutons de région pour A→Z
 function initAZToolbar() {
@@ -12,7 +34,6 @@ function initAZToolbar() {
     if (!azBar) return;
 
     const regionBtns = [...azBar.querySelectorAll('.az-regions .seg-btn')];
-    const hint = document.getElementById('az-hint');
     const REGION_ORDER = ['US','EUROPE','ASIA'];
     const COMBO_MAP = {
         'US,EUROPE':'US_EUROPE',
@@ -25,13 +46,6 @@ function initAZToolbar() {
         if (window.azSelectedRegions.size === 1) return [...window.azSelectedRegions][0];
         const arr = [...window.azSelectedRegions].sort((a,b) => REGION_ORDER.indexOf(a) - REGION_ORDER.indexOf(b));
         return COMBO_MAP[`${arr[0]},${arr[1]}`] || 'GLOBAL';
-    }
-    
-    function updateHint() {
-        if (!hint) return;
-        const key = computeAzScope();
-        hint.textContent = key === 'GLOBAL' ? 'GLOBAL exclusif' : 
-            (window.azSelectedRegions.size === 1 ? `${[...window.azSelectedRegions][0]} uniquement` : 'Combo régional');
     }
 
     regionBtns.forEach(btn => {
@@ -66,15 +80,12 @@ function initAZToolbar() {
                 }
             }
             
-            updateHint();
             window.azScope = computeAzScope();
             window.dispatchEvent(new CustomEvent('azFiltersChanged', {
                 detail: { scope: window.azScope, regions: [...window.azSelectedRegions] }
             }));
         });
     });
-
-    updateHint();
 }
 
 // Event listener
@@ -86,11 +97,17 @@ window.addEventListener('azFiltersChanged', function(e) {
     }
 });
 
-// Initialisation
+// Initialisation avec suppression des facettes
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
+        removeAllFacets();
         setTimeout(initAZToolbar, 100);
+        // Nettoyer périodiquement au cas où d'autres scripts ajouteraient des éléments
+        setInterval(removeAllFacets, 1000);
     });
 } else {
+    removeAllFacets();
     setTimeout(initAZToolbar, 100);
+    // Nettoyer périodiquement
+    setInterval(removeAllFacets, 1000);
 }
