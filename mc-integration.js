@@ -123,6 +123,13 @@ if (!document.getElementById('mc-styles')) {
     outline: none;
   }
   
+  /* Ajustement pour les contrôles de filtres */
+  .filter-controls .mini-select,
+  .filter-controls .mini-input {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+  
   .mc-pill{
     display:inline-flex;
     gap:8px;
@@ -475,7 +482,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .find(title => title.textContent.includes('Actions par lettre'));
     
     if (actionsParLettre && !document.getElementById('mc-section')) {
-        // Créer section Composer avec structure accessible
+        // Créer section Composer avec structure accessible et critères RÉORGANISÉS
         const mcSection = document.createElement('section');
         mcSection.id = 'mc-section';
         mcSection.className = 'section';
@@ -490,12 +497,17 @@ document.addEventListener('DOMContentLoaded', function() {
       <fieldset>
         <legend class="text-sm opacity-70 mb-2">Critères sélectionnés = Ordre de priorité</legend>
         <div class="flex flex-wrap gap-2">
-          <label class="mc-pill"><input id="m-perf_1y" type="checkbox" aria-label="Performance 1 an"> Perf 1Y ↑</label>
-          <label class="mc-pill"><input id="m-ytd" type="checkbox" checked aria-label="Year to date"> YTD ↑</label>
-          <label class="mc-pill"><input id="m-perf_3m" type="checkbox" aria-label="Performance 3 mois"> Perf 3M ↑</label>
+          <!-- Performance (organisé par période) -->
+          <label class="mc-pill"><input id="m-perf_daily" type="checkbox" aria-label="Performance journalière"> Perf Daily ↑</label>
           <label class="mc-pill"><input id="m-perf_1m" type="checkbox" aria-label="Performance 1 mois"> Perf 1M ↑</label>
+          <label class="mc-pill"><input id="m-perf_3m" type="checkbox" aria-label="Performance 3 mois"> Perf 3M ↑</label>
+          <label class="mc-pill"><input id="m-ytd" type="checkbox" checked aria-label="Year to date"> YTD ↑</label>
+          <label class="mc-pill"><input id="m-perf_1y" type="checkbox" aria-label="Performance 1 an"> Perf 1Y ↑</label>
+          <label class="mc-pill"><input id="m-perf_3y" type="checkbox" aria-label="Performance 3 ans"> Perf 3Y ↑</label>
+          <!-- Risque -->
           <label class="mc-pill"><input id="m-volatility_3y" type="checkbox" aria-label="Volatilité 3 ans"> Vol 3Y ↓</label>
           <label class="mc-pill"><input id="m-max_drawdown_3y" type="checkbox" aria-label="Drawdown maximum 3 ans"> Max DD 3Y ↓</label>
+          <!-- Dividende -->
           <label class="mc-pill"><input id="m-dividend_yield" type="checkbox" checked aria-label="Rendement dividende"> Div. Yield ↑</label>
         </div>
       </fieldset>
