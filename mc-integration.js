@@ -70,17 +70,27 @@ if (!document.getElementById('mc-styles')) {
     box-shadow: 0 0 20px rgba(0,255,135,0.2);
   }
 
-  /* Grille Composer plus flexible */
+  /* Grille Composer ÉLARGIE pour les filtres */
   .composer-grid {
     display: grid;
-    grid-template-columns: minmax(280px, 360px) 1fr;
-    gap: 20px;
+    grid-template-columns: minmax(380px, 450px) 1fr;
+    gap: 24px;
   }
+  
+  @media (max-width: 1200px) {
+    .composer-grid { 
+      grid-template-columns: minmax(340px, 400px) 1fr;
+      gap: 20px;
+    }
+  }
+  
   @media (max-width: 1024px) {
-    .composer-grid { grid-template-columns: 1fr; }
+    .composer-grid { 
+      grid-template-columns: 1fr; 
+    }
   }
 
-  /* === PANNEAU FILTRES EN CYAN === */
+  /* === PANNEAU FILTRES EN CYAN ÉLARGI === */
   .composer-filters { 
     position: sticky; 
     top: calc(var(--header-height, 60px) + 12px);
@@ -98,12 +108,13 @@ if (!document.getElementById('mc-styles')) {
 
   /* Styles existants MC avec accent cyan */
   .mini-input,.mini-select{
-    padding:8px 10px;
+    padding:8px 12px;
     border-radius:8px;
     border:1px solid rgba(0, 200, 255, 0.3);
     background:rgba(0, 255, 255, 0.05);
     font-size:.9rem;
     color: #fff;
+    width: 100%;
   }
   
   .mini-input:focus, .mini-select:focus {
@@ -148,18 +159,27 @@ if (!document.getElementById('mc-styles')) {
   
   .mc-score{font-weight:800;color:#00ffff}
   
-  /* Amélioration accessibilité fieldsets */
+  /* Amélioration accessibilité fieldsets avec plus d'espace */
   fieldset {
     border: none;
     padding: 0;
-    margin: 0 0 1rem;
+    margin: 0 0 1.25rem;
   }
   
   fieldset legend {
     padding: 0;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
     color: rgba(0, 255, 255, 0.8);
     font-weight: 600;
+  }
+  
+  /* Espacement pour les filtres géographiques */
+  #geo-filters-container .flex {
+    margin-bottom: 0.75rem;
+  }
+  
+  #geo-filters-container label {
+    min-width: 80px !important;
   }
   
   /* Boutons avec style cyan et effet clic */
@@ -368,6 +388,8 @@ if (!document.getElementById('mc-styles')) {
   /* Summary avec style cyan */
   #mc-summary {
     color: rgba(0, 255, 255, 0.7);
+    line-height: 1.4;
+    padding: 0.5rem 0;
   }
   
   #mc-summary strong {
@@ -395,6 +417,16 @@ if (!document.getElementById('mc-styles')) {
     background: rgba(0, 255, 255, 0.3) !important;
     border-color: #00ffff !important;
     transform: scale(0.9);
+  }
+  
+  /* Amélioration du padding pour les filtres */
+  .composer-filters.glassmorphism {
+    padding: 1.25rem !important;
+  }
+  
+  /* Plus d'espace entre les sections */
+  .composer-filters fieldset + fieldset {
+    margin-top: 1.5rem;
   }
   `;
   document.head.appendChild(mcStyles);
