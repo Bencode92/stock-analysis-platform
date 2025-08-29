@@ -42,9 +42,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Insérer le nouveau bloc MC après le Top 10 Global
-    const topGlobalContainer = document.getElementById('top-global-container');
-    if (topGlobalContainer && !document.getElementById('mc-section')) {
+    // Insérer le nouveau bloc MC juste avant "Actions par lettre"
+    const actionsParLettre = document.querySelector('h2.section-title');
+    let targetElement = null;
+    
+    // Trouver le titre "Actions par lettre"
+    document.querySelectorAll('h2.section-title').forEach(title => {
+        if (title.textContent.includes('Actions par lettre')) {
+            targetElement = title;
+        }
+    });
+    
+    if (targetElement && !document.getElementById('mc-section')) {
         const mcSection = document.createElement('section');
         mcSection.id = 'mc-section';
         mcSection.className = 'mb-10';
@@ -123,8 +132,8 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </div>
         `;
-        // Insérer après le parent du Top Global
-        topGlobalContainer.parentElement.parentElement.insertAdjacentElement('afterend', mcSection);
+        // Insérer juste avant "Actions par lettre"
+        targetElement.parentElement.insertBefore(mcSection, targetElement);
     }
     
     // Charger le module MC
@@ -137,4 +146,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 500);
 });
 
-console.log('✅ Script d\'intégration MC chargé - Bloc NASDAQ supprimé');
+console.log('✅ Script d\'intégration MC chargé - Placé avant Actions par lettre');
