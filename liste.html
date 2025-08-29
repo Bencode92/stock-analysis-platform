@@ -679,6 +679,7 @@
              background-color: var(--accent-subtle);
              color: var(--accent-color);
              border: 1px solid var(--accent-medium);
+             cursor: pointer;
          }
          
          .action-button:hover {
@@ -1369,6 +1370,8 @@
              }
          }
      </style>
+     <!-- Styles additionnels pour les selects multiples -->
+     <link rel="stylesheet" href="liste-styles-patch.css">
  </head>
  <body class="dark">
      <!-- Bouton du sélecteur de thème -->
@@ -2189,9 +2192,10 @@
      </main>
 
      <script src="liste-script.js"></script>
-      <link rel="stylesheet" href="mc-styles.css">
-    <script src="mc-integration.js"></script>
-    <script src="mc-module.js"></script>
+     <script src="liste-toolbar-patch.js"></script>
+     <link rel="stylesheet" href="mc-styles.css">
+     <script src="mc-integration.js"></script>
+     <script src="mc-module.js"></script>
      
      <!-- Script amélioré pour la nouvelle barre de contrôle -->
      <script>
