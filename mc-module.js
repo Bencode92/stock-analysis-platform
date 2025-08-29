@@ -1,4 +1,4 @@
-// ===== MC (Multi-Critères) – Top 10 avec interface flexible ===================
+// ===== MC (Multi-Critères) – Interface unifiée avec drag & drop ===================
 (function(){
   // Attendre que le DOM soit prêt
   if (!document.querySelector('#mc-section')) {
@@ -19,7 +19,7 @@
 
   // util parse %
   const p = (s)=>{
-    if(s==null||s==='-') return NaN;
+    if(s==null||s==='-'||s==='') return NaN;
     let t=String(s).replace(',', '.').replace(/[+%]/g,'').trim(); 
     return parseFloat(t);
   };
@@ -35,9 +35,8 @@
     dividend_yield:  {label:'Div. Yield',     unit:'%', get:s=>p(s.dividend_yield), max:true},
   };
 
-  // DOM - utiliser root comme base
+  // DOM
   const modeRadios=[...root.querySelectorAll('input[name="mc-mode"]')];
-  const lexicoBox=document.getElementById('mc-lexico');
   const applyBtn=document.getElementById('mc-apply');
   const resetBtn=document.getElementById('mc-reset');
   const summary=document.getElementById('mc-summary');
@@ -47,57 +46,127 @@
     mode:'balanced', 
     data:[], 
     loading:false,
-    priorities: ['perf_1y', 'volatility_3y'], // Liste dynamique des priorités
-    customFilters: [] // Filtres rapides personnalisés
+    selectedMetrics: ['ytd', 'dividend_yield'], // Métriques sélectionnées = ordre de priorité
+    customFilters: []
   };
 
-  // Améliorer l'interface des priorités (remplacer les 3 selects par une liste dynamique)
-  function updatePriorityUI() {
-    if (!lexicoBox) return;
+  // Créer/mettre à jour la zone de priorités avec drag & drop
+  function updatePriorityDisplay() {
+    let priorityContainer = document.getElementById('priority-container');
     
-    const prioContainer = lexicoBox.querySelector('.grid') || lexicoBox;
-    prioContainer.innerHTML = `
-      <div class="text-xs opacity-70 mb-2">Ordre des priorités (glisser-déposer)</div>
-      <div id="priority-list" class="space-y-1 mb-2">
-        ${state.priorities.map((m, i) => `
-          <div class="priority-item flex items-center gap-2 p-2 rounded bg-white/5" data-metric="${m}">
-            <span class="priority-number text-xs opacity-50">${i+1}.</span>
-            <span class="flex-1">${METRICS[m].label} ${METRICS[m].max?'↑':'↓'}</span>
-            <button class="remove-priority text-red-400 hover:text-red-300" data-metric="${m}">✕</button>
-          </div>
-        `).join('')}
+    if (!priorityContainer) {
+      // Créer le conteneur s'il n'existe pas
+      const modeFieldset = root.querySelector('fieldset[role="radiogroup"]');
+      if (!modeFieldset) return;
+      
+      priorityContainer = document.createElement('div');
+      priorityContainer.id = 'priority-container';
+      priorityContainer.className = 'mt-3 p-3 rounded bg-white/5';
+      priorityContainer.innerHTML = `
+        <div class="text-xs opacity-70 mb-2">Ordre des priorités (glisser pour réorganiser)</div>
+        <div id="priority-list" class="space-y-1"></div>
+      `;
+      modeFieldset.appendChild(priorityContainer);
+    }
+    
+    const priorityList = document.getElementById('priority-list');
+    if (!priorityList) return;
+    
+    // Afficher uniquement si mode priorités
+    priorityContainer.style.display = state.mode === 'lexico' ? 'block' : 'none';
+    
+    // Générer la liste des priorités
+    priorityList.innerHTML = state.selectedMetrics.map((m, i) => `
+      <div class="priority-item flex items-center gap-2 p-2 rounded bg-white/5 cursor-move" 
+           draggable="true" data-metric="${m}">
+        <span class="drag-handle">☰</span>
+        <span class="priority-number text-xs opacity-50">${i+1}.</span>
+        <span class="flex-1">${METRICS[m].label} ${METRICS[m].max?'↑':'↓'}</span>
       </div>
-      <select id="add-priority" class="mini-select w-full">
-        <option value="">+ Ajouter une priorité</option>
-        ${Object.keys(METRICS)
-          .filter(k => !state.priorities.includes(k))
-          .map(k => `<option value="${k}">${METRICS[k].label} ${METRICS[k].max?'↑':'↓'}</option>`)
-          .join('')}
-      </select>
-    `;
+    `).join('') || '<div class="text-xs opacity-50">Cochez des critères pour définir les priorités</div>';
+    
+    // Ajouter les événements drag & drop
+    setupDragAndDrop();
+  }
 
-    // Event listeners pour ajouter/supprimer des priorités
-    const addSelect = document.getElementById('add-priority');
-    if (addSelect) {
-      addSelect.addEventListener('change', (e) => {
-        if (e.target.value) {
-          state.priorities.push(e.target.value);
-          updatePriorityUI();
+  // Drag & Drop pour réorganiser les priorités
+  function setupDragAndDrop() {
+    const items = document.querySelectorAll('.priority-item');
+    let draggedItem = null;
+    
+    items.forEach(item => {
+      item.addEventListener('dragstart', (e) => {
+        draggedItem = e.target;
+        e.target.style.opacity = '0.5';
+      });
+      
+      item.addEventListener('dragend', (e) => {
+        e.target.style.opacity = '';
+      });
+      
+      item.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const afterElement = getDragAfterElement(e.currentTarget.parentNode, e.clientY);
+        if (afterElement == null) {
+          e.currentTarget.parentNode.appendChild(draggedItem);
+        } else {
+          e.currentTarget.parentNode.insertBefore(draggedItem, afterElement);
         }
       });
-    }
+      
+      item.addEventListener('drop', (e) => {
+        e.preventDefault();
+        // Mettre à jour l'ordre dans state.selectedMetrics
+        const newOrder = [...document.querySelectorAll('.priority-item')].map(el => el.dataset.metric);
+        state.selectedMetrics = newOrder;
+        updatePriorityDisplay();
+      });
+    });
+  }
+  
+  function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.priority-item:not(.dragging)')];
+    
+    return draggableElements.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      
+      if (offset < 0 && offset > closest.offset) {
+        return { offset: offset, element: child };
+      } else {
+        return closest;
+      }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+  }
 
-    // Supprimer une priorité
-    prioContainer.querySelectorAll('.remove-priority').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const metric = e.target.dataset.metric;
-        state.priorities = state.priorities.filter(m => m !== metric);
-        updatePriorityUI();
+  // Synchroniser checkboxes et selectedMetrics
+  function setupMetricCheckboxes() {
+    Object.keys(METRICS).forEach(metricId => {
+      const checkbox = root.querySelector('#m-' + metricId);
+      if (!checkbox) return;
+      
+      // Mettre à jour l'état initial
+      if (state.selectedMetrics.includes(metricId)) {
+        checkbox.checked = true;
+      }
+      
+      // Écouter les changements
+      checkbox.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          // Ajouter à la fin si pas déjà présent
+          if (!state.selectedMetrics.includes(metricId)) {
+            state.selectedMetrics.push(metricId);
+          }
+        } else {
+          // Retirer de la liste
+          state.selectedMetrics = state.selectedMetrics.filter(m => m !== metricId);
+        }
+        updatePriorityDisplay();
       });
     });
   }
 
-  // Ajouter explication du mode équilibre
+  // Ajouter explication unifiée
   function addExplanation() {
     const modeContainer = root.querySelector('fieldset[role="radiogroup"]');
     if (modeContainer && !document.getElementById('mode-explanation')) {
@@ -105,81 +174,59 @@
       explanation.id = 'mode-explanation';
       explanation.className = 'text-xs opacity-60 mt-2 p-2 rounded bg-white/5';
       explanation.innerHTML = `
-        <div id="balanced-explanation" class="space-y-1">
-          <strong>Mode Équilibre :</strong> Chaque critère donne un score de 0 à 100 selon le classement percentile. 
-          La moyenne des scores détermine le rang final. Tous les critères ont le même poids.
+        <div id="balanced-explanation">
+          <strong>Mode Équilibre :</strong> Moyenne des scores percentiles (0-100) pour chaque critère coché.
         </div>
-        <div id="priority-explanation" class="hidden space-y-1">
-          <strong>Mode Priorités :</strong> Tri lexicographique - d'abord par le 1er critère, 
-          puis le 2e en cas d'égalité (±0.5%), etc.
+        <div id="priority-explanation" class="hidden">
+          <strong>Mode Priorités :</strong> Tri par ordre de priorité. Glissez pour réorganiser.
         </div>
       `;
       modeContainer.appendChild(explanation);
     }
   }
 
-  // charger les données depuis les fichiers JSON
+  // charger les données
   async function loadData() {
     if (state.loading) return;
     state.loading = true;
     
     try {
-      console.log('📊 MC: Chargement des données boursières...');
+      console.log('📊 MC: Chargement des données...');
       const files = ['data/stocks_us.json', 'data/stocks_europe.json', 'data/stocks_asia.json'];
       const responses = await Promise.all(
         files.map(f => 
           fetch(f)
-            .then(r => {
-              if (!r.ok) throw new Error(`HTTP ${r.status}`);
-              return r.json();
-            })
-            .catch(err => {
-              console.error(`❌ Erreur chargement ${f}:`, err);
-              return null;
-            })
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null)
         )
       );
       
       const allStocks = [];
-      let loadedRegions = [];
-      
       responses.forEach((data, index) => {
-        if (!data) return;
-        
+        if (!data?.stocks) return;
         const region = ['US', 'EUROPE', 'ASIA'][index];
-        loadedRegions.push(region);
-        
-        if (data.stocks && Array.isArray(data.stocks)) {
-          console.log(`📈 ${region}: ${data.stocks.length} actions`);
-          data.stocks.forEach(stock => {
-            stock.region = region;
-            allStocks.push(stock);
-          });
-        }
+        data.stocks.forEach(stock => {
+          stock.region = region;
+          allStocks.push(stock);
+        });
       });
       
       state.data = allStocks;
-      console.log(`✅ MC: ${allStocks.length} actions chargées (${loadedRegions.join(', ')})`);
+      console.log(`✅ MC: ${allStocks.length} actions chargées`);
       
       if (allStocks.length > 0) {
-        results.innerHTML = `<div class="text-center text-green-400 py-4">✅ ${allStocks.length} actions disponibles. Configurez et cliquez "Appliquer"</div>`;
+        results.innerHTML = `<div class="text-center text-green-400 py-4">✅ ${allStocks.length} actions disponibles</div>`;
       }
       
     } catch (err) {
-      console.error('❌ MC: Erreur chargement données:', err);
-      results.innerHTML = '<div class="text-center text-red-400 py-4">Erreur de chargement des données</div>';
+      console.error('❌ MC: Erreur:', err);
+      results.innerHTML = '<div class="text-center text-red-400 py-4">Erreur de chargement</div>';
     } finally {
       state.loading = false;
     }
   }
 
-  // critères cochés
-  function selectedMetrics(){
-    const ids = Object.keys(METRICS).filter(id => root.querySelector('#m-'+id)?.checked);
-    return ids.length? ids : ['perf_1y','volatility_3y'];
-  }
-
-  // filtres rapides dynamiques (à améliorer avec interface configurable)
+  // Filtres : EXCLURE les actions qui n'ont pas TOUTES les métriques requises
   function applyFilters(list){
     const quick = {
       q1y10: document.getElementById('q-1y10'),
@@ -188,22 +235,30 @@
       qVol40: document.getElementById('q-vol40'),
     };
 
-    return list.filter(s=>{
+    return list.filter(s => {
+      // IMPORTANT: Vérifier que TOUTES les métriques sélectionnées sont présentes
+      const hasAllMetrics = state.selectedMetrics.every(m => {
+        const value = METRICS[m].get(s);
+        return Number.isFinite(value);
+      });
+      
+      if (!hasAllMetrics) return false; // Exclure si manque une métrique
+      
+      // Appliquer les filtres rapides
       const v1y = METRICS.perf_1y.get(s);
-      const vytd= METRICS.ytd.get(s);
-      const vvol= METRICS.volatility_3y.get(s);
+      const vytd = METRICS.ytd.get(s);
+      const vvol = METRICS.volatility_3y.get(s);
 
-      if (quick.q1y10?.checked && !(v1y>=10)) return false;
-      if (quick.qytd10?.checked && !(vytd>=10)) return false;
-      if (quick.qNoNeg1y?.checked && !(v1y>0)) return false;
-      if (quick.qVol40?.checked && vvol>40) return false;
+      if (quick.q1y10?.checked && !(v1y >= 10)) return false;
+      if (quick.qytd10?.checked && !(vytd >= 10)) return false;
+      if (quick.qNoNeg1y?.checked && !(v1y > 0)) return false;
+      if (quick.qVol40?.checked && vvol > 40) return false;
 
-      const anySel = selectedMetrics().some(m => Number.isFinite(METRICS[m].get(s)));
-      return anySel;
+      return true;
     });
   }
 
-  // percentiles pour mode équilibre
+  // Calcul des percentiles
   function percentile(sorted, v){
     if(!Number.isFinite(v)||!sorted.length) return NaN;
     const lo = sorted[Math.floor(0.01*(sorted.length-1))];
@@ -214,12 +269,16 @@
     return Math.max(0, Math.min(1, (i-1)/(sorted.length-1)));
   }
 
-  // Mode équilibré : moyenne des percentiles
-  function rankBalanced(list, metrics){
+  // Mode équilibré
+  function rankBalanced(list){
+    const metrics = state.selectedMetrics;
+    if (!metrics.length) return [];
+    
     const dict={};
     metrics.forEach(m=>{
       dict[m] = list.map(s=>METRICS[m].get(s)).filter(Number.isFinite).sort((a,b)=>a-b);
     });
+    
     const scored=[];
     for(const s of list){
       let sum=0,k=0;
@@ -228,7 +287,7 @@
         if(!Number.isFinite(v)) continue;
         let pr = percentile(dict[m], v);
         if(!Number.isFinite(pr)) continue;
-        if(!METRICS[m].max) pr = 1-pr; // Inverser si on veut minimiser
+        if(!METRICS[m].max) pr = 1-pr;
         sum+=pr; k++;
       }
       if(k>0) scored.push({s, score: sum/k});
@@ -237,9 +296,11 @@
     return scored;
   }
 
-  // Mode priorités : tri lexicographique
+  // Mode priorités
   function rankLexico(list){
-    const prios = state.priorities.length ? state.priorities : ['perf_1y','volatility_3y'];
+    const prios = state.selectedMetrics;
+    if (!prios.length) return list.map(s=>({s, score:NaN}));
+    
     const EPS=0.5;
     const cmp=(a,b)=>{
       for(const m of prios){
@@ -254,10 +315,10 @@
     return list.slice().sort(cmp).map(s=>({s, score:NaN}));
   }
 
-  // Nouveau rendu avec métriques visibles verticalement
-  function render(entries, metrics){
+  // Rendu vertical avec métriques
+  function render(entries){
     results.innerHTML='';
-    results.className = 'space-y-2'; // Affichage vertical
+    results.className = 'space-y-2';
     
     const top = entries.slice(0,10);
     
@@ -279,10 +340,10 @@
       
       const tkr = e.s.ticker || e.s.symbol || (e.s.name||'').split(' ')[0] || '—';
       
-      // Préparer les valeurs des métriques sélectionnées
-      const metricValues = metrics.map(m => {
+      // Afficher uniquement les métriques sélectionnées
+      const metricValues = state.selectedMetrics.map(m => {
         const value = METRICS[m].get(e.s);
-        if (!Number.isFinite(value)) return `<span class="opacity-30">—</span>`;
+        if (!Number.isFinite(value)) return '';
         
         const formatted = value.toFixed(1);
         const colorClass = METRICS[m].max 
@@ -295,23 +356,23 @@
             <div class="${colorClass} font-semibold">${value > 0 && METRICS[m].max ? '+' : ''}${formatted}${METRICS[m].unit}</div>
           </div>
         `;
-      }).join('');
+      }).filter(Boolean).join('');
       
       // Icône de région
       let regionIcon = '';
       if (e.s.region === 'US') {
-        regionIcon = '<i class="fas fa-flag-usa text-xs text-blue-400" title="US"></i>';
+        regionIcon = '🇺🇸';
       } else if (e.s.region === 'EUROPE') {
-        regionIcon = '<i class="fas fa-globe-europe text-xs text-green-400" title="Europe"></i>';
+        regionIcon = '🇪🇺';
       } else if (e.s.region === 'ASIA') {
-        regionIcon = '<i class="fas fa-globe-asia text-xs text-red-400" title="Asie"></i>';
+        regionIcon = '🌏';
       }
       
       card.innerHTML=`
         <div class="rank text-2xl font-bold text-accent-color">#${i+1}</div>
         <div class="flex-1">
           <div class="font-semibold flex items-center gap-2">
-            ${tkr} ${regionIcon}
+            ${tkr} <span class="text-sm opacity-60">${regionIcon}</span>
           </div>
           <div class="text-xs opacity-60" title="${e.s.name||''}">${e.s.name||'—'}</div>
         </div>
@@ -321,17 +382,25 @@
       
       results.appendChild(card);
     });
+    
+    // Afficher le nombre d'actions si moins de 10
+    if (entries.length < 10 && entries.length > 0) {
+      const info = document.createElement('div');
+      info.className = 'text-center text-xs opacity-50 mt-3';
+      info.textContent = `Seulement ${entries.length} actions correspondent aux critères`;
+      results.appendChild(info);
+    }
   }
 
-  function setSummary(total, kept, metrics){
+  function setSummary(total, kept){
     if (!summary) return;
     const mode = state.mode==='balanced' ? 'Équilibre' : 'Priorités';
-    const labels = metrics.map(m=>METRICS[m].label).join(' · ');
-    summary.innerHTML = `<strong>${mode}</strong> • ${labels} • ${kept}/${total} actions`;
+    const labels = state.selectedMetrics.map(m=>METRICS[m].label).join(' · ');
+    summary.innerHTML = `<strong>${mode}</strong> • ${labels || 'Aucun critère'} • ${kept}/${total} actions`;
   }
 
   async function compute(){
-    console.log('🔍 MC: Calcul demandé');
+    console.log('🔍 MC: Calcul avec critères:', state.selectedMetrics);
     
     if (state.data.length === 0) {
       results.innerHTML = '<div class="text-center text-gray-400 py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Chargement...</div>';
@@ -340,29 +409,34 @@
     
     const base = state.data;
     if(!base.length){ 
-      results.innerHTML = '<div class="text-center text-gray-400 py-4">Aucune donnée disponible</div>';
+      results.innerHTML = '<div class="text-center text-gray-400 py-4">Aucune donnée</div>';
       return; 
+    }
+    
+    if (!state.selectedMetrics.length) {
+      results.innerHTML = '<div class="text-center text-yellow-400 py-4">Sélectionnez au moins un critère</div>';
+      setSummary(base.length, 0);
+      return;
     }
     
     const filtered = applyFilters(base);
     if (filtered.length === 0) {
-      results.innerHTML = '<div class="text-center text-yellow-400 py-4">Aucune action ne correspond aux filtres</div>';
-      setSummary(base.length, 0, selectedMetrics());
+      results.innerHTML = '<div class="text-center text-yellow-400 py-4">Aucune action avec toutes les métriques requises</div>';
+      setSummary(base.length, 0);
       return;
     }
     
-    const metrics = selectedMetrics();
-    const out = state.mode==='balanced' ? rankBalanced(filtered, metrics) : rankLexico(filtered);
-    setSummary(base.length, filtered.length, metrics);
-    render(out, metrics);
-    console.log(`✅ MC: Top 10 calculé (${filtered.length} actions filtrées)`);
+    const out = state.mode==='balanced' ? rankBalanced(filtered) : rankLexico(filtered);
+    setSummary(base.length, filtered.length);
+    render(out);
+    console.log(`✅ MC: ${filtered.length} actions avec toutes les métriques`);
   }
 
-  // UI wiring
+  // Event listeners
   modeRadios.forEach(r=>r.addEventListener('change',()=>{
     state.mode = modeRadios.find(x=>x.checked)?.value || 'balanced';
     
-    // Afficher/masquer les explications
+    // Afficher/masquer explications et priorités
     const balancedExp = document.getElementById('balanced-explanation');
     const priorityExp = document.getElementById('priority-explanation');
     if (balancedExp && priorityExp) {
@@ -370,27 +444,27 @@
       priorityExp.classList.toggle('hidden', state.mode !== 'lexico');
     }
     
-    if (lexicoBox) {
-      lexicoBox.classList.toggle('hidden', state.mode!=='lexico');
-      lexicoBox.setAttribute('aria-hidden', state.mode!=='lexico' ? 'true' : 'false');
-    }
+    updatePriorityDisplay();
   }));
   
   if (applyBtn) {
     applyBtn.addEventListener('click', () => {
-      console.log('🎯 MC: Bouton Appliquer cliqué');
+      console.log('🎯 MC: Calcul demandé');
       compute();
     });
   }
   
   if (resetBtn) {
     resetBtn.addEventListener('click', ()=>{
-      // Reset critères
-      root.querySelector('#m-perf_1y').checked=true;
-      root.querySelector('#m-volatility_3y').checked=true;
-      ['ytd','perf_3m','perf_1m','max_drawdown_3y','dividend_yield'].forEach(id=>{
-        const el=root.querySelector('#m-'+id); 
-        if(el) el.checked=false;
+      // Reset tout
+      state.selectedMetrics = ['ytd', 'dividend_yield'];
+      
+      // Synchroniser les checkboxes
+      Object.keys(METRICS).forEach(id => {
+        const checkbox = root.querySelector('#m-'+id);
+        if (checkbox) {
+          checkbox.checked = state.selectedMetrics.includes(id);
+        }
       });
       
       // Reset filtres rapides
@@ -403,27 +477,26 @@
       const balancedRadio = modeRadios.find(x=>x.value==='balanced');
       if (balancedRadio) balancedRadio.checked=true;
       state.mode='balanced';
-      state.priorities = ['perf_1y', 'volatility_3y'];
       
-      // Update UI
-      if (lexicoBox) {
-        lexicoBox.classList.add('hidden');
-        lexicoBox.setAttribute('aria-hidden', 'true');
-      }
-      updatePriorityUI();
+      updatePriorityDisplay();
       compute();
     });
   }
 
   // Initialisation
   addExplanation();
-  updatePriorityUI();
+  setupMetricCheckboxes();
+  updatePriorityDisplay();
 
   // expose
   window.MC = { refresh: compute, loadData, state };
 
-  // Charger les données au démarrage
+  // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module initialisé avec succès');
+    console.log('✅ MC Module prêt');
+    // Calculer automatiquement si des critères sont déjà sélectionnés
+    if (state.selectedMetrics.length > 0) {
+      compute();
+    }
   });
 })();
