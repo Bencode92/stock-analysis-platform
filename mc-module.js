@@ -613,91 +613,78 @@
     return pool.map(r => ({ s: r.s, score: NaN }));
   }
 
-  // RENDU EN GRILLE 2 COLONNES × 5 LIGNES
+  // RENDU VERTICAL SIMPLE - UNE COLONNE
   function render(entries){
     results.innerHTML='';
-    // Retirer la classe space-y-2 pour la grille
-    results.classList.remove('space-y-2');
     
-    // Créer un conteneur de grille
-    const gridContainer = document.createElement('div');
-    gridContainer.className = 'grid grid-cols-2 gap-3';
+    // Conteneur avec espacement vertical
+    const container = document.createElement('div');
+    container.className = 'space-y-2';
     
     const top = entries.slice(0,10);
     
-    // Réorganiser pour avoir #1-#2 sur ligne 1, #3-#4 sur ligne 2, etc.
-    const pairs = [];
-    for(let i = 0; i < 10; i += 2) {
-      pairs.push([top[i], top[i+1]]);
-    }
-    
-    pairs.forEach((pair, rowIndex) => {
-      pair.forEach((e, colIndex) => {
-        if (!e) return;
-        
-        const i = rowIndex * 2 + colIndex;
-        const card = document.createElement('div');
-        card.className = 'glassmorphism rounded-lg p-3 flex items-center gap-3';
-        
-        if(!e.s){
-          card.innerHTML=`
-            <div class="rank text-2xl font-bold opacity-30">#${i+1}</div>
-            <div class="flex-1">
-              <div class="font-semibold">—</div>
-              <div class="text-xs opacity-60">—</div>
-            </div>`;
-          gridContainer.appendChild(card); 
-          return;
-        }
-        
-        const tkr = e.s.ticker || e.s.symbol || (e.s.name||'').split(' ')[0] || '—';
-        
-        // Obtenir les icônes de région
-        let regionIcon = '';
-        if (e.s.region === 'US') {
-          regionIcon = '🇺🇸';
-        } else if (e.s.region === 'EUROPE') {
-          regionIcon = '🇪🇺';
-        } else if (e.s.region === 'ASIA') {
-          regionIcon = '🌏';
-        }
-        
-        // Créer la ligne de métriques alignées à droite
-        const metricsHTML = state.selectedMetrics.map(m => {
-          const value = METRICS[m].get(e.s);
-          if (!Number.isFinite(value)) return '';
-          
-          const formatted = value.toFixed(1);
-          const colorClass = METRICS[m].max 
-            ? (value > 0 ? 'text-green-400' : 'text-red-400')
-            : (value < 20 ? 'text-green-400' : value > 40 ? 'text-red-400' : 'text-yellow-400');
-          
-          return `
-            <div class="text-right">
-              <div class="text-xs opacity-60">${METRICS[m].label}</div>
-              <div class="${colorClass} font-semibold">${value > 0 && METRICS[m].max ? '+' : ''}${formatted}%</div>
-            </div>
-          `;
-        }).filter(Boolean).join('');
-        
+    top.forEach((e,i)=>{
+      const card = document.createElement('div');
+      card.className = 'glassmorphism rounded-lg p-3 flex items-center gap-4';
+      
+      if(!e.s){
         card.innerHTML=`
-          <div class="rank text-2xl font-bold text-cyan-400" style="min-width:40px">#${i+1}</div>
+          <div class="rank text-2xl font-bold opacity-30">#${i+1}</div>
           <div class="flex-1">
-            <div class="flex items-center gap-2">
-              <span class="font-bold">${tkr}</span>
-              <span class="text-xs opacity-60">${regionIcon}</span>
-            </div>
-            <div class="text-xs opacity-70 truncate" title="${e.s.name||''}">${e.s.name||'—'}</div>
-          </div>
-          <div class="flex gap-3">
-            ${metricsHTML}
+            <div class="font-semibold">—</div>
+            <div class="text-xs opacity-60">—</div>
           </div>`;
+        container.appendChild(card); 
+        return;
+      }
+      
+      const tkr = e.s.ticker || e.s.symbol || (e.s.name||'').split(' ')[0] || '—';
+      
+      // Obtenir les icônes de région
+      let regionIcon = '';
+      if (e.s.region === 'US') {
+        regionIcon = '🇺🇸';
+      } else if (e.s.region === 'EUROPE') {
+        regionIcon = '🇪🇺';
+      } else if (e.s.region === 'ASIA') {
+        regionIcon = '🌏';
+      }
+      
+      // Créer les métriques en ligne compacte
+      const metricsHTML = state.selectedMetrics.map(m => {
+        const value = METRICS[m].get(e.s);
+        if (!Number.isFinite(value)) return '';
         
-        gridContainer.appendChild(card);
-      });
+        const formatted = value.toFixed(1);
+        const colorClass = METRICS[m].max 
+          ? (value > 0 ? 'text-green-400' : 'text-red-400')
+          : (value < 20 ? 'text-green-400' : value > 40 ? 'text-red-400' : 'text-yellow-400');
+        
+        return `
+          <div class="text-right">
+            <div class="text-xs opacity-60">${METRICS[m].label}</div>
+            <div class="${colorClass} font-semibold">${value > 0 && METRICS[m].max ? '+' : ''}${formatted}%</div>
+          </div>
+        `;
+      }).filter(Boolean).join('');
+      
+      card.innerHTML=`
+        <div class="rank text-2xl font-bold text-cyan-400" style="min-width:45px">#${i+1}</div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-base">${tkr}</span>
+            <span class="text-xs opacity-60">${regionIcon}</span>
+          </div>
+          <div class="text-xs opacity-70">${e.s.name||'—'}</div>
+        </div>
+        <div class="flex gap-4">
+          ${metricsHTML}
+        </div>`;
+      
+      container.appendChild(card);
     });
     
-    results.appendChild(gridContainer);
+    results.appendChild(container);
     
     if (entries.length < 10 && entries.length > 0) {
       const info = document.createElement('div');
