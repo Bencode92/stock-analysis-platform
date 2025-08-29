@@ -8,55 +8,32 @@ mcStyles.textContent = `
 :root { --section-gap: 80px; }
 .section { margin-bottom: var(--section-gap); }
 
-/* Titre du Composer avec effet glow */
+/* Titre du Composer centré et professionnel */
 .composer-title {
-  font-size: 1.5rem;
-  font-weight: 900;
+  font-size: 1.3rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   color: var(--accent-color);
-  text-shadow: 0 0 20px rgba(0,255,135,0.6);
-  margin-bottom: 15px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  text-align: center;
+  margin-bottom: 20px;
+  opacity: 0.95;
 }
 
-.composer-title::before,
-.composer-title::after {
-  content: "✨";
-  font-size: 1.2rem;
-  animation: sparkle 3s ease-in-out infinite;
-}
-
-@keyframes sparkle {
-  0%, 100% { opacity: 0.5; transform: scale(0.9); }
-  50% { opacity: 1; transform: scale(1.1); }
-}
-
-/* Ligne sous-titre flashy pour Composer */
+/* Ligne sous-titre simple et élégante */
 .section-highlight {
   position: relative;
-  height: 3px;
-  margin: 0 0 30px 0;
+  height: 2px;
+  margin: 0 auto 30px;
+  max-width: 300px;
   background: linear-gradient(90deg, 
     transparent, 
-    #00ff87 10%,
-    #00ffaa 50%,
-    #00ff87 90%,
+    rgba(0,255,135,0.6) 20%,
+    rgba(0,255,135,0.6) 80%,
     transparent);
-  box-shadow: 
-    0 0 30px rgba(0,255,135,0.5),
-    0 0 60px rgba(0,255,135,0.2);
-  animation: pulse-glow 2s ease-in-out infinite;
 }
 
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
-}
-
-/* Diviseur entre sections plus visible */
+/* Diviseur entre sections */
 .section-divider {
   position: relative;
   height: 2px;
@@ -123,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .find(title => title.textContent.includes('Actions par lettre'));
     
     if (actionsParLettre && !document.getElementById('mc-section')) {
-        // Créer section Composer avec titre stylé et ligne sous-titre
+        // Créer section Composer avec titre centré et professionnel
         const mcSection = document.createElement('section');
         mcSection.id = 'mc-section';
         mcSection.className = 'section';
