@@ -1,4 +1,4 @@
-// ===== MC (Multi-Critères) – Interface avec filtres personnalisables ===================
+// ===== MC (Multi-Critères) – Interface avec filtres personnalisables et géographiques ===================
 (function(){
   // Attendre que le DOM soit prêt
   if (!document.querySelector('#mc-section')) {
@@ -46,18 +46,106 @@
     mode:'balanced', 
     data:[], 
     loading:false,
-    selectedMetrics: ['ytd', 'dividend_yield'], // Métriques sélectionnées = ordre de priorité
-    customFilters: [] // Format: [{metric: 'perf_1y', operator: '>=', value: 10}, ...]
+    selectedMetrics: ['ytd', 'dividend_yield'],
+    customFilters: [],
+    // Nouveaux filtres géographiques
+    geoFilters: {
+      region: 'all',
+      country: 'all',
+      sector: 'all'
+    },
+    // Listes pour les dropdowns
+    availableRegions: new Set(),
+    availableCountries: new Set(),
+    availableSectors: new Set()
   };
+
+  // Créer l'interface des filtres géographiques
+  function setupGeoFilters() {
+    const geoContainer = document.getElementById('geo-filters-container');
+    if (!geoContainer) return;
+    
+    geoContainer.innerHTML = `
+      <div class="space-y-2">
+        <div class="flex gap-2 items-center">
+          <label class="text-xs opacity-70 min-w-[60px]">Région:</label>
+          <select id="filter-region" class="mini-select flex-1">
+            <option value="all">Toutes régions</option>
+            ${Array.from(state.availableRegions).map(r => 
+              `<option value="${r}">${r}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div class="flex gap-2 items-center">
+          <label class="text-xs opacity-70 min-w-[60px]">Pays:</label>
+          <select id="filter-country" class="mini-select flex-1">
+            <option value="all">Tous pays</option>
+            ${Array.from(state.availableCountries).map(c => 
+              `<option value="${c}">${c}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div class="flex gap-2 items-center">
+          <label class="text-xs opacity-70 min-w-[60px]">Secteur:</label>
+          <select id="filter-sector" class="mini-select flex-1">
+            <option value="all">Tous secteurs</option>
+            ${Array.from(state.availableSectors).map(s => 
+              `<option value="${s}">${s}</option>`
+            ).join('')}
+          </select>
+        </div>
+      </div>
+    `;
+    
+    // Event listeners pour les filtres géo
+    document.getElementById('filter-region')?.addEventListener('change', (e) => {
+      state.geoFilters.region = e.target.value;
+      updateCountryFilter(); // Mettre à jour les pays disponibles selon la région
+    });
+    
+    document.getElementById('filter-country')?.addEventListener('change', (e) => {
+      state.geoFilters.country = e.target.value;
+    });
+    
+    document.getElementById('filter-sector')?.addEventListener('change', (e) => {
+      state.geoFilters.sector = e.target.value;
+    });
+  }
+
+  // Mettre à jour le filtre pays selon la région sélectionnée
+  function updateCountryFilter() {
+    const countrySelect = document.getElementById('filter-country');
+    if (!countrySelect) return;
+    
+    const filteredCountries = new Set();
+    state.data.forEach(stock => {
+      if (state.geoFilters.region === 'all' || stock.region === state.geoFilters.region) {
+        if (stock.country) filteredCountries.add(stock.country);
+      }
+    });
+    
+    countrySelect.innerHTML = `
+      <option value="all">Tous pays</option>
+      ${Array.from(filteredCountries).sort().map(c => 
+        `<option value="${c}">${c}</option>`
+      ).join('')}
+    `;
+    
+    state.geoFilters.country = 'all';
+  }
 
   // Créer l'interface des filtres personnalisables
   function setupCustomFilters() {
-    const filtersFieldset = root.querySelector('fieldset:last-of-type');
+    const filtersFieldset = root.querySelector('fieldset:nth-of-type(3)');
     if (!filtersFieldset) return;
     
-    // Remplacer le contenu par une interface dynamique
     filtersFieldset.innerHTML = `
-      <legend class="text-sm opacity-70 mb-2">Filtres personnalisés</legend>
+      <legend class="text-sm opacity-70 mb-2">Filtres géographiques</legend>
+      <div id="geo-filters-container" class="mb-3">
+        <!-- Les filtres géo seront ajoutés ici -->
+      </div>
+      
+      <legend class="text-sm opacity-70 mb-2 mt-3">Filtres personnalisés</legend>
       <div id="custom-filters-list" class="space-y-2 mb-2">
         <!-- Les filtres seront ajoutés ici -->
       </div>
@@ -96,7 +184,6 @@
       }
     });
     
-    // Ajouter quelques filtres par défaut
     state.customFilters = [
       { metric: 'dividend_yield', operator: '>', value: 5.2 }
     ];
@@ -125,7 +212,6 @@
       `;
     }).join('') || '<div class="text-xs opacity-50 text-center py-2">Aucun filtre personnalisé</div>';
     
-    // Event listeners pour supprimer
     filtersList.querySelectorAll('.remove-filter').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const index = parseInt(e.currentTarget.dataset.index);
@@ -271,7 +357,7 @@
     }
   }
 
-  // charger les données
+  // charger les données et extraire les infos géographiques
   async function loadData() {
     if (state.loading) return;
     state.loading = true;
@@ -293,12 +379,51 @@
         const region = ['US', 'EUROPE', 'ASIA'][index];
         data.stocks.forEach(stock => {
           stock.region = region;
+          
+          // Extraire le pays depuis exchange ou name
+          if (!stock.country) {
+            if (stock.exchange?.includes('India')) stock.country = 'Inde';
+            else if (stock.exchange?.includes('China')) stock.country = 'Chine';
+            else if (stock.exchange?.includes('Korea')) stock.country = 'Corée';
+            else if (stock.exchange?.includes('Japan')) stock.country = 'Japon';
+            else if (stock.exchange?.includes('London')) stock.country = 'UK';
+            else if (stock.exchange?.includes('Paris')) stock.country = 'France';
+            else if (stock.exchange?.includes('Frankfurt')) stock.country = 'Allemagne';
+            else if (region === 'US') stock.country = 'USA';
+            else if (region === 'EUROPE') stock.country = 'Europe';
+            else if (region === 'ASIA') stock.country = 'Asie';
+          }
+          
+          // Extraire le secteur depuis le nom ou ajouter un secteur par défaut
+          if (!stock.sector) {
+            const name = stock.name?.toLowerCase() || '';
+            if (name.includes('bank') || name.includes('financ')) stock.sector = 'Finance';
+            else if (name.includes('tech') || name.includes('software') || name.includes('semi')) stock.sector = 'Technologie';
+            else if (name.includes('pharma') || name.includes('health')) stock.sector = 'Santé';
+            else if (name.includes('energy') || name.includes('oil') || name.includes('gas')) stock.sector = 'Énergie';
+            else if (name.includes('retail') || name.includes('consum')) stock.sector = 'Consommation';
+            else if (name.includes('real estate') || name.includes('reit')) stock.sector = 'Immobilier';
+            else if (name.includes('industrial')) stock.sector = 'Industrie';
+            else stock.sector = 'Autres';
+          }
+          
+          // Ajouter aux listes
+          state.availableRegions.add(stock.region);
+          state.availableCountries.add(stock.country);
+          state.availableSectors.add(stock.sector);
+          
           allStocks.push(stock);
         });
       });
       
       state.data = allStocks;
       console.log(`✅ MC: ${allStocks.length} actions chargées`);
+      console.log(`📍 Régions: ${Array.from(state.availableRegions).join(', ')}`);
+      console.log(`🌍 Pays: ${state.availableCountries.size} pays`);
+      console.log(`📊 Secteurs: ${state.availableSectors.size} secteurs`);
+      
+      // Initialiser les filtres géo après le chargement
+      setupGeoFilters();
       
       if (allStocks.length > 0) {
         results.innerHTML = `<div class="text-center text-cyan-400 py-4">✅ ${allStocks.length} actions disponibles</div>`;
@@ -312,9 +437,14 @@
     }
   }
 
-  // Appliquer les filtres personnalisés - CORRECTION DU BUG ICI
+  // Appliquer tous les filtres
   function applyFilters(list){
     return list.filter(s => {
+      // Filtres géographiques
+      if (state.geoFilters.region !== 'all' && s.region !== state.geoFilters.region) return false;
+      if (state.geoFilters.country !== 'all' && s.country !== state.geoFilters.country) return false;
+      if (state.geoFilters.sector !== 'all' && s.sector !== state.geoFilters.sector) return false;
+      
       // Vérifier que toutes les métriques sélectionnées sont présentes
       const hasAllMetrics = state.selectedMetrics.every(m => {
         const value = METRICS[m].get(s);
@@ -323,39 +453,24 @@
       
       if (!hasAllMetrics) return false;
       
-      // Appliquer les filtres personnalisés avec LOGIQUE STRICTE
+      // Appliquer les filtres personnalisés
       for (const filter of state.customFilters) {
         const value = METRICS[filter.metric].get(s);
-        if (!Number.isFinite(value)) return false; // Si pas de valeur, exclure
+        if (!Number.isFinite(value)) return false;
         
         let passes = false;
-        const EPSILON = 0.001; // Pour gérer les erreurs d'arrondi
+        const EPSILON = 0.001;
         
         switch(filter.operator) {
-          case '>=': 
-            passes = value >= filter.value - EPSILON; 
-            break;
-          case '>':  
-            passes = value > filter.value + EPSILON; // STRICT : doit être vraiment supérieur
-            break;
-          case '=':  
-            passes = Math.abs(value - filter.value) < EPSILON; 
-            break;
-          case '<':  
-            passes = value < filter.value - EPSILON; // STRICT : doit être vraiment inférieur
-            break;
-          case '<=': 
-            passes = value <= filter.value + EPSILON; 
-            break;
-          case '!=': 
-            passes = Math.abs(value - filter.value) > EPSILON; 
-            break;
+          case '>=': passes = value >= filter.value - EPSILON; break;
+          case '>':  passes = value > filter.value + EPSILON; break;
+          case '=':  passes = Math.abs(value - filter.value) < EPSILON; break;
+          case '<':  passes = value < filter.value - EPSILON; break;
+          case '<=': passes = value <= filter.value + EPSILON; break;
+          case '!=': passes = Math.abs(value - filter.value) > EPSILON; break;
         }
         
-        if (!passes) {
-          console.log(`❌ ${s.ticker||s.name}: ${METRICS[filter.metric].label}=${value} ne passe pas ${filter.operator} ${filter.value}`);
-          return false;
-        }
+        if (!passes) return false;
       }
       
       return true;
@@ -419,7 +534,7 @@
     return list.slice().sort(cmp).map(s=>({s, score:NaN}));
   }
 
-  // Rendu vertical avec métriques et style cyan
+  // Rendu vertical avec métriques et infos géo
   function render(entries){
     results.innerHTML='';
     results.className = 'space-y-2';
@@ -477,6 +592,7 @@
             ${tkr} <span class="text-sm opacity-60">${regionIcon}</span>
           </div>
           <div class="text-xs opacity-60" title="${e.s.name||''}">${e.s.name||'—'}</div>
+          <div class="text-xs opacity-40">${e.s.sector||''} • ${e.s.country||''}</div>
         </div>
         <div class="flex gap-4">
           ${metricValues}
@@ -493,7 +609,7 @@
     } else if (entries.length === 0) {
       const info = document.createElement('div');
       info.className = 'text-center text-cyan-400 py-4';
-      info.innerHTML = '<i class="fas fa-filter mr-2"></i>Aucune action ne passe les filtres stricts';
+      info.innerHTML = '<i class="fas fa-filter mr-2"></i>Aucune action ne passe les filtres';
       results.appendChild(info);
     }
   }
@@ -503,11 +619,20 @@
     const mode = state.mode==='balanced' ? 'Équilibre' : 'Priorités';
     const labels = state.selectedMetrics.map(m=>METRICS[m].label).join(' · ');
     const filters = state.customFilters.length;
-    summary.innerHTML = `<strong>${mode}</strong> • ${labels || 'Aucun critère'} • ${filters} filtres • ${kept}/${total} actions`;
+    
+    // Ajouter les filtres géo au résumé
+    const geoActive = [];
+    if (state.geoFilters.region !== 'all') geoActive.push(state.geoFilters.region);
+    if (state.geoFilters.country !== 'all') geoActive.push(state.geoFilters.country);
+    if (state.geoFilters.sector !== 'all') geoActive.push(state.geoFilters.sector);
+    
+    const geoText = geoActive.length > 0 ? ` • ${geoActive.join(', ')}` : '';
+    
+    summary.innerHTML = `<strong>${mode}</strong> • ${labels || 'Aucun critère'} • ${filters} filtres${geoText} • ${kept}/${total} actions`;
   }
 
   async function compute(){
-    console.log('🔍 MC: Calcul avec', state.selectedMetrics.length, 'critères et', state.customFilters.length, 'filtres');
+    console.log('🔍 MC: Calcul avec filtres géo:', state.geoFilters);
     
     if (state.data.length === 0) {
       results.innerHTML = '<div class="text-center text-gray-400 py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Chargement...</div>';
@@ -530,7 +655,7 @@
     console.log(`📊 Après filtres: ${filtered.length} actions sur ${base.length}`);
     
     if (filtered.length === 0) {
-      results.innerHTML = '<div class="text-center text-cyan-400 py-4"><i class="fas fa-exclamation-triangle mr-2"></i>Aucune action ne passe les filtres stricts</div>';
+      results.innerHTML = '<div class="text-center text-cyan-400 py-4"><i class="fas fa-exclamation-triangle mr-2"></i>Aucune action ne passe les filtres</div>';
       setSummary(base.length, 0);
       return;
     }
@@ -568,6 +693,7 @@
       state.customFilters = [
         { metric: 'dividend_yield', operator: '>', value: 5.2 }
       ];
+      state.geoFilters = { region: 'all', country: 'all', sector: 'all' };
       
       Object.keys(METRICS).forEach(id => {
         const checkbox = root.querySelector('#m-'+id);
@@ -575,6 +701,14 @@
           checkbox.checked = state.selectedMetrics.includes(id);
         }
       });
+      
+      // Reset filtres géo
+      const regionSelect = document.getElementById('filter-region');
+      const countrySelect = document.getElementById('filter-country');
+      const sectorSelect = document.getElementById('filter-sector');
+      if (regionSelect) regionSelect.value = 'all';
+      if (countrySelect) countrySelect.value = 'all';
+      if (sectorSelect) sectorSelect.value = 'all';
       
       const balancedRadio = modeRadios.find(x=>x.value==='balanced');
       if (balancedRadio) balancedRadio.checked=true;
@@ -597,7 +731,7 @@
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module prêt');
+    console.log('✅ MC Module prêt avec filtres géographiques');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
