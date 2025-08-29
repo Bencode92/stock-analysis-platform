@@ -89,21 +89,67 @@ if (!document.getElementById('mc-styles')) {
     .composer-grid { grid-template-columns: 1fr; }
   }
 
-  /* Panneau filtres sticky avec variables CSS */
+  /* === PANNEAU FILTRES EN CYAN === */
   .composer-filters { 
     position: sticky; 
     top: calc(var(--header-height, 60px) + 12px);
     align-self: start;
     max-height: calc(100vh - (var(--header-height, 60px) + 24px));
     overflow-y: auto;
+    
+    /* Style cyan flashy */
+    background: linear-gradient(135deg, 
+      rgba(0, 200, 255, 0.05), 
+      rgba(0, 255, 255, 0.03)) !important;
+    border: 1px solid rgba(0, 200, 255, 0.3) !important;
+    box-shadow: 
+      0 0 30px rgba(0, 200, 255, 0.2),
+      inset 0 0 20px rgba(0, 255, 255, 0.05) !important;
   }
 
-  /* Styles existants MC */
-  .mini-input,.mini-select{padding:8px 10px;border-radius:8px;border:1px solid var(--card-border);background:rgba(255,255,255,0.05);font-size:.9rem}
-  .mc-pill{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border:1px solid var(--card-border);border-radius:10px;background:rgba(255,255,255,0.04);cursor:pointer;font-size:.9rem;transition:all 0.2s ease}
-  .mc-pill:hover{background:rgba(0,255,135,0.08);border-color:var(--accent-medium)}
-  .mc-pill input{accent-color:#00FF87}
-  .mc-row{display:flex;gap:8px;align-items:center}
+  /* Styles existants MC avec accent cyan */
+  .mini-input,.mini-select{
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid rgba(0, 200, 255, 0.3);
+    background:rgba(0, 255, 255, 0.05);
+    font-size:.9rem;
+    color: #fff;
+  }
+  
+  .mini-input:focus, .mini-select:focus {
+    border-color: #00ffff;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+    outline: none;
+  }
+  
+  .mc-pill{
+    display:inline-flex;
+    gap:8px;
+    align-items:center;
+    padding:6px 10px;
+    border:1px solid rgba(0, 200, 255, 0.2);
+    border-radius:10px;
+    background:rgba(0, 255, 255, 0.03);
+    cursor:pointer;
+    font-size:.9rem;
+    transition:all 0.2s ease;
+  }
+  
+  .mc-pill:hover{
+    background:rgba(0, 255, 255, 0.1);
+    border-color: #00ffff;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+  }
+  
+  .mc-pill input{accent-color:#00ffff}
+  
+  .mc-row{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  
   .mc-score{font-weight:800;color:var(--accent-color)}
   
   /* Amélioration accessibilité fieldsets */
@@ -112,14 +158,39 @@ if (!document.getElementById('mc-styles')) {
     padding: 0;
     margin: 0 0 1rem;
   }
+  
   fieldset legend {
     padding: 0;
     margin-bottom: 0.5rem;
+    color: rgba(0, 255, 255, 0.8);
+    font-weight: 600;
+  }
+  
+  /* Boutons avec style cyan */
+  .composer-filters .search-button {
+    background: linear-gradient(135deg, rgba(0, 200, 255, 0.2), rgba(0, 255, 255, 0.1));
+    border: 1px solid rgba(0, 255, 255, 0.5);
+    color: #00ffff;
+  }
+  
+  .composer-filters .search-button:hover {
+    background: linear-gradient(135deg, rgba(0, 200, 255, 0.3), rgba(0, 255, 255, 0.2));
+    border-color: #00ffff;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+  }
+  
+  .composer-filters .action-button {
+    background: rgba(0, 255, 255, 0.1);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+  }
+  
+  .composer-filters .action-button:hover {
+    background: rgba(0, 255, 255, 0.2);
+    border-color: #00ffff;
   }
   
   /* === ZONE DE RÉSULTATS CYAN FLASHY === */
   
-  /* Conteneur principal des résultats avec effet cyan */
   #mc-results {
     background: linear-gradient(135deg, 
       rgba(0, 200, 255, 0.05), 
@@ -191,19 +262,21 @@ if (!document.getElementById('mc-styles')) {
   /* === DRAG & DROP POUR PRIORITÉS === */
   
   #priority-container {
-    background: rgba(0, 255, 135, 0.03);
-    border: 1px solid rgba(0, 255, 135, 0.2);
+    background: rgba(0, 255, 255, 0.03);
+    border: 1px solid rgba(0, 255, 255, 0.2);
   }
   
   .priority-item {
     cursor: move;
     transition: all 0.2s ease;
     user-select: none;
+    background: rgba(0, 255, 255, 0.05);
+    border: 1px solid rgba(0, 255, 255, 0.2);
   }
   
   .priority-item:hover {
-    background: rgba(255, 255, 255, 0.08) !important;
-    border: 1px solid rgba(0, 255, 135, 0.3);
+    background: rgba(0, 255, 255, 0.1) !important;
+    border-color: #00ffff;
   }
   
   .priority-item.dragging {
@@ -211,8 +284,8 @@ if (!document.getElementById('mc-styles')) {
   }
   
   .priority-item .drag-handle {
-    color: var(--accent-color);
-    opacity: 0.5;
+    color: #00ffff;
+    opacity: 0.7;
     font-size: 0.9rem;
     cursor: grab;
   }
@@ -224,7 +297,7 @@ if (!document.getElementById('mc-styles')) {
   .priority-number {
     min-width: 20px;
     font-weight: 600;
-    color: var(--accent-color);
+    color: #00ffff;
   }
   
   /* Conteneur de priorités vide */
@@ -239,13 +312,13 @@ if (!document.getElementById('mc-styles')) {
   
   /* Explications des modes */
   #mode-explanation {
-    background: rgba(0, 255, 135, 0.05);
-    border-left: 2px solid var(--accent-color);
+    background: rgba(0, 255, 255, 0.05);
+    border-left: 2px solid #00ffff;
     font-size: 0.75rem;
   }
   
   #mode-explanation strong {
-    color: var(--accent-color);
+    color: #00ffff;
     display: block;
     margin-bottom: 0.25rem;
   }
@@ -276,14 +349,29 @@ if (!document.getElementById('mc-styles')) {
     color: rgba(0, 255, 255, 0.7);
   }
   
-  /* Filtres personnalisés */
+  /* Filtres personnalisés avec style cyan */
   .filter-item {
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 255, 255, 0.05);
+    border: 1px solid rgba(0, 255, 255, 0.2);
   }
   
   .filter-item:hover {
-    background: rgba(0, 255, 135, 0.05) !important;
-    border-color: rgba(0, 255, 135, 0.3);
+    background: rgba(0, 255, 255, 0.1) !important;
+    border-color: #00ffff;
+  }
+  
+  /* Summary avec style cyan */
+  #mc-summary {
+    color: rgba(0, 255, 255, 0.7);
+  }
+  
+  #mc-summary strong {
+    color: #00ffff;
+  }
+  
+  /* Divider en bas des filtres */
+  .composer-filters .border-t {
+    border-color: rgba(0, 255, 255, 0.2) !important;
   }
   `;
   document.head.appendChild(mcStyles);
@@ -342,7 +430,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <div class="section-highlight"></div>
   
   <div class="composer-grid">
-    <!-- Colonne gauche : Filtres avec interface unifiée -->
+    <!-- Colonne gauche : Filtres avec interface unifiée et style cyan -->
     <aside class="composer-filters glassmorphism rounded-lg p-4" role="complementary" aria-label="Filtres du composeur">
       <fieldset>
         <legend class="text-sm opacity-70 mb-2">Critères sélectionnés = Ordre de priorité</legend>
