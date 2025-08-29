@@ -5,9 +5,10 @@
   if(!root || !results) return;
 
   // util parse %
-  const p = (typeof parsePercentage==='function') ? parsePercentage : (s)=>{
+  const p = (s)=>{
     if(s==null||s==='-') return NaN;
-    let t=String(s).replace(',', '.').replace(/[+%]/g,'').trim(); return parseFloat(t);
+    let t=String(s).replace(',', '.').replace(/[+%]/g,'').trim(); 
+    return parseFloat(t);
   };
 
   // métriques
@@ -38,24 +39,45 @@
   const summary=document.getElementById('mc-summary');
 
   // état et données
-  const state={ mode:'balanced', data:[] };
+  const state={ mode:'balanced', data:[], loading:false };
 
   // charger les données depuis les fichiers JSON
   async function loadData() {
+    if (state.loading) return;
+    state.loading = true;
+    
     try {
+      console.log('📊 Chargement des données boursières...');
       const files = ['data/stocks_us.json', 'data/stocks_europe.json', 'data/stocks_asia.json'];
-      const responses = await Promise.all(files.map(f => fetch(f).then(r => r.json())));
-      const allStocks = [];
+      const responses = await Promise.all(
+        files.map(f => 
+          fetch(f)
+            .then(r => r.ok ? r.json() : Promise.reject(`Erreur ${f}`))
+            .catch(err => {
+              console.error(`❌ Erreur chargement ${f}:`, err);
+              return null;
+            })
+        )
+      );
       
-      responses.forEach(data => {
-        if (data.stocks) {
+      const allStocks = [];
+      let loadedRegions = [];
+      
+      responses.forEach((data, index) => {
+        if (!data) return;
+        
+        const region = ['US', 'EUROPE', 'ASIA'][index];
+        loadedRegions.push(region);
+        
+        if (data.stocks && Array.isArray(data.stocks)) {
           data.stocks.forEach(stock => {
-            // Enrichir avec icône selon région
-            if (data.region === 'US') {
+            // Enrichir avec région et icône
+            stock.region = region;
+            if (region === 'US') {
               stock.marketIcon = '<i class="fas fa-flag-usa text-xs ml-1 text-blue-400" title="US"></i>';
-            } else if (data.region === 'EUROPE') {
+            } else if (region === 'EUROPE') {
               stock.marketIcon = '<i class="fas fa-globe-europe text-xs ml-1 text-green-400" title="Europe"></i>';
-            } else if (data.region === 'ASIA') {
+            } else if (region === 'ASIA') {
               stock.marketIcon = '<i class="fas fa-globe-asia text-xs ml-1 text-red-400" title="Asie"></i>';
             }
             allStocks.push(stock);
@@ -64,10 +86,24 @@
       });
       
       state.data = allStocks;
-      console.log(`✅ MC: ${allStocks.length} actions chargées`);
+      console.log(`✅ MC: ${allStocks.length} actions chargées (${loadedRegions.join(', ')})`);
+      
+      // Si des filtres sont déjà cochés, calculer automatiquement
+      if (hasActiveFilters()) {
+        compute();
+      }
+      
     } catch (err) {
       console.error('❌ MC: Erreur chargement données:', err);
+      results.innerHTML = '<div class="text-center text-red-400 py-4">Erreur de chargement des données</div>';
+    } finally {
+      state.loading = false;
     }
+  }
+
+  // vérifier si des filtres sont actifs
+  function hasActiveFilters() {
+    return Object.keys(METRICS).some(id => root.querySelector('#m-'+id)?.checked);
   }
 
   // remplir priorités
@@ -83,16 +119,9 @@
     return ids.length? ids : ['perf_1y','volatility_3y']; // défaut simple
   }
 
-  // univers (utilise state.data ou fallback sur window.stocksData)
+  // univers 
   function universe(){
-    if (state.data.length > 0) {
-      return state.data;
-    }
-    // Fallback sur données de liste-script.js
-    const idx = (window.stocksData && window.stocksData.indices) || {};
-    const out=[];
-    Object.values(idx).forEach(list => (list||[]).forEach(s=>out.push(s)));
-    return out;
+    return state.data;
   }
 
   // filtres rapides
@@ -105,7 +134,7 @@
       if (quick.q1y10.checked && !(v1y>=10)) return false;
       if (quick.qytd10.checked && !(vytd>=10)) return false;
       if (quick.qNoNeg1y.checked && !(v1y>0)) return false;
-      if (quick.qVol40.checked && !(vvol<=40)) return false;
+      if (quick.qVol40.checked && vvol>40) return false;
 
       // au moins une métrique sélectionnée doit être présente
       const anySel = selectedMetrics().some(m => Number.isFinite(METRICS[m].get(s)));
@@ -180,15 +209,36 @@
           <div class="stock-performance neutral">—</div>`;
         results.appendChild(card); return;
       }
+      
+      // Utiliser le ticker ou name
       const tkr = e.s.ticker || e.s.symbol || (e.s.name||'').split(' ')[0] || '—';
-      const scoreText = Number.isFinite(e.score)? `${Math.round(e.score*100)} pts` : (e.s.perf_1y || e.s.perf_ytd || e.s.ytd || '—');
+      
+      // Afficher le score ou une métrique principale
+      let scoreText;
+      if (Number.isFinite(e.score)) {
+        scoreText = `${Math.round(e.score*100)} pts`;
+      } else {
+        // Afficher perf_1y ou ytd comme fallback
+        const perf1y = e.s.perf_1y;
+        const ytd = e.s.perf_ytd || e.s.ytd;
+        if (perf1y) {
+          scoreText = `${perf1y > 0 ? '+' : ''}${perf1y}%`;
+        } else if (ytd) {
+          scoreText = `${ytd > 0 ? '+' : ''}${ytd}%`;
+        } else {
+          scoreText = '—';
+        }
+      }
+      
+      const valueClass = scoreText.includes('-') ? 'negative' : 'positive';
+      
       card.innerHTML=`
         <div class="rank">#${i+1}</div>
         <div class="stock-info">
           <div class="stock-name">${tkr} ${e.s.marketIcon||''}</div>
           <div class="stock-fullname" title="${e.s.name||''}">${e.s.name||'—'}</div>
         </div>
-        <div class="stock-performance positive"><span class="mc-score">${scoreText}</span></div>`;
+        <div class="stock-performance ${valueClass}"><span class="mc-score">${scoreText}</span></div>`;
       results.appendChild(card);
     });
   }
@@ -202,15 +252,23 @@
   async function compute(){
     // Charger les données si pas encore fait
     if (state.data.length === 0) {
+      results.innerHTML = '<div class="text-center text-gray-400 py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Chargement des données...</div>';
       await loadData();
     }
     
     const base = universe();
     if(!base.length){ 
-      results.innerHTML = '<div class="text-center text-gray-400 py-4">Chargement des données...</div>';
+      results.innerHTML = '<div class="text-center text-gray-400 py-4">Aucune donnée disponible</div>';
       return; 
     }
+    
     const filtered = applyFilters(base);
+    if (filtered.length === 0) {
+      results.innerHTML = '<div class="text-center text-yellow-400 py-4">Aucune action ne correspond aux filtres sélectionnés</div>';
+      setSummary(base.length, 0, selectedMetrics());
+      return;
+    }
+    
     const metrics = selectedMetrics();
     const out = state.mode==='balanced' ? rankBalanced(filtered, metrics) : rankLexico(filtered);
     setSummary(base.length, filtered.length, metrics);
@@ -221,9 +279,12 @@
   modeRadios.forEach(r=>r.addEventListener('change',()=>{
     state.mode = modeRadios.find(x=>x.checked)?.value || 'balanced';
     lexicoBox.classList.toggle('hidden', state.mode!=='lexico');
+    lexicoBox.setAttribute('aria-hidden', state.mode!=='lexico' ? 'true' : 'false');
   }));
-  document.getElementById('mc-apply').addEventListener('click', compute);
-  document.getElementById('mc-reset').addEventListener('click', ()=>{
+  
+  applyBtn.addEventListener('click', compute);
+  
+  resetBtn.addEventListener('click', ()=>{
     root.querySelector('#m-perf_1y').checked=true;
     root.querySelector('#m-volatility_3y').checked=true;
     ['ytd','perf_3m','perf_1m','max_drawdown_3y','dividend_yield'].forEach(id=>{
@@ -231,19 +292,18 @@
     });
     Object.values(quick).forEach(el=> el.checked=false);
     modeRadios.find(x=>x.value==='balanced').checked=true;
-    state.mode='balanced'; lexicoBox.classList.add('hidden');
+    state.mode='balanced'; 
+    lexicoBox.classList.add('hidden');
+    lexicoBox.setAttribute('aria-hidden', 'true');
     prio1.value='perf_1y'; prio2.value='volatility_3y'; prio3.value='ytd';
     compute();
   });
 
-  // recalc quand la barre Global change (régions / Jour/YTD)
-  window.addEventListener('topFiltersChanged', compute);
-
   // expose pour relancer après chargement A→Z
-  window.MC = { refresh: compute };
+  window.MC = { refresh: compute, loadData };
 
   // Charger les données au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module prêt');
+    console.log('✅ MC Module prêt avec données');
   });
 })();
