@@ -1,6 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition
-// v11.3: Ajout Top 10 holdings + fix GITHUB_OUTPUT
+// v11.4: Génération directe de combined_etfs_holdings.csv
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -581,7 +581,7 @@ async function processListing(item) {
 
 // Fonction principale
 async function filterETFs() {
-    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition v11.3\n');
+    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition v11.4\n');
     console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
     console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max`);
     console.log(`📂  Dossier de sortie: ${OUT_DIR}\n`);
@@ -843,10 +843,34 @@ async function filterETFs() {
     await fs.writeFile(bondsCsvPath, csvHeaderBonds + (csvRowsBonds ? csvRowsBonds + '\n' : ''));
     console.log(`📝 CSV Bonds: ${results.bonds.length} ligne(s) → ${bondsCsvPath}`);
     
+    // === NEW: CSV Holdings détaillé ===
+    const holdingsHeader = 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n';
+    const holdingsRows = [];
+    
+    for (const etf of results.etfs) {
+        const holdings = etf.holdings_top10 || [];
+        holdings.forEach((h, idx) => {
+            // Convertir weight (0-1) en pourcentage
+            const weight_pct = h.weight != null ? (h.weight * 100).toFixed(2) : '';
+            holdingsRows.push([
+                etf.symbol,
+                idx + 1,
+                h.symbol || '',
+                `"${(h.name || '').replace(/"/g, '""')}"`,
+                weight_pct
+            ].join(','));
+        });
+    }
+    
+    const holdingsCsvPath = path.join(OUT_DIR, 'combined_etfs_holdings.csv');
+    await fs.writeFile(holdingsCsvPath, holdingsHeader + holdingsRows.join('\n'));
+    console.log(`📝 CSV Holdings: ${holdingsRows.length} ligne(s) → ${holdingsCsvPath}`);
+    
     // Résumé
     console.log('\n📊 RÉSUMÉ:');
     console.log(`ETFs retenus: ${results.etfs.length}/${etfs.length}`);
     console.log(`Bonds retenus: ${results.bonds.length}/${bonds.length}`);
+    console.log(`Holdings extraits: ${holdingsRows.length} positions`);
     console.log(`Rejetés: ${results.rejected.length}`);
     console.log(`Temps total: ${results.stats.elapsed_seconds}s`);
     
@@ -871,12 +895,14 @@ async function filterETFs() {
     console.log(`✅ Weekly snapshot JSON: ${weeklyPath} (champs hebdo uniquement)`);
     console.log(`✅ CSV ETFs: ${etfCsvPath}`);
     console.log(`✅ CSV Bonds: ${bondsCsvPath}`);
+    console.log(`✅ CSV Holdings détaillé: ${holdingsCsvPath}`);
     
     // Pour GitHub Actions (nouveau mécanisme)
     if (process.env.GITHUB_OUTPUT) {
         const fsSync = require('fs');
         fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `etfs_count=${results.etfs.length}\n`);
         fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_count=${results.bonds.length}\n`);
+        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `holdings_count=${holdingsRows.length}\n`);
     }
 }
 
