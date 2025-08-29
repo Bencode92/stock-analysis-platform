@@ -1246,6 +1246,51 @@
              transform: translateY(0) scale(1);
          }
          
+         /* Styles pour les filtres Actions par lettre */
+         .az-filters-container {
+             background: var(--card-bg);
+             border: 1px solid var(--card-border);
+             border-radius: 12px;
+             padding: 16px;
+             margin-bottom: 24px;
+             backdrop-filter: blur(10px);
+         }
+         
+         .az-scope {
+             display: flex;
+             gap: 8px;
+             margin-bottom: 16px;
+         }
+         
+         .filter-select {
+             padding: 10px 16px;
+             border-radius: 8px;
+             background: rgba(255, 255, 255, 0.05);
+             border: 1px solid var(--card-border);
+             color: var(--text-color);
+             font-size: 0.9rem;
+             font-weight: 500;
+             transition: all 0.2s ease;
+             cursor: pointer;
+             min-width: 150px;
+         }
+         
+         .filter-select:hover {
+             background: rgba(0, 255, 135, 0.08);
+             border-color: var(--accent-medium);
+         }
+         
+         .filter-select:focus {
+             outline: none;
+             border-color: var(--accent-color);
+             box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2);
+         }
+         
+         .filter-select option {
+             background: var(--background-color);
+             color: var(--text-color);
+         }
+         
          /* Version mobile-friendly */
          @media (max-width: 768px) {
              .tp-toolbar {
@@ -1366,6 +1411,18 @@
              .index-tabs {
                  overflow-x: auto;
                  flex-wrap: nowrap;
+             }
+             
+             .az-filters-container {
+                 padding: 12px;
+             }
+             
+             .az-scope {
+                 flex-wrap: wrap;
+             }
+             
+             .filter-select {
+                 width: 100%;
              }
          }
      </style>
@@ -1517,6 +1574,32 @@
                  <!-- Onglets alphabétiques (QUATRIÈME) -->
                  <div class="mb-8">
                      <h2 class="section-title mb-6">Actions par lettre</h2>
+                     
+                     <!-- NOUVEAUX FILTRES POUR LA SECTION A-Z -->
+                     <div class="az-filters-container">
+                         <!-- Sélecteur de régions (même logique que Top 10) -->
+                         <div id="az-scope" class="az-scope">
+                             <button class="market-btn active" data-scope="GLOBAL">🌍 Global</button>
+                             <button class="market-btn" data-scope="US">🇺🇸 US</button>
+                             <button class="market-btn" data-scope="EUROPE">🇪🇺 Europe</button>
+                             <button class="market-btn" data-scope="ASIA">🌏 Asie</button>
+                         </div>
+                         
+                         <!-- Filtres additionnels -->
+                         <div class="flex gap-4">
+                             <select id="az-country-filter" class="filter-select">
+                                 <option value="">Tous pays</option>
+                             </select>
+                             
+                             <select id="az-sector-filter" class="filter-select">
+                                 <option value="">Tous secteurs</option>
+                             </select>
+                             
+                             <div class="ml-auto text-sm text-gray-400">
+                                 <span id="az-filtered-count">0</span> actions filtrées
+                             </div>
+                         </div>
+                     </div>
                      
                      <!-- Barre de recherche -->
                      <div class="search-container mb-4">
