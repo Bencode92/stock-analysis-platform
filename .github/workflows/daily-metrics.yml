@@ -3,7 +3,7 @@ name: Daily ETF/Bond Metrics
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 16 * * 1-5'  # 16:00 UTC ~ 18:00 Paris les jours ouvrés
+    - cron: '0 16 * * 1-5'  # 16:00 UTC ~ 18:00 Paris (CEST) les jours ouvrés
 
 jobs:
   daily-metrics:
@@ -20,6 +20,7 @@ jobs:
         run: npm install axios csv-parse
 
       - name: Run daily metrics
+        id: run_daily
         env:
           TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
         run: node etf-bond-daily-metrics.js
@@ -33,7 +34,8 @@ jobs:
                   data/daily_metrics_etfs.csv data/daily_metrics_bonds.csv \
                   data/combined_snapshot.json \
                   data/combined_etfs.csv data/combined_bonds.csv \
-                  data/combined_etfs_exposure.csv
+                  data/combined_etfs_exposure.csv \
+                  data/combined_etfs_holdings.csv
 
           # Commit seulement s'il y a des changements
           git diff --quiet && git diff --staged --quiet || git commit -m "Update daily ETF/Bond metrics [skip ci]"
