@@ -1,4 +1,4 @@
-// ===== MC (Multi-Critères) – Module avec corrections complètes ===================
+// ===== MC (Multi-Critères) – Module avec Priorités+ amélioré ===================
 (function(){
   // Attendre que le DOM soit prêt
   if (!document.querySelector('#mc-section')) {
@@ -381,7 +381,7 @@
           <strong>Mode Équilibre :</strong> Moyenne des scores percentiles (0-100) pour chaque critère coché.
         </div>
         <div id="priority-explanation" class="hidden">
-          <strong>Mode Priorités :</strong> Tri par ordre de priorité. Glissez pour réorganiser.
+          <strong>Mode Priorités+ :</strong> Tri par ordre avec tolérance (2%) et tie-break pondéré. Plus robuste.
         </div>
       `;
       modeContainer.appendChild(explanation);
@@ -551,23 +551,66 @@
     return scored;
   }
 
-  // Mode priorités avec EPS RÉDUIT
-  function rankLexico(list){
+  // === PRIORITÉS+ : lexico sur percentiles avec tolérance + tie-break pondéré ===
+  function rankLexicoPlus(list, topN = 10) {
     const prios = state.selectedMetrics;
-    if (!prios.length) return list.map(s=>({s, score:NaN}));
-    
-    const EPS = 0.1; // RÉDUIT de 0.5 à 0.1
-    const cmp=(a,b)=>{
-      for(const m of prios){
-        const av=METRICS[m].get(a), bv=METRICS[m].get(b);
-        const dir = METRICS[m].max? -1 : +1;
-        const aa = Number.isFinite(av)? av : (METRICS[m].max? -1e9:+1e9);
-        const bb = Number.isFinite(bv)? bv : (METRICS[m].max? -1e9:+1e9);
-        if (Math.abs(aa-bb)>EPS) return (aa-bb)*dir;
-      }
-      return 0;
+    if (!prios.length) return list.map(s => ({ s, score: NaN }));
+
+    // 1) Prépare percentiles par métrique (distribution sur la liste filtrée)
+    const dict = {};
+    prios.forEach(m => {
+      dict[m] = list
+        .map(s => METRICS[m].get(s))
+        .filter(Number.isFinite)
+        .sort((a, b) => a - b);
+    });
+
+    // Transforme une valeur -> percentile orienté "plus c'est bon, plus c'est haut"
+    const pr = (m, v) => {
+      let r = percentile(dict[m], v);
+      if (!Number.isFinite(r)) return 0;
+      if (!METRICS[m].max) r = 1 - r;   // inverse pour min→mieux
+      return r; // in [0,1]
     };
-    return list.slice().sort(cmp).map(s=>({s, score:NaN}));
+
+    // 2) Vecteur de percentiles par titre (dans l'ordre des priorités)
+    const rows = list.map(s => ({
+      s,
+      vec: prios.map(m => pr(m, METRICS[m].get(s)))
+    }));
+
+    // 3) Paramètres de Priorités+
+    const tau = 0.02;                         // tolérance (2 points de percentile)
+    const weights = prios.map((_, i) => Math.pow(0.5, i)); // tie-break pondéré
+
+    // Étagement Top-K pour stabiliser le Top 10
+    const stageKeeps = [Math.max(4 * topN, 40), Math.max(2 * topN, 20), topN];
+
+    let pool = rows.slice();
+    for (let k = 0; k < prios.length && pool.length > topN; k++) {
+      // Tri simple sur la priorité k
+      pool.sort((A, B) => B.vec[k] - A.vec[k]);
+
+      // Coupe au Top-K si on n'est pas au dernier critère
+      if (k < prios.length - 1) {
+        const keep = stageKeeps[Math.min(k, stageKeeps.length - 1)];
+        pool = pool.slice(0, Math.min(keep, pool.length));
+      }
+    }
+
+    // 4) Tri final : lexico avec tolérance + tie-break pondéré
+    pool.sort((A, B) => {
+      for (let i = 0; i < prios.length; i++) {
+        const d = A.vec[i] - B.vec[i];
+        if (Math.abs(d) > tau) return d > 0 ? -1 : 1; // plus haut percentile d'abord
+      }
+      // Tie-break : somme pondérée
+      const sA = A.vec.reduce((acc, v, i) => acc + v * weights[i], 0);
+      const sB = B.vec.reduce((acc, v, i) => acc + v * weights[i], 0);
+      return sB - sA;
+    });
+
+    return pool.map(r => ({ s: r.s, score: NaN }));
   }
 
   // Rendu vertical SANS ÉCRASER LA CLASSE
@@ -652,7 +695,7 @@
 
   function setSummary(total, kept){
     if (!summary) return;
-    const mode = state.mode==='balanced' ? 'Équilibre' : 'Priorités';
+    const mode = state.mode==='balanced' ? 'Équilibre' : 'Priorités+';
     const labels = state.selectedMetrics.map(m=>METRICS[m].label).join(' · ');
     const filters = state.customFilters.length;
     
@@ -695,10 +738,14 @@
       return;
     }
     
-    const out = state.mode==='balanced' ? rankBalanced(filtered) : rankLexico(filtered);
+    // Utilise rankLexicoPlus au lieu de l'ancien rankLexico
+    const out = state.mode === 'balanced'
+      ? rankBalanced(filtered)
+      : rankLexicoPlus(filtered);
+      
     setSummary(base.length, filtered.length);
     render(out);
-    console.log(`✅ MC: ${filtered.length} actions filtrées`);
+    console.log(`✅ MC: ${filtered.length} actions filtrées, mode: ${state.mode}`);
   }
 
   // Event listeners
@@ -773,7 +820,7 @@
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module prêt avec toutes les corrections');
+    console.log('✅ MC Module prêt avec Priorités+');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
