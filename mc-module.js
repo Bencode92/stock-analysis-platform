@@ -613,30 +613,30 @@
     return pool.map(r => ({ s: r.s, score: NaN }));
   }
 
-  // RENDU VERTICAL ÉTENDU - UTILISE TOUTE LA LARGEUR
+  // RENDU VERTICAL - FORCE L'UTILISATION DE 100% DE LA LARGEUR
   function render(entries){
+    // Vider et réinitialiser le conteneur
     results.innerHTML='';
-    
-    // Conteneur avec espacement vertical
-    const container = document.createElement('div');
-    container.className = 'space-y-3';
+    results.style.width = '100%';
     
     const top = entries.slice(0,10);
     
     top.forEach((e,i)=>{
       const card = document.createElement('div');
-      card.className = 'glassmorphism rounded-lg p-4 flex items-center justify-between w-full';
+      // Force largeur 100% avec style inline
+      card.style.cssText = 'width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;';
+      card.className = 'glassmorphism rounded-lg p-4';
       
       if(!e.s){
         card.innerHTML=`
-          <div class="flex items-center gap-4">
-            <div class="rank text-3xl font-bold opacity-30">#${i+1}</div>
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <div style="font-size: 1.875rem; font-weight: bold; color: #00ffff; min-width: 55px;">#${i+1}</div>
             <div>
-              <div class="font-semibold text-lg">—</div>
-              <div class="text-sm opacity-60">—</div>
+              <div style="font-weight: bold; font-size: 1.125rem;">—</div>
+              <div style="font-size: 0.875rem; opacity: 0.7;">—</div>
             </div>
           </div>`;
-        container.appendChild(card); 
+        results.appendChild(card); 
         return;
       }
       
@@ -663,32 +663,30 @@
           : (value < 20 ? 'text-green-400' : value > 40 ? 'text-red-400' : 'text-yellow-400');
         
         return `
-          <div class="text-center px-4">
-            <div class="text-xs opacity-60 mb-1">${METRICS[m].label}</div>
-            <div class="${colorClass} font-bold text-lg">${value > 0 && METRICS[m].max ? '+' : ''}${formatted}%</div>
+          <div style="text-align: center; padding: 0 20px;">
+            <div style="font-size: 0.75rem; opacity: 0.6; margin-bottom: 4px;">${METRICS[m].label}</div>
+            <div class="${colorClass}" style="font-weight: bold; font-size: 1.125rem;">${value > 0 && METRICS[m].max ? '+' : ''}${formatted}%</div>
           </div>
         `;
       }).filter(Boolean).join('');
       
       card.innerHTML=`
-        <div class="flex items-center gap-4">
-          <div class="rank text-3xl font-bold text-cyan-400" style="min-width:55px">#${i+1}</div>
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <div style="font-size: 1.875rem; font-weight: bold; color: #00ffff; min-width: 55px;">#${i+1}</div>
           <div>
-            <div class="flex items-center gap-2">
-              <span class="font-bold text-lg">${tkr}</span>
-              <span class="text-sm opacity-60">${regionIcon}</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-weight: bold; font-size: 1.125rem;">${tkr}</span>
+              <span style="font-size: 0.875rem; opacity: 0.6;">${regionIcon}</span>
             </div>
-            <div class="text-sm opacity-70">${e.s.name||'—'}</div>
+            <div style="font-size: 0.875rem; opacity: 0.7;">${e.s.name||'—'}</div>
           </div>
         </div>
-        <div class="flex items-center gap-2">
+        <div style="display: flex; align-items: center;">
           ${metricsHTML}
         </div>`;
       
-      container.appendChild(card);
+      results.appendChild(card);
     });
-    
-    results.appendChild(container);
     
     if (entries.length < 10 && entries.length > 0) {
       const info = document.createElement('div');
