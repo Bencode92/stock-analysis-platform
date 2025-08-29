@@ -613,16 +613,16 @@
     return pool.map(r => ({ s: r.s, score: NaN }));
   }
 
-  // Rendu vertical SANS ÉCRASER LA CLASSE
+  // RENDU VERTICAL LIGNE PAR LIGNE
   function render(entries){
     results.innerHTML='';
-    results.classList.add('space-y-2'); // AJOUT au lieu de REMPLACEMENT
+    results.classList.add('space-y-2');
     
     const top = entries.slice(0,10);
     
     top.forEach((e,i)=>{
       const card=document.createElement('div');
-      card.className='glassmorphism rounded-lg p-3 flex items-center gap-4';
+      card.className='glassmorphism rounded-lg p-4 flex items-center gap-4';
       
       if(!e.s){
         card.innerHTML=`
@@ -630,15 +630,25 @@
           <div class="flex-1">
             <div class="font-semibold">—</div>
             <div class="text-xs opacity-60">—</div>
-          </div>
-          <div class="text-right opacity-30">—</div>`;
+          </div>`;
         results.appendChild(card); 
         return;
       }
       
       const tkr = e.s.ticker || e.s.symbol || (e.s.name||'').split(' ')[0] || '—';
       
-      const metricValues = state.selectedMetrics.map(m => {
+      // Obtenir les icônes de région
+      let regionIcon = '';
+      if (e.s.region === 'US') {
+        regionIcon = '🇺🇸';
+      } else if (e.s.region === 'EUROPE') {
+        regionIcon = '🇪🇺';
+      } else if (e.s.region === 'ASIA') {
+        regionIcon = '🌏';
+      }
+      
+      // Créer la ligne de métriques alignées à droite
+      const metricsHTML = state.selectedMetrics.map(m => {
         const value = METRICS[m].get(e.s);
         if (!Number.isFinite(value)) return '';
         
@@ -650,31 +660,22 @@
         return `
           <div class="text-right">
             <div class="text-xs opacity-60">${METRICS[m].label}</div>
-            <div class="${colorClass} font-semibold">${value > 0 && METRICS[m].max ? '+' : ''}${formatted}${METRICS[m].unit}</div>
+            <div class="${colorClass} font-semibold text-lg">${value > 0 && METRICS[m].max ? '+' : ''}${formatted}%</div>
           </div>
         `;
       }).filter(Boolean).join('');
       
-      let regionIcon = '';
-      if (e.s.region === 'US') {
-        regionIcon = '🇺🇸';
-      } else if (e.s.region === 'EUROPE') {
-        regionIcon = '🇪🇺';
-      } else if (e.s.region === 'ASIA') {
-        regionIcon = '🌏';
-      }
-      
       card.innerHTML=`
-        <div class="rank text-2xl font-bold">#${i+1}</div>
+        <div class="rank text-3xl font-bold" style="min-width:60px">#${i+1}</div>
         <div class="flex-1">
-          <div class="font-semibold flex items-center gap-2">
-            ${tkr} <span class="text-sm opacity-60">${regionIcon}</span>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="font-bold text-lg">${tkr}</span>
+            <span class="text-sm opacity-60">${regionIcon}</span>
           </div>
-          <div class="text-xs opacity-60" title="${e.s.name||''}">${e.s.name||'—'}</div>
-          <div class="text-xs opacity-40">${e.s.sector||''} • ${e.s.country||''}</div>
+          <div class="text-sm opacity-70">${e.s.name||'—'}</div>
         </div>
-        <div class="flex gap-4">
-          ${metricValues}
+        <div class="flex gap-6">
+          ${metricsHTML}
         </div>`;
       
       results.appendChild(card);
