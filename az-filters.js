@@ -50,9 +50,24 @@
     
     // Injection du HTML des filtres
     function injectAZFilters() {
-        const targetContainer = document.querySelector('#indices-container .card-header');
+        // MODIFIÉ: Chercher le premier glassmorphism card-header dans la section Actions par lettre
+        const targetContainer = document.querySelector('.section-title:nth-of-type(2)')?.parentElement?.querySelector('.glassmorphism .card-header');
+        
         if (!targetContainer) {
-            console.warn('Container pour les filtres A→Z non trouvé');
+            console.warn('Container pour les filtres A→Z non trouvé, recherche alternative...');
+            // Alternative: injecter après le card-header qui contient "Actions globales"
+            const cards = document.querySelectorAll('.glassmorphism');
+            for (let card of cards) {
+                const header = card.querySelector('.card-header h3');
+                if (header && header.textContent.includes('Actions globales')) {
+                    targetContainer = card.querySelector('.card-header');
+                    break;
+                }
+            }
+        }
+        
+        if (!targetContainer) {
+            console.error('Impossible de trouver le conteneur pour les filtres A→Z');
             return;
         }
         
@@ -103,6 +118,10 @@
         `;
         
         targetContainer.insertAdjacentHTML('afterend', filtersHTML);
+        console.log('✅ Filtres A→Z injectés avec succès');
+        
+        // Initialiser le compteur après injection
+        updateFilterCount();
     }
     
     // Configuration des listeners
@@ -221,6 +240,25 @@
         });
     }
     
+    // Mise à jour du compteur
+    function updateFilterCount() {
+        let count = 0;
+        const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
+        
+        alphabet.forEach(letter => {
+            const tbody = document.getElementById(`${letter}-indices-body`);
+            if (tbody) {
+                const visibleRows = tbody.querySelectorAll('tr:not(.details-row):not([style*="display: none"])');
+                count += visibleRows.length;
+            }
+        });
+        
+        const counter = document.getElementById('az-filter-count');
+        if (counter) {
+            counter.textContent = count;
+        }
+    }
+    
     // Filtrage des actions
     function filterAZStocks() {
         const countryFilter = document.getElementById('az-country-filter')?.value || '';
@@ -302,14 +340,12 @@
         
         const textContent = cell.textContent;
         // Extraire le pays depuis le texte de la cellule
-        // Format attendu: nom de l'action, puis badges région/pays
         const countryMatch = textContent.match(/(?:US|EUROPE|ASIA)\s+([^[]+)/);
         return countryMatch ? countryMatch[1].trim() : '';
     }
     
     function extractSectorFromRow(row) {
         // Le secteur est dans les détails, mais on peut l'ajouter comme data-attribute
-        // Pour l'instant, retourner vide
         return '';
     }
     
