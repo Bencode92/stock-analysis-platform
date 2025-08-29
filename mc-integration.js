@@ -117,7 +117,7 @@ if (!document.getElementById('mc-styles')) {
     margin-bottom: 0.5rem;
   }
   
-  /* === NOUVEAUX STYLES POUR AFFICHAGE VERTICAL === */
+  /* === AFFICHAGE VERTICAL DES RÉSULTATS === */
   
   /* Conteneur de résultats verticaux */
   #mc-results .space-y-2 > div {
@@ -146,36 +146,53 @@ if (!document.getElementById('mc-styles')) {
     min-width: 50px;
   }
   
-  /* Priorités dynamiques */
+  /* === DRAG & DROP POUR PRIORITÉS === */
+  
+  #priority-container {
+    background: rgba(0, 255, 135, 0.03);
+    border: 1px solid rgba(0, 255, 135, 0.2);
+  }
+  
   .priority-item {
     cursor: move;
     transition: all 0.2s ease;
+    user-select: none;
   }
   
   .priority-item:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(0, 255, 135, 0.3);
+  }
+  
+  .priority-item.dragging {
+    opacity: 0.5;
+  }
+  
+  .priority-item .drag-handle {
+    color: var(--accent-color);
+    opacity: 0.5;
+    font-size: 0.9rem;
+    cursor: grab;
+  }
+  
+  .priority-item:active .drag-handle {
+    cursor: grabbing;
   }
   
   .priority-number {
     min-width: 20px;
+    font-weight: 600;
+    color: var(--accent-color);
   }
   
-  .remove-priority {
+  /* Conteneur de priorités vide */
+  #priority-list:empty::after {
+    content: "Cochez des critères pour définir les priorités";
+    display: block;
+    text-align: center;
     opacity: 0.5;
-    transition: opacity 0.2s;
-    cursor: pointer;
-    background: none;
-    border: none;
-    font-size: 1.2rem;
-  }
-  
-  .remove-priority:hover {
-    opacity: 1;
-  }
-  
-  /* Sélecteur d'ajout de priorité */
-  #add-priority {
-    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    padding: 1rem;
   }
   
   /* Explications des modes */
@@ -199,7 +216,7 @@ if (!document.getElementById('mc-styles')) {
   }
   
   #mc-results .flex.gap-4 > div {
-    min-width: 60px;
+    min-width: 70px;
   }
   
   /* Couleurs pour les valeurs */
@@ -208,12 +225,11 @@ if (!document.getElementById('mc-styles')) {
   .text-yellow-400 { color: #facc15; }
   .text-blue-400 { color: #60a5fa; }
   
-  /* Icônes de région */
-  #mc-results .fa-flag-usa,
-  #mc-results .fa-globe-europe,
-  #mc-results .fa-globe-asia {
-    margin-left: 0.25rem;
-    opacity: 0.7;
+  /* Info sur le nombre d'actions */
+  #mc-results .text-center.text-xs {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 1rem;
+    margin-top: 1rem;
   }
   `;
   document.head.appendChild(mcStyles);
@@ -272,18 +288,18 @@ document.addEventListener('DOMContentLoaded', function() {
   <div class="section-highlight"></div>
   
   <div class="composer-grid">
-    <!-- Colonne gauche : Filtres avec fieldsets pour accessibilité -->
+    <!-- Colonne gauche : Filtres avec interface unifiée -->
     <aside class="composer-filters glassmorphism rounded-lg p-4" role="complementary" aria-label="Filtres du composeur">
       <fieldset>
-        <legend class="text-sm opacity-70 mb-2">Critères (sans pondération)</legend>
+        <legend class="text-sm opacity-70 mb-2">Critères sélectionnés = Ordre de priorité</legend>
         <div class="flex flex-wrap gap-2">
-          <label class="mc-pill"><input id="m-perf_1y" type="checkbox" checked aria-label="Performance 1 an"> Perf 1Y ↑</label>
+          <label class="mc-pill"><input id="m-perf_1y" type="checkbox" aria-label="Performance 1 an"> Perf 1Y ↑</label>
           <label class="mc-pill"><input id="m-ytd" type="checkbox" checked aria-label="Year to date"> YTD ↑</label>
           <label class="mc-pill"><input id="m-perf_3m" type="checkbox" aria-label="Performance 3 mois"> Perf 3M ↑</label>
           <label class="mc-pill"><input id="m-perf_1m" type="checkbox" aria-label="Performance 1 mois"> Perf 1M ↑</label>
-          <label class="mc-pill"><input id="m-volatility_3y" type="checkbox" checked aria-label="Volatilité 3 ans"> Vol 3Y ↓</label>
+          <label class="mc-pill"><input id="m-volatility_3y" type="checkbox" aria-label="Volatilité 3 ans"> Vol 3Y ↓</label>
           <label class="mc-pill"><input id="m-max_drawdown_3y" type="checkbox" aria-label="Drawdown maximum 3 ans"> Max DD 3Y ↓</label>
-          <label class="mc-pill"><input id="m-dividend_yield" type="checkbox" aria-label="Rendement dividende"> Div. Yield ↑</label>
+          <label class="mc-pill"><input id="m-dividend_yield" type="checkbox" checked aria-label="Rendement dividende"> Div. Yield ↑</label>
         </div>
       </fieldset>
 
@@ -293,11 +309,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <label class="mc-pill"><input type="radio" name="mc-mode" value="balanced" checked> Équilibre auto</label>
           <label class="mc-pill"><input type="radio" name="mc-mode" value="lexico"> Priorités</label>
         </div>
-        <div id="mc-lexico" class="mt-2 hidden" aria-hidden="true">
-          <div class="grid grid-cols-1 gap-2">
-            <!-- Interface dynamique des priorités sera générée par JS -->
-          </div>
-        </div>
+        <!-- Le conteneur de priorités sera ajouté dynamiquement ici par JS -->
       </fieldset>
 
       <fieldset>
