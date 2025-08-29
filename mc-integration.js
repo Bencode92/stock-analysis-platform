@@ -8,82 +8,17 @@ mcStyles.textContent = `
 :root { --section-gap: 80px; }
 .section { margin-bottom: var(--section-gap); }
 
-/* Diviseur étiqueté ULTRA FLASHY pour Composer */
+/* Ligne simple de séparation */
 .section-divider {
   position: relative;
-  height: 3px;
-  margin: 60px 0 40px;
-  background: linear-gradient(90deg, 
-    transparent, 
-    var(--accent-color) 15%, 
-    var(--accent-color) 85%, 
-    transparent);
-  box-shadow: 0 0 30px rgba(0,255,135,0.4);
-}
-
-.section-divider.highlight {
-  height: 4px;
-  background: linear-gradient(90deg, 
-    transparent,
-    #00ff87 10%,
-    #00ffaa 50%,
-    #00ff87 90%,
-    transparent);
-  box-shadow: 
-    0 0 40px rgba(0,255,135,0.6),
-    0 0 80px rgba(0,255,135,0.3);
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.8; }
-  50% { opacity: 1; }
-}
-
-.section-divider.highlight::before {
-  content: attr(data-label);
-  position: absolute;
-  top: 50%; 
-  left: 50%;
-  transform: translate(-50%, -50%);
-  padding: 12px 32px;
-  border-radius: 999px;
-  font-weight: 900;
-  font-size: 1.1rem;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  background: linear-gradient(135deg, 
-    rgba(0,255,135,0.2), 
-    rgba(0,255,170,0.1));
-  border: 2px solid var(--accent-color);
-  color: var(--accent-color);
-  box-shadow: 
-    0 0 40px rgba(0,255,135,0.4),
-    inset 0 0 20px rgba(0,255,135,0.1);
-  text-shadow: 0 0 10px rgba(0,255,135,0.8);
-  animation: flash-text 3s ease-in-out infinite;
-}
-
-@keyframes flash-text {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); }
-  50% { transform: translate(-50%, -50%) scale(1.05); }
-}
-
-/* Ligne simple sans label pour Actions par lettre */
-.section-divider.simple {
   height: 2px;
+  margin: 60px 0 40px;
   background: linear-gradient(90deg, 
     transparent, 
     rgba(255,255,255,0.1) 20%, 
     rgba(255,255,255,0.1) 80%, 
     transparent);
   box-shadow: none;
-  animation: none;
-}
-.section-divider.simple::before {
-  display: none;
 }
 
 /* Grille Composer : filtres à gauche, résultats à droite */
@@ -135,21 +70,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Créer le diviseur et la nouvelle section Composer
+    // Créer la nouvelle section Composer
     const actionsParLettre = Array.from(document.querySelectorAll('h2.section-title'))
         .find(title => title.textContent.includes('Actions par lettre'));
     
     if (actionsParLettre && !document.getElementById('mc-section')) {
-        // Créer diviseur FLASHY avant Composer
-        const divider1 = document.createElement('div');
-        divider1.className = 'section-divider highlight';
-        divider1.setAttribute('data-label', '✨ Top 10 — Composer multi-critères ✨');
-        
-        // Créer section Composer avec grille
+        // Créer section Composer avec titre et grille
         const mcSection = document.createElement('section');
         mcSection.id = 'mc-section';
         mcSection.className = 'section';
         mcSection.innerHTML = `
+  <h2 class="section-title mb-4">Top 10 — Composer multi-critères</h2>
   <div class="composer-grid">
     <!-- Colonne gauche : Filtres -->
     <aside class="composer-filters glassmorphism rounded-lg p-4">
@@ -220,13 +151,12 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         
         // Créer diviseur SIMPLE (ligne seule) avant Actions par lettre
-        const divider2 = document.createElement('div');
-        divider2.className = 'section-divider simple';
+        const divider = document.createElement('div');
+        divider.className = 'section-divider';
         
         // Insérer les éléments
-        actionsParLettre.parentElement.insertBefore(divider1, actionsParLettre);
         actionsParLettre.parentElement.insertBefore(mcSection, actionsParLettre);
-        actionsParLettre.parentElement.insertBefore(divider2, actionsParLettre);
+        actionsParLettre.parentElement.insertBefore(divider, actionsParLettre);
         
         // Marquer les sections existantes
         const topGlobal = document.getElementById('top-global-container');
@@ -249,4 +179,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 500);
 });
 
-console.log('✅ Script d\'intégration MC avec diviseurs chargé');
+console.log('✅ Script d\'intégration MC chargé');
