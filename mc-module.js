@@ -1,4 +1,4 @@
-// ===== MC (Multi-Critères) – Interface unifiée avec drag & drop ===================
+// ===== MC (Multi-Critères) – Interface avec filtres personnalisables ===================
 (function(){
   // Attendre que le DOM soit prêt
   if (!document.querySelector('#mc-section')) {
@@ -47,15 +47,110 @@
     data:[], 
     loading:false,
     selectedMetrics: ['ytd', 'dividend_yield'], // Métriques sélectionnées = ordre de priorité
-    customFilters: []
+    customFilters: [] // Format: [{metric: 'perf_1y', operator: '>=', value: 10}, ...]
   };
+
+  // Créer l'interface des filtres personnalisables
+  function setupCustomFilters() {
+    const filtersFieldset = root.querySelector('fieldset:last-of-type');
+    if (!filtersFieldset) return;
+    
+    // Remplacer le contenu par une interface dynamique
+    filtersFieldset.innerHTML = `
+      <legend class="text-sm opacity-70 mb-2">Filtres personnalisés</legend>
+      <div id="custom-filters-list" class="space-y-2 mb-2">
+        <!-- Les filtres seront ajoutés ici -->
+      </div>
+      <div class="flex gap-2 items-center">
+        <select id="filter-metric" class="mini-select flex-1">
+          ${Object.entries(METRICS).map(([k,v]) => 
+            `<option value="${k}">${v.label}</option>`
+          ).join('')}
+        </select>
+        <select id="filter-operator" class="mini-select">
+          <option value=">=">≥</option>
+          <option value=">">></option>
+          <option value="=">=</option>
+          <option value="<"><</option>
+          <option value="<=">≤</option>
+          <option value="!=">≠</option>
+        </select>
+        <input id="filter-value" type="number" class="mini-input w-20" placeholder="0" step="0.1">
+        <span class="text-xs opacity-60">%</span>
+        <button id="add-filter" class="action-button px-3">
+          <i class="fas fa-plus"></i>
+        </button>
+      </div>
+    `;
+    
+    // Event listener pour ajouter un filtre
+    document.getElementById('add-filter')?.addEventListener('click', () => {
+      const metric = document.getElementById('filter-metric').value;
+      const operator = document.getElementById('filter-operator').value;
+      const value = parseFloat(document.getElementById('filter-value').value);
+      
+      if (!isNaN(value)) {
+        state.customFilters.push({ metric, operator, value });
+        updateFiltersList();
+        document.getElementById('filter-value').value = '';
+      }
+    });
+    
+    // Ajouter quelques filtres par défaut
+    state.customFilters = [
+      { metric: 'perf_1y', operator: '>=', value: 10 },
+      { metric: 'volatility_3y', operator: '<=', value: 30 }
+    ];
+    updateFiltersList();
+  }
+
+  // Mettre à jour l'affichage des filtres
+  function updateFiltersList() {
+    const filtersList = document.getElementById('custom-filters-list');
+    if (!filtersList) return;
+    
+    filtersList.innerHTML = state.customFilters.map((filter, index) => {
+      const metric = METRICS[filter.metric];
+      const color = getOperatorColor(filter.operator, metric.max);
+      
+      return `
+        <div class="filter-item flex items-center gap-2 p-2 rounded bg-white/5">
+          <span class="flex-1">
+            ${metric.label} 
+            <span class="${color} font-semibold">${filter.operator} ${filter.value}%</span>
+          </span>
+          <button class="remove-filter text-red-400 hover:text-red-300 text-sm" data-index="${index}">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      `;
+    }).join('') || '<div class="text-xs opacity-50 text-center py-2">Aucun filtre personnalisé</div>';
+    
+    // Event listeners pour supprimer
+    filtersList.querySelectorAll('.remove-filter').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const index = parseInt(e.currentTarget.dataset.index);
+        state.customFilters.splice(index, 1);
+        updateFiltersList();
+      });
+    });
+  }
+
+  // Couleur selon l'opérateur
+  function getOperatorColor(operator, isMax) {
+    if (operator === '>=' || operator === '>') {
+      return isMax ? 'text-green-400' : 'text-red-400';
+    } else if (operator === '<=' || operator === '<') {
+      return isMax ? 'text-red-400' : 'text-green-400';
+    }
+    return 'text-yellow-400';
+  }
 
   // Créer/mettre à jour la zone de priorités avec drag & drop
   function updatePriorityDisplay() {
     let priorityContainer = document.getElementById('priority-container');
     
     if (!priorityContainer) {
-      // Créer le conteneur s'il n'existe pas
       const modeFieldset = root.querySelector('fieldset[role="radiogroup"]');
       if (!modeFieldset) return;
       
@@ -72,10 +167,8 @@
     const priorityList = document.getElementById('priority-list');
     if (!priorityList) return;
     
-    // Afficher uniquement si mode priorités
     priorityContainer.style.display = state.mode === 'lexico' ? 'block' : 'none';
     
-    // Générer la liste des priorités
     priorityList.innerHTML = state.selectedMetrics.map((m, i) => `
       <div class="priority-item flex items-center gap-2 p-2 rounded bg-white/5 cursor-move" 
            draggable="true" data-metric="${m}">
@@ -85,11 +178,10 @@
       </div>
     `).join('') || '<div class="text-xs opacity-50">Cochez des critères pour définir les priorités</div>';
     
-    // Ajouter les événements drag & drop
     setupDragAndDrop();
   }
 
-  // Drag & Drop pour réorganiser les priorités
+  // Drag & Drop
   function setupDragAndDrop() {
     const items = document.querySelectorAll('.priority-item');
     let draggedItem = null;
@@ -116,7 +208,6 @@
       
       item.addEventListener('drop', (e) => {
         e.preventDefault();
-        // Mettre à jour l'ordre dans state.selectedMetrics
         const newOrder = [...document.querySelectorAll('.priority-item')].map(el => el.dataset.metric);
         state.selectedMetrics = newOrder;
         updatePriorityDisplay();
@@ -145,20 +236,16 @@
       const checkbox = root.querySelector('#m-' + metricId);
       if (!checkbox) return;
       
-      // Mettre à jour l'état initial
       if (state.selectedMetrics.includes(metricId)) {
         checkbox.checked = true;
       }
       
-      // Écouter les changements
       checkbox.addEventListener('change', (e) => {
         if (e.target.checked) {
-          // Ajouter à la fin si pas déjà présent
           if (!state.selectedMetrics.includes(metricId)) {
             state.selectedMetrics.push(metricId);
           }
         } else {
-          // Retirer de la liste
           state.selectedMetrics = state.selectedMetrics.filter(m => m !== metricId);
         }
         updatePriorityDisplay();
@@ -166,7 +253,7 @@
     });
   }
 
-  // Ajouter explication unifiée
+  // Ajouter explication
   function addExplanation() {
     const modeContainer = root.querySelector('fieldset[role="radiogroup"]');
     if (modeContainer && !document.getElementById('mode-explanation')) {
@@ -226,34 +313,35 @@
     }
   }
 
-  // Filtres : EXCLURE les actions qui n'ont pas TOUTES les métriques requises
+  // Appliquer les filtres personnalisés
   function applyFilters(list){
-    const quick = {
-      q1y10: document.getElementById('q-1y10'),
-      qytd10: document.getElementById('q-ytd10'),
-      qNoNeg1y: document.getElementById('q-noNeg1y'),
-      qVol40: document.getElementById('q-vol40'),
-    };
-
     return list.filter(s => {
-      // IMPORTANT: Vérifier que TOUTES les métriques sélectionnées sont présentes
+      // Vérifier que toutes les métriques sélectionnées sont présentes
       const hasAllMetrics = state.selectedMetrics.every(m => {
         const value = METRICS[m].get(s);
         return Number.isFinite(value);
       });
       
-      if (!hasAllMetrics) return false; // Exclure si manque une métrique
+      if (!hasAllMetrics) return false;
       
-      // Appliquer les filtres rapides
-      const v1y = METRICS.perf_1y.get(s);
-      const vytd = METRICS.ytd.get(s);
-      const vvol = METRICS.volatility_3y.get(s);
-
-      if (quick.q1y10?.checked && !(v1y >= 10)) return false;
-      if (quick.qytd10?.checked && !(vytd >= 10)) return false;
-      if (quick.qNoNeg1y?.checked && !(v1y > 0)) return false;
-      if (quick.qVol40?.checked && vvol > 40) return false;
-
+      // Appliquer les filtres personnalisés
+      for (const filter of state.customFilters) {
+        const value = METRICS[filter.metric].get(s);
+        if (!Number.isFinite(value)) continue;
+        
+        let passes = false;
+        switch(filter.operator) {
+          case '>=': passes = value >= filter.value; break;
+          case '>':  passes = value > filter.value; break;
+          case '=':  passes = Math.abs(value - filter.value) < 0.1; break;
+          case '<':  passes = value < filter.value; break;
+          case '<=': passes = value <= filter.value; break;
+          case '!=': passes = Math.abs(value - filter.value) >= 0.1; break;
+        }
+        
+        if (!passes) return false;
+      }
+      
       return true;
     });
   }
@@ -340,7 +428,6 @@
       
       const tkr = e.s.ticker || e.s.symbol || (e.s.name||'').split(' ')[0] || '—';
       
-      // Afficher uniquement les métriques sélectionnées
       const metricValues = state.selectedMetrics.map(m => {
         const value = METRICS[m].get(e.s);
         if (!Number.isFinite(value)) return '';
@@ -358,7 +445,6 @@
         `;
       }).filter(Boolean).join('');
       
-      // Icône de région
       let regionIcon = '';
       if (e.s.region === 'US') {
         regionIcon = '🇺🇸';
@@ -383,7 +469,6 @@
       results.appendChild(card);
     });
     
-    // Afficher le nombre d'actions si moins de 10
     if (entries.length < 10 && entries.length > 0) {
       const info = document.createElement('div');
       info.className = 'text-center text-xs opacity-50 mt-3';
@@ -396,11 +481,12 @@
     if (!summary) return;
     const mode = state.mode==='balanced' ? 'Équilibre' : 'Priorités';
     const labels = state.selectedMetrics.map(m=>METRICS[m].label).join(' · ');
-    summary.innerHTML = `<strong>${mode}</strong> • ${labels || 'Aucun critère'} • ${kept}/${total} actions`;
+    const filters = state.customFilters.length;
+    summary.innerHTML = `<strong>${mode}</strong> • ${labels || 'Aucun critère'} • ${filters} filtres • ${kept}/${total} actions`;
   }
 
   async function compute(){
-    console.log('🔍 MC: Calcul avec critères:', state.selectedMetrics);
+    console.log('🔍 MC: Calcul avec', state.selectedMetrics.length, 'critères et', state.customFilters.length, 'filtres');
     
     if (state.data.length === 0) {
       results.innerHTML = '<div class="text-center text-gray-400 py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Chargement...</div>';
@@ -421,7 +507,7 @@
     
     const filtered = applyFilters(base);
     if (filtered.length === 0) {
-      results.innerHTML = '<div class="text-center text-yellow-400 py-4">Aucune action avec toutes les métriques requises</div>';
+      results.innerHTML = '<div class="text-center text-yellow-400 py-4">Aucune action ne passe les filtres</div>';
       setSummary(base.length, 0);
       return;
     }
@@ -429,14 +515,13 @@
     const out = state.mode==='balanced' ? rankBalanced(filtered) : rankLexico(filtered);
     setSummary(base.length, filtered.length);
     render(out);
-    console.log(`✅ MC: ${filtered.length} actions avec toutes les métriques`);
+    console.log(`✅ MC: ${filtered.length} actions filtrées`);
   }
 
   // Event listeners
   modeRadios.forEach(r=>r.addEventListener('change',()=>{
     state.mode = modeRadios.find(x=>x.checked)?.value || 'balanced';
     
-    // Afficher/masquer explications et priorités
     const balancedExp = document.getElementById('balanced-explanation');
     const priorityExp = document.getElementById('priority-explanation');
     if (balancedExp && priorityExp) {
@@ -456,10 +541,12 @@
   
   if (resetBtn) {
     resetBtn.addEventListener('click', ()=>{
-      // Reset tout
       state.selectedMetrics = ['ytd', 'dividend_yield'];
+      state.customFilters = [
+        { metric: 'perf_1y', operator: '>=', value: 10 },
+        { metric: 'volatility_3y', operator: '<=', value: 30 }
+      ];
       
-      // Synchroniser les checkboxes
       Object.keys(METRICS).forEach(id => {
         const checkbox = root.querySelector('#m-'+id);
         if (checkbox) {
@@ -467,18 +554,12 @@
         }
       });
       
-      // Reset filtres rapides
-      ['q-1y10','q-ytd10','q-noNeg1y','q-vol40'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.checked = false;
-      });
-      
-      // Reset mode
       const balancedRadio = modeRadios.find(x=>x.value==='balanced');
       if (balancedRadio) balancedRadio.checked=true;
       state.mode='balanced';
       
       updatePriorityDisplay();
+      updateFiltersList();
       compute();
     });
   }
@@ -486,6 +567,7 @@
   // Initialisation
   addExplanation();
   setupMetricCheckboxes();
+  setupCustomFilters();
   updatePriorityDisplay();
 
   // expose
@@ -494,7 +576,6 @@
   // Charger et calculer au démarrage
   loadData().then(() => {
     console.log('✅ MC Module prêt');
-    // Calculer automatiquement si des critères sont déjà sélectionnés
     if (state.selectedMetrics.length > 0) {
       compute();
     }
