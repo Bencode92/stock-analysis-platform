@@ -117,31 +117,73 @@ if (!document.getElementById('mc-styles')) {
     margin-bottom: 0.5rem;
   }
   
-  /* === AFFICHAGE VERTICAL DES RÉSULTATS === */
+  /* === ZONE DE RÉSULTATS CYAN FLASHY === */
+  
+  /* Conteneur principal des résultats avec effet cyan */
+  #mc-results {
+    background: linear-gradient(135deg, 
+      rgba(0, 200, 255, 0.05), 
+      rgba(0, 255, 255, 0.03)) !important;
+    border: 1px solid rgba(0, 200, 255, 0.3) !important;
+    box-shadow: 
+      0 0 30px rgba(0, 200, 255, 0.2),
+      inset 0 0 20px rgba(0, 255, 255, 0.05) !important;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  #mc-results::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(90deg, 
+      transparent,
+      rgba(0, 255, 255, 0.4) 20%,
+      rgba(0, 255, 255, 0.6) 50%,
+      rgba(0, 255, 255, 0.4) 80%,
+      transparent);
+    opacity: 0;
+    z-index: -1;
+    animation: cyan-pulse 3s ease-in-out infinite;
+  }
+  
+  @keyframes cyan-pulse {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 0.3; }
+  }
   
   /* Conteneur de résultats verticaux */
   #mc-results .space-y-2 > div {
     margin-bottom: 0.5rem;
   }
   
-  /* Carte de résultat améliorée */
+  /* Carte de résultat avec teinte cyan */
   #mc-results .glassmorphism {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(135deg,
+      rgba(0, 200, 255, 0.03),
+      rgba(0, 255, 255, 0.02)) !important;
+    border: 1px solid rgba(0, 200, 255, 0.15) !important;
     transition: all 0.2s ease;
   }
   
   #mc-results .glassmorphism:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: var(--accent-color);
+    background: linear-gradient(135deg,
+      rgba(0, 200, 255, 0.08),
+      rgba(0, 255, 255, 0.05)) !important;
+    border-color: rgba(0, 255, 255, 0.5) !important;
     transform: translateX(2px);
+    box-shadow: 0 0 20px rgba(0, 200, 255, 0.3);
   }
   
-  /* Rang avec style accent */
+  /* Rang avec couleur cyan */
   #mc-results .rank {
     font-size: 1.5rem;
     font-weight: 900;
-    color: var(--accent-color);
+    color: #00ffff;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
     opacity: 0.9;
     min-width: 50px;
   }
@@ -224,12 +266,24 @@ if (!document.getElementById('mc-styles')) {
   .text-red-400 { color: #f87171; }
   .text-yellow-400 { color: #facc15; }
   .text-blue-400 { color: #60a5fa; }
+  .text-cyan-400 { color: #00ffff; }
   
   /* Info sur le nombre d'actions */
   #mc-results .text-center.text-xs {
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid rgba(0, 200, 255, 0.2);
     padding-top: 1rem;
     margin-top: 1rem;
+    color: rgba(0, 255, 255, 0.7);
+  }
+  
+  /* Filtres personnalisés */
+  .filter-item {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .filter-item:hover {
+    background: rgba(0, 255, 135, 0.05) !important;
+    border-color: rgba(0, 255, 135, 0.3);
   }
   `;
   document.head.appendChild(mcStyles);
@@ -313,13 +367,8 @@ document.addEventListener('DOMContentLoaded', function() {
       </fieldset>
 
       <fieldset>
-        <legend class="text-sm opacity-70 mb-2">Filtres rapides</legend>
-        <div class="space-y-2">
-          <label class="mc-row"><input id="q-1y10" type="checkbox" aria-label="Inclure performance 1 an supérieure à 10%"> Inclure : Perf 1Y ≥ <b>+10%</b></label>
-          <label class="mc-row"><input id="q-ytd10" type="checkbox" aria-label="Inclure YTD supérieur à 10%"> Inclure : YTD ≥ <b>+10%</b></label>
-          <label class="mc-row"><input id="q-noNeg1y" type="checkbox" aria-label="Exclure performance 1 an négative"> Exclure : Perf 1Y ≤ <b>0%</b></label>
-          <label class="mc-row"><input id="q-vol40" type="checkbox" aria-label="Exclure volatilité supérieure à 40%"> Exclure : Vol 3Y ≥ <b>40%</b></label>
-        </div>
+        <legend class="text-sm opacity-70 mb-2">Filtres personnalisés</legend>
+        <!-- L'interface des filtres sera générée dynamiquement par JS -->
       </fieldset>
 
       <div class="border-t border-white/10 pt-4">
@@ -331,7 +380,7 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
     </aside>
 
-    <!-- Colonne droite : Résultats avec aria-live -->
+    <!-- Colonne droite : Résultats avec aria-live et style cyan -->
     <div>
       <div id="mc-results" class="glassmorphism rounded-lg p-4" aria-live="polite" aria-label="Résultats du composeur">
         <div class="stock-cards-container">
