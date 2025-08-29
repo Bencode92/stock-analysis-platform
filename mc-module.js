@@ -613,47 +613,32 @@
     return pool.map(r => ({ s: r.s, score: NaN }));
   }
 
-  // RENDU VERTICAL - FORCE L'UTILISATION DE 100% DE LA LARGEUR
+  // RENDU VERTICAL SIMPLE - SIMILAIRE À L'EXEMPLE
   function render(entries){
-    // Vider et réinitialiser le conteneur
     results.innerHTML='';
-    results.style.width = '100%';
+    results.className = 'space-y-2';
     
     const top = entries.slice(0,10);
     
     top.forEach((e,i)=>{
-      const card = document.createElement('div');
-      // Force largeur 100% avec style inline
-      card.style.cssText = 'width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;';
-      card.className = 'glassmorphism rounded-lg p-4';
+      const card=document.createElement('div');
+      card.className='glassmorphism rounded-lg p-3 flex items-center gap-4';
       
       if(!e.s){
         card.innerHTML=`
-          <div style="display: flex; align-items: center; gap: 16px;">
-            <div style="font-size: 1.875rem; font-weight: bold; color: #00ffff; min-width: 55px;">#${i+1}</div>
-            <div>
-              <div style="font-weight: bold; font-size: 1.125rem;">—</div>
-              <div style="font-size: 0.875rem; opacity: 0.7;">—</div>
-            </div>
-          </div>`;
+          <div class="rank text-2xl font-bold opacity-30">#${i+1}</div>
+          <div class="flex-1">
+            <div class="font-semibold">—</div>
+            <div class="text-xs opacity-60">—</div>
+          </div>
+          <div class="text-right opacity-30">—</div>`;
         results.appendChild(card); 
         return;
       }
       
       const tkr = e.s.ticker || e.s.symbol || (e.s.name||'').split(' ')[0] || '—';
       
-      // Obtenir les icônes de région
-      let regionIcon = '';
-      if (e.s.region === 'US') {
-        regionIcon = '🇺🇸';
-      } else if (e.s.region === 'EUROPE') {
-        regionIcon = '🇪🇺';
-      } else if (e.s.region === 'ASIA') {
-        regionIcon = '🌏';
-      }
-      
-      // Créer les métriques avec plus d'espace
-      const metricsHTML = state.selectedMetrics.map(m => {
+      const metricValues = state.selectedMetrics.map(m => {
         const value = METRICS[m].get(e.s);
         if (!Number.isFinite(value)) return '';
         
@@ -663,26 +648,33 @@
           : (value < 20 ? 'text-green-400' : value > 40 ? 'text-red-400' : 'text-yellow-400');
         
         return `
-          <div style="text-align: center; padding: 0 20px;">
-            <div style="font-size: 0.75rem; opacity: 0.6; margin-bottom: 4px;">${METRICS[m].label}</div>
-            <div class="${colorClass}" style="font-weight: bold; font-size: 1.125rem;">${value > 0 && METRICS[m].max ? '+' : ''}${formatted}%</div>
+          <div class="text-right">
+            <div class="text-xs opacity-60">${METRICS[m].label}</div>
+            <div class="${colorClass} font-semibold">${value > 0 && METRICS[m].max ? '+' : ''}${formatted}${METRICS[m].unit}</div>
           </div>
         `;
       }).filter(Boolean).join('');
       
+      let regionIcon = '';
+      if (e.s.region === 'US') {
+        regionIcon = '🇺🇸';
+      } else if (e.s.region === 'EUROPE') {
+        regionIcon = '🇪🇺';
+      } else if (e.s.region === 'ASIA') {
+        regionIcon = '🌏';
+      }
+      
       card.innerHTML=`
-        <div style="display: flex; align-items: center; gap: 16px;">
-          <div style="font-size: 1.875rem; font-weight: bold; color: #00ffff; min-width: 55px;">#${i+1}</div>
-          <div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-weight: bold; font-size: 1.125rem;">${tkr}</span>
-              <span style="font-size: 0.875rem; opacity: 0.6;">${regionIcon}</span>
-            </div>
-            <div style="font-size: 0.875rem; opacity: 0.7;">${e.s.name||'—'}</div>
+        <div class="rank text-2xl font-bold">#${i+1}</div>
+        <div class="flex-1">
+          <div class="font-semibold flex items-center gap-2">
+            ${tkr} <span class="text-sm opacity-60">${regionIcon}</span>
           </div>
+          <div class="text-xs opacity-60" title="${e.s.name||''}">${e.s.name||'—'}</div>
+          <div class="text-xs opacity-40">${e.s.sector||''} • ${e.s.country||''}</div>
         </div>
-        <div style="display: flex; align-items: center;">
-          ${metricsHTML}
+        <div class="flex gap-4">
+          ${metricValues}
         </div>`;
       
       results.appendChild(card);
