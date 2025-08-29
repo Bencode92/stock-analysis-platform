@@ -98,8 +98,7 @@
     
     // Ajouter quelques filtres par défaut
     state.customFilters = [
-      { metric: 'perf_1y', operator: '>=', value: 10 },
-      { metric: 'volatility_3y', operator: '<=', value: 30 }
+      { metric: 'dividend_yield', operator: '>', value: 5.2 }
     ];
     updateFiltersList();
   }
@@ -139,7 +138,7 @@
   // Couleur selon l'opérateur
   function getOperatorColor(operator, isMax) {
     if (operator === '>=' || operator === '>') {
-      return isMax ? 'text-green-400' : 'text-red-400';
+      return isMax ? 'text-green-400' : 'text-cyan-400';
     } else if (operator === '<=' || operator === '<') {
       return isMax ? 'text-red-400' : 'text-green-400';
     }
@@ -302,7 +301,7 @@
       console.log(`✅ MC: ${allStocks.length} actions chargées`);
       
       if (allStocks.length > 0) {
-        results.innerHTML = `<div class="text-center text-green-400 py-4">✅ ${allStocks.length} actions disponibles</div>`;
+        results.innerHTML = `<div class="text-center text-cyan-400 py-4">✅ ${allStocks.length} actions disponibles</div>`;
       }
       
     } catch (err) {
@@ -313,7 +312,7 @@
     }
   }
 
-  // Appliquer les filtres personnalisés
+  // Appliquer les filtres personnalisés - CORRECTION DU BUG ICI
   function applyFilters(list){
     return list.filter(s => {
       // Vérifier que toutes les métriques sélectionnées sont présentes
@@ -324,22 +323,39 @@
       
       if (!hasAllMetrics) return false;
       
-      // Appliquer les filtres personnalisés
+      // Appliquer les filtres personnalisés avec LOGIQUE STRICTE
       for (const filter of state.customFilters) {
         const value = METRICS[filter.metric].get(s);
-        if (!Number.isFinite(value)) continue;
+        if (!Number.isFinite(value)) return false; // Si pas de valeur, exclure
         
         let passes = false;
+        const EPSILON = 0.001; // Pour gérer les erreurs d'arrondi
+        
         switch(filter.operator) {
-          case '>=': passes = value >= filter.value; break;
-          case '>':  passes = value > filter.value; break;
-          case '=':  passes = Math.abs(value - filter.value) < 0.1; break;
-          case '<':  passes = value < filter.value; break;
-          case '<=': passes = value <= filter.value; break;
-          case '!=': passes = Math.abs(value - filter.value) >= 0.1; break;
+          case '>=': 
+            passes = value >= filter.value - EPSILON; 
+            break;
+          case '>':  
+            passes = value > filter.value + EPSILON; // STRICT : doit être vraiment supérieur
+            break;
+          case '=':  
+            passes = Math.abs(value - filter.value) < EPSILON; 
+            break;
+          case '<':  
+            passes = value < filter.value - EPSILON; // STRICT : doit être vraiment inférieur
+            break;
+          case '<=': 
+            passes = value <= filter.value + EPSILON; 
+            break;
+          case '!=': 
+            passes = Math.abs(value - filter.value) > EPSILON; 
+            break;
         }
         
-        if (!passes) return false;
+        if (!passes) {
+          console.log(`❌ ${s.ticker||s.name}: ${METRICS[filter.metric].label}=${value} ne passe pas ${filter.operator} ${filter.value}`);
+          return false;
+        }
       }
       
       return true;
@@ -403,7 +419,7 @@
     return list.slice().sort(cmp).map(s=>({s, score:NaN}));
   }
 
-  // Rendu vertical avec métriques
+  // Rendu vertical avec métriques et style cyan
   function render(entries){
     results.innerHTML='';
     results.className = 'space-y-2';
@@ -455,7 +471,7 @@
       }
       
       card.innerHTML=`
-        <div class="rank text-2xl font-bold text-accent-color">#${i+1}</div>
+        <div class="rank text-2xl font-bold">#${i+1}</div>
         <div class="flex-1">
           <div class="font-semibold flex items-center gap-2">
             ${tkr} <span class="text-sm opacity-60">${regionIcon}</span>
@@ -473,6 +489,11 @@
       const info = document.createElement('div');
       info.className = 'text-center text-xs opacity-50 mt-3';
       info.textContent = `Seulement ${entries.length} actions correspondent aux critères`;
+      results.appendChild(info);
+    } else if (entries.length === 0) {
+      const info = document.createElement('div');
+      info.className = 'text-center text-cyan-400 py-4';
+      info.innerHTML = '<i class="fas fa-filter mr-2"></i>Aucune action ne passe les filtres stricts';
       results.appendChild(info);
     }
   }
@@ -506,8 +527,10 @@
     }
     
     const filtered = applyFilters(base);
+    console.log(`📊 Après filtres: ${filtered.length} actions sur ${base.length}`);
+    
     if (filtered.length === 0) {
-      results.innerHTML = '<div class="text-center text-yellow-400 py-4">Aucune action ne passe les filtres</div>';
+      results.innerHTML = '<div class="text-center text-cyan-400 py-4"><i class="fas fa-exclamation-triangle mr-2"></i>Aucune action ne passe les filtres stricts</div>';
       setSummary(base.length, 0);
       return;
     }
@@ -543,8 +566,7 @@
     resetBtn.addEventListener('click', ()=>{
       state.selectedMetrics = ['ytd', 'dividend_yield'];
       state.customFilters = [
-        { metric: 'perf_1y', operator: '>=', value: 10 },
-        { metric: 'volatility_3y', operator: '<=', value: 30 }
+        { metric: 'dividend_yield', operator: '>', value: 5.2 }
       ];
       
       Object.keys(METRICS).forEach(id => {
