@@ -1,4 +1,4 @@
-// ===== MC (Multi-Critères) – Module avec Priorités+ amélioré ===================
+// ===== MC (Multi-Critères) – Module avec Priorités intelligentes ===================
 (function(){
   // Attendre que le DOM soit prêt
   if (!document.querySelector('#mc-section')) {
@@ -381,7 +381,7 @@
           <strong>Mode Équilibre :</strong> Moyenne des scores percentiles (0-100) pour chaque critère coché.
         </div>
         <div id="priority-explanation" class="hidden">
-          <strong>Mode Priorités+ :</strong> Tri par ordre avec tolérance (2%) et tie-break pondéré. Plus robuste.
+          <strong>Mode Priorités intelligentes :</strong> Tri par ordre avec tolérance locale basée sur la densité de distribution.
         </div>
       `;
       modeContainer.appendChild(explanation);
@@ -551,62 +551,82 @@
     return scored;
   }
 
-  // === PRIORITÉS+ : lexico sur percentiles avec tolérance + tie-break pondéré ===
-  function rankLexicoPlus(list, topN = 10) {
+  // === PRIORITÉS INTELLIGENTES : lexico avec tolérance locale + tie-break pondéré ===
+  function rankLexicoSmart(list, topN = 10, tauPct = 0.02, kappa = 1.2) {
     const prios = state.selectedMetrics;
     if (!prios.length) return list.map(s => ({ s, score: NaN }));
 
-    // 1) Prépare percentiles par métrique (distribution sur la liste filtrée)
-    const dict = {};
+    // 1) Distributions pour percentiles + accès aux gaps locaux (densité)
+    const pctBase = {};
+    const rawBase = {};
     prios.forEach(m => {
-      dict[m] = list
-        .map(s => METRICS[m].get(s))
-        .filter(Number.isFinite)
-        .sort((a, b) => a - b);
+      const arr = list.map(s => METRICS[m].get(s)).filter(Number.isFinite);
+      rawBase[m] = arr.slice();
+      pctBase[m] = arr.slice().sort((a,b)=>a-b);
     });
 
-    // Transforme une valeur -> percentile orienté "plus c'est bon, plus c'est haut"
     const pr = (m, v) => {
-      let r = percentile(dict[m], v);
+      let r = percentile(pctBase[m], v);
       if (!Number.isFinite(r)) return 0;
-      if (!METRICS[m].max) r = 1 - r;   // inverse pour min→mieux
-      return r; // in [0,1]
+      if (!METRICS[m].max) r = 1 - r; // min → mieux
+      return r; // [0,1]
     };
 
-    // 2) Vecteur de percentiles par titre (dans l'ordre des priorités)
+    const localGap = (arrSorted, v, W = 8) => {
+      if (!arrSorted.length) return Infinity;
+      let lo = 0, hi = arrSorted.length;
+      while (lo < hi) { 
+        const mid = (lo + hi) >> 1; 
+        (arrSorted[mid] < v) ? lo = mid + 1 : hi = mid; 
+      }
+      const i = Math.min(Math.max(lo, 1), arrSorted.length - 2);
+      const start = Math.max(1, i - W), end = Math.min(arrSorted.length - 2, i + W);
+      const gaps = [];
+      for (let j = start - 1; j <= end; j++) {
+        gaps.push(Math.abs(arrSorted[j+1] - arrSorted[j]));
+      }
+      gaps.sort((a,b)=>a-b);
+      return gaps.length ? gaps[Math.floor(gaps.length/2)] : Infinity; // médiane du gap local
+    };
+
+    // 2) Vecteurs de percentiles
     const rows = list.map(s => ({
       s,
       vec: prios.map(m => pr(m, METRICS[m].get(s)))
     }));
 
-    // 3) Paramètres de Priorités+
-    const tau = 0.02;                         // tolérance (2 points de percentile)
-    const weights = prios.map((_, i) => Math.pow(0.5, i)); // tie-break pondéré
-
-    // Étagement Top-K pour stabiliser le Top 10
+    // 3) Étagement pour stabiliser le Top 10
     const stageKeeps = [Math.max(4 * topN, 40), Math.max(2 * topN, 20), topN];
-
     let pool = rows.slice();
     for (let k = 0; k < prios.length && pool.length > topN; k++) {
-      // Tri simple sur la priorité k
-      pool.sort((A, B) => B.vec[k] - A.vec[k]);
-
-      // Coupe au Top-K si on n'est pas au dernier critère
+      pool.sort((A,B)=> B.vec[k] - A.vec[k]);
       if (k < prios.length - 1) {
         const keep = stageKeeps[Math.min(k, stageKeeps.length - 1)];
         pool = pool.slice(0, Math.min(keep, pool.length));
       }
     }
 
-    // 4) Tri final : lexico avec tolérance + tie-break pondéré
+    // 4) Tri final : lexico avec double tolérance (percentile + valeur brute locale)
+    const weights = prios.map((_, i) => Math.pow(0.5, i)); // tie-break pondéré
     pool.sort((A, B) => {
       for (let i = 0; i < prios.length; i++) {
-        const d = A.vec[i] - B.vec[i];
-        if (Math.abs(d) > tau) return d > 0 ? -1 : 1; // plus haut percentile d'abord
+        const m = prios[i];
+        const dPct = A.vec[i] - B.vec[i]; // plus grand = meilleur
+        const vA = METRICS[m].get(A.s), vB = METRICS[m].get(B.s);
+
+        // tolérance en valeur brute basée sur la densité locale
+        const gapLoc = localGap(pctBase[m], (vA + vB) / 2);
+        const nearInValue = Math.abs(vA - vB) <= kappa * gapLoc; // ~ "même rang local"
+        const nearInPct   = Math.abs(dPct) <= tauPct;
+
+        if (!(nearInPct || nearInValue)) {
+          return dPct > 0 ? -1 : 1; // tranche sur m
+        }
+        // sinon : "quasi égalité" sur m → on regarde le critère suivant
       }
-      // Tie-break : somme pondérée
-      const sA = A.vec.reduce((acc, v, i) => acc + v * weights[i], 0);
-      const sB = B.vec.reduce((acc, v, i) => acc + v * weights[i], 0);
+      // Tous quasi égaux → tie-break pondéré (respecte l'ordre)
+      const sA = A.vec.reduce((acc,v,i)=>acc + v*weights[i], 0);
+      const sB = B.vec.reduce((acc,v,i)=>acc + v*weights[i], 0);
       return sB - sA;
     });
 
@@ -695,7 +715,7 @@
 
   function setSummary(total, kept){
     if (!summary) return;
-    const mode = state.mode==='balanced' ? 'Équilibre' : 'Priorités+';
+    const mode = state.mode==='balanced' ? 'Équilibre' : 'Priorités intelligentes';
     const labels = state.selectedMetrics.map(m=>METRICS[m].label).join(' · ');
     const filters = state.customFilters.length;
     
@@ -738,10 +758,10 @@
       return;
     }
     
-    // Utilise rankLexicoPlus au lieu de l'ancien rankLexico
+    // Utilise rankLexicoSmart au lieu de rankLexicoPlus
     const out = state.mode === 'balanced'
       ? rankBalanced(filtered)
-      : rankLexicoPlus(filtered);
+      : rankLexicoSmart(filtered);
       
     setSummary(base.length, filtered.length);
     render(out);
@@ -820,7 +840,7 @@
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module prêt avec Priorités+');
+    console.log('✅ MC Module prêt avec Priorités intelligentes');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
