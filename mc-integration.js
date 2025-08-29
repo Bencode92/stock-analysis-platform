@@ -18,39 +18,30 @@ if (!document.getElementById('mc-styles')) {
     max-width: 500px;
     background: linear-gradient(90deg, 
       transparent, 
-      rgba(0,255,135,0.8) 15%,
-      rgba(0,255,170,0.9) 50%,
-      rgba(0,255,135,0.8) 85%,
+      rgba(0,255,255,0.6) 15%,
+      rgba(0,255,255,0.8) 50%,
+      rgba(0,255,255,0.6) 85%,
       transparent);
-    box-shadow: 
-      0 0 25px rgba(0,255,135,0.5),
-      0 0 50px rgba(0,255,135,0.2);
-    animation: pulse-line 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse-line {
-    0%, 100% { opacity: 0.6; }
-    50% { opacity: 1; }
+    box-shadow: 0 0 15px rgba(0,255,255,0.3);
   }
   
   /* Support pour reduced motion */
   @media (prefers-reduced-motion: reduce) {
     .section-highlight-top { 
-      animation: none; 
-      box-shadow: 0 0 10px rgba(0,255,135,0.3);
+      box-shadow: none;
     }
   }
 
-  /* Titre du Composer centré et professionnel */
+  /* Titre du Composer en CYAN */
   .composer-title {
     font-size: 1.3rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--accent-color);
+    color: #00ffff !important;
     text-align: center;
     margin-bottom: 20px;
-    opacity: 0.95;
+    text-shadow: 0 0 10px rgba(0,255,255,0.4);
   }
 
   /* Ligne sous-titre simple et élégante */
@@ -61,8 +52,8 @@ if (!document.getElementById('mc-styles')) {
     max-width: 300px;
     background: linear-gradient(90deg, 
       transparent, 
-      rgba(0,255,135,0.6) 20%,
-      rgba(0,255,135,0.6) 80%,
+      rgba(0,255,255,0.6) 20%,
+      rgba(0,255,255,0.6) 80%,
       transparent);
   }
 
@@ -97,14 +88,12 @@ if (!document.getElementById('mc-styles')) {
     max-height: calc(100vh - (var(--header-height, 60px) + 24px));
     overflow-y: auto;
     
-    /* Style cyan flashy */
+    /* Style cyan SANS brillance */
     background: linear-gradient(135deg, 
       rgba(0, 200, 255, 0.05), 
       rgba(0, 255, 255, 0.03)) !important;
     border: 1px solid rgba(0, 200, 255, 0.3) !important;
-    box-shadow: 
-      0 0 30px rgba(0, 200, 255, 0.2),
-      inset 0 0 20px rgba(0, 255, 255, 0.05) !important;
+    box-shadow: 0 4px 12px rgba(0, 200, 255, 0.1) !important;
   }
 
   /* Styles existants MC avec accent cyan */
@@ -138,8 +127,15 @@ if (!document.getElementById('mc-styles')) {
   
   .mc-pill:hover{
     background:rgba(0, 255, 255, 0.1);
-    border-color: #00ffff;
-    box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+    border-color: rgba(0, 255, 255, 0.5);
+  }
+  
+  /* Effet cyan au clic */
+  .mc-pill:active,
+  .mc-pill input:checked + .mc-pill {
+    background:rgba(0, 255, 255, 0.2) !important;
+    border-color: #00ffff !important;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
   }
   
   .mc-pill input{accent-color:#00ffff}
@@ -150,7 +146,7 @@ if (!document.getElementById('mc-styles')) {
     align-items:center;
   }
   
-  .mc-score{font-weight:800;color:var(--accent-color)}
+  .mc-score{font-weight:800;color:#00ffff}
   
   /* Amélioration accessibilité fieldsets */
   fieldset {
@@ -166,64 +162,56 @@ if (!document.getElementById('mc-styles')) {
     font-weight: 600;
   }
   
-  /* Boutons avec style cyan */
+  /* Boutons avec style cyan et effet clic */
   .composer-filters .search-button {
     background: linear-gradient(135deg, rgba(0, 200, 255, 0.2), rgba(0, 255, 255, 0.1));
     border: 1px solid rgba(0, 255, 255, 0.5);
     color: #00ffff;
+    transition: all 0.2s ease;
   }
   
   .composer-filters .search-button:hover {
     background: linear-gradient(135deg, rgba(0, 200, 255, 0.3), rgba(0, 255, 255, 0.2));
     border-color: #00ffff;
-    box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+  }
+  
+  .composer-filters .search-button:active {
+    background: rgba(0, 255, 255, 0.4) !important;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+    transform: scale(0.98);
   }
   
   .composer-filters .action-button {
     background: rgba(0, 255, 255, 0.1);
     border: 1px solid rgba(0, 255, 255, 0.3);
+    transition: all 0.2s ease;
   }
   
   .composer-filters .action-button:hover {
     background: rgba(0, 255, 255, 0.2);
-    border-color: #00ffff;
+    border-color: rgba(0, 255, 255, 0.5);
   }
   
-  /* === ZONE DE RÉSULTATS CYAN FLASHY === */
+  .composer-filters .action-button:active {
+    background: rgba(0, 255, 255, 0.3) !important;
+    transform: scale(0.95);
+  }
+  
+  /* === ZONE DE RÉSULTATS CYAN SANS BRILLANCE === */
   
   #mc-results {
     background: linear-gradient(135deg, 
       rgba(0, 200, 255, 0.05), 
       rgba(0, 255, 255, 0.03)) !important;
     border: 1px solid rgba(0, 200, 255, 0.3) !important;
-    box-shadow: 
-      0 0 30px rgba(0, 200, 255, 0.2),
-      inset 0 0 20px rgba(0, 255, 255, 0.05) !important;
+    box-shadow: 0 4px 12px rgba(0, 200, 255, 0.1) !important;
     position: relative;
     overflow: hidden;
   }
   
+  /* Suppression de l'animation brillante */
   #mc-results::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
-    background: linear-gradient(90deg, 
-      transparent,
-      rgba(0, 255, 255, 0.4) 20%,
-      rgba(0, 255, 255, 0.6) 50%,
-      rgba(0, 255, 255, 0.4) 80%,
-      transparent);
-    opacity: 0;
-    z-index: -1;
-    animation: cyan-pulse 3s ease-in-out infinite;
-  }
-  
-  @keyframes cyan-pulse {
-    0%, 100% { opacity: 0; }
-    50% { opacity: 0.3; }
+    display: none;
   }
   
   /* Conteneur de résultats verticaux */
@@ -231,7 +219,7 @@ if (!document.getElementById('mc-styles')) {
     margin-bottom: 0.5rem;
   }
   
-  /* Carte de résultat avec teinte cyan */
+  /* Carte de résultat avec teinte cyan SANS brillance */
   #mc-results .glassmorphism {
     background: linear-gradient(135deg,
       rgba(0, 200, 255, 0.03),
@@ -242,11 +230,17 @@ if (!document.getElementById('mc-styles')) {
   
   #mc-results .glassmorphism:hover {
     background: linear-gradient(135deg,
-      rgba(0, 200, 255, 0.08),
-      rgba(0, 255, 255, 0.05)) !important;
-    border-color: rgba(0, 255, 255, 0.5) !important;
+      rgba(0, 200, 255, 0.06),
+      rgba(0, 255, 255, 0.04)) !important;
+    border-color: rgba(0, 255, 255, 0.3) !important;
     transform: translateX(2px);
-    box-shadow: 0 0 20px rgba(0, 200, 255, 0.3);
+  }
+  
+  /* Effet cyan au clic sur les cartes */
+  #mc-results .glassmorphism:active {
+    background: rgba(0, 255, 255, 0.15) !important;
+    border-color: #00ffff !important;
+    transform: translateX(0) scale(0.99);
   }
   
   /* Rang avec couleur cyan */
@@ -254,7 +248,7 @@ if (!document.getElementById('mc-styles')) {
     font-size: 1.5rem;
     font-weight: 900;
     color: #00ffff;
-    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
     opacity: 0.9;
     min-width: 50px;
   }
@@ -276,7 +270,12 @@ if (!document.getElementById('mc-styles')) {
   
   .priority-item:hover {
     background: rgba(0, 255, 255, 0.1) !important;
-    border-color: #00ffff;
+    border-color: rgba(0, 255, 255, 0.4);
+  }
+  
+  .priority-item:active {
+    background: rgba(0, 255, 255, 0.2) !important;
+    border-color: #00ffff !important;
   }
   
   .priority-item.dragging {
@@ -353,11 +352,17 @@ if (!document.getElementById('mc-styles')) {
   .filter-item {
     background: rgba(0, 255, 255, 0.05);
     border: 1px solid rgba(0, 255, 255, 0.2);
+    transition: all 0.2s ease;
   }
   
   .filter-item:hover {
-    background: rgba(0, 255, 255, 0.1) !important;
-    border-color: #00ffff;
+    background: rgba(0, 255, 255, 0.08) !important;
+    border-color: rgba(0, 255, 255, 0.4);
+  }
+  
+  .filter-item:active {
+    background: rgba(0, 255, 255, 0.15) !important;
+    border-color: #00ffff !important;
   }
   
   /* Summary avec style cyan */
@@ -372,6 +377,24 @@ if (!document.getElementById('mc-styles')) {
   /* Divider en bas des filtres */
   .composer-filters .border-t {
     border-color: rgba(0, 255, 255, 0.2) !important;
+  }
+  
+  /* Bouton + pour ajouter filtre */
+  #add-filter {
+    background: rgba(0, 255, 255, 0.1) !important;
+    border-color: rgba(0, 255, 255, 0.3) !important;
+    color: #00ffff !important;
+  }
+  
+  #add-filter:hover {
+    background: rgba(0, 255, 255, 0.2) !important;
+    border-color: rgba(0, 255, 255, 0.5) !important;
+  }
+  
+  #add-filter:active {
+    background: rgba(0, 255, 255, 0.3) !important;
+    border-color: #00ffff !important;
+    transform: scale(0.9);
   }
   `;
   document.head.appendChild(mcStyles);
