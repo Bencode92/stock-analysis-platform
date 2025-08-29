@@ -191,7 +191,10 @@ async function extractGeoData() {
  */
 function createDynamicSelectors(section) {
     const container = document.getElementById(`${section}-facets-container`);
-    if (!container) return;
+    if (!container) {
+        console.warn(`Container ${section}-facets-container non trouvé`);
+        return;
+    }
     
     container.innerHTML = `
         <div class="pills facets-pills" role="group" aria-label="Filtres ${section === 'top' ? 'Top 10' : 'A→Z'}">
@@ -351,57 +354,119 @@ function clearFacets(section) {
  * Initialisation principale
  */
 async function initDynamicFilters() {
+    console.log('🔄 Initialisation des filtres dynamiques...');
+    
     // D'abord extraire les données
     await extractGeoData();
     
-    // Créer les conteneurs si nécessaire
-    ['top', 'az'].forEach(section => {
-        const toolbar = document.querySelector(section === 'top' ? '.tp-toolbar' : '#az-toolbar');
-        if (!toolbar) return;
+    // Créer les sélecteurs pour Top 10
+    const topToolbar = document.querySelector('.tp-toolbar');
+    if (topToolbar) {
+        console.log('📍 Toolbar Top 10 trouvée');
         
         // Vérifier si le conteneur existe déjà
-        let container = document.getElementById(`${section}-facets-container`);
-        if (!container) {
-            container = document.createElement('div');
-            container.id = `${section}-facets-container`;
-            container.className = 'facets-container';
+        let topContainer = document.getElementById('top-facets-container');
+        if (!topContainer) {
+            topContainer = document.createElement('div');
+            topContainer.id = 'top-facets-container';
+            topContainer.className = 'facets-container';
             
             // Insérer après les boutons de région
-            const regions = toolbar.querySelector(section === 'top' ? '.tp-regions' : '.az-regions');
-            if (regions && regions.nextSibling) {
-                toolbar.insertBefore(container, regions.nextSibling);
+            const topRegions = topToolbar.querySelector('.tp-regions');
+            if (topRegions && topRegions.nextSibling) {
+                topToolbar.insertBefore(topContainer, topRegions.nextSibling);
             } else {
-                toolbar.appendChild(container);
+                topToolbar.appendChild(topContainer);
             }
         }
         
         // Créer les sélecteurs
-        createDynamicSelectors(section);
+        createDynamicSelectors('top');
+        updateSelectorsForRegion('top');
         
-        // Mettre à jour selon les régions actives
-        updateSelectorsForRegion(section);
+        // Event listeners pour Top 10
+        const topCountrySelect = document.getElementById('top-country-filter');
+        const topSectorSelect = document.getElementById('top-sector-filter');
+        const topClearBtn = document.getElementById('top-clear-facets');
         
-        // Event listeners
-        const countrySelect = document.getElementById(`${section}-country-filter`);
-        const sectorSelect = document.getElementById(`${section}-sector-filter`);
-        const clearBtn = document.getElementById(`${section}-clear-facets`);
-        
-        if (countrySelect) {
-            countrySelect.addEventListener('change', () => 
-                handleFacetChange(`${section}-country-filter`, section, 'countries')
+        if (topCountrySelect) {
+            topCountrySelect.addEventListener('change', () => 
+                handleFacetChange('top-country-filter', 'top', 'countries')
             );
         }
         
-        if (sectorSelect) {
-            sectorSelect.addEventListener('change', () => 
-                handleFacetChange(`${section}-sector-filter`, section, 'sectors')
+        if (topSectorSelect) {
+            topSectorSelect.addEventListener('change', () => 
+                handleFacetChange('top-sector-filter', 'top', 'sectors')
             );
         }
         
-        if (clearBtn) {
-            clearBtn.addEventListener('click', () => clearFacets(section));
+        if (topClearBtn) {
+            topClearBtn.addEventListener('click', () => clearFacets('top'));
         }
-    });
+    }
+    
+    // Créer les sélecteurs pour A→Z - avec plusieurs tentatives
+    let azToolbar = document.getElementById('az-toolbar');
+    if (!azToolbar) {
+        // Si az-toolbar n'existe pas encore, attendre un peu
+        console.log('⏳ Attente de az-toolbar...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        azToolbar = document.getElementById('az-toolbar');
+    }
+    
+    if (azToolbar) {
+        console.log('📍 Toolbar A→Z trouvée');
+        
+        // Vérifier si le conteneur existe déjà
+        let azContainer = document.getElementById('az-facets-container');
+        if (!azContainer) {
+            azContainer = document.createElement('div');
+            azContainer.id = 'az-facets-container';
+            azContainer.className = 'facets-container';
+            
+            // Insérer après les boutons de région
+            const azRegions = azToolbar.querySelector('.az-regions');
+            if (azRegions && azRegions.nextSibling) {
+                azToolbar.insertBefore(azContainer, azRegions.nextSibling);
+            } else {
+                // Si pas de nextSibling, insérer avant le hint
+                const azHint = azToolbar.querySelector('.toolbar-hint');
+                if (azHint) {
+                    azToolbar.insertBefore(azContainer, azHint);
+                } else {
+                    azToolbar.appendChild(azContainer);
+                }
+            }
+        }
+        
+        // Créer les sélecteurs
+        createDynamicSelectors('az');
+        updateSelectorsForRegion('az');
+        
+        // Event listeners pour A→Z
+        const azCountrySelect = document.getElementById('az-country-filter');
+        const azSectorSelect = document.getElementById('az-sector-filter');
+        const azClearBtn = document.getElementById('az-clear-facets');
+        
+        if (azCountrySelect) {
+            azCountrySelect.addEventListener('change', () => 
+                handleFacetChange('az-country-filter', 'az', 'countries')
+            );
+        }
+        
+        if (azSectorSelect) {
+            azSectorSelect.addEventListener('change', () => 
+                handleFacetChange('az-sector-filter', 'az', 'sectors')
+            );
+        }
+        
+        if (azClearBtn) {
+            azClearBtn.addEventListener('click', () => clearFacets('az'));
+        }
+    } else {
+        console.log('⚠️ Toolbar A→Z non trouvée');
+    }
     
     // Écouter les changements de région pour mettre à jour les sélecteurs
     window.addEventListener('topFiltersChanged', (e) => {
@@ -429,9 +494,11 @@ window.DynamicFilters = {
     clear: clearFacets
 };
 
-// Auto-initialisation
+// Auto-initialisation avec délai plus long pour être sûr que az-toolbar existe
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDynamicFilters);
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(initDynamicFilters, 500); // Plus de délai
+    });
 } else {
-    setTimeout(initDynamicFilters, 100);
+    setTimeout(initDynamicFilters, 500); // Plus de délai
 }
