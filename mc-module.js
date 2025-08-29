@@ -24,14 +24,19 @@
     return parseFloat(t);
   };
 
-  // métriques disponibles
+  // métriques disponibles ORGANISÉES PAR CATÉGORIE
   const METRICS = {
-    perf_1y:         {label:'Perf 1Y',        unit:'%', get:s=>p(s.perf_1y),        max:true},
-    ytd:             {label:'YTD',            unit:'%', get:s=>p(s.perf_ytd||s.ytd),max:true},
-    perf_3m:         {label:'Perf 3M',        unit:'%', get:s=>p(s.perf_3m),        max:true},
+    // Performance
+    perf_daily:      {label:'Perf Daily',     unit:'%', get:s=>p(s.perf_daily||s.daily||s.perf_1d), max:true},
     perf_1m:         {label:'Perf 1M',        unit:'%', get:s=>p(s.perf_1m),        max:true},
+    perf_3m:         {label:'Perf 3M',        unit:'%', get:s=>p(s.perf_3m),        max:true},
+    ytd:             {label:'YTD',            unit:'%', get:s=>p(s.perf_ytd||s.ytd),max:true},
+    perf_1y:         {label:'Perf 1Y',        unit:'%', get:s=>p(s.perf_1y),        max:true},
+    perf_3y:         {label:'Perf 3Y',        unit:'%', get:s=>p(s.perf_3y||s.perf_3_years), max:true},
+    // Risque
     volatility_3y:   {label:'Vol 3Y',         unit:'%', get:s=>p(s.volatility_3y),  max:false},
     max_drawdown_3y: {label:'Max DD 3Y',      unit:'%', get:s=>p(s.max_drawdown_3y),max:false},
+    // Dividende
     dividend_yield:  {label:'Div. Yield',     unit:'%', get:s=>p(s.dividend_yield), max:true},
   };
 
@@ -47,7 +52,7 @@
     data:[], 
     loading:false,
     selectedMetrics: ['ytd', 'dividend_yield'],
-    customFilters: [],
+    customFilters: [], // PAS DE FILTRE PAR DÉFAUT
     // Nouveaux filtres géographiques
     geoFilters: {
       region: 'all',
@@ -134,7 +139,7 @@
     state.geoFilters.country = 'all';
   }
 
-  // Créer l'interface des filtres personnalisables
+  // Créer l'interface des filtres personnalisables AVEC ESPACEMENT RÉDUIT
   function setupCustomFilters() {
     const filtersFieldset = root.querySelector('fieldset:nth-of-type(3)');
     if (!filtersFieldset) return;
@@ -149,13 +154,13 @@
       <div id="custom-filters-list" class="space-y-2 mb-2">
         <!-- Les filtres seront ajoutés ici -->
       </div>
-      <div class="flex gap-2 items-center">
-        <select id="filter-metric" class="mini-select flex-1">
+      <div class="flex gap-1 items-center filter-controls">
+        <select id="filter-metric" class="mini-select" style="flex: 1.5; min-width: 100px;">
           ${Object.entries(METRICS).map(([k,v]) => 
             `<option value="${k}">${v.label}</option>`
           ).join('')}
         </select>
-        <select id="filter-operator" class="mini-select">
+        <select id="filter-operator" class="mini-select" style="width: 50px;">
           <option value=">=">≥</option>
           <option value=">">></option>
           <option value="=">=</option>
@@ -163,9 +168,9 @@
           <option value="<=">≤</option>
           <option value="!=">≠</option>
         </select>
-        <input id="filter-value" type="number" class="mini-input w-20" placeholder="0" step="0.1">
+        <input id="filter-value" type="number" class="mini-input" style="width: 65px;" placeholder="0" step="0.1">
         <span class="text-xs opacity-60">%</span>
-        <button id="add-filter" class="action-button px-3">
+        <button id="add-filter" class="action-button" style="padding: 6px 10px;">
           <i class="fas fa-plus"></i>
         </button>
       </div>
@@ -184,9 +189,8 @@
       }
     });
     
-    state.customFilters = [
-      { metric: 'dividend_yield', operator: '>', value: 5.2 }
-    ];
+    // PAS de filtres par défaut
+    state.customFilters = [];
     updateFiltersList();
   }
 
@@ -690,9 +694,7 @@
   if (resetBtn) {
     resetBtn.addEventListener('click', ()=>{
       state.selectedMetrics = ['ytd', 'dividend_yield'];
-      state.customFilters = [
-        { metric: 'dividend_yield', operator: '>', value: 5.2 }
-      ];
+      state.customFilters = []; // PAS de filtre par défaut
       state.geoFilters = { region: 'all', country: 'all', sector: 'all' };
       
       Object.keys(METRICS).forEach(id => {
