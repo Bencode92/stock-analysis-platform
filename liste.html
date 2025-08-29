@@ -1246,6 +1246,140 @@
              transform: translateY(0) scale(1);
          }
          
+         /* ========================================= */
+         /* STYLES POUR LES FILTRES A→Z */
+         /* ========================================= */
+         
+         /* Wrapper principal des filtres A→Z */
+         .az-filters-wrapper {
+             background: rgba(0,255,135,0.02);
+             border: 1px solid var(--card-border);
+             border-radius: 12px;
+             padding: 16px;
+             margin-top: 16px;
+             margin-bottom: 24px;
+             backdrop-filter: blur(5px);
+         }
+         
+         /* Boutons région A→Z */
+         .az-region-btn {
+             padding: 10px 18px;
+             border: 1px solid rgba(255,255,255,0.2);
+             background: transparent;
+             color: var(--text-color);
+             border-radius: 8px;
+             transition: all 0.3s ease;
+             font-weight: 600;
+             cursor: pointer;
+             display: inline-flex;
+             align-items: center;
+             gap: 8px;
+         }
+         
+         .dark .az-region-btn {
+             border-color: var(--card-border);
+         }
+         
+         .light .az-region-btn {
+             border-color: rgba(0,0,0,0.1);
+             color: var(--light-text-color);
+         }
+         
+         .az-region-btn:hover {
+             background: var(--accent-subtle);
+             transform: translateY(-2px);
+             box-shadow: var(--accent-glow);
+         }
+         
+         .az-region-btn.active {
+             background: var(--accent-color);
+             color: var(--background-color);
+             border-color: var(--accent-color);
+             box-shadow: 0 0 15px rgba(0,255,135,0.4);
+         }
+         
+         .dark .az-region-btn.active {
+             color: var(--background-color);
+         }
+         
+         .light .az-region-btn.active {
+             color: white;
+         }
+         
+         .az-region-btn i {
+             font-size: 14px;
+         }
+         
+         /* Dropdowns A→Z */
+         #az-country-filter,
+         #az-sector-filter {
+             background: transparent;
+             border: 1px solid var(--card-border);
+             color: var(--text-color);
+             padding: 10px 12px;
+             border-radius: 8px;
+             font-size: 0.95rem;
+             transition: all 0.3s ease;
+             cursor: pointer;
+         }
+         
+         .dark #az-country-filter,
+         .dark #az-sector-filter {
+             background: rgba(255,255,255,0.05);
+         }
+         
+         .light #az-country-filter,
+         .light #az-sector-filter {
+             background: rgba(0,0,0,0.03);
+             color: var(--light-text-color);
+         }
+         
+         #az-country-filter:hover,
+         #az-sector-filter:hover {
+             border-color: var(--accent-color);
+             box-shadow: 0 0 10px rgba(0,255,135,0.2);
+         }
+         
+         #az-country-filter:focus,
+         #az-sector-filter:focus {
+             outline: none;
+             border-color: var(--accent-color);
+             box-shadow: var(--accent-glow);
+         }
+         
+         #az-country-filter option,
+         #az-sector-filter option {
+             background: var(--background-color);
+             color: var(--text-color);
+             padding: 8px;
+         }
+         
+         /* Compteur de résultats */
+         #az-filter-count {
+             color: var(--accent-color);
+             font-weight: 700;
+             font-size: 1.1rem;
+         }
+         
+         /* Labels des filtres */
+         .az-filters-wrapper label {
+             font-size: 0.85rem;
+             text-transform: uppercase;
+             letter-spacing: 0.05em;
+             opacity: 0.7;
+             font-weight: 600;
+         }
+         
+         /* Animation pour les changements de filtres */
+         @keyframes filterChange {
+             0% { opacity: 0.5; }
+             100% { opacity: 1; }
+         }
+         
+         .az-filters-wrapper.filtering {
+             animation: filterChange 0.3s ease;
+         }
+         
          /* Version mobile-friendly */
          @media (max-width: 768px) {
              .tp-toolbar {
@@ -1301,6 +1435,25 @@
                  .stock-cards-container { 
                      grid-template-columns: 1fr; 
                  } 
+             }
+             
+             /* Filtres A→Z mobiles */
+             .az-region-buttons {
+                 flex-wrap: wrap;
+                 gap: 8px;
+             }
+             
+             .az-region-btn {
+                 flex: 1;
+                 min-width: calc(50% - 4px);
+                 justify-content: center;
+                 padding: 8px 12px;
+                 font-size: 0.85rem;
+             }
+             
+             .az-filters-wrapper .grid {
+                 grid-template-columns: 1fr;
+                 gap: 12px;
              }
          }
 
@@ -1518,6 +1671,15 @@
                  <div class="mb-8">
                      <h2 class="section-title mb-6">Actions par lettre</h2>
                      
+                     <!-- Container pour les filtres A→Z sera injecté ici -->
+                     <div id="indices-container" class="glassmorphism rounded-lg">
+                         <div class="card-header">
+                             <h3>Actions globales</h3>
+                             <span class="text-sm opacity-70" id="region-breakdown"></span>
+                         </div>
+                         <!-- Les filtres seront injectés ici par az-filters.js -->
+                     </div>
+                     
                      <!-- Barre de recherche -->
                      <div class="search-container mb-4">
                          <div class="search-wrapper relative">
@@ -1577,7 +1739,7 @@
                              </button>
                          </div>
                          
-                         <div id="indices-container" class="hidden">
+                         <div id="indices-container-table" class="hidden">
                              <!-- Contenu pour chaque lettre -->
                              <div id="a-indices" class="region-content">
                                  <div class="overflow-x-auto">
@@ -2189,9 +2351,10 @@
      </main>
 
      <script src="liste-script.js"></script>
-      <link rel="stylesheet" href="mc-styles.css">
-    <script src="mc-integration.js"></script>
-    <script src="mc-module.js"></script>
+     <script src="az-filters.js"></script>
+     <link rel="stylesheet" href="mc-styles.css">
+     <script src="mc-integration.js"></script>
+     <script src="mc-module.js"></script>
      
      <!-- Script amélioré pour la nouvelle barre de contrôle -->
      <script>
