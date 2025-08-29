@@ -1,48 +1,168 @@
-/* Styles additionnels pour les select multiples */
+/* Styles améliorés pour les sélecteurs pays/secteurs */
+
+/* Style général pour les selects */
 select.pill {
     appearance: none;
     border: 1px solid var(--card-border);
     border-radius: 8px;
-    padding: 8px 12px;
-    color: inherit;
-    background: transparent;
+    padding: 8px 32px 8px 12px;
+    color: var(--text-color);
+    background: rgba(255, 255, 255, 0.05);
+    min-width: 180px;
+    max-width: 250px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    position: relative;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2300FF87' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    transition: all 0.2s ease;
 }
 
-select.pill option {
-    color: black;
-    background: white;
+select.pill:hover {
+    background-color: rgba(0, 255, 135, 0.08);
+    border-color: var(--accent-color);
 }
 
 select.pill:focus {
     outline: none;
-    box-shadow: var(--accent-glow);
+    box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2);
     border-color: var(--accent-color);
+    background-color: rgba(0, 255, 135, 0.1);
 }
 
-select[multiple] {
-    max-height: 200px;
-    overflow-y: auto;
+select.pill option {
+    color: white;
+    background: #0a1929;
+    padding: 8px;
 }
 
-.select-count {
-    margin-left: 8px;
-    font-size: 0.75rem;
-    opacity: 0.6;
+select.pill option:hover {
+    background: rgba(0, 255, 135, 0.2);
+}
+
+select.pill option[disabled] {
+    color: #666;
     font-weight: 600;
+    background: #061420;
+    border-bottom: 1px solid var(--card-border);
 }
 
-/* Styles pour les toolbars indépendantes */
+select.pill option:checked {
+    background: linear-gradient(90deg, rgba(0, 255, 135, 0.3), rgba(0, 255, 135, 0.1));
+}
+
+/* Style pour les boutons de réinitialisation */
+.action-button {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    background-color: rgba(0, 255, 135, 0.1);
+    color: var(--accent-color);
+    border: 1px solid var(--accent-medium);
+    cursor: pointer;
+}
+
+.action-button:hover {
+    background-color: var(--accent-medium);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 255, 135, 0.3);
+}
+
+.action-button:active {
+    transform: translateY(0);
+}
+
+/* Badge de compteur pour la sélection multiple */
+.select-count {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--accent-color);
+    color: var(--background-color);
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    min-width: 20px;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0, 255, 135, 0.4);
+}
+
+/* Container pour select avec badge */
+.select-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+/* Amélioration visuelle des toolbars */
 #top-toolbar, #az-toolbar {
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
 }
 
-.az-regions .seg-btn {
-    /* Différencier visuellement les boutons A→Z */
-    opacity: 0.8;
+#top-toolbar .pills,
+#az-toolbar .pills {
+    gap: 12px;
+    align-items: center;
+}
+
+/* Différencier visuellement les toolbars A→Z */
+#az-toolbar {
+    border-top: 1px solid var(--card-border);
+    padding-top: 16px;
+    margin-top: 16px;
 }
 
 .az-regions .seg-btn[aria-selected="true"] {
     background: rgba(0, 200, 255, 0.15);
     color: #00c8ff;
     box-shadow: 0 0 0 1px rgba(0, 200, 255, 0.3) inset;
+}
+
+/* Transition douce pour les changements */
+.tp-toolbar * {
+    transition: all 0.2s ease;
+}
+
+/* Style pour dropdown ouvert */
+select.pill:focus,
+select.pill.active {
+    box-shadow: 0 4px 20px rgba(0, 255, 135, 0.2);
+}
+
+/* Amélioration pour mobile */
+@media (max-width: 768px) {
+    select.pill {
+        min-width: 120px;
+        font-size: 0.85rem;
+        padding: 6px 24px 6px 8px;
+    }
+    
+    .action-button {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+}
+
+/* Animation de mise à jour */
+@keyframes update-flash {
+    0% { background-color: rgba(0, 255, 135, 0.3); }
+    100% { background-color: transparent; }
+}
+
+.updating {
+    animation: update-flash 0.5s ease;
+}
+
+/* Styles pour les labels de sélection */
+.pill-label {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-right: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
