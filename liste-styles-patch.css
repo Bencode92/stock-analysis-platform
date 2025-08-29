@@ -1,0 +1,48 @@
+/* Styles additionnels pour les select multiples */
+select.pill {
+    appearance: none;
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: inherit;
+    background: transparent;
+}
+
+select.pill option {
+    color: black;
+    background: white;
+}
+
+select.pill:focus {
+    outline: none;
+    box-shadow: var(--accent-glow);
+    border-color: var(--accent-color);
+}
+
+select[multiple] {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.select-count {
+    margin-left: 8px;
+    font-size: 0.75rem;
+    opacity: 0.6;
+    font-weight: 600;
+}
+
+/* Styles pour les toolbars indépendantes */
+#top-toolbar, #az-toolbar {
+    margin-bottom: 1rem;
+}
+
+.az-regions .seg-btn {
+    /* Différencier visuellement les boutons A→Z */
+    opacity: 0.8;
+}
+
+.az-regions .seg-btn[aria-selected="true"] {
+    background: rgba(0, 200, 255, 0.15);
+    color: #00c8ff;
+    box-shadow: 0 0 0 1px rgba(0, 200, 255, 0.3) inset;
+}
