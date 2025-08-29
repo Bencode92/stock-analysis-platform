@@ -8,6 +8,29 @@ mcStyles.textContent = `
 :root { --section-gap: 80px; }
 .section { margin-bottom: var(--section-gap); }
 
+/* Ligne flashy au-dessus du titre */
+.section-highlight-top {
+  position: relative;
+  height: 2px;
+  margin: 0 auto 20px;
+  max-width: 500px;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(0,255,135,0.8) 15%,
+    rgba(0,255,170,0.9) 50%,
+    rgba(0,255,135,0.8) 85%,
+    transparent);
+  box-shadow: 
+    0 0 25px rgba(0,255,135,0.5),
+    0 0 50px rgba(0,255,135,0.2);
+  animation: pulse-line 2s ease-in-out infinite;
+}
+
+@keyframes pulse-line {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
 /* Titre du Composer centré et professionnel */
 .composer-title {
   font-size: 1.3rem;
@@ -100,11 +123,12 @@ document.addEventListener('DOMContentLoaded', function() {
         .find(title => title.textContent.includes('Actions par lettre'));
     
     if (actionsParLettre && !document.getElementById('mc-section')) {
-        // Créer section Composer avec titre centré et professionnel
+        // Créer section Composer avec lignes flashy encadrant le titre
         const mcSection = document.createElement('section');
         mcSection.id = 'mc-section';
         mcSection.className = 'section';
         mcSection.innerHTML = `
+  <div class="section-highlight-top"></div>
   <h2 class="composer-title">Top 10 — Composer multi-critères</h2>
   <div class="section-highlight"></div>
   
