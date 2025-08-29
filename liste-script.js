@@ -3,6 +3,7 @@
  * Données mises à jour régulièrement par GitHub Actions
  * Version améliorée avec chargement dynamique des données par marché et sélection multi-régions
  * Ajout de panneaux détails extensibles pour chaque action
+ * MODIFIÉ: Section A→Z indépendante des filtres Top 10
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -22,6 +23,9 @@ document.addEventListener('DOMContentLoaded', function() {
         US_ASIA:       ['US','ASIA'],
         EUROPE_ASIA:   ['EUROPE','ASIA'],
     };
+    
+    // NOUVEAU: Constante pour forcer GLOBAL sur la section A→Z
+    const AZ_SCOPE = 'GLOBAL'; // Section A→Z toujours en mode GLOBAL (toutes régions)
     
     // Variables globales pour stocker les données
     let stocksData = {
@@ -87,8 +91,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialiser les boutons de sélection multi-régions
     wireScopeButtons();
     
-    // Premier chargement des données A→Z basé sur la sélection régionale
-    loadAZDataForCurrentSelection();
+    // MODIFIÉ: Forcer le chargement GLOBAL pour la section A→Z
+    loadAZDataForCurrentSelection(false, true); // forceGlobal = true
     
     // Charger les données pour le marché sélectionné (NASDAQ/STOXX)
     loadStocksData();
@@ -103,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('retry-button')?.addEventListener('click', function() {
         hideElement('indices-error');
         showElement('indices-loading');
-        loadAZDataForCurrentSelection(true);
+        loadAZDataForCurrentSelection(true, true); // MODIFIÉ: forceGlobal = true
     });
     
     // Écouter les événements de changement de filtres depuis liste.html
@@ -122,13 +126,14 @@ document.addEventListener('DOMContentLoaded', function() {
             topScope = COMBO_MAP[`${ordered[0]},${ordered[1]}`] || 'GLOBAL';
         }
         
-        // Recharger les données et re-render
+        // MODIFIÉ: Ne recharger QUE les tops, PAS les données A→Z
         renderTop();
-        loadAZDataForCurrentSelection(true);
+        // SUPPRIMÉ: loadAZDataForCurrentSelection(true);
     });
     
     /**
      * Initialise les boutons de sélection multi-régions pour les Top 10
+     * MODIFIÉ: Ne recharge plus les données A→Z
      */
     function wireScopeButtons() {
       const box = document.getElementById('top-scope');
@@ -204,8 +209,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
           updateButtonsUI();
           topScope = computeTopKey();
-          renderTop(); // recharge les tops depuis tops_overview.sets[topScope]
-          loadAZDataForCurrentSelection(true); // recharge A→Z selon la nouvelle sélection
+          renderTop(); // MODIFIÉ: recharge SEULEMENT les tops, PAS les données A→Z
+          // SUPPRIMÉ: loadAZDataForCurrentSelection(true);
         });
       });
 
@@ -303,9 +308,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     /**
      * Charge les données A→Z basées sur la sélection régionale actuelle
+     * MODIFIÉ: Accepte un paramètre forceGlobal pour toujours charger GLOBAL
      */
-    async function loadAZDataForCurrentSelection(forceRefresh = false) {
-        const scope = (typeof topScope === 'string' && SCOPE_TO_FILES[topScope]) ? topScope : 'GLOBAL';
+    async function loadAZDataForCurrentSelection(forceRefresh = false, forceGlobal = false) {
+        // MODIFIÉ: Toujours utiliser GLOBAL pour la section A→Z
+        const scope = forceGlobal ? 'GLOBAL' : AZ_SCOPE;
         const regions = SCOPE_TO_FILES[scope];
         const urls = regions.map(r => AZ_FILES[r]).filter(Boolean);
         const cacheBuster = forceRefresh ? `?t=${Date.now()}` : '';
@@ -327,15 +334,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const parent = loadingText.parentElement;
             parent?.querySelector('.loading-msg')?.remove(); // Supprimer l'ancien message
             
-            const regionsText = regions.join(' + ');
+            // MODIFIÉ: Message clair pour la section A→Z
             const loadingMessage = document.createElement('p');
             loadingMessage.className = 'loading-msg mt-4 text-sm text-gray-400';
-            loadingMessage.textContent = `Chargement des données ${regionsText}...`;
+            loadingMessage.textContent = `Chargement des données globales (US + Europe + Asie)...`;
             parent.appendChild(loadingMessage);
         }
         
         try {
-            console.log(`🔍 Chargement A→Z pour scope: ${scope}, régions: ${regions.join(', ')}`);
+            console.log(`🔍 Chargement A→Z GLOBAL (toutes régions)`);
             
             const payloads = await Promise.all(
                 urls.map(u => 
@@ -419,7 +426,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             };
             
-            console.log(`✅ Chargé ${stats.total} actions: ${Object.entries(stats.byRegion).map(([r,c]) => `${r}: ${c}`).join(', ')}`);
+            console.log(`✅ Section A→Z: ${stats.total} actions globales chargées`);
             
             // Afficher les statistiques dans l'UI
             const regionBreakdown = document.getElementById('region-breakdown');
