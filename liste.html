@@ -1612,17 +1612,17 @@
                      <!-- Nouvelle barre de contrôle élégante -->
                      <div class="tp-toolbar">
                          <!-- Régions (Segmented Control) -->
-                         <div class="seg tp-regions" role="tablist" aria-label="Régions">
-                             <button class="seg-btn" data-region="GLOBAL" aria-selected="true">
+                         <div class="seg tp-regions" role="tablist" aria-label="Régions" id="top-scope">
+                             <button class="seg-btn market-btn" data-scope="GLOBAL" data-region="GLOBAL" aria-selected="true">
                                  <i class="fas fa-globe"></i>Global
                              </button>
-                             <button class="seg-btn" data-region="US" aria-selected="false">
+                             <button class="seg-btn market-btn" data-scope="US" data-region="US" aria-selected="false">
                                  <i class="fas fa-flag-usa"></i>US
                              </button>
-                             <button class="seg-btn" data-region="EUROPE" aria-selected="false">
+                             <button class="seg-btn market-btn" data-scope="EUROPE" data-region="EUROPE" aria-selected="false">
                                  <i class="fas fa-globe-europe"></i>Europe
                              </button>
-                             <button class="seg-btn" data-region="ASIA" aria-selected="false">
+                             <button class="seg-btn market-btn" data-scope="ASIA" data-region="ASIA" aria-selected="false">
                                  <i class="fas fa-globe-asia"></i>Asie
                              </button>
                          </div>
@@ -1671,8 +1671,8 @@
                  <div class="mb-8">
                      <h2 class="section-title mb-6">Actions par lettre</h2>
                      
-                     <!-- Container pour les filtres A→Z sera injecté ici -->
-                     <div id="indices-container" class="glassmorphism rounded-lg">
+                     <!-- Container pour les filtres A→Z (card séparée) -->
+                     <div class="glassmorphism rounded-lg mb-6">
                          <div class="card-header">
                              <h3>Actions globales</h3>
                              <span class="text-sm opacity-70" id="region-breakdown"></span>
@@ -1739,7 +1739,8 @@
                              </button>
                          </div>
                          
-                         <div id="indices-container-table" class="hidden">
+                         <!-- CORRIGÉ: Utiliser le bon ID "indices-container" attendu par liste-script.js -->
+                         <div id="indices-container" class="hidden">
                              <!-- Contenu pour chaque lettre -->
                              <div id="a-indices" class="region-content">
                                  <div class="overflow-x-auto">
@@ -1763,7 +1764,7 @@
                                  </div>
                              </div>
                              
-                             <!-- B -->
+                             <!-- B à Z (même structure) -->
                              <div id="b-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -1779,14 +1780,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="b-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="b-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- C -->
                              <div id="c-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -1802,14 +1800,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="c-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="c-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- D -->
                              <div id="d-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -1825,14 +1820,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="d-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="d-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- E -->
                              <div id="e-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -1848,14 +1840,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="e-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="e-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- F -->
                              <div id="f-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -1871,14 +1860,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="f-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="f-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- G -->
                              <div id="g-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -1894,14 +1880,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="g-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="g-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- H -->
                              <div id="h-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -1917,14 +1900,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="h-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="h-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- I -->
                              <div id="i-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -1940,14 +1920,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="i-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="i-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- J -->
                              <div id="j-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -1963,14 +1940,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="j-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="j-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- K -->
                              <div id="k-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -1986,14 +1960,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="k-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="k-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- L -->
                              <div id="l-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -2009,14 +1980,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="l-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="l-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- M -->
                              <div id="m-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -2032,14 +2000,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="m-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="m-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- N -->
                              <div id="n-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -2055,14 +2020,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="n-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="n-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- O -->
                              <div id="o-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -2078,14 +2040,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="o-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="o-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- P -->
                              <div id="p-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -2101,14 +2060,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="p-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="p-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- Q -->
                              <div id="q-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -2124,14 +2080,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="q-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="q-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- R -->
                              <div id="r-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -2147,14 +2100,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="r-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="r-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- S -->
                              <div id="s-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -2170,14 +2120,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="s-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="s-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- T -->
                              <div id="t-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -2193,14 +2140,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="t-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="t-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- U -->
                              <div id="u-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -2216,14 +2160,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="u-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="u-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- V -->
                              <div id="v-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -2239,14 +2180,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="v-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="v-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- W -->
                              <div id="w-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -2262,14 +2200,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="w-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="w-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- X -->
                              <div id="x-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -2285,14 +2220,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="x-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="x-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- Y -->
                              <div id="y-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -2308,14 +2240,11 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="y-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="y-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
                              
-                             <!-- Z -->
                              <div id="z-indices" class="region-content hidden">
                                  <div class="overflow-x-auto">
                                      <table class="data-table">
@@ -2331,9 +2260,7 @@
                                                  <th>VOLUME</th>
                                              </tr>
                                          </thead>
-                                         <tbody id="z-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
+                                         <tbody id="z-indices-body"></tbody>
                                      </table>
                                  </div>
                              </div>
@@ -2355,148 +2282,5 @@
      <link rel="stylesheet" href="mc-styles.css">
      <script src="mc-integration.js"></script>
      <script src="mc-module.js"></script>
-     
-     <!-- Script amélioré pour la nouvelle barre de contrôle -->
-     <script>
-        (function() {
-            // Éléments du DOM
-            const regionBtns = [...document.querySelectorAll('.tp-regions .seg-btn')];
-            const pillBar = document.querySelector('.tp-filters');
-            const pills = [...pillBar.querySelectorAll('.pill')];
-            const hint = document.getElementById('hint-text');
-            const scopeLabel = document.getElementById('top-scope-label');
-            const container = document.getElementById('top-global-container');
-
-            // État des filtres
-            let selectedRegions = new Set(['GLOBAL']);
-            let currentDirection = 'up'; // 'up' ou 'down'
-            let currentTimeframe = 'daily'; // 'daily' ou 'ytd'
-
-            // Underline animée pour les pills
-            function updatePillUnderline() {
-                const activePill = pillBar.querySelector('.pill[aria-selected="true"]');
-                if (activePill) {
-                    const rect = activePill.getBoundingClientRect();
-                    const barRect = pillBar.getBoundingClientRect();
-                    const x = rect.left - barRect.left;
-                    const w = rect.width;
-                    pillBar.style.setProperty('--x', `${x}px`);
-                    pillBar.style.setProperty('--w', `${w}px`);
-                }
-            }
-
-            // Gestion des boutons de région
-            regionBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const region = btn.dataset.region;
-                    
-                    // GLOBAL est exclusif
-                    if (region === 'GLOBAL') {
-                        selectedRegions.clear();
-                        selectedRegions.add('GLOBAL');
-                        regionBtns.forEach(b => {
-                            b.setAttribute('aria-selected', b.dataset.region === 'GLOBAL' ? 'true' : 'false');
-                        });
-                    } else {
-                        // Si GLOBAL est actif, le retirer
-                        if (selectedRegions.has('GLOBAL')) {
-                            selectedRegions.delete('GLOBAL');
-                            regionBtns.find(b => b.dataset.region === 'GLOBAL').setAttribute('aria-selected', 'false');
-                        }
-                        
-                        // Toggle de la région
-                        if (selectedRegions.has(region)) {
-                            selectedRegions.delete(region);
-                            btn.setAttribute('aria-selected', 'false');
-                        } else {
-                            // Maximum 2 régions simultanément
-                            if (selectedRegions.size < 2) {
-                                selectedRegions.add(region);
-                                btn.setAttribute('aria-selected', 'true');
-                            } else {
-                                // Animation de refus
-                                btn.style.animation = 'pulse 0.3s';
-                                setTimeout(() => btn.style.animation = '', 300);
-                                return;
-                            }
-                        }
-                        
-                        // Si plus aucune région, remettre GLOBAL
-                        if (selectedRegions.size === 0) {
-                            selectedRegions.add('GLOBAL');
-                            regionBtns.find(b => b.dataset.region === 'GLOBAL').setAttribute('aria-selected', 'true');
-                        }
-                    }
-                    
-                    updateScopeLabel();
-                    updateHint();
-                    triggerDataRefresh();
-                });
-            });
-
-            // Gestion des pills
-            pills.forEach(pill => {
-                pill.addEventListener('click', () => {
-                    const dir = pill.dataset.dir;
-                    const frame = pill.dataset.frame;
-                    
-                    if (dir) {
-                        // Direction pills
-                        pills.filter(p => p.dataset.dir).forEach(p => {
-                            p.setAttribute('aria-selected', p === pill ? 'true' : 'false');
-                        });
-                        currentDirection = dir;
-                    } else if (frame) {
-                        // Timeframe pills
-                        pills.filter(p => p.dataset.frame).forEach(p => {
-                            p.setAttribute('aria-selected', p === pill ? 'true' : 'false');
-                        });
-                        currentTimeframe = frame;
-                    }
-                    
-                    updatePillUnderline();
-                    triggerDataRefresh();
-                });
-            });
-
-            // Mise à jour du label
-            function updateScopeLabel() {
-                if (selectedRegions.has('GLOBAL')) {
-                    scopeLabel.textContent = 'GLOBAL';
-                } else {
-                    const regions = Array.from(selectedRegions).sort();
-                    scopeLabel.textContent = regions.join(' + ');
-                }
-            }
-
-            // Mise à jour du hint
-            function updateHint() {
-                if (selectedRegions.has('GLOBAL')) {
-                    hint.textContent = 'GLOBAL exclusif';
-                } else if (selectedRegions.size === 1) {
-                    hint.textContent = `${Array.from(selectedRegions)[0]} uniquement`;
-                } else {
-                    hint.textContent = 'Combo régional';
-                }
-            }
-
-            // Trigger du rafraîchissement des données
-            function triggerDataRefresh() {
-                // Émettre un événement personnalisé pour liste-script.js
-                window.dispatchEvent(new CustomEvent('topFiltersChanged', {
-                    detail: {
-                        regions: Array.from(selectedRegions),
-                        direction: currentDirection,
-                        timeframe: currentTimeframe
-                    }
-                }));
-            }
-
-            // Init
-            updatePillUnderline();
-            updateScopeLabel();
-            updateHint();
-        })();
-     </script>
  </body>
  </html>
