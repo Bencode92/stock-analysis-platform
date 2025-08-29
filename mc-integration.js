@@ -14,7 +14,7 @@ mcStyles.textContent = `
 `;
 document.head.appendChild(mcStyles);
 
-// 2. Masquer les anciens blocs NASDAQ
+// 2. Masquer les anciens blocs NASDAQ et insérer le nouveau bloc
 document.addEventListener('DOMContentLoaded', function() {
     // Masquer le sélecteur de marché
     const marketSelector = document.querySelector('.market-selector');
@@ -34,9 +34,8 @@ document.addEventListener('DOMContentLoaded', function() {
         nasdaqTopContainer.classList.add('hidden');
     }
     
-    // Insérer le nouveau bloc MC après le top-global-container
-    const topGlobalContainer = document.getElementById('top-global-container');
-    if (topGlobalContainer && !document.getElementById('mc-section')) {
+    // Insérer le nouveau bloc MC juste avant le marketSelector (donc à la place du bloc NASDAQ)
+    if (marketSelector && !document.getElementById('mc-section')) {
         const mcSection = document.createElement('div');
         mcSection.innerHTML = `
 <!-- ===== COMPOSER MULTI-CRITÈRES (remplace l'ancien Top 10 NASDAQ) ===== -->
@@ -116,7 +115,8 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </section>
         `;
-        topGlobalContainer.parentElement.parentElement.insertAdjacentHTML('afterend', mcSection.innerHTML);
+        // Insérer juste avant le marketSelector (donc à la place du bloc NASDAQ)
+        marketSelector.parentElement.insertBefore(mcSection.firstElementChild, marketSelector);
     }
     
     // Charger le module MC
