@@ -1,8 +1,21 @@
 // ===== MC (Multi-Critères) – Top 10 dédié sous le Global ===================
 (function(){
-  const root = document.getElementById('mc-root');
+  // Attendre que le DOM soit prêt
+  if (!document.querySelector('#mc-section')) {
+    console.log('⏳ MC: En attente du DOM...');
+    setTimeout(arguments.callee, 500);
+    return;
+  }
+
+  const root = document.querySelector('#mc-section');
   const results = document.querySelector('#mc-results .stock-cards-container');
-  if(!root || !results) return;
+  
+  if(!root || !results) {
+    console.error('❌ MC: Éléments DOM non trouvés', {root, results});
+    return;
+  }
+
+  console.log('✅ MC: Éléments DOM trouvés');
 
   // util parse %
   const p = (s)=>{
@@ -22,7 +35,7 @@
     dividend_yield:  {label:'Div. Yield',     get:s=>p(s.dividend_yield), max:true},
   };
 
-  // DOM
+  // DOM - utiliser root comme base
   const modeRadios=[...root.querySelectorAll('input[name="mc-mode"]')];
   const lexicoBox=document.getElementById('mc-lexico');
   const prio1=document.getElementById('mc-prio1');
@@ -47,12 +60,15 @@
     state.loading = true;
     
     try {
-      console.log('📊 Chargement des données boursières...');
+      console.log('📊 MC: Chargement des données boursières...');
       const files = ['data/stocks_us.json', 'data/stocks_europe.json', 'data/stocks_asia.json'];
       const responses = await Promise.all(
         files.map(f => 
           fetch(f)
-            .then(r => r.ok ? r.json() : Promise.reject(`Erreur ${f}`))
+            .then(r => {
+              if (!r.ok) throw new Error(`HTTP ${r.status}`);
+              return r.json();
+            })
             .catch(err => {
               console.error(`❌ Erreur chargement ${f}:`, err);
               return null;
@@ -70,6 +86,7 @@
         loadedRegions.push(region);
         
         if (data.stocks && Array.isArray(data.stocks)) {
+          console.log(`📈 ${region}: ${data.stocks.length} actions`);
           data.stocks.forEach(stock => {
             // Enrichir avec région et icône
             stock.region = region;
@@ -88,9 +105,9 @@
       state.data = allStocks;
       console.log(`✅ MC: ${allStocks.length} actions chargées (${loadedRegions.join(', ')})`);
       
-      // Si des filtres sont déjà cochés, calculer automatiquement
-      if (hasActiveFilters()) {
-        compute();
+      // Afficher message de succès
+      if (allStocks.length > 0) {
+        results.innerHTML = `<div class="text-center text-green-400 py-4">✅ ${allStocks.length} actions disponibles. Configurez et cliquez "Appliquer"</div>`;
       }
       
     } catch (err) {
@@ -101,22 +118,21 @@
     }
   }
 
-  // vérifier si des filtres sont actifs
-  function hasActiveFilters() {
-    return Object.keys(METRICS).some(id => root.querySelector('#m-'+id)?.checked);
-  }
-
   // remplir priorités
   (function fillPrio(){
     const opts = Object.keys(METRICS).map(k=>`<option value="${k}">${METRICS[k].label}${METRICS[k].max?' ↑':' ↓'}</option>`).join('');
-    [prio1,prio2,prio3].forEach(sel=> sel.innerHTML = `<option value="">(aucune)</option>${opts}`);
-    prio1.value='perf_1y'; prio2.value='volatility_3y'; prio3.value='ytd';
+    [prio1,prio2,prio3].forEach(sel=> {
+      if (sel) sel.innerHTML = `<option value="">(aucune)</option>${opts}`;
+    });
+    if (prio1) prio1.value='perf_1y'; 
+    if (prio2) prio2.value='volatility_3y'; 
+    if (prio3) prio3.value='ytd';
   })();
 
   // critères cochés
   function selectedMetrics(){
     const ids = Object.keys(METRICS).filter(id => root.querySelector('#m-'+id)?.checked);
-    return ids.length? ids : ['perf_1y','volatility_3y']; // défaut simple
+    return ids.length? ids : ['perf_1y','volatility_3y'];
   }
 
   // univers 
@@ -131,10 +147,10 @@
       const vytd= METRICS.ytd.get(s);
       const vvol= METRICS.volatility_3y.get(s);
 
-      if (quick.q1y10.checked && !(v1y>=10)) return false;
-      if (quick.qytd10.checked && !(vytd>=10)) return false;
-      if (quick.qNoNeg1y.checked && !(v1y>0)) return false;
-      if (quick.qVol40.checked && vvol>40) return false;
+      if (quick.q1y10?.checked && !(v1y>=10)) return false;
+      if (quick.qytd10?.checked && !(vytd>=10)) return false;
+      if (quick.qNoNeg1y?.checked && !(v1y>0)) return false;
+      if (quick.qVol40?.checked && vvol>40) return false;
 
       // au moins une métrique sélectionnée doit être présente
       const anySel = selectedMetrics().some(m => Number.isFinite(METRICS[m].get(s)));
@@ -178,13 +194,13 @@
 
   // priorités (lexicographique, tolérance 0.5 pt)
   function rankLexico(list){
-    const prios=[prio1.value, prio2.value, prio3.value].filter(Boolean);
+    const prios=[prio1?.value, prio2?.value, prio3?.value].filter(Boolean);
     if(!prios.length) prios.push('perf_1y','volatility_3y');
     const EPS=0.5;
     const cmp=(a,b)=>{
       for(const m of prios){
         const av=METRICS[m].get(a), bv=METRICS[m].get(b);
-        const dir = METRICS[m].max? -1 : +1; // -1 => décroissant
+        const dir = METRICS[m].max? -1 : +1;
         const aa = Number.isFinite(av)? av : (METRICS[m].max? -1e9:+1e9);
         const bb = Number.isFinite(bv)? bv : (METRICS[m].max? -1e9:+1e9);
         if (Math.abs(aa-bb)>EPS) return (aa-bb)*dir;
@@ -210,15 +226,12 @@
         results.appendChild(card); return;
       }
       
-      // Utiliser le ticker ou name
       const tkr = e.s.ticker || e.s.symbol || (e.s.name||'').split(' ')[0] || '—';
       
-      // Afficher le score ou une métrique principale
       let scoreText;
       if (Number.isFinite(e.score)) {
         scoreText = `${Math.round(e.score*100)} pts`;
       } else {
-        // Afficher perf_1y ou ytd comme fallback
         const perf1y = e.s.perf_1y;
         const ytd = e.s.perf_ytd || e.s.ytd;
         if (perf1y) {
@@ -244,12 +257,15 @@
   }
 
   function setSummary(total, kept, metrics){
+    if (!summary) return;
     const mode = state.mode==='balanced' ? 'Équilibre auto' : 'Priorités';
     const labels = metrics.map(m=>METRICS[m].label+(METRICS[m].max?' ↑':' ↓')).join(' · ');
     summary.innerHTML = `${mode} • ${labels} • ${kept}/${total} titres retenus`;
   }
 
   async function compute(){
+    console.log('🔍 MC: Calcul demandé');
+    
     // Charger les données si pas encore fait
     if (state.data.length === 0) {
       results.innerHTML = '<div class="text-center text-gray-400 py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Chargement des données...</div>';
@@ -273,37 +289,55 @@
     const out = state.mode==='balanced' ? rankBalanced(filtered, metrics) : rankLexico(filtered);
     setSummary(base.length, filtered.length, metrics);
     render(out);
+    console.log(`✅ MC: Top 10 calculé (${filtered.length} actions filtrées)`);
   }
 
   // UI wiring
   modeRadios.forEach(r=>r.addEventListener('change',()=>{
     state.mode = modeRadios.find(x=>x.checked)?.value || 'balanced';
-    lexicoBox.classList.toggle('hidden', state.mode!=='lexico');
-    lexicoBox.setAttribute('aria-hidden', state.mode!=='lexico' ? 'true' : 'false');
+    if (lexicoBox) {
+      lexicoBox.classList.toggle('hidden', state.mode!=='lexico');
+      lexicoBox.setAttribute('aria-hidden', state.mode!=='lexico' ? 'true' : 'false');
+    }
   }));
   
-  applyBtn.addEventListener('click', compute);
-  
-  resetBtn.addEventListener('click', ()=>{
-    root.querySelector('#m-perf_1y').checked=true;
-    root.querySelector('#m-volatility_3y').checked=true;
-    ['ytd','perf_3m','perf_1m','max_drawdown_3y','dividend_yield'].forEach(id=>{
-      const el=root.querySelector('#m-'+id); if(el) el.checked=false;
+  if (applyBtn) {
+    applyBtn.addEventListener('click', () => {
+      console.log('🎯 MC: Bouton Appliquer cliqué');
+      compute();
     });
-    Object.values(quick).forEach(el=> el.checked=false);
-    modeRadios.find(x=>x.value==='balanced').checked=true;
-    state.mode='balanced'; 
-    lexicoBox.classList.add('hidden');
-    lexicoBox.setAttribute('aria-hidden', 'true');
-    prio1.value='perf_1y'; prio2.value='volatility_3y'; prio3.value='ytd';
-    compute();
-  });
+  }
+  
+  if (resetBtn) {
+    resetBtn.addEventListener('click', ()=>{
+      root.querySelector('#m-perf_1y').checked=true;
+      root.querySelector('#m-volatility_3y').checked=true;
+      ['ytd','perf_3m','perf_1m','max_drawdown_3y','dividend_yield'].forEach(id=>{
+        const el=root.querySelector('#m-'+id); 
+        if(el) el.checked=false;
+      });
+      Object.values(quick).forEach(el=> {
+        if (el) el.checked=false;
+      });
+      const balancedRadio = modeRadios.find(x=>x.value==='balanced');
+      if (balancedRadio) balancedRadio.checked=true;
+      state.mode='balanced'; 
+      if (lexicoBox) {
+        lexicoBox.classList.add('hidden');
+        lexicoBox.setAttribute('aria-hidden', 'true');
+      }
+      if (prio1) prio1.value='perf_1y'; 
+      if (prio2) prio2.value='volatility_3y'; 
+      if (prio3) prio3.value='ytd';
+      compute();
+    });
+  }
 
-  // expose pour relancer après chargement A→Z
-  window.MC = { refresh: compute, loadData };
+  // expose
+  window.MC = { refresh: compute, loadData, state };
 
   // Charger les données au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module prêt avec données');
+    console.log('✅ MC Module initialisé avec succès');
   });
 })();
