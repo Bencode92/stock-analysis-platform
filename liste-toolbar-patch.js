@@ -1,6 +1,7 @@
 /**
  * Patch pour séparer complètement les toolbars Top 10 et A→Z
  * À inclure après liste-script.js
+ * MODIFIÉ : Suppression des sélecteurs pays/secteur (gérés par liste-toolbar-enhanced.js)
  */
 
 // États séparés pour A→Z
@@ -13,27 +14,7 @@ function patchTopToolbar() {
     if (!toolbar) return;
     
     toolbar.id = 'top-toolbar';
-    
-    // Ajouter les filtres pays/secteur
-    const filtersDiv = document.createElement('div');
-    filtersDiv.className = 'pills';
-    filtersDiv.style.cssText = 'gap:12px;flex:1';
-    filtersDiv.innerHTML = `
-        <select id="top-country-filter" multiple class="pill bg-transparent min-w-[220px]" style="min-width:150px">
-            <option disabled>— Pays (multi) —</option>
-        </select>
-        <select id="top-sector-filter" multiple class="pill bg-transparent min-w-[220px]" style="min-width:150px">
-            <option disabled>— Secteur (multi) —</option>
-        </select>
-        <button id="top-clear-facets" class="action-button">Réinitialiser</button>
-    `;
-    
-    // Insérer avant le hint
-    const hint = toolbar.querySelector('.toolbar-hint');
-    if (hint) {
-        toolbar.insertBefore(filtersDiv, hint);
-        hint.id = 'top-hint';
-    }
+    // Ne PAS ajouter les filtres ici, ils sont gérés par liste-toolbar-enhanced.js
 }
 
 // Fonction pour créer la toolbar A→Z
@@ -53,16 +34,7 @@ function createAZToolbar() {
             <button class="seg-btn" data-region="ASIA" aria-selected="false"><i class="fas fa-globe-asia"></i>Asie</button>
         </div>
 
-        <!-- Pays / Secteur (A→Z) -->
-        <div class="pills" style="gap:12px;flex:1">
-            <select id="az-country-filter" multiple class="pill bg-transparent" style="min-width:150px">
-                <option disabled>— Pays (multi) —</option>
-            </select>
-            <select id="az-sector-filter" multiple class="pill bg-transparent" style="min-width:150px">
-                <option disabled>— Secteur (multi) —</option>
-            </select>
-            <button id="az-clear-facets" class="action-button">Réinitialiser</button>
-        </div>
+        <!-- Le conteneur pour les facettes sera ajouté par liste-toolbar-enhanced.js -->
 
         <div class="toolbar-hint" id="az-hint"><span>GLOBAL exclusif</span></div>
     `;
