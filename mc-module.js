@@ -13,7 +13,7 @@
   // métriques
   const METRICS = {
     perf_1y:         {label:'Perf 1Y',        get:s=>p(s.perf_1y),        max:true},
-    ytd:             {label:'YTD',            get:s=>p(s.ytd),            max:true},
+    ytd:             {label:'YTD',            get:s=>p(s.perf_ytd||s.ytd),max:true},
     perf_3m:         {label:'Perf 3M',        get:s=>p(s.perf_3m),        max:true},
     perf_1m:         {label:'Perf 1M',        get:s=>p(s.perf_1m),        max:true},
     volatility_3y:   {label:'Vol 3Y',         get:s=>p(s.volatility_3y),  max:false},
@@ -37,8 +37,38 @@
   const resetBtn=document.getElementById('mc-reset');
   const summary=document.getElementById('mc-summary');
 
-  // état
-  const state={ mode:'balanced' };
+  // état et données
+  const state={ mode:'balanced', data:[] };
+
+  // charger les données depuis les fichiers JSON
+  async function loadData() {
+    try {
+      const files = ['data/stocks_us.json', 'data/stocks_europe.json', 'data/stocks_asia.json'];
+      const responses = await Promise.all(files.map(f => fetch(f).then(r => r.json())));
+      const allStocks = [];
+      
+      responses.forEach(data => {
+        if (data.stocks) {
+          data.stocks.forEach(stock => {
+            // Enrichir avec icône selon région
+            if (data.region === 'US') {
+              stock.marketIcon = '<i class="fas fa-flag-usa text-xs ml-1 text-blue-400" title="US"></i>';
+            } else if (data.region === 'EUROPE') {
+              stock.marketIcon = '<i class="fas fa-globe-europe text-xs ml-1 text-green-400" title="Europe"></i>';
+            } else if (data.region === 'ASIA') {
+              stock.marketIcon = '<i class="fas fa-globe-asia text-xs ml-1 text-red-400" title="Asie"></i>';
+            }
+            allStocks.push(stock);
+          });
+        }
+      });
+      
+      state.data = allStocks;
+      console.log(`✅ MC: ${allStocks.length} actions chargées`);
+    } catch (err) {
+      console.error('❌ MC: Erreur chargement données:', err);
+    }
+  }
 
   // remplir priorités
   (function fillPrio(){
@@ -53,8 +83,12 @@
     return ids.length? ids : ['perf_1y','volatility_3y']; // défaut simple
   }
 
-  // univers (A→Z fusionné)
+  // univers (utilise state.data ou fallback sur window.stocksData)
   function universe(){
+    if (state.data.length > 0) {
+      return state.data;
+    }
+    // Fallback sur données de liste-script.js
     const idx = (window.stocksData && window.stocksData.indices) || {};
     const out=[];
     Object.values(idx).forEach(list => (list||[]).forEach(s=>out.push(s)));
@@ -147,7 +181,7 @@
         results.appendChild(card); return;
       }
       const tkr = e.s.ticker || e.s.symbol || (e.s.name||'').split(' ')[0] || '—';
-      const scoreText = Number.isFinite(e.score)? `${Math.round(e.score*100)} pts` : (e.s.perf_1y || e.s.ytd || '—');
+      const scoreText = Number.isFinite(e.score)? `${Math.round(e.score*100)} pts` : (e.s.perf_1y || e.s.perf_ytd || e.s.ytd || '—');
       card.innerHTML=`
         <div class="rank">#${i+1}</div>
         <div class="stock-info">
@@ -165,9 +199,17 @@
     summary.innerHTML = `${mode} • ${labels} • ${kept}/${total} titres retenus`;
   }
 
-  function compute(){
+  async function compute(){
+    // Charger les données si pas encore fait
+    if (state.data.length === 0) {
+      await loadData();
+    }
+    
     const base = universe();
-    if(!base.length){ return; }
+    if(!base.length){ 
+      results.innerHTML = '<div class="text-center text-gray-400 py-4">Chargement des données...</div>';
+      return; 
+    }
     const filtered = applyFilters(base);
     const metrics = selectedMetrics();
     const out = state.mode==='balanced' ? rankBalanced(filtered, metrics) : rankLexico(filtered);
@@ -200,6 +242,8 @@
   // expose pour relancer après chargement A→Z
   window.MC = { refresh: compute };
 
-  // 1er rendu (si données déjà là)
-  setTimeout(compute, 300);
+  // Charger les données au démarrage
+  loadData().then(() => {
+    console.log('✅ MC Module prêt');
+  });
 })();
