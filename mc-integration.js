@@ -8,17 +8,65 @@ mcStyles.textContent = `
 :root { --section-gap: 80px; }
 .section { margin-bottom: var(--section-gap); }
 
-/* Ligne simple de séparation */
+/* Titre du Composer avec effet glow */
+.composer-title {
+  font-size: 1.5rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent-color);
+  text-shadow: 0 0 20px rgba(0,255,135,0.6);
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.composer-title::before,
+.composer-title::after {
+  content: "✨";
+  font-size: 1.2rem;
+  animation: sparkle 3s ease-in-out infinite;
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 0.5; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+/* Ligne sous-titre flashy pour Composer */
+.section-highlight {
+  position: relative;
+  height: 3px;
+  margin: 0 0 30px 0;
+  background: linear-gradient(90deg, 
+    transparent, 
+    #00ff87 10%,
+    #00ffaa 50%,
+    #00ff87 90%,
+    transparent);
+  box-shadow: 
+    0 0 30px rgba(0,255,135,0.5),
+    0 0 60px rgba(0,255,135,0.2);
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* Diviseur entre sections plus visible */
 .section-divider {
   position: relative;
   height: 2px;
-  margin: 60px 0 40px;
+  margin: 80px 0 60px;
   background: linear-gradient(90deg, 
     transparent, 
-    rgba(255,255,255,0.1) 20%, 
-    rgba(255,255,255,0.1) 80%, 
+    rgba(0,255,135,0.3) 20%, 
+    rgba(0,255,135,0.3) 80%, 
     transparent);
-  box-shadow: none;
+  box-shadow: 0 0 20px rgba(0,255,135,0.2);
 }
 
 /* Grille Composer : filtres à gauche, résultats à droite */
@@ -75,12 +123,14 @@ document.addEventListener('DOMContentLoaded', function() {
         .find(title => title.textContent.includes('Actions par lettre'));
     
     if (actionsParLettre && !document.getElementById('mc-section')) {
-        // Créer section Composer avec titre et grille
+        // Créer section Composer avec titre stylé et ligne sous-titre
         const mcSection = document.createElement('section');
         mcSection.id = 'mc-section';
         mcSection.className = 'section';
         mcSection.innerHTML = `
-  <h2 class="section-title mb-4">Top 10 — Composer multi-critères</h2>
+  <h2 class="composer-title">Top 10 — Composer multi-critères</h2>
+  <div class="section-highlight"></div>
+  
   <div class="composer-grid">
     <!-- Colonne gauche : Filtres -->
     <aside class="composer-filters glassmorphism rounded-lg p-4">
@@ -150,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
         `;
         
-        // Créer diviseur SIMPLE (ligne seule) avant Actions par lettre
+        // Créer diviseur visible entre Composer et Actions par lettre
         const divider = document.createElement('div');
         divider.className = 'section-divider';
         
