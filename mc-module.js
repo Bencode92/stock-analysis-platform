@@ -1,4 +1,4 @@
-// ===== MC (Multi-Critères) – Interface avec filtres personnalisables et géographiques ===================
+// ===== MC (Multi-Critères) – Module avec corrections complètes ===================
 (function(){
   // Attendre que le DOM soit prêt
   if (!document.querySelector('#mc-section')) {
@@ -17,10 +17,14 @@
 
   console.log('✅ MC: Éléments DOM trouvés');
 
-  // util parse %
+  // Parser amélioré avec minus unicode et espaces
   const p = (s)=>{
     if(s==null||s==='-'||s==='') return NaN;
-    let t=String(s).replace(',', '.').replace(/[+%]/g,'').trim(); 
+    const t = String(s)
+      .replace(/\u2212/g,'-')        // minus unicode
+      .replace(',', '.')             // décimal FR
+      .replace(/[+%\s]/g,'')         // +, %, espaces
+      .trim();
     return parseFloat(t);
   };
 
@@ -53,16 +57,21 @@
     loading:false,
     selectedMetrics: ['ytd', 'dividend_yield'],
     customFilters: [], // PAS DE FILTRE PAR DÉFAUT
-    // Nouveaux filtres géographiques
     geoFilters: {
       region: 'all',
       country: 'all',
       sector: 'all'
     },
-    // Listes pour les dropdowns
     availableRegions: new Set(),
     availableCountries: new Set(),
     availableSectors: new Set()
+  };
+
+  // Debounce pour auto-recompute
+  let computeTimer;
+  const scheduleCompute = () => {
+    clearTimeout(computeTimer);
+    computeTimer = setTimeout(compute, 150);
   };
 
   // Créer l'interface des filtres géographiques
@@ -102,18 +111,21 @@
       </div>
     `;
     
-    // Event listeners pour les filtres géo
+    // Event listeners avec auto-recompute
     document.getElementById('filter-region')?.addEventListener('change', (e) => {
       state.geoFilters.region = e.target.value;
-      updateCountryFilter(); // Mettre à jour les pays disponibles selon la région
+      updateCountryFilter();
+      scheduleCompute();
     });
     
     document.getElementById('filter-country')?.addEventListener('change', (e) => {
       state.geoFilters.country = e.target.value;
+      scheduleCompute();
     });
     
     document.getElementById('filter-sector')?.addEventListener('change', (e) => {
       state.geoFilters.sector = e.target.value;
+      scheduleCompute();
     });
   }
 
@@ -139,7 +151,7 @@
     state.geoFilters.country = 'all';
   }
 
-  // Créer l'interface des filtres personnalisables AVEC ESPACEMENT RÉDUIT
+  // Créer l'interface des filtres personnalisables
   function setupCustomFilters() {
     const filtersFieldset = root.querySelector('fieldset:nth-of-type(3)');
     if (!filtersFieldset) return;
@@ -186,10 +198,10 @@
         state.customFilters.push({ metric, operator, value });
         updateFiltersList();
         document.getElementById('filter-value').value = '';
+        scheduleCompute();
       }
     });
     
-    // PAS de filtres par défaut
     state.customFilters = [];
     updateFiltersList();
   }
@@ -221,6 +233,7 @@
         const index = parseInt(e.currentTarget.dataset.index);
         state.customFilters.splice(index, 1);
         updateFiltersList();
+        scheduleCompute();
       });
     });
   }
@@ -270,7 +283,7 @@
     setupDragAndDrop();
   }
 
-  // Drag & Drop
+  // Drag & Drop CORRIGÉ avec classe .dragging
   function setupDragAndDrop() {
     const items = document.querySelectorAll('.priority-item');
     let draggedItem = null;
@@ -279,10 +292,12 @@
       item.addEventListener('dragstart', (e) => {
         draggedItem = e.target;
         e.target.style.opacity = '0.5';
+        e.target.classList.add('dragging'); // AJOUT
       });
       
       item.addEventListener('dragend', (e) => {
         e.target.style.opacity = '';
+        e.target.classList.remove('dragging'); // RETRAIT
       });
       
       item.addEventListener('dragover', (e) => {
@@ -319,8 +334,9 @@
     }, { offset: Number.NEGATIVE_INFINITY }).element;
   }
 
-  // Synchroniser checkboxes et selectedMetrics
+  // Synchroniser checkboxes et selectedMetrics + classe is-checked
   function setupMetricCheckboxes() {
+    // Setup des checkboxes métriques
     Object.keys(METRICS).forEach(metricId => {
       const checkbox = root.querySelector('#m-' + metricId);
       if (!checkbox) return;
@@ -338,7 +354,18 @@
           state.selectedMetrics = state.selectedMetrics.filter(m => m !== metricId);
         }
         updatePriorityDisplay();
+        scheduleCompute();
       });
+    });
+    
+    // Synchroniser classe is-checked pour TOUS les pills
+    root.querySelectorAll('.mc-pill input').forEach(inp => {
+      const label = inp.closest('.mc-pill');
+      if (!label) return;
+      
+      const sync = () => label.classList.toggle('is-checked', inp.checked);
+      inp.addEventListener('change', sync);
+      sync(); // État initial
     });
   }
 
@@ -422,9 +449,6 @@
       
       state.data = allStocks;
       console.log(`✅ MC: ${allStocks.length} actions chargées`);
-      console.log(`📍 Régions: ${Array.from(state.availableRegions).join(', ')}`);
-      console.log(`🌍 Pays: ${state.availableCountries.size} pays`);
-      console.log(`📊 Secteurs: ${state.availableSectors.size} secteurs`);
       
       // Initialiser les filtres géo après le chargement
       setupGeoFilters();
@@ -441,7 +465,7 @@
     }
   }
 
-  // Appliquer tous les filtres
+  // Appliquer tous les filtres AVEC EPSILON CORRIGÉ
   function applyFilters(list){
     return list.filter(s => {
       // Filtres géographiques
@@ -457,21 +481,22 @@
       
       if (!hasAllMetrics) return false;
       
-      // Appliquer les filtres personnalisés
+      // Appliquer les filtres personnalisés avec EPSILON SYMÉTRIQUE
       for (const filter of state.customFilters) {
         const value = METRICS[filter.metric].get(s);
         if (!Number.isFinite(value)) return false;
         
         let passes = false;
-        const EPSILON = 0.001;
+        const EPS = 0.001;
+        const val = filter.value;
         
         switch(filter.operator) {
-          case '>=': passes = value >= filter.value - EPSILON; break;
-          case '>':  passes = value > filter.value + EPSILON; break;
-          case '=':  passes = Math.abs(value - filter.value) < EPSILON; break;
-          case '<':  passes = value < filter.value - EPSILON; break;
-          case '<=': passes = value <= filter.value + EPSILON; break;
-          case '!=': passes = Math.abs(value - filter.value) > EPSILON; break;
+          case '>=': passes = value >= val - EPS; break;
+          case '>':  passes = value >  val - EPS; break;
+          case '=':  passes = Math.abs(value - val) < EPS; break;
+          case '<':  passes = value <  val + EPS; break;
+          case '<=': passes = value <= val + EPS; break;
+          case '!=': passes = Math.abs(value - val) > EPS; break;
         }
         
         if (!passes) return false;
@@ -481,15 +506,22 @@
     });
   }
 
-  // Calcul des percentiles
+  // Calcul des percentiles AMÉLIORÉ (gestion des égalités)
   function percentile(sorted, v){
     if(!Number.isFinite(v)||!sorted.length) return NaN;
-    const lo = sorted[Math.floor(0.01*(sorted.length-1))];
-    const hi = sorted[Math.ceil(0.99*(sorted.length-1))];
-    const x = Math.min(hi, Math.max(lo, v));
-    let i=0; while(i<sorted.length && sorted[i]<=x) i++;
-    if(sorted.length===1) return 1;
-    return Math.max(0, Math.min(1, (i-1)/(sorted.length-1)));
+    const n = sorted.length;
+    const li = Math.max(0, Math.floor(0.01*(n-1)));
+    const hi = Math.min(n-1, Math.ceil(0.99*(n-1)));
+    const lo = sorted[li], hiV = sorted[hi];
+    const x = Math.min(hiV, Math.max(lo, v));
+    
+    // Trouver le bloc des égalités
+    let i=0; while(i<n && sorted[i] < x) i++;
+    let j=i; while(j<n && Math.abs(sorted[j]-x) < 1e-9) j++;
+    
+    // Rang moyen pour les égalités
+    const rank = (i + j - 1) / 2;
+    return n===1 ? 0.5 : rank / (n-1);
   }
 
   // Mode équilibré
@@ -519,12 +551,12 @@
     return scored;
   }
 
-  // Mode priorités
+  // Mode priorités avec EPS RÉDUIT
   function rankLexico(list){
     const prios = state.selectedMetrics;
     if (!prios.length) return list.map(s=>({s, score:NaN}));
     
-    const EPS=0.5;
+    const EPS = 0.1; // RÉDUIT de 0.5 à 0.1
     const cmp=(a,b)=>{
       for(const m of prios){
         const av=METRICS[m].get(a), bv=METRICS[m].get(b);
@@ -538,10 +570,10 @@
     return list.slice().sort(cmp).map(s=>({s, score:NaN}));
   }
 
-  // Rendu vertical avec métriques et infos géo
+  // Rendu vertical SANS ÉCRASER LA CLASSE
   function render(entries){
     results.innerHTML='';
-    results.className = 'space-y-2';
+    results.classList.add('space-y-2'); // AJOUT au lieu de REMPLACEMENT
     
     const top = entries.slice(0,10);
     
@@ -624,7 +656,6 @@
     const labels = state.selectedMetrics.map(m=>METRICS[m].label).join(' · ');
     const filters = state.customFilters.length;
     
-    // Ajouter les filtres géo au résumé
     const geoActive = [];
     if (state.geoFilters.region !== 'all') geoActive.push(state.geoFilters.region);
     if (state.geoFilters.country !== 'all') geoActive.push(state.geoFilters.country);
@@ -682,6 +713,7 @@
     }
     
     updatePriorityDisplay();
+    scheduleCompute();
   }));
   
   if (applyBtn) {
@@ -694,13 +726,21 @@
   if (resetBtn) {
     resetBtn.addEventListener('click', ()=>{
       state.selectedMetrics = ['ytd', 'dividend_yield'];
-      state.customFilters = []; // PAS de filtre par défaut
+      state.customFilters = [];
       state.geoFilters = { region: 'all', country: 'all', sector: 'all' };
       
       Object.keys(METRICS).forEach(id => {
         const checkbox = root.querySelector('#m-'+id);
         if (checkbox) {
           checkbox.checked = state.selectedMetrics.includes(id);
+        }
+      });
+      
+      // Synchroniser les pills après reset
+      root.querySelectorAll('.mc-pill input').forEach(inp => {
+        const label = inp.closest('.mc-pill');
+        if (label) {
+          label.classList.toggle('is-checked', inp.checked);
         }
       });
       
@@ -733,7 +773,7 @@
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module prêt avec filtres géographiques');
+    console.log('✅ MC Module prêt avec toutes les corrections');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
