@@ -1245,16 +1245,6 @@
              opacity: 1;
              transform: translateY(0) scale(1);
          }
-
-         /* Composer Multi-critères styles */
-         .mini-input,.mini-select{padding:8px 10px;border-radius:8px;border:1px solid var(--card-border);background:rgba(255,255,255,0.05);font-size:.9rem}
-         .mini-input{width:110px}
-         .mc-pill{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border:1px solid var(--card-border);border-radius:10px;background:rgba(255,255,255,0.04);cursor:pointer;font-size:.9rem}
-         .mc-pill input{accent-color:#00FF87}
-         .mc-row{display:flex;gap:8px;align-items:center}
-         .mc-chip{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border:1px solid var(--card-border);border-radius:999px;background:rgba(0,255,135,0.06);margin-right:6px;margin-bottom:6px}
-         .mc-chip button{border:none;background:transparent;cursor:pointer;opacity:.7}
-         .mc-score{font-weight:800}
          
          /* Version mobile-friendly */
          @media (max-width: 768px) {
@@ -1521,103 +1511,8 @@
                          </div>
                      </div>
                  </div>
-
-                 <!-- COMPOSER MULTI-CRITÈRES -->
-                 <div id="mc-root" class="glassmorphism rounded-lg p-4 mb-8">
-                   <h2 class="section-title mb-4">Composer Multi-critères</h2>
-                   <div class="grid md:grid-cols-3 gap-4">
-                     <!-- (A) Critères à considérer -->
-                     <div>
-                       <div class="text-sm opacity-70 mb-2">Critères (sans pondération)</div>
-                       <div class="flex flex-wrap gap-2">
-                         <label class="mc-pill"><input id="m-perf_1y" type="checkbox" checked> Perf 1Y ↑</label>
-                         <label class="mc-pill"><input id="m-ytd" type="checkbox"> YTD ↑</label>
-                         <label class="mc-pill"><input id="m-perf_3m" type="checkbox"> Perf 3M ↑</label>
-                         <label class="mc-pill"><input id="m-perf_1m" type="checkbox"> Perf 1M ↑</label>
-                         <label class="mc-pill"><input id="m-volatility_3y" type="checkbox" checked> Vol 3Y ↓</label>
-                         <label class="mc-pill"><input id="m-max_drawdown_3y" type="checkbox"> Max DD 3Y ↓</label>
-                         <label class="mc-pill"><input id="m-dividend_yield" type="checkbox"> Div. Yield ↑</label>
-                       </div>
-
-                       <div class="mt-4">
-                         <div class="text-sm opacity-70 mb-2">Mode d'agrégation</div>
-                         <div class="flex gap-2">
-                           <label class="mc-pill"><input type="radio" name="mc-mode" value="balanced" checked> Équilibre auto</label>
-                           <label class="mc-pill"><input type="radio" name="mc-mode" value="lexico"> Priorités</label>
-                         </div>
-
-                         <!-- Priorités quand 'lexico' -->
-                         <div id="mc-lexico" class="mt-2 hidden">
-                           <div class="text-xs opacity-70 mb-1">Classement par priorité</div>
-                           <div class="grid grid-cols-3 gap-2">
-                             <select id="mc-prio1" class="mini-select"></select>
-                             <select id="mc-prio2" class="mini-select"></select>
-                             <select id="mc-prio3" class="mini-select"></select>
-                           </div>
-                           <div class="text-[11px] opacity-60 mt-1">Tolérance: 0,5 pt (évite qu'un micro-écart bouleverse l'ordre)</div>
-                         </div>
-                       </div>
-                     </div>
-
-                     <!-- (B) Filtres rapides (inclure / exclure) -->
-                     <div>
-                       <div class="text-sm opacity-70 mb-2">Filtres rapides</div>
-                       <div class="space-y-2">
-                         <label class="mc-row"><input id="q-1y10" type="checkbox"> Inclure seulement: Perf 1Y ≥ <b>+10%</b></label>
-                         <label class="mc-row"><input id="q-ytd10" type="checkbox"> Inclure seulement: YTD ≥ <b>+10%</b></label>
-                         <label class="mc-row"><input id="q-noNeg1y" type="checkbox"> Exclure: Perf 1Y ≤ <b>0%</b></label>
-                         <label class="mc-row"><input id="q-vol40" type="checkbox"> Exclure: Vol 3Y ≥ <b>40%</b></label>
-                       </div>
-
-                       <div class="mt-4">
-                         <div class="text-sm opacity-70 mb-2">Filtre libre</div>
-                         <div class="flex gap-2 items-center">
-                           <select id="mc-free-metric" class="mini-select">
-                             <option value="perf_1y">Perf 1Y</option>
-                             <option value="ytd">YTD</option>
-                             <option value="perf_3m">Perf 3M</option>
-                             <option value="perf_1m">Perf 1M</option>
-                             <option value="volatility_3y">Vol 3Y</option>
-                             <option value="max_drawdown_3y">Max DD 3Y</option>
-                             <option value="dividend_yield">Div. Yield</option>
-                           </select>
-                           <select id="mc-free-op" class="mini-select">
-                             <option value=">=">≥</option>
-                             <option value="<=">≤</option>
-                           </select>
-                           <input id="mc-free-value" class="mini-input" type="number" step="0.1" placeholder="valeur %">
-                           <button id="mc-free-add" class="action-button">Ajouter</button>
-                         </div>
-                         <div id="mc-free-list" class="text-xs opacity-80 mt-2"></div>
-                       </div>
-                     </div>
-
-                     <!-- (C) Actions -->
-                     <div>
-                       <div class="text-sm opacity-70 mb-2">Actions</div>
-                       <div class="flex gap-2 mb-2">
-                         <button id="mc-apply" class="search-button"><i class="fas fa-magic mr-2"></i>Appliquer</button>
-                         <button id="mc-reset" class="action-button"><i class="fas fa-undo mr-2"></i>Réinitialiser</button>
-                       </div>
-                       <div class="text-xs opacity-60">
-                         Output : <b>Top 10 personnalisé</b> affiché ci-dessous.
-                         <div id="mc-summary" class="mt-1"></div>
-                       </div>
-                     </div>
-                   </div>
-                 </div>
                  
-                 <!-- ZONE D'AFFICHAGE DU MC (nouvelle zone dédiée) -->
-                 <div id="mc-results-container" class="top-stocks-container mb-10" style="display: none;">
-                     <h2 class="section-title mb-4">Top 10 Multi-critères — Résultats personnalisés</h2>
-                     <div id="mc-top-container" class="top-stocks-content">
-                         <div class="stock-cards-container">
-                             <!-- Les résultats du MC seront affichés ici -->
-                         </div>
-                     </div>
-                 </div>
-                 
-                 <!-- Sélecteur de marché (restauré) -->
+                 <!-- Sélecteur de marché (DEUXIÈME) -->
                  <div class="market-selector mb-8">
                      <h2 class="section-title mb-4">Sélectionner un marché</h2>
                      <div class="market-selector-buttons">
@@ -1630,7 +1525,7 @@
                      </div>
                  </div>
                  
-                 <!-- Pagination (pour STOXX 600) -->
+                 <!-- Pagination (pour STOXX 600) - Déplacé sous le sélecteur de marché -->
                  <div id="pagination-container" class="pagination-container hidden">
                      <button id="prev-page" class="pagination-button" disabled>
                          <i class="fas fa-chevron-left mr-2"></i> Page précédente
@@ -1643,7 +1538,7 @@
                      </button>
                  </div>
                  
-                 <!-- Top 10 Redessiné (restauré) -->
+                 <!-- Top 10 Redessiné (TROISIÈME) -->
                  <div class="top-stocks-container mb-10">
                      <h2 class="section-title mb-4">Top 10 Performance du <span id="current-market-name">NASDAQ</span></h2>
                      
@@ -1859,9 +1754,580 @@
                                  </div>
                              </div>
                              
-                             <!-- B à Z (structure identique) -->
-                             <!-- ... code tronqué pour la lisibilité ... -->
+                             <!-- B -->
+                             <div id="b-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="b-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
                              
+                             <!-- C -->
+                             <div id="c-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="c-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- D -->
+                             <div id="d-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                              <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="d-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- E -->
+                             <div id="e-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                              <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="e-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- F -->
+                             <div id="f-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="f-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- G -->
+                             <div id="g-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="g-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- H -->
+                             <div id="h-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="h-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- I -->
+                             <div id="i-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="i-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- J -->
+                             <div id="j-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="j-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- K -->
+                             <div id="k-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                              <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="k-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- L -->
+                             <div id="l-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="l-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- M -->
+                             <div id="m-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                              <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="m-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- N -->
+                             <div id="n-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="n-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- O -->
+                             <div id="o-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="o-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- P -->
+                             <div id="p-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="p-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- Q -->
+                             <div id="q-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                              <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="q-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- R -->
+                             <div id="r-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                              <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="r-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- S -->
+                             <div id="s-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                              <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="s-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- T -->
+                             <div id="t-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="t-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- U -->
+                             <div id="u-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="u-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- V -->
+                             <div id="v-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="v-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- W -->
+                             <div id="w-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="w-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- X -->
+                             <div id="x-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="x-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- Y -->
+                             <div id="y-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="y-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- Z -->
+                             <div id="z-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>YTD %</th>
+                                                 <th>1 ANS %</th>
+                                                 <th>Volatilité 3Y %</th>
+                                                 <th>Rendement</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="z-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
                          </div>
                      </div>
                  </div>
@@ -1869,15 +2335,155 @@
                  <!-- Source et avertissement -->
                  <div class="text-center text-sm text-gray-400 mb-6 p-4 glassmorphism rounded-lg bg-opacity-50">
                      <p id="source-link">Sources: <a href="https://www.boursorama.com/bourse/actions/cotations/international/?international_quotation_az_filter%5Bcountry%5D=1&international_quotation_az_filter%5Bmarket%5D=%24COMPX" target="_blank" class="text-green-400 hover:underline">Boursorama</a></p>
-                     <p class="mt-2">Les données sont mises à jour toutes les heures via GitHub Actions</p>
-                     <p class="mt-2 text-xs">Avertissement : Ce site est à but informatif uniquement et ne constitue pas un conseil en investissement.</p>
+                     <p class="mt-2">Les données sont actualisées régulièrement mais peuvent accuser un retard par rapport aux marchés en temps réel.</p>
                  </div>
-                 
              </div>
          </div>
      </main>
-     
-     <!-- Script principal -->
+
      <script src="liste-script.js"></script>
+     
+     <!-- Script amélioré pour la nouvelle barre de contrôle -->
+     <script>
+        (function() {
+            // Éléments du DOM
+            const regionBtns = [...document.querySelectorAll('.tp-regions .seg-btn')];
+            const pillBar = document.querySelector('.tp-filters');
+            const pills = [...pillBar.querySelectorAll('.pill')];
+            const hint = document.getElementById('hint-text');
+            const scopeLabel = document.getElementById('top-scope-label');
+            const container = document.getElementById('top-global-container');
+
+            // État des filtres
+            let selectedRegions = new Set(['GLOBAL']);
+            let currentDirection = 'up'; // 'up' ou 'down'
+            let currentTimeframe = 'daily'; // 'daily' ou 'ytd'
+
+            // Underline animée pour les pills
+            function updatePillUnderline() {
+                const activePill = pillBar.querySelector('.pill[aria-selected="true"]');
+                if (activePill) {
+                    const rect = activePill.getBoundingClientRect();
+                    const barRect = pillBar.getBoundingClientRect();
+                    const x = rect.left - barRect.left;
+                    const w = rect.width;
+                    pillBar.style.setProperty('--x', `${x}px`);
+                    pillBar.style.setProperty('--w', `${w}px`);
+                }
+            }
+
+            // Gestion des boutons de région
+            regionBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const region = btn.dataset.region;
+                    
+                    // GLOBAL est exclusif
+                    if (region === 'GLOBAL') {
+                        selectedRegions.clear();
+                        selectedRegions.add('GLOBAL');
+                        regionBtns.forEach(b => {
+                            b.setAttribute('aria-selected', b.dataset.region === 'GLOBAL' ? 'true' : 'false');
+                        });
+                    } else {
+                        // Si GLOBAL est actif, le retirer
+                        if (selectedRegions.has('GLOBAL')) {
+                            selectedRegions.delete('GLOBAL');
+                            regionBtns.find(b => b.dataset.region === 'GLOBAL').setAttribute('aria-selected', 'false');
+                        }
+                        
+                        // Toggle de la région
+                        if (selectedRegions.has(region)) {
+                            selectedRegions.delete(region);
+                            btn.setAttribute('aria-selected', 'false');
+                        } else {
+                            // Maximum 2 régions simultanément
+                            if (selectedRegions.size < 2) {
+                                selectedRegions.add(region);
+                                btn.setAttribute('aria-selected', 'true');
+                            } else {
+                                // Animation de refus
+                                btn.style.animation = 'pulse 0.3s';
+                                setTimeout(() => btn.style.animation = '', 300);
+                                return;
+                            }
+                        }
+                        
+                        // Si plus aucune région, remettre GLOBAL
+                        if (selectedRegions.size === 0) {
+                            selectedRegions.add('GLOBAL');
+                            regionBtns.find(b => b.dataset.region === 'GLOBAL').setAttribute('aria-selected', 'true');
+                        }
+                    }
+                    
+                    updateScopeLabel();
+                    updateHint();
+                    triggerDataRefresh();
+                });
+            });
+
+            // Gestion des pills
+            pills.forEach(pill => {
+                pill.addEventListener('click', () => {
+                    const dir = pill.dataset.dir;
+                    const frame = pill.dataset.frame;
+                    
+                    if (dir) {
+                        // Direction pills
+                        pills.filter(p => p.dataset.dir).forEach(p => {
+                            p.setAttribute('aria-selected', p === pill ? 'true' : 'false');
+                        });
+                        currentDirection = dir;
+                    } else if (frame) {
+                        // Timeframe pills
+                        pills.filter(p => p.dataset.frame).forEach(p => {
+                            p.setAttribute('aria-selected', p === pill ? 'true' : 'false');
+                        });
+                        currentTimeframe = frame;
+                    }
+                    
+                    updatePillUnderline();
+                    triggerDataRefresh();
+                });
+            });
+
+            // Mise à jour du label
+            function updateScopeLabel() {
+                if (selectedRegions.has('GLOBAL')) {
+                    scopeLabel.textContent = 'GLOBAL';
+                } else {
+                    const regions = Array.from(selectedRegions).sort();
+                    scopeLabel.textContent = regions.join(' + ');
+                }
+            }
+
+            // Mise à jour du hint
+            function updateHint() {
+                if (selectedRegions.has('GLOBAL')) {
+                    hint.textContent = 'GLOBAL exclusif';
+                } else if (selectedRegions.size === 1) {
+                    hint.textContent = `${Array.from(selectedRegions)[0]} uniquement`;
+                } else {
+                    hint.textContent = 'Combo régional';
+                }
+            }
+
+            // Trigger du rafraîchissement des données
+            function triggerDataRefresh() {
+                // Émettre un événement personnalisé pour liste-script.js
+                window.dispatchEvent(new CustomEvent('topFiltersChanged', {
+                    detail: {
+                        regions: Array.from(selectedRegions),
+                        direction: currentDirection,
+                        timeframe: currentTimeframe
+                    }
+                }));
+            }
+
+            // Init
+            updatePillUnderline();
+            updateScopeLabel();
+            updateHint();
+        })();
+     </script>
  </body>
  </html>
