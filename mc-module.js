@@ -613,26 +613,28 @@
     return pool.map(r => ({ s: r.s, score: NaN }));
   }
 
-  // RENDU VERTICAL SIMPLE - UNE COLONNE
+  // RENDU VERTICAL ÉTENDU - UTILISE TOUTE LA LARGEUR
   function render(entries){
     results.innerHTML='';
     
     // Conteneur avec espacement vertical
     const container = document.createElement('div');
-    container.className = 'space-y-2';
+    container.className = 'space-y-3';
     
     const top = entries.slice(0,10);
     
     top.forEach((e,i)=>{
       const card = document.createElement('div');
-      card.className = 'glassmorphism rounded-lg p-3 flex items-center gap-4';
+      card.className = 'glassmorphism rounded-lg p-4 flex items-center justify-between w-full';
       
       if(!e.s){
         card.innerHTML=`
-          <div class="rank text-2xl font-bold opacity-30">#${i+1}</div>
-          <div class="flex-1">
-            <div class="font-semibold">—</div>
-            <div class="text-xs opacity-60">—</div>
+          <div class="flex items-center gap-4">
+            <div class="rank text-3xl font-bold opacity-30">#${i+1}</div>
+            <div>
+              <div class="font-semibold text-lg">—</div>
+              <div class="text-sm opacity-60">—</div>
+            </div>
           </div>`;
         container.appendChild(card); 
         return;
@@ -650,7 +652,7 @@
         regionIcon = '🌏';
       }
       
-      // Créer les métriques en ligne compacte
+      // Créer les métriques avec plus d'espace
       const metricsHTML = state.selectedMetrics.map(m => {
         const value = METRICS[m].get(e.s);
         if (!Number.isFinite(value)) return '';
@@ -661,23 +663,25 @@
           : (value < 20 ? 'text-green-400' : value > 40 ? 'text-red-400' : 'text-yellow-400');
         
         return `
-          <div class="text-right">
-            <div class="text-xs opacity-60">${METRICS[m].label}</div>
-            <div class="${colorClass} font-semibold">${value > 0 && METRICS[m].max ? '+' : ''}${formatted}%</div>
+          <div class="text-center px-4">
+            <div class="text-xs opacity-60 mb-1">${METRICS[m].label}</div>
+            <div class="${colorClass} font-bold text-lg">${value > 0 && METRICS[m].max ? '+' : ''}${formatted}%</div>
           </div>
         `;
       }).filter(Boolean).join('');
       
       card.innerHTML=`
-        <div class="rank text-2xl font-bold text-cyan-400" style="min-width:45px">#${i+1}</div>
-        <div class="flex-1">
-          <div class="flex items-center gap-2">
-            <span class="font-bold text-base">${tkr}</span>
-            <span class="text-xs opacity-60">${regionIcon}</span>
+        <div class="flex items-center gap-4">
+          <div class="rank text-3xl font-bold text-cyan-400" style="min-width:55px">#${i+1}</div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-lg">${tkr}</span>
+              <span class="text-sm opacity-60">${regionIcon}</span>
+            </div>
+            <div class="text-sm opacity-70">${e.s.name||'—'}</div>
           </div>
-          <div class="text-xs opacity-70">${e.s.name||'—'}</div>
         </div>
-        <div class="flex gap-4">
+        <div class="flex items-center gap-2">
           ${metricsHTML}
         </div>`;
       
