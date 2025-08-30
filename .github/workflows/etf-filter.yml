@@ -3,7 +3,7 @@ name: ETF Advanced Filter
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 14 * * 1-5'  # 14h UTC = 16h Paris CEST (jours ouvrés)
+    - cron: '0 14 * * 1-5'  # 14h UTC = 15h Paris (jours ouvrés)
 
 jobs:
   filter-etfs:
@@ -23,7 +23,6 @@ jobs:
       run: npm install csv-parse axios
     
     - name: Run ETF filter
-      id: run_filter
       env:
         TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
       run: node etf-advanced-filter.js
@@ -33,10 +32,9 @@ jobs:
         git config --local user.email "actions@github.com"
         git config --local user.name "GitHub Actions"
         
-        # Ajouter les fichiers générés
+        # Ajouter les fichiers générés (2 CSV séparés)
         git add data/filtered_advanced.json data/weekly_snapshot.json \
-                data/weekly_snapshot_etfs.csv data/weekly_snapshot_bonds.csv \
-                data/combined_etfs_holdings.csv
+                data/weekly_snapshot_etfs.csv data/weekly_snapshot_bonds.csv
         
         # Ajouter package.json et package-lock.json si modifiés
         git add -f package.json package-lock.json || true
