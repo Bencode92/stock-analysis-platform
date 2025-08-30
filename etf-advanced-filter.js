@@ -1,6 +1,6 @@
 // etf-advanced-filter.js
-// Version hebdomadaire : Filtrage ADV + enrichissement summary/composition
-// v11.2: Séparation en 2 CSV distincts (ETFs et Bonds)
+// Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
+// v11.3: Ajout extraction holdings et export CSV WIDE combined_etfs_holdings.csv
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -195,7 +195,14 @@ function pickWeekly(etf) {
         countries: (etf.countries && etf.countries.length ? etf.countries : []),
         country_top5: (etf.country_top5 && etf.country_top5.length ? etf.country_top5 : []),
         country_top: (etf.country_top5 && etf.country_top5[0]) ? etf.country_top5[0] : null,
-        domicile: etf.Country || null,
+        domicile: etf.domicile || etf.Country || null,
+        // Holdings (NEW)
+        holdings_top10: (etf.holdings_top10 || []).map(h => ({
+            symbol: h.symbol || null,
+            name: h.name || null,
+            weight: (h.weight != null) ? Number(h.weight) : null
+        })),
+        holding_top: etf.holding_top || null,
         // Timestamps
         as_of_summary: etf.as_of_summary || null,
         as_of_composition: etf.as_of_composition || null,
@@ -215,7 +222,8 @@ function calculateDataQualityScore(etf) {
         has_yield: etf.yield_ttm != null,
         has_objective: etf.objective && etf.objective.length > 20,
         has_sectors: etf.sectors && etf.sectors.length > 0,
-        has_countries: etf.countries && etf.countries.length > 0
+        has_countries: etf.countries && etf.countries.length > 0,
+        has_holdings_top10: etf.holdings_top10 && etf.holdings_top10.length > 0
     };
     
     const weights = {
@@ -223,8 +231,9 @@ function calculateDataQualityScore(etf) {
         has_ter: 15,
         has_yield: 10,
         has_objective: 15,
-        has_sectors: 20,
-        has_countries: 20
+        has_sectors: 18,
+        has_countries: 17,
+        has_holdings_top10: 15
     };
     
     let score = 0;
@@ -463,6 +472,20 @@ async function fetchWeeklyPack(symbolParam, item) {
         weight: (x.allocation != null) ? Number(x.allocation) : null
     }));
 
+    // --- HOLDINGS (Top 10) ---
+    // candidats possibles selon la forme renvoyée par l'API
+    const holdingsRaw = (c.top_holdings || c.holdings || c.constituents || []).filter(Boolean);
+
+    // mapping robuste -> {symbol,name,weight}
+    const holdings = holdingsRaw.map(h => ({
+        symbol: cleanSymbol(h.symbol || h.ticker || h.code || ''),
+        name: h.name || h.security || h.company || h.title || '',
+        weight: (h.weight != null) ? Number(h.weight)
+              : (h.allocation != null) ? Number(h.allocation)
+              : (h.percent != null) ? Number(h.percent)
+              : null
+    })).filter(h => (h.symbol || h.name));
+
     // Détection automatique pour ETF single-stock si pas de composition
     let autoDetected = false;
     if (!sectors.length && etfTypeInfo.type === 'single_stock' && etfTypeInfo.ticker) {
@@ -470,6 +493,10 @@ async function fetchWeeklyPack(symbolParam, item) {
         if (stockInfo) {
             sectors = [{ sector: stockInfo.sector, weight: 1.0 }];
             countries = [{ country: stockInfo.country, weight: 1.0 }];
+            // Ajouter holding si pas déjà présent
+            if (!holdings.length) {
+                holdings.push({ symbol: etfTypeInfo.ticker, name: etfTypeInfo.ticker, weight: 1.0 });
+            }
             autoDetected = true;
             pack.is_single_stock = true;
         }
@@ -487,6 +514,8 @@ async function fetchWeeklyPack(symbolParam, item) {
 
     const sector_top5 = topN(sectors, 'weight', 5);
     const country_top5 = topN(countries, 'weight', 5);
+    const holdings_top10 = topN(holdings, 'weight', 10);
+    const holding_top = holdings_top10[0] || null;
 
     return {
         ...pack,
@@ -496,6 +525,9 @@ async function fetchWeeklyPack(symbolParam, item) {
         countries,
         country_top5,
         country_top: country_top5[0] || null,
+        holdings,
+        holdings_top10,
+        holding_top,
         auto_detected_composition: autoDetected
     };
 }
@@ -553,7 +585,7 @@ async function processListing(item) {
 
 // Fonction principale
 async function filterETFs() {
-    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition v11.2\n');
+    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS v11.3\n');
     console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
     console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max`);
     console.log(`📂  Dossier de sortie: ${OUT_DIR}\n`);
@@ -663,7 +695,7 @@ async function filterETFs() {
     });
     
     // ÉTAPE 4: Enrichissement hebdo (summary + composition) pour les ETF PASS
-    console.log('\n🧩 Enrichissement HEBDO (summary + composition) sous budget 2584/min…');
+    console.log('\n🧩 Enrichissement HEBDO (summary + composition + HOLDINGS) sous budget 2584/min…');
     
     // Trier par AUM décroissant pour prioriser les plus gros ETFs
     results.etfs.sort((a, b) => (b.net_assets || 0) - (a.net_assets || 0));
@@ -701,6 +733,9 @@ async function filterETFs() {
     results.stats.total_retained = results.etfs.length + results.bonds.length;
     results.stats.rejected_count = results.rejected.length;
     
+    // Stats pour les holdings
+    const positionsCount = results.etfs.reduce((acc,e)=> acc + ((e.holdings_top10 || []).length), 0);
+    
     // Pour compatibilité, ajouter les stats data_quality
     results.stats.data_quality = {
         with_aum: results.etfs.filter(e => e.aum_usd != null).length,
@@ -709,6 +744,7 @@ async function filterETFs() {
         with_sectors: results.etfs.filter(e => e.sectors && e.sectors.length > 0).length,
         with_countries: results.etfs.filter(e => e.countries && e.countries.length > 0).length,
         with_objective: results.etfs.filter(e => e.objective && e.objective.length > 0).length,
+        with_holdings: results.etfs.filter(e => e.holdings_top10 && e.holdings_top10.length > 0).length,
         with_auto_detection: results.etfs.filter(e => e.auto_detected_composition).length,
         avg_quality_score: Math.round(results.etfs.reduce((acc, e) => acc + (e.data_quality_score || 0), 0) / results.etfs.length),
         by_etf_type: {
@@ -751,9 +787,9 @@ async function filterETFs() {
     const weeklyPath = path.join(OUT_DIR, 'weekly_snapshot.json');
     await fs.writeFile(weeklyPath, JSON.stringify(weekly, null, 2));
     
-    // === CSV EXPORTS (Option A) ===
+    // === CSV EXPORTS ===
 
-    // CSV hebdo ETF
+    // CSV hebdo ETF avec holdings
     const csvHeaderEtf = [
         'symbol','isin','mic_code','currency','fund_type','etf_type',
         'aum_usd','total_expense_ratio','yield_ttm',
@@ -761,6 +797,7 @@ async function filterETFs() {
         'sector_top','sector_top_weight',
         'country_top','country_top_weight',
         'sector_top5','country_top5',
+        'holding_top','holdings_top10',      // NEW
         'data_quality_score'
     ].join(',') + '\n';
 
@@ -771,6 +808,15 @@ async function filterETFs() {
         const countryTopW = e.country_top?.weight != null ? (e.country_top.weight*100).toFixed(2) : '';
         const sectorTop5 = JSON.stringify((e.sector_top5 || []).map(x => ({ s: x.sector, w: Number((x.weight*100).toFixed(2)) }))).replace(/"/g,'""');
         const countryTop5 = JSON.stringify((e.country_top5 || []).map(x => ({ c: x.country, w: x.weight ? Number((x.weight*100).toFixed(2)) : null }))).replace(/"/g,'""');
+        
+        // NEW: holdings
+        const holdingTop = e.holding_top ? `${e.holding_top.symbol || ''} ${e.holding_top.name ? '('+e.holding_top.name+')' : ''}`.trim() : '';
+        const holdingsTop10 = JSON.stringify((e.holdings_top10 || []).map(h => ({
+            t: h.symbol || null,
+            n: h.name || null,
+            w: h.weight != null ? Number((h.weight*100).toFixed(2)) : null
+        }))).replace(/"/g,'""');
+
         const objective = `"${(e.objective || '').replace(/"/g, '""')}"`;
 
         return [
@@ -780,6 +826,7 @@ async function filterETFs() {
             `"${sectorTop}"`, sectorTopW,
             `"${countryTop}"`, countryTopW,
             `"${sectorTop5}"`, `"${countryTop5}"`,
+            `"${holdingTop}"`, `"${holdingsTop10}"`,   // NEW
             e.data_quality_score || 0
         ].join(',');
     }).join('\n');
@@ -790,7 +837,6 @@ async function filterETFs() {
     console.log(`📝 CSV ETFs: ${results.etfs.length} ligne(s) → ${etfCsvPath}`);
 
     // CSV hebdo BONDS (colonnes marché simples)
-    // -> Toujours écrire le fichier (même si 0 bond) : au minimum l'entête
     const csvHeaderBonds = [
         'symbol','isin','mic_code','currency',
         'avg_dollar_volume','price','change','percent_change','volume','average_volume','days_traded'
@@ -806,11 +852,63 @@ async function filterETFs() {
     await fs.writeFile(bondsCsvPath, csvHeaderBonds + (csvRowsBonds ? csvRowsBonds + '\n' : ''));
     console.log(`📝 CSV Bonds: ${results.bonds.length} ligne(s) → ${bondsCsvPath}`);
     
+    // === NEW: CSV Holdings WIDE (1 ligne par ETF, Top10 à plat) ===
+    const safe = (v) => {
+        if (v === null || v === undefined) return '';
+        const s = String(v);
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+    };
+
+    const wideHeader = [
+        'etf_symbol','isin','as_of_composition',
+        ...Array.from({length:10},(_,i)=>[`h${i+1}_symbol`,`h${i+1}_name`,`h${i+1}_weight_pct`]).flat(),
+        'cr5','cr10','hhi_top10','valid_holdings'
+    ].join(',') + '\n';
+
+    const wideLines = results.etfs.map(etf => {
+        // top10 -> padding à 10
+        const hs = (etf.holdings_top10 || []).slice(0,10);
+        while (hs.length < 10) hs.push({ symbol:'', name:'', weight:null });
+
+        let cr5 = 0, cr10 = 0, hhi = 0, valid = 0;
+
+        const cells = [
+            etf.symbol,
+            etf.isin || '',
+            etf.as_of_composition || ''
+        ];
+
+        hs.forEach((h, idx) => {
+            const wPct = (h.weight != null) ? (h.weight * 100) : null;
+            if (wPct != null) {
+                valid += 1;
+                if (idx < 5) cr5 += wPct;
+                cr10 += wPct;
+                hhi += Math.pow(wPct / 100, 2);
+            }
+            cells.push(h.symbol || '', h.name || '', wPct != null ? Number(wPct.toFixed(2)) : '');
+        });
+
+        cells.push(
+            Number(cr5.toFixed(2)),
+            Number(cr10.toFixed(2)),
+            Number(hhi.toFixed(4)),
+            valid
+        );
+
+        return cells.map(safe).join(',');
+    }).join('\n');
+
+    const holdingsCsvPath = path.join(OUT_DIR, 'combined_etfs_holdings.csv');
+    await fs.writeFile(holdingsCsvPath, wideHeader + (wideLines ? wideLines + '\n' : ''));
+    console.log(`📝 CSV Holdings WIDE: ${results.etfs.length} ligne(s) → ${holdingsCsvPath}`);
+    
     // Résumé
     console.log('\n📊 RÉSUMÉ:');
     console.log(`ETFs retenus: ${results.etfs.length}/${etfs.length}`);
     console.log(`Bonds retenus: ${results.bonds.length}/${bonds.length}`);
     console.log(`Rejetés: ${results.rejected.length}`);
+    console.log(`Holdings extraits: ${positionsCount} positions (Top10 cumulés)`);
     console.log(`Temps total: ${results.stats.elapsed_seconds}s`);
     
     console.log('\n📊 Qualité des données:');
@@ -834,11 +932,15 @@ async function filterETFs() {
     console.log(`✅ Weekly snapshot JSON: ${weeklyPath} (champs hebdo uniquement)`);
     console.log(`✅ CSV ETFs: ${etfCsvPath}`);
     console.log(`✅ CSV Bonds: ${bondsCsvPath}`);
+    console.log(`✅ CSV Holdings WIDE: ${holdingsCsvPath}`);
     
-    // Pour GitHub Actions
-    if (process.env.GITHUB_ACTIONS) {
-        console.log(`::set-output name=etfs_count::${results.etfs.length}`);
-        console.log(`::set-output name=bonds_count::${results.bonds.length}`);
+    // Pour GitHub Actions (nouveau mécanisme)
+    if (process.env.GITHUB_OUTPUT) {
+        const fsSync = require('fs');
+        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `etfs_count=${results.etfs.length}\n`);
+        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_count=${results.bonds.length}\n`);
+        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `holdings_wide_rows=${results.etfs.length}\n`);
+        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `holdings_positions=${positionsCount}\n`);
     }
 }
 
