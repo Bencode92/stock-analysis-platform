@@ -35,7 +35,8 @@ jobs:
                   data/combined_snapshot.json \
                   data/combined_etfs.csv data/combined_bonds.csv \
                   data/combined_etfs_exposure.csv \
-                  data/combined_etfs_holdings.csv
+                  data/combined_etfs_holdings.csv \
+                  data/combined_bonds_holdings.csv
 
           # Commit seulement s'il y a des changements
           git diff --quiet && git diff --staged --quiet || git commit -m "Update daily ETF/Bond metrics [skip ci]"
