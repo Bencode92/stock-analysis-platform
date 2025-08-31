@@ -3,7 +3,7 @@ name: ETF Advanced Filter
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 14 * * 1-5'  # 14h UTC = 16h Paris été (CEST) / 15h Paris hiver (CET)
+    - cron: '0 14 * * 1-5'  # 14h UTC = 15h Paris (jours ouvrés)
 
 jobs:
   filter-etfs:
@@ -23,32 +23,22 @@ jobs:
       run: npm install csv-parse axios
     
     - name: Run ETF filter
-      id: run_filter
       env:
         TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
       run: node etf-advanced-filter.js
-    
-    - name: Check holdings file
-      run: |
-        echo "📁 Contenu du dossier data:"
-        ls -lh data/
-        echo ""
-        echo "📋 Entête du fichier holdings WIDE:"
-        head -n 1 data/combined_etfs_holdings.csv || echo "❌ Fichier non trouvé"
     
     - name: Commit results
       run: |
         git config --local user.email "actions@github.com"
         git config --local user.name "GitHub Actions"
         
-        # Ajouter tous les fichiers générés (incluant le nouveau CSV holdings)
+        # Ajouter les fichiers générés (2 CSV séparés)
         git add data/filtered_advanced.json data/weekly_snapshot.json \
-                data/weekly_snapshot_etfs.csv data/weekly_snapshot_bonds.csv \
-                data/combined_etfs_holdings.csv
+                data/weekly_snapshot_etfs.csv data/weekly_snapshot_bonds.csv
         
         # Ajouter package.json et package-lock.json si modifiés
         git add -f package.json package-lock.json || true
         
         # Commit seulement s'il y a des changements
-        git diff --quiet && git diff --staged --quiet || git commit -m "Update filtered ETFs with holdings [skip ci]"
+        git diff --quiet && git diff --staged --quiet || git commit -m "Update filtered ETFs [skip ci]"
         git push
