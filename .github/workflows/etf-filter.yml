@@ -28,27 +28,30 @@ jobs:
         TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
       run: node etf-advanced-filter.js
     
-    - name: Check holdings file
+    - name: Check holdings files
       run: |
         echo "📁 Contenu du dossier data:"
         ls -lh data/
         echo ""
-        echo "📋 Premières lignes du fichier holdings (narrow):"
+        echo "📋 Holdings ETFs (premières lignes):"
         head -n 5 data/combined_etfs_holdings.csv || echo "❌ Fichier non trouvé"
+        echo ""
+        echo "📋 Holdings Bonds (premières lignes):"
+        head -n 5 data/combined_bonds_holdings.csv || echo "❌ Fichier non trouvé"
     
     - name: Commit results
       run: |
         git config --local user.email "actions@github.com"
         git config --local user.name "GitHub Actions"
         
-        # Ajouter tous les fichiers générés (incluant le CSV holdings)
+        # Ajouter tous les fichiers générés (incluant les CSV holdings)
         git add data/filtered_advanced.json data/weekly_snapshot.json \
                 data/weekly_snapshot_etfs.csv data/weekly_snapshot_bonds.csv \
-                data/combined_etfs_holdings.csv
+                data/combined_etfs_holdings.csv data/combined_bonds_holdings.csv
         
         # Ajouter package.json et package-lock.json si modifiés
         git add -f package.json package-lock.json || true
         
         # Commit même s'il n'y a aucun diff (force avec --allow-empty)
-        git commit -m "Update filtered ETFs with holdings [skip ci]" --allow-empty
+        git commit -m "Update filtered ETFs + bonds with holdings [skip ci]" --allow-empty
         git push
