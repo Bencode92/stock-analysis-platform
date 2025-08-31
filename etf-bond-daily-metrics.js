@@ -2,6 +2,7 @@
 // Daily scrape: perfs & risque, et fusion avec le weekly snapshot
 // Calcule: daily % (quote), YTD %, 1Y %, Vol 3Y % (annualisée) depuis /time_series
 // Sorties: data/daily_metrics.json, data/daily_metrics_*.csv, data/combined_*.{json,csv}
+// v2.0: Enrichissement des bonds avec sectors/countries/holdings comme les ETFs
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -280,13 +281,18 @@ async function main(){
     await writeCSV(path.join(OUT_DIR, 'combined_etfs.csv'),
                    [], ['symbol','isin','mic_code','currency','fund_type','etf_type','leverage','aum_usd','total_expense_ratio','yield_ttm',
                         'objective','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of',
-                        'sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5','data_quality_score']);
+                        'sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5',
+                        'holding_top','holdings_top10','data_quality_score']);
     await writeCSV(path.join(OUT_DIR, 'combined_bonds.csv'),
                    [], ['symbol','isin','mic_code','currency','fund_type','etf_type','aum_usd','total_expense_ratio','yield_ttm',
-                        'objective','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of','data_quality_score']);
+                        'objective','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of',
+                        'sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5',
+                        'holding_top','holdings_top10','data_quality_score']);
     await writeCSV(path.join(OUT_DIR, 'combined_etfs_exposure.csv'),
                    [], ['symbol','isin','mic_code','currency','fund_type','etf_type','leverage','aum_usd','total_expense_ratio','yield_ttm',
-                        'objective','sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5','data_quality_score']);
+                        'objective','sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5',
+                        'holding_top','holdings_top10','data_quality_score']);
+    await fs.writeFile(path.join(OUT_DIR, 'combined_bonds_holdings.csv'), 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n');
     return;
   }
 
@@ -335,10 +341,9 @@ async function main(){
   // 5) Fusion weekly + daily (pour affichage site)
   
   // ✅ Source de vérité = CSVs weekly
-  // (les champs sector_top5 / country_top5 y sont des chaînes JSON)
+  // Normalisation pour ETFs
   const weeklyEtfs = etfRows.map(r => ({
     ...r,
-    // <-- ajoute cette ligne
     leverage: findLeverage(r),
     // normalisation des champs d'expo
     sector_top5: parseMaybeJSON(r.sector_top5) || [],
@@ -347,9 +352,24 @@ async function main(){
       ? Number(r.sector_top_weight) : '',
     country_top_weight: r.country_top_weight !== '' && r.country_top_weight != null
       ? Number(r.country_top_weight) : '',
+    holdings_top10: parseMaybeJSON(r.holdings_top10) || [],
+    holding_top: r.holding_top || '',
     data_quality_score: r.data_quality_score != null ? Number(r.data_quality_score) : ''
   }));
-  const weeklyBonds = bondRows; // rien de spécial pour les bonds
+  
+  // Normalisation pour Bonds (même logique que ETFs)
+  const weeklyBonds = bondRows.map(r => ({
+    ...r,
+    // expos secteurs/pays (au weekly c'est du JSON string → on parse)
+    sector_top5: parseMaybeJSON(r.sector_top5) || [],
+    country_top5: parseMaybeJSON(r.country_top5) || [],
+    sector_top_weight: r.sector_top_weight !== '' && r.sector_top_weight != null ? Number(r.sector_top_weight) : '',
+    country_top_weight: r.country_top_weight !== '' && r.country_top_weight != null ? Number(r.country_top_weight) : '',
+    // holdings (Top10 au weekly → JSON string)
+    holdings_top10: parseMaybeJSON(r.holdings_top10) || [],
+    holding_top: r.holding_top || '',
+    data_quality_score: r.data_quality_score != null ? Number(r.data_quality_score) : ''
+  }));
 
   const etfMerged = mergeWeeklyDaily(weeklyEtfs, new Map(etfDaily.map(x=>[x.symbol,x])));
   const bondMerged = mergeWeeklyDaily(weeklyBonds, new Map(bondDaily.map(x=>[x.symbol,x])));
@@ -359,12 +379,70 @@ async function main(){
 
   // --- CSV combinés ---
 
-  // 2) Bonds : créer le fichier même si vide, avec un en-tête "riche" (les champs weekly restent vides)
+  // Normalisation "exposure" pour bonds (comme pour ETFs)
+  const bondExposure = weeklyBonds.map(e => ({
+    symbol: e.symbol,
+    isin: e.isin || '',
+    mic_code: e.mic_code || '',
+    currency: e.currency || '',
+    fund_type: e.fund_type || '',
+    etf_type: e.etf_type || '',
+    aum_usd: e.aum_usd ?? '',
+    total_expense_ratio: e.total_expense_ratio ?? '',
+    yield_ttm: e.yield_ttm ?? '',
+    objective: e.objective || '',
+    sector_top: e.sector_top || '',
+    sector_top_weight: e.sector_top_weight || '',
+    country_top: e.country_top || (e.domicile || ''),
+    country_top_weight: e.country_top_weight || '',
+    sector_top5: JSON.stringify(
+      (e.sector_top5 || []).map(x => ('sector' in x)
+        ? { s: x.sector, w: x.weight != null ? Number((x.weight*100).toFixed(2)) : null }
+        : { s: x.s, w: x.w != null ? Number(x.w) : null }
+      )
+    ),
+    country_top5: JSON.stringify(
+      (e.country_top5 || []).map(x => ('country' in x)
+        ? { c: x.country, w: x.weight != null ? Number((x.weight*100).toFixed(2)) : null }
+        : { c: x.c, w: x.w != null ? Number(x.w) : null }
+      )
+    ),
+    holding_top: e.holding_top || '',
+    holdings_top10: JSON.stringify(
+      (e.holdings_top10 || []).map(h =>
+        ('t' in h)
+          ? { t: h.t, n: h.n ?? null, w: h.w }
+          : { t: h.symbol || null, n: h.name || null, w: h.weight != null ? Number((h.weight*100).toFixed(2)) : null }
+      )
+    ),
+    data_quality_score: e.data_quality_score ?? ''
+  }));
+
+  const exposureByBond = new Map(bondExposure.map(x => [x.symbol, x]));
+  const bondMergedWithExposure = bondMerged.map(row => {
+    const ex = exposureByBond.get(row.symbol) || {};
+    return {
+      ...row,
+      sector_top: ex.sector_top ?? '',
+      sector_top_weight: ex.sector_top_weight ?? '',
+      country_top: ex.country_top ?? (row.domicile || ''),
+      country_top_weight: ex.country_top_weight ?? '',
+      sector_top5: ex.sector_top5 ?? '[]',
+      country_top5: ex.country_top5 ?? '[]',
+      holding_top: ex.holding_top ?? '',
+      holdings_top10: ex.holdings_top10 ?? '[]',
+      data_quality_score: row.data_quality_score ?? ex.data_quality_score ?? ''
+    };
+  });
+
   await writeCSV(path.join(OUT_DIR, 'combined_bonds.csv'),
-    bondMerged, [
-      'symbol','isin','mic_code','currency',
-      'fund_type','etf_type','aum_usd','total_expense_ratio','yield_ttm','objective',
+    bondMergedWithExposure, [
+      'symbol','isin','mic_code','currency','fund_type','etf_type',
+      'aum_usd','total_expense_ratio','yield_ttm','objective',
       'daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of',
+      'sector_top','sector_top_weight','country_top','country_top_weight',
+      'sector_top5','country_top5',
+      'holding_top','holdings_top10',
       'data_quality_score'
     ]
   );
@@ -398,6 +476,14 @@ async function main(){
         : { c: x.c, w: x.w != null ? Number(x.w) : null }
       )
     ),
+    holding_top: e.holding_top || '',
+    holdings_top10: JSON.stringify(
+      (e.holdings_top10 || []).map(h =>
+        ('t' in h)
+          ? { t: h.t, n: h.n ?? null, w: h.w }
+          : { t: h.symbol || null, n: h.name || null, w: h.weight != null ? Number((h.weight*100).toFixed(2)) : null }
+      )
+    ),
     data_quality_score: e.data_quality_score ?? ''
   }));
 
@@ -406,7 +492,9 @@ async function main(){
       'symbol','isin','mic_code','currency','fund_type','etf_type','leverage',
       'aum_usd','total_expense_ratio','yield_ttm','objective',
       'sector_top','sector_top_weight','country_top','country_top_weight',
-      'sector_top5','country_top5','data_quality_score'
+      'sector_top5','country_top5',
+      'holding_top','holdings_top10',
+      'data_quality_score'
     ]
   );
 
@@ -422,6 +510,8 @@ async function main(){
       country_top_weight: ex.country_top_weight ?? '',
       sector_top5: ex.sector_top5 ?? '[]',
       country_top5: ex.country_top5 ?? '[]',
+      holding_top: ex.holding_top ?? '',
+      holdings_top10: ex.holdings_top10 ?? '[]',
       data_quality_score: row.data_quality_score ?? ex.data_quality_score ?? ''
     };
   });
@@ -432,9 +522,37 @@ async function main(){
       'aum_usd','total_expense_ratio','yield_ttm','objective',
       'daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of',
       'sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5',
+      'holding_top','holdings_top10',
       'data_quality_score'
     ]
   );
+
+  // === NEW: combined_bonds_holdings.csv (Top10 only, narrow) ===
+  const bondsHoldingsHeader = 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n';
+  const bondsHoldingsRows = weeklyBonds.flatMap(fund => {
+    const hs = Array.isArray(fund.holdings_top10) ? fund.holdings_top10 : [];
+    // normaliser
+    const norm = hs.map(h => ('t' in h)
+      ? { sym: h.t || '', name: h.n || '', w: h.w != null ? Number(h.w) : null }
+      : { sym: h.symbol || '', name: h.name || '', w: h.weight != null ? Number((h.weight*100).toFixed(2)) : null }
+    );
+    return norm.map((h, idx) => {
+      const cells = [
+        fund.symbol || '', idx + 1,
+        h.sym, (h.name || '').replace(/"/g,'""'),
+        h.w != null ? Number(h.w).toFixed(2) : ''
+      ];
+      return cells.map(v => {
+        const s = String(v);
+        return /[",\n]/.test(s) ? `"${s}"` : s;
+      }).join(',');
+    });
+  });
+  await fs.writeFile(
+    path.join(OUT_DIR, 'combined_bonds_holdings.csv'),
+    bondsHoldingsHeader + (bondsHoldingsRows.length ? bondsHoldingsRows.join('\n') + '\n' : '')
+  );
+  console.log(`📝 Combined BONDS holdings (Top10): ${bondsHoldingsRows.length} lignes → data/combined_bonds_holdings.csv`);
 
   console.log('🔗 Fusions weekly+daily écrites (JSON & CSV).');
   console.log(`✅ Total: ${etfMergedWithExposure.length} ETFs, ${bondMerged.length} Bonds traités`);
