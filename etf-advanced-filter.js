@@ -1,6 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
-// v11.4: Format narrow pour combined_etfs_holdings.csv (1 ligne = 1 position)
+// v11.5: Enrichissement des bonds + combined_bonds_holdings.csv
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -585,7 +585,7 @@ async function processListing(item) {
 
 // Fonction principale
 async function filterETFs() {
-    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS v11.4\n');
+    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS v11.5\n');
     console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
     console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max`);
     console.log(`📂  Dossier de sortie: ${OUT_DIR}\n`);
@@ -695,7 +695,7 @@ async function filterETFs() {
     });
     
     // ÉTAPE 4: Enrichissement hebdo (summary + composition) pour les ETF PASS
-    console.log('\n🧩 Enrichissement HEBDO (summary + composition + HOLDINGS) sous budget 2584/min…');
+    console.log('\n🧩 Enrichissement HEBDO ETFs (summary + composition + HOLDINGS) sous budget 2584/min…');
     
     // Trier par AUM décroissant pour prioriser les plus gros ETFs
     results.etfs.sort((a, b) => (b.net_assets || 0) - (a.net_assets || 0));
@@ -705,7 +705,7 @@ async function filterETFs() {
         const batchNum = Math.floor(i/ENRICH_CONCURRENCY) + 1;
         const totalBatches = Math.ceil(results.etfs.length/ENRICH_CONCURRENCY);
         
-        console.log(`📦 Enrichissement lot ${batchNum}/${totalBatches}`);
+        console.log(`📦 Enrichissement ETF lot ${batchNum}/${totalBatches}`);
         
         await Promise.all(batch.map(async (it) => {
             const symbolForApi = it.symbolParam || it.symbol;
@@ -725,6 +725,31 @@ async function filterETFs() {
         }));
     }
     
+    // === NEW: Enrichissement BONDS (même logique que ETFs) ===
+    console.log('\n🧩 Enrichissement HEBDO BONDS (summary + composition + HOLDINGS) sous budget 2584/min…');
+    results.bonds.sort((a, b) => (b.net_assets || 0) - (a.net_assets || 0));
+
+    for (let i = 0; i < results.bonds.length; i += ENRICH_CONCURRENCY) {
+        const batch = results.bonds.slice(i, i + ENRICH_CONCURRENCY);
+        const batchNum = Math.floor(i / ENRICH_CONCURRENCY) + 1;
+        const totalBatches = Math.ceil(results.bonds.length / ENRICH_CONCURRENCY);
+        console.log(`📦 Enrichissement BONDS lot ${batchNum}/${totalBatches}`);
+
+        await Promise.all(batch.map(async (it) => {
+            const symbolForApi = it.symbolParam || it.symbol;
+            try {
+                const weekly = await fetchWeeklyPack(symbolForApi, it);
+                Object.assign(it, weekly);
+                it.data_quality_score = calculateDataQualityScore(it);
+                if (CONFIG.DEBUG) {
+                    console.log(`  ${symbolForApi} | AUM ${it.aum_usd} | TER ${it.total_expense_ratio} | Quality ${it.data_quality_score}`);
+                }
+            } catch (e) {
+                console.log(`  ${symbolForApi} | ⚠️ Enrichissement bonds KO: ${e.message}`);
+            }
+        }));
+    }
+    
     // Statistiques finales
     const elapsedTime = Date.now() - results.stats.start_time;
     results.stats.elapsed_seconds = Math.round(elapsedTime / 1000);
@@ -734,7 +759,8 @@ async function filterETFs() {
     results.stats.rejected_count = results.rejected.length;
     
     // Stats pour les holdings
-    const positionsCount = results.etfs.reduce((acc,e)=> acc + ((e.holdings_top10 || []).length), 0);
+    const etfPositionsCount = results.etfs.reduce((acc,e)=> acc + ((e.holdings_top10 || []).length), 0);
+    const bondsPositionsCount = results.bonds.reduce((acc,e)=> acc + ((e.holdings_top10 || []).length), 0);
     
     // Pour compatibilité, ajouter les stats data_quality
     results.stats.data_quality = {
@@ -836,23 +862,48 @@ async function filterETFs() {
     await fs.writeFile(etfCsvPath, csvHeaderEtf + (csvRowsEtf ? csvRowsEtf + '\n' : ''));
     console.log(`📝 CSV ETFs: ${results.etfs.length} ligne(s) → ${etfCsvPath}`);
 
-    // CSV hebdo BONDS (colonnes marché simples)
+    // === CSV hebdo BONDS (ENRICHED, même structure que ETFs) ===
     const csvHeaderBonds = [
-        'symbol','isin','mic_code','currency',
-        'avg_dollar_volume','price','change','percent_change','volume','average_volume','days_traded'
+        'symbol','isin','mic_code','currency','fund_type','etf_type',
+        'aum_usd','total_expense_ratio','yield_ttm',
+        'objective',
+        'sector_top','sector_top_weight',
+        'country_top','country_top_weight',
+        'sector_top5','country_top5',
+        'holding_top','holdings_top10',
+        'data_quality_score'
     ].join(',') + '\n';
 
-    const csvRowsBonds = results.bonds.map(b => [
-        b.symbol, b.isin || '', b.mic_code || '', b.currency || '',
-        b.avg_dollar_volume ?? '', b.price ?? '', b.change ?? '', b.percent_change ?? '',
-        b.volume ?? '', b.average_volume ?? '', b.days_traded ?? ''
-    ].join(',')).join('\n');
+    const csvRowsBonds = results.bonds.map(e => {
+        const sectorTop = e.sector_top ? e.sector_top.sector : '';
+        const sectorTopW = e.sector_top?.weight != null ? (e.sector_top.weight*100).toFixed(2) : '';
+        const countryTop = e.country_top ? e.country_top.country : (e.domicile || '');
+        const countryTopW = e.country_top?.weight != null ? (e.country_top.weight*100).toFixed(2) : '';
+        const sectorTop5 = JSON.stringify((e.sector_top5 || []).map(x => ({ s:x.sector, w:Number((x.weight*100).toFixed(2)) }))).replace(/"/g,'""');
+        const countryTop5 = JSON.stringify((e.country_top5 || []).map(x => ({ c:x.country, w:x.weight!=null?Number((x.weight*100).toFixed(2)):null }))).replace(/"/g,'""');
+        const holdingTop = e.holding_top ? `${e.holding_top.symbol || ''} ${e.holding_top.name ? '('+e.holding_top.name+')' : ''}`.trim() : '';
+        const holdingsTop10 = JSON.stringify((e.holdings_top10 || []).map(h => ({
+            t:h.symbol || null, n:h.name || null, w:h.weight!=null?Number((h.weight*100).toFixed(2)):null
+        }))).replace(/"/g,'""');
+        const objective = `"${(e.objective || '').replace(/"/g,'""')}"`;
+
+        return [
+            e.symbol, e.isin || '', e.mic_code || '', e.currency || '', e.fund_type || '', e.etf_type || '',
+            e.aum_usd ?? '', e.total_expense_ratio ?? '', e.yield_ttm ?? '',
+            objective,
+            `"${sectorTop}"`, sectorTopW,
+            `"${countryTop}"`, countryTopW,
+            `"${sectorTop5}"`, `"${countryTop5}"`,
+            `"${holdingTop}"`, `"${holdingsTop10}"`,
+            e.data_quality_score || 0
+        ].join(',');
+    }).join('\n');
 
     const bondsCsvPath = path.join(OUT_DIR, 'weekly_snapshot_bonds.csv');
     await fs.writeFile(bondsCsvPath, csvHeaderBonds + (csvRowsBonds ? csvRowsBonds + '\n' : ''));
-    console.log(`📝 CSV Bonds: ${results.bonds.length} ligne(s) → ${bondsCsvPath}`);
+    console.log(`📝 CSV Bonds (enriched): ${results.bonds.length} ligne(s) → ${bondsCsvPath}`);
     
-    // === CSV Holdings (Top10 only, narrow) ===
+    // === CSV Holdings ETFs (Top10 only, narrow) ===
     const narrowHeader = 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n';
 
     const narrowRows = results.etfs.flatMap(etf => {
@@ -882,14 +933,44 @@ async function filterETFs() {
         holdingsCsvPath,
         narrowHeader + (narrowRows.length ? narrowRows.join('\n') + '\n' : '')
     );
-    console.log(`📝 CSV Holdings (Top10 only): ${narrowRows.length} lignes → ${holdingsCsvPath}`);
+    console.log(`📝 CSV Holdings ETFs (Top10 only): ${narrowRows.length} lignes → ${holdingsCsvPath}`);
+    
+    // === NEW: Combined BONDS holdings (Top10 only, narrow) ===
+    const bondsNarrowHeader = 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n';
+
+    const bondsNarrowRows = results.bonds.flatMap(fund => {
+        const hs = (fund.holdings_top10 && fund.holdings_top10.length)
+            ? fund.holdings_top10
+            : topN(fund.holdings || [], 'weight', 10);
+
+        return hs.map((h, idx) => {
+            const etfSym = fund.symbol || '';
+            const rank = idx + 1;
+            const hSym = h.symbol || '';
+            const hName = (h.name || '').replace(/"/g,'""');
+            const wPct = (h.weight != null) ? (h.weight * 100).toFixed(2) : '';
+            const cells = [etfSym, rank, hSym, hName, wPct].map(v => {
+                const s = String(v);
+                return /[",\n]/.test(s) ? `"${s}"` : s;
+            });
+            return cells.join(',');
+        });
+    });
+
+    const combinedBondsHoldingsPath = path.join(OUT_DIR, 'combined_bonds_holdings.csv');
+    await fs.writeFile(
+        combinedBondsHoldingsPath,
+        bondsNarrowHeader + (bondsNarrowRows.length ? bondsNarrowRows.join('\n') + '\n' : '')
+    );
+    console.log(`📝 Combined BONDS holdings (Top10): ${bondsNarrowRows.length} lignes → ${combinedBondsHoldingsPath}`);
     
     // Résumé
     console.log('\n📊 RÉSUMÉ:');
     console.log(`ETFs retenus: ${results.etfs.length}/${etfs.length}`);
     console.log(`Bonds retenus: ${results.bonds.length}/${bonds.length}`);
     console.log(`Rejetés: ${results.rejected.length}`);
-    console.log(`Holdings extraits: ${positionsCount} positions (Top10 cumulés)`);
+    console.log(`Holdings ETFs: ${etfPositionsCount} positions (Top10)`);
+    console.log(`Holdings Bonds: ${bondsPositionsCount} positions (Top10)`);
     console.log(`Temps total: ${results.stats.elapsed_seconds}s`);
     
     console.log('\n📊 Qualité des données:');
@@ -912,16 +993,18 @@ async function filterETFs() {
     console.log(`\n✅ Résultats complets: ${filteredPath}`);
     console.log(`✅ Weekly snapshot JSON: ${weeklyPath} (champs hebdo uniquement)`);
     console.log(`✅ CSV ETFs: ${etfCsvPath}`);
-    console.log(`✅ CSV Bonds: ${bondsCsvPath}`);
-    console.log(`✅ CSV Holdings (narrow): ${holdingsCsvPath}`);
+    console.log(`✅ CSV Bonds (enriched): ${bondsCsvPath}`);
+    console.log(`✅ CSV Holdings ETFs: ${holdingsCsvPath}`);
+    console.log(`✅ CSV Holdings Bonds: ${combinedBondsHoldingsPath}`);
     
     // Pour GitHub Actions (nouveau mécanisme)
     if (process.env.GITHUB_OUTPUT) {
         const fsSync = require('fs');
         fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `etfs_count=${results.etfs.length}\n`);
         fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_count=${results.bonds.length}\n`);
-        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `holdings_rows=${narrowRows.length}\n`);
-        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `holdings_positions=${positionsCount}\n`);
+        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `etf_holdings_rows=${narrowRows.length}\n`);
+        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_holdings_rows=${bondsNarrowRows.length}\n`);
+        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `total_holdings_positions=${etfPositionsCount + bondsPositionsCount}\n`);
     }
 }
 
