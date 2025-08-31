@@ -1,6 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
-// v11.3: Ajout extraction holdings et export CSV WIDE combined_etfs_holdings.csv
+// v11.4: Format narrow pour combined_etfs_holdings.csv (1 ligne = 1 position)
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -585,7 +585,7 @@ async function processListing(item) {
 
 // Fonction principale
 async function filterETFs() {
-    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS v11.3\n');
+    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS v11.4\n');
     console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
     console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max`);
     console.log(`📂  Dossier de sortie: ${OUT_DIR}\n`);
@@ -852,56 +852,37 @@ async function filterETFs() {
     await fs.writeFile(bondsCsvPath, csvHeaderBonds + (csvRowsBonds ? csvRowsBonds + '\n' : ''));
     console.log(`📝 CSV Bonds: ${results.bonds.length} ligne(s) → ${bondsCsvPath}`);
     
-    // === NEW: CSV Holdings WIDE (1 ligne par ETF, Top10 à plat) ===
-    const safe = (v) => {
-        if (v === null || v === undefined) return '';
-        const s = String(v);
-        return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
-    };
+    // === CSV Holdings (Top10 only, narrow) ===
+    const narrowHeader = 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n';
 
-    const wideHeader = [
-        'etf_symbol','isin','as_of_composition',
-        ...Array.from({length:10},(_,i)=>[`h${i+1}_symbol`,`h${i+1}_name`,`h${i+1}_weight_pct`]).flat(),
-        'cr5','cr10','hhi_top10','valid_holdings'
-    ].join(',') + '\n';
+    const narrowRows = results.etfs.flatMap(etf => {
+        // si holdings_top10 est déjà présent on l'utilise, sinon on prend le top 10 depuis holdings
+        const hs = (etf.holdings_top10 && etf.holdings_top10.length)
+            ? etf.holdings_top10
+            : topN(etf.holdings || [], 'weight', 10);
 
-    const wideLines = results.etfs.map(etf => {
-        // top10 -> padding à 10
-        const hs = (etf.holdings_top10 || []).slice(0,10);
-        while (hs.length < 10) hs.push({ symbol:'', name:'', weight:null });
+        return hs.map((h, idx) => {
+            const etfSym = etf.symbol || '';
+            const rank = idx + 1;
+            const hSym = h.symbol || '';
+            const hName = (h.name || '').replace(/"/g, '""');
+            const wPct = (h.weight != null) ? (h.weight * 100).toFixed(2) : '';
 
-        let cr5 = 0, cr10 = 0, hhi = 0, valid = 0;
-
-        const cells = [
-            etf.symbol,
-            etf.isin || '',
-            etf.as_of_composition || ''
-        ];
-
-        hs.forEach((h, idx) => {
-            const wPct = (h.weight != null) ? (h.weight * 100) : null;
-            if (wPct != null) {
-                valid += 1;
-                if (idx < 5) cr5 += wPct;
-                cr10 += wPct;
-                hhi += Math.pow(wPct / 100, 2);
-            }
-            cells.push(h.symbol || '', h.name || '', wPct != null ? Number(wPct.toFixed(2)) : '');
+            // CSV safe
+            const cells = [etfSym, rank, hSym, hName, wPct].map(v => {
+                const s = String(v);
+                return /[",\n]/.test(s) ? `"${s}"` : s;
+            });
+            return cells.join(',');
         });
-
-        cells.push(
-            Number(cr5.toFixed(2)),
-            Number(cr10.toFixed(2)),
-            Number(hhi.toFixed(4)),
-            valid
-        );
-
-        return cells.map(safe).join(',');
-    }).join('\n');
+    });
 
     const holdingsCsvPath = path.join(OUT_DIR, 'combined_etfs_holdings.csv');
-    await fs.writeFile(holdingsCsvPath, wideHeader + (wideLines ? wideLines + '\n' : ''));
-    console.log(`📝 CSV Holdings WIDE: ${results.etfs.length} ligne(s) → ${holdingsCsvPath}`);
+    await fs.writeFile(
+        holdingsCsvPath,
+        narrowHeader + (narrowRows.length ? narrowRows.join('\n') + '\n' : '')
+    );
+    console.log(`📝 CSV Holdings (Top10 only): ${narrowRows.length} lignes → ${holdingsCsvPath}`);
     
     // Résumé
     console.log('\n📊 RÉSUMÉ:');
@@ -932,14 +913,14 @@ async function filterETFs() {
     console.log(`✅ Weekly snapshot JSON: ${weeklyPath} (champs hebdo uniquement)`);
     console.log(`✅ CSV ETFs: ${etfCsvPath}`);
     console.log(`✅ CSV Bonds: ${bondsCsvPath}`);
-    console.log(`✅ CSV Holdings WIDE: ${holdingsCsvPath}`);
+    console.log(`✅ CSV Holdings (narrow): ${holdingsCsvPath}`);
     
     // Pour GitHub Actions (nouveau mécanisme)
     if (process.env.GITHUB_OUTPUT) {
         const fsSync = require('fs');
         fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `etfs_count=${results.etfs.length}\n`);
         fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_count=${results.bonds.length}\n`);
-        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `holdings_wide_rows=${results.etfs.length}\n`);
+        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `holdings_rows=${narrowRows.length}\n`);
         fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `holdings_positions=${positionsCount}\n`);
     }
 }
