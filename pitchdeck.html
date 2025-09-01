@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -202,7 +201,7 @@
     .progress { position: fixed; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,0.08); z-index: 6; }
     .progress > span { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .25s ease; }
 
-    /* Print / PDF Export - Print-optimized design */
+    /* Print / PDF Export - Print-optimized design with fixed alignment */
     @media print {
       @page { 
         size: A4 landscape; 
@@ -223,15 +222,15 @@
       /* Hide UI elements */
       .toolbar, .progress, .backdrop { display: none !important; }
       
-      /* Print-optimized slide design */
+      /* Print-optimized slide design with fixed layout */
       .slide { 
         page-break-after: always !important;
         page-break-inside: avoid !important;
-        min-height: 180mm !important;
-        width: auto !important;
-        max-width: 100% !important;
-        margin: 0 !important;
-        padding: 25px !important;
+        height: 190mm !important;
+        width: 277mm !important;
+        max-width: 277mm !important;
+        margin: 0 auto !important;
+        padding: 20mm !important;
         border-radius: 0 !important;
         
         /* Professional border frame */
@@ -239,9 +238,30 @@
         background: white !important;
         box-shadow: inset 0 0 0 1px #e0e0e0 !important;
         
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: center !important;
+        /* Force block layout for print */
+        display: block !important;
+        position: relative !important;
+        overflow: visible !important;
+      }
+      
+      /* Force all slide content to use normal flow */
+      .slide > * {
+        display: block !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        text-align: center !important;
+      }
+      
+      /* Force sections with specific alignment */
+      .slide[style*="display: flex"],
+      .slide[style*="display:flex"] {
+        display: block !important;
+      }
+      
+      .slide[style*="justify-content"],
+      .slide[style*="align-items"] {
+        display: block !important;
+        text-align: center !important;
       }
       
       .slide:last-child { page-break-after: auto !important; }
@@ -258,6 +278,9 @@
         -webkit-text-fill-color: #24d17e !important;
         text-shadow: 2px 2px 0 #f0fff8 !important;
         font-size: 42pt !important;
+        text-align: center !important;
+        margin: 0 auto 20px !important;
+        display: block !important;
       }
       
       h2 { 
@@ -265,12 +288,34 @@
         font-size: 28pt !important;
         border-bottom: 3px solid #24d17e !important;
         padding-bottom: 10px !important;
-        margin-bottom: 20px !important;
+        margin: 0 auto 20px !important;
+        text-align: center !important;
+        display: block !important;
+        max-width: 90% !important;
       }
       
       h3 { 
         color: #24d17e !important;
         font-size: 18pt !important;
+        text-align: center !important;
+        margin: 15px auto !important;
+        display: block !important;
+      }
+      
+      /* Paragraphs and text blocks */
+      p {
+        text-align: center !important;
+        margin: 10px auto !important;
+        display: block !important;
+        max-width: 90% !important;
+      }
+      
+      /* Lists centered with left-aligned text */
+      ul {
+        max-width: 80% !important;
+        margin: 10px auto !important;
+        text-align: left !important;
+        display: block !important;
       }
       
       /* Print-optimized cards */
@@ -280,6 +325,84 @@
         color: #1a1a1a !important;
         padding: 12px !important;
         border-radius: 8px !important;
+        margin: 10px auto !important;
+        display: block !important;
+        text-align: left !important;
+      }
+      
+      /* Grid layouts for print */
+      .grid {
+        display: block !important;
+        width: 100% !important;
+        margin: 10px auto !important;
+      }
+      
+      .grid > * {
+        display: inline-block !important;
+        width: 30% !important;
+        margin: 5px 1% !important;
+        vertical-align: top !important;
+      }
+      
+      /* Metrics layout */
+      .metrics {
+        display: block !important;
+        text-align: center !important;
+        margin: 20px auto !important;
+      }
+      
+      .metrics > * {
+        display: inline-block !important;
+        width: 22% !important;
+        margin: 0 1% !important;
+        vertical-align: top !important;
+      }
+      
+      /* Flow layout */
+      .flow {
+        display: block !important;
+        text-align: center !important;
+        margin: 20px auto !important;
+      }
+      
+      .flow > * {
+        display: inline-block !important;
+        vertical-align: middle !important;
+        margin: 0 5px !important;
+      }
+      
+      /* Problem grid */
+      .problem {
+        display: block !important;
+        text-align: center !important;
+        margin: 20px auto !important;
+      }
+      
+      .problem > * {
+        display: inline-block !important;
+        width: 30% !important;
+        margin: 0 1% !important;
+        vertical-align: top !important;
+      }
+      
+      /* Timeline */
+      .timeline {
+        display: block !important;
+        margin: 20px auto !important;
+        max-width: 80% !important;
+        position: relative !important;
+      }
+      
+      .mile {
+        display: block !important;
+        margin: 15px 0 15px 30px !important;
+        text-align: left !important;
+      }
+      
+      /* Tables centered */
+      .table {
+        margin: 20px auto !important;
+        display: table !important;
       }
       
       /* Print-optimized pills/badges */
@@ -288,6 +411,8 @@
         border: 2px solid #24d17e !important;
         color: #0a0b14 !important;
         font-weight: bold !important;
+        display: inline-block !important;
+        margin: 5px !important;
       }
       
       /* Special callouts */
@@ -296,10 +421,17 @@
         border: 2px solid #ff3f5e !important;
         color: #d01030 !important;
         border-radius: 8px !important;
+        padding: 15px !important;
+        margin: 10px !important;
+        display: inline-block !important;
+        width: 28% !important;
+        vertical-align: top !important;
       }
       
       .callout strong { 
         color: #ff3f5e !important;
+        display: block !important;
+        margin-bottom: 5px !important;
       }
       
       .card strong { 
@@ -313,6 +445,8 @@
         font-weight: bold !important;
         padding: 10px 15px !important;
         border-radius: 8px !important;
+        display: inline-block !important;
+        margin: 5px !important;
       }
       
       /* Metrics styling */
@@ -320,16 +454,21 @@
         background: #f0fff8 !important;
         border: 2px solid #24d17e !important;
         border-radius: 12px !important;
+        padding: 15px !important;
+        display: inline-block !important;
+        text-align: center !important;
       }
       
       .metric .val { 
         color: #24d17e !important;
         font-size: 24pt !important;
+        display: block !important;
       }
       
       .metric .lab { 
         color: #666 !important;
         font-size: 10pt !important;
+        display: block !important;
       }
       
       /* CTA buttons */
@@ -339,6 +478,8 @@
         border: 2px solid #24d17e !important;
         font-weight: bold !important;
         padding: 10px 20px !important;
+        display: inline-block !important;
+        margin: 10px auto !important;
       }
       
       /* Tables */
@@ -388,6 +529,7 @@
       .arrow {
         color: #24d17e !important;
         font-weight: bold !important;
+        display: inline-block !important;
       }
       
       /* Force inline style colors */
@@ -421,7 +563,7 @@
         text-decoration: underline !important;
       }
       
-      /* Page numbers (optional) */
+      /* Page numbers */
       .slide::after {
         content: attr(data-title);
         position: absolute;
@@ -447,6 +589,24 @@
         border: 3px solid #24d17e !important;
         background: #f0fff8 !important;
         color: #24d17e !important;
+      }
+      
+      /* Specific fixes for divs with inline styles */
+      div[style*="display: flex"],
+      div[style*="display:flex"] {
+        display: block !important;
+        text-align: center !important;
+      }
+      
+      div[style*="grid"] {
+        display: block !important;
+      }
+      
+      div[style*="grid"] > * {
+        display: inline-block !important;
+        width: 30% !important;
+        margin: 5px 1% !important;
+        vertical-align: top !important;
       }
     }
   </style>
