@@ -201,60 +201,126 @@
     .progress { position: fixed; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,0.08); z-index: 6; }
     .progress > span { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .25s ease; }
 
-    /* Print / PDF Export */
+    /* Print / PDF Export - Preserve original design */
     @media print {
       @page { 
         size: A4 landscape; 
         margin: 0;
       }
-      body { 
-        background: white; 
-        font-size: 10pt;
-        print-color-adjust: exact;
-        -webkit-print-color-adjust: exact;
+      
+      /* Preserve original colors and backgrounds */
+      * {
+        print-color-adjust: exact !important;
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
       }
-      .toolbar, .backdrop, .progress { display: none !important; }
+      
+      body { 
+        background: linear-gradient(180deg, #0a0b14 0%, #0f1224 100%) !important;
+        font-size: 10pt;
+      }
+      
+      /* Hide UI elements but keep backdrop for visual effect */
+      .toolbar, .progress { display: none !important; }
+      .backdrop { 
+        opacity: 0.5 !important; 
+        animation: none !important;
+      }
+      
+      /* Preserve slide styles */
       .slide { 
         page-break-after: always;
         page-break-inside: avoid;
         height: 100vh;
         width: 100vw;
         max-width: none;
-        margin: 0;
+        margin: 0 !important;
         padding: 40px;
-        border: none;
         border-radius: 0;
         box-shadow: none;
-        background: white !important;
-        color: #111;
+        background: rgba(255,255,255,0.06) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
         display: flex !important;
         flex-direction: column;
         justify-content: center;
       }
+      
       .slide:last-child { page-break-after: auto; }
-      h1, h2, h3 { 
-        color: #111 !important; 
-        background: none !important; 
-        -webkit-text-fill-color: #111 !important;
-        text-fill-color: #111 !important;
+      
+      /* Preserve heading gradients */
+      h1 {
+        background: linear-gradient(135deg, #fff, #b9ffde 40%, #a9e8ff 85%) !important;
+        -webkit-background-clip: text !important;
+        background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
       }
-      .card, .pill, .badge, .callout { 
-        background: #f5f5f5 !important;
-        border-color: #ddd !important;
-        color: #111 !important;
+      
+      h2 { color: #fff !important; }
+      h3 { color: #e6e8ef !important; }
+      
+      /* Preserve text colors */
+      .slide { color: #e6e8ef !important; }
+      p, div, span, li { color: inherit !important; }
+      
+      /* Preserve special element styles */
+      .card { 
+        background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        color: #e6e8ef !important;
       }
-      .card strong, .callout strong { color: #000 !important; }
-      .cta { 
-        background: #24d17e !important;
-        color: white !important;
-        print-color-adjust: exact;
+      
+      .pill, .badge { 
+        background: rgba(255,255,255,0.06) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        color: #e6e8ef !important;
       }
-      .metric .val { color: #24d17e !important; }
+      
+      .callout {
+        background: linear-gradient(180deg, rgba(255,63,94,0.1), rgba(255,63,94,0.04)) !important;
+        border: 1px solid rgba(255,63,94,0.28) !important;
+        color: #ffd9df !important;
+      }
+      
+      .callout strong { color: #ff8fa1 !important; }
+      .card strong { color: #24d17e !important; }
+      
       .chip { 
-        background: #24d17e !important;
-        color: white !important;
+        background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
+        color: #0a0b14 !important;
       }
-      a { color: #0066cc !important; }
+      
+      .metric .val { color: #24d17e !important; }
+      .metric .lab { color: #aab2c8 !important; }
+      
+      .cta { 
+        background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
+        color: #0a0b14 !important;
+      }
+      
+      /* Preserve accent colors */
+      [style*="color:var(--accent)"] { color: #24d17e !important; }
+      [style*="color:var(--accent-2)"] { color: #00b7ff !important; }
+      [style*="color:var(--muted)"] { color: #aab2c8 !important; }
+      
+      /* Force gradients to show */
+      [style*="background: linear-gradient"] {
+        background-image: inherit !important;
+        print-color-adjust: exact !important;
+      }
+      
+      /* Preserve table styles */
+      .table th { 
+        background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
+        color: #0a0b14 !important;
+      }
+      .table td { 
+        border-top: 1px solid rgba(255,255,255,0.12) !important;
+        color: #e6e8ef !important;
+      }
+      
+      /* Preserve animations as static */
+      @keyframes none {}
+      * { animation: none !important; }
     }
   </style>
 </head>
