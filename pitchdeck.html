@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
@@ -201,211 +200,260 @@
     .progress { position: fixed; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,0.08); z-index: 6; }
     .progress > span { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .25s ease; }
 
-    /* Print / PDF Export - Print-optimized design with fixed alignment */
+    /* Print / PDF Export - Fixed alignment and overflow */
     @media print {
       @page { 
         size: A4 landscape; 
-        margin: 10mm;
+        margin: 0;
       }
       
       /* Force color printing */
       * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+        box-sizing: border-box !important;
       }
       
       body { 
         background: white !important;
-        font-size: 11pt;
+        font-size: 10pt;
+        margin: 0 !important;
+        padding: 0 !important;
       }
       
       /* Hide UI elements */
       .toolbar, .progress, .backdrop { display: none !important; }
       
-      /* Print-optimized slide design with fixed layout */
+      /* Container reset */
+      .container {
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      
+      /* Fixed slide dimensions for A4 landscape */
       .slide { 
         page-break-after: always !important;
         page-break-inside: avoid !important;
-        height: 190mm !important;
-        width: 277mm !important;
-        max-width: 277mm !important;
-        margin: 0 auto !important;
-        padding: 20mm !important;
-        border-radius: 0 !important;
         
-        /* Professional border frame */
+        /* A4 landscape exact dimensions */
+        width: 297mm !important;
+        height: 210mm !important;
+        max-width: 297mm !important;
+        max-height: 210mm !important;
+        
+        margin: 0 !important;
+        padding: 15mm 20mm !important;
+        
+        /* Professional border */
         border: 3px solid #24d17e !important;
         background: white !important;
-        box-shadow: inset 0 0 0 1px #e0e0e0 !important;
         
-        /* Force block layout for print */
+        /* Force block layout */
         display: block !important;
         position: relative !important;
-        overflow: visible !important;
+        overflow: hidden !important;
+        
+        /* Box model fix */
+        box-sizing: border-box !important;
       }
       
-      /* Force all slide content to use normal flow */
-      .slide > * {
-        display: block !important;
-        margin-left: auto !important;
-        margin-right: auto !important;
-        text-align: center !important;
-      }
-      
-      /* Force sections with specific alignment */
-      .slide[style*="display: flex"],
-      .slide[style*="display:flex"] {
+      /* Reset all inline styles that might conflict */
+      .slide[style] {
         display: block !important;
       }
-      
-      .slide[style*="justify-content"],
-      .slide[style*="align-items"] {
-        display: block !important;
-        text-align: center !important;
-      }
-      
-      .slide:last-child { page-break-after: auto !important; }
       
       /* Typography for print */
       .slide, .slide * { 
         color: #1a1a1a !important;
+        max-width: 100% !important;
       }
       
-      /* Print-optimized headings */
+      /* Headings */
       h1 {
         color: #24d17e !important;
         background: none !important;
         -webkit-text-fill-color: #24d17e !important;
-        text-shadow: 2px 2px 0 #f0fff8 !important;
-        font-size: 42pt !important;
+        font-size: 36pt !important;
         text-align: center !important;
-        margin: 0 auto 20px !important;
+        margin: 0 0 15px 0 !important;
+        padding: 0 !important;
         display: block !important;
+        width: 100% !important;
       }
       
       h2 { 
         color: #0a0b14 !important;
-        font-size: 28pt !important;
+        font-size: 24pt !important;
         border-bottom: 3px solid #24d17e !important;
-        padding-bottom: 10px !important;
-        margin: 0 auto 20px !important;
+        padding-bottom: 8px !important;
+        margin: 0 0 15px 0 !important;
         text-align: center !important;
         display: block !important;
-        max-width: 90% !important;
+        width: 100% !important;
       }
       
       h3 { 
         color: #24d17e !important;
-        font-size: 18pt !important;
+        font-size: 16pt !important;
         text-align: center !important;
-        margin: 15px auto !important;
+        margin: 10px 0 !important;
         display: block !important;
+        width: 100% !important;
       }
       
-      /* Paragraphs and text blocks */
+      /* Paragraphs */
       p {
         text-align: center !important;
-        margin: 10px auto !important;
+        margin: 8px 0 !important;
         display: block !important;
-        max-width: 90% !important;
+        width: 100% !important;
+        font-size: 10pt !important;
       }
       
-      /* Lists centered with left-aligned text */
+      /* Lists */
       ul {
-        max-width: 80% !important;
+        max-width: 90% !important;
         margin: 10px auto !important;
         text-align: left !important;
         display: block !important;
+        padding-left: 20px !important;
       }
       
-      /* Print-optimized cards */
+      li {
+        margin: 5px 0 !important;
+        font-size: 10pt !important;
+      }
+      
+      /* Cards - force consistent layout */
       .card { 
         background: #f8fffe !important;
         border: 2px solid #24d17e !important;
         color: #1a1a1a !important;
-        padding: 12px !important;
+        padding: 10px !important;
         border-radius: 8px !important;
-        margin: 10px auto !important;
-        display: block !important;
-        text-align: left !important;
+        margin: 8px 5px !important;
+        display: inline-block !important;
+        vertical-align: top !important;
+        width: calc(31% - 10px) !important;
+        font-size: 9pt !important;
+        box-sizing: border-box !important;
       }
       
-      /* Grid layouts for print */
+      /* Special cards with borders */
+      .card[style*="border-left"] {
+        display: block !important;
+        width: 90% !important;
+        margin: 10px auto !important;
+      }
+      
+      /* Grid handling */
       .grid {
         display: block !important;
+        text-align: center !important;
         width: 100% !important;
-        margin: 10px auto !important;
+        margin: 10px 0 !important;
       }
       
-      .grid > * {
+      .grid > div {
         display: inline-block !important;
-        width: 30% !important;
+        width: 31% !important;
         margin: 5px 1% !important;
         vertical-align: top !important;
       }
       
-      /* Metrics layout */
-      .metrics {
+      /* Problem callouts */
+      .problem {
         display: block !important;
         text-align: center !important;
-        margin: 20px auto !important;
+        width: 100% !important;
       }
       
-      .metrics > * {
+      .callout {
+        background: #fff5f7 !important;
+        border: 2px solid #ff3f5e !important;
+        color: #d01030 !important;
+        border-radius: 8px !important;
+        padding: 12px !important;
+        margin: 8px !important;
         display: inline-block !important;
-        width: 22% !important;
-        margin: 0 1% !important;
+        width: calc(31% - 16px) !important;
         vertical-align: top !important;
+        font-size: 9pt !important;
+        box-sizing: border-box !important;
+      }
+      
+      .callout strong { 
+        color: #ff3f5e !important;
+        display: block !important;
+        margin-bottom: 5px !important;
+        font-size: 11pt !important;
       }
       
       /* Flow layout */
       .flow {
         display: block !important;
         text-align: center !important;
-        margin: 20px auto !important;
+        margin: 15px 0 !important;
+        width: 100% !important;
       }
       
-      .flow > * {
+      .chip { 
+        background: #24d17e !important;
+        color: white !important;
+        font-weight: bold !important;
+        padding: 8px 12px !important;
+        border-radius: 8px !important;
         display: inline-block !important;
-        vertical-align: middle !important;
-        margin: 0 5px !important;
+        margin: 5px !important;
+        font-size: 9pt !important;
       }
       
-      /* Problem grid */
-      .problem {
+      .arrow {
+        color: #24d17e !important;
+        font-weight: bold !important;
+        display: inline-block !important;
+        margin: 0 5px !important;
+        font-size: 14pt !important;
+      }
+      
+      /* Metrics */
+      .metrics {
         display: block !important;
         text-align: center !important;
-        margin: 20px auto !important;
+        width: 100% !important;
+        margin: 15px 0 !important;
       }
       
-      .problem > * {
+      .metric { 
+        background: #f0fff8 !important;
+        border: 2px solid #24d17e !important;
+        border-radius: 12px !important;
+        padding: 12px 8px !important;
         display: inline-block !important;
-        width: 30% !important;
-        margin: 0 1% !important;
+        width: calc(23% - 10px) !important;
+        margin: 5px !important;
+        text-align: center !important;
         vertical-align: top !important;
+        box-sizing: border-box !important;
       }
       
-      /* Timeline */
-      .timeline {
+      .metric .val { 
+        color: #24d17e !important;
+        font-size: 20pt !important;
         display: block !important;
-        margin: 20px auto !important;
-        max-width: 80% !important;
-        position: relative !important;
+        margin: 0 !important;
       }
       
-      .mile {
+      .metric .lab { 
+        color: #666 !important;
+        font-size: 8pt !important;
         display: block !important;
-        margin: 15px 0 15px 30px !important;
-        text-align: left !important;
+        margin-top: 5px !important;
+        line-height: 1.2 !important;
       }
       
-      /* Tables centered */
-      .table {
-        margin: 20px auto !important;
-        display: table !important;
-      }
-      
-      /* Print-optimized pills/badges */
+      /* Pills and badges */
       .pill, .badge { 
         background: white !important;
         border: 2px solid #24d17e !important;
@@ -413,98 +461,40 @@
         font-weight: bold !important;
         display: inline-block !important;
         margin: 5px !important;
-      }
-      
-      /* Special callouts */
-      .callout {
-        background: #fff5f7 !important;
-        border: 2px solid #ff3f5e !important;
-        color: #d01030 !important;
-        border-radius: 8px !important;
-        padding: 15px !important;
-        margin: 10px !important;
-        display: inline-block !important;
-        width: 28% !important;
-        vertical-align: top !important;
-      }
-      
-      .callout strong { 
-        color: #ff3f5e !important;
-        display: block !important;
-        margin-bottom: 5px !important;
-      }
-      
-      .card strong { 
-        color: #24d17e !important;
-      }
-      
-      /* Chips with gradient border */
-      .chip { 
-        background: #24d17e !important;
-        color: white !important;
-        font-weight: bold !important;
-        padding: 10px 15px !important;
-        border-radius: 8px !important;
-        display: inline-block !important;
-        margin: 5px !important;
-      }
-      
-      /* Metrics styling */
-      .metric { 
-        background: #f0fff8 !important;
-        border: 2px solid #24d17e !important;
-        border-radius: 12px !important;
-        padding: 15px !important;
-        display: inline-block !important;
-        text-align: center !important;
-      }
-      
-      .metric .val { 
-        color: #24d17e !important;
-        font-size: 24pt !important;
-        display: block !important;
-      }
-      
-      .metric .lab { 
-        color: #666 !important;
-        font-size: 10pt !important;
-        display: block !important;
-      }
-      
-      /* CTA buttons */
-      .cta { 
-        background: #24d17e !important;
-        color: white !important;
-        border: 2px solid #24d17e !important;
-        font-weight: bold !important;
-        padding: 10px 20px !important;
-        display: inline-block !important;
-        margin: 10px auto !important;
+        padding: 6px 12px !important;
+        font-size: 9pt !important;
       }
       
       /* Tables */
       .table { 
         border: 2px solid #24d17e !important;
+        width: 90% !important;
+        margin: 15px auto !important;
+        font-size: 9pt !important;
       }
       
       .table th { 
         background: #24d17e !important;
         color: white !important;
         font-weight: bold !important;
-        padding: 12px !important;
+        padding: 10px !important;
+        text-align: left !important;
       }
       
       .table td { 
         border-top: 1px solid #e0e0e0 !important;
-        padding: 10px !important;
+        padding: 8px !important;
         background: white !important;
       }
       
-      .table tr:nth-child(even) td { 
-        background: #f9f9f9 !important;
+      /* Timeline */
+      .timeline {
+        display: block !important;
+        margin: 15px auto !important;
+        max-width: 85% !important;
+        position: relative !important;
       }
       
-      /* Timeline elements */
       .timeline::before {
         background: #24d17e !important;
         width: 3px !important;
@@ -513,26 +503,56 @@
       .mile {
         background: #f0fff8 !important;
         border: 2px solid #24d17e !important;
-      }
-      
-      .mile::before {
-        background: #24d17e !important;
-        border: 3px solid white !important;
+        padding: 10px !important;
+        margin: 10px 0 10px 30px !important;
+        font-size: 9pt !important;
       }
       
       .time {
         color: #24d17e !important;
         font-weight: bold !important;
+        font-size: 10pt !important;
       }
       
-      /* Arrows */
-      .arrow {
-        color: #24d17e !important;
+      /* CTA buttons */
+      .cta { 
+        background: #24d17e !important;
+        color: white !important;
+        border: 2px solid #24d17e !important;
         font-weight: bold !important;
+        padding: 8px 16px !important;
         display: inline-block !important;
+        margin: 8px !important;
+        font-size: 10pt !important;
       }
       
-      /* Force inline style colors */
+      /* Market bubbles */
+      .bubble {
+        border: 3px solid #24d17e !important;
+        background: #f0fff8 !important;
+        color: #24d17e !important;
+      }
+      
+      /* Force specific div layouts */
+      div[style*="display: grid"],
+      div[style*="display:grid"] {
+        display: block !important;
+        text-align: center !important;
+      }
+      
+      div[style*="display: flex"],
+      div[style*="display:flex"] {
+        display: block !important;
+        text-align: center !important;
+      }
+      
+      /* Max width for any content div */
+      .slide > div {
+        max-width: 100% !important;
+        overflow: hidden !important;
+      }
+      
+      /* Force colors */
       [style*="color:var(--accent)"], 
       [style*="color: var(--accent)"] { 
         color: #24d17e !important;
@@ -543,70 +563,32 @@
         color: #666 !important;
       }
       
-      [style*="color:#ff8fa1"] {
-        color: #ff3f5e !important;
-      }
-      
-      [style*="color:#ffb703"] {
-        color: #ff9500 !important;
-      }
-      
-      /* Special background treatments */
-      [style*="background: linear-gradient"] {
-        background: #f0fff8 !important;
-        border: 2px solid #24d17e !important;
-      }
-      
       /* Links */
       a { 
         color: #00b7ff !important;
         text-decoration: underline !important;
       }
       
-      /* Page numbers */
-      .slide::after {
-        content: attr(data-title);
-        position: absolute;
-        bottom: 10px;
-        right: 20px;
-        font-size: 9pt;
-        color: #999;
-      }
-      
-      /* Disable animations */
+      /* Hide animations and transitions */
       * { 
         animation: none !important;
         transition: none !important;
       }
       
-      /* Ensure text is readable */
-      p, li, span, div {
-        line-height: 1.4 !important;
+      /* Ensure nothing overflows */
+      * {
+        overflow-wrap: break-word !important;
+        word-wrap: break-word !important;
       }
       
-      /* Market bubbles */
-      .bubble {
-        border: 3px solid #24d17e !important;
-        background: #f0fff8 !important;
-        color: #24d17e !important;
-      }
-      
-      /* Specific fixes for divs with inline styles */
-      div[style*="display: flex"],
-      div[style*="display:flex"] {
-        display: block !important;
-        text-align: center !important;
-      }
-      
-      div[style*="grid"] {
-        display: block !important;
-      }
-      
-      div[style*="grid"] > * {
-        display: inline-block !important;
-        width: 30% !important;
-        margin: 5px 1% !important;
-        vertical-align: top !important;
+      /* Page title in footer */
+      .slide::after {
+        content: attr(data-title);
+        position: absolute;
+        bottom: 10px;
+        right: 20px;
+        font-size: 8pt;
+        color: #999;
       }
     }
   </style>
