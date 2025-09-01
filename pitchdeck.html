@@ -201,7 +201,7 @@
     .progress { position: fixed; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,0.08); z-index: 6; }
     .progress > span { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .25s ease; }
 
-    /* Print / PDF Export - Dark theme with fixed horizontal layouts */
+    /* Print / PDF Export - Dark theme with optimized spacing */
     @media print {
       @page { 
         size: A4 landscape; 
@@ -244,7 +244,7 @@
         -webkit-print-color-adjust: exact !important;
       }
       
-      /* Fixed slide dimensions with table layout for stability */
+      /* Fixed slide dimensions with flex centering */
       .slide { 
         page-break-after: always !important;
         page-break-inside: avoid !important;
@@ -256,15 +256,17 @@
         max-height: 210mm !important;
         
         margin: 0 !important;
-        padding: 8mm 12mm !important;
+        padding: 10mm 15mm !important;
         
         /* Dark theme styling */
         border: 1px solid rgba(255,255,255,0.12) !important;
         background: rgba(255,255,255,0.06) !important;
         
-        /* Table layout for better print stability */
-        display: table !important;
-        table-layout: fixed !important;
+        /* Flex centering for better vertical alignment */
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
         
         position: relative !important;
         overflow: hidden !important;
@@ -273,16 +275,10 @@
         -webkit-print-color-adjust: exact !important;
       }
       
-      /* Inner wrapper for vertical centering */
-      .slide > * {
-        display: table-cell !important;
-        vertical-align: middle !important;
-        text-align: center !important;
-      }
-      
       /* Typography optimized for space */
       .slide, .slide * { 
         color: #e6e8ef !important;
+        max-width: 100% !important;
         -webkit-print-color-adjust: exact !important;
       }
       
@@ -292,9 +288,9 @@
         -webkit-background-clip: text !important;
         background-clip: text !important;
         -webkit-text-fill-color: transparent !important;
-        font-size: 38pt !important;
+        font-size: 42pt !important;
         text-align: center !important;
-        margin: 0 0 15px 0 !important;
+        margin: 0 0 20px 0 !important;
         padding: 0 !important;
         display: block !important;
         width: 100% !important;
@@ -303,10 +299,10 @@
       
       h2 { 
         color: #fff !important;
-        font-size: 26pt !important;
+        font-size: 28pt !important;
         border-bottom: 3px solid #24d17e !important;
-        padding-bottom: 8px !important;
-        margin: 0 0 15px 0 !important;
+        padding-bottom: 10px !important;
+        margin: 0 0 20px 0 !important;
         text-align: center !important;
         display: block !important;
         width: 100% !important;
@@ -315,29 +311,29 @@
       
       h3 { 
         color: #24d17e !important;
-        font-size: 16pt !important;
+        font-size: 18pt !important;
         text-align: center !important;
-        margin: 12px 0 !important;
+        margin: 15px 0 !important;
         display: block !important;
         width: 100% !important;
         -webkit-print-color-adjust: exact !important;
       }
       
-      /* Paragraphs */
+      /* Larger paragraphs */
       p {
         color: #e6e8ef !important;
         text-align: center !important;
-        margin: 8px 0 !important;
+        margin: 10px 0 !important;
         display: block !important;
         width: 100% !important;
-        font-size: 10pt !important;
+        font-size: 11pt !important;
         -webkit-print-color-adjust: exact !important;
       }
       
       /* Lists */
       ul {
-        max-width: 85% !important;
-        margin: 10px auto !important;
+        max-width: 90% !important;
+        margin: 12px auto !important;
         text-align: left !important;
         display: block !important;
         padding-left: 20px !important;
@@ -345,173 +341,171 @@
       }
       
       li {
-        margin: 5px 0 !important;
-        font-size: 10pt !important;
+        margin: 6px 0 !important;
+        font-size: 11pt !important;
         color: #e6e8ef !important;
       }
       
-      /* Cards - force horizontal with table layout */
+      /* Larger cards */
       .card { 
         background: rgba(255,255,255,0.08) !important;
         border: 1px solid rgba(255,255,255,0.12) !important;
         color: #e6e8ef !important;
-        padding: 12px !important;
-        border-radius: 8px !important;
-        margin: 6px !important;
-        display: table-cell !important;
-        vertical-align: middle !important;
-        font-size: 9pt !important;
+        padding: 15px !important;
+        border-radius: 10px !important;
+        margin: 10px 8px !important;
+        display: inline-block !important;
+        vertical-align: top !important;
+        width: calc(31% - 16px) !important;
+        font-size: 10pt !important;
+        box-sizing: border-box !important;
         -webkit-print-color-adjust: exact !important;
       }
       
       .card strong {
         color: #24d17e !important;
-        font-size: 10pt !important;
-        display: block !important;
-        margin-bottom: 5px !important;
+        font-size: 11pt !important;
         -webkit-print-color-adjust: exact !important;
       }
       
-      /* Special cards with borders - force width */
+      /* Special cards with borders - larger */
       .card[style*="border-left"] {
         display: block !important;
-        width: 100% !important;
-        margin: 8px 0 !important;
-        padding: 15px !important;
+        width: 94% !important;
+        margin: 12px auto !important;
+        padding: 18px !important;
         border-left: 4px solid #24d17e !important;
       }
       
-      /* Grid handling - force table layout */
+      /* Grid handling */
       .grid {
-        display: table !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
         width: 100% !important;
-        margin: 10px 0 !important;
-        table-layout: fixed !important;
+        margin: 15px 0 !important;
       }
       
       .grid > div {
-        display: table-cell !important;
-        padding: 5px !important;
-        vertical-align: top !important;
+        flex: 0 1 31% !important;
+        margin: 8px !important;
       }
       
-      /* Problem callouts - force horizontal */
+      /* Problem callouts - larger */
       .problem {
-        display: table !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: stretch !important;
         width: 100% !important;
-        table-layout: fixed !important;
+        gap: 15px !important;
       }
       
       .callout {
         background: rgba(255,63,94,0.1) !important;
         border: 1px solid rgba(255,63,94,0.28) !important;
         color: #ffd9df !important;
-        border-radius: 8px !important;
-        padding: 15px !important;
-        display: table-cell !important;
-        font-size: 10pt !important;
-        vertical-align: middle !important;
+        border-radius: 10px !important;
+        padding: 20px !important;
+        flex: 1 !important;
+        max-width: 30% !important;
+        font-size: 11pt !important;
+        box-sizing: border-box !important;
         -webkit-print-color-adjust: exact !important;
       }
       
       .callout strong { 
         color: #ff8fa1 !important;
         display: block !important;
-        margin-bottom: 5px !important;
-        font-size: 12pt !important;
+        margin-bottom: 8px !important;
+        font-size: 14pt !important;
         -webkit-print-color-adjust: exact !important;
       }
       
-      /* Flow layout - force inline */
+      /* Flow layout - larger */
       .flow {
-        display: table !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        margin: 20px 0 !important;
         width: 100% !important;
-        margin: 15px 0 !important;
-        table-layout: fixed !important;
-      }
-      
-      .flow > * {
-        display: table-cell !important;
-        vertical-align: middle !important;
-        text-align: center !important;
+        gap: 10px !important;
       }
       
       .chip { 
         background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
         color: #0a0b14 !important;
         font-weight: bold !important;
-        padding: 10px 14px !important;
-        border-radius: 8px !important;
-        font-size: 10pt !important;
-        display: inline-block !important;
+        padding: 12px 18px !important;
+        border-radius: 10px !important;
+        font-size: 11pt !important;
         -webkit-print-color-adjust: exact !important;
       }
       
       .arrow {
         color: #aab2c8 !important;
         font-weight: bold !important;
-        font-size: 16pt !important;
-        display: inline-block !important;
-        padding: 0 8px !important;
+        font-size: 18pt !important;
+        margin: 0 5px !important;
         -webkit-print-color-adjust: exact !important;
       }
       
-      /* Metrics - force horizontal table */
+      /* Metrics - larger */
       .metrics {
-        display: table !important;
+        display: flex !important;
+        justify-content: center !important;
         width: 100% !important;
-        margin: 15px 0 !important;
-        table-layout: fixed !important;
+        margin: 20px 0 !important;
+        gap: 15px !important;
       }
       
       .metric { 
         background: rgba(255,255,255,0.09) !important;
         border: 1px solid rgba(255,255,255,0.12) !important;
-        border-radius: 12px !important;
-        padding: 15px 8px !important;
-        display: table-cell !important;
+        border-radius: 14px !important;
+        padding: 18px 12px !important;
+        flex: 1 !important;
+        max-width: 22% !important;
         text-align: center !important;
-        vertical-align: middle !important;
+        box-sizing: border-box !important;
         -webkit-print-color-adjust: exact !important;
       }
       
       .metric .val { 
         color: #24d17e !important;
-        font-size: 24pt !important;
+        font-size: 26pt !important;
         display: block !important;
         margin: 0 !important;
-        font-weight: bold !important;
         -webkit-print-color-adjust: exact !important;
       }
       
       .metric .lab { 
         color: #aab2c8 !important;
-        font-size: 8pt !important;
+        font-size: 9pt !important;
         display: block !important;
-        margin-top: 5px !important;
-        line-height: 1.2 !important;
+        margin-top: 8px !important;
+        line-height: 1.3 !important;
         -webkit-print-color-adjust: exact !important;
       }
       
-      /* Pills and badges - inline */
+      /* Pills and badges - larger */
       .pill, .badge { 
         background: rgba(255,255,255,0.06) !important;
         border: 1px solid rgba(255,255,255,0.12) !important;
         color: #e6e8ef !important;
         font-weight: bold !important;
         display: inline-block !important;
-        margin: 5px !important;
-        padding: 8px 14px !important;
-        font-size: 9pt !important;
+        margin: 6px !important;
+        padding: 10px 16px !important;
+        font-size: 10pt !important;
         -webkit-print-color-adjust: exact !important;
       }
       
       /* Tables - larger */
       .table { 
         border: 1px solid rgba(255,255,255,0.12) !important;
-        width: 100% !important;
-        margin: 15px 0 !important;
-        font-size: 10pt !important;
+        width: 95% !important;
+        margin: 20px auto !important;
+        font-size: 11pt !important;
         -webkit-print-color-adjust: exact !important;
       }
       
@@ -519,26 +513,26 @@
         background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
         color: #0a0b14 !important;
         font-weight: bold !important;
-        padding: 10px !important;
+        padding: 12px !important;
         text-align: left !important;
-        font-size: 11pt !important;
+        font-size: 12pt !important;
         -webkit-print-color-adjust: exact !important;
       }
       
       .table td { 
         border-top: 1px solid rgba(255,255,255,0.12) !important;
-        padding: 8px !important;
+        padding: 10px !important;
         background: transparent !important;
         color: #e6e8ef !important;
-        font-size: 9pt !important;
+        font-size: 10pt !important;
         -webkit-print-color-adjust: exact !important;
       }
       
-      /* Timeline - compact */
+      /* Timeline - larger */
       .timeline {
         display: block !important;
-        margin: 15px auto !important;
-        max-width: 95% !important;
+        margin: 20px auto !important;
+        max-width: 90% !important;
         position: relative !important;
       }
       
@@ -551,9 +545,9 @@
       .mile {
         background: rgba(255,255,255,0.05) !important;
         border: 1px solid rgba(255,255,255,0.12) !important;
-        padding: 10px !important;
-        margin: 8px 0 8px 30px !important;
-        font-size: 9pt !important;
+        padding: 14px !important;
+        margin: 12px 0 12px 35px !important;
+        font-size: 10pt !important;
         color: #e6e8ef !important;
         -webkit-print-color-adjust: exact !important;
       }
@@ -561,20 +555,20 @@
       .time {
         color: #24d17e !important;
         font-weight: bold !important;
-        font-size: 11pt !important;
+        font-size: 12pt !important;
         -webkit-print-color-adjust: exact !important;
       }
       
-      /* CTA buttons */
+      /* CTA buttons - larger */
       .cta { 
         background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
         color: #0a0b14 !important;
         border: none !important;
         font-weight: bold !important;
-        padding: 10px 20px !important;
+        padding: 12px 24px !important;
         display: inline-block !important;
-        margin: 8px !important;
-        font-size: 11pt !important;
+        margin: 10px !important;
+        font-size: 12pt !important;
         border-radius: 999px !important;
         -webkit-print-color-adjust: exact !important;
       }
@@ -584,49 +578,12 @@
         background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
         color: #0a0b14 !important;
         font-weight: bold !important;
-        display: inline-block !important;
         -webkit-print-color-adjust: exact !important;
       }
       
-      /* Force specific div containers to be horizontal */
-      div[style*="display: grid"],
-      div[style*="display:grid"] {
-        display: table !important;
-        width: 100% !important;
-        table-layout: fixed !important;
-      }
-      
-      div[style*="display: grid"] > div,
-      div[style*="display:grid"] > div {
-        display: table-cell !important;
-        padding: 5px !important;
-        vertical-align: top !important;
-      }
-      
-      div[style*="display: flex"],
-      div[style*="display:flex"] {
-        display: table !important;
-        width: 100% !important;
-        table-layout: fixed !important;
-      }
-      
-      div[style*="display: flex"] > *,
-      div[style*="display:flex"] > * {
-        display: table-cell !important;
-        vertical-align: middle !important;
-      }
-      
-      /* Special handling for specific slide content */
-      div[style*="grid-template-columns"] {
-        display: table !important;
-        width: 100% !important;
-        table-layout: fixed !important;
-      }
-      
-      div[style*="grid-template-columns"] > div {
-        display: table-cell !important;
-        padding: 8px !important;
-        vertical-align: top !important;
+      /* Special handling for first slide */
+      .slide[data-title="Couverture"] {
+        justify-content: space-evenly !important;
       }
       
       /* Force colors */
@@ -659,9 +616,9 @@
       .slide::after {
         content: attr(data-title);
         position: absolute;
-        bottom: 3px;
-        right: 10px;
-        font-size: 7pt;
+        bottom: 5px;
+        right: 15px;
+        font-size: 8pt;
         color: #666;
       }
     }
