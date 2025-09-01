@@ -201,51 +201,98 @@
     .progress { position: fixed; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,0.08); z-index: 6; }
     .progress > span { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .25s ease; }
 
-    /* Print / PDF Export - Preserve original design */
+    /* Print / PDF Export - Force dark theme */
     @media print {
       @page { 
         size: A4 landscape; 
         margin: 0;
       }
       
-      /* Preserve original colors and backgrounds */
+      /* Force color printing */
       * {
-        print-color-adjust: exact !important;
         -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
         color-adjust: exact !important;
       }
       
+      /* Force dark background with pseudo-element trick */
       body { 
+        position: relative;
+        background: transparent !important;
+      }
+      
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
         background: linear-gradient(180deg, #0a0b14 0%, #0f1224 100%) !important;
-        font-size: 10pt;
+        z-index: -2;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
       
-      /* Hide UI elements but keep backdrop for visual effect */
+      /* Hide UI elements */
       .toolbar, .progress { display: none !important; }
-      .backdrop { 
-        opacity: 0.5 !important; 
-        animation: none !important;
+      .backdrop { display: none !important; }
+      
+      /* Container background */
+      .container {
+        position: relative;
+        z-index: 1;
       }
       
-      /* Preserve slide styles */
+      /* Slide styling with forced dark theme */
       .slide { 
-        page-break-after: always;
-        page-break-inside: avoid;
-        height: 100vh;
-        width: 100vw;
-        max-width: none;
+        page-break-after: always !important;
+        page-break-inside: avoid !important;
+        height: 100vh !important;
+        width: 100vw !important;
+        max-width: none !important;
         margin: 0 !important;
-        padding: 40px;
-        border-radius: 0;
-        box-shadow: none;
+        padding: 40px !important;
+        border-radius: 0 !important;
+        position: relative !important;
+        z-index: 1 !important;
+        
+        /* Force dark card background */
         background: rgba(255,255,255,0.06) !important;
         border: 1px solid rgba(255,255,255,0.12) !important;
+        box-shadow: none !important;
+        
         display: flex !important;
-        flex-direction: column;
-        justify-content: center;
+        flex-direction: column !important;
+        justify-content: center !important;
+        
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
       
-      .slide:last-child { page-break-after: auto; }
+      /* Add dark overlay for each slide */
+      .slide::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(180deg, #0a0b14 0%, #0f1224 100%) !important;
+        z-index: -1;
+        opacity: 0.95;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      
+      .slide:last-child { page-break-after: auto !important; }
+      
+      /* Force text colors */
+      .slide, .slide * { 
+        color: #e6e8ef !important;
+        z-index: 2;
+        position: relative;
+      }
       
       /* Preserve heading gradients */
       h1 {
@@ -253,74 +300,147 @@
         -webkit-background-clip: text !important;
         background-clip: text !important;
         -webkit-text-fill-color: transparent !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
       
-      h2 { color: #fff !important; }
-      h3 { color: #e6e8ef !important; }
+      h2 { 
+        color: #ffffff !important;
+        -webkit-print-color-adjust: exact !important;
+      }
       
-      /* Preserve text colors */
-      .slide { color: #e6e8ef !important; }
-      p, div, span, li { color: inherit !important; }
+      h3 { 
+        color: #e6e8ef !important;
+        -webkit-print-color-adjust: exact !important;
+      }
       
-      /* Preserve special element styles */
+      /* Force element backgrounds */
       .card { 
-        background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)) !important;
+        background: rgba(255,255,255,0.08) !important;
         border: 1px solid rgba(255,255,255,0.12) !important;
         color: #e6e8ef !important;
+        -webkit-print-color-adjust: exact !important;
       }
       
       .pill, .badge { 
         background: rgba(255,255,255,0.06) !important;
         border: 1px solid rgba(255,255,255,0.12) !important;
         color: #e6e8ef !important;
+        -webkit-print-color-adjust: exact !important;
       }
       
       .callout {
-        background: linear-gradient(180deg, rgba(255,63,94,0.1), rgba(255,63,94,0.04)) !important;
-        border: 1px solid rgba(255,63,94,0.28) !important;
+        background: rgba(255,63,94,0.15) !important;
+        border: 1px solid rgba(255,63,94,0.3) !important;
         color: #ffd9df !important;
+        -webkit-print-color-adjust: exact !important;
       }
       
-      .callout strong { color: #ff8fa1 !important; }
-      .card strong { color: #24d17e !important; }
+      .callout strong { 
+        color: #ff8fa1 !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      .card strong { 
+        color: #24d17e !important;
+        -webkit-print-color-adjust: exact !important;
+      }
       
       .chip { 
         background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
         color: #0a0b14 !important;
+        -webkit-print-color-adjust: exact !important;
       }
       
-      .metric .val { color: #24d17e !important; }
-      .metric .lab { color: #aab2c8 !important; }
+      .metric { 
+        background: rgba(255,255,255,0.09) !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      .metric .val { 
+        color: #24d17e !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      .metric .lab { 
+        color: #aab2c8 !important;
+        -webkit-print-color-adjust: exact !important;
+      }
       
       .cta { 
         background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
         color: #0a0b14 !important;
+        -webkit-print-color-adjust: exact !important;
       }
       
-      /* Preserve accent colors */
-      [style*="color:var(--accent)"] { color: #24d17e !important; }
-      [style*="color:var(--accent-2)"] { color: #00b7ff !important; }
-      [style*="color:var(--muted)"] { color: #aab2c8 !important; }
-      
-      /* Force gradients to show */
-      [style*="background: linear-gradient"] {
-        background-image: inherit !important;
-        print-color-adjust: exact !important;
-      }
-      
-      /* Preserve table styles */
+      /* Table styles */
       .table th { 
         background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
         color: #0a0b14 !important;
+        -webkit-print-color-adjust: exact !important;
       }
+      
       .table td { 
         border-top: 1px solid rgba(255,255,255,0.12) !important;
         color: #e6e8ef !important;
+        background: transparent !important;
+        -webkit-print-color-adjust: exact !important;
       }
       
-      /* Preserve animations as static */
-      @keyframes none {}
-      * { animation: none !important; }
+      .table tr:nth-child(even) td { 
+        background: rgba(255,255,255,0.03) !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* Force inline style colors */
+      [style*="color: var(--accent)"] { 
+        color: #24d17e !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      [style*="color:var(--accent)"] { 
+        color: #24d17e !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      [style*="color: var(--muted)"] { 
+        color: #aab2c8 !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      [style*="color:var(--muted)"] { 
+        color: #aab2c8 !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* Timeline elements */
+      .timeline::before {
+        background: linear-gradient(180deg, #24d17e, #00b7ff) !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      .mile {
+        background: rgba(255,255,255,0.05) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      .time {
+        color: #24d17e !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* Links */
+      a { 
+        color: #00b7ff !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* Disable animations */
+      * { 
+        animation: none !important;
+        transition: none !important;
+      }
     }
   </style>
 </head>
