@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -201,245 +202,251 @@
     .progress { position: fixed; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,0.08); z-index: 6; }
     .progress > span { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .25s ease; }
 
-    /* Print / PDF Export - Force dark theme */
+    /* Print / PDF Export - Print-optimized design */
     @media print {
       @page { 
         size: A4 landscape; 
-        margin: 0;
+        margin: 10mm;
       }
       
       /* Force color printing */
       * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
-        color-adjust: exact !important;
       }
       
-      /* Force dark background with pseudo-element trick */
       body { 
-        position: relative;
-        background: transparent !important;
-      }
-      
-      body::before {
-        content: "";
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(180deg, #0a0b14 0%, #0f1224 100%) !important;
-        z-index: -2;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
+        background: white !important;
+        font-size: 11pt;
       }
       
       /* Hide UI elements */
-      .toolbar, .progress { display: none !important; }
-      .backdrop { display: none !important; }
+      .toolbar, .progress, .backdrop { display: none !important; }
       
-      /* Container background */
-      .container {
-        position: relative;
-        z-index: 1;
-      }
-      
-      /* Slide styling with forced dark theme */
+      /* Print-optimized slide design */
       .slide { 
         page-break-after: always !important;
         page-break-inside: avoid !important;
-        height: 100vh !important;
-        width: 100vw !important;
-        max-width: none !important;
+        min-height: 180mm !important;
+        width: auto !important;
+        max-width: 100% !important;
         margin: 0 !important;
-        padding: 40px !important;
+        padding: 25px !important;
         border-radius: 0 !important;
-        position: relative !important;
-        z-index: 1 !important;
         
-        /* Force dark card background */
-        background: rgba(255,255,255,0.06) !important;
-        border: 1px solid rgba(255,255,255,0.12) !important;
-        box-shadow: none !important;
+        /* Professional border frame */
+        border: 3px solid #24d17e !important;
+        background: white !important;
+        box-shadow: inset 0 0 0 1px #e0e0e0 !important;
         
         display: flex !important;
         flex-direction: column !important;
         justify-content: center !important;
-        
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
-      
-      /* Add dark overlay for each slide */
-      .slide::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(180deg, #0a0b14 0%, #0f1224 100%) !important;
-        z-index: -1;
-        opacity: 0.95;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
       }
       
       .slide:last-child { page-break-after: auto !important; }
       
-      /* Force text colors */
+      /* Typography for print */
       .slide, .slide * { 
-        color: #e6e8ef !important;
-        z-index: 2;
-        position: relative;
+        color: #1a1a1a !important;
       }
       
-      /* Preserve heading gradients */
+      /* Print-optimized headings */
       h1 {
-        background: linear-gradient(135deg, #fff, #b9ffde 40%, #a9e8ff 85%) !important;
-        -webkit-background-clip: text !important;
-        background-clip: text !important;
-        -webkit-text-fill-color: transparent !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
+        color: #24d17e !important;
+        background: none !important;
+        -webkit-text-fill-color: #24d17e !important;
+        text-shadow: 2px 2px 0 #f0fff8 !important;
+        font-size: 42pt !important;
       }
       
       h2 { 
-        color: #ffffff !important;
-        -webkit-print-color-adjust: exact !important;
+        color: #0a0b14 !important;
+        font-size: 28pt !important;
+        border-bottom: 3px solid #24d17e !important;
+        padding-bottom: 10px !important;
+        margin-bottom: 20px !important;
       }
       
       h3 { 
-        color: #e6e8ef !important;
-        -webkit-print-color-adjust: exact !important;
+        color: #24d17e !important;
+        font-size: 18pt !important;
       }
       
-      /* Force element backgrounds */
+      /* Print-optimized cards */
       .card { 
-        background: rgba(255,255,255,0.08) !important;
-        border: 1px solid rgba(255,255,255,0.12) !important;
-        color: #e6e8ef !important;
-        -webkit-print-color-adjust: exact !important;
+        background: #f8fffe !important;
+        border: 2px solid #24d17e !important;
+        color: #1a1a1a !important;
+        padding: 12px !important;
+        border-radius: 8px !important;
       }
       
+      /* Print-optimized pills/badges */
       .pill, .badge { 
-        background: rgba(255,255,255,0.06) !important;
-        border: 1px solid rgba(255,255,255,0.12) !important;
-        color: #e6e8ef !important;
-        -webkit-print-color-adjust: exact !important;
+        background: white !important;
+        border: 2px solid #24d17e !important;
+        color: #0a0b14 !important;
+        font-weight: bold !important;
       }
       
+      /* Special callouts */
       .callout {
-        background: rgba(255,63,94,0.15) !important;
-        border: 1px solid rgba(255,63,94,0.3) !important;
-        color: #ffd9df !important;
-        -webkit-print-color-adjust: exact !important;
+        background: #fff5f7 !important;
+        border: 2px solid #ff3f5e !important;
+        color: #d01030 !important;
+        border-radius: 8px !important;
       }
       
       .callout strong { 
-        color: #ff8fa1 !important;
-        -webkit-print-color-adjust: exact !important;
+        color: #ff3f5e !important;
       }
       
       .card strong { 
         color: #24d17e !important;
-        -webkit-print-color-adjust: exact !important;
       }
       
+      /* Chips with gradient border */
       .chip { 
-        background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
-        color: #0a0b14 !important;
-        -webkit-print-color-adjust: exact !important;
+        background: #24d17e !important;
+        color: white !important;
+        font-weight: bold !important;
+        padding: 10px 15px !important;
+        border-radius: 8px !important;
       }
       
+      /* Metrics styling */
       .metric { 
-        background: rgba(255,255,255,0.09) !important;
-        -webkit-print-color-adjust: exact !important;
+        background: #f0fff8 !important;
+        border: 2px solid #24d17e !important;
+        border-radius: 12px !important;
       }
       
       .metric .val { 
         color: #24d17e !important;
-        -webkit-print-color-adjust: exact !important;
+        font-size: 24pt !important;
       }
       
       .metric .lab { 
-        color: #aab2c8 !important;
-        -webkit-print-color-adjust: exact !important;
+        color: #666 !important;
+        font-size: 10pt !important;
       }
       
+      /* CTA buttons */
       .cta { 
-        background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
-        color: #0a0b14 !important;
-        -webkit-print-color-adjust: exact !important;
+        background: #24d17e !important;
+        color: white !important;
+        border: 2px solid #24d17e !important;
+        font-weight: bold !important;
+        padding: 10px 20px !important;
       }
       
-      /* Table styles */
+      /* Tables */
+      .table { 
+        border: 2px solid #24d17e !important;
+      }
+      
       .table th { 
-        background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
-        color: #0a0b14 !important;
-        -webkit-print-color-adjust: exact !important;
+        background: #24d17e !important;
+        color: white !important;
+        font-weight: bold !important;
+        padding: 12px !important;
       }
       
       .table td { 
-        border-top: 1px solid rgba(255,255,255,0.12) !important;
-        color: #e6e8ef !important;
-        background: transparent !important;
-        -webkit-print-color-adjust: exact !important;
+        border-top: 1px solid #e0e0e0 !important;
+        padding: 10px !important;
+        background: white !important;
       }
       
       .table tr:nth-child(even) td { 
-        background: rgba(255,255,255,0.03) !important;
-        -webkit-print-color-adjust: exact !important;
-      }
-      
-      /* Force inline style colors */
-      [style*="color: var(--accent)"] { 
-        color: #24d17e !important;
-        -webkit-print-color-adjust: exact !important;
-      }
-      
-      [style*="color:var(--accent)"] { 
-        color: #24d17e !important;
-        -webkit-print-color-adjust: exact !important;
-      }
-      
-      [style*="color: var(--muted)"] { 
-        color: #aab2c8 !important;
-        -webkit-print-color-adjust: exact !important;
-      }
-      
-      [style*="color:var(--muted)"] { 
-        color: #aab2c8 !important;
-        -webkit-print-color-adjust: exact !important;
+        background: #f9f9f9 !important;
       }
       
       /* Timeline elements */
       .timeline::before {
-        background: linear-gradient(180deg, #24d17e, #00b7ff) !important;
-        -webkit-print-color-adjust: exact !important;
+        background: #24d17e !important;
+        width: 3px !important;
       }
       
       .mile {
-        background: rgba(255,255,255,0.05) !important;
-        border: 1px solid rgba(255,255,255,0.12) !important;
-        -webkit-print-color-adjust: exact !important;
+        background: #f0fff8 !important;
+        border: 2px solid #24d17e !important;
+      }
+      
+      .mile::before {
+        background: #24d17e !important;
+        border: 3px solid white !important;
       }
       
       .time {
         color: #24d17e !important;
-        -webkit-print-color-adjust: exact !important;
+        font-weight: bold !important;
+      }
+      
+      /* Arrows */
+      .arrow {
+        color: #24d17e !important;
+        font-weight: bold !important;
+      }
+      
+      /* Force inline style colors */
+      [style*="color:var(--accent)"], 
+      [style*="color: var(--accent)"] { 
+        color: #24d17e !important;
+      }
+      
+      [style*="color:var(--muted)"], 
+      [style*="color: var(--muted)"] { 
+        color: #666 !important;
+      }
+      
+      [style*="color:#ff8fa1"] {
+        color: #ff3f5e !important;
+      }
+      
+      [style*="color:#ffb703"] {
+        color: #ff9500 !important;
+      }
+      
+      /* Special background treatments */
+      [style*="background: linear-gradient"] {
+        background: #f0fff8 !important;
+        border: 2px solid #24d17e !important;
       }
       
       /* Links */
       a { 
         color: #00b7ff !important;
-        -webkit-print-color-adjust: exact !important;
+        text-decoration: underline !important;
+      }
+      
+      /* Page numbers (optional) */
+      .slide::after {
+        content: attr(data-title);
+        position: absolute;
+        bottom: 10px;
+        right: 20px;
+        font-size: 9pt;
+        color: #999;
       }
       
       /* Disable animations */
       * { 
         animation: none !important;
         transition: none !important;
+      }
+      
+      /* Ensure text is readable */
+      p, li, span, div {
+        line-height: 1.4 !important;
+      }
+      
+      /* Market bubbles */
+      .bubble {
+        border: 3px solid #24d17e !important;
+        background: #f0fff8 !important;
+        color: #24d17e !important;
       }
     }
   </style>
