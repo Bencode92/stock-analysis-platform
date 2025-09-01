@@ -299,10 +299,10 @@
       
       h2 { 
         color: #fff !important;
-        font-size: 28pt !important;
+        font-size: 24pt !important;
         border-bottom: 3px solid #24d17e !important;
         padding-bottom: 10px !important;
-        margin: 0 0 20px 0 !important;
+        margin: 0 0 15px 0 !important;
         text-align: center !important;
         display: block !important;
         width: 100% !important;
@@ -311,9 +311,9 @@
       
       h3 { 
         color: #24d17e !important;
-        font-size: 18pt !important;
+        font-size: 14pt !important;
         text-align: center !important;
-        margin: 15px 0 !important;
+        margin: 10px 0 !important;
         display: block !important;
         width: 100% !important;
         -webkit-print-color-adjust: exact !important;
@@ -323,17 +323,17 @@
       p {
         color: #e6e8ef !important;
         text-align: center !important;
-        margin: 10px 0 !important;
+        margin: 8px 0 !important;
         display: block !important;
         width: 100% !important;
-        font-size: 11pt !important;
+        font-size: 10pt !important;
         -webkit-print-color-adjust: exact !important;
       }
       
       /* Lists */
       ul {
         max-width: 90% !important;
-        margin: 12px auto !important;
+        margin: 10px auto !important;
         text-align: left !important;
         display: block !important;
         padding-left: 20px !important;
@@ -341,8 +341,8 @@
       }
       
       li {
-        margin: 6px 0 !important;
-        font-size: 11pt !important;
+        margin: 4px 0 !important;
+        font-size: 10pt !important;
         color: #e6e8ef !important;
       }
       
@@ -351,30 +351,21 @@
         background: rgba(255,255,255,0.08) !important;
         border: 1px solid rgba(255,255,255,0.12) !important;
         color: #e6e8ef !important;
-        padding: 15px !important;
+        padding: 12px !important;
         border-radius: 10px !important;
-        margin: 10px 8px !important;
+        margin: 8px 6px !important;
         display: inline-block !important;
         vertical-align: top !important;
-        width: calc(31% - 16px) !important;
-        font-size: 10pt !important;
+        width: calc(31% - 12px) !important;
+        font-size: 9pt !important;
         box-sizing: border-box !important;
         -webkit-print-color-adjust: exact !important;
       }
       
       .card strong {
         color: #24d17e !important;
-        font-size: 11pt !important;
+        font-size: 10pt !important;
         -webkit-print-color-adjust: exact !important;
-      }
-      
-      /* Special cards with borders - larger */
-      .card[style*="border-left"] {
-        display: block !important;
-        width: 94% !important;
-        margin: 12px auto !important;
-        padding: 18px !important;
-        border-left: 4px solid #24d17e !important;
       }
       
       /* Grid handling */
@@ -383,12 +374,12 @@
         flex-wrap: wrap !important;
         justify-content: center !important;
         width: 100% !important;
-        margin: 15px 0 !important;
+        margin: 12px 0 !important;
       }
       
       .grid > div {
-        flex: 0 1 31% !important;
-        margin: 8px !important;
+        flex: 0 1 30% !important;
+        margin: 6px !important;
       }
       
       /* Problem callouts - larger */
@@ -397,7 +388,7 @@
         justify-content: center !important;
         align-items: stretch !important;
         width: 100% !important;
-        gap: 15px !important;
+        gap: 12px !important;
       }
       
       .callout {
@@ -405,10 +396,10 @@
         border: 1px solid rgba(255,63,94,0.28) !important;
         color: #ffd9df !important;
         border-radius: 10px !important;
-        padding: 20px !important;
+        padding: 15px !important;
         flex: 1 !important;
-        max-width: 30% !important;
-        font-size: 11pt !important;
+        max-width: 31% !important;
+        font-size: 10pt !important;
         box-sizing: border-box !important;
         -webkit-print-color-adjust: exact !important;
       }
@@ -416,74 +407,8 @@
       .callout strong { 
         color: #ff8fa1 !important;
         display: block !important;
-        margin-bottom: 8px !important;
-        font-size: 14pt !important;
-        -webkit-print-color-adjust: exact !important;
-      }
-      
-      /* Flow layout - larger */
-      .flow {
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
-        margin: 20px 0 !important;
-        width: 100% !important;
-        gap: 10px !important;
-      }
-      
-      .chip { 
-        background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
-        color: #0a0b14 !important;
-        font-weight: bold !important;
-        padding: 12px 18px !important;
-        border-radius: 10px !important;
-        font-size: 11pt !important;
-        -webkit-print-color-adjust: exact !important;
-      }
-      
-      .arrow {
-        color: #aab2c8 !important;
-        font-weight: bold !important;
-        font-size: 18pt !important;
-        margin: 0 5px !important;
-        -webkit-print-color-adjust: exact !important;
-      }
-      
-      /* Metrics - larger */
-      .metrics {
-        display: flex !important;
-        justify-content: center !important;
-        width: 100% !important;
-        margin: 20px 0 !important;
-        gap: 15px !important;
-      }
-      
-      .metric { 
-        background: rgba(255,255,255,0.09) !important;
-        border: 1px solid rgba(255,255,255,0.12) !important;
-        border-radius: 14px !important;
-        padding: 18px 12px !important;
-        flex: 1 !important;
-        max-width: 22% !important;
-        text-align: center !important;
-        box-sizing: border-box !important;
-        -webkit-print-color-adjust: exact !important;
-      }
-      
-      .metric .val { 
-        color: #24d17e !important;
-        font-size: 26pt !important;
-        display: block !important;
-        margin: 0 !important;
-        -webkit-print-color-adjust: exact !important;
-      }
-      
-      .metric .lab { 
-        color: #aab2c8 !important;
-        font-size: 9pt !important;
-        display: block !important;
-        margin-top: 8px !important;
-        line-height: 1.3 !important;
+        margin-bottom: 6px !important;
+        font-size: 12pt !important;
         -webkit-print-color-adjust: exact !important;
       }
       
@@ -494,18 +419,18 @@
         color: #e6e8ef !important;
         font-weight: bold !important;
         display: inline-block !important;
-        margin: 6px !important;
-        padding: 10px 16px !important;
-        font-size: 10pt !important;
+        margin: 4px !important;
+        padding: 8px 14px !important;
+        font-size: 9pt !important;
         -webkit-print-color-adjust: exact !important;
       }
       
       /* Tables - larger */
       .table { 
         border: 1px solid rgba(255,255,255,0.12) !important;
-        width: 95% !important;
-        margin: 20px auto !important;
-        font-size: 11pt !important;
+        width: 90% !important;
+        margin: 15px auto !important;
+        font-size: 10pt !important;
         -webkit-print-color-adjust: exact !important;
       }
       
@@ -513,26 +438,26 @@
         background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
         color: #0a0b14 !important;
         font-weight: bold !important;
-        padding: 12px !important;
+        padding: 10px !important;
         text-align: left !important;
-        font-size: 12pt !important;
+        font-size: 10pt !important;
         -webkit-print-color-adjust: exact !important;
       }
       
       .table td { 
         border-top: 1px solid rgba(255,255,255,0.12) !important;
-        padding: 10px !important;
+        padding: 8px !important;
         background: transparent !important;
         color: #e6e8ef !important;
-        font-size: 10pt !important;
+        font-size: 9pt !important;
         -webkit-print-color-adjust: exact !important;
       }
       
       /* Timeline - larger */
       .timeline {
         display: block !important;
-        margin: 20px auto !important;
-        max-width: 90% !important;
+        margin: 15px auto !important;
+        max-width: 85% !important;
         position: relative !important;
       }
       
@@ -545,9 +470,9 @@
       .mile {
         background: rgba(255,255,255,0.05) !important;
         border: 1px solid rgba(255,255,255,0.12) !important;
-        padding: 14px !important;
-        margin: 12px 0 12px 35px !important;
-        font-size: 10pt !important;
+        padding: 12px !important;
+        margin: 10px 0 10px 30px !important;
+        font-size: 9pt !important;
         color: #e6e8ef !important;
         -webkit-print-color-adjust: exact !important;
       }
@@ -555,7 +480,7 @@
       .time {
         color: #24d17e !important;
         font-weight: bold !important;
-        font-size: 12pt !important;
+        font-size: 10pt !important;
         -webkit-print-color-adjust: exact !important;
       }
       
@@ -565,10 +490,10 @@
         color: #0a0b14 !important;
         border: none !important;
         font-weight: bold !important;
-        padding: 12px 24px !important;
+        padding: 10px 20px !important;
         display: inline-block !important;
-        margin: 10px !important;
-        font-size: 12pt !important;
+        margin: 8px !important;
+        font-size: 10pt !important;
         border-radius: 999px !important;
         -webkit-print-color-adjust: exact !important;
       }
@@ -584,6 +509,152 @@
       /* Special handling for first slide */
       .slide[data-title="Couverture"] {
         justify-content: space-evenly !important;
+      }
+      
+      /* === SPECIFIC FIXES FOR PROBLEMATIC SLIDES === */
+      
+      /* Slide 3 - Solution Flow */
+      .slide[data-title="La solution"] .flow {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        margin: 15px auto !important;
+        width: 100% !important;
+        gap: 8px !important;
+        flex-wrap: nowrap !important;
+      }
+      
+      .slide[data-title="La solution"] .chip { 
+        background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
+        color: #0a0b14 !important;
+        font-weight: bold !important;
+        padding: 10px 14px !important;
+        border-radius: 10px !important;
+        font-size: 9pt !important;
+        white-space: nowrap !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      .slide[data-title="La solution"] .arrow {
+        color: #aab2c8 !important;
+        font-weight: bold !important;
+        font-size: 14pt !important;
+        margin: 0 3px !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* Slide 5 - Différenciation Cards */
+      .slide[data-title="Différenciation"] .card[style*="border-left"] {
+        display: block !important;
+        width: 90% !important;
+        margin: 10px auto !important;
+        padding: 14px 18px !important;
+        border-left: 4px solid #24d17e !important;
+        font-size: 9pt !important;
+      }
+      
+      .slide[data-title="Différenciation"] ul {
+        margin: 5px 0 !important;
+        padding-left: 18px !important;
+        font-size: 9pt !important;
+      }
+      
+      .slide[data-title="Différenciation"] li {
+        margin: 3px 0 !important;
+        font-size: 9pt !important;
+      }
+      
+      /* Slide 6 - Modèle économique Metrics */
+      .slide[data-title="Modèle économique"] .metrics {
+        display: flex !important;
+        justify-content: center !important;
+        width: 100% !important;
+        margin: 15px auto !important;
+        gap: 10px !important;
+        flex-wrap: wrap !important;
+      }
+      
+      .slide[data-title="Modèle économique"] .metric { 
+        background: rgba(255,255,255,0.09) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        border-radius: 12px !important;
+        padding: 12px 8px !important;
+        flex: 0 1 22% !important;
+        min-width: 20% !important;
+        text-align: center !important;
+        box-sizing: border-box !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      .slide[data-title="Modèle économique"] .metric .val { 
+        color: #24d17e !important;
+        font-size: 20pt !important;
+        display: block !important;
+        margin: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      .slide[data-title="Modèle économique"] .metric .lab { 
+        color: #aab2c8 !important;
+        font-size: 8pt !important;
+        display: block !important;
+        margin-top: 5px !important;
+        line-height: 1.2 !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      .slide[data-title="Modèle économique"] .grid {
+        display: flex !important;
+        justify-content: center !important;
+        gap: 10px !important;
+        margin: 10px auto !important;
+      }
+      
+      .slide[data-title="Modèle économique"] .grid .card {
+        flex: 0 1 30% !important;
+        font-size: 8pt !important;
+        padding: 10px !important;
+      }
+      
+      /* Slide 11 - Ask Grid */
+      .slide[data-title="Ce dont nous avons besoin"] > div > div:first-of-type {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+        margin: 15px auto !important;
+        width: 95% !important;
+      }
+      
+      .slide[data-title="Ce dont nous avons besoin"] .card {
+        width: 100% !important;
+        padding: 18px !important;
+        margin: 0 !important;
+        text-align: center !important;
+        background: linear-gradient(135deg, rgba(36,209,126,0.1), rgba(0,183,255,0.1)) !important;
+        font-size: 9pt !important;
+      }
+      
+      .slide[data-title="Ce dont nous avons besoin"] .card span[style*="font-size: 2.5em"] {
+        font-size: 1.8em !important;
+        display: block !important;
+        margin-bottom: 8px !important;
+      }
+      
+      .slide[data-title="Ce dont nous avons besoin"] .card h3 {
+        font-size: 11pt !important;
+        margin: 8px 0 5px !important;
+      }
+      
+      .slide[data-title="Ce dont nous avons besoin"] .card p {
+        font-size: 8pt !important;
+        margin: 5px 0 !important;
+      }
+      
+      /* Special orange box in slide 11 */
+      .slide[data-title="Ce dont nous avons besoin"] div[style*="background: linear-gradient(135deg, #ffb703"] {
+        margin: 15px auto !important;
+        padding: 20px !important;
+        width: 90% !important;
       }
       
       /* Force colors */
