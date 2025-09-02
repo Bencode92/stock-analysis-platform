@@ -6,6 +6,7 @@
  * MODIFIÉ: Section A→Z indépendante des filtres Top 10
  * AJOUT: Filtres région, pays et secteur pour la section A→Z
  * v1.1: Intégration du payout ratio dans les métriques détaillées
+ * v1.2: Fix recherche - fermeture systématique des détails ouverts
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -1797,6 +1798,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * Initialise la fonctionnalité de recherche
+     * v1.2: Corrigé pour fermer systématiquement les détails ouverts
      */
     function initSearchFunctionality() {
         // Éléments du DOM
@@ -1807,6 +1809,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const alphabetTabs = document.querySelectorAll('.region-tab');
         
         if (!searchInput || !clearButton) return;
+        
+        // NOUVEAU: Helper global pour fermer tous les détails
+        function closeAllDetails() {
+          document.querySelectorAll('tr.details-row').forEach(r => r.classList.add('hidden'));
+          document.querySelectorAll('.details-toggle[aria-expanded="true"]').forEach(b => {
+            b.setAttribute('aria-expanded','false');
+            const ic = b.querySelector('i');
+            if (ic) { ic.classList.add('fa-chevron-down'); ic.classList.remove('fa-chevron-up'); }
+          });
+        }
         
         // Ajouter un onglet "Tous" au début des filtres alphabétiques si nécessaire
         const tabsContainer = document.querySelector('.region-tabs');
@@ -1883,6 +1895,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Fonction pour effectuer la recherche
         function performSearch(searchTerm) {
+            // NOUVEAU: Fermer tous les détails au début de la recherche
+            closeAllDetails();
+            
             let totalResults = 0;
             let foundInRegions = new Set();
             
@@ -1909,6 +1924,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     const stockName = row.cells[0].textContent.toLowerCase();
                     
+                    // NOUVEAU: Gérer la ligne de détails associée
+                    const detailsRow = row.nextElementSibling;
+                    const detailsBtn = row.querySelector('.details-toggle');
+                    
                     if (stockName.includes(searchTerm)) {
                         // Marquer cette ligne comme résultat de recherche
                         row.classList.add('search-highlight');
@@ -1917,11 +1936,31 @@ document.addEventListener('DOMContentLoaded', function() {
                         regionResults++;
                         totalResults++;
                         foundInRegions.add(letter);
+                        
+                        // NOUVEAU: Garder les détails fermés par défaut
+                        if (detailsRow && detailsRow.classList.contains('details-row')) {
+                            detailsRow.classList.add('hidden');
+                            if (detailsBtn) {
+                                detailsBtn.setAttribute('aria-expanded','false');
+                                const ic = detailsBtn.querySelector('i');
+                                if (ic) { ic.classList.add('fa-chevron-down'); ic.classList.remove('fa-chevron-up'); }
+                            }
+                        }
                     } else {
-                        // Masquer cette ligne
+                        // Masquer cette ligne ET ses détails
                         row.classList.remove('search-highlight');
                         row.classList.add('hidden');
                         row.style.display = 'none';
+                        
+                        // NOUVEAU: Masquer aussi la ligne de détails
+                        if (detailsRow && detailsRow.classList.contains('details-row')) {
+                            detailsRow.classList.add('hidden');
+                        }
+                        if (detailsBtn) {
+                            detailsBtn.setAttribute('aria-expanded','false');
+                            const ic = detailsBtn.querySelector('i');
+                            if (ic) { ic.classList.add('fa-chevron-down'); ic.classList.remove('fa-chevron-up'); }
+                        }
                     }
                 });
                 
@@ -1988,6 +2027,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Fonction pour effacer la recherche
         function clearSearch() {
+            // NOUVEAU: Fermer tous les détails au début
+            closeAllDetails();
+            
             // Réinitialiser le compteur
             searchInfo.classList.add('hidden');
             
@@ -2040,6 +2082,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 }
             }
+            
+            // NOUVEAU: Enlever les marqueurs d'onglets "has-results"
+            document.querySelectorAll('.region-tab.has-results').forEach(t => t.classList.remove('has-results'));
             
             // Masquer le bouton d'effacement
             clearButton.style.opacity = '0';
