@@ -1,5 +1,5 @@
 // Script d'intégration pour ajouter le composeur multi-critères avec nouvelle structure
-// À exécuter après le chargement de la page
+// Version 1.1 - Ajout du payout ratio
 
 // 1. Ajouter les styles CSS améliorés (avec idempotence)
 if (!document.getElementById('mc-styles')) {
@@ -366,10 +366,12 @@ if (!document.getElementById('mc-styles')) {
     min-width: 70px;
   }
   
-  /* Couleurs pour les valeurs */
+  /* Couleurs pour les valeurs avec nuances pour payout */
   .text-green-400 { color: #4ade80; }
+  .text-green-500 { color: #22c55e; }
   .text-red-400 { color: #f87171; }
   .text-yellow-400 { color: #facc15; }
+  .text-orange-400 { color: #fb923c; }
   .text-blue-400 { color: #60a5fa; }
   .text-cyan-400 { color: #00ffff; }
   
@@ -440,6 +442,14 @@ if (!document.getElementById('mc-styles')) {
   /* Plus d'espace entre les sections */
   .composer-filters fieldset + fieldset {
     margin-top: 1.5rem;
+  }
+  
+  /* Tooltip pour payout ratio */
+  .mc-pill .info-icon {
+    font-size: 0.7rem;
+    opacity: 0.6;
+    margin-left: 2px;
+    cursor: help;
   }
   `;
   document.head.appendChild(mcStyles);
@@ -513,8 +523,12 @@ document.addEventListener('DOMContentLoaded', function() {
           <!-- Risque -->
           <label class="mc-pill"><input id="m-volatility_3y" type="checkbox" aria-label="Volatilité 3 ans"> Vol 3Y ↓</label>
           <label class="mc-pill"><input id="m-max_drawdown_3y" type="checkbox" aria-label="Drawdown maximum 3 ans"> Max DD 3Y ↓</label>
-          <!-- Dividende -->
+          <!-- Dividende & Payout -->
           <label class="mc-pill"><input id="m-dividend_yield" type="checkbox" checked aria-label="Rendement dividende"> Div. Yield ↑</label>
+          <label class="mc-pill" title="Ratio dividendes/bénéfices (plus bas = plus soutenable). Cible: <60% excellent, 60-80% bon, >100% risqué">
+            <input id="m-payout_ratio" type="checkbox" aria-label="Payout ratio">
+            <span>Payout ↓ <i class="fas fa-info-circle info-icon"></i></span>
+          </label>
         </div>
       </fieldset>
 
@@ -579,10 +593,10 @@ document.addEventListener('DOMContentLoaded', function() {
         script.src = 'mc-module.js';
         script.defer = true;
         script.addEventListener('load', () => {
-            console.log('✅ MC module prêt');
+            console.log('✅ MC module prêt avec payout ratio');
         });
         document.body.appendChild(script);
     }
 });
 
-console.log('✅ Script d\'intégration MC chargé');
+console.log('✅ Script d\'intégration MC v1.1 avec payout ratio chargé');
