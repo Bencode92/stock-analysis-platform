@@ -1,4 +1,4 @@
-// ===== MC (Multi-Critères) – Module avec Priorités intelligentes ===================
+// ===== MC (Multi-Critères) – Module Optimisé v2.0 avec Cache & Bitsets ===================
 (function(){
   // Attendre que le DOM soit prêt
   if (!document.querySelector('#mc-section')) {
@@ -17,6 +17,26 @@
 
   console.log('✅ MC: Éléments DOM trouvés');
 
+  // ==== CONSTANTES DE PERFORMANCE ====
+  const GAP_FLOOR = { 
+    ytd: 0.3, 
+    dividend_yield: 0.1, 
+    volatility_3y: 0.2, 
+    max_drawdown_3y: 0.3,
+    perf_daily: 0.5,
+    perf_1m: 0.4,
+    perf_3m: 0.4,
+    perf_1y: 0.3,
+    perf_3y: 0.3
+  };
+  
+  const TOL_PRESET = { c: 1.0, kappa: 1.5 };  // Normal par défaut
+  const TOP_N = 10;
+
+  // Cache des métriques et masques de filtrage
+  const cache = {};  // { metric: { raw, sorted, rankPct, iqr } }
+  const masks = { geo: null, custom: null, final: null };  // Bitsets
+
   // Parser amélioré avec minus unicode et espaces
   const p = (s)=>{
     if(s==null||s==='-'||s==='') return NaN;
@@ -28,20 +48,20 @@
     return parseFloat(t);
   };
 
-  // métriques disponibles ORGANISÉES PAR CATÉGORIE
+  // Métriques disponibles ORGANISÉES PAR CATÉGORIE
   const METRICS = {
     // Performance
-    perf_daily:      {label:'Perf Daily',     unit:'%', get:s=>p(s.perf_daily||s.daily||s.perf_1d), max:true},
-    perf_1m:         {label:'Perf 1M',        unit:'%', get:s=>p(s.perf_1m),        max:true},
-    perf_3m:         {label:'Perf 3M',        unit:'%', get:s=>p(s.perf_3m),        max:true},
-    ytd:             {label:'YTD',            unit:'%', get:s=>p(s.perf_ytd||s.ytd),max:true},
-    perf_1y:         {label:'Perf 1Y',        unit:'%', get:s=>p(s.perf_1y),        max:true},
-    perf_3y:         {label:'Perf 3Y',        unit:'%', get:s=>p(s.perf_3y||s.perf_3_years), max:true},
+    perf_daily:      {label:'Perf Daily',     unit:'%', get:s=>s.metrics?.perf_daily ?? NaN, max:true},
+    perf_1m:         {label:'Perf 1M',        unit:'%', get:s=>s.metrics?.perf_1m ?? NaN,    max:true},
+    perf_3m:         {label:'Perf 3M',        unit:'%', get:s=>s.metrics?.perf_3m ?? NaN,    max:true},
+    ytd:             {label:'YTD',            unit:'%', get:s=>s.metrics?.ytd ?? NaN,         max:true},
+    perf_1y:         {label:'Perf 1Y',        unit:'%', get:s=>s.metrics?.perf_1y ?? NaN,    max:true},
+    perf_3y:         {label:'Perf 3Y',        unit:'%', get:s=>s.metrics?.perf_3y ?? NaN,    max:true},
     // Risque
-    volatility_3y:   {label:'Vol 3Y',         unit:'%', get:s=>p(s.volatility_3y),  max:false},
-    max_drawdown_3y: {label:'Max DD 3Y',      unit:'%', get:s=>p(s.max_drawdown_3y),max:false},
+    volatility_3y:   {label:'Vol 3Y',         unit:'%', get:s=>s.metrics?.volatility_3y ?? NaN,   max:false},
+    max_drawdown_3y: {label:'Max DD 3Y',      unit:'%', get:s=>s.metrics?.max_drawdown_3y ?? NaN, max:false},
     // Dividende
-    dividend_yield:  {label:'Div. Yield',     unit:'%', get:s=>p(s.dividend_yield), max:true},
+    dividend_yield:  {label:'Div. Yield',     unit:'%', get:s=>s.metrics?.dividend_yield ?? NaN,  max:true},
   };
 
   // DOM
@@ -50,13 +70,13 @@
   const resetBtn=document.getElementById('mc-reset');
   const summary=document.getElementById('mc-summary');
 
-  // état et données
+  // État et données
   const state={ 
     mode:'balanced', 
     data:[], 
     loading:false,
     selectedMetrics: ['ytd', 'dividend_yield'],
-    customFilters: [], // PAS DE FILTRE PAR DÉFAUT
+    customFilters: [],
     geoFilters: {
       region: 'all',
       country: 'all',
@@ -74,6 +94,327 @@
     computeTimer = setTimeout(compute, 150);
   };
 
+  // ===== MIN HEAP POUR TOP K =====
+  class MinHeap {
+    constructor(){ this.a=[]; }
+    size(){ return this.a.length; }
+    peek(){ return this.a[0]; }
+    push(x){ 
+      const a=this.a; 
+      a.push(x); 
+      let i=a.length-1;
+      while(i>0){ 
+        const p=(i-1)>>1; 
+        if (a[p].key<=x.key) break; 
+        [a[i],a[p]]=[a[p],a[i]]; 
+        i=p; 
+      }
+    }
+    pop(){ 
+      const a=this.a; 
+      if(!a.length) return;
+      const top=a[0], x=a.pop(); 
+      if(!a.length) return top;
+      a[0]=x; 
+      let i=0;
+      while(true){ 
+        const l=2*i+1, r=l+1; 
+        let s=i;
+        if(l<a.length && a[l].key<a[s].key) s=l;
+        if(r<a.length && a[r].key<a[s].key) s=r;
+        if(s===i) break; 
+        [a[i],a[s]]=[a[s],a[i]]; 
+        i=s;
+      }
+      return top;
+    }
+  }
+
+  // ===== CONSTRUCTION DU CACHE =====
+  function buildCache() {
+    const n = state.data.length;
+    if (n === 0) return;
+
+    console.log('📊 Construction du cache pour', n, 'stocks...');
+    
+    // Parser toutes les métriques une seule fois
+    for (const s of state.data) {
+      s.metrics = {
+        perf_daily: p(s.perf_daily||s.daily||s.perf_1d),
+        perf_1m:    p(s.perf_1m),   
+        perf_3m:    p(s.perf_3m),
+        ytd:        p(s.perf_ytd||s.ytd),
+        perf_1y:    p(s.perf_1y),   
+        perf_3y:    p(s.perf_3y||s.perf_3_years),
+        volatility_3y:   p(s.volatility_3y),
+        max_drawdown_3y: p(s.max_drawdown_3y),
+        dividend_yield:  p(s.dividend_yield),
+      };
+    }
+
+    // Construire cache par métrique
+    for (const m of Object.keys(METRICS)) {
+      const raw = new Float64Array(n);
+      for (let i=0; i<n; i++) {
+        raw[i] = state.data[i].metrics[m];
+      }
+
+      // Copie triée & winsorisation douce (0.5%–99.5%)
+      const validIndices = [];
+      for (let i=0; i<n; i++) {
+        if (Number.isFinite(raw[i])) validIndices.push(i);
+      }
+      
+      const sorted = validIndices.map(i => raw[i]).sort((a,b) => a-b);
+      
+      if (sorted.length > 0) {
+        const q = (p) => sorted[Math.floor(p * (sorted.length - 1))];
+        const lo = q(0.005), hi = q(0.995);
+        for (let i=0; i<n; i++) {
+          if (Number.isFinite(raw[i])) {
+            raw[i] = Math.min(hi, Math.max(lo, raw[i]));
+          }
+        }
+      }
+
+      // Rang/percentile Hazen + égalités
+      const idx = validIndices.sort((i,j) => raw[i] - raw[j]);
+      const rankPct = new Float64Array(n); // défaut 0
+      let k = 0;
+      while (k < idx.length) {
+        let j = k + 1; 
+        while(j < idx.length && Math.abs(raw[idx[j]] - raw[idx[k]]) < 1e-12) j++;
+        const r = (k + j - 1) / 2;
+        const hazen = (r + 0.5) / idx.length;
+        for (let t = k; t < j; t++) {
+          rankPct[idx[t]] = hazen;
+        }
+        k = j;
+      }
+
+      // IQR robuste (pour normaliser les gaps)
+      let iqr = 1;
+      if (sorted.length >= 4) {
+        const q1 = sorted[Math.floor(0.25 * (sorted.length - 1))];
+        const q3 = sorted[Math.floor(0.75 * (sorted.length - 1))];
+        iqr = Math.max(1e-9, q3 - q1);
+      }
+
+      cache[m] = { 
+        raw, 
+        sorted: Float64Array.from(sorted), 
+        rankPct, 
+        iqr 
+      };
+    }
+    
+    console.log('✅ Cache construit avec succès');
+  }
+
+  // ===== OUTILS PERCENTILES & NEAR-TIE =====
+  const localWindow = (len) => Math.max(6, Math.min(40, Math.ceil(0.03 * len)));
+
+  function localGap(sorted, v) {
+    const a = sorted; 
+    const n = a.length; 
+    if(!n) return Infinity;
+    
+    let lo=0, hi=n; 
+    while(lo<hi) { 
+      const mid=(lo+hi)>>1; 
+      (a[mid]<v) ? lo=mid+1 : hi=mid; 
+    }
+    
+    const W = localWindow(n);
+    const i = Math.min(Math.max(lo,1), n-2);
+    const start = Math.max(1, i-W), end = Math.min(n-2, i+W);
+    const gaps = [];
+    for (let j=start-1; j<=end; j++) {
+      gaps.push(Math.abs(a[j+1] - a[j]));
+    }
+    gaps.sort((x,y) => x-y);
+    return gaps.length ? gaps[Math.floor(gaps.length/2)] : Infinity;
+  }
+
+  function nearTie(metric, vA, vB, dPct, n) {
+    const { sorted, iqr } = cache[metric];
+    const c = TOL_PRESET.c;
+    const baseP = c / Math.sqrt(Math.max(2, n));
+    const gLoc = localGap(sorted, (vA + vB) / 2);
+    const tolV = Math.max(TOL_PRESET.kappa * (gLoc/iqr), (GAP_FLOOR[metric]||0) / iqr);
+    const nearV = Math.abs(vA - vB) / iqr <= tolV;
+    const nearP = Math.abs(dPct) <= Math.max(baseP, 1.5 * (1/Math.max(2, sorted.length)));
+    return nearV || nearP;
+  }
+
+  // ===== BITSETS DE FILTRAGE =====
+  function buildGeoMask() {
+    const n = state.data.length;
+    const mask = new Uint8Array(n); 
+    mask.fill(1);
+    
+    for (let i=0; i<n; i++) {
+      const s = state.data[i];
+      if (state.geoFilters.region !== 'all' && s.region !== state.geoFilters.region) mask[i] = 0;
+      if (state.geoFilters.country !== 'all' && s.country !== state.geoFilters.country) mask[i] = 0;
+      if (state.geoFilters.sector !== 'all' && s.sector !== state.geoFilters.sector) mask[i] = 0;
+    }
+    masks.geo = mask;
+  }
+
+  function buildCustomMask() {
+    const n = state.data.length;
+    const mask = new Uint8Array(n); 
+    mask.fill(1);
+    const fs = state.customFilters || [];
+    
+    for (let i=0; i<n; i++) {
+      for (const f of fs) {
+        const v = state.data[i].metrics[f.metric];
+        if (!Number.isFinite(v)) { 
+          mask[i] = 0; 
+          break; 
+        }
+        
+        const x = f.value, EPS = 0.001;
+        let ok = true;
+        if (f.operator === '>=') ok = v >= x - EPS;
+        else if (f.operator === '>') ok = v > x - EPS;
+        else if (f.operator === '=') ok = Math.abs(v - x) < EPS;
+        else if (f.operator === '<') ok = v < x + EPS;
+        else if (f.operator === '<=') ok = v <= x + EPS;
+        else if (f.operator === '!=') ok = Math.abs(v - x) > EPS;
+        
+        if (!ok) { 
+          mask[i] = 0; 
+          break; 
+        }
+      }
+    }
+    masks.custom = mask;
+  }
+
+  function buildFinalMask() {
+    const n = state.data.length;
+    const out = new Uint8Array(n);
+    for (let i=0; i<n; i++) {
+      out[i] = (masks.geo[i] & masks.custom[i]) ? 1 : 0;
+    }
+    masks.final = out;
+  }
+
+  function filteredIndices(requireMetrics) {
+    const idx = [];
+    const n = state.data.length;
+    
+    for (let i=0; i<n; i++) {
+      if (!masks.final[i]) continue;
+      
+      // Vérifier présence métriques requises
+      let ok = true;
+      for (const m of requireMetrics) {
+        if (!Number.isFinite(cache[m].raw[i])) { 
+          ok = false; 
+          break; 
+        }
+      }
+      if (ok) idx.push(i);
+    }
+    return idx;
+  }
+
+  // ===== ALGORITHMES DE RANKING OPTIMISÉS =====
+  
+  // Comparateur lexico-smart sur indices
+  function lexicoKey(idx, prios) {
+    const w = prios.map((_, i) => Math.pow(0.5, i));
+    const vec = [];
+    
+    for (let k=0; k<prios.length; k++) {
+      const m = prios[k];
+      let pA = cache[m].rankPct[idx]; 
+      if (!METRICS[m].max) pA = 1 - pA;
+      vec.push(pA);
+    }
+    
+    const score = vec.reduce((acc, v, i) => acc + v * w[i], 0);
+    const tkr = String(state.data[idx].ticker || state.data[idx].name || '');
+    return { vec, score, tkr, key: -score };
+  }
+
+  function smarterCompare(aIdx, bIdx, prios) {
+    const n = state.data.length;
+    
+    for (let i=0; i<prios.length; i++) {
+      const m = prios[i];
+      let pA = cache[m].rankPct[aIdx], pB = cache[m].rankPct[bIdx];
+      if (!METRICS[m].max) { 
+        pA = 1 - pA; 
+        pB = 1 - pB; 
+      }
+      const dPct = pA - pB;
+      const vA = cache[m].raw[aIdx], vB = cache[m].raw[bIdx];
+      
+      if (!nearTie(m, vA, vB, dPct, n)) {
+        return dPct > 0 ? -1 : 1;
+      }
+    }
+    
+    // Tie-break pondéré puis ticker
+    const wa = lexicoKey(aIdx, prios).score;
+    const wb = lexicoKey(bIdx, prios).score;
+    if (wa !== wb) return wb - wa;
+    
+    const ta = String(state.data[aIdx].ticker || state.data[aIdx].name || '');
+    const tb = String(state.data[bIdx].ticker || state.data[bIdx].name || '');
+    return ta.localeCompare(tb);
+  }
+
+  // Top N par tas (O(n log TOP_N))
+  function topNByLexico(indices, prios) {
+    if (indices.length <= TOP_N) {
+      return indices.sort((a, b) => smarterCompare(a, b, prios));
+    }
+    
+    const heap = new MinHeap();
+    for (const i of indices) {
+      const key = lexicoKey(i, prios).key;
+      if (heap.size() < TOP_N) {
+        heap.push({ idx: i, key });
+      } else if (key < heap.peek().key) {
+        heap.pop(); 
+        heap.push({ idx: i, key });
+      }
+    }
+    
+    const arr = []; 
+    while(heap.size()) arr.push(heap.pop().idx);
+    return arr.sort((a, b) => smarterCompare(a, b, prios));
+  }
+
+  // Mode équilibré ultra-rapide
+  function rankBalancedFast(indices) {
+    const M = state.selectedMetrics;
+    const out = [];
+    
+    for (const i of indices) {
+      let sum = 0, k = 0;
+      for (const m of M) {
+        let p = cache[m].rankPct[i];
+        if (!Number.isFinite(p)) continue;
+        if (!METRICS[m].max) p = 1 - p;
+        sum += p; 
+        k++;
+      }
+      if (k > 0) out.push({ idx: i, score: sum / k });
+    }
+    
+    out.sort((a, b) => b.score - a.score);
+    return out.slice(0, TOP_N).map(e => e.idx);
+  }
+
+  // ===== INTERFACE UTILISATEUR =====
+  
   // Créer l'interface des filtres géographiques
   function setupGeoFilters() {
     const geoContainer = document.getElementById('geo-filters-container');
@@ -283,7 +624,7 @@
     setupDragAndDrop();
   }
 
-  // Drag & Drop CORRIGÉ avec classe .dragging
+  // Drag & Drop
   function setupDragAndDrop() {
     const items = document.querySelectorAll('.priority-item');
     let draggedItem = null;
@@ -292,12 +633,12 @@
       item.addEventListener('dragstart', (e) => {
         draggedItem = e.target;
         e.target.style.opacity = '0.5';
-        e.target.classList.add('dragging'); // AJOUT
+        e.target.classList.add('dragging');
       });
       
       item.addEventListener('dragend', (e) => {
         e.target.style.opacity = '';
-        e.target.classList.remove('dragging'); // RETRAIT
+        e.target.classList.remove('dragging');
       });
       
       item.addEventListener('dragover', (e) => {
@@ -334,9 +675,8 @@
     }, { offset: Number.NEGATIVE_INFINITY }).element;
   }
 
-  // Synchroniser checkboxes et selectedMetrics + classe is-checked
+  // Synchroniser checkboxes et selectedMetrics
   function setupMetricCheckboxes() {
-    // Setup des checkboxes métriques
     Object.keys(METRICS).forEach(metricId => {
       const checkbox = root.querySelector('#m-' + metricId);
       if (!checkbox) return;
@@ -378,17 +718,17 @@
       explanation.className = 'text-xs opacity-60 mt-2 p-2 rounded bg-white/5';
       explanation.innerHTML = `
         <div id="balanced-explanation">
-          <strong>Mode Équilibre :</strong> Moyenne des scores percentiles (0-100) pour chaque critère coché.
+          <strong>Mode Équilibre :</strong> Moyenne des scores percentiles optimisés (Hazen).
         </div>
         <div id="priority-explanation" class="hidden">
-          <strong>Mode Priorités intelligentes :</strong> Tri par ordre avec tolérance locale basée sur la densité de distribution.
+          <strong>Mode Priorités intelligentes :</strong> Tri lexicographique avec tolérances adaptatives (IQR-normalisées).
         </div>
       `;
       modeContainer.appendChild(explanation);
     }
   }
 
-  // charger les données et extraire les infos géographiques
+  // Charger les données et extraire les infos géographiques
   async function loadData() {
     if (state.loading) return;
     state.loading = true;
@@ -448,7 +788,11 @@
       });
       
       state.data = allStocks;
-      console.log(`✅ MC: ${allStocks.length} actions chargées`);
+      
+      // CONSTRUIRE LE CACHE ICI
+      buildCache();
+      
+      console.log(`✅ MC: ${allStocks.length} actions chargées avec cache optimisé`);
       
       // Initialiser les filtres géo après le chargement
       setupGeoFilters();
@@ -465,187 +809,19 @@
     }
   }
 
-  // Appliquer tous les filtres AVEC EPSILON CORRIGÉ
-  function applyFilters(list){
-    return list.filter(s => {
-      // Filtres géographiques
-      if (state.geoFilters.region !== 'all' && s.region !== state.geoFilters.region) return false;
-      if (state.geoFilters.country !== 'all' && s.country !== state.geoFilters.country) return false;
-      if (state.geoFilters.sector !== 'all' && s.sector !== state.geoFilters.sector) return false;
-      
-      // Vérifier que toutes les métriques sélectionnées sont présentes
-      const hasAllMetrics = state.selectedMetrics.every(m => {
-        const value = METRICS[m].get(s);
-        return Number.isFinite(value);
-      });
-      
-      if (!hasAllMetrics) return false;
-      
-      // Appliquer les filtres personnalisés avec EPSILON SYMÉTRIQUE
-      for (const filter of state.customFilters) {
-        const value = METRICS[filter.metric].get(s);
-        if (!Number.isFinite(value)) return false;
-        
-        let passes = false;
-        const EPS = 0.001;
-        const val = filter.value;
-        
-        switch(filter.operator) {
-          case '>=': passes = value >= val - EPS; break;
-          case '>':  passes = value >  val - EPS; break;
-          case '=':  passes = Math.abs(value - val) < EPS; break;
-          case '<':  passes = value <  val + EPS; break;
-          case '<=': passes = value <= val + EPS; break;
-          case '!=': passes = Math.abs(value - val) > EPS; break;
-        }
-        
-        if (!passes) return false;
-      }
-      
-      return true;
-    });
-  }
-
-  // Calcul des percentiles AMÉLIORÉ (gestion des égalités)
-  function percentile(sorted, v){
-    if(!Number.isFinite(v)||!sorted.length) return NaN;
-    const n = sorted.length;
-    const li = Math.max(0, Math.floor(0.01*(n-1)));
-    const hi = Math.min(n-1, Math.ceil(0.99*(n-1)));
-    const lo = sorted[li], hiV = sorted[hi];
-    const x = Math.min(hiV, Math.max(lo, v));
-    
-    // Trouver le bloc des égalités
-    let i=0; while(i<n && sorted[i] < x) i++;
-    let j=i; while(j<n && Math.abs(sorted[j]-x) < 1e-9) j++;
-    
-    // Rang moyen pour les égalités
-    const rank = (i + j - 1) / 2;
-    return n===1 ? 0.5 : rank / (n-1);
-  }
-
-  // Mode équilibré
-  function rankBalanced(list){
-    const metrics = state.selectedMetrics;
-    if (!metrics.length) return [];
-    
-    const dict={};
-    metrics.forEach(m=>{
-      dict[m] = list.map(s=>METRICS[m].get(s)).filter(Number.isFinite).sort((a,b)=>a-b);
-    });
-    
-    const scored=[];
-    for(const s of list){
-      let sum=0,k=0;
-      for(const m of metrics){
-        const v=METRICS[m].get(s);
-        if(!Number.isFinite(v)) continue;
-        let pr = percentile(dict[m], v);
-        if(!Number.isFinite(pr)) continue;
-        if(!METRICS[m].max) pr = 1-pr;
-        sum+=pr; k++;
-      }
-      if(k>0) scored.push({s, score: sum/k});
-    }
-    scored.sort((a,b)=>b.score-a.score);
-    return scored;
-  }
-
-  // === PRIORITÉS INTELLIGENTES : lexico avec tolérance locale + tie-break pondéré ===
-  function rankLexicoSmart(list, topN = 10, tauPct = 0.02, kappa = 1.2) {
-    const prios = state.selectedMetrics;
-    if (!prios.length) return list.map(s => ({ s, score: NaN }));
-
-    // 1) Distributions pour percentiles + accès aux gaps locaux (densité)
-    const pctBase = {};
-    const rawBase = {};
-    prios.forEach(m => {
-      const arr = list.map(s => METRICS[m].get(s)).filter(Number.isFinite);
-      rawBase[m] = arr.slice();
-      pctBase[m] = arr.slice().sort((a,b)=>a-b);
-    });
-
-    const pr = (m, v) => {
-      let r = percentile(pctBase[m], v);
-      if (!Number.isFinite(r)) return 0;
-      if (!METRICS[m].max) r = 1 - r; // min → mieux
-      return r; // [0,1]
-    };
-
-    const localGap = (arrSorted, v, W = 8) => {
-      if (!arrSorted.length) return Infinity;
-      let lo = 0, hi = arrSorted.length;
-      while (lo < hi) { 
-        const mid = (lo + hi) >> 1; 
-        (arrSorted[mid] < v) ? lo = mid + 1 : hi = mid; 
-      }
-      const i = Math.min(Math.max(lo, 1), arrSorted.length - 2);
-      const start = Math.max(1, i - W), end = Math.min(arrSorted.length - 2, i + W);
-      const gaps = [];
-      for (let j = start - 1; j <= end; j++) {
-        gaps.push(Math.abs(arrSorted[j+1] - arrSorted[j]));
-      }
-      gaps.sort((a,b)=>a-b);
-      return gaps.length ? gaps[Math.floor(gaps.length/2)] : Infinity; // médiane du gap local
-    };
-
-    // 2) Vecteurs de percentiles
-    const rows = list.map(s => ({
-      s,
-      vec: prios.map(m => pr(m, METRICS[m].get(s)))
-    }));
-
-    // 3) Étagement pour stabiliser le Top 10
-    const stageKeeps = [Math.max(4 * topN, 40), Math.max(2 * topN, 20), topN];
-    let pool = rows.slice();
-    for (let k = 0; k < prios.length && pool.length > topN; k++) {
-      pool.sort((A,B)=> B.vec[k] - A.vec[k]);
-      if (k < prios.length - 1) {
-        const keep = stageKeeps[Math.min(k, stageKeeps.length - 1)];
-        pool = pool.slice(0, Math.min(keep, pool.length));
-      }
-    }
-
-    // 4) Tri final : lexico avec double tolérance (percentile + valeur brute locale)
-    const weights = prios.map((_, i) => Math.pow(0.5, i)); // tie-break pondéré
-    pool.sort((A, B) => {
-      for (let i = 0; i < prios.length; i++) {
-        const m = prios[i];
-        const dPct = A.vec[i] - B.vec[i]; // plus grand = meilleur
-        const vA = METRICS[m].get(A.s), vB = METRICS[m].get(B.s);
-
-        // tolérance en valeur brute basée sur la densité locale
-        const gapLoc = localGap(pctBase[m], (vA + vB) / 2);
-        const nearInValue = Math.abs(vA - vB) <= kappa * gapLoc; // ~ "même rang local"
-        const nearInPct   = Math.abs(dPct) <= tauPct;
-
-        if (!(nearInPct || nearInValue)) {
-          return dPct > 0 ? -1 : 1; // tranche sur m
-        }
-        // sinon : "quasi égalité" sur m → on regarde le critère suivant
-      }
-      // Tous quasi égaux → tie-break pondéré (respecte l'ordre)
-      const sA = A.vec.reduce((acc,v,i)=>acc + v*weights[i], 0);
-      const sB = B.vec.reduce((acc,v,i)=>acc + v*weights[i], 0);
-      return sB - sA;
-    });
-
-    return pool.map(r => ({ s: r.s, score: NaN }));
-  }
-
-  // RENDU VERTICAL SIMPLE - SIMILAIRE À L'EXEMPLE
-  function render(entries){
+  // RENDU VERTICAL SIMPLE
+  function render(entries) {
     results.innerHTML='';
     results.className = 'space-y-2';
     
-    const top = entries.slice(0,10);
+    const top = entries.slice(0, 10);
     
-    top.forEach((e,i)=>{
-      const card=document.createElement('div');
-      card.className='glassmorphism rounded-lg p-3 flex items-center gap-4';
+    top.forEach((e, i) => {
+      const card = document.createElement('div');
+      card.className = 'glassmorphism rounded-lg p-3 flex items-center gap-4';
       
-      if(!e.s){
-        card.innerHTML=`
+      if(!e.s) {
+        card.innerHTML = `
           <div class="rank text-2xl font-bold opacity-30">#${i+1}</div>
           <div class="flex-1">
             <div class="font-semibold">—</div>
@@ -684,7 +860,7 @@
         regionIcon = '🌏';
       }
       
-      card.innerHTML=`
+      card.innerHTML = `
         <div class="rank text-2xl font-bold">#${i+1}</div>
         <div class="flex-1">
           <div class="font-semibold flex items-center gap-2">
@@ -713,10 +889,10 @@
     }
   }
 
-  function setSummary(total, kept){
+  function setSummary(total, kept) {
     if (!summary) return;
-    const mode = state.mode==='balanced' ? 'Équilibre' : 'Priorités intelligentes';
-    const labels = state.selectedMetrics.map(m=>METRICS[m].label).join(' · ');
+    const mode = state.mode === 'balanced' ? 'Équilibre' : 'Priorités';
+    const labels = state.selectedMetrics.map(m => METRICS[m].label).join(' · ');
     const filters = state.customFilters.length;
     
     const geoActive = [];
@@ -729,8 +905,9 @@
     summary.innerHTML = `<strong>${mode}</strong> • ${labels || 'Aucun critère'} • ${filters} filtres${geoText} • ${kept}/${total} actions`;
   }
 
-  async function compute(){
-    console.log('🔍 MC: Calcul avec filtres géo:', state.geoFilters);
+  // ===== COMPUTE PRINCIPAL OPTIMISÉ =====
+  async function compute() {
+    console.log('🔍 MC: Calcul optimisé avec cache et bitsets');
     
     if (state.data.length === 0) {
       results.innerHTML = '<div class="text-center text-gray-400 py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Chargement...</div>';
@@ -738,7 +915,7 @@
     }
     
     const base = state.data;
-    if(!base.length){ 
+    if(!base.length) { 
       results.innerHTML = '<div class="text-center text-gray-400 py-4">Aucune donnée</div>';
       return; 
     }
@@ -749,28 +926,61 @@
       return;
     }
     
-    const filtered = applyFilters(base);
-    console.log(`📊 Après filtres: ${filtered.length} actions sur ${base.length}`);
+    // Reconstruire les masques si nécessaire
+    if (!masks.geo) buildGeoMask();
+    else buildGeoMask(); // Pour l'instant on reconstruit toujours
     
-    if (filtered.length === 0) {
-      results.innerHTML = '<div class="text-center text-cyan-400 py-4"><i class="fas fa-exclamation-triangle mr-2"></i>Aucune action ne passe les filtres</div>';
-      setSummary(base.length, 0);
+    if (!masks.custom) buildCustomMask();
+    else buildCustomMask();
+    
+    buildFinalMask();
+    
+    const need = state.selectedMetrics;
+    const pool = filteredIndices(need);
+    
+    console.log(`📊 Après filtres: ${pool.length} actions sur ${base.length}`);
+    setSummary(base.length, pool.length);
+    
+    if (pool.length === 0) {
+      render([]);
       return;
     }
     
-    // Utilise rankLexicoSmart au lieu de rankLexicoPlus
-    const out = state.mode === 'balanced'
-      ? rankBalanced(filtered)
-      : rankLexicoSmart(filtered);
+    let topIdx;
+    const startTime = performance.now();
+    
+    if (state.mode === 'balanced') {
+      topIdx = rankBalancedFast(pool);
+    } else {
+      // Staging adaptatif : si pool > 600, garde 120 puis 40 avant Top10
+      let cand = pool.slice();
       
-    setSummary(base.length, filtered.length);
-    render(out);
-    console.log(`✅ MC: ${filtered.length} actions filtrées, mode: ${state.mode}`);
+      if (cand.length > 600) {
+        // Premier filtre sur le premier critère
+        cand.sort((a, b) => smarterCompare(a, b, [need[0]]));
+        cand = cand.slice(0, 120);
+        
+        // Deuxième filtre sur les deux premiers critères
+        if (need[1]) {
+          cand.sort((a, b) => smarterCompare(a, b, [need[0], need[1]]));
+          cand = cand.slice(0, 40);
+        }
+      }
+      
+      topIdx = topNByLexico(cand, need);
+    }
+    
+    const elapsed = performance.now() - startTime;
+    console.log(`✅ MC: Top 10 calculé en ${elapsed.toFixed(1)}ms (mode: ${state.mode})`);
+    
+    // Mapper vers le renderer existant
+    const entries = topIdx.map(i => ({ s: state.data[i], score: NaN }));
+    render(entries);
   }
 
   // Event listeners
-  modeRadios.forEach(r=>r.addEventListener('change',()=>{
-    state.mode = modeRadios.find(x=>x.checked)?.value || 'balanced';
+  modeRadios.forEach(r => r.addEventListener('change', () => {
+    state.mode = modeRadios.find(x => x.checked)?.value || 'balanced';
     
     const balancedExp = document.getElementById('balanced-explanation');
     const priorityExp = document.getElementById('priority-explanation');
@@ -791,10 +1001,15 @@
   }
   
   if (resetBtn) {
-    resetBtn.addEventListener('click', ()=>{
+    resetBtn.addEventListener('click', () => {
       state.selectedMetrics = ['ytd', 'dividend_yield'];
       state.customFilters = [];
       state.geoFilters = { region: 'all', country: 'all', sector: 'all' };
+      
+      // Invalider les masques
+      masks.geo = null;
+      masks.custom = null;
+      masks.final = null;
       
       Object.keys(METRICS).forEach(id => {
         const checkbox = root.querySelector('#m-'+id);
@@ -819,9 +1034,9 @@
       if (countrySelect) countrySelect.value = 'all';
       if (sectorSelect) sectorSelect.value = 'all';
       
-      const balancedRadio = modeRadios.find(x=>x.value==='balanced');
-      if (balancedRadio) balancedRadio.checked=true;
-      state.mode='balanced';
+      const balancedRadio = modeRadios.find(x => x.value === 'balanced');
+      if (balancedRadio) balancedRadio.checked = true;
+      state.mode = 'balanced';
       
       updatePriorityDisplay();
       updateFiltersList();
@@ -835,12 +1050,12 @@
   setupCustomFilters();
   updatePriorityDisplay();
 
-  // expose
-  window.MC = { refresh: compute, loadData, state };
+  // Expose
+  window.MC = { refresh: compute, loadData, state, cache, masks };
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module prêt avec Priorités intelligentes');
+    console.log('✅ MC Module v2.0 prêt avec optimisations cache & bitsets');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
