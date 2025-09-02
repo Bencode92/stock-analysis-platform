@@ -1,4 +1,4 @@
-// ===== MC (Multi-Critères) – Module Optimisé v2.3 avec Payout Ratio ===================
+// ===== MC (Multi-Critères) – Module Optimisé v2.3.1 avec Payout Ratio ===================
 (function(){
   // Attendre que le DOM soit prêt
   if (!document.querySelector('#mc-section')) {
@@ -194,16 +194,17 @@
         }
         
         const x = f.value;
-        const EPS = 0.001;
+        // CORRECTION: Epsilon adaptatif - strict à 0, tolérance légère ailleurs
+        const EPS = (x === 0 ? 0 : 0.001);
         let ok = true;
         
         switch(f.operator) {
-          case '>=': ok = v >= x - EPS; break;
-          case '>':  ok = v > x - EPS; break;
-          case '=':  ok = Math.abs(v - x) < EPS; break;
-          case '<':  ok = v < x + EPS; break;
-          case '<=': ok = v <= x + EPS; break;
-          case '!=': ok = Math.abs(v - x) > EPS; break;
+          case '>=': ok = v >= x - EPS; break;           // inclusif
+          case '>':  ok = v >  x + EPS; break;           // strict (CORRIGÉ)
+          case '=':  ok = Math.abs(v - x) <= EPS; break; // égalité tolérante (CORRIGÉ)
+          case '<':  ok = v <  x - EPS; break;           // strict (CORRIGÉ)
+          case '<=': ok = v <= x + EPS; break;           // inclusif
+          case '!=': ok = Math.abs(v - x) > EPS; break;  // différence
         }
         
         if (!ok) {
@@ -1197,7 +1198,7 @@
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module v2.3 avec Payout Ratio intégré');
+    console.log('✅ MC Module v2.3.1 avec Payout Ratio et opérateurs corrigés');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
