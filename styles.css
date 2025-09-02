@@ -374,3 +374,54 @@ body {
 [class^="payout-"] {
     transition: color 0.2s ease;
 }
+
+/* === NOUVEAU: Style pour le popover MC === */
+.mc-tip {
+    position: fixed;
+    z-index: 9999;
+    max-width: 240px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, .9);
+    color: #fff;
+    font-size: 12px;
+    line-height: 1.35;
+    border: 1px solid rgba(0, 255, 255, .4);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .35);
+    pointer-events: none; /* Évite les interactions accidentelles */
+}
+
+/* Animation d'apparition du popover */
+@keyframes tipFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.mc-tip {
+    animation: tipFadeIn 0.2s ease-out;
+}
+
+/* Dark mode pour le popover */
+.dark-mode .mc-tip {
+    background: rgba(15, 23, 42, 0.95);
+    border-color: rgba(0, 255, 135, 0.5);
+    color: #e2e8f0;
+}
+
+/* Info icon style pour MC payout */
+#payout-info {
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s, color 0.2s;
+}
+
+#payout-info:hover {
+    opacity: 1;
+    color: #00ff87;
+}
