@@ -555,88 +555,102 @@
         font-size: 8pt !important;
       }
       
-      /* SLIDE 3 FIX - La solution - Better spacing and alignment */
+      /* SLIDE 3 FIX ENHANCED - La solution - Much bigger cards and better readability */
       .slide[data-title="La solution"] {
         justify-content: center !important;
-        padding: 8mm 12mm !important;
+        padding: 6mm 10mm !important;
       }
       
       .slide[data-title="La solution"] h2 {
-        font-size: 17pt !important;
-        margin-bottom: 8px !important;
+        font-size: 19pt !important;
+        margin-bottom: 5px !important;
       }
       
-      .slide[data-title="La solution"] h3 {
-        font-size: 10pt !important;
-        margin: 5px 0 15px !important;
+      .slide[data-title="La solution"] h3:first-of-type {
+        font-size: 11pt !important;
+        margin: 3px 0 10px !important;
       }
       
       .slide[data-title="La solution"] .flow {
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
-        margin: 15px auto !important;
+        margin: 10px auto 8px !important;
         width: 100% !important;
-        gap: 5px !important;
+        gap: 8px !important;
         flex-wrap: nowrap !important;
       }
       
       .slide[data-title="La solution"] .chip { 
-        padding: 8px 10px !important;
-        font-size: 8pt !important;
+        padding: 10px 14px !important;
+        font-size: 9pt !important;
         white-space: nowrap !important;
+        border-radius: 8px !important;
       }
       
       .slide[data-title="La solution"] .arrow {
-        font-size: 12pt !important;
-        margin: 0 3px !important;
+        font-size: 14pt !important;
+        margin: 0 4px !important;
       }
       
       .slide[data-title="La solution"] > p:nth-of-type(1) {
-        margin: 10px 0 15px !important;
+        margin: 8px 0 12px !important;
       }
       
-      /* Fix the cards container spacing */
+      .slide[data-title="La solution"] > p:nth-of-type(1) .pill {
+        font-size: 9pt !important;
+        padding: 6px 12px !important;
+      }
+      
+      /* Make the cards section much bigger */
       .slide[data-title="La solution"] > div:nth-child(4) {
-        margin: 15px auto !important;
+        margin: 10px auto !important;
         width: 100% !important;
       }
       
       .slide[data-title="La solution"] > div:nth-child(4) h3 {
-        font-size: 11pt !important;
-        margin: 10px 0 10px !important;
+        font-size: 13pt !important;
+        margin: 8px 0 8px !important;
+        color: #24d17e !important;
       }
       
       .slide[data-title="La solution"] > div:nth-child(4) > div {
         display: flex !important;
-        justify-content: center !important;
-        gap: 15px !important;
+        justify-content: space-between !important;
+        gap: 20px !important;
         width: 100% !important;
-        margin-top: 10px !important;
+        margin-top: 8px !important;
       }
       
+      /* BIGGER CARDS WITH MORE READABLE TEXT */
       .slide[data-title="La solution"] .card {
         flex: 1 !important;
-        max-width: 30% !important;
-        padding: 12px !important;
-        font-size: 8pt !important;
+        width: 31% !important;
+        padding: 18px !important;
+        font-size: 10pt !important;
         text-align: center !important;
         margin: 0 !important;
+        background: rgba(255,255,255,0.1) !important;
+        border: 2px solid rgba(36,209,126,0.3) !important;
+        border-radius: 12px !important;
       }
       
       .slide[data-title="La solution"] .card strong {
-        font-size: 9pt !important;
-        margin-bottom: 5px !important;
+        font-size: 12pt !important;
+        margin-bottom: 8px !important;
+        color: #24d17e !important;
+        display: block !important;
       }
       
       .slide[data-title="La solution"] > p:nth-last-of-type(2) {
-        font-size: 10pt !important;
-        margin: 15px 0 5px !important;
+        font-size: 11pt !important;
+        margin: 12px 0 5px !important;
+        color: #24d17e !important;
       }
       
       .slide[data-title="La solution"] > p:last-of-type {
         font-size: 8pt !important;
-        margin: 5px 0 0 !important;
+        margin: 3px 0 0 !important;
       }
       
       /* Slide 4 - Fonctionnalités - OPTIMIZED */
@@ -1030,6 +1044,89 @@
       .slide[data-title="Ce dont nous avons besoin"] > p:last-of-type {
         margin-top: 15px !important;
         font-size: 9pt !important;
+      }
+      
+      /* SLIDE 12 FIX ENHANCED - Contact - Perfect vertical centering */
+      .slide[data-title="Contact"] {
+        justify-content: center !important;
+        padding: 8mm 12mm !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+      }
+      
+      .slide[data-title="Contact"] h3:first-of-type {
+        font-size: 13pt !important;
+        margin: 10px 0 8px !important;
+      }
+      
+      .slide[data-title="Contact"] > p:first-of-type {
+        font-size: 11pt !important;
+        font-style: italic !important;
+        margin: 8px 0 15px !important;
+        line-height: 1.4 !important;
+      }
+      
+      .slide[data-title="Contact"] > div:first-of-type {
+        margin: 15px 0 !important;
+      }
+      
+      .slide[data-title="Contact"] h2 {
+        font-size: 20pt !important;
+        margin: 10px 0 !important;
+      }
+      
+      .slide[data-title="Contact"] h3:nth-of-type(2) {
+        font-size: 12pt !important;
+        margin: 10px 0 8px !important;
+      }
+      
+      .slide[data-title="Contact"] > div > p:first-of-type {
+        font-size: 10pt !important;
+        margin: 8px 0 !important;
+      }
+      
+      .slide[data-title="Contact"] > div > p:nth-of-type(2) {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 12px !important;
+        justify-content: center !important;
+        margin: 15px 0 !important;
+      }
+      
+      .slide[data-title="Contact"] .pill {
+        font-size: 10pt !important;
+        padding: 8px 14px !important;
+      }
+      
+      .slide[data-title="Contact"] > div:nth-child(3) {
+        background: rgba(255,183,3,0.1) !important;
+        border: 2px solid rgba(255,183,3,0.3) !important;
+        border-radius: 15px !important;
+        padding: 15px !important;
+        margin: 15px 0 !important;
+        width: auto !important;
+      }
+      
+      .slide[data-title="Contact"] > div:nth-child(3) h3 {
+        font-size: 11pt !important;
+        margin-bottom: 8px !important;
+        color: #ffb703 !important;
+      }
+      
+      .slide[data-title="Contact"] > div:nth-child(3) p {
+        font-size: 9pt !important;
+        margin: 5px 0 !important;
+      }
+      
+      .slide[data-title="Contact"] > p:last-of-type {
+        color: #aab2c8 !important;
+        margin-top: 15px !important;
+        padding: 10px !important;
+        background: rgba(33,150,243,0.1) !important;
+        border-radius: 10px !important;
+        font-size: 9pt !important;
+        width: auto !important;
       }
       
       /* Force colors */
