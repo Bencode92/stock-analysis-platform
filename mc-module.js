@@ -1,4 +1,4 @@
-// ===== MC (Multi-Critères) – Module Optimisé v2.2 avec Retouches Chirurgicales ===================
+// ===== MC (Multi-Critères) – Module Optimisé v2.3 avec Payout Ratio ===================
 (function(){
   // Attendre que le DOM soit prêt
   if (!document.querySelector('#mc-section')) {
@@ -27,7 +27,8 @@
     perf_1m: 0.4,
     perf_3m: 0.4,
     perf_1y: 0.3,
-    perf_3y: 0.3
+    perf_3y: 0.3,
+    payout_ratio: 0.2 // NOUVEAU: Tolérance pour payout ratio
   };
   
   // MODIFIÉ: Tolérance percentile ajustée
@@ -35,6 +36,7 @@
   const MIN_TOL_P = 0.012; // Plancher à 1.2pp
   const TOP_N = 10;
   const ALLOW_MISSING = 1; // NOUVEAU: Tolérer 1 critère manquant
+  const CONFIG = { DEBUG: false }; // Config pour debug
 
   // Cache global pour les métriques
   const cache = {};
@@ -44,9 +46,9 @@
   const p = (s)=>{
     if(s==null||s==='-'||s==='') return NaN;
     const t = String(s)
-      .replace(/\u2212/g,'-')        // minus unicode
+      .replace(/\\u2212/g,'-')        // minus unicode
       .replace(',', '.')             // décimal FR
-      .replace(/[+%\s]/g,'')         // +, %, espaces
+      .replace(/[+%\\s]/g,'')         // +, %, espaces
       .trim();
     return parseFloat(t);
   };
@@ -65,6 +67,27 @@
     max_drawdown_3y: {label:'Max DD 3Y',      unit:'%', get:s=>p(s.max_drawdown_3y),max:false},
     // Dividende
     dividend_yield:  {label:'Div. Yield',     unit:'%', get:s=>p(s.dividend_yield), max:true},
+    // NOUVEAU: Payout ratio
+    payout_ratio: {
+      label: 'Payout',
+      unit: '%',
+      get: s => {
+        // Accepte plusieurs fallbacks possibles
+        const val = p(s.payout_ratio ?? s.payout ?? s.dividend_payout_ratio ?? s.payout_ratio_ttm);
+        if (!Number.isFinite(val)) return NaN;
+
+        // REITs/Immobilier : les >100% peuvent être "normaux"
+        const isRE = String(s.sector||'').toLowerCase().includes('immobili')
+                   || String(s.sector||'').toLowerCase() === 'real estate'
+                   || /property|immo/i.test(String(s.sector||''))
+                   || /reit/i.test(String(s.name||''))
+                   || /reit/i.test(String(s.exchange||''));
+        
+        // Cap différent pour REITs vs autres
+        return isRE ? Math.min(val, 400) : Math.min(val, 200);
+      },
+      max: false // On veut MINIMISER le payout (plus bas = plus soutenable)
+    }
   };
 
   // DOM
@@ -96,6 +119,38 @@
     clearTimeout(computeTimer);
     computeTimer = setTimeout(compute, 150);
   };
+
+  // ==== PROTECTION YIELD-TRAP ====
+  function ensureYieldTrapOnce() {
+    const hasDY = state.selectedMetrics.includes('dividend_yield');
+    const hasPayoutMetric = state.selectedMetrics.includes('payout_ratio');
+    const hasPayoutFilter = (state.customFilters||[]).some(f => f.metric === 'payout_ratio');
+    
+    // Ajouter protection seulement si yield est coché sans garde-fou payout
+    if (hasDY && !hasPayoutMetric && !hasPayoutFilter) {
+      // Filtre silencieux: payout < 100%
+      state.customFilters.push({ 
+        metric: 'payout_ratio', 
+        operator: '<', 
+        value: 100, 
+        __auto: true // Marqueur pour identifier ce filtre automatique
+      });
+      masks.custom = null; // Invalider le cache
+      if (CONFIG.DEBUG) {
+        console.log('🛡️ Protection yield-trap activée: payout < 100% appliqué automatiquement');
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function cleanupAutoYieldTrap() {
+    const index = (state.customFilters||[]).findIndex(f => f.__auto);
+    if (index >= 0) {
+      state.customFilters.splice(index, 1);
+      masks.custom = null; // Invalider le cache
+    }
+  }
 
   // ==== SYSTÈME DE MASQUES DE FILTRAGE ====
   function buildGeoMask() {
@@ -433,6 +488,9 @@
     if (!filtersList) return;
     
     filtersList.innerHTML = state.customFilters.map((filter, index) => {
+      // Ignorer les filtres automatiques dans l'affichage
+      if (filter.__auto) return '';
+      
       const metric = METRICS[filter.metric];
       const color = getOperatorColor(filter.operator, metric.max);
       
@@ -883,7 +941,7 @@
       .map(i => ({ s: state.data[i], score: NaN }));
   }
 
-  // RENDU VERTICAL SIMPLE
+  // RENDU VERTICAL SIMPLE avec coloration intelligente
   function render(entries){
     results.innerHTML='';
     results.className = 'space-y-2';
@@ -908,19 +966,42 @@
       
       const tkr = e.s.ticker || e.s.symbol || (e.s.name||'').split(' ')[0] || '—';
       
+      // MODIFIÉ: Formatage amélioré avec coloration contextuelle
       const metricValues = state.selectedMetrics.map(m => {
-        const value = e.s.metrics ? e.s.metrics[m] : METRICS[m].get(e.s);
-        if (!Number.isFinite(value)) return '';
+        const raw = e.s.metrics ? e.s.metrics[m] : METRICS[m].get(e.s);
+        if (!Number.isFinite(raw)) return '';
+
+        // Format par défaut
+        const isMax = !!METRICS[m].max;
+        const formatted = METRICS[m].unit === '%' ? raw.toFixed(1) : raw.toFixed(2);
         
-        const formatted = value.toFixed(1);
-        const colorClass = METRICS[m].max 
-          ? (value > 0 ? 'text-green-400' : 'text-red-400')
-          : (value < 20 ? 'text-green-400' : value > 40 ? 'text-red-400' : 'text-yellow-400');
-        
+        // Coloration contextuelle
+        let colorClass;
+        if (m === 'payout_ratio') {
+          // Coloration spéciale pour payout ratio
+          colorClass = raw < 30 ? 'text-green-500' :      // Conservative
+                      raw < 60 ? 'text-green-400' :       // Moderate
+                      raw < 80 ? 'text-yellow-400' :      // High
+                      raw < 100 ? 'text-orange-400' :     // Very high
+                      'text-red-400';                     // Unsustainable
+        } else if (m === 'volatility_3y' || m === 'max_drawdown_3y') {
+          // Pour les métriques de risque
+          colorClass = raw < 15 ? 'text-green-400' : 
+                      raw < 25 ? 'text-yellow-400' : 
+                      'text-red-400';
+        } else {
+          // Coloration standard
+          colorClass = isMax 
+            ? (raw > 0 ? 'text-green-400' : 'text-red-400')
+            : (raw < 20 ? 'text-green-400' : raw > 40 ? 'text-red-400' : 'text-yellow-400');
+        }
+
         return `
           <div class="text-right">
             <div class="text-xs opacity-60">${METRICS[m].label}</div>
-            <div class="${colorClass} font-semibold">${value > 0 && METRICS[m].max ? '+' : ''}${formatted}${METRICS[m].unit}</div>
+            <div class="${colorClass} font-semibold">
+              ${isMax && raw > 0 ? '+' : ''}${formatted}${METRICS[m].unit || ''}
+            </div>
           </div>
         `;
       }).filter(Boolean).join('');
@@ -967,7 +1048,9 @@
     if (!summary) return;
     const mode = state.mode==='balanced' ? 'Équilibre' : 'Priorités intelligentes';
     const labels = state.selectedMetrics.map(m=>METRICS[m].label).join(' · ');
-    const filters = state.customFilters.length;
+    
+    // Compter seulement les filtres visibles (exclure __auto)
+    const visibleFilters = state.customFilters.filter(f => !f.__auto).length;
     
     const geoActive = [];
     if (state.geoFilters.region !== 'all') geoActive.push(state.geoFilters.region);
@@ -976,7 +1059,7 @@
     
     const geoText = geoActive.length > 0 ? ` • ${geoActive.join(', ')}` : '';
     
-    summary.innerHTML = `<strong>${mode}</strong> • ${labels || 'Aucun critère'} • ${filters} filtres${geoText} • ${kept}/${total} actions`;
+    summary.innerHTML = `<strong>${mode}</strong> • ${labels || 'Aucun critère'} • ${visibleFilters} filtres${geoText} • ${kept}/${total} actions`;
   }
 
   async function compute(){
@@ -999,6 +1082,9 @@
       return;
     }
     
+    // NOUVEAU: Protection yield-trap automatique
+    const hadAutoTrap = ensureYieldTrapOnce();
+    
     // Utiliser les masques optimisés
     console.time('Filtrage');
     buildGeoMask();
@@ -1012,6 +1098,8 @@
     
     if (pool.length === 0) {
       results.innerHTML = '<div class="text-center text-cyan-400 py-4"><i class="fas fa-exclamation-triangle mr-2"></i>Aucune action ne passe les filtres</div>';
+      // NOUVEAU: Nettoyer le filtre auto si appliqué
+      if (hadAutoTrap) cleanupAutoYieldTrap();
       return;
     }
     
@@ -1027,6 +1115,9 @@
     
     render(out);
     console.log(`✅ MC: ${pool.length} actions filtrées, mode: ${state.mode}`);
+    
+    // NOUVEAU: Nettoyer le filtre auto après le rendu
+    if (hadAutoTrap) cleanupAutoYieldTrap();
   }
 
   // Event listeners
@@ -1106,7 +1197,7 @@
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module v2.2 optimisé avec retouches chirurgicales');
+    console.log('✅ MC Module v2.3 avec Payout Ratio intégré');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
