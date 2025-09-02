@@ -1,4 +1,4 @@
-// ===== MC (Multi-Critères) – Module Optimisé v2.1 avec Cache & Performances ===================
+// ===== MC (Multi-Critères) – Module Optimisé v2.2 avec Retouches Chirurgicales ===================
 (function(){
   // Attendre que le DOM soit prêt
   if (!document.querySelector('#mc-section')) {
@@ -30,8 +30,11 @@
     perf_3y: 0.3
   };
   
-  const TOL_PRESET = { c: 1.0, kappa: 1.5 };
+  // MODIFIÉ: Tolérance percentile ajustée
+  const TOL_PRESET = { c: 0.6, kappa: 1.5 }; // c réduit de 1.0 à 0.6
+  const MIN_TOL_P = 0.012; // Plancher à 1.2pp
   const TOP_N = 10;
+  const ALLOW_MISSING = 1; // NOUVEAU: Tolérer 1 critère manquant
 
   // Cache global pour les métriques
   const cache = {};
@@ -174,6 +177,7 @@
     return out;
   }
 
+  // MODIFIÉ: Tolérer ALLOW_MISSING critères manquants
   function getFilteredIndices(requireMetrics = []) {
     if (!masks.final) buildFinalMask();
     
@@ -183,20 +187,22 @@
     for (let i = 0; i < n; i++) {
       if (!masks.final[i]) continue;
       
-      // Vérifier les métriques requises
-      let hasAll = true;
+      // Compter les métriques valides
+      let validCount = 0;
       for (const m of requireMetrics) {
         const value = cache[m] ? cache[m].raw[i] : 
           (state.data[i].metrics ? state.data[i].metrics[m] : 
            METRICS[m].get(state.data[i]));
         
-        if (!Number.isFinite(value)) {
-          hasAll = false;
-          break;
+        if (Number.isFinite(value)) {
+          validCount++;
         }
       }
       
-      if (hasAll) indices.push(i);
+      // Accepter si on a au moins (requis - ALLOW_MISSING) métriques
+      if (validCount >= requireMetrics.length - ALLOW_MISSING) {
+        indices.push(i);
+      }
     }
     
     return indices;
@@ -230,6 +236,7 @@
     return gaps.length ? gaps[Math.floor(gaps.length / 2)] : Infinity;
   }
 
+  // MODIFIÉ: Utilisation du MIN_TOL_P
   function nearTie(metric, vA, vB, dPct, n) {
     const cached = cache[metric];
     if (!cached) return false;
@@ -240,7 +247,7 @@
     const gLoc = localGap(sorted, (vA + vB) / 2);
     const tolV = Math.max(TOL_PRESET.kappa * (gLoc / iqr), (GAP_FLOOR[metric] || 0) / iqr);
     const nearV = Math.abs(vA - vB) / iqr <= tolV;
-    const nearP = Math.abs(dPct) <= Math.max(baseP, 1.5 * (1 / Math.max(2, sorted.length)));
+    const nearP = Math.abs(dPct) <= Math.max(baseP, MIN_TOL_P); // Ajout du plancher MIN_TOL_P
     return nearV || nearP;
   }
 
@@ -685,7 +692,7 @@
             raw[i] = state.data[i].metrics[m];
           }
           
-          // Copie triée avec winsorization doux
+          // Winsorization doux
           const sorted = Array.from(raw)
             .filter(Number.isFinite)
             .sort((a, b) => a - b);
@@ -700,40 +707,50 @@
                 raw[i] = Math.min(hi, Math.max(lo, raw[i]));
               }
             }
-          }
-          
-          // Calcul des rangs/percentiles avec gestion des égalités
-          const idx = Array.from({length: n}, (_, i) => i)
-            .filter(i => Number.isFinite(raw[i]));
-          idx.sort((i, j) => raw[i] - raw[j]);
-          
-          const rankPct = new Float64Array(n);
-          let k = 0;
-          while (k < idx.length) {
-            let j = k + 1;
-            while (j < idx.length && Math.abs(raw[idx[j]] - raw[idx[k]]) < 1e-12) j++;
-            const r = (k + j - 1) / 2;
-            const hazen = (r + 0.5) / idx.length;
-            for (let t = k; t < j; t++) {
-              rankPct[idx[t]] = hazen;
+            
+            // MODIFIÉ: Recalculer sorted après winsorisation
+            const sortedW = Array.from(raw)
+              .filter(Number.isFinite)
+              .sort((a, b) => a - b);
+            const qW = (p) => sortedW[Math.floor(p * (sortedW.length - 1))];
+            const q1 = qW(0.25);
+            const q3 = qW(0.75);
+            const iqr = Math.max(1e-9, q3 - q1);
+            
+            // Calcul des rangs/percentiles avec gestion des égalités
+            const idx = Array.from({length: n}, (_, i) => i)
+              .filter(i => Number.isFinite(raw[i]));
+            idx.sort((i, j) => raw[i] - raw[j]);
+            
+            const rankPct = new Float64Array(n);
+            let k = 0;
+            while (k < idx.length) {
+              let j = k + 1;
+              while (j < idx.length && Math.abs(raw[idx[j]] - raw[idx[k]]) < 1e-12) j++;
+              const r = (k + j - 1) / 2;
+              const hazen = (r + 0.5) / idx.length;
+              for (let t = k; t < j; t++) {
+                rankPct[idx[t]] = hazen;
+              }
+              k = j;
             }
-            k = j;
+            
+            // Utiliser sorted winsorisé dans le cache
+            cache[m] = {
+              raw,
+              sorted: Float64Array.from(sortedW), // Sorted après winsorisation
+              rankPct,
+              iqr // IQR recalculé après winsorisation
+            };
+          } else {
+            // Pas de données valides
+            cache[m] = {
+              raw,
+              sorted: new Float64Array(),
+              rankPct: new Float64Array(n),
+              iqr: 1
+            };
           }
-          
-          // IQR robuste pour normalisation
-          let iqr = 1;
-          if (sorted.length >= 4) {
-            const q1 = sorted[Math.floor(0.25 * (sorted.length - 1))];
-            const q3 = sorted[Math.floor(0.75 * (sorted.length - 1))];
-            iqr = Math.max(1e-9, q3 - q1);
-          }
-          
-          cache[m] = {
-            raw,
-            sorted: Float64Array.from(sorted),
-            rankPct,
-            iqr
-          };
         }
         
         console.log('✅ Cache initialisé pour', Object.keys(cache).length, 'métriques');
@@ -1089,7 +1106,7 @@
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module v2.1 optimisé prêt avec cache et performances');
+    console.log('✅ MC Module v2.2 optimisé avec retouches chirurgicales');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
