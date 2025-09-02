@@ -1,4 +1,4 @@
-// ===== MC (Multi-Critères) – Module Optimisé v2.3.1 avec Payout Ratio ===================
+// ===== MC (Multi-Critères) – Module Optimisé v2.4 avec Payout Ratio et Comparaison Quantisée ===================
 (function(){
   // Attendre que le DOM soit prêt
   if (!document.querySelector('#mc-section')) {
@@ -175,6 +175,7 @@
     return mask;
   }
 
+  // CORRIGÉ v2.4: Comparaison quantisée à 1 décimale pour cohérence avec l'UI
   function buildCustomMask() {
     const n = state.data.length;
     const mask = new Uint8Array(n);
@@ -182,29 +183,33 @@
     
     const fs = state.customFilters || [];
     
+    // NOUVEAU: Fonction de quantisation à 1 décimale
+    const DEC = 1, POW = 10 ** DEC;
+    const q = v => Math.round(v * POW) / POW; // quantize à 1 décimale
+    
     for (let i = 0; i < n; i++) {
       for (const f of fs) {
-        const v = state.data[i].metrics ? 
+        const raw = state.data[i].metrics ? 
           state.data[i].metrics[f.metric] : 
           METRICS[f.metric].get(state.data[i]);
         
-        if (!Number.isFinite(v)) {
+        if (!Number.isFinite(raw)) {
           mask[i] = 0;
           break;
         }
         
-        const x = f.value;
-        // CORRECTION: Epsilon adaptatif - strict à 0, tolérance légère ailleurs
-        const EPS = (x === 0 ? 0 : 0.001);
-        let ok = true;
+        // MODIFIÉ: Quantiser les deux valeurs à 1 décimale
+        const v = q(raw);        // valeur métrique arrondie à 0.1
+        const x = q(f.value);    // valeur seuil arrondie à 0.1
         
+        let ok = true;
         switch(f.operator) {
-          case '>=': ok = v >= x - EPS; break;           // inclusif
-          case '>':  ok = v >  x + EPS; break;           // strict (CORRIGÉ)
-          case '=':  ok = Math.abs(v - x) <= EPS; break; // égalité tolérante (CORRIGÉ)
-          case '<':  ok = v <  x - EPS; break;           // strict (CORRIGÉ)
-          case '<=': ok = v <= x + EPS; break;           // inclusif
-          case '!=': ok = Math.abs(v - x) > EPS; break;  // différence
+          case '>=': ok = v >= x; break;
+          case '>':  ok = v >  x; break;
+          case '=':  ok = v === x; break;  // Égalité exacte après quantisation
+          case '<':  ok = v <  x; break;
+          case '<=': ok = v <= x; break;
+          case '!=': ok = v !== x; break;
         }
         
         if (!ok) {
@@ -667,6 +672,48 @@
       `;
       modeContainer.appendChild(explanation);
     }
+  }
+
+  // NOUVEAU v2.4: Popover au clic pour l'info payout
+  function setupPayoutPopover() {
+    const icon = document.getElementById('payout-info');
+    if (!icon) return;
+
+    const TEXT = "Payout = dividendes ÷ bénéfices.\nPlus bas = mieux.\nRepères : <60% ok, 60–80% moyen, >100% risqué.";
+
+    let tipEl = null;
+    const closeTip = () => { 
+      tipEl?.remove(); 
+      tipEl = null; 
+      document.removeEventListener('click', onDoc); 
+    };
+    
+    const onDoc = (e) => { 
+      if (!tipEl || tipEl.contains(e.target) || e.target === icon) return; 
+      closeTip(); 
+    };
+
+    icon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (tipEl) { 
+        closeTip(); 
+        return; 
+      }
+
+      tipEl = document.createElement('div');
+      tipEl.className = 'mc-tip';
+      tipEl.style.whiteSpace = 'pre-line'; // Pour respecter les sauts de ligne
+      tipEl.textContent = TEXT;
+
+      document.body.appendChild(tipEl);
+      const r = icon.getBoundingClientRect();
+      const x = Math.min(window.innerWidth - tipEl.offsetWidth - 8, r.left + 12);
+      const y = Math.min(window.innerHeight - tipEl.offsetHeight - 8, r.top + 18);
+      tipEl.style.left = x + 'px';
+      tipEl.style.top = y + 'px';
+
+      setTimeout(() => document.addEventListener('click', onDoc), 0);
+    });
   }
 
   // charger les données et extraire les infos géographiques
@@ -1192,13 +1239,14 @@
   setupMetricCheckboxes();
   setupCustomFilters();
   updatePriorityDisplay();
+  setupPayoutPopover(); // NOUVEAU v2.4
 
   // expose
   window.MC = { refresh: compute, loadData, state, cache };
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module v2.3.1 avec Payout Ratio et opérateurs corrigés');
+    console.log('✅ MC Module v2.4 avec comparaison quantisée et popover payout');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
