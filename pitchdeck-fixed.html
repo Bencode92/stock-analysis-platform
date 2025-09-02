@@ -555,7 +555,7 @@
         font-size: 8pt !important;
       }
       
-      /* SLIDE 3 FIX ENHANCED - La solution - Much bigger cards and better readability */
+      /* SLIDE 3 ULTIMATE FIX - Force horizontal layout for cards */
       .slide[data-title="La solution"] {
         justify-content: center !important;
         padding: 6mm 10mm !important;
@@ -602,40 +602,48 @@
         padding: 6px 12px !important;
       }
       
-      /* Make the cards section much bigger */
+      /* CRITICAL FIX FOR THE 3 CARDS */
       .slide[data-title="La solution"] > div:nth-child(4) {
         margin: 10px auto !important;
         width: 100% !important;
+        text-align: center !important;
       }
       
       .slide[data-title="La solution"] > div:nth-child(4) h3 {
         font-size: 13pt !important;
-        margin: 8px 0 8px !important;
+        margin: 8px 0 10px !important;
         color: #24d17e !important;
       }
       
+      /* FORCE HORIZONTAL LAYOUT WITH TABLE DISPLAY */
       .slide[data-title="La solution"] > div:nth-child(4) > div {
-        display: flex !important;
-        justify-content: space-between !important;
-        gap: 20px !important;
+        display: table !important;
+        table-layout: fixed !important;
         width: 100% !important;
-        margin-top: 8px !important;
+        margin: 0 auto !important;
       }
       
-      /* BIGGER CARDS WITH MORE READABLE TEXT */
-      .slide[data-title="La solution"] .card {
-        flex: 1 !important;
-        width: 31% !important;
-        padding: 18px !important;
+      /* MAKE CARDS TABLE CELLS FOR GUARANTEED HORIZONTAL LAYOUT */
+      .slide[data-title="La solution"] > div:nth-child(4) .card {
+        display: table-cell !important;
+        width: 33.333% !important;
+        padding: 20px 15px !important;
         font-size: 10pt !important;
         text-align: center !important;
+        vertical-align: top !important;
         margin: 0 !important;
         background: rgba(255,255,255,0.1) !important;
         border: 2px solid rgba(36,209,126,0.3) !important;
         border-radius: 12px !important;
+        border-right: 10px solid transparent !important;
+        background-clip: padding-box !important;
       }
       
-      .slide[data-title="La solution"] .card strong {
+      .slide[data-title="La solution"] > div:nth-child(4) .card:last-child {
+        border-right: 2px solid rgba(36,209,126,0.3) !important;
+      }
+      
+      .slide[data-title="La solution"] > div:nth-child(4) .card strong {
         font-size: 12pt !important;
         margin-bottom: 8px !important;
         color: #24d17e !important;
