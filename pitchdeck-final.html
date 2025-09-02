@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Pitch Deck – NOVIS — Benoît Comas</title>
+  <style>
+    /* =========  Design System  ========= */
+    :root {
+      --bg: #0a0b14;
+      --bg-soft: #0f1224;
+      --text: #e6e8ef;
+      --muted: #aab2c8;
+      --card: rgba(255,255,255,0.06);
+      --stroke: rgba(255,255,255,0.12);
+      --accent: #24d17e; /* néon vert */
+      --accent-2: #00b7ff; /* azur */
+      --gradient: radial-gradient(60% 60% at 20% 10%, rgba(36,209,126,0.25), transparent 60%),
+                  radial-gradient(50% 50% at 80% 20%, rgba(0,183,255,0.25), transparent 60%),
+                  radial-gradient(40% 40% at 50% 90%, rgba(255,255,255,0.04), transparent 60%);
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --shadow: 0 10px 30px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
+      --shadow-soft: 0 10px 24px rgba(0,0,0,0.35);
+      --slide-min-h: 640px;
+      --slide-w: 1120px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .backdrop { animation: none; }
+      * { transition: none !important; }
+    }
+    
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f5f7fb;
+        --bg-soft: #eef2f8;
+        --text: #12131a;
+        --muted: #475069;
+        --card: rgba(255,255,255,0.85);
+        --stroke: rgba(10,11,20,0.08);
+        --shadow: 0 16px 40px rgba(20,22,35,0.08), inset 0 1px 0 rgba(255,255,255,0.7);
+        --shadow-soft: 0 12px 28px rgba(20,22,35,0.08);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji",
+                   "Segoe UI Emoji";
+      background: linear-gradient(180deg, var(--bg) 0%, var(--bg-soft) 100%);
+      background-attachment: fixed;
+      color: var(--text);
+      line-height: 1.6;
+      letter-spacing: 0.2px;
+      margin: 0;
+    }
+
+    /* Animated backdrop */
+    .backdrop {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image: var(--gradient);
+      filter: blur(40px) saturate(120%);
+      animation: float 18s ease-in-out infinite alternate;
+      opacity: 0.8;
+    }
+    @keyframes float { from { transform: translateY(-6%) } to { transform: translateY(6%) } }
+
+    .container { max-width: 1280px; margin: 0 auto; padding: 24px; position: relative; z-index: 1; }
+
+    /* ======= Top Toolbar ======= */
+    .toolbar {
+      position: sticky; top: 0; z-index: 5;
+      backdrop-filter: blur(10px);
+      background: linear-gradient(180deg, rgba(10,11,20,0.65), rgba(10,11,20,0.2));
+      border: 1px solid var(--stroke);
+      padding: 10px 14px; margin: 16px auto 24px; border-radius: 999px; width: fit-content;
+      box-shadow: var(--shadow-soft);
+      display: flex; gap: 10px; align-items: center;
+    }
+    .btn {
+      appearance: none; border: 1px solid var(--stroke);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      color: var(--text); padding: 10px 14px; border-radius: 999px;
+      font-weight: 600; font-size: 14px; letter-spacing: 0.2px; cursor: pointer;
+      transition: transform .15s ease, border-color .2s ease, box-shadow .2s ease;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: rgba(255,255,255,0.25); box-shadow: 0 8px 20px rgba(0,0,0,0.25); }
+    .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #0a0b14; border: none; }
+
+    /* ======= Slides ======= */
+    .slide {
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius-xl);
+      padding: clamp(28px, 5vw, 64px);
+      margin: 28px auto 44px;
+      box-shadow: var(--shadow);
+      min-height: var(--slide-min-h);
+      max-width: var(--slide-w);
+      position: relative; overflow: clip;
+      isolation: isolate;
+    }
+    .slide::after {
+      content: ""; position: absolute; inset: -2px; border-radius: inherit; z-index: -1;
+      background: conic-gradient(from 180deg at 50% 50%, rgba(36,209,126,0.35), rgba(0,183,255,0.25), transparent 60%, rgba(36,209,126,0.35));
+      filter: blur(30px); opacity: .25; transform: scale(1.02);
+    }
+
+    .slide h1, .slide h2 { line-height: 1.1; }
+    h1 {
+      font-size: clamp(34px, 5vw, 56px);
+      margin: 0 0 6px; font-weight: 800;
+      background: linear-gradient(135deg, #fff, #b9ffde 40%, #a9e8ff 85%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      letter-spacing: 0.5px;
+    }
+    .tagline { font-size: clamp(16px, 2.3vw, 22px); color: var(--muted); margin: 6px 0 10px; }
+    .author { font-weight: 700; color: var(--accent); margin-top: 12px; }
+
+    h2 {
+      font-size: clamp(26px, 3.4vw, 38px);
+      margin: 0 0 18px; font-weight: 800; color: #fff;
+    }
+    h3 { font-size: clamp(18px, 2.4vw, 24px); color: var(--text); margin: 20px 0 10px; }
+    p { margin: 10px 0; }
+    ul { margin: 0; padding-left: 18px; }
+    li { margin: 4px 0; }
+
+    .pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--stroke);
+      background: rgba(255,255,255,0.06); color: var(--text); font-weight: 600; font-size: 14px; }
+    
+    .badge { display:inline-block;padding:8px 12px;border:1px solid var(--stroke);
+      border-radius:999px;background:rgba(255,255,255,.06);font-weight:600;font-size:14px; }
+    .subtitle { color:var(--muted);font-size:0.95em;margin-top:4px; }
+
+    /* Problem statements */
+    .problem { display: grid; gap: 14px; margin: 18px 0 8px; }
+    .callout {
+      background: linear-gradient(180deg, rgba(255,63,94,0.1), rgba(255,63,94,0.04));
+      border: 1px solid rgba(255,63,94,0.28);
+      color: #ffd9df; padding: 16px 18px; border-radius: var(--radius-lg);
+    }
+    .callout strong { color: #ff8fa1 }
+
+    /* Solution flow */
+    .flow { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: center; margin: 12px 0 24px; }
+    .chip { padding: 12px 16px; border-radius: 14px; font-weight: 700; letter-spacing: .3px; color: #0a0b14; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+    .arrow { color: var(--muted); font-weight: 900; font-size: 22px; }
+
+    /* Features */
+    .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-top: 12px; }
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+      border: 1px solid var(--stroke);
+      border-radius: 16px; padding: 14px 16px; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    .card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.25); box-shadow: var(--shadow-soft); }
+    .card strong { color: var(--accent); display: block; margin-bottom: 6px; }
+
+    /* Comparison table */
+    .table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 14px; border: 1px solid var(--stroke); margin-top: 6px; }
+    .table th { text-align: left; padding: 16px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #0a0b14; font-size: 16px; }
+    .table td { padding: 16px; border-top: 1px solid var(--stroke); }
+    .table tr:nth-child(even) td { background: rgba(255,255,255,0.03); }
+
+    /* Metrics */
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin: 12px 0 18px; }
+    .metric { text-align: center; padding: 18px; border-radius: 18px; border: 1px solid var(--stroke); background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04)); }
+    .metric .val { font-size: clamp(28px, 3vw, 40px); font-weight: 900; color: var(--accent); }
+    .metric .lab { color: var(--muted) }
+
+    .market { display: grid; place-items: center; grid-template-columns: repeat(3, 1fr); gap: 18px; margin: 8px 0 6px; }
+    .bubble { aspect-ratio: 1/1; border-radius: 9999px; display: grid; place-items: center; color: #0a0b14; font-weight: 900; border: 1px solid var(--stroke);
+      background: linear-gradient(135deg, var(--accent), var(--accent-2)); filter: saturate(120%); }
+
+    /* Roadmap timeline */
+    .timeline { position: relative; margin-top: 4px; }
+    .timeline::before { content: ""; position: absolute; left: 14px; top: 0; bottom: 0; width: 2px; background: linear-gradient(180deg, var(--accent), var(--accent-2)); }
+    .mile { position: relative; margin: 18px 0 18px 36px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--stroke); background: rgba(255,255,255,0.05); }
+    .mile::before { content: ""; position: absolute; left: -8px; top: 18px; width: 14px; height: 14px; border-radius: 999px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); border: 2px solid #0a0b14; }
+    .time { font-weight: 800; color: var(--accent); margin-bottom: 6px; }
+
+    /* Ask grid */
+    .ask { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .ask .item { text-align: center; padding: 18px; border-radius: 18px; border: 1px solid var(--stroke); background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04)); font-weight: 700; }
+    .ask .item.highlight { background: linear-gradient(135deg, #ffb703, #fb8500); color: #0a0b14; border: none; }
+
+    /* Footer CTA */
+    .cta { display: inline-flex; align-items: center; gap: 10px; padding: 14px 22px; border-radius: 999px; font-weight: 800; text-decoration: none; color: #0a0b14;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2)); border: none; box-shadow: 0 16px 40px rgba(0,183,255,0.26); cursor: pointer; }
+    .cta:hover { transform: translateY(-2px); box-shadow: 0 20px 50px rgba(0,183,255,0.35); }
+
+    /* Presentation Mode */
+    body.present { overflow: hidden; }
+    body.present .container { max-width: none; padding: 0; }
+    body.present .slide { height: 100svh; max-width: none; margin: 0; border-radius: 0; box-shadow: none; border: none; }
+    .progress { position: fixed; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,0.08); z-index: 6; }
+    .progress > span { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .25s ease; }
+
+    /* Print / PDF Export - Dark theme with optimized spacing */
+    @media print {
+      @page { 
+        size: A4 landscape; 
+        margin: 0;
+      }
+      
+      /* Force color printing */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+        box-sizing: border-box !important;
+      }
+      
+      body { 
+        background: #0a0b14 !important;
+        font-size: 11pt;
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* Hide UI elements */
+      .toolbar, .progress { display: none !important; }
+      
+      /* Container reset */
+      .container {
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: linear-gradient(180deg, #0a0b14 0%, #0f1224 100%) !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* Fixed slide dimensions with flex centering */
+      .slide { 
+        page-break-after: always !important;
+        page-break-inside: avoid !important;
+        
+        /* A4 landscape exact dimensions */
+        width: 297mm !important;
+        height: 210mm !important;
+        max-width: 297mm !important;
+        max-height: 210mm !important;
+        
+        margin: 0 !important;
+        padding: 8mm 12mm !important;
+        
+        /* Dark theme styling */
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        background: rgba(255,255,255,0.06) !important;
+        
+        position: relative !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+        
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* Typography optimized for space */
+      .slide, .slide * { 
+        color: #e6e8ef !important;
+        max-width: 100% !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* Larger headings */
+      h1 {
+        background: linear-gradient(135deg, #fff, #b9ffde 40%, #a9e8ff 85%) !important;
+        -webkit-background-clip: text !important;
+        background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        font-size: 36pt !important;
+        text-align: center !important;
+        margin: 0 0 15px 0 !important;
+        padding: 0 !important;
+        display: block !important;
+        width: 100% !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      h2 { 
+        color: #fff !important;
+        font-size: 20pt !important;
+        border-bottom: 2px solid #24d17e !important;
+        padding-bottom: 8px !important;
+        margin: 0 0 12px 0 !important;
+        text-align: center !important;
+        display: block !important;
+        width: 100% !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      h3 { 
+        color: #24d17e !important;
+        font-size: 12pt !important;
+        text-align: center !important;
+        margin: 8px 0 !important;
+        display: block !important;
+        width: 100% !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* Larger paragraphs */
+      p {
+        color: #e6e8ef !important;
+        text-align: center !important;
+        margin: 6px 0 !important;
+        display: block !important;
+        width: 100% !important;
+        font-size: 9pt !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* Lists */
+      ul {
+        max-width: 90% !important;
+        margin: 8px auto !important;
+        text-align: left !important;
+        display: block !important;
+        padding-left: 18px !important;
+        color: #e6e8ef !important;
+      }
+      
+      li {
+        margin: 3px 0 !important;
+        font-size: 9pt !important;
+        color: #e6e8ef !important;
+      }
+      
+      /* Larger cards */
+      .card { 
+        background: rgba(255,255,255,0.08) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        color: #e6e8ef !important;
+        padding: 10px !important;
+        border-radius: 8px !important;
+        margin: 6px 4px !important;
+        display: inline-block !important;
+        vertical-align: top !important;
+        width: calc(31% - 8px) !important;
+        font-size: 8pt !important;
+        box-sizing: border-box !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      .card strong {
+        color: #24d17e !important;
+        font-size: 9pt !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* Grid handling */
+      .grid {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        width: 100% !important;
+        margin: 10px 0 !important;
+      }
+      
+      .grid > div {
+        flex: 0 1 30% !important;
+        margin: 4px !important;
+      }
+      
+      /* Problem callouts - larger */
+      .problem {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: stretch !important;
+        width: 100% !important;
+        gap: 10px !important;
+      }
+      
+      .callout {
+        background: rgba(255,63,94,0.1) !important;
+        border: 1px solid rgba(255,63,94,0.28) !important;
+        color: #ffd9df !important;
+        border-radius: 8px !important;
+        padding: 12px !important;
+        flex: 1 !important;
+        max-width: 31% !important;
+        font-size: 9pt !important;
+        box-sizing: border-box !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      .callout strong { 
+        color: #ff8fa1 !important;
+        display: block !important;
+        margin-bottom: 4px !important;
+        font-size: 11pt !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* Pills and badges - larger */
+      .pill, .badge { 
+        background: rgba(255,255,255,0.06) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        color: #e6e8ef !important;
+        font-weight: bold !important;
+        display: inline-block !important;
+        margin: 3px !important;
+        padding: 6px 10px !important;
+        font-size: 8pt !important;
+        border-radius: 999px !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* Tables - larger */
+      .table { 
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        width: 85% !important;
+        margin: 12px auto !important;
+        font-size: 9pt !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      .table th { 
+        background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
+        color: #0a0b14 !important;
+        font-weight: bold !important;
+        padding: 8px !important;
+        text-align: left !important;
+        font-size: 9pt !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      .table td { 
+        border-top: 1px solid rgba(255,255,255,0.12) !important;
+        padding: 6px !important;
+        background: transparent !important;
+        color: #e6e8ef !important;
+        font-size: 8pt !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* Timeline - larger */
+      .timeline {
+        display: block !important;
+        margin: 12px auto !important;
+        max-width: 80% !important;
+        position: relative !important;
+      }
+      
+      .timeline::before {
+        background: linear-gradient(180deg, #24d17e, #00b7ff) !important;
+        width: 2px !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      .mile {
+        background: rgba(255,255,255,0.05) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        padding: 10px !important;
+        margin: 8px 0 8px 25px !important;
+        font-size: 8pt !important;
+        color: #e6e8ef !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      .time {
+        color: #24d17e !important;
+        font-weight: bold !important;
+        font-size: 9pt !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* CTA buttons - larger */
+      .cta { 
+        background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
+        color: #0a0b14 !important;
+        border: none !important;
+        font-weight: bold !important;
+        padding: 8px 16px !important;
+        display: inline-block !important;
+        margin: 6px !important;
+        font-size: 9pt !important;
+        border-radius: 999px !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* Market bubbles */
+      .bubble {
+        background: linear-gradient(135deg, #24d17e, #00b7ff) !important;
+        color: #0a0b14 !important;
+        font-weight: bold !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* === PATCH PDF ALIGN/CENTER === */
+      /* 1) Désactiver le backdrop flou (banding + poids) */
+      .backdrop { display: none !important; }
+
+      /* 2) Colonne de contenu centrée et cohérente sur tous les slides */
+      .slide {
+        display: grid !important;
+        place-items: center !important;
+        box-sizing: border-box !important;
+      }
+      
+      /* Contrainte douce sur la largeur "utile" interne */
+      .slide > * {
+        max-width: calc(297mm - 24mm);
+        margin-left: auto !important;
+        margin-right: auto !important;
+      }
+
+      /* 3) Grilles & flex centrés systématiquement */
+      .grid,
+      .problem,
+      .flow,
+      .market,
+      .ask > div,
+      .timeline {
+        margin-left: auto !important;
+        margin-right: auto !important;
+        justify-content: center !important;
+        align-items: stretch !important;
+      }
+
+      /* 4) Tables et cartes : pas de reflow bizarre, hauteurs homogènes */
+      .table { margin-left: auto !important; margin-right: auto !important; }
+      .card { height: 100% !important; }
+
+      /* 5) Sécurité : empêcher les sauts internes si un slide se recompose */
+      .slide, .card, .table, .problem, .grid { break-inside: avoid !important; }
+
+      /* 6) Alléger encore les effets */
+      .slide::after { content: none !important; }
+      
+      /* Force colors */
+      [style*="color:var(--accent)"], 
+      [style*="color: var(--accent)"] { 
+        color: #24d17e !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      [style*="color:var(--muted)"], 
+      [style*="color: var(--muted)"] { 
+        color: #aab2c8 !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* Links */
+      a { 
+        color: #00b7ff !important;
+        text-decoration: underline !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      
+      /* Hide animations */
+      * { 
+        animation: none !important;
+        transition: none !important;
+      }
+      
+      /* Page title in footer */
+      .slide::after {
+        content: attr(data-title);
+        position: absolute;
+        bottom: 3px;
+        right: 10px;
+        font-size: 7pt;
+        color: #666;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+  <div class="container">
+    <!-- Toolbar -->
+    <div class="toolbar" role="toolbar" aria-label="Contrôles de présentation">
+      <button class="btn primary" id="togglePresent">Mode Présentation</button>
+      <button class="btn" id="prev">◀︎ Précédent</button>
+      <button class="btn" id="next">Suivant ▶︎</button>
+      <button class="btn" id="print">📄 Exporter PDF</button>
+      <span class="pill">Astuce : ← / → ou P pour basculer</span>
+    </div>
+
+    <!-- Slide 1 - Couverture -->
+    <section class="slide" data-title="Couverture" style="display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; position: relative; overflow: hidden;">
+      <!-- Animated gradient orbs -->
+      <div style="position: absolute; top: -100px; left: 20%; width: 200px; height: 200px; background: radial-gradient(circle, rgba(36,209,126,0.4), transparent 70%); filter: blur(60px); animation: float 8s ease-in-out infinite;"></div>
+      <div style="position: absolute; bottom: -80px; right: 15%; width: 180px; height: 180px; background: radial-gradient(circle, rgba(0,183,255,0.4), transparent 70%); filter: blur(50px); animation: float 10s ease-in-out infinite reverse;"></div>
+      <div style="position: absolute; top: 50%; left: -50px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(255,183,3,0.3), transparent 70%); filter: blur(40px); animation: float 12s ease-in-out infinite;"></div>
+      
+      <!-- Main content -->
+      <div style="position: relative; z-index: 1;">
+        <h1 style="font-size: 5em; margin-bottom: 20px; letter-spacing: 4px; text-shadow: 0 0 40px rgba(36,209,126,0.3); animation: glow 3s ease-in-out infinite alternate;">NOVIS</h1>
+        
+        <div style="max-width:750px; margin: 0 auto;">
+          <p class="tagline" style="font-size:1.45em;font-weight:800;line-height:1.4;">
+            L'app qui <span style="color:var(--accent);text-shadow: 0 0 10px rgba(36,209,126,0.4);">relie budget</span>, 
+            <span style="color:var(--accent);text-shadow: 0 0 10px rgba(36,209,126,0.4);">fiscalité</span> et 
+            <span style="color:var(--accent);text-shadow: 0 0 10px rgba(36,209,126,0.4);">portefeuilles</span><br/>
+            pour investir simplement — <b style="background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent;">5&nbsp;€/mois</b>
+          </p>
+          
+          <!-- Status badges -->
+          <div style="margin: 30px 0; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <span class="pill" style="background: linear-gradient(135deg, rgba(255,183,3,0.2), rgba(255,183,3,0.1)); border-color: rgba(255,183,3,0.4); color: #ffb703;">
+              🚀 Site en finalisation
+            </span>
+            <span class="pill" style="background: linear-gradient(135deg, rgba(36,209,126,0.2), rgba(36,209,126,0.1)); border-color: rgba(36,209,126,0.4); color: var(--accent);">
+              👥 Phase de recrutement
+            </span>
+            <span class="pill" style="background: linear-gradient(135deg, rgba(0,183,255,0.2), rgba(0,183,255,0.1)); border-color: rgba(0,183,255,0.4); color: var(--accent-2);">
+              ✅ Vérifications en cours
+            </span>
+          </div>
+          
+          <!-- Coming soon banner -->
+          <div style="margin: 20px auto; padding: 16px 24px; background: linear-gradient(135deg, rgba(36,209,126,0.15), rgba(0,183,255,0.1)); border: 2px solid var(--accent); border-radius: 20px; max-width: 400px;">
+            <p style="margin: 0; font-weight: 700; font-size: 1.1em; color: var(--accent);">
+              🎯 Lancement imminent
+            </p>
+            <p style="margin: 5px 0 0; font-size: 0.95em; opacity: 0.9;">
+              Beta privée • Accès sur sélection
+            </p>
+          </div>
+        </div>
+        
+        <!-- Founder section with enhanced styling -->
+        <div style="margin-top: 40px; padding: 20px; background: rgba(255,255,255,0.03); border-radius: 15px; border: 1px solid rgba(255,255,255,0.08);">
+          <p style="font-size: 1.2em; font-weight: 700; color: var(--accent); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 2px;">Fondateur</p>
+          <p class="author" style="font-size: 1.6em; margin: 0;">Benoît Comas</p>
+        </div>
+      </div>
+      
+      <!-- Add glow animation -->
+      <style>
+        @keyframes glow {
+          from { filter: brightness(1) drop-shadow(0 0 20px rgba(36,209,126,0.2)); }
+          to { filter: brightness(1.1) drop-shadow(0 0 30px rgba(36,209,126,0.4)); }
+        }
+      </style>
+    </section>
+
+    <!-- Slide 2 - Problème -->
+    <section class="slide" data-title="Le Problème" style="display: flex; flex-direction: column; justify-content: center;">
+      <h2 style="text-align: center;">Le Vrai Problème : Les Lacunes d'Information Financière</h2>
+      <div class="problem">
+        <div class="callout" style="text-align:center;">
+          <strong>6,8&nbsp;%</strong> détiennent des actions en direct
+          <div style="font-size:.9em;opacity:.85;">Culture financière encore faible en France¹</div>
+        </div>
+        <div class="callout" style="text-align:center;">
+          <strong>1,35–1,42&nbsp;%</strong> de frais/an sur fonds
+          <div style="font-size:.9em;opacity:.85;">Hors frais d'entrée, AV, courtage²</div>
+        </div>
+        <div class="callout" style="text-align:center;background:linear-gradient(180deg,rgba(36,209,126,.12),rgba(36,209,126,.06));border-color:rgba(36,209,126,.35);">
+          <strong>Pourquoi maintenant ?</strong><br/>Inflation & Livret A saturé =&nbsp;épargne <b>qui s'érode</b>
+        </div>
+      </div>
+      <h3 style="text-align:center;margin-top:16px;">
+        <span style="color:var(--accent);">Info partout,</span> <span style="color:#ffb703;">lien nulle part</span> → on n'investit pas.
+      </h3>
+      <p style="text-align: center; font-size: 0.8em; color: var(--muted); margin-top: 20px;">
+        Sources : ¹OCDE/AMF 2023 · ²AMF Rapport 2023
+      </p>
+    </section>
+
+    <!-- Slide 3 - Solution -->
+    <section class="slide" data-title="La solution" style="display: flex; flex-direction: column; justify-content: center;">
+      <h2 style="text-align: center;">NOVIS : La Solution</h2>
+      <h3 style="text-align:center; margin-bottom: 25px;">Une seule plateforme · Un seul prix · Tout devient simple</h3>
+      <div class="flow" aria-label="Parcours utilisateur">
+        <span class="chip">1. J'organise</span>
+        <span class="arrow">→</span>
+        <span class="chip">2. J'apprends</span>
+        <span class="arrow">→</span>
+        <span class="chip">3. J'investis</span>
+        <span class="arrow">→</span>
+        <span class="chip">4. Je prospère</span>
+      </div>
+      
+      <p style="text-align:center;margin:8px 0 0;">
+        <span class="pill">⏱️ En 7 jours : plan d'investissement, enveloppe fiscale prioritaire, watchlist ETF</span>
+      </p>
+      
+      <div style="text-align: center; margin-top: 30px;">
+        <h3 style="color: var(--accent);">Notre approche unique</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px;">
+          <div class="card" style="text-align: center;">
+            <strong>📚 Éducation First</strong>
+            Chaque concept expliqué simplement
+          </div>
+          <div class="card" style="text-align:center;">
+            <strong>🎥 Accompagnement continu</strong>
+            Daily TikTok + live hebdo Q&A
+          </div>
+          <div class="card" style="text-align: center;">
+            <strong>💶 Prix Militant</strong>
+            5&nbsp;€/mois vs 40-60&nbsp;€ ailleurs
+          </div>
+        </div>
+      </div>
+      
+      <p style="text-align:center; margin-top: 20px; font-size: 1.2em; color: var(--accent);">
+        « Les outils complexes créent des investisseurs perdants. La simplicité crée la richesse. »
+      </p>
+      <p style="text-align:center; font-size: 0.85em; color: var(--muted);">
+        *Données décalées de 15 minutes (suffisant pour 99% des investisseurs particuliers)
+      </p>
+    </section>
+
+    <!-- Slide 4 - Fonctionnalités -->
+    <section class="slide" data-title="Fonctionnalités" style="display: flex; flex-direction: column; justify-content: center;">
+      <h2 style="text-align: center;">NOVIS : L'Écosystème Interconnecté</h2>
+      
+      <div style="text-align: center; margin: 20px 0;">
+        <h3 style="color: var(--accent);">🔗 Le cœur : 3 Portefeuilles Optimisés</h3>
+        <div style="display: flex; justify-content: center; gap: 15px; margin: 15px 0;">
+          <span class="pill">🔥 Agressif</span>
+          <span class="pill">⚖️ Modéré</span>
+          <span class="pill">🛡️ Stable</span>
+        </div>
+        <p style="font-size: 0.95em; color: var(--muted);">Connectés en temps réel aux actualités filtrées, data marchés, secteurs, actions, ETF, crypto</p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 20px 0; font-size: 0.9em;">
+        <div>
+          <h3 style="color: var(--accent); font-size: 1.1em; margin-bottom: 10px;">📊 Marchés & Analyse</h3>
+          <div class="card" style="margin: 5px 0;"><strong>Marchés</strong> Vue globale indices</div>
+          <div class="card" style="margin: 5px 0;"><strong>Secteurs</strong> Europe & US analysés</div>
+          <div class="card" style="margin: 5px 0;"><strong>Actions</strong> Screener multi-critères</div>
+          <div class="card" style="margin: 5px 0;"><strong>ETF & Crypto</strong> Analyses comparées</div>
+        </div>
+        
+        <div>
+          <h3 style="color: var(--accent); font-size: 1.1em; margin-bottom: 10px;">💰 Simulation & Fiscal</h3>
+          <div class="card" style="margin: 5px 0;"><strong>Investissement</strong> PEA/CTO/AV optimisé</div>
+          <div class="card" style="margin: 5px 0;"><strong>Budget/Épargne</strong> Capacité mensuelle</div>
+          <div class="card" style="margin: 5px 0;"><strong>Dette & PTZ</strong> Simulateur complet</div>
+          <div class="card" style="margin: 5px 0;"><strong>Guide Placements</strong> Produits décryptés</div>
+        </div>
+        
+        <div>
+          <h3 style="color: var(--accent); font-size: 1.1em; margin-bottom: 10px;">🏠 Patrimoine & Business</h3>
+          <div class="card" style="margin: 5px 0;"><strong>Immobilier</strong> Data + fiscalité</div>
+          <div class="card" style="margin: 5px 0;"><strong>Entreprise</strong> Statut + simulateur</div>
+          <div class="card" style="margin: 5px 0;"><strong>Coûts cachés</strong> Frais révélés</div>
+          <div class="card" style="margin: 5px 0;"><strong>Projets</strong> Actuel vs optimisé</div>
+        </div>
+      </div>
+      
+      <p style="text-align:center;margin-top:12px;">
+        <span class="pill" style="font-size:1.05em;background:rgba(36,209,126,0.15);">
+          🔗 Tout est relié : news → portefeuilles → simulations
+        </span>
+      </p>
+    </section>
+
+    <!-- Slide 5 - Différenciation -->
+    <section class="slide" data-title="Différenciation" style="display: flex; flex-direction: column; justify-content: center;">
+      <h2 style="text-align: center;">4 Différenciateurs Qui Changent Tout</h2>
+      
+      <div style="max-width: 950px; margin: 20px auto;">
+        <div class="card" style="padding:20px;margin:15px 0;border-left:4px solid var(--accent);">
+          <h3 style="color:var(--accent);margin:0 0 8px;">1. Par un investisseur, pour les gens</h3>
+          <ul style="margin:0;padding-left:18px;">
+            <li>Langage simple, sans jargon</li>
+            <li>Process perso ouvert et documenté</li>
+            <li>Décisions expliquées, pas "signaux"</li>
+          </ul>
+        </div>
+        
+        <div class="card" style="padding:20px;margin:15px 0;border-left:4px solid var(--accent);">
+          <h3 style="color:var(--accent);margin:0 0 8px;">2. Mon système d'investissement personnel ouvert</h3>
+          <ul style="margin:0;padding-left:18px;">
+            <li>MON tableau de bord quotidien partagé</li>
+            <li>Améliorations instantanées pour tous</li>
+            <li>Pas une app pour vous vendre</li>
+          </ul>
+        </div>
+        
+        <div class="card" style="padding:20px;margin:15px 0;border-left:4px solid var(--accent);">
+          <h3 style="color:var(--accent);margin:0 0 8px;">3. Comprendre les différents types d'investissement</h3>
+          <ul style="margin:0;padding-left:18px;">
+            <li>PEA vs CTO vs AV : différences réelles</li>
+            <li>Pièges cachés révélés</li>
+            <li>Tout comparé au même endroit</li>
+          </ul>
+        </div>
+        
+        <div class="card" style="padding:20px;margin:15px 0;border-left:4px solid var(--accent);">
+          <h3 style="color:var(--accent);margin:0 0 8px;">4. Une communauté, pas juste un outil</h3>
+          <ul style="margin:0;padding-left:18px;">
+            <li>Vidéos TikTok quotidiennes</li>
+            <li>Lives hebdomadaires Q&A</li>
+            <li>J'investis avec vous, on apprend ensemble</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div style="text-align: center; margin-top: 25px; padding: 20px; background: rgba(36,209,126,0.1); border-radius: 15px;">
+        <h3 style="color: var(--accent);">Preuves terrain</h3>
+        <p style="font-size: 1.2em; margin: 10px 0;">
+          <strong>Parcours personnel vérifié :</strong><br/>
+          Livret A → PEA → CTO → AV → ETF → SCPI → Immobilier locatif
+        </p>
+        <p style="margin-top: 15px; color: var(--muted); font-size: 0.95em;">
+          Je ne théorise pas. J'investis avec vous, avec mon propre argent, tous les jours.
+        </p>
+      </div>
+    </section>
+
+    <!-- Slide 6 - Modèle économique -->
+    <section class="slide" data-title="Modèle économique" style="display:flex;flex-direction:column;justify-content:center;">
+      <h2 style="text-align:center;">Modèle Économique Ultra-Lean</h2>
+      <p style="text-align:center;margin:0 0 12px;">
+        <span class="pill">✅ Rentable dès ~178 abonnés (config lean)</span>
+      </p>
+
+      <div class="metrics" style="max-width:920px;margin:18px auto;">
+        <div class="metric"><div class="val">5&nbsp;€</div><div class="lab">Prix / abonné / mois</div></div>
+        <div class="metric"><div class="val">~800&nbsp;€</div>
+          <div class="lab">Fixes de démarrage (APIs 500 · Serveur 100 · Maintenance 200)</div>
+        </div>
+        <div class="metric"><div class="val">~0,50&nbsp;€</div><div class="lab">Coût variable / abonné</div></div>
+        <div class="metric"><div class="val">~4,50&nbsp;€</div><div class="lab">Marge unitaire</div></div>
+      </div>
+
+      <div class="grid" style="max-width:980px;margin:8px auto 6px;">
+        <div class="card">
+          <strong>Fixes indispensables</strong>
+          APIs 500&nbsp;€/mois · Serveur 100&nbsp;€/mois · Maintenance 200&nbsp;€/mois<br/>
+          <span class="pill" style="margin-top:8px;">Total v1 : ~800&nbsp;€/mois</span>
+        </div>
+        <div class="card">
+          <strong>Optionnels activables</strong>
+          Monteur TikTok 300&nbsp;€/mois · Juridique/MAJ 200&nbsp;€/mois<br/>
+          <span class="pill" style="margin-top:8px;">Quand la traction le justifie</span>
+        </div>
+        <div class="card">
+          <strong>Variables par abonné</strong>
+          Paiement (~0,35&nbsp;€) + API incrémental + Serveur incrémental ≈ <b>~0,50&nbsp;€</b><br/>
+          <span class="pill" style="margin-top:8px;">Contribution ≈ 5&nbsp;€ − 0,50&nbsp;€ = 4,50&nbsp;€</span>
+        </div>
+      </div>
+
+      <h3 style="text-align:center;color:var(--accent);margin-top:12px;">Point mort (abonnés)</h3>
+      <table class="table" style="max-width:820px;margin:10px auto;">
+        <thead><tr><th>Configuration</th><th>Fixes mensuels</th><th>Contribution</th><th>Point mort</th></tr></thead>
+        <tbody>
+          <tr><td>Lean (sans options)</td><td>~800&nbsp;€</td><td>~4,50&nbsp;€/abonné</td><td><b>~178</b></td></tr>
+          <tr><td>Avec Monteur + Juridique</td><td>~1&nbsp;300&nbsp;€</td><td>~4,50&nbsp;€/abonné</td><td><b>~289</b></td></tr>
+        </tbody>
+      </table>
+
+      <p style="text-align:center;color:var(--muted);margin-top:6px;">
+        Sensibilité : si le variable monte à 0,80&nbsp;€, point mort ≈ <b>~190</b> abonnés (lean).
+      </p>
+    </section>
+
+    <!-- Slide 7 - Conformité -->
+    <section class="slide" data-title="Conformité AMF" style="display: flex; flex-direction: column; justify-content: center;">
+      <h2 style="text-align: center;">100% Conforme AMF & Légal</h2>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; max-width: 900px; margin: 30px auto;">
+        <div style="text-align: center;">
+          <h3 style="color: var(--accent); margin-bottom: 15px;">✅ CE QUE NOVIS FAIT</h3>
+          <div class="card" style="margin: 10px 0;"><strong>Éducation financière</strong><br/>Contenus pédagogiques généraux</div>
+          <div class="card" style="margin: 10px 0;"><strong>Conseils généraux</strong><br/>Jamais personnalisés ou individualisés</div>
+          <div class="card" style="margin: 10px 0;"><strong>Outils de simulation</strong><br/>Calculs et projections neutres</div>
+          <div class="card" style="margin: 10px 0;"><strong>Information publique</strong><br/>Données de marché accessibles</div>
+        </div>
+        
+        <div style="text-align: center;">
+          <h3 style="color: #ff8fa1; margin-bottom: 15px;">❌ CE QUE NOVIS NE FAIT PAS</h3>
+          <div class="card" style="margin: 10px 0; background: rgba(255,63,94,0.1);"><strong>Conseil personnalisé</strong><br/>Pas de "vous devriez acheter X"</div>
+          <div class="card" style="margin: 10px 0; background: rgba(255,63,94,0.1);"><strong>Gestion pour compte</strong><br/>Pas de gestion d'argent client</div>
+          <div class="card" style="margin: 10px 0; background: rgba(255,63,94,0.1);"><strong>Recommandation individuelle</strong><br/>Pas d'adaptation au profil</div>
+          <div class="card" style="margin: 10px 0; background: rgba(255,63,94,0.1);"><strong>Exécution d'ordres</strong><br/>Pas de trading direct</div>
+        </div>
+      </div>
+      
+      <div style="text-align: center; margin-top: 30px;">
+        <p class="pill" style="padding: 15px 30px; font-size: 1.1em; background: rgba(33,150,243,0.15);">
+          🏛️ Conforme au cadre AMF : éducation, conseils non personnalisés, simulations
+        </p>
+      </div>
+      
+      <p style="text-align:center;margin-top:14px;color:var(--muted);">
+        NOVIS n'est <b>ni CIF</b> ni <b>PSI</b> : pas de conseil personnalisé, pas d'exécution d'ordres.
+      </p>
+    </section>
+
+    <!-- Slide 8 - Marché -->
+    <section class="slide" data-title="Marché" style="display: flex; flex-direction: column; justify-content: center;">
+      <h2 style="text-align: center;">Un Marché Gigantesque & Inexploité</h2>
+      
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; max-width: 900px; margin: 30px auto;">
+        <div style="text-align: center;">
+          <div style="width: 180px; height: 180px; margin: 0 auto; border-radius: 50%; background: linear-gradient(135deg, #3498db, #2980b9); display: flex; align-items: center; justify-content: center; flex-direction: column; color: white;">
+            <div style="font-size: 2.5em; font-weight: 900;">28M</div>
+            <div style="font-size: 0.9em;">TAM</div>
+          </div>
+          <p style="margin-top: 15px; font-weight: 600;">Épargnants français¹</p>
+          <p style="font-size: 0.85em; color: var(--muted);">Potentiel total</p>
+        </div>
+        
+        <div style="text-align: center;">
+          <div style="width: 150px; height: 150px; margin: 15px auto; border-radius: 50%; background: linear-gradient(135deg, #9b59b6, #8e44ad); display: flex; align-items: center; justify-content: center; flex-direction: column; color: white;">
+            <div style="font-size: 2.2em; font-weight: 900;">93%</div>
+            <div style="font-size: 0.85em;">SAM</div>
+          </div>
+          <p style="margin-top: 15px; font-weight: 600;">Sans actions directes²</p>
+          <p style="font-size: 0.85em; color: var(--muted);">Cible directe</p>
+        </div>
+        
+        <div style="text-align: center;">
+          <div style="width: 120px; height: 120px; margin: 30px auto; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2)); display: flex; align-items: center; justify-content: center; flex-direction: column; color: #0a0b14;">
+            <div style="font-size: 1.8em; font-weight: 900;">100K</div>
+            <div style="font-size: 0.8em;">SOM</div>
+          </div>
+          <p style="margin-top: 15px; font-weight: 600;">Objectif 2 ans</p>
+          <p style="font-size: 0.85em; color: var(--muted);">0,4% du marché</p>
+        </div>
+      </div>
+      
+      <div style="text-align: center; margin-top: 30px;">
+        <h3 style="color: var(--accent);">Opportunité de marché</h3>
+        <div style="display: flex; justify-content: center; gap: 30px; margin-top: 15px; flex-wrap: wrap;">
+          <div class="pill" style="padding: 12px 20px;">💰 432 Mds€ sur Livret A³</div>
+          <div class="pill" style="padding: 12px 20px;">📈 603 Mds€ Livret A+LDDS⁴</div>
+          <div class="pill" style="padding: 12px 20px;">🎯 Rebond fintech 2024⁵</div>
+        </div>
+        
+        <h3 style="color: var(--accent);margin-top:20px;">Go-to-Market</h3>
+        <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:8px;">
+          <span class="pill">TikTok organique (daily)</span>
+          <span class="pill">UGC & micro-influence</span>
+          <span class="pill">Partenariats néobanques</span>
+        </div>
+      </div>
+      
+      <p style="text-align: center; font-size: 0.75em; color: var(--muted); margin-top: 25px;">
+        Sources : ¹INSEE 2024 · ²OCDE/AMF 2023 · ³⁴Banque de France 2024 · ⁵France Fintech 2024
+      </p>
+    </section>
+
+    <!-- Slide 9 - Équipe -->
+    <section class="slide" data-title="Équipe" style="display: flex; flex-direction: column; justify-content: center;">
+      <h2 style="text-align: center;">Équipe NOVIS : Focus & Expertise</h2>
+      <div class="grid" style="max-width: 1000px; margin: 30px auto;">
+        <div class="card" style="text-align: center; padding: 25px;">
+          <strong style="font-size: 1.2em;">Benoît Comas</strong><br/>
+          <span style="color: var(--muted);">Fondateur</span><br/>
+          <hr style="margin: 10px 0; opacity: 0.2;"/>
+          • Parcours scolaire financier<br/>
+          • Expérience financière<br/>
+          • Investisseur actif<br/>
+          • Autodidacte tech & IA
+        </div>
+        <div class="card" style="text-align: center; padding: 25px;">
+          <strong style="font-size: 1.2em;">Développeur Senior</strong><br/>
+          <span style="color: var(--muted);">En recrutement</span><br/>
+          <hr style="margin: 10px 0; opacity: 0.2;"/>
+          • Architecture fintech<br/>
+          • APIs & intégrations<br/>
+          • Performance & sécurité<br/>
+          • Maintenance continue
+        </div>
+        <div class="card" style="text-align: center; padding: 25px;">
+          <strong style="font-size: 1.2em;">Conseil Juridique</strong><br/>
+          <span style="color: var(--muted);">En recrutement</span><br/>
+          <hr style="margin: 10px 0; opacity: 0.2;"/>
+          • Expertise AMF<br/>
+          • Veille réglementaire<br/>
+          • Validation légale<br/>
+          • Protection données
+        </div>
+        <div class="card" style="text-align: center; padding: 25px;">
+          <strong style="font-size: 1.2em;">Monteur TikTok</strong><br/>
+          <span style="color: var(--muted);">En recrutement</span><br/>
+          <hr style="margin: 10px 0; opacity: 0.2;"/>
+          • Montage quotidien<br/>
+          • Optimisation algorithme<br/>
+          • Formats viraux<br/>
+          • 300&nbsp;€/mois activable
+        </div>
+      </div>
+      <p style="text-align:center; margin-top: 25px; font-size: 1.15em;">
+        <span class="pill" style="padding: 12px 25px;">💡 Équipe réduite · Expertise maximale · Coûts maîtrisés</span>
+      </p>
+    </section>
+
+    <!-- Slide 10 - Roadmap -->
+    <section class="slide" data-title="Roadmap" style="display: flex; flex-direction: column; justify-content: center;">
+      <h2 style="text-align: center;">Roadmap NOVIS : Croissance Maîtrisée</h2>
+      <div class="timeline" style="max-width: 800px; margin: 30px auto;">
+        <div class="mile">
+          <div class="time">Phase 1 : 0–6 mois</div>
+          <strong>Validation & traction</strong><br/>
+          KPI : 500 abonnés payants · 10&nbsp;k TikTok · NPS&nbsp;>80<br/>
+          Livrables : site SEO, 1 partenariat néobanque, format vidéo quotidien
+        </div>
+        <div class="mile">
+          <div class="time">Phase 2 : 6–12 mois</div>
+          <strong>Croissance & Mobile</strong><br/>
+          KPI : 3&nbsp;000 users (14k€/mois) · 50k TikTok · Rétention >85%<br/>
+          Livrables : app iOS/Android, IA recommandations, v2.0 avec retours
+        </div>
+        <div class="mile">
+          <div class="time">Phase 3 : 12–24 mois</div>
+          <strong>Leader & Expansion</strong><br/>
+          KPI : 100k users (500k€/mois) · 1M€/mois gains users · CAC=0€<br/>
+          Livrables : expansion Belgique/Lux, référence française, équipe 10 max
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 11 - Ask -->
+    <section class="slide" data-title="Ce dont nous avons besoin" style="display: flex; flex-direction: column; justify-content: center;">
+      <h2 style="text-align: center;">Pour Faire Décoller NOVIS</h2>
+      
+      <div style="max-width: 900px; margin: 20px auto;">
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 25px;">
+          <div class="card" style="padding: 25px; text-align: center; background: linear-gradient(135deg, rgba(36,209,126,0.1), rgba(0,183,255,0.1));">
+            <span style="font-size: 2.5em;">📺</span>
+            <h3 style="color: var(--accent); margin: 15px 0 10px;">Visibilité médiatique</h3>
+            <p>Toucher les 21 millions d'épargnants qui ne connaissent pas l'alternative</p>
+          </div>
+          
+          <div class="card" style="padding: 25px; text-align: center; background: linear-gradient(135deg, rgba(36,209,126,0.1), rgba(0,183,255,0.1));">
+            <span style="font-size: 2.5em;">🤝</span>
+            <h3 style="color: var(--accent); margin: 15px 0 10px;">Réseau fintech</h3>
+            <p>Partenariats néobanques et acteurs épargne pour accélérer</p>
+          </div>
+          
+          <div class="card" style="padding:25px;text-align:center;background:linear-gradient(135deg,rgba(36,209,126,0.1),rgba(0,183,255,0.1));">
+            <span style="font-size:2.5em;">🎬</span>
+            <h3 style="color:var(--accent);margin:15px 0 8px;">Monteur TikTok freelance</h3>
+            <p>Daily formats + A/B tests pour accélérer l'orga (300&nbsp;€/mois activable)</p>
+          </div>
+          
+          <div class="card" style="padding: 25px; text-align: center; background: linear-gradient(135deg, rgba(36,209,126,0.1), rgba(0,183,255,0.1));">
+            <span style="font-size: 2.5em;">👥</span>
+            <h3 style="color: var(--accent); margin: 15px 0 10px;">100 beta-testeurs</h3>
+            <p>Communauté engagée pour perfectionner l'expérience utilisateur</p>
+          </div>
+        </div>
+        
+        <div style="background: linear-gradient(135deg, #ffb703, #fb8500); padding: 30px; border-radius: 20px; text-align: center; color: #0a0b14;">
+          <h3 style="font-size: 1.5em; margin-bottom: 15px;">🛡️ Notre Ligne Rouge</h3>
+          <p style="font-size: 1.2em; font-weight: bold;">
+            ZERO DILUTION = Rester à 5&nbsp;€/mois pour toujours
+          </p>
+          <p style="margin-top: 10px;">
+            J'ai déjà refusé 3 propositions d'investissement.<br/>
+            Notre mission sociale passe avant l'enrichissement.
+          </p>
+        </div>
+      </div>
+      
+      <p style="text-align: center; margin-top: 25px; font-size: 1.1em; color: var(--muted);">
+        "Je préfère 10&nbsp;000 utilisateurs qui changent leur vie à 5&nbsp;€<br/>
+        qu'un exit à 10M€ qui trahit la mission."
+      </p>
+    </section>
+
+    <!-- Slide 12 - Contact / Mission -->
+    <section class="slide" data-title="Contact" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+      <h3 style="color: var(--accent); margin-top: 25px;">Notre Mission</h3>
+      <p style="font-style: italic; font-size: 1.3em; margin: 10px 0;">
+        « Permettre à 21&nbsp;millions de Français de transformer leur épargne dormante<br/>
+        en patrimoine actif — sans enrichir des investisseurs »
+      </p>
+      
+      <div style="margin: 30px 0;">
+        <h2>Rejoignez NOVIS</h2>
+        <h3 style="color: var(--accent); margin: 15px 0;">Benoît Comas — Fondateur</h3>
+        <p style="font-size: 1.1em;">Expert Finance & Immobilier · 7 ans d'expérience · Autodidacte IA</p>
+        
+        <p style="display:flex; flex-wrap:wrap; gap:10px; justify-content: center; margin: 20px 0;">
+          <a href="mailto:mynovis@novisfr.com" class="pill" style="text-decoration:none;">📧 mynovis@novisfr.com</a>
+          <span class="pill">📱 06&nbsp;77&nbsp;13&nbsp;89&nbsp;30</span>
+          <span class="pill">💼 LinkedIn&nbsp;: Benoît Comas</span>
+        </p>
+      </div>
+      
+      <div style="background: rgba(255,183,3,0.1); border: 2px solid rgba(255,183,3,0.3); border-radius: 20px; padding: 20px; margin: 20px 0;">
+        <h3 style="color: #ffb703; margin-bottom: 10px;">🔒 Accès Beta Exclusif</h3>
+        <p style="margin: 5px 0;">Plateforme en <strong>beta privée</strong> · Accès réservé aux partenaires sélectionnés</p>
+      </div>
+      
+      <p style="color: var(--muted); margin-top: 20px; padding: 10px; background: rgba(33,150,243,0.1); border-radius: 10px;">
+        ✅ 100% conforme AMF · Contenu éducatif & conseils généraux uniquement
+      </p>
+    </section>
+  </div>
+
+  <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+
+  <script>
+    // ===== Auto-fit anti-rognage (pré-impression) =====
+    (function () {
+      const MM_TO_PX = 96 / 25.4; // ~3.7795
+      const PAGE_W_MM = 297, PAGE_H_MM = 210;
+      const pageWpx = PAGE_W_MM * MM_TO_PX, pageHpx = PAGE_H_MM * MM_TO_PX;
+
+      function fitSlides() {
+        document.querySelectorAll('.slide').forEach(slide => {
+          slide.style.transformOrigin = 'top left';
+          slide.style.transform = ''; // reset
+          // petit buffer pour prévenir les arrondis/ombres
+          const rect = slide.getBoundingClientRect();
+          const scale = Math.min(
+            1,
+            (pageWpx - 4) / rect.width,
+            (pageHpx - 4) / rect.height
+          );
+          if (scale < 1) slide.style.transform = `scale(${scale})`;
+        });
+      }
+
+      if (window.matchMedia) {
+        window.addEventListener('beforeprint', fitSlides);
+        window.addEventListener('afterprint', () => {
+          document.querySelectorAll('.slide').forEach(s => s.style.transform = '');
+        });
+      }
+
+      // Bonus: si tu appuies sur le bouton Exporter PDF
+      const btn = document.getElementById('print');
+      if (btn) btn.addEventListener('click', fitSlides, { capture: true });
+    })();
+
+    // ===== Presentation Controls =====
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const progressBar = document.getElementById('progressBar');
+    let index = 0;
+
+    function show(i) {
+      index = (i + slides.length) % slides.length;
+      if (document.body.classList.contains('present')) {
+        slides[index].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      const pct = ((index + 1) / slides.length) * 100;
+      progressBar.style.width = pct + '%';
+      document.title = `${slides[index].dataset.title || 'slide'} — NOVIS`;
+    }
+
+    function next() { show(index + 1); }
+    function prev() { show(index - 1); }
+
+    document.getElementById('next').addEventListener('click', next);
+    document.getElementById('prev').addEventListener('click', prev);
+    
+    // Improved PDF export function
+    document.getElementById('print').addEventListener('click', () => {
+      // Add print-mode class temporarily for better styling
+      document.body.classList.add('print-mode');
+      
+      // Trigger print dialog with PDF save option
+      window.print();
+      
+      // Show instructions if needed
+      setTimeout(() => {
+        if (!window.matchMedia('print').matches) {
+          alert('💡 Astuce : Dans la fenêtre d\'impression, sélectionnez "Enregistrer en PDF" comme imprimante.\n\nParamètres recommandés :\n• Format : Paysage\n• Marges : Aucune\n• Graphiques d\'arrière-plan : Activé');
+        }
+        document.body.classList.remove('print-mode');
+      }, 100);
+    });
+
+    const toggleBtn = document.getElementById('togglePresent');
+    toggleBtn.addEventListener('click', () => {
+      document.body.classList.toggle('present');
+      show(index);
+    });
+
+    // Keyboard shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'p') { document.body.classList.toggle('present'); show(index); }
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') { next(); }
+      if (e.key === 'ArrowLeft' || e.key === 'PageUp') { prev(); }
+    });
+
+    // Auto-update progress on scroll in non-present mode
+    const io = new IntersectionObserver((entries) => {
+      const vis = entries.filter(e => e.isIntersecting).sort((a,b)=> b.intersectionRatio - a.intersectionRatio)[0];
+      if (vis) {
+        index = slides.indexOf(vis.target);
+        const pct = ((index + 1) / slides.length) * 100;
+        progressBar.style.width = pct + '%';
+      }
+    }, { threshold: [0.51] });
+    slides.forEach(s => io.observe(s));
+
+    // Initial
+    show(0);
+  </script>
+</body>
+</html>
