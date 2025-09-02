@@ -335,3 +335,42 @@ body {
 .dark-mode .stock-performance {
     background-color: rgba(0, 0, 0, 0.2);
 }
+
+/* === NOUVEAU: Classes pour le payout ratio === */
+/* Couleurs pour le payout selon la soutenabilité */
+.payout-ok-strong { 
+    color: #22c55e; /* Vert foncé - <30% excellent */
+    font-weight: 600;
+}
+
+.payout-ok { 
+    color: #4ade80; /* Vert - 30-60% bon */
+    font-weight: 600;
+}
+
+.payout-warn { 
+    color: #facc15; /* Jaune - 60-80% attention */
+    font-weight: 600;
+}
+
+.payout-high { 
+    color: #fb923c; /* Orange - 80-100% élevé */
+    font-weight: 600;
+}
+
+.payout-risk { 
+    color: #f87171; /* Rouge - >100% risqué */
+    font-weight: 600;
+}
+
+/* Dark mode adjustments pour payout */
+.dark-mode .payout-ok-strong { color: #34d399; }
+.dark-mode .payout-ok { color: #6ee7b7; }
+.dark-mode .payout-warn { color: #fde047; }
+.dark-mode .payout-high { color: #fdba74; }
+.dark-mode .payout-risk { color: #fca5a5; }
+
+/* Transition smooth pour les couleurs */
+[class^="payout-"] {
+    transition: color 0.2s ease;
+}
