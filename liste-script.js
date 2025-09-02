@@ -5,6 +5,7 @@
  * Ajout de panneaux détails extensibles pour chaque action
  * MODIFIÉ: Section A→Z indépendante des filtres Top 10
  * AJOUT: Filtres région, pays et secteur pour la section A→Z
+ * v1.1: Intégration du payout ratio dans les métriques détaillées
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -470,6 +471,42 @@ document.addEventListener('DOMContentLoaded', function() {
         }) : '-';
     }
     
+    // --- NOUVEAU: Payout helpers ---
+    function parsePctRaw(v){
+      if (v == null || v === '-' || v === '') return NaN;
+      return parseFloat(String(v)
+        .replace('\u2212','-')         // minus unicode
+        .replace(',', '.')
+        .replace(/[+%\s]/g,'')
+        .trim());
+    }
+
+    function computePayoutMeta(r){
+      // multi-fallbacks possibles depuis les JSON
+      const raw = parsePctRaw(
+        r.payout_ratio ?? r.payout ?? r.dividend_payout_ratio ?? r.payout_ratio_ttm
+      );
+      if (!Number.isFinite(raw)) return { num: null, str: null, cls: '' };
+
+      const sector = String(r.sector || '').toLowerCase();
+      const isRE = sector.includes('immobili') || sector === 'real estate' ||
+                   /reit/i.test(String(r.name||'')) || /reit/i.test(String(r.exchange||''));
+      const val = Math.min(raw, isRE ? 400 : 200); // cap souple
+
+      const cls =
+        val < 30  ? 'payout-ok-strong' :
+        val < 60  ? 'payout-ok'        :
+        val < 80  ? 'payout-warn'      :
+        val < 100 ? 'payout-high'      :
+                    'payout-risk';
+
+      return { 
+        num: val, 
+        str: val.toFixed(1).replace('.', ',') + ' %', // pas de signe
+        cls 
+      };
+    }
+    
     function normalizeRecord(r, fallbackRegion) {
         // On accepte {price,change_percent,perf_ytd,open,high,low,volume} ou {last,change,ytd,...}
         const name = r.name || r.ticker || '—';
@@ -486,6 +523,9 @@ document.addEventListener('DOMContentLoaded', function() {
             EUROPE: '<i class="fas fa-globe-europe text-xs ml-1 text-green-400" title="Europe"></i>',
             ASIA: '<i class="fas fa-globe-asia text-xs ml-1 text-red-400" title="Asie"></i>'
         }[region] || '';
+        
+        // NOUVEAU: Calculer le payout
+        const payout = computePayoutMeta(r);
         
         return {
             name,
@@ -512,7 +552,11 @@ document.addEventListener('DOMContentLoaded', function() {
             perf_3m: r.perf_3m ? pctToStr(r.perf_3m) : null,
             perf_1y: r.perf_1y ? pctToStr(r.perf_1y) : '-',
             perf_3y: r.perf_3y ? pctToStr(r.perf_3y) : '-',
-            max_drawdown_3y: r.max_drawdown_3y ? pctToStr(r.max_drawdown_3y) : '-'
+            max_drawdown_3y: r.max_drawdown_3y ? pctToStr(r.max_drawdown_3y) : '-',
+            // === Payout intégré ===
+            payout_ratio: payout.str,          // "xx,x %"
+            payout_ratio_num: payout.num,      // nombre
+            payout_class: payout.cls           // classe couleur
         };
     }
     
@@ -1166,28 +1210,42 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * Toggle les détails d'une action
+     * Toggle les détails d'une action - VERSION CORRIGÉE
+     * NOUVEAU: N'ouvre QUE sur clic et ferme les autres
      */
-    function toggleDetailsRow(button) {
-        const stockKey = button.dataset.key;
-        const detailsRow = document.querySelector(`.details-row[data-for="${CSS.escape(stockKey)}"]`);
-        
-        if (detailsRow) {
-            const isHidden = detailsRow.classList.contains('hidden');
-            detailsRow.classList.toggle('hidden');
-            
-            // Mettre à jour l'icône du bouton
-            const icon = button.querySelector('i');
-            if (icon) {
-                icon.classList.toggle('fa-chevron-down', !isHidden);
-                icon.classList.toggle('fa-chevron-up', isHidden);
-            }
-            
-            // Mettre à jour le texte du bouton si texte visible
-            if (button.textContent.includes('Détails') || button.textContent.includes('Masquer')) {
-                button.textContent = isHidden ? 'Masquer ▴' : 'Détails ▾';
-            }
+    function toggleDetailsRow(button){
+      const mainRow = button.closest('tr');
+      if (!mainRow) return;
+
+      // 💡 Le détail est TOUJOURS la ligne suivante
+      const detailsRow = mainRow.nextElementSibling;
+      if (!detailsRow || !detailsRow.classList.contains('details-row')) return;
+
+      const isOpen = !detailsRow.classList.contains('hidden');
+
+      // Fermer tous les autres détails ouverts (sécurité)
+      document.querySelectorAll('tr.details-row:not(.hidden)').forEach(r => {
+        r.classList.add('hidden');
+        const btn = r.previousElementSibling?.querySelector('.details-toggle');
+        if (btn){
+          btn.setAttribute('aria-expanded','false');
+          const ic = btn.querySelector('i');
+          if (ic){ ic.classList.add('fa-chevron-down'); ic.classList.remove('fa-chevron-up'); }
         }
+      });
+
+      // Basculer celui-ci uniquement si il était fermé
+      if (!isOpen){
+        detailsRow.classList.remove('hidden');
+        button.setAttribute('aria-expanded','true');
+        const icon = button.querySelector('i');
+        if (icon){ icon.classList.remove('fa-chevron-down'); icon.classList.add('fa-chevron-up'); }
+      } else {
+        detailsRow.classList.add('hidden');
+        button.setAttribute('aria-expanded','false');
+        const icon = button.querySelector('i');
+        if (icon){ icon.classList.add('fa-chevron-down'); icon.classList.remove('fa-chevron-up'); }
+      }
     }
     
     /**
@@ -1265,6 +1323,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             const ytdClass = stock.ytd && stock.ytd.includes('-') ? 'negative' : 'positive';
                             const perf1yClass = stock.perf_1y && stock.perf_1y.includes('-') ? 'negative' : 'positive';
                             
+                            // NOUVEAU: Bouton avec aria-expanded
                             row.innerHTML = `
                                 <td class="py-2 px-3">
                                     <div class="font-medium">${stock.name || '-'} ${stock.marketIcon}</div>
@@ -1282,13 +1341,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <td class="text-right">${stock.dividend_yield || '-'}</td>
                                 <td class="text-right">${stock.volume || '-'}</td>
                                 <td class="text-center">
-                                    <button onclick="toggleDetailsRow(this)" class="action-button details-toggle" data-key="${stockKey}">
-                                        <i class="fas fa-chevron-down"></i>
-                                    </button>
+                                  <button type="button" onclick="toggleDetailsRow(this)" 
+                                          class="action-button details-toggle" 
+                                          aria-expanded="false" data-key="${stockKey}">
+                                    <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                                  </button>
                                 </td>
                             `;
                             
-                            // Ligne de détails (cachée par défaut)
+                            // Ligne de détails (cachée par défaut) - NOUVEAU: avec payout
                             const detailsRow = document.createElement('tr');
                             detailsRow.className = 'details-row hidden';
                             detailsRow.setAttribute('data-for', stockKey);
@@ -1319,6 +1380,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <div class="space-y-1 text-sm">
                                                 <div><span class="opacity-60">Volatilité 3Y:</span> ${stock.volatility_3y || '–'}</div>
                                                 <div><span class="opacity-60">Rendement:</span> ${stock.dividend_yield || '–'}</div>
+                                                
+                                                <!-- 👉 NOUVELLE LIGNE PAYOUT -->
+                                                <div><span class="opacity-60">Payout:</span> <span class="${stock.payout_class}">
+                                                  ${stock.payout_ratio || '–'}
+                                                </span></div>
+                                                
                                                 <div><span class="opacity-60">52 semaines:</span> ${stock.range_52w || '–'}</div>
                                                 <div><span class="opacity-60">Max Drawdown 3Y:</span> <span class="negative">${stock.max_drawdown_3y || '–'}</span></div>
                                                 <div><span class="opacity-60">Volume:</span> ${stock.volume || '–'}</div>
@@ -1345,7 +1412,11 @@ document.addEventListener('DOMContentLoaded', function() {
             hideElement('indices-error');
             showElement('indices-container');
             
-            // Réassigner la fonction toggle au window pour permettre l'accès global
+            // NOUVEAU: Toujours fermer les détails après (re)rendu
+            document.querySelectorAll('tr.details-row').forEach(r => r.classList.add('hidden'));
+            document.querySelectorAll('.details-toggle').forEach(b => b.setAttribute('aria-expanded','false'));
+
+            // exposer la fonction
             window.toggleDetailsRow = toggleDetailsRow;
             
         } catch (error) {
