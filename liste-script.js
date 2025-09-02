@@ -7,7 +7,18 @@
  * AJOUT: Filtres région, pays et secteur pour la section A→Z
  * v1.1: Intégration du payout ratio dans les métriques détaillées
  * v1.2: Fix recherche - fermeture systématique des détails ouverts
+ * v1.3: Fix définitif - ne jamais réafficher les details-row lors du clear
  */
+
+// NOUVEAU: Fonction globale pour fermer tous les détails
+function closeAllDetails() {
+  document.querySelectorAll('tr.details-row').forEach(r => r.classList.add('hidden'));
+  document.querySelectorAll('.details-toggle').forEach(btn => {
+    btn.setAttribute('aria-expanded', 'false');
+    const ic = btn.querySelector('i');
+    if (ic) { ic.classList.add('fa-chevron-down'); ic.classList.remove('fa-chevron-up'); }
+  });
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     // --- FICHIERS A→Z PAR RÉGION ---
@@ -800,6 +811,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     /**
      * Initialise les onglets alphabet
+     * MODIFIÉ: Ferme tous les détails quand on change d'onglet
      */
     function initAlphabetTabs() {
         const tabs = document.querySelectorAll('.region-tab');
@@ -819,6 +831,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 document.getElementById(`${letter}-indices`)?.classList.remove('hidden');
+                
+                // NOUVEAU: Fermer tous les détails quand on change d'onglet
+                closeAllDetails();
             });
         });
     }
@@ -1798,7 +1813,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * Initialise la fonctionnalité de recherche
-     * v1.2: Corrigé pour fermer systématiquement les détails ouverts
+     * v1.3: Utilise la fonction globale closeAllDetails et corrige showAllStocks et clearSearch
      */
     function initSearchFunctionality() {
         // Éléments du DOM
@@ -1809,16 +1824,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const alphabetTabs = document.querySelectorAll('.region-tab');
         
         if (!searchInput || !clearButton) return;
-        
-        // NOUVEAU: Helper global pour fermer tous les détails
-        function closeAllDetails() {
-          document.querySelectorAll('tr.details-row').forEach(r => r.classList.add('hidden'));
-          document.querySelectorAll('.details-toggle[aria-expanded="true"]').forEach(b => {
-            b.setAttribute('aria-expanded','false');
-            const ic = b.querySelector('i');
-            if (ic) { ic.classList.add('fa-chevron-down'); ic.classList.remove('fa-chevron-up'); }
-          });
-        }
         
         // Ajouter un onglet "Tous" au début des filtres alphabétiques si nécessaire
         const tabsContainer = document.querySelector('.region-tabs');
@@ -1849,6 +1854,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Fonction pour montrer toutes les actions (si possible)
+        // MODIFIÉ: Ne réaffiche que les lignes principales
         function showAllStocks() {
             // Si la pagination est active (STOXX), on ne peut pas tout montrer
             if (currentMarket === 'stoxx') {
@@ -1857,15 +1863,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
+            // NOUVEAU: Fermer tous les détails d'abord
+            closeAllDetails();
+            
             // Afficher toutes les régions
             const regionContents = document.querySelectorAll('.region-content');
             regionContents.forEach(content => {
                 content.classList.remove('hidden');
             });
             
-            // Rendre visibles toutes les lignes qui étaient cachées par la recherche
-            const allRows = document.querySelectorAll('table tbody tr');
-            allRows.forEach(row => {
+            // MODIFIÉ: Ne rendre visibles que les lignes principales (pas les details-row)
+            document.querySelectorAll('table tbody tr:not(.details-row)').forEach(row => {
                 row.classList.remove('hidden', 'search-highlight');
                 row.style.display = '';
             });
@@ -1895,7 +1903,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Fonction pour effectuer la recherche
         function performSearch(searchTerm) {
-            // NOUVEAU: Fermer tous les détails au début de la recherche
+            // Utiliser la fonction globale closeAllDetails
             closeAllDetails();
             
             let totalResults = 0;
@@ -1924,7 +1932,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     const stockName = row.cells[0].textContent.toLowerCase();
                     
-                    // NOUVEAU: Gérer la ligne de détails associée
+                    // Gérer la ligne de détails associée
                     const detailsRow = row.nextElementSibling;
                     const detailsBtn = row.querySelector('.details-toggle');
                     
@@ -1937,7 +1945,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         totalResults++;
                         foundInRegions.add(letter);
                         
-                        // NOUVEAU: Garder les détails fermés par défaut
+                        // Garder les détails fermés par défaut
                         if (detailsRow && detailsRow.classList.contains('details-row')) {
                             detailsRow.classList.add('hidden');
                             if (detailsBtn) {
@@ -1952,7 +1960,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         row.classList.add('hidden');
                         row.style.display = 'none';
                         
-                        // NOUVEAU: Masquer aussi la ligne de détails
+                        // Masquer aussi la ligne de détails
                         if (detailsRow && detailsRow.classList.contains('details-row')) {
                             detailsRow.classList.add('hidden');
                         }
@@ -2026,8 +2034,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Fonction pour effacer la recherche
+        // MODIFIÉ: Ne réaffiche que les lignes principales
         function clearSearch() {
-            // NOUVEAU: Fermer tous les détails au début
+            // Utiliser la fonction globale closeAllDetails
             closeAllDetails();
             
             // Réinitialiser le compteur
@@ -2046,11 +2055,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     noResultsRow.remove();
                 }
                 
-                // Réinitialiser toutes les lignes
-                const rows = tableBody.querySelectorAll('tr');
+                // MODIFIÉ: Ne remettre en visibilité que les lignes principales
+                const rows = tableBody.querySelectorAll('tr:not(.details-row)');
                 rows.forEach(row => {
                     row.classList.remove('search-highlight', 'hidden');
                     row.style.display = '';
+                });
+                
+                // S'assurer que les détails restent bien fermés
+                tableBody.querySelectorAll('tr.details-row').forEach(dr => {
+                    dr.classList.add('hidden');
+                    dr.style.display = ''; // reset display sans ouvrir
+                });
+                tableBody.querySelectorAll('.details-toggle').forEach(btn => {
+                    btn.setAttribute('aria-expanded','false');
+                    const ic = btn.querySelector('i');
+                    if (ic) { ic.classList.add('fa-chevron-down'); ic.classList.remove('fa-chevron-up'); }
                 });
             });
             
@@ -2083,7 +2103,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
-            // NOUVEAU: Enlever les marqueurs d'onglets "has-results"
+            // Enlever les marqueurs d'onglets "has-results"
             document.querySelectorAll('.region-tab.has-results').forEach(t => t.classList.remove('has-results'));
             
             // Masquer le bouton d'effacement
