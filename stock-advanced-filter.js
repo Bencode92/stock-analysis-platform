@@ -1,12 +1,16 @@
 // stock-advanced-filter.js
-// Version 3.7 - Ajout du payout ratio TTM et métriques dividendes enrichies
+// Version 3.8 - Amélioration de la lecture des champs API et multi-source pour EPS/Payout
 // Corrections appliquées : 
 // - YTD sans toISOString() pour éviter bug UTC
 // - Fallback dividende TTM/price si meta absente
 // - Logs DEBUG enrichis pour YTD
 // - Formules 52w conventionnelles
 // - Métadonnées marché pour tracer source exacte (exchange, devise, MIC)
-// - NOUVEAU: Payout ratio TTM calculé depuis P/E et DPS
+// - Payout ratio TTM calculé depuis P/E et DPS
+// - NOUVEAU v3.8: Helper pickNumDeep pour lecture robuste des champs profonds
+// - NOUVEAU v3.8: Lecture améliorée des champs statistics (trailing_pe, eps_ttm, etc.)
+// - NOUVEAU v3.8: Normalisation GBX → GBP pour London Stock Exchange
+// - NOUVEAU v3.8: Multi-source pour EPS et payout (API direct, DPS/EPS, yield×P/E)
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -81,6 +85,16 @@ function parseNumberLoose(val) {
     
     const n = Number(s);
     return Number.isFinite(n) ? n * mult : null;
+}
+
+// NOUVEAU v3.8: Lecture robuste de nombres dans des chemins profonds
+function pickNumDeep(obj, paths) {
+    for (const p of paths) {
+        const v = p.split('.').reduce((o,k)=>o?.[k], obj);
+        const n = parseNumberLoose(v);
+        if (Number.isFinite(n)) return n;
+    }
+    return null;
 }
 
 // Fonction de résolution locale avec mapping des exchanges
@@ -467,43 +481,79 @@ function calculateDividendGrowth(history) {
     return Number(cagr.toFixed(2));
 }
 
+// NOUVEAU v3.8: Version améliorée qui lit les bons champs de l'API
 async function getStatisticsData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.STATISTICS);
         const resolved = typeof stock === 'string' ? symbol : resolveSymbol(symbol, stock);
-        
+
         const { data } = await axios.get('https://api.twelvedata.com/statistics', {
             params: { 
                 symbol: resolved, 
-                apikey: CONFIG.API_KEY 
+                apikey: CONFIG.API_KEY,
+                dp: 6                         // plus de décimales (optionnel)
             }
         });
-        
+
         if (CONFIG.DEBUG) console.log('[STATISTICS]', resolved, data?.status || 'ok');
-        if (data.status === 'error') {
+        if (data?.status === 'error') {
             if (CONFIG.DEBUG) console.error('[STATISTICS ERR]', resolved, data?.message);
             return {};
         }
-        
+
         const root = data?.statistics || data || {};
-        const mc = parseNumberLoose(
-            root.market_cap ??
-            root.market_capitalization ??
-            root?.financials?.market_capitalization ??
-            root?.overview?.market_cap
-        );
-        const pe = parseNumberLoose(root.pe_ratio ?? root?.valuations_metrics?.pe_ratio);
-        const so = parseNumberLoose(
-            root.shares_outstanding ??
-            root?.overview?.shares_outstanding ??
-            root?.financials?.shares_outstanding
-        );
-        
+
+        // Market cap (plusieurs chemins possibles)
+        const market_cap = pickNumDeep(root, [
+            'valuations_metrics.market_capitalization',
+            'market_capitalization',
+            'financials.market_capitalization',
+            'overview.market_cap'
+        ]);
+
+        // P/E trailing (priorité au trailing_pe renvoyé par TwelveData)
+        const pe_ratio = pickNumDeep(root, [
+            'valuations_metrics.trailing_pe',
+            'valuations_metrics.pe_ratio',
+            'overview.pe_ratio',
+            'pe_ratio',
+            'pe'
+        ]);
+
+        // EPS TTM
+        const eps_ttm = pickNumDeep(root, [
+            'financials.income_statement.diluted_eps_ttm',
+            'financials.income_statement.eps_ttm',
+            'overview.eps',
+            'earnings_per_share',
+            'eps'
+        ]);
+
+        // Payout & Dividend yield renvoyés en fraction (0–1)
+        const payout_frac = pickNumDeep(root, [
+            'dividends_and_splits.payout_ratio'
+        ]);
+        const yield_frac = pickNumDeep(root, [
+            'dividends_and_splits.trailing_annual_dividend_yield',
+            'dividends_and_splits.forward_annual_dividend_yield'
+        ]);
+
+        // Beta / Shares outstanding
+        const beta = pickNumDeep(root, ['stock_price_summary.beta','beta']);
+        const shares_outstanding = pickNumDeep(root, [
+            'stock_statistics.shares_outstanding',
+            'overview.shares_outstanding',
+            'financials.shares_outstanding'
+        ]);
+
         return {
-            market_cap: Number.isFinite(mc) ? mc : null,
-            pe_ratio: Number.isFinite(pe) ? pe : null,
-            beta: parseNumberLoose(root.beta ?? root?.risk_metrics?.beta) || null,
-            shares_outstanding: Number.isFinite(so) ? so : null
+            market_cap: Number.isFinite(market_cap) ? market_cap : null,
+            pe_ratio: Number.isFinite(pe_ratio) ? pe_ratio : null,
+            eps_ttm: Number.isFinite(eps_ttm) ? eps_ttm : null,
+            payout_ratio_api_pct: Number.isFinite(payout_frac) ? payout_frac * 100 : null,   // %
+            dividend_yield_api_pct: Number.isFinite(yield_frac) ? yield_frac * 100 : null,  // %
+            beta: Number.isFinite(beta) ? beta : null,
+            shares_outstanding: Number.isFinite(shares_outstanding) ? shares_outstanding : null
         };
     } catch (error) {
         if (CONFIG.DEBUG) console.error('[STATISTICS EXCEPTION]', symbol, error.message);
@@ -587,6 +637,13 @@ async function enrichStock(stock) {
         }
     }
     
+    // NOUVEAU v3.8: Normalisation LSE (GBX → GBP) pour la cohérence des ratios basés sur le prix
+    const usedCurrency = quote?._meta?.currency ?? perf?._series_meta?.currency ?? null;
+    if (usedCurrency === 'GBX' && Number.isFinite(price)) {
+        price = price / 100; // 7450 GBX -> 74.50 GBP
+        if (CONFIG.DEBUG) console.log(`[GBX→GBP] ${stock.symbol}: price converted from GBX to GBP`);
+    }
+    
     if (!price) {
         // Vraiment rien → on retourne l'erreur
         return { ...stock, error: 'NO_DATA' };
@@ -601,59 +658,60 @@ async function enrichStock(stock) {
             ? stats.shares_outstanding * price
             : null);
     
-    // FIX dividendes: Fallback TTM/price si yield absent
-    const dividendYield = 
-        (dividends?.total_dividends_ttm && price)
-            ? Number((dividends.total_dividends_ttm / price * 100).toFixed(2))
-            : (dividends?.dividend_yield_ttm ?? null);
+    // NOUVEAU v3.8: Amélioration du calcul du dividend_yield avec priorité à l'API
+    const dividendYield =
+        Number.isFinite(stats?.dividend_yield_api_pct) ? Number(stats.dividend_yield_api_pct.toFixed(2)) :
+        (dividends?.total_dividends_ttm && price)      ? Number((dividends.total_dividends_ttm / price * 100).toFixed(2)) :
+        (dividends?.dividend_yield_ttm ?? null);
     
-    // ============================================
-    // NOUVEAU: Calcul du payout ratio TTM
-    // ============================================
-    const dps_ttm = (typeof dividends?.total_dividends_ttm === 'number')
-        ? dividends.total_dividends_ttm
-        : null;
-    
-    let eps_ttm = null;
+    // =======================
+    // NOUVEAU v3.8: EPS & Payout (multi-source)
+    // =======================
+    const dps_ttm = (typeof dividends?.total_dividends_ttm === 'number') ? dividends.total_dividends_ttm : null;
+
+    // 1) EPS : prends stats.eps_ttm si dispo, sinon fallback via P/E
+    let eps_ttm = Number.isFinite(stats?.eps_ttm) ? stats.eps_ttm : null;
+    if (!Number.isFinite(eps_ttm) && Number.isFinite(stats?.pe_ratio) && stats.pe_ratio > 0 && Number.isFinite(price) && price > 0) {
+        eps_ttm = price / stats.pe_ratio;
+    }
+
+    // 2) Payout ratio : priorité à l'API (déjà en %), sinon DPS/EPS, sinon approx yield% * P/E
     let payout_ratio_ttm = null;
+    if (Number.isFinite(stats?.payout_ratio_api_pct)) {
+        payout_ratio_ttm = stats.payout_ratio_api_pct;
+    } else if (Number.isFinite(dps_ttm) && Number.isFinite(eps_ttm) && dps_ttm > 0 && eps_ttm > 0) {
+        payout_ratio_ttm = (dps_ttm / eps_ttm) * 100;
+    } else if (Number.isFinite(stats?.dividend_yield_api_pct) && Number.isFinite(stats?.pe_ratio)) {
+        // Identité: payout% ≈ dividend_yield% × P/E (si pas d'EPS/DPS)
+        payout_ratio_ttm = stats.dividend_yield_api_pct * stats.pe_ratio;
+    }
+
+    // Nettoyage & bornage
+    if (Number.isFinite(payout_ratio_ttm)) {
+        payout_ratio_ttm = Math.min(200, Number(payout_ratio_ttm.toFixed(1)));
+    }
+
+    // 3) Statut & couverture
     let payout_status = null;
     let dividend_coverage = null;
-    
-    // Calcul EPS depuis P/E ratio
-    if (Number.isFinite(stats?.pe_ratio) && stats.pe_ratio > 0 && 
-        Number.isFinite(price) && price > 0) {
-        eps_ttm = price / stats.pe_ratio;
-        
-        // Calcul du payout ratio avec validation
-        if (Number.isFinite(dps_ttm) && dps_ttm > 0 && eps_ttm > 0) {
-            const raw_payout = (dps_ttm / eps_ttm) * 100;
-            
-            // Cap à 200% pour éviter les valeurs aberrantes
-            payout_ratio_ttm = Math.min(200, Number(raw_payout.toFixed(1)));
-            
-            // Catégorisation du payout pour filtres futurs
-            if (payout_ratio_ttm < 30) {
-                payout_status = 'conservative';
-            } else if (payout_ratio_ttm < 60) {
-                payout_status = 'moderate';
-            } else if (payout_ratio_ttm < 80) {
-                payout_status = 'high';
-            } else if (payout_ratio_ttm < 100) {
-                payout_status = 'very_high';
-            } else {
-                payout_status = 'unsustainable';
-            }
-            
-            // Calcul de la couverture du dividende (inverse du payout)
+    if (Number.isFinite(payout_ratio_ttm)) {
+        payout_status =
+            payout_ratio_ttm < 30  ? 'conservative' :
+            payout_ratio_ttm < 60  ? 'moderate'     :
+            payout_ratio_ttm < 80  ? 'high'         :
+            payout_ratio_ttm < 100 ? 'very_high'    : 'unsustainable';
+
+        if (Number.isFinite(eps_ttm) && Number.isFinite(dps_ttm) && dps_ttm > 0) {
             dividend_coverage = Number((eps_ttm / dps_ttm).toFixed(2));
         }
     }
     
     // Logs DEBUG pour le payout ratio
-    if (CONFIG.DEBUG && dps_ttm !== null && eps_ttm !== null) {
+    if (CONFIG.DEBUG && (dps_ttm !== null || eps_ttm !== null)) {
         console.log(
-            `[PAYOUT] ${stock.symbol}: DPS=${dps_ttm.toFixed(4)}, EPS=${eps_ttm?.toFixed(4) || 'N/A'}, ` +
-            `P/E=${stats?.pe_ratio || 'N/A'}, Payout=${payout_ratio_ttm || 'N/A'}% (${payout_status || 'N/A'})`
+            `[PAYOUT] ${stock.symbol}: DPS=${dps_ttm?.toFixed(4) || 'N/A'}, EPS=${eps_ttm?.toFixed(4) || 'N/A'}, ` +
+            `P/E=${stats?.pe_ratio || 'N/A'}, Payout=${payout_ratio_ttm || 'N/A'}% (${payout_status || 'N/A'}), ` +
+            `Source: ${stats?.payout_ratio_api_pct ? 'API' : eps_ttm ? 'DPS/EPS' : 'yield×P/E'}`
         );
     }
     
@@ -707,17 +765,17 @@ async function enrichStock(stock) {
         dividend_yield: dividendYield,
         dividends_history: dividends?.dividends_history || [],
         avg_dividend_year: Number(dividends?.avg_dividend_per_year?.toFixed?.(2) ?? dividends?.avg_dividend_per_year ?? null),
-        total_dividends_ttm: dps_ttm,              // NOUVEAU: exposé pour debug
-        dividend_growth_3y: dividends?.dividend_growth_3y || null,  // NOUVEAU
+        total_dividends_ttm: dps_ttm,              
+        dividend_growth_3y: dividends?.dividend_growth_3y || null,  
         
-        // NOUVELLES MÉTRIQUES PAYOUT
-        payout_ratio_ttm,                          // NOUVEAU: payout ratio en %
-        payout_status,                             // NOUVEAU: catégorisation
-        dividend_coverage,                         // NOUVEAU: couverture du dividende
+        // MÉTRIQUES PAYOUT (v3.8 multi-source)
+        payout_ratio_ttm,                          
+        payout_status,                             
+        dividend_coverage,                         
         
         // Métriques de valorisation
-        eps_ttm,                                   // NOUVEAU: EPS trailing twelve months
-        pe_ratio: stats?.pe_ratio || null,        // Exposé pour référence
+        eps_ttm,                                   
+        pe_ratio: stats?.pe_ratio || null,        
         
         volatility_3y: perf.volatility_3y,
         distance_52w_high: perf.distance_52w_high,
@@ -790,7 +848,9 @@ function buildOverview(byRegion){
     // NOUVEAU: Ajout des métriques de dividendes dans les tops
     dividend_yield: s.dividend_yield == null ? null : Number(s.dividend_yield),
     payout_ratio_ttm: s.payout_ratio_ttm == null ? null : Number(s.payout_ratio_ttm),
-    payout_status: s.payout_status || null
+    payout_status: s.payout_status || null,
+    pe_ratio: s.pe_ratio == null ? null : Number(s.pe_ratio),
+    eps_ttm: s.eps_ttm == null ? null : Number(s.eps_ttm)
   });
 
   const sets = {
@@ -830,7 +890,7 @@ function buildOverview(byRegion){
 }
 
 async function main() { 
-    console.log('📊 Enrichissement complet des stocks (v3.7 avec payout ratio)\n');
+    console.log('📊 Enrichissement complet des stocks (v3.8 avec multi-source EPS/Payout)\n');
     await fs.mkdir(OUT_DIR, { recursive: true });
     
     const [usStocks, europeStocks, asiaStocks] = await Promise.all([
@@ -880,10 +940,16 @@ async function main() {
     // NOUVEAU: Statistiques sur les payout ratios
     const allStocks = [...byRegion.US, ...byRegion.EUROPE, ...byRegion.ASIA];
     const withPayout = allStocks.filter(s => s.payout_ratio_ttm !== null);
+    const withEPS = allStocks.filter(s => s.eps_ttm !== null);
+    const withPE = allStocks.filter(s => s.pe_ratio !== null);
+    
+    console.log('\n📊 Statistiques des métriques:');
+    console.log(`  - Actions avec P/E ratio: ${withPE.length}/${allStocks.length}`);
+    console.log(`  - Actions avec EPS TTM: ${withEPS.length}/${allStocks.length}`);
+    console.log(`  - Actions avec payout ratio: ${withPayout.length}/${allStocks.length}`);
     
     if (withPayout.length > 0) {
-        console.log('\n📊 Statistiques Payout Ratio:');
-        console.log(`  - Actions avec payout: ${withPayout.length}/${allStocks.length}`);
+        console.log('\n📊 Distribution Payout Ratio:');
         console.log(`  - Conservative (<30%): ${withPayout.filter(s => s.payout_status === 'conservative').length}`);
         console.log(`  - Modéré (30-60%): ${withPayout.filter(s => s.payout_status === 'moderate').length}`);
         console.log(`  - Élevé (60-80%): ${withPayout.filter(s => s.payout_status === 'high').length}`);
