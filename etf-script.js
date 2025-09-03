@@ -1,7 +1,7 @@
 /**
  * etf-script.js - Script principal pour la page ETF avec Top 10 et fonctionnalités complètes
  * Similaire à liste-script.js mais adapté aux ETFs
- * v1.1 - Simplification des cartes Top 10 avec tag spéculatif
+ * v1.2 - Amélioration alignement tag spéculatif
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return t.includes('inverse') || t.includes('leverag') || (Number.isFinite(lev) && lev !== 0);
     }
     
-    // Render Top 10 ETFs - VERSION SIMPLIFIÉE
+    // Render Top 10 ETFs - VERSION AVEC MEILLEUR ALIGNEMENT
     function renderTopTenETFs() {
         const container = document.querySelector('#top-global-container .stock-cards-container');
         if (!container) return;
@@ -159,14 +159,18 @@ document.addEventListener('DOMContentLoaded', function() {
             else if (index === 1) rankBg = 'bg-gray-300';
             else if (index === 2) rankBg = 'bg-amber-700';
 
-            const specTag = isSpeculative(etf) ? `<span class="ml-2 ter-badge">⚠ spéculatif</span>` : '';
+            const specTag = isSpeculative(etf) ? 
+                `<span class="ter-badge" style="display: inline-flex; align-items: center; margin-left: 8px; vertical-align: middle;">⚠ spéculatif</span>` : '';
 
             const card = document.createElement('div');
             card.className = 'stock-card';
             card.innerHTML = `
                 <div class="rank ${rankBg}">#${index + 1}</div>
                 <div class="stock-info">
-                    <div class="stock-name">${etf.ticker}${specTag}</div>
+                    <div class="stock-name" style="display: flex; align-items: center;">
+                        <span>${etf.ticker}</span>
+                        ${specTag}
+                    </div>
                     <div class="stock-fullname" title="${etf.name}">${etf.name}</div>
                     <div class="text-xs opacity-60 mt-1">
                         <span class="text-[11px] opacity-70">
@@ -496,4 +500,4 @@ document.addEventListener('DOMContentLoaded', function() {
     loadETFData();
 });
 
-console.log('✅ ETF Script v1.1 - Top 10 simplifié avec tags spéculatifs');
+console.log('✅ ETF Script v1.2 - Alignement tag spéculatif amélioré');
