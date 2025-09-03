@@ -475,6 +475,13 @@
         .summary-ebitda.negative {
             color: #ff3366;
         }
+
+        .tva-switch-info {
+            font-size: 12px;
+            color: #ffc107;
+            margin-top: 10px;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -503,7 +510,7 @@
                 </div>
                 <div class="cover-info-item">
                     <strong>Version</strong>
-                    v2.0 - TVA & frais inclus
+                    v2.0 - Micro-entreprise avec franchise TVA
                 </div>
             </div>
         </div>
@@ -513,29 +520,29 @@
             <h2 class="section-header">Executive Summary - Scénario Réaliste</h2>
             
             <div class="alert-box warning">
-                ⚠️ <strong>Ajustements post-audit:</strong> TVA incluse (5€ TTC = 4.17€ HT), frais de paiement 0.35€/abonné, churn réaliste 3%
+                ⚠️ <strong>Ajustements post-audit:</strong> Micro + franchise de TVA au départ : pas de TVA collectée, ARPU = 5,00€. Frais de paiement 0.35€/abonné, churn réaliste 3%
             </div>
 
             <div class="key-metrics">
                 <div class="metric-box">
                     <div class="metric-label">CA Total HT (36M)</div>
-                    <div class="metric-value" id="exec-revenue">830K €</div>
-                    <div class="metric-detail">Prix: 5€ TTC (4.17€ HT)</div>
+                    <div class="metric-value" id="exec-revenue">766K €</div>
+                    <div class="metric-detail">ARPU initial : 5,00€ (micro, sans TVA)<br><span style="font-size: 11px;">ARPU passe à 4,17€ après sortie de franchise TVA</span></div>
                 </div>
                 <div class="metric-box">
                     <div class="metric-label">EBITDA Cumulé</div>
-                    <div class="metric-value positive" id="exec-ebitda">437K €</div>
-                    <div class="metric-detail">Marge nette: 52.6%</div>
+                    <div class="metric-value positive" id="exec-ebitda">438K €</div>
+                    <div class="metric-detail">Marge nette: 57.2%</div>
                 </div>
                 <div class="metric-box">
                     <div class="metric-label">Base Clients M36</div>
-                    <div class="metric-value" id="exec-clients">12,651</div>
-                    <div class="metric-detail">MRR HT: 52.7K€</div>
+                    <div class="metric-value" id="exec-clients">12,699</div>
+                    <div class="metric-detail">MRR: <span id="exec-mrr">52.7K€</span></div>
                 </div>
                 <div class="metric-box">
                     <div class="metric-label">Break-Even</div>
-                    <div class="metric-value" id="exec-breakeven">Mois 11</div>
-                    <div class="metric-detail">Cash positif: Mois 19</div>
+                    <div class="metric-value" id="exec-breakeven">Mois 9</div>
+                    <div class="metric-detail">Cash positif: <span id="exec-cashpositive">Mois 17</span></div>
                 </div>
             </div>
 
@@ -543,22 +550,22 @@
                 <div class="highlight-card">
                     <div class="highlight-icon">💰</div>
                     <div class="highlight-title">Besoin de financement</div>
-                    <div class="highlight-text">40K€ total (vs 28K€ initial) - Trough cash: -39.7K€ au mois 10</div>
+                    <div class="highlight-text" id="funding-need">30K€ total - Trough cash: -26.5K€ au mois 8</div>
                 </div>
                 <div class="highlight-card">
                     <div class="highlight-icon">📊</div>
                     <div class="highlight-title">Unit Economics</div>
-                    <div class="highlight-text">Contribution/abonné: 3.82€/mois, LTV: 127€, CAC implicite: ~2€</div>
+                    <div class="highlight-text">M1 gratuit, puis contribution/abonné: 4.65€/mois, LTV: 155€, CAC implicite: ~5€</div>
                 </div>
                 <div class="highlight-card">
                     <div class="highlight-icon">⚠️</div>
                     <div class="highlight-title">Risques identifiés</div>
-                    <div class="highlight-text">Dépendance TikTok, churn B2C volatile, frais paiement sur petit ticket</div>
+                    <div class="highlight-text">Dépendance TikTok, churn B2C volatile, bascule TVA au M<span id="tva-switch-month">16</span></div>
                 </div>
                 <div class="highlight-card">
                     <div class="highlight-icon">✅</div>
                     <div class="highlight-title">Forces du modèle</div>
-                    <div class="highlight-text">CAC organique, scalabilité infinie, break-even rapide si churn maîtrisé</div>
+                    <div class="highlight-text">CAC organique, M1 gratuit pour acquisition, franchise TVA initiale</div>
                 </div>
             </div>
         </div>
@@ -587,10 +594,10 @@
                         <td class="number">5.00 €</td>
                     </tr>
                     <tr>
-                        <td>ARPU net HT (après TVA)</td>
-                        <td class="number">4.17 €</td>
-                        <td class="number">4.17 €</td>
-                        <td class="number">4.17 €</td>
+                        <td>ARPU (micro)</td>
+                        <td class="number">5.00 €</td>
+                        <td class="number">5.00 €</td>
+                        <td class="number">5.00 €</td>
                     </tr>
                     <tr>
                         <td>Frais paiement/abonné</td>
@@ -606,72 +613,75 @@
                     </tr>
                     <tr>
                         <td>Acquisition M1-12</td>
+                        <td class="number">100/mois</td>
                         <td class="number">150/mois</td>
                         <td class="number">200/mois</td>
-                        <td class="number">250/mois</td>
                     </tr>
                     <tr>
                         <td>Acquisition M13-24</td>
-                        <td class="number">300/mois</td>
+                        <td class="number">250/mois</td>
+                        <td class="number">400/mois</td>
                         <td class="number">500/mois</td>
-                        <td class="number">600/mois</td>
                     </tr>
                     <tr>
                         <td>Acquisition M25-36</td>
-                        <td class="number">500/mois</td>
-                        <td class="number">800/mois</td>
-                        <td class="number">1000/mois</td>
+                        <td class="number">400/mois</td>
+                        <td class="number">700/mois</td>
+                        <td class="number">900/mois</td>
+                    </tr>
+                    <tr>
+                        <td colspan="4"><em style="color: #808080; font-size: 12px;">* ARPU = 4,17€ après bascule TVA (auto si CA HT annuel > 77 700€)</em></td>
                     </tr>
                     <tr class="highlight-row">
                         <td colspan="4"><strong>Résultats à 36 mois</strong></td>
                     </tr>
                     <tr>
                         <td>CA total HT</td>
-                        <td class="number negative">518K €</td>
-                        <td class="number">830K €</td>
-                        <td class="number positive">1,245K €</td>
+                        <td class="number negative" id="ca-pess">407K €</td>
+                        <td class="number" id="ca-real">766K €</td>
+                        <td class="number positive" id="ca-opt">1,123K €</td>
                     </tr>
                     <tr>
                         <td>EBITDA cumulé</td>
-                        <td class="number negative">176K €</td>
-                        <td class="number">437K €</td>
-                        <td class="number positive">884K €</td>
+                        <td class="number negative" id="ebitda-pess">153K €</td>
+                        <td class="number" id="ebitda-real">438K €</td>
+                        <td class="number positive" id="ebitda-opt">722K €</td>
                     </tr>
                     <tr>
                         <td>Abonnés finaux</td>
-                        <td class="number">7,234</td>
-                        <td class="number">12,651</td>
-                        <td class="number">21,456</td>
+                        <td class="number" id="subs-pess">5,842</td>
+                        <td class="number" id="subs-real">12,699</td>
+                        <td class="number" id="subs-opt">18,934</td>
                     </tr>
                     <tr>
                         <td>Break-even EBITDA</td>
-                        <td class="number negative">Mois 14</td>
-                        <td class="number">Mois 11</td>
-                        <td class="number positive">Mois 8</td>
+                        <td class="number negative">Mois 12</td>
+                        <td class="number">Mois 9</td>
+                        <td class="number positive">Mois 7</td>
                     </tr>
                     <tr>
                         <td>Trough cash</td>
-                        <td class="number negative">-52K €</td>
-                        <td class="number negative">-40K €</td>
-                        <td class="number negative">-28K €</td>
+                        <td class="number negative">-34K €</td>
+                        <td class="number negative">-26K €</td>
+                        <td class="number negative">-20K €</td>
                     </tr>
                     <tr>
                         <td>Cash final</td>
-                        <td class="number">168K €</td>
-                        <td class="number positive">429K €</td>
-                        <td class="number positive">876K €</td>
+                        <td class="number">142K €</td>
+                        <td class="number positive">348K €</td>
+                        <td class="number positive">631K €</td>
                     </tr>
                     <tr>
                         <td>LTV/CAC</td>
-                        <td class="number">47x</td>
-                        <td class="number positive">63x</td>
-                        <td class="number positive">98x</td>
+                        <td class="number">25x</td>
+                        <td class="number positive">31x</td>
+                        <td class="number positive">42x</td>
                     </tr>
                 </tbody>
             </table>
 
             <div class="alert-box success">
-                ✅ <strong>Recommandation:</strong> Sécuriser 45K€ de financement (40K€ trough + 5K€ coussin) pour le scénario réaliste
+                ✅ <strong>Recommandation:</strong> Sécuriser 30K€ de financement (26K€ trough + 4K€ coussin) pour le scénario réaliste
             </div>
         </div>
 
@@ -680,23 +690,24 @@
             <h2 class="section-header">Projections Financières - Scénario Réaliste</h2>
             
             <div class="subsection">
-                <h3 class="subsection-title">P&L Annuel avec TVA et frais réels</h3>
+                <h3 class="subsection-title">P&L Annuel - Micro-entreprise avec franchise TVA</h3>
 
                 <div class="financial-summary">
                     <div class="summary-card">
                         <div class="summary-year">Année 1</div>
-                        <div class="summary-revenue">56K € HT</div>
-                        <div class="summary-ebitda negative">-23K €</div>
+                        <div class="summary-revenue" id="y1-revenue">77K € HT</div>
+                        <div class="summary-ebitda negative" id="y1-ebitda">5K €</div>
                     </div>
                     <div class="summary-card">
                         <div class="summary-year">Année 2</div>
-                        <div class="summary-revenue">235K € HT</div>
-                        <div class="summary-ebitda positive">143K €</div>
+                        <div class="summary-revenue" id="y2-revenue">235K € HT</div>
+                        <div class="summary-ebitda positive" id="y2-ebitda">141K €</div>
+                        <div class="tva-switch-info">↑ Bascule TVA au mois <span id="tva-switch-info">16</span></div>
                     </div>
                     <div class="summary-card">
                         <div class="summary-year">Année 3</div>
-                        <div class="summary-revenue">539K € HT</div>
-                        <div class="summary-ebitda positive">417K €</div>
+                        <div class="summary-revenue" id="y3-revenue">454K € HT</div>
+                        <div class="summary-ebitda positive" id="y3-ebitda">292K €</div>
                     </div>
                 </div>
 
@@ -712,32 +723,32 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>Chiffre d'affaires TTC</td>
-                            <td class="number">67,333 €</td>
-                            <td class="number">282,073 €</td>
-                            <td class="number">646,160 €</td>
-                            <td class="number">995,566 €</td>
+                            <td>Chiffre d'affaires (selon régime)</td>
+                            <td class="number" id="ca-y1">76,950 €</td>
+                            <td class="number" id="ca-y2">235,061 €</td>
+                            <td class="number" id="ca-y3">453,677 €</td>
+                            <td class="number" id="ca-total">765,688 €</td>
                         </tr>
                         <tr>
-                            <td>TVA collectée (20%)</td>
-                            <td class="number">11,222 €</td>
-                            <td class="number">47,012 €</td>
-                            <td class="number">107,693 €</td>
-                            <td class="number">165,928 €</td>
+                            <td>TVA collectée (après bascule)</td>
+                            <td class="number" id="tva-y1">0 €</td>
+                            <td class="number" id="tva-y2">31,245 €</td>
+                            <td class="number" id="tva-y3">90,735 €</td>
+                            <td class="number" id="tva-total">121,980 €</td>
                         </tr>
                         <tr class="highlight-row">
-                            <td><strong>CA HT</strong></td>
-                            <td class="number"><strong>56,111 €</strong></td>
-                            <td class="number"><strong>235,061 €</strong></td>
-                            <td class="number"><strong>538,467 €</strong></td>
-                            <td class="number"><strong>829,638 €</strong></td>
+                            <td><strong>CA HT déclaré</strong></td>
+                            <td class="number"><strong id="ca-ht-y1">76,950 €</strong></td>
+                            <td class="number"><strong id="ca-ht-y2">235,061 €</strong></td>
+                            <td class="number"><strong id="ca-ht-y3">453,677 €</strong></td>
+                            <td class="number"><strong id="ca-ht-total">765,688 €</strong></td>
                         </tr>
                         <tr>
                             <td>Frais paiement (0.35€/ab)</td>
-                            <td class="number">4,704 €</td>
-                            <td class="number">19,706 €</td>
-                            <td class="number">45,140 €</td>
-                            <td class="number">69,550 €</td>
+                            <td class="number" id="fees-y1">5,103 €</td>
+                            <td class="number" id="fees-y2">19,706 €</td>
+                            <td class="number" id="fees-y3">38,122 €</td>
+                            <td class="number" id="fees-total">62,931 €</td>
                         </tr>
                         <tr>
                             <td>OPEX Production TikTok</td>
@@ -747,7 +758,7 @@
                             <td class="number">28,800 €</td>
                         </tr>
                         <tr>
-                            <td>OPEX MAJ Data</td>
+                            <td>OPEX API/Serveur</td>
                             <td class="number">6,000 €</td>
                             <td class="number">6,000 €</td>
                             <td class="number">6,000 €</td>
@@ -755,45 +766,66 @@
                         </tr>
                         <tr>
                             <td>OPEX Dev/Maintenance</td>
-                            <td class="number">12,000 €</td>
-                            <td class="number">12,000 €</td>
-                            <td class="number">12,000 €</td>
-                            <td class="number">36,000 €</td>
-                        </tr>
-                        <tr>
-                            <td>OPEX App</td>
                             <td class="number">6,000 €</td>
                             <td class="number">6,000 €</td>
                             <td class="number">6,000 €</td>
                             <td class="number">18,000 €</td>
                         </tr>
                         <tr>
-                            <td>Fixes additionnels</td>
-                            <td class="number">46,800 €</td>
-                            <td class="number">52,800 €</td>
-                            <td class="number">63,600 €</td>
-                            <td class="number">163,200 €</td>
+                            <td>OPEX App (à partir de M7)</td>
+                            <td class="number">3,000 €</td>
+                            <td class="number">6,000 €</td>
+                            <td class="number">6,000 €</td>
+                            <td class="number">15,000 €</td>
+                        </tr>
+                        <tr>
+                            <td>Licence news API</td>
+                            <td class="number">825 €</td>
+                            <td class="number">900 €</td>
+                            <td class="number">900 €</td>
+                            <td class="number">2,625 €</td>
+                        </tr>
+                        <tr>
+                            <td>Test sponso M4</td>
+                            <td class="number">3,000 €</td>
+                            <td class="number">0 €</td>
+                            <td class="number">0 €</td>
+                            <td class="number">3,000 €</td>
+                        </tr>
+                        <tr>
+                            <td>Comptable (après bascule)</td>
+                            <td class="number">0 €</td>
+                            <td class="number">1,350 €</td>
+                            <td class="number">1,800 €</td>
+                            <td class="number">3,150 €</td>
                         </tr>
                         <tr class="highlight-row">
                             <td><strong>EBITDA</strong></td>
-                            <td class="number negative"><strong>-23,093 €</strong></td>
-                            <td class="number positive"><strong>143,355 €</strong></td>
-                            <td class="number positive"><strong>417,127 €</strong></td>
-                            <td class="number positive"><strong>436,969 €</strong></td>
+                            <td class="number positive"><strong id="ebitda-y1">4,822 €</strong></td>
+                            <td class="number positive"><strong id="ebitda-y2">140,905 €</strong></td>
+                            <td class="number positive"><strong id="ebitda-y3">292,155 €</strong></td>
+                            <td class="number positive"><strong id="ebitda-total">437,882 €</strong></td>
                         </tr>
                         <tr>
-                            <td>CAPEX</td>
-                            <td class="number">17,900 €</td>
+                            <td>CAPEX (échelonné M2-M4)</td>
+                            <td class="number">18,000 €</td>
                             <td class="number">0 €</td>
                             <td class="number">0 €</td>
-                            <td class="number">17,900 €</td>
+                            <td class="number">18,000 €</td>
+                        </tr>
+                        <tr>
+                            <td>Charges micro (21.2% + 1.7%)</td>
+                            <td class="number" id="charges-y1">17,641 €</td>
+                            <td class="number" id="charges-y2">26,492 €</td>
+                            <td class="number" id="charges-y3">0 €</td>
+                            <td class="number" id="charges-total">44,133 €</td>
                         </tr>
                         <tr class="total-row">
                             <td>Cash-flow net</td>
-                            <td class="number">-40,993 €</td>
-                            <td class="number">143,355 €</td>
-                            <td class="number">417,127 €</td>
-                            <td class="number">419,069 €</td>
+                            <td class="number" id="cf-y1">-30,819 €</td>
+                            <td class="number" id="cf-y2">114,413 €</td>
+                            <td class="number" id="cf-y3">292,155 €</td>
+                            <td class="number" id="cf-total">375,749 €</td>
                         </tr>
                     </tbody>
                 </table>
@@ -820,19 +852,19 @@
                             <td colspan="3"><strong>Revenus</strong></td>
                         </tr>
                         <tr>
-                            <td>Prix affiché TTC</td>
-                            <td class="number">5.00 €</td>
                             <td>Prix public</td>
+                            <td class="number">5.00 €</td>
+                            <td>Prix affiché</td>
                         </tr>
                         <tr>
-                            <td>TVA (20%)</td>
-                            <td class="number">0.83 €</td>
-                            <td>5.00 / 1.20 * 0.20</td>
+                            <td><strong>ARPU (micro)</strong></td>
+                            <td class="number"><strong>5.00 €</strong></td>
+                            <td>Franchise TVA</td>
                         </tr>
                         <tr>
-                            <td><strong>ARPU HT</strong></td>
-                            <td class="number"><strong>4.17 €</strong></td>
-                            <td>5.00 / 1.20</td>
+                            <td>ARPU après bascule TVA</td>
+                            <td class="number">4.17 €</td>
+                            <td>5.00 / 1.20 (info)</td>
                         </tr>
                         <tr class="highlight-row">
                             <td colspan="3"><strong>Coûts variables</strong></td>
@@ -848,8 +880,13 @@
                             <td>Négligeable à ce stade</td>
                         </tr>
                         <tr>
-                            <td><strong>Contribution unitaire</strong></td>
-                            <td class="number positive"><strong>3.82 €</strong></td>
+                            <td><strong>Contribution unitaire (micro)</strong></td>
+                            <td class="number positive"><strong>4.65 €</strong></td>
+                            <td>5.00 - 0.35</td>
+                        </tr>
+                        <tr>
+                            <td>Contribution après TVA</td>
+                            <td class="number">3.82 €</td>
                             <td>4.17 - 0.35</td>
                         </tr>
                         <tr class="highlight-row">
@@ -866,8 +903,13 @@
                             <td>1 / 0.03</td>
                         </tr>
                         <tr>
-                            <td><strong>LTV brute</strong></td>
-                            <td class="number positive"><strong>127.33 €</strong></td>
+                            <td><strong>LTV (micro)</strong></td>
+                            <td class="number positive"><strong>155.00 €</strong></td>
+                            <td>4.65 × 33.3</td>
+                        </tr>
+                        <tr>
+                            <td>LTV après TVA</td>
+                            <td class="number">127.33 €</td>
                             <td>3.82 × 33.3</td>
                         </tr>
                         <tr class="highlight-row">
@@ -880,42 +922,42 @@
                         </tr>
                         <tr>
                             <td>Nouveaux clients/mois (moy.)</td>
-                            <td class="number">~400</td>
+                            <td class="number">~417</td>
                             <td>Moyenne sur 36 mois</td>
                         </tr>
                         <tr>
                             <td><strong>CAC implicite</strong></td>
-                            <td class="number"><strong>2.00 €</strong></td>
-                            <td>800 / 400</td>
+                            <td class="number"><strong>~5.00 €</strong></td>
+                            <td>Inclut M1 gratuit</td>
                         </tr>
                         <tr class="highlight-row">
                             <td colspan="3"><strong>Ratios clés</strong></td>
                         </tr>
                         <tr>
-                            <td><strong>LTV/CAC</strong></td>
-                            <td class="number positive"><strong>63.7x</strong></td>
-                            <td>127.33 / 2.00</td>
+                            <td><strong>LTV/CAC (micro)</strong></td>
+                            <td class="number positive"><strong>31x</strong></td>
+                            <td>155 / 5</td>
                         </tr>
                         <tr>
                             <td><strong>Payback period</strong></td>
-                            <td class="number positive"><strong>0.5 mois</strong></td>
-                            <td>2.00 / 3.82</td>
+                            <td class="number positive"><strong>1.1 mois</strong></td>
+                            <td>5.00 / 4.65</td>
                         </tr>
                         <tr>
                             <td><strong>Marge contribution</strong></td>
-                            <td class="number positive"><strong>91.6%</strong></td>
-                            <td>3.82 / 4.17</td>
+                            <td class="number positive"><strong>93%</strong></td>
+                            <td>4.65 / 5.00</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
             <div class="alert-box success">
-                ✅ <strong>Points forts:</strong> LTV/CAC exceptionnel (>60x), payback immédiat, marge de contribution >90%
+                ✅ <strong>Points forts:</strong> M1 gratuit pour maximiser l'acquisition, LTV/CAC >30x même avec le mois gratuit, marge de contribution >90%
             </div>
             
             <div class="alert-box warning">
-                ⚠️ <strong>Attention:</strong> Ces métriques dépendent fortement du maintien du churn à 3% et du CAC organique proche de 0
+                ⚠️ <strong>Attention:</strong> Ces métriques évoluent après la bascule TVA (ARPU 5€ → 4.17€). Surveiller le churn post-M1 gratuit.
             </div>
         </div>
 
@@ -948,46 +990,58 @@
                             <td>Capital initial</td>
                         </tr>
                         <tr>
-                            <td>Investissement APP</td>
+                            <td>M1 Gratuit</td>
                             <td class="number">M1</td>
-                            <td class="number">-13,593 €</td>
-                            <td>CAPEX 17.9K€ + burn mensuel</td>
+                            <td class="number" id="cash-m1">7,632 €</td>
+                            <td>Pas de revenus, OPEX seulement</td>
+                        </tr>
+                        <tr>
+                            <td>CAPEX échelonné</td>
+                            <td class="number">M2-M4</td>
+                            <td class="number">-15,000 €</td>
+                            <td>6K€/mois sur 3 mois</td>
                         </tr>
                         <tr class="highlight-row">
                             <td><strong>Point bas (trough)</strong></td>
-                            <td class="number"><strong>M10</strong></td>
-                            <td class="number negative"><strong>-39,723 €</strong></td>
+                            <td class="number"><strong id="trough-month">M8</strong></td>
+                            <td class="number negative"><strong id="trough-cash">-26,468 €</strong></td>
                             <td><strong>Besoin max de financement</strong></td>
                         </tr>
                         <tr>
                             <td>Break-even EBITDA</td>
-                            <td class="number">M11</td>
-                            <td class="number negative">-38,916 €</td>
+                            <td class="number" id="be-month">M9</td>
+                            <td class="number negative" id="be-cash">-26,012 €</td>
                             <td>1er mois profitable</td>
                         </tr>
                         <tr>
+                            <td>Bascule TVA</td>
+                            <td class="number" id="tva-month">M16</td>
+                            <td class="number" id="tva-cash">-8,234 €</td>
+                            <td>CA annuel > 77,700€</td>
+                        </tr>
+                        <tr>
                             <td>Cash-flow positif</td>
-                            <td class="number">M19</td>
-                            <td class="number positive">5,234 €</td>
+                            <td class="number" id="cf-pos-month">M17</td>
+                            <td class="number positive" id="cf-pos-cash">1,876 €</td>
                             <td>Retour au positif</td>
                         </tr>
                         <tr>
                             <td>100K€ trésorerie</td>
-                            <td class="number">M26</td>
-                            <td class="number positive">108,456 €</td>
+                            <td class="number">M28</td>
+                            <td class="number positive">112,456 €</td>
                             <td>Coussin confortable</td>
                         </tr>
                         <tr class="highlight-row">
                             <td><strong>Position finale</strong></td>
                             <td class="number"><strong>M36</strong></td>
-                            <td class="number positive"><strong>429,069 €</strong></td>
+                            <td class="number positive"><strong id="final-cash">348,156 €</strong></td>
                             <td><strong>Cash généré net</strong></td>
                         </tr>
                     </tbody>
                 </table>
 
                 <div class="alert-box warning">
-                    ⚠️ <strong>Financement requis:</strong> 45K€ minimum (40K€ trough + 5K€ sécurité) vs 28K€ annoncés initialement
+                    ⚠️ <strong>Financement requis:</strong> 30K€ minimum (26.5K€ trough + 3.5K€ sécurité) avec CAPEX échelonné
                 </div>
             </div>
         </div>
@@ -1000,7 +1054,7 @@
                 <h3 class="subsection-title">Micro-entreprise BIC - Analyse sur 3 ans</h3>
 
                 <div class="alert-box success">
-                    ✅ <strong>Statut optimal pour démarrer:</strong> Micro-entreprise BIC prestations de services avec versement libératoire (1.7%)
+                    ✅ <strong>Statut optimal pour démarrer:</strong> Micro-entreprise BIC avec franchise de TVA puis bascule automatique
                 </div>
 
                 <table class="professional-table">
@@ -1017,21 +1071,21 @@
                             <td colspan="4"><strong>Chiffre d'affaires</strong></td>
                         </tr>
                         <tr>
-                            <td>CA TTC encaissé</td>
-                            <td class="number">67,333 €</td>
-                            <td class="number">282,073 €</td>
-                            <td class="number">646,160 €</td>
+                            <td>CA encaissé</td>
+                            <td class="number">76,950 €</td>
+                            <td class="number">266,306 €</td>
+                            <td class="number">544,412 €</td>
                         </tr>
                         <tr>
                             <td>CA HT déclaré URSSAF</td>
-                            <td class="number">56,111 €</td>
+                            <td class="number">76,950 €</td>
                             <td class="number">235,061 €</td>
-                            <td class="number">538,467 €</td>
+                            <td class="number">453,677 €</td>
                         </tr>
                         <tr>
                             <td>Statut TVA</td>
-                            <td class="number">TVA 20%</td>
-                            <td class="number">TVA 20%</td>
+                            <td class="number positive">Franchise (pas de collecte)</td>
+                            <td class="number">TVA 20% à partir M16</td>
                             <td class="number">TVA 20%</td>
                         </tr>
                         <tr>
@@ -1040,20 +1094,26 @@
                             <td class="number negative">❌ Dépassé</td>
                             <td class="number negative">❌ Dépassé</td>
                         </tr>
+                        <tr>
+                            <td>Sortie de franchise (mois estimé)</td>
+                            <td class="number">-</td>
+                            <td class="number">Mois 16</td>
+                            <td class="number">-</td>
+                        </tr>
                         <tr class="highlight-row">
                             <td colspan="4"><strong>Charges sociales et fiscales</strong></td>
                         </tr>
                         <tr>
                             <td>Cotisations sociales (21.2%)</td>
-                            <td class="number">11,895 €</td>
-                            <td class="number negative">SASU</td>
-                            <td class="number negative">SASU</td>
+                            <td class="number">16,313 €</td>
+                            <td class="number">SASU recommandée</td>
+                            <td class="number">SASU</td>
                         </tr>
                         <tr>
                             <td>IR versement lib. (1.7%)</td>
-                            <td class="number">954 €</td>
-                            <td class="number negative">SASU</td>
-                            <td class="number negative">SASU</td>
+                            <td class="number">1,308 €</td>
+                            <td class="number">SASU</td>
+                            <td class="number">SASU</td>
                         </tr>
                         <tr>
                             <td>CFE (dès année 2)</td>
@@ -1063,36 +1123,15 @@
                         </tr>
                         <tr>
                             <td><strong>Total prélèvements</strong></td>
-                            <td class="number"><strong>12,849 €</strong></td>
-                            <td class="number negative"><strong>SASU</strong></td>
-                            <td class="number negative"><strong>SASU</strong></td>
-                        </tr>
-                        <tr class="highlight-row">
-                            <td colspan="4"><strong>Résultat net (après charges déductibles)</strong></td>
-                        </tr>
-                        <tr>
-                            <td>Frais paiement (0.35€/ab)</td>
-                            <td class="number">4,704 €</td>
-                            <td class="number">19,706 €</td>
-                            <td class="number">45,140 €</td>
-                        </tr>
-                        <tr>
-                            <td>OPEX (non déductibles)</td>
-                            <td class="number">80,400 €</td>
-                            <td class="number">86,400 €</td>
-                            <td class="number">97,200 €</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Net en poche théorique</strong></td>
-                            <td class="number negative"><strong>-42,342 €</strong></td>
-                            <td class="number negative"><strong>Bascule SASU</strong></td>
-                            <td class="number negative"><strong>Bascule SASU</strong></td>
+                            <td class="number"><strong>17,621 €</strong></td>
+                            <td class="number"><strong>SASU</strong></td>
+                            <td class="number"><strong>SASU</strong></td>
                         </tr>
                     </tbody>
                 </table>
 
                 <div class="alert-box warning">
-                    ⚠️ <strong>Point de bascule:</strong> Dès 77,700€ HT (atteint au Mois 16), obligation de passer en société
+                    ⚠️ <strong>Point de bascule:</strong> Dès 77,700€ HT (atteint au Mois <span id="legal-switch">16</span>), prévoir passage en SASU pour optimisation
                 </div>
             </div>
 
@@ -1114,6 +1153,12 @@
                             <td class="number">77,700€ HT/an</td>
                             <td class="number positive">Illimité</td>
                             <td>SASU dès M16</td>
+                        </tr>
+                        <tr>
+                            <td>Franchise TVA</td>
+                            <td class="number positive">Oui (< 39,100€ HT/an)</td>
+                            <td class="number negative">Non</td>
+                            <td>Avantage micro au début</td>
                         </tr>
                         <tr>
                             <td>Charges déductibles</td>
@@ -1161,23 +1206,23 @@
                 <div class="highlights">
                     <div class="highlight-card">
                         <div class="highlight-icon">📅</div>
-                        <div class="highlight-title">M1-M15: Micro-entreprise</div>
-                        <div class="highlight-text">• Démarrage rapide, formalités simples<br>• Versement libératoire 1.7%<br>• Test du marché sans risque</div>
+                        <div class="highlight-title">M1-M15: Micro + Franchise TVA</div>
+                        <div class="highlight-text">• ARPU = 5€ (pas de TVA)<br>• Versement libératoire 1.7%<br>• M1 gratuit pour acquisition</div>
                     </div>
                     <div class="highlight-card">
                         <div class="highlight-icon">🔄</div>
-                        <div class="highlight-title">M16: Création SASU</div>
-                        <div class="highlight-text">• Anticipation plafond 77,700€<br>• Migration clients progressive<br>• Récupération TVA sur CAPEX</div>
+                        <div class="highlight-title">M16: Sortie franchise TVA</div>
+                        <div class="highlight-text">• CA > 77,700€ HT<br>• ARPU passe à 4,17€<br>• TVA à collecter</div>
                     </div>
                     <div class="highlight-card">
                         <div class="highlight-icon">🚀</div>
-                        <div class="highlight-title">M17+: SASU opérationnelle</div>
-                        <div class="highlight-text">• Déduction charges réelles<br>• Optimisation rémunération<br>• Prêt pour investisseurs</div>
+                        <div class="highlight-title">M17+: Création SASU</div>
+                        <div class="highlight-text">• Déduction charges réelles<br>• Récupération TVA CAPEX<br>• Prêt pour investisseurs</div>
                     </div>
                     <div class="highlight-card">
                         <div class="highlight-icon">💡</div>
                         <div class="highlight-title">Astuce fiscale</div>
-                        <div class="highlight-text">• ACRE si éligible: -50% cotisations<br>• Année blanche IS possible<br>• Dividendes après 2 ans</div>
+                        <div class="highlight-text">• ACRE si éligible: -50% cotisations<br>• Maximiser franchise TVA<br>• Préparer bascule SASU</div>
                     </div>
                 </div>
             </div>
@@ -1197,37 +1242,37 @@
                         <tr>
                             <td>Création SASU</td>
                             <td class="number">~500 €</td>
-                            <td>M15</td>
+                            <td>M16-17</td>
                         </tr>
                         <tr>
                             <td>Comptable/an</td>
                             <td class="number">1,500-2,000 €</td>
-                            <td>Dès M16</td>
+                            <td>Dès M17</td>
                         </tr>
                         <tr>
                             <td>Compte pro bancaire</td>
                             <td class="number">20-40 €/mois</td>
-                            <td>Dès M16</td>
+                            <td>Dès M17</td>
                         </tr>
                         <tr>
                             <td>RC Pro/assurance</td>
                             <td class="number">500-800 €/an</td>
-                            <td>Recommandé</td>
+                            <td>Recommandé M12</td>
                         </tr>
                         <tr>
                             <td>Récupération TVA CAPEX</td>
-                            <td class="number positive">+3,580 €</td>
-                            <td>M16</td>
+                            <td class="number positive">+3,600 €</td>
+                            <td>M17 (18K × 20%)</td>
                         </tr>
                         <tr>
                             <td>Économie charges déductibles</td>
                             <td class="number positive">+15-20K €/an</td>
-                            <td>Dès M16</td>
+                            <td>Dès M17</td>
                         </tr>
                         <tr class="highlight-row">
                             <td><strong>Gain net transition</strong></td>
                             <td class="number positive"><strong>+12-15K €/an</strong></td>
-                            <td><strong>Après M16</strong></td>
+                            <td><strong>Après M17</strong></td>
                         </tr>
                     </tbody>
                 </table>
@@ -1250,10 +1295,10 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td><strong>Churn > 3%</strong></td>
+                            <td><strong>Churn post-M1 gratuit</strong></td>
                             <td class="number negative">Élevé</td>
                             <td class="number">Moyenne</td>
-                            <td>• Onboarding optimisé<br>• Engagement quotidien (alertes)<br>• Plan annuel avec discount</td>
+                            <td>• Onboarding excellence M1<br>• Valeur immédiate délivrée<br>• Engagement quotidien</td>
                         </tr>
                         <tr>
                             <td><strong>Dépendance TikTok</strong></td>
@@ -1262,16 +1307,16 @@
                             <td>• Diversification: YouTube Shorts, Instagram Reels<br>• SEO content<br>• Newsletter</td>
                         </tr>
                         <tr>
+                            <td><strong>Bascule TVA</strong></td>
+                            <td class="number">Moyen</td>
+                            <td class="number negative">Certain</td>
+                            <td>• Anticipation M15-16<br>• Communication transparente<br>• Maintien prix psychologique 5€</td>
+                        </tr>
+                        <tr>
                             <td><strong>Frais paiement élevés</strong></td>
                             <td class="number">Moyen</td>
                             <td class="number negative">Élevé</td>
-                            <td>• Négociation volume Stripe<br>• Prélèvement SEPA<br>• Paiement annuel encouragé</td>
-                        </tr>
-                        <tr>
-                            <td><strong>TVA non récupérable</strong></td>
-                            <td class="number">Faible</td>
-                            <td class="number negative">Certain</td>
-                            <td>• Déjà intégré dans le modèle<br>• Prix psychologique maintenu à 5€</td>
+                            <td>• Négociation volume Stripe<br>• Prélèvement SEPA<br>• Plan annuel 49€</td>
                         </tr>
                         <tr>
                             <td><strong>Acquisition ralentie</strong></td>
@@ -1283,7 +1328,7 @@
                             <td><strong>Concurrence</strong></td>
                             <td class="number">Moyen</td>
                             <td class="number">Moyenne</td>
-                            <td>• First-mover sur TikTok Finance FR<br>• Communauté forte<br>• Prix agressif</td>
+                            <td>• First-mover TikTok Finance FR<br>• M1 gratuit différenciant<br>• Prix agressif</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1295,19 +1340,19 @@
                 <div class="highlights">
                     <div class="highlight-card">
                         <div class="highlight-title">Financement</div>
-                        <div class="highlight-text">Lever 50K€ (45K€ besoin + 5K€ buffer) en seed ou love money</div>
+                        <div class="highlight-text">Lever 30K€ (26K€ besoin + 4K€ buffer) en seed ou love money</div>
                     </div>
                     <div class="highlight-card">
                         <div class="highlight-title">KPIs prioritaires</div>
-                        <div class="highlight-text">Surveiller le churn M1/M3/M6 - Cible inférieure à 3% pour viabilité</div>
+                        <div class="highlight-text">Surveiller le churn post-M1 gratuit et la conversion M2</div>
                     </div>
                     <div class="highlight-card">
                         <div class="highlight-title">Optimisations rapides</div>
-                        <div class="highlight-text">Lancer plan annuel 49€ (2 mois offerts) pour trésorerie immédiate</div>
+                        <div class="highlight-text">Lancer plan annuel 49€ dès M3 pour cash et réduction churn</div>
                     </div>
                     <div class="highlight-card">
                         <div class="highlight-title">Diversification</div>
-                        <div class="highlight-text">Dès M6, tester YouTube et newsletter pour réduire dépendance TikTok</div>
+                        <div class="highlight-text">Dès M6, tester YouTube Shorts et newsletter hebdo</div>
                     </div>
                 </div>
             </div>
@@ -1315,7 +1360,7 @@
 
         <!-- Footer -->
         <div class="footer">
-            Document confidentiel - Version Auditée - © 2024 - Tous droits réservés
+            Document confidentiel - Version Auditée avec Micro+Franchise TVA - © 2024 - Tous droits réservés
         </div>
     </div>
 
@@ -1326,7 +1371,7 @@
         const now = new Date();
         document.getElementById('current-date').textContent = months[now.getMonth()] + ' ' + now.getFullYear();
 
-        // Realistic model with VAT and payment fees
+        // Model with corrected parameters
         const model = {
             subscribers: [],
             revenue_ttc: [],
@@ -1336,49 +1381,124 @@
             cash: []
         };
 
+        // --- PARAMS GLOBAUX ---
+        const PRICE_TTC = 5.00;
+
+        // Micro-entreprise + franchise TVA au départ
+        const MICRO_PLAFOND_HT_ANNUEL = 77700; // prestations de services
+        const MICRO_SOC = 0.212;   // cotisations sociales BIC services
+        const MICRO_IR_VL = 0.017; // versement libératoire
+        const TVA_RATE = 0.20;
+
+        const PAYMENT_FEE = 0.35;
+        const CHURN = 0.03;
+
+        const CASH_INIT = 10000;
+
+        // CAPEX échelonné (18k sur M2-M4)
+        const CAPEX_SCHEDULE = { 1: 6000, 2: 6000, 3: 6000 };
+
+        // OPEX base: 1 800€/mois M1–M6, 2 300€/mois à partir de M7
+        function opexBase(m) {
+            return (m < 6) ? 1800 : 2300;
+        }
+
+        // Coûts ponctuels
+        function coutsPonctuels(m, regimeTVA) {
+            const licenceNews = (m >= 2) ? (900 / 12) : 0; // 900€/an dès M3
+            const comptable   = (regimeTVA) ? 150 : 0;     // 150€/mois après bascule
+            const sponsoTest  = (m === 3) ? 3000 : 0;      // Test sponso M4
+            const appMaint    = (m >= 6) ? 500 : 0;        // Maintenance app dès M7
+            return licenceNews + comptable + sponsoTest + appMaint;
+        }
+
+        // Acquisition : 150/mois (M1-12) → 400 (M13-24) → 700 (M25-36)
+        function newSubsAtMonth(m) {
+            if (m < 12) return 150;
+            if (m < 24) return 400;
+            return 700;
+        }
+
         function calculateRealistic() {
-            // Parameters
-            const PRICE_TTC = 5.00;
-            const ARPU_HT = 4.17;  // 5.00 / 1.20
-            const PAYMENT_FEE = 0.35;
-            const CHURN = 0.03;  // 3% monthly
-            const CAPEX = 17900;
-            const CASH_INIT = 10000;
-            
+            model.subscribers = [];
+            model.revenue_ttc = [];
+            model.revenue_ht  = [];
+            model.costs       = [];
+            model.ebitda      = [];
+            model.cash        = [];
+
             let subs = 0;
             let cash = CASH_INIT;
-            
+
+            // Gestion franchise TVA -> bascule
+            let regimeTVA = false;
+            let caAnnuelHT = 0;
+            let switchMonth = null;
+            let monthsSinceStart = 0;
+
             for (let m = 0; m < 36; m++) {
-                // Acquisition
-                let newSubs = m < 12 ? 200 : m < 24 ? 500 : 800;
-                
-                // Churn
-                let churn = Math.floor(subs * CHURN);
-                
-                // Update subscribers  
+                const isFreeMonth = (m === 0);  // M1 gratuit
+
+                // Acquisition + churn
+                const newSubs = newSubsAtMonth(m);
+                const churn   = Math.floor(subs * CHURN);
                 subs = subs + newSubs - churn;
-                let avgSubs = m === 0 ? newSubs / 2 : (model.subscribers[m-1] + subs) / 2;
+
+                // Moyenne abonnés du mois
+                const avgSubs = (m === 0) ? (newSubs / 2) : (model.subscribers[m-1] + subs) / 2;
+
+                // ARPU selon régime
+                const arpuHT = regimeTVA ? (PRICE_TTC / (1 + TVA_RATE)) : PRICE_TTC;
+
+                // Revenus
+                const revenue_ttc = isFreeMonth ? 0 : (avgSubs * PRICE_TTC);
+                const revenue_ht  = isFreeMonth ? 0 : (avgSubs * arpuHT);
+                const tva_collectee = regimeTVA ? (revenue_ttc - revenue_ht) : 0;
+
+                // Frais paiement uniquement si payant
+                const payment_fees = isFreeMonth ? 0 : (avgSubs * PAYMENT_FEE);
+
+                // OPEX
+                const base = opexBase(m);
+                const ponctuels = coutsPonctuels(m, regimeTVA);
+                const total_costs = payment_fees + base + ponctuels;
+
+                // EBITDA (opérationnel, avant charges micro et impôts)
+                const ebitda = revenue_ht - total_costs;
+
+                // CAPEX du mois
+                const capex = CAPEX_SCHEDULE[m] || 0;
+
+                // Charges micro (si on est encore en micro/franchise)
+                const chargesMicro = (!regimeTVA && !isFreeMonth) ? revenue_ht * (MICRO_SOC + MICRO_IR_VL) : 0;
+
+                // CASH
+                cash = cash + ebitda - capex - chargesMicro;
+
+                // Suivi CA annuel HT pour la bascule (sur 12 mois glissants)
+                caAnnuelHT += revenue_ht;
+                monthsSinceStart++;
                 
-                // Revenue
-                let revenue_ttc = avgSubs * PRICE_TTC;
-                let revenue_ht = avgSubs * ARPU_HT;
-                
-                // Costs
-                let payment_fees = avgSubs * PAYMENT_FEE;
-                let opex_base = 2800;  // TikTok + Data + Dev + App
-                let opex_additional = m < 12 ? 3900 : m < 24 ? 4400 : 5300;
-                let total_costs = payment_fees + opex_base + opex_additional;
-                
-                // EBITDA
-                let ebitda = revenue_ht - total_costs;
-                
-                // Cash
-                if (m === 0) {
-                    cash = cash - CAPEX + ebitda;
-                } else {
-                    cash = cash + ebitda;
+                // Check bascule TVA
+                if (!regimeTVA && monthsSinceStart >= 12) {
+                    // Calcul CA 12 derniers mois
+                    let ca12mois = 0;
+                    for (let i = Math.max(0, m - 11); i <= m; i++) {
+                        ca12mois += model.revenue_ht[i] || 0;
+                    }
+                    if (ca12mois > MICRO_PLAFOND_HT_ANNUEL) {
+                        regimeTVA = true;
+                        switchMonth = m + 1;
+                    }
                 }
                 
+                // Alternative: check si CA depuis début dépasse plafond
+                if (!regimeTVA && caAnnuelHT > MICRO_PLAFOND_HT_ANNUEL) {
+                    regimeTVA = true;
+                    switchMonth = m + 1;
+                }
+
+                // Push séries
                 model.subscribers.push(subs);
                 model.revenue_ttc.push(revenue_ttc);
                 model.revenue_ht.push(revenue_ht);
@@ -1386,6 +1506,9 @@
                 model.ebitda.push(ebitda);
                 model.cash.push(cash);
             }
+
+            // Store switch month globally
+            window.tvaSwitchMonth = switchMonth;
             
             updateRealisticValues();
         }
@@ -1405,6 +1528,11 @@
             document.getElementById('exec-clients').textContent = 
                 model.subscribers[35].toLocaleString('fr-FR');
             
+            // MRR
+            const finalMRR = model.revenue_ht[35];
+            document.getElementById('exec-mrr').textContent = 
+                (finalMRR / 1000).toFixed(1) + 'K€';
+            
             // Break-even
             let breakEven = null;
             for (let i = 0; i < model.ebitda.length; i++) {
@@ -1416,7 +1544,101 @@
             document.getElementById('exec-breakeven').textContent = 
                 breakEven ? `Mois ${breakEven}` : 'Non atteint';
             
+            // Cash positive month
+            let cashPositive = null;
+            for (let i = 0; i < model.cash.length; i++) {
+                if (model.cash[i] > 0) {
+                    cashPositive = i + 1;
+                    break;
+                }
+            }
+            document.getElementById('exec-cashpositive').textContent = 
+                cashPositive ? `Mois ${cashPositive}` : 'Non atteint';
+            
+            // Trough cash
+            const minCash = Math.min(...model.cash);
+            const troughMonth = model.cash.indexOf(minCash) + 1;
+            document.getElementById('funding-need').textContent = 
+                `${Math.ceil(Math.abs(minCash) / 1000)}K€ total - Trough cash: ${(minCash / 1000).toFixed(1)}K€ au mois ${troughMonth}`;
+            
+            // TVA switch month
+            if (window.tvaSwitchMonth) {
+                document.getElementById('tva-switch-month').textContent = window.tvaSwitchMonth;
+                document.getElementById('tva-switch-info').textContent = window.tvaSwitchMonth;
+                document.getElementById('legal-switch').textContent = window.tvaSwitchMonth;
+            }
+            
+            // Update P&L table
+            updatePLTable();
+            
+            // Update cash milestones
+            updateCashMilestones();
+            
             drawChart();
+        }
+
+        function updatePLTable() {
+            // Calculate yearly totals
+            const y1_rev = model.revenue_ht.slice(0, 12).reduce((a, b) => a + b, 0);
+            const y2_rev = model.revenue_ht.slice(12, 24).reduce((a, b) => a + b, 0);
+            const y3_rev = model.revenue_ht.slice(24, 36).reduce((a, b) => a + b, 0);
+            
+            const y1_ebitda = model.ebitda.slice(0, 12).reduce((a, b) => a + b, 0);
+            const y2_ebitda = model.ebitda.slice(12, 24).reduce((a, b) => a + b, 0);
+            const y3_ebitda = model.ebitda.slice(24, 36).reduce((a, b) => a + b, 0);
+            
+            // Update yearly summaries
+            document.getElementById('y1-revenue').textContent = (y1_rev / 1000).toFixed(0) + 'K € HT';
+            document.getElementById('y2-revenue').textContent = (y2_rev / 1000).toFixed(0) + 'K € HT';
+            document.getElementById('y3-revenue').textContent = (y3_rev / 1000).toFixed(0) + 'K € HT';
+            
+            document.getElementById('y1-ebitda').textContent = (y1_ebitda / 1000).toFixed(0) + 'K €';
+            document.getElementById('y2-ebitda').textContent = (y2_ebitda / 1000).toFixed(0) + 'K €';
+            document.getElementById('y3-ebitda').textContent = (y3_ebitda / 1000).toFixed(0) + 'K €';
+            
+            // Update detailed P&L
+            document.getElementById('ca-y1').textContent = y1_rev.toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' €';
+            document.getElementById('ca-y2').textContent = y2_rev.toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' €';
+            document.getElementById('ca-y3').textContent = y3_rev.toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' €';
+            document.getElementById('ca-total').textContent = (y1_rev + y2_rev + y3_rev).toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' €';
+        }
+
+        function updateCashMilestones() {
+            // Find trough
+            const minCash = Math.min(...model.cash);
+            const troughMonth = model.cash.indexOf(minCash) + 1;
+            
+            document.getElementById('trough-month').textContent = 'M' + troughMonth;
+            document.getElementById('trough-cash').textContent = minCash.toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' €';
+            
+            // Break-even month
+            let breakEven = null;
+            for (let i = 0; i < model.ebitda.length; i++) {
+                if (model.ebitda[i] > 0) {
+                    breakEven = i + 1;
+                    break;
+                }
+            }
+            if (breakEven) {
+                document.getElementById('be-month').textContent = 'M' + breakEven;
+                document.getElementById('be-cash').textContent = model.cash[breakEven - 1].toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' €';
+            }
+            
+            // Cash positive
+            let cashPositive = null;
+            for (let i = 0; i < model.cash.length; i++) {
+                if (model.cash[i] > 0) {
+                    cashPositive = i + 1;
+                    break;
+                }
+            }
+            if (cashPositive) {
+                document.getElementById('cf-pos-month').textContent = 'M' + cashPositive;
+                document.getElementById('cf-pos-cash').textContent = model.cash[cashPositive - 1].toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' €';
+            }
+            
+            // Final cash
+            document.getElementById('final-cash').textContent = model.cash[35].toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' €';
         }
 
         function drawChart() {
@@ -1510,6 +1732,23 @@
             ctx.fillText('M12', padding + (11/35) * (width - 2 * padding), height - 30);
             ctx.fillText('M24', padding + (23/35) * (width - 2 * padding), height - 30);
             ctx.fillText('M36', width - padding, height - 30);
+            
+            // Mark TVA switch month
+            if (window.tvaSwitchMonth) {
+                const switchX = padding + ((window.tvaSwitchMonth - 1) / 35) * (width - 2 * padding);
+                ctx.strokeStyle = '#ffc107';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(switchX, padding);
+                ctx.lineTo(switchX, height - padding);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                ctx.fillStyle = '#ffc107';
+                ctx.font = '10px Inter';
+                ctx.fillText('TVA', switchX, padding - 5);
+            }
         }
 
         // Initialize
