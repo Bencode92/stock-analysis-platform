@@ -1,6 +1,7 @@
 /**
  * etf-script.js - Script principal pour la page ETF avec Top 10 et fonctionnalités complètes
  * Similaire à liste-script.js mais adapté aux ETFs
+ * v1.1 - Simplification des cartes Top 10 avec tag spéculatif
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -78,22 +79,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Normaliser les données ETF
+    // Normaliser les données ETF - VERSION AMÉLIORÉE avec fallbacks
     function normalizeETFData(etf) {
         return {
             ...etf,
             ticker: etf.ticker || etf.symbol || '-',
-            name: etf.name || '-',
-            ter: parseFloat(etf.ter || etf.expense_ratio || 0),
-            aum: parseFloat(etf.aum || etf.net_assets || 0),
-            price: parseFloat(etf.price || etf.last || 0),
-            return_1d: parseFloat(etf.return_1d || etf.change || 0),
-            return_ytd: parseFloat(etf.return_ytd || etf.ytd || 0),
-            return_1y: parseFloat(etf.return_1y || etf.perf_1y || 0),
-            return_3y: parseFloat(etf.return_3y || etf.perf_3y || 0),
-            volatility: parseFloat(etf.volatility || etf.vol_1y || 0),
-            sharpe_ratio: parseFloat(etf.sharpe_ratio || etf.sharpe || 0),
-            dividend_yield: parseFloat(etf.dividend_yield || etf.yield || 0),
+            name: etf.name || etf.objective?.slice(0, 60) || '-',
+
+            // fallbacks dataset
+            ter: parseFloat(etf.total_expense_ratio ?? etf.expense_ratio ?? etf.ter ?? 0),
+            aum: parseFloat(etf.aum_usd ?? etf.aum ?? etf.net_assets ?? 0),
+            price: parseFloat(etf.last_close ?? etf.last ?? etf.price ?? 0),
+
+            return_1d: parseFloat(etf.daily_change_pct ?? etf.return_1d ?? etf.change ?? 0),
+            return_ytd: parseFloat(etf.ytd_return_pct ?? etf.return_ytd ?? etf.ytd ?? 0),
+            return_1y: parseFloat(etf.one_year_return_pct ?? etf.return_1y ?? etf.perf_1y ?? 0),
+            return_3y: parseFloat(etf.return_3y ?? etf.perf_3y ?? 0),
+
+            volatility: parseFloat(etf.vol_3y_pct ?? etf.volatility ?? etf.vol_1y ?? 0),
+            sharpe_ratio: parseFloat(etf.sharpe_ratio ?? etf.sharpe ?? 0),
+            dividend_yield: parseFloat(etf.yield_ttm ?? etf.dividend_yield ?? 0),
+
+            // pour le tag spéculatif
+            etf_type: etf.etf_type || '',
+            leverage: (etf.leverage !== '' && etf.leverage !== undefined) ? Number(etf.leverage) : null,
+
             type: getETFType(etf)
         };
     }
@@ -111,76 +121,73 @@ document.addEventListener('DOMContentLoaded', function() {
         etfsData.topPerformers.ytd.worst = sortedYTD.slice(-10).reverse();
     }
     
-    // Render Top 10 ETFs
+    // Helper pour détecter si ETF spéculatif
+    function isSpeculative(e) {
+        const t = String(e.etf_type || '').toLowerCase();
+        const lev = Number(e.leverage);
+        return t.includes('inverse') || t.includes('leverag') || (Number.isFinite(lev) && lev !== 0);
+    }
+    
+    // Render Top 10 ETFs - VERSION SIMPLIFIÉE
     function renderTopTenETFs() {
         const container = document.querySelector('#top-global-container .stock-cards-container');
         if (!container) return;
-        
+
         // Filtrer par type si nécessaire
         let data = etfsData.all;
         if (topFilters.type !== 'GLOBAL') {
-            data = data.filter(etf => {
-                const type = etf.type.toUpperCase();
-                return type === topFilters.type;
-            });
+            const want = topFilters.type.toLowerCase();
+            data = data.filter(etf => (etf.type || '').toLowerCase() === want);
         }
-        
-        // Sélectionner les bonnes données
-        let topData = [];
-        if (topFilters.timeframe === 'daily') {
-            // Trier par performance daily
-            const sorted = [...data].sort((a, b) => 
-                topFilters.direction === 'up' ? b.return_1d - a.return_1d : a.return_1d - b.return_1d
-            );
-            topData = sorted.slice(0, 10);
-        } else {
-            // Trier par YTD
-            const sorted = [...data].sort((a, b) => 
-                topFilters.direction === 'up' ? b.return_ytd - a.return_ytd : a.return_ytd - b.return_ytd
-            );
-            topData = sorted.slice(0, 10);
-        }
-        
-        // Clear container
+
+        // Trier selon metric active
+        const perfKey = topFilters.timeframe === 'daily' ? 'return_1d' : 'return_ytd';
+        const sorted = [...data].sort((a, b) =>
+            topFilters.direction === 'up' ? (b[perfKey] - a[perfKey]) : (a[perfKey] - b[perfKey])
+        );
+        const topData = sorted.slice(0, 10);
+
         container.innerHTML = '';
-        
-        // Créer les cartes
+
         topData.forEach((etf, index) => {
-            const card = document.createElement('div');
-            card.className = 'stock-card';
-            
-            const value = topFilters.timeframe === 'daily' ? etf.return_1d : etf.return_ytd;
-            const valueClass = value >= 0 ? 'positive' : 'negative';
-            const formattedValue = formatPercent(value);
-            
-            // Badge pour le rang
+            const main = topFilters.timeframe === 'daily' ? etf.return_1d : etf.return_ytd;
+            const sub = topFilters.timeframe === 'daily' ? etf.return_ytd : etf.return_1d;
+            const valueClass = main >= 0 ? 'positive' : 'negative';
+
             let rankBg = '';
             if (index === 0) rankBg = 'bg-amber-500';
             else if (index === 1) rankBg = 'bg-gray-300';
             else if (index === 2) rankBg = 'bg-amber-700';
-            
+
+            const specTag = isSpeculative(etf) ? `<span class="ml-2 ter-badge">⚠ spéculatif</span>` : '';
+
+            const card = document.createElement('div');
+            card.className = 'stock-card';
             card.innerHTML = `
                 <div class="rank ${rankBg}">#${index + 1}</div>
                 <div class="stock-info">
-                    <div class="stock-name">${etf.ticker}</div>
+                    <div class="stock-name">${etf.ticker}${specTag}</div>
                     <div class="stock-fullname" title="${etf.name}">${etf.name}</div>
-                    <div class="text-xs opacity-50 mt-1">
-                        <span class="ter-badge">TER ${etf.ter.toFixed(2)}%</span>
-                        <span class="aum-badge ml-1">${formatAUM(etf.aum)}</span>
+                    <div class="text-xs opacity-60 mt-1">
+                        <span class="text-[11px] opacity-70">
+                            ${topFilters.timeframe === 'daily' ? 'YTD' : 'Jour'} ${formatPercent(sub)}
+                        </span>
                     </div>
                 </div>
                 <div class="stock-performance ${valueClass}">
-                    ${formattedValue}
+                    ${formatPercent(main)}
                 </div>
             `;
-            
             container.appendChild(card);
         });
-        
-        // Si moins de 10 résultats
-        if (topData.length === 0) {
+
+        if (!topData.length) {
             container.innerHTML = '<div class="text-center text-gray-400 py-4">Aucune donnée disponible</div>';
         }
+
+        // hint dynamique
+        const hint = document.getElementById('hint-text');
+        if (hint) hint.textContent = `Top ${topFilters.direction === 'up' ? 'hausses' : 'baisses'} — ${topFilters.timeframe === 'daily' ? 'Jour' : 'YTD'}`;
     }
     
     // Render table complète
@@ -489,4 +496,4 @@ document.addEventListener('DOMContentLoaded', function() {
     loadETFData();
 });
 
-console.log('✅ ETF Script v1.0 chargé');
+console.log('✅ ETF Script v1.1 - Top 10 simplifié avec tags spéculatifs');
