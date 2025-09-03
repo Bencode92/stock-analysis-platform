@@ -1029,7 +1029,7 @@
                         <tr class="highlight-row">
                             <td><strong>Trough</strong></td>
                             <td class="number"><strong>M13</strong></td>
-                            <td class="number negative"><strong>-45,234 €</strong></td>
+                            <td class="number negative"><strong id="trough-cash">-45,234 €</strong></td>
                             <td><strong>Point bas</strong></td>
                         </tr>
                         <tr>
@@ -1053,7 +1053,7 @@
                         <tr class="highlight-row">
                             <td><strong>Finale</strong></td>
                             <td class="number"><strong>M36</strong></td>
-                            <td class="number positive"><strong>105,511 €</strong></td>
+                            <td class="number positive"><strong id="final-cash">105,511 €</strong></td>
                             <td><strong>Cash généré</strong></td>
                         </tr>
                     </tbody>
@@ -1077,16 +1077,7 @@
         const now = new Date();
         document.getElementById('current-date').textContent = months[now.getMonth()] + ' ' + now.getFullYear();
 
-        const model = {
-            trialSubs: [],
-            paidSubs: [],
-            revenue_ttc: [],
-            revenue_ht: [],
-            costs: [],
-            ebitda: [],
-            cash: []
-        };
-
+        // Configuration du modèle
         const PRICE_TTC = 5.00;
         const TVA_FRANCHISE_MAJORE = 41250;
         const TVA_RATE = 0.20;
@@ -1097,16 +1088,17 @@
         const STRIPE_FEE_RATE = 0.015;
         const STRIPE_FEE_FIXED = 0.25;
         const CASH_INIT = 10000;
-        const CAPEX_SCHEDULE = { 1: 6000, 2: 6000, 3: 6000 };
+        const CAPEX_SCHEDULE = { 0: 6000, 1: 6000, 2: 6000 };
         
-        // Évolution progressive du mix Web/App
+        // Fonction pour obtenir le mix Web/App selon le mois
         function getChannelMix(month) {
-            if (month < 6) return { web: 1.0, app: 0.0 };  // M1-M6: 100% Web
-            if (month < 12) return { web: 0.9, app: 0.1 };  // M7-M12: 90% Web, 10% App
-            if (month < 24) return { web: 0.85, app: 0.15 }; // M13-M24: 85% Web, 15% App
-            return { web: 0.8, app: 0.2 }; // M25+: 80% Web, 20% App
+            if (month < 6) return { web: 1.0, app: 0.0 };  
+            if (month < 12) return { web: 0.9, app: 0.1 };  
+            if (month < 24) return { web: 0.85, app: 0.15 }; 
+            return { web: 0.8, app: 0.2 }; 
         }
         
+        // Fonction pour les nouveaux essais par mois
         function newTrialsAtMonth(m) {
             if (m < 6) return 200;
             if (m < 12) return 400;
@@ -1114,6 +1106,7 @@
             return 800;
         }
         
+        // Fonction pour les charges opérationnelles mensuelles
         function monthlyOPEX(m, hasVAT) {
             let base = 3000;
             if (m >= 6) base += 500;
@@ -1128,37 +1121,55 @@
             return base;
         }
         
+        // Calcul principal du modèle
         function calculate() {
-            let trialSubs = 0;
+            const model = {
+                trialSubs: [],
+                paidSubs: [],
+                revenue_ht: [],
+                costs: [],
+                ebitda: [],
+                cash: []
+            };
+            
             let paidSubs = 0;
             let cash = CASH_INIT;
             let cumulativeRevenueHT = 0;
             let hasVAT = false;
+            let vatSwitchMonth = null;
+            let troughCash = CASH_INIT;
+            let troughMonth = 0;
             
             for (let m = 0; m < 36; m++) {
                 const newTrials = newTrialsAtMonth(m);
+                
+                // Conversion des essais en payants (mois précédent)
                 let newPaid = 0;
                 if (m > 0) {
-                    newPaid = Math.floor(model.trialSubs[m-1] * CONV_TRIAL_TO_PAID);
+                    const previousTrials = newTrialsAtMonth(m-1);
+                    newPaid = Math.floor(previousTrials * CONV_TRIAL_TO_PAID);
                 }
                 
+                // Churn des abonnés existants
                 const churnPaid = Math.floor(paidSubs * (CHURN_PAID + CHURN_INVOLUNTARY));
-                trialSubs = newTrials;
                 paidSubs = paidSubs + newPaid - churnPaid;
                 
+                // Vérification TVA
                 if (!hasVAT && cumulativeRevenueHT > TVA_FRANCHISE_MAJORE) {
                     hasVAT = true;
+                    vatSwitchMonth = m;
                 }
                 
-                const avgPaidSubs = m === 0 ? 0 : (model.paidSubs[m-1] + paidSubs) / 2;
+                // Calcul des revenus par canal
                 const mix = getChannelMix(m);
-                const subsWeb = avgPaidSubs * mix.web;
-                const subsApp = avgPaidSubs * mix.app;
+                const subsWeb = paidSubs * mix.web;
+                const subsApp = paidSubs * mix.app;
                 const revenueTTCWeb = subsWeb * PRICE_TTC;
                 const revenueTTCApp = subsApp * PRICE_TTC;
                 const appStoreFee = revenueTTCApp * APP_STORE_FEE;
                 const netAfterAppStore = revenueTTCApp - appStoreFee;
                 
+                // Calcul revenus HT (avec TVA si applicable)
                 let revenueHTWeb = revenueTTCWeb;
                 let revenueHTApp = netAfterAppStore;
                 
@@ -1167,43 +1178,54 @@
                     revenueHTApp = netAfterAppStore / (1 + TVA_RATE);
                 }
                 
-                const revenue_ttc = revenueTTCWeb + revenueTTCApp;
                 const revenue_ht = revenueHTWeb + revenueHTApp;
                 cumulativeRevenueHT += revenue_ht;
                 
+                // Calcul des coûts
                 const paymentFees = subsWeb * (STRIPE_FEE_RATE * PRICE_TTC + STRIPE_FEE_FIXED);
                 const acquisitionCost = newTrials * 8;
                 const opex = monthlyOPEX(m, hasVAT);
                 const total_costs = paymentFees + acquisitionCost + opex;
+                
+                // EBITDA
                 const ebitda = revenue_ht - total_costs;
+                
+                // CAPEX et charges sociales
                 const capex = CAPEX_SCHEDULE[m] || 0;
                 const socialCharges = hasVAT ? revenue_ht * 0.10 : revenue_ht * 0.229;
                 
+                // Mise à jour du cash
                 cash = cash + ebitda - capex - socialCharges;
                 
-                model.trialSubs.push(trialSubs);
+                // Tracking du trough
+                if (cash < troughCash) {
+                    troughCash = cash;
+                    troughMonth = m + 1;
+                }
+                
+                // Stockage des données
+                model.trialSubs.push(newTrials);
                 model.paidSubs.push(paidSubs);
-                model.revenue_ttc.push(revenue_ttc);
                 model.revenue_ht.push(revenue_ht);
                 model.costs.push(total_costs);
                 model.ebitda.push(ebitda);
                 model.cash.push(cash);
             }
             
-            updateDashboard();
-        }
-        
-        function updateDashboard() {
+            // Mise à jour du dashboard
             const totalRevenue = model.revenue_ht.reduce((a, b) => a + b, 0);
             const totalEBITDA = model.ebitda.reduce((a, b) => a + b, 0);
             const finalSubs = model.paidSubs[35];
             const finalMRR = model.revenue_ht[35];
+            const finalCash = model.cash[35];
             
+            // Mise à jour des métriques affichées
             document.getElementById('exec-revenue').textContent = (totalRevenue / 1000).toFixed(0) + 'K €';
             document.getElementById('exec-ebitda').textContent = (totalEBITDA / 1000).toFixed(0) + 'K €';
             document.getElementById('exec-clients').textContent = finalSubs.toLocaleString('fr-FR');
             document.getElementById('exec-mrr').textContent = (finalMRR / 1000).toFixed(0) + 'K€';
             
+            // Break-even
             let breakEven = null;
             for (let i = 0; i < model.ebitda.length; i++) {
                 if (model.ebitda[i] > 0) {
@@ -1213,6 +1235,7 @@
             }
             document.getElementById('exec-breakeven').textContent = breakEven ? `Mois ${breakEven}` : 'Non atteint';
             
+            // Cash positif
             let cashPositive = null;
             for (let i = 0; i < model.cash.length; i++) {
                 if (model.cash[i] > 0) {
@@ -1222,15 +1245,18 @@
             }
             document.getElementById('exec-cashpositive').textContent = cashPositive ? `Mois ${cashPositive}` : 'Non atteint';
             
-            const minCash = Math.min(...model.cash);
-            const troughMonth = model.cash.indexOf(minCash) + 1;
+            // Mise à jour du financement requis et valeurs finales
             document.getElementById('funding-need').textContent = 
-                `${Math.ceil(Math.abs(minCash) / 1000 * 1.15)}K€ (${Math.ceil(Math.abs(minCash) / 1000)}K€ trough + 7K€ buffer)`;
+                `${Math.ceil(Math.abs(troughCash) / 1000 * 1.15)}K€ (${Math.ceil(Math.abs(troughCash) / 1000)}K€ trough + 7K€ buffer)`;
+            document.getElementById('trough-cash').textContent = troughCash.toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' €';
+            document.getElementById('final-cash').textContent = finalCash.toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' €';
             
-            drawChart();
+            // Dessin du graphique
+            drawChart(model.cash);
         }
         
-        function drawChart() {
+        // Fonction pour dessiner le graphique
+        function drawChart(data) {
             const canvas = document.getElementById('chart-cash');
             if (!canvas) return;
             
@@ -1241,11 +1267,11 @@
             ctx.clearRect(0, 0, width, height);
             
             const padding = 50;
-            const data = model.cash;
-            const max = Math.max(...data);
-            const min = Math.min(...data);
-            const range = max - min || 1;
+            const max = Math.max(...data, 20000); // Au minimum 20K pour l'échelle
+            const min = Math.min(...data, -60000); // Au minimum -60K pour l'échelle
+            const range = max - min;
             
+            // Grille
             ctx.strokeStyle = 'rgba(6, 255, 165, 0.1)';
             ctx.lineWidth = 1;
             
@@ -1257,6 +1283,7 @@
                 ctx.stroke();
             }
             
+            // Ligne zéro
             if (min < 0 && max > 0) {
                 ctx.strokeStyle = 'rgba(255, 51, 102, 0.3)';
                 ctx.lineWidth = 2;
@@ -1267,6 +1294,7 @@
                 ctx.stroke();
             }
             
+            // Ligne de données
             ctx.strokeStyle = '#06ffa5';
             ctx.lineWidth = 2;
             ctx.shadowColor = '#06ffa5';
@@ -1282,6 +1310,7 @@
             }
             ctx.stroke();
             
+            // Labels Y
             ctx.fillStyle = '#808080';
             ctx.font = '11px Inter';
             ctx.textAlign = 'right';
@@ -1292,6 +1321,7 @@
                 ctx.fillText((val/1000).toFixed(0) + 'K€', padding - 10, y + 4);
             }
             
+            // Labels X
             ctx.textAlign = 'center';
             ctx.fillText('M6', padding + (5/35) * (width - 2 * padding), height - 30);
             ctx.fillText('M12', padding + (11/35) * (width - 2 * padding), height - 30);
@@ -1299,6 +1329,7 @@
             ctx.fillText('M36', width - padding, height - 30);
         }
         
+        // Lancement du calcul au chargement
         calculate();
     </script>
 </body>
