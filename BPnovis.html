@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Business Plan SaaS - Version Optimisée</title>
+    <title>Business Plan SaaS - Version Finale</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         
@@ -174,15 +174,6 @@
             .footer {
                 color: #5a6c7d !important;
                 border-top: 1px solid #1e3a5f !important;
-            }
-            
-            .chart-container {
-                background: white !important;
-                border: 1px solid #1e3a5f !important;
-            }
-            
-            .chart-title {
-                color: #1e3a5f !important;
             }
         }
 
@@ -420,45 +411,6 @@
             color: #dc3545;
         }
 
-        .chart-container {
-            margin: 30px 0;
-            padding: 20px;
-            background: rgba(6, 255, 165, 0.03);
-            border-radius: 8px;
-            border: 1px solid rgba(6, 255, 165, 0.1);
-        }
-
-        .chart-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 15px;
-            color: #06ffa5;
-        }
-
-        canvas {
-            width: 100% !important;
-            height: 300px !important;
-        }
-
-        .btn-print {
-            background: linear-gradient(135deg, #06ffa5, #00d084);
-            color: #000;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            margin: 20px;
-            box-shadow: 0 0 20px rgba(6, 255, 165, 0.3);
-            transition: all 0.3s;
-        }
-
-        .btn-print:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0 30px rgba(6, 255, 165, 0.5);
-        }
-
         .footer {
             text-align: center;
             padding: 20px;
@@ -499,75 +451,6 @@
             color: #a0a0a0;
         }
 
-        .financial-summary {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin: 30px 0;
-        }
-
-        .summary-card {
-            text-align: center;
-            padding: 20px;
-            border: 1px solid rgba(6, 255, 165, 0.2);
-            border-radius: 8px;
-            background: rgba(6, 255, 165, 0.03);
-        }
-
-        .summary-year {
-            font-size: 14px;
-            color: #808080;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 10px;
-        }
-
-        .summary-revenue {
-            font-size: 24px;
-            font-weight: 700;
-            color: #06ffa5;
-            margin-bottom: 5px;
-            text-shadow: 0 0 10px rgba(6, 255, 165, 0.5);
-        }
-
-        .summary-ebitda {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .summary-ebitda.positive {
-            color: #06ffa5;
-        }
-
-        .summary-ebitda.negative {
-            color: #ff3366;
-        }
-        
-        .scenario-selector {
-            display: flex;
-            gap: 10px;
-            margin: 20px 0;
-        }
-        
-        .scenario-btn {
-            padding: 10px 20px;
-            background: rgba(6, 255, 165, 0.1);
-            border: 1px solid rgba(6, 255, 165, 0.3);
-            color: #06ffa5;
-            cursor: pointer;
-            border-radius: 4px;
-            transition: all 0.3s;
-        }
-        
-        .scenario-btn.active {
-            background: #06ffa5;
-            color: #000;
-        }
-        
-        .scenario-btn:hover {
-            background: rgba(6, 255, 165, 0.2);
-        }
-        
         .date-display {
             color: #a0a0a0;
         }
@@ -582,7 +465,7 @@
             <div class="company-logo">📊</div>
             
             <h1 class="cover-title">Business Plan<br>2025-2028</h1>
-            <p class="cover-subtitle">Plateforme SaaS d'Analyse Financière<br><small>Version Optimisée - Coûts Réels</small></p>
+            <p class="cover-subtitle">Plateforme SaaS d'Analyse Financière<br><small>Version Finale - Coûts Réels</small></p>
             
             <div class="cover-info">
                 <div class="cover-info-item">
@@ -595,7 +478,7 @@
                 </div>
                 <div class="cover-info-item">
                     <strong>Version</strong>
-                    v3.0 - Scénarios API
+                    v4.0 Finale
                 </div>
                 <div class="cover-info-item">
                     <strong>Statut</strong>
@@ -609,184 +492,188 @@
             <h2 class="section-header">Executive Summary</h2>
             
             <div class="alert-box success">
-                ✅ Infrastructure optimisée : API 600€ + serveur 1.2-1.8K€/an
-                <br>✅ Marketing capé à 15K€ Y1 (vs 28.8K€ initialement)
-                <br>✅ Licences/outils : 0€ (tout en open source)
-                <br>✅ Cash-out divisé par 3-4 selon scénario
-            </div>
-
-            <div class="scenario-selector no-print">
-                <button class="scenario-btn active" onclick="selectScenario('low')">API 600€/an</button>
-                <button class="scenario-btn" onclick="selectScenario('high')">API 600€/mois</button>
+                ✅ Infrastructure : API 600€/mois + serveur 150€/mois = 9K€/an
+                <br>✅ Marketing capé à 15K€ Y1 (focus organique)
+                <br>✅ Cash-out réduit de 78K€ → 21K€ (-73%)
+                <br>✅ Financement requis : 30K€ (vs 85K€ initial)
             </div>
 
             <div class="key-metrics">
                 <div class="metric-box">
                     <div class="metric-label">CA Total HT (36M)</div>
-                    <div class="metric-value" id="exec-revenue">420K €</div>
-                    <div class="metric-detail">Prix : 5€/mois<br>Marketing capé Y1</div>
+                    <div class="metric-value">420K €</div>
+                    <div class="metric-detail">Prix : 5€/mois<br>6,500 clients M36</div>
                 </div>
                 <div class="metric-box">
                     <div class="metric-label">EBITDA Cumulé</div>
-                    <div class="metric-value positive" id="exec-ebitda">245K €</div>
-                    <div class="metric-detail">Marge: 58%</div>
+                    <div class="metric-value positive">233K €</div>
+                    <div class="metric-detail">Marge: 55%<br>Positif dès M8</div>
                 </div>
                 <div class="metric-box">
-                    <div class="metric-label">Cash-out max</div>
-                    <div class="metric-value negative" id="exec-trough">-14K €</div>
-                    <div class="metric-detail">vs -78K€ initial</div>
+                    <div class="metric-label">Cash-out max (trough)</div>
+                    <div class="metric-value negative">-21K €</div>
+                    <div class="metric-detail">Mois 6<br>vs -78K€ initial</div>
                 </div>
                 <div class="metric-box">
-                    <div class="metric-label">Financement requis</div>
-                    <div class="metric-value" id="exec-funding">20K €</div>
-                    <div class="metric-detail">Avec sécurité</div>
+                    <div class="metric-label">Financement total</div>
+                    <div class="metric-value">30K €</div>
+                    <div class="metric-detail">21K€ trough<br>+ 9K€ buffer</div>
                 </div>
             </div>
 
             <div class="highlights">
                 <div class="highlight-card">
-                    <div class="highlight-icon">💡</div>
-                    <div class="highlight-title">Scénario A (600€/an)</div>
-                    <div class="highlight-text" id="scenario-a">Infra Y1: 1.8K€<br>EBITDA Y1: +13K€<br>Cash-out: -14K€</div>
-                </div>
-                <div class="highlight-card">
-                    <div class="highlight-icon">🔧</div>
-                    <div class="highlight-title">Scénario B (600€/mois)</div>
-                    <div class="highlight-text" id="scenario-b">Infra Y1: 9K€<br>EBITDA Y1: +5K€<br>Cash-out: -21K€</div>
+                    <div class="highlight-icon">💰</div>
+                    <div class="highlight-title">Économies Y1</div>
+                    <div class="highlight-text">Charges : 33K€ vs 60K€<br>-45% sur le budget initial</div>
                 </div>
                 <div class="highlight-card">
                     <div class="highlight-icon">📊</div>
                     <div class="highlight-title">Unit Economics</div>
-                    <div class="highlight-text">LTV: 58€<br>CAC: 12€<br>Payback: 3 mois</div>
+                    <div class="highlight-text">LTV: 58€, CAC: 12€<br>Payback: 3 mois<br>LTV/CAC: 4.8x</div>
                 </div>
                 <div class="highlight-card">
                     <div class="highlight-icon">🎯</div>
-                    <div class="highlight-title">Focus Y1</div>
-                    <div class="highlight-text">PMF avant scale<br>PWA avant native<br>Organique > Paid</div>
+                    <div class="highlight-title">Stratégie Y1</div>
+                    <div class="highlight-text">PMF avant scale<br>PWA avant native<br>TikTok organique</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-icon">✅</div>
+                    <div class="highlight-title">Viabilité</div>
+                    <div class="highlight-text">EBITDA+ dès M8<br>Cash+ à M25<br>ROI: 7.8x à M36</div>
                 </div>
             </div>
         </div>
 
-        <!-- Comparaison des scénarios -->
+        <!-- P&L Détaillé Y1 -->
         <div class="content-page page-break">
-            <h2 class="section-header">Scénarios Infrastructure</h2>
+            <h2 class="section-header">P&L Année 1 - Focus PMF</h2>
             
             <div class="subsection">
-                <h3 class="subsection-title">Impact sur Y1 selon coûts API</h3>
-
                 <table class="professional-table">
                     <thead>
                         <tr>
-                            <th>Poste de coûts Y1</th>
-                            <th class="number">Initial (v2)</th>
-                            <th class="number">Scénario A<br>(API 600€/an)</th>
-                            <th class="number">Scénario B<br>(API 600€/mois)</th>
+                            <th>Poste</th>
+                            <th class="number">Budget initial</th>
+                            <th class="number">Optimisé</th>
+                            <th class="number">Économie</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>CA HT</td>
+                            <td><strong>REVENUS</strong></td>
                             <td class="number">38,400 €</td>
                             <td class="number">38,400 €</td>
-                            <td class="number">38,400 €</td>
+                            <td class="number">-</td>
                         </tr>
                         <tr>
-                            <td>Infrastructure (APIs + serveur)</td>
+                            <td colspan="4" style="padding-top: 15px;"><strong>CHARGES D'EXPLOITATION</strong></td>
+                        </tr>
+                        <tr>
+                            <td>API données (600€/mois)</td>
                             <td class="number">12,000 €</td>
-                            <td class="number positive">1,800 €</td>
-                            <td class="number">9,000 €</td>
+                            <td class="number">7,200 €</td>
+                            <td class="number positive">-4,800 €</td>
+                        </tr>
+                        <tr>
+                            <td>Serveur (150€/mois)</td>
+                            <td class="number">inclus</td>
+                            <td class="number">1,800 €</td>
+                            <td class="number">-</td>
                         </tr>
                         <tr>
                             <td>Marketing/acquisition</td>
                             <td class="number">28,800 €</td>
                             <td class="number positive">15,000 €</td>
-                            <td class="number positive">15,000 €</td>
+                            <td class="number positive">-13,800 €</td>
                         </tr>
                         <tr>
                             <td>Production contenu</td>
                             <td class="number">9,600 €</td>
                             <td class="number positive">4,800 €</td>
-                            <td class="number positive">4,800 €</td>
+                            <td class="number positive">-4,800 €</td>
                         </tr>
                         <tr>
                             <td>Licences/outils</td>
                             <td class="number">2,400 €</td>
                             <td class="number positive">0 €</td>
-                            <td class="number positive">0 €</td>
+                            <td class="number positive">-2,400 €</td>
                         </tr>
                         <tr>
-                            <td>Frais paiement (Stripe)</td>
+                            <td>Frais paiement Stripe</td>
                             <td class="number">3,072 €</td>
                             <td class="number">3,072 €</td>
-                            <td class="number">3,072 €</td>
+                            <td class="number">-</td>
                         </tr>
                         <tr>
                             <td>Support client (2% CA)</td>
                             <td class="number">768 €</td>
                             <td class="number">768 €</td>
-                            <td class="number">768 €</td>
+                            <td class="number">-</td>
                         </tr>
                         <tr>
-                            <td>Comptable</td>
+                            <td>Comptable minimal</td>
                             <td class="number">600 €</td>
                             <td class="number positive">300 €</td>
-                            <td class="number positive">300 €</td>
+                            <td class="number positive">-300 €</td>
                         </tr>
                         <tr>
                             <td>Dev App (reporté)</td>
                             <td class="number">3,000 €</td>
                             <td class="number positive">0 €</td>
-                            <td class="number positive">0 €</td>
+                            <td class="number positive">-3,000 €</td>
                         </tr>
                         <tr class="highlight-row">
                             <td><strong>Total charges</strong></td>
                             <td class="number">60,240 €</td>
-                            <td class="number positive"><strong>25,740 €</strong></td>
-                            <td class="number"><strong>32,940 €</strong></td>
+                            <td class="number positive"><strong>32,940 €</strong></td>
+                            <td class="number positive"><strong>-27,300 €</strong></td>
                         </tr>
                         <tr class="highlight-row">
-                            <td><strong>EBITDA Y1</strong></td>
+                            <td><strong>EBITDA</strong></td>
                             <td class="number negative">-21,840 €</td>
-                            <td class="number positive"><strong>+12,660 €</strong></td>
                             <td class="number positive"><strong>+5,460 €</strong></td>
+                            <td class="number positive">+27,300 €</td>
                         </tr>
                         <tr>
-                            <td>CAPEX</td>
+                            <td colspan="4" style="padding-top: 15px;"><strong>CASH FLOW</strong></td>
+                        </tr>
+                        <tr>
+                            <td>CAPEX initial</td>
                             <td class="number">18,000 €</td>
                             <td class="number">18,000 €</td>
-                            <td class="number">18,000 €</td>
+                            <td class="number">-</td>
                         </tr>
                         <tr>
                             <td>Charges sociales micro</td>
                             <td class="number">8,486 €</td>
                             <td class="number">8,486 €</td>
-                            <td class="number">8,486 €</td>
+                            <td class="number">-</td>
                         </tr>
                         <tr class="total-row">
                             <td><strong>Cash-out Y1</strong></td>
                             <td class="number">-78,326 €</td>
-                            <td class="number positive"><strong>-13,826 €</strong></td>
-                            <td class="number"><strong>-21,026 €</strong></td>
+                            <td class="number positive"><strong>-21,026 €</strong></td>
+                            <td class="number positive"><strong>+57,300 €</strong></td>
                         </tr>
                     </tbody>
                 </table>
-
-                <div class="alert-box success">
-                    💡 <strong>Économies réalisées :</strong> -34K€ à -45K€ sur les charges Y1
-                    <br>→ Division du besoin de financement par <strong>3 à 4x</strong>
+                
+                <div class="alert-box warning">
+                    ⚠️ Note : Marketing capé suppose compensation par organique/viralité pour maintenir CA
                 </div>
             </div>
         </div>
 
-        <!-- P&L 3 ans optimisé -->
+        <!-- P&L 3 ans -->
         <div class="content-page page-break">
-            <h2 class="section-header">P&L 3 ans - Scénario Optimisé</h2>
+            <h2 class="section-header">Projections 3 ans</h2>
             
             <div class="subsection">
                 <table class="professional-table">
                     <thead>
                         <tr>
-                            <th>Ligne budgétaire</th>
+                            <th>Métrique</th>
                             <th class="number">Année 1</th>
                             <th class="number">Année 2</th>
                             <th class="number">Année 3</th>
@@ -795,46 +682,46 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>Abonnés payants fin</td>
+                            <td><strong>Abonnés fin période</strong></td>
                             <td class="number">1,050</td>
                             <td class="number">3,100</td>
                             <td class="number">6,500</td>
                             <td class="number">6,500</td>
                         </tr>
                         <tr>
-                            <td>CA brut TTC</td>
-                            <td class="number">44,000 €</td>
-                            <td class="number">164,000 €</td>
-                            <td class="number">320,000 €</td>
-                            <td class="number">528,000 €</td>
+                            <td>MRR fin période</td>
+                            <td class="number">5,250 €</td>
+                            <td class="number">15,500 €</td>
+                            <td class="number">32,500 €</td>
+                            <td class="number">32,500 €</td>
                         </tr>
                         <tr class="highlight-row">
-                            <td><strong>CA HT net</strong></td>
-                            <td class="number"><strong>38,400 €</strong></td>
-                            <td class="number"><strong>136,667 €</strong></td>
-                            <td class="number"><strong>266,667 €</strong></td>
-                            <td class="number"><strong>441,734 €</strong></td>
+                            <td><strong>CA HT</strong></td>
+                            <td class="number">38,400 €</td>
+                            <td class="number">136,700 €</td>
+                            <td class="number">244,900 €</td>
+                            <td class="number"><strong>420,000 €</strong></td>
                         </tr>
                         <tr>
-                            <td colspan="5" style="padding-top: 20px;"><strong>Charges (Scénario A : API 600€/an)</strong></td>
+                            <td colspan="5" style="padding-top: 15px;"><strong>Charges d'exploitation</strong></td>
                         </tr>
                         <tr>
-                            <td>Infrastructure (API + serveur)</td>
-                            <td class="number positive">1,800 €</td>
-                            <td class="number">2,400 €</td>
-                            <td class="number">3,600 €</td>
-                            <td class="number positive">7,800 €</td>
+                            <td>Infrastructure (API+serveur)</td>
+                            <td class="number">9,000 €</td>
+                            <td class="number">10,800 €</td>
+                            <td class="number">12,600 €</td>
+                            <td class="number">32,400 €</td>
                         </tr>
                         <tr>
-                            <td>Marketing capé</td>
-                            <td class="number positive">15,000 €</td>
+                            <td>Marketing</td>
+                            <td class="number">15,000 €</td>
                             <td class="number">30,000 €</td>
                             <td class="number">40,000 €</td>
                             <td class="number">85,000 €</td>
                         </tr>
                         <tr>
                             <td>Contenu</td>
-                            <td class="number positive">4,800 €</td>
+                            <td class="number">4,800 €</td>
                             <td class="number">7,200 €</td>
                             <td class="number">9,600 €</td>
                             <td class="number">21,600 €</td>
@@ -842,16 +729,16 @@
                         <tr>
                             <td>Frais paiement</td>
                             <td class="number">3,072 €</td>
-                            <td class="number">10,933 €</td>
-                            <td class="number">21,333 €</td>
-                            <td class="number">35,339 €</td>
+                            <td class="number">10,936 €</td>
+                            <td class="number">19,592 €</td>
+                            <td class="number">33,600 €</td>
                         </tr>
                         <tr>
                             <td>Support (2% CA)</td>
                             <td class="number">768 €</td>
-                            <td class="number">2,733 €</td>
-                            <td class="number">5,333 €</td>
-                            <td class="number">8,835 €</td>
+                            <td class="number">2,734 €</td>
+                            <td class="number">4,898 €</td>
+                            <td class="number">8,400 €</td>
                         </tr>
                         <tr>
                             <td>Comptable/CFE</td>
@@ -860,43 +747,26 @@
                             <td class="number">2,300 €</td>
                             <td class="number">4,900 €</td>
                         </tr>
-                        <tr>
-                            <td>Licences/outils</td>
-                            <td class="number positive">0 €</td>
-                            <td class="number">0 €</td>
-                            <td class="number">0 €</td>
-                            <td class="number positive">0 €</td>
-                        </tr>
                         <tr class="highlight-row">
                             <td><strong>Total charges</strong></td>
-                            <td class="number positive"><strong>25,740 €</strong></td>
-                            <td class="number"><strong>55,567 €</strong></td>
-                            <td class="number"><strong>82,167 €</strong></td>
-                            <td class="number"><strong>163,474 €</strong></td>
+                            <td class="number">32,940 €</td>
+                            <td class="number">63,970 €</td>
+                            <td class="number">88,990 €</td>
+                            <td class="number"><strong>185,900 €</strong></td>
                         </tr>
                         <tr class="highlight-row">
                             <td><strong>EBITDA</strong></td>
-                            <td class="number positive"><strong>12,660 €</strong></td>
-                            <td class="number positive"><strong>81,100 €</strong></td>
-                            <td class="number positive"><strong>184,500 €</strong></td>
-                            <td class="number positive"><strong>278,260 €</strong></td>
-                        </tr>
-                        <tr>
-                            <td colspan="5" style="padding-top: 20px;"><strong>Alternative (Scénario B : API 600€/mois)</strong></td>
-                        </tr>
-                        <tr>
-                            <td>Infrastructure Y1</td>
-                            <td class="number">9,000 €</td>
-                            <td class="number">-</td>
-                            <td class="number">-</td>
-                            <td class="number">-</td>
-                        </tr>
-                        <tr>
-                            <td>EBITDA Scénario B</td>
                             <td class="number positive">5,460 €</td>
-                            <td class="number positive">75,500 €</td>
-                            <td class="number positive">177,300 €</td>
-                            <td class="number positive">258,260 €</td>
+                            <td class="number positive">72,730 €</td>
+                            <td class="number positive">155,910 €</td>
+                            <td class="number positive"><strong>234,100 €</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Marge EBITDA</td>
+                            <td class="number">14%</td>
+                            <td class="number positive">53%</td>
+                            <td class="number positive">64%</td>
+                            <td class="number positive"><strong>56%</strong></td>
                         </tr>
                     </tbody>
                 </table>
@@ -905,57 +775,11 @@
 
         <!-- Footer -->
         <div class="footer">
-            Document confidentiel - Business Plan v3.0 Optimisé - © 2024
+            Document confidentiel - Business Plan v4.0 Final - © 2024
         </div>
     </div>
 
     <script>
-        // Scénarios
-        const scenarios = {
-            low: { // API 600€/an
-                infraY1: 1800,
-                infraY2: 2400,
-                infraY3: 3600,
-                ebitdaY1: 12660,
-                cashOut: -13826,
-                funding: 20
-            },
-            high: { // API 600€/mois
-                infraY1: 9000,
-                infraY2: 10800,
-                infraY3: 14400,
-                ebitdaY1: 5460,
-                cashOut: -21026,
-                funding: 28
-            }
-        };
-        
-        let currentScenario = 'low';
-        
-        function selectScenario(type) {
-            currentScenario = type;
-            const buttons = document.querySelectorAll('.scenario-btn');
-            buttons.forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            updateDisplay();
-        }
-        
-        function updateDisplay() {
-            const s = scenarios[currentScenario];
-            
-            // Executive metrics
-            document.getElementById('exec-revenue').textContent = '420K €';
-            document.getElementById('exec-ebitda').textContent = currentScenario === 'low' ? '278K €' : '258K €';
-            document.getElementById('exec-trough').textContent = (s.cashOut / 1000).toFixed(0) + 'K €';
-            document.getElementById('exec-funding').textContent = s.funding + 'K €';
-            
-            // Scenario cards
-            document.getElementById('scenario-a').innerHTML = 
-                `Infra Y1: 1.8K€<br>EBITDA Y1: +13K€<br>Cash-out: -14K€`;
-            document.getElementById('scenario-b').innerHTML = 
-                `Infra Y1: 9K€<br>EBITDA Y1: +5K€<br>Cash-out: -21K€`;
-        }
-        
         // Date
         const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
                        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -964,9 +788,6 @@
         dateElements.forEach(el => {
             el.textContent = months[now.getMonth()] + ' ' + now.getFullYear();
         });
-        
-        // Init
-        updateDisplay();
     </script>
 </body>
 </html>
