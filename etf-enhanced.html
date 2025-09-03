@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradePulse - ETFs</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        green: {
+                            400: '#00FF87'
+                        }
+                    }
+                },
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif']
+                }
+            }
+        }
+    </script>
+    
+    <!-- Styles identiques à liste.html -->
+    <style>
+        /* Variables et styles de base identiques à liste.html */
+        :root {
+            --background-color: #0a1929;
+            --light-background-color: #f0f5ff;
+            --text-color: #FFFFFF;
+            --light-text-color: #1a202c;
+            --accent-color: #00FF87;
+            --accent-subtle: rgba(0, 255, 135, 0.15);
+            --accent-medium: rgba(0, 255, 135, 0.3);
+            --accent-strong: rgba(0, 255, 135, 0.6);
+            --card-bg: rgba(10, 30, 50, 0.6);
+            --card-header: rgba(15, 40, 65, 0.8);
+            --card-border: rgba(0, 255, 135, 0.2);
+            --accent-glow: 0 0 15px rgba(0, 255, 135, 0.2);
+            --accent-glow-strong: 0 0 20px rgba(0, 255, 135, 0.3);
+            --transition-time: 0.3s;
+            --header-height: 70px;
+            --sidebar-width: 80px;
+            --negative-color: #ff4d4f;
+            --neutral-color: #aaaaaa;
+            --separator-color: rgba(255, 255, 255, 0.07);
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+            letter-spacing: 0.01em;
+            line-height: 1.6;
+        }
+        
+        body.dark {
+            background-color: var(--background-color);
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 255, 135, 0.08) 0%, transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(0, 100, 255, 0.05) 0%, transparent 20%);
+            color: var(--text-color);
+        }
+        
+        /* Reprendre TOUS les styles de liste.html incluant:
+           - Header principal
+           - Sidebar
+           - Theme toggle
+           - Glassmorphism
