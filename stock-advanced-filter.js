@@ -1,6 +1,11 @@
 // stock-advanced-filter.js
-// Version 3.10 - Stratégie d'essais robuste pour US/Europe/Asie
-// Améliorations v3.10:
+// Version 3.11 - Correctifs BKT/ROG avec fallback prix via market_cap
+// Améliorations v3.11:
+// - Patterns MIC ajoutés: BME Spanish Exchanges, SIX
+// - Essais exchange= pour Europe/Asie (SIX, BME, XETRA, etc.)
+// - Fallback prix = market_cap/shares_outstanding si quote/time_series échouent
+// - Correction typo dans resolveSymbol
+// v3.10:
 // - Helper fetchTD générique avec séquence d'essais
 // - tdParamTrials adapté par région (US: exchange=, autres: mic_code=)
 // - Cache des succès pour optimiser les appels
@@ -105,7 +110,7 @@ function pickNumDeep(obj, paths) {
     return null;
 }
 
-// ───────── v3.10: Helpers centralisés pour stratégie d'essais ─────────
+// ───────── v3.11: Helpers centralisés pour stratégie d'essais ─────────
 
 // Détecte si US
 const isUS = (ex='') => /nasdaq|new york stock exchange|nyse|bats|cboe/i.test(ex);
@@ -117,6 +122,8 @@ function usExchangeName(ex='') {
     if (/bats|cboe/i.test(ex)) return 'BATS';
     return null;
 }
+
+const normalize = s => (s||'').toLowerCase().trim();
 
 // Construit la liste d'essais de paramètres selon la région
 function tdParamTrials(symbol, stock, resolvedSym=null) {
@@ -141,7 +148,27 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
             trials.push({ symbol: `${base}:${mic}` });         // ou suffixe
         }
         trials.push({ symbol: base });                        // fallback final
+        
+        // v3.11: variantes exchange= pour Europe/Asie (utiles sur /quote et /statistics)
+        const exLabel = normalize(stock.exchange);
+        const exVar = [];
+        if (/six swiss|^six$/.test(exLabel))                exVar.push('SIX','SIX Swiss Exchange');
+        if (/bolsa.*madrid|bme/.test(exLabel) || /espagn/.test(normalize(stock.country)))
+                                                            exVar.push('BME','BME Spanish Exchanges','Bolsa De Madrid');
+        if (/xetra|deutsche boerse/.test(exLabel))          exVar.push('XETRA','Xetra');
+        if (/euronext.*paris/.test(exLabel))                exVar.push('Euronext Paris');
+        if (/euronext.*amsterdam/.test(exLabel))            exVar.push('Euronext Amsterdam');
+        if (/euronext.*brussels/.test(exLabel))             exVar.push('Euronext Brussels');
+        if (/euronext.*milan/.test(exLabel))                exVar.push('Euronext Milan');
+        if (/london stock exchange/.test(exLabel))          exVar.push('London Stock Exchange','LSE');
+        if (/nasdaq stockholm/.test(exLabel))               exVar.push('NASDAQ Stockholm');
+        if (/nasdaq copenhagen/.test(exLabel))              exVar.push('NASDAQ Copenhagen');
+        if (/nasdaq helsinki/.test(exLabel))                exVar.push('NASDAQ Helsinki');
+        if (/taiwan/.test(exLabel))                         exVar.push('Taiwan Stock Exchange');
+        
+        for (const ex of exVar) trials.push({ symbol: base, exchange: ex });
     }
+    
     return trials;
 }
 
@@ -190,7 +217,9 @@ const EX2MIC_PATTERNS = [
     ['bursa malaysia',                  'XKLS'],
     ['philippine stock exchange',       'XPHS'],
 
-    // Europe
+    // Europe - v3.11: ajout patterns BME et SIX
+    ['bme spanish exchanges',           'XMAD'],   // NOUVEAU
+    ['six',                              'XSWX'],   // NOUVEAU
     ['euronext amsterdam',              'XAMS'],
     ['nyse euronext - euronext paris',  'XPAR'],
     ['nyse euronext - euronext brussels','XBRU'],
@@ -239,8 +268,6 @@ const COUNTRY2MIC = {
     'thailand':'XBKK', 'philippines':'XPHS', 'malaysia':'XKLS',
     'china':'XSHG' // si "Shenzhen", l'intitulé d'exchange donne XSHE via le pattern
 };
-
-const normalize = s => (s||'').toLowerCase().trim();
 
 function toMIC(exchange, country=''){
     const ex = normalize(exchange);
@@ -311,7 +338,7 @@ async function tryQuote(sym, mic){
 
 // Résolution locale "simple" → renvoie SYM:MIC si on connaît le MIC
 function resolveSymbol(symbol, stock) {
-    if (/:/. test(symbol)) return symbol; // déjà suffixé
+    if (/:/.test(symbol)) return symbol; // v3.11: correction typo (pas d'espace)
     const mic = toMIC(stock.exchange, stock.country);
     return mic ? `${symbol}:${mic}` : symbol;
 }
@@ -381,7 +408,7 @@ async function loadStockCSV(filepath) {
     }
 }
 
-// ───────── v3.10: Fonctions refactorisées avec fetchTD ─────────
+// ───────── v3.11: Fonctions refactorisées avec fetchTD ─────────
 
 async function getQuoteData(symbol, stock) {
     try {
@@ -726,8 +753,19 @@ async function enrichStock(stock) {
         if (CONFIG.DEBUG) console.log(`[GBX→GBP] ${stock.symbol}: price converted from GBX to GBP`);
     }
     
+    // v3.11: Fallback prix via market_cap / shares_outstanding
     if (!price) {
-        // Vraiment rien → on retourne l'erreur
+        // Essai de reconstitution du prix via statistics (market_cap / shares)
+        if (Number.isFinite(stats?.market_cap) && Number.isFinite(stats?.shares_outstanding) && stats.shares_outstanding > 0) {
+            price = stats.market_cap / stats.shares_outstanding;
+            if (CONFIG.DEBUG) console.log(`[FALLBACK PRICE] ${stock.symbol}: price = ${price} from market_cap/shares`);
+            // on n'a pas de variation jour fiable sans quote/série
+            change_percent = null;
+            // range 52w restera null si on n'a pas la série
+        }
+    }
+    
+    if (!price) {
         return { ...stock, error: 'NO_DATA' };
     }
     
@@ -959,7 +997,7 @@ function buildOverview(byRegion){
 }
 
 async function main() { 
-    console.log('📊 Enrichissement complet des stocks (v3.10 avec stratégie d\'essais robuste)\n');
+    console.log('📊 Enrichissement complet des stocks (v3.11 avec fallback prix et essais Europe)\\n');
     await fs.mkdir(OUT_DIR, { recursive: true });
     
     const [usStocks, europeStocks, asiaStocks] = await Promise.all([
@@ -968,7 +1006,7 @@ async function main() {
         loadStockCSV('data/filtered/Actions_Asie_filtered.csv')
     ]);
     
-    console.log(`Stocks: US ${usStocks.length} | Europe ${europeStocks.length} | Asie ${asiaStocks.length}\n`);
+    console.log(`Stocks: US ${usStocks.length} | Europe ${europeStocks.length} | Asie ${asiaStocks.length}\\n`);
     
     const regions = [
         { name: 'us', stocks: usStocks },
@@ -979,7 +1017,7 @@ async function main() {
     const byRegion = {}; // Ajout pour stocker les données par région
     
     for (const region of regions) {
-        console.log(`\n🌍 ${region.name.toUpperCase()}`);
+        console.log(`\\n🌍 ${region.name.toUpperCase()}`);
         const enrichedStocks = [];
         
         for (let i = 0; i < region.stocks.length; i += CONFIG.CHUNK_SIZE) {
@@ -1012,13 +1050,13 @@ async function main() {
     const withEPS = allStocks.filter(s => s.eps_ttm !== null);
     const withPE = allStocks.filter(s => s.pe_ratio !== null);
     
-    console.log('\n📊 Statistiques des métriques:');
+    console.log('\\n📊 Statistiques des métriques:');
     console.log(`  - Actions avec P/E ratio: ${withPE.length}/${allStocks.length}`);
     console.log(`  - Actions avec EPS TTM: ${withEPS.length}/${allStocks.length}`);
     console.log(`  - Actions avec payout ratio: ${withPayout.length}/${allStocks.length}`);
     
     if (withPayout.length > 0) {
-        console.log('\n📊 Distribution Payout Ratio:');
+        console.log('\\n📊 Distribution Payout Ratio:');
         console.log(`  - Conservative (<30%): ${withPayout.filter(s => s.payout_status === 'conservative').length}`);
         console.log(`  - Modéré (30-60%): ${withPayout.filter(s => s.payout_status === 'moderate').length}`);
         console.log(`  - Élevé (60-80%): ${withPayout.filter(s => s.payout_status === 'high').length}`);
@@ -1026,8 +1064,8 @@ async function main() {
         console.log(`  - Non soutenable (>100%): ${withPayout.filter(s => s.payout_status === 'unsustainable').length}`);
     }
     
-    // v3.10: Stats sur le cache
-    console.log(`\n📊 Cache hits: ${successCache.size} symboles optimisés`);
+    // v3.11: Stats sur le cache et les fallbacks
+    console.log(`\\n📊 Cache hits: ${successCache.size} symboles optimisés`);
 }
 
 if (!CONFIG.API_KEY) {
