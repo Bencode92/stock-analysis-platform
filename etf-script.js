@@ -1,10 +1,15 @@
 /**
  * etf-script.js - Script principal pour la page ETF avec Top 10 et fonctionnalités complètes
  * Similaire à liste-script.js mais adapté aux ETFs
- * v1.2 - Amélioration alignement tag spéculatif
+ * v2.0 - Simplification avec taggage par dataset (etf vs bonds)
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Supprimer "Matières" de l'UI
+    document.querySelector('.tp-regions .seg-btn[data-type="COMMODITY"]')?.remove();
+    document.querySelector('.region-tab[data-type="commodity"]')?.remove();
+    document.querySelector('#etf-filter-type option[value="commodity"]')?.remove();
+    
     // État global ETF
     let etfsData = {
         all: [],
@@ -57,11 +62,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 skipEmptyLines: true 
             }).data : [];
             
-            // Combiner et nettoyer
-            etfsData.all = [...etfs, ...bonds]
-                .filter(row => row && Object.keys(row).length > 1)
-                .map(normalizeETFData);
+            // Combiner et nettoyer (taguer la source sans toucher aux CSV)
+            const etfsNorm = etfs
+                .filter(r => r && Object.keys(r).length > 1)
+                .map(r => normalizeETFData(r, 'etf'));
             
+            const bondsNorm = bonds
+                .filter(r => r && Object.keys(r).length > 1)
+                .map(r => normalizeETFData(r, 'bonds'));
+            
+            etfsData.all = [...etfsNorm, ...bondsNorm];
             etfsData.filtered = etfsData.all;
             
             // Calculer les top performers
@@ -79,14 +89,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Normaliser les données ETF - VERSION AMÉLIORÉE avec fallbacks
-    function normalizeETFData(etf) {
-        return {
+    // Normaliser les données ETF avec source
+    function normalizeETFData(etf, source = 'etf') {
+        const base = {
             ...etf,
             ticker: etf.ticker || etf.symbol || '-',
             name: etf.name || etf.objective?.slice(0, 60) || '-',
 
-            // fallbacks dataset
             ter: parseFloat(etf.total_expense_ratio ?? etf.expense_ratio ?? etf.ter ?? 0),
             aum: parseFloat(etf.aum_usd ?? etf.aum ?? etf.net_assets ?? 0),
             price: parseFloat(etf.last_close ?? etf.last ?? etf.price ?? 0),
@@ -100,12 +109,29 @@ document.addEventListener('DOMContentLoaded', function() {
             sharpe_ratio: parseFloat(etf.sharpe_ratio ?? etf.sharpe ?? 0),
             dividend_yield: parseFloat(etf.yield_ttm ?? etf.dividend_yield ?? 0),
 
-            // pour le tag spéculatif
             etf_type: etf.etf_type || '',
             leverage: (etf.leverage !== '' && etf.leverage !== undefined) ? Number(etf.leverage) : null,
 
-            type: getETFType(etf)
+            dataset: source  // <= clé : on sait d'où ça vient
         };
+
+        return {
+            ...base,
+            // Si ça vient de bonds.csv => 'bonds', sinon on garde une typologie simple côté ETFs
+            type: source === 'bonds' ? 'bonds' : getETFType(base)
+        };
+    }
+    
+    // Déterminer le type d'ETF (ultra simple, pas de "Matières")
+    function getETFType(etf) {
+        const name = String(etf.name || '').toLowerCase();
+        const fundType = String(etf.fund_type || '').toLowerCase();
+
+        if (name.includes('sector') || fundType.includes('sector') || name.includes('technology') || name.includes('health'))
+            return 'sector';
+        if (name.includes('emerging') || name.includes('europe') || name.includes('asia'))
+            return 'geographic';
+        return 'equity'; // défaut côté ETFs
     }
     
     // Calculer les top performers
@@ -128,17 +154,18 @@ document.addEventListener('DOMContentLoaded', function() {
         return t.includes('inverse') || t.includes('leverag') || (Number.isFinite(lev) && lev !== 0);
     }
     
-    // Render Top 10 ETFs - VERSION AVEC MEILLEUR ALIGNEMENT
+    // Render Top 10 ETFs - FILTRAGE PAR DATASET
     function renderTopTenETFs() {
         const container = document.querySelector('#top-global-container .stock-cards-container');
         if (!container) return;
 
-        // Filtrer par type si nécessaire
+        // Top 10: GLOBAL = ETFs + Bonds, sinon on filtre par dataset
         let data = etfsData.all;
-        if (topFilters.type !== 'GLOBAL') {
-            const want = topFilters.type.toLowerCase();
-            data = data.filter(etf => (etf.type || '').toLowerCase() === want);
-        }
+        if (topFilters.type === 'EQUITY') {
+            data = data.filter(e => e.dataset === 'etf');
+        } else if (topFilters.type === 'BONDS') {
+            data = data.filter(e => e.dataset === 'bonds');
+        } // GLOBAL = etf + bonds (pas de filtre)
 
         // Trier selon metric active
         const perfKey = topFilters.timeframe === 'daily' ? 'return_1d' : 'return_ytd';
@@ -194,6 +221,38 @@ document.addEventListener('DOMContentLoaded', function() {
         if (hint) hint.textContent = `Top ${topFilters.direction === 'up' ? 'hausses' : 'baisses'} — ${topFilters.timeframe === 'daily' ? 'Jour' : 'YTD'}`;
     }
     
+    // Filtrage pour la table complète - BASÉ SUR DATASET
+    function filterETFs() {
+        let filtered = etfsData.all;
+
+        // Onglet actif
+        const activeTab = document.querySelector('.region-tab.active');
+        const filterType = activeTab?.dataset.type || 'all';
+
+        if (filterType === 'equity') {
+            filtered = filtered.filter(e => e.dataset === 'etf');
+        } else if (filterType === 'bonds') {
+            filtered = filtered.filter(e => e.dataset === 'bonds');
+        } else if (filterType === 'sector' || filterType === 'geographic') {
+            filtered = filtered.filter(e => e.dataset === 'etf' && e.type === filterType);
+        } // 'all' => tout
+        
+        // Filtre par recherche
+        if (etfsData.searchQuery) {
+            const query = etfsData.searchQuery.toLowerCase();
+            filtered = filtered.filter(etf => 
+                String(etf.ticker).toLowerCase().includes(query) ||
+                String(etf.name).toLowerCase().includes(query) ||
+                String(etf.isin || '').toLowerCase().includes(query)
+            );
+        }
+        
+        // Tri par AUM décroissant
+        filtered.sort((a, b) => b.aum - a.aum);
+        
+        return filtered;
+    }
+    
     // Render table complète
     function renderETFData() {
         const tbody = document.getElementById('etf-table-body');
@@ -244,7 +303,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="space-y-1 text-sm">
                                 <div><span class="opacity-60">ISIN:</span> <strong>${etf.isin || '–'}</strong></div>
                                 <div><span class="opacity-60">Type:</span> ${etf.type}</div>
-                                <div><span class="opacity-60">Réplication:</span> ${etf.replication || '–'}</div>
+                                <div><span class="opacity-60">Source:</span> ${etf.dataset}</div>
                                 <div><span class="opacity-60">Devise:</span> ${etf.currency || 'EUR'}</div>
                             </div>
                         </div>
@@ -278,46 +337,6 @@ document.addEventListener('DOMContentLoaded', function() {
         hideElement('indices-loading');
         hideElement('indices-error');
         showElement('indices-container');
-    }
-    
-    // Filtrage
-    function filterETFs() {
-        let filtered = etfsData.all;
-        
-        // Filtre par type (onglets du bas)
-        const activeTab = document.querySelector('.region-tab.active');
-        const filterType = activeTab?.dataset.type || 'all';
-        
-        if (filterType !== 'all') {
-            filtered = filtered.filter(etf => etf.type === filterType);
-        }
-        
-        // Filtre par recherche
-        if (etfsData.searchQuery) {
-            const query = etfsData.searchQuery.toLowerCase();
-            filtered = filtered.filter(etf => 
-                String(etf.ticker).toLowerCase().includes(query) ||
-                String(etf.name).toLowerCase().includes(query) ||
-                String(etf.isin || '').toLowerCase().includes(query)
-            );
-        }
-        
-        // Tri par AUM décroissant
-        filtered.sort((a, b) => b.aum - a.aum);
-        
-        return filtered;
-    }
-    
-    // Déterminer le type d'ETF
-    function getETFType(etf) {
-        const name = String(etf.name || '').toLowerCase();
-        const type = String(etf.type || '').toLowerCase();
-        
-        if (name.includes('bond') || type.includes('bond') || name.includes('obligation')) return 'bonds';
-        if (name.includes('commodity') || name.includes('gold') || name.includes('oil') || name.includes('matière')) return 'commodity';
-        if (name.includes('sector') || name.includes('technology') || name.includes('health')) return 'sector';
-        if (name.includes('emerging') || name.includes('europe') || name.includes('asia')) return 'geographic';
-        return 'equity';
     }
     
     // Toggle détails
@@ -500,4 +519,4 @@ document.addEventListener('DOMContentLoaded', function() {
     loadETFData();
 });
 
-console.log('✅ ETF Script v1.2 - Alignement tag spéculatif amélioré');
+console.log('✅ ETF Script v2.0 - Simplification avec taggage par dataset');
