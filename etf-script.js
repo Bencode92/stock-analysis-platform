@@ -1,1156 +1,371 @@
-/**
- * etf-script.js - Script pour afficher les ETF mondiaux, américains et européens
- * Données mises à jour régulièrement par GitHub Actions
- */
+// ETF Analysis Platform - Main Script
+// Adapté de liste-script.js pour les ETFs
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Variables globales pour stocker les données
-    let etfsData = {
-        indices: {},
-        meta: {
-            source: 'Boursorama/JustETF',
-            timestamp: null,
-            count: 0,
-            isStale: false
-        }
+    // État global
+    const state = {
+        etfs: [],
+        bonds: [],
+        holdings: {},
+        currentCategory: 'all',
+        filteredETFs: [],
+        comparisonETFs: [],
+        loading: false
     };
-    
-    // État du scraper
-    let isLoading = false;
-    let lastUpdate = null;
-    
-    // État pour le marché actuel et la pagination
-    let currentMarket = 'world'; // 'world', 'us', ou 'eu'
-    let currentCategory = 'all'; // filtre de catégorie actif
-    let currentEtfCategory = 'top50'; // 'top50', 'bonds', 'shortterm'
-    
-    // Pagination pour chaque type d'ETF
-    let paginationState = {
-        top50: {
-            currentPage: 1,
-            totalPages: 1,
-            itemsPerPage: 10
-        },
-        bonds: {
-            currentPage: 1,
-            totalPages: 1,
-            itemsPerPage: 10
-        },
-        shortterm: {
-            currentPage: 1,
-            totalPages: 1,
-            itemsPerPage: 10
-        }
+
+    // Métriques spécifiques ETF
+    const ETF_METRICS = {
+        // Coûts
+        ter: {label: 'TER', unit: '%', max: false, format: v => `${v.toFixed(3)}%`},
+        management_fee: {label: 'Frais Gestion', unit: '%', max: false},
+        
+        // Performance
+        perf_1d: {label: '1 Jour', unit: '%', max: true},
+        perf_1m: {label: '1 Mois', unit: '%', max: true},
+        perf_3m: {label: '3 Mois', unit: '%', max: true},
+        perf_ytd: {label: 'YTD', unit: '%', max: true},
+        perf_1y: {label: '1 An', unit: '%', max: true},
+        perf_3y: {label: '3 Ans', unit: '%', max: true},
+        perf_5y: {label: '5 Ans', unit: '%', max: true},
+        
+        // Liquidité
+        aum: {label: 'AUM', unit: 'M€', max: true, format: v => `€${(v/1000000).toFixed(0)}M`},
+        avg_volume: {label: 'Volume Moy.', unit: '', max: true},
+        bid_ask_spread: {label: 'Spread', unit: '%', max: false},
+        
+        // Risque
+        volatility_1y: {label: 'Vol. 1Y', unit: '%', max: false},
+        max_drawdown: {label: 'Max DD', unit: '%', max: false},
+        sharpe_ratio: {label: 'Sharpe', unit: '', max: true, format: v => v.toFixed(2)},
+        tracking_error: {label: 'Tracking Error', unit: '%', max: false},
+        
+        // Distribution
+        distribution_yield: {label: 'Rendement', unit: '%', max: true},
+        distribution_freq: {label: 'Fréq. Distrib.', unit: '', max: true}
     };
-    
-    // Initialiser les onglets alphabet
-    initAlphabetTabs();
-    
-    // Initialiser les sélecteurs de marché
-    initMarketSelector();
-    
-    // Initialiser les sélecteurs de catégorie ETF
-    initEtfCategorySelector();
-    
-    // Initialiser les filtres de catégorie
-    initCategoryFilters();
-    
-    // Initialiser la barre de recherche (gérée par le script inline dans le HTML)
-    
-    // Mettre à jour l'horloge du marché
-    updateMarketTime();
-    setInterval(updateMarketTime, 1000);
-    
-    // Initialiser le thème
-    initTheme();
-    
-    // Premier chargement des données
-    loadEtfsData();
-    
-    // Ajouter les gestionnaires d'événements
-    document.getElementById('retry-button')?.addEventListener('click', function() {
-        hideElement('etfs-error');
-        showElement('etfs-loading');
-        loadEtfsData(true);
-    });
-    
-    /**
-     * Initialise les onglets alphabet
-     */
-    function initAlphabetTabs() {
-        const tabs = document.querySelectorAll('.region-tab');
-        
-        tabs.forEach(tab => {
-            tab.addEventListener('click', function() {
-                // Mettre à jour les onglets actifs
-                tabs.forEach(t => t.classList.remove('active'));
-                this.classList.add('active');
-                
-                // Afficher le contenu correspondant
-                const letter = this.getAttribute('data-region');
-                const contents = document.querySelectorAll('.region-content');
-                
-                contents.forEach(content => {
-                    content.classList.add('hidden');
-                });
-                
-                if (letter === 'all') {
-                    // Afficher toutes les sections
-                    contents.forEach(content => {
-                        content.classList.remove('hidden');
-                    });
-                } else {
-                    // Afficher uniquement la section pour cette lettre
-                    document.getElementById(`${letter}-etfs`)?.classList.remove('hidden');
-                }
-            });
-        });
-    }
-    
-    /**
-     * Initialise les sélecteurs de marché
-     */
-    function initMarketSelector() {
-        const worldButton = document.getElementById('market-world');
-        const usButton = document.getElementById('market-us');
-        const euButton = document.getElementById('market-eu');
-        
-        worldButton?.addEventListener('click', function() {
-            if (currentMarket !== 'world') {
-                // Mettre à jour l'état
-                currentMarket = 'world';
-                resetAllPagination();
-                
-                // Mettre à jour l'interface
-                updateMarketUI();
-                
-                // Charger les données
-                loadEtfsData(true);
-            }
-        });
-        
-        usButton?.addEventListener('click', function() {
-            if (currentMarket !== 'us') {
-                // Mettre à jour l'état
-                currentMarket = 'us';
-                resetAllPagination();
-                
-                // Mettre à jour l'interface
-                updateMarketUI();
-                
-                // Charger les données
-                loadEtfsData(true);
-            }
-        });
-        
-        euButton?.addEventListener('click', function() {
-            if (currentMarket !== 'eu') {
-                // Mettre à jour l'état
-                currentMarket = 'eu';
-                resetAllPagination();
-                
-                // Mettre à jour l'interface
-                updateMarketUI();
-                
-                // Charger les données
-                loadEtfsData(true);
-            }
-        });
-    }
-    
-    /**
-     * Réinitialise toutes les paginations
-     */
-    function resetAllPagination() {
-        Object.keys(paginationState).forEach(key => {
-            paginationState[key].currentPage = 1;
-        });
-    }
-    
-    /**
-     * Initialise les sélecteurs de catégorie ETF
-     */
-    function initEtfCategorySelector() {
-        const top50Button = document.getElementById('category-top50');
-        const bondsButton = document.getElementById('category-bonds');
-        const shorttermButton = document.getElementById('category-shortterm');
-        
-        if (top50Button) {
-            top50Button.addEventListener('click', function() {
-                switchEtfCategory('top50');
-            });
-        }
-        
-        if (bondsButton) {
-            bondsButton.addEventListener('click', function() {
-                switchEtfCategory('bonds');
-            });
-        }
-        
-        if (shorttermButton) {
-            shorttermButton.addEventListener('click', function() {
-                switchEtfCategory('shortterm');
-            });
-        }
-        
-        // Initial setup of visibility
-        updateEtfCategoryUI();
-    }
-    
-    /**
-     * Switch to a different ETF category and update UI
-     */
-    function switchEtfCategory(category) {
-        if (currentEtfCategory !== category) {
-            currentEtfCategory = category;
-            updateEtfCategoryUI();
-            
-            // Mettre à jour les top performers pour cette catégorie
-            updateCategoryTopPerformers(category);
-        }
-    }
-    
-    /**
-     * Update UI based on selected ETF category
-     */
-    function updateEtfCategoryUI() {
-        // Update category buttons state
-        const categoryButtons = document.querySelectorAll('.market-btn');
-        categoryButtons.forEach(btn => {
-            const btnCategory = btn.getAttribute('data-category');
-            btn.classList.toggle('active', btnCategory === currentEtfCategory);
-        });
-        
-        // Update title based on category
-        const titleElement = document.getElementById('market-title');
-        if (titleElement) {
-            if (currentEtfCategory === 'top50') {
-                titleElement.textContent = 'TOP 50 ETF';
-            } else if (currentEtfCategory === 'bonds') {
-                titleElement.textContent = 'TOP ETF Obligations';
-            } else if (currentEtfCategory === 'shortterm') {
-                titleElement.textContent = 'TOP ETF Court Terme';
-            }
-        }
-        
-        // Show/hide relevant sections
-        const topEtfSection = document.querySelector('.top-etf-section');
-        const topBondSection = document.querySelector('.top-bond-section');
-        const topShortTermSection = document.querySelector('.top-short-term-section');
-        
-        if (topEtfSection && topBondSection && topShortTermSection) {
-            topEtfSection.style.display = currentEtfCategory === 'top50' ? 'block' : 'none';
-            topBondSection.style.display = currentEtfCategory === 'bonds' ? 'block' : 'none';
-            topShortTermSection.style.display = currentEtfCategory === 'shortterm' ? 'block' : 'none';
-        }
-        
-        // Show/hide pagination for current category
-        updatePaginationVisibility();
-    }
-    
-    /**
-     * Update pagination visibility based on current category
-     */
-    function updatePaginationVisibility() {
-        // Hide all pagination containers first
-        document.querySelectorAll('.pagination-container').forEach(container => {
-            container.style.display = 'none';
-        });
-        
-        // Show the pagination for the current category
-        const paginationId = `pagination-${currentEtfCategory}`;
-        const pagination = document.getElementById(paginationId);
-        if (pagination) {
-            const state = paginationState[currentEtfCategory];
-            if (state.totalPages > 1) {
-                pagination.style.display = 'flex';
-                updatePaginationUI(currentEtfCategory);
-            } else {
-                pagination.style.display = 'none';
-            }
-        }
-    }
-    
-    /**
-     * Initialise les filtres de catégorie
-     */
-    function initCategoryFilters() {
-        const filterButtons = document.querySelectorAll('.filter-btn');
-        
-        filterButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                // Mettre à jour l'état actif
-                filterButtons.forEach(btn => btn.classList.remove('active'));
-                this.classList.add('active');
-                
-                currentCategory = this.getAttribute('data-category');
-                
-                // Appliquer le filtre aux données actuellement affichées
-                applyFilters();
-            });
-        });
-    }
-    
-    /**
-     * Applique les filtres actuels (catégorie) aux données
-     */
-    function applyFilters() {
-        const allRows = document.querySelectorAll('table.data-table tbody tr');
-        
-        allRows.forEach(row => {
-            if (row.cells.length <= 1) return; // Ignorer les lignes spéciales
-            
-            if (currentCategory === 'all') {
-                row.style.display = '';
-            } else {
-                const categoryCell = row.cells[1]; // Colonne de catégorie
-                if (categoryCell && categoryCell.textContent.toLowerCase().includes(currentCategory)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            }
-        });
-    }
-    
-    /**
-     * Initialise les boutons de pagination pour une catégorie spécifique
-     * @param {string} category - La catégorie (top50, bonds, shortterm)
-     */
-    function setupPagination(category) {
-        // Récupérer les éléments de pagination
-        const prevBtn = document.getElementById(`${category}-prev-page`);
-        const nextBtn = document.getElementById(`${category}-next-page`);
-        const currentPageElem = document.getElementById(`${category}-current-page`);
-        const totalPagesElem = document.getElementById(`${category}-total-pages`);
-        
-        if (!prevBtn || !nextBtn) return;
-        
-        // Configuration des boutons
-        prevBtn.addEventListener('click', function() {
-            if (paginationState[category].currentPage > 1) {
-                paginationState[category].currentPage--;
-                updatePaginationUI(category);
-                
-                // Recharger les données du tableau
-                if (category === 'top50') {
-                    renderTopEtfTables();
-                } else if (category === 'bonds') {
-                    renderTopEtfTables();
-                } else if (category === 'shortterm') {
-                    renderTopShortTermTable();
-                }
-            }
-        });
-        
-        nextBtn.addEventListener('click', function() {
-            if (paginationState[category].currentPage < paginationState[category].totalPages) {
-                paginationState[category].currentPage++;
-                updatePaginationUI(category);
-                
-                // Recharger les données du tableau
-                if (category === 'top50') {
-                    renderTopEtfTables();
-                } else if (category === 'bonds') {
-                    renderTopEtfTables();
-                } else if (category === 'shortterm') {
-                    renderTopShortTermTable();
-                }
-            }
-        });
-        
-        // Mettre à jour l'affichage
-        updatePaginationUI(category);
-    }
-    
-    /**
-     * Met à jour l'interface de pagination pour une catégorie spécifique
-     * @param {string} category - La catégorie (top50, bonds, shortterm)
-     */
-    function updatePaginationUI(category) {
-        const prevBtn = document.getElementById(`${category}-prev-page`);
-        const nextBtn = document.getElementById(`${category}-next-page`);
-        const currentPageElem = document.getElementById(`${category}-current-page`);
-        const totalPagesElem = document.getElementById(`${category}-total-pages`);
-        
-        if (!prevBtn || !nextBtn || !currentPageElem || !totalPagesElem) return;
-        
-        const state = paginationState[category];
-        
-        // Mise à jour des numéros de page
-        currentPageElem.textContent = state.currentPage;
-        totalPagesElem.textContent = state.totalPages;
-        
-        // Activation/désactivation des boutons
-        prevBtn.disabled = state.currentPage <= 1;
-        nextBtn.disabled = state.currentPage >= state.totalPages;
-        
-        // Style visuel des boutons
-        if (state.currentPage <= 1) {
-            prevBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        } else {
-            prevBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        }
-        
-        if (state.currentPage >= state.totalPages) {
-            nextBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        } else {
-            nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        }
-    }
-    
-    /**
-     * Met à jour l'interface en fonction du marché sélectionné
-     */
-    function updateMarketUI() {
-        // Mettre à jour les boutons de marché
-        const worldButton = document.getElementById('market-world');
-        const usButton = document.getElementById('market-us');
-        const euButton = document.getElementById('market-eu');
-        
-        if (worldButton && usButton && euButton) {
-            worldButton.classList.toggle('active', currentMarket === 'world');
-            usButton.classList.toggle('active', currentMarket === 'us');
-            euButton.classList.toggle('active', currentMarket === 'eu');
-        }
-        
-        // Mettre à jour le titre de la page
-        const titleElement = document.getElementById('market-title');
-        if (titleElement) {
-            if (currentMarket === 'world') {
-                titleElement.textContent = 'ETF Mondiaux';
-            } else if (currentMarket === 'us') {
-                titleElement.textContent = 'ETF Américains';
-            } else if (currentMarket === 'eu') {
-                titleElement.textContent = 'ETF Européens';
-            }
-        }
-        
-        // Mettre à jour le lien source
-        const sourceLink = document.getElementById('source-link');
-        if (sourceLink) {
-            let justEtfLink = 'https://www.justetf.com/';
-            if (currentMarket === 'us') {
-                justEtfLink = 'https://www.justetf.com/us/';
-            } else if (currentMarket === 'eu') {
-                justEtfLink = 'https://www.justetf.com/en/';
-            }
-            
-            sourceLink.innerHTML = `Sources: <a href="https://www.boursorama.com/bourse/trackers/" target="_blank" class="text-green-400 hover:underline">Boursorama</a>, <a href="${justEtfLink}" target="_blank" class="text-green-400 hover:underline">JustETF</a>`;
-        }
-    }
-    
-    /**
-     * Charge les données d'ETFs depuis le fichier JSON unique
-     */
-    async function loadEtfsData(forceRefresh = false) {
-        // Éviter les chargements multiples simultanés
-        if (isLoading) {
-            console.log('⚠️ Chargement déjà en cours, opération ignorée');
-            return;
-        }
-        
-        isLoading = true;
-        
-        // Afficher le loader
-        showElement('etfs-loading');
-        hideElement('etfs-error');
-        hideElement('etfs-container');
+
+    // Chargement des données
+    async function loadETFData() {
+        if (state.loading) return;
+        state.loading = true;
         
         try {
-            // Utiliser le fichier ETF JSON unique
-            const url = `data/etf.json`;
+            console.log('📊 Chargement des données ETF...');
             
-            // Pour éviter le cache du navigateur en cas de forceRefresh
-            const cacheBuster = forceRefresh ? `?t=${Date.now()}` : '';
+            // Charger les fichiers CSV convertis (à remplacer par JSON après conversion)
+            const [etfsRes, bondsRes, holdingsRes] = await Promise.all([
+                fetch('data/combined_etfs.json').catch(() => null),
+                fetch('data/combined_bonds.json').catch(() => null),
+                fetch('data/combined_etfs_holdings.json').catch(() => null)
+            ]);
             
-            console.log(`🔍 Chargement des données depuis ${url}${cacheBuster}`);
+            // Pour l'instant, données mockées
+            state.etfs = generateMockETFs('equity', 50);
+            state.bonds = generateMockETFs('bonds', 30);
             
-            const response = await fetch(`${url}${cacheBuster}`);
-            
-            if (!response.ok) {
-                throw new Error(`Erreur de chargement: ${response.status}`);
-            }
-            
-            // Charger les données
-            const rawData = await response.json();
-            
-            // Assigner les données chargées
-            etfsData = rawData;
-            
-            // IMPORTANT: Exposer les données ETF pour la fonction de recherche
-            window.etfsData = rawData;
-            
-            // Vérifier la fraîcheur des données
-            const dataTimestamp = new Date(etfsData.meta.timestamp || Date.now());
-            const now = new Date();
-            const dataAge = now - dataTimestamp;
-            const MAX_DATA_AGE = 60 * 60 * 1000; // 1 heure en millisecondes
-            
-            // Marquer les données comme périmées si plus vieilles que MAX_DATA_AGE
-            etfsData.meta.isStale = dataAge > MAX_DATA_AGE;
-            
-            // Afficher une notification si les données sont périmées
-            if (etfsData.meta.isStale) {
-                showNotification('Les données affichées datent de plus d\'une heure', 'warning');
-            }
-            
-            // Calculer le nombre total de pages pour chaque catégorie
-            calculateTotalPages();
-            
-            // Mettre en place les paginations
-            setupPagination('top50');
-            setupPagination('bonds');
-            setupPagination('shortterm');
-            
-            // Mettre à jour la visibilité des paginations
-            updatePaginationVisibility();
+            console.log(`✅ ${state.etfs.length} ETFs actions chargés`);
+            console.log(`✅ ${state.bonds.length} ETFs obligations chargés`);
             
             // Afficher les données
-            renderEtfsData();
-            renderTopEtfTables();
-            renderTopShortTermTable();
+            updateTopPerformers();
+            filterETFs();
             
-            // Mettre à jour les top performers pour la catégorie actuelle
-            updateCategoryTopPerformers(currentEtfCategory);
-            
-            lastUpdate = new Date();
         } catch (error) {
-            console.error('❌ Erreur lors du chargement des données:', error);
-            showElement('etfs-error');
-            hideElement('etfs-loading');
-            hideElement('etfs-container');
+            console.error('❌ Erreur chargement:', error);
         } finally {
-            // Réinitialiser l'état
-            isLoading = false;
-        }
-    }
-    
-    /**
-     * Calcule le nombre total de pages pour chaque catégorie
-     */
-    function calculateTotalPages() {
-        // TOP 50 ETF
-        if (etfsData.top50_etfs) {
-            const top50Count = etfsData.top50_etfs.length;
-            paginationState.top50.totalPages = Math.ceil(top50Count / paginationState.top50.itemsPerPage);
-        }
-        
-        // TOP Bond ETF
-        if (etfsData.top_bond_etfs) {
-            const bondCount = etfsData.top_bond_etfs.length;
-            paginationState.bonds.totalPages = Math.ceil(bondCount / paginationState.bonds.itemsPerPage);
-        }
-        
-        // TOP Short Term ETF
-        if (etfsData.top_short_term_etfs) {
-            const shortTermCount = etfsData.top_short_term_etfs.length;
-            paginationState.shortterm.totalPages = Math.ceil(shortTermCount / paginationState.shortterm.itemsPerPage);
-        }
-    }
-    
-    /**
-     * Affiche les données d'ETF dans l'interface
-     */
-    function renderEtfsData() {
-        try {
-            // Mettre à jour l'horodatage
-            const timestamp = new Date(etfsData.meta.timestamp);
-            
-            // Ajuster l'heure pour le fuseau horaire français (UTC+1)
-            timestamp.setHours(timestamp.getHours() + 1);
-            
-            let formattedDate = timestamp.toLocaleDateString('fr-FR', {
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            
-            // Ajouter un indicateur si les données sont périmées
-            if (etfsData.meta.isStale) {
-                formattedDate += ' (anciennes données)';
-            }
-            
-            document.getElementById('last-update-time').textContent = formattedDate;
-            
-            // Mettre à jour le compteur d'ETF
-            document.getElementById('etfs-count').textContent = etfsData.meta.count || 0;
-            
-            // Générer le HTML pour chaque lettre
-            const alphabet = "abcdefghijklmnopqrstuvwxyz".split('');
-            
-            alphabet.forEach(letter => {
-                const etfs = etfsData.indices[letter] || [];
-                const tableBody = document.getElementById(`${letter}-etfs-body`);
-                
-                if (tableBody) {
-                    // Vider le corps du tableau
-                    tableBody.innerHTML = '';
-                    
-                    // Si pas d'ETF, afficher un message
-                    if (etfs.length === 0) {
-                        const emptyRow = document.createElement('tr');
-                        emptyRow.innerHTML = `
-                            <td colspan="8" class="text-center py-4 text-gray-400">
-                                <i class="fas fa-info-circle mr-2"></i>
-                                Aucun ETF disponible pour cette lettre
-                            </td>
-                        `;
-                        tableBody.appendChild(emptyRow);
-                    } else {
-                        // Trier les ETF par nom
-                        const sortedEtfs = [...etfs].sort((a, b) => {
-                            return (a.name || "").localeCompare(b.name || "");
-                        });
-                        
-                        // Remplir avec les données
-                        sortedEtfs.forEach(etf => {
-                            const row = document.createElement('tr');
-                            
-                            // Déterminer la classe CSS pour les valeurs (positif/négatif)
-                            const changeClass = etf.change && etf.change.includes('-') ? 'negative' : 'positive';
-                            const ytdClass = etf.ytd && etf.ytd.includes('-') ? 'negative' : 'positive';
-                            
-                            // Création de la ligne avec la structure correcte
-                            row.innerHTML = `
-                                <td class="font-medium">${etf.name || '-'}</td>
-                                <td>${etf.category || '-'}</td>
-                                <td>${etf.provider || '-'}</td>
-                                <td>${etf.last || '-'}</td>
-                                <td class="${changeClass}">${etf.change || '-'}</td>
-                                <td class="${ytdClass}">${etf.ytd || '-'}</td>
-                                <td>${etf.assets || '-'}</td>
-                                <td>${etf.ratio || '-'}</td>
-                            `;
-                            
-                            tableBody.appendChild(row);
-                        });
-                    }
-                }
-            });
-            
-            // Mettre à jour les top performers
-            if (etfsData.top_performers) {
-                updateTopPerformers(etfsData.top_performers);
-            }
-            
-            // Masquer le loader et afficher les données
-            hideElement('etfs-loading');
-            hideElement('etfs-error');
-            showElement('etfs-container');
-            
-            // Appliquer les filtres actuels
-            applyFilters();
-            
-        } catch (error) {
-            console.error('❌ Erreur lors de l\'affichage des données:', error);
-            hideElement('etfs-loading');
-            showElement('etfs-error');
+            state.loading = false;
         }
     }
 
-    /**
-     * Affiche les données des TOP ETF et TOP ETF Obligations avec pagination
-     */
-    function renderTopEtfTables() {
-        try {
-            // Vérifier si les données sont disponibles
-            if (!etfsData.top50_etfs || !etfsData.top_bond_etfs) {
-                console.warn("Les données TOP ETF ne sont pas disponibles");
-                return;
-            }
-            
-            // Récupérer les éléments du DOM
-            const topEtfBody = document.getElementById('top-etf-body');
-            const topBondBody = document.getElementById('top-bond-body');
-            
-            if (!topEtfBody || !topBondBody) {
-                console.warn("Les éléments du DOM pour les TOP ETF ne sont pas disponibles");
-                return;
-            }
-            
-            // Vider les conteneurs
-            topEtfBody.innerHTML = '';
-            topBondBody.innerHTML = '';
-            
-            // Calculer les indices de début et de fin pour TOP 50 ETF
-            const top50State = paginationState.top50;
-            const top50Start = (top50State.currentPage - 1) * top50State.itemsPerPage;
-            const top50End = Math.min(top50Start + top50State.itemsPerPage, etfsData.top50_etfs.length);
-            
-            // Afficher les TOP 50 ETF pour la page actuelle
-            const paginatedTop50 = etfsData.top50_etfs.slice(top50Start, top50End);
-            
-            if (paginatedTop50.length === 0) {
-                topEtfBody.innerHTML = `
-                    <tr>
-                        <td colspan="4" class="text-center py-4 text-gray-400">
-                            <i class="fas fa-info-circle mr-2"></i>
-                            Aucun ETF disponible pour cette page
-                        </td>
-                    </tr>
-                `;
-            } else {
-                paginatedTop50.forEach((etf, index) => {
-                    const row = document.createElement('tr');
-                    const globalIndex = top50Start + index + 1; // Pour numéroter les ETF
-                    
-                    // Utiliser les données correctement mappées
-                    row.innerHTML = `
-                        <td class="font-medium">${globalIndex}. ${etf.name || etf.focus || '-'}</td>
-                        <td class="${etf.ytd && etf.ytd.includes('-') ? 'negative' : 'positive'}">${etf.ytd || '-'}</td>
-                        <td class="${etf.one_month && etf.one_month.includes('-') ? 'negative' : 'positive'}">${etf.one_month || '-'}</td>
-                        <td class="${etf.one_year && etf.one_year.includes('-') ? 'negative' : 'positive'}">${etf.one_year || '-'}</td>
-                    `;
-                    topEtfBody.appendChild(row);
-                });
-            }
-            
-            // Calculer les indices de début et de fin pour TOP Bond ETF
-            const bondsState = paginationState.bonds;
-            const bondsStart = (bondsState.currentPage - 1) * bondsState.itemsPerPage;
-            const bondsEnd = Math.min(bondsStart + bondsState.itemsPerPage, etfsData.top_bond_etfs.length);
-            
-            // Afficher les TOP Bond ETF pour la page actuelle
-            const paginatedBonds = etfsData.top_bond_etfs.slice(bondsStart, bondsEnd);
-            
-            if (paginatedBonds.length === 0) {
-                topBondBody.innerHTML = `
-                    <tr>
-                        <td colspan="4" class="text-center py-4 text-gray-400">
-                            <i class="fas fa-info-circle mr-2"></i>
-                            Aucun ETF disponible pour cette page
-                        </td>
-                    </tr>
-                `;
-            } else {
-                paginatedBonds.forEach((etf, index) => {
-                    const row = document.createElement('tr');
-                    const globalIndex = bondsStart + index + 1; // Pour numéroter les ETF
-                    
-                    // Utiliser les données correctement mappées
-                    row.innerHTML = `
-                        <td class="font-medium">${globalIndex}. ${etf.name || etf.focus || '-'}</td>
-                        <td class="${etf.ytd && etf.ytd.includes('-') ? 'negative' : 'positive'}">${etf.ytd || '-'}</td>
-                        <td class="${etf.one_month && etf.one_month.includes('-') ? 'negative' : 'positive'}">${etf.one_month || '-'}</td>
-                        <td class="${etf.one_year && etf.one_year.includes('-') ? 'negative' : 'positive'}">${etf.one_year || '-'}</td>
-                    `;
-                    topBondBody.appendChild(row);
-                });
-            }
-            
-            console.log(`Rendu de ${paginatedTop50.length} TOP ETF (page ${top50State.currentPage}/${top50State.totalPages}) et ${paginatedBonds.length} TOP ETF Obligations (page ${bondsState.currentPage}/${bondsState.totalPages})`);
-        } catch (error) {
-            console.error('❌ Erreur lors de l\'affichage des TOP ETF:', error);
-        }
-    }
-    
-    /**
-     * Affiche les données des ETF court terme avec pagination
-     * Avec seulement les colonnes LIBELLÉ, 1 MOIS et 6 MOIS
-     */
-    function renderTopShortTermTable() {
-        try {
-            // Vérifier si les données sont disponibles
-            if (!etfsData.top_short_term_etfs) {
-                console.warn("Les données TOP ETF court terme ne sont pas disponibles");
-                return;
-            }
-            
-            // Récupérer l'élément du DOM
-            const topShortTermBody = document.getElementById('top-short-term-body');
-            
-            if (!topShortTermBody) {
-                console.warn("L'élément DOM pour les TOP ETF court terme n'est pas disponible");
-                return;
-            }
-            
-            // Vider le conteneur
-            topShortTermBody.innerHTML = '';
-            
-            // Si pas de données, afficher un message
-            if (etfsData.top_short_term_etfs.length === 0) {
-                topShortTermBody.innerHTML = `
-                    <tr>
-                        <td colspan="3" class="text-center py-4 text-gray-400">
-                            <i class="fas fa-info-circle mr-2"></i>
-                            Aucun ETF court terme disponible
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            // Calculer les indices de début et de fin pour la pagination
-            const state = paginationState.shortterm;
-            const start = (state.currentPage - 1) * state.itemsPerPage;
-            const end = Math.min(start + state.itemsPerPage, etfsData.top_short_term_etfs.length);
-            
-            // Afficher les ETF court terme pour la page actuelle
-            const paginatedShortTerm = etfsData.top_short_term_etfs.slice(start, end);
-            
-            if (paginatedShortTerm.length === 0) {
-                topShortTermBody.innerHTML = `
-                    <tr>
-                        <td colspan="3" class="text-center py-4 text-gray-400">
-                            <i class="fas fa-info-circle mr-2"></i>
-                            Aucun ETF disponible pour cette page
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            // Fonction pour formater correctement les pourcentages
-            const formatPerformance = (value) => {
-                if (!value || value === '') return '-';
-                
-                // Nettoyer la valeur en supprimant les symboles % existants
-                let cleanValue = value.replace(/%/g, '');
-                
-                // Vérifier si le signe + ou - existe déjà
-                if (cleanValue.startsWith('+')) {
-                    return cleanValue + '%';
-                } else if (cleanValue.startsWith('-')) {
-                    return cleanValue + '%';
-                } else {
-                    // Si pas de signe, ajouter un +
-                    return `+${cleanValue}%`;
-                }
-            };
-            
-            // Afficher les ETF court terme avec seulement LIBELLÉ, 1 MOIS et 6 MOIS
-            paginatedShortTerm.forEach((etf, index) => {
-                const row = document.createElement('tr');
-                
-                // Détermine les classes CSS pour les valeurs numériques
-                const oneMonthClass = etf.oneMonth && parseFloat(etf.oneMonth.replace(',', '.').replace(/%/g, '')) < 0 ? 'negative' : 'positive';
-                const sixMonthClass = etf.sixMonth && parseFloat(etf.sixMonth.replace(',', '.').replace(/%/g, '')) < 0 ? 'negative' : 'positive';
-                
-                // Appliquer le formatage propre
-                const oneMonthDisplay = formatPerformance(etf.oneMonth);
-                const sixMonthDisplay = formatPerformance(etf.sixMonth);
-                
-                // Structure HTML simplifiée avec seulement 3 colonnes
-                row.innerHTML = `
-                    <td class="font-medium">${etf.name || '-'}</td>
-                    <td class="${oneMonthClass}">${oneMonthDisplay}</td>
-                    <td class="${sixMonthClass}">${sixMonthDisplay}</td>
-                `;
-                
-                topShortTermBody.appendChild(row);
+    // Générateur de données mock (temporaire)
+    function generateMockETFs(type, count) {
+        const etfs = [];
+        const providers = ['iShares', 'Vanguard', 'SPDR', 'Lyxor', 'Amundi', 'Xtrackers'];
+        const indices = ['S&P 500', 'MSCI World', 'MSCI EM', 'FTSE 100', 'DAX', 'CAC 40', 'Nasdaq 100'];
+        
+        for (let i = 0; i < count; i++) {
+            etfs.push({
+                ticker: `${providers[i % providers.length].substring(0, 3).toUpperCase()}${i}`,
+                name: `${providers[i % providers.length]} ${indices[i % indices.length]} ${type === 'bonds' ? 'Bonds' : 'ETF'}`,
+                type: type,
+                ter: Math.random() * 0.8,
+                aum: Math.random() * 5000000000,
+                perf_1y: (Math.random() - 0.3) * 40,
+                perf_ytd: (Math.random() - 0.3) * 25,
+                volatility_1y: Math.random() * 30,
+                sharpe_ratio: Math.random() * 2 - 0.5,
+                distribution_yield: Math.random() * 5,
+                avg_volume: Math.floor(Math.random() * 100000),
+                tracking_error: Math.random() * 2,
+                provider: providers[i % providers.length],
+                index: indices[i % indices.length]
             });
-            
-            console.log(`Rendu de ${paginatedShortTerm.length} TOP ETF court terme (page ${state.currentPage}/${state.totalPages})`);
-        } catch (error) {
-            console.error('❌ Erreur lors de l\'affichage des TOP ETF court terme:', error);
-            
-            // Afficher un message d'erreur dans le tableau
-            const topShortTermBody = document.getElementById('top-short-term-body');
-            if (topShortTermBody) {
-                topShortTermBody.innerHTML = `
-                    <tr>
-                        <td colspan="3" class="text-center py-4 text-red-400">
-                            <i class="fas fa-exclamation-triangle mr-2"></i>
-                            Erreur lors du chargement des données ETF court terme
-                        </td>
-                    </tr>
-                `;
-            }
-        }
-    }
-    
-    /**
-     * Gère l'affichage des Top Performers spécifiques à chaque catégorie d'ETF
-     * @param {string} category - La catégorie d'ETF ('top50', 'bonds', 'shortterm')
-     */
-    function updateCategoryTopPerformers(category) {
-        // Définir les données sources en fonction de la catégorie sélectionnée
-        let sourceData;
-        let performersConfig;
-        
-        if (category === 'top50') {
-            // TOP 50 ETF - afficher 1 mois et YTD
-            sourceData = window.etfsData.top50_etfs || [];
-            performersConfig = [
-                { containerId: 'daily-top', valueField: 'one_month', title: 'Top 10 Hausse (1 MOIS)', isPositive: true },
-                { containerId: 'daily-bottom', valueField: 'one_month', title: 'Top 10 Baisse (1 MOIS)', isPositive: false },
-                { containerId: 'ytd-top', valueField: 'ytd', title: 'Top 10 Hausse (YTD)', isPositive: true },
-                { containerId: 'ytd-bottom', valueField: 'ytd', title: 'Top 10 Baisse (YTD)', isPositive: false }
-            ];
-        } else if (category === 'bonds') {
-            // TOP ETF Obligations - afficher 1 mois et YTD
-            sourceData = window.etfsData.top_bond_etfs || [];
-            performersConfig = [
-                { containerId: 'daily-top', valueField: 'one_month', title: 'Top 10 Hausse (1 MOIS)', isPositive: true },
-                { containerId: 'daily-bottom', valueField: 'one_month', title: 'Top 10 Baisse (1 MOIS)', isPositive: false },
-                { containerId: 'ytd-top', valueField: 'ytd', title: 'Top 10 Hausse (YTD)', isPositive: true },
-                { containerId: 'ytd-bottom', valueField: 'ytd', title: 'Top 10 Baisse (YTD)', isPositive: false }
-            ];
-        } else if (category === 'shortterm') {
-            // ETF Court Terme - afficher 1 mois et 6 mois
-            sourceData = window.etfsData.top_short_term_etfs || [];
-            performersConfig = [
-                { containerId: 'daily-top', valueField: 'oneMonth', title: 'Top 10 Hausse (1 MOIS)', isPositive: true },
-                { containerId: 'daily-bottom', valueField: 'oneMonth', title: 'Top 10 Baisse (1 MOIS)', isPositive: false },
-                { containerId: 'ytd-top', valueField: 'sixMonth', title: 'Top 10 Hausse (6 MOIS)', isPositive: true },
-                { containerId: 'ytd-bottom', valueField: 'sixMonth', title: 'Top 10 Baisse (6 MOIS)', isPositive: false }
-            ];
         }
         
-        // Si aucune donnée, ne rien faire
-        if (!sourceData || sourceData.length === 0) {
-            console.warn(`Aucune donnée disponible pour la catégorie ${category}`);
-            // Afficher des messages "Aucune donnée disponible" dans chaque conteneur
-            performersConfig.forEach(config => {
-                const container = document.getElementById(config.containerId);
-                if (container) {
-                    container.innerHTML = `
-                        <div class="flex justify-center items-center py-4 text-gray-400">
-                            <i class="fas fa-info-circle mr-2"></i>
-                            Aucune donnée disponible
-                        </div>
-                    `;
-                    
-                    // Mise à jour du titre de l'en-tête
-                    const header = container.closest('.performer-card').querySelector('.performer-header span:first-child');
-                    if (header) {
-                        header.textContent = config.title;
-                    }
-                }
-            });
-            return;
-        }
-        
-        // Pour chaque configuration, mettre à jour le conteneur correspondant
-        performersConfig.forEach(config => {
-            const { containerId, valueField, title, isPositive } = config;
-            
-            // Trier les ETF selon le champ de valeur
-            const sortedData = [...sourceData].filter(etf => {
-                // S'assurer que la valeur existe et est valide
-                const value = etf[valueField];
-                if (!value) return false;
-                
-                // Convertir la valeur en nombre pour le tri (en gérant le format avec %)
-                const numValue = parseFloat(value.replace(/[%+]/g, '').replace(',', '.'));
-                return !isNaN(numValue);
-            }).sort((a, b) => {
-                // Extraire les valeurs numériques pour comparer
-                const valueA = parseFloat(a[valueField].replace(/[%+]/g, '').replace(',', '.'));
-                const valueB = parseFloat(b[valueField].replace(/[%+]/g, '').replace(',', '.'));
-                
-                // Tri descendant pour les hausses, ascendant pour les baisses
-                return isPositive ? valueB - valueA : valueA - valueB;
-            });
-            
-            // Prendre les 10 premiers
-            const topTen = sortedData.slice(0, 10);
-            
-            // Mettre à jour le conteneur
-            updateTopPerformersHTML(containerId, topTen, valueField);
-            
-            // Mise à jour du titre de l'en-tête
-            const container = document.getElementById(containerId);
-            if (container) {
-                const header = container.closest('.performer-card').querySelector('.performer-header span:first-child');
-                if (header) {
-                    header.textContent = title;
-                }
-            }
-        });
-    }
-    
-    /**
-     * Met à jour les top performers
-     */
-    function updateTopPerformers(topPerformersData) {
-        if (!topPerformersData) return;
-        
-        // Mettre à jour les top/bottom performers journaliers
-        if (topPerformersData.daily) {
-            updateTopPerformersHTML('daily-top', topPerformersData.daily.best, 'change');
-            updateTopPerformersHTML('daily-bottom', topPerformersData.daily.worst, 'change');
-        }
-        
-        // Mettre à jour les top/bottom performers YTD
-        if (topPerformersData.ytd) {
-            updateTopPerformersHTML('ytd-top', topPerformersData.ytd.best, 'ytd');
-            updateTopPerformersHTML('ytd-bottom', topPerformersData.ytd.worst, 'ytd');
-        }
-    }
-    
-    /**
-     * Met à jour le HTML pour une section de top performers
-     */
-    function updateTopPerformersHTML(containerId, etfs, valueField) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-        
-        // Vider le conteneur
-        container.innerHTML = '';
-        
-        // Si pas de données, afficher un message
-        if (!etfs || etfs.length === 0) {
-            container.innerHTML = `
-                <div class="flex justify-center items-center py-4 text-gray-400">
-                    <i class="fas fa-info-circle mr-2"></i>
-                    Aucune donnée disponible
-                </div>
-            `;
-            return;
-        }
-        
-        // Générer le HTML pour chaque ETF
-        etfs.forEach((etf, i) => {
-            const row = document.createElement('div');
-            row.className = 'performer-row';
-            
-            // Déterminer si la valeur est positive ou négative
-            const rawValue = etf[valueField] || "";
-            const isNegative = rawValue.includes('-');
-            const valueClass = isNegative ? 'negative' : 'positive';
-            
-            row.innerHTML = `
-                <div class="performer-info">
-                    <div class="performer-index">${etf.name || ""}</div>
-                    <div class="performer-country">${etf.symbol || ""}</div>
-                </div>
-                <div class="performer-value ${valueClass}">
-                    ${rawValue || "-"}
-                </div>
-            `;
-            
-            container.appendChild(row);
-        });
+        return etfs;
     }
 
-    /**
-     * Fonctions utilitaires
-     */
-    function showElement(id) {
-        const element = document.getElementById(id);
-        if (element) {
-            element.classList.remove('hidden');
-        }
+    // Mise à jour des top performers
+    function updateTopPerformers() {
+        const allETFs = [...state.etfs, ...state.bonds];
+        
+        // Meilleurs TER
+        const bestTER = allETFs
+            .sort((a, b) => a.ter - b.ter)
+            .slice(0, 5);
+        
+        document.getElementById('best-ter').innerHTML = bestTER.map((etf, i) => `
+            <div class="flex justify-between items-center p-2 hover:bg-white/5 rounded">
+                <span class="text-sm">${etf.ticker}</span>
+                <span class="metric-badge">${etf.ter.toFixed(3)}%</span>
+            </div>
+        `).join('');
+        
+        // Meilleures performances
+        const bestPerf = allETFs
+            .sort((a, b) => b.perf_1y - a.perf_1y)
+            .slice(0, 5);
+        
+        document.getElementById('best-perf').innerHTML = bestPerf.map((etf, i) => `
+            <div class="flex justify-between items-center p-2 hover:bg-white/5 rounded">
+                <span class="text-sm">${etf.ticker}</span>
+                <span class="metric-badge ${etf.perf_1y > 0 ? 'text-green-400' : 'text-red-400'}">
+                    ${etf.perf_1y > 0 ? '+' : ''}${etf.perf_1y.toFixed(1)}%
+                </span>
+            </div>
+        `).join('');
+        
+        // Plus gros AUM
+        const largestAUM = allETFs
+            .sort((a, b) => b.aum - a.aum)
+            .slice(0, 5);
+        
+        document.getElementById('largest-aum').innerHTML = largestAUM.map((etf, i) => `
+            <div class="flex justify-between items-center p-2 hover:bg-white/5 rounded">
+                <span class="text-sm">${etf.ticker}</span>
+                <span class="metric-badge">€${(etf.aum/1000000000).toFixed(1)}B</span>
+            </div>
+        `).join('');
+        
+        // Meilleur Sharpe
+        const bestSharpe = allETFs
+            .filter(e => e.sharpe_ratio > 0)
+            .sort((a, b) => b.sharpe_ratio - a.sharpe_ratio)
+            .slice(0, 5);
+        
+        document.getElementById('best-sharpe').innerHTML = bestSharpe.map((etf, i) => `
+            <div class="flex justify-between items-center p-2 hover:bg-white/5 rounded">
+                <span class="text-sm">${etf.ticker}</span>
+                <span class="metric-badge">${etf.sharpe_ratio.toFixed(2)}</span>
+            </div>
+        `).join('');
     }
-    
-    function hideElement(id) {
-        const element = document.getElementById(id);
-        if (element) {
-            element.classList.add('hidden');
-        }
-    }
-    
-    function showNotification(message, type = 'info') {
-        // Vérifier si une notification existe déjà
-        let notification = document.querySelector('.notification-popup');
-        if (!notification) {
-            notification = document.createElement('div');
-            notification.className = 'notification-popup';
-            notification.style.position = 'fixed';
-            notification.style.bottom = '20px';
-            notification.style.right = '20px';
-            notification.style.padding = '15px 25px';
-            notification.style.borderRadius = '4px';
-            notification.style.zIndex = '1000';
-            notification.style.opacity = '0';
-            notification.style.transform = 'translateY(20px)';
-            notification.style.transition = 'opacity 0.3s, transform 0.3s';
-            
-            if (type === 'warning') {
-                notification.style.backgroundColor = 'rgba(255, 193, 7, 0.1)';
-                notification.style.borderLeft = '3px solid #FFC107';
-                notification.style.color = '#FFC107';
-            } else {
-                notification.style.backgroundColor = 'rgba(0, 255, 135, 0.1)';
-                notification.style.borderLeft = '3px solid var(--accent-color)';
-                notification.style.color = 'var(--text-color)';
-            }
-            
-            notification.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.2)';
-            
-            document.body.appendChild(notification);
+
+    // Filtrage des ETFs
+    function filterETFs() {
+        let filtered = [...state.etfs, ...state.bonds];
+        
+        // Filtrage par catégorie
+        if (state.currentCategory !== 'all') {
+            filtered = filtered.filter(etf => {
+                switch(state.currentCategory) {
+                    case 'equity': return etf.type === 'equity';
+                    case 'bonds': return etf.type === 'bonds';
+                    // Ajouter d'autres catégories
+                    default: return true;
+                }
+            });
         }
         
-        notification.textContent = message;
+        // Appliquer les critères multi-filtres
+        if (document.getElementById('crit-ter').checked) {
+            filtered = filtered.filter(e => e.ter < 0.5);
+        }
+        if (document.getElementById('crit-aum').checked) {
+            filtered = filtered.filter(e => e.aum > 100000000);
+        }
+        if (document.getElementById('crit-volume').checked) {
+            filtered = filtered.filter(e => e.avg_volume > 10000);
+        }
+        if (document.getElementById('crit-perf').checked) {
+            filtered = filtered.filter(e => e.perf_1y > 10);
+        }
+        if (document.getElementById('crit-volatility').checked) {
+            filtered = filtered.filter(e => e.volatility_1y < 15);
+        }
+        if (document.getElementById('crit-sharpe').checked) {
+            filtered = filtered.filter(e => e.sharpe_ratio > 1);
+        }
         
-        // Animer la notification
-        setTimeout(() => {
-            notification.style.opacity = '1';
-            notification.style.transform = 'translateY(0)';
-            
-            // Masquer automatiquement après 4 secondes
-            setTimeout(() => {
-                notification.style.opacity = '0';
-                notification.style.transform = 'translateY(20px)';
-                
-                // Supprimer après la transition
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.parentNode.removeChild(notification);
-                    }
-                }, 300);
-            }, 4000);
-        }, 100);
+        state.filteredETFs = filtered;
+        displayFilteredResults();
     }
-    
-    /**
-     * Met à jour l'heure du marché
-     */
-    function updateMarketTime() {
+
+    // Affichage des résultats filtrés
+    function displayFilteredResults() {
+        const container = document.getElementById('filtered-results');
+        
+        if (state.filteredETFs.length === 0) {
+            container.innerHTML = '<p class="text-center opacity-50">Aucun ETF ne correspond aux critères</p>';
+            return;
+        }
+        
+        // Limiter à 10 résultats
+        const top10 = state.filteredETFs.slice(0, 10);
+        
+        container.innerHTML = top10.map(etf => `
+            <div class="p-3 bg-black/20 rounded-lg hover:bg-black/30 transition cursor-pointer"
+                 onclick="selectETFForComparison('${etf.ticker}')">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <div class="font-semibold">${etf.ticker}</div>
+                        <div class="text-xs opacity-60">${etf.name}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs opacity-60">TER</div>
+                        <div class="font-semibold text-cyan-400">${etf.ter.toFixed(3)}%</div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-4 gap-2 text-xs">
+                    <div>
+                        <span class="opacity-60">1Y:</span>
+                        <span class="${etf.perf_1y > 0 ? 'text-green-400' : 'text-red-400'}">
+                            ${etf.perf_1y > 0 ? '+' : ''}${etf.perf_1y.toFixed(1)}%
+                        </span>
+                    </div>
+                    <div>
+                        <span class="opacity-60">Vol:</span>
+                        <span>${etf.volatility_1y.toFixed(1)}%</span>
+                    </div>
+                    <div>
+                        <span class="opacity-60">Sharpe:</span>
+                        <span>${etf.sharpe_ratio.toFixed(2)}</span>
+                    </div>
+                    <div>
+                        <span class="opacity-60">AUM:</span>
+                        <span>€${(etf.aum/1000000000).toFixed(1)}B</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Comparaison d'ETFs
+    window.selectETFForComparison = function(ticker) {
+        const etf = [...state.etfs, ...state.bonds].find(e => e.ticker === ticker);
+        if (!etf) return;
+        
+        // Limiter à 5 ETFs en comparaison
+        if (state.comparisonETFs.length >= 5) {
+            state.comparisonETFs.shift();
+        }
+        
+        if (!state.comparisonETFs.find(e => e.ticker === ticker)) {
+            state.comparisonETFs.push(etf);
+            updateComparisonTable();
+        }
+    };
+
+    // Mise à jour du tableau de comparaison
+    function updateComparisonTable() {
+        const container = document.getElementById('comparison-table');
+        
+        if (state.comparisonETFs.length === 0) {
+            container.innerHTML = '<p class="text-center opacity-50 py-4">Sélectionnez des ETFs pour les comparer</p>';
+            return;
+        }
+        
+        container.innerHTML = `
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-cyan-500/20">
+                        <th class="text-left p-2">Métrique</th>
+                        ${state.comparisonETFs.map(e => 
+                            `<th class="text-center p-2">${e.ticker}</th>`
+                        ).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Object.entries(ETF_METRICS).slice(0, 10).map(([key, metric]) => `
+                        <tr class="border-b border-cyan-500/10">
+                            <td class="p-2 text-xs opacity-70">${metric.label}</td>
+                            ${state.comparisonETFs.map(etf => {
+                                const value = etf[key] || 0;
+                                const formatted = metric.format ? 
+                                    metric.format(value) : 
+                                    `${value.toFixed(2)}${metric.unit}`;
+                                const colorClass = getColorClass(key, value, metric.max);
+                                return `<td class="text-center p-2 ${colorClass}">${formatted}</td>`;
+                            }).join('')}
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+
+    // Déterminer la couleur selon la valeur
+    function getColorClass(metric, value, isMax) {
+        if (metric.includes('perf') || metric === 'sharpe_ratio' || metric === 'distribution_yield') {
+            return value > 0 ? 'text-green-400' : 'text-red-400';
+        }
+        if (metric === 'ter' || metric.includes('volatility') || metric === 'tracking_error') {
+            return value < 0.5 ? 'text-green-400' : value < 1 ? 'text-yellow-400' : 'text-red-400';
+        }
+        return '';
+    }
+
+    // Event Listeners
+    document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            state.currentCategory = this.dataset.category;
+            filterETFs();
+        });
+    });
+
+    document.getElementById('apply-filters').addEventListener('click', filterETFs);
+
+    // Recherche d'ETFs
+    document.getElementById('etf-search').addEventListener('input', function(e) {
+        const search = e.target.value.toLowerCase();
+        if (search.length < 2) return;
+        
+        const results = [...state.etfs, ...state.bonds].filter(etf => 
+            etf.ticker.toLowerCase().includes(search) ||
+            etf.name.toLowerCase().includes(search)
+        );
+        
+        // Afficher suggestions (à implémenter)
+    });
+
+    // Theme toggle
+    document.getElementById('theme-toggle').addEventListener('click', function() {
+        document.body.classList.toggle('dark');
+        document.body.classList.toggle('light');
+        const icon = this.querySelector('i');
+        icon.classList.toggle('fa-moon');
+        icon.classList.toggle('fa-sun');
+    });
+
+    // Mise à jour de l'heure
+    function updateTime() {
         const now = new Date();
-        const hours = now.getHours().toString().padStart(2, '0');
-        const minutes = now.getMinutes().toString().padStart(2, '0');
-        const seconds = now.getSeconds().toString().padStart(2, '0');
-        const timeStr = `${hours}:${minutes}:${seconds}`;
-        
-        const marketTimeElement = document.getElementById('marketTime');
-        if (marketTimeElement) {
-            marketTimeElement.textContent = timeStr;
-        }
+        document.getElementById('last-update').textContent = 
+            now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     }
-    
-    /**
-     * Gestion du mode sombre/clair
-     */
-    function initTheme() {
-        const themeToggleBtn = document.getElementById('theme-toggle-btn');
-        const darkIcon = document.getElementById('dark-icon');
-        const lightIcon = document.getElementById('light-icon');
-        
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'light') {
-            document.body.classList.remove('dark');
-            document.body.classList.add('light');
-            document.documentElement.classList.remove('dark');
-            darkIcon.style.display = 'none';
-            lightIcon.style.display = 'block';
-        } else {
-            document.body.classList.add('dark');
-            document.body.classList.remove('light');
-            document.documentElement.classList.add('dark');
-            darkIcon.style.display = 'block';
-            lightIcon.style.display = 'none';
-        }
-        
-        themeToggleBtn.addEventListener('click', function() {
-            document.body.classList.toggle('dark');
-            document.body.classList.toggle('light');
-            document.documentElement.classList.toggle('dark');
-            
-            if (document.body.classList.contains('dark')) {
-                darkIcon.style.display = 'block';
-                lightIcon.style.display = 'none';
-                localStorage.setItem('theme', 'dark');
-            } else {
-                darkIcon.style.display = 'none';
-                lightIcon.style.display = 'block';
-                localStorage.setItem('theme', 'light');
-            }
-        });
-    }
+    setInterval(updateTime, 60000);
+    updateTime();
+
+    // Initialisation
+    loadETFData();
+
+    // Export pour utilisation dans d'autres modules
+    window.ETF = {
+        state,
+        metrics: ETF_METRICS,
+        filterETFs,
+        selectETFForComparison
+    };
 });

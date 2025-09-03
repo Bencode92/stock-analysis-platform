@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradePulse - ETF Analysis Platform</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --background-color: #0a1929;
+            --text-color: #FFFFFF;
+            --accent-color: #00FF87;
+            --accent-etf: #00FFFF;
+            --card-bg: rgba(10, 30, 50, 0.6);
+            --card-header: rgba(15, 40, 65, 0.8);
+            --header-height: 70px;
+            --sidebar-width: 80px;
+        }
+        
+        body.dark {
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        
+        .etf-accent {
+            color: var(--accent-etf) !important;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+        }
+        
+        .etf-card {
+            background: linear-gradient(135deg, rgba(0, 200, 255, 0.05), rgba(0, 255, 255, 0.03));
+            border: 1px solid rgba(0, 200, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .etf-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 255, 255, 0.2);
+        }
+        
+        .category-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .category-btn.active {
+            background: rgba(0, 255, 255, 0.3);
+            border-color: var(--accent-etf);
+        }
+        
+        .metric-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="dark">
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 h-[70px] backdrop-blur-md bg-black/50 border-b border-cyan-500/20 z-50">
+        <div class="flex justify-between items-center h-full px-8">
+            <div class="flex items-center gap-8">
+                <h1 class="text-2xl font-bold etf-accent">ETF PULSE</h1>
+                <nav class="flex gap-6">
+                    <a href="#equity" class="hover:text-cyan-400 transition">Actions</a>
+                    <a href="#bonds" class="hover:text-cyan-400 transition">Obligations</a>
+                    <a href="#commodity" class="hover:text-cyan-400 transition">Matières Premières</a>
+                    <a href="#mixed" class="hover:text-cyan-400 transition">Mixtes</a>
+                </nav>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="text-sm opacity-70">Dernière MAJ: <span id="last-update">--:--</span></span>
+                <button id="theme-toggle" class="p-2 rounded-lg hover:bg-white/10">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="pt-24 px-8 pb-8">
+        <!-- ETF Categories Filters -->
+        <section class="mb-8">
+            <h2 class="text-xl font-bold mb-4 etf-accent">Catégories d'ETFs</h2>
+            <div class="flex gap-4 flex-wrap">
+                <button class="category-btn active" data-category="all">
+                    <i class="fas fa-globe mr-2"></i>Tous
+                </button>
+                <button class="category-btn" data-category="equity">
+                    <i class="fas fa-chart-line mr-2"></i>Actions
+                </button>
+                <button class="category-btn" data-category="bonds">
+                    <i class="fas fa-landmark mr-2"></i>Obligations
+                </button>
+                <button class="category-btn" data-category="commodity">
+                    <i class="fas fa-coins mr-2"></i>Matières Premières
+                </button>
+                <button class="category-btn" data-category="sector">
+                    <i class="fas fa-industry mr-2"></i>Sectoriels
+                </button>
+                <button class="category-btn" data-category="geographic">
+                    <i class="fas fa-map mr-2"></i>Géographiques
+                </button>
+            </div>
+        </section>
+
+        <!-- Top Performers -->
+        <section class="mb-8">
+            <h2 class="text-xl font-bold mb-4 etf-accent">Top Performers ETFs</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Best TER -->
+                <div class="etf-card rounded-lg p-4">
+                    <h3 class="text-sm font-semibold mb-3 opacity-70">Meilleurs TER</h3>
+                    <div id="best-ter" class="space-y-2">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+                <!-- Best Performance -->
+                <div class="etf-card rounded-lg p-4">
+                    <h3 class="text-sm font-semibold mb-3 opacity-70">Meilleures Perfs 1Y</h3>
+                    <div id="best-perf" class="space-y-2">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+                <!-- Largest AUM -->
+                <div class="etf-card rounded-lg p-4">
+                    <h3 class="text-sm font-semibold mb-3 opacity-70">Plus gros AUM</h3>
+                    <div id="largest-aum" class="space-y-2">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+                <!-- Best Sharpe -->
+                <div class="etf-card rounded-lg p-4">
+                    <h3 class="text-sm font-semibold mb-3 opacity-70">Meilleur Sharpe</h3>
+                    <div id="best-sharpe" class="space-y-2">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Multi-Criteria Composer -->
+        <section class="mb-8">
+            <h2 class="text-xl font-bold mb-4 etf-accent">Composeur Multi-Critères ETF</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Filters -->
+                <div class="etf-card rounded-lg p-4">
+                    <h3 class="text-sm font-semibold mb-4">Critères</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" id="crit-ter" checked>
+                            <span>TER < 0.5%</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" id="crit-aum" checked>
+                            <span>AUM > 100M€</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" id="crit-volume">
+                            <span>Volume > 10K/jour</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" id="crit-perf">
+                            <span>Perf 1Y > 10%</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" id="crit-volatility">
+                            <span>Volatilité < 15%</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" id="crit-sharpe">
+                            <span>Sharpe > 1</span>
+                        </label>
+                    </div>
+                    <button id="apply-filters" class="mt-4 w-full py-2 bg-cyan-500/20 border border-cyan-500/50 rounded-lg hover:bg-cyan-500/30 transition">
+                        Appliquer Filtres
+                    </button>
+                </div>
+                
+                <!-- Results -->
+                <div class="lg:col-span-2">
+                    <div class="etf-card rounded-lg p-4">
+                        <h3 class="text-sm font-semibold mb-4">Résultats Filtrés</h3>
+                        <div id="filtered-results" class="space-y-2">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ETF Comparison Tool -->
+        <section class="mb-8">
+            <h2 class="text-xl font-bold mb-4 etf-accent">Comparateur d'ETFs</h2>
+            <div class="etf-card rounded-lg p-4">
+                <div class="mb-4">
+                    <input type="text" id="etf-search" placeholder="Rechercher un ETF..." 
+                           class="w-full p-3 bg-black/30 border border-cyan-500/30 rounded-lg">
+                </div>
+                <div id="comparison-table" class="overflow-x-auto">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Holdings Analysis -->
+        <section class="mb-8">
+            <h2 class="text-xl font-bold mb-4 etf-accent">Analyse des Holdings</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="etf-card rounded-lg p-4">
+                    <h3 class="text-sm font-semibold mb-4">Top 10 Holdings</h3>
+                    <div id="top-holdings">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+                <div class="etf-card rounded-lg p-4">
+                    <h3 class="text-sm font-semibold mb-4">Répartition Sectorielle</h3>
+                    <canvas id="sector-chart"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="etf-script.js"></script>
+    <script src="etf-mc-module.js"></script>
+</body>
+</html>
