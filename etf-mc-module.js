@@ -1,338 +1,270 @@
-// Module Multi-Critères pour ETFs
-// Adapté de mc-module.js avec métriques ETF spécifiques
-
+// Module MC adapté pour ETFs
 (function() {
-    // Configuration
-    const CONFIG = {
-        TOP_N: 10,
-        DEBUG: false,
-        ALLOW_MISSING: 1
-    };
-
-    // Métriques ETF pour le scoring
-    const ETF_METRICS = {
-        // Efficience coût/performance
-        efficiency_score: {
-            label: 'Efficience',
-            calculate: (etf) => {
-                const perf = etf.perf_1y || 0;
-                const ter = etf.ter || 1;
-                return perf / (ter + 0.01); // Éviter division par 0
-            },
-            max: true
-        },
-        
-        // Score de liquidité
-        liquidity_score: {
-            label: 'Liquidité',
-            calculate: (etf) => {
-                const volumeScore = Math.log10(etf.avg_volume || 1) / 5;
-                const aumScore = Math.log10(etf.aum || 1) / 10;
-                const spreadScore = 1 - (etf.bid_ask_spread || 0) / 2;
-                return (volumeScore + aumScore + spreadScore) / 3;
-            },
-            max: true
-        },
-        
-        // Score risque-rendement
-        risk_adjusted_return: {
-            label: 'Risque-Ajusté',
-            calculate: (etf) => {
-                const sharpe = etf.sharpe_ratio || 0;
-                const maxDD = etf.max_drawdown || -20;
-                return sharpe - (Math.abs(maxDD) / 100);
-            },
-            max: true
-        },
-        
-        // Score de diversification
-        diversification_score: {
-            label: 'Diversification',
-            calculate: (etf, holdings) => {
-                if (!holdings || !holdings.length) return 0.5;
-                
-                // Calculer HHI (Herfindahl-Hirschman Index)
-                const totalWeight = holdings.reduce((sum, h) => sum + (h.weight || 0), 0);
-                const hhi = holdings.reduce((sum, h) => {
-                    const weight = (h.weight || 0) / totalWeight;
-                    return sum + weight * weight;
-                }, 0);
-                
-                // Convertir HHI en score (0 = concentré, 1 = diversifié)
-                return 1 - hhi;
-            },
-            max: true
-        },
-        
-        // Score ESG (si disponible)
-        esg_score: {
-            label: 'Score ESG',
-            calculate: (etf) => etf.esg_score || 0,
-            max: true
-        }
-    };
-
-    // Filtres prédéfinis pour ETFs
-    const ETF_FILTERS = {
-        lowCost: {
-            label: 'Faibles Coûts',
-            apply: (etfs) => etfs.filter(e => e.ter < 0.3)
-        },
-        
-        highLiquidity: {
-            label: 'Haute Liquidité',
-            apply: (etfs) => etfs.filter(e => 
-                e.aum > 500000000 && e.avg_volume > 50000
-            )
-        },
-        
-        efficient: {
-            label: 'Efficient',
-            apply: (etfs) => etfs.filter(e => {
-                const efficiency = ETF_METRICS.efficiency_score.calculate(e);
-                return efficiency > 20;
-            })
-        },
-        
-        lowRisk: {
-            label: 'Faible Risque',
-            apply: (etfs) => etfs.filter(e => 
-                e.volatility_1y < 12 && (e.max_drawdown || -100) > -15
-            )
-        },
-        
-        dividend: {
-            label: 'Dividendes',
-            apply: (etfs) => etfs.filter(e => e.distribution_yield > 2)
-        }
-    };
-
-    // Analyse des holdings
-    function analyzeHoldings(etf, allHoldings) {
-        const holdings = allHoldings[etf.ticker] || [];
-        
-        if (!holdings.length) {
-            return {
-                topHoldings: [],
-                sectorExposure: {},
-                geoExposure: {},
-                concentration: 0,
-                diversificationScore: 0
-            };
-        }
-        
-        // Top 10 holdings
-        const topHoldings = holdings
-            .sort((a, b) => b.weight - a.weight)
-            .slice(0, 10);
-        
-        // Concentration (somme des top 10)
-        const concentration = topHoldings
-            .reduce((sum, h) => sum + h.weight, 0);
-        
-        // Répartition sectorielle
-        const sectorExposure = holdings.reduce((acc, h) => {
-            const sector = h.sector || 'Other';
-            acc[sector] = (acc[sector] || 0) + h.weight;
-            return acc;
-        }, {});
-        
-        // Répartition géographique
-        const geoExposure = holdings.reduce((acc, h) => {
-            const country = h.country || 'Other';
-            acc[country] = (acc[country] || 0) + h.weight;
-            return acc;
-        }, {});
-        
-        // Score de diversification
-        const diversificationScore = ETF_METRICS.diversification_score.calculate(etf, holdings);
-        
-        return {
-            topHoldings,
-            sectorExposure,
-            geoExposure,
-            concentration,
-            diversificationScore
-        };
+    // Attendre le chargement des données ETF
+    if (!window.ETFData) {
+        console.log('⏳ ETF MC: En attente des données...');
+        setTimeout(arguments.callee, 500);
+        return;
     }
-
-    // Calcul du score composite
-    function calculateCompositeScore(etf, weights = {}) {
-        const defaultWeights = {
-            efficiency: 0.25,
-            liquidity: 0.20,
-            risk_adjusted: 0.30,
-            diversification: 0.15,
-            esg: 0.10
-        };
-        
-        const w = { ...defaultWeights, ...weights };
-        
-        let score = 0;
-        score += w.efficiency * (ETF_METRICS.efficiency_score.calculate(etf) / 100);
-        score += w.liquidity * ETF_METRICS.liquidity_score.calculate(etf);
-        score += w.risk_adjusted * Math.max(0, ETF_METRICS.risk_adjusted_return.calculate(etf));
-        score += w.diversification * ETF_METRICS.diversification_score.calculate(etf);
-        score += w.esg * (ETF_METRICS.esg_score.calculate(etf) / 100);
-        
-        return score * 100; // Normaliser sur 100
+    
+    const root = document.querySelector('#etf-mc-section');
+    const results = document.querySelector('#etf-mc-results .stock-cards-container');
+    
+    if (!root || !results) {
+        console.error('❌ ETF MC: Éléments DOM non trouvés');
+        return;
     }
-
-    // Fonction de comparaison d'ETFs
-    function compareETFs(etf1, etf2, criteria = ['ter', 'perf_1y', 'volatility_1y', 'sharpe_ratio']) {
-        const comparison = {};
+    
+    console.log('✅ ETF MC: Module initialisé');
+    
+    // État
+    const state = {
+        mode: 'balanced',
+        selectedMetrics: ['ter', 'aum', 'return_ytd', 'sharpe'],
+        filters: {
+            type: 'all',
+            maxTER: null,
+            minAUM: null
+        },
+        data: []
+    };
+    
+    // Métriques ETF
+    const METRICS = {
+        ter: { label: 'TER', unit: '%', max: false },
+        aum: { label: 'AUM', unit: 'M€', max: true },
+        return_1d: { label: 'Perf Daily', unit: '%', max: true },
+        return_ytd: { label: 'YTD', unit: '%', max: true },
+        return_1y: { label: 'Perf 1Y', unit: '%', max: true },
+        return_3y: { label: 'Perf 3Y', unit: '%', max: true },
+        volatility: { label: 'Volatilité', unit: '%', max: false },
+        sharpe: { label: 'Sharpe', unit: '', max: true },
+        dividend_yield: { label: 'Rendement', unit: '%', max: true },
+        tracking_error: { label: 'Track. Error', unit: '%', max: false }
+    };
+    
+    // Cache pour les calculs
+    const cache = {};
+    
+    // Calculer les rankings
+    function calculate() {
+        // Récupérer les données ETF
+        state.data = window.ETFData.getData() || [];
         
-        criteria.forEach(criterion => {
-            const val1 = etf1[criterion] || 0;
-            const val2 = etf2[criterion] || 0;
-            const diff = val1 - val2;
-            const pctDiff = val2 !== 0 ? (diff / val2) * 100 : 0;
+        if (state.data.length === 0) {
+            results.innerHTML = '<div class="text-center text-gray-400 py-4">Chargement des données...</div>';
+            return;
+        }
+        
+        // Appliquer les filtres
+        let filtered = state.data;
+        
+        // Filtre type
+        if (state.filters.type !== 'all') {
+            filtered = filtered.filter(etf => etf.type === state.filters.type);
+        }
+        
+        // Filtre TER max
+        if (state.filters.maxTER) {
+            filtered = filtered.filter(etf => etf.ter <= state.filters.maxTER);
+        }
+        
+        // Filtre AUM min
+        if (state.filters.minAUM) {
+            filtered = filtered.filter(etf => etf.aum >= state.filters.minAUM);
+        }
+        
+        // Calculer les scores
+        const scores = filtered.map(etf => {
+            let score = 0;
+            let count = 0;
             
-            comparison[criterion] = {
-                etf1: val1,
-                etf2: val2,
-                difference: diff,
-                percentDiff: pctDiff,
-                winner: diff > 0 ? etf1.ticker : etf2.ticker
+            state.selectedMetrics.forEach(metric => {
+                const value = etf[metric];
+                if (typeof value === 'number' && !isNaN(value)) {
+                    // Normaliser entre 0 et 1
+                    const allValues = filtered.map(e => e[metric]).filter(v => !isNaN(v));
+                    const min = Math.min(...allValues);
+                    const max = Math.max(...allValues);
+                    
+                    let normalized;
+                    if (max === min) {
+                        normalized = 0.5;
+                    } else {
+                        normalized = (value - min) / (max - min);
+                    }
+                    
+                    // Inverser si on veut minimiser
+                    if (!METRICS[metric].max) {
+                        normalized = 1 - normalized;
+                    }
+                    
+                    score += normalized;
+                    count++;
+                }
+            });
+            
+            return {
+                etf,
+                score: count > 0 ? score / count : 0
             };
         });
         
-        return comparison;
+        // Trier et prendre le top 10
+        scores.sort((a, b) => b.score - a.score);
+        const top10 = scores.slice(0, 10);
+        
+        // Render
+        render(top10);
+        
+        // Update summary
+        updateSummary(filtered.length, state.data.length);
     }
-
-    // Calcul de corrélation entre ETFs
-    function calculateCorrelation(etf1Returns, etf2Returns) {
-        if (!etf1Returns || !etf2Returns || etf1Returns.length !== etf2Returns.length) {
-            return null;
+    
+    // Render les résultats
+    function render(entries) {
+        results.innerHTML = '';
+        results.className = 'space-y-2';
+        
+        entries.forEach((entry, i) => {
+            const card = document.createElement('div');
+            card.className = 'glassmorphism rounded-lg p-3 flex items-center gap-4';
+            
+            const etf = entry.etf;
+            
+            // Valeurs métriques
+            const metricValues = state.selectedMetrics.map(m => {
+                const value = etf[m];
+                if (typeof value !== 'number' || isNaN(value)) return '';
+                
+                const metric = METRICS[m];
+                const formatted = m === 'aum' ? formatAUM(value) : value.toFixed(2);
+                const colorClass = metric.max ? 
+                    (value > 0 ? 'text-green-400' : 'text-red-400') :
+                    (value < 1 ? 'text-green-400' : 'text-yellow-400');
+                
+                return `
+                    <div class="text-right">
+                        <div class="text-xs opacity-60">${metric.label}</div>
+                        <div class="${colorClass} font-semibold">
+                            ${formatted}${metric.unit && m !== 'aum' ? metric.unit : ''}
+                        </div>
+                    </div>
+                `;
+            }).filter(Boolean).join('');
+            
+            card.innerHTML = `
+                <div class="rank text-2xl font-bold">#${i + 1}</div>
+                <div class="flex-1">
+                    <div class="font-semibold">${etf.ticker}</div>
+                    <div class="text-xs opacity-60">${etf.name}</div>
+                    <div class="text-xs opacity-40">${etf.type}</div>
+                </div>
+                <div class="flex gap-4">
+                    ${metricValues}
+                </div>
+                <div class="text-lg font-bold text-cyan-400">
+                    Score: ${(entry.score * 100).toFixed(0)}%
+                </div>
+            `;
+            
+            results.appendChild(card);
+        });
+        
+        if (entries.length === 0) {
+            results.innerHTML = '<div class="text-center text-cyan-400 py-4">Aucun ETF ne correspond aux critères</div>';
         }
+    }
+    
+    // Update summary
+    function updateSummary(filtered, total) {
+        const summary = document.getElementById('etf-mc-summary');
+        if (!summary) return;
         
-        const n = etf1Returns.length;
-        const mean1 = etf1Returns.reduce((a, b) => a + b, 0) / n;
-        const mean2 = etf2Returns.reduce((a, b) => a + b, 0) / n;
+        const mode = state.mode === 'balanced' ? 'Équilibre' : 'Priorités';
+        const metrics = state.selectedMetrics.map(m => METRICS[m].label).join(' · ');
         
-        let cov = 0, var1 = 0, var2 = 0;
-        
-        for (let i = 0; i < n; i++) {
-            const diff1 = etf1Returns[i] - mean1;
-            const diff2 = etf2Returns[i] - mean2;
-            cov += diff1 * diff2;
-            var1 += diff1 * diff1;
-            var2 += diff2 * diff2;
+        summary.innerHTML = `<strong>${mode}</strong> • ${metrics} • ${filtered}/${total} ETFs`;
+    }
+    
+    // Format AUM
+    function formatAUM(val) {
+        if (val >= 1000) return (val / 1000).toFixed(1) + 'B€';
+        return val.toFixed(0) + 'M€';
+    }
+    
+    // Event listeners
+    
+    // Checkboxes métriques
+    Object.keys(METRICS).forEach(metric => {
+        const checkbox = document.getElementById(`etf-m-${metric}`);
+        if (checkbox) {
+            checkbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    if (!state.selectedMetrics.includes(metric)) {
+                        state.selectedMetrics.push(metric);
+                    }
+                } else {
+                    state.selectedMetrics = state.selectedMetrics.filter(m => m !== metric);
+                }
+            });
         }
+    });
+    
+    // Mode radio buttons
+    document.querySelectorAll('input[name="etf-mc-mode"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            state.mode = radio.value;
+        });
+    });
+    
+    // Filtres
+    document.getElementById('etf-filter-type')?.addEventListener('change', (e) => {
+        state.filters.type = e.target.value;
+    });
+    
+    document.getElementById('etf-filter-ter')?.addEventListener('input', (e) => {
+        state.filters.maxTER = e.target.value ? parseFloat(e.target.value) : null;
+    });
+    
+    document.getElementById('etf-filter-aum')?.addEventListener('input', (e) => {
+        state.filters.minAUM = e.target.value ? parseFloat(e.target.value) : null;
+    });
+    
+    // Boutons
+    document.getElementById('etf-mc-apply')?.addEventListener('click', calculate);
+    
+    document.getElementById('etf-mc-reset')?.addEventListener('click', () => {
+        // Reset état
+        state.selectedMetrics = ['ter', 'aum', 'return_ytd', 'sharpe'];
+        state.filters = { type: 'all', maxTER: null, minAUM: null };
+        state.mode = 'balanced';
         
-        return cov / Math.sqrt(var1 * var2);
-    }
-
-    // Détection de chevauchement entre ETFs
-    function detectOverlap(etf1Holdings, etf2Holdings) {
-        if (!etf1Holdings || !etf2Holdings) return { overlap: 0, common: [] };
+        // Reset UI
+        Object.keys(METRICS).forEach(m => {
+            const cb = document.getElementById(`etf-m-${m}`);
+            if (cb) cb.checked = state.selectedMetrics.includes(m);
+        });
         
-        const holdings1 = new Map(etf1Holdings.map(h => [h.ticker, h.weight]));
-        const holdings2 = new Map(etf2Holdings.map(h => [h.ticker, h.weight]));
+        document.getElementById('etf-filter-type').value = 'all';
+        document.getElementById('etf-filter-ter').value = '';
+        document.getElementById('etf-filter-aum').value = '';
         
-        let overlapWeight = 0;
-        const commonHoldings = [];
+        const balancedRadio = document.querySelector('input[name="etf-mc-mode"][value="balanced"]');
+        if (balancedRadio) balancedRadio.checked = true;
         
-        for (const [ticker, weight1] of holdings1) {
-            if (holdings2.has(ticker)) {
-                const weight2 = holdings2.get(ticker);
-                const minWeight = Math.min(weight1, weight2);
-                overlapWeight += minWeight;
-                commonHoldings.push({
-                    ticker,
-                    weight1,
-                    weight2,
-                    overlap: minWeight
-                });
-            }
+        calculate();
+    });
+    
+    // Expose
+    window.ETF_MC = { calculate, state };
+    
+    // Calcul initial après un délai
+    setTimeout(() => {
+        if (window.ETFData.getData().length > 0) {
+            calculate();
         }
-        
-        return {
-            overlapPercentage: overlapWeight,
-            commonHoldings: commonHoldings.sort((a, b) => b.overlap - a.overlap)
-        };
-    }
-
-    // Calcul des frais cumulés
-    function calculateTotalCost(etf, years = 10, initialInvestment = 10000) {
-        const ter = etf.ter / 100 || 0;
-        const expectedReturn = (etf.perf_1y || 5) / 100;
-        
-        let value = initialInvestment;
-        let totalCosts = 0;
-        
-        for (let year = 1; year <= years; year++) {
-            value *= (1 + expectedReturn);
-            const annualCost = value * ter;
-            totalCosts += annualCost;
-            value -= annualCost;
-        }
-        
-        return {
-            finalValue: value,
-            totalCosts,
-            costPercentage: (totalCosts / initialInvestment) * 100,
-            annualizedCost: totalCosts / years
-        };
-    }
-
-    // Recommandations basées sur le profil
-    function getRecommendations(profile = 'balanced') {
-        const profiles = {
-            conservative: {
-                filters: ['lowRisk', 'highLiquidity', 'lowCost'],
-                weights: {
-                    efficiency: 0.15,
-                    liquidity: 0.30,
-                    risk_adjusted: 0.35,
-                    diversification: 0.20
-                }
-            },
-            balanced: {
-                filters: ['efficient', 'highLiquidity'],
-                weights: {
-                    efficiency: 0.25,
-                    liquidity: 0.20,
-                    risk_adjusted: 0.30,
-                    diversification: 0.25
-                }
-            },
-            aggressive: {
-                filters: ['efficient'],
-                weights: {
-                    efficiency: 0.40,
-                    liquidity: 0.15,
-                    risk_adjusted: 0.35,
-                    diversification: 0.10
-                }
-            },
-            income: {
-                filters: ['dividend', 'lowRisk'],
-                weights: {
-                    efficiency: 0.20,
-                    liquidity: 0.20,
-                    risk_adjusted: 0.25,
-                    diversification: 0.35
-                }
-            }
-        };
-        
-        return profiles[profile] || profiles.balanced;
-    }
-
-    // Export des fonctions
-    window.ETF_MC = {
-        metrics: ETF_METRICS,
-        filters: ETF_FILTERS,
-        analyzeHoldings,
-        calculateCompositeScore,
-        compareETFs,
-        calculateCorrelation,
-        detectOverlap,
-        calculateTotalCost,
-        getRecommendations,
-        config: CONFIG
-    };
-
-    console.log('✅ Module Multi-Critères ETF chargé');
+    }, 1000);
+    
+    console.log('✅ ETF MC Module v1.0 prêt');
 })();
