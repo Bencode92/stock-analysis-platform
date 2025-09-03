@@ -1,5 +1,5 @@
 // stock-advanced-filter.js
-// Version 3.8 - Amélioration de la lecture des champs API et multi-source pour EPS/Payout
+// Version 3.9 - Désambiguïsation Twelve Data améliorée avec détection ADR et codes LSE IOB
 // Corrections appliquées : 
 // - YTD sans toISOString() pour éviter bug UTC
 // - Fallback dividende TTM/price si meta absente
@@ -11,6 +11,7 @@
 // - NOUVEAU v3.8: Lecture améliorée des champs statistics (trailing_pe, eps_ttm, etc.)
 // - NOUVEAU v3.8: Normalisation GBX → GBP pour London Stock Exchange
 // - NOUVEAU v3.8: Multi-source pour EPS et payout (API direct, DPS/EPS, yield×P/E)
+// - NOUVEAU v3.9: Désambiguïsation TD avec détection ADR, codes LSE IOB et validation nom/marché
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -97,102 +98,181 @@ function pickNumDeep(obj, paths) {
     return null;
 }
 
-// Fonction de résolution locale avec mapping des exchanges
-function resolveSymbol(symbol, stock) {
-    if (/:/.test(symbol)) return symbol; // déjà suffixé
-    
-    const ex = (stock.exchange || '').toLowerCase();
-    const country = (stock.country || '').toLowerCase();
-    
-    // Mapping par nom d'exchange
-    const byExchange = {
-        'euronext amsterdam': 'XAMS',
-        'xetra': 'XETR',
-        'six swiss exchange': 'XSWX',
-        'london stock exchange': 'XLON',
-        'euronext paris': 'XPAR',
-        'euronext brussels': 'XBRU',
-        'euronext milan': 'XMIL',
-        'euronext lisbon': 'XLIS',
-        'nasdaq stockholm': 'XSTO',
-        'nasdaq copenhagen': 'XCSE',
-        'nasdaq helsinki': 'XHEL',
-        'madrid stock exchange': 'XMAD'
-    };
-    
-    for (const k in byExchange) {
-        if (ex.includes(k)) return `${symbol}:${byExchange[k]}`;
+// ───────── Exchange → MIC (multi-synonymes) + fallback par pays ─────────
+const EX2MIC_PATTERNS = [
+    // Asie
+    ['taiwan stock exchange',           'XTAI'],
+    ['gretai securities market',        'ROCO'],   // Taipei Exchange (ex-GTSM)
+    ['hong kong exchanges and clearing','XHKG'],
+    ['shenzhen stock exchange',         'XSHE'],
+    ['korea exchange (stock market)',   'XKRX'],
+    ['korea exchange (kosdaq)',         'XKOS'],
+    ['national stock exchange of india','XNSE'],
+    ['stock exchange of thailand',      'XBKK'],
+    ['bursa malaysia',                  'XKLS'],
+    ['philippine stock exchange',       'XPHS'],
+
+    // Europe
+    ['euronext amsterdam',              'XAMS'],
+    ['nyse euronext - euronext paris',  'XPAR'],
+    ['nyse euronext - euronext brussels','XBRU'],
+    ['nyse euronext - euronext lisbon', 'XLIS'],
+    ['xetra',                           'XETR'],
+    ['deutsche boerse xetra',           'XETR'],
+    ['six swiss exchange',              'XSWX'],
+    ['london stock exchange',           'XLON'],
+    ['bolsa de madrid',                 'XMAD'],
+    ['borsa italiana',                  'XMIL'],
+    ['wiener boerse ag',                'XWBO'],
+    ['irish stock exchange - all market','XDUB'],
+    ['oslo bors asa',                   'XOSL'],
+    ['madrid stock exchange',           'XMAD'],
+    ['euronext milan',                  'XMIL'],
+    ['nasdaq stockholm',                'XSTO'],
+    ['nasdaq copenhagen',               'XCSE'],
+    ['nasdaq helsinki',                 'XHEL'],
+
+    // USA
+    ['nasdaq',                          'XNAS'],
+    ['new york stock exchange inc.',    'XNYS'],
+    ['cboe bzx',                        'BATS'],
+    ['cboe bzx exchange',               'BATS'],
+];
+
+const COUNTRY2MIC = {
+    'switzerland':'XSWX', 'suisse':'XSWX',
+    'france':'XPAR', 
+    'belgium':'XBRU', 'belgique':'XBRU',
+    'netherlands':'XAMS', 'pays-bas':'XAMS',
+    'portugal':'XLIS',
+    'united kingdom':'XLON', 'uk':'XLON', 'royaume-uni':'XLON',
+    'germany':'XETR', 'allemagne':'XETR',
+    'spain':'XMAD', 'espagne':'XMAD',
+    'italy':'XMIL', 'italie':'XMIL',
+    'austria':'XWBO', 'norway':'XOSL', 'ireland':'XDUB',
+    'sweden':'XSTO', 'suède':'XSTO',
+    'denmark':'XCSE', 'danemark':'XCSE',
+    'finland':'XHEL', 'finlande':'XHEL',
+    'japan':'XTKS', 'japon':'XTKS',
+    'hong kong':'XHKG', 'singapore':'XSES',
+    'taiwan':'XTAI', 'taïwan':'XTAI',
+    'south korea':'XKRX', 'corée':'XKRX',
+    'india':'XNSE', 'inde':'XNSE',
+    'thailand':'XBKK', 'philippines':'XPHS', 'malaysia':'XKLS',
+    'china':'XSHG' // si "Shenzhen", l'intitulé d'exchange donne XSHE via le pattern
+};
+
+const normalize = s => (s||'').toLowerCase().trim();
+
+function toMIC(exchange, country=''){
+    const ex = normalize(exchange);
+    if (ex) {
+        for (const [pat, mic] of EX2MIC_PATTERNS) {
+            if (ex.includes(pat)) return mic;
+        }
     }
-    
-    // Mapping par pays
-    const byCountry = {
-        'pays-bas': 'XAMS', 'netherlands': 'XAMS',
-        'allemagne': 'XETR', 'germany': 'XETR',
-        'suisse': 'XSWX', 'switzerland': 'XSWX',
-        'royaume-uni': 'XLON', 'united kingdom': 'XLON', 'uk': 'XLON',
-        'france': 'XPAR',
-        'belgique': 'XBRU', 'belgium': 'XBRU',
-        'italie': 'XMIL', 'italy': 'XMIL',
-        'portugal': 'XLIS',
-        'espagne': 'XMAD', 'spain': 'XMAD',
-        'suède': 'XSTO', 'sweden': 'XSTO',
-        'danemark': 'XCSE', 'denmark': 'XCSE',
-        'finlande': 'XHEL', 'finland': 'XHEL',
-        'taiwan': 'XTAI', 'taïwan': 'XTAI',
-        'hong kong': 'XHKG',
-        'singapore': 'XSES',
-        'japan': 'XTKS', 'japon': 'XTKS',
-        'south korea': 'XKRX', 'corée': 'XKRX',
-        'india': 'XBOM', 'inde': 'XBOM'
-    };
-    
-    for (const k in byCountry) {
-        if (country.includes(k)) return `${symbol}:${byCountry[k]}`;
-    }
-    
-    return symbol; // fallback sans suffixe
+    const c = normalize(country);
+    return COUNTRY2MIC[c] || null;
 }
 
-// Smart resolver avec fallback
-async function resolveSymbolSmart(symbol, stock) {
-    // Helper pour tester un symbole
-    const trySymbol = async (sym) => {
+// ───────── Helpers de désambiguïsation ─────────
+const US_EXCH = /nasdaq|nyse|arca|amex|bats/i;
+const LSE_IOB = /^[0][A-Z0-9]{3}$/; // codes LSE "0XXX" (IOB)
+
+// Valide que le nom ressemble (≥1 mot de ≥3 lettres en commun)
+function tokens(s){
+    return normalize(s).normalize("NFKD").replace(/[^a-z0-9\s]/g," ")
+        .split(/\s+/).filter(w => w.length>=3);
+}
+function nameLooksRight(metaName, expected){
+    if (!expected) return true;
+    const a = new Set(tokens(metaName));
+    const b = tokens(expected);
+    return b.some(t => a.has(t));
+}
+
+// Annuaire Twelve Data
+async function tdStocksLookup({ symbol, country, exchange }) {
+    try {
+        const { data } = await axios.get('https://api.twelvedata.com/stocks', {
+            params: { symbol, country, exchange, apikey: CONFIG.API_KEY }, timeout: 15000
+        });
+        const arr = Array.isArray(data?.data) ? data.data : (Array.isArray(data)?data:[]);
+        return arr;
+    } catch { return []; }
+}
+
+// Score des candidats /stocks
+function rankCandidate(c, wanted){
+    let s = 0;
+    const micWanted = toMIC(wanted.exchange, wanted.country);
+    if (micWanted && c.mic_code === micWanted) s += 3;                             // MIC exact
+    if (normalize(c.exchange).includes(normalize(wanted.exchange))) s += 2;        // libellé d'exchange
+    if (LSE_IOB.test(c.symbol)) s += 1;                                            // LSE "0XXX"
+    if (US_EXCH.test(c.exchange||"") && normalize(wanted.country) !== 'united states') s -= 3; // évite ADR US
+    return s;
+}
+
+// Quote robuste (essaye SYM:MIC, puis mic_code, puis SYM brut)
+async function tryQuote(sym, mic){
+    const attempt = async (params) => {
         try {
-            const { data } = await axios.get('https://api.twelvedata.com/quote', {
-                params: { symbol: sym, apikey: CONFIG.API_KEY }
-            });
-            if (data && data.status !== 'error') return sym;
+            const { data } = await axios.get('https://api.twelvedata.com/quote', { params, timeout: 15000 });
+            if (data && data.status !== 'error') return data;
         } catch {}
         return null;
     };
-    
-    // 1) Essai local: SYM:MIC
-    const local = resolveSymbol(symbol, stock);
-    let ok = await trySymbol(local);
-    if (ok) return ok;
-    
-    // 2) SYM brut (sans suffixe)
-    ok = await trySymbol(symbol);
-    if (ok) return ok;
-    
-    // 3) Recherche via /stocks pour trouver la forme supportée
-    try {
-        const { data } = await axios.get('https://api.twelvedata.com/stocks', {
-            params: {
-                symbol,
-                exchange: (stock.exchange || '').split(' ')[0]
-            }
-        });
-        const arr = data?.data || data;
-        const first = Array.isArray(arr) ? arr.find(s => (s.symbol || '').toUpperCase().startsWith(symbol.toUpperCase())) : null;
-        if (first?.symbol && first?.exchange) {
-            const guess = `${first.symbol}:${first.exchange}`;
-            ok = await trySymbol(guess);
-            if (ok) return ok;
+    if (mic) {
+        const q1 = await attempt({ symbol: `${sym}:${mic}`, apikey: CONFIG.API_KEY });
+        if (q1) return q1;
+        const q2 = await attempt({ symbol: sym, mic_code: mic, apikey: CONFIG.API_KEY });
+        if (q2) return q2;
+    }
+    return await attempt({ symbol: sym, apikey: CONFIG.API_KEY });
+}
+
+// Résolution locale "simple" → renvoie SYM:MIC si on connaît le MIC
+function resolveSymbol(symbol, stock) {
+    if (/:/.test(symbol)) return symbol; // déjà suffixé
+    const mic = toMIC(stock.exchange, stock.country);
+    return mic ? `${symbol}:${mic}` : symbol;
+}
+
+// Résolution "smart": test direct, sinon /stocks → meilleur candidat
+async function resolveSymbolSmart(symbol, stock) {
+    const mic = toMIC(stock.exchange, stock.country);
+
+    // 1) essai direct sur le ticker (avec MIC si dispo)
+    const q = await tryQuote(symbol, mic);
+    const looksUS  = q?.exchange && US_EXCH.test(q.exchange);
+    const okMarket = !(looksUS && normalize(stock.country) !== 'united states');
+    const okName   = q?.name ? nameLooksRight(q.name, stock.name) : true;
+
+    if (q && okMarket && okName) {
+        return mic ? `${symbol}:${mic}` : symbol;         // symbole final (suffixé si on sait le MIC)
+    }
+
+    // 2) lookup /stocks pour symbole TD non ambigu (priorité MIC voulu, LSE 0XXX)
+    const cand = await tdStocksLookup({ symbol, country: stock.country, exchange: stock.exchange });
+    if (cand.length) {
+        cand.sort((a,b)=>rankCandidate(b,stock) - rankCandidate(a,stock));
+        const best = cand[0]; // ex: 0QOK (Roche)
+
+        // Si best.symbol est déjà "0XXX", inutile de suffixer
+        const bestSym = LSE_IOB.test(best.symbol) ? best.symbol
+                       : (best.mic_code ? `${best.symbol}:${best.mic_code}` : best.symbol);
+
+        // On valide que le quote obtenu colle au nom/marché
+        const qBest = await tryQuote(best.symbol, best.mic_code);
+        if (qBest) {
+            const okM = !(US_EXCH.test(qBest.exchange||"") && normalize(stock.country) !== 'united states');
+            const okN = nameLooksRight(qBest.name || '', stock.name);
+            if (okM && okN) return bestSym;
         }
-    } catch {}
-    
-    return null; // rien trouvé
+    }
+
+    // 3) dernier recours : mapping simple
+    return resolveSymbol(symbol, stock);
 }
 
 function parseCSV(csvText) {
@@ -611,6 +691,7 @@ async function enrichStock(stock) {
     // Résolution robuste une fois pour toutes
     const resolved = await resolveSymbolSmart(stock.symbol, stock);
     if (CONFIG.DEBUG) console.log('[RESOLVED]', stock.symbol, '→', resolved || '(none)');
+    if (!resolved) console.warn(`  ⚠️ Impossible de résoudre ${stock.symbol} (${stock.exchange})`);
     
     // On calcule tout en parallèle
     const [perf, quote, dividends, stats, mcDirect] = await Promise.all([
@@ -890,7 +971,7 @@ function buildOverview(byRegion){
 }
 
 async function main() { 
-    console.log('📊 Enrichissement complet des stocks (v3.8 avec multi-source EPS/Payout)\n');
+    console.log('📊 Enrichissement complet des stocks (v3.9 avec désambiguïsation TD avancée)\n');
     await fs.mkdir(OUT_DIR, { recursive: true });
     
     const [usStocks, europeStocks, asiaStocks] = await Promise.all([
