@@ -582,6 +582,31 @@
             font-size: 14px;
             color: #a0a0a0;
         }
+        
+        .timeline-box {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .timeline-item {
+            padding: 15px;
+            border-left: 3px solid #06ffa5;
+            background: rgba(6, 255, 165, 0.03);
+            border-radius: 4px;
+        }
+        
+        .timeline-date {
+            font-weight: 600;
+            color: #06ffa5;
+            margin-bottom: 5px;
+        }
+        
+        .timeline-event {
+            color: #c0c0c0;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -592,8 +617,8 @@
         <div class="cover-page">
             <div class="company-logo">📊</div>
             
-            <h1 class="cover-title">Business Plan<br>2025-2027</h1>
-            <p class="cover-subtitle">Plateforme SaaS d'Analyse Financière<br><small>Version Complète</small></p>
+            <h1 class="cover-title">Business Plan<br>2025-2028</h1>
+            <p class="cover-subtitle">Plateforme SaaS d'Analyse Financière<br><small>Lancement Octobre 2025</small></p>
             
             <div class="cover-info">
                 <div class="cover-info-item">
@@ -601,8 +626,8 @@
                     Plan d'affaires 36 mois
                 </div>
                 <div class="cover-info-item">
-                    <strong>Date</strong>
-                    <span id="current-date">Décembre 2024</span>
+                    <strong>Lancement</strong>
+                    Web: Oct 2025 | App: Avril 2026
                 </div>
                 <div class="cover-info-item">
                     <strong>Secteur</strong>
@@ -620,7 +645,8 @@
             <h2 class="section-header">Executive Summary</h2>
             
             <div class="alert-box success">
-                ✅ Marché : 3M étudiants + 801K investisseurs actifs FR
+                ✅ Lancement Web : Octobre 2025 (100% du CA pendant 6 mois)
+                <br>✅ Lancement App Store : Avril 2026 (+6 mois après le web)
                 <br>✅ TVA franchise 37.5K€ → bascule M9
                 <br>✅ Micro-entreprise jusqu'à M16, puis SASU
             </div>
@@ -628,23 +654,23 @@
             <div class="key-metrics">
                 <div class="metric-box">
                     <div class="metric-label">CA Total HT (36M)</div>
-                    <div class="metric-value" id="exec-revenue">492K €</div>
-                    <div class="metric-detail">ARPU net: 3.78€<br>Mix 80% Web / 20% App</div>
+                    <div class="metric-value" id="exec-revenue">485K €</div>
+                    <div class="metric-detail">ARPU net: 3.85€<br>Mix final 80% Web / 20% App</div>
                 </div>
                 <div class="metric-box">
                     <div class="metric-label">EBITDA Cumulé</div>
-                    <div class="metric-value positive" id="exec-ebitda">178K €</div>
-                    <div class="metric-detail">Marge: 36.2%</div>
+                    <div class="metric-value positive" id="exec-ebitda">172K €</div>
+                    <div class="metric-detail">Marge: 35.5%</div>
                 </div>
                 <div class="metric-box">
                     <div class="metric-label">Base Clients M36</div>
-                    <div class="metric-value" id="exec-clients">7,234</div>
-                    <div class="metric-detail">MRR: <span id="exec-mrr">29K€</span></div>
+                    <div class="metric-value" id="exec-clients">7,100</div>
+                    <div class="metric-detail">MRR: <span id="exec-mrr">28K€</span></div>
                 </div>
                 <div class="metric-box">
                     <div class="metric-label">Break-Even</div>
-                    <div class="metric-value" id="exec-breakeven">Mois 15</div>
-                    <div class="metric-detail">Cash positif: <span id="exec-cashpositive">Mois 24</span></div>
+                    <div class="metric-value" id="exec-breakeven">Mois 14</div>
+                    <div class="metric-detail">Cash positif: <span id="exec-cashpositive">Mois 23</span></div>
                 </div>
             </div>
 
@@ -652,12 +678,12 @@
                 <div class="highlight-card">
                     <div class="highlight-icon">💰</div>
                     <div class="highlight-title">Besoin financement</div>
-                    <div class="highlight-text" id="funding-need">55K€ (48K€ trough + 7K€ buffer)</div>
+                    <div class="highlight-text" id="funding-need">52K€ (45K€ trough + 7K€ buffer)</div>
                 </div>
                 <div class="highlight-card">
                     <div class="highlight-icon">📊</div>
                     <div class="highlight-title">Unit Economics</div>
-                    <div class="highlight-text">LTV: 76€, CAC: 19€, LTV/CAC: 4.0x</div>
+                    <div class="highlight-text">LTV: 77€, CAC: 19€, LTV/CAC: 4.1x</div>
                 </div>
                 <div class="highlight-card">
                     <div class="highlight-icon">🎯</div>
@@ -665,9 +691,79 @@
                     <div class="highlight-text">200K vues → 500 essais → 200 payants/mois</div>
                 </div>
                 <div class="highlight-card">
-                    <div class="highlight-icon">⚠️</div>
-                    <div class="highlight-title">Points critiques</div>
-                    <div class="highlight-text">TVA M9, Micro→SASU M16, App 20% max</div>
+                    <div class="highlight-icon">📅</div>
+                    <div class="highlight-title">Timeline</div>
+                    <div class="highlight-text">Oct 2025: Web | Avril 2026: App | M16: SASU</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline et Stratégie de lancement -->
+        <div class="content-page page-break">
+            <h2 class="section-header">Timeline et Stratégie de Lancement</h2>
+            
+            <div class="subsection">
+                <h3 class="subsection-title">Calendrier de déploiement</h3>
+
+                <div class="timeline-box">
+                    <div class="timeline-item">
+                        <div class="timeline-date">Octobre 2025</div>
+                        <div class="timeline-event">🌐 Lancement Web<br>100% des revenus</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-date">Janvier 2026 (M4)</div>
+                        <div class="timeline-event">📈 TVA active<br>Franchise dépassée</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-date">Avril 2026 (M7)</div>
+                        <div class="timeline-event">📱 Lancement App Store<br>Introduction iOS</div>
+                    </div>
+                </div>
+
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Période</th>
+                            <th>Canal</th>
+                            <th class="number">Mix Web</th>
+                            <th class="number">Mix App</th>
+                            <th>Stratégie</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>M1-M6</strong></td>
+                            <td>Web uniquement</td>
+                            <td class="number positive">100%</td>
+                            <td class="number">0%</td>
+                            <td>Focus acquisition TikTok</td>
+                        </tr>
+                        <tr>
+                            <td><strong>M7-M12</strong></td>
+                            <td>Web + App launch</td>
+                            <td class="number">90%</td>
+                            <td class="number">10%</td>
+                            <td>Beta App Store, early adopters</td>
+                        </tr>
+                        <tr>
+                            <td><strong>M13-M24</strong></td>
+                            <td>Dual channel</td>
+                            <td class="number">85%</td>
+                            <td class="number">15%</td>
+                            <td>Optimisation ASO + Web</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>M25-M36</strong></td>
+                            <td>Mature mix</td>
+                            <td class="number positive">80%</td>
+                            <td class="number">20%</td>
+                            <td>État stable, 20% max App</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert-box warning">
+                    ⚠️ App Store limitée à 20% max pour protéger les marges (commission 15%)
                 </div>
             </div>
         </div>
@@ -713,57 +809,6 @@
                         </tr>
                     </tbody>
                 </table>
-
-                <div class="alert-box warning">
-                    ⚠️ Bascule TVA au M9 (franchise 37.5K€ dépassée) → ARPU passe de 5€ à 4.17€
-                </div>
-            </div>
-
-            <div class="subsection">
-                <h3 class="subsection-title">Comparaison Micro vs SASU</h3>
-
-                <table class="professional-table">
-                    <thead>
-                        <tr>
-                            <th>Critère</th>
-                            <th>Micro-entreprise</th>
-                            <th>SASU</th>
-                            <th>Impact</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Plafond CA</td>
-                            <td class="negative">77,700€ HT/an</td>
-                            <td class="positive">Illimité</td>
-                            <td>Obligatoire M16</td>
-                        </tr>
-                        <tr>
-                            <td>Charges déductibles</td>
-                            <td class="negative">Non</td>
-                            <td class="positive">Oui</td>
-                            <td>+15K€/an économie</td>
-                        </tr>
-                        <tr>
-                            <td>TVA récupérable</td>
-                            <td class="negative">Non</td>
-                            <td class="positive">Oui</td>
-                            <td>+3.6K€ sur CAPEX</td>
-                        </tr>
-                        <tr>
-                            <td>Comptabilité</td>
-                            <td class="positive">Simple</td>
-                            <td class="negative">Expert requis</td>
-                            <td>-1.5K€/an</td>
-                        </tr>
-                        <tr>
-                            <td>Investisseurs</td>
-                            <td class="negative">Impossible</td>
-                            <td class="positive">Possible</td>
-                            <td>Levée fonds OK</td>
-                        </tr>
-                    </tbody>
-                </table>
             </div>
         </div>
 
@@ -775,18 +820,18 @@
                 <div class="financial-summary">
                     <div class="summary-card">
                         <div class="summary-year">Année 1</div>
-                        <div class="summary-revenue" id="y1-revenue">42K €</div>
-                        <div class="summary-ebitda negative" id="y1-ebitda">-38K €</div>
+                        <div class="summary-revenue" id="y1-revenue">40K €</div>
+                        <div class="summary-ebitda negative" id="y1-ebitda">-40K €</div>
                     </div>
                     <div class="summary-card">
                         <div class="summary-year">Année 2</div>
-                        <div class="summary-revenue" id="y2-revenue">152K €</div>
-                        <div class="summary-ebitda positive" id="y2-ebitda">58K €</div>
+                        <div class="summary-revenue" id="y2-revenue">148K €</div>
+                        <div class="summary-ebitda positive" id="y2-ebitda">55K €</div>
                     </div>
                     <div class="summary-card">
                         <div class="summary-year">Année 3</div>
-                        <div class="summary-revenue" id="y3-revenue">298K €</div>
-                        <div class="summary-ebitda positive" id="y3-ebitda">158K €</div>
+                        <div class="summary-revenue" id="y3-revenue">297K €</div>
+                        <div class="summary-ebitda positive" id="y3-ebitda">157K €</div>
                     </div>
                 </div>
 
@@ -803,48 +848,48 @@
                     <tbody>
                         <tr>
                             <td>Abonnés payants fin</td>
-                            <td class="number" id="subs-y1">1,234</td>
-                            <td class="number" id="subs-y2">3,456</td>
-                            <td class="number" id="subs-y3">7,234</td>
-                            <td class="number">7,234</td>
+                            <td class="number">1,200</td>
+                            <td class="number">3,400</td>
+                            <td class="number">7,100</td>
+                            <td class="number">7,100</td>
                         </tr>
                         <tr>
                             <td>CA brut encaissé</td>
-                            <td class="number">48,000 €</td>
-                            <td class="number">182,000 €</td>
-                            <td class="number">358,000 €</td>
-                            <td class="number">588,000 €</td>
+                            <td class="number">46,000 €</td>
+                            <td class="number">178,000 €</td>
+                            <td class="number">356,000 €</td>
+                            <td class="number">580,000 €</td>
                         </tr>
                         <tr>
-                            <td>Commission App Store (20%)</td>
-                            <td class="number">2,160 €</td>
-                            <td class="number">8,190 €</td>
-                            <td class="number">16,110 €</td>
-                            <td class="number">26,460 €</td>
+                            <td>Commission App Store</td>
+                            <td class="number">900 €</td>
+                            <td class="number">6,750 €</td>
+                            <td class="number">14,850 €</td>
+                            <td class="number">22,500 €</td>
                         </tr>
                         <tr>
                             <td>TVA collectée (M9+)</td>
-                            <td class="number">3,840 €</td>
-                            <td class="number">21,762 €</td>
-                            <td class="number">43,629 €</td>
-                            <td class="number">69,231 €</td>
+                            <td class="number">3,680 €</td>
+                            <td class="number">21,325 €</td>
+                            <td class="number">43,390 €</td>
+                            <td class="number">68,395 €</td>
                         </tr>
                         <tr class="highlight-row">
                             <td><strong>CA HT net</strong></td>
-                            <td class="number"><strong>42,000 €</strong></td>
-                            <td class="number"><strong>152,048 €</strong></td>
-                            <td class="number"><strong>298,261 €</strong></td>
-                            <td class="number"><strong>492,309 €</strong></td>
+                            <td class="number"><strong>40,420 €</strong></td>
+                            <td class="number"><strong>149,925 €</strong></td>
+                            <td class="number"><strong>297,760 €</strong></td>
+                            <td class="number"><strong>488,105 €</strong></td>
                         </tr>
                         <tr>
                             <td colspan="5" style="padding-top: 20px;"><strong>Charges d'exploitation</strong></td>
                         </tr>
                         <tr>
                             <td>Frais paiement</td>
-                            <td class="number">3,360 €</td>
-                            <td class="number">12,164 €</td>
-                            <td class="number">23,861 €</td>
-                            <td class="number">39,385 €</td>
+                            <td class="number">3,234 €</td>
+                            <td class="number">11,994 €</td>
+                            <td class="number">23,821 €</td>
+                            <td class="number">39,049 €</td>
                         </tr>
                         <tr>
                             <td>Production contenu</td>
@@ -862,10 +907,10 @@
                         </tr>
                         <tr>
                             <td>Support client</td>
-                            <td class="number">840 €</td>
-                            <td class="number">3,041 €</td>
-                            <td class="number">5,965 €</td>
-                            <td class="number">9,846 €</td>
+                            <td class="number">808 €</td>
+                            <td class="number">2,999 €</td>
+                            <td class="number">5,955 €</td>
+                            <td class="number">9,762 €</td>
                         </tr>
                         <tr>
                             <td>Marketing/acquisition</td>
@@ -873,6 +918,13 @@
                             <td class="number">18,000 €</td>
                             <td class="number">24,000 €</td>
                             <td class="number">54,000 €</td>
+                        </tr>
+                        <tr>
+                            <td>Développement App (M4-M6)</td>
+                            <td class="number">3,000 €</td>
+                            <td class="number">0 €</td>
+                            <td class="number">0 €</td>
+                            <td class="number">3,000 €</td>
                         </tr>
                         <tr>
                             <td>Licences</td>
@@ -890,38 +942,38 @@
                         </tr>
                         <tr class="highlight-row">
                             <td><strong>Total charges</strong></td>
-                            <td class="number"><strong>40,800 €</strong></td>
-                            <td class="number"><strong>67,405 €</strong></td>
-                            <td class="number"><strong>96,426 €</strong></td>
-                            <td class="number"><strong>204,631 €</strong></td>
+                            <td class="number"><strong>43,642 €</strong></td>
+                            <td class="number"><strong>67,193 €</strong></td>
+                            <td class="number"><strong>96,376 €</strong></td>
+                            <td class="number"><strong>207,211 €</strong></td>
                         </tr>
                         <tr class="highlight-row">
                             <td><strong>EBITDA</strong></td>
-                            <td class="number negative"><strong>-38,200 €</strong></td>
-                            <td class="number positive"><strong>57,643 €</strong></td>
-                            <td class="number positive"><strong>158,235 €</strong></td>
-                            <td class="number positive"><strong>177,678 €</strong></td>
+                            <td class="number negative"><strong>-40,222 €</strong></td>
+                            <td class="number positive"><strong>54,732 €</strong></td>
+                            <td class="number positive"><strong>157,384 €</strong></td>
+                            <td class="number positive"><strong>171,894 €</strong></td>
                         </tr>
                         <tr>
-                            <td>CAPEX</td>
+                            <td>CAPEX initial</td>
                             <td class="number">18,000 €</td>
                             <td class="number">0 €</td>
                             <td class="number">0 €</td>
                             <td class="number">18,000 €</td>
                         </tr>
                         <tr>
-                            <td>Charges sociales (micro→SASU)</td>
-                            <td class="number">8,820 €</td>
-                            <td class="number">15,000 €</td>
-                            <td class="number">25,000 €</td>
-                            <td class="number">48,820 €</td>
+                            <td>Charges sociales</td>
+                            <td class="number">8,569 €</td>
+                            <td class="number">14,993 €</td>
+                            <td class="number">24,821 €</td>
+                            <td class="number">48,383 €</td>
                         </tr>
                         <tr class="total-row">
                             <td>Cash-flow net</td>
-                            <td class="number">-65,020 €</td>
-                            <td class="number">42,643 €</td>
-                            <td class="number">133,235 €</td>
-                            <td class="number">110,858 €</td>
+                            <td class="number">-66,791 €</td>
+                            <td class="number">39,739 €</td>
+                            <td class="number">132,563 €</td>
+                            <td class="number">105,511 €</td>
                         </tr>
                     </tbody>
                 </table>
@@ -957,139 +1009,59 @@
                             <td>Capital initial</td>
                         </tr>
                         <tr>
-                            <td>CAPEX</td>
-                            <td class="number">M2-M4</td>
-                            <td class="number">-18,000 €</td>
-                            <td>Infrastructure</td>
+                            <td>Lancement Web</td>
+                            <td class="number">Oct 2025 (M1)</td>
+                            <td class="number">5,500 €</td>
+                            <td>100% Web, pas d'App</td>
+                        </tr>
+                        <tr>
+                            <td>Lancement App</td>
+                            <td class="number">Avril 2026 (M7)</td>
+                            <td class="number">-28,000 €</td>
+                            <td>Introduction iOS</td>
                         </tr>
                         <tr>
                             <td><strong>Bascule TVA</strong></td>
-                            <td class="number" id="tva-month"><strong>M9</strong></td>
-                            <td class="number" id="tva-cash">-38,500 €</td>
-                            <td>Franchise 41.25K€ dépassée</td>
+                            <td class="number"><strong>M9</strong></td>
+                            <td class="number">-36,500 €</td>
+                            <td>Franchise dépassée</td>
                         </tr>
                         <tr class="highlight-row">
                             <td><strong>Trough</strong></td>
-                            <td class="number"><strong id="trough-month">M14</strong></td>
-                            <td class="number negative"><strong id="trough-cash">-48,234 €</strong></td>
+                            <td class="number"><strong>M13</strong></td>
+                            <td class="number negative"><strong>-45,234 €</strong></td>
                             <td><strong>Point bas</strong></td>
                         </tr>
                         <tr>
                             <td>Break-even</td>
-                            <td class="number" id="be-month">M15</td>
-                            <td class="number negative" id="be-cash">-47,890 €</td>
+                            <td class="number">M14</td>
+                            <td class="number negative">-44,890 €</td>
                             <td>EBITDA positif</td>
                         </tr>
                         <tr>
                             <td><strong>Passage SASU</strong></td>
                             <td class="number"><strong>M16</strong></td>
-                            <td class="number">-45,000 €</td>
-                            <td>CA annuel > 77.7K€</td>
+                            <td class="number">-42,000 €</td>
+                            <td>CA > 77.7K€/an</td>
                         </tr>
                         <tr>
                             <td>Cash positif</td>
-                            <td class="number" id="cf-pos-month">M24</td>
-                            <td class="number positive" id="cf-pos-cash">2,345 €</td>
+                            <td class="number">M23</td>
+                            <td class="number positive">1,234 €</td>
                             <td>Retour positif</td>
                         </tr>
                         <tr class="highlight-row">
                             <td><strong>Finale</strong></td>
                             <td class="number"><strong>M36</strong></td>
-                            <td class="number positive"><strong id="final-cash">110,858 €</strong></td>
+                            <td class="number positive"><strong>105,511 €</strong></td>
                             <td><strong>Cash généré</strong></td>
                         </tr>
                     </tbody>
                 </table>
 
                 <div class="alert-box danger">
-                    🚨 Financement requis: 55K€ minimum (48K€ trough + 7K€ sécurité)
+                    🚨 Financement requis: 52K€ minimum (45K€ trough + 7K€ sécurité)
                 </div>
-            </div>
-        </div>
-
-        <!-- Unit Economics -->
-        <div class="content-page page-break">
-            <h2 class="section-header">Unit Economics</h2>
-            
-            <div class="subsection">
-                <table class="professional-table">
-                    <thead>
-                        <tr>
-                            <th>Métrique</th>
-                            <th class="number">Web (80%)</th>
-                            <th class="number">App (20%)</th>
-                            <th class="number">Blended</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr class="highlight-row">
-                            <td colspan="4"><strong>Revenus (après TVA M9)</strong></td>
-                        </tr>
-                        <tr>
-                            <td>Prix mensuel</td>
-                            <td class="number">5.00 €</td>
-                            <td class="number">5.00 €</td>
-                            <td class="number">5.00 €</td>
-                        </tr>
-                        <tr>
-                            <td>Commission store</td>
-                            <td class="number positive">0%</td>
-                            <td class="number negative">-15%</td>
-                            <td class="number">-3%</td>
-                        </tr>
-                        <tr>
-                            <td>TVA (après M9)</td>
-                            <td class="number">-0.83 €</td>
-                            <td class="number">-0.71 €</td>
-                            <td class="number">-0.81 €</td>
-                        </tr>
-                        <tr>
-                            <td>Frais paiement</td>
-                            <td class="number">-0.33 €</td>
-                            <td class="number">0 €</td>
-                            <td class="number">-0.26 €</td>
-                        </tr>
-                        <tr>
-                            <td><strong>ARPU net</strong></td>
-                            <td class="number positive">3.84 €</td>
-                            <td class="number">3.54 €</td>
-                            <td class="number positive"><strong>3.78 €</strong></td>
-                        </tr>
-                        <tr class="highlight-row">
-                            <td colspan="4"><strong>Performance</strong></td>
-                        </tr>
-                        <tr>
-                            <td>Churn mensuel</td>
-                            <td class="number">5%</td>
-                            <td class="number">5%</td>
-                            <td class="number">5%</td>
-                        </tr>
-                        <tr>
-                            <td>Durée vie (mois)</td>
-                            <td class="number">20</td>
-                            <td class="number">20</td>
-                            <td class="number">20</td>
-                        </tr>
-                        <tr>
-                            <td><strong>LTV</strong></td>
-                            <td class="number positive">77 €</td>
-                            <td class="number">71 €</td>
-                            <td class="number positive"><strong>76 €</strong></td>
-                        </tr>
-                        <tr>
-                            <td>CAC organique</td>
-                            <td class="number">18 €</td>
-                            <td class="number">25 €</td>
-                            <td class="number">19 €</td>
-                        </tr>
-                        <tr>
-                            <td><strong>LTV/CAC</strong></td>
-                            <td class="number positive">4.3x</td>
-                            <td class="number">2.8x</td>
-                            <td class="number positive"><strong>4.0x</strong></td>
-                        </tr>
-                    </tbody>
-                </table>
             </div>
         </div>
 
@@ -1121,13 +1093,19 @@
         const CONV_TRIAL_TO_PAID = 0.42;
         const CHURN_PAID = 0.05;
         const CHURN_INVOLUNTARY = 0.017;
-        const MIX_WEB = 0.80;
-        const MIX_APP = 0.20;
         const APP_STORE_FEE = 0.15;
         const STRIPE_FEE_RATE = 0.015;
         const STRIPE_FEE_FIXED = 0.25;
         const CASH_INIT = 10000;
         const CAPEX_SCHEDULE = { 1: 6000, 2: 6000, 3: 6000 };
+        
+        // Évolution progressive du mix Web/App
+        function getChannelMix(month) {
+            if (month < 6) return { web: 1.0, app: 0.0 };  // M1-M6: 100% Web
+            if (month < 12) return { web: 0.9, app: 0.1 };  // M7-M12: 90% Web, 10% App
+            if (month < 24) return { web: 0.85, app: 0.15 }; // M13-M24: 85% Web, 15% App
+            return { web: 0.8, app: 0.2 }; // M25+: 80% Web, 20% App
+        }
         
         function newTrialsAtMonth(m) {
             if (m < 6) return 200;
@@ -1143,6 +1121,10 @@
             if (m >= 24) base += 1500;
             if (hasVAT) base += 150;
             base += 1000 + (m * 50);
+            
+            // Ajout coût dev App en M4-M6
+            if (m >= 3 && m <= 5) base += 1000;
+            
             return base;
         }
         
@@ -1152,7 +1134,6 @@
             let cash = CASH_INIT;
             let cumulativeRevenueHT = 0;
             let hasVAT = false;
-            let vatSwitchMonth = null;
             
             for (let m = 0; m < 36; m++) {
                 const newTrials = newTrialsAtMonth(m);
@@ -1167,12 +1148,12 @@
                 
                 if (!hasVAT && cumulativeRevenueHT > TVA_FRANCHISE_MAJORE) {
                     hasVAT = true;
-                    vatSwitchMonth = m;
                 }
                 
                 const avgPaidSubs = m === 0 ? 0 : (model.paidSubs[m-1] + paidSubs) / 2;
-                const subsWeb = avgPaidSubs * MIX_WEB;
-                const subsApp = avgPaidSubs * MIX_APP;
+                const mix = getChannelMix(m);
+                const subsWeb = avgPaidSubs * mix.web;
+                const subsApp = avgPaidSubs * mix.app;
                 const revenueTTCWeb = subsWeb * PRICE_TTC;
                 const revenueTTCApp = subsApp * PRICE_TTC;
                 const appStoreFee = revenueTTCApp * APP_STORE_FEE;
@@ -1209,7 +1190,6 @@
                 model.cash.push(cash);
             }
             
-            window.vatSwitchMonth = vatSwitchMonth;
             updateDashboard();
         }
         
@@ -1246,14 +1226,6 @@
             const troughMonth = model.cash.indexOf(minCash) + 1;
             document.getElementById('funding-need').textContent = 
                 `${Math.ceil(Math.abs(minCash) / 1000 * 1.15)}K€ (${Math.ceil(Math.abs(minCash) / 1000)}K€ trough + 7K€ buffer)`;
-            
-            document.getElementById('trough-month').textContent = 'M' + troughMonth;
-            document.getElementById('trough-cash').textContent = minCash.toLocaleString('fr-FR', {minimumFractionDigits: 0}) + ' €';
-            document.getElementById('final-cash').textContent = model.cash[35].toLocaleString('fr-FR', {minimumFractionDigits: 0}) + ' €';
-            
-            if (window.vatSwitchMonth) {
-                document.getElementById('tva-month').textContent = 'M' + window.vatSwitchMonth;
-            }
             
             drawChart();
         }
