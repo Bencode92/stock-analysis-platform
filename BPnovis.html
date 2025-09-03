@@ -38,12 +38,14 @@
         @media print {
             @page {
                 size: A4;
-                margin: 1.5cm;
+                margin: 0;
             }
             
             body {
-                background: white;
-                color: #000;
+                background: #1e3a5f !important;
+                color: white !important;
+                padding: 0;
+                margin: 0;
             }
             
             .page-break {
@@ -57,22 +59,134 @@
             .document {
                 box-shadow: none;
                 border: none;
-                background: white !important;
+                background: transparent !important;
+                width: 100%;
+                margin: 0;
             }
             
-            * {
-                color: #000 !important;
-                background: white !important;
-                border-color: #ddd !important;
+            /* Cover page with blue background */
+            .cover-page {
+                background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%) !important;
+                color: white !important;
+                padding: 60px !important;
+                min-height: 100vh;
             }
             
-            .metric-value, .highlight-title {
-                color: #000 !important;
+            /* Content pages with subtle blue */
+            .content-page, .executive-summary {
+                background: #f0f4f8 !important;
+                color: #1e3a5f !important;
+                padding: 40px !important;
+            }
+            
+            /* Preserve text colors for print */
+            .cover-title, .cover-subtitle, .company-logo {
+                color: white !important;
                 text-shadow: none !important;
             }
             
+            .cover-info-item, .cover-info-item strong {
+                color: white !important;
+            }
+            
+            .section-header {
+                color: #1e3a5f !important;
+                border-color: #1e3a5f !important;
+                text-shadow: none !important;
+            }
+            
+            .metric-value, .highlight-title {
+                color: #1e3a5f !important;
+                text-shadow: none !important;
+            }
+            
+            .metric-box, .highlight-card {
+                background: white !important;
+                border: 2px solid #1e3a5f !important;
+                border-left: 4px solid #1e3a5f !important;
+            }
+            
+            .metric-label, .metric-detail, .highlight-text {
+                color: #2d5a8e !important;
+            }
+            
+            .professional-table {
+                background: white !important;
+                border: 1px solid #1e3a5f !important;
+            }
+            
             .professional-table thead {
-                background: #f0f0f0 !important;
+                background: #e8f0f8 !important;
+            }
+            
+            .professional-table th {
+                color: #1e3a5f !important;
+                border-color: #1e3a5f !important;
+            }
+            
+            .professional-table td {
+                color: #2d5a8e !important;
+                border-color: #d0dce8 !important;
+            }
+            
+            .professional-table .highlight-row {
+                background: #e8f0f8 !important;
+            }
+            
+            .professional-table .highlight-row td {
+                color: #1e3a5f !important;
+                font-weight: 600;
+            }
+            
+            .professional-table .total-row {
+                background: #1e3a5f !important;
+            }
+            
+            .professional-table .total-row td {
+                color: white !important;
+            }
+            
+            .alert-box {
+                background: #fff3cd !important;
+                border: 1px solid #ffc107 !important;
+                color: #856404 !important;
+            }
+            
+            .alert-box.success {
+                background: #d4edda !important;
+                border-color: #28a745 !important;
+                color: #155724 !important;
+            }
+            
+            .alert-box.warning {
+                background: #fff3cd !important;
+                border-color: #ffc107 !important;
+                color: #856404 !important;
+            }
+            
+            .subsection-title {
+                color: #1e3a5f !important;
+            }
+            
+            .footer {
+                color: #5a6c7d !important;
+                border-top: 1px solid #1e3a5f !important;
+            }
+            
+            .confidential {
+                background: #ffe6e6 !important;
+                color: #cc0000 !important;
+                border: 1px solid #cc0000 !important;
+            }
+            
+            /* Chart container for print */
+            .chart-container {
+                background: white !important;
+                border: 1px solid #1e3a5f !important;
+            }
+            
+            .chart-title {
+                color: #1e3a5f !important;
             }
         }
 
