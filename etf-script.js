@@ -1,7 +1,7 @@
 /**
  * etf-script.js - Script principal pour la page ETF avec Top 10 et fonctionnalités complètes
  * Similaire à liste-script.js mais adapté aux ETFs
- * v2.0 - Simplification avec taggage par dataset (etf vs bonds)
+ * v2.1 - Amélioration lisibilité avec badges et noms multi-lignes
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -9,6 +9,95 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('.tp-regions .seg-btn[data-type="COMMODITY"]')?.remove();
     document.querySelector('.region-tab[data-type="commodity"]')?.remove();
     document.querySelector('#etf-filter-type option[value="commodity"]')?.remove();
+    
+    // Ajouter styles améliorés pour la lisibilité
+    if (!document.getElementById('etf-enhanced-styles')) {
+        const enhancedStyles = document.createElement('style');
+        enhancedStyles.id = 'etf-enhanced-styles';
+        enhancedStyles.textContent = `
+            /* Cartes plus larges, colonne auto */
+            #top-global-container .stock-cards-container {
+                display: grid;
+                gap: 16px;
+                grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            }
+
+            /* Carte : un peu plus d'espace à gauche, perf compacte à droite */
+            #top-global-container .stock-card { 
+                grid-template-columns: 44px 1fr max-content; 
+            }
+
+            /* Titre sur 2 lignes (3 au hover) : arrêt des coupures agressives */
+            #top-global-container .stock-fullname {
+                font-size: 0.92rem;
+                opacity: .8;
+                line-height: 1.25;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+                white-space: normal;
+                max-height: calc(1.25em * 2);
+                transition: max-height 0.2s ease;
+            }
+            
+            #top-global-container .stock-card:hover .stock-fullname {
+                -webkit-line-clamp: 3;
+                max-height: calc(1.25em * 3);
+            }
+
+            /* Ligne du haut : meilleur espacement + wrap */
+            #top-global-container .stock-name {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            
+            #top-global-container .stock-name .ticker { 
+                font-weight: 800; 
+            }
+
+            /* Badges dataset (Actions/Obligations) */
+            .dataset-badge {
+                font-size: .68rem;
+                font-weight: 700;
+                padding: 2px 8px;
+                border-radius: 999px;
+                border: 1px solid;
+                line-height: 1;
+            }
+            
+            .dataset-badge.etf {
+                color: #00ffd0;
+                border-color: rgba(0,255,135,.35);
+                background: rgba(0,255,135,.09);
+            }
+            
+            .dataset-badge.bonds {
+                color: #80aaff;
+                border-color: rgba(128,170,255,.35);
+                background: rgba(128,170,255,.08);
+            }
+
+            /* Perf : réserve un peu de largeur pour éviter de pincer le nom */
+            #top-global-container .stock-performance { 
+                min-width: 8ch; 
+                text-align: right; 
+            }
+
+            /* Mode lisibilité+ optionnel */
+            body.readable #top-global-container .stock-cards-container {
+                grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+            }
+            
+            body.readable #top-global-container .stock-fullname {
+                -webkit-line-clamp: 3;
+                max-height: calc(1.25em * 3);
+            }
+        `;
+        document.head.appendChild(enhancedStyles);
+    }
     
     // État global ETF
     let etfsData = {
@@ -154,7 +243,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return t.includes('inverse') || t.includes('leverag') || (Number.isFinite(lev) && lev !== 0);
     }
     
-    // Render Top 10 ETFs - FILTRAGE PAR DATASET
+    // Render Top 10 ETFs - AVEC BADGES AMÉLIORÉS
     function renderTopTenETFs() {
         const container = document.querySelector('#top-global-container .stock-cards-container');
         if (!container) return;
@@ -187,15 +276,20 @@ document.addEventListener('DOMContentLoaded', function() {
             else if (index === 2) rankBg = 'bg-amber-700';
 
             const specTag = isSpeculative(etf) ? 
-                `<span class="ter-badge" style="display: inline-flex; align-items: center; margin-left: 8px; vertical-align: middle;">⚠ spéculatif</span>` : '';
+                `<span class="ter-badge" style="display: inline-flex; align-items: center; vertical-align: middle;">⚠ spéculatif</span>` : '';
+
+            const datasetBadge = `<span class="dataset-badge ${etf.dataset === 'bonds' ? 'bonds' : 'etf'}">
+                ${etf.dataset === 'bonds' ? 'Obligations' : 'Actions'}
+            </span>`;
 
             const card = document.createElement('div');
             card.className = 'stock-card';
             card.innerHTML = `
                 <div class="rank ${rankBg}">#${index + 1}</div>
                 <div class="stock-info">
-                    <div class="stock-name" style="display: flex; align-items: center;">
-                        <span>${etf.ticker}</span>
+                    <div class="stock-name">
+                        <span class="ticker">${etf.ticker}</span>
+                        ${datasetBadge}
                         ${specTag}
                     </div>
                     <div class="stock-fullname" title="${etf.name}">${etf.name}</div>
@@ -509,6 +603,19 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('light-icon').style.display = 'block';
     }
     
+    // Bouton Lisibilité+ (optionnel)
+    const readabilityBtn = document.createElement('button');
+    readabilityBtn.id = 'readability-btn';
+    readabilityBtn.className = 'pill';
+    readabilityBtn.style.marginLeft = '8px';
+    readabilityBtn.innerHTML = '<i class="fas fa-eye"></i> Lisibilité+';
+    document.querySelector('.toolbar-hint')?.before(readabilityBtn);
+    
+    readabilityBtn.addEventListener('click', () => {
+        document.body.classList.toggle('readable');
+        renderTopTenETFs();
+    });
+    
     // Exposer les données pour le module MC
     window.ETFData = {
         getData: () => etfsData.all,
@@ -519,4 +626,4 @@ document.addEventListener('DOMContentLoaded', function() {
     loadETFData();
 });
 
-console.log('✅ ETF Script v2.0 - Simplification avec taggage par dataset');
+console.log('✅ ETF Script v2.1 - Amélioration lisibilité avec badges et noms multi-lignes');
