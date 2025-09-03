@@ -1,6 +1,11 @@
 // stock-advanced-filter.js
-// Version 3.11 - Correctifs BKT/ROG avec fallback prix via market_cap
-// Améliorations v3.11:
+// Version 3.12 - Gestion ADR avec rebasculement automatique vers US
+// Améliorations v3.12:
+// - Détection et rebasculement des ADR vers région US
+// - Helper micForRegion pour éviter MIC US sur pays non-US
+// - Blocage fallback US dans resolveSymbolSmart
+// - Tag is_adr pour traçabilité
+// v3.11:
 // - Patterns MIC ajoutés: BME Spanish Exchanges, SIX
 // - Essais exchange= pour Europe/Asie (SIX, BME, XETRA, etc.)
 // - Fallback prix = market_cap/shares_outstanding si quote/time_series échouent
@@ -10,17 +15,6 @@
 // - tdParamTrials adapté par région (US: exchange=, autres: mic_code=)
 // - Cache des succès pour optimiser les appels
 // - Réutilisation dans quote, statistics, time_series, dividends
-// Corrections appliquées : 
-// - YTD sans toISOString() pour éviter bug UTC
-// - Fallback dividende TTM/price si meta absente
-// - Logs DEBUG enrichis pour YTD
-// - Formules 52w conventionnelles
-// - Métadonnées marché pour tracer source exacte (exchange, devise, MIC)
-// - Payout ratio TTM calculé depuis P/E et DPS
-// - Helper pickNumDeep pour lecture robuste des champs profonds
-// - Normalisation GBX → GBP pour London Stock Exchange
-// - Multi-source pour EPS et payout (API direct, DPS/EPS, yield×P/E)
-// - Désambiguïsation TD avec détection ADR, codes LSE IOB et validation nom/marché
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -47,6 +41,11 @@ let windowStart = Date.now();
 
 // Cache des succès pour optimiser les appels
 const successCache = new Map(); // "AAPL_quote" → { symbol: "AAPL", exchange: "NASDAQ" }
+
+// v3.12: Constantes ADR
+const US_MICS = new Set(['XNAS','XNGS','XNYS','BATS','ARCX','IEXG']);
+const isUSMic = (mic) => US_MICS.has(mic);
+const isADRLike = s => isUS(s.exchange) && normalize(s.country) !== 'united states';
 
 async function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -110,7 +109,7 @@ function pickNumDeep(obj, paths) {
     return null;
 }
 
-// ───────── v3.11: Helpers centralisés pour stratégie d'essais ─────────
+// ───────── Helpers centralisés pour stratégie d'essais ─────────
 
 // Détecte si US
 const isUS = (ex='') => /nasdaq|new york stock exchange|nyse|bats|cboe/i.test(ex);
@@ -125,6 +124,14 @@ function usExchangeName(ex='') {
 
 const normalize = s => (s||'').toLowerCase().trim();
 
+// v3.12: MIC safe pour éviter ADR
+function micForRegion(stock) {
+    const mic = toMIC(stock.exchange, stock.country);
+    // si l'exchange est US mais le pays n'est pas US → ne pas forcer MIC US (évite ADR)
+    if (normalize(stock.country) !== 'united states' && isUSMic(mic)) return null;
+    return mic;
+}
+
 // Construit la liste d'essais de paramètres selon la région
 function tdParamTrials(symbol, stock, resolvedSym=null) {
     // si resolvedSym = "SYM:MIC", on récupère aussi le MIC
@@ -134,7 +141,7 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
         base = b; 
         micFromResolved = m;
     }
-    const mic = micFromResolved || toMIC(stock.exchange, stock.country);
+    const mic = micFromResolved || micForRegion(stock); // v3.12: utilise micForRegion
     const trials = [];
 
     if (isUS(stock.exchange)) {
@@ -339,7 +346,7 @@ async function tryQuote(sym, mic){
 // Résolution locale "simple" → renvoie SYM:MIC si on connaît le MIC
 function resolveSymbol(symbol, stock) {
     if (/:/.test(symbol)) return symbol; // v3.11: correction typo (pas d'espace)
-    const mic = toMIC(stock.exchange, stock.country);
+    const mic = micForRegion(stock); // v3.12: utilise micForRegion
     return mic ? `${symbol}:${mic}` : symbol;
 }
 
@@ -377,7 +384,13 @@ async function resolveSymbolSmart(symbol, stock) {
     }
 
     // 3) dernier recours : mapping simple
-    return resolveSymbol(symbol, stock);
+    const fallback = resolveSymbol(symbol, stock);
+    
+    // v3.12: Si le fallback atterrit sur un MIC US alors que le country n'est pas US → refuse (évite ADR)
+    if (normalize(stock.country) !== 'united states' && /:(XNAS|XNGS|XNYS|BATS|ARCX|IEXG)\b/.test(fallback)) {
+        return null; // on laisse la suite gérer (ça évite de rebasculer en US)
+    }
+    return fallback;
 }
 
 function parseCSV(csvText) {
@@ -408,7 +421,7 @@ async function loadStockCSV(filepath) {
     }
 }
 
-// ───────── v3.11: Fonctions refactorisées avec fetchTD ─────────
+// ───────── Fonctions refactorisées avec fetchTD ─────────
 
 async function getQuoteData(symbol, stock) {
     try {
@@ -719,7 +732,13 @@ async function enrichStock(stock) {
     // Résolution robuste une fois pour toutes
     const resolved = await resolveSymbolSmart(stock.symbol, stock);
     if (CONFIG.DEBUG) console.log('[RESOLVED]', stock.symbol, '→', resolved || '(none)');
-    if (!resolved) console.warn(`  ⚠️ Impossible de résoudre ${stock.symbol} (${stock.exchange})`);
+    
+    // v3.12: Si on n'a rien résolu et que l'exchange du CSV est US alors que le pays n'est pas US → ADR
+    if (!resolved && isUS(stock.exchange) && normalize(stock.country) !== 'united states') {
+        if (CONFIG.DEBUG) console.log(`[ADR] ${stock.symbol} détecté comme ADR`);
+        stock.is_adr = true; // Tag pour traçabilité
+        // On continue avec le symbole brut pour récupérer les données US
+    }
     
     // On calcule tout en parallèle
     const [perf, quote, dividends, stats, mcDirect] = await Promise.all([
@@ -851,6 +870,9 @@ async function enrichStock(stock) {
         country: stock.country,
         exchange: stock.exchange, // Exchange du CSV (intention)
         
+        // v3.12: Tag ADR
+        is_adr: stock.is_adr || false,
+        
         // Métadonnées source réelle
         resolved_symbol: symUsed,
         data_exchange: usedEx,
@@ -941,9 +963,9 @@ function cmpCore(a, b, field, dir){
 }
 
 // Top N générique (direction: 'desc' = hausses, 'asc' = baisses)
-function getTopN(stocks, { field, direction='desc', n=10 }={}){
+function getTopN(stocks, { field, direction='desc', n=10, excludeADR=false }={}){
   return (stocks||[])
-    .filter(s => !s.error)
+    .filter(s => !s.error && (!excludeADR || !s.is_adr)) // v3.12: option pour exclure ADR
     .sort((a,b) => cmpCore(a,b,field,direction))
     .slice(0, n);
 }
@@ -958,7 +980,8 @@ function buildOverview(byRegion){
     payout_ratio_ttm: s.payout_ratio_ttm == null ? null : Number(s.payout_ratio_ttm),
     payout_status: s.payout_status || null,
     pe_ratio: s.pe_ratio == null ? null : Number(s.pe_ratio),
-    eps_ttm: s.eps_ttm == null ? null : Number(s.eps_ttm)
+    eps_ttm: s.eps_ttm == null ? null : Number(s.eps_ttm),
+    is_adr: s.is_adr || false // v3.12: inclure flag ADR
   });
 
   const sets = {
@@ -975,18 +998,21 @@ function buildOverview(byRegion){
 
   for (const key of Object.keys(sets)) {
     const arr = sets[key];
+    // v3.12: Pour les régions non-US, exclure les ADR des tops
+    const excludeADR = /^(EUROPE|ASIA|EUROPE_ASIA)$/.test(key);
+    
     out.sets[key] = {
       day: {
-        up:   getTopN(arr, { field: 'change_percent', direction: 'desc', n: 10 }).map(pick),
-        down: getTopN(arr, { field: 'change_percent', direction: 'asc',  n: 10 }).map(pick),
+        up:   getTopN(arr, { field: 'change_percent', direction: 'desc', n: 10, excludeADR }).map(pick),
+        down: getTopN(arr, { field: 'change_percent', direction: 'asc',  n: 10, excludeADR }).map(pick),
       },
       ytd: {
-        up:   getTopN(arr, { field: 'perf_ytd',      direction: 'desc', n: 10 }).map(pick),
-        down: getTopN(arr, { field: 'perf_ytd',      direction: 'asc',  n: 10 }).map(pick),
+        up:   getTopN(arr, { field: 'perf_ytd',      direction: 'desc', n: 10, excludeADR }).map(pick),
+        down: getTopN(arr, { field: 'perf_ytd',      direction: 'asc',  n: 10, excludeADR }).map(pick),
       },
       dividends: {
-        highest_yield: getTopN(arr, { field: 'dividend_yield', direction: 'desc', n: 10 }).map(pick),
-        best_payout: arr.filter(s => s.payout_ratio_ttm > 0 && s.payout_ratio_ttm < 80)
+        highest_yield: getTopN(arr, { field: 'dividend_yield', direction: 'desc', n: 10, excludeADR }).map(pick),
+        best_payout: arr.filter(s => s.payout_ratio_ttm > 0 && s.payout_ratio_ttm < 80 && (!excludeADR || !s.is_adr))
                        .sort((a,b) => (b.dividend_yield || 0) - (a.dividend_yield || 0))
                        .slice(0, 10)
                        .map(pick)
@@ -997,7 +1023,7 @@ function buildOverview(byRegion){
 }
 
 async function main() { 
-    console.log('📊 Enrichissement complet des stocks (v3.11 avec fallback prix et essais Europe)\\n');
+    console.log('📊 Enrichissement complet des stocks (v3.12 avec gestion ADR)\\n');
     await fs.mkdir(OUT_DIR, { recursive: true });
     
     const [usStocks, europeStocks, asiaStocks] = await Promise.all([
@@ -1008,13 +1034,43 @@ async function main() {
     
     console.log(`Stocks: US ${usStocks.length} | Europe ${europeStocks.length} | Asie ${asiaStocks.length}\\n`);
     
+    // v3.12: Détection et rebasculement des ADR
+    const adrFromEurope = [];
+    const adrFromAsia = [];
+    
+    const europeFiltered = europeStocks.filter(s => {
+        if (isADRLike(s)) {
+            adrFromEurope.push(s);
+            return false;
+        }
+        return true;
+    });
+    
+    const asiaFiltered = asiaStocks.filter(s => {
+        if (isADRLike(s)) {
+            adrFromAsia.push(s);
+            return false;
+        }
+        return true;
+    });
+    
+    // Ajouter les ADR à la région US
+    const usStocksWithADR = [...usStocks, ...adrFromEurope, ...adrFromAsia];
+    
+    if (adrFromEurope.length || adrFromAsia.length) {
+        console.log(`📋 ADR détectés et rebasculés vers US:`);
+        console.log(`  - Depuis Europe: ${adrFromEurope.length} (${adrFromEurope.map(s => s.symbol).join(', ')})`);
+        console.log(`  - Depuis Asie: ${adrFromAsia.length} (${adrFromAsia.map(s => s.symbol).join(', ')})`);
+        console.log('');
+    }
+    
     const regions = [
-        { name: 'us', stocks: usStocks },
-        { name: 'europe', stocks: europeStocks },
-        { name: 'asia', stocks: asiaStocks }
+        { name: 'us', stocks: usStocksWithADR },
+        { name: 'europe', stocks: europeFiltered },
+        { name: 'asia', stocks: asiaFiltered }
     ];
     
-    const byRegion = {}; // Ajout pour stocker les données par région
+    const byRegion = {};
     
     for (const region of regions) {
         console.log(`\\n🌍 ${region.name.toUpperCase()}`);
@@ -1026,13 +1082,18 @@ async function main() {
             enrichedStocks.push(...enrichedBatch);
         }
         
-        byRegion[region.name.toUpperCase()] = enrichedStocks; // Enregistrement dans la map
+        byRegion[region.name.toUpperCase()] = enrichedStocks;
         
         const filepath = path.join(OUT_DIR, `stocks_${region.name}.json`);
         await fs.writeFile(filepath, JSON.stringify({
             region: region.name.toUpperCase(),
             timestamp: new Date().toISOString(),
-            stocks: enrichedStocks
+            stocks: enrichedStocks,
+            // v3.12: Métadonnées ADR
+            adr_info: region.name === 'us' ? {
+                from_europe: adrFromEurope.map(s => s.symbol),
+                from_asia: adrFromAsia.map(s => s.symbol)
+            } : null
         }, null, 2));
         
         console.log(`✅ ${filepath}`);
@@ -1049,11 +1110,13 @@ async function main() {
     const withPayout = allStocks.filter(s => s.payout_ratio_ttm !== null);
     const withEPS = allStocks.filter(s => s.eps_ttm !== null);
     const withPE = allStocks.filter(s => s.pe_ratio !== null);
+    const adrCount = allStocks.filter(s => s.is_adr).length;
     
     console.log('\\n📊 Statistiques des métriques:');
     console.log(`  - Actions avec P/E ratio: ${withPE.length}/${allStocks.length}`);
     console.log(`  - Actions avec EPS TTM: ${withEPS.length}/${allStocks.length}`);
     console.log(`  - Actions avec payout ratio: ${withPayout.length}/${allStocks.length}`);
+    console.log(`  - ADR dans US: ${adrCount}`);
     
     if (withPayout.length > 0) {
         console.log('\\n📊 Distribution Payout Ratio:');
@@ -1064,7 +1127,7 @@ async function main() {
         console.log(`  - Non soutenable (>100%): ${withPayout.filter(s => s.payout_status === 'unsustainable').length}`);
     }
     
-    // v3.11: Stats sur le cache et les fallbacks
+    // v3.12: Stats sur le cache et les ADR
     console.log(`\\n📊 Cache hits: ${successCache.size} symboles optimisés`);
 }
 
