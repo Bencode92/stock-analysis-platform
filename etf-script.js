@@ -1,371 +1,492 @@
-// ETF Analysis Platform - Main Script
-// Adapté de liste-script.js pour les ETFs
+/**
+ * etf-script.js - Script principal pour la page ETF avec Top 10 et fonctionnalités complètes
+ * Similaire à liste-script.js mais adapté aux ETFs
+ */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // État global
-    const state = {
-        etfs: [],
-        bonds: [],
-        holdings: {},
-        currentCategory: 'all',
-        filteredETFs: [],
-        comparisonETFs: [],
-        loading: false
+    // État global ETF
+    let etfsData = {
+        all: [],
+        filtered: [],
+        currentType: 'all',
+        searchQuery: '',
+        topPerformers: {
+            daily: { best: [], worst: [] },
+            ytd: { best: [], worst: [] }
+        }
     };
-
-    // Métriques spécifiques ETF
-    const ETF_METRICS = {
-        // Coûts
-        ter: {label: 'TER', unit: '%', max: false, format: v => `${v.toFixed(3)}%`},
-        management_fee: {label: 'Frais Gestion', unit: '%', max: false},
-        
-        // Performance
-        perf_1d: {label: '1 Jour', unit: '%', max: true},
-        perf_1m: {label: '1 Mois', unit: '%', max: true},
-        perf_3m: {label: '3 Mois', unit: '%', max: true},
-        perf_ytd: {label: 'YTD', unit: '%', max: true},
-        perf_1y: {label: '1 An', unit: '%', max: true},
-        perf_3y: {label: '3 Ans', unit: '%', max: true},
-        perf_5y: {label: '5 Ans', unit: '%', max: true},
-        
-        // Liquidité
-        aum: {label: 'AUM', unit: 'M€', max: true, format: v => `€${(v/1000000).toFixed(0)}M`},
-        avg_volume: {label: 'Volume Moy.', unit: '', max: true},
-        bid_ask_spread: {label: 'Spread', unit: '%', max: false},
-        
-        // Risque
-        volatility_1y: {label: 'Vol. 1Y', unit: '%', max: false},
-        max_drawdown: {label: 'Max DD', unit: '%', max: false},
-        sharpe_ratio: {label: 'Sharpe', unit: '', max: true, format: v => v.toFixed(2)},
-        tracking_error: {label: 'Tracking Error', unit: '%', max: false},
-        
-        // Distribution
-        distribution_yield: {label: 'Rendement', unit: '%', max: true},
-        distribution_freq: {label: 'Fréq. Distrib.', unit: '', max: true}
+    
+    // État pour le Top 10
+    let topFilters = {
+        type: 'GLOBAL',
+        direction: 'up',
+        timeframe: 'daily'
     };
-
-    // Chargement des données
+    
+    // Mise à jour de l'horloge
+    function updateMarketTime() {
+        const now = new Date();
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        const seconds = now.getSeconds().toString().padStart(2, '0');
+        document.getElementById('marketTime').textContent = `${hours}:${minutes}:${seconds}`;
+    }
+    setInterval(updateMarketTime, 1000);
+    updateMarketTime();
+    
+    // Chargement des données CSV
     async function loadETFData() {
-        if (state.loading) return;
-        state.loading = true;
-        
         try {
-            console.log('📊 Chargement des données ETF...');
+            showElement('indices-loading');
             
-            // Charger les fichiers CSV convertis (à remplacer par JSON après conversion)
-            const [etfsRes, bondsRes, holdingsRes] = await Promise.all([
-                fetch('data/combined_etfs.json').catch(() => null),
-                fetch('data/combined_bonds.json').catch(() => null),
-                fetch('data/combined_etfs_holdings.json').catch(() => null)
+            const [etfsRes, bondsRes] = await Promise.all([
+                fetch('data/combined_etfs.csv').then(r => r.text()).catch(() => ''),
+                fetch('data/combined_bonds.csv').then(r => r.text()).catch(() => '')
             ]);
             
-            // Pour l'instant, données mockées
-            state.etfs = generateMockETFs('equity', 50);
-            state.bonds = generateMockETFs('bonds', 30);
+            const etfs = etfsRes ? Papa.parse(etfsRes, { 
+                header: true, 
+                dynamicTyping: true,
+                skipEmptyLines: true 
+            }).data : [];
             
-            console.log(`✅ ${state.etfs.length} ETFs actions chargés`);
-            console.log(`✅ ${state.bonds.length} ETFs obligations chargés`);
+            const bonds = bondsRes ? Papa.parse(bondsRes, { 
+                header: true, 
+                dynamicTyping: true,
+                skipEmptyLines: true 
+            }).data : [];
             
-            // Afficher les données
-            updateTopPerformers();
-            filterETFs();
+            // Combiner et nettoyer
+            etfsData.all = [...etfs, ...bonds]
+                .filter(row => row && Object.keys(row).length > 1)
+                .map(normalizeETFData);
+            
+            etfsData.filtered = etfsData.all;
+            
+            // Calculer les top performers
+            calculateTopPerformers();
+            
+            // Render initial
+            renderTopTenETFs();
+            renderETFData();
             
         } catch (error) {
-            console.error('❌ Erreur chargement:', error);
+            console.error('Erreur:', error);
+            showElement('indices-error');
         } finally {
-            state.loading = false;
+            hideElement('indices-loading');
         }
     }
-
-    // Générateur de données mock (temporaire)
-    function generateMockETFs(type, count) {
-        const etfs = [];
-        const providers = ['iShares', 'Vanguard', 'SPDR', 'Lyxor', 'Amundi', 'Xtrackers'];
-        const indices = ['S&P 500', 'MSCI World', 'MSCI EM', 'FTSE 100', 'DAX', 'CAC 40', 'Nasdaq 100'];
+    
+    // Normaliser les données ETF
+    function normalizeETFData(etf) {
+        return {
+            ...etf,
+            ticker: etf.ticker || etf.symbol || '-',
+            name: etf.name || '-',
+            ter: parseFloat(etf.ter || etf.expense_ratio || 0),
+            aum: parseFloat(etf.aum || etf.net_assets || 0),
+            price: parseFloat(etf.price || etf.last || 0),
+            return_1d: parseFloat(etf.return_1d || etf.change || 0),
+            return_ytd: parseFloat(etf.return_ytd || etf.ytd || 0),
+            return_1y: parseFloat(etf.return_1y || etf.perf_1y || 0),
+            return_3y: parseFloat(etf.return_3y || etf.perf_3y || 0),
+            volatility: parseFloat(etf.volatility || etf.vol_1y || 0),
+            sharpe_ratio: parseFloat(etf.sharpe_ratio || etf.sharpe || 0),
+            dividend_yield: parseFloat(etf.dividend_yield || etf.yield || 0),
+            type: getETFType(etf)
+        };
+    }
+    
+    // Calculer les top performers
+    function calculateTopPerformers() {
+        // Trier pour daily best/worst
+        const sortedDaily = [...etfsData.all].sort((a, b) => b.return_1d - a.return_1d);
+        etfsData.topPerformers.daily.best = sortedDaily.slice(0, 10);
+        etfsData.topPerformers.daily.worst = sortedDaily.slice(-10).reverse();
         
-        for (let i = 0; i < count; i++) {
-            etfs.push({
-                ticker: `${providers[i % providers.length].substring(0, 3).toUpperCase()}${i}`,
-                name: `${providers[i % providers.length]} ${indices[i % indices.length]} ${type === 'bonds' ? 'Bonds' : 'ETF'}`,
-                type: type,
-                ter: Math.random() * 0.8,
-                aum: Math.random() * 5000000000,
-                perf_1y: (Math.random() - 0.3) * 40,
-                perf_ytd: (Math.random() - 0.3) * 25,
-                volatility_1y: Math.random() * 30,
-                sharpe_ratio: Math.random() * 2 - 0.5,
-                distribution_yield: Math.random() * 5,
-                avg_volume: Math.floor(Math.random() * 100000),
-                tracking_error: Math.random() * 2,
-                provider: providers[i % providers.length],
-                index: indices[i % indices.length]
+        // Trier pour YTD best/worst
+        const sortedYTD = [...etfsData.all].sort((a, b) => b.return_ytd - a.return_ytd);
+        etfsData.topPerformers.ytd.best = sortedYTD.slice(0, 10);
+        etfsData.topPerformers.ytd.worst = sortedYTD.slice(-10).reverse();
+    }
+    
+    // Render Top 10 ETFs
+    function renderTopTenETFs() {
+        const container = document.querySelector('#top-global-container .stock-cards-container');
+        if (!container) return;
+        
+        // Filtrer par type si nécessaire
+        let data = etfsData.all;
+        if (topFilters.type !== 'GLOBAL') {
+            data = data.filter(etf => {
+                const type = etf.type.toUpperCase();
+                return type === topFilters.type;
             });
         }
         
-        return etfs;
+        // Sélectionner les bonnes données
+        let topData = [];
+        if (topFilters.timeframe === 'daily') {
+            // Trier par performance daily
+            const sorted = [...data].sort((a, b) => 
+                topFilters.direction === 'up' ? b.return_1d - a.return_1d : a.return_1d - b.return_1d
+            );
+            topData = sorted.slice(0, 10);
+        } else {
+            // Trier par YTD
+            const sorted = [...data].sort((a, b) => 
+                topFilters.direction === 'up' ? b.return_ytd - a.return_ytd : a.return_ytd - b.return_ytd
+            );
+            topData = sorted.slice(0, 10);
+        }
+        
+        // Clear container
+        container.innerHTML = '';
+        
+        // Créer les cartes
+        topData.forEach((etf, index) => {
+            const card = document.createElement('div');
+            card.className = 'stock-card';
+            
+            const value = topFilters.timeframe === 'daily' ? etf.return_1d : etf.return_ytd;
+            const valueClass = value >= 0 ? 'positive' : 'negative';
+            const formattedValue = formatPercent(value);
+            
+            // Badge pour le rang
+            let rankBg = '';
+            if (index === 0) rankBg = 'bg-amber-500';
+            else if (index === 1) rankBg = 'bg-gray-300';
+            else if (index === 2) rankBg = 'bg-amber-700';
+            
+            card.innerHTML = `
+                <div class="rank ${rankBg}">#${index + 1}</div>
+                <div class="stock-info">
+                    <div class="stock-name">${etf.ticker}</div>
+                    <div class="stock-fullname" title="${etf.name}">${etf.name}</div>
+                    <div class="text-xs opacity-50 mt-1">
+                        <span class="ter-badge">TER ${etf.ter.toFixed(2)}%</span>
+                        <span class="aum-badge ml-1">${formatAUM(etf.aum)}</span>
+                    </div>
+                </div>
+                <div class="stock-performance ${valueClass}">
+                    ${formattedValue}
+                </div>
+            `;
+            
+            container.appendChild(card);
+        });
+        
+        // Si moins de 10 résultats
+        if (topData.length === 0) {
+            container.innerHTML = '<div class="text-center text-gray-400 py-4">Aucune donnée disponible</div>';
+        }
     }
-
-    // Mise à jour des top performers
-    function updateTopPerformers() {
-        const allETFs = [...state.etfs, ...state.bonds];
+    
+    // Render table complète
+    function renderETFData() {
+        const tbody = document.getElementById('etf-table-body');
+        if (!tbody) return;
         
-        // Meilleurs TER
-        const bestTER = allETFs
-            .sort((a, b) => a.ter - b.ter)
-            .slice(0, 5);
+        tbody.innerHTML = '';
         
-        document.getElementById('best-ter').innerHTML = bestTER.map((etf, i) => `
-            <div class="flex justify-between items-center p-2 hover:bg-white/5 rounded">
-                <span class="text-sm">${etf.ticker}</span>
-                <span class="metric-badge">${etf.ter.toFixed(3)}%</span>
-            </div>
-        `).join('');
+        const data = filterETFs();
         
-        // Meilleures performances
-        const bestPerf = allETFs
-            .sort((a, b) => b.perf_1y - a.perf_1y)
-            .slice(0, 5);
+        // Mise à jour compteurs
+        document.getElementById('etfs-count').textContent = data.length;
+        document.getElementById('last-update-time').textContent = new Date().toLocaleString('fr-FR');
         
-        document.getElementById('best-perf').innerHTML = bestPerf.map((etf, i) => `
-            <div class="flex justify-between items-center p-2 hover:bg-white/5 rounded">
-                <span class="text-sm">${etf.ticker}</span>
-                <span class="metric-badge ${etf.perf_1y > 0 ? 'text-green-400' : 'text-red-400'}">
-                    ${etf.perf_1y > 0 ? '+' : ''}${etf.perf_1y.toFixed(1)}%
-                </span>
-            </div>
-        `).join('');
+        // Limiter à 200 pour performance
+        data.slice(0, 200).forEach((etf, idx) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="py-2 px-3">
+                    <div class="font-medium">${etf.ticker}</div>
+                    <div class="text-xs opacity-70 mt-1">${etf.name}</div>
+                </td>
+                <td class="text-right"><span class="ter-badge">${formatNumber(etf.ter)}%</span></td>
+                <td class="text-right"><span class="aum-badge">${formatAUM(etf.aum)}</span></td>
+                <td class="text-right">${formatNumber(etf.price, 2)}€</td>
+                <td class="text-right ${getColorClass(etf.return_1d)}">${formatPercent(etf.return_1d)}</td>
+                <td class="text-right ${getColorClass(etf.return_ytd)}">${formatPercent(etf.return_ytd)}</td>
+                <td class="text-right ${getColorClass(etf.return_1y)}">${formatPercent(etf.return_1y)}</td>
+                <td class="text-right">${formatNumber(etf.volatility)}%</td>
+                <td class="text-right">${formatNumber(etf.sharpe_ratio, 2)}</td>
+                <td class="text-right">${formatNumber(etf.dividend_yield)}%</td>
+                <td class="text-center">
+                    <button type="button" onclick="toggleDetailsRow(this, ${idx})" 
+                            class="action-button details-toggle" 
+                            aria-expanded="false">
+                        <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                    </button>
+                </td>
+            `;
+            
+            const detailsRow = document.createElement('tr');
+            detailsRow.className = 'details-row hidden';
+            detailsRow.id = `details-${idx}`;
+            detailsRow.innerHTML = `
+                <td colspan="11">
+                    <div class="grid md:grid-cols-3 gap-6 p-4">
+                        <div>
+                            <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Informations</div>
+                            <div class="space-y-1 text-sm">
+                                <div><span class="opacity-60">ISIN:</span> <strong>${etf.isin || '–'}</strong></div>
+                                <div><span class="opacity-60">Type:</span> ${etf.type}</div>
+                                <div><span class="opacity-60">Réplication:</span> ${etf.replication || '–'}</div>
+                                <div><span class="opacity-60">Devise:</span> ${etf.currency || 'EUR'}</div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Performances</div>
+                            <div class="space-y-1 text-sm">
+                                <div><span class="opacity-60">1 mois:</span> <span class="${getColorClass(etf.return_1m)}">${formatPercent(etf.return_1m)}</span></div>
+                                <div><span class="opacity-60">3 mois:</span> <span class="${getColorClass(etf.return_3m)}">${formatPercent(etf.return_3m)}</span></div>
+                                <div><span class="opacity-60">3 ans:</span> <span class="${getColorClass(etf.return_3y)}">${formatPercent(etf.return_3y)}</span></div>
+                                <div><span class="opacity-60">5 ans:</span> <span class="${getColorClass(etf.return_5y)}">${formatPercent(etf.return_5y)}</span></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Risques</div>
+                            <div class="space-y-1 text-sm">
+                                <div><span class="opacity-60">Max Drawdown:</span> <span class="negative">${formatPercent(etf.max_drawdown)}</span></div>
+                                <div><span class="opacity-60">Tracking Error:</span> ${formatNumber(etf.tracking_error)}%</div>
+                                <div><span class="opacity-60">Beta:</span> ${formatNumber(etf.beta, 2)}</div>
+                                <div><span class="opacity-60">R²:</span> ${formatNumber(etf.r_squared, 2)}</div>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+            tbody.appendChild(detailsRow);
+        });
         
-        // Plus gros AUM
-        const largestAUM = allETFs
-            .sort((a, b) => b.aum - a.aum)
-            .slice(0, 5);
-        
-        document.getElementById('largest-aum').innerHTML = largestAUM.map((etf, i) => `
-            <div class="flex justify-between items-center p-2 hover:bg-white/5 rounded">
-                <span class="text-sm">${etf.ticker}</span>
-                <span class="metric-badge">€${(etf.aum/1000000000).toFixed(1)}B</span>
-            </div>
-        `).join('');
-        
-        // Meilleur Sharpe
-        const bestSharpe = allETFs
-            .filter(e => e.sharpe_ratio > 0)
-            .sort((a, b) => b.sharpe_ratio - a.sharpe_ratio)
-            .slice(0, 5);
-        
-        document.getElementById('best-sharpe').innerHTML = bestSharpe.map((etf, i) => `
-            <div class="flex justify-between items-center p-2 hover:bg-white/5 rounded">
-                <span class="text-sm">${etf.ticker}</span>
-                <span class="metric-badge">${etf.sharpe_ratio.toFixed(2)}</span>
-            </div>
-        `).join('');
+        // Afficher le tableau
+        hideElement('indices-loading');
+        hideElement('indices-error');
+        showElement('indices-container');
     }
-
-    // Filtrage des ETFs
+    
+    // Filtrage
     function filterETFs() {
-        let filtered = [...state.etfs, ...state.bonds];
+        let filtered = etfsData.all;
         
-        // Filtrage par catégorie
-        if (state.currentCategory !== 'all') {
-            filtered = filtered.filter(etf => {
-                switch(state.currentCategory) {
-                    case 'equity': return etf.type === 'equity';
-                    case 'bonds': return etf.type === 'bonds';
-                    // Ajouter d'autres catégories
-                    default: return true;
-                }
-            });
+        // Filtre par type (onglets du bas)
+        const activeTab = document.querySelector('.region-tab.active');
+        const filterType = activeTab?.dataset.type || 'all';
+        
+        if (filterType !== 'all') {
+            filtered = filtered.filter(etf => etf.type === filterType);
         }
         
-        // Appliquer les critères multi-filtres
-        if (document.getElementById('crit-ter').checked) {
-            filtered = filtered.filter(e => e.ter < 0.5);
-        }
-        if (document.getElementById('crit-aum').checked) {
-            filtered = filtered.filter(e => e.aum > 100000000);
-        }
-        if (document.getElementById('crit-volume').checked) {
-            filtered = filtered.filter(e => e.avg_volume > 10000);
-        }
-        if (document.getElementById('crit-perf').checked) {
-            filtered = filtered.filter(e => e.perf_1y > 10);
-        }
-        if (document.getElementById('crit-volatility').checked) {
-            filtered = filtered.filter(e => e.volatility_1y < 15);
-        }
-        if (document.getElementById('crit-sharpe').checked) {
-            filtered = filtered.filter(e => e.sharpe_ratio > 1);
+        // Filtre par recherche
+        if (etfsData.searchQuery) {
+            const query = etfsData.searchQuery.toLowerCase();
+            filtered = filtered.filter(etf => 
+                String(etf.ticker).toLowerCase().includes(query) ||
+                String(etf.name).toLowerCase().includes(query) ||
+                String(etf.isin || '').toLowerCase().includes(query)
+            );
         }
         
-        state.filteredETFs = filtered;
-        displayFilteredResults();
+        // Tri par AUM décroissant
+        filtered.sort((a, b) => b.aum - a.aum);
+        
+        return filtered;
     }
-
-    // Affichage des résultats filtrés
-    function displayFilteredResults() {
-        const container = document.getElementById('filtered-results');
+    
+    // Déterminer le type d'ETF
+    function getETFType(etf) {
+        const name = String(etf.name || '').toLowerCase();
+        const type = String(etf.type || '').toLowerCase();
         
-        if (state.filteredETFs.length === 0) {
-            container.innerHTML = '<p class="text-center opacity-50">Aucun ETF ne correspond aux critères</p>';
-            return;
-        }
-        
-        // Limiter à 10 résultats
-        const top10 = state.filteredETFs.slice(0, 10);
-        
-        container.innerHTML = top10.map(etf => `
-            <div class="p-3 bg-black/20 rounded-lg hover:bg-black/30 transition cursor-pointer"
-                 onclick="selectETFForComparison('${etf.ticker}')">
-                <div class="flex justify-between items-start mb-2">
-                    <div>
-                        <div class="font-semibold">${etf.ticker}</div>
-                        <div class="text-xs opacity-60">${etf.name}</div>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-xs opacity-60">TER</div>
-                        <div class="font-semibold text-cyan-400">${etf.ter.toFixed(3)}%</div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-4 gap-2 text-xs">
-                    <div>
-                        <span class="opacity-60">1Y:</span>
-                        <span class="${etf.perf_1y > 0 ? 'text-green-400' : 'text-red-400'}">
-                            ${etf.perf_1y > 0 ? '+' : ''}${etf.perf_1y.toFixed(1)}%
-                        </span>
-                    </div>
-                    <div>
-                        <span class="opacity-60">Vol:</span>
-                        <span>${etf.volatility_1y.toFixed(1)}%</span>
-                    </div>
-                    <div>
-                        <span class="opacity-60">Sharpe:</span>
-                        <span>${etf.sharpe_ratio.toFixed(2)}</span>
-                    </div>
-                    <div>
-                        <span class="opacity-60">AUM:</span>
-                        <span>€${(etf.aum/1000000000).toFixed(1)}B</span>
-                    </div>
-                </div>
-            </div>
-        `).join('');
+        if (name.includes('bond') || type.includes('bond') || name.includes('obligation')) return 'bonds';
+        if (name.includes('commodity') || name.includes('gold') || name.includes('oil') || name.includes('matière')) return 'commodity';
+        if (name.includes('sector') || name.includes('technology') || name.includes('health')) return 'sector';
+        if (name.includes('emerging') || name.includes('europe') || name.includes('asia')) return 'geographic';
+        return 'equity';
     }
-
-    // Comparaison d'ETFs
-    window.selectETFForComparison = function(ticker) {
-        const etf = [...state.etfs, ...state.bonds].find(e => e.ticker === ticker);
-        if (!etf) return;
+    
+    // Toggle détails
+    window.toggleDetailsRow = function(button, idx) {
+        const detailsRow = document.getElementById(`details-${idx}`);
+        if (!detailsRow) return;
         
-        // Limiter à 5 ETFs en comparaison
-        if (state.comparisonETFs.length >= 5) {
-            state.comparisonETFs.shift();
-        }
+        const isOpen = !detailsRow.classList.contains('hidden');
         
-        if (!state.comparisonETFs.find(e => e.ticker === ticker)) {
-            state.comparisonETFs.push(etf);
-            updateComparisonTable();
+        // Fermer tous les autres
+        document.querySelectorAll('.details-row').forEach(row => {
+            row.classList.add('hidden');
+        });
+        document.querySelectorAll('.details-toggle').forEach(btn => {
+            btn.setAttribute('aria-expanded', 'false');
+            const icon = btn.querySelector('i');
+            if (icon) {
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            }
+        });
+        
+        // Toggle celui-ci
+        if (!isOpen) {
+            detailsRow.classList.remove('hidden');
+            button.setAttribute('aria-expanded', 'true');
+            const icon = button.querySelector('i');
+            if (icon) {
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            }
         }
     };
-
-    // Mise à jour du tableau de comparaison
-    function updateComparisonTable() {
-        const container = document.getElementById('comparison-table');
-        
-        if (state.comparisonETFs.length === 0) {
-            container.innerHTML = '<p class="text-center opacity-50 py-4">Sélectionnez des ETFs pour les comparer</p>';
-            return;
-        }
-        
-        container.innerHTML = `
-            <table class="w-full">
-                <thead>
-                    <tr class="border-b border-cyan-500/20">
-                        <th class="text-left p-2">Métrique</th>
-                        ${state.comparisonETFs.map(e => 
-                            `<th class="text-center p-2">${e.ticker}</th>`
-                        ).join('')}
-                    </tr>
-                </thead>
-                <tbody>
-                    ${Object.entries(ETF_METRICS).slice(0, 10).map(([key, metric]) => `
-                        <tr class="border-b border-cyan-500/10">
-                            <td class="p-2 text-xs opacity-70">${metric.label}</td>
-                            ${state.comparisonETFs.map(etf => {
-                                const value = etf[key] || 0;
-                                const formatted = metric.format ? 
-                                    metric.format(value) : 
-                                    `${value.toFixed(2)}${metric.unit}`;
-                                const colorClass = getColorClass(key, value, metric.max);
-                                return `<td class="text-center p-2 ${colorClass}">${formatted}</td>`;
-                            }).join('')}
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        `;
+    
+    // Formatage
+    function formatNumber(val, decimals = 2) {
+        if (!val && val !== 0) return '-';
+        return parseFloat(val).toFixed(decimals);
     }
-
-    // Déterminer la couleur selon la valeur
-    function getColorClass(metric, value, isMax) {
-        if (metric.includes('perf') || metric === 'sharpe_ratio' || metric === 'distribution_yield') {
-            return value > 0 ? 'text-green-400' : 'text-red-400';
-        }
-        if (metric === 'ter' || metric.includes('volatility') || metric === 'tracking_error') {
-            return value < 0.5 ? 'text-green-400' : value < 1 ? 'text-yellow-400' : 'text-red-400';
-        }
-        return '';
+    
+    function formatAUM(val) {
+        if (!val) return '-';
+        const num = parseFloat(val);
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'B€';
+        return num.toFixed(0) + 'M€';
     }
-
-    // Event Listeners
-    document.querySelectorAll('.category-btn').forEach(btn => {
+    
+    function formatPercent(val) {
+        if (!val && val !== 0) return '-';
+        const num = parseFloat(val);
+        return (num >= 0 ? '+' : '') + num.toFixed(2) + '%';
+    }
+    
+    function getColorClass(val) {
+        const num = parseFloat(val);
+        if (isNaN(num)) return '';
+        return num >= 0 ? 'positive' : 'negative';
+    }
+    
+    // Utility
+    function showElement(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('hidden');
+    }
+    
+    function hideElement(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    }
+    
+    // Event listeners
+    
+    // Top 10 - Boutons de type
+    document.querySelectorAll('.tp-regions .seg-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            state.currentCategory = this.dataset.category;
-            filterETFs();
+            document.querySelectorAll('.tp-regions .seg-btn').forEach(b => 
+                b.setAttribute('aria-selected', 'false'));
+            this.setAttribute('aria-selected', 'true');
+            
+            topFilters.type = this.dataset.type;
+            document.getElementById('top-scope-label').textContent = 
+                this.textContent.trim().toUpperCase();
+            
+            renderTopTenETFs();
         });
     });
-
-    document.getElementById('apply-filters').addEventListener('click', filterETFs);
-
-    // Recherche d'ETFs
-    document.getElementById('etf-search').addEventListener('input', function(e) {
-        const search = e.target.value.toLowerCase();
-        if (search.length < 2) return;
-        
-        const results = [...state.etfs, ...state.bonds].filter(etf => 
-            etf.ticker.toLowerCase().includes(search) ||
-            etf.name.toLowerCase().includes(search)
-        );
-        
-        // Afficher suggestions (à implémenter)
+    
+    // Top 10 - Boutons direction/timeframe
+    document.querySelectorAll('.tp-filters .pill').forEach(pill => {
+        pill.addEventListener('click', function() {
+            const dir = this.dataset.dir;
+            const frame = this.dataset.frame;
+            
+            if (dir) {
+                document.querySelectorAll('.pill[data-dir]').forEach(p => 
+                    p.setAttribute('aria-selected', 'false'));
+                this.setAttribute('aria-selected', 'true');
+                topFilters.direction = dir;
+            } else if (frame) {
+                document.querySelectorAll('.pill[data-frame]').forEach(p => 
+                    p.setAttribute('aria-selected', 'false'));
+                this.setAttribute('aria-selected', 'true');
+                topFilters.timeframe = frame;
+            }
+            
+            renderTopTenETFs();
+        });
     });
-
+    
+    // Onglets de type (table complète)
+    document.querySelectorAll('.region-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.region-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            renderETFData();
+        });
+    });
+    
+    // Recherche
+    const searchInput = document.getElementById('etf-search');
+    const clearButton = document.getElementById('clear-search');
+    
+    searchInput?.addEventListener('input', function() {
+        etfsData.searchQuery = this.value;
+        clearButton.style.opacity = this.value ? '1' : '0';
+        renderETFData();
+    });
+    
+    clearButton?.addEventListener('click', function() {
+        searchInput.value = '';
+        etfsData.searchQuery = '';
+        this.style.opacity = '0';
+        renderETFData();
+    });
+    
+    // Retry
+    document.getElementById('retry-button')?.addEventListener('click', function() {
+        hideElement('indices-error');
+        showElement('indices-loading');
+        loadETFData();
+    });
+    
     // Theme toggle
-    document.getElementById('theme-toggle').addEventListener('click', function() {
+    document.getElementById('theme-toggle-btn')?.addEventListener('click', function() {
         document.body.classList.toggle('dark');
         document.body.classList.toggle('light');
-        const icon = this.querySelector('i');
-        icon.classList.toggle('fa-moon');
-        icon.classList.toggle('fa-sun');
+        document.documentElement.classList.toggle('dark');
+        
+        const darkIcon = document.getElementById('dark-icon');
+        const lightIcon = document.getElementById('light-icon');
+        
+        if (document.body.classList.contains('dark')) {
+            darkIcon.style.display = 'block';
+            lightIcon.style.display = 'none';
+            localStorage.setItem('theme', 'dark');
+        } else {
+            darkIcon.style.display = 'none';
+            lightIcon.style.display = 'block';
+            localStorage.setItem('theme', 'light');
+        }
     });
-
-    // Mise à jour de l'heure
-    function updateTime() {
-        const now = new Date();
-        document.getElementById('last-update').textContent = 
-            now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    
+    // Initialiser le thème
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+        document.body.classList.remove('dark');
+        document.body.classList.add('light');
+        document.documentElement.classList.remove('dark');
+        document.getElementById('dark-icon').style.display = 'none';
+        document.getElementById('light-icon').style.display = 'block';
     }
-    setInterval(updateTime, 60000);
-    updateTime();
-
-    // Initialisation
-    loadETFData();
-
-    // Export pour utilisation dans d'autres modules
-    window.ETF = {
-        state,
-        metrics: ETF_METRICS,
-        filterETFs,
-        selectETFForComparison
+    
+    // Exposer les données pour le module MC
+    window.ETFData = {
+        getData: () => etfsData.all,
+        refresh: loadETFData
     };
+    
+    // Charger les données au démarrage
+    loadETFData();
 });
+
+console.log('✅ ETF Script v1.0 chargé');
