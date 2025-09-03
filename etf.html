@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ETF Pulse - Analyse Multi-Critères</title>
+    <title>TradePulse - ETFs</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,31 +12,45 @@
     <style>
         :root {
             --background-color: #0a1929;
+            --light-background-color: #f0f5ff;
             --text-color: #FFFFFF;
+            --light-text-color: #1a202c;
             --accent-color: #00FF87;
-            --accent-etf: #00D4FF;
+            --accent-subtle: rgba(0, 255, 135, 0.15);
+            --accent-medium: rgba(0, 255, 135, 0.3);
+            --accent-strong: rgba(0, 255, 135, 0.6);
             --card-bg: rgba(10, 30, 50, 0.6);
-            --card-border: rgba(0, 212, 255, 0.2);
+            --card-header: rgba(15, 40, 65, 0.8);
+            --card-border: rgba(0, 255, 135, 0.2);
+            --accent-glow: 0 0 15px rgba(0, 255, 135, 0.2);
+            --accent-glow-strong: 0 0 20px rgba(0, 255, 135, 0.3);
+            --transition-time: 0.3s;
             --header-height: 70px;
             --sidebar-width: 80px;
+            --negative-color: #ff4d4f;
+            --neutral-color: #aaaaaa;
+            --separator-color: rgba(255, 255, 255, 0.07);
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+            letter-spacing: 0.01em;
+            line-height: 1.6;
         }
         
         body.dark {
             background-color: var(--background-color);
             background-image: 
-                radial-gradient(circle at 15% 50%, rgba(0, 212, 255, 0.08) 0%, transparent 25%),
+                radial-gradient(circle at 15% 50%, rgba(0, 255, 135, 0.08) 0%, transparent 25%),
                 radial-gradient(circle at 85% 30%, rgba(0, 100, 255, 0.05) 0%, transparent 20%);
             color: var(--text-color);
         }
         
-        .glassmorphism {
-            backdrop-filter: blur(12px);
-            background-color: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
-        }
-        
-        /* Layout principal */
+        /* Header - EXACTEMENT COMME liste.html */
         .main-header {
             position: fixed;
             top: 0;
@@ -44,111 +58,136 @@
             right: 0;
             height: var(--header-height);
             backdrop-filter: blur(10px);
-            background-color: rgba(10, 25, 41, 0.85);
-            border-bottom: 1px solid var(--card-border);
-            z-index: 100;
-            padding: 0 40px;
+            -webkit-backdrop-filter: blur(10px);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 0 40px;
+            z-index: 100;
+            transition: all 0.3s ease;
         }
         
+        .dark .main-header {
+            background-color: rgba(10, 25, 41, 0.85);
+            border-bottom: 1px solid var(--card-border);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .pulse-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 10px var(--accent-color);
+            animation: pulse 2s infinite;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            font-weight: 900;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+        }
+        
+        .logo-container a {
+            text-decoration: none;
+            color: var(--text-color);
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Sidebar - EXACTEMENT COMME liste.html */
         .sidebar {
             position: fixed;
             top: 0;
             left: 0;
             width: var(--sidebar-width);
             height: 100vh;
-            background-color: rgba(8, 20, 35, 0.95);
-            border-right: 1px solid var(--card-border);
             display: flex;
             flex-direction: column;
             align-items: center;
             padding: 20px 0;
             z-index: 101;
+            transition: background-color 0.3s ease, border-right 0.3s ease, box-shadow 0.3s ease;
         }
         
+        .dark .sidebar {
+            background-color: rgba(8, 20, 35, 0.95);
+            border-right: 1px solid var(--card-border);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--accent-color);
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
+        }
+        
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+        }
+        
+        .nav-item {
+            margin-bottom: 24px;
+            width: 42px;
+            height: 42px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            transition: all 0.3s;
+            position: relative;
+            text-decoration: none;
+        }
+        
+        .dark .nav-item {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .dark .nav-item:hover, .dark .nav-item.active {
+            background-color: var(--accent-subtle);
+            color: var(--accent-color);
+            box-shadow: var(--accent-glow);
+            transform: translateY(-2px);
+        }
+        
+        .nav-item i {
+            font-size: 1.2rem;
+        }
+        
+        /* Main container */
         .main-container {
             margin-left: var(--sidebar-width);
             margin-top: var(--header-height);
             padding: 24px;
             min-height: calc(100vh - var(--header-height));
+            transition: background-color 0.3s ease;
         }
         
-        /* Filtres ETF */
-        .etf-filter-tabs {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 24px;
-            padding: 8px;
-            background: var(--card-bg);
-            border-radius: 12px;
+        /* Glassmorphism - STYLE ORIGINAL */
+        .glassmorphism {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            box-shadow: var(--accent-glow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
         
-        .etf-filter-btn {
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.3s;
-            cursor: pointer;
-            border: 1px solid transparent;
-            background: transparent;
-            color: rgba(255,255,255,0.7);
+        .dark .glassmorphism {
+            background-color: var(--card-bg);
         }
         
-        .etf-filter-btn.active {
-            background: rgba(0, 212, 255, 0.2);
-            border-color: var(--accent-etf);
-            color: var(--accent-etf);
+        .glassmorphism:hover {
+            box-shadow: var(--accent-glow-strong);
         }
         
-        /* Badges */
-        .ter-badge {
-            background: rgba(255, 193, 7, 0.1);
-            color: #FFC107;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-        
-        .aum-badge {
-            background: rgba(0, 212, 255, 0.1);
-            color: var(--accent-etf);
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-        
-        /* Multi-critères */
-        .mc-pill {
-            display: inline-flex;
-            gap: 8px;
-            align-items: center;
-            padding: 8px 12px;
-            border: 1px solid rgba(0, 200, 255, 0.2);
-            border-radius: 10px;
-            background: rgba(0, 255, 255, 0.03);
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s;
-        }
-        
-        .mc-pill:hover {
-            background: rgba(0, 255, 255, 0.1);
-            border-color: rgba(0, 255, 255, 0.5);
-        }
-        
-        .mc-pill.is-checked {
-            background: rgba(0, 255, 255, 0.2);
-            border-color: var(--accent-etf);
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
-        }
-        
-        .mc-pill input { accent-color: var(--accent-etf); }
-        
-        /* Table */
+        /* Table style - COMME liste.html */
         .data-table {
             width: 100%;
             border-collapse: separate;
@@ -164,33 +203,104 @@
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: rgba(255, 255, 255, 0.8);
-            background-color: rgba(15, 40, 65, 0.8);
-            cursor: pointer;
-            user-select: none;
-        }
-        
-        .data-table th:hover {
-            background-color: rgba(15, 40, 65, 1);
+            background-color: var(--card-header);
         }
         
         .data-table td {
-            padding: 12px 16px;
+            padding: 16px;
             font-size: 0.9rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+            border-bottom: 1px solid var(--separator-color);
         }
         
         .data-table tr:hover td {
-            background-color: rgba(0, 212, 255, 0.05);
+            background-color: var(--accent-subtle);
         }
         
-        /* Holdings details */
-        .holdings-row {
-            background: rgba(0, 0, 0, 0.3);
-            display: none;
+        /* Valeurs positives/négatives - STYLE ORIGINAL */
+        .positive { color: var(--accent-color); font-weight: 600; }
+        .negative { color: var(--negative-color); font-weight: 600; }
+        .neutral { color: var(--neutral-color); font-weight: 600; }
+        
+        /* Multi-critères - STYLE CYAN de mc-integration.js */
+        .mc-pill {
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            padding: 6px 10px;
+            border: 1px solid rgba(0, 200, 255, 0.2);
+            border-radius: 10px;
+            background: rgba(0, 255, 255, 0.03);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
         }
         
-        .holdings-row.show {
-            display: table-row;
+        .mc-pill:hover {
+            background: rgba(0, 255, 255, 0.1);
+            border-color: rgba(0, 255, 255, 0.5);
+        }
+        
+        .mc-pill.is-checked {
+            background: rgba(0, 255, 255, 0.2);
+            border-color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+        
+        .mc-pill input { accent-color: #00ffff; }
+        
+        /* Filtres ETF */
+        .etf-filter-tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding: 8px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+        }
+        
+        .etf-filter-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+            cursor: pointer;
+            border: 1px solid transparent;
+            background: transparent;
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .etf-filter-btn.active {
+            background: var(--accent-subtle);
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+        
+        /* Search button - STYLE ORIGINAL */
+        .search-button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+        
+        .dark .search-button {
+            background-color: var(--accent-subtle);
+            border: 1px solid var(--accent-medium);
+            color: var(--text-color);
+        }
+        
+        .search-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--accent-glow);
+            background-color: var(--accent-medium);
+        }
+        
+        .search-button i {
+            margin-right: 8px;
+            color: var(--accent-color);
         }
         
         /* Loader */
@@ -198,9 +308,9 @@
             display: inline-block;
             width: 50px;
             height: 50px;
-            border: 3px solid rgba(0, 212, 255, 0.2);
+            border: 3px solid rgba(0, 255, 135, 0.2);
             border-radius: 50%;
-            border-top-color: var(--accent-etf);
+            border-top-color: var(--accent-color);
             animation: spin 1s ease-in-out infinite;
         }
         
@@ -209,288 +319,312 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Responsive */
-        @media (max-width: 768px) {
-            .main-header { left: 0; padding: 0 20px; }
-            .sidebar { width: 100%; height: auto; flex-direction: row; bottom: 0; top: auto; }
-            .main-container { margin-left: 0; margin-bottom: 60px; }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
+        }
+        
+        /* Theme toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .theme-toggle-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+        
+        .dark .theme-toggle-btn {
+            color: var(--text-color);
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .theme-toggle-btn:hover {
+            transform: scale(1.1);
         }
     </style>
 </head>
 <body class="dark">
+    <!-- Theme Toggle -->
+    <div class="theme-toggle">
+        <button id="theme-toggle-btn" class="theme-toggle-btn">
+            <i class="fas fa-moon" id="dark-icon"></i>
+            <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
+        </button>
+    </div>
+
     <!-- Sidebar -->
     <aside class="sidebar">
-        <div class="text-2xl font-bold text-blue-400">EP</div>
-        <nav class="flex flex-col gap-6 flex-1">
-            <a href="index.html" class="text-white/70 hover:text-blue-400 transition">
-                <i class="fas fa-home text-xl"></i>
+        <div class="sidebar-logo">TP</div>
+        <nav class="sidebar-nav">
+            <a href="actualites.html" class="nav-item" title="Actualités">
+                <i class="fas fa-newspaper"></i>
             </a>
-            <a href="liste.html" class="text-white/70 hover:text-blue-400 transition">
-                <i class="fas fa-list text-xl"></i>
+            <a href="portefeuille.html" class="nav-item" title="Portefeuilles">
+                <i class="fas fa-chart-pie"></i>
             </a>
-            <a href="#" class="text-blue-400">
-                <i class="fas fa-layer-group text-xl"></i>
+            <a href="dashboard.html" class="nav-item" title="Tableau de bord">
+                <i class="fas fa-tachometer-alt"></i>
+            </a>
+            <a href="marches.html" class="nav-item" title="Marchés">
+                <i class="fas fa-chart-line"></i>
+            </a>
+            <a href="liste.html" class="nav-item" title="Actions">
+                <i class="fas fa-list-ul"></i>
+            </a>
+            <a href="etf.html" class="nav-item active" title="ETFs">
+                <i class="fas fa-layer-group"></i>
+            </a>
+            <a href="parametres.html" class="nav-item" title="Paramètres">
+                <i class="fas fa-cog"></i>
             </a>
         </nav>
     </aside>
 
     <!-- Header -->
     <header class="main-header">
-        <div class="flex items-center gap-8">
-            <h1 class="text-2xl font-bold">
-                <span class="text-blue-400">ETF</span>PULSE
-            </h1>
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="pulse-dot"></div>
+                <a href="index.html">TRADEPULSE</a>
+            </div>
+            <nav class="main-nav">
+                <a href="actualites.html">Actualités</a>
+                <a href="portefeuille.html">Portefeuilles</a>
+                <a href="dashboard.html">Tableau de bord</a>
+                <a href="marches.html">Marchés</a>
+                <a href="liste.html">Actions</a>
+                <a href="etf.html" class="active">ETFs</a>
+            </nav>
         </div>
-        <div class="flex items-center gap-4">
-            <div id="stats-summary" class="text-sm text-gray-400"></div>
-            <button id="theme-toggle" class="p-2 rounded-lg hover:bg-white/10">
-                <i class="fas fa-moon"></i>
-            </button>
+        <div class="header-right">
+            <div class="market-status">
+                <div class="market-indicator green"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time" id="marketTime">09:45:22</span>
+            </div>
+            <a href="recherche.html" class="search-button">
+                <i class="fas fa-search"></i>
+                <span>Ma question</span>
+            </a>
         </div>
     </header>
 
-    <!-- Main Content -->
+    <!-- Main Container -->
     <main class="main-container">
-        <!-- Top Stats -->
-        <div class="grid grid-cols-4 gap-4 mb-8">
-            <div class="glassmorphism p-4">
-                <div class="text-gray-400 text-sm mb-1">Total ETFs</div>
-                <div class="text-2xl font-bold" id="total-etfs">-</div>
-            </div>
-            <div class="glassmorphism p-4">
-                <div class="text-gray-400 text-sm mb-1">TER Moyen</div>
-                <div class="text-2xl font-bold text-yellow-400" id="avg-ter">-</div>
-            </div>
-            <div class="glassmorphism p-4">
-                <div class="text-gray-400 text-sm mb-1">AUM Total</div>
-                <div class="text-2xl font-bold text-blue-400" id="total-aum">-</div>
-            </div>
-            <div class="glassmorphism p-4">
-                <div class="text-gray-400 text-sm mb-1">Perf Moy. 1Y</div>
-                <div class="text-2xl font-bold text-green-400" id="avg-perf">-</div>
-            </div>
-        </div>
-
-        <!-- Filtres catégories -->
-        <div class="etf-filter-tabs">
-            <button class="etf-filter-btn active" data-category="all">
-                <i class="fas fa-globe mr-2"></i>Tous
-            </button>
-            <button class="etf-filter-btn" data-category="equity">
-                <i class="fas fa-chart-line mr-2"></i>Actions
-            </button>
-            <button class="etf-filter-btn" data-category="bonds">
-                <i class="fas fa-shield-alt mr-2"></i>Obligations
-            </button>
-            <button class="etf-filter-btn" data-category="commodity">
-                <i class="fas fa-coins mr-2"></i>Matières premières
-            </button>
-        </div>
-
-        <!-- Multi-Critères Section -->
-        <section class="mb-12">
-            <h2 class="text-xl font-bold mb-6 text-blue-400">Top 10 - Composer Multi-Critères</h2>
-            
-            <div class="grid grid-cols-3 gap-6">
-                <div class="glassmorphism p-4">
-                    <h3 class="font-semibold mb-4">Critères</h3>
-                    <div class="flex flex-wrap gap-2">
-                        <label class="mc-pill"><input type="checkbox" id="mc-ter" checked> TER ↓</label>
-                        <label class="mc-pill"><input type="checkbox" id="mc-aum" checked> AUM ↑</label>
-                        <label class="mc-pill"><input type="checkbox" id="mc-perf1y"> Perf 1Y ↑</label>
-                        <label class="mc-pill"><input type="checkbox" id="mc-vol"> Volatilité ↓</label>
-                        <label class="mc-pill"><input type="checkbox" id="mc-sharpe"> Sharpe ↑</label>
+        <div class="p-6">
+            <div class="max-w-7xl mx-auto">
+                <!-- Header -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+                    <div>
+                        <h1 class="text-3xl font-bold mb-2">ETFs - Exchange Traded Funds</h1>
+                        <p class="text-gray-400">
+                            <span id="etfs-count" class="font-semibold">0</span> ETFs listés | 
+                            Dernière mise à jour: <span id="last-update-time" class="font-medium">Chargement...</span>
+                        </p>
                     </div>
-                    
-                    <button id="mc-calculate" class="w-full mt-6 bg-blue-500 hover:bg-blue-600 rounded py-2 font-semibold transition">
-                        Calculer Top 10
+                </div>
+
+                <!-- Filtres catégories -->
+                <div class="etf-filter-tabs">
+                    <button class="etf-filter-btn active" data-category="all">
+                        <i class="fas fa-globe mr-2"></i>Tous
+                    </button>
+                    <button class="etf-filter-btn" data-category="equity">
+                        <i class="fas fa-chart-line mr-2"></i>Actions
+                    </button>
+                    <button class="etf-filter-btn" data-category="bonds">
+                        <i class="fas fa-shield-alt mr-2"></i>Obligations
+                    </button>
+                    <button class="etf-filter-btn" data-category="commodity">
+                        <i class="fas fa-coins mr-2"></i>Matières premières
                     </button>
                 </div>
 
-                <div class="col-span-2">
-                    <div id="mc-results" class="space-y-3">
-                        <div class="text-center text-gray-400 py-8">
-                            <i class="fas fa-chart-bar text-4xl mb-3 opacity-50"></i>
-                            <p>Sélectionnez vos critères et cliquez sur Calculer</p>
+                <!-- Multi-Critères - COMME mc-integration.js -->
+                <section class="mb-12">
+                    <h2 class="section-title mb-6">Top 10 - Composer Multi-Critères</h2>
+                    
+                    <div class="composer-grid" style="display: grid; grid-template-columns: minmax(380px, 450px) 1fr; gap: 24px;">
+                        <div class="glassmorphism rounded-lg p-4">
+                            <fieldset>
+                                <legend class="text-sm opacity-70 mb-2">Critères sélectionnés</legend>
+                                <div class="flex flex-wrap gap-2">
+                                    <label class="mc-pill"><input type="checkbox" id="mc-ter" checked> TER ↓</label>
+                                    <label class="mc-pill"><input type="checkbox" id="mc-aum" checked> AUM ↑</label>
+                                    <label class="mc-pill"><input type="checkbox" id="mc-perf1y"> Perf 1Y ↑</label>
+                                    <label class="mc-pill"><input type="checkbox" id="mc-vol"> Volatilité ↓</label>
+                                    <label class="mc-pill"><input type="checkbox" id="mc-sharpe"> Sharpe ↑</label>
+                                </div>
+                            </fieldset>
+                            
+                            <div class="border-t border-white/10 pt-4 mt-4">
+                                <button id="mc-calculate" class="search-button flex-1 w-full">
+                                    <i class="fas fa-magic mr-2"></i>Calculer Top 10
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div id="mc-results" class="glassmorphism rounded-lg p-4">
+                                <div class="text-center text-gray-400 py-8">
+                                    <i class="fas fa-chart-bar text-4xl mb-3 opacity-50"></i>
+                                    <p>Sélectionnez vos critères et cliquez sur Calculer</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Search -->
+                <div class="search-container mb-6">
+                    <div class="search-wrapper relative">
+                        <input type="text" id="etf-search" 
+                               placeholder="Rechercher un ETF..." 
+                               class="w-full py-3 px-12 bg-opacity-10 rounded-lg border border-opacity-30 text-white focus:outline-none focus:border-accent">
+                        <i class="fas fa-search absolute left-4 top-4 text-opacity-70"></i>
+                    </div>
+                </div>
+
+                <!-- Table ETFs -->
+                <div class="glassmorphism rounded-lg overflow-hidden">
+                    <div id="loading-indicator" class="py-16 flex justify-center">
+                        <div class="loader"></div>
+                    </div>
+                    
+                    <div id="etf-table-container" class="hidden">
+                        <div class="overflow-x-auto">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>TICKER / NOM</th>
+                                        <th>TER</th>
+                                        <th>AUM</th>
+                                        <th>PRIX</th>
+                                        <th>VAR %</th>
+                                        <th>YTD %</th>
+                                        <th>1 AN %</th>
+                                        <th>VOLATILITÉ</th>
+                                        <th>SHARPE</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="etf-table-body"></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
             </div>
-        </section>
-
-        <!-- Recherche -->
-        <div class="mb-6">
-            <div class="relative">
-                <input type="text" id="etf-search" 
-                       placeholder="Rechercher par ticker, nom, ISIN..." 
-                       class="w-full bg-black/30 rounded-lg py-3 px-12 border border-gray-700 focus:border-blue-400 transition">
-                <i class="fas fa-search absolute left-4 top-4 text-gray-400"></i>
-            </div>
         </div>
-
-        <!-- Table des ETFs -->
-        <section>
-            <div class="glassmorphism overflow-hidden">
-                <div id="loading-indicator" class="py-16 flex justify-center">
-                    <div class="loader"></div>
-                </div>
-                
-                <div id="etf-table-container" class="hidden overflow-x-auto">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th data-sort="ticker">Ticker <i class="fas fa-sort text-xs ml-1"></i></th>
-                                <th data-sort="name">Nom</th>
-                                <th data-sort="ter" class="text-right">TER</th>
-                                <th data-sort="aum" class="text-right">AUM</th>
-                                <th data-sort="price" class="text-right">Prix</th>
-                                <th data-sort="return_1d" class="text-right">1J</th>
-                                <th data-sort="return_1m" class="text-right">1M</th>
-                                <th data-sort="return_ytd" class="text-right">YTD</th>
-                                <th data-sort="return_1y" class="text-right">1Y</th>
-                                <th data-sort="volatility" class="text-right">Vol</th>
-                                <th data-sort="sharpe" class="text-right">Sharpe</th>
-                                <th class="text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="etf-table-body"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
     </main>
 
     <script>
-        // ============= ÉTAT GLOBAL =============
+        // État global
         const ETFData = {
             all: [],
             filtered: [],
-            holdings: {},
             currentCategory: 'all',
             searchQuery: '',
-            sortBy: 'aum',
-            sortOrder: 'desc',
             mcCriteria: ['ter', 'aum']
         };
 
-        // ============= CHARGEMENT CSV =============
+        // Chargement CSV
         async function loadCSVFiles() {
             try {
-                const [etfsRes, bondsRes, holdingsRes, holdingsBondsRes] = await Promise.all([
+                const [etfsRes, bondsRes] = await Promise.all([
                     fetch('data/combined_etfs.csv').then(r => r.text()).catch(() => ''),
-                    fetch('data/combined_bonds.csv').then(r => r.text()).catch(() => ''),
-                    fetch('data/combined_etfs_holdings.csv').then(r => r.text()).catch(() => ''),
-                    fetch('data/combined_bonds_holdings.csv').then(r => r.text()).catch(() => '')
+                    fetch('data/combined_bonds.csv').then(r => r.text()).catch(() => '')
                 ]);
 
                 const etfs = etfsRes ? Papa.parse(etfsRes, { header: true, dynamicTyping: true }).data : [];
                 const bonds = bondsRes ? Papa.parse(bondsRes, { header: true, dynamicTyping: true }).data : [];
-                const holdings1 = holdingsRes ? Papa.parse(holdingsRes, { header: true, dynamicTyping: true }).data : [];
-                const holdings2 = holdingsBondsRes ? Papa.parse(holdingsBondsRes, { header: true, dynamicTyping: true }).data : [];
 
-                // Combiner et nettoyer
                 ETFData.all = [...etfs, ...bonds].filter(row => row && Object.keys(row).length > 1);
-                
-                // Indexer les holdings
-                [...holdings1, ...holdings2].forEach(h => {
-                    if (h && h.ticker) {
-                        if (!ETFData.holdings[h.ticker]) ETFData.holdings[h.ticker] = [];
-                        ETFData.holdings[h.ticker].push(h);
-                    }
-                });
-
                 ETFData.filtered = ETFData.all;
-                updateStats();
+                
                 renderTable();
                 hideLoader();
+                updateTime();
 
             } catch (error) {
-                console.error('Erreur chargement:', error);
+                console.error('Erreur:', error);
                 document.getElementById('loading-indicator').innerHTML = 
-                    '<div class="text-red-400">Erreur de chargement des données</div>';
+                    '<div class="text-red-400">Erreur de chargement</div>';
             }
         }
 
-        // ============= CATÉGORISATION =============
+        // Catégorisation
         function getCategory(etf) {
             const name = String(etf.name || '').toLowerCase();
-            const type = String(etf.type || '').toLowerCase();
-            
-            if (name.includes('bond') || type.includes('bond')) return 'bonds';
+            if (name.includes('bond')) return 'bonds';
             if (name.includes('commodity') || name.includes('gold')) return 'commodity';
             return 'equity';
         }
 
-        // ============= FILTRAGE =============
+        // Filtrage
         function filterData() {
             let filtered = ETFData.all;
 
-            // Filtre catégorie
             if (ETFData.currentCategory !== 'all') {
                 filtered = filtered.filter(etf => getCategory(etf) === ETFData.currentCategory);
             }
 
-            // Filtre recherche
             if (ETFData.searchQuery) {
                 const q = ETFData.searchQuery.toLowerCase();
                 filtered = filtered.filter(etf => 
                     String(etf.ticker || '').toLowerCase().includes(q) ||
-                    String(etf.name || '').toLowerCase().includes(q) ||
-                    String(etf.isin || '').toLowerCase().includes(q)
+                    String(etf.name || '').toLowerCase().includes(q)
                 );
             }
-
-            // Tri
-            filtered.sort((a, b) => {
-                const aVal = parseFloat(a[ETFData.sortBy]) || 0;
-                const bVal = parseFloat(b[ETFData.sortBy]) || 0;
-                return ETFData.sortOrder === 'desc' ? bVal - aVal : aVal - bVal;
-            });
 
             ETFData.filtered = filtered;
             renderTable();
         }
 
-        // ============= RENDU TABLE =============
+        // Rendu table
         function renderTable() {
             const tbody = document.getElementById('etf-table-body');
             const data = ETFData.filtered.slice(0, 100);
             
-            tbody.innerHTML = data.map((etf, idx) => `
+            tbody.innerHTML = data.map(etf => `
                 <tr>
-                    <td class="font-semibold">${etf.ticker || '-'}</td>
-                    <td class="text-sm">${etf.name || '-'}</td>
-                    <td class="text-right"><span class="ter-badge">${formatNumber(etf.ter)}%</span></td>
-                    <td class="text-right"><span class="aum-badge">${formatAUM(etf.aum)}</span></td>
-                    <td class="text-right">${formatNumber(etf.price, 2, '€')}</td>
+                    <td>
+                        <div class="font-medium">${etf.ticker || '-'}</div>
+                        <div class="text-xs opacity-70">${etf.name || '-'}</div>
+                    </td>
+                    <td class="text-right">${formatNumber(etf.ter)}%</td>
+                    <td class="text-right">${formatAUM(etf.aum)}</td>
+                    <td class="text-right">${formatNumber(etf.price, 2)}€</td>
                     <td class="text-right ${getColorClass(etf.return_1d)}">${formatPercent(etf.return_1d)}</td>
-                    <td class="text-right ${getColorClass(etf.return_1m)}">${formatPercent(etf.return_1m)}</td>
                     <td class="text-right ${getColorClass(etf.return_ytd)}">${formatPercent(etf.return_ytd)}</td>
                     <td class="text-right ${getColorClass(etf.return_1y)}">${formatPercent(etf.return_1y)}</td>
                     <td class="text-right">${formatNumber(etf.volatility)}%</td>
-                    <td class="text-right ${getSharpeColor(etf.sharpe_ratio)}">${formatNumber(etf.sharpe_ratio, 2)}</td>
-                    <td class="text-center">
-                        <button onclick="toggleHoldings('${etf.ticker}', ${idx})" class="text-blue-400 hover:text-blue-300">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </td>
-                </tr>
-                <tr class="holdings-row" id="holdings-${idx}">
-                    <td colspan="12" class="p-4">
-                        <div id="holdings-content-${idx}"></div>
-                    </td>
+                    <td class="text-right">${formatNumber(etf.sharpe_ratio, 2)}</td>
                 </tr>
             `).join('');
+            
+            document.getElementById('etfs-count').textContent = data.length;
         }
 
-        // ============= MULTI-CRITÈRES =============
+        // Multi-critères
         function calculateMCScore() {
-            const criteria = ETFData.mcCriteria;
             const weights = { ter: -2, aum: 1.5, return_1y: 1.5, volatility: -1, sharpe_ratio: 2 };
             
             const scored = ETFData.filtered.map(etf => {
                 let score = 0;
-                criteria.forEach(c => {
+                ETFData.mcCriteria.forEach(c => {
                     const val = parseFloat(etf[c]) || 0;
                     score += val * (weights[c] || 1);
                 });
@@ -499,52 +633,25 @@
 
             scored.sort((a, b) => b.score - a.score);
             
-            const top10 = scored.slice(0, 10);
-            renderMCResults(top10);
-        }
-
-        function renderMCResults(results) {
             const container = document.getElementById('mc-results');
-            container.innerHTML = results.map((etf, idx) => `
-                <div class="glassmorphism p-4 flex justify-between items-center hover:bg-white/5 transition">
-                    <div class="flex items-center gap-4">
-                        <div class="text-2xl font-bold ${idx < 3 ? 'text-blue-400' : 'text-gray-400'}">#${idx + 1}</div>
-                        <div>
-                            <div class="font-semibold">${etf.ticker}</div>
-                            <div class="text-sm text-gray-400">${etf.name}</div>
-                            <div class="flex gap-2 mt-1">
-                                <span class="ter-badge">TER: ${formatNumber(etf.ter)}%</span>
-                                <span class="aum-badge">AUM: ${formatAUM(etf.aum)}</span>
-                            </div>
-                        </div>
+            container.innerHTML = scored.slice(0, 10).map((etf, idx) => `
+                <div class="p-3 border-b border-gray-700 flex justify-between items-center">
+                    <div>
+                        <div class="font-semibold">#${idx + 1} ${etf.ticker}</div>
+                        <div class="text-xs opacity-70">${etf.name}</div>
                     </div>
                     <div class="text-right">
-                        <div class="text-lg font-bold text-blue-400">Score: ${etf.score.toFixed(1)}</div>
-                        <div class="text-sm ${getColorClass(etf.return_1y)}">${formatPercent(etf.return_1y)} (1Y)</div>
+                        <div class="${getColorClass(etf.return_1y)}">${formatPercent(etf.return_1y)}</div>
+                        <div class="text-xs opacity-70">TER: ${formatNumber(etf.ter)}%</div>
                     </div>
                 </div>
             `).join('');
         }
 
-        // ============= STATS GLOBALES =============
-        function updateStats() {
-            const data = ETFData.filtered;
-            document.getElementById('total-etfs').textContent = data.length;
-            
-            const avgTER = data.reduce((sum, etf) => sum + (parseFloat(etf.ter) || 0), 0) / data.length;
-            document.getElementById('avg-ter').textContent = avgTER.toFixed(3) + '%';
-            
-            const totalAUM = data.reduce((sum, etf) => sum + (parseFloat(etf.aum) || 0), 0);
-            document.getElementById('total-aum').textContent = formatAUM(totalAUM);
-            
-            const avgPerf = data.reduce((sum, etf) => sum + (parseFloat(etf.return_1y) || 0), 0) / data.length;
-            document.getElementById('avg-perf').textContent = formatPercent(avgPerf);
-        }
-
-        // ============= FORMATAGE =============
-        function formatNumber(val, decimals = 2, suffix = '') {
+        // Formatage
+        function formatNumber(val, decimals = 2) {
             if (!val && val !== 0) return '-';
-            return parseFloat(val).toFixed(decimals) + suffix;
+            return parseFloat(val).toFixed(decimals);
         }
 
         function formatAUM(val) {
@@ -563,15 +670,7 @@
         function getColorClass(val) {
             const num = parseFloat(val);
             if (isNaN(num)) return '';
-            return num >= 0 ? 'text-green-400' : 'text-red-400';
-        }
-
-        function getSharpeColor(val) {
-            const num = parseFloat(val);
-            if (isNaN(num)) return '';
-            if (num > 1.5) return 'text-green-400';
-            if (num > 0.5) return 'text-yellow-400';
-            return 'text-gray-400';
+            return num >= 0 ? 'positive' : 'negative';
         }
 
         function hideLoader() {
@@ -579,41 +678,24 @@
             document.getElementById('etf-table-container').classList.remove('hidden');
         }
 
-        // ============= HOLDINGS =============
-        function toggleHoldings(ticker, idx) {
-            const row = document.getElementById(`holdings-${idx}`);
-            const content = document.getElementById(`holdings-content-${idx}`);
-            
-            if (row.classList.contains('show')) {
-                row.classList.remove('show');
-                return;
-            }
-
-            const holdings = ETFData.holdings[ticker] || [];
-            content.innerHTML = holdings.length ? 
-                `<div class="text-xs text-gray-400">Top Holdings:</div>
-                 <div class="grid grid-cols-3 gap-2 mt-2">
-                    ${holdings.slice(0, 10).map(h => 
-                        `<div class="text-xs">${h.name || h.holding || '-'} (${h.weight || '-'}%)</div>`
-                    ).join('')}
-                 </div>` :
-                '<div class="text-xs text-gray-400">Pas de holdings disponibles</div>';
-            
-            row.classList.add('show');
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('last-update-time').textContent = now.toLocaleString('fr-FR');
+            document.getElementById('marketTime').textContent = now.toLocaleTimeString('fr-FR');
         }
 
-        // ============= EVENT LISTENERS =============
+        // Event listeners
         document.addEventListener('DOMContentLoaded', () => {
             loadCSVFiles();
+            setInterval(updateTime, 1000);
 
-            // Filtres catégorie
+            // Filtres
             document.querySelectorAll('.etf-filter-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     document.querySelectorAll('.etf-filter-btn').forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
                     ETFData.currentCategory = this.dataset.category;
                     filterData();
-                    updateStats();
                 });
             });
 
@@ -623,21 +705,7 @@
                 filterData();
             });
 
-            // Tri colonnes
-            document.querySelectorAll('th[data-sort]').forEach(th => {
-                th.addEventListener('click', function() {
-                    const field = this.dataset.sort;
-                    if (ETFData.sortBy === field) {
-                        ETFData.sortOrder = ETFData.sortOrder === 'desc' ? 'asc' : 'desc';
-                    } else {
-                        ETFData.sortBy = field;
-                        ETFData.sortOrder = 'desc';
-                    }
-                    filterData();
-                });
-            });
-
-            // Multi-critères checkboxes
+            // Multi-critères
             document.querySelectorAll('.mc-pill input').forEach(cb => {
                 cb.addEventListener('change', function() {
                     const metric = this.id.replace('mc-', '');
@@ -654,8 +722,22 @@
                 });
             });
 
-            // Bouton calculer
             document.getElementById('mc-calculate').addEventListener('click', calculateMCScore);
+
+            // Theme toggle
+            document.getElementById('theme-toggle-btn').addEventListener('click', function() {
+                document.body.classList.toggle('dark');
+                document.body.classList.toggle('light');
+                document.documentElement.classList.toggle('dark');
+                
+                if (document.body.classList.contains('dark')) {
+                    document.getElementById('dark-icon').style.display = 'block';
+                    document.getElementById('light-icon').style.display = 'none';
+                } else {
+                    document.getElementById('dark-icon').style.display = 'none';
+                    document.getElementById('light-icon').style.display = 'block';
+                }
+            });
 
             // Init checkboxes
             document.querySelectorAll('.mc-pill input:checked').forEach(cb => {
