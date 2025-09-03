@@ -10,10 +10,26 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     
-    <!-- Copier EXACTEMENT les styles de liste.html -->
-    <link rel="stylesheet" href="mc-styles.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        green: {
+                            400: '#00FF87'
+                        }
+                    }
+                },
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif']
+                }
+            }
+        }
+    </script>
+    
+    <!-- Reprendre EXACTEMENT les mêmes styles que liste.html -->
     <style>
-        /* EXACTEMENT les mêmes styles que liste.html */
         :root {
             --background-color: #0a1929;
             --light-background-color: #f0f5ff;
@@ -54,7 +70,12 @@
             color: var(--text-color);
         }
         
-        /* Copier tous les styles de liste.html */
+        body.light {
+            background-color: var(--light-background-color);
+            color: var(--light-text-color);
+        }
+        
+        /* Header */
         .main-header {
             position: fixed;
             top: 0;
@@ -77,10 +98,33 @@
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
         
+        .light .main-header {
+            background-color: rgba(240, 245, 255, 0.9);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
         .header-left { display: flex; align-items: center; }
-        .logo-container { display: flex; align-items: center; font-weight: 900; font-size: 1.5rem; letter-spacing: 1px; }
-        .logo-container a { text-decoration: none; transition: color 0.3s ease; }
-        .dark .logo-container a { color: var(--text-color); text-shadow: 0 0 10px rgba(255, 255, 255, 0.1); }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            font-weight: 900;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+        }
+        
+        .logo-container a {
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .dark .logo-container a {
+            color: var(--text-color);
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+        }
+        
+        .light .logo-container a { color: var(--light-text-color); }
         
         .pulse-dot {
             width: 12px;
@@ -93,6 +137,7 @@
         }
         
         .main-nav { display: flex; margin-left: 40px; }
+        
         .main-nav a {
             margin-right: 30px;
             padding: 8px 5px;
@@ -101,7 +146,10 @@
             transition: color 0.3s;
             text-decoration: none;
         }
+        
         .dark .main-nav a { color: rgba(255, 255, 255, 0.8); }
+        .light .main-nav a { color: var(--light-text-color); }
+        
         .main-nav a::after {
             content: '';
             position: absolute;
@@ -112,7 +160,10 @@
             background-color: var(--accent-color);
             transition: width 0.3s;
         }
-        .main-nav a:hover::after, .main-nav a.active::after { width: 100%; }
+        
+        .main-nav a:hover::after,
+        .main-nav a.active::after { width: 100%; }
+        
         .main-nav a.active { color: var(--accent-color); }
         
         .header-right { display: flex; align-items: center; }
@@ -124,7 +175,9 @@
             font-size: 0.875rem;
             transition: color 0.3s ease;
         }
+        
         .dark .market-status { color: var(--text-color); }
+        .light .market-status { color: var(--light-text-color); }
         
         .market-indicator {
             width: 10px;
@@ -132,6 +185,7 @@
             border-radius: 50%;
             margin-right: 8px;
         }
+        
         .market-indicator.green {
             background-color: #4CAF50;
             box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
@@ -151,16 +205,27 @@
             transition: all 0.3s;
             text-decoration: none;
         }
+        
         .dark .search-button {
             background-color: var(--accent-subtle);
             border: 1px solid var(--accent-medium);
             color: var(--text-color);
         }
+        
+        .light .search-button {
+            background-color: rgba(0, 210, 110, 0.1);
+            border: 1px solid rgba(0, 210, 110, 0.3);
+            color: var(--light-text-color);
+        }
+        
         .search-button:hover {
             transform: translateY(-2px);
             box-shadow: var(--accent-glow);
         }
+        
         .dark .search-button:hover { background-color: var(--accent-medium); }
+        .light .search-button:hover { background-color: rgba(0, 210, 110, 0.2); }
+        
         .search-button i { margin-right: 8px; color: var(--accent-color); }
         
         /* Sidebar */
@@ -177,10 +242,17 @@
             z-index: 101;
             transition: background-color 0.3s ease, border-right 0.3s ease, box-shadow 0.3s ease;
         }
+        
         .dark .sidebar {
             background-color: rgba(8, 20, 35, 0.95);
             border-right: 1px solid var(--card-border);
             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .light .sidebar {
+            background-color: rgba(230, 240, 255, 0.95);
+            border-right: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
         }
         
         .sidebar-logo {
@@ -191,7 +263,12 @@
             text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
         }
         
-        .sidebar-nav { display: flex; flex-direction: column; align-items: center; flex-grow: 1; }
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+        }
         
         .nav-item {
             margin-bottom: 24px;
@@ -205,17 +282,27 @@
             position: relative;
             text-decoration: none;
         }
+        
         .dark .nav-item { color: rgba(255, 255, 255, 0.7); }
+        .light .nav-item { color: rgba(0, 0, 0, 0.7); }
+        
         .dark .nav-item:hover, .dark .nav-item.active {
             background-color: var(--accent-subtle);
             color: var(--accent-color);
             box-shadow: var(--accent-glow);
             transform: translateY(-2px);
         }
+        
+        .light .nav-item:hover, .light .nav-item.active {
+            background-color: rgba(0, 210, 110, 0.1);
+            color: var(--accent-color);
+        }
+        
         .nav-item i { font-size: 1.2rem; }
         
         /* Theme toggle */
         .theme-toggle { position: fixed; top: 20px; right: 20px; z-index: 1000; }
+        
         .theme-toggle-btn {
             background: none;
             border: none;
@@ -229,10 +316,17 @@
             font-size: 1.2rem;
             transition: all 0.3s ease;
         }
+        
         .dark .theme-toggle-btn {
             color: var(--text-color);
             background-color: rgba(255, 255, 255, 0.1);
         }
+        
+        .light .theme-toggle-btn {
+            color: var(--light-text-color);
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+        
         .theme-toggle-btn:hover { transform: scale(1.1); }
         
         /* Main container */
@@ -244,7 +338,7 @@
             transition: background-color 0.3s ease;
         }
         
-        /* Glassmorphism cards */
+        /* Glassmorphism */
         .glassmorphism {
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
@@ -252,18 +346,21 @@
             box-shadow: var(--accent-glow);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
+        
         .dark .glassmorphism { background-color: var(--card-bg); }
+        .light .glassmorphism { background-color: rgba(240, 245, 255, 0.8); }
+        
         .glassmorphism:hover { box-shadow: var(--accent-glow-strong); }
         
-        /* Data table - EXACTEMENT comme liste.html */
+        /* Data table */
         .data-table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
         }
-        .data-table th, .data-table td {
-            font-variant-numeric: tabular-nums;
-        }
+        
+        .data-table th, .data-table td { font-variant-numeric: tabular-nums; }
+        
         .data-table th {
             padding: 14px 16px;
             font-weight: 600;
@@ -275,15 +372,17 @@
             color: rgba(255, 255, 255, 0.8);
             background-color: var(--card-header);
         }
+        
         .data-table td {
             padding: 16px;
             font-size: 0.9rem;
             border-bottom: 1px solid var(--separator-color);
         }
+        
         .data-table tr:last-child td { border-bottom: none; }
         .data-table tr:hover td { background-color: var(--accent-subtle); }
         
-        /* Positive/negative/neutral values */
+        /* Values */
         .positive { color: var(--accent-color); font-weight: 600; }
         .negative { color: var(--negative-color); font-weight: 600; }
         .neutral { color: var(--neutral-color); font-weight: 600; }
@@ -297,6 +396,7 @@
             display: flex;
             align-items: center;
         }
+        
         .section-title::before {
             content: '';
             display: inline-block;
@@ -308,23 +408,210 @@
             box-shadow: 0 0 8px var(--accent-color);
         }
         
-        /* ETF specific badges */
-        .ter-badge {
-            background: rgba(255, 193, 7, 0.1);
-            color: #FFC107;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            font-weight: 600;
+        /* Top 10 cards - copié de liste.html */
+        .stock-cards-container {
+            display: grid;
+            gap: 16px;
+            grid-auto-rows: 1fr;
+            grid-template-columns: repeat(2, minmax(280px, 1fr));
         }
         
-        .aum-badge {
-            background: rgba(0, 212, 255, 0.1);
-            color: #00D4FF;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.7rem;
+        @media (min-width: 1024px) { 
+            .stock-cards-container { grid-template-columns: repeat(3, 1fr); } 
+        }
+        
+        @media (min-width: 1280px) { 
+            .stock-cards-container { grid-template-columns: repeat(4, 1fr); } 
+        }
+        
+        .stock-card {
+            display: grid;
+            grid-template-columns: 40px 1fr auto;
+            align-items: center;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 14px 16px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid var(--card-border);
+            height: 100%;
+        }
+        
+        .stock-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--accent-glow);
+        }
+        
+        .rank {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-right: 16px;
+            background-color: var(--accent-subtle);
+            color: var(--accent-color);
+        }
+        
+        .stock-info { flex-grow: 1; }
+        
+        .stock-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            line-height: 1;
+        }
+        
+        .stock-fullname {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            line-height: 1.2;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        
+        .stock-performance {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            min-width: 7ch;
+            text-align: right;
+            white-space: nowrap;
+        }
+        
+        /* Top 3 */
+        .stock-card:nth-child(-n+3) .rank {
+            background-color: var(--accent-medium);
+            color: white;
+            box-shadow: 0 0 10px rgba(0, 255, 135, 0.4);
+        }
+        
+        /* Barre de contrôle Top 10 */
+        .tp-toolbar {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 8px 0;
+        }
+        
+        .tp-regions, .tp-filters {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        .seg {
+            display: flex;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 6px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .seg .seg-btn {
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            opacity: 0.85;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: var(--text-color);
+            position: relative;
+        }
+        
+        .seg .seg-btn i { font-size: 14px; transition: transform 0.2s ease; }
+        
+        .seg .seg-btn:not([aria-selected="true"]):hover {
+            background: rgba(0, 255, 135, 0.08);
+            opacity: 1;
+        }
+        
+        .seg .seg-btn:hover i { transform: translateY(-1px); }
+        
+        .seg .seg-btn[aria-selected="true"] {
+            background: var(--accent-subtle);
+            color: var(--accent-color);
+            box-shadow: 0 0 0 1px var(--accent-medium) inset;
+            opacity: 1;
+        }
+        
+        .pills {
+            position: relative;
+            display: flex;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 4px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .pill {
+            padding: 8px 14px;
+            border-radius: 8px;
             font-weight: 600;
+            font-size: 0.9rem;
+            opacity: 0.8;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: var(--text-color);
+        }
+        
+        .pill i { font-size: 12px; }
+        
+        .pill:hover {
+            background: rgba(0, 255, 135, 0.06);
+            opacity: 0.95;
+        }
+        
+        .pill[aria-selected="true"] {
+            color: var(--accent-color);
+            opacity: 1;
+        }
+        
+        .pills-separator {
+            margin: 0 8px;
+            opacity: 0.3;
+            font-size: 12px;
+            color: var(--text-color);
+        }
+        
+        .toolbar-hint {
+            margin-left: auto;
+            opacity: 0.65;
+            font-size: 0.9rem;
+            padding: 8px 16px;
+            background: rgba(0, 255, 135, 0.05);
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .toolbar-hint:hover {
+            opacity: 0.85;
+            background: rgba(0, 255, 135, 0.08);
         }
         
         /* Filters */
@@ -337,6 +624,7 @@
             border-radius: 8px;
             overflow: hidden;
         }
+        
         .region-tab {
             padding: 14px;
             cursor: pointer;
@@ -346,15 +634,18 @@
             transition: all 0.3s ease;
             letter-spacing: 0.02em;
         }
+        
         .region-tab:hover {
             background-color: var(--accent-subtle);
             opacity: 0.9;
         }
+        
         .region-tab.active {
             opacity: 1;
             color: var(--accent-color);
             background-color: var(--accent-subtle);
         }
+        
         .region-tab::after {
             content: '';
             position: absolute;
@@ -366,18 +657,16 @@
             transition: width 0.3s ease;
             box-shadow: 0 0 8px var(--accent-color);
         }
+        
         .region-tab.active::after { width: 100%; }
         
-        /* Details row */
-        .details-row {
-            display: none;
-        }
+        /* Détails */
         .details-row td {
             background: rgba(0,255,135,0.02);
             border-top: 1px solid var(--card-border);
         }
         
-        /* Button */
+        /* Bouton */
         .action-button {
             padding: 6px 14px;
             border-radius: 6px;
@@ -388,6 +677,7 @@
             color: var(--accent-color);
             border: 1px solid var(--accent-medium);
         }
+        
         .action-button:hover {
             background-color: var(--accent-medium);
             transform: translateY(-1px);
@@ -414,10 +704,29 @@
             70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
             100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
         }
+        
+        /* ETF badges spécifiques */
+        .ter-badge {
+            background: rgba(255, 193, 7, 0.1);
+            color: #FFC107;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        .aum-badge {
+            background: rgba(0, 212, 255, 0.1);
+            color: #00D4FF;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body class="dark">
-    <!-- Bouton du sélecteur de thème -->
+    <!-- Theme toggle -->
     <div class="theme-toggle">
         <button id="theme-toggle-btn" class="theme-toggle-btn">
             <i class="fas fa-moon" id="dark-icon"></i>
@@ -425,7 +734,7 @@
         </button>
     </div>
 
-    <!-- Sidebar de navigation verticale -->
+    <!-- Sidebar -->
     <aside class="sidebar">
         <div class="sidebar-logo">TP</div>
         <nav class="sidebar-nav">
@@ -453,7 +762,7 @@
         </nav>
     </aside>
 
-    <!-- Header principal -->
+    <!-- Header -->
     <header class="main-header">
         <div class="header-left">
             <div class="logo-container">
@@ -482,11 +791,11 @@
         </div>
     </header>
 
-    <!-- Container principal -->
+    <!-- Main container -->
     <main class="main-container">
         <div class="p-6">
             <div class="max-w-7xl mx-auto">
-                <!-- Header avec titre et mise à jour -->
+                <!-- Header -->
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
                     <div>
                         <h1 class="text-3xl font-bold mb-2">ETFs (Exchange Traded Funds)</h1>
@@ -497,74 +806,219 @@
                     </div>
                 </div>
                 
-                <!-- Onglets de filtrage par type -->
-                <div class="region-tabs mb-6">
-                    <div class="region-tab active" data-type="all">TOUS</div>
-                    <div class="region-tab" data-type="equity">ACTIONS</div>
-                    <div class="region-tab" data-type="bonds">OBLIGATIONS</div>
-                    <div class="region-tab" data-type="commodity">MATIÈRES PREMIÈRES</div>
-                    <div class="region-tab" data-type="sector">SECTORIELS</div>
-                    <div class="region-tab" data-type="geographic">GÉOGRAPHIQUES</div>
-                </div>
-                
-                <!-- Recherche -->
-                <div class="search-container mb-6">
-                    <div class="search-wrapper relative">
-                        <input type="text" id="etf-search" 
-                               placeholder="Rechercher un ETF par ticker, nom, ISIN..." 
-                               class="w-full py-3 px-12 bg-opacity-10 rounded-lg border border-opacity-30 text-white focus:outline-none focus:border-accent"
-                               style="background-color: rgba(255, 255, 255, 0.07); border-color: var(--card-border); color: var(--text-color);">
-                        <i class="fas fa-search absolute left-4 top-4 text-opacity-70" style="color: rgba(255, 255, 255, 0.5);"></i>
-                        <button id="clear-search" class="absolute right-4 top-4 opacity-0 transition-opacity duration-200" style="cursor: pointer;">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Table des ETFs -->
-                <div class="glassmorphism rounded-lg overflow-hidden">
-                    <div id="indices-loading" class="py-16 flex justify-center">
-                        <div class="loader"></div>
+                <!-- TOP 10 GLOBAL ETFs (comme dans liste.html) -->
+                <div class="top-stocks-container mb-10">
+                    <h2 class="section-title mb-4">Top 10 ETFs — <span id="top-scope-label">GLOBAL</span></h2>
+                    
+                    <!-- Barre de contrôle élégante -->
+                    <div class="tp-toolbar">
+                        <!-- Filtres par type d'ETF -->
+                        <div class="seg tp-regions" role="tablist" aria-label="Types">
+                            <button class="seg-btn" data-type="GLOBAL" aria-selected="true">
+                                <i class="fas fa-globe"></i>Tous
+                            </button>
+                            <button class="seg-btn" data-type="EQUITY" aria-selected="false">
+                                <i class="fas fa-chart-line"></i>Actions
+                            </button>
+                            <button class="seg-btn" data-type="BONDS" aria-selected="false">
+                                <i class="fas fa-certificate"></i>Obligations
+                            </button>
+                            <button class="seg-btn" data-type="COMMODITY" aria-selected="false">
+                                <i class="fas fa-coins"></i>Matières
+                            </button>
+                        </div>
+
+                        <!-- Filtres performance -->
+                        <div class="pills tp-filters" role="tablist" aria-label="Filtre variation">
+                            <button class="pill" data-dir="up" aria-selected="true">
+                                <i class="fas fa-arrow-up text-green-400"></i>Hausses
+                            </button>
+                            <button class="pill" data-dir="down" aria-selected="false">
+                                <i class="fas fa-arrow-down text-red-500"></i>Baisses
+                            </button>
+                            <span class="pills-separator">•</span>
+                            <button class="pill" data-frame="daily" aria-selected="true">
+                                <i class="fas fa-bolt"></i>Jour
+                            </button>
+                            <button class="pill" data-frame="ytd" aria-selected="false">
+                                <i class="fas fa-calendar-check"></i>YTD
+                            </button>
+                        </div>
+
+                        <div class="toolbar-hint">
+                            <span id="hint-text">TER le plus bas</span>
+                        </div>
                     </div>
                     
-                    <div id="indices-error" class="py-16 text-center hidden">
-                        <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
-                        <p class="text-lg">Impossible de charger les données des ETFs.</p>
-                        <button id="retry-button" class="mt-4 search-button inline-flex items-center">
-                            <i class="fas fa-sync-alt mr-2"></i>
-                            Réessayer
-                        </button>
+                    <!-- Conteneur pour les cartes Top 10 -->
+                    <div id="top-global-container" class="top-stocks-content mt-4" aria-live="polite">
+                        <div class="stock-cards-container">
+                            <!-- Les cartes seront générées dynamiquement -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- DIVISEUR VISUEL (comme dans liste.html avec MC) -->
+                <div class="section-divider" style="position: relative; height: 2px; margin: 80px 0 60px; background: linear-gradient(90deg, transparent, rgba(0,255,135,0.3) 20%, rgba(0,255,135,0.3) 80%, transparent); box-shadow: 0 0 20px rgba(0,255,135,0.2);"></div>
+                
+                <!-- COMPOSEUR MULTI-CRITÈRES ETFs -->
+                <section id="etf-mc-section" class="section">
+                    <div class="section-highlight-top" style="position: relative; height: 2px; margin: 0 auto 20px; max-width: 500px; background: linear-gradient(90deg, transparent, rgba(0,255,255,0.6) 15%, rgba(0,255,255,0.8) 50%, rgba(0,255,255,0.6) 85%, transparent); box-shadow: 0 0 15px rgba(0,255,255,0.3);"></div>
+                    <h2 class="composer-title" style="font-size: 1.3rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #00ffff !important; text-align: center; margin-bottom: 20px; text-shadow: 0 0 10px rgba(0,255,255,0.4);">Top 10 ETFs — Composer multi-critères</h2>
+                    <div class="section-highlight" style="position: relative; height: 2px; margin: 0 auto 30px; max-width: 300px; background: linear-gradient(90deg, transparent, rgba(0,255,255,0.6) 20%, rgba(0,255,255,0.6) 80%, transparent);"></div>
+                    
+                    <div class="composer-grid" style="display: grid; grid-template-columns: minmax(380px, 450px) 1fr; gap: 24px;">
+                        <!-- Colonne gauche : Filtres ETF -->
+                        <aside class="composer-filters glassmorphism rounded-lg p-4" role="complementary" aria-label="Filtres ETF">
+                            <fieldset>
+                                <legend class="text-sm opacity-70 mb-2">Critères de sélection ETF</legend>
+                                <div class="flex flex-wrap gap-2">
+                                    <!-- Critères ETF spécifiques -->
+                                    <label class="mc-pill"><input id="etf-m-ter" type="checkbox" checked> TER ↓</label>
+                                    <label class="mc-pill"><input id="etf-m-aum" type="checkbox" checked> AUM ↑</label>
+                                    <label class="mc-pill"><input id="etf-m-return_1d" type="checkbox"> Perf Daily ↑</label>
+                                    <label class="mc-pill"><input id="etf-m-return_ytd" type="checkbox" checked> YTD ↑</label>
+                                    <label class="mc-pill"><input id="etf-m-return_1y" type="checkbox"> Perf 1Y ↑</label>
+                                    <label class="mc-pill"><input id="etf-m-return_3y" type="checkbox"> Perf 3Y ↑</label>
+                                    <label class="mc-pill"><input id="etf-m-volatility" type="checkbox"> Volatilité ↓</label>
+                                    <label class="mc-pill"><input id="etf-m-sharpe" type="checkbox" checked> Sharpe ↑</label>
+                                    <label class="mc-pill"><input id="etf-m-dividend_yield" type="checkbox"> Rendement ↑</label>
+                                    <label class="mc-pill"><input id="etf-m-tracking_error" type="checkbox"> Track. Error ↓</label>
+                                </div>
+                            </fieldset>
+
+                            <fieldset role="radiogroup" aria-label="Mode de tri">
+                                <legend class="text-xs opacity-60 mb-2">Mode de tri</legend>
+                                <div class="flex gap-2">
+                                    <label class="mc-pill"><input type="radio" name="etf-mc-mode" value="balanced" checked> Équilibre auto</label>
+                                    <label class="mc-pill"><input type="radio" name="etf-mc-mode" value="lexico"> Priorités</label>
+                                </div>
+                            </fieldset>
+
+                            <fieldset>
+                                <legend class="text-sm opacity-70 mb-2">Filtres ETF</legend>
+                                <div class="space-y-2 mb-2">
+                                    <div class="flex gap-2 items-center">
+                                        <label class="text-xs opacity-70 min-w-[60px]">Type:</label>
+                                        <select id="etf-filter-type" class="mini-select flex-1" style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
+                                            <option value="all">Tous types</option>
+                                            <option value="equity">Actions</option>
+                                            <option value="bonds">Obligations</option>
+                                            <option value="commodity">Matières premières</option>
+                                            <option value="sector">Sectoriels</option>
+                                            <option value="geographic">Géographiques</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex gap-2 items-center">
+                                        <label class="text-xs opacity-70 min-w-[60px]">TER max:</label>
+                                        <input id="etf-filter-ter" type="number" step="0.01" placeholder="0.50" class="mini-input flex-1" style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
+                                        <span class="text-xs opacity-60">%</span>
+                                    </div>
+                                    <div class="flex gap-2 items-center">
+                                        <label class="text-xs opacity-70 min-w-[60px]">AUM min:</label>
+                                        <input id="etf-filter-aum" type="number" placeholder="100" class="mini-input flex-1" style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
+                                        <span class="text-xs opacity-60">M€</span>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <div class="border-t border-white/10 pt-4">
+                                <div class="flex gap-2">
+                                    <button id="etf-mc-apply" class="search-button flex-1"><i class="fas fa-magic mr-2"></i>Appliquer</button>
+                                    <button id="etf-mc-reset" class="action-button"><i class="fas fa-undo"></i></button>
+                                </div>
+                                <div id="etf-mc-summary" class="text-xs opacity-60 mt-2"></div>
+                            </div>
+                        </aside>
+
+                        <!-- Colonne droite : Résultats -->
+                        <div>
+                            <div id="etf-mc-results" class="glassmorphism rounded-lg p-4">
+                                <div class="stock-cards-container">
+                                    <!-- Les résultats seront générés ici -->
+                                    <div class="text-center text-cyan-400 py-4">Sélectionnez vos critères et cliquez sur Appliquer</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- DIVISEUR -->
+                <div class="section-divider" style="position: relative; height: 2px; margin: 80px 0 60px; background: linear-gradient(90deg, transparent, rgba(0,255,135,0.3) 20%, rgba(0,255,135,0.3) 80%, transparent); box-shadow: 0 0 20px rgba(0,255,135,0.2);"></div>
+                
+                <!-- LISTE COMPLÈTE DES ETFs -->
+                <div class="mb-8">
+                    <h2 class="section-title mb-6">Tous les ETFs</h2>
+                    
+                    <!-- Onglets de filtrage -->
+                    <div class="region-tabs mb-6">
+                        <div class="region-tab active" data-type="all">TOUS</div>
+                        <div class="region-tab" data-type="equity">ACTIONS</div>
+                        <div class="region-tab" data-type="bonds">OBLIGATIONS</div>
+                        <div class="region-tab" data-type="commodity">MATIÈRES PREMIÈRES</div>
+                        <div class="region-tab" data-type="sector">SECTORIELS</div>
+                        <div class="region-tab" data-type="geographic">GÉOGRAPHIQUES</div>
                     </div>
                     
-                    <div id="indices-container" class="hidden">
-                        <div id="etf-table-content">
-                            <div class="overflow-x-auto">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>TICKER / NOM</th>
-                                            <th>TER</th>
-                                            <th>AUM</th>
-                                            <th>DERNIER</th>
-                                            <th>VAR %</th>
-                                            <th>YTD %</th>
-                                            <th>1 AN %</th>
-                                            <th>VOLATILITÉ</th>
-                                            <th>SHARPE</th>
-                                            <th>RENDEMENT</th>
-                                            <th></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="etf-table-body">
-                                        <!-- Les données seront injectées ici -->
-                                    </tbody>
-                                </table>
+                    <!-- Recherche -->
+                    <div class="search-container mb-6">
+                        <div class="search-wrapper relative">
+                            <input type="text" id="etf-search" 
+                                   placeholder="Rechercher un ETF par ticker, nom, ISIN..." 
+                                   class="w-full py-3 px-12 bg-opacity-10 rounded-lg border border-opacity-30 text-white focus:outline-none focus:border-accent"
+                                   style="background-color: rgba(255, 255, 255, 0.07); border-color: var(--card-border); color: var(--text-color);">
+                            <i class="fas fa-search absolute left-4 top-4 text-opacity-70" style="color: rgba(255, 255, 255, 0.5);"></i>
+                            <button id="clear-search" class="absolute right-4 top-4 opacity-0 transition-opacity duration-200" style="cursor: pointer;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Table -->
+                    <div class="glassmorphism rounded-lg overflow-hidden">
+                        <div id="indices-loading" class="py-16 flex justify-center">
+                            <div class="loader"></div>
+                        </div>
+                        
+                        <div id="indices-error" class="py-16 text-center hidden">
+                            <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                            <p class="text-lg">Impossible de charger les données des ETFs.</p>
+                            <button id="retry-button" class="mt-4 search-button inline-flex items-center">
+                                <i class="fas fa-sync-alt mr-2"></i>
+                                Réessayer
+                            </button>
+                        </div>
+                        
+                        <div id="indices-container" class="hidden">
+                            <div id="etf-table-content">
+                                <div class="overflow-x-auto">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>TICKER / NOM</th>
+                                                <th>TER</th>
+                                                <th>AUM</th>
+                                                <th>DERNIER</th>
+                                                <th>VAR %</th>
+                                                <th>YTD %</th>
+                                                <th>1 AN %</th>
+                                                <th>VOLATILITÉ</th>
+                                                <th>SHARPE</th>
+                                                <th>RENDEMENT</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="etf-table-body">
+                                            <!-- Les données seront injectées ici -->
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Source et avertissement -->
+                <!-- Avertissement -->
                 <div class="text-center text-sm text-gray-400 mb-6 p-4 glassmorphism rounded-lg bg-opacity-50 mt-8">
                     <p>Les données sont mises à jour régulièrement. Les performances passées ne préjugent pas des performances futures.</p>
                 </div>
@@ -572,304 +1026,12 @@
         </div>
     </main>
 
-    <!-- Script SIMILAIRE à liste-script.js mais pour ETFs -->
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // État global
-        let etfsData = {
-            all: [],
-            filtered: [],
-            currentType: 'all',
-            searchQuery: ''
-        };
-        
-        // Mise à jour de l'horloge
-        function updateMarketTime() {
-            const now = new Date();
-            const hours = now.getHours().toString().padStart(2, '0');
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            const seconds = now.getSeconds().toString().padStart(2, '0');
-            document.getElementById('marketTime').textContent = `${hours}:${minutes}:${seconds}`;
-        }
-        setInterval(updateMarketTime, 1000);
-        updateMarketTime();
-        
-        // Chargement des données CSV
-        async function loadETFData() {
-            try {
-                const [etfsRes, bondsRes] = await Promise.all([
-                    fetch('data/combined_etfs.csv').then(r => r.text()).catch(() => ''),
-                    fetch('data/combined_bonds.csv').then(r => r.text()).catch(() => '')
-                ]);
-                
-                const etfs = etfsRes ? Papa.parse(etfsRes, { header: true, dynamicTyping: true }).data : [];
-                const bonds = bondsRes ? Papa.parse(bondsRes, { header: true, dynamicTyping: true }).data : [];
-                
-                etfsData.all = [...etfs, ...bonds].filter(row => row && Object.keys(row).length > 1);
-                etfsData.filtered = etfsData.all;
-                
-                renderETFData();
-                
-            } catch (error) {
-                console.error('Erreur:', error);
-                showElement('indices-error');
-                hideElement('indices-loading');
-            }
-        }
-        
-        // Rendu des données
-        function renderETFData() {
-            const tbody = document.getElementById('etf-table-body');
-            if (!tbody) return;
-            
-            tbody.innerHTML = '';
-            
-            const data = filterETFs();
-            
-            // Mise à jour compteur
-            document.getElementById('etfs-count').textContent = data.length;
-            document.getElementById('last-update-time').textContent = new Date().toLocaleString('fr-FR');
-            
-            // Limiter à 200 pour performance
-            data.slice(0, 200).forEach((etf, idx) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="py-2 px-3">
-                        <div class="font-medium">${etf.ticker || etf.symbol || '-'}</div>
-                        <div class="text-xs opacity-70 mt-1">${etf.name || '-'}</div>
-                    </td>
-                    <td class="text-right"><span class="ter-badge">${formatNumber(etf.ter || etf.expense_ratio)}%</span></td>
-                    <td class="text-right"><span class="aum-badge">${formatAUM(etf.aum || etf.net_assets)}</span></td>
-                    <td class="text-right">${formatNumber(etf.price || etf.last, 2)}€</td>
-                    <td class="text-right ${getColorClass(etf.return_1d || etf.change)}">${formatPercent(etf.return_1d || etf.change)}</td>
-                    <td class="text-right ${getColorClass(etf.return_ytd || etf.ytd)}">${formatPercent(etf.return_ytd || etf.ytd)}</td>
-                    <td class="text-right ${getColorClass(etf.return_1y || etf.perf_1y)}">${formatPercent(etf.return_1y || etf.perf_1y)}</td>
-                    <td class="text-right">${formatNumber(etf.volatility || etf.vol_1y)}%</td>
-                    <td class="text-right">${formatNumber(etf.sharpe_ratio || etf.sharpe, 2)}</td>
-                    <td class="text-right">${formatNumber(etf.dividend_yield || etf.yield)}%</td>
-                    <td class="text-center">
-                        <button type="button" onclick="toggleDetailsRow(this, ${idx})" 
-                                class="action-button details-toggle" 
-                                aria-expanded="false">
-                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
-                        </button>
-                    </td>
-                `;
-                
-                const detailsRow = document.createElement('tr');
-                detailsRow.className = 'details-row hidden';
-                detailsRow.id = `details-${idx}`;
-                detailsRow.innerHTML = `
-                    <td colspan="11">
-                        <div class="grid md:grid-cols-3 gap-6 p-4">
-                            <div>
-                                <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Informations</div>
-                                <div class="space-y-1 text-sm">
-                                    <div><span class="opacity-60">ISIN:</span> <strong>${etf.isin || '–'}</strong></div>
-                                    <div><span class="opacity-60">Type:</span> ${getETFType(etf)}</div>
-                                    <div><span class="opacity-60">Réplication:</span> ${etf.replication || '–'}</div>
-                                    <div><span class="opacity-60">Devise:</span> ${etf.currency || 'EUR'}</div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Performances</div>
-                                <div class="space-y-1 text-sm">
-                                    <div><span class="opacity-60">1 mois:</span> <span class="${getColorClass(etf.return_1m)}">${formatPercent(etf.return_1m)}</span></div>
-                                    <div><span class="opacity-60">3 mois:</span> <span class="${getColorClass(etf.return_3m)}">${formatPercent(etf.return_3m)}</span></div>
-                                    <div><span class="opacity-60">3 ans:</span> <span class="${getColorClass(etf.return_3y)}">${formatPercent(etf.return_3y)}</span></div>
-                                    <div><span class="opacity-60">5 ans:</span> <span class="${getColorClass(etf.return_5y)}">${formatPercent(etf.return_5y)}</span></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Risques</div>
-                                <div class="space-y-1 text-sm">
-                                    <div><span class="opacity-60">Max Drawdown:</span> <span class="negative">${formatPercent(etf.max_drawdown)}</span></div>
-                                    <div><span class="opacity-60">Tracking Error:</span> ${formatNumber(etf.tracking_error)}%</div>
-                                    <div><span class="opacity-60">Beta:</span> ${formatNumber(etf.beta, 2)}</div>
-                                    <div><span class="opacity-60">R²:</span> ${formatNumber(etf.r_squared, 2)}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                `;
-                
-                tbody.appendChild(row);
-                tbody.appendChild(detailsRow);
-            });
-            
-            // Afficher le tableau
-            hideElement('indices-loading');
-            hideElement('indices-error');
-            showElement('indices-container');
-        }
-        
-        // Filtrage
-        function filterETFs() {
-            let filtered = etfsData.all;
-            
-            // Filtre par type
-            if (etfsData.currentType !== 'all') {
-                filtered = filtered.filter(etf => getETFType(etf) === etfsData.currentType);
-            }
-            
-            // Filtre par recherche
-            if (etfsData.searchQuery) {
-                const query = etfsData.searchQuery.toLowerCase();
-                filtered = filtered.filter(etf => 
-                    String(etf.ticker || '').toLowerCase().includes(query) ||
-                    String(etf.name || '').toLowerCase().includes(query) ||
-                    String(etf.isin || '').toLowerCase().includes(query)
-                );
-            }
-            
-            // Tri par AUM décroissant
-            filtered.sort((a, b) => {
-                const aumA = parseFloat(a.aum || a.net_assets || 0);
-                const aumB = parseFloat(b.aum || b.net_assets || 0);
-                return aumB - aumA;
-            });
-            
-            return filtered;
-        }
-        
-        // Déterminer le type d'ETF
-        function getETFType(etf) {
-            const name = String(etf.name || '').toLowerCase();
-            const type = String(etf.type || '').toLowerCase();
-            
-            if (name.includes('bond') || type.includes('bond')) return 'bonds';
-            if (name.includes('commodity') || name.includes('gold') || name.includes('oil')) return 'commodity';
-            if (name.includes('sector') || name.includes('technology') || name.includes('health')) return 'sector';
-            if (name.includes('emerging') || name.includes('europe') || name.includes('asia')) return 'geographic';
-            return 'equity';
-        }
-        
-        // Toggle détails
-        window.toggleDetailsRow = function(button, idx) {
-            const detailsRow = document.getElementById(`details-${idx}`);
-            if (!detailsRow) return;
-            
-            const isOpen = !detailsRow.classList.contains('hidden');
-            
-            // Fermer tous les autres
-            document.querySelectorAll('.details-row').forEach(row => {
-                row.classList.add('hidden');
-            });
-            document.querySelectorAll('.details-toggle').forEach(btn => {
-                btn.setAttribute('aria-expanded', 'false');
-                const icon = btn.querySelector('i');
-                if (icon) {
-                    icon.classList.remove('fa-chevron-up');
-                    icon.classList.add('fa-chevron-down');
-                }
-            });
-            
-            // Toggle celui-ci
-            if (!isOpen) {
-                detailsRow.classList.remove('hidden');
-                button.setAttribute('aria-expanded', 'true');
-                const icon = button.querySelector('i');
-                if (icon) {
-                    icon.classList.remove('fa-chevron-down');
-                    icon.classList.add('fa-chevron-up');
-                }
-            }
-        };
-        
-        // Formatage
-        function formatNumber(val, decimals = 2) {
-            if (!val && val !== 0) return '-';
-            return parseFloat(val).toFixed(decimals);
-        }
-        
-        function formatAUM(val) {
-            if (!val) return '-';
-            const num = parseFloat(val);
-            if (num >= 1000) return (num / 1000).toFixed(1) + 'B€';
-            return num.toFixed(0) + 'M€';
-        }
-        
-        function formatPercent(val) {
-            if (!val && val !== 0) return '-';
-            const num = parseFloat(val);
-            return (num >= 0 ? '+' : '') + num.toFixed(2) + '%';
-        }
-        
-        function getColorClass(val) {
-            const num = parseFloat(val);
-            if (isNaN(num)) return '';
-            return num >= 0 ? 'positive' : 'negative';
-        }
-        
-        // Utility
-        function showElement(id) {
-            const el = document.getElementById(id);
-            if (el) el.classList.remove('hidden');
-        }
-        
-        function hideElement(id) {
-            const el = document.getElementById(id);
-            if (el) el.classList.add('hidden');
-        }
-        
-        // Event listeners
-        
-        // Onglets de type
-        document.querySelectorAll('.region-tab').forEach(tab => {
-            tab.addEventListener('click', function() {
-                document.querySelectorAll('.region-tab').forEach(t => t.classList.remove('active'));
-                this.classList.add('active');
-                etfsData.currentType = this.dataset.type;
-                renderETFData();
-            });
-        });
-        
-        // Recherche
-        const searchInput = document.getElementById('etf-search');
-        const clearButton = document.getElementById('clear-search');
-        
-        searchInput?.addEventListener('input', function() {
-            etfsData.searchQuery = this.value;
-            clearButton.style.opacity = this.value ? '1' : '0';
-            renderETFData();
-        });
-        
-        clearButton?.addEventListener('click', function() {
-            searchInput.value = '';
-            etfsData.searchQuery = '';
-            this.style.opacity = '0';
-            renderETFData();
-        });
-        
-        // Retry
-        document.getElementById('retry-button')?.addEventListener('click', function() {
-            hideElement('indices-error');
-            showElement('indices-loading');
-            loadETFData();
-        });
-        
-        // Theme toggle
-        document.getElementById('theme-toggle-btn')?.addEventListener('click', function() {
-            document.body.classList.toggle('dark');
-            document.body.classList.toggle('light');
-            document.documentElement.classList.toggle('dark');
-            
-            if (document.body.classList.contains('dark')) {
-                document.getElementById('dark-icon').style.display = 'block';
-                document.getElementById('light-icon').style.display = 'none';
-            } else {
-                document.getElementById('dark-icon').style.display = 'none';
-                document.getElementById('light-icon').style.display = 'block';
-            }
-        });
-        
-        // Charger les données au démarrage
-        loadETFData();
-    });
-    </script>
-
+    <!-- Script ETF amélioré -->
+    <script src="etf-script.js"></script>
+    
+    <!-- Scripts MC adaptés pour ETF -->
     <link rel="stylesheet" href="mc-styles.css">
-    <script src="mc-integration.js"></script>
-    <script src="mc-module.js"></script>
+    <script src="etf-mc-integration.js"></script>
+    <script src="etf-mc-module.js"></script>
 </body>
 </html>
