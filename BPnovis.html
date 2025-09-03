@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Plan SaaS - Version Auditée</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #000;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+
+        @media screen {
+            body {
+                background: #000;
+                padding: 20px;
+            }
+            
+            .document {
+                max-width: 1200px;
+                margin: 0 auto;
+                background: #0a0a0a;
+                box-shadow: 0 0 40px rgba(6, 255, 165, 0.1);
+                border: 1px solid rgba(6, 255, 165, 0.1);
+            }
+        }
+
+        @media print {
+            @page {
+                size: A4;
+                margin: 1.5cm;
+            }
+            
+            body {
+                background: white;
+                color: #000;
+            }
+            
+            .page-break {
+                page-break-before: always;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            .document {
+                box-shadow: none;
+                border: none;
+                background: white !important;
+            }
+            
+            * {
+                color: #000 !important;
+                background: white !important;
+                border-color: #ddd !important;
+            }
+            
+            .metric-value, .highlight-title {
+                color: #000 !important;
+                text-shadow: none !important;
+            }
+            
+            .professional-table thead {
+                background: #f0f0f0 !important;
+            }
+        }
+
+        .document {
+            background: #0a0a0a;
+        }
+
+        /* Cover Page */
+        .cover-page {
+            padding: 80px 60px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            page-break-after: always;
+            background: #000;
+        }
+
+        .company-logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #06ffa5, #00d084);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 40px;
+            box-shadow: 0 0 30px rgba(6, 255, 165, 0.3);
+        }
+
+        .cover-title {
+            font-size: 48px;
+            font-weight: 700;
+            color: #06ffa5;
+            margin-bottom: 20px;
+            line-height: 1.2;
+            text-shadow: 0 0 30px rgba(6, 255, 165, 0.3);
+        }
+
+        .cover-subtitle {
+            font-size: 24px;
+            color: #a0a0a0;
+            margin-bottom: 60px;
+            font-weight: 300;
+        }
+
+        .cover-info {
+            border-top: 1px solid rgba(6, 255, 165, 0.2);
+            padding-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .cover-info-item {
+            color: #a0a0a0;
+        }
+
+        .cover-info-item strong {
+            color: #06ffa5;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        /* Executive Summary */
+        .executive-summary {
+            padding: 60px;
+            page-break-after: always;
+            background: #0a0a0a;
+        }
+
+        .section-header {
+            font-size: 32px;
+            font-weight: 700;
+            color: #06ffa5;
+            margin-bottom: 40px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #06ffa5;
+            text-shadow: 0 0 20px rgba(6, 255, 165, 0.3);
+        }
+
+        .key-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .metric-box {
+            padding: 25px;
+            background: rgba(6, 255, 165, 0.05);
+            border-radius: 12px;
+            border-left: 4px solid #06ffa5;
+            border: 1px solid rgba(6, 255, 165, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .metric-label {
+            font-size: 14px;
+            color: #a0a0a0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #06ffa5;
+            text-shadow: 0 0 15px rgba(6, 255, 165, 0.5);
+        }
+
+        .metric-value.positive {
+            color: #06ffa5;
+        }
+
+        .metric-value.negative {
+            color: #ff3366;
+        }
+
+        .metric-detail {
+            font-size: 14px;
+            color: #808080;
+            margin-top: 5px;
+        }
+
+        /* Content Pages */
+        .content-page {
+            padding: 60px;
+            page-break-inside: avoid;
+            background: #0a0a0a;
+        }
+
+        .subsection {
+            margin-bottom: 40px;
+        }
+
+        .subsection-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #06ffa5;
+            margin-bottom: 20px;
+        }
+
+        /* Scenarios Tabs */
+        .scenario-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid rgba(6, 255, 165, 0.2);
+        }
+
+        .scenario-tab {
+            padding: 12px 24px;
+            background: rgba(6, 255, 165, 0.05);
+            border: 1px solid rgba(6, 255, 165, 0.2);
+            border-bottom: none;
+            color: #a0a0a0;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .scenario-tab:hover {
+            background: rgba(6, 255, 165, 0.1);
+        }
+
+        .scenario-tab.active {
+            background: rgba(6, 255, 165, 0.15);
+            color: #06ffa5;
+            border-color: #06ffa5;
+        }
+
+        /* Tables */
+        .professional-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+            background: rgba(6, 255, 165, 0.02);
+            border: 1px solid rgba(6, 255, 165, 0.1);
+        }
+
+        .professional-table thead {
+            background: rgba(6, 255, 165, 0.1);
+        }
+
+        .professional-table th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #06ffa5;
+            border-bottom: 2px solid rgba(6, 255, 165, 0.2);
+        }
+
+        .professional-table th.number,
+        .professional-table td.number {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .professional-table td {
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(6, 255, 165, 0.05);
+            color: #c0c0c0;
+        }
+
+        .professional-table tbody tr:hover {
+            background: rgba(6, 255, 165, 0.05);
+        }
+
+        .professional-table .highlight-row {
+            background: rgba(6, 255, 165, 0.1);
+            font-weight: 600;
+        }
+
+        .professional-table .highlight-row td {
+            color: #06ffa5;
+        }
+
+        .professional-table .total-row {
+            background: #06ffa5;
+            color: #000;
+            font-weight: 700;
+        }
+
+        .professional-table .total-row td {
+            border-bottom: none;
+            padding: 14px 16px;
+            color: #000;
+        }
+
+        .number.positive {
+            color: #06ffa5;
+        }
+
+        .number.negative {
+            color: #ff3366;
+        }
+
+        /* Alert Box */
+        .alert-box {
+            padding: 20px;
+            background: rgba(255, 51, 102, 0.1);
+            border: 1px solid rgba(255, 51, 102, 0.3);
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .alert-box.warning {
+            background: rgba(255, 193, 7, 0.1);
+            border-color: rgba(255, 193, 7, 0.3);
+            color: #ffc107;
+        }
+
+        .alert-box.success {
+            background: rgba(6, 255, 165, 0.1);
+            border-color: rgba(6, 255, 165, 0.3);
+            color: #06ffa5;
+        }
+
+        /* Charts */
+        .chart-container {
+            margin: 30px 0;
+            padding: 20px;
+            background: rgba(6, 255, 165, 0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(6, 255, 165, 0.1);
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #06ffa5;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: 300px !important;
+        }
+
+        /* Button */
+        .btn-print {
+            background: linear-gradient(135deg, #06ffa5, #00d084);
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 20px;
+            box-shadow: 0 0 20px rgba(6, 255, 165, 0.3);
+            transition: all 0.3s;
+        }
+
+        .btn-print:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(6, 255, 165, 0.5);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #606060;
+            font-size: 12px;
+            border-top: 1px solid rgba(6, 255, 165, 0.1);
+            margin-top: 40px;
+        }
+
+        .confidential {
+            background: rgba(255, 51, 102, 0.1);
+            color: #ff3366;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 12px;
+            text-align: center;
+            margin: 20px 60px;
+            border: 1px solid rgba(255, 51, 102, 0.3);
+        }
+
+        /* Highlights */
+        .highlights {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .highlight-card {
+            padding: 20px;
+            background: rgba(6, 255, 165, 0.05);
+            border-radius: 8px;
+            border-left: 4px solid #06ffa5;
+            border: 1px solid rgba(6, 255, 165, 0.2);
+        }
+
+        .highlight-icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .highlight-title {
+            font-weight: 600;
+            color: #06ffa5;
+            margin-bottom: 8px;
+        }
+
+        .highlight-text {
+            font-size: 14px;
+            color: #a0a0a0;
+        }
+
+        /* Financial Summary */
+        .financial-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .summary-card {
+            text-align: center;
+            padding: 20px;
+            border: 1px solid rgba(6, 255, 165, 0.2);
+            border-radius: 8px;
+            background: rgba(6, 255, 165, 0.03);
+        }
+
+        .summary-year {
+            font-size: 14px;
+            color: #808080;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .summary-revenue {
+            font-size: 24px;
+            font-weight: 700;
+            color: #06ffa5;
+            margin-bottom: 5px;
+            text-shadow: 0 0 10px rgba(6, 255, 165, 0.5);
+        }
+
+        .summary-ebitda {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .summary-ebitda.positive {
+            color: #06ffa5;
+        }
+
+        .summary-ebitda.negative {
+            color: #ff3366;
+        }
+    </style>
+</head>
+<body>
+    <button class="btn-print no-print" onclick="window.print()">📄 Générer PDF</button>
+
+    <div class="document">
+        <!-- Cover Page -->
+        <div class="cover-page">
+            <div class="company-logo">📊</div>
+            
+            <h1 class="cover-title">Business Plan<br>2025-2027</h1>
+            <p class="cover-subtitle">Plateforme SaaS d'Analyse Financière<br><small>Version Auditée - Scénario Réaliste</small></p>
+            
+            <div class="cover-info">
+                <div class="cover-info-item">
+                    <strong>Document</strong>
+                    Plan d'affaires 36 mois - Post-audit
+                </div>
+                <div class="cover-info-item">
+                    <strong>Date</strong>
+                    <span id="current-date">Décembre 2024</span>
+                </div>
+                <div class="cover-info-item">
+                    <strong>Secteur</strong>
+                    FinTech / SaaS B2C
+                </div>
+                <div class="cover-info-item">
+                    <strong>Version</strong>
+                    v2.0 - TVA & frais inclus
+                </div>
+            </div>
+        </div>
+
+        <!-- Executive Summary -->
+        <div class="executive-summary page-break">
+            <h2 class="section-header">Executive Summary - Scénario Réaliste</h2>
+            
+            <div class="alert-box warning">
+                ⚠️ <strong>Ajustements post-audit:</strong> TVA incluse (5€ TTC = 4.17€ HT), frais de paiement 0.35€/abonné, churn réaliste 3%
+            </div>
+
+            <div class="key-metrics">
+                <div class="metric-box">
+                    <div class="metric-label">CA Total HT (36M)</div>
+                    <div class="metric-value" id="exec-revenue">830K €</div>
+                    <div class="metric-detail">Prix: 5€ TTC (4.17€ HT)</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">EBITDA Cumulé</div>
+                    <div class="metric-value positive" id="exec-ebitda">437K €</div>
+                    <div class="metric-detail">Marge nette: 52.6%</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Base Clients M36</div>
+                    <div class="metric-value" id="exec-clients">12,651</div>
+                    <div class="metric-detail">MRR HT: 52.7K€</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Break-Even</div>
+                    <div class="metric-value" id="exec-breakeven">Mois 11</div>
+                    <div class="metric-detail">Cash positif: Mois 19</div>
+                </div>
+            </div>
+
+            <div class="highlights">
+                <div class="highlight-card">
+                    <div class="highlight-icon">💰</div>
+                    <div class="highlight-title">Besoin de financement</div>
+                    <div class="highlight-text">40K€ total (vs 28K€ initial) - Trough cash: -39.7K€ au mois 10</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-icon">📊</div>
+                    <div class="highlight-title">Unit Economics</div>
+                    <div class="highlight-text">Contribution/abonné: 3.82€/mois, LTV: 127€, CAC implicite: ~2€</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-icon">⚠️</div>
+                    <div class="highlight-title">Risques identifiés</div>
+                    <div class="highlight-text">Dépendance TikTok, churn B2C volatile, frais paiement sur petit ticket</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-icon">✅</div>
+                    <div class="highlight-title">Forces du modèle</div>
+                    <div class="highlight-text">CAC organique, scalabilité infinie, break-even rapide si churn maîtrisé</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scenarios Comparison -->
+        <div class="content-page page-break">
+            <h2 class="section-header">Analyse de Sensibilité - 3 Scénarios</h2>
+
+            <table class="professional-table">
+                <thead>
+                    <tr>
+                        <th>Paramètre</th>
+                        <th class="number">Pessimiste</th>
+                        <th class="number">Réaliste (Base)</th>
+                        <th class="number">Optimiste</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="highlight-row">
+                        <td colspan="4"><strong>Hypothèses</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Prix TTC</td>
+                        <td class="number">5.00 €</td>
+                        <td class="number">5.00 €</td>
+                        <td class="number">5.00 €</td>
+                    </tr>
+                    <tr>
+                        <td>ARPU net HT (après TVA)</td>
+                        <td class="number">4.17 €</td>
+                        <td class="number">4.17 €</td>
+                        <td class="number">4.17 €</td>
+                    </tr>
+                    <tr>
+                        <td>Frais paiement/abonné</td>
+                        <td class="number">0.50 €</td>
+                        <td class="number">0.35 €</td>
+                        <td class="number">0.20 €</td>
+                    </tr>
+                    <tr>
+                        <td>Churn mensuel</td>
+                        <td class="number">4%</td>
+                        <td class="number">3%</td>
+                        <td class="number">2%</td>
+                    </tr>
+                    <tr>
+                        <td>Acquisition M1-12</td>
+                        <td class="number">150/mois</td>
+                        <td class="number">200/mois</td>
+                        <td class="number">250/mois</td>
+                    </tr>
+                    <tr>
+                        <td>Acquisition M13-24</td>
+                        <td class="number">300/mois</td>
+                        <td class="number">500/mois</td>
+                        <td class="number">600/mois</td>
+                    </tr>
+                    <tr>
+                        <td>Acquisition M25-36</td>
+                        <td class="number">500/mois</td>
+                        <td class="number">800/mois</td>
+                        <td class="number">1000/mois</td>
+                    </tr>
+                    <tr class="highlight-row">
+                        <td colspan="4"><strong>Résultats à 36 mois</strong></td>
+                    </tr>
+                    <tr>
+                        <td>CA total HT</td>
+                        <td class="number negative">518K €</td>
+                        <td class="number">830K €</td>
+                        <td class="number positive">1,245K €</td>
+                    </tr>
+                    <tr>
+                        <td>EBITDA cumulé</td>
+                        <td class="number negative">176K €</td>
+                        <td class="number">437K €</td>
+                        <td class="number positive">884K €</td>
+                    </tr>
+                    <tr>
+                        <td>Abonnés finaux</td>
+                        <td class="number">7,234</td>
+                        <td class="number">12,651</td>
+                        <td class="number">21,456</td>
+                    </tr>
+                    <tr>
+                        <td>Break-even EBITDA</td>
+                        <td class="number negative">Mois 14</td>
+                        <td class="number">Mois 11</td>
+                        <td class="number positive">Mois 8</td>
+                    </tr>
+                    <tr>
+                        <td>Trough cash</td>
+                        <td class="number negative">-52K €</td>
+                        <td class="number negative">-40K €</td>
+                        <td class="number negative">-28K €</td>
+                    </tr>
+                    <tr>
+                        <td>Cash final</td>
+                        <td class="number">168K €</td>
+                        <td class="number positive">429K €</td>
+                        <td class="number positive">876K €</td>
+                    </tr>
+                    <tr>
+                        <td>LTV/CAC</td>
+                        <td class="number">47x</td>
+                        <td class="number positive">63x</td>
+                        <td class="number positive">98x</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="alert-box success">
+                ✅ <strong>Recommandation:</strong> Sécuriser 45K€ de financement (40K€ trough + 5K€ coussin) pour le scénario réaliste
+            </div>
+        </div>
+
+        <!-- Financial Projections Realistic -->
+        <div class="content-page page-break">
+            <h2 class="section-header">Projections Financières - Scénario Réaliste</h2>
+            
+            <div class="subsection">
+                <h3 class="subsection-title">P&L Annuel avec TVA et frais réels</h3>
+
+                <div class="financial-summary">
+                    <div class="summary-card">
+                        <div class="summary-year">Année 1</div>
+                        <div class="summary-revenue">56K € HT</div>
+                        <div class="summary-ebitda negative">-23K €</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-year">Année 2</div>
+                        <div class="summary-revenue">235K € HT</div>
+                        <div class="summary-ebitda positive">143K €</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-year">Année 3</div>
+                        <div class="summary-revenue">539K € HT</div>
+                        <div class="summary-ebitda positive">417K €</div>
+                    </div>
+                </div>
+
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Ligne budgétaire</th>
+                            <th class="number">Année 1</th>
+                            <th class="number">Année 2</th>
+                            <th class="number">Année 3</th>
+                            <th class="number">Total 36M</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Chiffre d'affaires TTC</td>
+                            <td class="number">67,333 €</td>
+                            <td class="number">282,073 €</td>
+                            <td class="number">646,160 €</td>
+                            <td class="number">995,566 €</td>
+                        </tr>
+                        <tr>
+                            <td>TVA collectée (20%)</td>
+                            <td class="number">11,222 €</td>
+                            <td class="number">47,012 €</td>
+                            <td class="number">107,693 €</td>
+                            <td class="number">165,928 €</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>CA HT</strong></td>
+                            <td class="number"><strong>56,111 €</strong></td>
+                            <td class="number"><strong>235,061 €</strong></td>
+                            <td class="number"><strong>538,467 €</strong></td>
+                            <td class="number"><strong>829,638 €</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Frais paiement (0.35€/ab)</td>
+                            <td class="number">4,704 €</td>
+                            <td class="number">19,706 €</td>
+                            <td class="number">45,140 €</td>
+                            <td class="number">69,550 €</td>
+                        </tr>
+                        <tr>
+                            <td>OPEX Production TikTok</td>
+                            <td class="number">9,600 €</td>
+                            <td class="number">9,600 €</td>
+                            <td class="number">9,600 €</td>
+                            <td class="number">28,800 €</td>
+                        </tr>
+                        <tr>
+                            <td>OPEX MAJ Data</td>
+                            <td class="number">6,000 €</td>
+                            <td class="number">6,000 €</td>
+                            <td class="number">6,000 €</td>
+                            <td class="number">18,000 €</td>
+                        </tr>
+                        <tr>
+                            <td>OPEX Dev/Maintenance</td>
+                            <td class="number">12,000 €</td>
+                            <td class="number">12,000 €</td>
+                            <td class="number">12,000 €</td>
+                            <td class="number">36,000 €</td>
+                        </tr>
+                        <tr>
+                            <td>OPEX App</td>
+                            <td class="number">6,000 €</td>
+                            <td class="number">6,000 €</td>
+                            <td class="number">6,000 €</td>
+                            <td class="number">18,000 €</td>
+                        </tr>
+                        <tr>
+                            <td>Fixes additionnels</td>
+                            <td class="number">46,800 €</td>
+                            <td class="number">52,800 €</td>
+                            <td class="number">63,600 €</td>
+                            <td class="number">163,200 €</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>EBITDA</strong></td>
+                            <td class="number negative"><strong>-23,093 €</strong></td>
+                            <td class="number positive"><strong>143,355 €</strong></td>
+                            <td class="number positive"><strong>417,127 €</strong></td>
+                            <td class="number positive"><strong>436,969 €</strong></td>
+                        </tr>
+                        <tr>
+                            <td>CAPEX</td>
+                            <td class="number">17,900 €</td>
+                            <td class="number">0 €</td>
+                            <td class="number">0 €</td>
+                            <td class="number">17,900 €</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td>Cash-flow net</td>
+                            <td class="number">-40,993 €</td>
+                            <td class="number">143,355 €</td>
+                            <td class="number">417,127 €</td>
+                            <td class="number">419,069 €</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Unit Economics -->
+        <div class="content-page page-break">
+            <h2 class="section-header">Unit Economics Détaillés</h2>
+            
+            <div class="subsection">
+                <h3 class="subsection-title">Économie par abonné - Scénario réaliste</h3>
+
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Métrique</th>
+                            <th class="number">Montant</th>
+                            <th>Calcul / Note</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="highlight-row">
+                            <td colspan="3"><strong>Revenus</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Prix affiché TTC</td>
+                            <td class="number">5.00 €</td>
+                            <td>Prix public</td>
+                        </tr>
+                        <tr>
+                            <td>TVA (20%)</td>
+                            <td class="number">0.83 €</td>
+                            <td>5.00 / 1.20 * 0.20</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ARPU HT</strong></td>
+                            <td class="number"><strong>4.17 €</strong></td>
+                            <td>5.00 / 1.20</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td colspan="3"><strong>Coûts variables</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Frais de paiement Stripe/PayPal</td>
+                            <td class="number">0.35 €</td>
+                            <td>~2.9% + 0.25€ fixe</td>
+                        </tr>
+                        <tr>
+                            <td>Infra/email/support</td>
+                            <td class="number">0.00 €</td>
+                            <td>Négligeable à ce stade</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Contribution unitaire</strong></td>
+                            <td class="number positive"><strong>3.82 €</strong></td>
+                            <td>4.17 - 0.35</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td colspan="3"><strong>Lifetime Value</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Churn mensuel</td>
+                            <td class="number">3%</td>
+                            <td>Hypothèse réaliste B2C</td>
+                        </tr>
+                        <tr>
+                            <td>Durée de vie moyenne</td>
+                            <td class="number">33.3 mois</td>
+                            <td>1 / 0.03</td>
+                        </tr>
+                        <tr>
+                            <td><strong>LTV brute</strong></td>
+                            <td class="number positive"><strong>127.33 €</strong></td>
+                            <td>3.82 × 33.3</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td colspan="3"><strong>Coût d'acquisition</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Budget contenu TikTok/mois</td>
+                            <td class="number">800 €</td>
+                            <td>Production vidéos</td>
+                        </tr>
+                        <tr>
+                            <td>Nouveaux clients/mois (moy.)</td>
+                            <td class="number">~400</td>
+                            <td>Moyenne sur 36 mois</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CAC implicite</strong></td>
+                            <td class="number"><strong>2.00 €</strong></td>
+                            <td>800 / 400</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td colspan="3"><strong>Ratios clés</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>LTV/CAC</strong></td>
+                            <td class="number positive"><strong>63.7x</strong></td>
+                            <td>127.33 / 2.00</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Payback period</strong></td>
+                            <td class="number positive"><strong>0.5 mois</strong></td>
+                            <td>2.00 / 3.82</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Marge contribution</strong></td>
+                            <td class="number positive"><strong>91.6%</strong></td>
+                            <td>3.82 / 4.17</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert-box success">
+                ✅ <strong>Points forts:</strong> LTV/CAC exceptionnel (>60x), payback immédiat, marge de contribution >90%
+            </div>
+            
+            <div class="alert-box warning">
+                ⚠️ <strong>Attention:</strong> Ces métriques dépendent fortement du maintien du churn à 3% et du CAC organique proche de 0
+            </div>
+        </div>
+
+        <!-- Cash Flow Analysis -->
+        <div class="content-page page-break">
+            <h2 class="section-header">Analyse de Trésorerie Détaillée</h2>
+            
+            <div class="subsection">
+                <h3 class="subsection-title">Évolution mensuelle - Points critiques</h3>
+                
+                <div class="chart-container">
+                    <div class="chart-title">Position de trésorerie (scénario réaliste)</div>
+                    <canvas id="chart-cash"></canvas>
+                </div>
+
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Milestone</th>
+                            <th class="number">Mois</th>
+                            <th class="number">Trésorerie</th>
+                            <th>Commentaire</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Démarrage</td>
+                            <td class="number">M0</td>
+                            <td class="number">10,000 €</td>
+                            <td>Capital initial</td>
+                        </tr>
+                        <tr>
+                            <td>Investissement APP</td>
+                            <td class="number">M1</td>
+                            <td class="number">-13,593 €</td>
+                            <td>CAPEX 17.9K€ + burn mensuel</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>Point bas (trough)</strong></td>
+                            <td class="number"><strong>M10</strong></td>
+                            <td class="number negative"><strong>-39,723 €</strong></td>
+                            <td><strong>Besoin max de financement</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Break-even EBITDA</td>
+                            <td class="number">M11</td>
+                            <td class="number negative">-38,916 €</td>
+                            <td>1er mois profitable</td>
+                        </tr>
+                        <tr>
+                            <td>Cash-flow positif</td>
+                            <td class="number">M19</td>
+                            <td class="number positive">5,234 €</td>
+                            <td>Retour au positif</td>
+                        </tr>
+                        <tr>
+                            <td>100K€ trésorerie</td>
+                            <td class="number">M26</td>
+                            <td class="number positive">108,456 €</td>
+                            <td>Coussin confortable</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>Position finale</strong></td>
+                            <td class="number"><strong>M36</strong></td>
+                            <td class="number positive"><strong>429,069 €</strong></td>
+                            <td><strong>Cash généré net</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert-box warning">
+                    ⚠️ <strong>Financement requis:</strong> 45K€ minimum (40K€ trough + 5K€ sécurité) vs 28K€ annoncés initialement
+                </div>
+            </div>
+        </div>
+
+        <!-- Legal and Tax Structure -->
+        <div class="content-page page-break">
+            <h2 class="section-header">Structure Juridique et Fiscale</h2>
+            
+            <div class="subsection">
+                <h3 class="subsection-title">Micro-entreprise BIC - Analyse sur 3 ans</h3>
+
+                <div class="alert-box success">
+                    ✅ <strong>Statut optimal pour démarrer:</strong> Micro-entreprise BIC prestations de services avec versement libératoire (1.7%)
+                </div>
+
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Paramètre</th>
+                            <th class="number">Année 1</th>
+                            <th class="number">Année 2</th>
+                            <th class="number">Année 3</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="highlight-row">
+                            <td colspan="4"><strong>Chiffre d'affaires</strong></td>
+                        </tr>
+                        <tr>
+                            <td>CA TTC encaissé</td>
+                            <td class="number">67,333 €</td>
+                            <td class="number">282,073 €</td>
+                            <td class="number">646,160 €</td>
+                        </tr>
+                        <tr>
+                            <td>CA HT déclaré URSSAF</td>
+                            <td class="number">56,111 €</td>
+                            <td class="number">235,061 €</td>
+                            <td class="number">538,467 €</td>
+                        </tr>
+                        <tr>
+                            <td>Statut TVA</td>
+                            <td class="number">TVA 20%</td>
+                            <td class="number">TVA 20%</td>
+                            <td class="number">TVA 20%</td>
+                        </tr>
+                        <tr>
+                            <td>Plafond micro (77,700€ HT)</td>
+                            <td class="number positive">✅ OK</td>
+                            <td class="number negative">❌ Dépassé</td>
+                            <td class="number negative">❌ Dépassé</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td colspan="4"><strong>Charges sociales et fiscales</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Cotisations sociales (21.2%)</td>
+                            <td class="number">11,895 €</td>
+                            <td class="number negative">SASU</td>
+                            <td class="number negative">SASU</td>
+                        </tr>
+                        <tr>
+                            <td>IR versement lib. (1.7%)</td>
+                            <td class="number">954 €</td>
+                            <td class="number negative">SASU</td>
+                            <td class="number negative">SASU</td>
+                        </tr>
+                        <tr>
+                            <td>CFE (dès année 2)</td>
+                            <td class="number">0 €</td>
+                            <td class="number">~400 €</td>
+                            <td class="number">~400 €</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Total prélèvements</strong></td>
+                            <td class="number"><strong>12,849 €</strong></td>
+                            <td class="number negative"><strong>SASU</strong></td>
+                            <td class="number negative"><strong>SASU</strong></td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td colspan="4"><strong>Résultat net (après charges déductibles)</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Frais paiement (0.35€/ab)</td>
+                            <td class="number">4,704 €</td>
+                            <td class="number">19,706 €</td>
+                            <td class="number">45,140 €</td>
+                        </tr>
+                        <tr>
+                            <td>OPEX (non déductibles)</td>
+                            <td class="number">80,400 €</td>
+                            <td class="number">86,400 €</td>
+                            <td class="number">97,200 €</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Net en poche théorique</strong></td>
+                            <td class="number negative"><strong>-42,342 €</strong></td>
+                            <td class="number negative"><strong>Bascule SASU</strong></td>
+                            <td class="number negative"><strong>Bascule SASU</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert-box warning">
+                    ⚠️ <strong>Point de bascule:</strong> Dès 77,700€ HT (atteint au Mois 16), obligation de passer en société
+                </div>
+            </div>
+
+            <div class="subsection">
+                <h3 class="subsection-title">Comparaison Micro-entreprise vs SASU</h3>
+
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Critère</th>
+                            <th>Micro-entreprise</th>
+                            <th>SASU à l'IS</th>
+                            <th>Recommandation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Plafond CA</td>
+                            <td class="number">77,700€ HT/an</td>
+                            <td class="number positive">Illimité</td>
+                            <td>SASU dès M16</td>
+                        </tr>
+                        <tr>
+                            <td>Charges déductibles</td>
+                            <td class="number negative">Non (forfait 50%)</td>
+                            <td class="number positive">Oui (100%)</td>
+                            <td>SASU si OPEX > 25%</td>
+                        </tr>
+                        <tr>
+                            <td>TVA récupérable</td>
+                            <td class="number negative">Non</td>
+                            <td class="number positive">Oui</td>
+                            <td>SASU pour CAPEX</td>
+                        </tr>
+                        <tr>
+                            <td>Cotisations sociales</td>
+                            <td class="number positive">21.2% du CA</td>
+                            <td class="number">45% du net</td>
+                            <td>Micro si peu de charges</td>
+                        </tr>
+                        <tr>
+                            <td>Imposition</td>
+                            <td class="number positive">1.7% (VL)</td>
+                            <td class="number">15-25% IS + IR div</td>
+                            <td>Micro avec VL</td>
+                        </tr>
+                        <tr>
+                            <td>Comptabilité</td>
+                            <td class="number positive">Ultra simple</td>
+                            <td class="number negative">Expert requis</td>
+                            <td>+1,500€/an en SASU</td>
+                        </tr>
+                        <tr>
+                            <td>Investisseurs</td>
+                            <td class="number negative">Impossible</td>
+                            <td class="number positive">Possible</td>
+                            <td>SASU si levée</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="subsection">
+                <h3 class="subsection-title">Stratégie de transition recommandée</h3>
+
+                <div class="highlights">
+                    <div class="highlight-card">
+                        <div class="highlight-icon">📅</div>
+                        <div class="highlight-title">M1-M15: Micro-entreprise</div>
+                        <div class="highlight-text">• Démarrage rapide, formalités simples<br>• Versement libératoire 1.7%<br>• Test du marché sans risque</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-icon">🔄</div>
+                        <div class="highlight-title">M16: Création SASU</div>
+                        <div class="highlight-text">• Anticipation plafond 77,700€<br>• Migration clients progressive<br>• Récupération TVA sur CAPEX</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-icon">🚀</div>
+                        <div class="highlight-title">M17+: SASU opérationnelle</div>
+                        <div class="highlight-text">• Déduction charges réelles<br>• Optimisation rémunération<br>• Prêt pour investisseurs</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-icon">💡</div>
+                        <div class="highlight-title">Astuce fiscale</div>
+                        <div class="highlight-text">• ACRE si éligible: -50% cotisations<br>• Année blanche IS possible<br>• Dividendes après 2 ans</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="subsection">
+                <h3 class="subsection-title">Impact financier de la transition</h3>
+
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Élément</th>
+                            <th class="number">Coût/Impact</th>
+                            <th>Timing</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Création SASU</td>
+                            <td class="number">~500 €</td>
+                            <td>M15</td>
+                        </tr>
+                        <tr>
+                            <td>Comptable/an</td>
+                            <td class="number">1,500-2,000 €</td>
+                            <td>Dès M16</td>
+                        </tr>
+                        <tr>
+                            <td>Compte pro bancaire</td>
+                            <td class="number">20-40 €/mois</td>
+                            <td>Dès M16</td>
+                        </tr>
+                        <tr>
+                            <td>RC Pro/assurance</td>
+                            <td class="number">500-800 €/an</td>
+                            <td>Recommandé</td>
+                        </tr>
+                        <tr>
+                            <td>Récupération TVA CAPEX</td>
+                            <td class="number positive">+3,580 €</td>
+                            <td>M16</td>
+                        </tr>
+                        <tr>
+                            <td>Économie charges déductibles</td>
+                            <td class="number positive">+15-20K €/an</td>
+                            <td>Dès M16</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>Gain net transition</strong></td>
+                            <td class="number positive"><strong>+12-15K €/an</strong></td>
+                            <td><strong>Après M16</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Risk Analysis -->
+        <div class="content-page page-break">
+            <h2 class="section-header">Analyse des Risques et Mitigations</h2>
+            
+            <div class="subsection">
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Risque</th>
+                            <th>Impact</th>
+                            <th>Probabilité</th>
+                            <th>Mitigation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Churn > 3%</strong></td>
+                            <td class="number negative">Élevé</td>
+                            <td class="number">Moyenne</td>
+                            <td>• Onboarding optimisé<br>• Engagement quotidien (alertes)<br>• Plan annuel avec discount</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Dépendance TikTok</strong></td>
+                            <td class="number negative">Élevé</td>
+                            <td class="number">Moyenne</td>
+                            <td>• Diversification: YouTube Shorts, Instagram Reels<br>• SEO content<br>• Newsletter</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Frais paiement élevés</strong></td>
+                            <td class="number">Moyen</td>
+                            <td class="number negative">Élevé</td>
+                            <td>• Négociation volume Stripe<br>• Prélèvement SEPA<br>• Paiement annuel encouragé</td>
+                        </tr>
+                        <tr>
+                            <td><strong>TVA non récupérable</strong></td>
+                            <td class="number">Faible</td>
+                            <td class="number negative">Certain</td>
+                            <td>• Déjà intégré dans le modèle<br>• Prix psychologique maintenu à 5€</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Acquisition ralentie</strong></td>
+                            <td class="number">Moyen</td>
+                            <td class="number">Faible</td>
+                            <td>• Tests A/B continus<br>• Micro-influenceurs<br>• Programme referral</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Concurrence</strong></td>
+                            <td class="number">Moyen</td>
+                            <td class="number">Moyenne</td>
+                            <td>• First-mover sur TikTok Finance FR<br>• Communauté forte<br>• Prix agressif</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="subsection">
+                <h3 class="subsection-title">Recommandations finales</h3>
+                
+                <div class="highlights">
+                    <div class="highlight-card">
+                        <div class="highlight-title">Financement</div>
+                        <div class="highlight-text">Lever 50K€ (45K€ besoin + 5K€ buffer) en seed ou love money</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-title">KPIs prioritaires</div>
+                        <div class="highlight-text">Surveiller le churn M1/M3/M6 - Cible inférieure à 3% pour viabilité</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-title">Optimisations rapides</div>
+                        <div class="highlight-text">Lancer plan annuel 49€ (2 mois offerts) pour trésorerie immédiate</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-title">Diversification</div>
+                        <div class="highlight-text">Dès M6, tester YouTube et newsletter pour réduire dépendance TikTok</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            Document confidentiel - Version Auditée - © 2024 - Tous droits réservés
+        </div>
+    </div>
+
+    <script>
+        // Set current date
+        const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+                       'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+        const now = new Date();
+        document.getElementById('current-date').textContent = months[now.getMonth()] + ' ' + now.getFullYear();
+
+        // Realistic model with VAT and payment fees
+        const model = {
+            subscribers: [],
+            revenue_ttc: [],
+            revenue_ht: [],
+            costs: [],
+            ebitda: [],
+            cash: []
+        };
+
+        function calculateRealistic() {
+            // Parameters
+            const PRICE_TTC = 5.00;
+            const ARPU_HT = 4.17;  // 5.00 / 1.20
+            const PAYMENT_FEE = 0.35;
+            const CHURN = 0.03;  // 3% monthly
+            const CAPEX = 17900;
+            const CASH_INIT = 10000;
+            
+            let subs = 0;
+            let cash = CASH_INIT;
+            
+            for (let m = 0; m < 36; m++) {
+                // Acquisition
+                let newSubs = m < 12 ? 200 : m < 24 ? 500 : 800;
+                
+                // Churn
+                let churn = Math.floor(subs * CHURN);
+                
+                // Update subscribers  
+                subs = subs + newSubs - churn;
+                let avgSubs = m === 0 ? newSubs / 2 : (model.subscribers[m-1] + subs) / 2;
+                
+                // Revenue
+                let revenue_ttc = avgSubs * PRICE_TTC;
+                let revenue_ht = avgSubs * ARPU_HT;
+                
+                // Costs
+                let payment_fees = avgSubs * PAYMENT_FEE;
+                let opex_base = 2800;  // TikTok + Data + Dev + App
+                let opex_additional = m < 12 ? 3900 : m < 24 ? 4400 : 5300;
+                let total_costs = payment_fees + opex_base + opex_additional;
+                
+                // EBITDA
+                let ebitda = revenue_ht - total_costs;
+                
+                // Cash
+                if (m === 0) {
+                    cash = cash - CAPEX + ebitda;
+                } else {
+                    cash = cash + ebitda;
+                }
+                
+                model.subscribers.push(subs);
+                model.revenue_ttc.push(revenue_ttc);
+                model.revenue_ht.push(revenue_ht);
+                model.costs.push(total_costs);
+                model.ebitda.push(ebitda);
+                model.cash.push(cash);
+            }
+            
+            updateRealisticValues();
+        }
+
+        function updateRealisticValues() {
+            // Total revenue HT
+            let totalRevenue = model.revenue_ht.reduce((a, b) => a + b, 0);
+            document.getElementById('exec-revenue').textContent = 
+                (totalRevenue / 1000).toFixed(0) + 'K €';
+            
+            // Total EBITDA
+            let totalEbitda = model.ebitda.reduce((a, b) => a + b, 0);
+            document.getElementById('exec-ebitda').textContent = 
+                (totalEbitda / 1000).toFixed(0) + 'K €';
+            
+            // Final subscribers
+            document.getElementById('exec-clients').textContent = 
+                model.subscribers[35].toLocaleString('fr-FR');
+            
+            // Break-even
+            let breakEven = null;
+            for (let i = 0; i < model.ebitda.length; i++) {
+                if (model.ebitda[i] > 0) {
+                    breakEven = i + 1;
+                    break;
+                }
+            }
+            document.getElementById('exec-breakeven').textContent = 
+                breakEven ? `Mois ${breakEven}` : 'Non atteint';
+            
+            drawChart();
+        }
+
+        function drawChart() {
+            const canvas = document.getElementById('chart-cash');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width = canvas.offsetWidth;
+            const height = canvas.height = 300;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            const padding = 50;
+            const data = model.cash;
+            const max = Math.max(...data);
+            const min = Math.min(...data);
+            const range = max - min || 1;
+            
+            // Grid lines
+            ctx.strokeStyle = 'rgba(6, 255, 165, 0.1)';
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i <= 5; i++) {
+                const y = padding + (i * (height - 2 * padding) / 5);
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+            }
+            
+            // Zero line
+            if (min < 0 && max > 0) {
+                ctx.strokeStyle = 'rgba(255, 51, 102, 0.3)';
+                ctx.lineWidth = 2;
+                const zeroY = height - padding - ((0 - min) / range) * (height - 2 * padding);
+                ctx.beginPath();
+                ctx.moveTo(padding, zeroY);
+                ctx.lineTo(width - padding, zeroY);
+                ctx.stroke();
+            }
+            
+            // Data line
+            ctx.strokeStyle = '#06ffa5';
+            ctx.lineWidth = 2;
+            ctx.shadowColor = '#06ffa5';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            
+            for (let i = 0; i < data.length; i++) {
+                const x = padding + (i / (data.length - 1)) * (width - 2 * padding);
+                const y = height - padding - ((data[i] - min) / range) * (height - 2 * padding);
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Fill areas
+            ctx.shadowBlur = 0;
+            
+            // Positive area
+            ctx.fillStyle = 'rgba(6, 255, 165, 0.1)';
+            ctx.beginPath();
+            for (let i = 0; i < data.length; i++) {
+                if (data[i] >= 0) {
+                    const x = padding + (i / (data.length - 1)) * (width - 2 * padding);
+                    const y = height - padding - ((Math.max(0, data[i]) - min) / range) * (height - 2 * padding);
+                    const zeroY = height - padding - ((0 - min) / range) * (height - 2 * padding);
+                    
+                    if (i === 0 || data[i-1] < 0) ctx.moveTo(x, zeroY);
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.closePath();
+            ctx.fill();
+            
+            // Labels
+            ctx.fillStyle = '#808080';
+            ctx.font = '11px Inter';
+            ctx.textAlign = 'right';
+            
+            for (let i = 0; i <= 5; i++) {
+                const val = max - (i * range / 5);
+                const y = padding + (i * (height - 2 * padding) / 5);
+                ctx.fillText((val/1000).toFixed(0) + 'K€', padding - 10, y + 4);
+            }
+            
+            // X-axis labels
+            ctx.textAlign = 'center';
+            ctx.fillText('M1', padding, height - 30);
+            ctx.fillText('M12', padding + (11/35) * (width - 2 * padding), height - 30);
+            ctx.fillText('M24', padding + (23/35) * (width - 2 * padding), height - 30);
+            ctx.fillText('M36', width - padding, height - 30);
+        }
+
+        // Initialize
+        calculateRealistic();
+    </script>
+</body>
+</html>
