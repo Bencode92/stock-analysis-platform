@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TradePulse - ETF Analysis Platform</title>
+    <title>TradePulse - ETF Mondiaux</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -16,10 +16,6 @@
                     colors: {
                         green: {
                             400: '#00FF87'
-                        },
-                        cyan: {
-                            400: '#00FFFF',
-                            500: '#06B6D4'
                         }
                     }
                 },
@@ -31,12 +27,11 @@
     </script>
     <style>
         :root {
-            --background-color: #0a1929;
+            --background-color: #0a1929; /* Bleu nuit plus profond */
             --light-background-color: #f0f5ff;
             --text-color: #FFFFFF;
             --light-text-color: #1a202c;
-            --accent-color: #00FF87;
-            --accent-etf: #00FFFF;
+            --accent-color: #00FF87; /* Vert néon */
             --accent-subtle: rgba(0, 255, 135, 0.15);
             --accent-medium: rgba(0, 255, 135, 0.3);
             --accent-strong: rgba(0, 255, 135, 0.6);
@@ -45,17 +40,22 @@
             --card-border: rgba(0, 255, 135, 0.2);
             --accent-glow: 0 0 15px rgba(0, 255, 135, 0.2);
             --accent-glow-strong: 0 0 20px rgba(0, 255, 135, 0.3);
+            --transition-time: 0.3s;
             --header-height: 70px;
             --sidebar-width: 80px;
             --negative-color: #ff4757;
             --neutral-color: #aaaaaa;
+            --separator-color: rgba(255, 255, 255, 0.07);
         }
         
         body {
             margin: 0;
             padding: 0;
             font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
             overflow-x: hidden;
+            letter-spacing: 0.01em;
+            line-height: 1.6;
         }
         
         body.dark {
@@ -66,7 +66,12 @@
             color: var(--text-color);
         }
         
-        /* Header et Sidebar existants conservés */
+        body.light {
+            background-color: var(--light-background-color);
+            color: var(--light-text-color);
+        }
+        
+        /* Header */
         .main-header {
             position: fixed;
             top: 0;
@@ -80,13 +85,179 @@
             align-items: center;
             padding: 0 40px;
             z-index: 100;
+            transition: all 0.3s ease;
         }
         
         .dark .main-header {
             background-color: rgba(10, 25, 41, 0.85);
             border-bottom: 1px solid var(--card-border);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
         
+        .light .main-header {
+            background-color: rgba(240, 245, 255, 0.9);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            font-weight: 900;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+        }
+        
+        .logo-container a {
+            text-decoration: none;
+            $transition: color 0.3s ease;
+        }
+        
+        .dark .logo-container a {
+            color: var(--text-color);
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+        }
+        
+        .light .logo-container a {
+            color: var(--light-text-color);
+        }
+        
+        .pulse-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 10px var(--accent-color);
+            animation: pulse 2s infinite;
+        }
+        
+        .main-nav {
+            display: flex;
+            margin-left: 40px;
+        }
+        
+        .main-nav a {
+            margin-right: 30px;
+            padding: 8px 5px;
+            font-weight: 500;
+            position: relative;
+            transition: color 0.3s;
+            text-decoration: none;
+        }
+        
+        .dark .main-nav a {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .light .main-nav a {
+            color: var(--light-text-color);
+        }
+        
+        .main-nav a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--accent-color);
+            transition: width 0.3s;
+        }
+        
+        .main-nav a:hover::after,
+        .main-nav a.active::after {
+            width: 100%;
+        }
+        
+        .main-nav a.active {
+            color: var(--accent-color);
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+        }
+        
+        .market-status {
+            display: flex;
+            align-items: center;
+            margin-right: 30px;
+            font-size: 0.875rem;
+            transition: color 0.3s ease;
+        }
+        
+        .dark .market-status {
+            color: var(--text-color);
+        }
+        
+        .light .market-status {
+            color: var(--light-text-color);
+        }
+        
+        .market-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .market-indicator.green {
+            background-color: #4CAF50;
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+        }
+        
+        .market-time {
+            margin-left: 10px;
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+        
+        .search-button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+        
+        .dark .search-button {
+            background-color: var(--accent-subtle);
+            border: 1px solid var(--accent-medium);
+            color: var(--text-color);
+        }
+        
+        .light .search-button {
+            background-color: rgba(0, 210, 110, 0.1);
+            border: 1px solid rgba(0, 210, 110, 0.3);
+            color: var(--light-text-color);
+        }
+        
+        .search-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--accent-glow);
+        }
+        
+        .dark .search-button:hover {
+            background-color: var(--accent-medium);
+        }
+        
+        .light .search-button:hover {
+            background-color: rgba(0, 210, 110, 0.2);
+        }
+        
+        .search-button i {
+            margin-right: 8px;
+            color: var(--accent-color);
+        }
+        
+        /* Sidebar de navigation verticale */
         .sidebar {
             position: fixed;
             top: 0;
@@ -98,65 +269,156 @@
             align-items: center;
             padding: 20px 0;
             z-index: 101;
+            transition: background-color 0.3s ease, border-right 0.3s ease, box-shadow 0.3s ease;
         }
         
         .dark .sidebar {
             background-color: rgba(8, 20, 35, 0.95);
             border-right: 1px solid var(--card-border);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
         }
         
+        .light .sidebar {
+            background-color: rgba(230, 240, 255, 0.95);
+            border-right: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--accent-color);
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
+        }
+        
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+        }
+        
+        .nav-item {
+            margin-bottom: 24px;
+            width: 42px;
+            height: 42px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            transition: all 0.3s;
+            position: relative;
+            text-decoration: none;
+        }
+
+        /* Notification badge for alerts */
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 10px;
+            height: 10px;
+            background-color: #ff4757;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
+        }
+        
+        .dark .nav-item {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .light .nav-item {
+            color: rgba(0, 0, 0, 0.7);
+        }
+        
+        .dark .nav-item:hover, .dark .nav-item.active {
+            background-color: var(--accent-subtle);
+            color: var(--accent-color);
+            box-shadow: var(--accent-glow);
+            transform: translateY(-2px);
+        }
+        
+        .light .nav-item:hover, .light .nav-item.active {
+            background-color: rgba(0, 210, 110, 0.1);
+            color: var(--accent-color);
+        }
+        
+        .nav-item i {
+            font-size: 1.2rem;
+        }
+        
+        /* Mode sombre/clair toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .theme-toggle-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+        
+        .dark .theme-toggle-btn {
+            color: var(--text-color);
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .light .theme-toggle-btn {
+            color: var(--light-text-color);
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+        
+        .theme-toggle-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Main container */
         .main-container {
             margin-left: var(--sidebar-width);
             margin-top: var(--header-height);
             padding: 24px;
             min-height: calc(100vh - var(--header-height));
+            transition: background-color 0.3s ease;
         }
-        
-        /* Glassmorphism */
+
+        /* Glassmorphism cards */
         .glassmorphism {
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid var(--card-border);
             box-shadow: var(--accent-glow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
         
         .dark .glassmorphism {
             background-color: var(--card-bg);
         }
         
-        /* ETF Specific Styles */
-        .etf-card {
-            background: linear-gradient(135deg, rgba(0, 200, 255, 0.05), rgba(0, 255, 255, 0.03));
-            border: 1px solid rgba(0, 200, 255, 0.3);
-            transition: all 0.3s ease;
+        .light .glassmorphism {
+            background-color: rgba(240, 245, 255, 0.8);
         }
         
-        .etf-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(0, 255, 255, 0.2);
+        .glassmorphism:hover {
+            box-shadow: var(--accent-glow-strong);
         }
-        
-        .category-btn {
-            padding: 10px 20px;
-            border-radius: 8px;
-            background: rgba(0, 255, 255, 0.1);
-            border: 1px solid rgba(0, 255, 255, 0.3);
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .category-btn.active {
-            background: rgba(0, 255, 255, 0.3);
-            border-color: var(--accent-etf);
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
-        }
-        
-        .metric-badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            background: rgba(0, 255, 255, 0.1);
-            border: 1px solid rgba(0, 255, 255, 0.2);
+
+        /* Data table styles */
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
         }
         
         .data-table th {
@@ -171,6 +433,21 @@
             background-color: var(--card-header);
         }
         
+        .data-table td {
+            padding: 16px;
+            font-size: 0.9rem;
+            border-bottom: 1px solid var(--separator-color);
+        }
+        
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .data-table tr:hover td {
+            background-color: var(--accent-subtle);
+        }
+
+        /* Positive, negative, and neutral values */
         .positive {
             color: var(--accent-color);
             font-weight: 600;
@@ -181,214 +458,1466 @@
             font-weight: 600;
         }
         
+        .neutral {
+            color: var(--neutral-color);
+            font-weight: 600;
+        }
+
+        /* Top performers */
+        .top-performers-section {
+            margin-bottom: 2rem;
+        }
+        
+        .top-performers-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: center;
+        }
+        
+        .top-performers-title::before {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 3px;
+            background-color: var(--accent-color);
+            margin-right: 10px;
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+        
+        .top-performers-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-gap: 1px;
+        }
+        
+        .performer-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .performer-header {
+            background-color: rgba(25, 45, 70, 0.9);
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: white;
+            border-bottom: 1px solid var(--card-border);
+        }
+        
+        .performer-row {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--separator-color);
+            display: flex;
+            justify-content: space-between;
+            transition: background-color 0.2s;
+        }
+        
+        .performer-row:hover {
+            background-color: rgba(15, 40, 70, 0.8);
+        }
+        
+        .performer-row:last-child {
+            border-bottom: none;
+        }
+        
+        .performer-info {
+            flex: 1;
+        }
+        
+        .performer-index {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 3px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .performer-country {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .performer-value {
+            font-weight: 700;
+            text-align: right;
+            min-width: 62px;
+        }
+
+        /* Autres styles */
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 3px;
+            background-color: var(--accent-color);
+            margin-right: 10px;
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+
+        /* Cards with consistent headers */
+        .card-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--card-border);
+            background-color: var(--card-header);
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card-header h3 {
+            font-weight: 600;
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .card-body {
+            padding: 16px;
+        }
+
         /* Animations */
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
             70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
             100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
         }
-        
-        .pulse-dot {
-            width: 12px;
-            height: 12px;
-            background-color: var(--accent-color);
+
+        /* Loader */
+        .loader {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(0, 255, 135, 0.2);
             border-radius: 50%;
-            animation: pulse 2s infinite;
+            border-top-color: var(--accent-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         
+        /* Button styling */
+        .action-button {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            background-color: var(--accent-subtle);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-medium);
+        }
+        
+        .action-button:hover {
+            background-color: var(--accent-medium);
+            transform: translateY(-1px);
+        }
+        
+        /* Market Selector */
+        .market-selector {
+            margin-bottom: 24px;
+        }
+        
+        .market-selector-buttons {
+            display: flex;
+            gap: 16px;
+        }
+        
+        .market-btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            flex-grow: 1;
+            text-align: center;
+            border: 2px solid transparent;
+        }
+        
+        .dark .market-btn {
+            background-color: var(--accent-subtle);
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .light .market-btn {
+            background-color: rgba(0, 210, 110, 0.1);
+            color: var(--light-text-color);
+        }
+        
+        .market-btn.active {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+            box-shadow: var(--accent-glow);
+        }
+        
+        .market-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        /* Pagination Styling */
+        .pagination-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .pagination-button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .dark .pagination-button {
+            background-color: var(--accent-subtle);
+            color: var(--text-color);
+            border: 1px solid var(--accent-medium);
+        }
+        
+        .light .pagination-button {
+            background-color: rgba(0, 210, 110, 0.1);
+            border: 1px solid rgba(0, 210, 110, 0.3);
+            color: var(--light-text-color);
+        }
+        
+        .pagination-button:not(:disabled):hover {
+            transform: translateY(-2px);
+            box-shadow: var(--accent-glow);
+        }
+        
+        .pagination-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .pagination-info {
+            margin: 0 16px;
+            font-weight: 500;
+        }
+        
+        /* Styles pour la barre de recherche améliorée */
+        .search-container {
+            max-width: 100%;
+            margin-bottom: 24px;
+            z-index: 10;
+            position: relative;
+        }
+        
+        .search-wrapper {
+            max-width: 100%;
+            position: relative;
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+            z-index: 20;
+        }
+        
+        .search-wrapper:focus-within {
+            transform: translateY(-5px);
+        }
+        
+        /* Style amélioré pour l'input de recherche */
+        .dark .main-search-input {
+            background-color: rgba(20, 40, 60, 1); /* Fond 100% opaque */
+            border: 2px solid var(--accent-color); /* Bordure plus visible */
+            color: white; /* Texte plus contrasté */
+            padding: 18px 20px;
+            padding-left: 50px;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* Ombre plus prononcée */
+        }
+        
+        .light .main-search-input {
+            background-color: rgba(240, 245, 255, 1); /* 100% opaque */
+            border: 2px solid rgba(0, 210, 110, 0.5);
+            color: var(--light-text-color);
+            padding: 18px 20px;
+            padding-left: 50px;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .dark .main-search-input:focus {
+            border-color: var(--accent-color);
+            box-shadow: var(--accent-glow), 0 4px 15px rgba(0, 0, 0, 0.4);
+            outline: none;
+            background-color: rgba(25, 45, 65, 1); /* 100% opaque en focus */
+        }
+        
+        .light .main-search-input:focus {
+            border-color: var(--accent-color);
+            box-shadow: var(--accent-glow);
+            outline: none;
+        }
+        
+        .dark .search-wrapper i {
+            color: rgba(255, 255, 255, 0.6);
+            transition: color 0.3s ease;
+        }
+        
+        .light .search-wrapper i {
+            color: rgba(0, 0, 0, 0.5);
+            transition: color 0.3s ease;
+        }
+        
+        .search-wrapper:focus-within i.search-icon {
+            color: var(--accent-color);
+            text-shadow: 0 0 5px rgba(0, 255, 135, 0.3);
+        }
+        
+        .clear-btn {
+            cursor: pointer;
+            padding: 8px;
+            font-size: 18px;
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            outline: none;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .clear-btn:hover {
+            color: var(--accent-color);
+            transform: translateY(-50%) scale(1.2);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+        }
+        
+        /* Suggestions pour l'autocomplétion */
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: rgba(20, 40, 60, 1); /* Fond 100% opaque */
+            border: 1px solid var(--accent-color);
+            border-radius: 0 0 12px 12px;
+            margin-top: 5px;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 100;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6); /* Ombre renforcée */
+        }
+        
+        .search-suggestions.active {
+            max-height: 300px;
+            opacity: 1;
+            overflow-y: auto;
+        }
+        
+        /* Style des éléments de suggestion */
+        .suggestion-item {
+            padding: 12px 18px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid rgba(0, 255, 135, 0.3);
+            color: white;
+            font-weight: 500;
+            background-color: rgba(20, 40, 60, 1); /* Fond 100% opaque */
+        }
+        
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
+        .suggestion-item:hover {
+            background-color: rgba(0, 255, 135, 0.3); /* Couleur de survol plus visible */
+            transform: translateX(5px);
+        }
+        
+        .suggestion-item .text-green-400 {
+            color: var(--accent-color);
+            font-weight: 600;
+            text-shadow: 0 0 8px rgba(0, 255, 135, 0.4); /* Léger halo */
+        }
+        
+        /* Style amélioré pour les résultats de recherche */
+        #search-results {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        
+        #search-results.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        #search-results-body tr {
+            background-color: rgba(20, 40, 60, 1); /* Fond 100% opaque */
+        }
+        
+        #search-results-body tr:hover {
+            background-color: rgba(0, 255, 135, 0.25); /* Survol plus visible */
+        }
+        
+        /* Amélioration pour le compteur de résultats */
+        .search-count {
+            margin-top: 12px;
+            font-size: 0.95rem;
+            color: var(--accent-color); /* Couleur d'accent pour plus de visibilité */
+            background-color: rgba(20, 40, 60, 1); /* Fond 100% opaque */
+            padding: 8px 16px;
+            border-radius: 8px;
+            display: inline-block;
+            border-left: 3px solid var(--accent-color);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            font-weight: 600; /* Texte en gras */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Ombre portée */
+            z-index: 10;
+            position: relative;
+        }
+        
+        .search-count.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Style pour le titre des résultats de recherche */
+        #search-results .section-title {
+            text-shadow: 0 0 10px rgba(0, 255, 135, 0.3);
+        }
+        
+        /* Mise en évidence du texte recherché */
+        .search-highlight {
+            background-color: rgba(0, 255, 135, 0.4); /* Plus visible */
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+            animation: highlight-pulse 2s infinite;
+        }
+        
+        @keyframes highlight-pulse {
+            0% { background-color: var(--accent-subtle); }
+            50% { background-color: var(--accent-medium); }
+            100% { background-color: var(--accent-subtle); }
+        }
+
+        /* Styles pour les indicateurs de type d'ETF */
+        .etf-type-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+            position: relative;
+            top: -1px;
+            box-shadow: 0 0 3px rgba(255, 255, 255, 0.5); /* Ombre légère pour meilleure visibilité */
+        }
+
+        .etf-type-standard {
+            background-color: #4682B4; /* Bleu standard */
+        }
+
+        .etf-type-top50 {
+            background-color: #00FF87; /* Vert néon - couleur d'accent de votre thème */
+            box-shadow: 0 0 5px rgba(0, 255, 135, 0.5);
+        }
+
+        .etf-type-bond {
+            background-color: #FFA500; /* Orange pour les obligations */
+        }
+
+        .etf-type-shortterm {
+            background-color: #9370DB; /* Violet pour les ETF court terme */
+        }
+
+        /* Style pour les suggestions avec indicateurs */
+        .suggestion-item .etf-type-indicator {
+            width: 6px;
+            height: 6px;
+            margin-right: 8px;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
-            .main-header { left: 0; }
-            .sidebar { width: 100%; height: auto; bottom: 0; top: auto; }
-            .main-container { margin-left: 0; margin-bottom: 60px; }
+            .main-header {
+                left: 0;
+                padding: 0 20px;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                flex-direction: row;
+                padding: 10px 20px;
+                justify-content: space-between;
+                position: fixed;
+                bottom: 0;
+                top: auto;
+                border-top: 1px solid var(--card-border);
+                border-right: none;
+            }
+            
+            .sidebar-logo {
+                display: none;
+            }
+            
+            .sidebar-nav {
+                flex-direction: row;
+                justify-content: space-around;
+                width: 100%;
+                margin: 0;
+            }
+            
+            .nav-item {
+                margin: 0;
+            }
+            
+            .main-container {
+                margin-left: 0;
+                margin-top: calc(var(--header-height));
+                margin-bottom: 60px;
+            }
+            
+            .main-nav {
+                display: none;
+            }
+            
+            .top-performers-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            
+            .market-selector-buttons {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body class="dark">
-    <!-- Sidebar -->
+    <!-- Bouton du sélecteur de thème -->
+    <div class="theme-toggle">
+        <button id="theme-toggle-btn" class="theme-toggle-btn">
+            <i class="fas fa-moon" id="dark-icon"></i>
+            <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar de navigation verticale -->
     <aside class="sidebar">
-        <div class="text-2xl font-bold text-cyan-400 mb-8">TP</div>
-        <nav class="flex flex-col gap-6">
-            <a href="actualites.html" class="text-gray-400 hover:text-cyan-400 transition">
-                <i class="fas fa-newspaper text-xl"></i>
+        <div class="sidebar-logo">TP</div>
+        <nav class="sidebar-nav">
+            <a href="actualites.html" class="nav-item" title="Actualités">
+                <i class="fas fa-newspaper"></i>
             </a>
-            <a href="portefeuille.html" class="text-gray-400 hover:text-cyan-400 transition">
-                <i class="fas fa-chart-pie text-xl"></i>
+            <a href="portefeuille.html" class="nav-item" title="Portefeuilles">
+                <i class="fas fa-chart-pie"></i>
             </a>
-            <a href="dashboard.html" class="text-gray-400 hover:text-cyan-400 transition">
-                <i class="fas fa-tachometer-alt text-xl"></i>
+            <a href="dashboard.html" class="nav-item" title="Tableau de bord">
+                <i class="fas fa-tachometer-alt"></i>
             </a>
-            <a href="liste.html" class="text-gray-400 hover:text-cyan-400 transition">
-                <i class="fas fa-list-ul text-xl"></i>
+            <a href="marches.html" class="nav-item" title="Marchés">
+                <i class="fas fa-chart-line"></i>
             </a>
-            <a href="etf.html" class="text-cyan-400">
-                <i class="fas fa-funnel-dollar text-xl"></i>
+            <a href="liste.html" class="nav-item" title="Actions">
+                <i class="fas fa-list-ul"></i>
+            </a>
+            <a href="etf.html" class="nav-item active" title="ETF">
+                <i class="fas fa-funnel-dollar"></i>
+            </a>
+            <a href="email-preview.html" class="nav-item" title="Alertes">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge"></span>
+            </a>
+            <a href="parametres.html" class="nav-item" title="Paramètres">
+                <i class="fas fa-cog"></i>
             </a>
         </nav>
     </aside>
 
-    <!-- Header -->
+    <!-- Header principal -->
     <header class="main-header">
-        <div class="flex items-center gap-8">
-            <div class="flex items-center">
-                <div class="pulse-dot mr-3"></div>
-                <h1 class="text-2xl font-bold">TRADEPULSE ETF</h1>
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="pulse-dot"></div>
+                <a href="index.html">TRADEPULSE</a>
             </div>
-            <nav class="hidden md:flex gap-6">
-                <a href="#equity" class="hover:text-cyan-400 transition">Actions</a>
-                <a href="#bonds" class="hover:text-cyan-400 transition">Obligations</a>
-                <a href="#commodity" class="hover:text-cyan-400 transition">Matières Premières</a>
+            <nav class="main-nav">
+                <a href="actualites.html">Actualités</a>
+                <a href="portefeuille.html">Portefeuilles</a>
+                <a href="dashboard.html">Tableau de bord</a>
+                <a href="marches.html">Marchés</a>
+                <a href="liste.html">Actions</a>
+                <a href="etf.html" class="active">ETF</a>
             </nav>
         </div>
-        <div class="flex items-center gap-4">
-            <span class="text-sm opacity-70">MAJ: <span id="last-update">--:--</span></span>
-            <button id="theme-toggle" class="p-2 rounded-lg hover:bg-white/10">
-                <i class="fas fa-moon"></i>
-            </button>
+        <div class="header-right">
+            <div class="market-status">
+                <div class="market-indicator green"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time" id="marketTime">09:45:22</span>
+            </div>
+            <a href="recherche.html" class="search-button ripple">
+                <i class="fas fa-search"></i>
+                <span>Ma question</span>
+            </a>
         </div>
     </header>
 
-    <!-- Main Content -->
+    <!-- Container principal -->
     <main class="main-container">
-        <!-- Categories Filter -->
-        <section class="mb-8">
-            <h2 class="text-xl font-bold mb-4 text-cyan-400">Catégories d'ETFs</h2>
-            <div class="flex gap-4 flex-wrap">
-                <button class="category-btn active" data-category="all">
-                    <i class="fas fa-globe mr-2"></i>Tous
-                </button>
-                <button class="category-btn" data-category="equity">
-                    <i class="fas fa-chart-line mr-2"></i>Actions
-                </button>
-                <button class="category-btn" data-category="bonds">
-                    <i class="fas fa-landmark mr-2"></i>Obligations
-                </button>
-                <button class="category-btn" data-category="commodity">
-                    <i class="fas fa-coins mr-2"></i>Matières Premières
-                </button>
-                <button class="category-btn" data-category="sector">
-                    <i class="fas fa-industry mr-2"></i>Sectoriels
-                </button>
-            </div>
-        </section>
-
-        <!-- Top Performers Grid -->
-        <section class="mb-8">
-            <h2 class="text-xl font-bold mb-4 text-cyan-400">Top Performers ETFs</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Best TER -->
-                <div class="etf-card glassmorphism rounded-lg p-4">
-                    <h3 class="text-sm font-semibold mb-3 opacity-70">Meilleurs TER</h3>
-                    <div id="best-ter" class="space-y-2"></div>
-                </div>
-                <!-- Best Performance -->
-                <div class="etf-card glassmorphism rounded-lg p-4">
-                    <h3 class="text-sm font-semibold mb-3 opacity-70">Meilleures Perfs 1Y</h3>
-                    <div id="best-perf" class="space-y-2"></div>
-                </div>
-                <!-- Largest AUM -->
-                <div class="etf-card glassmorphism rounded-lg p-4">
-                    <h3 class="text-sm font-semibold mb-3 opacity-70">Plus gros AUM</h3>
-                    <div id="largest-aum" class="space-y-2"></div>
-                </div>
-                <!-- Best Sharpe -->
-                <div class="etf-card glassmorphism rounded-lg p-4">
-                    <h3 class="text-sm font-semibold mb-3 opacity-70">Meilleur Sharpe</h3>
-                    <div id="best-sharpe" class="space-y-2"></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Multi-Criteria Composer -->
-        <section class="mb-8">
-            <h2 class="text-xl font-bold mb-4 text-cyan-400">Composeur Multi-Critères ETF</h2>
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Filters -->
-                <div class="etf-card glassmorphism rounded-lg p-4">
-                    <h3 class="text-sm font-semibold mb-4">Critères</h3>
-                    <div class="space-y-2">
-                        <label class="flex items-center gap-2">
-                            <input type="checkbox" id="crit-ter" checked class="accent-cyan-400">
-                            <span>TER < 0.5%</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input type="checkbox" id="crit-aum" checked class="accent-cyan-400">
-                            <span>AUM > 100M€</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input type="checkbox" id="crit-sharpe" class="accent-cyan-400">
-                            <span>Sharpe > 1</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input type="checkbox" id="crit-volatility" class="accent-cyan-400">
-                            <span>Volatilité < 15%</span>
-                        </label>
+        <div class="p-6">
+            <div class="max-w-7xl mx-auto">
+                <!-- Header avec titre et dernière mise à jour -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+                    <div>
+                        <h1 class="text-3xl font-bold mb-2" id="market-title">TOP 50 ETF</h1>
+                        <p class="text-gray-400">
+                           <span id="etfs-count" class="font-semibold">0</span> ETF listés | 
+                           Dernière mise à jour: <span id="last-update-time" class="font-medium">Chargement...</span>
+                        </p>
                     </div>
-                    <button id="apply-filters" class="mt-4 w-full py-2 bg-cyan-500/20 border border-cyan-500/50 rounded-lg hover:bg-cyan-500/30 transition">
-                        Appliquer Filtres
-                    </button>
                 </div>
                 
-                <!-- Results -->
-                <div class="lg:col-span-2">
-                    <div class="etf-card glassmorphism rounded-lg p-4">
-                        <h3 class="text-sm font-semibold mb-4">Résultats Filtrés</h3>
-                        <div id="filtered-results" class="space-y-2"></div>
+                <!-- Barre de recherche principale améliorée -->
+                <div class="search-container mb-8">
+                    <h2 class="section-title mb-4">Rechercher un ETF</h2>
+                    <div class="search-wrapper relative">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="main-search-input" class="main-search-input" placeholder="Saisissez le nom d'un ETF (ex: 'MSCI World', 'S&P 500', 'Gold')..." autocomplete="off">
+                        <button id="clear-search" class="clear-btn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <!-- Container pour les suggestions -->
+                        <div id="search-suggestions" class="search-suggestions">
+                            <!-- Les suggestions seront ajoutées dynamiquement ici -->
+                        </div>
+                    </div>
+                    <div id="search-count" class="search-count">
+                        <span id="results-count">0</span> résultats trouvés
                     </div>
                 </div>
-            </div>
-        </section>
-
-        <!-- ETF Comparison Table -->
-        <section class="mb-8">
-            <h2 class="text-xl font-bold mb-4 text-cyan-400">Comparateur d'ETFs</h2>
-            <div class="etf-card glassmorphism rounded-lg p-4">
-                <div class="mb-4">
-                    <input type="text" id="etf-search" placeholder="Rechercher un ETF..." 
-                           class="w-full p-3 bg-black/30 border border-cyan-500/30 rounded-lg text-white">
+                
+                <!-- Résultats de recherche -->
+                <div id="search-results" class="results-container hidden mb-10">
+                    <h2 class="section-title mb-6">Résultats de recherche</h2>
+                    <div class="glassmorphism rounded-lg overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>LIBELLÉ</th>
+                                        <th>CATÉGORIE</th>
+                                        <th>1 MOIS</th>
+                                        <th>6 MOIS</th>
+                                        <th>YTD</th>
+                                        <th>1 AN</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="search-results-body">
+                                    <!-- Les résultats de recherche seront injectés ici -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-                <div id="comparison-table" class="overflow-x-auto"></div>
-            </div>
-        </section>
-
-        <!-- Holdings Analysis -->
-        <section class="mb-8">
-            <h2 class="text-xl font-bold mb-4 text-cyan-400">Analyse des Holdings</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="etf-card glassmorphism rounded-lg p-4">
-                    <h3 class="text-sm font-semibold mb-4">Top 10 Holdings</h3>
-                    <div id="top-holdings"></div>
+                
+                <!-- Sélecteur de catégorie ETF -->
+                <div class="market-selector mb-8">
+                    <h2 class="section-title mb-4">Sélectionner une catégorie</h2>
+                    <div class="market-selector-buttons">
+                        <button id="category-top50" class="market-btn active" data-category="top50">
+                            <i class="fas fa-trophy mr-2"></i> TOP 50 ETF
+                        </button>
+                        <button id="category-bonds" class="market-btn" data-category="bonds">
+                            <i class="fas fa-file-invoice-dollar mr-2"></i> TOP ETF Obligations
+                        </button>
+                        <button id="category-shortterm" class="market-btn" data-category="shortterm">
+                            <i class="fas fa-bolt mr-2"></i> TOP ETF Court Terme
+                        </button>
+                    </div>
                 </div>
-                <div class="etf-card glassmorphism rounded-lg p-4">
-                    <h3 class="text-sm font-semibold mb-4">Répartition Sectorielle</h3>
-                    <canvas id="sector-chart"></canvas>
+                
+                <!-- TOP ETF COURT TERME Section -->
+                <div class="top-short-term-section mb-10">
+                    <h2 class="section-title mb-6">TOP ETF COURT TERME</h2>
+                    <div class="glassmorphism rounded-lg overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>LIBELLÉ</th>
+                                        <th>1 MOIS</th>
+                                        <th>6 MOIS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="top-short-term-body">
+                                    <!-- Les données seront injectées ici -->
+                                    <tr>
+                                        <td colspan="3" class="text-center py-4 text-gray-400">
+                                            <i class="fas fa-spinner fa-spin mr-2"></i>
+                                            Chargement des données...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Pagination pour ETF Court Terme -->
+                        <div id="pagination-shortterm" class="pagination-container py-3 px-4" style="display: none;">
+                            <button id="shortterm-prev-page" class="pagination-button mr-2">
+                                <i class="fas fa-chevron-left mr-2"></i> Précédent
+                            </button>
+                            <div class="pagination-info">
+                                Page <span id="shortterm-current-page">1</span> / <span id="shortterm-total-pages">1</span>
+                            </div>
+                            <button id="shortterm-next-page" class="pagination-button ml-2">
+                                Suivant <i class="fas fa-chevron-right ml-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- TOP ETF 2025 Section -->
+                <div class="top-etf-section mb-10">
+                    <h2 class="section-title mb-6">TOP ETF 2025</h2>
+                    <div class="glassmorphism rounded-lg overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>INDICE</th>
+                                        <th>YTD 2025</th>
+                                        <th>1 MOIS</th>
+                                        <th>1 AN</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="top-etf-body">
+                                    <!-- Les données seront injectées ici -->
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4 text-gray-400">
+                                            <i class="fas fa-spinner fa-spin mr-2"></i>
+                                            Chargement des données...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Pagination pour TOP 50 ETF -->
+                        <div id="pagination-top50" class="pagination-container py-3 px-4" style="display: none;">
+                            <button id="top50-prev-page" class="pagination-button mr-2">
+                                <i class="fas fa-chevron-left mr-2"></i> Précédent
+                            </button>
+                            <div class="pagination-info">
+                                Page <span id="top50-current-page">1</span> / <span id="top50-total-pages">1</span>
+                            </div>
+                            <button id="top50-next-page" class="pagination-button ml-2">
+                                Suivant <i class="fas fa-chevron-right ml-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TOP ETF BOND 2025 Section -->
+                <div class="top-bond-section mb-10">
+                    <h2 class="section-title mb-6">TOP ETF OBLIGATIONS 2025</h2>
+                    <div class="glassmorphism rounded-lg overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>INDICE</th>
+                                        <th>YTD 2025</th>
+                                        <th>1 MOIS</th>
+                                        <th>1 AN</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="top-bond-body">
+                                    <!-- Les données seront injectées ici -->
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4 text-gray-400">
+                                            <i class="fas fa-spinner fa-spin mr-2"></i>
+                                            Chargement des données...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Pagination pour TOP ETF Obligations -->
+                        <div id="pagination-bonds" class="pagination-container py-3 px-4" style="display: none;">
+                            <button id="bonds-prev-page" class="pagination-button mr-2">
+                                <i class="fas fa-chevron-left mr-2"></i> Précédent
+                            </button>
+                            <div class="pagination-info">
+                                Page <span id="bonds-current-page">1</span> / <span id="bonds-total-pages">1</span>
+                            </div>
+                            <button id="bonds-next-page" class="pagination-button ml-2">
+                                Suivant <i class="fas fa-chevron-right ml-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Top Performers -->
+                <div class="top-performers-section mb-10">
+                    <h2 class="top-performers-title mb-6">Top Performers</h2>
+                    
+                    <div class="top-performers-grid">
+                        <!-- Top 10 Hausse Quotidienne -->
+                        <div class="performer-card">
+                            <div class="performer-header">
+                                <span>Top 10 Hausse (1 MOIS)</span>
+                                <span class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                            </div>
+                            <div id="daily-top">
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">Chargement...</div>
+                                        <div class="performer-country"></div>
+                                    </div>
+                                    <div class="performer-value positive">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Top 10 Baisse Quotidienne -->
+                        <div class="performer-card">
+                            <div class="performer-header">
+                                <span>Top 10 Baisse (1 MOIS)</span>
+                                <span class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
+                            </div>
+                            <div id="daily-bottom">
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">Chargement...</div>
+                                        <div class="performer-country"></div>
+                                    </div>
+                                    <div class="performer-value negative">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Top 10 Hausse YTD -->
+                        <div class="performer-card">
+                            <div class="performer-header">
+                                <span>Top 10 Hausse (YTD)</span>
+                                <span class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                            </div>
+                            <div id="ytd-top">
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">Chargement...</div>
+                                        <div class="performer-country"></div>
+                                    </div>
+                                    <div class="performer-value positive">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Top 10 Baisse YTD -->
+                        <div class="performer-card">
+                            <div class="performer-header">
+                                <span>Top 10 Baisse (YTD)</span>
+                                <span class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
+                            </div>
+                            <div id="ytd-bottom">
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">Chargement...</div>
+                                        <div class="performer-country"></div>
+                                    </div>
+                                    <div class="performer-value negative">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Source et avertissement -->
+                <div class="text-center text-sm text-gray-400 mb-6 p-4 glassmorphism rounded-lg bg-opacity-50">
+                    <p id="source-link">Sources: <a href="https://www.boursorama.com/bourse/trackers/" target="_blank" class="text-green-400 hover:underline">Boursorama</a>, <a href="https://www.justetf.com/" target="_blank" class="text-green-400 hover:underline">JustETF</a></p>
+                    <p class="mt-2">Les données sont actualisées régulièrement mais peuvent accuser un retard par rapport aux marchés en temps réel.</p>
                 </div>
             </div>
-        </section>
-
-        <!-- ETF List Table -->
-        <section>
-            <h2 class="text-xl font-bold mb-4 text-cyan-400">Liste des ETFs</h2>
-            <div class="etf-card glassmorphism rounded-lg overflow-hidden">
-                <table class="w-full data-table">
-                    <thead>
-                        <tr>
-                            <th>Ticker</th>
-                            <th>Nom</th>
-                            <th>TER</th>
-                            <th>AUM</th>
-                            <th>Perf 1Y</th>
-                            <th>Sharpe</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="etf-list"></tbody>
-                </table>
-            </div>
-        </section>
+        </div>
     </main>
 
-    <script src="etf-enhanced-script.js"></script>
-    <script src="etf-mc-module.js"></script>
+    <script src="etf-script.js"></script>
+    
+    <!-- Script de recherche amélioré -->
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Référence aux éléments de recherche
+    const searchInput = document.getElementById('main-search-input');
+    const clearButton = document.getElementById('clear-search');
+    const searchCount = document.getElementById('search-count');
+    const resultsCount = document.getElementById('results-count');
+    const searchResults = document.getElementById('search-results');
+    const searchResultsBody = document.getElementById('search-results-body');
+    const searchSuggestions = document.getElementById('search-suggestions');
+    
+    // Variables pour les suggestions
+    let suggestionTimeout;
+    let currentSuggestions = [];
+    let selectedSuggestionIndex = -1;
+    
+    // Vérifier si les éléments existent
+    if (searchInput && clearButton) {
+        console.log('🔍 Initialisation du système de recherche ETF');
+        
+        // Recherche en temps réel
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.trim().toLowerCase();
+            
+            // Afficher/masquer le bouton d'effacement
+            clearButton.style.opacity = searchTerm ? '1' : '0';
+            
+            // Annuler le timeout précédent pour les suggestions
+            clearTimeout(suggestionTimeout);
+            
+            // Effectuer la recherche et afficher des suggestions après un court délai
+            if (searchTerm && searchTerm.length >= 2) {
+                // Définir un délai avant de montrer les suggestions (pour éviter trop de requêtes)
+                suggestionTimeout = setTimeout(() => {
+                    // Vérifier si les données sont disponibles
+                    if (!window.etfsData) {
+                        console.warn("Attente du chargement des données ETF...");
+                        checkDataAndRetry(searchTerm, 5);
+                        return;
+                    }
+                    
+                    performSearch(searchTerm);
+                    updateSuggestions(searchTerm);
+                }, 300);
+            } else {
+                clearSearch();
+                hideSuggestions();
+            }
+        });
+        
+        // Fonction pour vérifier si les données sont disponibles et réessayer
+        function checkDataAndRetry(searchTerm, attempts) {
+            if (attempts <= 0) {
+                console.error("Impossible de charger les données ETF pour la recherche");
+                showDataLoadingError();
+                return;
+            }
+            
+            setTimeout(() => {
+                if (window.etfsData) {
+                    performSearch(searchTerm);
+                    updateSuggestions(searchTerm);
+                } else {
+                    checkDataAndRetry(searchTerm, attempts - 1);
+                }
+            }, 1000); // Attendre 1 seconde avant de réessayer
+        }
+        
+        // Afficher un message d'erreur si les données ne se chargent pas
+        function showDataLoadingError() {
+            if (searchResultsBody) {
+                searchResultsBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-red-400">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            Impossible de charger les données ETF. Veuillez recharger la page.
+                        </td>
+                    </tr>
+                `;
+                
+                // Afficher la section de résultats
+                if (searchResults) {
+                    searchResults.classList.remove('hidden');
+                    setTimeout(() => {
+                        searchResults.classList.add('visible');
+                    }, 50);
+                }
+            }
+        }
+        
+        // Effacer la recherche
+        clearButton.addEventListener('click', function() {
+            searchInput.value = '';
+            searchInput.focus();
+            clearSearch();
+            hideSuggestions();
+            this.style.opacity = '0';
+        });
+        
+        // Navigation au clavier dans les suggestions
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (currentSuggestions.length > 0) {
+                    selectedSuggestionIndex = (selectedSuggestionIndex + 1) % currentSuggestions.length;
+                    highlightSuggestion(selectedSuggestionIndex);
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (currentSuggestions.length > 0) {
+                    if (selectedSuggestionIndex <= 0) {
+                        selectedSuggestionIndex = currentSuggestions.length - 1;
+                    } else {
+                        selectedSuggestionIndex--;
+                    }
+                    highlightSuggestion(selectedSuggestionIndex);
+                }
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                
+                // Si une suggestion est sélectionnée, l'utiliser
+                if (selectedSuggestionIndex >= 0 && currentSuggestions.length > 0) {
+                    const selectedSuggestion = currentSuggestions[selectedSuggestionIndex];
+                    searchInput.value = selectedSuggestion.name;
+                    performSearch(selectedSuggestion.name.toLowerCase());
+                    hideSuggestions();
+                } else {
+                    // Sinon, effectuer une recherche normale
+                    const searchTerm = this.value.trim().toLowerCase();
+                    if (searchTerm && searchTerm.length >= 2) {
+                        performSearch(searchTerm);
+                        hideSuggestions();
+                    }
+                }
+            } else if (e.key === 'Escape') {
+                hideSuggestions();
+            }
+        });
+        
+        // Masquer les suggestions lors du clic en dehors
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !searchSuggestions.contains(e.target)) {
+                hideSuggestions();
+            }
+        });
+        
+        // Focus sur l'input au chargement de la page
+        setTimeout(() => {
+            searchInput.focus();
+        }, 500);
+    } else {
+        console.error("❌ Éléments de recherche non trouvés dans le DOM");
+    }
+    
+    // Fonction pour mettre en évidence une suggestion
+    function highlightSuggestion(index) {
+        const suggestionItems = searchSuggestions.querySelectorAll('.suggestion-item');
+        
+        suggestionItems.forEach((item, i) => {
+            if (i === index) {
+                item.classList.add('bg-accent-subtle');
+            } else {
+                item.classList.remove('bg-accent-subtle');
+            }
+        });
+    }
+    
+    // Fonction pour masquer les suggestions
+    function hideSuggestions() {
+        if (searchSuggestions) {
+            searchSuggestions.classList.remove('active');
+            searchSuggestions.innerHTML = '';
+            currentSuggestions = [];
+            selectedSuggestionIndex = -1;
+        }
+    }
+    
+    // Fonction pour mettre à jour les suggestions
+    function updateSuggestions(searchTerm) {
+        if (!window.etfsData || !window.etfsData.indices) {
+            console.warn("Les données ETF ne sont pas encore disponibles pour les suggestions");
+            return;
+        }
+        
+        currentSuggestions = [];
+        const alphabet = "abcdefghijklmnopqrstuvwxyz".split('');
+        
+        // Collecter les ETF correspondants
+        alphabet.forEach(letter => {
+            const etfs = window.etfsData.indices[letter] || [];
+            
+            etfs.forEach(etf => {
+                if (etf.name && etf.name.toLowerCase().includes(searchTerm) && currentSuggestions.length < 5) {
+                    currentSuggestions.push({...etf, etfType: 'standard'});
+                }
+            });
+        });
+        
+        // Chercher aussi dans les ETF TOP 50, Obligations et Court Terme
+        ['top50_etfs', 'top_bond_etfs', 'top_short_term_etfs'].forEach(category => {
+            if (window.etfsData[category]) {
+                window.etfsData[category].forEach(etf => {
+                    if (etf.name && etf.name.toLowerCase().includes(searchTerm) && 
+                        !currentSuggestions.some(s => s.name === etf.name) && 
+                        currentSuggestions.length < 5) {
+                        
+                        // Ajouter une propriété pour identifier le type d'ETF
+                        const etfWithCategory = { ...etf };
+                        if (category === 'top50_etfs') etfWithCategory.etfType = 'top50';
+                        else if (category === 'top_bond_etfs') etfWithCategory.etfType = 'bonds';
+                        else etfWithCategory.etfType = 'shortterm';
+                        
+                        currentSuggestions.push(etfWithCategory);
+                    }
+                });
+            }
+        });
+        
+        // Afficher les suggestions
+        if (currentSuggestions.length > 0) {
+            searchSuggestions.innerHTML = '';
+            
+            currentSuggestions.forEach((etf, index) => {
+                const suggestionItem = document.createElement('div');
+                suggestionItem.className = 'suggestion-item';
+                
+                // Définir la classe d'indicateur visuel en fonction du type d'ETF
+                let typeIndicator = '';
+                if (etf.etfType === 'top50') {
+                    typeIndicator = '<span class="etf-type-indicator etf-type-top50"></span>';
+                } else if (etf.etfType === 'bonds') {
+                    typeIndicator = '<span class="etf-type-indicator etf-type-bond"></span>';
+                } else if (etf.etfType === 'shortterm') {
+                    typeIndicator = '<span class="etf-type-indicator etf-type-shortterm"></span>';
+                } else {
+                    typeIndicator = '<span class="etf-type-indicator etf-type-standard"></span>';
+                }
+                
+                // Mettre en évidence la partie correspondante
+                const regex = new RegExp(`(${searchTerm})`, 'gi');
+                const highlightedName = etf.name.replace(regex, '<span class="text-green-400 font-medium">$1</span>');
+                
+                suggestionItem.innerHTML = `${typeIndicator}${highlightedName}`;
+                
+                // Ajouter un event listener pour le clic
+                suggestionItem.addEventListener('click', () => {
+                    searchInput.value = etf.name;
+                    performSearch(etf.name.toLowerCase());
+                    hideSuggestions();
+                });
+                
+                // Ajouter un event listener pour le survol
+                suggestionItem.addEventListener('mouseover', () => {
+                    selectedSuggestionIndex = index;
+                    highlightSuggestion(index);
+                });
+                
+                searchSuggestions.appendChild(suggestionItem);
+            });
+            
+            searchSuggestions.classList.add('active');
+        } else {
+            hideSuggestions();
+        }
+    }
+    
+    // Fonction pour effectuer la recherche - adaptée pour gérer différentes structures
+    function performSearch(searchTerm) {
+        if (!window.etfsData || !window.etfsData.indices) {
+            console.warn("Les données ETF ne sont pas encore chargées pour la recherche");
+            return;
+        }
+        
+        console.log(`🔍 Recherche d'ETF pour: "${searchTerm}"`);
+        
+        // Vider le tableau de résultats
+        if (searchResultsBody) {
+            searchResultsBody.innerHTML = '';
+        } else {
+            console.warn("Élément searchResultsBody non trouvé");
+            return;
+        }
+        
+        // Afficher la section de résultats avec animation
+        if (searchResults) {
+            searchResults.classList.remove('hidden');
+            
+            // Ajouter la classe visible après un court délai pour l'animation
+            setTimeout(() => {
+                searchResults.classList.add('visible');
+            }, 50);
+        }
+        
+        // Trouver tous les ETF correspondants à la recherche
+        let matchingETFs = findMatchingETFs(searchTerm);
+        let totalResults = matchingETFs.length;
+        
+        // Vérifier si nous avons des ETF Court Terme ou des ETF standard/Top50/Bonds
+        let hasShortTerm = matchingETFs.some(etf => 
+            etf.etfType === 'shortterm' || 
+            etf.category === "Court Terme");
+        
+        // Mise à jour du compteur de résultats avec animation
+        if (searchCount && resultsCount) {
+            resultsCount.textContent = totalResults;
+            searchCount.classList.remove('hidden');
+            
+            // Ajouter la classe visible après un court délai pour l'animation
+            setTimeout(() => {
+                searchCount.classList.add('visible');
+            }, 100);
+        }
+        
+        // Afficher les résultats
+        if (searchResultsBody) {
+            if (totalResults === 0) {
+                searchResultsBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-gray-400">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Aucun ETF ne correspond à votre recherche
+                        </td>
+                    </tr>
+                `;
+            } else {
+                // Trier les résultats par nom
+                matchingETFs.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+                
+                // Limiter à 20 résultats pour la performance
+                const displayETFs = matchingETFs.slice(0, 20);
+                
+                // Ajouter chaque ETF au tableau
+                displayETFs.forEach((etf, index) => {
+                    displayETFResult(etf, hasShortTerm, index);
+                });
+                
+                // Afficher un message si les résultats sont limités
+                if (totalResults > 20) {
+                    const moreRow = document.createElement('tr');
+                    moreRow.innerHTML = `
+                        <td colspan="6" class="text-center py-2 text-gray-400">
+                            <i class="fas fa-ellipsis-h mr-2"></i>
+                            ${totalResults - 20} résultats supplémentaires trouvés. Affinez votre recherche pour des résultats plus précis.
+                        </td>
+                    `;
+                    
+                    // Ajouter l'effet d'apparition progressive
+                    moreRow.style.opacity = '0';
+                    moreRow.style.transform = 'translateY(10px)';
+                    moreRow.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                    
+                    searchResultsBody.appendChild(moreRow);
+                    
+                    // Déclencher l'animation après toutes les autres lignes
+                    setTimeout(() => {
+                        moreRow.style.opacity = '1';
+                        moreRow.style.transform = 'translateY(0)';
+                    }, 50 + displayETFs.length * 30 + 100);
+                }
+            }
+        }
+    }
+    
+    // Fonction pour rechercher les ETF correspondants au terme de recherche
+    function findMatchingETFs(searchTerm) {
+        let matches = [];
+        
+        // Chercher dans toutes les catégories alphabétiques (ETF standard)
+        const alphabet = "abcdefghijklmnopqrstuvwxyz".split('');
+        alphabet.forEach(letter => {
+            const etfs = window.etfsData.indices[letter] || [];
+            etfs.forEach(etf => {
+                if (etf.name && etf.name.toLowerCase().includes(searchTerm)) {
+                    matches.push({...etf, etfType: 'standard'});
+                }
+            });
+        });
+        
+        // Chercher dans les ETF TOP 50
+        if (window.etfsData.top50_etfs) {
+            window.etfsData.top50_etfs.forEach(etf => {
+                if (etf.name && etf.name.toLowerCase().includes(searchTerm)) {
+                    matches.push({
+                        name: etf.name,
+                        category: "TOP 50",
+                        change: etf.one_month || "-",
+                        ytd: etf.ytd || "-",
+                        one_year: etf.one_year || "-",
+                        etfType: 'top50'
+                    });
+                }
+            });
+        }
+        
+        // Chercher dans les ETF Obligations
+        if (window.etfsData.top_bond_etfs) {
+            window.etfsData.top_bond_etfs.forEach(etf => {
+                if (etf.name && etf.name.toLowerCase().includes(searchTerm)) {
+                    matches.push({
+                        name: etf.name,
+                        category: "Obligations",
+                        change: etf.one_month || "-",
+                        ytd: etf.ytd || "-",
+                        one_year: etf.one_year || "-",
+                        etfType: 'bonds'
+                    });
+                }
+            });
+        }
+        
+        // Chercher dans les ETF Court Terme
+        if (window.etfsData.top_short_term_etfs) {
+            window.etfsData.top_short_term_etfs.forEach(etf => {
+                if (etf.name && etf.name.toLowerCase().includes(searchTerm)) {
+                    matches.push({
+                        name: etf.name,
+                        category: "Court Terme",
+                        oneMonth: etf.oneMonth || "-",
+                        sixMonth: etf.sixMonth || "-",
+                        etfType: 'shortterm'
+                    });
+                }
+            });
+        }
+        
+        return matches;
+    }
+    
+    // Fonction pour afficher un ETF dans le tableau de résultats
+    function displayETFResult(etf, hasShortTerm, index) {
+        const row = document.createElement('tr');
+        
+        // Ajouter un gestionnaire d'événements pour le clic sur la ligne
+        row.addEventListener('click', () => {
+            navigateToETFDetail(etf);
+        });
+        
+        // Déterminer le type d'ETF et ajouter l'indicateur visuel
+        let typeClass = '';
+        if (etf.etfType === 'top50') typeClass = 'etf-type-top50';
+        else if (etf.etfType === 'bonds') typeClass = 'etf-type-bond';
+        else if (etf.etfType === 'shortterm') typeClass = 'etf-type-shortterm';
+        else typeClass = 'etf-type-standard';
+        
+        // Créer l'indicateur visuel
+        const typeIndicator = `<span class="etf-type-indicator ${typeClass}"></span>`;
+        
+        // Cellules de base
+        row.innerHTML = `
+            <td class="font-medium">${typeIndicator}${etf.name || '-'}</td>
+            <td>${etf.category || '-'}</td>
+        `;
+        
+        // Cellules spécifiques au type d'ETF
+        if (etf.etfType === 'shortterm') {
+            // Format pour ETF Court Terme
+            const oneMonthClass = etf.oneMonth && etf.oneMonth.includes('-') ? 'negative' : 'positive';
+            const sixMonthClass = etf.sixMonth && etf.sixMonth.includes('-') ? 'negative' : 'positive';
+            
+            row.innerHTML += `
+                <td class="${oneMonthClass}">${etf.oneMonth || '-'}</td>
+                <td class="${sixMonthClass}">${etf.sixMonth || '-'}</td>
+                <td>-</td>
+                <td>-</td>
+            `;
+        } else {
+            // Format pour ETF standard, TOP 50 ou Obligations
+            const changeClass = etf.change && etf.change.includes('-') ? 'negative' : 'positive';
+            const ytdClass = etf.ytd && etf.ytd.includes('-') ? 'negative' : 'positive';
+            const yearClass = etf.one_year && etf.one_year.includes('-') ? 'negative' : 'positive';
+            
+            if (hasShortTerm) {
+                // Si on a aussi des ETF court terme, adapter le format
+                row.innerHTML += `
+                    <td class="${changeClass}">${etf.change || '-'}</td>
+                    <td>-</td>
+                    <td class="${ytdClass}">${etf.ytd || '-'}</td>
+                    <td class="${yearClass}">${etf.one_year || '-'}</td>
+                `;
+            } else {
+                // Format standard
+                row.innerHTML += `
+                    <td class="${changeClass}">${etf.change || '-'}</td>
+                    <td>-</td>
+                    <td class="${ytdClass}">${etf.ytd || '-'}</td>
+                    <td class="${yearClass}">${etf.one_year || '-'}</td>
+                `;
+            }
+        }
+        
+        // Ajouter l'effet d'apparition progressive
+        row.style.opacity = '0';
+        row.style.transform = 'translateY(10px)';
+        row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        
+        searchResultsBody.appendChild(row);
+        
+        // Déclencher l'animation avec un délai croissant pour chaque ligne
+        setTimeout(() => {
+            row.style.opacity = '1';
+            row.style.transform = 'translateY(0)';
+        }, 50 + index * 30);
+    }
+    
+    // Fonction pour naviguer vers la page de détail d'un ETF
+    function navigateToETFDetail(etf) {
+        // Encodage du nom de l'ETF pour l'URL
+        const encodedName = encodeURIComponent(etf.name);
+        
+        // Navigation vers la page détaillée avec les paramètres
+        window.location.href = `etf-detail.html?name=${encodedName}&type=${etf.etfType || 'standard'}`;
+    }
+    
+    // Fonction pour effacer la recherche
+    function clearSearch() {
+        // Masquer le compteur de résultats
+        if (searchCount) {
+            searchCount.classList.remove('visible');
+            setTimeout(() => {
+                searchCount.classList.add('hidden');
+            }, 300);
+        }
+        
+        // Masquer la section de résultats
+        if (searchResults) {
+            searchResults.classList.remove('visible');
+            setTimeout(() => {
+                searchResults.classList.add('hidden');
+            }, 300);
+        }
+        
+        // Vider le tableau de résultats
+        if (searchResultsBody) {
+            searchResultsBody.innerHTML = '';
+        }
+    }
+    
+    // Exposer window.performSearch pour pouvoir être appelé depuis etf-script.js
+    window.performGlobalSearch = performSearch;
+    window.clearGlobalSearch = clearSearch;
+});
+    </script>
 </body>
 </html>
