@@ -1,5 +1,10 @@
 // stock-advanced-filter.js
-// Version 3.9 - Désambiguïsation Twelve Data améliorée avec détection ADR et codes LSE IOB
+// Version 3.10 - Stratégie d'essais robuste pour US/Europe/Asie
+// Améliorations v3.10:
+// - Helper fetchTD générique avec séquence d'essais
+// - tdParamTrials adapté par région (US: exchange=, autres: mic_code=)
+// - Cache des succès pour optimiser les appels
+// - Réutilisation dans quote, statistics, time_series, dividends
 // Corrections appliquées : 
 // - YTD sans toISOString() pour éviter bug UTC
 // - Fallback dividende TTM/price si meta absente
@@ -7,11 +12,10 @@
 // - Formules 52w conventionnelles
 // - Métadonnées marché pour tracer source exacte (exchange, devise, MIC)
 // - Payout ratio TTM calculé depuis P/E et DPS
-// - NOUVEAU v3.8: Helper pickNumDeep pour lecture robuste des champs profonds
-// - NOUVEAU v3.8: Lecture améliorée des champs statistics (trailing_pe, eps_ttm, etc.)
-// - NOUVEAU v3.8: Normalisation GBX → GBP pour London Stock Exchange
-// - NOUVEAU v3.8: Multi-source pour EPS et payout (API direct, DPS/EPS, yield×P/E)
-// - NOUVEAU v3.9: Désambiguïsation TD avec détection ADR, codes LSE IOB et validation nom/marché
+// - Helper pickNumDeep pour lecture robuste des champs profonds
+// - Normalisation GBX → GBP pour London Stock Exchange
+// - Multi-source pour EPS et payout (API direct, DPS/EPS, yield×P/E)
+// - Désambiguïsation TD avec détection ADR, codes LSE IOB et validation nom/marché
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -35,6 +39,9 @@ const CONFIG = {
 
 let creditsUsed = 0;
 let windowStart = Date.now();
+
+// Cache des succès pour optimiser les appels
+const successCache = new Map(); // "AAPL_quote" → { symbol: "AAPL", exchange: "NASDAQ" }
 
 async function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -88,12 +95,83 @@ function parseNumberLoose(val) {
     return Number.isFinite(n) ? n * mult : null;
 }
 
-// NOUVEAU v3.8: Lecture robuste de nombres dans des chemins profonds
+// Helper: Lecture robuste de nombres dans des chemins profonds
 function pickNumDeep(obj, paths) {
     for (const p of paths) {
         const v = p.split('.').reduce((o,k)=>o?.[k], obj);
         const n = parseNumberLoose(v);
         if (Number.isFinite(n)) return n;
+    }
+    return null;
+}
+
+// ───────── v3.10: Helpers centralisés pour stratégie d'essais ─────────
+
+// Détecte si US
+const isUS = (ex='') => /nasdaq|new york stock exchange|nyse|bats|cboe/i.test(ex);
+
+// Mappe échange → nom attendu TD pour US
+function usExchangeName(ex='') {
+    if (/nasdaq/i.test(ex)) return 'NASDAQ';
+    if (/new york stock exchange|nyse/i.test(ex)) return 'NYSE';
+    if (/bats|cboe/i.test(ex)) return 'BATS';
+    return null;
+}
+
+// Construit la liste d'essais de paramètres selon la région
+function tdParamTrials(symbol, stock, resolvedSym=null) {
+    // si resolvedSym = "SYM:MIC", on récupère aussi le MIC
+    let base = symbol, micFromResolved = null;
+    if (resolvedSym && resolvedSym.includes(':')) {
+        const [b, m] = resolvedSym.split(':');
+        base = b; 
+        micFromResolved = m;
+    }
+    const mic = micFromResolved || toMIC(stock.exchange, stock.country);
+    const trials = [];
+
+    if (isUS(stock.exchange)) {
+        const ex = usExchangeName(stock.exchange);
+        if (ex) trials.push({ symbol: base, exchange: ex }); // US: utiliser exchange=
+        trials.push({ symbol: base });                        // ticker pur
+        if (mic) trials.push({ symbol: `${base}:${mic}` });  // dernier recours
+    } else {
+        if (mic) {
+            trials.push({ symbol: base, mic_code: mic });      // non-US: mic_code=
+            trials.push({ symbol: `${base}:${mic}` });         // ou suffixe
+        }
+        trials.push({ symbol: base });                        // fallback final
+    }
+    return trials;
+}
+
+// Appel générique avec séquence d'essais (et logs DEBUG)
+async function fetchTD(endpoint, trials, extraParams={}) {
+    const cacheKey = `${trials[0].symbol}_${endpoint}`;
+    const cached = successCache.get(cacheKey);
+    
+    // Si on a déjà un format qui marche, l'essayer en premier
+    if (cached) {
+        trials = [cached, ...trials.filter(t => JSON.stringify(t) !== JSON.stringify(cached))];
+    }
+    
+    for (const p of trials) {
+        try {
+            const { data } = await axios.get(`https://api.twelvedata.com/${endpoint}`, {
+                params: { ...p, ...extraParams, apikey: CONFIG.API_KEY },
+                timeout: 15000
+            });
+            if (data && data.status !== 'error') {
+                successCache.set(cacheKey, p); // Mémoriser le succès
+                if (CONFIG.DEBUG) console.log(`[TD OK ${endpoint}]`, p);
+                return data;
+            }
+            if (CONFIG.DEBUG) console.warn(`[TD FAIL ${endpoint}]`, p, data?.message || data?.status);
+        } catch (e) {
+            if (CONFIG.DEBUG && e.response?.status !== 404) {
+                console.warn(`[TD EXC ${endpoint}]`, p, e.message);
+            }
+        }
     }
     return null;
 }
@@ -233,7 +311,7 @@ async function tryQuote(sym, mic){
 
 // Résolution locale "simple" → renvoie SYM:MIC si on connaît le MIC
 function resolveSymbol(symbol, stock) {
-    if (/:/.test(symbol)) return symbol; // déjà suffixé
+    if (/:/. test(symbol)) return symbol; // déjà suffixé
     const mic = toMIC(stock.exchange, stock.country);
     return mic ? `${symbol}:${mic}` : symbol;
 }
@@ -303,24 +381,17 @@ async function loadStockCSV(filepath) {
     }
 }
 
+// ───────── v3.10: Fonctions refactorisées avec fetchTD ─────────
+
 async function getQuoteData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.QUOTE);
         const resolved = typeof stock === 'string' ? symbol : resolveSymbol(symbol, stock);
-        
-        const { data } = await axios.get('https://api.twelvedata.com/quote', {
-            params: { 
-                symbol: resolved, 
-                apikey: CONFIG.API_KEY 
-            }
-        });
-        
-        if (CONFIG.DEBUG) console.log('[QUOTE]', resolved, data?.status || 'ok');
-        if (data.status === 'error') {
-            if (CONFIG.DEBUG) console.error('[QUOTE ERR]', resolved, data?.message);
-            return null;
-        }
-        
+        const trials = tdParamTrials(symbol, typeof stock === 'string' ? {exchange:'',country:''} : stock, resolved);
+
+        const data = await fetchTD('quote', trials);
+        if (!data) return null;
+
         const out = {
             price: parseNumberLoose(data.close) || 0,
             change: parseNumberLoose(data.change) || 0,
@@ -332,10 +403,10 @@ async function getQuoteData(symbol, stock) {
                 range: data.fifty_two_week?.range || null
             },
             _meta: {
-                symbol_used: resolved,                 // ex: "ASML:XAMS"
-                exchange: data.exchange ?? null,       // ex: "London Stock Exchange"
-                mic_code: data.mic_code ?? null,       // ex: "XLON"
-                currency: data.currency ?? null        // ex: "USD", "EUR", "GBX"...
+                symbol_used: data.symbol || trials[0]?.symbol || resolved,
+                exchange: data.exchange ?? null,
+                mic_code: data.mic_code ?? null,
+                currency: data.currency ?? null
             }
         };
         
@@ -354,122 +425,87 @@ async function getPerformanceData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.TIME_SERIES);
         const resolved = typeof stock === 'string' ? symbol : resolveSymbol(symbol, stock);
-        
-        const { data } = await axios.get('https://api.twelvedata.com/time_series', {
-            params: {
-                symbol: resolved,
-                interval: '1day',
-                outputsize: 900,
-                order: 'ASC',
-                adjusted: true,  // Ajout pour éviter les problèmes de split
-                apikey: CONFIG.API_KEY
-            }
+        const trials = tdParamTrials(symbol, typeof stock === 'string' ? {exchange:'',country:''} : stock, resolved);
+
+        const data = await fetchTD('time_series', trials, {
+            interval: '1day', outputsize: 900, order: 'ASC', adjusted: true
         });
         
-        if (CONFIG.DEBUG) console.log('[TIME_SERIES]', resolved, data?.status || 'ok');
-        if (!data.values || data.status === 'error') {
-            if (CONFIG.DEBUG) console.error('[TIME_SERIES ERR]', resolved, data?.message);
-            return {};
-        }
-        
-        const meta = data?.meta || {};
-        const prices = (data.values || []).map(v => ({
-            date: v.datetime.slice(0, 10),
-            close: Number(v.close)
-        }));
-        
-        if (prices.length === 0) return {};
-        
+        if (!data || data.status === 'error' || !data.values) return {};
+
+        const meta = data.meta || {};
+        const prices = (data.values || []).map(v => ({ date: v.datetime.slice(0,10), close: Number(v.close) }));
+        if (!prices.length) return {};
+
         const current = prices.at(-1)?.close || 0;
         const prev = prices.at(-2)?.close || null;
         const perf = {};
         
-        // Performance 1 jour
-        if (prev) perf.day_1 = ((current - prev) / prev * 100).toFixed(2);
-        
-        // Helper pour récupérer n jours en arrière
-        const atFromEnd = (n) => prices.at(-1 - n)?.close ?? null;
-        
-        // Performances sur différentes périodes
+        if (prev) perf.day_1 = ((current - prev)/prev*100).toFixed(2);
+
+        const atFromEnd = n => prices.at(-1 - n)?.close ?? null;
         const p21 = atFromEnd(21), p63 = atFromEnd(63), p252 = atFromEnd(252);
-        if (p21) perf.month_1 = ((current - p21) / p21 * 100).toFixed(2);
-        if (p63) perf.month_3 = ((current - p63) / p63 * 100).toFixed(2);
-        if (p252) perf.year_1 = ((current - p252) / p252 * 100).toFixed(2);
-        
-        // Performance 3 ans avec ancrage calendaire
+        if (p21) perf.month_1 = ((current - p21)/p21*100).toFixed(2);
+        if (p63) perf.month_3 = ((current - p63)/p63*100).toFixed(2);
+        if (p252) perf.year_1 = ((current - p252)/p252*100).toFixed(2);
+
         const now = new Date();
-        const y3ISO = new Date(now.getFullYear() - 3, now.getMonth(), now.getDate()).toISOString().slice(0, 10);
+        const y3ISO = new Date(now.getFullYear()-3, now.getMonth(), now.getDate()).toISOString().slice(0,10);
         const y3Bar = prices.find(p => p.date >= y3ISO);
-        if (y3Bar && y3Bar.close !== current) {
-            perf.year_3 = ((current - y3Bar.close) / y3Bar.close * 100).toFixed(2);
-        }
-        
-        // YTD - FIX: éviter toISOString() qui cause des bugs UTC
+        if (y3Bar && y3Bar.close !== current) perf.year_3 = ((current - y3Bar.close)/y3Bar.close*100).toFixed(2);
+
         const yearStart = `${new Date().getFullYear()}-01-01`;
         const ytdIdx = prices.findIndex(p => p.date >= yearStart);
         const ytdBar = ytdIdx !== -1 ? prices[ytdIdx] : null;
         
-        // Logs DEBUG enrichis pour YTD
-        if (CONFIG.DEBUG) {
+        if (CONFIG.DEBUG && ytdBar) {
             const prev = ytdIdx > 0 ? prices[ytdIdx - 1] : null;
             console.log(
                 `[YTD] ${resolved} | yearStart=${yearStart} | basis=${ytdBar?.date ?? 'N/A'} close=${ytdBar?.close ?? 'N/A'} | ` +
                 `prev=${prev?.date ?? 'N/A'} closePrev=${prev?.close ?? 'N/A'} | current=${current}`
             );
-            if (ytdBar && ytdBar.date.endsWith('12-31')) {
-                console.warn(`[YTD WARN] ${resolved} basis is 12-31 (UTC drift suspected).`);
-            }
         }
         
         if (ytdBar && ytdBar.close !== current) {
-            perf.ytd = ((current - ytdBar.close) / ytdBar.close * 100).toFixed(2);
+            perf.ytd = ((current - ytdBar.close)/ytdBar.close*100).toFixed(2);
         }
-        
-        // Volatilité avec log-returns
-        const tail = prices.slice(-Math.min(252 * 3, prices.length)).map(p => p.close);
-        const rets = [];
-        for (let i = 1; i < tail.length; i++) {
-            rets.push(Math.log(tail[i] / tail[i - 1]));
-        }
+
+        const tail = prices.slice(-Math.min(252*3, prices.length)).map(p => p.close);
+        const rets = []; 
+        for (let i=1; i<tail.length; i++) rets.push(Math.log(tail[i]/tail[i-1]));
         const vol = Math.sqrt(252) * standardDeviation(rets) * 100;
-        
-        // Distance 52 semaines
+
         const last252 = prices.slice(-252);
-        const high52 = last252.length ? Math.max(...last252.map(p => p.close)) : null;
-        const low52 = last252.length ? Math.min(...last252.map(p => p.close)) : null;
-        
-        // Drawdowns
+        const high52 = last252.length ? Math.max(...last252.map(p=>p.close)) : null;
+        const low52 = last252.length ? Math.min(...last252.map(p=>p.close)) : null;
+
         const drawdowns = calculateDrawdowns(prices);
-        
+
         return {
             performances: perf,
             volatility_3y: vol.toFixed(2),
             max_drawdown_ytd: drawdowns.ytd,
             max_drawdown_3y: drawdowns.year3,
-            // FIX: formules conventionnelles avec high52/low52 au dénominateur
-            distance_52w_high: high52 ? ((current - high52) / high52 * 100).toFixed(2) : null,
-            distance_52w_low: low52 ? ((current - low52) / low52 * 100).toFixed(2) : null,
-            // Métadonnées YTD pour debugging
+            distance_52w_high: high52 ? ((current - high52)/high52*100).toFixed(2) : null,
+            distance_52w_low: low52 ? ((current - low52)/low52*100).toFixed(2) : null,
             ytd_meta: { 
                 year_start: yearStart, 
                 basis_date: ytdBar?.date ?? null, 
                 basis_close: ytdBar?.close ?? null 
             },
-            // Métadonnées de série
             _series_meta: {
-                symbol_used: resolved,
+                symbol_used: data.symbol || trials[0]?.symbol || resolved,
                 exchange: meta.exchange ?? null,
                 currency: meta.currency ?? null,
                 timezone: meta.exchange_timezone ?? meta.timezone ?? null
             },
-            // Expose pour fallback
             __last_close: current,
             __prev_close: prev,
             __hi52: high52,
             __lo52: low52
         };
-    } catch (error) {
-        if (CONFIG.DEBUG) console.error('[TIME_SERIES EXCEPTION]', symbol, error.message);
+    } catch (e) {
+        if (CONFIG.DEBUG) console.error('[TIME_SERIES EXC]', symbol, e.message);
         return {};
     }
 }
@@ -478,58 +514,147 @@ async function getDividendData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.DIVIDENDS);
         const resolved = typeof stock === 'string' ? symbol : resolveSymbol(symbol, stock);
-        
-        const todayISO = new Date().toISOString().slice(0, 10);
-        const threeY = new Date();
-        threeY.setFullYear(threeY.getFullYear() - 3);
-        
-        const { data } = await axios.get('https://api.twelvedata.com/dividends', {
-            params: {
-                symbol: resolved,
-                start_date: threeY.toISOString().slice(0, 10),
-                end_date: todayISO,
-                apikey: CONFIG.API_KEY
-            }
+        const trials = tdParamTrials(symbol, typeof stock === 'string' ? {exchange:'',country:''} : stock, resolved);
+
+        const todayISO = new Date().toISOString().slice(0,10);
+        const threeY = new Date(); 
+        threeY.setFullYear(threeY.getFullYear()-3);
+
+        const data = await fetchTD('dividends', trials, {
+            start_date: threeY.toISOString().slice(0,10),
+            end_date: todayISO
         });
         
-        if (CONFIG.DEBUG) console.log('[DIVIDENDS]', resolved, data?.status || 'ok');
-        if (data?.status === 'error') {
-            if (CONFIG.DEBUG) console.error('[DIVIDENDS ERR]', resolved, data?.message);
-            return {};
-        }
-        
+        if (!data || data.status === 'error') return {};
+
         const arr = Array.isArray(data) ? data : (data.values || data.data || data.dividends || []);
         const dividends = arr.map(d => ({
-            ex_date: d.ex_date || d.date,
-            amount: parseNumberLoose(d.amount) || 0,
+            ex_date: d.ex_date || d.date, 
+            amount: parseNumberLoose(d.amount) || 0, 
             payment_date: d.payment_date
         })).filter(d => d.ex_date);
-        
+
         const lastYear = dividends.filter(d => {
-            const date = new Date(d.ex_date);
-            const yearAgo = new Date();
-            yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+            const date = new Date(d.ex_date); 
+            const yearAgo = new Date(); 
+            yearAgo.setFullYear(yearAgo.getFullYear()-1);
             return date > yearAgo;
         });
-        
-        // FIX: garder les nombres, pas des strings - on formatera dans enrichStock
-        const totalTTM = lastYear.reduce((sum, d) => sum + d.amount, 0);
+
+        const totalTTM = lastYear.reduce((s,d)=>s+d.amount,0);
         const years = new Set(dividends.map(d => new Date(d.ex_date).getFullYear())).size;
-        const avgPerYear = years > 0 ? dividends.reduce((sum, d) => sum + d.amount, 0) / years : 0;
-        
-        // NOUVEAU: Calcul de la croissance des dividendes
+        const avgPerYear = years>0 ? dividends.reduce((s,d)=>s+d.amount,0)/years : 0;
         const dividendGrowth = calculateDividendGrowth(dividends);
-        
+
         return {
             dividend_yield_ttm: parseNumberLoose(data.meta?.dividend_yield) ?? null,
-            dividends_history: dividends.sort((a,b) => b.ex_date.localeCompare(a.ex_date)).slice(0, 10),
-            avg_dividend_per_year: avgPerYear,    // nombre
-            total_dividends_ttm: totalTTM,        // nombre
-            dividend_growth_3y: dividendGrowth    // NOUVEAU
+            dividends_history: dividends.sort((a,b)=>b.ex_date.localeCompare(a.ex_date)).slice(0,10),
+            avg_dividend_per_year: avgPerYear,
+            total_dividends_ttm: totalTTM,
+            dividend_growth_3y: dividendGrowth
+        };
+    } catch (e) {
+        if (CONFIG.DEBUG) console.error('[DIVIDENDS EXC]', symbol, e.message);
+        return {};
+    }
+}
+
+async function getStatisticsData(symbol, stock) {
+    try {
+        await pay(CONFIG.CREDITS.STATISTICS);
+        const resolved = typeof stock === 'string' ? symbol : resolveSymbol(symbol, stock);
+        const trials = tdParamTrials(symbol, typeof stock === 'string' ? {exchange:'',country:''} : stock, resolved);
+        
+        const data = await fetchTD('statistics', trials, { dp: 6 });
+        if (!data) return {};
+
+        const root = data.statistics || data || {};
+        
+        const market_cap = pickNumDeep(root, [
+            'valuations_metrics.market_capitalization',
+            'market_capitalization',
+            'financials.market_capitalization',
+            'overview.market_cap'
+        ]);
+        
+        const pe_ratio = pickNumDeep(root, [
+            'valuations_metrics.trailing_pe',
+            'valuations_metrics.pe_ratio',
+            'overview.pe_ratio',
+            'pe_ratio',
+            'pe'
+        ]);
+        
+        const eps_ttm = pickNumDeep(root, [
+            'financials.income_statement.diluted_eps_ttm',
+            'financials.income_statement.eps_ttm',
+            'overview.eps',
+            'earnings_per_share',
+            'eps'
+        ]);
+        
+        const payout_frac = pickNumDeep(root, ['dividends_and_splits.payout_ratio']);
+        const yield_frac = pickNumDeep(root, [
+            'dividends_and_splits.trailing_annual_dividend_yield',
+            'dividends_and_splits.forward_annual_dividend_yield'
+        ]);
+        
+        const beta = pickNumDeep(root, ['stock_price_summary.beta','beta']);
+        const shares_outstanding = pickNumDeep(root, [
+            'stock_statistics.shares_outstanding',
+            'overview.shares_outstanding',
+            'financials.shares_outstanding'
+        ]);
+
+        return {
+            market_cap: Number.isFinite(market_cap) ? market_cap : null,
+            pe_ratio: Number.isFinite(pe_ratio) ? pe_ratio : null,
+            eps_ttm: Number.isFinite(eps_ttm) ? eps_ttm : null,
+            payout_ratio_api_pct: Number.isFinite(payout_frac) ? payout_frac * 100 : null,
+            dividend_yield_api_pct: Number.isFinite(yield_frac) ? yield_frac * 100 : null,
+            beta: Number.isFinite(beta) ? beta : null,
+            shares_outstanding: Number.isFinite(shares_outstanding) ? shares_outstanding : null
         };
     } catch (error) {
-        if (CONFIG.DEBUG) console.error('[DIVIDENDS EXCEPTION]', symbol, error.message);
+        if (CONFIG.DEBUG) console.error('[STATISTICS EXCEPTION]', symbol, error.message);
         return {};
+    }
+}
+
+// Market cap avec handling spécial pour symboles déjà résolus
+async function getMarketCapDirect(symbolOrResolved, stock) {
+    try {
+        await pay(CONFIG.CREDITS.MARKET_CAP);
+        
+        // Si déjà résolu avec :MIC, ne pas re-résoudre
+        const isResolved = /:/.test(symbolOrResolved);
+        const trials = isResolved 
+            ? [{ symbol: symbolOrResolved }]
+            : tdParamTrials(symbolOrResolved, stock || {exchange:'',country:''});
+        
+        const data = await fetchTD('market_cap', trials);
+        if (!data) return null;
+        
+        // Format "série": { market_cap: [{date, value}, ...] }
+        const series = Array.isArray(data?.market_cap) ? data.market_cap
+                     : Array.isArray(data?.values)     ? data.values
+                     : Array.isArray(data?.data)       ? data.data
+                     : null;
+        
+        if (series && series.length) {
+            const sorted = series.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+            const last = sorted.at(-1);
+            const mc = parseNumberLoose(last?.value ?? last?.market_cap ?? last?.close);
+            return Number.isFinite(mc) ? mc : null;
+        }
+        
+        // Format "valeur simple": { market_cap: "..." } ou { value: "..." }
+        const raw = data?.market_cap ?? data?.value;
+        const mc = parseNumberLoose(raw);
+        return Number.isFinite(mc) ? mc : null;
+    } catch (e) {
+        if (CONFIG.DEBUG) console.error('[MARKET_CAP EXC]', symbolOrResolved, e.message);
+        return null;
     }
 }
 
@@ -559,130 +684,6 @@ function calculateDividendGrowth(history) {
     const cagr = (Math.pow(last / first, 1 / n) - 1) * 100;
     
     return Number(cagr.toFixed(2));
-}
-
-// NOUVEAU v3.8: Version améliorée qui lit les bons champs de l'API
-async function getStatisticsData(symbol, stock) {
-    try {
-        await pay(CONFIG.CREDITS.STATISTICS);
-        const resolved = typeof stock === 'string' ? symbol : resolveSymbol(symbol, stock);
-
-        const { data } = await axios.get('https://api.twelvedata.com/statistics', {
-            params: { 
-                symbol: resolved, 
-                apikey: CONFIG.API_KEY,
-                dp: 6                         // plus de décimales (optionnel)
-            }
-        });
-
-        if (CONFIG.DEBUG) console.log('[STATISTICS]', resolved, data?.status || 'ok');
-        if (data?.status === 'error') {
-            if (CONFIG.DEBUG) console.error('[STATISTICS ERR]', resolved, data?.message);
-            return {};
-        }
-
-        const root = data?.statistics || data || {};
-
-        // Market cap (plusieurs chemins possibles)
-        const market_cap = pickNumDeep(root, [
-            'valuations_metrics.market_capitalization',
-            'market_capitalization',
-            'financials.market_capitalization',
-            'overview.market_cap'
-        ]);
-
-        // P/E trailing (priorité au trailing_pe renvoyé par TwelveData)
-        const pe_ratio = pickNumDeep(root, [
-            'valuations_metrics.trailing_pe',
-            'valuations_metrics.pe_ratio',
-            'overview.pe_ratio',
-            'pe_ratio',
-            'pe'
-        ]);
-
-        // EPS TTM
-        const eps_ttm = pickNumDeep(root, [
-            'financials.income_statement.diluted_eps_ttm',
-            'financials.income_statement.eps_ttm',
-            'overview.eps',
-            'earnings_per_share',
-            'eps'
-        ]);
-
-        // Payout & Dividend yield renvoyés en fraction (0–1)
-        const payout_frac = pickNumDeep(root, [
-            'dividends_and_splits.payout_ratio'
-        ]);
-        const yield_frac = pickNumDeep(root, [
-            'dividends_and_splits.trailing_annual_dividend_yield',
-            'dividends_and_splits.forward_annual_dividend_yield'
-        ]);
-
-        // Beta / Shares outstanding
-        const beta = pickNumDeep(root, ['stock_price_summary.beta','beta']);
-        const shares_outstanding = pickNumDeep(root, [
-            'stock_statistics.shares_outstanding',
-            'overview.shares_outstanding',
-            'financials.shares_outstanding'
-        ]);
-
-        return {
-            market_cap: Number.isFinite(market_cap) ? market_cap : null,
-            pe_ratio: Number.isFinite(pe_ratio) ? pe_ratio : null,
-            eps_ttm: Number.isFinite(eps_ttm) ? eps_ttm : null,
-            payout_ratio_api_pct: Number.isFinite(payout_frac) ? payout_frac * 100 : null,   // %
-            dividend_yield_api_pct: Number.isFinite(yield_frac) ? yield_frac * 100 : null,  // %
-            beta: Number.isFinite(beta) ? beta : null,
-            shares_outstanding: Number.isFinite(shares_outstanding) ? shares_outstanding : null
-        };
-    } catch (error) {
-        if (CONFIG.DEBUG) console.error('[STATISTICS EXCEPTION]', symbol, error.message);
-        return {};
-    }
-}
-
-// Nouveau endpoint dédié pour market_cap - FIX pour gérer format série
-async function getMarketCapDirect(symbolOrResolved, stock) {
-    try {
-        await pay(CONFIG.CREDITS.MARKET_CAP);
-        const sym = /:/.test(symbolOrResolved) ? symbolOrResolved : resolveSymbol(symbolOrResolved, stock);
-        const { data } = await axios.get('https://api.twelvedata.com/market_cap', {
-            params: { symbol: sym, apikey: CONFIG.API_KEY }
-        });
-        
-        if (CONFIG.DEBUG) console.log('[MARKET_CAP]', sym, data?.status || 'ok');
-        if (data?.status === 'error') {
-            if (CONFIG.DEBUG) console.error('[MARKET_CAP ERR]', sym, data?.message);
-            return null;
-        }
-        
-        // Debug pour voir le format exact
-        if (CONFIG.DEBUG && data) {
-            console.log('[MARKET_CAP RAW]', JSON.stringify(data).slice(0, 300) + '...');
-        }
-        
-        // 1) Format "série": { market_cap: [{date, value}, ...] }
-        const series = Array.isArray(data?.market_cap) ? data.market_cap
-                     : Array.isArray(data?.values)     ? data.values
-                     : Array.isArray(data?.data)       ? data.data
-                     : null;
-        
-        if (series && series.length) {
-            // On choisit la plus récente par date
-            const sorted = series.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
-            const last = sorted.at(-1);
-            const mc = parseNumberLoose(last?.value ?? last?.market_cap ?? last?.close);
-            return Number.isFinite(mc) ? mc : null;
-        }
-        
-        // 2) Format "valeur simple": { market_cap: "..." } ou { value: "..." }
-        const raw = data?.market_cap ?? data?.value;
-        const mc = parseNumberLoose(raw);
-        return Number.isFinite(mc) ? mc : null;
-    } catch (e) {
-        if (CONFIG.DEBUG) console.error('[MARKET_CAP EXC]', symbolOrResolved, e.message);
-        return null;
-    }
 }
 
 async function enrichStock(stock) {
@@ -718,7 +719,7 @@ async function enrichStock(stock) {
         }
     }
     
-    // NOUVEAU v3.8: Normalisation LSE (GBX → GBP) pour la cohérence des ratios basés sur le prix
+    // Normalisation LSE (GBX → GBP) pour la cohérence des ratios basés sur le prix
     const usedCurrency = quote?._meta?.currency ?? perf?._series_meta?.currency ?? null;
     if (usedCurrency === 'GBX' && Number.isFinite(price)) {
         price = price / 100; // 7450 GBX -> 74.50 GBP
@@ -739,15 +740,13 @@ async function enrichStock(stock) {
             ? stats.shares_outstanding * price
             : null);
     
-    // NOUVEAU v3.8: Amélioration du calcul du dividend_yield avec priorité à l'API
+    // Amélioration du calcul du dividend_yield avec priorité à l'API
     const dividendYield =
         Number.isFinite(stats?.dividend_yield_api_pct) ? Number(stats.dividend_yield_api_pct.toFixed(2)) :
         (dividends?.total_dividends_ttm && price)      ? Number((dividends.total_dividends_ttm / price * 100).toFixed(2)) :
         (dividends?.dividend_yield_ttm ?? null);
     
-    // =======================
-    // NOUVEAU v3.8: EPS & Payout (multi-source)
-    // =======================
+    // EPS & Payout (multi-source)
     const dps_ttm = (typeof dividends?.total_dividends_ttm === 'number') ? dividends.total_dividends_ttm : null;
 
     // 1) EPS : prends stats.eps_ttm si dispo, sinon fallback via P/E
@@ -807,14 +806,6 @@ async function enrichStock(stock) {
         console.log(`[DATA CTX] ${stock.symbol} -> ${symUsed} | ${usedEx} (${usedMic}) | ${usedCur} | ${usedTz || 'tz?'}`);
     }
     
-    // Logs DEBUG pour métadonnées YTD
-    if (CONFIG.DEBUG && perf?.ytd_meta) {
-        console.log(
-            `[YTD META] ${stock.symbol} → start=${perf.ytd_meta.year_start} ` +
-            `basis=${perf.ytd_meta.basis_date} close=${perf.ytd_meta.basis_close}`
-        );
-    }
-    
     return {
         ticker: stock.symbol,
         name: stock.name,
@@ -849,7 +840,7 @@ async function enrichStock(stock) {
         total_dividends_ttm: dps_ttm,              
         dividend_growth_3y: dividends?.dividend_growth_3y || null,  
         
-        // MÉTRIQUES PAYOUT (v3.8 multi-source)
+        // MÉTRIQUES PAYOUT
         payout_ratio_ttm,                          
         payout_status,                             
         dividend_coverage,                         
@@ -878,7 +869,6 @@ function standardDeviation(values) {
 function calculateDrawdowns(prices) {
     let peak = prices[prices.length - 1]?.close || 0;
     let maxDD_ytd = 0, maxDD_3y = 0;
-    // FIX: éviter toISOString() ici aussi
     const yearStart = `${new Date().getFullYear()}-01-01`;
     
     for (let i = prices.length - 1; i >= 0; i--) {
@@ -926,7 +916,6 @@ function buildOverview(byRegion){
     price: s.price, market_cap: s.market_cap,
     change_percent: s.change_percent == null ? null : Number(s.change_percent),
     perf_ytd: s.perf_ytd == null ? null : Number(s.perf_ytd),
-    // NOUVEAU: Ajout des métriques de dividendes dans les tops
     dividend_yield: s.dividend_yield == null ? null : Number(s.dividend_yield),
     payout_ratio_ttm: s.payout_ratio_ttm == null ? null : Number(s.payout_ratio_ttm),
     payout_status: s.payout_status || null,
@@ -957,7 +946,6 @@ function buildOverview(byRegion){
         up:   getTopN(arr, { field: 'perf_ytd',      direction: 'desc', n: 10 }).map(pick),
         down: getTopN(arr, { field: 'perf_ytd',      direction: 'asc',  n: 10 }).map(pick),
       },
-      // NOUVEAU: Top dividendes
       dividends: {
         highest_yield: getTopN(arr, { field: 'dividend_yield', direction: 'desc', n: 10 }).map(pick),
         best_payout: arr.filter(s => s.payout_ratio_ttm > 0 && s.payout_ratio_ttm < 80)
@@ -971,7 +959,7 @@ function buildOverview(byRegion){
 }
 
 async function main() { 
-    console.log('📊 Enrichissement complet des stocks (v3.9 avec désambiguïsation TD avancée)\n');
+    console.log('📊 Enrichissement complet des stocks (v3.10 avec stratégie d\'essais robuste)\n');
     await fs.mkdir(OUT_DIR, { recursive: true });
     
     const [usStocks, europeStocks, asiaStocks] = await Promise.all([
@@ -1018,7 +1006,7 @@ async function main() {
     await fs.writeFile(topsPath, JSON.stringify(overview, null, 2));
     console.log(`🏁 ${topsPath}`);
     
-    // NOUVEAU: Statistiques sur les payout ratios
+    // Statistiques sur les payout ratios
     const allStocks = [...byRegion.US, ...byRegion.EUROPE, ...byRegion.ASIA];
     const withPayout = allStocks.filter(s => s.payout_ratio_ttm !== null);
     const withEPS = allStocks.filter(s => s.eps_ttm !== null);
@@ -1037,6 +1025,9 @@ async function main() {
         console.log(`  - Très élevé (80-100%): ${withPayout.filter(s => s.payout_status === 'very_high').length}`);
         console.log(`  - Non soutenable (>100%): ${withPayout.filter(s => s.payout_status === 'unsustainable').length}`);
     }
+    
+    // v3.10: Stats sur le cache
+    console.log(`\n📊 Cache hits: ${successCache.size} symboles optimisés`);
 }
 
 if (!CONFIG.API_KEY) {
