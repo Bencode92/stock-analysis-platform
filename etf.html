@@ -3,30 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TradePulse - ETFs (Exchange Traded Funds)</title>
+    <title>TradePulse - ETFs</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        green: {
+                            400: '#00FF87'
+                        }
+                    }
+                },
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif']
+                }
+            }
+        }
+    </script>
+    
+    <!-- Reprendre EXACTEMENT les mêmes styles que liste.html -->
     <style>
         :root {
             --background-color: #0a1929;
+            --light-background-color: #f0f5ff;
             --text-color: #FFFFFF;
+            --light-text-color: #1a202c;
             --accent-color: #00FF87;
             --accent-subtle: rgba(0, 255, 135, 0.15);
             --accent-medium: rgba(0, 255, 135, 0.3);
+            --accent-strong: rgba(0, 255, 135, 0.6);
             --card-bg: rgba(10, 30, 50, 0.6);
+            --card-header: rgba(15, 40, 65, 0.8);
             --card-border: rgba(0, 255, 135, 0.2);
+            --accent-glow: 0 0 15px rgba(0, 255, 135, 0.2);
+            --accent-glow-strong: 0 0 20px rgba(0, 255, 135, 0.3);
+            --transition-time: 0.3s;
             --header-height: 70px;
             --sidebar-width: 80px;
             --negative-color: #ff4d4f;
+            --neutral-color: #aaaaaa;
+            --separator-color: rgba(255, 255, 255, 0.07);
         }
         
         body {
             margin: 0;
             padding: 0;
             font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+            letter-spacing: 0.01em;
+            line-height: 1.6;
+        }
+        
+        body.dark {
             background-color: var(--background-color);
             background-image: 
                 radial-gradient(circle at 15% 50%, rgba(0, 255, 135, 0.08) 0%, transparent 25%),
@@ -34,6 +70,12 @@
             color: var(--text-color);
         }
         
+        body.light {
+            background-color: var(--light-background-color);
+            color: var(--light-text-color);
+        }
+        
+        /* Header */
         .main-header {
             position: fixed;
             top: 0;
@@ -41,203 +83,48 @@
             right: 0;
             height: var(--header-height);
             backdrop-filter: blur(10px);
-            background-color: rgba(10, 25, 41, 0.85);
-            border-bottom: 1px solid var(--card-border);
+            -webkit-backdrop-filter: blur(10px);
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 0 40px;
             z-index: 100;
-        }
-        
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: var(--sidebar-width);
-            height: 100vh;
-            background-color: rgba(8, 20, 35, 0.95);
-            border-right: 1px solid var(--card-border);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px 0;
-            z-index: 101;
-        }
-        
-        .main-container {
-            margin-left: var(--sidebar-width);
-            margin-top: var(--header-height);
-            padding: 24px;
-            min-height: calc(100vh - var(--header-height));
-        }
-        
-        .glassmorphism {
-            backdrop-filter: blur(12px);
-            background-color: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
-            padding: 20px;
-        }
-        
-        .category-tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 24px;
-            background-color: rgba(10, 30, 50, 0.4);
-            padding: 8px;
-            border-radius: 12px;
-            border: 1px solid var(--card-border);
-        }
-        
-        .category-tab {
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
             transition: all 0.3s ease;
-            font-weight: 500;
-            border: 1px solid transparent;
-            background: transparent;
-            color: rgba(255, 255, 255, 0.7);
         }
         
-        .category-tab:hover {
-            background-color: var(--accent-subtle);
-        }
-        
-        .category-tab.active {
-            background-color: var(--accent-medium);
-            color: var(--accent-color);
-            border-color: var(--accent-color);
-            box-shadow: 0 0 10px rgba(0, 255, 135, 0.3);
-        }
-        
-        .filter-tabs {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 20px;
+        .dark .main-header {
+            background-color: rgba(10, 25, 41, 0.85);
             border-bottom: 1px solid var(--card-border);
-            padding-bottom: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
         
-        .filter-tab {
-            padding: 8px 16px;
-            cursor: pointer;
-            position: relative;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            color: rgba(255, 255, 255, 0.6);
+        .light .main-header {
+            background-color: rgba(240, 245, 255, 0.9);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
         
-        .filter-tab.active {
-            color: var(--accent-color);
-        }
+        .header-left { display: flex; align-items: center; }
         
-        .filter-tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background-color: var(--accent-color);
-            box-shadow: 0 0 8px var(--accent-color);
-        }
-        
-        .etf-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 16px;
-        }
-        
-        .etf-card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
-            padding: 16px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .etf-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 4px 20px rgba(0, 255, 135, 0.2);
-            border-color: var(--accent-color);
-        }
-        
-        .etf-rank {
-            display: inline-block;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background-color: var(--accent-subtle);
-            color: var(--accent-color);
-            text-align: center;
-            line-height: 36px;
-            font-weight: bold;
-            margin-bottom: 12px;
-        }
-        
-        .etf-name {
-            font-weight: 700;
-            font-size: 1.1rem;
-            margin-bottom: 4px;
-        }
-        
-        .etf-description {
-            font-size: 0.85rem;
-            opacity: 0.7;
-            margin-bottom: 12px;
-            line-height: 1.3;
-            height: 2.6em;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .etf-metrics {
+        .logo-container {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding-top: 12px;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            font-weight: 900;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
         }
         
-        .etf-change {
-            font-weight: 700;
-            font-size: 1.2rem;
-        }
-        
-        .positive {
-            color: var(--accent-color);
-        }
-        
-        .negative {
-            color: var(--negative-color);
-        }
-        
-        .ytd-label {
-            font-size: 0.75rem;
-            opacity: 0.6;
-        }
-        
-        .nav-item {
-            margin-bottom: 24px;
-            width: 42px;
-            height: 42px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-radius: 10px;
-            transition: all 0.3s;
-            color: rgba(255, 255, 255, 0.7);
+        .logo-container a {
             text-decoration: none;
+            transition: color 0.3s ease;
         }
         
-        .nav-item:hover, .nav-item.active {
-            background-color: var(--accent-subtle);
-            color: var(--accent-color);
-            box-shadow: 0 0 10px rgba(0, 255, 135, 0.2);
+        .dark .logo-container a {
+            color: var(--text-color);
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
         }
+        
+        .light .logo-container a { color: var(--light-text-color); }
         
         .pulse-dot {
             width: 12px;
@@ -249,12 +136,554 @@
             animation: pulse 2s infinite;
         }
         
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
+        .main-nav { display: flex; margin-left: 40px; }
+        
+        .main-nav a {
+            margin-right: 30px;
+            padding: 8px 5px;
+            font-weight: 500;
+            position: relative;
+            transition: color 0.3s;
+            text-decoration: none;
         }
         
+        .dark .main-nav a { color: rgba(255, 255, 255, 0.8); }
+        .light .main-nav a { color: var(--light-text-color); }
+        
+        .main-nav a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--accent-color);
+            transition: width 0.3s;
+        }
+        
+        .main-nav a:hover::after,
+        .main-nav a.active::after { width: 100%; }
+        
+        .main-nav a.active { color: var(--accent-color); }
+        
+        .header-right { display: flex; align-items: center; }
+        
+        .market-status {
+            display: flex;
+            align-items: center;
+            margin-right: 30px;
+            font-size: 0.875rem;
+            transition: color 0.3s ease;
+        }
+        
+        .dark .market-status { color: var(--text-color); }
+        .light .market-status { color: var(--light-text-color); }
+        
+        .market-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .market-indicator.green {
+            background-color: #4CAF50;
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+        }
+        
+        .market-time {
+            margin-left: 10px;
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+        
+        .search-button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+        
+        .dark .search-button {
+            background-color: var(--accent-subtle);
+            border: 1px solid var(--accent-medium);
+            color: var(--text-color);
+        }
+        
+        .light .search-button {
+            background-color: rgba(0, 210, 110, 0.1);
+            border: 1px solid rgba(0, 210, 110, 0.3);
+            color: var(--light-text-color);
+        }
+        
+        .search-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--accent-glow);
+        }
+        
+        .dark .search-button:hover { background-color: var(--accent-medium); }
+        .light .search-button:hover { background-color: rgba(0, 210, 110, 0.2); }
+        
+        .search-button i { margin-right: 8px; color: var(--accent-color); }
+        
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            z-index: 101;
+            transition: background-color 0.3s ease, border-right 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .dark .sidebar {
+            background-color: rgba(8, 20, 35, 0.95);
+            border-right: 1px solid var(--card-border);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .light .sidebar {
+            background-color: rgba(230, 240, 255, 0.95);
+            border-right: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--accent-color);
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
+        }
+        
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+        }
+        
+        .nav-item {
+            margin-bottom: 24px;
+            width: 42px;
+            height: 42px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            transition: all 0.3s;
+            position: relative;
+            text-decoration: none;
+        }
+        
+        .dark .nav-item { color: rgba(255, 255, 255, 0.7); }
+        .light .nav-item { color: rgba(0, 0, 0, 0.7); }
+        
+        .dark .nav-item:hover, .dark .nav-item.active {
+            background-color: var(--accent-subtle);
+            color: var(--accent-color);
+            box-shadow: var(--accent-glow);
+            transform: translateY(-2px);
+        }
+        
+        .light .nav-item:hover, .light .nav-item.active {
+            background-color: rgba(0, 210, 110, 0.1);
+            color: var(--accent-color);
+        }
+        
+        .nav-item i { font-size: 1.2rem; }
+        
+        /* Theme toggle */
+        .theme-toggle { position: fixed; top: 20px; right: 20px; z-index: 1000; }
+        
+        .theme-toggle-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+        
+        .dark .theme-toggle-btn {
+            color: var(--text-color);
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .light .theme-toggle-btn {
+            color: var(--light-text-color);
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+        
+        .theme-toggle-btn:hover { transform: scale(1.1); }
+        
+        /* Main container */
+        .main-container {
+            margin-left: var(--sidebar-width);
+            margin-top: var(--header-height);
+            padding: 24px;
+            min-height: calc(100vh - var(--header-height));
+            transition: background-color 0.3s ease;
+        }
+        
+        /* Glassmorphism */
+        .glassmorphism {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            box-shadow: var(--accent-glow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .dark .glassmorphism { background-color: var(--card-bg); }
+        .light .glassmorphism { background-color: rgba(240, 245, 255, 0.8); }
+        
+        .glassmorphism:hover { box-shadow: var(--accent-glow-strong); }
+        
+        /* Data table */
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        .data-table th, .data-table td { font-variant-numeric: tabular-nums; }
+        
+        .data-table th {
+            padding: 14px 16px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-align: left;
+            border-bottom: 1px solid var(--card-border);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: rgba(255, 255, 255, 0.8);
+            background-color: var(--card-header);
+        }
+        
+        .data-table td {
+            padding: 16px;
+            font-size: 0.9rem;
+            border-bottom: 1px solid var(--separator-color);
+        }
+        
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background-color: var(--accent-subtle); }
+        
+        /* Values */
+        .positive { color: var(--accent-color); font-weight: 600; }
+        .negative { color: var(--negative-color); font-weight: 600; }
+        .neutral { color: var(--neutral-color); font-weight: 600; }
+        
+        /* Section title */
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 3px;
+            background-color: var(--accent-color);
+            margin-right: 10px;
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+        
+        /* Top 10 cards - copié de liste.html */
+        .stock-cards-container {
+            display: grid;
+            gap: 16px;
+            grid-auto-rows: 1fr;
+            grid-template-columns: repeat(2, minmax(280px, 1fr));
+        }
+        
+        @media (min-width: 1024px) { 
+            .stock-cards-container { grid-template-columns: repeat(3, 1fr); } 
+        }
+        
+        @media (min-width: 1280px) { 
+            .stock-cards-container { grid-template-columns: repeat(4, 1fr); } 
+        }
+        
+        .stock-card {
+            display: grid;
+            grid-template-columns: 40px 1fr auto;
+            align-items: center;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 14px 16px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid var(--card-border);
+            height: 100%;
+        }
+        
+        .stock-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--accent-glow);
+        }
+        
+        .rank {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-right: 16px;
+            background-color: var(--accent-subtle);
+            color: var(--accent-color);
+        }
+        
+        .stock-info { flex-grow: 1; }
+        
+        .stock-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            line-height: 1;
+        }
+        
+        .stock-fullname {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            line-height: 1.2;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        
+        .stock-performance {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            min-width: 7ch;
+            text-align: right;
+            white-space: nowrap;
+        }
+        
+        /* Top 3 */
+        .stock-card:nth-child(-n+3) .rank {
+            background-color: var(--accent-medium);
+            color: white;
+            box-shadow: 0 0 10px rgba(0, 255, 135, 0.4);
+        }
+        
+        /* Barre de contrôle Top 10 */
+        .tp-toolbar {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 8px 0;
+        }
+        
+        .tp-regions, .tp-filters {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        .seg {
+            display: flex;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 6px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .seg .seg-btn {
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            opacity: 0.85;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: var(--text-color);
+            position: relative;
+        }
+        
+        .seg .seg-btn i { font-size: 14px; transition: transform 0.2s ease; }
+        
+        .seg .seg-btn:not([aria-selected="true"]):hover {
+            background: rgba(0, 255, 135, 0.08);
+            opacity: 1;
+        }
+        
+        .seg .seg-btn:hover i { transform: translateY(-1px); }
+        
+        .seg .seg-btn[aria-selected="true"] {
+            background: var(--accent-subtle);
+            color: var(--accent-color);
+            box-shadow: 0 0 0 1px var(--accent-medium) inset;
+            opacity: 1;
+        }
+        
+        .pills {
+            position: relative;
+            display: flex;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 4px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .pill {
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            opacity: 0.8;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: var(--text-color);
+        }
+        
+        .pill i { font-size: 12px; }
+        
+        .pill:hover {
+            background: rgba(0, 255, 135, 0.06);
+            opacity: 0.95;
+        }
+        
+        .pill[aria-selected="true"] {
+            color: var(--accent-color);
+            opacity: 1;
+        }
+        
+        .pills-separator {
+            margin: 0 8px;
+            opacity: 0.3;
+            font-size: 12px;
+            color: var(--text-color);
+        }
+        
+        .toolbar-hint {
+            margin-left: auto;
+            opacity: 0.65;
+            font-size: 0.9rem;
+            padding: 8px 16px;
+            background: rgba(0, 255, 135, 0.05);
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .toolbar-hint:hover {
+            opacity: 0.85;
+            background: rgba(0, 255, 135, 0.08);
+        }
+        
+        /* Filters */
+        .region-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            border-bottom: 1px solid var(--card-border);
+            margin-bottom: 24px;
+            background-color: var(--card-header);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .region-tab {
+            padding: 14px;
+            cursor: pointer;
+            position: relative;
+            font-weight: 500;
+            opacity: 0.7;
+            transition: all 0.3s ease;
+            letter-spacing: 0.02em;
+        }
+        
+        .region-tab:hover {
+            background-color: var(--accent-subtle);
+            opacity: 0.9;
+        }
+        
+        .region-tab.active {
+            opacity: 1;
+            color: var(--accent-color);
+            background-color: var(--accent-subtle);
+        }
+        
+        .region-tab::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 3px;
+            background-color: var(--accent-color);
+            transition: width 0.3s ease;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+        
+        .region-tab.active::after { width: 100%; }
+        
+        /* Détails */
+        .details-row td {
+            background: rgba(0,255,135,0.02);
+            border-top: 1px solid var(--card-border);
+        }
+        
+        /* Bouton */
+        .action-button {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            background-color: var(--accent-subtle);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-medium);
+        }
+        
+        .action-button:hover {
+            background-color: var(--accent-medium);
+            transform: translateY(-1px);
+        }
+        
+        /* Loader */
         .loader {
             display: inline-block;
             width: 50px;
@@ -270,444 +699,339 @@
             100% { transform: rotate(360deg); }
         }
         
-        .speculative-badge {
-            display: inline-block;
-            background: linear-gradient(135deg, #ffd700, #ffed4e);
-            color: #000;
-            padding: 2px 8px;
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
+        }
+        
+        /* ETF badges spécifiques */
+        .ter-badge {
+            background: rgba(255, 193, 7, 0.1);
+            color: #FFC107;
+            padding: 2px 6px;
             border-radius: 4px;
             font-size: 0.7rem;
-            font-weight: 700;
-            margin-left: 8px;
-            text-transform: uppercase;
-            box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
-        }
-        
-        .table-container {
-            overflow-x: auto;
-            margin-top: 24px;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-        
-        th, td {
-            padding: 14px 16px;
-            text-align: left;
-        }
-        
-        th {
-            background-color: rgba(10, 30, 50, 0.8);
             font-weight: 600;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: rgba(255, 255, 255, 0.8);
-            border-bottom: 1px solid var(--card-border);
         }
         
-        tr:hover td {
-            background-color: var(--accent-subtle);
-        }
-        
-        /* Stats header */
-        .stats-header {
-            display: flex;
-            gap: 24px;
-            margin-bottom: 32px;
-        }
-        
-        .stat-card {
-            flex: 1;
-            background-color: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 8px;
-            padding: 16px;
-        }
-        
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--accent-color);
-        }
-        
-        .stat-label {
-            font-size: 0.875rem;
-            opacity: 0.7;
-            margin-top: 4px;
+        .aum-badge {
+            background: rgba(0, 212, 255, 0.1);
+            color: #00D4FF;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
         }
     </style>
 </head>
 <body class="dark">
+    <!-- Theme toggle -->
+    <div class="theme-toggle">
+        <button id="theme-toggle-btn" class="theme-toggle-btn">
+            <i class="fas fa-moon" id="dark-icon"></i>
+            <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
+        </button>
+    </div>
+
     <!-- Sidebar -->
     <aside class="sidebar">
-        <div style="font-size: 1.5rem; font-weight: 900; color: var(--accent-color); margin-bottom: 40px;">TP</div>
-        <nav class="sidebar-nav" style="display: flex; flex-direction: column; align-items: center; flex-grow: 1;">
-            <a href="actualites.html" class="nav-item"><i class="fas fa-newspaper"></i></a>
-            <a href="portefeuille.html" class="nav-item"><i class="fas fa-chart-pie"></i></a>
-            <a href="dashboard.html" class="nav-item"><i class="fas fa-tachometer-alt"></i></a>
-            <a href="marches.html" class="nav-item"><i class="fas fa-chart-line"></i></a>
-            <a href="liste.html" class="nav-item"><i class="fas fa-list-ul"></i></a>
-            <a href="etf.html" class="nav-item active"><i class="fas fa-coins"></i></a>
-            <a href="parametres.html" class="nav-item"><i class="fas fa-cog"></i></a>
+        <div class="sidebar-logo">TP</div>
+        <nav class="sidebar-nav">
+            <a href="actualites.html" class="nav-item" title="Actualités">
+                <i class="fas fa-newspaper"></i>
+            </a>
+            <a href="portefeuille.html" class="nav-item" title="Portefeuilles">
+                <i class="fas fa-chart-pie"></i>
+            </a>
+            <a href="dashboard.html" class="nav-item" title="Tableau de bord">
+                <i class="fas fa-tachometer-alt"></i>
+            </a>
+            <a href="marches.html" class="nav-item" title="Marchés">
+                <i class="fas fa-chart-line"></i>
+            </a>
+            <a href="liste.html" class="nav-item" title="Actions">
+                <i class="fas fa-list-ul"></i>
+            </a>
+            <a href="etf.html" class="nav-item active" title="ETFs">
+                <i class="fas fa-layer-group"></i>
+            </a>
+            <a href="parametres.html" class="nav-item" title="Paramètres">
+                <i class="fas fa-cog"></i>
+            </a>
         </nav>
     </aside>
 
     <!-- Header -->
     <header class="main-header">
-        <div style="display: flex; align-items: center;">
-            <div class="pulse-dot"></div>
-            <a href="index.html" style="text-decoration: none; color: var(--text-color); font-weight: 900; font-size: 1.5rem;">TRADEPULSE</a>
-        </div>
-        <div style="display: flex; align-items: center; gap: 24px;">
-            <div style="display: flex; align-items: center; font-size: 0.875rem;">
-                <div style="width: 10px; height: 10px; background-color: #4CAF50; border-radius: 50%; margin-right: 8px;"></div>
-                <span>Marché ouvert</span>
-                <span style="margin-left: 10px; font-weight: 600; color: var(--accent-color);" id="marketTime">09:45:22</span>
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="pulse-dot"></div>
+                <a href="index.html">TRADEPULSE</a>
             </div>
+            <nav class="main-nav">
+                <a href="actualites.html">Actualités</a>
+                <a href="portefeuille.html">Portefeuilles</a>
+                <a href="dashboard.html">Tableau de bord</a>
+                <a href="marches.html">Marchés</a>
+                <a href="liste.html">Actions</a>
+                <a href="etf.html" class="active">ETFs</a>
+            </nav>
+        </div>
+        <div class="header-right">
+            <div class="market-status">
+                <div class="market-indicator green"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time" id="marketTime">09:45:22</span>
+            </div>
+            <a href="recherche.html" class="search-button ripple">
+                <i class="fas fa-search"></i>
+                <span>Ma question</span>
+            </a>
         </div>
     </header>
 
-    <!-- Main content -->
+    <!-- Main container -->
     <main class="main-container">
-        <div class="max-w-7xl mx-auto">
-            <!-- Header -->
-            <div class="mb-8">
-                <h1 class="text-3xl font-bold mb-2">ETFs (Exchange Traded Funds)</h1>
-                <p class="text-gray-400">
-                    <span id="etf-count" class="font-semibold">0</span> ETFs listés | 
-                    Dernière mise à jour: <span id="last-update" class="font-medium">Chargement...</span>
-                </p>
-            </div>
-
-            <!-- Stats -->
-            <div class="stats-header">
-                <div class="stat-card">
-                    <div class="stat-value" id="total-etfs">0</div>
-                    <div class="stat-label">ETFs Total</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="bonds-count">0</div>
-                    <div class="stat-label">Obligations</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value positive" id="gainers-count">0</div>
-                    <div class="stat-label">Hausses du jour</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value negative" id="losers-count">0</div>
-                    <div class="stat-label">Baisses du jour</div>
-                </div>
-            </div>
-
-            <!-- Top 10 Section -->
-            <div class="mb-10">
-                <h2 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 1.5rem; color: white; display: flex; align-items: center;">
-                    <span style="width: 24px; height: 3px; background-color: var(--accent-color); margin-right: 10px; border-radius: 2px;"></span>
-                    Top 10 ETFs —TOUS
-                </h2>
-
-                <!-- Category tabs - Removed "Matières" -->
-                <div class="category-tabs">
-                    <button class="category-tab active" data-category="all">
-                        <i class="fas fa-globe mr-2"></i>Tous
-                    </button>
-                    <button class="category-tab" data-category="stocks">
-                        <i class="fas fa-chart-line mr-2"></i>Actions
-                    </button>
-                    <button class="category-tab" data-category="bonds">
-                        <i class="fas fa-shield-alt mr-2"></i>Obligations
-                    </button>
-                </div>
-
-                <!-- Filter tabs -->
-                <div class="filter-tabs">
-                    <button class="filter-tab active" data-filter="gainers-daily">
-                        <i class="fas fa-arrow-up text-green-400 mr-2"></i>Hausses
-                    </button>
-                    <button class="filter-tab" data-filter="losers-daily">
-                        <i class="fas fa-arrow-down text-red-500 mr-2"></i>Baisses
-                    </button>
-                    <span style="margin: 0 8px; opacity: 0.3;">•</span>
-                    <button class="filter-tab" data-filter="daily">
-                        <i class="fas fa-bolt mr-2"></i>Jour
-                    </button>
-                    <button class="filter-tab" data-filter="ytd">
-                        <i class="fas fa-calendar-check mr-2"></i>YTD
-                    </button>
-                </div>
-
-                <!-- ETF Grid -->
-                <div id="etf-grid" class="etf-grid">
-                    <!-- ETF cards will be generated here -->
-                    <div class="etf-card">
-                        <div class="loader" style="margin: 0 auto; display: block;"></div>
+        <div class="p-6">
+            <div class="max-w-7xl mx-auto">
+                <!-- Header -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+                    <div>
+                        <h1 class="text-3xl font-bold mb-2">ETFs (Exchange Traded Funds)</h1>
+                        <p class="text-gray-400">
+                           <span id="etfs-count" class="font-semibold">0</span> ETFs listés | 
+                           Dernière mise à jour: <span id="last-update-time" class="font-medium">Chargement...</span>
+                        </p>
                     </div>
                 </div>
-            </div>
+                
+                <!-- TOP 10 GLOBAL ETFs (comme dans liste.html) -->
+                <div class="top-stocks-container mb-10">
+                    <h2 class="section-title mb-4">Top 10 ETFs — <span id="top-scope-label">GLOBAL</span></h2>
+                    
+                    <!-- Barre de contrôle élégante -->
+                    <div class="tp-toolbar">
+                        <!-- Filtres par type d'ETF -->
+                        <div class="seg tp-regions" role="tablist" aria-label="Types">
+                            <button class="seg-btn" data-type="GLOBAL" aria-selected="true">
+                                <i class="fas fa-globe"></i>Tous
+                            </button>
+                            <button class="seg-btn" data-type="EQUITY" aria-selected="false">
+                                <i class="fas fa-chart-line"></i>Actions
+                            </button>
+                            <button class="seg-btn" data-type="BONDS" aria-selected="false">
+                                <i class="fas fa-certificate"></i>Obligations
+                            </button>
+                            <button class="seg-btn" data-type="COMMODITY" aria-selected="false">
+                                <i class="fas fa-coins"></i>Matières
+                            </button>
+                        </div>
 
-            <!-- Full List Table -->
-            <div class="glassmorphism">
-                <h2 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem;">Liste complète des ETFs</h2>
-                <div class="table-container">
-                    <table id="etf-table">
-                        <thead>
-                            <tr>
-                                <th>Symbole</th>
-                                <th>Nom</th>
-                                <th>Catégorie</th>
-                                <th>Dernier</th>
-                                <th>Variation %</th>
-                                <th>YTD %</th>
-                                <th>Volume</th>
-                                <th>Actifs (M$)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="etf-table-body">
-                            <!-- Table rows will be generated here -->
-                        </tbody>
-                    </table>
+                        <!-- Filtres performance -->
+                        <div class="pills tp-filters" role="tablist" aria-label="Filtre variation">
+                            <button class="pill" data-dir="up" aria-selected="true">
+                                <i class="fas fa-arrow-up text-green-400"></i>Hausses
+                            </button>
+                            <button class="pill" data-dir="down" aria-selected="false">
+                                <i class="fas fa-arrow-down text-red-500"></i>Baisses
+                            </button>
+                            <span class="pills-separator">•</span>
+                            <button class="pill" data-frame="daily" aria-selected="true">
+                                <i class="fas fa-bolt"></i>Jour
+                            </button>
+                            <button class="pill" data-frame="ytd" aria-selected="false">
+                                <i class="fas fa-calendar-check"></i>YTD
+                            </button>
+                        </div>
+
+                        <div class="toolbar-hint">
+                            <span id="hint-text">TER le plus bas</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Conteneur pour les cartes Top 10 -->
+                    <div id="top-global-container" class="top-stocks-content mt-4" aria-live="polite">
+                        <div class="stock-cards-container">
+                            <!-- Les cartes seront générées dynamiquement -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- DIVISEUR VISUEL (comme dans liste.html avec MC) -->
+                <div class="section-divider" style="position: relative; height: 2px; margin: 80px 0 60px; background: linear-gradient(90deg, transparent, rgba(0,255,135,0.3) 20%, rgba(0,255,135,0.3) 80%, transparent); box-shadow: 0 0 20px rgba(0,255,135,0.2);"></div>
+                
+                <!-- COMPOSEUR MULTI-CRITÈRES ETFs -->
+                <section id="etf-mc-section" class="section">
+                    <div class="section-highlight-top" style="position: relative; height: 2px; margin: 0 auto 20px; max-width: 500px; background: linear-gradient(90deg, transparent, rgba(0,255,255,0.6) 15%, rgba(0,255,255,0.8) 50%, rgba(0,255,255,0.6) 85%, transparent); box-shadow: 0 0 15px rgba(0,255,255,0.3);"></div>
+                    <h2 class="composer-title" style="font-size: 1.3rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #00ffff !important; text-align: center; margin-bottom: 20px; text-shadow: 0 0 10px rgba(0,255,255,0.4);">Top 10 ETFs — Composer multi-critères</h2>
+                    <div class="section-highlight" style="position: relative; height: 2px; margin: 0 auto 30px; max-width: 300px; background: linear-gradient(90deg, transparent, rgba(0,255,255,0.6) 20%, rgba(0,255,255,0.6) 80%, transparent);"></div>
+                    
+                    <div class="composer-grid" style="display: grid; grid-template-columns: minmax(380px, 450px) 1fr; gap: 24px;">
+                        <!-- Colonne gauche : Filtres ETF -->
+                        <aside class="composer-filters glassmorphism rounded-lg p-4" role="complementary" aria-label="Filtres ETF">
+                            <fieldset>
+                                <legend class="text-sm opacity-70 mb-2">Critères de sélection ETF</legend>
+                                <div class="flex flex-wrap gap-2">
+                                    <!-- Critères ETF spécifiques -->
+                                    <label class="mc-pill"><input id="etf-m-ter" type="checkbox" checked> TER ↓</label>
+                                    <label class="mc-pill"><input id="etf-m-aum" type="checkbox" checked> AUM ↑</label>
+                                    <label class="mc-pill"><input id="etf-m-return_1d" type="checkbox"> Perf Daily ↑</label>
+                                    <label class="mc-pill"><input id="etf-m-return_ytd" type="checkbox" checked> YTD ↑</label>
+                                    <label class="mc-pill"><input id="etf-m-return_1y" type="checkbox"> Perf 1Y ↑</label>
+                                    <label class="mc-pill"><input id="etf-m-return_3y" type="checkbox"> Perf 3Y ↑</label>
+                                    <label class="mc-pill"><input id="etf-m-volatility" type="checkbox"> Volatilité ↓</label>
+                                    <label class="mc-pill"><input id="etf-m-sharpe" type="checkbox" checked> Sharpe ↑</label>
+                                    <label class="mc-pill"><input id="etf-m-dividend_yield" type="checkbox"> Rendement ↑</label>
+                                    <label class="mc-pill"><input id="etf-m-tracking_error" type="checkbox"> Track. Error ↓</label>
+                                </div>
+                            </fieldset>
+
+                            <fieldset role="radiogroup" aria-label="Mode de tri">
+                                <legend class="text-xs opacity-60 mb-2">Mode de tri</legend>
+                                <div class="flex gap-2">
+                                    <label class="mc-pill"><input type="radio" name="etf-mc-mode" value="balanced" checked> Équilibre auto</label>
+                                    <label class="mc-pill"><input type="radio" name="etf-mc-mode" value="lexico"> Priorités</label>
+                                </div>
+                            </fieldset>
+
+                            <fieldset>
+                                <legend class="text-sm opacity-70 mb-2">Filtres ETF</legend>
+                                <div class="space-y-2 mb-2">
+                                    <div class="flex gap-2 items-center">
+                                        <label class="text-xs opacity-70 min-w-[60px]">Type:</label>
+                                        <select id="etf-filter-type" class="mini-select flex-1" style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
+                                            <option value="all">Tous types</option>
+                                            <option value="equity">Actions</option>
+                                            <option value="bonds">Obligations</option>
+                                            <option value="commodity">Matières premières</option>
+                                            <option value="sector">Sectoriels</option>
+                                            <option value="geographic">Géographiques</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex gap-2 items-center">
+                                        <label class="text-xs opacity-70 min-w-[60px]">TER max:</label>
+                                        <input id="etf-filter-ter" type="number" step="0.01" placeholder="0.50" class="mini-input flex-1" style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
+                                        <span class="text-xs opacity-60">%</span>
+                                    </div>
+                                    <div class="flex gap-2 items-center">
+                                        <label class="text-xs opacity-70 min-w-[60px]">AUM min:</label>
+                                        <input id="etf-filter-aum" type="number" placeholder="100" class="mini-input flex-1" style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
+                                        <span class="text-xs opacity-60">M€</span>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <div class="border-t border-white/10 pt-4">
+                                <div class="flex gap-2">
+                                    <button id="etf-mc-apply" class="search-button flex-1"><i class="fas fa-magic mr-2"></i>Appliquer</button>
+                                    <button id="etf-mc-reset" class="action-button"><i class="fas fa-undo"></i></button>
+                                </div>
+                                <div id="etf-mc-summary" class="text-xs opacity-60 mt-2"></div>
+                            </div>
+                        </aside>
+
+                        <!-- Colonne droite : Résultats -->
+                        <div>
+                            <div id="etf-mc-results" class="glassmorphism rounded-lg p-4">
+                                <div class="stock-cards-container">
+                                    <!-- Les résultats seront générés ici -->
+                                    <div class="text-center text-cyan-400 py-4">Sélectionnez vos critères et cliquez sur Appliquer</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- DIVISEUR -->
+                <div class="section-divider" style="position: relative; height: 2px; margin: 80px 0 60px; background: linear-gradient(90deg, transparent, rgba(0,255,135,0.3) 20%, rgba(0,255,135,0.3) 80%, transparent); box-shadow: 0 0 20px rgba(0,255,135,0.2);"></div>
+                
+                <!-- LISTE COMPLÈTE DES ETFs -->
+                <div class="mb-8">
+                    <h2 class="section-title mb-6">Tous les ETFs</h2>
+                    
+                    <!-- Onglets de filtrage -->
+                    <div class="region-tabs mb-6">
+                        <div class="region-tab active" data-type="all">TOUS</div>
+                        <div class="region-tab" data-type="equity">ACTIONS</div>
+                        <div class="region-tab" data-type="bonds">OBLIGATIONS</div>
+                        <div class="region-tab" data-type="commodity">MATIÈRES PREMIÈRES</div>
+                        <div class="region-tab" data-type="sector">SECTORIELS</div>
+                        <div class="region-tab" data-type="geographic">GÉOGRAPHIQUES</div>
+                    </div>
+                    
+                    <!-- Recherche -->
+                    <div class="search-container mb-6">
+                        <div class="search-wrapper relative">
+                            <input type="text" id="etf-search" 
+                                   placeholder="Rechercher un ETF par ticker, nom, ISIN..." 
+                                   class="w-full py-3 px-12 bg-opacity-10 rounded-lg border border-opacity-30 text-white focus:outline-none focus:border-accent"
+                                   style="background-color: rgba(255, 255, 255, 0.07); border-color: var(--card-border); color: var(--text-color);">
+                            <i class="fas fa-search absolute left-4 top-4 text-opacity-70" style="color: rgba(255, 255, 255, 0.5);"></i>
+                            <button id="clear-search" class="absolute right-4 top-4 opacity-0 transition-opacity duration-200" style="cursor: pointer;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Table -->
+                    <div class="glassmorphism rounded-lg overflow-hidden">
+                        <div id="indices-loading" class="py-16 flex justify-center">
+                            <div class="loader"></div>
+                        </div>
+                        
+                        <div id="indices-error" class="py-16 text-center hidden">
+                            <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                            <p class="text-lg">Impossible de charger les données des ETFs.</p>
+                            <button id="retry-button" class="mt-4 search-button inline-flex items-center">
+                                <i class="fas fa-sync-alt mr-2"></i>
+                                Réessayer
+                            </button>
+                        </div>
+                        
+                        <div id="indices-container" class="hidden">
+                            <div id="etf-table-content">
+                                <div class="overflow-x-auto">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>TICKER / NOM</th>
+                                                <th>TER</th>
+                                                <th>AUM</th>
+                                                <th>DERNIER</th>
+                                                <th>VAR %</th>
+                                                <th>YTD %</th>
+                                                <th>1 AN %</th>
+                                                <th>VOLATILITÉ</th>
+                                                <th>SHARPE</th>
+                                                <th>RENDEMENT</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="etf-table-body">
+                                            <!-- Les données seront injectées ici -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Avertissement -->
+                <div class="text-center text-sm text-gray-400 mb-6 p-4 glassmorphism rounded-lg bg-opacity-50 mt-8">
+                    <p>Les données sont mises à jour régulièrement. Les performances passées ne préjugent pas des performances futures.</p>
                 </div>
             </div>
         </div>
     </main>
 
-    <script>
-        // Global state
-        const state = {
-            etfData: [],
-            bondsData: [],
-            currentCategory: 'all',
-            currentFilter: 'gainers-daily',
-            currentTimeframe: 'daily'
-        };
-
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeEventListeners();
-            updateMarketTime();
-            setInterval(updateMarketTime, 1000);
-            loadData();
-        });
-
-        // Event listeners
-        function initializeEventListeners() {
-            // Category tabs
-            document.querySelectorAll('.category-tab').forEach(tab => {
-                tab.addEventListener('click', function() {
-                    document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
-                    this.classList.add('active');
-                    state.currentCategory = this.dataset.category;
-                    updateDisplay();
-                });
-            });
-
-            // Filter tabs
-            document.querySelectorAll('.filter-tab').forEach(tab => {
-                tab.addEventListener('click', function() {
-                    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-                    this.classList.add('active');
-                    state.currentFilter = this.dataset.filter;
-                    updateDisplay();
-                });
-            });
-        }
-
-        // Load data from CSV files
-        async function loadData() {
-            try {
-                // Load ETF data
-                const etfResponse = await fetch('data/combined_etfs.csv');
-                const etfText = await etfResponse.text();
-                
-                Papa.parse(etfText, {
-                    header: true,
-                    dynamicTyping: true,
-                    complete: function(results) {
-                        state.etfData = results.data.filter(row => row.symbol);
-                        console.log(`Loaded ${state.etfData.length} ETFs`);
-                    }
-                });
-
-                // Load Bonds data
-                const bondsResponse = await fetch('data/combined_bonds.csv');
-                const bondsText = await bondsResponse.text();
-                
-                Papa.parse(bondsText, {
-                    header: true,
-                    dynamicTyping: true,
-                    complete: function(results) {
-                        state.bondsData = results.data.filter(row => row.symbol);
-                        console.log(`Loaded ${state.bondsData.length} bonds`);
-                        
-                        // Update display after all data is loaded
-                        updateStats();
-                        updateDisplay();
-                    }
-                });
-
-            } catch (error) {
-                console.error('Error loading data:', error);
-                document.getElementById('etf-grid').innerHTML = '<div class="text-center text-red-400">Erreur lors du chargement des données</div>';
-            }
-        }
-
-        // Update statistics
-        function updateStats() {
-            const totalETFs = state.etfData.length;
-            const totalBonds = state.bondsData.length;
-            const gainers = state.etfData.filter(etf => parseFloat(etf.change_percent) > 0).length;
-            const losers = state.etfData.filter(etf => parseFloat(etf.change_percent) < 0).length;
-
-            document.getElementById('total-etfs').textContent = totalETFs;
-            document.getElementById('bonds-count').textContent = totalBonds;
-            document.getElementById('gainers-count').textContent = gainers;
-            document.getElementById('losers-count').textContent = losers;
-            document.getElementById('etf-count').textContent = totalETFs + totalBonds;
-
-            // Update timestamp
-            const now = new Date();
-            document.getElementById('last-update').textContent = now.toLocaleDateString('fr-FR', {
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
-
-        // Update display based on filters
-        function updateDisplay() {
-            let data = [];
-            
-            // Select data based on category
-            if (state.currentCategory === 'all') {
-                data = [...state.etfData, ...state.bondsData];
-            } else if (state.currentCategory === 'stocks') {
-                data = state.etfData.filter(etf => !etf.name?.toLowerCase().includes('bond'));
-            } else if (state.currentCategory === 'bonds') {
-                data = state.bondsData;
-            }
-
-            // Apply filters
-            const isGainers = state.currentFilter.includes('gainers');
-            const isDaily = state.currentFilter.includes('daily') || !state.currentFilter.includes('ytd');
-            
-            if (isGainers) {
-                data = data.filter(item => {
-                    const value = isDaily ? parseFloat(item.change_percent) : parseFloat(item.ytd);
-                    return value > 0;
-                });
-            } else if (state.currentFilter.includes('losers')) {
-                data = data.filter(item => {
-                    const value = isDaily ? parseFloat(item.change_percent) : parseFloat(item.ytd);
-                    return value < 0;
-                });
-            }
-
-            // Sort
-            data.sort((a, b) => {
-                const valueA = isDaily ? parseFloat(a.change_percent) : parseFloat(a.ytd);
-                const valueB = isDaily ? parseFloat(b.change_percent) : parseFloat(b.ytd);
-                return isGainers ? valueB - valueA : valueA - valueB;
-            });
-
-            // Display top 10
-            displayETFCards(data.slice(0, 10), isDaily);
-            
-            // Update table with all data
-            updateTable(data);
-        }
-
-        // Display ETF cards
-        function displayETFCards(data, isDaily) {
-            const grid = document.getElementById('etf-grid');
-            
-            if (data.length === 0) {
-                grid.innerHTML = '<div class="text-center text-gray-400">Aucune donnée disponible</div>';
-                return;
-            }
-
-            grid.innerHTML = data.map((item, index) => {
-                const changeValue = isDaily ? item.change_percent : item.ytd;
-                const changeClass = parseFloat(changeValue) >= 0 ? 'positive' : 'negative';
-                const changeText = parseFloat(changeValue) >= 0 ? '+' : '';
-                const isSpeculative = item.name?.toLowerCase().includes('2x') || item.name?.toLowerCase().includes('3x');
-
-                return `
-                    <div class="etf-card">
-                        <div class="etf-rank">#${index + 1}</div>
-                        <div class="etf-name">
-                            ${item.symbol || item.ticker || '—'}
-                            ${isSpeculative ? '<span class="speculative-badge">⚠ spéculatif</span>' : ''}
-                        </div>
-                        <div class="etf-description">${item.name || '—'}</div>
-                        <div class="etf-metrics">
-                            <div>
-                                <div class="ytd-label">YTD</div>
-                                <div class="${parseFloat(item.ytd) >= 0 ? 'positive' : 'negative'}">
-                                    ${parseFloat(item.ytd) >= 0 ? '+' : ''}${parseFloat(item.ytd).toFixed(2)}%
-                                </div>
-                            </div>
-                            <div class="etf-change ${changeClass}">
-                                ${changeText}${parseFloat(changeValue).toFixed(2)}%
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // Update table
-        function updateTable(data) {
-            const tbody = document.getElementById('etf-table-body');
-            
-            tbody.innerHTML = data.map(item => {
-                const changeClass = parseFloat(item.change_percent) >= 0 ? 'positive' : 'negative';
-                const ytdClass = parseFloat(item.ytd) >= 0 ? 'positive' : 'negative';
-                const category = item.category || (state.bondsData.includes(item) ? 'Obligations' : 'Actions');
-
-                return `
-                    <tr>
-                        <td style="font-weight: 700;">${item.symbol || item.ticker || '—'}</td>
-                        <td>${item.name || '—'}</td>
-                        <td>${category}</td>
-                        <td>${item.last || item.price || '—'}</td>
-                        <td class="${changeClass}">${parseFloat(item.change_percent).toFixed(2)}%</td>
-                        <td class="${ytdClass}">${parseFloat(item.ytd).toFixed(2)}%</td>
-                        <td>${formatVolume(item.volume)}</td>
-                        <td>${item.assets ? formatAssets(item.assets) : '—'}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        // Format helpers
-        function formatVolume(volume) {
-            if (!volume) return '—';
-            const num = parseFloat(volume);
-            if (num > 1e6) return (num / 1e6).toFixed(1) + 'M';
-            if (num > 1e3) return (num / 1e3).toFixed(1) + 'K';
-            return num.toLocaleString();
-        }
-
-        function formatAssets(assets) {
-            if (!assets) return '—';
-            const num = parseFloat(assets);
-            if (num > 1e9) return (num / 1e9).toFixed(1) + 'B';
-            if (num > 1e6) return (num / 1e6).toFixed(0) + 'M';
-            return num.toFixed(0);
-        }
-
-        // Update market time
-        function updateMarketTime() {
-            const now = new Date();
-            const timeStr = now.toTimeString().split(' ')[0];
-            document.getElementById('marketTime').textContent = timeStr;
-        }
-    </script>
+    <!-- Script ETF amélioré -->
+    <script src="etf-script.js"></script>
+    
+    <!-- Scripts MC adaptés pour ETF -->
+    <link rel="stylesheet" href="mc-styles.css">
+    <script src="etf-mc-integration.js"></script>
+    <script src="etf-mc-module.js"></script>
 </body>
 </html>
