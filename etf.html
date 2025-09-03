@@ -9,7 +9,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
+    <!-- Copier EXACTEMENT les styles de liste.html -->
+    <link rel="stylesheet" href="mc-styles.css">
     <style>
+        /* EXACTEMENT les mêmes styles que liste.html */
         :root {
             --background-color: #0a1929;
             --light-background-color: #f0f5ff;
@@ -50,7 +54,7 @@
             color: var(--text-color);
         }
         
-        /* Header - EXACTEMENT COMME liste.html */
+        /* Copier tous les styles de liste.html */
         .main-header {
             position: fixed;
             top: 0;
@@ -73,6 +77,11 @@
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
         
+        .header-left { display: flex; align-items: center; }
+        .logo-container { display: flex; align-items: center; font-weight: 900; font-size: 1.5rem; letter-spacing: 1px; }
+        .logo-container a { text-decoration: none; transition: color 0.3s ease; }
+        .dark .logo-container a { color: var(--text-color); text-shadow: 0 0 10px rgba(255, 255, 255, 0.1); }
+        
         .pulse-dot {
             width: 12px;
             height: 12px;
@@ -83,21 +92,78 @@
             animation: pulse 2s infinite;
         }
         
-        .logo-container {
+        .main-nav { display: flex; margin-left: 40px; }
+        .main-nav a {
+            margin-right: 30px;
+            padding: 8px 5px;
+            font-weight: 500;
+            position: relative;
+            transition: color 0.3s;
+            text-decoration: none;
+        }
+        .dark .main-nav a { color: rgba(255, 255, 255, 0.8); }
+        .main-nav a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--accent-color);
+            transition: width 0.3s;
+        }
+        .main-nav a:hover::after, .main-nav a.active::after { width: 100%; }
+        .main-nav a.active { color: var(--accent-color); }
+        
+        .header-right { display: flex; align-items: center; }
+        
+        .market-status {
             display: flex;
             align-items: center;
-            font-weight: 900;
-            font-size: 1.5rem;
-            letter-spacing: 1px;
+            margin-right: 30px;
+            font-size: 0.875rem;
+            transition: color 0.3s ease;
+        }
+        .dark .market-status { color: var(--text-color); }
+        
+        .market-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .market-indicator.green {
+            background-color: #4CAF50;
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
         }
         
-        .logo-container a {
+        .market-time {
+            margin-left: 10px;
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+        
+        .search-button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
             text-decoration: none;
-            color: var(--text-color);
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
         }
+        .dark .search-button {
+            background-color: var(--accent-subtle);
+            border: 1px solid var(--accent-medium);
+            color: var(--text-color);
+        }
+        .search-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--accent-glow);
+        }
+        .dark .search-button:hover { background-color: var(--accent-medium); }
+        .search-button i { margin-right: 8px; color: var(--accent-color); }
         
-        /* Sidebar - EXACTEMENT COMME liste.html */
+        /* Sidebar */
         .sidebar {
             position: fixed;
             top: 0;
@@ -111,7 +177,6 @@
             z-index: 101;
             transition: background-color 0.3s ease, border-right 0.3s ease, box-shadow 0.3s ease;
         }
-        
         .dark .sidebar {
             background-color: rgba(8, 20, 35, 0.95);
             border-right: 1px solid var(--card-border);
@@ -126,12 +191,7 @@
             text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
         }
         
-        .sidebar-nav {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            flex-grow: 1;
-        }
+        .sidebar-nav { display: flex; flex-direction: column; align-items: center; flex-grow: 1; }
         
         .nav-item {
             margin-bottom: 24px;
@@ -145,21 +205,35 @@
             position: relative;
             text-decoration: none;
         }
-        
-        .dark .nav-item {
-            color: rgba(255, 255, 255, 0.7);
-        }
-        
+        .dark .nav-item { color: rgba(255, 255, 255, 0.7); }
         .dark .nav-item:hover, .dark .nav-item.active {
             background-color: var(--accent-subtle);
             color: var(--accent-color);
             box-shadow: var(--accent-glow);
             transform: translateY(-2px);
         }
+        .nav-item i { font-size: 1.2rem; }
         
-        .nav-item i {
+        /* Theme toggle */
+        .theme-toggle { position: fixed; top: 20px; right: 20px; z-index: 1000; }
+        .theme-toggle-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 1.2rem;
+            transition: all 0.3s ease;
         }
+        .dark .theme-toggle-btn {
+            color: var(--text-color);
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .theme-toggle-btn:hover { transform: scale(1.1); }
         
         /* Main container */
         .main-container {
@@ -170,7 +244,7 @@
             transition: background-color 0.3s ease;
         }
         
-        /* Glassmorphism - STYLE ORIGINAL */
+        /* Glassmorphism cards */
         .glassmorphism {
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
@@ -178,22 +252,18 @@
             box-shadow: var(--accent-glow);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
+        .dark .glassmorphism { background-color: var(--card-bg); }
+        .glassmorphism:hover { box-shadow: var(--accent-glow-strong); }
         
-        .dark .glassmorphism {
-            background-color: var(--card-bg);
-        }
-        
-        .glassmorphism:hover {
-            box-shadow: var(--accent-glow-strong);
-        }
-        
-        /* Table style - COMME liste.html */
+        /* Data table - EXACTEMENT comme liste.html */
         .data-table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
         }
-        
+        .data-table th, .data-table td {
+            font-variant-numeric: tabular-nums;
+        }
         .data-table th {
             padding: 14px 16px;
             font-weight: 600;
@@ -205,102 +275,122 @@
             color: rgba(255, 255, 255, 0.8);
             background-color: var(--card-header);
         }
-        
         .data-table td {
             padding: 16px;
             font-size: 0.9rem;
             border-bottom: 1px solid var(--separator-color);
         }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background-color: var(--accent-subtle); }
         
-        .data-table tr:hover td {
-            background-color: var(--accent-subtle);
-        }
-        
-        /* Valeurs positives/négatives - STYLE ORIGINAL */
+        /* Positive/negative/neutral values */
         .positive { color: var(--accent-color); font-weight: 600; }
         .negative { color: var(--negative-color); font-weight: 600; }
         .neutral { color: var(--neutral-color); font-weight: 600; }
         
-        /* Multi-critères - STYLE CYAN de mc-integration.js */
-        .mc-pill {
-            display: inline-flex;
-            gap: 8px;
-            align-items: center;
-            padding: 6px 10px;
-            border: 1px solid rgba(0, 200, 255, 0.2);
-            border-radius: 10px;
-            background: rgba(0, 255, 255, 0.03);
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
-        }
-        
-        .mc-pill:hover {
-            background: rgba(0, 255, 255, 0.1);
-            border-color: rgba(0, 255, 255, 0.5);
-        }
-        
-        .mc-pill.is-checked {
-            background: rgba(0, 255, 255, 0.2);
-            border-color: #00ffff;
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
-        }
-        
-        .mc-pill input { accent-color: #00ffff; }
-        
-        /* Filtres ETF */
-        .etf-filter-tabs {
+        /* Section title */
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: white;
             display: flex;
-            gap: 12px;
-            margin-bottom: 24px;
-            padding: 8px;
-            background: var(--card-bg);
-            border-radius: 12px;
-            border: 1px solid var(--card-border);
+            align-items: center;
+        }
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 3px;
+            background-color: var(--accent-color);
+            margin-right: 10px;
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--accent-color);
         }
         
-        .etf-filter-btn {
-            padding: 10px 20px;
-            border-radius: 8px;
+        /* ETF specific badges */
+        .ter-badge {
+            background: rgba(255, 193, 7, 0.1);
+            color: #FFC107;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
             font-weight: 600;
-            transition: all 0.3s;
-            cursor: pointer;
-            border: 1px solid transparent;
-            background: transparent;
-            color: rgba(255,255,255,0.7);
         }
         
-        .etf-filter-btn.active {
-            background: var(--accent-subtle);
-            border-color: var(--accent-color);
-            color: var(--accent-color);
+        .aum-badge {
+            background: rgba(0, 212, 255, 0.1);
+            color: #00D4FF;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
         }
         
-        /* Search button - STYLE ORIGINAL */
-        .search-button {
-            padding: 10px 20px;
-            border-radius: 8px;
+        /* Filters */
+        .region-tabs {
             display: flex;
-            align-items: center;
-            transition: all 0.3s;
-            text-decoration: none;
+            flex-wrap: wrap;
+            border-bottom: 1px solid var(--card-border);
+            margin-bottom: 24px;
+            background-color: var(--card-header);
+            border-radius: 8px;
+            overflow: hidden;
         }
-        
-        .dark .search-button {
+        .region-tab {
+            padding: 14px;
+            cursor: pointer;
+            position: relative;
+            font-weight: 500;
+            opacity: 0.7;
+            transition: all 0.3s ease;
+            letter-spacing: 0.02em;
+        }
+        .region-tab:hover {
             background-color: var(--accent-subtle);
-            border: 1px solid var(--accent-medium);
-            color: var(--text-color);
+            opacity: 0.9;
         }
-        
-        .search-button:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--accent-glow);
-            background-color: var(--accent-medium);
-        }
-        
-        .search-button i {
-            margin-right: 8px;
+        .region-tab.active {
+            opacity: 1;
             color: var(--accent-color);
+            background-color: var(--accent-subtle);
+        }
+        .region-tab::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 3px;
+            background-color: var(--accent-color);
+            transition: width 0.3s ease;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+        .region-tab.active::after { width: 100%; }
+        
+        /* Details row */
+        .details-row {
+            display: none;
+        }
+        .details-row td {
+            background: rgba(0,255,135,0.02);
+            border-top: 1px solid var(--card-border);
+        }
+        
+        /* Button */
+        .action-button {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            background-color: var(--accent-subtle);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-medium);
+        }
+        .action-button:hover {
+            background-color: var(--accent-medium);
+            transform: translateY(-1px);
         }
         
         /* Loader */
@@ -324,41 +414,10 @@
             70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
             100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
         }
-        
-        /* Theme toggle */
-        .theme-toggle {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-        }
-        
-        .theme-toggle-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            transition: all 0.3s ease;
-        }
-        
-        .dark .theme-toggle-btn {
-            color: var(--text-color);
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-        
-        .theme-toggle-btn:hover {
-            transform: scale(1.1);
-        }
     </style>
 </head>
 <body class="dark">
-    <!-- Theme Toggle -->
+    <!-- Bouton du sélecteur de thème -->
     <div class="theme-toggle">
         <button id="theme-toggle-btn" class="theme-toggle-btn">
             <i class="fas fa-moon" id="dark-icon"></i>
@@ -366,7 +425,7 @@
         </button>
     </div>
 
-    <!-- Sidebar -->
+    <!-- Sidebar de navigation verticale -->
     <aside class="sidebar">
         <div class="sidebar-logo">TP</div>
         <nav class="sidebar-nav">
@@ -394,7 +453,7 @@
         </nav>
     </aside>
 
-    <!-- Header -->
+    <!-- Header principal -->
     <header class="main-header">
         <div class="header-left">
             <div class="logo-container">
@@ -416,334 +475,401 @@
                 <span>Marché ouvert</span>
                 <span class="market-time" id="marketTime">09:45:22</span>
             </div>
-            <a href="recherche.html" class="search-button">
+            <a href="recherche.html" class="search-button ripple">
                 <i class="fas fa-search"></i>
                 <span>Ma question</span>
             </a>
         </div>
     </header>
 
-    <!-- Main Container -->
+    <!-- Container principal -->
     <main class="main-container">
         <div class="p-6">
             <div class="max-w-7xl mx-auto">
-                <!-- Header -->
+                <!-- Header avec titre et mise à jour -->
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
                     <div>
-                        <h1 class="text-3xl font-bold mb-2">ETFs - Exchange Traded Funds</h1>
+                        <h1 class="text-3xl font-bold mb-2">ETFs (Exchange Traded Funds)</h1>
                         <p class="text-gray-400">
-                            <span id="etfs-count" class="font-semibold">0</span> ETFs listés | 
-                            Dernière mise à jour: <span id="last-update-time" class="font-medium">Chargement...</span>
+                           <span id="etfs-count" class="font-semibold">0</span> ETFs listés | 
+                           Dernière mise à jour: <span id="last-update-time" class="font-medium">Chargement...</span>
                         </p>
                     </div>
                 </div>
-
-                <!-- Filtres catégories -->
-                <div class="etf-filter-tabs">
-                    <button class="etf-filter-btn active" data-category="all">
-                        <i class="fas fa-globe mr-2"></i>Tous
-                    </button>
-                    <button class="etf-filter-btn" data-category="equity">
-                        <i class="fas fa-chart-line mr-2"></i>Actions
-                    </button>
-                    <button class="etf-filter-btn" data-category="bonds">
-                        <i class="fas fa-shield-alt mr-2"></i>Obligations
-                    </button>
-                    <button class="etf-filter-btn" data-category="commodity">
-                        <i class="fas fa-coins mr-2"></i>Matières premières
-                    </button>
+                
+                <!-- Onglets de filtrage par type -->
+                <div class="region-tabs mb-6">
+                    <div class="region-tab active" data-type="all">TOUS</div>
+                    <div class="region-tab" data-type="equity">ACTIONS</div>
+                    <div class="region-tab" data-type="bonds">OBLIGATIONS</div>
+                    <div class="region-tab" data-type="commodity">MATIÈRES PREMIÈRES</div>
+                    <div class="region-tab" data-type="sector">SECTORIELS</div>
+                    <div class="region-tab" data-type="geographic">GÉOGRAPHIQUES</div>
                 </div>
-
-                <!-- Multi-Critères - COMME mc-integration.js -->
-                <section class="mb-12">
-                    <h2 class="section-title mb-6">Top 10 - Composer Multi-Critères</h2>
-                    
-                    <div class="composer-grid" style="display: grid; grid-template-columns: minmax(380px, 450px) 1fr; gap: 24px;">
-                        <div class="glassmorphism rounded-lg p-4">
-                            <fieldset>
-                                <legend class="text-sm opacity-70 mb-2">Critères sélectionnés</legend>
-                                <div class="flex flex-wrap gap-2">
-                                    <label class="mc-pill"><input type="checkbox" id="mc-ter" checked> TER ↓</label>
-                                    <label class="mc-pill"><input type="checkbox" id="mc-aum" checked> AUM ↑</label>
-                                    <label class="mc-pill"><input type="checkbox" id="mc-perf1y"> Perf 1Y ↑</label>
-                                    <label class="mc-pill"><input type="checkbox" id="mc-vol"> Volatilité ↓</label>
-                                    <label class="mc-pill"><input type="checkbox" id="mc-sharpe"> Sharpe ↑</label>
-                                </div>
-                            </fieldset>
-                            
-                            <div class="border-t border-white/10 pt-4 mt-4">
-                                <button id="mc-calculate" class="search-button flex-1 w-full">
-                                    <i class="fas fa-magic mr-2"></i>Calculer Top 10
-                                </button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div id="mc-results" class="glassmorphism rounded-lg p-4">
-                                <div class="text-center text-gray-400 py-8">
-                                    <i class="fas fa-chart-bar text-4xl mb-3 opacity-50"></i>
-                                    <p>Sélectionnez vos critères et cliquez sur Calculer</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Search -->
+                
+                <!-- Recherche -->
                 <div class="search-container mb-6">
                     <div class="search-wrapper relative">
                         <input type="text" id="etf-search" 
-                               placeholder="Rechercher un ETF..." 
-                               class="w-full py-3 px-12 bg-opacity-10 rounded-lg border border-opacity-30 text-white focus:outline-none focus:border-accent">
-                        <i class="fas fa-search absolute left-4 top-4 text-opacity-70"></i>
+                               placeholder="Rechercher un ETF par ticker, nom, ISIN..." 
+                               class="w-full py-3 px-12 bg-opacity-10 rounded-lg border border-opacity-30 text-white focus:outline-none focus:border-accent"
+                               style="background-color: rgba(255, 255, 255, 0.07); border-color: var(--card-border); color: var(--text-color);">
+                        <i class="fas fa-search absolute left-4 top-4 text-opacity-70" style="color: rgba(255, 255, 255, 0.5);"></i>
+                        <button id="clear-search" class="absolute right-4 top-4 opacity-0 transition-opacity duration-200" style="cursor: pointer;">
+                            <i class="fas fa-times"></i>
+                        </button>
                     </div>
                 </div>
-
-                <!-- Table ETFs -->
+                
+                <!-- Table des ETFs -->
                 <div class="glassmorphism rounded-lg overflow-hidden">
-                    <div id="loading-indicator" class="py-16 flex justify-center">
+                    <div id="indices-loading" class="py-16 flex justify-center">
                         <div class="loader"></div>
                     </div>
                     
-                    <div id="etf-table-container" class="hidden">
-                        <div class="overflow-x-auto">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>TICKER / NOM</th>
-                                        <th>TER</th>
-                                        <th>AUM</th>
-                                        <th>PRIX</th>
-                                        <th>VAR %</th>
-                                        <th>YTD %</th>
-                                        <th>1 AN %</th>
-                                        <th>VOLATILITÉ</th>
-                                        <th>SHARPE</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="etf-table-body"></tbody>
-                            </table>
+                    <div id="indices-error" class="py-16 text-center hidden">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                        <p class="text-lg">Impossible de charger les données des ETFs.</p>
+                        <button id="retry-button" class="mt-4 search-button inline-flex items-center">
+                            <i class="fas fa-sync-alt mr-2"></i>
+                            Réessayer
+                        </button>
+                    </div>
+                    
+                    <div id="indices-container" class="hidden">
+                        <div id="etf-table-content">
+                            <div class="overflow-x-auto">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>TICKER / NOM</th>
+                                            <th>TER</th>
+                                            <th>AUM</th>
+                                            <th>DERNIER</th>
+                                            <th>VAR %</th>
+                                            <th>YTD %</th>
+                                            <th>1 AN %</th>
+                                            <th>VOLATILITÉ</th>
+                                            <th>SHARPE</th>
+                                            <th>RENDEMENT</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="etf-table-body">
+                                        <!-- Les données seront injectées ici -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
+                </div>
+                
+                <!-- Source et avertissement -->
+                <div class="text-center text-sm text-gray-400 mb-6 p-4 glassmorphism rounded-lg bg-opacity-50 mt-8">
+                    <p>Les données sont mises à jour régulièrement. Les performances passées ne préjugent pas des performances futures.</p>
                 </div>
             </div>
         </div>
     </main>
 
+    <!-- Script SIMILAIRE à liste-script.js mais pour ETFs -->
     <script>
+    document.addEventListener('DOMContentLoaded', function() {
         // État global
-        const ETFData = {
+        let etfsData = {
             all: [],
             filtered: [],
-            currentCategory: 'all',
-            searchQuery: '',
-            mcCriteria: ['ter', 'aum']
+            currentType: 'all',
+            searchQuery: ''
         };
-
-        // Chargement CSV
-        async function loadCSVFiles() {
+        
+        // Mise à jour de l'horloge
+        function updateMarketTime() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            document.getElementById('marketTime').textContent = `${hours}:${minutes}:${seconds}`;
+        }
+        setInterval(updateMarketTime, 1000);
+        updateMarketTime();
+        
+        // Chargement des données CSV
+        async function loadETFData() {
             try {
                 const [etfsRes, bondsRes] = await Promise.all([
                     fetch('data/combined_etfs.csv').then(r => r.text()).catch(() => ''),
                     fetch('data/combined_bonds.csv').then(r => r.text()).catch(() => '')
                 ]);
-
+                
                 const etfs = etfsRes ? Papa.parse(etfsRes, { header: true, dynamicTyping: true }).data : [];
                 const bonds = bondsRes ? Papa.parse(bondsRes, { header: true, dynamicTyping: true }).data : [];
-
-                ETFData.all = [...etfs, ...bonds].filter(row => row && Object.keys(row).length > 1);
-                ETFData.filtered = ETFData.all;
                 
-                renderTable();
-                hideLoader();
-                updateTime();
-
+                etfsData.all = [...etfs, ...bonds].filter(row => row && Object.keys(row).length > 1);
+                etfsData.filtered = etfsData.all;
+                
+                renderETFData();
+                
             } catch (error) {
                 console.error('Erreur:', error);
-                document.getElementById('loading-indicator').innerHTML = 
-                    '<div class="text-red-400">Erreur de chargement</div>';
+                showElement('indices-error');
+                hideElement('indices-loading');
             }
         }
-
-        // Catégorisation
-        function getCategory(etf) {
-            const name = String(etf.name || '').toLowerCase();
-            if (name.includes('bond')) return 'bonds';
-            if (name.includes('commodity') || name.includes('gold')) return 'commodity';
-            return 'equity';
+        
+        // Rendu des données
+        function renderETFData() {
+            const tbody = document.getElementById('etf-table-body');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            
+            const data = filterETFs();
+            
+            // Mise à jour compteur
+            document.getElementById('etfs-count').textContent = data.length;
+            document.getElementById('last-update-time').textContent = new Date().toLocaleString('fr-FR');
+            
+            // Limiter à 200 pour performance
+            data.slice(0, 200).forEach((etf, idx) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="py-2 px-3">
+                        <div class="font-medium">${etf.ticker || etf.symbol || '-'}</div>
+                        <div class="text-xs opacity-70 mt-1">${etf.name || '-'}</div>
+                    </td>
+                    <td class="text-right"><span class="ter-badge">${formatNumber(etf.ter || etf.expense_ratio)}%</span></td>
+                    <td class="text-right"><span class="aum-badge">${formatAUM(etf.aum || etf.net_assets)}</span></td>
+                    <td class="text-right">${formatNumber(etf.price || etf.last, 2)}€</td>
+                    <td class="text-right ${getColorClass(etf.return_1d || etf.change)}">${formatPercent(etf.return_1d || etf.change)}</td>
+                    <td class="text-right ${getColorClass(etf.return_ytd || etf.ytd)}">${formatPercent(etf.return_ytd || etf.ytd)}</td>
+                    <td class="text-right ${getColorClass(etf.return_1y || etf.perf_1y)}">${formatPercent(etf.return_1y || etf.perf_1y)}</td>
+                    <td class="text-right">${formatNumber(etf.volatility || etf.vol_1y)}%</td>
+                    <td class="text-right">${formatNumber(etf.sharpe_ratio || etf.sharpe, 2)}</td>
+                    <td class="text-right">${formatNumber(etf.dividend_yield || etf.yield)}%</td>
+                    <td class="text-center">
+                        <button type="button" onclick="toggleDetailsRow(this, ${idx})" 
+                                class="action-button details-toggle" 
+                                aria-expanded="false">
+                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                        </button>
+                    </td>
+                `;
+                
+                const detailsRow = document.createElement('tr');
+                detailsRow.className = 'details-row hidden';
+                detailsRow.id = `details-${idx}`;
+                detailsRow.innerHTML = `
+                    <td colspan="11">
+                        <div class="grid md:grid-cols-3 gap-6 p-4">
+                            <div>
+                                <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Informations</div>
+                                <div class="space-y-1 text-sm">
+                                    <div><span class="opacity-60">ISIN:</span> <strong>${etf.isin || '–'}</strong></div>
+                                    <div><span class="opacity-60">Type:</span> ${getETFType(etf)}</div>
+                                    <div><span class="opacity-60">Réplication:</span> ${etf.replication || '–'}</div>
+                                    <div><span class="opacity-60">Devise:</span> ${etf.currency || 'EUR'}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Performances</div>
+                                <div class="space-y-1 text-sm">
+                                    <div><span class="opacity-60">1 mois:</span> <span class="${getColorClass(etf.return_1m)}">${formatPercent(etf.return_1m)}</span></div>
+                                    <div><span class="opacity-60">3 mois:</span> <span class="${getColorClass(etf.return_3m)}">${formatPercent(etf.return_3m)}</span></div>
+                                    <div><span class="opacity-60">3 ans:</span> <span class="${getColorClass(etf.return_3y)}">${formatPercent(etf.return_3y)}</span></div>
+                                    <div><span class="opacity-60">5 ans:</span> <span class="${getColorClass(etf.return_5y)}">${formatPercent(etf.return_5y)}</span></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Risques</div>
+                                <div class="space-y-1 text-sm">
+                                    <div><span class="opacity-60">Max Drawdown:</span> <span class="negative">${formatPercent(etf.max_drawdown)}</span></div>
+                                    <div><span class="opacity-60">Tracking Error:</span> ${formatNumber(etf.tracking_error)}%</div>
+                                    <div><span class="opacity-60">Beta:</span> ${formatNumber(etf.beta, 2)}</div>
+                                    <div><span class="opacity-60">R²:</span> ${formatNumber(etf.r_squared, 2)}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+                tbody.appendChild(detailsRow);
+            });
+            
+            // Afficher le tableau
+            hideElement('indices-loading');
+            hideElement('indices-error');
+            showElement('indices-container');
         }
-
+        
         // Filtrage
-        function filterData() {
-            let filtered = ETFData.all;
-
-            if (ETFData.currentCategory !== 'all') {
-                filtered = filtered.filter(etf => getCategory(etf) === ETFData.currentCategory);
+        function filterETFs() {
+            let filtered = etfsData.all;
+            
+            // Filtre par type
+            if (etfsData.currentType !== 'all') {
+                filtered = filtered.filter(etf => getETFType(etf) === etfsData.currentType);
             }
-
-            if (ETFData.searchQuery) {
-                const q = ETFData.searchQuery.toLowerCase();
+            
+            // Filtre par recherche
+            if (etfsData.searchQuery) {
+                const query = etfsData.searchQuery.toLowerCase();
                 filtered = filtered.filter(etf => 
-                    String(etf.ticker || '').toLowerCase().includes(q) ||
-                    String(etf.name || '').toLowerCase().includes(q)
+                    String(etf.ticker || '').toLowerCase().includes(query) ||
+                    String(etf.name || '').toLowerCase().includes(query) ||
+                    String(etf.isin || '').toLowerCase().includes(query)
                 );
             }
-
-            ETFData.filtered = filtered;
-            renderTable();
-        }
-
-        // Rendu table
-        function renderTable() {
-            const tbody = document.getElementById('etf-table-body');
-            const data = ETFData.filtered.slice(0, 100);
             
-            tbody.innerHTML = data.map(etf => `
-                <tr>
-                    <td>
-                        <div class="font-medium">${etf.ticker || '-'}</div>
-                        <div class="text-xs opacity-70">${etf.name || '-'}</div>
-                    </td>
-                    <td class="text-right">${formatNumber(etf.ter)}%</td>
-                    <td class="text-right">${formatAUM(etf.aum)}</td>
-                    <td class="text-right">${formatNumber(etf.price, 2)}€</td>
-                    <td class="text-right ${getColorClass(etf.return_1d)}">${formatPercent(etf.return_1d)}</td>
-                    <td class="text-right ${getColorClass(etf.return_ytd)}">${formatPercent(etf.return_ytd)}</td>
-                    <td class="text-right ${getColorClass(etf.return_1y)}">${formatPercent(etf.return_1y)}</td>
-                    <td class="text-right">${formatNumber(etf.volatility)}%</td>
-                    <td class="text-right">${formatNumber(etf.sharpe_ratio, 2)}</td>
-                </tr>
-            `).join('');
-            
-            document.getElementById('etfs-count').textContent = data.length;
-        }
-
-        // Multi-critères
-        function calculateMCScore() {
-            const weights = { ter: -2, aum: 1.5, return_1y: 1.5, volatility: -1, sharpe_ratio: 2 };
-            
-            const scored = ETFData.filtered.map(etf => {
-                let score = 0;
-                ETFData.mcCriteria.forEach(c => {
-                    const val = parseFloat(etf[c]) || 0;
-                    score += val * (weights[c] || 1);
-                });
-                return { ...etf, score };
+            // Tri par AUM décroissant
+            filtered.sort((a, b) => {
+                const aumA = parseFloat(a.aum || a.net_assets || 0);
+                const aumB = parseFloat(b.aum || b.net_assets || 0);
+                return aumB - aumA;
             });
-
-            scored.sort((a, b) => b.score - a.score);
             
-            const container = document.getElementById('mc-results');
-            container.innerHTML = scored.slice(0, 10).map((etf, idx) => `
-                <div class="p-3 border-b border-gray-700 flex justify-between items-center">
-                    <div>
-                        <div class="font-semibold">#${idx + 1} ${etf.ticker}</div>
-                        <div class="text-xs opacity-70">${etf.name}</div>
-                    </div>
-                    <div class="text-right">
-                        <div class="${getColorClass(etf.return_1y)}">${formatPercent(etf.return_1y)}</div>
-                        <div class="text-xs opacity-70">TER: ${formatNumber(etf.ter)}%</div>
-                    </div>
-                </div>
-            `).join('');
+            return filtered;
         }
-
+        
+        // Déterminer le type d'ETF
+        function getETFType(etf) {
+            const name = String(etf.name || '').toLowerCase();
+            const type = String(etf.type || '').toLowerCase();
+            
+            if (name.includes('bond') || type.includes('bond')) return 'bonds';
+            if (name.includes('commodity') || name.includes('gold') || name.includes('oil')) return 'commodity';
+            if (name.includes('sector') || name.includes('technology') || name.includes('health')) return 'sector';
+            if (name.includes('emerging') || name.includes('europe') || name.includes('asia')) return 'geographic';
+            return 'equity';
+        }
+        
+        // Toggle détails
+        window.toggleDetailsRow = function(button, idx) {
+            const detailsRow = document.getElementById(`details-${idx}`);
+            if (!detailsRow) return;
+            
+            const isOpen = !detailsRow.classList.contains('hidden');
+            
+            // Fermer tous les autres
+            document.querySelectorAll('.details-row').forEach(row => {
+                row.classList.add('hidden');
+            });
+            document.querySelectorAll('.details-toggle').forEach(btn => {
+                btn.setAttribute('aria-expanded', 'false');
+                const icon = btn.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('fa-chevron-up');
+                    icon.classList.add('fa-chevron-down');
+                }
+            });
+            
+            // Toggle celui-ci
+            if (!isOpen) {
+                detailsRow.classList.remove('hidden');
+                button.setAttribute('aria-expanded', 'true');
+                const icon = button.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-up');
+                }
+            }
+        };
+        
         // Formatage
         function formatNumber(val, decimals = 2) {
             if (!val && val !== 0) return '-';
             return parseFloat(val).toFixed(decimals);
         }
-
+        
         function formatAUM(val) {
             if (!val) return '-';
             const num = parseFloat(val);
             if (num >= 1000) return (num / 1000).toFixed(1) + 'B€';
             return num.toFixed(0) + 'M€';
         }
-
+        
         function formatPercent(val) {
             if (!val && val !== 0) return '-';
             const num = parseFloat(val);
             return (num >= 0 ? '+' : '') + num.toFixed(2) + '%';
         }
-
+        
         function getColorClass(val) {
             const num = parseFloat(val);
             if (isNaN(num)) return '';
             return num >= 0 ? 'positive' : 'negative';
         }
-
-        function hideLoader() {
-            document.getElementById('loading-indicator').classList.add('hidden');
-            document.getElementById('etf-table-container').classList.remove('hidden');
+        
+        // Utility
+        function showElement(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('hidden');
         }
-
-        function updateTime() {
-            const now = new Date();
-            document.getElementById('last-update-time').textContent = now.toLocaleString('fr-FR');
-            document.getElementById('marketTime').textContent = now.toLocaleTimeString('fr-FR');
+        
+        function hideElement(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
         }
-
+        
         // Event listeners
-        document.addEventListener('DOMContentLoaded', () => {
-            loadCSVFiles();
-            setInterval(updateTime, 1000);
-
-            // Filtres
-            document.querySelectorAll('.etf-filter-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('.etf-filter-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    ETFData.currentCategory = this.dataset.category;
-                    filterData();
-                });
-            });
-
-            // Recherche
-            document.getElementById('etf-search').addEventListener('input', (e) => {
-                ETFData.searchQuery = e.target.value;
-                filterData();
-            });
-
-            // Multi-critères
-            document.querySelectorAll('.mc-pill input').forEach(cb => {
-                cb.addEventListener('change', function() {
-                    const metric = this.id.replace('mc-', '');
-                    const mapping = { 'perf1y': 'return_1y', 'vol': 'volatility', 'sharpe': 'sharpe_ratio' };
-                    const key = mapping[metric] || metric;
-                    
-                    if (this.checked) {
-                        if (!ETFData.mcCriteria.includes(key)) ETFData.mcCriteria.push(key);
-                        this.parentElement.classList.add('is-checked');
-                    } else {
-                        ETFData.mcCriteria = ETFData.mcCriteria.filter(c => c !== key);
-                        this.parentElement.classList.remove('is-checked');
-                    }
-                });
-            });
-
-            document.getElementById('mc-calculate').addEventListener('click', calculateMCScore);
-
-            // Theme toggle
-            document.getElementById('theme-toggle-btn').addEventListener('click', function() {
-                document.body.classList.toggle('dark');
-                document.body.classList.toggle('light');
-                document.documentElement.classList.toggle('dark');
-                
-                if (document.body.classList.contains('dark')) {
-                    document.getElementById('dark-icon').style.display = 'block';
-                    document.getElementById('light-icon').style.display = 'none';
-                } else {
-                    document.getElementById('dark-icon').style.display = 'none';
-                    document.getElementById('light-icon').style.display = 'block';
-                }
-            });
-
-            // Init checkboxes
-            document.querySelectorAll('.mc-pill input:checked').forEach(cb => {
-                cb.parentElement.classList.add('is-checked');
+        
+        // Onglets de type
+        document.querySelectorAll('.region-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.region-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                etfsData.currentType = this.dataset.type;
+                renderETFData();
             });
         });
+        
+        // Recherche
+        const searchInput = document.getElementById('etf-search');
+        const clearButton = document.getElementById('clear-search');
+        
+        searchInput?.addEventListener('input', function() {
+            etfsData.searchQuery = this.value;
+            clearButton.style.opacity = this.value ? '1' : '0';
+            renderETFData();
+        });
+        
+        clearButton?.addEventListener('click', function() {
+            searchInput.value = '';
+            etfsData.searchQuery = '';
+            this.style.opacity = '0';
+            renderETFData();
+        });
+        
+        // Retry
+        document.getElementById('retry-button')?.addEventListener('click', function() {
+            hideElement('indices-error');
+            showElement('indices-loading');
+            loadETFData();
+        });
+        
+        // Theme toggle
+        document.getElementById('theme-toggle-btn')?.addEventListener('click', function() {
+            document.body.classList.toggle('dark');
+            document.body.classList.toggle('light');
+            document.documentElement.classList.toggle('dark');
+            
+            if (document.body.classList.contains('dark')) {
+                document.getElementById('dark-icon').style.display = 'block';
+                document.getElementById('light-icon').style.display = 'none';
+            } else {
+                document.getElementById('dark-icon').style.display = 'none';
+                document.getElementById('light-icon').style.display = 'block';
+            }
+        });
+        
+        // Charger les données au démarrage
+        loadETFData();
+    });
     </script>
+
+    <link rel="stylesheet" href="mc-styles.css">
+    <script src="mc-integration.js"></script>
+    <script src="mc-module.js"></script>
 </body>
 </html>
