@@ -1,5 +1,5 @@
-// Script d'intégration MC pour ETFs - v3.7.0 FIXED (opérateurs ASCII)
-// - Affichage compact façon "Actions"
+// Script d'intégration MC pour ETFs - v3.8.0 ULTRA-COMPACT
+// - Affichage ultra-compact avec override v3.11
 // - Styles CSS pour liste verticale
 // - Facettes LISTES FR avec dictionnaires complets
 // - SUPPRESSION de Sharpe/R-Vol
@@ -98,6 +98,52 @@
     `;
     document.head.appendChild(s);
   }
+
+  // ---------- ULTRA-COMPACT Override ----------
+  (() => {
+    if (document.getElementById('etf-mc-v311b-styles')) return;
+    const s = document.createElement('style'); s.id='etf-mc-v311b-styles';
+    s.textContent = `
+    /* === Overrides ULTRA-COMPACT === */
+    .etf-card{
+      grid-template-columns: 44px minmax(220px,0.95fr) 1fr !important;
+      gap:8px !important; padding:9px !important;
+    }
+    .etf-rank{ width:36px !important; height:36px !important; font-size:.8rem !important }
+
+    /* Nom un poil plus lisible */
+    .etf-info{ min-width:clamp(200px,26vw,420px) !important }
+    .etf-name{ font-size:1.02rem !important; gap:6px !important }
+
+    /* Valeurs + labels plus petits et plus denses */
+    #etf-mc-results .etf-card .metrics{
+      grid-template-columns:repeat(auto-fit,minmax(56px,max-content)) !important;
+      gap:6px 10px !important;
+    }
+    #etf-mc-results .etf-card .metric-col .k{
+      font-size:.62rem !important; letter-spacing:.2px !important; opacity:.65 !important;
+    }
+    #etf-mc-results .etf-card .metric-col .v{
+      font-size:.90rem !important; line-height:1.02 !important; font-variant-numeric:tabular-nums !important;
+    }
+    .badge{ font-size:.54rem !important; padding:2px 5px !important }
+
+    /* Réduction supplémentaire sur écrans plus étroits */
+    @media (max-width: 1400px){
+      #etf-mc-results .etf-card .metric-col .k{ font-size:.60rem !important }
+      #etf-mc-results .etf-card .metric-col .v{ font-size:.86rem !important }
+      .etf-name{ font-size:1rem !important }
+    }
+
+    /* Option nom sur 2 lignes activée */
+    .etf-name{
+      white-space:normal !important; display:-webkit-box !important; 
+      -webkit-line-clamp:2 !important;
+      -webkit-box-orient:vertical !important; overflow:hidden !important;
+    }
+    `;
+    document.head.appendChild(s);
+  })();
 
   document.addEventListener('DOMContentLoaded', () => {
     // === (1) MÉTRIQUES — SANS Sharpe/R-Vol, SANS Perf 3Y, SANS Track Error ===
@@ -391,6 +437,6 @@
       if (e.key==='Escape') document.getElementById('etf-mc-reset')?.click();
     });
 
-    console.log('✅ ETF MC Integration v3.7.0 FIXED — Opérateurs ASCII');
+    console.log('✅ ETF MC Integration v3.8.0 ULTRA-COMPACT — Override styles');
   });
 })();
