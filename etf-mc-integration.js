@@ -1,4 +1,8 @@
-// Script d'intégration MC pour ETFs - v3.2 (styles + contrôles + UX/ARIA)
+// Script d'intégration MC pour ETFs - v3.3
+// - Retire Qualité (métrique + slider)
+// + Ajoute UI facettes (Pays / Secteurs / Fund type multi)
+// + Ajoute "Filtres personnalisés" (metric/op/value)
+// - Retire affichage du badge % (géré côté module)
 (function(){
   // ---------- Styles idempotents ----------
   if (!document.getElementById('etf-mc-styles')) {
@@ -21,16 +25,13 @@
     .ter-badge,.aum-badge{ padding:3px 10px;border-radius:6px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:inline-block;line-height:1; }
     .ter-badge{ background:rgba(255,193,7,.2); color:#FFC107; border:1px solid rgba(255,193,7,.3); }
     .aum-badge{ background:rgba(0,212,255,.2); color:#00D4FF; border:1px solid rgba(0,212,255,.3); }
-    .mc-score-badge{ background:linear-gradient(135deg,rgba(0,255,255,.15),rgba(0,255,255,.05));border:1px solid rgba(0,255,255,.4);padding:5px 12px;border-radius:8px;font-weight:700;margin-top:8px;font-size:.9rem; }
-    /* Pills */
+    /* Pills et items */
     #etf-mc-section .mc-pill{ display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border:1px solid rgba(0,200,255,.2);border-radius:10px;background:rgba(0,255,255,.03);cursor:pointer;transition:all .2s ease; user-select:none; }
     #etf-mc-section .mc-pill:hover{ background:rgba(0,255,255,.08); border-color:rgba(0,255,255,.35); }
     #etf-mc-section .mc-pill.is-checked{ background:rgba(0,255,255,.2)!important; border-color:#00ffff!important; box-shadow:0 0 12px rgba(0,255,255,.3); transform:translateY(-1px); }
     #etf-mc-section .mini-input,#etf-mc-section .mini-select{ transition:all .2s ease; background:rgba(0,255,255,.05); color:#fff; }
     #etf-mc-section .mini-input:focus,#etf-mc-section .mini-select:focus{ border-color:#00ffff; box-shadow:0 0 0 3px rgba(0,255,255,.2); outline:none; }
-    /* Toggle lev */
-    .lev-toggle-container{ display:flex; align-items:center; gap:8px; padding:8px 12px; background:rgba(255,50,50,.05); border:1px solid rgba(255,50,50,.2); border-radius:8px; margin-top:8px; }
-    .lev-toggle-container:has(input:checked){ background:rgba(255,50,50,.1); border-color:rgba(255,50,50,.3); }
+    .filter-item{ background:rgba(0,255,255,.05); border:1px solid rgba(0,255,255,.2); border-radius:8px; }
     /* Loader */
     @keyframes shimmer{0%{background-position:-1000px 0}100%{background-position:1000px 0}}
     .loading-shimmer{background:linear-gradient(90deg,rgba(0,255,255,.05) 0%,rgba(0,255,255,.1) 50%,rgba(0,255,255,.05) 100%);background-size:1000px 100%;animation:shimmer 2s infinite}
@@ -40,72 +41,102 @@
     document.head.appendChild(s);
   }
 
-  // ---------- Ajouter contrôles manquants / tooltips / loader ----------
   document.addEventListener('DOMContentLoaded', () => {
-    // Crée métriques si absentes (ids = etf-m-<metric>)
+    // === (1) MÉTRIQUES — enlever "Qualité", ajouter celles utiles ===
+    const zoneMetrics = document.querySelector('#etf-mc-section fieldset:first-of-type .flex.flex-wrap');
     const setPill = (id, label, checked=false) => {
-      const zone = document.querySelector('#etf-mc-section fieldset:first-of-type .flex.flex-wrap');
-      if (!zone || document.getElementById(`etf-m-${id}`)) return;
+      if (!zoneMetrics || document.getElementById(`etf-m-${id}`)) return;
       const lab = document.createElement('label'); lab.className='mc-pill';
       lab.innerHTML = `<input id="etf-m-${id}" type="checkbox" ${checked?'checked':''}> ${label}`;
-      zone.appendChild(lab);
+      zoneMetrics.appendChild(lab);
     };
+    // Ajouts (si manquent)
     setPill('yield_net','Yield net ↑',false);
     setPill('sharpe_proxy','R/Vol ↑',true);
-    setPill('quality','Qualité ↑',false);
+    // Supprimer "Qualité" si présent
+    (function removeQuality(){
+      const pill = document.getElementById('etf-m-quality')?.closest('.mc-pill');
+      if (pill) pill.remove();
+    })();
 
-    // Enlever ce qui n'existe pas dans ton CSV
-    ['tracking_error','sharpe'].forEach(id=>{
-      const el = document.getElementById(`etf-m-${id}`);
-      if (el) el.closest('.mc-pill')?.remove();
-    });
-
-    // Toggle Leveraged/Inverse si absent
+    // === (2) ZONE FILTRES — remplace "Tous types" par facettes multi ===
     const filtFS = document.querySelector('#etf-mc-section fieldset:last-of-type');
-    if (filtFS && !document.getElementById('etf-filter-leveraged')) {
-      const box = document.createElement('div');
-      box.className='lev-toggle-container';
-      box.innerHTML = `
-        <input id="etf-filter-leveraged" type="checkbox" checked class="accent-red-500">
-        <label for="etf-filter-leveraged" class="text-sm font-medium">Exclure ETFs Leveraged/Inverse</label>
-        <span class="text-xs opacity-60 ml-2">(recommandé)</span>
+    if (filtFS) {
+      // Supprimer sélecteur type si présent
+      const oldType = document.getElementById('etf-filter-type');
+      if (oldType) oldType.closest('.flex')?.remove();
+
+      // Range Qualité : supprimer s'il existe
+      document.getElementById('etf-filter-quality')?.closest('div')?.remove();
+
+      // Toggle Lev/Inv : (créé si absent)
+      if (!document.getElementById('etf-filter-leveraged')) {
+        const box = document.createElement('div');
+        box.className='lev-toggle-container';
+        box.innerHTML = `
+          <input id="etf-filter-leveraged" type="checkbox" checked class="accent-red-500">
+          <label for="etf-filter-leveraged" class="text-sm font-medium">Exclure ETFs Leveraged/Inverse</label>
+          <span class="text-xs opacity-60 ml-2">(recommandé)</span>
+        `;
+        filtFS.appendChild(box);
+      }
+
+      // Facettes dynamiques (remplies par le module)
+      const facets = document.createElement('div');
+      facets.className='space-y-2 mt-2';
+      facets.innerHTML = `
+        <div>
+          <div class="text-xs opacity-70 mb-1">Pays (multi)</div>
+          <div id="etf-filter-countries" class="flex flex-wrap gap-2"></div>
+        </div>
+        <div>
+          <div class="text-xs opacity-70 mb-1">Secteurs (multi)</div>
+          <div id="etf-filter-sectors" class="flex flex-wrap gap-2"></div>
+        </div>
+        <div>
+          <div class="text-xs opacity-70 mb-1">Fund type (multi)</div>
+          <div id="etf-filter-fundtype" class="flex flex-wrap gap-2"></div>
+        </div>
       `;
-      filtFS.appendChild(box);
+      filtFS.appendChild(facets);
+
+      // Filtres personnalisés (comme "actions")
+      const customBox = document.createElement('div');
+      customBox.className='mt-3';
+      customBox.innerHTML = `
+        <div class="text-xs opacity-70 mb-2">Filtres personnalisés</div>
+        <div id="etf-custom-filters-list" class="space-y-2 mb-2">
+          <div class="text-xs opacity-50 text-center py-2">Aucun filtre personnalisé</div>
+        </div>
+        <div class="flex gap-1 items-center filter-controls">
+          <select id="etf-filter-metric" class="mini-select" style="flex:1.5; min-width:120px;">
+            <option value="ter">TER</option>
+            <option value="aum">AUM</option>
+            <option value="return_1d">Perf 1D</option>
+            <option value="return_ytd">YTD</option>
+            <option value="return_1y">Perf 1Y</option>
+            <option value="volatility">Vol 3Y</option>
+            <option value="dividend_yield">Yield TTM</option>
+            <option value="yield_net">Yield net</option>
+            <option value="sharpe_proxy">R/Vol</option>
+          </select>
+          <select id="etf-filter-operator" class="mini-select" style="width:64px;">
+            <option value=">=">≥</option><option value=">">></option>
+            <option value="=">=</option>
+            <option value="<"><</option><option value="<=">≤</option>
+            <option value="!=">≠</option>
+          </select>
+          <input id="etf-filter-value" type="number" class="mini-input" style="width:90px;" placeholder="0" step="0.1">
+          <span id="etf-filter-unit" class="text-xs opacity-60">%</span>
+          <button id="etf-add-filter" class="action-button" style="padding:6px 10px;"><i class="fas fa-plus"></i></button>
+        </div>
+      `;
+      filtFS.appendChild(customBox);
     }
 
-    // Slider Qualité min
-    if (filtFS && !document.getElementById('etf-filter-quality')) {
-      const box = document.createElement('div');
-      box.className='flex gap-2 items-center mt-2';
-      box.innerHTML = `
-        <label class="text-xs opacity-70 min-w-[60px]">Qualité min:</label>
-        <input id="etf-filter-quality" type="range" min="0" max="100" value="80" class="flex-1" style="accent-color:#00ffff;">
-        <span id="quality-value" class="text-xs font-bold min-w-[30px]">80</span>
-      `;
-      filtFS.appendChild(box);
-    }
-
-    // Tooltips rapides
-    const addTip = (id, text) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.closest('.mc-pill')?.setAttribute('title', text);
-    };
-    addTip('etf-m-ter','Total Expense Ratio — plus bas = mieux');
-    addTip('etf-m-aum','AUM en millions de $');
-    addTip('etf-m-return_1d','Performance jour (%)');
-    addTip('etf-m-return_ytd','Performance depuis le 1er janvier (%)');
-    addTip('etf-m-return_1y','Performance 1 an (%)');
-    addTip('etf-m-volatility','Volatilité 3 ans (%) — plus bas = mieux');
-    addTip('etf-m-dividend_yield','Rendement dividendes TTM (%)');
-    addTip('etf-m-yield_net','Rendement net après frais (surtout pour obligations)');
-    addTip('etf-m-sharpe_proxy','Rendement / Volatilité — plus haut = mieux');
-    addTip('etf-m-quality','Score de qualité des données (0–100)');
-
-    // Sync visuel pills
+    // Sync visuel pills (génériques)
     document.querySelectorAll('#etf-mc-section .mc-pill input').forEach(inp=>{
-      const lab = inp.closest('.mc-pill');
-      const sync = ()=> lab?.classList.toggle('is-checked', inp.checked);
+      const lab = inp.closest('.mc-pill'); const sync = ()=> lab?.classList.toggle('is-checked', inp.checked);
       inp.addEventListener('change', sync); sync();
     });
 
@@ -115,11 +146,7 @@
       if (container) {
         const loader = document.createElement('div');
         loader.id='mc-loading'; loader.className='hidden';
-        loader.innerHTML = `
-          <div class="loading-shimmer rounded-lg p-8 text-center">
-            <p class="mt-2 text-cyan-400">Calcul en cours…</p>
-          </div>
-        `;
+        loader.innerHTML = `<div class="loading-shimmer rounded-lg p-8 text-center"><p class="mt-2 text-cyan-400">Calcul en cours…</p></div>`;
         container.parentNode.insertBefore(loader, container);
       }
     }
@@ -146,6 +173,6 @@
       if (e.key==='Escape') document.getElementById('etf-mc-reset')?.click();
     });
 
-    console.log('✅ ETF MC Integration v3.2 — contrôles/UX prêts');
+    console.log('✅ ETF MC Integration v3.3 — facettes + filtres perso prêts');
   });
 })();
