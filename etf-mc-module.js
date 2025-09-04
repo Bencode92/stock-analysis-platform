@@ -1,13 +1,12 @@
-// Module MC adapté pour ETFs - v3.4
-// - Libellés FR
-// - Facettes LISTE (pays/secteurs/type de fonds)
-// - Filtres personnalisés (comme Actions)
-// - Qualité & score retirés
+// Module MC adapté pour ETFs - v3.5 COMPACT
+// - Affichage compact façon "Actions" (liste verticale)
+// - Limite à 3 métriques visibles
+// - Template simplifié
 
 (function () {
   function waitFor(cond, cb, tries = 40) {
     if (cond()) return void cb();
-    if (tries <= 0) return console.error('❌ ETF MC v3.4: Données introuvables.');
+    if (tries <= 0) return console.error('❌ ETF MC v3.5: Données introuvables.');
     setTimeout(() => waitFor(cond, cb, tries - 1), 250);
   }
 
@@ -17,10 +16,10 @@
     const root    = document.querySelector('#etf-mc-section');
     const results = document.querySelector('#etf-mc-results .stock-cards-container');
     if (!root || !results) {
-      console.error('❌ ETF MC v3.4: DOM manquant', {root, results});
+      console.error('❌ ETF MC v3.5: DOM manquant', {root, results});
       return;
     }
-    console.log('✅ ETF MC v3.4: Module initialisé');
+    console.log('✅ ETF MC v3.5 COMPACT: Module initialisé');
 
     // Helpers
     const CURRENCY_SYMBOL = { USD: '$', EUR: '€', GBP: '£', JPY: '¥', CHF: 'CHF' };
@@ -285,13 +284,13 @@
       updateSummary(arr.length, state.data.length);
     }
 
-    // Rendu
+    // Rendu COMPACT (liste verticale)
     function render(entries) {
       results.innerHTML = '';
-      results.className = 'stock-cards-container';
+      results.className = 'space-y-2';  // CHANGEMENT : Liste verticale au lieu de grille
 
       if (!entries.length) {
-        results.innerHTML = '<div class="text-center text-cyan-400 py-4 col-span-full">Aucun ETF ne correspond aux critères</div>';
+        results.innerHTML = '<div class="text-center text-cyan-400 py-4">Aucun ETF ne correspond aux critères</div>';
         return;
       }
 
@@ -302,9 +301,9 @@
         const topSWeight = Number(e.sector_top_weight);
         const topCountry = str(e.country_top);
         const topCWeight = Number(e.country_top_weight);
-        const cur = CURRENCY_SYMBOL[str(e.currency).toUpperCase()] || str(e.currency) || '$';
-
-        const metricValues = state.selectedMetrics.map(m => {
+        
+        // CHANGEMENT : Limite à 3 métriques visibles
+        const metricValues = state.selectedMetrics.slice(0,3).map(m => {
           const def = METRICS[m]; if (!def) return '';
           const raw = def.get(e); if (!Number.isFinite(raw)) return '';
           let val;
@@ -334,32 +333,30 @@
                                       '<span class="aum-badge">Actions</span>';
         const levBadge = e.__lev ? '<span class="text-xs px-2 py-1 bg-red-900 text-red-300 rounded">LEV/INV</span>' : '';
 
-        const nameLine = str(e.symbol) || '—';
-        const subLine  = (topSector ? `${topSector}${Number.isFinite(topSWeight)?' '+fmt(topSWeight,0)+'%':''}` : '')
-                       + (topSector && topCountry ? ' • ' : '')
-                       + (topCountry ? `${topCountry}${Number.isFinite(topCWeight)?' '+fmt(topCWeight,0)+'%':''}` : '');
-        const desc = trunc(str(e.objective), 160);
-
-        const last = Number(e.last_close);
-        const lastHtml = Number.isFinite(last)
-          ? `<div class="text-xs opacity-60 mt-1">Dernier cours : <strong>${cur} ${fmt(last,2)}</strong>${e.as_of ? ` • <span class="opacity-60">${str(e.as_of).split('T')[0]}</span>`:''}</div>`
-          : '';
+        // CHANGEMENT : Template simplifié façon "Actions"
+        const name     = str(e.symbol) || str(e.ticker) || '—';
+        const desc     = trunc(str(e.objective), 96);
+        const sectorLn = (topSector ? `${topSector}${Number.isFinite(topSWeight)?' '+fmt(topSWeight,0)+'%':''}` : '');
+        const ctryLn   = (topCountry ? `${topCountry}${Number.isFinite(topCWeight)?' '+fmt(topCWeight,0)+'%':''}` : '');
+        const micro    = [sectorLn, ctryLn].filter(Boolean).join(' • ');
 
         const card = document.createElement('div');
-        card.className = 'stock-card glassmorphism rounded-lg p-4';
+        card.className = 'glassmorphism rounded-lg p-3 flex items-center gap-4';
+
         card.innerHTML = `
           <div class="rank">#${i+1}</div>
-          <div class="stock-info">
-            <div class="stock-name">${nameLine} ${typeBadge} ${levBadge}</div>
-            <div class="stock-fullname" title="${desc.replace(/"/g,'&quot;')}">${desc || '&nbsp;'}</div>
-            <div class="text-xs opacity-40">
-              ${str(e.isin)}${e.isin? ' • ':''}${str(e.mic_code)}${e.mic_code?' • ':''}${str(e.currency)}
+          <div class="flex-1">
+            <div class="font-semibold flex items-center gap-2">
+              ${name} ${typeBadge} ${levBadge}
             </div>
-            ${subLine ? `<div class="text-xs opacity-60 mt-1">${subLine}</div>` : ''}
-            ${lastHtml}
+            <div class="text-xs opacity-60" title="${desc.replace(/"/g,'&quot;')}">${desc || '&nbsp;'}</div>
+            <div class="text-xs opacity-40">${micro}</div>
+            <div class="text-xs opacity-60 etf-last line-iso">
+              ${str(e.isin)}${e.isin?' • ':''}${str(e.mic_code)}${e.mic_code?' • ':''}${str(e.currency)}
+            </div>
           </div>
-          <div class="stock-performance">
-            <div class="flex gap-3">${metricValues}</div>
+          <div class="flex gap-4">
+            ${metricValues}
           </div>
         `;
         results.appendChild(card);
