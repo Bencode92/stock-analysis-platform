@@ -1,18 +1,12 @@
-// Module MC adapté pour ETFs - v3.2 avec améliorations performances et UX
+// Module MC adapté pour ETFs - v3.1 avec métriques réelles et filtrage intelligent
 (function() {
-    // ========== HELPERS ==========
-    
-    // Attendre que les données soient prêtes (event-based, pas de polling)
-    function onETFDataReady(cb) {
-        if (window.ETFData?.getData?.().length) return cb();
-        const once = () => { 
-            document.removeEventListener('ETFData:ready', once); 
-            cb(); 
-        };
-        document.addEventListener('ETFData:ready', once);
+    // Attendre le chargement des données ETF
+    if (!window.ETFData) {
+        console.log('⏳ ETF MC: En attente des données...');
+        setTimeout(arguments.callee, 500);
+        return;
     }
     
-    // Vérifier que le DOM est prêt
     const root = document.querySelector('#etf-mc-section');
     const results = document.querySelector('#etf-mc-results .stock-cards-container');
     
@@ -21,7 +15,7 @@
         return;
     }
     
-    console.log('✅ ETF MC v3.2: Module initialisé - Event-based, Auto-calc, LocalStorage');
+    console.log('✅ ETF MC v3.1: Module initialisé avec champs réels');
     
     // ========== HELPERS DE CLASSIFICATION ==========
     function kindOf(e) {
@@ -41,14 +35,8 @@
         return Number.isFinite(+x) ? +x : NaN; 
     }
     
-    function formatPct(x) { 
-        return Number.isFinite(x) ? x.toFixed(1) + '%' : ''; 
-    }
-    
-    // ========== ÉTAT avec LocalStorage ==========
-    const LS_KEY = 'etf-mc:v3.2';
-    
-    const defaultState = {
+    // ========== ÉTAT ==========
+    const state = {
         mode: 'balanced',
         selectedMetrics: ['ter', 'aum', 'return_ytd', 'volatility', 'sharpe_proxy'],
         filters: {
@@ -56,40 +44,10 @@
             maxTER: null,
             minAUM: null,
             minQuality: 80,
-            excludeLeveraged: true
+            excludeLeveraged: true // Nouveau: exclure lev/inverse par défaut
         },
         data: []
     };
-    
-    let state = { ...defaultState };
-    
-    // Charger l'état depuis localStorage
-    function loadState() {
-        try {
-            const saved = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
-            if (saved.mode) state.mode = saved.mode;
-            if (Array.isArray(saved.selectedMetrics)) {
-                state.selectedMetrics = saved.selectedMetrics.filter(m => METRICS[m]);
-            }
-            if (saved.filters) Object.assign(state.filters, saved.filters);
-        } catch(e) {
-            console.warn('ETF MC: Impossible de charger les préférences', e);
-        }
-    }
-    
-    // Sauvegarder l'état dans localStorage
-    function saveState() {
-        try {
-            const toSave = {
-                mode: state.mode,
-                selectedMetrics: state.selectedMetrics,
-                filters: state.filters
-            };
-            localStorage.setItem(LS_KEY, JSON.stringify(toSave));
-        } catch(e) {
-            console.warn('ETF MC: Impossible de sauvegarder les préférences', e);
-        }
-    }
     
     // ========== MÉTRIQUES AVEC VRAIS CHAMPS ==========
     const METRICS = {
@@ -103,7 +61,7 @@
             label: 'AUM', 
             unit: '$M', 
             max: true, 
-            get: e => pct(e.aum_usd) 
+            get: e => pct(e.aum_usd) / 1e6 
         },
         return_1d: { 
             label: 'Perf Daily', 
@@ -163,32 +121,10 @@
         }
     };
     
-    // ========== LOADER ==========
-    function showLoader(on) {
-        const loader = document.getElementById('mc-loading');
-        const resultsBox = document.getElementById('etf-mc-results');
-        if (loader && resultsBox) {
-            loader.classList.toggle('hidden', !on);
-            resultsBox.classList.toggle('hidden', on);
-        }
-    }
-    
-    // ========== CALCUL DES RANKINGS avec DEBOUNCE ==========
-    let calcTimer;
-    function scheduleCalculate() {
-        clearTimeout(calcTimer);
-        calcTimer = setTimeout(() => {
-            showLoader(true);
-            requestAnimationFrame(() => {
-                calculate();
-                showLoader(false);
-            });
-        }, 120);
-    }
-    
+    // ========== CALCUL DES RANKINGS ==========
     function calculate() {
         // Récupérer et enrichir les données
-        state.data = (window.ETFData?.getData() || []).map(e => ({
+        state.data = (window.ETFData.getData() || []).map(e => ({
             ...e,
             __kind: kindOf(e),
             __lev: isLeveraged(e)
@@ -240,7 +176,6 @@
         if (filtered.length === 0) {
             render([]);
             updateSummary(0, state.data.length);
-            saveState(); // Sauvegarder même si pas de résultats
             return;
         }
         
@@ -300,11 +235,11 @@
                     .filter(x => Number.isFinite(x.v))
                     .sort((a, b) => a.v - b.v);
                 
-                const pctArr = new Array(N).fill(NaN);
+                const pct = new Array(N).fill(NaN);
                 arr.forEach((x, idx) => { 
-                    pctArr[x.i] = (idx + 0.5) / arr.length; 
+                    pct[x.i] = (idx + 0.5) / arr.length; 
                 });
-                ranks[m] = pctArr;
+                ranks[m] = pct;
             });
 
             // Tri lexicographique
@@ -327,13 +262,12 @@
             top10 = idx.slice(0, 10).map(i => ({ etf: filtered[i], score: NaN }));
         }
         
-        // Render et sauvegarder
+        // Render
         render(top10);
         updateSummary(filtered.length, state.data.length);
-        saveState();
     }
     
-    // ========== RENDU DES RÉSULTATS AMÉLIORÉ ==========
+    // ========== RENDU DES RÉSULTATS ==========
     function render(entries) {
         results.innerHTML = '';
         results.className = 'stock-cards-container';
@@ -349,28 +283,12 @@
             
             const etf = entry.etf;
             
-            // Ligne d'infos supplémentaires (pays/secteur/date)
-            const infoLine = `
-                <div class="text-xs opacity-60 mt-1">
-                    ${etf.country_top ? `🌍 ${etf.country_top}${Number.isFinite(etf.country_top_weight) ? ' ' + formatPct(etf.country_top_weight) : ''}` : ''}
-                    ${etf.sector_top ? ` • 🏷️ ${etf.sector_top}${Number.isFinite(etf.sector_top_weight) ? ' ' + formatPct(etf.sector_top_weight) : ''}` : ''}
-                    ${etf.as_of ? ` • ⏱️ ${new Date(etf.as_of).toLocaleDateString()}` : ''}
-                </div>
-            `;
-            
             // Valeurs métriques avec formatage amélioré
             const metricValues = state.selectedMetrics.map(m => {
                 const def = METRICS[m];
                 if (!def) return '';
                 const raw = def.get(etf);
-                
-                // Si valeur manquante, afficher en grisé
-                if (!Number.isFinite(raw)) return `
-                    <div class="text-right opacity-40">
-                        <div class="text-xs">${def.label}</div>
-                        <div>—</div>
-                    </div>
-                `;
+                if (!Number.isFinite(raw)) return '';
                 
                 // Formatage selon le type
                 let formatted;
@@ -447,7 +365,6 @@
                         ${levBadge}
                     </div>
                     <div class="stock-fullname" title="${etf.name}">${etf.name}</div>
-                    ${infoLine}
                     <div class="text-xs opacity-40">${etf.isin || ''}</div>
                 </div>
                 <div class="stock-performance">
@@ -484,7 +401,7 @@
         summary.innerHTML = `<strong>${mode}</strong> • ${metrics}${filterText} • ${filtered}/${total} ETFs`;
     }
     
-    // ========== EVENT LISTENERS AVEC AUTO-CALC ==========
+    // ========== EVENT LISTENERS ==========
     
     // Checkboxes métriques
     Object.keys(METRICS).forEach(metric => {
@@ -498,7 +415,6 @@
                 } else {
                     state.selectedMetrics = state.selectedMetrics.filter(m => m !== metric);
                 }
-                scheduleCalculate(); // Auto-recalcul
             });
         }
     });
@@ -507,39 +423,27 @@
     document.querySelectorAll('input[name="etf-mc-mode"]').forEach(radio => {
         radio.addEventListener('change', () => {
             state.mode = radio.value;
-            scheduleCalculate(); // Auto-recalcul
         });
     });
     
     // Filtres
     document.getElementById('etf-filter-type')?.addEventListener('change', (e) => {
         state.filters.type = e.target.value;
-        scheduleCalculate(); // Auto-recalcul
     });
     
     document.getElementById('etf-filter-ter')?.addEventListener('input', (e) => {
         state.filters.maxTER = e.target.value ? parseFloat(e.target.value) : null;
-        scheduleCalculate(); // Auto-recalcul
     });
     
     document.getElementById('etf-filter-aum')?.addEventListener('input', (e) => {
         state.filters.minAUM = e.target.value ? parseFloat(e.target.value) : null;
-        scheduleCalculate(); // Auto-recalcul
-    });
-    
-    // Slider qualité
-    document.getElementById('etf-filter-quality')?.addEventListener('input', (e) => {
-        state.filters.minQuality = parseInt(e.target.value);
-        document.getElementById('quality-value').textContent = e.target.value;
-        scheduleCalculate(); // Auto-recalcul
     });
     
     // Toggle leveraged/inverse
     let levToggle = document.getElementById('etf-filter-leveraged');
     if (!levToggle) {
         // Créer le toggle s'il n'existe pas
-        const filterContainer = document.querySelector('#etf-mc-filters') || 
-                               document.querySelector('#etf-mc-section fieldset[data-role="filters"]');
+        const filterContainer = document.querySelector('#etf-mc-section fieldset:last-of-type');
         if (filterContainer) {
             const toggleDiv = document.createElement('div');
             toggleDiv.className = 'flex gap-2 items-center mt-2';
@@ -557,18 +461,25 @@
     
     levToggle?.addEventListener('change', (e) => {
         state.filters.excludeLeveraged = e.target.checked;
-        scheduleCalculate(); // Auto-recalcul
     });
     
-    // Boutons (Apply force le recalcul immédiat)
+    // Boutons
     document.getElementById('etf-mc-apply')?.addEventListener('click', () => {
-        console.log('🎯 ETF MC v3.2: Calcul forcé avec', state.selectedMetrics.length, 'métriques');
-        calculate(); // Calcul immédiat
+        console.log('🎯 ETF MC v3.1: Calcul avec', state.selectedMetrics.length, 'métriques');
+        calculate();
     });
     
     document.getElementById('etf-mc-reset')?.addEventListener('click', () => {
         // Reset état
-        state = JSON.parse(JSON.stringify(defaultState));
+        state.selectedMetrics = ['ter', 'aum', 'return_ytd', 'volatility', 'sharpe_proxy'];
+        state.filters = { 
+            type: 'all', 
+            maxTER: null, 
+            minAUM: null, 
+            minQuality: 80,
+            excludeLeveraged: true 
+        };
+        state.mode = 'balanced';
         
         // Reset UI
         Object.keys(METRICS).forEach(m => {
@@ -579,16 +490,11 @@
         const typeFilter = document.getElementById('etf-filter-type');
         const terFilter = document.getElementById('etf-filter-ter');
         const aumFilter = document.getElementById('etf-filter-aum');
-        const qualitySlider = document.getElementById('etf-filter-quality');
         const levToggle = document.getElementById('etf-filter-leveraged');
         
         if (typeFilter) typeFilter.value = 'all';
         if (terFilter) terFilter.value = '';
         if (aumFilter) aumFilter.value = '';
-        if (qualitySlider) {
-            qualitySlider.value = '80';
-            document.getElementById('quality-value').textContent = '80';
-        }
         if (levToggle) levToggle.checked = true;
         
         const balancedRadio = document.querySelector('input[name="etf-mc-mode"][value="balanced"]');
@@ -602,72 +508,24 @@
             }
         });
         
-        // Effacer localStorage et recalculer
-        localStorage.removeItem(LS_KEY);
         calculate();
     });
     
-    // ========== EXPOSITION API PROPRE ==========
-    window.ETF_MC = {
-        calculate,
-        state,
+    // ========== EXPOSITION API ==========
+    window.ETF_MC = { 
+        calculate, 
+        state, 
         METRICS,
-        setMetrics(list) { 
-            state.selectedMetrics = list.filter(m => METRICS[m]); 
-            scheduleCalculate(); 
-        },
-        setFilter(k, v) { 
-            state.filters[k] = v; 
-            scheduleCalculate(); 
-        },
-        setMode(m) { 
-            state.mode = m; 
-            scheduleCalculate(); 
-        },
-        refresh() { 
-            calculate(); 
-        },
         helpers: { kindOf, isLeveraged }
     };
     
     // ========== INITIALISATION ==========
+    setTimeout(() => {
+        if (window.ETFData.getData().length > 0) {
+            calculate();
+            console.log('✅ ETF MC v3.1: Données chargées, calcul initial avec filtrage intelligent');
+        }
+    }, 1000);
     
-    // Charger les préférences sauvegardées
-    loadState();
-    
-    // Synchroniser l'UI avec l'état chargé
-    Object.keys(METRICS).forEach(m => {
-        const cb = document.getElementById(`etf-m-${m}`);
-        if (cb) cb.checked = state.selectedMetrics.includes(m);
-    });
-    
-    const modeRadio = document.querySelector(`input[name="etf-mc-mode"][value="${state.mode}"]`);
-    if (modeRadio) modeRadio.checked = true;
-    
-    const typeFilter = document.getElementById('etf-filter-type');
-    if (typeFilter && state.filters.type) typeFilter.value = state.filters.type;
-    
-    const terFilter = document.getElementById('etf-filter-ter');
-    if (terFilter && state.filters.maxTER) terFilter.value = state.filters.maxTER;
-    
-    const aumFilter = document.getElementById('etf-filter-aum');
-    if (aumFilter && state.filters.minAUM) aumFilter.value = state.filters.minAUM;
-    
-    const qualitySlider = document.getElementById('etf-filter-quality');
-    if (qualitySlider && state.filters.minQuality != null) {
-        qualitySlider.value = state.filters.minQuality;
-        const qualityValue = document.getElementById('quality-value');
-        if (qualityValue) qualityValue.textContent = state.filters.minQuality;
-    }
-    
-    const levToggle = document.getElementById('etf-filter-leveraged');
-    if (levToggle) levToggle.checked = state.filters.excludeLeveraged;
-    
-    // Attendre les données et calculer
-    onETFDataReady(() => {
-        calculate();
-        console.log('✅ ETF MC v3.2: Données prêtes → calcul initial avec préférences restaurées');
-    });
-    
-    console.log('✅ ETF MC Module v3.2 - Event-based, Auto-calc, LocalStorage, Infos étendues');
+    console.log('✅ ETF MC Module v3.1 - Champs réels, filtrage leveraged, métriques avancées');
 })();
