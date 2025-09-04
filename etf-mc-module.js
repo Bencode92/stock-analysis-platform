@@ -1,5 +1,4 @@
-// Module MC adapté pour ETFs - v4.0 ACTIONS-LIKE
-// Reprend exactement la logique Actions : winsorisation, percentiles Hazen, nearTie, etc.
+// Module MC adapté pour ETFs - v4.1 avec filtre type de base
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const num=x=>Number.isFinite(+x)?+x:NaN, str=s=>s==null?'':String(s);
@@ -22,15 +21,15 @@
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results');
     const summary=document.getElementById('etf-mc-summary');
-    if(!root||!results){console.error('❌ ETF MC v4.0: DOM manquant');return;}
-    console.log('✅ ETF MC v4.0: Module Actions-like avec nearTie');
+    if(!root||!results){console.error('❌ ETF MC v4.1: DOM manquant');return;}
+    console.log('✅ ETF MC v4.1: Module avec filtre type de base');
 
     // Harmonisation du conteneur
     results.classList.add('glassmorphism','rounded-lg','p-4');
 
-    // Styles harmonisés
-    if(!document.getElementById('etf-mc-v4-styles')){
-      const s=document.createElement('style'); s.id='etf-mc-v4-styles'; s.textContent=`
+    // Styles harmonisés + nouveau filtre type
+    if(!document.getElementById('etf-mc-v41-styles')){
+      const s=document.createElement('style'); s.id='etf-mc-v41-styles'; s.textContent=`
       #etf-mc-results { display:block }
       #etf-mc-results .space-y-2 > div { margin-bottom: .75rem }
       #etf-mc-results .etf-card{
@@ -74,6 +73,11 @@
       .facet-item{padding:6px 8px;border-radius:8px;display:flex;align-items:center;gap:8px}
       .facet-item input{accent-color:#00ffff}
       .facet-item.is-checked{background:rgba(0,200,255,.16);border:1px solid rgba(0,200,255,.35)}
+      /* Filtre type de base */
+      .type-filter-seg{display:inline-flex;background:rgba(255,255,255,.04);border:1px solid rgba(0,200,255,.2);border-radius:14px;padding:4px;gap:4px}
+      .type-filter-seg button{padding:8px 14px;border-radius:10px;font-weight:600;font-size:.85rem;opacity:.8;transition:all .2s;border:none;background:none;color:inherit;cursor:pointer}
+      .type-filter-seg button:hover{background:rgba(0,255,255,.06);opacity:.95}
+      .type-filter-seg button.active{background:rgba(0,255,255,.15);color:#00ffff;opacity:1;box-shadow:0 0 0 1px rgba(0,255,255,.3) inset}
       `;
       document.head.appendChild(s);
     }
@@ -81,19 +85,21 @@
     // === État & caches (même structure que Actions) ===
     const state={
       mode:'balanced',
+      baseFilter:'all', // nouveau: all/equity/bonds
       selectedMetrics:['return_ytd','ter','aum','return_1y'],
       filters:{countries:new Set(),sectors:new Set(),fundTypes:new Set(),excludeLeveraged:true},
       customFilters:[],
       data:[],
       catalogs:{countries:[],sectors:[],fundTypes:[]}
     };
-    const cache = {};  // { metric: { raw, sorted, rankPct, iqr } }
+    const cache = {};
     const masks = { facets:null, custom:null, final:null };
 
     // ==== MÉTRIQUES (équivalents ETF) ====
     const classify=e=>{
       const ft=str(e.fund_type).toLowerCase();
-      if(/(bond|government|fixed income|core|short|intermediate|maturity)/i.test(ft))return 'bonds';
+      const dataset=str(e.dataset).toLowerCase();
+      if(dataset==='bonds' || /(bond|government|fixed income|core|short|intermediate|maturity)/i.test(ft))return 'bonds';
       if(/(commodit|precious|gold|silver|oil)/i.test(ft))return 'commodity';
       return 'equity';
     };
@@ -117,6 +123,34 @@
       }}
     };
 
+    // ==== UI: Filtre type de base ====
+    function createBaseFilterUI(){
+      const firstFieldset = root.querySelector('fieldset');
+      if(!firstFieldset || document.getElementById('etf-base-filter')) return;
+      
+      const filterDiv = document.createElement('div');
+      filterDiv.id = 'etf-base-filter';
+      filterDiv.className = 'mb-3';
+      filterDiv.innerHTML = `
+        <div class="text-xs opacity-70 mb-2">Type d'ETF</div>
+        <div class="type-filter-seg" role="tablist">
+          <button data-type="all" class="active">🌍 Global</button>
+          <button data-type="equity">📈 Actions</button>
+          <button data-type="bonds">📊 Obligations</button>
+        </div>
+      `;
+      firstFieldset.parentNode.insertBefore(filterDiv, firstFieldset);
+      
+      filterDiv.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          filterDiv.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          state.baseFilter = btn.dataset.type;
+          scheduleCompute();
+        });
+      });
+    }
+
     // ==== UI: cases métriques & mode ====
     function syncSelectedFromUI() {
       const pills=[...root.querySelectorAll('.mc-pill input[id^="etf-m-"]')];
@@ -137,7 +171,7 @@
       if(e.target && e.target.name==='etf-mc-mode'){ state.mode=e.target.value||'balanced'; buildPriorityUI(); scheduleCompute(); }
     });
 
-    // UI Priorités (copie Actions)
+    // UI Priorités
     function buildPriorityUI(){
       let host=root.querySelector('fieldset[role="radiogroup"]') || root.querySelector('#etf-mc-section fieldset:nth-of-type(2)');
       if(!host) return;
@@ -253,12 +287,18 @@
       }
     }
 
-    // ==== MASQUES (facettes + custom) ====
+    // ==== MASQUES (facettes + custom + BASE FILTER) ====
     const q1d=(v)=>Math.round(v*10)/10;
     function buildFacetMask(){
       const n=state.data.length, mask=new Uint8Array(n); mask.fill(1);
       for(let i=0;i<n;i++){
         const e=state.data[i];
+        // NOUVEAU: filtre de base
+        if(state.baseFilter !== 'all'){
+          const kind = classify(e);
+          if(state.baseFilter === 'equity' && kind !== 'equity'){ mask[i]=0; continue; }
+          if(state.baseFilter === 'bonds' && kind !== 'bonds'){ mask[i]=0; continue; }
+        }
         if(state.filters.excludeLeveraged && e.__lev){ mask[i]=0; continue; }
         if(state.filters.countries.size && !e.__countries.some(c=>state.filters.countries.has(c))) { mask[i]=0; continue; }
         if(state.filters.sectors.size && !e.__sectors.some(s=>state.filters.sectors.has(s))) { mask[i]=0; continue; }
@@ -419,13 +459,14 @@
     function updateSummary(filtered,total){
       if(!summary) return;
       const mode=state.mode==='balanced'?'Équilibre':'Priorités intelligentes';
+      const typeLabel = state.baseFilter === 'equity' ? ' Actions' : state.baseFilter === 'bonds' ? ' Obligations' : '';
       const metrics=state.selectedMetrics.map(m=>METRICS[m]?.label).filter(Boolean).join(' · ');
       const tags=[];
       if(state.filters.countries.size) tags.push(`Pays(${state.filters.countries.size})`);
       if(state.filters.sectors.size)   tags.push(`Secteurs(${state.filters.sectors.size})`);
       if(state.filters.fundTypes.size) tags.push(`Type(${state.filters.fundTypes.size})`);
       if(state.filters.excludeLeveraged) tags.push('No Lev/Inv');
-      summary.innerHTML=`<strong>${mode}</strong> • ${metrics}${tags.length?' • '+tags.join(' '):''} • ${filtered}/${total} ETFs`;
+      summary.innerHTML=`<strong>${mode}${typeLabel}</strong> • ${metrics}${tags.length?' • '+tags.join(' '):''} • ${filtered}/${total} ETFs`;
     }
 
     // ==== COMPUTE PIPELINE (identique Actions) ====
@@ -502,9 +543,12 @@
     document.getElementById('etf-mc-apply')?.addEventListener('click',()=>compute());
     document.getElementById('etf-mc-reset')?.addEventListener('click',()=>{
       state.mode='balanced';
+      state.baseFilter='all';
       state.selectedMetrics=['return_ytd','ter','aum','return_1y'];
       state.filters={countries:new Set(),sectors:new Set(),fundTypes:new Set(),excludeLeveraged:true};
       state.customFilters=[];
+      document.querySelectorAll('#etf-base-filter button').forEach(b=>b.classList.remove('active'));
+      document.querySelector('#etf-base-filter button[data-type="all"]')?.classList.add('active');
       document.querySelectorAll('#etf-mc-section .mc-pill input').forEach(inp=>{
         const id=inp.id?.replace('etf-m-','');
         inp.checked=state.selectedMetrics.includes(id);
@@ -520,7 +564,8 @@
       compute();
     });
 
-    // Go
+    // Initialisation
+    createBaseFilterUI();
     syncSelectedFromUI();
     setTimeout(()=>compute(), 300);
     window.ETF_MC={compute,state,METRICS,cache};
