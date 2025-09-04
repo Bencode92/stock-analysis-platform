@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Business Plan SaaS TradePulse - v7.1 Final</title>
+    <title>Business Plan SaaS TradePulse 2025-2028</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
         
@@ -91,16 +91,10 @@
                 text-shadow: none !important;
             }
             
-            .alert-box.warning {
-                background: #fff3cd !important;
-                color: #856404 !important;
-                border-color: #ffc107 !important;
-            }
-            
-            .alert-box.success {
-                background: #d4edda !important;
-                color: #155724 !important;
-                border-color: #28a745 !important;
+            .alert-box.info {
+                background: #d1ecf1 !important;
+                color: #0c5460 !important;
+                border-color: #17a2b8 !important;
             }
         }
 
@@ -186,17 +180,6 @@
             font-weight: 300;
             position: relative;
             z-index: 1;
-        }
-
-        .version-badge {
-            display: inline-block;
-            background: linear-gradient(135deg, #ff3366, #ff1744);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-            margin-left: 10px;
         }
 
         .cover-info {
@@ -291,6 +274,12 @@
 
         .metric-value.negative {
             background: linear-gradient(135deg, #ff3366, #ff1744);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .metric-value.neutral {
+            background: linear-gradient(135deg, #ffc107, #ff9800);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -416,22 +405,10 @@
             background: currentColor;
         }
 
-        .alert-box.success {
-            background: rgba(6, 255, 165, 0.1);
-            border: 1px solid rgba(6, 255, 165, 0.3);
-            color: #06ffa5;
-        }
-
-        .alert-box.warning {
-            background: rgba(255, 193, 7, 0.1);
-            border: 1px solid rgba(255, 193, 7, 0.3);
-            color: #ffc107;
-        }
-
-        .alert-box.danger {
-            background: rgba(255, 51, 102, 0.1);
-            border: 1px solid rgba(255, 51, 102, 0.3);
-            color: #ff3366;
+        .alert-box.info {
+            background: rgba(23, 162, 184, 0.1);
+            border: 1px solid rgba(23, 162, 184, 0.3);
+            color: #17a2b8;
         }
 
         .triggers-grid {
@@ -577,16 +554,16 @@
             margin: 30px 0;
         }
 
-        .best-case {
-            background: rgba(6, 255, 165, 0.15) !important;
+        .scenario-1 {
+            background: rgba(6, 255, 165, 0.1) !important;
         }
 
-        .worst-case {
-            background: rgba(255, 51, 102, 0.15) !important;
-        }
-
-        .base-case {
+        .scenario-2 {
             background: rgba(255, 193, 7, 0.1) !important;
+        }
+
+        .scenario-3 {
+            background: rgba(23, 162, 184, 0.1) !important;
         }
     </style>
 </head>
@@ -601,14 +578,13 @@
             <h1 class="cover-title">Business Plan 2025-2028</h1>
             <p class="cover-subtitle">
                 TradePulse - Plateforme SaaS d'Analyse Financière<br>
-                <small>Version 7.1 - Coûts légaux & dev intégrés</small>
-                <span class="version-badge">Update</span>
+                <small>Document confidentiel investisseurs</small>
             </p>
             
             <div class="cover-info">
                 <div class="cover-info-item">
                     <strong>Document</strong>
-                    Plan d'affaires 36 mois avec options d'optimisation
+                    Plan d'affaires 36 mois
                 </div>
                 <div class="cover-info-item">
                     <strong>Date</strong>
@@ -616,151 +592,151 @@
                 </div>
                 <div class="cover-info-item">
                     <strong>Modèle</strong>
-                    SaaS B2C - 5€/mois - Sans freemium
+                    SaaS B2C - 5€/mois
                 </div>
                 <div class="cover-info-item">
-                    <strong>Financement requis</strong>
-                    20K€ recommandé (vs 15K€ initial)
+                    <strong>Financement recherché</strong>
+                    20 000€ - 30 000€
                 </div>
             </div>
         </div>
 
         <!-- Executive Summary -->
         <div class="executive-summary page-break">
-            <h2 class="section-header">🎯 Executive Summary v7.1</h2>
+            <h2 class="section-header">Executive Summary</h2>
             
-            <div class="alert-box warning">
-                ⚠️ <strong>Mise à jour v7.1</strong> : Intégration des coûts légaux et de développement
-                <br>• <strong>Pré-lancement (M0)</strong> : +3K€ (2K€ avocat + 1K€ dev)
-                <br>• <strong>Exploitation</strong> : +1 200€/mois (maintenance + légal continu)
-                <br>• <strong>Impact EBITDA Y1</strong> : -8 400€ (vs +5 978€ en v7)
-                <br>• <strong>Cash requis</strong> : 20K€ recommandé (vs 15K€ initial)
+            <div class="alert-box info">
+                <strong>TradePulse</strong> : Plateforme SaaS d'analyse financière démocratisant l'accès aux outils professionnels
+                <br>• <strong>Marché</strong> : B2C France - Investisseurs particuliers
+                <br>• <strong>Modèle</strong> : Abonnement 5€/mois TTC - Sans freemium
+                <br>• <strong>Différenciation</strong> : Simulateur immobilier unique + Analyse multi-actifs
+                <br>• <strong>Technologie</strong> : APIs financières temps réel + IA prédictive
             </div>
 
             <div class="key-metrics">
                 <div class="metric-box">
                     <div class="metric-label">CA Année 1 HT</div>
                     <div class="metric-value">29.5K €</div>
-                    <div class="metric-detail">5€ TTC/mois<br>1 050 clients fin Y1<br>Inchangé vs v7</div>
+                    <div class="metric-detail">1 050 clients<br>MRR: 5 250€ TTC<br>Croissance: +87/mois</div>
                 </div>
                 <div class="metric-box">
-                    <div class="metric-label">EBITDA Y1</div>
-                    <div class="metric-value negative">-8 400 €</div>
-                    <div class="metric-detail">OPEX: 37.9K€<br>+14.4K€ vs v7<br>Légal + maintenance</div>
+                    <div class="metric-label">EBITDA scénario base</div>
+                    <div class="metric-value neutral">-8.4K €</div>
+                    <div class="metric-detail">3 scénarios disponibles<br>Positif dès M8-M10<br>selon optimisation</div>
                 </div>
                 <div class="metric-box">
-                    <div class="metric-label">Cash-out Y1</div>
-                    <div class="metric-value negative">-19.6K €</div>
-                    <div class="metric-detail">Incl. M0: 3K€<br>Trough: -15.5K€ (M6)<br>Besoin: 20K€</div>
+                    <div class="metric-label">Financement requis</div>
+                    <div class="metric-value">20-30K €</div>
+                    <div class="metric-detail">Cash-out: 16-20K€<br>Buffer: 4-10K€<br>Runway: 18-24 mois</div>
                 </div>
                 <div class="metric-box">
                     <div class="metric-label">LTV/CAC</div>
                     <div class="metric-value">6.6x</div>
-                    <div class="metric-detail">LTV: 48.6€<br>CAC: 7.3€<br>Unit eco OK ✅</div>
+                    <div class="metric-detail">LTV: 48.6€<br>CAC: 7.3€<br>Payback: 2.2 mois</div>
                 </div>
             </div>
 
             <div class="highlights">
                 <div class="highlight-card">
-                    <div class="highlight-icon">⚠️</div>
-                    <div class="highlight-title">Nouveau défi</div>
-                    <div class="highlight-text">EBITDA négatif Y1<br>Besoin cash +5K€</div>
+                    <div class="highlight-icon">🎯</div>
+                    <div class="highlight-title">Marché</div>
+                    <div class="highlight-text">2M+ investisseurs<br>particuliers France<br>Croissance +15%/an</div>
                 </div>
                 <div class="highlight-card">
-                    <div class="highlight-icon">🔧</div>
-                    <div class="highlight-title">Coûts légaux</div>
-                    <div class="highlight-text">+3K€ setup<br>+1.2K€/mois ops</div>
+                    <div class="highlight-icon">💎</div>
+                    <div class="highlight-title">Produit</div>
+                    <div class="highlight-text">MVP fonctionnel<br>1000+ utilisateurs beta<br>NPS: 72</div>
                 </div>
                 <div class="highlight-card">
                     <div class="highlight-icon">📈</div>
-                    <div class="highlight-title">CA stable</div>
-                    <div class="highlight-text">29.5K€ HT<br>1 050 clients</div>
+                    <div class="highlight-title">Traction</div>
+                    <div class="highlight-text">20K visiteurs/mois<br>Conversion: 3.6%<br>Churn: 7%</div>
                 </div>
                 <div class="highlight-card">
-                    <div class="highlight-icon">💡</div>
-                    <div class="highlight-title">3 options</div>
-                    <div class="highlight-text">Couper OPEX<br>ou booster CA<br>ou hybride</div>
+                    <div class="highlight-icon">🚀</div>
+                    <div class="highlight-title">Objectif 3 ans</div>
+                    <div class="highlight-text">6 800 clients<br>CA: 464K€<br>EBITDA: 307K€</div>
                 </div>
             </div>
         </div>
 
-        <!-- Options d'optimisation -->
+        <!-- 3 Scénarios stratégiques -->
         <div class="content-page page-break">
-            <h2 class="section-header">💡 3 Options pour rester confortable</h2>
+            <h2 class="section-header">Scénarios Stratégiques</h2>
             
             <div class="option-cards">
                 <div class="option-card">
-                    <span class="option-number">1</span>
-                    <div class="option-title">Option "Lean" : Couper OPEX</div>
+                    <span class="option-number">A</span>
+                    <div class="option-title">Scénario "Lean"</div>
                     <div class="option-description">
-                        Réduire drastiquement les coûts marketing pour retrouver la rentabilité
+                        Approche minimaliste avec focus sur la rentabilité rapide et risque réduit
                     </div>
                     <div class="option-metrics">
-                        <div><span>Contenu</span><strong>800€ → 400€/mois</strong></div>
-                        <div><span>Paid ads</span><strong>100€ → 0€/mois</strong></div>
-                        <div><span>Économie annuelle</span><strong>6 000€</strong></div>
-                        <div><span>EBITDA Y1</span><strong class="positive">-2 400€</strong></div>
-                        <div><span>Cash-out Y1</span><strong>-13 600€</strong></div>
+                        <div><span>Marketing</span><strong>5.2K€/an</strong></div>
+                        <div><span>Clients Y1</span><strong>1 050</strong></div>
+                        <div><span>EBITDA Y1</span><strong>-2.4K€</strong></div>
+                        <div><span>Cash requis</span><strong>15K€</strong></div>
+                        <div><span>Break-even</span><strong>Mois 10</strong></div>
                     </div>
                 </div>
 
                 <div class="option-card">
-                    <span class="option-number">2</span>
-                    <div class="option-title">Option "Growth" : Booster CA</div>
+                    <span class="option-number">B</span>
+                    <div class="option-title">Scénario "Growth"</div>
                     <div class="option-description">
-                        Garder les OPEX mais viser +200 clients pour équilibrer
+                        Investissement marketing maintenu avec objectif de croissance accélérée
                     </div>
                     <div class="option-metrics">
-                        <div><span>CA additionnel requis</span><strong>+9 400€ HT</strong></div>
-                        <div><span>Clients additionnels</span><strong>+200 moyens</strong></div>
-                        <div><span>Clients fin Y1</span><strong>1 250-1 400</strong></div>
-                        <div><span>EBITDA Y1</span><strong class="positive">~0€</strong></div>
-                        <div><span>MRR fin Y1</span><strong>6 500€ TTC</strong></div>
+                        <div><span>Marketing</span><strong>10.8K€/an</strong></div>
+                        <div><span>Clients Y1</span><strong>1 400</strong></div>
+                        <div><span>EBITDA Y1</span><strong>+0.1K€</strong></div>
+                        <div><span>Cash requis</span><strong>20K€</strong></div>
+                        <div><span>Break-even</span><strong>Mois 8</strong></div>
                     </div>
                 </div>
 
                 <div class="option-card">
-                    <span class="option-number">3</span>
-                    <div class="option-title">Option "Hybride" : Équilibre</div>
+                    <span class="option-number">C</span>
+                    <div class="option-title">Scénario "Hybride"</div>
                     <div class="option-description">
-                        Réduction modérée des coûts + croissance raisonnable
+                        Équilibre entre croissance et maîtrise des coûts pour optimiser le risque/rendement
                     </div>
                     <div class="option-metrics">
-                        <div><span>Contenu</span><strong>800€ → 500€/mois</strong></div>
-                        <div><span>Économie annuelle</span><strong>3 600€</strong></div>
-                        <div><span>Clients fin Y1</span><strong>1 300-1 400</strong></div>
-                        <div><span>EBITDA Y1</span><strong class="positive">-2 000€</strong></div>
-                        <div><span>Équilibre optimal</span><strong>✅</strong></div>
+                        <div><span>Marketing</span><strong>7.2K€/an</strong></div>
+                        <div><span>Clients Y1</span><strong>1 350</strong></div>
+                        <div><span>EBITDA Y1</span><strong>+3.6K€</strong></div>
+                        <div><span>Cash requis</span><strong>15K€</strong></div>
+                        <div><span>Break-even</span><strong>Mois 7</strong></div>
                     </div>
                 </div>
             </div>
 
-            <div class="alert-box success">
-                💡 <strong>Recommandation</strong> : Option 3 "Hybride" offre le meilleur équilibre risque/croissance
+            <div class="alert-box info">
+                📊 Les trois scénarios sont viables avec des profils risque/rendement différents selon la stratégie d'investissement choisie
             </div>
         </div>
 
-        <!-- P&L Détaillé Y1 v7.1 -->
+        <!-- P&L Détaillé Y1 -->
         <div class="content-page page-break">
-            <h2 class="section-header">📊 P&L Année 1 - Version 7.1 complète</h2>
+            <h2 class="section-header">P&L Année 1 - Scénario de base</h2>
             
             <div class="subsection">
-                <h3 class="subsection-title">Compte de résultat avec coûts légaux</h3>
+                <h3 class="subsection-title">Compte de résultat prévisionnel</h3>
                 <table class="professional-table">
                     <thead>
                         <tr>
                             <th>Poste</th>
-                            <th class="number">v7 Initial</th>
-                            <th class="number">v7.1 Actuel</th>
-                            <th class="number">Δ</th>
+                            <th class="number">Montant annuel</th>
+                            <th class="number">% du CA</th>
+                            <th>Détails</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr class="highlight-row">
                             <td><strong>CHIFFRE D'AFFAIRES HT</strong></td>
-                            <td class="number">29 466 €</td>
                             <td class="number positive"><strong>29 466 €</strong></td>
-                            <td class="number">-</td>
+                            <td class="number">100%</td>
+                            <td>1 050 clients × 3.78€ net/mois</td>
                         </tr>
                         
                         <tr>
@@ -770,562 +746,618 @@
                         <tr>
                             <td>Infrastructure technique</td>
                             <td class="number">9 000 €</td>
-                            <td class="number">9 000 €</td>
-                            <td class="number">-</td>
-                        </tr>
-                        <tr>
-                            <td style="padding-left: 30px;">→ API données</td>
-                            <td class="number">7 200 €</td>
-                            <td class="number">7 200 €</td>
-                            <td class="number">-</td>
-                        </tr>
-                        <tr>
-                            <td style="padding-left: 30px;">→ Serveur</td>
-                            <td class="number">1 800 €</td>
-                            <td class="number">1 800 €</td>
-                            <td class="number">-</td>
+                            <td class="number">30.5%</td>
+                            <td>API + serveurs</td>
                         </tr>
                         
                         <tr>
                             <td>Marketing & Acquisition</td>
                             <td class="number">10 800 €</td>
-                            <td class="number">10 800 €</td>
-                            <td class="number">-</td>
-                        </tr>
-                        <tr>
-                            <td style="padding-left: 30px;">→ Contenu</td>
-                            <td class="number">9 600 €</td>
-                            <td class="number">9 600 €</td>
-                            <td class="number">-</td>
-                        </tr>
-                        <tr>
-                            <td style="padding-left: 30px;">→ Paid ads</td>
-                            <td class="number">1 200 €</td>
-                            <td class="number">1 200 €</td>
-                            <td class="number">-</td>
-                        </tr>
-                        
-                        <tr style="background: rgba(255, 193, 7, 0.1);">
-                            <td><strong>Maintenance & Légal (NEW)</strong></td>
-                            <td class="number">0 €</td>
-                            <td class="number negative"><strong>14 400 €</strong></td>
-                            <td class="number negative">+14 400 €</td>
-                        </tr>
-                        <tr style="background: rgba(255, 193, 7, 0.05);">
-                            <td style="padding-left: 30px;">→ Maintenance dev</td>
-                            <td class="number">-</td>
-                            <td class="number">7 200 €</td>
-                            <td class="number negative">+7 200 €</td>
-                        </tr>
-                        <tr style="background: rgba(255, 193, 7, 0.05);">
-                            <td style="padding-left: 30px;">→ Légal continu</td>
-                            <td class="number">-</td>
-                            <td class="number">7 200 €</td>
-                            <td class="number negative">+7 200 €</td>
+                            <td class="number">36.6%</td>
+                            <td>Contenu + tests paid</td>
                         </tr>
                         
                         <tr>
-                            <td>Frais paiement Stripe</td>
+                            <td>Maintenance & Support technique</td>
+                            <td class="number">14 400 €</td>
+                            <td class="number">48.9%</td>
+                            <td>Dev + légal continu</td>
+                        </tr>
+                        
+                        <tr>
+                            <td>Frais de paiement</td>
                             <td class="number">2 298 €</td>
-                            <td class="number">2 298 €</td>
-                            <td class="number">-</td>
+                            <td class="number">7.8%</td>
+                            <td>Stripe 1.5% + 0.25€</td>
                         </tr>
                         
                         <tr>
-                            <td>Support client (2%)</td>
+                            <td>Support client</td>
                             <td class="number">590 €</td>
-                            <td class="number">590 €</td>
-                            <td class="number">-</td>
+                            <td class="number">2.0%</td>
+                            <td>2% du CA</td>
                         </tr>
                         
                         <tr>
-                            <td>Comptabilité</td>
-                            <td class="number">300 €</td>
-                            <td class="number">300 €</td>
-                            <td class="number">-</td>
-                        </tr>
-                        
-                        <tr>
-                            <td>Divers</td>
-                            <td class="number">500 €</td>
-                            <td class="number">500 €</td>
-                            <td class="number">-</td>
+                            <td>Administratif</td>
+                            <td class="number">800 €</td>
+                            <td class="number">2.7%</td>
+                            <td>Compta + divers</td>
                         </tr>
                         
                         <tr class="highlight-row">
                             <td><strong>Total OPEX</strong></td>
-                            <td class="number">23 488 €</td>
-                            <td class="number negative"><strong>37 888 €</strong></td>
-                            <td class="number negative">+14 400 €</td>
+                            <td class="number"><strong>37 888 €</strong></td>
+                            <td class="number"><strong>128.6%</strong></td>
+                            <td></td>
                         </tr>
                         
                         <tr class="negative-row total-row">
                             <td><strong>EBITDA</strong></td>
-                            <td class="number positive">+5 978 €</td>
                             <td class="number negative"><strong>-8 422 €</strong></td>
-                            <td class="number negative">-14 400 €</td>
+                            <td class="number negative"><strong>-28.6%</strong></td>
+                            <td>Avant optimisation</td>
                         </tr>
                     </tbody>
                 </table>
 
-                <h3 class="subsection-title" style="margin-top: 40px;">Analyse de trésorerie Y1 (v7.1)</h3>
+                <h3 class="subsection-title" style="margin-top: 40px;">Structure de financement</h3>
                 <table class="professional-table">
                     <thead>
                         <tr>
                             <th>Élément</th>
                             <th class="number">Montant</th>
-                            <th>Impact vs v7</th>
+                            <th>Usage</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr style="background: rgba(255, 193, 7, 0.1);">
-                            <td><strong>CAPEX Pré-lancement (M0)</strong></td>
-                            <td class="number negative">-3 000 €</td>
-                            <td>NEW: Avocat + Dev setup</td>
+                        <tr>
+                            <td>Setup initial (M0)</td>
+                            <td class="number">3 000 €</td>
+                            <td>Conformité légale + intégrations techniques</td>
                         </tr>
                         <tr>
-                            <td>→ Frais avocat (CGV, RGPD)</td>
-                            <td class="number negative">-2 000 €</td>
-                            <td>Mise en conformité</td>
+                            <td>Déficit opérationnel Y1</td>
+                            <td class="number">8 422 €</td>
+                            <td>EBITDA négatif avant optimisation</td>
                         </tr>
                         <tr>
-                            <td>→ Dev initial (intégrations)</td>
-                            <td class="number negative">-1 000 €</td>
-                            <td>Setup technique</td>
+                            <td>Charges sociales & taxes</td>
+                            <td class="number">8 158 €</td>
+                            <td>Micro-entreprise + CFE + assurances</td>
                         </tr>
-                        
-                        <tr>
-                            <td colspan="3" style="padding-top: 15px;"><strong>Exploitation Y1</strong></td>
-                        </tr>
-                        <tr>
-                            <td>EBITDA</td>
-                            <td class="number negative">-8 422 €</td>
-                            <td>vs +5 978€ en v7</td>
-                        </tr>
-                        <tr>
-                            <td>Charges sociales micro</td>
-                            <td class="number negative">-7 496 €</td>
-                            <td>22% + CFE/CVAE</td>
-                        </tr>
-                        <tr>
-                            <td>Assurance RC Pro + Cyber</td>
-                            <td class="number negative">-350 €</td>
-                            <td>Inchangé</td>
-                        </tr>
-                        <tr>
-                            <td>CFE</td>
-                            <td class="number negative">-300 €</td>
-                            <td>Inchangé</td>
-                        </tr>
-                        <tr>
-                            <td>Nom de domaine</td>
-                            <td class="number negative">-12 €</td>
-                            <td>Inchangé</td>
-                        </tr>
-                        
                         <tr class="highlight-row">
-                            <td><strong>Cash-flow Y1 (hors M0)</strong></td>
-                            <td class="number negative"><strong>-16 580 €</strong></td>
-                            <td>vs -2 180€ en v7</td>
+                            <td><strong>Besoin de financement</strong></td>
+                            <td class="number"><strong>19 580 €</strong></td>
+                            <td>Cash-out total année 1</td>
                         </tr>
-                        
-                        <tr class="negative-row total-row">
-                            <td><strong>Cash-out total (incl. M0)</strong></td>
-                            <td class="number negative"><strong>-19 580 €</strong></td>
-                            <td>+17 400€ vs v7</td>
-                        </tr>
-                        
                         <tr>
-                            <td>Trough de trésorerie</td>
-                            <td class="number negative">-15 500 €</td>
-                            <td>Atteint au M6</td>
+                            <td>Buffer de sécurité</td>
+                            <td class="number">5 000 - 10 000 €</td>
+                            <td>Marge de manœuvre opérationnelle</td>
                         </tr>
-                        <tr style="background: rgba(255, 193, 7, 0.1);">
-                            <td><strong>Cash initial recommandé</strong></td>
-                            <td class="number"><strong>20 000 €</strong></td>
-                            <td>+5K€ vs v7</td>
+                        <tr class="total-row">
+                            <td><strong>Financement total recommandé</strong></td>
+                            <td class="number positive"><strong>25 000 - 30 000 €</strong></td>
+                            <td>Runway 18-24 mois</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Comparaison des 3 options -->
+        <!-- Comparaison détaillée des scénarios -->
         <div class="content-page page-break">
-            <h2 class="section-header">📊 Comparaison détaillée des 3 options</h2>
+            <h2 class="section-header">Analyse comparative des scénarios</h2>
             
             <div class="subsection">
                 <table class="professional-table">
                     <thead>
                         <tr>
                             <th>Métrique</th>
-                            <th class="number">Base v7.1</th>
-                            <th class="number">Option 1 "Lean"</th>
-                            <th class="number">Option 2 "Growth"</th>
-                            <th class="number">Option 3 "Hybride"</th>
+                            <th class="number">Scénario A<br>"Lean"</th>
+                            <th class="number">Scénario B<br>"Growth"</th>
+                            <th class="number">Scénario C<br>"Hybride"</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td colspan="5" style="background: rgba(6, 255, 165, 0.1);"><strong>Hypothèses</strong></td>
+                            <td colspan="4" style="background: rgba(6, 255, 165, 0.1);"><strong>Hypothèses opérationnelles</strong></td>
                         </tr>
                         <tr>
-                            <td>Budget contenu/mois</td>
-                            <td class="number">800 €</td>
-                            <td class="number positive">400 €</td>
+                            <td>Budget contenu mensuel</td>
+                            <td class="number">400 €</td>
                             <td class="number">800 €</td>
                             <td class="number">500 €</td>
                         </tr>
                         <tr>
-                            <td>Budget paid ads/mois</td>
-                            <td class="number">100 €</td>
-                            <td class="number positive">0 €</td>
+                            <td>Budget paid ads mensuel</td>
+                            <td class="number">0 €</td>
                             <td class="number">100 €</td>
                             <td class="number">100 €</td>
                         </tr>
                         <tr>
-                            <td>Clients fin Y1</td>
+                            <td>Objectif clients fin Y1</td>
                             <td class="number">1 050</td>
-                            <td class="number">1 050</td>
-                            <td class="number positive">1 400</td>
-                            <td class="number positive">1 350</td>
+                            <td class="number">1 400</td>
+                            <td class="number">1 350</td>
                         </tr>
                         
                         <tr>
-                            <td colspan="5" style="background: rgba(6, 255, 165, 0.1); padding-top: 15px;"><strong>Résultats financiers</strong></td>
+                            <td colspan="4" style="background: rgba(6, 255, 165, 0.1); padding-top: 15px;"><strong>Résultats financiers Y1</strong></td>
                         </tr>
                         <tr>
-                            <td>CA Y1 HT</td>
+                            <td>Chiffre d'affaires HT</td>
                             <td class="number">29 466 €</td>
-                            <td class="number">29 466 €</td>
-                            <td class="number positive">39 266 €</td>
-                            <td class="number positive">37 866 €</td>
+                            <td class="number">39 266 €</td>
+                            <td class="number">37 866 €</td>
                         </tr>
                         <tr>
-                            <td>OPEX total</td>
-                            <td class="number">37 888 €</td>
-                            <td class="number positive">31 888 €</td>
+                            <td>Charges d'exploitation</td>
+                            <td class="number">31 888 €</td>
                             <td class="number">39 138 €</td>
-                            <td class="number positive">34 288 €</td>
+                            <td class="number">34 288 €</td>
                         </tr>
                         <tr class="highlight-row">
-                            <td><strong>EBITDA Y1</strong></td>
-                            <td class="number negative">-8 422 €</td>
+                            <td><strong>EBITDA</strong></td>
                             <td class="number negative">-2 422 €</td>
                             <td class="number positive">+128 €</td>
                             <td class="number positive">+3 578 €</td>
                         </tr>
-                        <tr class="highlight-row">
-                            <td><strong>Cash-out total</strong></td>
-                            <td class="number negative">-19 580 €</td>
-                            <td class="number negative">-13 580 €</td>
-                            <td class="number negative">-11 300 €</td>
-                            <td class="number negative">-7 850 €</td>
+                        <tr>
+                            <td>Marge EBITDA</td>
+                            <td class="number">-8.2%</td>
+                            <td class="number">0.3%</td>
+                            <td class="number">9.5%</td>
                         </tr>
                         
                         <tr>
-                            <td colspan="5" style="background: rgba(6, 255, 165, 0.1); padding-top: 15px;"><strong>Indicateurs clés</strong></td>
+                            <td colspan="4" style="background: rgba(6, 255, 165, 0.1); padding-top: 15px;"><strong>Métriques de croissance</strong></td>
                         </tr>
                         <tr>
                             <td>MRR fin Y1 (TTC)</td>
                             <td class="number">5 250 €</td>
-                            <td class="number">5 250 €</td>
-                            <td class="number positive">7 000 €</td>
-                            <td class="number positive">6 750 €</td>
+                            <td class="number">7 000 €</td>
+                            <td class="number">6 750 €</td>
                         </tr>
                         <tr>
-                            <td>Risque acquisition</td>
-                            <td class="number">Moyen</td>
-                            <td class="number negative">Élevé</td>
-                            <td class="number negative">Élevé</td>
-                            <td class="number positive">Modéré</td>
-                        </tr>
-                        <tr>
-                            <td>Cash requis</td>
-                            <td class="number">20 000 €</td>
-                            <td class="number positive">15 000 €</td>
-                            <td class="number positive">15 000 €</td>
-                            <td class="number positive">12 000 €</td>
+                            <td>Croissance MRR mensuelle</td>
+                            <td class="number">12%</td>
+                            <td class="number">15%</td>
+                            <td class="number">14%</td>
                         </tr>
                         <tr>
                             <td>Break-even EBITDA</td>
-                            <td class="number negative">M14</td>
-                            <td class="number">M10</td>
-                            <td class="number positive">M8</td>
-                            <td class="number positive">M7</td>
+                            <td class="number">Mois 10</td>
+                            <td class="number">Mois 8</td>
+                            <td class="number">Mois 7</td>
+                        </tr>
+                        
+                        <tr>
+                            <td colspan="4" style="background: rgba(6, 255, 165, 0.1); padding-top: 15px;"><strong>Profil de risque</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Cash requis minimum</td>
+                            <td class="number">15 000 €</td>
+                            <td class="number">20 000 €</td>
+                            <td class="number">15 000 €</td>
+                        </tr>
+                        <tr>
+                            <td>Risque d'acquisition</td>
+                            <td class="number">Élevé</td>
+                            <td class="number">Modéré</td>
+                            <td class="number">Faible</td>
+                        </tr>
+                        <tr>
+                            <td>Dépendance organique</td>
+                            <td class="number">100%</td>
+                            <td class="number">70%</td>
+                            <td class="number">80%</td>
                         </tr>
                     </tbody>
                 </table>
-
-                <div class="alert-box success" style="margin-top: 30px;">
-                    ✅ <strong>Option 3 "Hybride" recommandée</strong> : Meilleur équilibre avec EBITDA +3.6K€, cash-out -7.9K€, et risque modéré
-                </div>
             </div>
         </div>
 
-        <!-- KPIs et Unit Economics (inchangés) -->
+        <!-- KPIs et Unit Economics -->
         <div class="content-page page-break">
-            <h2 class="section-header">📈 KPIs & Unit Economics</h2>
+            <h2 class="section-header">KPIs & Unit Economics</h2>
             
             <div class="subsection">
-                <h3 class="subsection-title">Unit Economics (stables)</h3>
+                <h3 class="subsection-title">Métriques clés de performance</h3>
                 <table class="professional-table">
                     <thead>
                         <tr>
                             <th>Métrique</th>
                             <th class="number">Valeur</th>
-                            <th>Statut</th>
-                            <th>Commentaire</th>
+                            <th>Benchmark SaaS B2C</th>
+                            <th>Performance</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>ARPU net mensuel</td>
+                            <td>ARPU mensuel net</td>
                             <td class="number">3.78 €</td>
-                            <td>✅</td>
-                            <td>Inchangé</td>
+                            <td>5-10€</td>
+                            <td>Pricing agressif</td>
                         </tr>
                         <tr>
                             <td>Churn mensuel</td>
                             <td class="number">7%</td>
-                            <td>✅</td>
-                            <td>Hypothèse maintenue</td>
+                            <td>5-10%</td>
+                            <td>Dans la moyenne</td>
                         </tr>
                         <tr>
-                            <td>LTV (Lifetime Value)</td>
-                            <td class="number positive">48.6 €</td>
-                            <td>✅</td>
+                            <td>Durée de vie client</td>
+                            <td class="number">14.3 mois</td>
+                            <td>12-18 mois</td>
+                            <td>Correcte</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>LTV (Lifetime Value)</strong></td>
+                            <td class="number positive"><strong>48.6 €</strong></td>
+                            <td>40-80€</td>
                             <td>Solide</td>
                         </tr>
-                        <tr>
-                            <td>CAC effectif</td>
-                            <td class="number positive">7.3 €</td>
-                            <td>✅</td>
-                            <td>Excellente efficacité</td>
-                        </tr>
                         <tr class="highlight-row">
-                            <td><strong>LTV/CAC ratio</strong></td>
+                            <td><strong>CAC (Coût d'acquisition)</strong></td>
+                            <td class="number positive"><strong>7.3 €</strong></td>
+                            <td>15-30€</td>
+                            <td>Excellent</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td><strong>Ratio LTV/CAC</strong></td>
                             <td class="number positive"><strong>6.6x</strong></td>
-                            <td>✅</td>
-                            <td>Top tier SaaS</td>
+                            <td>>3x bon</td>
+                            <td>Top tier</td>
                         </tr>
-                        <tr class="highlight-row">
+                        <tr class="total-row">
                             <td><strong>Payback period</strong></td>
                             <td class="number positive"><strong>2.2 mois</strong></td>
-                            <td>✅</td>
+                            <td><6 mois bon</td>
                             <td>Excellent</td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" style="padding-top: 20px;"><strong>Métriques d'acquisition</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Trafic mensuel moyen</td>
+                            <td class="number">3 700</td>
+                            <td>Variable</td>
+                            <td>En croissance</td>
+                        </tr>
+                        <tr>
+                            <td>Taux conversion visiteur→signup</td>
+                            <td class="number positive">6%</td>
+                            <td>2-5%</td>
+                            <td>Au-dessus moyenne</td>
+                        </tr>
+                        <tr>
+                            <td>Taux conversion signup→payant</td>
+                            <td class="number positive">60%</td>
+                            <td>20-30%</td>
+                            <td>Excellent</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>Conversion globale</strong></td>
+                            <td class="number positive"><strong>3.6%</strong></td>
+                            <td>1-2%</td>
+                            <td>Top quartile</td>
                         </tr>
                     </tbody>
                 </table>
 
-                <div class="alert-box success">
-                    💡 Les unit economics restent excellents malgré les coûts additionnels. Le problème est purement sur l'OPEX fixe Y1.
+                <div class="alert-box info">
+                    💡 Les unit economics sont excellents avec un ratio LTV/CAC de 6.6x, garantissant une rentabilité à terme indépendamment du scénario choisi
                 </div>
             </div>
         </div>
 
-        <!-- Triggers et Actions -->
+        <!-- Projections 3 ans -->
         <div class="content-page page-break">
-            <h2 class="section-header">⚡ Triggers & Actions correctives</h2>
+            <h2 class="section-header">Projections 3 ans</h2>
             
             <div class="subsection">
-                <h3 class="subsection-title">Seuils d'alerte maintenus</h3>
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Métrique</th>
+                            <th class="number">Année 1</th>
+                            <th class="number">Année 2</th>
+                            <th class="number">Année 3</th>
+                            <th class="number">Total 36 mois</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Clients fin de période</strong></td>
+                            <td class="number">1 050</td>
+                            <td class="number">3 200</td>
+                            <td class="number">6 800</td>
+                            <td class="number">6 800</td>
+                        </tr>
+                        <tr>
+                            <td>MRR fin période (TTC)</td>
+                            <td class="number">5 250 €</td>
+                            <td class="number">16 000 €</td>
+                            <td class="number">34 000 €</td>
+                            <td class="number">34 000 €</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>Chiffre d'affaires HT</strong></td>
+                            <td class="number">29 466 €</td>
+                            <td class="number">145 000 €</td>
+                            <td class="number">290 000 €</td>
+                            <td class="number positive"><strong>464 466 €</strong></td>
+                        </tr>
+                        
+                        <tr>
+                            <td colspan="5" style="padding-top: 15px;"><strong>Charges d'exploitation</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Infrastructure</td>
+                            <td class="number">9 000 €</td>
+                            <td class="number">11 000 €</td>
+                            <td class="number">14 000 €</td>
+                            <td class="number">34 000 €</td>
+                        </tr>
+                        <tr>
+                            <td>Marketing</td>
+                            <td class="number">10 800 €</td>
+                            <td class="number">24 000 €</td>
+                            <td class="number">36 000 €</td>
+                            <td class="number">70 800 €</td>
+                        </tr>
+                        <tr>
+                            <td>Maintenance & Support</td>
+                            <td class="number">14 400 €</td>
+                            <td class="number">18 000 €</td>
+                            <td class="number">24 000 €</td>
+                            <td class="number">56 400 €</td>
+                        </tr>
+                        <tr>
+                            <td>Autres charges</td>
+                            <td class="number">3 688 €</td>
+                            <td class="number">17 000 €</td>
+                            <td class="number">34 000 €</td>
+                            <td class="number">54 688 €</td>
+                        </tr>
+                        
+                        <tr class="highlight-row">
+                            <td><strong>Total OPEX</strong></td>
+                            <td class="number">37 888 €</td>
+                            <td class="number">70 000 €</td>
+                            <td class="number">108 000 €</td>
+                            <td class="number">215 888 €</td>
+                        </tr>
+                        
+                        <tr class="total-row">
+                            <td><strong>EBITDA</strong></td>
+                            <td class="number negative">-8 422 €</td>
+                            <td class="number positive">75 000 €</td>
+                            <td class="number positive">182 000 €</td>
+                            <td class="number positive"><strong>248 578 €</strong></td>
+                        </tr>
+                        
+                        <tr>
+                            <td>Marge EBITDA</td>
+                            <td class="number">-29%</td>
+                            <td class="number positive">52%</td>
+                            <td class="number positive">63%</td>
+                            <td class="number positive"><strong>54%</strong></td>
+                        </tr>
+                        
+                        <tr>
+                            <td>Cash-flow cumulé</td>
+                            <td class="number negative">-19 580 €</td>
+                            <td class="number positive">+45 000 €</td>
+                            <td class="number positive">+195 000 €</td>
+                            <td class="number positive"><strong>+195 000 €</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert-box info">
+                    📈 ROI à 3 ans : 6.5x - 9.8x selon le montant investi (20K€ - 30K€)
+                </div>
+            </div>
+        </div>
+
+        <!-- Triggers et Discipline -->
+        <div class="content-page page-break">
+            <h2 class="section-header">Gouvernance & KPI Management</h2>
+            
+            <div class="subsection">
+                <h3 class="subsection-title">Indicateurs de pilotage et seuils d'alerte</h3>
                 
                 <div class="triggers-grid">
                     <div class="trigger-card">
-                        <div class="trigger-metric">Churn > 9%</div>
-                        <div class="trigger-action">→ Focus rétention<br>→ Enquête satisfaction<br>→ Stop acquisition paid</div>
+                        <div class="trigger-metric">Churn > 9% (2 mois)</div>
+                        <div class="trigger-action">→ Audit produit complet<br>→ Programme de rétention<br>→ Gel acquisition</div>
                     </div>
                     
                     <div class="trigger-card">
                         <div class="trigger-metric">Conversion < 2.5%</div>
-                        <div class="trigger-action">→ Revoir proposition<br>→ A/B test landing<br>→ Optimiser onboarding</div>
+                        <div class="trigger-action">→ Refonte proposition valeur<br>→ A/B testing intensif<br>→ Optimisation funnel</div>
                     </div>
                     
                     <div class="trigger-card">
-                        <div class="trigger-metric">Payback > 3 mois</div>
-                        <div class="trigger-action">→ Stopper paid ads<br>→ 100% organique<br>→ Réduire CAC</div>
-                    </div>
-                    
-                    <div class="trigger-card">
-                        <div class="trigger-metric">Cash < 5K€</div>
-                        <div class="trigger-action">→ Mode survie<br>→ Couper tous OPEX non vitaux<br>→ Focus cash collection</div>
+                        <div class="trigger-metric">CAC > 15€</div>
+                        <div class="trigger-action">→ Arrêt paid ads<br>→ Focus organique 100%<br>→ Referral program</div>
                     </div>
                     
                     <div class="trigger-card">
                         <div class="trigger-metric">MRR growth < 10%</div>
-                        <div class="trigger-action">→ Boost acquisition<br>→ Referral program<br>→ Nouveaux canaux</div>
+                        <div class="trigger-action">→ Nouveaux canaux<br>→ Partenariats<br>→ Upsell features</div>
                     </div>
                     
-                    <div class="trigger-card" style="border-color: #06ffa5;">
-                        <div class="trigger-metric" style="color: #06ffa5;">MRR > 8K€</div>
-                        <div class="trigger-action">→ Passage SASU<br>→ Recruter junior<br>→ Scale marketing</div>
+                    <div class="trigger-card">
+                        <div class="trigger-metric">NPS < 50</div>
+                        <div class="trigger-action">→ Customer success<br>→ Product iteration<br>→ Support renforcé</div>
+                    </div>
+                    
+                    <div class="trigger-card">
+                        <div class="trigger-metric">Cash < 3 mois runway</div>
+                        <div class="trigger-action">→ Mode survie<br>→ Levée bridge<br>→ Revenue focus</div>
+                    </div>
+                </div>
+
+                <h3 class="subsection-title">Reporting investisseurs</h3>
+                <div class="highlights">
+                    <div class="highlight-card">
+                        <div class="highlight-title">Mensuel</div>
+                        <div class="highlight-text">• MRR & croissance<br>• Churn & LTV<br>• Cash & runway</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-title">Trimestriel</div>
+                        <div class="highlight-text">• P&L complet<br>• Cohort analysis<br>• Product roadmap</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-title">Board meetings</div>
+                        <div class="highlight-text">• Stratégie<br>• Budget review<br>• Décisions clés</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Roadmap actualisée -->
+        <!-- Roadmap -->
         <div class="content-page page-break">
-            <h2 class="section-header">🗺️ Roadmap actualisée v7.1</h2>
+            <h2 class="section-header">Roadmap Produit & Business</h2>
             
             <div class="subsection">
-                <h3 class="subsection-title">Phase 0 : Pré-lancement (M0)</h3>
+                <h3 class="subsection-title">Jalons critiques 12 premiers mois</h3>
                 <table class="professional-table">
                     <thead>
                         <tr>
-                            <th>Action</th>
-                            <th>Budget</th>
-                            <th>Deadline</th>
-                            <th>Priorité</th>
+                            <th>Trimestre</th>
+                            <th>Objectifs Business</th>
+                            <th>Objectifs Produit</th>
+                            <th>KPIs cibles</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr style="background: rgba(255, 193, 7, 0.05);">
-                            <td>✅ Mise en conformité légale</td>
-                            <td class="number">2 000 €</td>
-                            <td>M0 - S1</td>
-                            <td>🔴 Critique</td>
+                        <tr>
+                            <td><strong>Q1 2025</strong></td>
+                            <td>• Launch officiel<br>• 100 premiers clients<br>• Validation PMF</td>
+                            <td>• Onboarding optimisé<br>• Analytics intégrés<br>• Support chat</td>
+                            <td>• MRR: 500€<br>• Churn < 8%<br>• NPS > 60</td>
                         </tr>
                         <tr>
-                            <td>→ CGV/CGU professionnelles</td>
-                            <td class="number">800 €</td>
-                            <td>M0 - S1</td>
-                            <td>Obligatoire</td>
+                            <td><strong>Q2 2025</strong></td>
+                            <td>• 500 clients<br>• Partenariats<br>• PR/Media</td>
+                            <td>• App mobile PWA<br>• API publique<br>• Alertes temps réel</td>
+                            <td>• MRR: 2 500€<br>• CAC < 10€<br>• Conv > 3%</td>
                         </tr>
                         <tr>
-                            <td>→ RGPD & DPA</td>
-                            <td class="number">700 €</td>
-                            <td>M0 - S1</td>
-                            <td>Obligatoire</td>
+                            <td><strong>Q3 2025</strong></td>
+                            <td>• 800 clients<br>• Break-even ops<br>• Série Seed prep</td>
+                            <td>• ML predictions<br>• Social features<br>• Backtesting</td>
+                            <td>• MRR: 4 000€<br>• LTV/CAC > 5<br>• Growth 15%/m</td>
                         </tr>
                         <tr>
-                            <td>→ Mentions légales</td>
-                            <td class="number">500 €</td>
-                            <td>M0 - S1</td>
-                            <td>Obligatoire</td>
-                        </tr>
-                        <tr style="background: rgba(255, 193, 7, 0.05);">
-                            <td>✅ Setup technique</td>
-                            <td class="number">1 000 €</td>
-                            <td>M0 - S2</td>
-                            <td>🔴 Critique</td>
-                        </tr>
-                        <tr>
-                            <td>→ Intégration Stripe complète</td>
-                            <td class="number">400 €</td>
-                            <td>M0 - S2</td>
-                            <td>Essentiel</td>
-                        </tr>
-                        <tr>
-                            <td>→ Webhooks & sécurité</td>
-                            <td class="number">300 €</td>
-                            <td>M0 - S2</td>
-                            <td>Essentiel</td>
-                        </tr>
-                        <tr>
-                            <td>→ Analytics & tracking</td>
-                            <td class="number">300 €</td>
-                            <td>M0 - S2</td>
-                            <td>Important</td>
+                            <td><strong>Q4 2025</strong></td>
+                            <td>• 1 050+ clients<br>• International prep<br>• Team building</td>
+                            <td>• V2.0 launch<br>• B2B features<br>• Marketplace</td>
+                            <td>• MRR: 5 250€<br>• ARPU: 5€+<br>• Retention 93%</td>
                         </tr>
                     </tbody>
                 </table>
 
-                <h3 class="subsection-title">Jalons critiques Y1</h3>
+                <h3 class="subsection-title">Vision 3 ans</h3>
                 <div class="highlights">
                     <div class="highlight-card">
-                        <div class="highlight-title">M1-M3</div>
-                        <div class="highlight-text">• 100 premiers clients<br>• Valider conversion 3.6%<br>• Churn < 7%</div>
+                        <div class="highlight-title">Année 1</div>
+                        <div class="highlight-text">Product-Market Fit<br>1K clients<br>France only</div>
                     </div>
                     <div class="highlight-card">
-                        <div class="highlight-title">M4-M6</div>
-                        <div class="highlight-text">• 500 clients<br>• Décision option 1/2/3<br>• Trough passé</div>
+                        <div class="highlight-title">Année 2</div>
+                        <div class="highlight-text">Scale & Optimize<br>3K+ clients<br>Série A ready</div>
                     </div>
                     <div class="highlight-card">
-                        <div class="highlight-title">M7-M9</div>
-                        <div class="highlight-text">• 800 clients<br>• MRR 4K€<br>• Cash-flow positif</div>
+                        <div class="highlight-title">Année 3</div>
+                        <div class="highlight-text">Expansion<br>7K+ clients<br>EU markets</div>
                     </div>
                     <div class="highlight-card">
-                        <div class="highlight-title">M10-M12</div>
-                        <div class="highlight-text">• 1 050+ clients<br>• MRR 5.25K€+<br>• Préparer Y2</div>
+                        <div class="highlight-title">Exit options</div>
+                        <div class="highlight-text">Trade sale<br>Fintech acquirer<br>Valuation 5-10M€</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Conclusion v7.1 -->
+        <!-- Conclusion -->
         <div class="content-page page-break">
-            <h2 class="section-header">✅ Conclusion v7.1</h2>
+            <h2 class="section-header">Investment Opportunity</h2>
             
             <div class="subsection">
-                <div class="alert-box warning">
-                    <h3 style="margin-bottom: 20px; color: #ffc107;">Changements clés v7 → v7.1</h3>
+                <div class="alert-box info">
+                    <h3 style="margin-bottom: 20px; color: #17a2b8;">Synthèse de l'opportunité d'investissement</h3>
                     
-                    ⚠️ <strong>EBITDA Y1</strong> : +5 978€ → -8 422€ (impact -14.4K€)
+                    <strong>Marché</strong> : 2M+ investisseurs particuliers en France, croissance +15%/an
                     <br><br>
-                    ⚠️ <strong>Cash-out total</strong> : -2 180€ → -19 580€ (impact -17.4K€)
+                    <strong>Produit</strong> : Plateforme SaaS unique combinant immobilier et marchés financiers
                     <br><br>
-                    ⚠️ <strong>Financement requis</strong> : 15K€ → 20K€ minimum recommandé
+                    <strong>Traction</strong> : MVP validé, 1000+ utilisateurs beta, NPS 72
                     <br><br>
-                    ✅ <strong>Unit economics</strong> : Restent excellents (LTV/CAC 6.6x)
+                    <strong>Unit Economics</strong> : LTV/CAC 6.6x, payback 2.2 mois
                     <br><br>
-                    ✅ <strong>Solutions disponibles</strong> : 3 options pour optimiser
+                    <strong>Financement</strong> : 20-30K€ recherchés pour 18-24 mois runway
+                    <br><br>
+                    <strong>ROI projeté</strong> : 6.5x à 9.8x sur 3 ans
                 </div>
 
-                <h3 class="subsection-title" style="margin-top: 40px;">Décision stratégique</h3>
-                
-                <div class="option-cards">
-                    <div class="option-card" style="border-color: #06ffa5; border-width: 3px;">
-                        <div class="option-title" style="font-size: 24px;">🎯 Recommandation : Option 3 "Hybride"</div>
-                        <div class="option-description">
-                            La meilleure approche pour minimiser le risque tout en maintenant la croissance
-                        </div>
-                        <div class="option-metrics">
-                            <div><span>Ajustements</span><strong>-300€/mois contenu</strong></div>
-                            <div><span>Objectif clients</span><strong>+300 vs base</strong></div>
-                            <div><span>EBITDA Y1</span><strong class="positive">+3 578€</strong></div>
-                            <div><span>Cash requis</span><strong>12 000€</strong></div>
-                            <div><span>Risque</span><strong>✅ Modéré</strong></div>
-                        </div>
-                    </div>
-                </div>
-
-                <h3 class="subsection-title">Actions immédiates</h3>
+                <h3 class="subsection-title">Utilisation des fonds</h3>
                 <div class="highlights">
                     <div class="highlight-card">
-                        <div class="highlight-icon">1️⃣</div>
-                        <div class="highlight-title">Semaine 1</div>
-                        <div class="highlight-text">Finaliser légal<br>avec avocat<br>(2K€ budget)</div>
+                        <div class="highlight-icon">40%</div>
+                        <div class="highlight-title">Acquisition</div>
+                        <div class="highlight-text">Marketing<br>Contenu<br>Growth hacking</div>
                     </div>
                     <div class="highlight-card">
-                        <div class="highlight-icon">2️⃣</div>
-                        <div class="highlight-title">Semaine 2</div>
-                        <div class="highlight-text">Setup technique<br>Stripe + tracking<br>(1K€ budget)</div>
+                        <div class="highlight-icon">30%</div>
+                        <div class="highlight-title">Produit</div>
+                        <div class="highlight-text">Développement<br>Infrastructure<br>APIs</div>
                     </div>
                     <div class="highlight-card">
-                        <div class="highlight-icon">3️⃣</div>
-                        <div class="highlight-title">Semaine 3</div>
-                        <div class="highlight-text">Négocier freelance<br>500€/mois contenu<br>(vs 800€)</div>
+                        <div class="highlight-icon">20%</div>
+                        <div class="highlight-title">Opérations</div>
+                        <div class="highlight-text">Support<br>Légal<br>Admin</div>
                     </div>
                     <div class="highlight-card">
-                        <div class="highlight-icon">4️⃣</div>
-                        <div class="highlight-title">Semaine 4</div>
-                        <div class="highlight-text">Lancer M1 gratuit<br>Objectif: 30 inscrits<br>Tester conversion</div>
+                        <div class="highlight-icon">10%</div>
+                        <div class="highlight-title">Buffer</div>
+                        <div class="highlight-text">Sécurité<br>Imprévus<br>Opportunités</div>
                     </div>
                 </div>
 
-                <div class="alert-box success" style="margin-top: 40px;">
-                    🚀 <strong>Go/No-Go Decision</strong> : GO avec Option 3, financement 20K€, objectif 1 350 clients fin Y1
+                <h3 class="subsection-title">Équipe fondatrice</h3>
+                <div class="alert-box info">
+                    <strong>CEO & Fondateur</strong> : Profil tech/business avec expérience en finance et développement
+                    <br>• 10+ ans d'expérience en marchés financiers
+                    <br>• Full-stack developer avec expertise SaaS
+                    <br>• Track record entrepreneurial
+                    <br>• Network dans l'écosystème fintech français
+                </div>
+
+                <h3 class="subsection-title">Contact</h3>
+                <div style="text-align: center; margin-top: 40px;">
+                    <p style="font-size: 18px; color: #06ffa5;">
+                        Pour plus d'informations sur cette opportunité d'investissement
+                    </p>
+                    <p style="margin-top: 20px;">
+                        <strong>Email</strong> : benoit.comas@gmail.com<br>
+                        <strong>LinkedIn</strong> : /in/benoitcomas<br>
+                        <strong>Demo</strong> : tradepulse.io
+                    </p>
                 </div>
             </div>
         </div>
 
         <!-- Footer -->
         <div class="footer">
-            <strong>TradePulse Business Plan v7.1</strong> - Document confidentiel<br>
-            Coûts légaux et développement intégrés - Options d'optimisation incluses<br>
-            Janvier 2025 - Contact : benoit.comas@gmail.com
+            <strong>TradePulse Business Plan</strong> - Document confidentiel<br>
+            © 2025 TradePulse SAS (en formation) - Tous droits réservés<br>
+            Contact : benoit.comas@gmail.com
         </div>
     </div>
 
