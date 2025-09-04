@@ -1,10 +1,7 @@
-// Module MC adapté pour ETFs - v3.7 COMPACT UNIFIÉ
-// - Liste verticale compacte (style Actions)
-// - Rang bleu sans médailles
-// - Facettes repliables (Pays/Secteurs/Type de fonds)
-// - Filtres personnalisés fonctionnels
-// - Affiche TOUTES les métriques cochées à droite
-// - TER max/AUM min supprimés
+// Module MC adapté pour ETFs - v3.7.1 COMPACT PATCH
+// - Layout adaptatif pour les métriques
+// - Nom ETF uniquement (sans objectif)
+// - Grid responsive avec wrap automatique
 
 (function () {
   // ---------- utils ----------
@@ -21,29 +18,76 @@
   function init(){
     const root = document.querySelector('#etf-mc-section');
     const results = document.querySelector('#etf-mc-results .stock-cards-container');
-    if(!root || !results){ console.error('❌ ETF MC v3.7: DOM manquant'); return; }
-    console.log('✅ ETF MC v3.7 COMPACT: Module initialisé');
+    if(!root || !results){ console.error('❌ ETF MC v3.7.1: DOM manquant'); return; }
+    console.log('✅ ETF MC v3.7.1 COMPACT PATCH: Module initialisé');
 
-    // ---------- CSS idempotent ----------
+    // ---------- CSS idempotent avec layout adaptatif ----------
     if(!document.getElementById('etf-mc-v37-styles')){
       const s=document.createElement('style'); s.id='etf-mc-v37-styles'; s.textContent=`
       /* Liste compacte + rang BLEU */
       #etf-mc-results .stock-cards-container{ display:block }
       #etf-mc-results .stock-cards-container > .etf-card{ margin-bottom:.5rem }
-      .etf-card{ display:flex; gap:12px; align-items:flex-start; padding:12px; border-radius:12px;
-        background:linear-gradient(135deg,rgba(0,80,160,.15),rgba(0,90,170,.10)); border:1px solid rgba(0,140,255,.18) }
-      .etf-card:hover{ border-color:rgba(0,180,255,.35); background:linear-gradient(135deg,rgba(0,80,160,.22),rgba(0,90,170,.16)); transform:translateX(2px) }
-      .etf-rank{ width:42px; height:42px; border-radius:999px; display:flex; align-items:center; justify-content:center;
-        font-weight:800; font-size:.95rem; background:rgba(0,115,255,.20); color:#9EC9FF; box-shadow:0 0 12px rgba(0,115,255,.25) }
-      .etf-info .name{ font-weight:600; display:flex; gap:8px; align-items:center }
-      .badge{ font-size:.65rem; padding:3px 8px; border-radius:6px; font-weight:700; text-transform:uppercase; letter-spacing:.4px;
-        border:1px solid rgba(0,200,255,.3); color:#00D4FF; background:rgba(0,200,255,.15) }
-      .badge.warn{ color:#FF8A8A; border-color:rgba(255,70,70,.3); background:rgba(255,70,70,.12) }
+      
+      /* ===== Layout adaptatif v3.7.1 ===== */
+      .etf-card{
+        display:grid;
+        grid-template-columns: 42px 1fr auto; /* rang • infos • métriques */
+        gap:12px; align-items:start;
+        padding:12px; border-radius:12px;
+        background:linear-gradient(135deg,rgba(0,80,160,.15),rgba(0,90,170,.10)); 
+        border:1px solid rgba(0,140,255,.18)
+      }
+      .etf-card:hover{ 
+        border-color:rgba(0,180,255,.35); 
+        background:linear-gradient(135deg,rgba(0,80,160,.22),rgba(0,90,170,.16)); 
+        transform:translateX(2px) 
+      }
+      
+      .etf-rank{ 
+        width:42px; height:42px; border-radius:999px; 
+        display:flex; align-items:center; justify-content:center;
+        font-weight:800; font-size:.95rem; 
+        background:rgba(0,115,255,.20); color:#9EC9FF; 
+        box-shadow:0 0 12px rgba(0,115,255,.25) 
+      }
+      
+      .etf-info{ min-width:0 }  /* autorise le shrink/grow */
+      .etf-info .name{
+        white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+        font-weight:600; display:flex; gap:8px; align-items:center;
+      }
+      
+      .metrics{
+        /* shrink-to-fit mais bornée pour éviter le débordement */
+        display:grid;
+        grid-template-columns: repeat(auto-fit, minmax(80px, max-content));
+        gap:12px; justify-content:end;
+        width:max-content;           /* prend la place nécessaire */
+        max-width:58%;               /* mais n'empiète pas trop à gauche */
+      }
+      
+      .badge{ 
+        font-size:.65rem; padding:3px 8px; border-radius:6px; 
+        font-weight:700; text-transform:uppercase; letter-spacing:.4px;
+        border:1px solid rgba(0,200,255,.3); color:#00D4FF; 
+        background:rgba(0,200,255,.15) 
+      }
+      .badge.warn{ 
+        color:#FF8A8A; border-color:rgba(255,70,70,.3); 
+        background:rgba(255,70,70,.12) 
+      }
       .micro{ font-size:.75rem; opacity:.55 }
-      .metrics{ display:grid; grid-auto-flow:column; grid-template-columns:repeat(auto-fit,minmax(78px,1fr)); gap:12px; align-items:start; min-width:42%; }
       .metric .k{ font-size:.72rem; opacity:.60; margin-bottom:2px }
       .metric .v{ font-weight:600 }
       .g{ color:#34d399 } .y{ color:#fbbf24 } .r{ color:#f87171 }
+      
+      /* Réactivité: plus de place aux métriques quand l'écran rétrécit */
+      @media (max-width:1200px){ .metrics{ max-width:65% } }
+      @media (max-width:1000px){
+        .etf-card{ grid-template-columns: 42px 1fr } /* métriques passent dessous */
+        .metrics{ justify-content:flex-start; max-width:100% }
+      }
+      
       /* facettes repliables */
       .facet-group{ margin-top:10px }
       .facet-head{ display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; font-size:.85rem; opacity:.8 }
@@ -371,7 +415,7 @@
       updateSummary(arr.length, state.data.length);
     }
 
-    // ---------- rendu (toutes métriques cochées à droite) ----------
+    // ---------- rendu v3.7.1 (nom uniquement + layout adaptatif) ----------
     function render(entries){
       const box=results; box.innerHTML=''; box.className='stock-cards-container';
 
@@ -401,13 +445,19 @@
                           '<span class="badge">Actions</span>';
         const levBadge = e.__lev ? '<span class="badge warn">LEV/INV</span>' : '';
 
+        /* >>>>>>> nom uniquement (plus d'objectif) <<<<<< */
+        const displayName = str(e.long_name) || str(e.fund_name) || str(e.name) || str(e.symbol) || str(e.ticker) || '—';
+
+        const micro = [ topS ? `${topS}${Number.isFinite(wS)?' '+fmt(wS,0)+'%':''}` : '',
+                        topC ? `${topC}${Number.isFinite(wC)?' '+fmt(wC,0)+'%':''}` : '' ]
+                      .filter(Boolean).join(' • ');
+
         const card=document.createElement('div'); card.className='etf-card';
         card.innerHTML=`
           <div class="etf-rank">#${i+1}</div>
-          <div class="etf-info" style="flex:1">
-            <div class="name">${str(e.symbol)||str(e.ticker)||'—'} ${typeBadge} ${levBadge}</div>
-            <div class="micro">${trunc(str(e.objective),96)||'&nbsp;'}</div>
-            <div class="micro">${topS?`${topS}${Number.isFinite(wS)?' '+fmt(wS,0)+'%':''}`:''}${topS&&topC?' • ':''}${topC?`${topC}${Number.isFinite(wC)?' '+fmt(wC,0)+'%':''}`:''}</div>
+          <div class="etf-info">
+            <div class="name" title="${displayName.replace(/"/g,'&quot;')}">${displayName} ${typeBadge} ${levBadge}</div>
+            ${micro ? `<div class="micro">${micro}</div>` : ''}
           </div>
           <div class="metrics">${metricsHTML}</div>`;
         box.appendChild(card);
