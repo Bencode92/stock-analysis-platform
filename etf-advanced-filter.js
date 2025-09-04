@@ -1,17 +1,27 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
-// v11.5: Enrichissement des bonds + combined_bonds_holdings.csv
+// v11.6: Traduction française des objectifs via DeepL/Azure
 
 const fs = require('fs').promises;
 const path = require('path');
 const axios = require('axios');
 const csv = require('csv-parse/sync');
+const crypto = require('crypto'); // NEW: cache clés de trad
 
 const OUT_DIR = process.env.OUT_DIR || 'data';
 
 const CONFIG = {
     API_KEY: process.env.TWELVE_DATA_API_KEY,
     DEBUG: process.env.DEBUG === '1',
+    
+    // Traduction (optionnelle)
+    TRANSLATE_OBJECTIVE: process.env.TRANSLATE_OBJECTIVE === '1',
+    TRANSLATOR: process.env.TRANSLATOR || 'deepl', // 'deepl' | 'azure'
+    DEEPL_API_KEY: process.env.DEEPL_API_KEY || null,
+    AZURE_TRANSLATOR_KEY: process.env.AZURE_TRANSLATOR_KEY || null,
+    AZURE_TRANSLATOR_ENDPOINT: process.env.AZURE_TRANSLATOR_ENDPOINT || 'https://api.cognitive.microsofttranslator.com',
+    AZURE_TRANSLATOR_REGION: process.env.AZURE_TRANSLATOR_REGION || process.env.AZURE_REGION || null,
+    TRANSLATION_CONCURRENCY: Number(process.env.TRANSLATION_CONCURRENCY || 2),
     
     // Seuils différenciés
     MIN_ADV_USD_ETF: 1_000_000,    // 1M$ pour ETF
@@ -29,6 +39,76 @@ const CONFIG = {
         ETFS_COMPOSITION: 200
     }
 };
+
+// --------- Traduction: cache + helpers ----------
+const TRANSLATION_CACHE_PATH = path.join(OUT_DIR, 'objective_translations.cache.json');
+let translationCache = {};
+let translationActive = 0;
+
+async function loadTranslationCache() {
+  try { translationCache = JSON.parse(await fs.readFile(TRANSLATION_CACHE_PATH, 'utf8')); }
+  catch { translationCache = {}; }
+}
+async function saveTranslationCache() {
+  try { await fs.writeFile(TRANSLATION_CACHE_PATH, JSON.stringify(translationCache, null, 2)); }
+  catch {}
+}
+function tKey(text, to='fr') {
+  return crypto.createHash('sha1').update(`${to}|${text || ''}`).digest('hex');
+}
+function looksFrench(s='') {
+  return /[àâäçéèêëîïôöùûüÿœ]/i.test(s) || /\b(le|la|les|des|un|une|du|de|au|aux|pour|sur|dans|afin)\b/i.test(s);
+}
+async function withTranslationSlot(fn) {
+  while (translationActive >= CONFIG.TRANSLATION_CONCURRENCY) { await wait(100); }
+  translationActive++;
+  try { return await fn(); } finally { translationActive--; }
+}
+async function translateText(text, to='fr') {
+  if (!text || !CONFIG.TRANSLATE_OBJECTIVE) return null;
+  const useDeepL = CONFIG.TRANSLATOR === 'deepl' && CONFIG.DEEPL_API_KEY;
+  const useAzure = CONFIG.TRANSLATOR === 'azure' && CONFIG.AZURE_TRANSLATOR_KEY;
+  if (!useDeepL && !useAzure) return null;
+
+  const key = tKey(text, to);
+  if (translationCache[key]) return translationCache[key];
+
+  try {
+    let translated = null;
+    if (useDeepL) {
+      const params = new URLSearchParams({ text, target_lang: to.toUpperCase(), source_lang: 'EN' });
+      const resp = await withTranslationSlot(() =>
+        axios.post('https://api-free.deepl.com/v2/translate', params, {
+          headers: {
+            'Authorization': `DeepL-Auth-Key ${CONFIG.DEEPL_API_KEY}`,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        })
+      );
+      translated = resp?.data?.translations?.[0]?.text || null;
+    } else if (useAzure) {
+      const url = `${CONFIG.AZURE_TRANSLATOR_ENDPOINT.replace(/\/$/,'')}/translate?api-version=3.0&from=en&to=${to}`;
+      const resp = await withTranslationSlot(() =>
+        axios.post(url, [{ Text: text }], {
+          headers: {
+            'Ocp-Apim-Subscription-Key': CONFIG.AZURE_TRANSLATOR_KEY,
+            ...(CONFIG.AZURE_TRANSLATOR_REGION ? { 'Ocp-Apim-Subscription-Region': CONFIG.AZURE_TRANSLATOR_REGION } : {}),
+            'Content-Type': 'application/json'
+          }
+        })
+      );
+      translated = resp?.data?.[0]?.translations?.[0]?.text || null;
+    }
+    if (translated) {
+      translationCache[key] = translated;
+      return translated;
+    }
+  } catch (e) {
+    if (CONFIG.DEBUG) console.log('⚠️ Traduction objective KO:', e.message);
+  }
+  return null;
+}
+// -----------------------------------------------
 
 // MIC codes US
 const US_MIC_CODES = ['ARCX', 'BATS', 'XNAS', 'XNYS', 'XASE', 'XNGS', 'XNMS'];
@@ -187,6 +267,7 @@ function pickWeekly(etf) {
         total_expense_ratio: etf.total_expense_ratio ?? null,
         yield_ttm: etf.yield_ttm ?? null,
         objective: etf.objective || '',
+        objective_en: etf.objective_en || '', // NEW: garde l'anglais
         // Secteurs
         sectors: etf.sectors || [],
         sector_top5: etf.sector_top5 || [],
@@ -443,14 +524,20 @@ async function fetchWeeklyPack(symbolParam, item) {
     const s = sumRes?.data?.etf?.summary || {};
     const c = compRes?.data?.etf?.composition || {};
 
-    // summary
+    // summary (+ traduction FR optionnelle)
+    const overviewRaw = s.overview || '';
+    let objectiveFr = null;
+    if (CONFIG.TRANSLATE_OBJECTIVE && !looksFrench(overviewRaw)) {
+      objectiveFr = await translateText(overviewRaw, 'fr');
+    }
     const pack = {
         aum_usd: (s.net_assets != null) ? Number(s.net_assets) : null,
         total_expense_ratio: (s.expense_ratio_net != null) ? Math.abs(Number(s.expense_ratio_net)) : null,
         yield_ttm: (s.yield != null) ? Number(s.yield) : null,
         currency: s.currency || null,
         fund_type: s.fund_type || null,
-        objective: sanitizeText(s.overview || ''),
+        objective: sanitizeText(objectiveFr || overviewRaw), // <= FR si dispo
+        objective_en: sanitizeText(overviewRaw),             // debug (reste dans JSON)
         domicile: s.domicile || item.Country || null,
         as_of_summary: now,
         as_of_composition: now
@@ -585,13 +672,18 @@ async function processListing(item) {
 
 // Fonction principale
 async function filterETFs() {
-    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS v11.5\n');
+    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS v11.6\n');
     console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
     console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max`);
     console.log(`📂  Dossier de sortie: ${OUT_DIR}\n`);
     
+    if (CONFIG.TRANSLATE_OBJECTIVE) {
+        console.log(`🌐  Traduction: ACTIVÉE (${CONFIG.TRANSLATOR})\n`);
+    }
+    
     // Garantir que le dossier de sortie existe
     await fs.mkdir(OUT_DIR, { recursive: true });
+    await loadTranslationCache(); // NEW
     
     // Lire les CSV
     const etfData = await fs.readFile('data/all_etfs.csv', 'utf8');
@@ -762,6 +854,10 @@ async function filterETFs() {
     const etfPositionsCount = results.etfs.reduce((acc,e)=> acc + ((e.holdings_top10 || []).length), 0);
     const bondsPositionsCount = results.bonds.reduce((acc,e)=> acc + ((e.holdings_top10 || []).length), 0);
     
+    // Stats traduction
+    const translatedCount = results.etfs.filter(e => e.objective !== e.objective_en).length + 
+                           results.bonds.filter(e => e.objective !== e.objective_en).length;
+    
     // Pour compatibilité, ajouter les stats data_quality
     results.stats.data_quality = {
         with_aum: results.etfs.filter(e => e.aum_usd != null).length,
@@ -780,6 +876,14 @@ async function filterETFs() {
             single_stock: results.etfs.filter(e => e.etf_type === 'single_stock').length
         }
     };
+    
+    // Stats traduction NEW
+    if (CONFIG.TRANSLATE_OBJECTIVE) {
+        results.stats.translation = {
+            translated: translatedCount,
+            cache_size: Object.keys(translationCache).length
+        };
+    }
     
     // Analyser les raisons de rejet
     const rejectionReasons = {};
@@ -807,7 +911,8 @@ async function filterETFs() {
         stats: {
             total_etfs: results.stats.etfs_retained,
             total_bonds: results.stats.bonds_retained,
-            data_quality: results.stats.data_quality
+            data_quality: results.stats.data_quality,
+            translation: results.stats.translation
         }
     };
     const weeklyPath = path.join(OUT_DIR, 'weekly_snapshot.json');
@@ -964,6 +1069,8 @@ async function filterETFs() {
     );
     console.log(`📝 Combined BONDS holdings (Top10): ${bondsNarrowRows.length} lignes → ${combinedBondsHoldingsPath}`);
     
+    await saveTranslationCache(); // NEW
+    
     // Résumé
     console.log('\n📊 RÉSUMÉ:');
     console.log(`ETFs retenus: ${results.etfs.length}/${etfs.length}`);
@@ -971,6 +1078,10 @@ async function filterETFs() {
     console.log(`Rejetés: ${results.rejected.length}`);
     console.log(`Holdings ETFs: ${etfPositionsCount} positions (Top10)`);
     console.log(`Holdings Bonds: ${bondsPositionsCount} positions (Top10)`);
+    if (CONFIG.TRANSLATE_OBJECTIVE) {
+        console.log(`Traductions: ${translatedCount} objectifs traduits`);
+        console.log(`Cache: ${Object.keys(translationCache).length} entrées`);
+    }
     console.log(`Temps total: ${results.stats.elapsed_seconds}s`);
     
     console.log('\n📊 Qualité des données:');
@@ -996,6 +1107,9 @@ async function filterETFs() {
     console.log(`✅ CSV Bonds (enriched): ${bondsCsvPath}`);
     console.log(`✅ CSV Holdings ETFs: ${holdingsCsvPath}`);
     console.log(`✅ CSV Holdings Bonds: ${combinedBondsHoldingsPath}`);
+    if (CONFIG.TRANSLATE_OBJECTIVE) {
+        console.log(`✅ Cache traductions: ${TRANSLATION_CACHE_PATH}`);
+    }
     
     // Pour GitHub Actions (nouveau mécanisme)
     if (process.env.GITHUB_OUTPUT) {
@@ -1005,6 +1119,9 @@ async function filterETFs() {
         fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `etf_holdings_rows=${narrowRows.length}\n`);
         fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_holdings_rows=${bondsNarrowRows.length}\n`);
         fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `total_holdings_positions=${etfPositionsCount + bondsPositionsCount}\n`);
+        if (CONFIG.TRANSLATE_OBJECTIVE) {
+            fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `translated_count=${translatedCount}\n`);
+        }
     }
 }
 
