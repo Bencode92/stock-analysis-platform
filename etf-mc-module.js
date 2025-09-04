@@ -1,17 +1,21 @@
-// Module MC adapté pour ETFs - v3.8.5 ACTIONS-LIKE SINGLE LINE (sans Sharpe, Track Error, Perf 3Y)
+// Module MC adapté pour ETFs - v3.9.0 FIXED (corrections affichage + protection nom)
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const fmt=(n,d=2)=>Number.isFinite(+n)?(+n).toFixed(d):'—';
   const num=x=>Number.isFinite(+x)?+x:NaN;
   const str=s=>s==null?'':String(s);
-  const parseMaybeJSON=s=>{try{return typeof s==='string'?JSON.parse(s):(Array.isArray(s)?s:[])}catch{return[]}};
-  waitFor(()=>!!window.ETFData&&typeof window.ETFData.getData==='function',init);
+  const parseMaybeJSON=s=>{try{return typeof s==='string'?JSON.parse(s):(Array.isArray(s)?s:[])}catch{return[];}};
+  const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  
+  // FIX C: Attente complète du DOM et des données
+  waitFor(()=>!!window.ETFData?.getData && document.querySelector('#etf-mc-section') && document.querySelector('#etf-mc-results'),init);
 
   function init(){
     const root=document.querySelector('#etf-mc-section');
-    const results=document.querySelector('#etf-mc-results .stock-cards-container');
-    if(!root||!results){console.error('❌ ETF MC v3.8.5: DOM manquant');return;}
-    console.log('✅ ETF MC v3.8.5: Module initialisé (Sharpe/TrackError/Perf3Y retirés)');
+    // FIX A: Sélecteurs multiples pour le conteneur
+    const results=document.querySelector('#etf-mc-results .stock-cards-container, #etf-mc-results .etf-cards-container, #etf-mc-results');
+    if(!root||!results){console.error('❌ ETF MC v3.9.0: DOM manquant');return;}
+    console.log('✅ ETF MC v3.9.0: Module initialisé (avec fixes affichage)');
 
     // Masquer les pills indésirables si elles existent dans l'UI
     ['sharpe_proxy','track_error','tracking_error','return_3y'].forEach(id=>{
@@ -19,20 +23,37 @@
       if(el) el.remove();
     });
 
-    if(!document.getElementById('etf-mc-v38-styles')){
-      const s=document.createElement('style'); s.id='etf-mc-v38-styles'; s.textContent=`
+    if(!document.getElementById('etf-mc-v39-styles')){
+      const s=document.createElement('style'); s.id='etf-mc-v39-styles'; s.textContent=`
       #etf-mc-results .stock-cards-container{display:block}
       #etf-mc-results .stock-cards-container>.etf-card{margin-bottom:.6rem}
-      .etf-card{display:grid;grid-template-columns:52px 1fr auto;gap:14px;align-items:center;padding:14px;border-radius:14px;
-        background:linear-gradient(135deg,rgba(0,86,180,.12),rgba(0,140,255,.08));border:1px solid rgba(0,160,255,.22);transition:.2s ease}
+      /* FIX 3: Grille avec protection du nom */
+      .etf-card{
+        display:grid;
+        grid-template-columns:52px minmax(240px,1fr) minmax(360px,auto);
+        gap:14px;align-items:center;padding:14px;border-radius:14px;
+        background:linear-gradient(135deg,rgba(0,86,180,.12),rgba(0,140,255,.08));
+        border:1px solid rgba(0,160,255,.22);transition:.2s ease
+      }
+      @media (max-width:1100px){
+        .etf-card{grid-template-columns:52px minmax(200px,1fr) minmax(300px,auto)}
+      }
+      @media (max-width:860px){
+        .etf-card{grid-template-columns:52px minmax(170px,1fr) minmax(260px,auto)}
+      }
       .etf-card:hover{background:linear-gradient(135deg,rgba(0,86,180,.18),rgba(0,140,255,.12));border-color:rgba(0,200,255,.42);transform:translateX(2px)}
       .etf-rank{width:52px;height:52px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;background:rgba(0,160,255,.18);color:#9fd6ff;box-shadow:0 0 14px rgba(0,160,255,.28)}
-      .etf-info{min-width:0}
-      .etf-name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:8px}
+      .etf-info{min-width:240px}
+      .etf-name{font-weight:700;min-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:8px}
       .badge{font-size:.65rem;padding:3px 8px;border-radius:7px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;border:1px solid rgba(0,220,255,.35);color:#00e5ff;background:rgba(0,220,255,.12)}
       .badge.warn{color:#ff9aa7;border-color:rgba(255,90,90,.35);background:rgba(255,90,90,.12)}
       .micro{font-size:.8rem;opacity:.6;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      #etf-mc-results .etf-card .metrics{display:flex;align-items:center;gap:20px;flex-wrap:nowrap;white-space:nowrap;overflow-x:auto;scrollbar-width:thin}
+      #etf-mc-results .etf-card .metrics{
+        display:flex;align-items:center;gap:20px;
+        flex-wrap:nowrap;white-space:nowrap;
+        overflow-x:auto;scrollbar-width:thin;
+        flex:0 1 auto
+      }
       #etf-mc-results .etf-card .metric-col{display:inline-flex;flex-direction:column;min-width:90px}
       #etf-mc-results .etf-card .metric-col .k{text-transform:uppercase;letter-spacing:.5px;font-weight:700;font-size:.82rem;opacity:.65}
       #etf-mc-results .etf-card .metric-col .v{font-weight:800;font-size:1.10rem;line-height:1;font-variant-numeric:tabular-nums}
@@ -45,7 +66,6 @@
       .facet-item{padding:6px 8px;border-radius:8px;display:flex;align-items:center;gap:8px}
       .facet-item input{accent-color:#00e5ff}
       .facet-item.is-checked{background:rgba(0,200,255,.16);border:1px solid rgba(0,200,255,.35)}
-      #etf-filter-ter,#etf-filter-aum,label[for="etf-filter-ter"],label[for="etf-filter-aum"]{display:none!important}
       #etf-mc-section .mc-pill{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border:1px solid rgba(0,200,255,.2);border-radius:10px;background:rgba(0,255,255,.03);cursor:pointer;transition:.2s}
       #etf-mc-section .mc-pill:hover{background:rgba(0,255,255,.08);border-color:rgba(0,255,255,.35)}
       #etf-mc-section .mc-pill.is-checked{background:rgba(0,255,255,.2)!important;border-color:#00ffff!important;box-shadow:0 0 12px rgba(0,255,255,.3);transform:translateY(-1px)}
@@ -53,10 +73,17 @@
       .filter-item{background:rgba(0,255,255,.05);border:1px solid rgba(0,255,255,.2);border-radius:8px}
       `; document.head.appendChild(s);
     }
+    
+    // Cache dynamique des éléments TER/AUM si présents
+    ['etf-filter-ter','etf-filter-aum'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.style.display='none';
+      const label=document.querySelector(`label[for="${id}"]`);
+      if(label) label.style.display='none';
+    });
 
     const state={
       mode:'balanced',
-      // Retiré sharpe_proxy et perf_3y par défaut
       selectedMetrics:['return_ytd','ter','aum','return_1y'],
       filters:{countries:new Set(),sectors:new Set(),fundTypes:new Set(),excludeLeveraged:true},
       customFilters:[],
@@ -74,7 +101,6 @@
       return /leveraged|inverse/.test(t)||(Number.isFinite(lev)&&lev!==0);
     };
 
-    // ❗️Pas de sharpe_proxy / pas de track_error / pas de return_3y ici
     const METRICS={
       ter:{label:'TER',unit:'%',max:false,get:e=>num(e.total_expense_ratio)*100},
       aum:{label:'AUM',unit:'$M',max:true,get:e=>num(e.aum_usd)/1e6},
@@ -83,7 +109,13 @@
       return_1y:{label:'Perf 1A',unit:'%',max:true,get:e=>num(e.one_year_return_pct)},
       volatility:{label:'Vol 3A',unit:'%',max:false,get:e=>num(e.vol_3y_pct)},
       dividend_yield:{label:'Rdt TTM',unit:'%',max:true,get:e=>num(e.yield_ttm)*100},
-      yield_net:{label:'Rdt net',unit:'%',max:true,get:e=> classify(e)==='bonds'?(num(e.yield_ttm)*100 - num(e.total_expense_ratio)*100):NaN}
+      // FIX: robustesse yield_net
+      yield_net:{label:'Rdt net',unit:'%',max:true,get:e=>{
+        if(classify(e)!=='bonds') return NaN;
+        const y=num(e.yield_ttm), ter=num(e.total_expense_ratio);
+        if(!Number.isFinite(y)||!Number.isFinite(ter)) return NaN;
+        return (y-ter)*100;
+      }}
     };
 
     const schedule=(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(calculate,120);};})();
@@ -94,9 +126,8 @@
       state.selectedMetrics = pills
         .filter(x => x.checked)
         .map(x => x.id.replace('etf-m-',''))
-        .filter(m => METRICS[m]); // ignore automatiquement les ids supprimés
+        .filter(m => METRICS[m]);
       if (!state.selectedMetrics.length) {
-        // garde un minimum utile si l'utilisateur avait coché uniquement des métriques retirées
         state.selectedMetrics = ['return_ytd','ter','aum'];
       }
     }
@@ -179,14 +210,16 @@
         for(const f of state.customFilters){
           const d=METRICS[f.metric]; if(!d) return false;
           const raw=d.get(e); if(!Number.isFinite(raw)) return false;
-          const v=q(raw),x=q(f.value); let ok=true;
-          switch(f.operator){case'>=':ok=v>=x;break;case'>':ok=v>x;break;case'=':ok=v===x;break;case'<':ok=v<x;break;case'<=':ok=v<=x;break;case'!=':ok=v!==x;break;}
+          const v=q(raw),x=q(f.value); 
+          // FIX B: normalisation des opérateurs
+          const op=f.operator.replace('≥','>=').replace('≤','<=').replace('≠','!=');
+          let ok=true;
+          switch(op){case'>=':ok=v>=x;break;case'>':ok=v>x;break;case'=':ok=v===x;break;case'<':ok=v<x;break;case'<=':ok=v<=x;break;case'!=':ok=v!==x;break;}
           if(!ok) return false;
         } return true;
       });
     }
 
-    // écoute pills → mirroring à droite (uniquement celles encore définies dans METRICS)
     Object.keys(METRICS).forEach(metric=>{
       const cb=document.getElementById(`etf-m-${metric}`); if(!cb) return;
       cb.addEventListener('change',e=>{
@@ -197,7 +230,6 @@
       });
     });
 
-    // init depuis l'UI
     syncSelectedFromUI();
 
     document.querySelectorAll('input[name="etf-mc-mode"]').forEach(r=>r.addEventListener('change',()=>{state.mode=r.value; schedule();}));
@@ -243,15 +275,38 @@
     }
 
     function render(entries){
-      const box=results; box.innerHTML=''; box.className='stock-cards-container';
-      if(!entries.length){box.innerHTML='<div class="text-center text-cyan-400 py-4">Aucun ETF ne correspond aux critères</div>';return;}
+      const box=results; 
+      // Nettoyer correctement le conteneur
+      if(box.className.includes('stock-cards-container')) {
+        box.innerHTML='';
+      } else {
+        // Si c'est le conteneur parent, créer/vider le sous-conteneur
+        let cardsContainer = box.querySelector('.stock-cards-container');
+        if(!cardsContainer) {
+          cardsContainer = document.createElement('div');
+          cardsContainer.className = 'stock-cards-container';
+          box.innerHTML = '';
+          box.appendChild(cardsContainer);
+        } else {
+          cardsContainer.innerHTML = '';
+        }
+        box.className=''; // nettoyer les classes du parent
+      }
+      
+      const targetContainer = box.className.includes('stock-cards-container') ? box : box.querySelector('.stock-cards-container');
+      
+      if(!entries.length){
+        targetContainer.innerHTML='<div class="text-center text-cyan-400 py-4">Aucun ETF ne correspond aux critères</div>';
+        return;
+      }
 
       entries.forEach((entry,i)=>{
         const e=entry.etf;
         const typeBadge= classify(e)==='bonds' ? '<span class="badge">Obligations</span>' :
                          classify(e)==='commodity' ? '<span class="badge">Matières</span>' : '<span class="badge">Actions</span>';
         const levBadge = e.__lev ? '<span class="badge warn">LEV/INV</span>' : '';
-        const displayName = str(e.long_name)||str(e.fund_name)||str(e.name)||str(e.symbol)||str(e.ticker)||'—';
+        // FIX 4: Échapper les caractères HTML
+        const displayName = esc(e.long_name||e.fund_name||e.name||e.symbol||e.ticker||'—');
 
         const colsHTML = state.selectedMetrics
           .filter(m => METRICS[m])
@@ -285,11 +340,11 @@
         card.innerHTML=`
           <div class="etf-rank">#${i+1}</div>
           <div class="etf-info">
-            <div class="etf-name" title="${displayName.replace(/"/g,'&quot;')}">${displayName} ${typeBadge} ${levBadge}</div>
+            <div class="etf-name" title="${displayName}">${displayName} ${typeBadge} ${levBadge}</div>
             ${micro?`<div class="micro">${micro}</div>`:''}
           </div>
           <div class="metrics">${colsHTML}</div>`;
-        box.appendChild(card);
+        targetContainer.appendChild(card);
       });
     }
 
@@ -307,7 +362,7 @@
     document.getElementById('etf-mc-apply')?.addEventListener('click',()=>calculate());
     document.getElementById('etf-mc-reset')?.addEventListener('click',()=>{
       state.mode='balanced';
-      state.selectedMetrics=['return_ytd','ter','aum','return_1y']; // sans Sharpe/Perf3Y
+      state.selectedMetrics=['return_ytd','ter','aum','return_1y'];
       state.filters={countries:new Set(),sectors:new Set(),fundTypes:new Set(),excludeLeveraged:true};
       state.customFilters=[];
       document.querySelectorAll('#etf-mc-section .mc-pill input').forEach(inp=>{
