@@ -1,4 +1,4 @@
-// Module MC adapté pour ETFs - v3.12.0 HARMONIZED (même look que Actions)
+// Module MC adapté pour ETFs - v3.13.0 HARMONIZED avec UI Priorités
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const fmt=(n,d=2)=>Number.isFinite(+n)?(+n).toFixed(d):'—';
@@ -12,15 +12,15 @@
   function init(){
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results');
-    if(!root||!results){console.error('❌ ETF MC v3.12.0: DOM manquant');return;}
-    console.log('✅ ETF MC v3.12.0: Module harmonisé avec Actions');
+    if(!root||!results){console.error('❌ ETF MC v3.13.0: DOM manquant');return;}
+    console.log('✅ ETF MC v3.13.0: Module harmonisé avec UI Priorités');
 
     // Harmonisation du conteneur comme Actions
     results.classList.add('glassmorphism','rounded-lg','p-4');
 
-    // Styles harmonisés Actions/ETFs
-    if(!document.getElementById('etf-mc-v312-harmonized')){
-      const s=document.createElement('style'); s.id='etf-mc-v312-harmonized'; s.textContent=`
+    // Styles harmonisés Actions/ETFs + UI Priorités
+    if(!document.getElementById('etf-mc-v313-harmonized')){
+      const s=document.createElement('style'); s.id='etf-mc-v313-harmonized'; s.textContent=`
       /* Liste verticale comme Actions */
       #etf-mc-results { display:block }
       #etf-mc-results .space-y-2 > div { margin-bottom: .75rem }
@@ -111,6 +111,15 @@
       #etf-mc-section .mc-pill{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border:1px solid rgba(0,200,255,.2);border-radius:10px;background:rgba(0,255,255,.03);cursor:pointer;transition:.2s}
       #etf-mc-section .mc-pill:hover{background:rgba(0,255,255,.08);border-color:rgba(0,255,255,.35)}
       #etf-mc-section .mc-pill.is-checked{background:rgba(0,255,255,.2)!important;border-color:#00ffff!important;box-shadow:0 0 12px rgba(0,255,255,.3);transform:translateY(-1px)}
+      
+      /* --- Priorités UI (ETFs) --- */
+      #etf-priority-container{margin-top:12px;padding:12px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(0,255,255,.2)}
+      #etf-priority-container .head{font-size:.75rem;opacity:.7;margin-bottom:8px}
+      #etf-priority-list .priority-item{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:rgba(0,255,255,.05);border:1px solid rgba(0,255,255,.2);cursor:move;user-select:none;margin-bottom:4px}
+      #etf-priority-list .priority-item:hover{background:rgba(0,255,255,.1);border-color:rgba(0,255,255,.4)}
+      #etf-priority-list .priority-item.dragging{opacity:.5}
+      #etf-priority-list .drag{color:#00ffff;opacity:.8}
+      #etf-priority-list .num{min-width:18px;opacity:.6;font-size:.75rem}
       `;
       document.head.appendChild(s);
     }
@@ -153,6 +162,77 @@
     const schedule=(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(calculate,120);};})();
     const q=(v,dec=1)=>Math.round(v*10**dec)/10**dec;
 
+    // --- UI Priorités (comme Actions) ---
+    function buildPriorityUI(){
+      // conteneur: on l'insère sous le fieldset "mode"
+      let host = root.querySelector('fieldset[role="radiogroup"]') || root.querySelector('#etf-mc-section fieldset:nth-of-type(2)');
+      if(!host) return;
+
+      let box = document.getElementById('etf-priority-container');
+      if(!box){
+        box = document.createElement('div');
+        box.id = 'etf-priority-container';
+        box.innerHTML = `
+          <div class="head">Ordre des priorités (glisser pour réorganiser)</div>
+          <div id="etf-priority-list" class="space-y-1"></div>
+        `;
+        host.appendChild(box);
+      }
+
+      // visible seulement en mode priorités
+      box.style.display = (state.mode === 'balanced') ? 'none' : 'block';
+
+      const list = box.querySelector('#etf-priority-list');
+      if(!list) return;
+
+      // rebuild la liste à partir de state.selectedMetrics
+      list.innerHTML = state.selectedMetrics.map((m,i)=>`
+        <div class="priority-item" draggable="true" data-m="${m}">
+          <span class="drag">☰</span>
+          <span class="num">${i+1}.</span>
+          <span class="flex-1">${METRICS[m]?.label || m} ${METRICS[m]?.max?'↑':'↓'}</span>
+        </div>
+      `).join('') || '<div class="text-xs opacity-50">Coche au moins un critère</div>';
+
+      // drag & drop
+      const items = list.querySelectorAll('.priority-item');
+      let dragging = null;
+      items.forEach(it=>{
+        it.addEventListener('dragstart', e=>{ dragging = it; it.classList.add('dragging'); });
+        it.addEventListener('dragend', e=>{ it.classList.remove('dragging'); dragging=null; });
+        it.addEventListener('dragover', e=>{
+          e.preventDefault();
+          const after = (()=>{ // calcul de la cible
+            const els = [...list.querySelectorAll('.priority-item:not(.dragging)')];
+            let closest = {offset: Number.NEGATIVE_INFINITY, el: null};
+            els.forEach(el=>{
+              const r = el.getBoundingClientRect();
+              const off = e.clientY - r.top - r.height/2;
+              if(off < 0 && off > closest.offset) closest = {offset: off, el};
+            });
+            return closest.el;
+          })();
+          if(!after) list.appendChild(dragging);
+          else list.insertBefore(dragging, after);
+        });
+        it.addEventListener('drop', ()=>{
+          // maj ordre dans l'état + recalc numéros
+          state.selectedMetrics = [...list.querySelectorAll('.priority-item')].map(el=>el.dataset.m);
+          buildPriorityUI();
+          schedule();
+        });
+      });
+    }
+
+    // --- écoute robuste du radio (event delegation) ---
+    root.addEventListener('change', (e)=>{
+      if(e.target && e.target.name === 'etf-mc-mode'){
+        state.mode = e.target.value || 'balanced';
+        buildPriorityUI();
+        schedule();
+      }
+    });
+
     function syncSelectedFromUI() {
       const pills = [...document.querySelectorAll('#etf-mc-section .mc-pill input[id^="etf-m-"]')];
       state.selectedMetrics = pills
@@ -162,6 +242,7 @@
       if (!state.selectedMetrics.length) {
         state.selectedMetrics = ['return_ytd','ter','aum'];
       }
+      buildPriorityUI();
     }
 
     function buildFacetCatalogs(){
@@ -258,13 +339,13 @@
         if(e.target.checked){ if(!state.selectedMetrics.includes(metric)) state.selectedMetrics.push(metric); }
         else state.selectedMetrics=state.selectedMetrics.filter(m=>m!==metric);
         cb.closest('.mc-pill')?.classList.toggle('is-checked',cb.checked);
+        buildPriorityUI();
         schedule();
       });
     });
 
     syncSelectedFromUI();
 
-    document.querySelectorAll('input[name="etf-mc-mode"]').forEach(r=>r.addEventListener('change',()=>{state.mode=r.value; schedule();}));
     document.getElementById('etf-filter-leveraged')?.addEventListener('change',e=>{state.filters.excludeLeveraged=!!e.target.checked; schedule();});
 
     function calculate(){
@@ -400,6 +481,7 @@
       const listBox=document.getElementById('etf-custom-filters-list');
       if(listBox) listBox.innerHTML='<div class="text-xs opacity-50 text-center py-2">Aucun filtre personnalisé</div>';
       syncSelectedFromUI();
+      buildPriorityUI();
       calculate();
     });
 
