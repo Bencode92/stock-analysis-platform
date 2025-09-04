@@ -723,6 +723,12 @@
             font-size: 0.7rem;
             font-weight: 600;
         }
+        
+        /* Styles pour A→Z */
+        .region-tab.empty { 
+            opacity: 0.4; 
+            cursor: not-allowed; 
+        }
     </style>
 </head>
 <body class="dark">
@@ -1018,6 +1024,69 @@
                     </div>
                 </div>
                 
+                <!-- DIVISEUR -->
+                <div class="section-divider" style="position: relative; height: 2px; margin: 80px 0 60px; background: linear-gradient(90deg, transparent, rgba(0,255,135,0.3) 20%, rgba(0,255,135,0.3) 80%, transparent); box-shadow: 0 0 20px rgba(0,255,135,0.2);"></div>
+                
+                <!-- ================== ETFs par lettre (A→Z) ================== -->
+                <section id="etf-az" class="mb-12">
+                  <h2 class="section-title mb-4">ETFs — par lettre</h2>
+
+                  <!-- Contrôles principaux -->
+                  <div id="etf-az-controls" class="glassmorphism rounded-lg p-4 mb-4">
+                    <!-- Choix principal -->
+                    <div class="pills mb-3" role="tablist" aria-label="Portée">
+                      <button class="pill" data-scope="GLOBAL" aria-selected="true"><i class="fas fa-globe"></i> Global</button>
+                      <button class="pill" data-scope="ACTIONS" aria-selected="false"><i class="fas fa-chart-line"></i> Actions</button>
+                      <button class="pill" data-scope="BONDS" aria-selected="false"><i class="fas fa-certificate"></i> Bonds</button>
+                    </div>
+
+                    <!-- Sous-filtres -->
+                    <div class="grid md:grid-cols-3 gap-3">
+                      <div class="flex items-center gap-2">
+                        <label class="text-xs opacity-70 min-w-[90px]">Pays</label>
+                        <select id="etf-az-country" class="mini-select flex-1"
+                          style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
+                          <option value="">Tous</option>
+                        </select>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <label class="text-xs opacity-70 min-w-[90px]">Type de fonds</label>
+                        <select id="etf-az-fundtype" class="mini-select flex-1"
+                          style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
+                          <option value="">Tous</option>
+                        </select>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <label class="text-xs opacity-70 min-w-[90px]">Secteur</label>
+                        <select id="etf-az-sector" class="mini-select flex-1"
+                          style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
+                          <option value="">Tous</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- petite barre d'infos -->
+                    <div class="text-xs opacity-60 mt-3">
+                      <span>⚡ <span id="etf-az-count">0</span> lignes affichées</span>
+                      <span class="mx-2">•</span>
+                      <span>Maj: <span id="etf-az-lastupdate">—</span></span>
+                    </div>
+                  </div>
+
+                  <!-- Onglets A→Z -->
+                  <div id="etf-az-tabs" class="region-tabs mb-4"></div>
+
+                  <!-- Contenu -->
+                  <div id="etf-az-sections" class="glassmorphism rounded-lg overflow-hidden">
+                    <div id="etf-az-loading" class="py-16 flex justify-center"><div class="loader"></div></div>
+                    <div id="etf-az-error" class="py-16 text-center hidden">
+                      <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                      <p class="text-lg">Impossible de charger les données pour l'affichage A→Z.</p>
+                    </div>
+                    <div id="etf-az-container" class="hidden"></div>
+                  </div>
+                </section>
+                
                 <!-- Avertissement -->
                 <div class="text-center text-sm text-gray-400 mb-6 p-4 glassmorphism rounded-lg bg-opacity-50 mt-8">
                     <p>Les données sont mises à jour régulièrement. Les performances passées ne préjugent pas des performances futures.</p>
@@ -1033,5 +1102,346 @@
     <link rel="stylesheet" href="mc-styles.css">
     <script src="etf-mc-integration.js"></script>
     <script src="etf-mc-module.js"></script>
+    
+    <!-- Script A→Z ETFs -->
+    <script>
+    /* etf-az.js — A→Z ETFs basé sur les CSV normalisés par etf-script.js
+       - Portée: GLOBAL | ACTIONS | BONDS
+       - Sous-filtres: Pays, Type de fonds, Secteur
+       - A→Z + détails
+    */
+    (function () {
+      // ---------- Helpers visuels (mêmes conventions) ----------
+      const $  = s => document.querySelector(s);
+      const $$ = s => Array.from(document.querySelectorAll(s));
+
+      function fmtNum(v, d=2){ if(v==null||v==='') return '-'; const n=Number(v); return Number.isFinite(n)? n.toFixed(d):'-'; }
+      function fmtAUM(v){
+        const n = Number(v||0);
+        if (!Number.isFinite(n) || n<=0) return '-';
+        return n>=1000 ? (n/1000).toFixed(1)+'B€' : n.toFixed(0)+'M€';
+      }
+      function fmtPct(v){ if(v==null||v==='') return '-'; const n=Number(v); if(!Number.isFinite(n)) return '-'; return (n>=0?'+':'')+n.toFixed(2)+'%'; }
+      function clsPct(v){ const n=Number(v); return Number.isFinite(n)? (n>=0?'positive':'negative'):''; }
+
+      function getCountry(e){ return e.country || e.domicile || e.country_of_domicile || e.listing_country || ''; }
+      function getFundType(e){
+        return e.fund_type || e.etf_type || e.replication || e.distribution || (e.type && e.type!=='bonds' ? e.type : '') || '';
+      }
+      function getSector(e){
+        const fromField = e.sector || e.sector_name || e.category || '';
+        if (fromField) return fromField;
+        const name = String(e.name||'').toLowerCase();
+        if (/tech|information/i.test(name))   return 'Technology';
+        if (/health|sant|biotech/i.test(name))return 'Healthcare';
+        if (/energy|oil|gaz|petrol/i.test(name)) return 'Energy';
+        if (/finance|financial|bank/i.test(name)) return 'Financials';
+        if (/utilities/i.test(name))          return 'Utilities';
+        if (/materials/i.test(name))          return 'Materials';
+        if (/industr/i.test(name))            return 'Industrials';
+        if (/consumer/i.test(name))           return 'Consumer';
+        if (/real ?estate|reit/i.test(name))  return 'Real Estate';
+        return '';
+      }
+
+      // ---------- État ----------
+      let scope = 'GLOBAL';
+      let fCountry = '';
+      let fFundType = '';
+      let fSector   = '';
+
+      let dataAll = [];
+      let indexAZ = {};
+      let lastUpdate = null;
+
+      // ---------- UI build ----------
+      function buildTabs(){
+        const tabs = $('#etf-az-tabs');
+        const cont = $('#etf-az-container');
+        if (!tabs || !cont) return;
+
+        tabs.innerHTML = '';
+        const letters = ['all', ...'abcdefghijklmnopqrstuvwxyz'.split('')];
+        letters.forEach((l, i) => {
+          const el = document.createElement('div');
+          const count = (l === 'all') ? dataAll.length : (indexAZ[l]?.length || 0);
+          el.className = `region-tab ${l==='all'?'all-results':''} ${i===1?'active':''}`;
+          el.dataset.letter = l;
+          el.textContent = l==='all' ? `TOUS (${count})` : `${l.toUpperCase()} (${count})`;
+          if (l !== 'all' && !count) el.classList.add('empty');
+          tabs.appendChild(el);
+        });
+
+        tabs.addEventListener('click', (e) => {
+          const btn = e.target.closest('.region-tab'); 
+          if(!btn || btn.classList.contains('empty')) return;
+          $$('#etf-az-tabs .region-tab').forEach(t=>t.classList.remove('active'));
+          btn.classList.add('active');
+
+          const letter = btn.dataset.letter;
+          $$('#etf-az-container .etf-letter').forEach(div => {
+            if (letter==='all') div.classList.remove('hidden');
+            else div.id === `etf-az-${letter}` ? div.classList.remove('hidden') : div.classList.add('hidden');
+          });
+          closeAllDetails();
+        });
+
+        cont.innerHTML = '';
+        'abcdefghijklmnopqrstuvwxyz'.split('').forEach((l, idx) => {
+          const wrap = document.createElement('div');
+          wrap.id = `etf-az-${l}`;
+          wrap.className = `etf-letter ${idx===0?'':'hidden'}`;
+          wrap.innerHTML = `
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>TICKER / NOM</th>
+                    <th>TER</th>
+                    <th>AUM</th>
+                    <th>DERNIER</th>
+                    <th>VAR %</th>
+                    <th>YTD %</th>
+                    <th>1 AN %</th>
+                    <th>VOLATILITÉ</th>
+                    <th>SHARPE</th>
+                    <th>RENDEMENT</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="etf-az-body-${l}"></tbody>
+              </table>
+            </div>`;
+          cont.appendChild(wrap);
+        });
+      }
+
+      function closeAllDetails(){
+        $$('#etf-az-container tr.details-row').forEach(r => r.classList.add('hidden'));
+        $$('#etf-az-container .details-toggle').forEach(btn => {
+          btn.setAttribute('aria-expanded','false');
+          const ic = btn.querySelector('i');
+          if (ic){ ic.classList.add('fa-chevron-down'); ic.classList.remove('fa-chevron-up'); }
+        });
+      }
+      
+      window.toggleEtfAzDetails = function(btn){
+        const main = btn.closest('tr');
+        const details = main?.nextElementSibling;
+        if (!details || !details.classList.contains('details-row')) return;
+        const isOpen = !details.classList.contains('hidden');
+        closeAllDetails();
+        if (!isOpen){
+          details.classList.remove('hidden');
+          btn.setAttribute('aria-expanded','true');
+          const ic = btn.querySelector('i');
+          if (ic){ ic.classList.remove('fa-chevron-down'); ic.classList.add('fa-chevron-up'); }
+        }
+      };
+
+      // ---------- Data ----------
+      function takeScope(list){
+        if (scope==='ACTIONS') return list.filter(e => e.dataset==='etf');
+        if (scope==='BONDS')   return list.filter(e => e.dataset==='bonds');
+        return list;
+      }
+
+      function applySubfilters(list){
+        return list.filter(e => {
+          if (fCountry)  { const c=(getCountry(e)||'').toLowerCase(); if (c!==fCountry.toLowerCase()) return false; }
+          if (fFundType) { const t=(getFundType(e)||'').toLowerCase(); if (t!==fFundType.toLowerCase()) return false; }
+          if (fSector)   { const s=(getSector(e)||'').toLowerCase();   if (s!==fSector.toLowerCase())   return false; }
+          return true;
+        });
+      }
+
+      function indexByLetter(list){
+        const map = {}; 'abcdefghijklmnopqrstuvwxyz'.split('').forEach(l=>map[l]=[]);
+        list.forEach(e => {
+          const keySrc = String(e.name || e.ticker || e.isin || '').trim();
+          if (!keySrc) return;
+          const first = keySrc[0].toLowerCase();
+          if (map[first]) map[first].push(e);
+        });
+        Object.keys(map).forEach(l => map[l].sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''))));
+        return map;
+      }
+
+      // ---------- Dropdowns ----------
+      function uniqSorted(arr){ return [...new Set(arr.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b))); }
+
+      function populateDropdowns(list){
+        const countries = uniqSorted(list.map(getCountry));
+        const fundtypes = uniqSorted(list.map(getFundType));
+        const sectors   = uniqSorted(list.map(getSector));
+
+        const cSel = $('#etf-az-country');
+        const fSel = $('#etf-az-fundtype');
+        const sSel = $('#etf-az-sector');
+
+        cSel.innerHTML = `<option value="">Tous</option>` + countries.map(v=>`<option value="${v}">${v}</option>`).join('');
+        fSel.innerHTML = `<option value="">Tous</option>` + fundtypes.map(v=>`<option value="${v}">${v}</option>`).join('');
+        sSel.innerHTML = `<option value="">Tous</option>` + sectors.map(v=>`<option value="${v}">${v}</option>`).join('');
+
+        if (fCountry && countries.includes(fCountry)) cSel.value = fCountry; else fCountry = '';
+        if (fFundType && fundtypes.includes(fFundType)) fSel.value = fFundType; else fFundType = '';
+        if (fSector && sectors.includes(fSector)) sSel.value = fSector; else fSector = '';
+      }
+
+      // ---------- Render ----------
+      function render(){
+        const scoped = takeScope(dataAll);
+        const filtered = applySubfilters(scoped);
+        indexAZ = indexByLetter(filtered);
+
+        $('#etf-az-count').textContent = filtered.length;
+        if (lastUpdate) $('#etf-az-lastupdate').textContent = new Date(lastUpdate).toLocaleString('fr-FR');
+
+        // Update tabs with counts
+        $$('#etf-az-tabs .region-tab').forEach(tab => {
+          const l = tab.dataset.letter;
+          if (l === 'all') {
+            tab.textContent = `TOUS (${filtered.length})`;
+          } else {
+            const count = indexAZ[l]?.length || 0;
+            tab.textContent = `${l.toUpperCase()} (${count})`;
+            tab.classList.toggle('empty', !count);
+          }
+        });
+
+        'abcdefghijklmnopqrstuvwxyz'.split('').forEach(l => {
+          const body = $(`#etf-az-body-${l}`); 
+          if (!body) return;
+          body.innerHTML = '';
+          const list = indexAZ[l] || [];
+
+          if (!list.length){
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="11" class="text-center py-4 text-gray-400">
+                <i class="fas fa-info-circle mr-2"></i>Aucun ETF pour cette lettre
+              </td>`;
+            body.appendChild(tr);
+            return;
+          }
+
+          list.forEach((etf) => {
+            const row = document.createElement('tr');
+            const chCls  = clsPct(etf.return_1d);
+            const ytdCls = clsPct(etf.return_ytd);
+            const y1Cls  = clsPct(etf.return_1y);
+
+            row.innerHTML = `
+              <td class="py-2 px-3">
+                <div class="font-medium">${etf.ticker || etf.isin || '—'}</div>
+                <div class="text-xs opacity-70 mt-1">${etf.name || '—'}</div>
+              </td>
+              <td class="text-right"><span class="ter-badge">${fmtNum(etf.ter)}%</span></td>
+              <td class="text-right"><span class="aum-badge">${fmtAUM(etf.aum)}</span></td>
+              <td class="text-right">${fmtNum(etf.price,2)}€</td>
+              <td class="text-right ${chCls}">${fmtPct(etf.return_1d)}</td>
+              <td class="text-right ${ytdCls}">${fmtPct(etf.return_ytd)}</td>
+              <td class="text-right ${y1Cls}">${fmtPct(etf.return_1y)}</td>
+              <td class="text-right">${fmtNum(etf.volatility)}%</td>
+              <td class="text-right">${fmtNum(etf.sharpe_ratio,2)}</td>
+              <td class="text-right">${fmtNum(etf.dividend_yield)}%</td>
+              <td class="text-center">
+                <button class="action-button details-toggle" aria-expanded="false" onclick="toggleEtfAzDetails(this)">
+                  <i class="fas fa-chevron-down"></i>
+                </button>
+              </td>
+            `;
+
+            const dCountry = getCountry(etf) || '—';
+            const dFund    = getFundType(etf) || '—';
+            const dSector  = getSector(etf) || '—';
+            const details = document.createElement('tr');
+            details.className = 'details-row hidden';
+            details.innerHTML = `
+              <td colspan="11">
+                <div class="grid md:grid-cols-3 gap-6 p-4 text-sm">
+                  <div>
+                    <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Informations</div>
+                    <div class="space-y-1">
+                      <div><span class="opacity-60">Nom:</span> <strong>${etf.name || '—'}</strong></div>
+                      <div><span class="opacity-60">Ticker/ISIN:</span> ${etf.ticker || '—'} ${etf.isin ? ' • '+etf.isin : ''}</div>
+                      <div><span class="opacity-60">Pays:</span> ${dCountry}</div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Structure</div>
+                    <div class="space-y-1">
+                      <div><span class="opacity-60">Type de fonds:</span> ${dFund}</div>
+                      <div><span class="opacity-60">Secteur:</span> ${dSector}</div>
+                      <div><span class="opacity-60">Source:</span> ${etf.dataset || '—'}</div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Marché</div>
+                    <div class="space-y-1">
+                      <div><span class="opacity-60">AUM:</span> ${fmtAUM(etf.aum)}</div>
+                      <div><span class="opacity-60">TER:</span> ${fmtNum(etf.ter)}%</div>
+                      <div><span class="opacity-60">Devise:</span> ${etf.currency || 'EUR'}</div>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            `;
+
+            body.appendChild(row);
+            body.appendChild(details);
+          });
+        });
+
+        $('#etf-az-loading')?.classList.add('hidden');
+        $('#etf-az-error')?.classList.add('hidden');
+        $('#etf-az-container')?.classList.remove('hidden');
+      }
+
+      // ---------- Wiring ----------
+      function wireControls(){
+        $$('#etf-az-controls .pill').forEach(btn => {
+          btn.addEventListener('click', ()=>{
+            $$('#etf-az-controls .pill').forEach(b=>b.setAttribute('aria-selected','false'));
+            btn.setAttribute('aria-selected','true');
+            scope = btn.dataset.scope;
+            populateDropdowns(takeScope(dataAll));
+            render();
+          });
+        });
+        $('#etf-az-country')?.addEventListener('change', e=>{ fCountry = e.target.value || ''; render(); });
+        $('#etf-az-fundtype')?.addEventListener('change', e=>{ fFundType = e.target.value || ''; render(); });
+        $('#etf-az-sector')?.addEventListener('change',  e=>{ fSector   = e.target.value || ''; render(); });
+      }
+
+      // ---------- Boot ----------
+      async function init(){
+        try{
+          buildTabs();
+          wireControls();
+
+          let tries = 0;
+          while ((!window.ETFData || !Array.isArray(window.ETFData.getData?.()) || window.ETFData.getData().length===0) && tries<40){
+            await new Promise(r=>setTimeout(r, 125));
+            tries++;
+          }
+          if (!window.ETFData) throw new Error('ETFData non disponible');
+
+          const all = window.ETFData.getData();
+          dataAll = Array.isArray(all) ? all : [];
+          if (!dataAll.length) throw new Error('Données vides');
+
+          lastUpdate = Date.now();
+          populateDropdowns(takeScope(dataAll));
+          render();
+        } catch(err){
+          console.error(err);
+          $('#etf-az-loading')?.classList.add('hidden');
+          $('#etf-az-error')?.classList.remove('hidden');
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', init);
+    })();
+    </script>
 </body>
 </html>
