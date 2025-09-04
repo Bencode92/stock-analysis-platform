@@ -44,8 +44,8 @@
             }
             
             body {
-                background: white !important;
-                color: #1e3a5f !important;
+                background: #000 !important;
+                color: #e0e0e0 !important;
                 padding: 0;
             }
             
@@ -59,42 +59,81 @@
             
             .document {
                 box-shadow: none;
-                border: none;
-                background: white !important;
+                border: 1px solid rgba(6, 255, 165, 0.2);
+                background: #0f0f0f !important;
             }
             
             .cover-page {
-                background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%) !important;
-                color: white !important;
+                background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%) !important;
+                color: #e0e0e0 !important;
             }
             
             .content-page, .executive-summary {
-                background: white !important;
-                color: #1e3a5f !important;
+                background: #0f0f0f !important;
+                color: #e0e0e0 !important;
             }
             
             .metric-box, .highlight-card {
-                background: #f5f7fa !important;
-                border: 2px solid #1e3a5f !important;
+                background: linear-gradient(135deg, rgba(6, 255, 165, 0.05), rgba(6, 255, 165, 0.02)) !important;
+                border: 1px solid rgba(6, 255, 165, 0.2) !important;
+                color: #e0e0e0 !important;
             }
             
             .professional-table {
-                background: white !important;
+                background: rgba(6, 255, 165, 0.02) !important;
+                color: #c0c0c0 !important;
             }
             
             .professional-table thead {
-                background: #e8f0f8 !important;
+                background: rgba(6, 255, 165, 0.1) !important;
             }
             
-            h1, h2, h3, .section-header, .metric-value {
-                color: #1e3a5f !important;
-                text-shadow: none !important;
+            .professional-table th {
+                color: #06ffa5 !important;
+            }
+            
+            .professional-table td {
+                color: #c0c0c0 !important;
+            }
+            
+            h1, h2, h3, .section-header {
+                background: linear-gradient(135deg, #06ffa5, #00d084) !important;
+                -webkit-background-clip: text !important;
+                -webkit-text-fill-color: transparent !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            
+            .metric-value {
+                background: linear-gradient(135deg, #06ffa5, #00d084) !important;
+                -webkit-background-clip: text !important;
+                -webkit-text-fill-color: transparent !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
             
             .alert-box.info {
-                background: #d1ecf1 !important;
-                color: #0c5460 !important;
-                border-color: #17a2b8 !important;
+                background: rgba(23, 162, 184, 0.1) !important;
+                border: 1px solid rgba(23, 162, 184, 0.3) !important;
+                color: #17a2b8 !important;
+            }
+            
+            .alert-box.success {
+                background: rgba(6, 255, 165, 0.1) !important;
+                border: 1px solid rgba(6, 255, 165, 0.3) !important;
+                color: #06ffa5 !important;
+            }
+            
+            .footer {
+                background: #0a0a0a !important;
+                color: #606060 !important;
+            }
+            
+            /* Force color printing */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
             }
         }
 
