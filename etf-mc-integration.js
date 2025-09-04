@@ -1,8 +1,9 @@
-// Script d'intégration MC pour ETFs - v3.6.1 COMPACT (sans Sharpe)
+// Script d'intégration MC pour ETFs - v3.7.0 FIXED (opérateurs ASCII)
 // - Affichage compact façon "Actions"
 // - Styles CSS pour liste verticale
 // - Facettes LISTES FR avec dictionnaires complets
 // - SUPPRESSION de Sharpe/R-Vol
+// - FIX: opérateurs ASCII pour filtres personnalisés
 
 (function(){
   // ---------- Styles idempotents ----------
@@ -137,7 +138,7 @@
         filtFS.appendChild(box);
       }
 
-      // Filtres personnalisés (comme Actions) - SANS sharpe_proxy dans le select
+      // Filtres personnalisés (comme Actions) - FIX: valeurs ASCII pour opérateurs
       const customBox = document.createElement('div');
       customBox.className='mt-3';
       customBox.innerHTML = `
@@ -157,10 +158,12 @@
             <option value="yield_net">Rdt net</option>
           </select>
           <select id="etf-filter-operator" class="mini-select" style="width:64px;">
-            <option value="≥">≥</option><option value=">">></option>
+            <option value=">=">≥</option>
+            <option value=">">></option>
             <option value="=">=</option>
-            <option value="<"><</option><option value="≤">≤</option>
-            <option value="≠">≠</option>
+            <option value="<"><</option>
+            <option value="<=">≤</option>
+            <option value="!=">≠</option>
           </select>
           <input id="etf-filter-value" type="number" class="mini-input" style="width:90px;" placeholder="0" step="0.1">
           <span id="etf-filter-unit" class="text-xs opacity-60">%</span>
@@ -388,6 +391,6 @@
       if (e.key==='Escape') document.getElementById('etf-mc-reset')?.click();
     });
 
-    console.log('✅ ETF MC Integration v3.6.1 COMPACT — Sans Sharpe/R-Vol');
+    console.log('✅ ETF MC Integration v3.7.0 FIXED — Opérateurs ASCII');
   });
 })();
