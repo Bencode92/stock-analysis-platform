@@ -723,6 +723,36 @@
             font-size: 0.7rem;
             font-weight: 600;
         }
+        
+        /* MC Pills styles */
+        .mc-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        
+        .mc-pill:hover {
+            background: rgba(0, 255, 255, 0.1);
+            border-color: rgba(0, 255, 255, 0.3);
+        }
+        
+        .mc-pill input {
+            margin-right: 6px;
+            accent-color: #00ffff;
+        }
+        
+        .mc-pill.is-checked {
+            background: rgba(0, 255, 255, 0.2);
+            border-color: #00ffff;
+            box-shadow: 0 0 12px rgba(0, 255, 255, 0.3);
+        }
     </style>
 </head>
 <body class="dark">
@@ -806,7 +836,7 @@
                     </div>
                 </div>
                 
-                <!-- TOP 10 GLOBAL ETFs (comme dans liste.html) -->
+                <!-- TOP 10 GLOBAL ETFs -->
                 <div class="top-stocks-container mb-10">
                     <h2 class="section-title mb-4">Top 10 ETFs — <span id="top-scope-label">GLOBAL</span></h2>
                     
@@ -858,7 +888,7 @@
                     </div>
                 </div>
                 
-                <!-- DIVISEUR VISUEL (comme dans liste.html avec MC) -->
+                <!-- DIVISEUR VISUEL -->
                 <div class="section-divider" style="position: relative; height: 2px; margin: 80px 0 60px; background: linear-gradient(90deg, transparent, rgba(0,255,135,0.3) 20%, rgba(0,255,135,0.3) 80%, transparent); box-shadow: 0 0 20px rgba(0,255,135,0.2);"></div>
                 
                 <!-- COMPOSEUR MULTI-CRITÈRES ETFs -->
@@ -870,9 +900,9 @@
                     <div class="composer-grid" style="display: grid; grid-template-columns: minmax(380px, 450px) 1fr; gap: 24px;">
                         <!-- Colonne gauche : Filtres ETF -->
                         <aside class="composer-filters glassmorphism rounded-lg p-4" role="complementary" aria-label="Filtres ETF">
-                            <fieldset>
+                            <fieldset data-role="metrics">
                                 <legend class="text-sm opacity-70 mb-2">Critères de sélection ETF</legend>
-                                <div class="flex flex-wrap gap-2">
+                                <div class="flex flex-wrap gap-2" id="etf-mc-metrics">
                                     <!-- Critères ETF spécifiques -->
                                     <label class="mc-pill"><input id="etf-m-ter" type="checkbox" checked> TER ↓</label>
                                     <label class="mc-pill"><input id="etf-m-aum" type="checkbox" checked> AUM ↑</label>
@@ -881,9 +911,8 @@
                                     <label class="mc-pill"><input id="etf-m-return_1y" type="checkbox"> Perf 1Y ↑</label>
                                     <label class="mc-pill"><input id="etf-m-return_3y" type="checkbox"> Perf 3Y ↑</label>
                                     <label class="mc-pill"><input id="etf-m-volatility" type="checkbox"> Volatilité ↓</label>
-                                    <label class="mc-pill"><input id="etf-m-sharpe" type="checkbox" checked> Sharpe ↑</label>
+                                    <label class="mc-pill"><input id="etf-m-sharpe_proxy" type="checkbox" checked> R/Vol ↑</label>
                                     <label class="mc-pill"><input id="etf-m-dividend_yield" type="checkbox"> Rendement ↑</label>
-                                    <label class="mc-pill"><input id="etf-m-tracking_error" type="checkbox"> Track. Error ↓</label>
                                 </div>
                             </fieldset>
 
@@ -895,9 +924,9 @@
                                 </div>
                             </fieldset>
 
-                            <fieldset>
+                            <fieldset data-role="filters">
                                 <legend class="text-sm opacity-70 mb-2">Filtres ETF</legend>
-                                <div class="space-y-2 mb-2">
+                                <div class="space-y-2 mb-2" id="etf-mc-filters">
                                     <div class="flex gap-2 items-center">
                                         <label class="text-xs opacity-70 min-w-[60px]">Type:</label>
                                         <select id="etf-filter-type" class="mini-select flex-1" style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
@@ -917,7 +946,7 @@
                                     <div class="flex gap-2 items-center">
                                         <label class="text-xs opacity-70 min-w-[60px]">AUM min:</label>
                                         <input id="etf-filter-aum" type="number" placeholder="100" class="mini-input flex-1" style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
-                                        <span class="text-xs opacity-60">M€</span>
+                                        <span class="text-xs opacity-60">M$</span>
                                     </div>
                                 </div>
                             </fieldset>
@@ -933,6 +962,12 @@
 
                         <!-- Colonne droite : Résultats -->
                         <div>
+                            <div id="mc-loading" class="hidden">
+                                <div class="glassmorphism rounded-lg p-8 text-center">
+                                    <div class="loader mx-auto"></div>
+                                    <p class="mt-4 text-cyan-400">Calcul en cours...</p>
+                                </div>
+                            </div>
                             <div id="etf-mc-results" class="glassmorphism rounded-lg p-4">
                                 <div class="stock-cards-container">
                                     <!-- Les résultats seront générés ici -->
@@ -1026,12 +1061,38 @@
         </div>
     </main>
 
-    <!-- Script ETF amélioré -->
+    <!-- ORDRE CRITIQUE DES SCRIPTS : Adapter -> Script principal -> Integration -> Module MC -->
+    
+    <!-- 1. ETF Data Adapter (NOUVEAU - doit être chargé en premier) -->
+    <script src="etf-data-adapter.js"></script>
+    
+    <!-- 2. Script ETF principal (mise à jour v2.3 avec intégration de l'adapter) -->
     <script src="etf-script.js"></script>
     
-    <!-- Scripts MC adaptés pour ETF -->
+    <!-- 3. Styles MC (optionnel mais recommandé) -->
     <link rel="stylesheet" href="mc-styles.css">
+    
+    <!-- 4. Scripts MC adaptés pour ETF -->
     <script src="etf-mc-integration.js"></script>
     <script src="etf-mc-module.js"></script>
+    
+    <!-- Notification de chargement -->
+    <script>
+        console.log('✨ ETF Platform v2.3 avec Data Adapter - Initialisation...');
+        
+        // Vérification du chargement des modules
+        setTimeout(() => {
+            if (window.ETFDataAdapter && window.ETFData && window.ETF_MC) {
+                console.log('✅ Tous les modules sont chargés correctement');
+                console.log('📊 Stats des données:', window.ETFData.getStats?.());
+            } else {
+                console.warn('⚠️ Certains modules ne sont pas chargés:', {
+                    adapter: !!window.ETFDataAdapter,
+                    data: !!window.ETFData,
+                    mc: !!window.ETF_MC
+                });
+            }
+        }, 2000);
+    </script>
 </body>
 </html>
