@@ -1028,17 +1028,45 @@
     <script src="etf-mc-integration.js"></script>
     <script src="etf-mc-module.js"></script>
     
-    <!-- Script A→Z ETFs amélioré -->
+    <!-- Script A→Z ETFs amélioré avec corrections -->
     <script>
-    /* etf-az.js — A→Z ETFs (sans Sharpe) + détails enrichis (objectif, secteurs, holdings) */
+    /* etf-az.js — A→Z ETFs avec corrections de formatage */
     (function () {
       const $  = s => document.querySelector(s);
       const $$ = s => Array.from(document.querySelectorAll(s));
 
-      // ---------- Formatage ----------
-      function fmtNum(v, d=2){ if(v==null||v==='') return '-'; const n=Number(v); return Number.isFinite(n)? n.toFixed(d):'-'; }
-      function fmtAUM(v){ const n=Number(v||0); if(!Number.isFinite(n)||n<=0) return '-'; return n>=1000?(n/1000).toFixed(1)+'B€':n.toFixed(0)+'M€'; }
-      function fmtPct(v){ if(v==null||v==='') return '-'; const n=Number(v); if(!Number.isFinite(n)) return '-'; return (n>=0?'+':'')+n.toFixed(2)+'%'; }
+      // ---------- Formatage corrigé ----------
+      const NF_INT = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+      const NF_1   = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      
+      function fmtNum(v, d = 2) {
+        const n = Number(v);
+        return Number.isFinite(n) ? n.toFixed(d) : '-';
+      }
+      
+      // Accepte soit 0.0075 (ratio) soit 0.75 (déjà en %) et affiche 0,75%
+      function fmtPctSmart(v, d = 2) {
+        if (v == null || v === '') return '-';
+        let n = Number(v);
+        if (!Number.isFinite(n)) return '-';
+        if (Math.abs(n) <= 1) n *= 100;        // 0.0075 -> 0.75
+        const sign = n >= 0 ? '+' : '';
+        return `${sign}${n.toFixed(d)}%`;
+      }
+      
+      // AUM en valeur entière (ex: 1252394900) -> 1,3 B€, 950 M€, etc.
+      function fmtAUM(v) {
+        const n = Number(v);
+        if (!Number.isFinite(n) || n <= 0) return '-';
+        let val, unit;
+        if (n >= 1e12) { val = n / 1e12; unit = ' T€'; }
+        else if (n >= 1e9) { val = n / 1e9; unit = ' B€'; }
+        else if (n >= 1e6) { val = n / 1e6; unit = ' M€'; }
+        else { val = n / 1e3; unit = ' k€'; }
+        const num = val >= 10 ? NF_INT.format(val) : NF_1.format(val);
+        return `${num}${unit}`;
+      }
+      
       function clsPct(v){ const n=Number(v); return Number.isFinite(n)?(n>=0?'positive':'negative'):''; }
 
       // ---------- Accès aux champs ----------
@@ -1048,19 +1076,28 @@
         if (Array.isArray(val) || (typeof val === 'object' && val !== null)) return val;
         try { return JSON.parse(val); } catch { return null; }
       }
+      
       function toSectors(e){
-        // sector_top5: [{s:"Technology", w:37.9}, ...]
         const arr = parseMaybeJSON(e.sector_top5);
-        if (Array.isArray(arr) && arr.length) return arr;
-        if (e.sector_top) return [{ s: e.sector_top, w: Number(e.sector_top_weight) || null }];
+        if (Array.isArray(arr)) {
+          return arr.filter(x => x && Number(x.w) > 0.0001); // garde >0%
+        }
+        if (e.sector_top) {
+          const w = Number(e.sector_top_weight);
+          return (Number.isFinite(w) && w > 0.0001)
+            ? [{ s: e.sector_top, w }]
+            : [{ s: e.sector_top, w: null }];
+        }
         return [];
       }
+      
       function toHoldings(e){
-        // holdings_top10: [{t:"NVDA", n:"NVIDIA Corporation", w:11.93}, ...]
         const arr = parseMaybeJSON(e.holdings_top10);
-        if (Array.isArray(arr) && arr.length) return arr;
+        if (Array.isArray(arr) && arr.length) {
+          // garde ceux sans poids (null) ou avec poids positif
+          return arr.filter(h => h && (h.w == null || Number(h.w) > 0.0001));
+        }
         if (e.holding_top){
-          // essaie d'extraire ticker (entre parenthèses) + nom
           const m = String(e.holding_top).match(/\(([^)]+)\)/);
           const t = m ? m[1] : e.holding_top;
           const n = String(e.holding_top).replace(/\s*\([^)]*\)\s*/g,'').trim();
@@ -1068,6 +1105,7 @@
         }
         return [];
       }
+      
       function getFundType(e){
         return e.fund_type || e.etf_type || e.replication || e.distribution || (e.type && e.type!=='bonds' ? e.type : '') || '';
       }
@@ -1185,7 +1223,7 @@
           const first = keySrc[0].toLowerCase();
           if (map[first]) map[first].push(e);
         });
-        Object.keys(map).forEach(l => map[l].sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''))));
+        Object.keys(map).forEach(l => map[l].sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''))))
         return map;
       }
       function uniqSorted(arr){ return [...new Set(arr.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b))); }
@@ -1239,14 +1277,14 @@
                 <div class="font-medium">${etf.ticker || etf.isin || '—'}</div>
                 <div class="text-xs opacity-70 mt-1">${etf.name || '—'}</div>
               </td>
-              <td class="text-right"><span class="ter-badge">${fmtNum(etf.total_expense_ratio ?? etf.ter)}%</span></td>
+              <td class="text-right"><span class="ter-badge">${fmtPctSmart(etf.total_expense_ratio ?? etf.ter)}</span></td>
               <td class="text-right"><span class="aum-badge">${fmtAUM(etf.aum_usd ?? etf.aum)}</span></td>
               <td class="text-right">${fmtNum(etf.last_close ?? etf.price,2)}€</td>
-              <td class="text-right ${chCls}">${fmtPct(etf.daily_change_pct ?? etf.return_1d)}</td>
-              <td class="text-right ${ytdCls}">${fmtPct(etf.ytd_return_pct ?? etf.return_ytd)}</td>
-              <td class="text-right ${y1Cls}">${fmtPct(etf.one_year_return_pct ?? etf.return_1y)}</td>
-              <td class="text-right">${fmtNum(etf.vol_3y_pct ?? etf.volatility)}%</td>
-              <td class="text-right">${fmtNum(etf.yield_ttm ?? etf.dividend_yield)}%</td>
+              <td class="text-right ${chCls}">${fmtPctSmart(etf.daily_change_pct ?? etf.return_1d)}</td>
+              <td class="text-right ${ytdCls}">${fmtPctSmart(etf.ytd_return_pct ?? etf.return_ytd)}</td>
+              <td class="text-right ${y1Cls}">${fmtPctSmart(etf.one_year_return_pct ?? etf.return_1y)}</td>
+              <td class="text-right">${fmtPctSmart(etf.vol_3y_pct ?? etf.volatility)}</td>
+              <td class="text-right">${fmtPctSmart(etf.yield_ttm ?? etf.dividend_yield)}</td>
               <td class="text-center">
                 <button class="action-button details-toggle" aria-expanded="false" onclick="toggleEtfAzDetails(this)">
                   <i class="fas fa-chevron-down"></i>
