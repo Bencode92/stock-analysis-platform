@@ -1,6 +1,6 @@
-// Script d'intégration MC pour ETFs - v3.4
-// - Facettes "Pays / Secteurs / Type de fonds" en LISTES (checkboxes verticales)
-// - Libellés FR partout
+// Script d'intégration MC pour ETFs - v3.5
+// - Facettes "Pays / Secteurs / Type de fonds" en LISTES FR (checkboxes verticales)
+// - Dictionnaires de traduction français
 // - Qualité retirée (métrique + slider)
 // - Badge de score retiré (géré côté module)
 
@@ -32,6 +32,7 @@
     #etf-mc-section .mc-pill.is-checked{ background:rgba(0,255,255,.2)!important; border-color:#00ffff!important; box-shadow:0 0 12px rgba(0,255,255,.3); transform:translateY(-1px); }
     #etf-mc-section .mini-input,#etf-mc-section .mini-select{ transition:all .2s ease; background:rgba(0,255,255,.05); color:#fff; }
     #etf-mc-section .mini-input:focus,#etf-mc-section .mini-select:focus{ border-color:#00ffff; box-shadow:0 0 0 3px rgba(0,255,255,.2); outline:none; }
+    .filter-item{ background:rgba(0,255,255,.05); border:1px solid rgba(0,255,255,.2); border-radius:8px; }
 
     /* === LISTES DE FACETTES (pays / secteurs / type de fonds) === */
     .facet-header{ font-size:.8rem; opacity:.7; margin:.5rem 0 .25rem }
@@ -42,6 +43,10 @@
     .facet-item:hover{ background:rgba(0,255,255,.06); }
     .facet-item.is-checked{ background:rgba(0,255,255,.18); border:1px solid #00ffff; }
     .facet-item input{ accent-color:#00ffff; }
+
+    /* Toggle Lev/Inv */
+    .lev-toggle-container{ display:flex; align-items:center; gap:8px; padding:8px 12px; background:rgba(255,50,50,.05); border:1px solid rgba(255,50,50,.2); border-radius:8px; margin-top:8px; }
+    .lev-toggle-container:has(input:checked){ background:rgba(255,50,50,.1); border-color:rgba(255,50,50,.3); }
 
     /* Loader */
     @keyframes shimmer{0%{background-position:-1000px 0}100%{background-position:1000px 0}}
@@ -62,7 +67,7 @@
       lab.innerHTML = `<input id="etf-m-${id}" type="checkbox" ${checked?'checked':''}> ${label}`;
       zoneMetrics.appendChild(lab);
     };
-    // Ajouts/renommages utiles
+    // Ajouts/renommages utiles FR
     setPill('yield_net','Rdt net ↑',false);
     setPill('sharpe_proxy','R/Vol ↑',true);
     // Supprimer "Qualité" si présent
@@ -71,10 +76,10 @@
       if (pill) pill.remove();
     })();
 
-    // === (2) ZONE FILTRES — facettes en LISTES FR ===
+    // === (2) ZONE FILTRES de base ===
     const filtFS = document.querySelector('#etf-mc-section fieldset:last-of-type');
     if (filtFS) {
-      // Supprimer l'ancien select "type"
+      // Supprimer l'ancien select "type" s'il existe
       document.getElementById('etf-filter-type')?.closest('.flex')?.remove();
       // Supprimer le slider de qualité s'il existe
       document.getElementById('etf-filter-quality')?.closest('div')?.remove();
@@ -90,25 +95,6 @@
         `;
         filtFS.appendChild(box);
       }
-
-      // Facettes LISTE
-      const facets = document.createElement('div');
-      facets.className='space-y-2 mt-2';
-      facets.innerHTML = `
-        <div>
-          <div class="facet-header">Pays (multi)</div>
-          <ul id="etf-filter-countries" class="facet-list" aria-label="Pays"></ul>
-        </div>
-        <div>
-          <div class="facet-header">Secteurs (multi)</div>
-          <ul id="etf-filter-sectors" class="facet-list" aria-label="Secteurs"></ul>
-        </div>
-        <div>
-          <div class="facet-header">Type de fonds (multi)</div>
-          <ul id="etf-filter-fundtype" class="facet-list" aria-label="Type de fonds"></ul>
-        </div>
-      `;
-      filtFS.appendChild(facets);
 
       // Filtres personnalisés (comme Actions)
       const customBox = document.createElement('div');
@@ -144,10 +130,189 @@
       filtFS.appendChild(customBox);
     }
 
+    // === (3) LISTES FR pour Pays / Secteurs / Type de fonds (remplace les 3 selects) ===
+    (function makeFacetLists(){
+      const filtFS = document.querySelector('#etf-mc-section fieldset:last-of-type');
+      if (!filtFS) return;
+
+      // Dictionnaires FR (complets)
+      const FR_SECTORS = {
+        "Financial Services":"Services financiers",
+        "Consumer Cyclical":"Conso. cyclique",
+        "Technology":"Technologie",
+        "Industrial":"Industrie",
+        "Communication Services":"Communication",
+        "Basic Materials":"Matériaux de base",
+        "Healthcare":"Santé",
+        "Energy":"Énergie",
+        "Utilities":"Services publics",
+        "Real Estate":"Immobilier",
+        "Consumer Defensive":"Conso. défensive",
+        "Financials":"Finance",
+        "Information Technology":"Technologies de l'info",
+        "Consumer Staples":"Biens de conso. de base",
+        "Consumer Discretionary":"Conso. discrétionnaire",
+        "Materials":"Matériaux",
+        "Industrials":"Industriels",
+        "Health Care":"Soins de santé",
+        "Telecommunication Services":"Télécoms"
+      };
+      
+      const FR_COUNTRIES = {
+        "United States":"États-Unis",
+        "United Kingdom":"Royaume-Uni",
+        "Germany":"Allemagne",
+        "France":"France",
+        "Switzerland":"Suisse",
+        "Spain":"Espagne",
+        "Netherlands":"Pays-Bas",
+        "China":"Chine",
+        "Korea":"Corée",
+        "India":"Inde",
+        "Taiwan":"Taïwan",
+        "Japan":"Japon",
+        "Canada":"Canada",
+        "Italy":"Italie",
+        "Australia":"Australie",
+        "Belgium":"Belgique",
+        "Sweden":"Suède",
+        "Denmark":"Danemark",
+        "Norway":"Norvège",
+        "Brazil":"Brésil",
+        "Mexico":"Mexique",
+        "Hong Kong":"Hong Kong",
+        "Singapore":"Singapour",
+        "Ireland":"Irlande",
+        "Austria":"Autriche",
+        "Finland":"Finlande",
+        "Portugal":"Portugal",
+        "Greece":"Grèce",
+        "Poland":"Pologne",
+        "Russia":"Russie",
+        "South Africa":"Afrique du Sud",
+        "Turkey":"Turquie",
+        "Israel":"Israël",
+        "Saudi Arabia":"Arabie Saoudite",
+        "United Arab Emirates":"Émirats arabes unis",
+        "Indonesia":"Indonésie",
+        "Malaysia":"Malaisie",
+        "Thailand":"Thaïlande",
+        "Philippines":"Philippines",
+        "Argentina":"Argentine",
+        "Chile":"Chili",
+        "Colombia":"Colombie"
+      };
+      
+      const FR_FUNDTYPES = {
+        "Intermediate Core Bond":"Obligations core intermédiaire",
+        "Intermediate Core-Plus Bond":"Obligations core-plus intermédiaire",
+        "Short Government":"Gouvernement court terme",
+        "High Yield Bond":"Obligations haut rendement",
+        "Target Maturity":"Échéance cible",
+        "Equity Precious Metals":"Actions métaux précieux",
+        "Commodities Focused":"Matières premières",
+        "Technology":"Technologie",
+        "Health":"Santé",
+        "Trading--Leveraged Equity":"ETF levier (actions)",
+        "Trading--Inverse Equity":"ETF inverse (actions)",
+        "Mid-Cap Growth":"Mid-cap croissance",
+        "Large Blend":"Grande cap. mixte",
+        "Large Growth":"Grande cap. croissance",
+        "Large Value":"Grande cap. valeur",
+        "Small Growth":"Petite cap. croissance",
+        "Small Value":"Petite cap. valeur",
+        "Foreign Large Blend":"International grande cap.",
+        "Foreign Large Growth":"International croissance",
+        "Foreign Large Value":"International valeur",
+        "Emerging Markets":"Marchés émergents",
+        "Europe Stock":"Actions Europe",
+        "Pacific/Asia ex-Japan":"Asie-Pacifique ex-Japon",
+        "Japan Stock":"Actions Japon",
+        "Real Estate":"Immobilier",
+        "Sector Equity":"Actions sectorielles",
+        "World Bond":"Obligations mondiales",
+        "Inflation-Protected Bond":"Obligations indexées inflation",
+        "Corporate Bond":"Obligations d'entreprise",
+        "Long Government":"Gouvernement long terme",
+        "Intermediate Government":"Gouvernement moyen terme",
+        "Municipal Bond":"Obligations municipales",
+        "Preferred Stock":"Actions privilégiées",
+        "Bank Loan":"Prêts bancaires",
+        "Convertibles":"Obligations convertibles",
+        "Multisector Bond":"Obligations multi-secteurs",
+        "World Stock":"Actions mondiales",
+        "Alternative":"Alternatif",
+        "Allocation":"Allocation",
+        "Commodities Broad":"Matières premières larges",
+        "Energy":"Énergie",
+        "Agriculture":"Agriculture",
+        "Industrial Metals":"Métaux industriels",
+        "Volatility":"Volatilité",
+        "Trading--Leveraged":"Trading à effet de levier",
+        "Trading--Inverse":"Trading inverse",
+        "Currency":"Devises"
+      };
+      
+      const toFR = (v, dict) => dict[v] || v;
+
+      // Attend que le module ait construit les catalogues
+      const ready = () => window.ETF_MC?.state?.catalogs?.countries?.length;
+      const boot = () => {
+        const cats = window.ETF_MC.state.catalogs;
+
+        // 1) Cacher les vieux <select> s'ils existent
+        filtFS.querySelectorAll('select').forEach(s => {
+          const lab = s.previousElementSibling?.textContent?.toLowerCase() || "";
+          if (/(région|pays|secteur|type)/.test(lab)) {
+            const parent = s.closest('.flex') || s.parentElement;
+            if (parent) parent.style.display = 'none';
+          }
+        });
+
+        // 2) Insérer 3 listes (si pas déjà présentes)
+        const mk = (id, title, values, facet, dict) => {
+          if (document.getElementById(id)) return;
+          const wrap = document.createElement('div');
+          wrap.innerHTML = `
+            <div class="facet-header">${title}</div>
+            <ul id="${id}" class="facet-list" aria-label="${title}">
+              ${values.map(v => `
+                <li class="facet-item"><label>
+                  <input type="checkbox" data-facet="${facet}" value="${v}"> ${toFR(v, dict)}
+                </label></li>`).join('')}
+            </ul>`;
+          filtFS.insertBefore(wrap, document.getElementById('etf-custom-filters-list')?.parentElement);
+        };
+
+        mk('etf-filter-countries','Pays (multi-sélection)', cats.countries,'country', FR_COUNTRIES);
+        mk('etf-filter-sectors','Secteurs (multi-sélection)', cats.sectors,'sector', FR_SECTORS);
+        mk('etf-filter-fundtype','Type de fonds (multi-sélection)', cats.fundTypes,'fund', FR_FUNDTYPES);
+
+        // 3) Branche les checkbox sur les Sets du module
+        filtFS.querySelectorAll('input[data-facet]').forEach(inp=>{
+          const sets = window.ETF_MC.state.filters;
+          const target =
+            inp.dataset.facet==='country' ? sets.countries :
+            inp.dataset.facet==='sector'  ? sets.sectors   : sets.fundTypes;
+
+          inp.addEventListener('change', e=>{
+            const v = e.target.value;
+            if (e.target.checked) target.add(v); else target.delete(v);
+            e.target.closest('.facet-item')?.classList.toggle('is-checked', e.target.checked);
+            window.ETF_MC.calculate();
+          });
+        });
+      };
+
+      (function wait(){ if (ready()) return boot(); setTimeout(wait, 150); })();
+    })();
+
     // Sync visuel des pills métriques
     document.querySelectorAll('#etf-mc-section .mc-pill input').forEach(inp=>{
-      const lab = inp.closest('.mc-pill'); const sync = ()=> lab?.classList.toggle('is-checked', inp.checked);
-      inp.addEventListener('change', sync); sync();
+      const lab = inp.closest('.mc-pill'); 
+      const sync = ()=> lab?.classList.toggle('is-checked', inp.checked);
+      inp.addEventListener('change', sync); 
+      sync();
     });
 
     // Loader
@@ -183,6 +348,6 @@
       if (e.key==='Escape') document.getElementById('etf-mc-reset')?.click();
     });
 
-    console.log('✅ ETF MC Integration v3.4 — facettes LISTE FR prêtes');
+    console.log('✅ ETF MC Integration v3.5 — Facettes LISTE FR avec dictionnaires complets');
   });
 })();
