@@ -1,7 +1,7 @@
-// Module MC adapté pour ETFs - v3.8.2 ACTIONS-LIKE
-// - Métriques sur une seule ligne
+// Module MC adapté pour ETFs - v3.8.3 ACTIONS-LIKE SINGLE LINE
+// - Toutes les métriques sur une seule ligne  
 // - Typography identique à Actions
-// - Ordre: YTD, TER, puis AUM et R/Vol en chips
+// - Scroll horizontal si trop de colonnes
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const fmt=(n,d=2)=>Number.isFinite(+n)?(+n).toFixed(d):'—';
@@ -13,8 +13,8 @@
   function init(){
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results .stock-cards-container');
-    if(!root||!results){console.error('❌ ETF MC v3.8.2: DOM manquant');return;}
-    console.log('✅ ETF MC v3.8.2 ACTIONS-LIKE: Module initialisé');
+    if(!root||!results){console.error('❌ ETF MC v3.8.3: DOM manquant');return;}
+    console.log('✅ ETF MC v3.8.3 ACTIONS-LIKE SINGLE LINE: Module initialisé');
     
     if(!document.getElementById('etf-mc-v38-styles')){
       const s=document.createElement('style'); s.id='etf-mc-v38-styles'; s.textContent=`
@@ -37,48 +37,40 @@
       .badge.warn{color:#ff9aa7;border-color:rgba(255,90,90,.35);background:rgba(255,90,90,.12)}
       .micro{font-size:.8rem;opacity:.6;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       
-      /* === ACTIONS-LIKE: métriques sur une seule ligne + même typo === */
+      /* === ACTIONS-LIKE: toutes les métriques en une seule ligne, même quand tout est coché === */
       #etf-mc-results .etf-card .metrics{
         display:flex;
         align-items:center;
-        flex-wrap:nowrap;           /* une seule ligne */
         gap:20px;
-        max-width:100%;
-        white-space:nowrap;         /* évite le retour à la ligne */
+        flex-wrap:nowrap !important;     /* une seule ligne */
+        white-space:nowrap;               /* empêche le retour à la ligne */
+        overflow-x:auto;                  /* si trop de colonnes, scroll horizontal */
+        scrollbar-width: thin;
       }
-      #etf-mc-results .etf-card .metric-primary{
+      
+      #etf-mc-results .etf-card .metric-col{
         display:inline-flex;
         flex-direction:column;
-        min-width:auto;
+        min-width:90px;                   /* largeur mini d'une "colonne" */
       }
-      #etf-mc-results .etf-card .metric-primary .k{
+      
+      /* Typo identique à Actions */
+      #etf-mc-results .etf-card .metric-col .k{
         text-transform:uppercase;
         letter-spacing:.5px;
         font-weight:700;
         font-size:.82rem;
         opacity:.65;
       }
-      #etf-mc-results .etf-card .metric-primary .v{
+      #etf-mc-results .etf-card .metric-col .v{
         font-weight:800;
         font-size:1.10rem;
         line-height:1;
-        font-variant-numeric: tabular-nums; /* alignement propre des chiffres */
+        font-variant-numeric:tabular-nums;
       }
       
-      /* chips alignées sur la même ligne que les primaires */
-      #etf-mc-results .etf-card .chips{ 
-        display:inline-flex; 
-        gap:10px; 
-        margin-left:6px;
-      }
-      #etf-mc-results .etf-card .chip{
-        padding:6px 10px;
-        border-radius:9999px;
-        border:1px solid rgba(255,255,255,.12);
-        background:rgba(255,255,255,.06);
-        font-size:.72rem;
-        opacity:.9;
-      }
+      /* on neutralise l'ancien rendu "chips" s'il reste du code */
+      #etf-mc-results .etf-card .chips{ display:none !important; }
       
       .g{color:#34d399}.y{color:#fbbf24}.r{color:#f87171}
       /* Facettes repliables */
@@ -94,18 +86,6 @@
       /* masquer vieux champs TER/AUM */
       #etf-filter-ter,#etf-filter-aum,label[for="etf-filter-ter"],label[for="etf-filter-aum"]{display:none!important}
       
-      /* Responsive: on autorise le wrap en mobile uniquement */
-      @media (max-width: 1000px){
-        #etf-mc-results .etf-card{grid-template-columns:52px 1fr}
-        #etf-mc-results .etf-card .metrics{
-          flex-wrap:wrap;
-          white-space:normal;
-          gap:12px 10px;
-          justify-content:flex-start;
-          max-width:100%;
-        }
-      }
-      
       /* pills */
       #etf-mc-section .mc-pill{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border:1px solid rgba(0,200,255,.2);border-radius:10px;background:rgba(0,255,255,.03);cursor:pointer;transition:.2s}
       #etf-mc-section .mc-pill:hover{background:rgba(0,255,255,.08);border-color:rgba(0,255,255,.35)}
@@ -117,7 +97,7 @@
 
     const state={
       mode:'balanced',
-      selectedMetrics:['return_ytd','ter','aum','sharpe_proxy'], // Ordre spécifique: YTD, TER, AUM, R/Vol
+      selectedMetrics:['return_ytd','ter','aum','sharpe_proxy'],
       filters:{countries:new Set(),sectors:new Set(),fundTypes:new Set(),excludeLeveraged:true},
       customFilters:[],
       data:[],catalogs:{countries:[],sectors:[],fundTypes:[]}
@@ -155,8 +135,6 @@
         .filter(x => x.checked)
         .map(x => x.id.replace('etf-m-',''))
         .filter(m => METRICS[m]);
-      // Ordre spécifique si souhaité
-      state.selectedMetrics = ['return_ytd','ter','aum','sharpe_proxy'];
     }
 
     function buildFacetCatalogs(){
@@ -314,34 +292,32 @@
         const levBadge = e.__lev ? '<span class="badge warn">LEV/INV</span>' : '';
         const displayName = str(e.long_name)||str(e.fund_name)||str(e.name)||str(e.symbol)||str(e.ticker)||'—';
 
-        const primary = state.selectedMetrics.filter(m=>METRICS[m]).slice(0,2);
-        const secondary = state.selectedMetrics.filter(m=>METRICS[m]).slice(2);
+        // NEW: construit une colonne par métrique cochée (ordre = ordre des pills)
+        const colsHTML = state.selectedMetrics
+          .filter(m => METRICS[m])
+          .map(m => {
+            const d = METRICS[m];
+            const raw = d.get(e);
 
-        const renderVal=(m,raw)=>{
-          const d=METRICS[m]; if(!Number.isFinite(raw)) return '—';
-          if(m==='aum'){ const M=raw; return (M>=1000)?(M/1000).toFixed(1)+'B$':Math.round(M)+'M$'; }
-          return d.unit==='%'? fmt(raw,2)+'%' : fmt(raw,2);
-        };
-        const colorFor=(m,raw)=>{
-          if(!Number.isFinite(raw)) return '';
-          if(m==='ter') return raw<0.2?'g':raw<0.4?'g':'y';
-          if(m==='volatility') return raw<10?'g':raw<20?'g':'y';
-          if(m==='sharpe_proxy') return raw>2?'g':raw>1?'g':'y';
-          return raw>=0?'g':'r';
-        };
+            const renderVal = (m,raw)=>{
+              if(!Number.isFinite(raw)) return '—';
+              if(m==='aum'){ const M=raw; return (M>=1000)?(M/1000).toFixed(1)+'B$':Math.round(M)+'M$'; }
+              return d.unit==='%' ? fmt(raw,2)+'%' : fmt(raw,2);
+            };
+            const colorFor=(m,raw)=>{
+              if(!Number.isFinite(raw)) return '';
+              if(m==='ter') return raw<0.2?'g':raw<0.4?'g':'y';
+              if(m==='volatility') return raw<10?'g':raw<20?'g':'y';
+              if(m==='sharpe_proxy') return raw>2?'g':raw>1?'g':'y';
+              return raw>=0?'g':'r';
+            };
 
-        const primHTML = primary.map(m=>{
-          const d=METRICS[m], raw=d.get(e);
-          return `<div class="metric-primary">
-            <div class="k">${d.label}</div>
-            <div class="v ${colorFor(m,raw)}">${renderVal(m,raw)}</div>
-          </div>`;
-        }).join('');
-
-        const chipsHTML = secondary.map(m=>{
-          const d=METRICS[m], raw=d.get(e);
-          return `<span class="chip ${colorFor(m,raw)}">${d.label}: ${renderVal(m,raw)}</span>`;
-        }).join('');
+            return `<div class="metric-col">
+              <div class="k">${d.label}</div>
+              <div class="v ${colorFor(m,raw)}">${renderVal(m,raw)}</div>
+            </div>`;
+          })
+          .join('');
 
         const topS=str(e.sector_top), wS=num(e.sector_top_weight);
         const topC=str(e.country_top), wC=num(e.country_top_weight);
@@ -354,10 +330,7 @@
             <div class="etf-name" title="${displayName.replace(/"/g,'&quot;')}">${displayName} ${typeBadge} ${levBadge}</div>
             ${micro?`<div class="micro">${micro}</div>`:''}
           </div>
-          <div class="metrics">
-            ${primHTML}
-            ${chipsHTML?`<div class="chips">${chipsHTML}</div>`:''}
-          </div>`;
+          <div class="metrics">${colsHTML}</div>`;
         box.appendChild(card);
       });
     }
@@ -370,7 +343,7 @@
       if(state.filters.sectors.size)tags.push(`Secteurs(${state.filters.sectors.size})`);
       if(state.filters.fundTypes.size)tags.push(`Type(${state.filters.fundTypes.size})`);
       if(state.filters.excludeLeveraged)tags.push('No Lev/Inv');
-      summary.innerHTML=`<strong>${mode}</strong> • ${metrics}${tags.length?' • '+tags.join(' '):''} • ${filtered}/${total} ETFs`;
+      summary.innerHTML=`<strong>${mode}</strong> • ${metrics}${tags.length?' • '+tags.join(' '):''}  • ${filtered}/${total} ETFs`;
     }
 
     document.getElementById('etf-mc-apply')?.addEventListener('click',()=>calculate());
