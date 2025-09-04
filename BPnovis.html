@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Business Plan SaaS TradePulse 2025-2028</title>
+    <title>Business Plan NOVIS 2025-2028</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
         
@@ -411,6 +411,76 @@
             color: #17a2b8;
         }
 
+        .alert-box.success {
+            background: rgba(6, 255, 165, 0.1);
+            border: 1px solid rgba(6, 255, 165, 0.3);
+            color: #06ffa5;
+        }
+
+        .conformity-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin: 30px 0;
+        }
+
+        .conformity-card {
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .conformity-card.do {
+            background: linear-gradient(135deg, rgba(6, 255, 165, 0.05), rgba(6, 255, 165, 0.02));
+            border: 1px solid rgba(6, 255, 165, 0.2);
+        }
+
+        .conformity-card.dont {
+            background: linear-gradient(135deg, rgba(255, 51, 102, 0.05), rgba(255, 51, 102, 0.02));
+            border: 1px solid rgba(255, 51, 102, 0.2);
+        }
+
+        .conformity-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .conformity-card.do .conformity-title {
+            color: #06ffa5;
+        }
+
+        .conformity-card.dont .conformity-title {
+            color: #ff3366;
+        }
+
+        .conformity-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .conformity-list li {
+            padding: 8px 0;
+            padding-left: 24px;
+            position: relative;
+            color: #c0c0c0;
+        }
+
+        .conformity-list li::before {
+            position: absolute;
+            left: 0;
+            top: 8px;
+        }
+
+        .conformity-card.do .conformity-list li::before {
+            content: '✓';
+            color: #06ffa5;
+        }
+
+        .conformity-card.dont .conformity-list li::before {
+            content: '✗';
+            color: #ff3366;
+        }
+
         .triggers-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -573,12 +643,12 @@
     <div class="document">
         <!-- Cover Page -->
         <div class="cover-page">
-            <div class="company-logo">📊</div>
+            <div class="company-logo">💎</div>
             
             <h1 class="cover-title">Business Plan 2025-2028</h1>
             <p class="cover-subtitle">
-                TradePulse - Plateforme SaaS d'Analyse Financière<br>
-                <small>Document confidentiel investisseurs</small>
+                NOVIS - Plateforme d'éducation financière et d'investissement<br>
+                <small>Document confidentiel - Financement non dilutif</small>
             </p>
             
             <div class="cover-info">
@@ -588,15 +658,15 @@
                 </div>
                 <div class="cover-info-item">
                     <strong>Date</strong>
-                    <span class="date-display">Janvier 2025</span>
+                    <span class="date-display">Septembre 2025</span>
                 </div>
                 <div class="cover-info-item">
                     <strong>Lancement</strong>
-                    Octobre 2025
+                    Beta août-sept 2025 · Lancement octobre 2025
                 </div>
                 <div class="cover-info-item">
-                    <strong>Financement recherché</strong>
-                    20 000€ - 30 000€
+                    <strong>Financement non dilutif recherché</strong>
+                    20 000€ - 30 000€ (subventions, prêts d'honneur, avances remboursables)
                 </div>
             </div>
         </div>
@@ -606,11 +676,11 @@
             <h2 class="section-header">Executive Summary</h2>
             
             <div class="alert-box info">
-                <strong>TradePulse</strong> : Plateforme SaaS d'analyse financière démocratisant l'accès aux outils professionnels
-                <br>• <strong>Lancement</strong> : Octobre 2025 - Développement Q1-Q3, Launch Q4
-                <br>• <strong>Marché</strong> : B2C France - Investisseurs particuliers
-                <br>• <strong>Modèle</strong> : Abonnement 5€/mois TTC - Sans freemium
-                <br>• <strong>Technologie</strong> : APIs financières temps réel + IA prédictive
+                <strong>NOVIS</strong> : Plateforme d'éducation financière et d'investissement pour épargnants débutants
+                <br>• <strong>Lancement</strong> : Beta privée août-sept 2025 · Lancement public octobre 2025
+                <br>• <strong>Marché</strong> : B2C France - Épargnants débutants (TAM 28M, SAM ~21M, SOM 100k à 24 mois)
+                <br>• <strong>Modèle</strong> : Abonnement 5€/mois TTC - Sans freemium - ZERO DILUTION
+                <br>• <strong>Technologie</strong> : Éducation + outils (budget, fiscalité, portefeuilles, immobilier)
             </div>
 
             <div class="key-metrics">
@@ -625,14 +695,14 @@
                     <div class="metric-detail">Première année complète<br>2 000 clients<br>MRR: 10K€</div>
                 </div>
                 <div class="metric-box">
-                    <div class="metric-label">Financement requis</div>
+                    <div class="metric-label">Financement non dilutif</div>
                     <div class="metric-value">20-30K €</div>
                     <div class="metric-detail">9 mois développement<br>+ 3 mois lancement<br>Runway 12-15 mois</div>
                 </div>
                 <div class="metric-box">
                     <div class="metric-label">LTV/CAC</div>
-                    <div class="metric-value">6.6x</div>
-                    <div class="metric-detail">LTV: 48.6€<br>CAC: 7.3€<br>Payback: 2.2 mois</div>
+                    <div class="metric-value">7.4x</div>
+                    <div class="metric-detail">LTV: 54€<br>CAC organique: 5-10€<br>Payback: 1.9 mois</div>
                 </div>
             </div>
 
@@ -649,13 +719,13 @@
                 </div>
                 <div class="highlight-card">
                     <div class="highlight-icon">📈</div>
-                    <div class="highlight-title">Objectifs 2025</div>
-                    <div class="highlight-text">Q4: 260 clients<br>MRR: 1.3K€<br>Validation PMF</div>
+                    <div class="highlight-title">Objectifs 2025-2026</div>
+                    <div class="highlight-text">Q4 2025: 260 clients<br>2026: 2 000 clients<br>Validation PMF</div>
                 </div>
                 <div class="highlight-card">
                     <div class="highlight-icon">🚀</div>
                     <div class="highlight-title">Objectif 2028</div>
-                    <div class="highlight-text">6 800 clients<br>CA cumulé: 420K€<br>EBITDA: 250K€</div>
+                    <div class="highlight-text">6 800 clients<br>CA cumulé: 624K€<br>EBITDA: 232K€</div>
                 </div>
             </div>
         </div>
@@ -713,16 +783,55 @@
                 <div class="highlights">
                     <div class="highlight-card">
                         <div class="highlight-title">Pré-lancement (Jan-Sept)</div>
-                        <div class="highlight-text">• MVP complet<br>• 100 beta testeurs<br>• NPS > 60<br>• Conformité légale</div>
+                        <div class="highlight-text">• MVP complet<br>• 100 beta testeurs<br>• NPS > 60 à T1, >70 à 12 mois<br>• Conformité AMF</div>
                     </div>
                     <div class="highlight-card">
                         <div class="highlight-title">Lancement (Oct)</div>
-                        <div class="highlight-text">• 50 premiers clients<br>• Validation pricing<br>• Churn < 10%<br>• Support 24h</div>
+                        <div class="highlight-text">• 50 premiers clients<br>• Validation pricing<br>• Churn < 10%<br>• Réponse sous 24h ouvrées</div>
                     </div>
                     <div class="highlight-card">
                         <div class="highlight-title">Q4 2025</div>
-                        <div class="highlight-text">• 260 clients total<br>• MRR 1.3K€<br>• CAC < 15€<br>• PMF confirmé</div>
+                        <div class="highlight-text">• 260 clients total<br>• MRR 1.3K€<br>• CAC organique 5-10€<br>• PMF confirmé</div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conformité AMF -->
+        <div class="content-page page-break">
+            <h2 class="section-header">Conformité AMF</h2>
+            
+            <div class="subsection">
+                <h3 class="subsection-title">Statut réglementaire - NOVIS reste dans le cadre éducatif</h3>
+                
+                <div class="conformity-grid">
+                    <div class="conformity-card do">
+                        <div class="conformity-title">✅ Ce que NOVIS fait</div>
+                        <ul class="conformity-list">
+                            <li>Éducation financière générale</li>
+                            <li>Informations publiques sur les marchés</li>
+                            <li>Outils de simulation et calculatrices</li>
+                            <li>Actualités et analyses générales</li>
+                            <li>Conseils génériques non personnalisés</li>
+                            <li>Formations et contenus pédagogiques</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="conformity-card dont">
+                        <div class="conformity-title">❌ Ce que NOVIS ne fait PAS</div>
+                        <ul class="conformity-list">
+                            <li>Pas de conseils d'investissement personnalisés</li>
+                            <li>Pas de recommandations d'achat/vente</li>
+                            <li>Pas d'exécution d'ordres de bourse</li>
+                            <li>Pas de gestion de portefeuille</li>
+                            <li>Pas de conservation d'actifs</li>
+                            <li>Pas de garantie de performance</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="alert-box success">
+                    <strong>Position réglementaire claire</strong> : NOVIS opère comme plateforme éducative sous le régime de la libre prestation d'information financière. Aucun agrément AMF/ACPR requis pour nos activités actuelles.
                 </div>
             </div>
         </div>
@@ -790,7 +899,7 @@
                             <td class="number">36 250 €</td>
                         </tr>
                         <tr>
-                            <td>Marketing</td>
+                            <td>Marketing (organique)</td>
                             <td class="number">3 000 €</td>
                             <td class="number">15 000 €</td>
                             <td class="number">30 000 €</td>
@@ -901,98 +1010,6 @@
             </div>
         </div>
 
-        <!-- Timeline détaillée 2025 -->
-        <div class="content-page page-break">
-            <h2 class="section-header">Timeline détaillée 2025</h2>
-            
-            <div class="subsection">
-                <table class="professional-table">
-                    <thead>
-                        <tr>
-                            <th>Mois</th>
-                            <th>Développement</th>
-                            <th>Marketing/Business</th>
-                            <th>Milestones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>Janvier</strong></td>
-                            <td>• Setup architecture<br>• Choix tech stack</td>
-                            <td>• Étude de marché<br>• Définition personas</td>
-                            <td>Kick-off projet</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Février</strong></td>
-                            <td>• APIs financières<br>• Base de données</td>
-                            <td>• Branding<br>• Site vitrine</td>
-                            <td>Infrastructure ready</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Mars</strong></td>
-                            <td>• Dashboard V1<br>• Auth/paiements</td>
-                            <td>• Content strategy<br>• SEO setup</td>
-                            <td>Core features done</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Avril</strong></td>
-                            <td>• Simulateur immo<br>• Calculs fiscaux</td>
-                            <td>• Landing page<br>• Blog launch</td>
-                            <td>Feature 1 complete</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Mai</strong></td>
-                            <td>• Analyse actions<br>• Graphiques</td>
-                            <td>• Premiers articles<br>• Community building</td>
-                            <td>Feature 2 complete</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Juin</strong></td>
-                            <td>• Alertes temps réel<br>• Notifications</td>
-                            <td>• Partenariats<br>• Pre-launch buzz</td>
-                            <td>MVP feature-complete</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Juillet</strong></td>
-                            <td>• Beta testing<br>• Bug fixes</td>
-                            <td>• Recrutement beta<br>• Influenceurs</td>
-                            <td>Beta launch (100 users)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Août</strong></td>
-                            <td>• Optimisations<br>• Performance</td>
-                            <td>• Feedback analysis<br>• Pricing validation</td>
-                            <td>Product refinement</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Septembre</strong></td>
-                            <td>• Finalisation<br>• Stress tests</td>
-                            <td>• Launch preparation<br>• PR outreach</td>
-                            <td>Production ready</td>
-                        </tr>
-                        <tr class="highlight-row">
-                            <td><strong>Octobre</strong></td>
-                            <td>• Support L2<br>• Monitoring</td>
-                            <td>• <strong>LAUNCH PUBLIC</strong><br>• Paid ads start</td>
-                            <td><strong>🚀 GO LIVE</strong></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Novembre</strong></td>
-                            <td>• Features V2<br>• Mobile PWA</td>
-                            <td>• Growth hacking<br>• Referral program</td>
-                            <td>150 clients</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Décembre</strong></td>
-                            <td>• Roadmap 2026<br>• Tech debt</td>
-                            <td>• Bilan Q4<br>• Planning 2026</td>
-                            <td>260 clients</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
         <!-- KPIs et Unit Economics -->
         <div class="content-page page-break">
             <h2 class="section-header">KPIs & Unit Economics</h2>
@@ -1021,29 +1038,41 @@
                             <td>5-10%</td>
                             <td>Objectif réaliste</td>
                         </tr>
-                        <tr class="highlight-row">
-                            <td><strong>LTV (Lifetime Value)</strong></td>
-                            <td class="number positive"><strong>48.6 €</strong></td>
-                            <td>40-80€</td>
-                            <td>Solide</td>
+                        <tr>
+                            <td>Rétention mensuelle</td>
+                            <td class="number">93%</td>
+                            <td>90-95%</td>
+                            <td>Excellent</td>
                         </tr>
                         <tr class="highlight-row">
-                            <td><strong>CAC (Coût d'acquisition)</strong></td>
-                            <td class="number positive"><strong>7.3 €</strong></td>
+                            <td><strong>LTV (Lifetime Value)</strong></td>
+                            <td class="number positive"><strong>54 €</strong></td>
+                            <td>40-80€</td>
+                            <td>Solide (3.78€/0.07)</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>CAC (Coût d'acquisition organique)</strong></td>
+                            <td class="number positive"><strong>5-10 €</strong></td>
                             <td>15-30€</td>
-                            <td>Excellent</td>
+                            <td>Excellent (TikTok/UGC)</td>
                         </tr>
                         <tr class="total-row">
                             <td><strong>Ratio LTV/CAC</strong></td>
-                            <td class="number positive"><strong>6.6x</strong></td>
+                            <td class="number positive"><strong>7.4x</strong></td>
                             <td>>3x bon</td>
                             <td>Top tier</td>
                         </tr>
                         <tr class="total-row">
                             <td><strong>Payback period</strong></td>
-                            <td class="number positive"><strong>2.2 mois</strong></td>
+                            <td class="number positive"><strong>1.9 mois</strong></td>
                             <td><6 mois bon</td>
                             <td>Excellent</td>
+                        </tr>
+                        <tr>
+                            <td>NPS (Net Promoter Score)</td>
+                            <td class="number">>60 (T1), >70 (12 mois)</td>
+                            <td>>50 bon</td>
+                            <td>Objectif ambitieux</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1052,26 +1081,26 @@
 
         <!-- Conclusion -->
         <div class="content-page page-break">
-            <h2 class="section-header">Investment Opportunity</h2>
+            <h2 class="section-header">Opportunité de Financement Non Dilutif</h2>
             
             <div class="subsection">
                 <div class="alert-box info">
-                    <h3 style="margin-bottom: 20px; color: #17a2b8;">Opportunité d'investissement - Lancement Q4 2025</h3>
+                    <h3 style="margin-bottom: 20px; color: #17a2b8;">Opportunité de financement non dilutif - Lancement Q4 2025</h3>
                     
                     <strong>Timeline</strong> : 9 mois développement + lancement octobre 2025
                     <br><br>
-                    <strong>Marché</strong> : 2M+ investisseurs particuliers en France, croissance +15%/an
+                    <strong>Marché</strong> : TAM 28M épargnants français, SAM ~21M (93% sans actions), SOM 100k à 24 mois
                     <br><br>
                     <strong>Produit</strong> : MVP complet en septembre, beta test avec 100 utilisateurs
                     <br><br>
-                    <strong>Objectif Q4 2025</strong> : 260 clients, MRR 1.3K€, validation PMF
+                    <strong>Objectifs</strong> : Q4 2025: 260 clients | 2026: 2 000 clients | 2028: 6 800 clients
                     <br><br>
-                    <strong>Financement</strong> : 20-30K€ pour développement + lancement + runway
+                    <strong>Financement non dilutif</strong> : 20-30K€ (subventions, prêts d'honneur, avances remboursables, préventes)
                     <br><br>
-                    <strong>ROI projeté</strong> : 10x à 15x sur 3 ans (fin 2028)
+                    <strong>Objectif</strong> : Autofinancement rapide (break-even ~178 abonnés), maintien du prix à 5€/mois pour toujours
                 </div>
 
-                <h3 class="subsection-title">Utilisation des fonds (20-30K€)</h3>
+                <h3 class="subsection-title">Utilisation des fonds non dilutifs (20-30K€)</h3>
                 <div class="highlights">
                     <div class="highlight-card">
                         <div class="highlight-icon">50%</div>
@@ -1081,7 +1110,7 @@
                     <div class="highlight-card">
                         <div class="highlight-icon">20%</div>
                         <div class="highlight-title">Lancement</div>
-                        <div class="highlight-text">Oct-Déc 2025<br>Marketing initial<br>6K€</div>
+                        <div class="highlight-text">Oct-Déc 2025<br>Marketing organique<br>6K€</div>
                     </div>
                     <div class="highlight-card">
                         <div class="highlight-icon">20%</div>
@@ -1095,15 +1124,40 @@
                     </div>
                 </div>
 
+                <h3 class="subsection-title">Pourquoi maintenant ?</h3>
+                <div class="highlights">
+                    <div class="highlight-card">
+                        <div class="highlight-icon">💰</div>
+                        <div class="highlight-title">Épargne record</div>
+                        <div class="highlight-text">+15% épargne post-Covid<br>Besoin de rendement</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-icon">📊</div>
+                        <div class="highlight-title">Inflation</div>
+                        <div class="highlight-text">Pousse vers l'investissement<br>Livret A insuffisant</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-icon">🎯</div>
+                        <div class="highlight-title">Génération Z</div>
+                        <div class="highlight-text">Démocratisation crypto/bourse<br>Apps mobiles natives</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-icon">📅</div>
+                        <div class="highlight-title">Timing parfait</div>
+                        <div class="highlight-text">Oct 2025 = rentrée<br>Période fiscale clé</div>
+                    </div>
+                </div>
+
                 <h3 class="subsection-title">Contact</h3>
                 <div style="text-align: center; margin-top: 40px;">
                     <p style="font-size: 18px; color: #06ffa5;">
-                        Rejoignez l'aventure TradePulse dès maintenant
+                        Rejoignez l'aventure NOVIS - ZERO DILUTION = 5€/mois pour toujours
                     </p>
                     <p style="margin-top: 20px;">
-                        <strong>Email</strong> : benoit.comas@gmail.com<br>
+                        <strong>Email</strong> : mynovis@novisfr.com<br>
+                        <strong>Téléphone</strong> : 06 24 30 04 92<br>
                         <strong>LinkedIn</strong> : /in/benoitcomas<br>
-                        <strong>Lancement</strong> : Octobre 2025
+                        <strong>Lancement</strong> : Beta août-sept 2025 · Public octobre 2025
                     </p>
                 </div>
             </div>
@@ -1111,22 +1165,16 @@
 
         <!-- Footer -->
         <div class="footer">
-            <strong>TradePulse Business Plan</strong> - Document confidentiel<br>
-            Lancement prévu : Octobre 2025<br>
-            Contact : benoit.comas@gmail.com
+            <strong>NOVIS Business Plan</strong> - Document confidentiel - Financement non dilutif<br>
+            Beta privée : Août-Septembre 2025 · Lancement public : Octobre 2025<br>
+            Contact : mynovis@novisfr.com · 06 24 30 04 92
         </div>
     </div>
 
     <script>
-        // Mise à jour automatique de la date
-        const dateElements = document.querySelectorAll('.date-display');
-        const now = new Date();
-        const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
-                       'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-        dateElements.forEach(el => {
-            el.textContent = months[now.getMonth()] + ' ' + now.getFullYear();
-        });
-
+        // Date fixée en dur - pas de mise à jour automatique
+        // Pour modifier la date, changez directement dans le HTML
+        
         // Animation au scroll
         const observerOptions = {
             threshold: 0.1,
