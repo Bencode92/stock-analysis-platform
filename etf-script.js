@@ -1,10 +1,11 @@
 /**
  * etf-script.js - Script principal pour la page ETF avec Top 10 et fonctionnalités complètes
- * v2.2 - Intégration avec ETF Data Adapter pour meilleure gestion des données
+ * Similaire à liste-script.js mais adapté aux ETFs
+ * v2.1 - Amélioration lisibilité avec badges et noms multi-lignes
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Supprimer "Matières" de l'UI (gardé pour compatibilité)
+    // Supprimer "Matières" de l'UI
     document.querySelector('.tp-regions .seg-btn[data-type="COMMODITY"]')?.remove();
     document.querySelector('.region-tab[data-type="commodity"]')?.remove();
     document.querySelector('#etf-filter-type option[value="commodity"]')?.remove();
@@ -128,12 +129,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(updateMarketTime, 1000);
     updateMarketTime();
     
-    // Sauvegarder l'ancienne interface ETFData si elle existe
-    if (window.ETFData && !window.ETFData_backup) {
-        window.ETFData_backup = window.ETFData;
-    }
-    
-    // Chargement des données CSV avec Data Adapter
+    // Chargement des données CSV
     async function loadETFData() {
         try {
             showElement('indices-loading');
@@ -164,29 +160,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 .filter(r => r && Object.keys(r).length > 1)
                 .map(r => normalizeETFData(r, 'bonds'));
             
-            const allData = [...etfsNorm, ...bondsNorm];
-            
-            // Stocker localement
-            etfsData.all = allData;
-            etfsData.filtered = allData;
-            
-            // Si l'adapter existe, lui passer les données
-            if (window.ETFData && typeof window.ETFData.setData === 'function') {
-                window.ETFData.setData(allData);
-            } else {
-                // Sinon créer l'interface minimale pour compatibilité
-                window.ETFData = {
-                    getData: () => etfsData.all,
-                    refresh: loadETFData,
-                    setData: (data) => {
-                        etfsData.all = data;
-                        etfsData.filtered = data;
-                        calculateTopPerformers();
-                        renderTopTenETFs();
-                        renderETFData();
-                    }
-                };
-            }
+            etfsData.all = [...etfsNorm, ...bondsNorm];
+            etfsData.filtered = etfsData.all;
             
             // Calculer les top performers
             calculateTopPerformers();
@@ -194,11 +169,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Render initial
             renderTopTenETFs();
             renderETFData();
-            
-            // Dispatch event pour signaler que les données sont prêtes
-            document.dispatchEvent(new CustomEvent('ETFData:ready', { 
-                detail: { count: allData.length } 
-            }));
             
         } catch (error) {
             console.error('Erreur:', error);
@@ -215,41 +185,21 @@ document.addEventListener('DOMContentLoaded', function() {
             ticker: etf.ticker || etf.symbol || '-',
             name: etf.name || etf.objective?.slice(0, 60) || '-',
 
-            // Utiliser les vrais noms de colonnes
-            total_expense_ratio: parseFloat(etf.total_expense_ratio ?? etf.expense_ratio ?? etf.ter ?? 0),
-            aum_usd: parseFloat(etf.aum_usd ?? etf.aum ?? etf.net_assets ?? 0),
-            last_close: parseFloat(etf.last_close ?? etf.last ?? etf.price ?? 0),
-
-            daily_change_pct: parseFloat(etf.daily_change_pct ?? etf.return_1d ?? etf.change ?? 0),
-            ytd_return_pct: parseFloat(etf.ytd_return_pct ?? etf.return_ytd ?? etf.ytd ?? 0),
-            one_year_return_pct: parseFloat(etf.one_year_return_pct ?? etf.return_1y ?? etf.perf_1y ?? 0),
-            return_3y: parseFloat(etf.return_3y ?? etf.perf_3y ?? 0),
-
-            vol_3y_pct: parseFloat(etf.vol_3y_pct ?? etf.volatility ?? etf.vol_1y ?? 0),
-            sharpe_ratio: parseFloat(etf.sharpe_ratio ?? etf.sharpe ?? 0),
-            yield_ttm: parseFloat(etf.yield_ttm ?? etf.dividend_yield ?? 0),
-
-            etf_type: etf.etf_type || '',
-            fund_type: etf.fund_type || '',
-            leverage: (etf.leverage !== '' && etf.leverage !== undefined) ? Number(etf.leverage) : null,
-
-            // Champs additionnels
-            sector_top: etf.sector_top || '',
-            sector_top_weight: parseFloat(etf.sector_top_weight ?? 0),
-            country_top: etf.country_top || '',
-            country_top_weight: parseFloat(etf.country_top_weight ?? 0),
-            data_quality_score: parseFloat(etf.data_quality_score ?? 90),
-            as_of: etf.as_of || etf.date || new Date().toISOString(),
-
-            // Compatibilité avec l'ancien format
             ter: parseFloat(etf.total_expense_ratio ?? etf.expense_ratio ?? etf.ter ?? 0),
             aum: parseFloat(etf.aum_usd ?? etf.aum ?? etf.net_assets ?? 0),
             price: parseFloat(etf.last_close ?? etf.last ?? etf.price ?? 0),
+
             return_1d: parseFloat(etf.daily_change_pct ?? etf.return_1d ?? etf.change ?? 0),
             return_ytd: parseFloat(etf.ytd_return_pct ?? etf.return_ytd ?? etf.ytd ?? 0),
             return_1y: parseFloat(etf.one_year_return_pct ?? etf.return_1y ?? etf.perf_1y ?? 0),
+            return_3y: parseFloat(etf.return_3y ?? etf.perf_3y ?? 0),
+
             volatility: parseFloat(etf.vol_3y_pct ?? etf.volatility ?? etf.vol_1y ?? 0),
+            sharpe_ratio: parseFloat(etf.sharpe_ratio ?? etf.sharpe ?? 0),
             dividend_yield: parseFloat(etf.yield_ttm ?? etf.dividend_yield ?? 0),
+
+            etf_type: etf.etf_type || '',
+            leverage: (etf.leverage !== '' && etf.leverage !== undefined) ? Number(etf.leverage) : null,
 
             dataset: source  // <= clé : on sait d'où ça vient
         };
@@ -524,8 +474,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function formatAUM(val) {
         if (!val) return '-';
         const num = parseFloat(val);
-        if (num >= 1000) return (num / 1000).toFixed(1) + 'B$';
-        return num.toFixed(0) + 'M$';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'B€';
+        return num.toFixed(0) + 'M€';
     }
     
     function formatPercent(val) {
@@ -666,23 +616,14 @@ document.addEventListener('DOMContentLoaded', function() {
         renderTopTenETFs();
     });
     
-    // Interface pour le module MC (rétrocompatibilité)
-    if (!window.ETFData) {
-        window.ETFData = {
-            getData: () => etfsData.all,
-            refresh: loadETFData,
-            setData: (data) => {
-                etfsData.all = data;
-                etfsData.filtered = data;
-                calculateTopPerformers();
-                renderTopTenETFs();
-                renderETFData();
-            }
-        };
-    }
+    // Exposer les données pour le module MC
+    window.ETFData = {
+        getData: () => etfsData.all,
+        refresh: loadETFData
+    };
     
     // Charger les données au démarrage
     loadETFData();
 });
 
-console.log('✅ ETF Script v2.2 - Intégration avec Data Adapter pour meilleure gestion');
+console.log('✅ ETF Script v2.1 - Amélioration lisibilité avec badges et noms multi-lignes');
