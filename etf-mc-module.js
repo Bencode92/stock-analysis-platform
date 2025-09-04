@@ -1,9 +1,30 @@
-// Module MC adapté pour ETFs - v4.3 sans filtres TER/AUM
+// Module MC adapté pour ETFs - v4.4 avec nettoyage automatique
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const num=x=>Number.isFinite(+x)?+x:NaN, str=s=>s==null?'':String(s);
-  const parseMaybeJSON=s=>{try{return typeof s==='string'?JSON.parse(s):(Array.isArray(s)?s:[])}catch{return[];}};
   const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  
+  // Seuil pour ignorer les valeurs quasi-zéro
+  const ZERO_EPS = 0.01;
+  
+  // Parse top5 en ignorant les 0%
+  function parseTopList(listStr, keyLabel, keyWeight){
+    try{
+      const arr = typeof listStr === 'string' ? JSON.parse(listStr||'[]')
+                : Array.isArray(listStr) ? listStr : [];
+      return arr
+        .map(o => ({ label: String(o[keyLabel]||'').trim(), w: Number(o[keyWeight]) }))
+        .filter(x => x.label && Number.isFinite(x.w) && x.w > ZERO_EPS)
+        .map(x => x.label);
+    }catch{ return []; }
+  }
+  
+  function guessSingleStock(etf){
+    const name = (etf.long_name||etf.fund_name||etf.name||etf.symbol||'') + ' ' + (etf.etf_type||'');
+    const patLev = /\b(2x|3x|x2|x3|leveraged|inverse|bull|bear)\b/i;
+    const looksLev = patLev.test(name);
+    return { single: true, looksLev };
+  }
 
   // ==== CONSTANTES IDENTIQUES ACTIONS ====
   const GAP_FLOOR = {
@@ -21,15 +42,15 @@
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results');
     const summary=document.getElementById('etf-mc-summary');
-    if(!root||!results){console.error('❌ ETF MC v4.3: DOM manquant');return;}
-    console.log('✅ ETF MC v4.3: Interface simplifiée');
+    if(!root||!results){console.error('❌ ETF MC v4.4: DOM manquant');return;}
+    console.log('✅ ETF MC v4.4: Nettoyage automatique des données');
 
     // Harmonisation du conteneur
     results.classList.add('glassmorphism','rounded-lg','p-4');
 
-    // Styles harmonisés + nouveau filtre type
-    if(!document.getElementById('etf-mc-v43-styles')){
-      const s=document.createElement('style'); s.id='etf-mc-v43-styles'; s.textContent=`
+    // Styles harmonisés
+    if(!document.getElementById('etf-mc-v44-styles')){
+      const s=document.createElement('style'); s.id='etf-mc-v44-styles'; s.textContent=`
       #etf-mc-results { display:block }
       #etf-mc-results .space-y-2 > div { margin-bottom: .75rem }
       #etf-mc-results .etf-card{
@@ -86,7 +107,6 @@
     setTimeout(() => {
       document.getElementById('etf-filter-ter')?.closest('div')?.remove();
       document.getElementById('etf-filter-aum')?.closest('div')?.remove();
-      // Aussi nettoyer le label "Filtres ETF" si présent
       root.querySelectorAll('legend, .text-sm').forEach(el => {
         if (el.textContent.includes('Filtres ETF')) {
           el.style.display = 'none';
@@ -97,7 +117,7 @@
     // === État & caches ===
     const state={
       mode:'balanced',
-      baseFilter:'all', // all/equity/bonds
+      baseFilter:'all',
       selectedMetrics:['return_ytd','ter','aum','return_1y'],
       filters:{countries:new Set(),sectors:new Set(),fundTypes:new Set(),excludeLeveraged:true},
       customFilters:[],
@@ -115,10 +135,7 @@
       if(/(commodit|precious|gold|silver|oil)/i.test(ft))return 'commodity';
       return 'equity';
     };
-    const isLev=e=>{
-      const t=str(e.etf_type).toLowerCase(); const lev=Number(e.leverage);
-      return /leveraged|inverse/.test(t)||(Number.isFinite(lev)&&lev!==0);
-    };
+    
     const METRICS={
       ter:{label:'TER',unit:'%',max:false,get:e=>num(e.total_expense_ratio)*100},
       aum:{label:'AUM',unit:'$M',max:true,get:e=>num(e.aum_usd)/1e6},
@@ -170,7 +187,7 @@
       return state.data.filter(e=>{
         if (state.baseFilter==='equity' && classify(e)!=='equity') return false;
         if (state.baseFilter==='bonds' && classify(e)!=='bonds') return false;
-        if (state.filters.excludeLeveraged && isLev(e)) return false;
+        if (state.filters.excludeLeveraged && e.__lev) return false;
         return true;
       });
     }
@@ -189,7 +206,6 @@
         countries: top(c), sectors: top(s), fundTypes: top(f),
         counts: { countries:c, sectors:s, fundTypes:f }
       };
-      // purge sélections invalides
       [['countries',state.filters.countries],
        ['sectors',state.filters.sectors],
        ['fundTypes',state.filters.fundTypes]].forEach(([k,set])=>{
@@ -492,10 +508,13 @@
 
       entries.forEach((row,i)=>{
         const e=row.e;
-        const typeBadge= classify(e)==='bonds' ? '<span class="badge" style="color:#80aaff;border-color:rgba(128,170,255,.35);background:rgba(128,170,255,.08)">Oblig.</span>' :
-                         classify(e)==='commodity' ? '<span class="badge" style="color:#fbbf24;border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.08)">Mat.</span>' :
-                         '<span class="badge" style="color:#00ffd0;border-color:rgba(0,255,135,.35);background:rgba(0,255,135,.09)">Actions</span>';
+        const typeBadge =
+          classify(e)==='bonds'     ? '<span class="badge" style="color:#80aaff;border-color:rgba(128,170,255,.35);background:rgba(128,170,255,.08)">Oblig.</span>' :
+          classify(e)==='commodity' ? '<span class="badge" style="color:#fbbf24;border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.08)">Mat.</span>' :
+                                      '<span class="badge" style="color:#00ffd0;border-color:rgba(0,255,135,.35);background:rgba(0,255,135,.09)">Actions</span>';
+        
         const levBadge = e.__lev ? '<span class="badge" style="color:#ff9aa7;border-color:rgba(255,90,90,.35);background:rgba(255,90,90,.12)">LEV/INV</span>' : '';
+        const singleBadge = e.__singleStock ? '<span class="badge" style="color:#a7f3d0;border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.10)">Action unique</span>' : '';
         const name = esc(e.long_name||e.fund_name||e.name||e.symbol||e.ticker||'—');
 
         const colsHTML = state.selectedMetrics.map(m=>{
@@ -515,15 +534,22 @@
           return `<div class="metric-col"><div class="k">${d.label}</div><div class="v ${color()}">${renderVal()}</div></div>`;
         }).join('');
 
-        const topS=str(e.sector_top), wS=num(e.sector_top_weight);
-        const topC=str(e.country_top), wC=num(e.country_top_weight);
-        const micro=[ topS?`${topS}${Number.isFinite(wS)?' '+fmt(wS,0)+'%':''}`:'', topC?`${topC}${Number.isFinite(wC)?' '+fmt(wC,0)+'%':''}`:'' ].filter(Boolean).join(' • ');
+        // Micro avec nettoyage des 0%
+        const topS = (e.__sectors && e.__sectors[0]) ? e.__sectors[0] : '';
+        const wS = Number(e.sector_top_weight);
+        const topC = (e.__countries && e.__countries[0]) ? e.__countries[0] : '';
+        const wC = Number(e.country_top_weight);
+        
+        const microParts = [];
+        if (topS && Number.isFinite(wS) && wS > ZERO_EPS) microParts.push(`${topS} ${wS.toFixed(0)}%`);
+        if (topC && Number.isFinite(wC) && wC > ZERO_EPS) microParts.push(`${topC} ${wC.toFixed(0)}%`);
+        const micro = microParts.join(' • ');
 
         const card=document.createElement('div'); card.className='etf-card';
         card.innerHTML=`
           <div class="etf-rank">#${i+1}</div>
           <div class="etf-info">
-            <div class="etf-name" title="${name}">${name} ${typeBadge} ${levBadge}</div>
+            <div class="etf-name" title="${name}">${name} ${typeBadge} ${levBadge} ${singleBadge}</div>
             ${micro?`<div class="micro">${micro}</div>`:''}
           </div>
           <div class="metrics">${colsHTML}</div>`;
@@ -551,11 +577,46 @@
     function compute(){
       const raw=window.ETFData.getData()||[];
       state.data = raw.map(e=>{
-        const cs5=parseMaybeJSON(e.country_top5).map(o=>str(o.c)).filter(Boolean);
-        const ss5=parseMaybeJSON(e.sector_top5).map(o=>str(o.s)).filter(Boolean);
-        const countries=cs5.length?cs5:[str(e.country_top)].filter(Boolean);
-        const sectors=ss5.length?ss5:[str(e.sector_top)].filter(Boolean);
-        return {...e,__kind:classify(e),__lev:isLev(e),__countries:[...new Set(countries)],__sectors:[...new Set(sectors)]};
+        // Parse top5 en ignorant les 0%
+        const ss5 = parseTopList(e.sector_top5, 's', 'w');
+        const cs5 = parseTopList(e.country_top5, 'c', 'w');
+        
+        // Fallbacks avec vérification des poids
+        const sectorTopW = Number(e.sector_top_weight);
+        const sectorTopLabel = String(e.sector_top||'').trim();
+        const sectors = ss5.length ? ss5 
+                      : (Number.isFinite(sectorTopW) && sectorTopW > ZERO_EPS && sectorTopLabel ? [sectorTopLabel] : []);
+        
+        const countryTopW = Number(e.country_top_weight);
+        const countryTopLabel = String(e.country_top||'').trim();
+        const countries = cs5.length ? cs5
+                        : (Number.isFinite(countryTopW) && countryTopW > ZERO_EPS && countryTopLabel ? [countryTopLabel] : []);
+        
+        // Détection leveraged améliorée
+        const __levFlag = (()=>{
+          const t = String(e.etf_type||'').toLowerCase();
+          const lev = Number(e.leverage);
+          const byField = /leveraged|inverse/.test(t) || (Number.isFinite(lev) && lev !== 0);
+          const name = (e.long_name||e.fund_name||e.name||'') + ' ' + (e.symbol||'');
+          const byName = /\b(2x|3x|x2|x3|leveraged|inverse|bull|bear)\b/i.test(name);
+          return byField || byName;
+        })();
+        
+        // Détection single-stock
+        let __singleStock = false;
+        if (sectors.length === 0) {
+          const h = guessSingleStock(e);
+          __singleStock = h.single;
+        }
+        
+        return {
+          ...e,
+          __kind: classify(e),
+          __lev: __levFlag,
+          __singleStock,
+          __countries: [...new Set(countries)],
+          __sectors: [...new Set(sectors)]
+        };
       });
 
       recomputeFacetCatalogs();
