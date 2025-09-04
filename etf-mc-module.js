@@ -1,11 +1,13 @@
-// Module MC adapté pour ETFs - v3.3
-// + Filtres multi (Pays / Secteurs / Fund type)
-// + Filtres personnalisés (metric/op/value)
-// - Retrait "Qualité" & badge de score
+// Module MC adapté pour ETFs - v3.4
+// - Libellés FR
+// - Facettes LISTE (pays/secteurs/type de fonds)
+// - Filtres personnalisés (comme Actions)
+// - Qualité & score retirés
+
 (function () {
   function waitFor(cond, cb, tries = 40) {
     if (cond()) return void cb();
-    if (tries <= 0) return console.error('❌ ETF MC v3.3: Données introuvables.');
+    if (tries <= 0) return console.error('❌ ETF MC v3.4: Données introuvables.');
     setTimeout(() => waitFor(cond, cb, tries - 1), 250);
   }
 
@@ -15,12 +17,12 @@
     const root    = document.querySelector('#etf-mc-section');
     const results = document.querySelector('#etf-mc-results .stock-cards-container');
     if (!root || !results) {
-      console.error('❌ ETF MC v3.3: DOM manquant', {root, results});
+      console.error('❌ ETF MC v3.4: DOM manquant', {root, results});
       return;
     }
-    console.log('✅ ETF MC v3.3: Module initialisé');
+    console.log('✅ ETF MC v3.4: Module initialisé');
 
-    // --------- Helpers ----------
+    // Helpers
     const CURRENCY_SYMBOL = { USD: '$', EUR: '€', GBP: '£', JPY: '¥', CHF: 'CHF' };
     const fmt  = (n, d=2) => Number.isFinite(+n) ? (+n).toFixed(d) : '—';
     const num  = (x) => Number.isFinite(+x) ? +x : NaN;
@@ -39,40 +41,40 @@
       return /leveraged|inverse/.test(t) || (Number.isFinite(lev) && lev!==0);
     };
 
-    // --------- État ----------
+    // État
     const state = {
       mode: 'balanced',
       selectedMetrics: ['ter','aum','return_ytd','volatility','sharpe_proxy','dividend_yield'],
       filters: {
-        countries: new Set(),   // multi
-        sectors:   new Set(),   // multi
-        fundTypes: new Set(),   // multi (à partir de fund_type)
-        maxTER: null,           // %
-        minAUM: null,           // M$
+        countries: new Set(),
+        sectors:   new Set(),
+        fundTypes: new Set(),
+        maxTER: null,     // %
+        minAUM: null,     // M$
         excludeLeveraged: true
       },
-      customFilters: [],        // {metric, operator, value}
+      customFilters: [],  // {metric, operator, value}
       data: [],
       catalogs: { countries: [], sectors: [], fundTypes: [] }
     };
 
-    // --------- Métriques ----------
+    // Métriques (FR)
     const METRICS = {
-      ter:              { label:'TER',         unit:'%',  max:false, get: e => num(e.total_expense_ratio) * 100 },
-      aum:              { label:'AUM',         unit:'$M', max:true,  get: e => num(e.aum_usd) / 1e6 },
-      return_1d:        { label:'Perf 1D',     unit:'%',  max:true,  get: e => num(e.daily_change_pct) },
-      return_ytd:       { label:'YTD',         unit:'%',  max:true,  get: e => num(e.ytd_return_pct) },
-      return_1y:        { label:'Perf 1Y',     unit:'%',  max:true,  get: e => num(e.one_year_return_pct) },
-      volatility:       { label:'Vol 3Y',      unit:'%',  max:false, get: e => num(e.vol_3y_pct) },
-      dividend_yield:   { label:'Yield TTM',   unit:'%',  max:true,  get: e => num(e.yield_ttm) * 100 },
-      yield_net:        { label:'Yield net',   unit:'%',  max:true,  get: e => classify(e)==='bonds' ? (num(e.yield_ttm)*100 - num(e.total_expense_ratio)*100) : NaN },
-      sharpe_proxy:     { label:'R/Vol',       unit:'',   max:true,  get: e => { const r=num(e.one_year_return_pct), v=num(e.vol_3y_pct); return (Number.isFinite(r)&&Number.isFinite(v)&&v>0)? r/v : NaN; } },
+      ter:              { label:'TER',        unit:'%',  max:false, get: e => num(e.total_expense_ratio) * 100 },
+      aum:              { label:'AUM',        unit:'$M', max:true,  get: e => num(e.aum_usd) / 1e6 },
+      return_1d:        { label:'Perf 1J',    unit:'%',  max:true,  get: e => num(e.daily_change_pct) },
+      return_ytd:       { label:'YTD',        unit:'%',  max:true,  get: e => num(e.ytd_return_pct) },
+      return_1y:        { label:'Perf 1A',    unit:'%',  max:true,  get: e => num(e.one_year_return_pct) },
+      volatility:       { label:'Vol 3A',     unit:'%',  max:false, get: e => num(e.vol_3y_pct) },
+      dividend_yield:   { label:'Rdt TTM',    unit:'%',  max:true,  get: e => num(e.yield_ttm) * 100 },
+      yield_net:        { label:'Rdt net',    unit:'%',  max:true,  get: e => classify(e)==='bonds' ? (num(e.yield_ttm)*100 - num(e.total_expense_ratio)*100) : NaN },
+      sharpe_proxy:     { label:'R/Vol',      unit:'',   max:true,  get: e => { const r=num(e.one_year_return_pct), v=num(e.vol_3y_pct); return (Number.isFinite(r)&&Number.isFinite(v)&&v>0)? r/v : NaN; } },
     };
 
-    // --------- Debounce ----------
+    // Debounce
     let tCompute;  const schedule = () => { clearTimeout(tCompute); tCompute = setTimeout(calculate, 120); };
 
-    // --------- Facettes dynamiques (UI) ----------
+    // Catalogues facettes
     function buildFacetCatalogs() {
       const cCount = new Map(), sCount = new Map(), fCount = new Map();
       state.data.forEach(e => {
@@ -86,37 +88,36 @@
       state.catalogs.fundTypes = sortEntries(fCount);
     }
 
+    // UI facettes → LISTES
     function populateFacetUI() {
-      const zone = document.querySelector('#etf-mc-section fieldset:last-of-type');
       const countriesEl = document.getElementById('etf-filter-countries');
       const sectorsEl   = document.getElementById('etf-filter-sectors');
       const fundEl      = document.getElementById('etf-filter-fundtype');
-      if (!zone || !countriesEl || !sectorsEl || !fundEl) return;
+      if (!countriesEl || !sectorsEl || !fundEl) return;
 
-      const makeChips = (arr, idPrefix) =>
-        arr.map(v => `<label class="mc-pill"><input type="checkbox" data-facet="${idPrefix}" value="${v}"> ${v}</label>`).join('');
+      const makeList = (arr, facet) =>
+        arr.map(v => `<li class="facet-item"><label><input type="checkbox" data-facet="${facet}" value="${v}"> ${v}</label></li>`).join('');
 
-      countriesEl.innerHTML = makeChips(state.catalogs.countries, 'country');
-      sectorsEl.innerHTML   = makeChips(state.catalogs.sectors,   'sector');
-      fundEl.innerHTML      = makeChips(state.catalogs.fundTypes, 'fund');
+      countriesEl.innerHTML = makeList(state.catalogs.countries, 'country');
+      sectorsEl.innerHTML   = makeList(state.catalogs.sectors,   'sector');
+      fundEl.innerHTML      = makeList(state.catalogs.fundTypes, 'fund');
 
-      zone.querySelectorAll('input[data-facet]').forEach(inp=>{
+      // Écouteurs
+      [...document.querySelectorAll('#etf-filter-countries input[data-facet], #etf-filter-sectors input[data-facet], #etf-filter-fundtype input[data-facet]')].forEach(inp=>{
         const setFor = inp.dataset.facet==='country' ? state.filters.countries
                     : inp.dataset.facet==='sector'  ? state.filters.sectors
                     : state.filters.fundTypes;
         inp.addEventListener('change', e=>{
           const v = e.target.value;
           if (e.target.checked) setFor.add(v); else setFor.delete(v);
-          // style
-          e.target.closest('.mc-pill')?.classList.toggle('is-checked', e.target.checked);
+          e.target.closest('.facet-item')?.classList.toggle('is-checked', e.target.checked);
           schedule();
         });
       });
     }
 
-    // --------- Filtres personnalisés ----------
-    const DEC = 1, POW = 10 ** DEC;
-    const q = v => Math.round(v * POW) / POW;
+    // Filtres personnalisés (UI)
+    const DEC = 1, POW = 10 ** DEC, q = v => Math.round(v * POW) / POW;
 
     function setupCustomFiltersUI() {
       const metricSel = document.getElementById('etf-filter-metric');
@@ -127,33 +128,16 @@
       const listBox   = document.getElementById('etf-custom-filters-list');
       if (!metricSel || !opSel || !valInp || !unitSpan || !addBtn || !listBox) return;
 
-      // MAJ du label d'unité selon la métrique
-      const updateUnit = () => {
-        const def = METRICS[metricSel.value];
-        unitSpan.textContent = def ? def.unit || '' : '';
-      };
-      updateUnit();
-      metricSel.addEventListener('change', updateUnit);
+      const updateUnit = () => { unitSpan.textContent = METRICS[metricSel.value]?.unit || ''; };
+      updateUnit(); metricSel.addEventListener('change', updateUnit);
 
       addBtn.addEventListener('click', () => {
         const m = metricSel.value, op = opSel.value, val = parseFloat(valInp.value);
         if (!METRICS[m] || !isFinite(val)) return;
         state.customFilters.push({ metric:m, operator:op, value:val });
         valInp.value = '';
-        renderCustomFilters();
-        schedule();
-      });
-
-      function colorFor(op, isMax) {
-        if (op==='>='||op==='>') return isMax ? 'text-green-400' : 'text-cyan-400';
-        if (op==='<=||<' ) return isMax ? 'text-red-400'   : 'text-green-400';
-        return 'text-yellow-400';
-      }
-
-      function removeAt(i) {
-        state.customFilters.splice(i,1);
         renderCustomFilters(); schedule();
-      }
+      });
 
       function renderCustomFilters() {
         if (!state.customFilters.length) {
@@ -161,7 +145,8 @@
           return;
         }
         listBox.innerHTML = state.customFilters.map((f, i)=>{
-          const d = METRICS[f.metric], col =
+          const d = METRICS[f.metric];
+          const col =
             (f.operator==='>='||f.operator==='>') ? (d.max?'text-green-400':'text-cyan-400') :
             (f.operator==='<='||f.operator==='<') ? (d.max?'text-red-400':'text-green-400') : 'text-yellow-400';
           const unit = d.unit||'';
@@ -172,7 +157,11 @@
             </div>`;
         }).join('');
         listBox.querySelectorAll('.remove-filter').forEach(b=>{
-          b.addEventListener('click', e=> removeAt(parseInt(e.currentTarget.dataset.i)));
+          b.addEventListener('click', e=>{
+            const idx = parseInt(e.currentTarget.dataset.i,10);
+            state.customFilters.splice(idx,1);
+            renderCustomFilters(); schedule();
+          });
         });
       }
 
@@ -201,12 +190,11 @@
       });
     }
 
-    // --------- Calcul principal ----------
+    // Calcul principal
     function calculate() {
-      // enrichir data
       const raw = window.ETFData.getData() || [];
       state.data = raw.map(e => {
-        // pays/secteurs multiples depuis *top5*
+        // Pays / secteurs multiples depuis *top5*
         const cs5 = parseMaybeJSON(e.country_top5).map(o=>str(o.c)).filter(Boolean);
         const ss5 = parseMaybeJSON(e.sector_top5 ).map(o=>str(o.s)).filter(Boolean);
         const countries = cs5.length ? cs5 : [str(e.country_top)].filter(Boolean);
@@ -221,53 +209,31 @@
         return;
       }
 
-      // facettes (une fois)
       if (!state.catalogs.countries.length) { buildFacetCatalogs(); populateFacetUI(); setupCustomFiltersUI(); }
 
       // Filtres
       let arr = state.data.slice();
 
-      // Multi-facettes
-      const hasCountries = state.filters.countries.size>0;
-      const hasSectors   = state.filters.sectors.size>0;
-      const hasFunds     = state.filters.fundTypes.size>0;
+      // Facettes multi
+      if (state.filters.countries.size) arr = arr.filter(e => e.__countries.some(c => state.filters.countries.has(c)));
+      if (state.filters.sectors.size)   arr = arr.filter(e => e.__sectors.some(s => state.filters.sectors.has(s)));
+      if (state.filters.fundTypes.size) arr = arr.filter(e => state.filters.fundTypes.has(str(e.fund_type).trim()));
 
-      if (hasCountries) {
-        arr = arr.filter(e => e.__countries.some(c => state.filters.countries.has(c)));
-      }
-      if (hasSectors) {
-        arr = arr.filter(e => e.__sectors.some(s => state.filters.sectors.has(s)));
-      }
-      if (hasFunds) {
-        arr = arr.filter(e => state.filters.fundTypes.has(str(e.fund_type).trim()));
-      }
+      if (state.filters.excludeLeveraged) arr = arr.filter(e => !e.__lev);
 
-      if (state.filters.excludeLeveraged) {
-        arr = arr.filter(e => !e.__lev);
-      }
       if (state.filters.maxTER != null) {
-        arr = arr.filter(e => {
-          const v = METRICS.ter.get(e);
-          return Number.isFinite(v) && v <= state.filters.maxTER;
-        });
+        arr = arr.filter(e => { const v = METRICS.ter.get(e); return Number.isFinite(v) && v <= state.filters.maxTER; });
       }
       if (state.filters.minAUM != null) {
-        arr = arr.filter(e => {
-          const v = METRICS.aum.get(e);
-          return Number.isFinite(v) && v >= state.filters.minAUM;
-        });
+        arr = arr.filter(e => { const v = METRICS.aum.get(e); return Number.isFinite(v) && v >= state.filters.minAUM; });
       }
 
       // Filtres personnalisés
       arr = passCustomFilters(arr);
 
-      if (!arr.length) {
-        render([]);
-        updateSummary(0, state.data.length);
-        return;
-      }
+      if (!arr.length) { render([]); updateSummary(0, state.data.length); return; }
 
-      // Ranges pour normalisation
+      // Normalisation
       const sel = state.selectedMetrics.filter(m => METRICS[m]);
       const ranges = {};
       sel.forEach(m => {
@@ -275,7 +241,7 @@
         ranges[m] = vals.length ? {min: Math.min(...vals), max: Math.max(...vals)} : {min:0,max:0};
       });
 
-      // Modes
+      // Classements
       let out;
       if (state.mode === 'balanced') {
         const scores = arr.map(etf => {
@@ -319,7 +285,7 @@
       updateSummary(arr.length, state.data.length);
     }
 
-    // --------- Rendu ----------
+    // Rendu
     function render(entries) {
       results.innerHTML = '';
       results.className = 'stock-cards-container';
@@ -350,8 +316,8 @@
             val = fmt(raw, 2);
           }
           let cls='text-green-400';
-          if (m==='ter')         cls = raw<0.2?'text-green-500':raw<0.4?'text-green-400':raw<0.7?'text-yellow-400':'text-red-400';
-          else if (m==='volatility') cls = raw<10?'text-green-500':raw<20?'text-green-400':raw<30?'text-yellow-400':'text-red-400';
+          if (m==='ter')            cls = raw<0.2?'text-green-500':raw<0.4?'text-green-400':raw<0.7?'text-yellow-400':'text-red-400';
+          else if (m==='volatility')cls = raw<10?'text-green-500':raw<20?'text-green-400':raw<30?'text-yellow-400':'text-red-400';
           else if (m==='sharpe_proxy') cls = raw>2?'text-green-500':raw>1?'text-green-400':raw>0?'text-yellow-400':'text-red-400';
           else cls = raw>=0 ? 'text-green-400' : 'text-red-400';
 
@@ -376,7 +342,7 @@
 
         const last = Number(e.last_close);
         const lastHtml = Number.isFinite(last)
-          ? `<div class="text-xs opacity-60 mt-1">Dernier: <strong>${cur} ${fmt(last,2)}</strong>${e.as_of ? ` • <span class="opacity-60">${str(e.as_of).split('T')[0]}</span>`:''}</div>`
+          ? `<div class="text-xs opacity-60 mt-1">Dernier cours : <strong>${cur} ${fmt(last,2)}</strong>${e.as_of ? ` • <span class="opacity-60">${str(e.as_of).split('T')[0]}</span>`:''}</div>`
           : '';
 
         const card = document.createElement('div');
@@ -400,7 +366,7 @@
       });
     }
 
-    // --------- Résumé ----------
+    // Résumé
     function updateSummary(filtered, total) {
       const summary = document.getElementById('etf-mc-summary');
       if (!summary) return;
@@ -411,7 +377,7 @@
       const tags = [];
       if (state.filters.countries.size) tags.push(`Pays(${state.filters.countries.size})`);
       if (state.filters.sectors.size)   tags.push(`Secteurs(${state.filters.sectors.size})`);
-      if (state.filters.fundTypes.size) tags.push(`Fund type(${state.filters.fundTypes.size})`);
+      if (state.filters.fundTypes.size) tags.push(`Type de fonds(${state.filters.fundTypes.size})`);
       if (state.filters.maxTER!=null)   tags.push(`TER≤${state.filters.maxTER}%`);
       if (state.filters.minAUM!=null)   tags.push(`AUM≥${state.filters.minAUM}M$`);
       if (state.filters.excludeLeveraged) tags.push('No Lev/Inv');
@@ -419,8 +385,7 @@
       summary.innerHTML = `<strong>${mode}</strong> • ${metrics}${tags.length? ' • '+tags.join(' '): ''} • ${filtered}/${total} ETFs`;
     }
 
-    // --------- Écouteurs (réactifs) ----------
-    // checkboxes métriques
+    // Écouteurs
     Object.keys(METRICS).forEach(metric => {
       const cb = document.getElementById(`etf-m-${metric}`);
       if (!cb) return;
@@ -435,17 +400,14 @@
       });
     });
 
-    // mode radios
     document.querySelectorAll('input[name="etf-mc-mode"]').forEach(r => {
       r.addEventListener('change', () => { state.mode = r.value; schedule(); });
     });
 
-    // filtres simples
     document.getElementById('etf-filter-ter')?.addEventListener('input', (e)=>{ state.filters.maxTER = e.target.value ? parseFloat(e.target.value) : null; });
     document.getElementById('etf-filter-aum')?.addEventListener('input', (e)=>{ state.filters.minAUM = e.target.value ? parseFloat(e.target.value) : null; });
     document.getElementById('etf-filter-leveraged')?.addEventListener('change', (e)=>{ state.filters.excludeLeveraged = !!e.target.checked; schedule(); });
 
-    // boutons
     document.getElementById('etf-mc-apply')?.addEventListener('click', ()=> calculate());
     document.getElementById('etf-mc-reset')?.addEventListener('click', ()=>{
       state.mode = 'balanced';
@@ -453,7 +415,7 @@
       state.filters = { countries:new Set(), sectors:new Set(), fundTypes:new Set(), maxTER:null, minAUM:null, excludeLeveraged:true };
       state.customFilters = [];
 
-      // reset UI
+      // Reset UI
       Object.keys(METRICS).forEach(m=>{
         const cb = document.getElementById(`etf-m-${m}`);
         if (cb) { cb.checked = state.selectedMetrics.includes(m); cb.closest('.mc-pill')?.classList.toggle('is-checked', cb.checked); }
@@ -461,19 +423,19 @@
       ['etf-filter-aum','etf-filter-ter'].forEach(id=>{ const el=document.getElementById(id); if (el) el.value=''; });
       const l = document.getElementById('etf-filter-leveraged'); if (l) l.checked = true;
 
-      // désélection facettes
+      // Désélection facettes
       document.querySelectorAll('#etf-filter-countries input[type="checkbox"], #etf-filter-sectors input[type="checkbox"], #etf-filter-fundtype input[type="checkbox"]').forEach(inp=>{
-        inp.checked=false; inp.closest('.mc-pill')?.classList.remove('is-checked');
+        inp.checked=false; inp.closest('.facet-item')?.classList.remove('is-checked');
       });
 
-      // clear custom filters list
+      // Clear custom list
       const listBox = document.getElementById('etf-custom-filters-list');
       if (listBox) listBox.innerHTML = '<div class="text-xs opacity-50 text-center py-2">Aucun filtre personnalisé</div>';
 
       calculate();
     });
 
-    // Expose API
+    // Expose
     window.ETF_MC = { calculate, state, METRICS };
 
     // Initial
