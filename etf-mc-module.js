@@ -1,4 +1,4 @@
-// Module MC adapté pour ETFs - v4.2 avec facettes auto-générées
+// Module MC adapté pour ETFs - v4.3 sans filtres TER/AUM
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const num=x=>Number.isFinite(+x)?+x:NaN, str=s=>s==null?'':String(s);
@@ -21,15 +21,15 @@
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results');
     const summary=document.getElementById('etf-mc-summary');
-    if(!root||!results){console.error('❌ ETF MC v4.2: DOM manquant');return;}
-    console.log('✅ ETF MC v4.2: Facettes auto-générées depuis les données');
+    if(!root||!results){console.error('❌ ETF MC v4.3: DOM manquant');return;}
+    console.log('✅ ETF MC v4.3: Interface simplifiée');
 
     // Harmonisation du conteneur
     results.classList.add('glassmorphism','rounded-lg','p-4');
 
     // Styles harmonisés + nouveau filtre type
-    if(!document.getElementById('etf-mc-v42-styles')){
-      const s=document.createElement('style'); s.id='etf-mc-v42-styles'; s.textContent=`
+    if(!document.getElementById('etf-mc-v43-styles')){
+      const s=document.createElement('style'); s.id='etf-mc-v43-styles'; s.textContent=`
       #etf-mc-results { display:block }
       #etf-mc-results .space-y-2 > div { margin-bottom: .75rem }
       #etf-mc-results .etf-card{
@@ -81,6 +81,18 @@
       `;
       document.head.appendChild(s);
     }
+
+    // Nettoyer l'ancien HTML de filtres TER/AUM s'ils existent
+    setTimeout(() => {
+      document.getElementById('etf-filter-ter')?.closest('div')?.remove();
+      document.getElementById('etf-filter-aum')?.closest('div')?.remove();
+      // Aussi nettoyer le label "Filtres ETF" si présent
+      root.querySelectorAll('legend, .text-sm').forEach(el => {
+        if (el.textContent.includes('Filtres ETF')) {
+          el.style.display = 'none';
+        }
+      });
+    }, 100);
 
     // === État & caches ===
     const state={
