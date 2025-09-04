@@ -1,178 +1,127 @@
-// Script d'intégration MC pour ETFs - v3.8.0 ULTRA-COMPACT
-// - Affichage ultra-compact avec override v3.11
-// - Styles CSS pour liste verticale
-// - Facettes LISTES FR avec dictionnaires complets
-// - SUPPRESSION de Sharpe/R-Vol
-// - FIX: opérateurs ASCII pour filtres personnalisés
-
+// Script d'intégration MC pour ETFs - v3.12.0 HARMONIZED
+// Même look que Actions - Liste verticale avec cartes flex
 (function(){
-  // ---------- Styles idempotents ----------
-  if (!document.getElementById('etf-mc-styles')) {
+  // Styles harmonisés Actions/ETFs
+  if (!document.getElementById('etf-mc-harmonized-styles')) {
     const s = document.createElement('style');
-    s.id='etf-mc-styles';
+    s.id='etf-mc-harmonized-styles';
     s.textContent = `
-    /* ===== Affichage compact façon "Actions" ===== */
-    #etf-mc-results .space-y-2 > div { margin-bottom: .5rem; }
-    #etf-mc-results .glassmorphism{
-      background: linear-gradient(135deg, rgba(0,200,255,.03), rgba(0,255,255,.02)) !important;
-      border: 1px solid rgba(0,200,255,.15) !important;
-      transition: all .2s ease;
+    /* === HARMONISATION ETF = Actions === */
+    #etf-mc-results { 
+      display:block !important;
     }
-    #etf-mc-results .glassmorphism:hover{
-      background: linear-gradient(135deg, rgba(0,200,255,.06), rgba(0,255,255,.04)) !important;
-      border-color: rgba(0,200,255,.30) !important;
-      transform: translateX(2px);
-    }
-    #etf-mc-results .rank{
-      font-size:1.5rem; font-weight:900; color:#00ffff;
-      text-shadow:0 0 5px rgba(0,255,255,.3); opacity:.9; min-width:50px;
-    }
-    #etf-mc-results .flex.gap-4{ display:flex; gap:1rem; align-items:center; }
-    #etf-mc-results .flex.gap-4 > div{ min-width:70px; }
-    /* on allège: pas de longue description ni d'ISIN/MIC en compact */
-    #etf-mc-results .line-iso{ display:none }
     
-    /* Top 3 médailles */
-    #etf-mc-results > div:nth-child(1) .rank{ 
-      background:linear-gradient(135deg,#FFD700,#FFA500); 
-      color:#000; 
-      box-shadow:0 0 20px rgba(255,215,0,.6);
-      width:42px; height:42px; 
-      display:flex; justify-content:center; align-items:center;
-      border-radius:50%; font-size:1rem;
+    /* Pills métriques */
+    #etf-mc-section .mc-pill{ 
+      display:inline-flex;gap:8px;align-items:center;padding:6px 10px;
+      border:1px solid rgba(0,200,255,.2);border-radius:10px;
+      background:rgba(0,255,255,.03);cursor:pointer;transition:all .2s ease; 
+      user-select:none; 
     }
-    #etf-mc-results > div:nth-child(2) .rank{ 
-      background:linear-gradient(135deg,#E5E5E5,#C0C0C0); 
-      color:#000; 
-      box-shadow:0 0 18px rgba(192,192,192,.6);
-      width:42px; height:42px; 
-      display:flex; justify-content:center; align-items:center;
-      border-radius:50%; font-size:1rem;
+    #etf-mc-section .mc-pill:hover{ 
+      background:rgba(0,255,255,.08); border-color:rgba(0,255,255,.35); 
     }
-    #etf-mc-results > div:nth-child(3) .rank{ 
-      background:linear-gradient(135deg,#CD7F32,#B87333); 
+    #etf-mc-section .mc-pill.is-checked{ 
+      background:rgba(0,255,255,.2)!important; 
+      border-color:#00ffff!important; 
+      box-shadow:0 0 12px rgba(0,255,255,.3); 
+      transform:translateY(-1px); 
+    }
+    
+    /* Inputs et selects */
+    #etf-mc-section .mini-input,#etf-mc-section .mini-select{ 
+      transition:all .2s ease; 
+      background:rgba(0,255,255,.05); 
       color:#fff; 
-      box-shadow:0 0 16px rgba(205,127,50,.6);
-      width:42px; height:42px; 
-      display:flex; justify-content:center; align-items:center;
-      border-radius:50%; font-size:1rem;
+    }
+    #etf-mc-section .mini-input:focus,#etf-mc-section .mini-select:focus{ 
+      border-color:#00ffff; 
+      box-shadow:0 0 0 3px rgba(0,255,255,.2); 
+      outline:none; 
     }
     
-    /* Badges */
-    .ter-badge,.aum-badge{ 
-      padding:3px 10px; border-radius:6px; font-size:.7rem; 
-      font-weight:700; text-transform:uppercase; letter-spacing:.5px; 
-      display:inline-block; line-height:1; 
+    /* Filtres */
+    .filter-item{ 
+      background:rgba(0,255,255,.05); 
+      border:1px solid rgba(0,255,255,.2); 
+      border-radius:8px; 
     }
-    .ter-badge{ background:rgba(255,193,7,.2); color:#FFC107; border:1px solid rgba(255,193,7,.3); }
-    .aum-badge{ background:rgba(0,212,255,.2); color:#00D4FF; border:1px solid rgba(0,212,255,.3); }
-
-    /* Pills métriques (inchangé) */
-    #etf-mc-section .mc-pill{ display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border:1px solid rgba(0,200,255,.2);border-radius:10px;background:rgba(0,255,255,.03);cursor:pointer;transition:all .2s ease; user-select:none; }
-    #etf-mc-section .mc-pill:hover{ background:rgba(0,255,255,.08); border-color:rgba(0,255,255,.35); }
-    #etf-mc-section .mc-pill.is-checked{ background:rgba(0,255,255,.2)!important; border-color:#00ffff!important; box-shadow:0 0 12px rgba(0,255,255,.3); transform:translateY(-1px); }
-    #etf-mc-section .mini-input,#etf-mc-section .mini-select{ transition:all .2s ease; background:rgba(0,255,255,.05); color:#fff; }
-    #etf-mc-section .mini-input:focus,#etf-mc-section .mini-select:focus{ border-color:#00ffff; box-shadow:0 0 0 3px rgba(0,255,255,.2); outline:none; }
-    .filter-item{ background:rgba(0,255,255,.05); border:1px solid rgba(0,255,255,.2); border-radius:8px; }
-
-    /* === LISTES DE FACETTES (pays / secteurs / type de fonds) === */
+    
+    /* Facettes */
     .facet-header{ font-size:.8rem; opacity:.7; margin:.5rem 0 .25rem }
-    .facet-list{ list-style:none; margin:0; padding:6px 8px; display:block;
-      background:rgba(0,255,255,.04); border:1px solid rgba(0,255,255,.15); border-radius:8px;
-      max-height:220px; overflow:auto; }
-    .facet-item{ display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; }
+    .facet-list{ 
+      list-style:none; margin:0; padding:6px 8px; display:block;
+      background:rgba(0,255,255,.04); 
+      border:1px solid rgba(0,255,255,.15); 
+      border-radius:8px;
+      max-height:220px; overflow:auto; 
+    }
+    .facet-item{ 
+      display:flex; align-items:center; gap:8px; 
+      padding:6px 8px; border-radius:8px; 
+    }
     .facet-item:hover{ background:rgba(0,255,255,.06); }
-    .facet-item.is-checked{ background:rgba(0,255,255,.18); border:1px solid #00ffff; }
+    .facet-item.is-checked{ 
+      background:rgba(0,255,255,.18); 
+      border:1px solid #00ffff; 
+    }
     .facet-item input{ accent-color:#00ffff; }
-
+    
     /* Toggle Lev/Inv */
-    .lev-toggle-container{ display:flex; align-items:center; gap:8px; padding:8px 12px; background:rgba(255,50,50,.05); border:1px solid rgba(255,50,50,.2); border-radius:8px; margin-top:8px; }
-    .lev-toggle-container:has(input:checked){ background:rgba(255,50,50,.1); border-color:rgba(255,50,50,.3); }
-
+    .lev-toggle-container{ 
+      display:flex; align-items:center; gap:8px; padding:8px 12px; 
+      background:rgba(255,50,50,.05); 
+      border:1px solid rgba(255,50,50,.2); 
+      border-radius:8px; margin-top:8px; 
+    }
+    .lev-toggle-container:has(input:checked){ 
+      background:rgba(255,50,50,.1); 
+      border-color:rgba(255,50,50,.3); 
+    }
+    
     /* Loader */
-    @keyframes shimmer{0%{background-position:-1000px 0}100%{background-position:1000px 0}}
-    .loading-shimmer{background:linear-gradient(90deg,rgba(0,255,255,.05) 0%,rgba(0,255,255,.1) 50%,rgba(0,255,255,.05) 100%);background-size:1000px 100%;animation:shimmer 2s infinite}
-
-    /* Mobile */
-    @media (max-width:768px){ #etf-mc-results .space-y-2{ display:flex; flex-direction:column; } }
+    @keyframes shimmer{
+      0%{background-position:-1000px 0}
+      100%{background-position:1000px 0}
+    }
+    .loading-shimmer{
+      background:linear-gradient(90deg,rgba(0,255,255,.05) 0%,rgba(0,255,255,.1) 50%,rgba(0,255,255,.05) 100%);
+      background-size:1000px 100%;animation:shimmer 2s infinite
+    }
     `;
     document.head.appendChild(s);
   }
 
-  // ---------- ULTRA-COMPACT Override ----------
-  (() => {
-    if (document.getElementById('etf-mc-v311b-styles')) return;
-    const s = document.createElement('style'); s.id='etf-mc-v311b-styles';
-    s.textContent = `
-    /* === Overrides ULTRA-COMPACT === */
-    .etf-card{
-      grid-template-columns: 44px minmax(220px,0.95fr) 1fr !important;
-      gap:8px !important; padding:9px !important;
-    }
-    .etf-rank{ width:36px !important; height:36px !important; font-size:.8rem !important }
-
-    /* Nom un poil plus lisible */
-    .etf-info{ min-width:clamp(200px,26vw,420px) !important }
-    .etf-name{ font-size:1.02rem !important; gap:6px !important }
-
-    /* Valeurs + labels plus petits et plus denses */
-    #etf-mc-results .etf-card .metrics{
-      grid-template-columns:repeat(auto-fit,minmax(56px,max-content)) !important;
-      gap:6px 10px !important;
-    }
-    #etf-mc-results .etf-card .metric-col .k{
-      font-size:.62rem !important; letter-spacing:.2px !important; opacity:.65 !important;
-    }
-    #etf-mc-results .etf-card .metric-col .v{
-      font-size:.90rem !important; line-height:1.02 !important; font-variant-numeric:tabular-nums !important;
-    }
-    .badge{ font-size:.54rem !important; padding:2px 5px !important }
-
-    /* Réduction supplémentaire sur écrans plus étroits */
-    @media (max-width: 1400px){
-      #etf-mc-results .etf-card .metric-col .k{ font-size:.60rem !important }
-      #etf-mc-results .etf-card .metric-col .v{ font-size:.86rem !important }
-      .etf-name{ font-size:1rem !important }
-    }
-
-    /* Option nom sur 2 lignes activée */
-    .etf-name{
-      white-space:normal !important; display:-webkit-box !important; 
-      -webkit-line-clamp:2 !important;
-      -webkit-box-orient:vertical !important; overflow:hidden !important;
-    }
-    `;
-    document.head.appendChild(s);
-  })();
-
   document.addEventListener('DOMContentLoaded', () => {
-    // === (1) MÉTRIQUES — SANS Sharpe/R-Vol, SANS Perf 3Y, SANS Track Error ===
+    console.log('✅ ETF MC Integration v3.12.0 HARMONIZED');
+    
+    // === MÉTRIQUES (sans Sharpe/R-Vol/Track Error/Perf 3Y) ===
     const zoneMetrics = document.querySelector('#etf-mc-section fieldset:first-of-type .flex.flex-wrap');
     const setPill = (id, label, checked=false) => {
       if (!zoneMetrics || document.getElementById(`etf-m-${id}`)) return;
-      const lab = document.createElement('label'); lab.className='mc-pill';
+      const lab = document.createElement('label'); 
+      lab.className='mc-pill';
       lab.innerHTML = `<input id="etf-m-${id}" type="checkbox" ${checked?'checked':''}> ${label}`;
       zoneMetrics.appendChild(lab);
     };
     
-    // Ajout Rdt net seulement (pas de Sharpe/R-Vol)
+    // Ajout Rdt net uniquement
     setPill('yield_net','Rdt net ↑',false);
     
-    // Suppression des pills indésirables
+    // Suppression des pills non désirées
     ['sharpe','sharpe_proxy','tracking_error','return_3y','quality'].forEach(id => {
       const pill = document.getElementById(`etf-m-${id}`)?.closest('.mc-pill');
       if (pill) pill.remove();
     });
 
-    // === (2) ZONE FILTRES de base ===
+    // === ZONE FILTRES ===
     const filtFS = document.querySelector('#etf-mc-section fieldset:last-of-type');
     if (filtFS) {
-      // Supprimer l'ancien select "type" s'il existe
+      // Nettoyer les anciens éléments
       document.getElementById('etf-filter-type')?.closest('.flex')?.remove();
-      // Supprimer le slider de qualité s'il existe
       document.getElementById('etf-filter-quality')?.closest('div')?.remove();
 
-      // Toggle Lev/Inv (crée si manquant)
+      // Toggle Lev/Inv
       if (!document.getElementById('etf-filter-leveraged')) {
         const box = document.createElement('div');
         box.className='lev-toggle-container';
@@ -184,47 +133,49 @@
         filtFS.appendChild(box);
       }
 
-      // Filtres personnalisés (comme Actions) - FIX: valeurs ASCII pour opérateurs
-      const customBox = document.createElement('div');
-      customBox.className='mt-3';
-      customBox.innerHTML = `
-        <div class="text-xs opacity-70 mb-2">Filtres personnalisés</div>
-        <div id="etf-custom-filters-list" class="space-y-2 mb-2">
-          <div class="text-xs opacity-50 text-center py-2">Aucun filtre personnalisé</div>
-        </div>
-        <div class="flex gap-1 items-center filter-controls">
-          <select id="etf-filter-metric" class="mini-select" style="flex:1.5; min-width:120px;">
-            <option value="ter">TER</option>
-            <option value="aum">AUM</option>
-            <option value="return_1d">Perf 1J</option>
-            <option value="return_ytd">YTD</option>
-            <option value="return_1y">Perf 1A</option>
-            <option value="volatility">Vol 3A</option>
-            <option value="dividend_yield">Rdt TTM</option>
-            <option value="yield_net">Rdt net</option>
-          </select>
-          <select id="etf-filter-operator" class="mini-select" style="width:64px;">
-            <option value=">=">≥</option>
-            <option value=">">></option>
-            <option value="=">=</option>
-            <option value="<"><</option>
-            <option value="<=">≤</option>
-            <option value="!=">≠</option>
-          </select>
-          <input id="etf-filter-value" type="number" class="mini-input" style="width:90px;" placeholder="0" step="0.1">
-          <span id="etf-filter-unit" class="text-xs opacity-60">%</span>
-          <button id="etf-add-filter" class="action-button" style="padding:6px 10px;"><i class="fas fa-plus"></i></button>
-        </div>
-      `;
-      filtFS.appendChild(customBox);
+      // Filtres personnalisés
+      if (!document.getElementById('etf-custom-filters-list')) {
+        const customBox = document.createElement('div');
+        customBox.className='mt-3';
+        customBox.innerHTML = `
+          <div class="text-xs opacity-70 mb-2">Filtres personnalisés</div>
+          <div id="etf-custom-filters-list" class="space-y-2 mb-2">
+            <div class="text-xs opacity-50 text-center py-2">Aucun filtre personnalisé</div>
+          </div>
+          <div class="flex gap-1 items-center filter-controls">
+            <select id="etf-filter-metric" class="mini-select" style="flex:1.5; min-width:120px;">
+              <option value="ter">TER</option>
+              <option value="aum">AUM</option>
+              <option value="return_1d">Jour</option>
+              <option value="return_ytd">YTD</option>
+              <option value="return_1y">1 An</option>
+              <option value="volatility">Vol</option>
+              <option value="dividend_yield">Div</option>
+              <option value="yield_net">Rdt net</option>
+            </select>
+            <select id="etf-filter-operator" class="mini-select" style="width:64px;">
+              <option value=">=">≥</option>
+              <option value=">">></option>
+              <option value="=">=</option>
+              <option value="<"><</option>
+              <option value="<=">≤</option>
+              <option value="!=">≠</option>
+            </select>
+            <input id="etf-filter-value" type="number" class="mini-input" style="width:90px;" placeholder="0" step="0.1">
+            <span id="etf-filter-unit" class="text-xs opacity-60">%</span>
+            <button id="etf-add-filter" class="action-button" style="padding:6px 10px;"><i class="fas fa-plus"></i></button>
+          </div>
+        `;
+        filtFS.appendChild(customBox);
+      }
     }
 
-    // === (3) LISTES FR pour Pays / Secteurs / Type de fonds (remplace les 3 selects) ===
+    // === LISTES FR (Pays/Secteurs/Type) ===
     (function makeFacetLists(){
       const filtFS = document.querySelector('#etf-mc-section fieldset:last-of-type');
       if (!filtFS) return;
 
-      // Dictionnaires FR (complets)
+      // Dictionnaires FR
       const FR_SECTORS = {
         "Financial Services":"Services financiers",
         "Consumer Cyclical":"Conso. cyclique",
@@ -268,88 +219,34 @@
         "Denmark":"Danemark",
         "Norway":"Norvège",
         "Brazil":"Brésil",
-        "Mexico":"Mexique",
-        "Hong Kong":"Hong Kong",
-        "Singapore":"Singapour",
-        "Ireland":"Irlande",
-        "Austria":"Autriche",
-        "Finland":"Finlande",
-        "Portugal":"Portugal",
-        "Greece":"Grèce",
-        "Poland":"Pologne",
-        "Russia":"Russie",
-        "South Africa":"Afrique du Sud",
-        "Turkey":"Turquie",
-        "Israel":"Israël",
-        "Saudi Arabia":"Arabie Saoudite",
-        "United Arab Emirates":"Émirats arabes unis",
-        "Indonesia":"Indonésie",
-        "Malaysia":"Malaisie",
-        "Thailand":"Thaïlande",
-        "Philippines":"Philippines",
-        "Argentina":"Argentine",
-        "Chile":"Chili",
-        "Colombia":"Colombie"
+        "Mexico":"Mexique"
       };
       
       const FR_FUNDTYPES = {
         "Intermediate Core Bond":"Obligations core intermédiaire",
-        "Intermediate Core-Plus Bond":"Obligations core-plus intermédiaire",
-        "Short Government":"Gouvernement court terme",
         "High Yield Bond":"Obligations haut rendement",
-        "Target Maturity":"Échéance cible",
-        "Equity Precious Metals":"Actions métaux précieux",
-        "Commodities Focused":"Matières premières",
-        "Technology":"Technologie",
-        "Health":"Santé",
-        "Trading--Leveraged Equity":"ETF levier (actions)",
-        "Trading--Inverse Equity":"ETF inverse (actions)",
-        "Mid-Cap Growth":"Mid-cap croissance",
-        "Large Blend":"Grande cap. mixte",
         "Large Growth":"Grande cap. croissance",
         "Large Value":"Grande cap. valeur",
         "Small Growth":"Petite cap. croissance",
         "Small Value":"Petite cap. valeur",
         "Foreign Large Blend":"International grande cap.",
-        "Foreign Large Growth":"International croissance",
-        "Foreign Large Value":"International valeur",
         "Emerging Markets":"Marchés émergents",
         "Europe Stock":"Actions Europe",
-        "Pacific/Asia ex-Japan":"Asie-Pacifique ex-Japon",
-        "Japan Stock":"Actions Japon",
         "Real Estate":"Immobilier",
         "Sector Equity":"Actions sectorielles",
-        "World Bond":"Obligations mondiales",
-        "Inflation-Protected Bond":"Obligations indexées inflation",
         "Corporate Bond":"Obligations d'entreprise",
-        "Long Government":"Gouvernement long terme",
-        "Intermediate Government":"Gouvernement moyen terme",
-        "Municipal Bond":"Obligations municipales",
-        "Preferred Stock":"Actions privilégiées",
-        "Bank Loan":"Prêts bancaires",
-        "Convertibles":"Obligations convertibles",
-        "Multisector Bond":"Obligations multi-secteurs",
-        "World Stock":"Actions mondiales",
-        "Alternative":"Alternatif",
-        "Allocation":"Allocation",
-        "Commodities Broad":"Matières premières larges",
-        "Energy":"Énergie",
-        "Agriculture":"Agriculture",
-        "Industrial Metals":"Métaux industriels",
-        "Volatility":"Volatilité",
-        "Trading--Leveraged":"Trading à effet de levier",
-        "Trading--Inverse":"Trading inverse",
-        "Currency":"Devises"
+        "Trading--Leveraged Equity":"ETF levier (actions)",
+        "Trading--Inverse Equity":"ETF inverse (actions)"
       };
       
       const toFR = (v, dict) => dict[v] || v;
 
-      // Attend que le module ait construit les catalogues
+      // Attendre que le module MC soit prêt
       const ready = () => window.ETF_MC?.state?.catalogs?.countries?.length;
       const boot = () => {
         const cats = window.ETF_MC.state.catalogs;
 
-        // 1) Cacher les vieux <select> s'ils existent
+        // Cacher les anciens selects
         filtFS.querySelectorAll('select').forEach(s => {
           const lab = s.previousElementSibling?.textContent?.toLowerCase() || "";
           if (/(région|pays|secteur|type)/.test(lab)) {
@@ -358,14 +255,14 @@
           }
         });
 
-        // 2) Insérer 3 listes (si pas déjà présentes)
+        // Créer les listes facettes
         const mk = (id, title, values, facet, dict) => {
           if (document.getElementById(id)) return;
           const wrap = document.createElement('div');
           wrap.innerHTML = `
             <div class="facet-header">${title}</div>
             <ul id="${id}" class="facet-list" aria-label="${title}">
-              ${values.map(v => `
+              ${values.slice(0,10).map(v => `
                 <li class="facet-item"><label>
                   <input type="checkbox" data-facet="${facet}" value="${v}"> ${toFR(v, dict)}
                 </label></li>`).join('')}
@@ -377,7 +274,7 @@
         mk('etf-filter-sectors','Secteurs (multi-sélection)', cats.sectors,'sector', FR_SECTORS);
         mk('etf-filter-fundtype','Type de fonds (multi-sélection)', cats.fundTypes,'fund', FR_FUNDTYPES);
 
-        // 3) Branche les checkbox sur les Sets du module
+        // Connecter les checkboxes
         filtFS.querySelectorAll('input[data-facet]').forEach(inp=>{
           const sets = window.ETF_MC.state.filters;
           const target =
@@ -396,7 +293,7 @@
       (function wait(){ if (ready()) return boot(); setTimeout(wait, 150); })();
     })();
 
-    // Sync visuel des pills métriques
+    // Sync visuel des pills
     document.querySelectorAll('#etf-mc-section .mc-pill input').forEach(inp=>{
       const lab = inp.closest('.mc-pill'); 
       const sync = ()=> lab?.classList.toggle('is-checked', inp.checked);
@@ -409,16 +306,17 @@
       const container = document.querySelector('#etf-mc-results');
       if (container) {
         const loader = document.createElement('div');
-        loader.id='mc-loading'; loader.className='hidden';
+        loader.id='mc-loading'; 
+        loader.className='hidden';
         loader.innerHTML = `<div class="loading-shimmer rounded-lg p-8 text-center"><p class="mt-2 text-cyan-400">Calcul en cours…</p></div>`;
         container.parentNode.insertBefore(loader, container);
       }
     }
 
-    // Apply → mini-loader
+    // Apply button avec loader
     const apply = document.getElementById('etf-mc-apply');
     const resZone = document.getElementById('etf-mc-results');
-    const loader  = document.getElementById('mc-loading');
+    const loader = document.getElementById('mc-loading');
     if (apply && resZone && loader) {
       apply.addEventListener('click', ()=>{
         loader.classList.remove('hidden');
@@ -431,12 +329,10 @@
       });
     }
 
-    // Raccourcis
+    // Raccourcis clavier
     document.addEventListener('keydown', (e)=>{
       if ((e.ctrlKey||e.metaKey) && e.key==='Enter') apply?.click();
       if (e.key==='Escape') document.getElementById('etf-mc-reset')?.click();
     });
-
-    console.log('✅ ETF MC Integration v3.8.0 ULTRA-COMPACT — Override styles');
   });
 })();
