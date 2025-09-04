@@ -1,7 +1,7 @@
-// Module MC adapté pour ETFs - v3.8.3 ACTIONS-LIKE SINGLE LINE
+// Module MC adapté pour ETFs - v3.8.4 ACTIONS-LIKE SINGLE LINE FIXED
 // - Toutes les métriques sur une seule ligne  
 // - Typography identique à Actions
-// - Scroll horizontal si trop de colonnes
+// - Fix: sync correct des pills cochées
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const fmt=(n,d=2)=>Number.isFinite(+n)?(+n).toFixed(d):'—';
@@ -13,8 +13,8 @@
   function init(){
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results .stock-cards-container');
-    if(!root||!results){console.error('❌ ETF MC v3.8.3: DOM manquant');return;}
-    console.log('✅ ETF MC v3.8.3 ACTIONS-LIKE SINGLE LINE: Module initialisé');
+    if(!root||!results){console.error('❌ ETF MC v3.8.4: DOM manquant');return;}
+    console.log('✅ ETF MC v3.8.4 ACTIONS-LIKE SINGLE LINE FIXED: Module initialisé');
     
     if(!document.getElementById('etf-mc-v38-styles')){
       const s=document.createElement('style'); s.id='etf-mc-v38-styles'; s.textContent=`
@@ -37,24 +37,21 @@
       .badge.warn{color:#ff9aa7;border-color:rgba(255,90,90,.35);background:rgba(255,90,90,.12)}
       .micro{font-size:.8rem;opacity:.6;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       
-      /* === ACTIONS-LIKE: toutes les métriques en une seule ligne, même quand tout est coché === */
+      /* === ACTIONS-LIKE: toutes les métriques sur une seule ligne + même typo === */
       #etf-mc-results .etf-card .metrics{
         display:flex;
         align-items:center;
         gap:20px;
-        flex-wrap:nowrap !important;     /* une seule ligne */
-        white-space:nowrap;               /* empêche le retour à la ligne */
-        overflow-x:auto;                  /* si trop de colonnes, scroll horizontal */
-        scrollbar-width: thin;
+        flex-wrap:nowrap !important;   /* une seule ligne */
+        white-space:nowrap;            /* pas de retour à la ligne */
+        overflow-x:auto;               /* scroll horiz. si trop de colonnes */
+        scrollbar-width:thin;
       }
-      
       #etf-mc-results .etf-card .metric-col{
         display:inline-flex;
         flex-direction:column;
-        min-width:90px;                   /* largeur mini d'une "colonne" */
+        min-width:90px;
       }
-      
-      /* Typo identique à Actions */
       #etf-mc-results .etf-card .metric-col .k{
         text-transform:uppercase;
         letter-spacing:.5px;
@@ -68,8 +65,7 @@
         line-height:1;
         font-variant-numeric:tabular-nums;
       }
-      
-      /* on neutralise l'ancien rendu "chips" s'il reste du code */
+      /* si un ancien rendu "chips" traîne, on le masque */
       #etf-mc-results .etf-card .chips{ display:none !important; }
       
       .g{color:#34d399}.y{color:#fbbf24}.r{color:#f87171}
@@ -128,7 +124,7 @@
     const schedule=(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(calculate,120);};})();
     const q=(v,dec=1)=>Math.round(v*10**dec)/10**dec;
 
-    // == NEW: sync des métriques depuis l'UI ==
+    // FIX: sync correct des pills cochées (sans écraser)
     function syncSelectedFromUI() {
       const pills = [...document.querySelectorAll('#etf-mc-section .mc-pill input[id^="etf-m-"]')];
       state.selectedMetrics = pills
@@ -234,7 +230,7 @@
       });
     });
 
-    // == NEW: initialise selectedMetrics selon les pills cochées ==
+    // initialise selectedMetrics selon les pills cochées
     syncSelectedFromUI();
 
     document.querySelectorAll('input[name="etf-mc-mode"]').forEach(r=>r.addEventListener('change',()=>{state.mode=r.value; schedule();}));
@@ -257,7 +253,7 @@
       if(state.filters.excludeLeveraged) arr=arr.filter(e=>!e.__lev);
       arr=passCustomFilters(arr);
 
-      // == NEW: afficher rien si aucun critère n'est sélectionné ==
+      // afficher rien si aucun critère n'est sélectionné
       const sel = state.selectedMetrics.filter(m => METRICS[m]);
       if (sel.length === 0) {
         results.innerHTML = '<div class="text-center text-cyan-400 py-4">Coche au moins un critère à gauche.</div>';
@@ -292,7 +288,7 @@
         const levBadge = e.__lev ? '<span class="badge warn">LEV/INV</span>' : '';
         const displayName = str(e.long_name)||str(e.fund_name)||str(e.name)||str(e.symbol)||str(e.ticker)||'—';
 
-        // NEW: construit une colonne par métrique cochée (ordre = ordre des pills)
+        // Rendu colonnes (comme Actions)
         const colsHTML = state.selectedMetrics
           .filter(m => METRICS[m])
           .map(m => {
@@ -302,7 +298,7 @@
             const renderVal = (m,raw)=>{
               if(!Number.isFinite(raw)) return '—';
               if(m==='aum'){ const M=raw; return (M>=1000)?(M/1000).toFixed(1)+'B$':Math.round(M)+'M$'; }
-              return d.unit==='%' ? fmt(raw,2)+'%' : fmt(raw,2);
+              return d.unit==='%' ? (+raw).toFixed(2)+'%' : (+raw).toFixed(2);
             };
             const colorFor=(m,raw)=>{
               if(!Number.isFinite(raw)) return '';
@@ -362,7 +358,6 @@
       });
       const listBox=document.getElementById('etf-custom-filters-list');
       if(listBox) listBox.innerHTML='<div class="text-xs opacity-50 text-center py-2">Aucun filtre personnalisé</div>';
-      // == NEW: resynchroniser après reset ==
       syncSelectedFromUI();
       calculate();
     });
