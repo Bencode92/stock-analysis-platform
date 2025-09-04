@@ -1,7 +1,6 @@
-// Module MC adapté pour ETFs - v3.8 STYLE ACTIONS
-// - Cards façon "Actions" : 2 grosses métriques + chips
-// - Rang bleu, nom seul, layout responsive (wrap)
-// - Facettes repliables + filtres persos OK
+// Module MC adapté pour ETFs - v3.8.1 STYLE ACTIONS
+// - Sync automatique avec pills UI
+// - Bloque affichage si aucun critère coché
 // - Daily et YTD en priorité
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
@@ -14,8 +13,8 @@
   function init(){
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results .stock-cards-container');
-    if(!root||!results){console.error('❌ ETF MC v3.8: DOM manquant');return;}
-    console.log('✅ ETF MC v3.8 STYLE ACTIONS: Module initialisé');
+    if(!root||!results){console.error('❌ ETF MC v3.8.1: DOM manquant');return;}
+    console.log('✅ ETF MC v3.8.1 SYNC: Module initialisé');
     
     if(!document.getElementById('etf-mc-v38-styles')){
       const s=document.createElement('style'); s.id='etf-mc-v38-styles'; s.textContent=`
@@ -74,7 +73,7 @@
 
     const state={
       mode:'balanced',
-      selectedMetrics:['return_1d','return_ytd','volatility','sharpe_proxy','aum','ter','dividend_yield','return_1y'], // Daily et YTD en premier
+      selectedMetrics:['return_1d','return_ytd','volatility','sharpe_proxy','aum','ter','dividend_yield','return_1y'],
       filters:{countries:new Set(),sectors:new Set(),fundTypes:new Set(),excludeLeveraged:true},
       customFilters:[],
       data:[],catalogs:{countries:[],sectors:[],fundTypes:[]}
@@ -104,6 +103,15 @@
 
     const schedule=(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(calculate,120);};})();
     const q=(v,dec=1)=>Math.round(v*10**dec)/10**dec;
+
+    // == NEW: sync des métriques depuis l'UI ==
+    function syncSelectedFromUI() {
+      const pills = [...document.querySelectorAll('#etf-mc-section .mc-pill input[id^="etf-m-"]')];
+      state.selectedMetrics = pills
+        .filter(x => x.checked)
+        .map(x => x.id.replace('etf-m-',''))
+        .filter(m => METRICS[m]);
+    }
 
     function buildFacetCatalogs(){
       const cCount=new Map(),sCount=new Map(),fCount=new Map();
@@ -201,6 +209,10 @@
         schedule();
       });
     });
+
+    // == NEW: initialise selectedMetrics selon les pills cochées ==
+    syncSelectedFromUI();
+
     document.querySelectorAll('input[name="etf-mc-mode"]').forEach(r=>r.addEventListener('change',()=>{state.mode=r.value; schedule();}));
     document.getElementById('etf-filter-leveraged')?.addEventListener('change',e=>{state.filters.excludeLeveraged=!!e.target.checked; schedule();});
 
@@ -221,7 +233,15 @@
       if(state.filters.excludeLeveraged) arr=arr.filter(e=>!e.__lev);
       arr=passCustomFilters(arr);
 
-      const sel=state.selectedMetrics.filter(m=>METRICS[m]);
+      // == NEW: afficher rien si aucun critère n'est sélectionné ==
+      const sel = state.selectedMetrics.filter(m => METRICS[m]);
+      if (sel.length === 0) {
+        results.innerHTML = '<div class="text-center text-cyan-400 py-4">Coche au moins un critère à gauche.</div>';
+        const total = (window.ETFData.getData() || []).length;
+        updateSummary(0, total);
+        return;
+      }
+
       const ranges={}; sel.forEach(m=>{const vals=arr.map(e=>METRICS[m].get(e)).filter(Number.isFinite); ranges[m]=vals.length?{min:Math.min(...vals),max:Math.max(...vals)}:{min:0,max:0};});
       let out;
       if(state.mode==='balanced'){
@@ -323,6 +343,8 @@
       });
       const listBox=document.getElementById('etf-custom-filters-list');
       if(listBox) listBox.innerHTML='<div class="text-xs opacity-50 text-center py-2">Aucun filtre personnalisé</div>';
+      // == NEW: resynchroniser après reset ==
+      syncSelectedFromUI();
       calculate();
     });
 
