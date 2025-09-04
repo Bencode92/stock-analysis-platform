@@ -1,7 +1,8 @@
-// Script d'intégration MC pour ETFs - v3.6 COMPACT
+// Script d'intégration MC pour ETFs - v3.6.1 COMPACT (sans Sharpe)
 // - Affichage compact façon "Actions"
 // - Styles CSS pour liste verticale
 // - Facettes LISTES FR avec dictionnaires complets
+// - SUPPRESSION de Sharpe/R-Vol
 
 (function(){
   // ---------- Styles idempotents ----------
@@ -98,7 +99,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    // === (1) MÉTRIQUES — enlever "Qualité", s'assurer du FR ===
+    // === (1) MÉTRIQUES — SANS Sharpe/R-Vol, SANS Perf 3Y, SANS Track Error ===
     const zoneMetrics = document.querySelector('#etf-mc-section fieldset:first-of-type .flex.flex-wrap');
     const setPill = (id, label, checked=false) => {
       if (!zoneMetrics || document.getElementById(`etf-m-${id}`)) return;
@@ -106,14 +107,15 @@
       lab.innerHTML = `<input id="etf-m-${id}" type="checkbox" ${checked?'checked':''}> ${label}`;
       zoneMetrics.appendChild(lab);
     };
-    // Ajouts/renommages utiles FR
+    
+    // Ajout Rdt net seulement (pas de Sharpe/R-Vol)
     setPill('yield_net','Rdt net ↑',false);
-    setPill('sharpe_proxy','R/Vol ↑',true);
-    // Supprimer "Qualité" si présent
-    (function removeQuality(){
-      const pill = document.getElementById('etf-m-quality')?.closest('.mc-pill');
+    
+    // Suppression des pills indésirables
+    ['sharpe','sharpe_proxy','tracking_error','return_3y','quality'].forEach(id => {
+      const pill = document.getElementById(`etf-m-${id}`)?.closest('.mc-pill');
       if (pill) pill.remove();
-    })();
+    });
 
     // === (2) ZONE FILTRES de base ===
     const filtFS = document.querySelector('#etf-mc-section fieldset:last-of-type');
@@ -135,7 +137,7 @@
         filtFS.appendChild(box);
       }
 
-      // Filtres personnalisés (comme Actions)
+      // Filtres personnalisés (comme Actions) - SANS sharpe_proxy dans le select
       const customBox = document.createElement('div');
       customBox.className='mt-3';
       customBox.innerHTML = `
@@ -153,13 +155,12 @@
             <option value="volatility">Vol 3A</option>
             <option value="dividend_yield">Rdt TTM</option>
             <option value="yield_net">Rdt net</option>
-            <option value="sharpe_proxy">R/Vol</option>
           </select>
           <select id="etf-filter-operator" class="mini-select" style="width:64px;">
-            <option value=">=">≥</option><option value=">">></option>
+            <option value="≥">≥</option><option value=">">></option>
             <option value="=">=</option>
-            <option value="<"><</option><option value="<=">≤</option>
-            <option value="!=">≠</option>
+            <option value="<"><</option><option value="≤">≤</option>
+            <option value="≠">≠</option>
           </select>
           <input id="etf-filter-value" type="number" class="mini-input" style="width:90px;" placeholder="0" step="0.1">
           <span id="etf-filter-unit" class="text-xs opacity-60">%</span>
@@ -387,6 +388,6 @@
       if (e.key==='Escape') document.getElementById('etf-mc-reset')?.click();
     });
 
-    console.log('✅ ETF MC Integration v3.6 COMPACT — Affichage vertical compact façon Actions');
+    console.log('✅ ETF MC Integration v3.6.1 COMPACT — Sans Sharpe/R-Vol');
   });
 })();
