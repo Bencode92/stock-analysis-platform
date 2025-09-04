@@ -1,8 +1,7 @@
-// Script d'intégration MC pour ETFs - v3.5
-// - Facettes "Pays / Secteurs / Type de fonds" en LISTES FR (checkboxes verticales)
-// - Dictionnaires de traduction français
-// - Qualité retirée (métrique + slider)
-// - Badge de score retiré (géré côté module)
+// Script d'intégration MC pour ETFs - v3.6 COMPACT
+// - Affichage compact façon "Actions"
+// - Styles CSS pour liste verticale
+// - Facettes LISTES FR avec dictionnaires complets
 
 (function(){
   // ---------- Styles idempotents ----------
@@ -10,19 +9,59 @@
     const s = document.createElement('style');
     s.id='etf-mc-styles';
     s.textContent = `
-    /* Cartes (inchangé) */
-    #etf-mc-results .stock-cards-container { display:grid; gap:16px; grid-template-columns:repeat(auto-fill,minmax(380px,1fr)); }
-    @media (min-width:1280px){ #etf-mc-results .stock-cards-container{ grid-template-columns:repeat(auto-fill,minmax(440px,1fr)); } }
-    #etf-mc-results .stock-card{ display:grid; grid-template-columns:48px 1fr auto; align-items:center; gap:12px; min-height:100px; }
-    .stock-fullname{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; white-space:normal; word-break:break-word; transition:all .25s ease; line-height:1.3; }
-    .stock-card:hover .stock-fullname{ -webkit-line-clamp:4; }
-    .stock-performance{ white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums; }
-    .stock-performance .flex{ display:grid; grid-template-columns:repeat(auto-fit,minmax(70px,1fr)); gap:12px; }
-    .rank{ width:42px;height:42px;display:flex;justify-content:center;align-items:center;border-radius:50%;font-weight:700;background:var(--accent-subtle);color:var(--accent-color);box-shadow:0 0 8px rgba(0,255,135,.2); }
-    .stock-card:nth-child(1) .rank{ background:linear-gradient(135deg,#FFD700,#FFA500); color:#000; box-shadow:0 0 20px rgba(255,215,0,.6); }
-    .stock-card:nth-child(2) .rank{ background:linear-gradient(135deg,#E5E5E5,#C0C0C0); color:#000; box-shadow:0 0 18px rgba(192,192,192,.6); }
-    .stock-card:nth-child(3) .rank{ background:linear-gradient(135deg,#CD7F32,#B87333); color:#fff; box-shadow:0 0 16px rgba(205,127,50,.6); }
-    .ter-badge,.aum-badge{ padding:3px 10px;border-radius:6px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:inline-block;line-height:1; }
+    /* ===== Affichage compact façon "Actions" ===== */
+    #etf-mc-results .space-y-2 > div { margin-bottom: .5rem; }
+    #etf-mc-results .glassmorphism{
+      background: linear-gradient(135deg, rgba(0,200,255,.03), rgba(0,255,255,.02)) !important;
+      border: 1px solid rgba(0,200,255,.15) !important;
+      transition: all .2s ease;
+    }
+    #etf-mc-results .glassmorphism:hover{
+      background: linear-gradient(135deg, rgba(0,200,255,.06), rgba(0,255,255,.04)) !important;
+      border-color: rgba(0,200,255,.30) !important;
+      transform: translateX(2px);
+    }
+    #etf-mc-results .rank{
+      font-size:1.5rem; font-weight:900; color:#00ffff;
+      text-shadow:0 0 5px rgba(0,255,255,.3); opacity:.9; min-width:50px;
+    }
+    #etf-mc-results .flex.gap-4{ display:flex; gap:1rem; align-items:center; }
+    #etf-mc-results .flex.gap-4 > div{ min-width:70px; }
+    /* on allège: pas de longue description ni d'ISIN/MIC en compact */
+    #etf-mc-results .line-iso{ display:none }
+    
+    /* Top 3 médailles */
+    #etf-mc-results > div:nth-child(1) .rank{ 
+      background:linear-gradient(135deg,#FFD700,#FFA500); 
+      color:#000; 
+      box-shadow:0 0 20px rgba(255,215,0,.6);
+      width:42px; height:42px; 
+      display:flex; justify-content:center; align-items:center;
+      border-radius:50%; font-size:1rem;
+    }
+    #etf-mc-results > div:nth-child(2) .rank{ 
+      background:linear-gradient(135deg,#E5E5E5,#C0C0C0); 
+      color:#000; 
+      box-shadow:0 0 18px rgba(192,192,192,.6);
+      width:42px; height:42px; 
+      display:flex; justify-content:center; align-items:center;
+      border-radius:50%; font-size:1rem;
+    }
+    #etf-mc-results > div:nth-child(3) .rank{ 
+      background:linear-gradient(135deg,#CD7F32,#B87333); 
+      color:#fff; 
+      box-shadow:0 0 16px rgba(205,127,50,.6);
+      width:42px; height:42px; 
+      display:flex; justify-content:center; align-items:center;
+      border-radius:50%; font-size:1rem;
+    }
+    
+    /* Badges */
+    .ter-badge,.aum-badge{ 
+      padding:3px 10px; border-radius:6px; font-size:.7rem; 
+      font-weight:700; text-transform:uppercase; letter-spacing:.5px; 
+      display:inline-block; line-height:1; 
+    }
     .ter-badge{ background:rgba(255,193,7,.2); color:#FFC107; border:1px solid rgba(255,193,7,.3); }
     .aum-badge{ background:rgba(0,212,255,.2); color:#00D4FF; border:1px solid rgba(0,212,255,.3); }
 
@@ -53,7 +92,7 @@
     .loading-shimmer{background:linear-gradient(90deg,rgba(0,255,255,.05) 0%,rgba(0,255,255,.1) 50%,rgba(0,255,255,.05) 100%);background-size:1000px 100%;animation:shimmer 2s infinite}
 
     /* Mobile */
-    @media (max-width:768px){ #etf-mc-results .stock-cards-container{ grid-template-columns:1fr } .stock-performance .flex{ grid-template-columns:repeat(2,1fr) } }
+    @media (max-width:768px){ #etf-mc-results .space-y-2{ display:flex; flex-direction:column; } }
     `;
     document.head.appendChild(s);
   }
@@ -348,6 +387,6 @@
       if (e.key==='Escape') document.getElementById('etf-mc-reset')?.click();
     });
 
-    console.log('✅ ETF MC Integration v3.5 — Facettes LISTE FR avec dictionnaires complets');
+    console.log('✅ ETF MC Integration v3.6 COMPACT — Affichage vertical compact façon Actions');
   });
 })();
