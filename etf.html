@@ -952,81 +952,6 @@
                 <!-- DIVISEUR -->
                 <div class="section-divider" style="position: relative; height: 2px; margin: 80px 0 60px; background: linear-gradient(90deg, transparent, rgba(0,255,135,0.3) 20%, rgba(0,255,135,0.3) 80%, transparent); box-shadow: 0 0 20px rgba(0,255,135,0.2);"></div>
                 
-                <!-- LISTE COMPLÈTE DES ETFs -->
-                <div class="mb-8">
-                    <h2 class="section-title mb-6">Tous les ETFs</h2>
-                    
-                    <!-- Onglets de filtrage -->
-                    <div class="region-tabs mb-6">
-                        <div class="region-tab active" data-type="all">TOUS</div>
-                        <div class="region-tab" data-type="equity">ACTIONS</div>
-                        <div class="region-tab" data-type="bonds">OBLIGATIONS</div>
-                        <div class="region-tab" data-type="commodity">MATIÈRES PREMIÈRES</div>
-                        <div class="region-tab" data-type="sector">SECTORIELS</div>
-                        <div class="region-tab" data-type="geographic">GÉOGRAPHIQUES</div>
-                    </div>
-                    
-                    <!-- Recherche -->
-                    <div class="search-container mb-6">
-                        <div class="search-wrapper relative">
-                            <input type="text" id="etf-search" 
-                                   placeholder="Rechercher un ETF par ticker, nom, ISIN..." 
-                                   class="w-full py-3 px-12 bg-opacity-10 rounded-lg border border-opacity-30 text-white focus:outline-none focus:border-accent"
-                                   style="background-color: rgba(255, 255, 255, 0.07); border-color: var(--card-border); color: var(--text-color);">
-                            <i class="fas fa-search absolute left-4 top-4 text-opacity-70" style="color: rgba(255, 255, 255, 0.5);"></i>
-                            <button id="clear-search" class="absolute right-4 top-4 opacity-0 transition-opacity duration-200" style="cursor: pointer;">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Table -->
-                    <div class="glassmorphism rounded-lg overflow-hidden">
-                        <div id="indices-loading" class="py-16 flex justify-center">
-                            <div class="loader"></div>
-                        </div>
-                        
-                        <div id="indices-error" class="py-16 text-center hidden">
-                            <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
-                            <p class="text-lg">Impossible de charger les données des ETFs.</p>
-                            <button id="retry-button" class="mt-4 search-button inline-flex items-center">
-                                <i class="fas fa-sync-alt mr-2"></i>
-                                Réessayer
-                            </button>
-                        </div>
-                        
-                        <div id="indices-container" class="hidden">
-                            <div id="etf-table-content">
-                                <div class="overflow-x-auto">
-                                    <table class="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>TICKER / NOM</th>
-                                                <th>TER</th>
-                                                <th>AUM</th>
-                                                <th>DERNIER</th>
-                                                <th>VAR %</th>
-                                                <th>YTD %</th>
-                                                <th>1 AN %</th>
-                                                <th>VOLATILITÉ</th>
-                                                <th>SHARPE</th>
-                                                <th>RENDEMENT</th>
-                                                <th></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="etf-table-body">
-                                            <!-- Les données seront injectées ici -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- DIVISEUR -->
-                <div class="section-divider" style="position: relative; height: 2px; margin: 80px 0 60px; background: linear-gradient(90deg, transparent, rgba(0,255,135,0.3) 20%, rgba(0,255,135,0.3) 80%, transparent); box-shadow: 0 0 20px rgba(0,255,135,0.2);"></div>
-                
                 <!-- ================== ETFs par lettre (A→Z) ================== -->
                 <section id="etf-az" class="mb-12">
                   <h2 class="section-title mb-4">ETFs — par lettre</h2>
@@ -1103,58 +1028,63 @@
     <script src="etf-mc-integration.js"></script>
     <script src="etf-mc-module.js"></script>
     
-    <!-- Script A→Z ETFs -->
+    <!-- Script A→Z ETFs amélioré -->
     <script>
-    /* etf-az.js — A→Z ETFs basé sur les CSV normalisés par etf-script.js
-       - Portée: GLOBAL | ACTIONS | BONDS
-       - Sous-filtres: Pays, Type de fonds, Secteur
-       - A→Z + détails
-    */
+    /* etf-az.js — A→Z ETFs (sans Sharpe) + détails enrichis (objectif, secteurs, holdings) */
     (function () {
-      // ---------- Helpers visuels (mêmes conventions) ----------
       const $  = s => document.querySelector(s);
       const $$ = s => Array.from(document.querySelectorAll(s));
 
+      // ---------- Formatage ----------
       function fmtNum(v, d=2){ if(v==null||v==='') return '-'; const n=Number(v); return Number.isFinite(n)? n.toFixed(d):'-'; }
-      function fmtAUM(v){
-        const n = Number(v||0);
-        if (!Number.isFinite(n) || n<=0) return '-';
-        return n>=1000 ? (n/1000).toFixed(1)+'B€' : n.toFixed(0)+'M€';
-      }
+      function fmtAUM(v){ const n=Number(v||0); if(!Number.isFinite(n)||n<=0) return '-'; return n>=1000?(n/1000).toFixed(1)+'B€':n.toFixed(0)+'M€'; }
       function fmtPct(v){ if(v==null||v==='') return '-'; const n=Number(v); if(!Number.isFinite(n)) return '-'; return (n>=0?'+':'')+n.toFixed(2)+'%'; }
-      function clsPct(v){ const n=Number(v); return Number.isFinite(n)? (n>=0?'positive':'negative'):''; }
+      function clsPct(v){ const n=Number(v); return Number.isFinite(n)?(n>=0?'positive':'negative'):''; }
 
+      // ---------- Accès aux champs ----------
       function getCountry(e){ return e.country || e.domicile || e.country_of_domicile || e.listing_country || ''; }
+      function parseMaybeJSON(val){
+        if (!val) return null;
+        if (Array.isArray(val) || (typeof val === 'object' && val !== null)) return val;
+        try { return JSON.parse(val); } catch { return null; }
+      }
+      function toSectors(e){
+        // sector_top5: [{s:"Technology", w:37.9}, ...]
+        const arr = parseMaybeJSON(e.sector_top5);
+        if (Array.isArray(arr) && arr.length) return arr;
+        if (e.sector_top) return [{ s: e.sector_top, w: Number(e.sector_top_weight) || null }];
+        return [];
+      }
+      function toHoldings(e){
+        // holdings_top10: [{t:"NVDA", n:"NVIDIA Corporation", w:11.93}, ...]
+        const arr = parseMaybeJSON(e.holdings_top10);
+        if (Array.isArray(arr) && arr.length) return arr;
+        if (e.holding_top){
+          // essaie d'extraire ticker (entre parenthèses) + nom
+          const m = String(e.holding_top).match(/\(([^)]+)\)/);
+          const t = m ? m[1] : e.holding_top;
+          const n = String(e.holding_top).replace(/\s*\([^)]*\)\s*/g,'').trim();
+          return [{ t, n, w: null }];
+        }
+        return [];
+      }
       function getFundType(e){
         return e.fund_type || e.etf_type || e.replication || e.distribution || (e.type && e.type!=='bonds' ? e.type : '') || '';
       }
-      function getSector(e){
-        const fromField = e.sector || e.sector_name || e.category || '';
-        if (fromField) return fromField;
-        const name = String(e.name||'').toLowerCase();
-        if (/tech|information/i.test(name))   return 'Technology';
-        if (/health|sant|biotech/i.test(name))return 'Healthcare';
-        if (/energy|oil|gaz|petrol/i.test(name)) return 'Energy';
-        if (/finance|financial|bank/i.test(name)) return 'Financials';
-        if (/utilities/i.test(name))          return 'Utilities';
-        if (/materials/i.test(name))          return 'Materials';
-        if (/industr/i.test(name))            return 'Industrials';
-        if (/consumer/i.test(name))           return 'Consumer';
-        if (/real ?estate|reit/i.test(name))  return 'Real Estate';
-        return '';
+      function getSectorMain(e){
+        const arr = toSectors(e);
+        if (arr.length) return arr[0].s;
+        return e.sector || e.sector_name || '';
       }
 
       // ---------- État ----------
-      let scope = 'GLOBAL';
-      let fCountry = '';
-      let fFundType = '';
-      let fSector   = '';
-
+      let scope = 'GLOBAL'; // GLOBAL | ACTIONS | BONDS
+      let fCountry = '', fFundType = '', fSector = '';
       let dataAll = [];
       let indexAZ = {};
       let lastUpdate = null;
 
-      // ---------- UI build ----------
+      // ---------- UI (onglets + tables) ----------
       function buildTabs(){
         const tabs = $('#etf-az-tabs');
         const cont = $('#etf-az-container');
@@ -1164,20 +1094,16 @@
         const letters = ['all', ...'abcdefghijklmnopqrstuvwxyz'.split('')];
         letters.forEach((l, i) => {
           const el = document.createElement('div');
-          const count = (l === 'all') ? dataAll.length : (indexAZ[l]?.length || 0);
           el.className = `region-tab ${l==='all'?'all-results':''} ${i===1?'active':''}`;
           el.dataset.letter = l;
-          el.textContent = l==='all' ? `TOUS (${count})` : `${l.toUpperCase()} (${count})`;
-          if (l !== 'all' && !count) el.classList.add('empty');
+          el.textContent = (l==='all')?'TOUS':l.toUpperCase();
           tabs.appendChild(el);
         });
 
         tabs.addEventListener('click', (e) => {
-          const btn = e.target.closest('.region-tab'); 
-          if(!btn || btn.classList.contains('empty')) return;
+          const btn = e.target.closest('.region-tab'); if(!btn) return;
           $$('#etf-az-tabs .region-tab').forEach(t=>t.classList.remove('active'));
           btn.classList.add('active');
-
           const letter = btn.dataset.letter;
           $$('#etf-az-container .etf-letter').forEach(div => {
             if (letter==='all') div.classList.remove('hidden');
@@ -1204,7 +1130,6 @@
                     <th>YTD %</th>
                     <th>1 AN %</th>
                     <th>VOLATILITÉ</th>
-                    <th>SHARPE</th>
                     <th>RENDEMENT</th>
                     <th></th>
                   </tr>
@@ -1224,7 +1149,6 @@
           if (ic){ ic.classList.add('fa-chevron-down'); ic.classList.remove('fa-chevron-up'); }
         });
       }
-      
       window.toggleEtfAzDetails = function(btn){
         const main = btn.closest('tr');
         const details = main?.nextElementSibling;
@@ -1239,22 +1163,20 @@
         }
       };
 
-      // ---------- Data ----------
+      // ---------- Filtres de portée ----------
       function takeScope(list){
         if (scope==='ACTIONS') return list.filter(e => e.dataset==='etf');
         if (scope==='BONDS')   return list.filter(e => e.dataset==='bonds');
         return list;
       }
-
       function applySubfilters(list){
         return list.filter(e => {
           if (fCountry)  { const c=(getCountry(e)||'').toLowerCase(); if (c!==fCountry.toLowerCase()) return false; }
           if (fFundType) { const t=(getFundType(e)||'').toLowerCase(); if (t!==fFundType.toLowerCase()) return false; }
-          if (fSector)   { const s=(getSector(e)||'').toLowerCase();   if (s!==fSector.toLowerCase())   return false; }
+          if (fSector)   { const s=(getSectorMain(e)||'').toLowerCase(); if (s!==fSector.toLowerCase()) return false; }
           return true;
         });
       }
-
       function indexByLetter(list){
         const map = {}; 'abcdefghijklmnopqrstuvwxyz'.split('').forEach(l=>map[l]=[]);
         list.forEach(e => {
@@ -1266,23 +1188,18 @@
         Object.keys(map).forEach(l => map[l].sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''))));
         return map;
       }
-
-      // ---------- Dropdowns ----------
       function uniqSorted(arr){ return [...new Set(arr.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b))); }
 
       function populateDropdowns(list){
         const countries = uniqSorted(list.map(getCountry));
         const fundtypes = uniqSorted(list.map(getFundType));
-        const sectors   = uniqSorted(list.map(getSector));
-
+        const sectors   = uniqSorted(list.map(getSectorMain));
         const cSel = $('#etf-az-country');
         const fSel = $('#etf-az-fundtype');
         const sSel = $('#etf-az-sector');
-
         cSel.innerHTML = `<option value="">Tous</option>` + countries.map(v=>`<option value="${v}">${v}</option>`).join('');
         fSel.innerHTML = `<option value="">Tous</option>` + fundtypes.map(v=>`<option value="${v}">${v}</option>`).join('');
         sSel.innerHTML = `<option value="">Tous</option>` + sectors.map(v=>`<option value="${v}">${v}</option>`).join('');
-
         if (fCountry && countries.includes(fCountry)) cSel.value = fCountry; else fCountry = '';
         if (fFundType && fundtypes.includes(fFundType)) fSel.value = fFundType; else fFundType = '';
         if (fSector && sectors.includes(fSector)) sSel.value = fSector; else fSector = '';
@@ -1297,27 +1214,14 @@
         $('#etf-az-count').textContent = filtered.length;
         if (lastUpdate) $('#etf-az-lastupdate').textContent = new Date(lastUpdate).toLocaleString('fr-FR');
 
-        // Update tabs with counts
-        $$('#etf-az-tabs .region-tab').forEach(tab => {
-          const l = tab.dataset.letter;
-          if (l === 'all') {
-            tab.textContent = `TOUS (${filtered.length})`;
-          } else {
-            const count = indexAZ[l]?.length || 0;
-            tab.textContent = `${l.toUpperCase()} (${count})`;
-            tab.classList.toggle('empty', !count);
-          }
-        });
-
         'abcdefghijklmnopqrstuvwxyz'.split('').forEach(l => {
-          const body = $(`#etf-az-body-${l}`); 
-          if (!body) return;
+          const body = $(`#etf-az-body-${l}`); if (!body) return;
           body.innerHTML = '';
           const list = indexAZ[l] || [];
 
           if (!list.length){
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td colspan="11" class="text-center py-4 text-gray-400">
+            tr.innerHTML = `<td colspan="10" class="text-center py-4 text-gray-400">
                 <i class="fas fa-info-circle mr-2"></i>Aucun ETF pour cette lettre
               </td>`;
             body.appendChild(tr);
@@ -1325,25 +1229,24 @@
           }
 
           list.forEach((etf) => {
-            const row = document.createElement('tr');
             const chCls  = clsPct(etf.return_1d);
             const ytdCls = clsPct(etf.return_ytd);
             const y1Cls  = clsPct(etf.return_1y);
 
+            const row = document.createElement('tr');
             row.innerHTML = `
               <td class="py-2 px-3">
                 <div class="font-medium">${etf.ticker || etf.isin || '—'}</div>
                 <div class="text-xs opacity-70 mt-1">${etf.name || '—'}</div>
               </td>
-              <td class="text-right"><span class="ter-badge">${fmtNum(etf.ter)}%</span></td>
-              <td class="text-right"><span class="aum-badge">${fmtAUM(etf.aum)}</span></td>
-              <td class="text-right">${fmtNum(etf.price,2)}€</td>
-              <td class="text-right ${chCls}">${fmtPct(etf.return_1d)}</td>
-              <td class="text-right ${ytdCls}">${fmtPct(etf.return_ytd)}</td>
-              <td class="text-right ${y1Cls}">${fmtPct(etf.return_1y)}</td>
-              <td class="text-right">${fmtNum(etf.volatility)}%</td>
-              <td class="text-right">${fmtNum(etf.sharpe_ratio,2)}</td>
-              <td class="text-right">${fmtNum(etf.dividend_yield)}%</td>
+              <td class="text-right"><span class="ter-badge">${fmtNum(etf.total_expense_ratio ?? etf.ter)}%</span></td>
+              <td class="text-right"><span class="aum-badge">${fmtAUM(etf.aum_usd ?? etf.aum)}</span></td>
+              <td class="text-right">${fmtNum(etf.last_close ?? etf.price,2)}€</td>
+              <td class="text-right ${chCls}">${fmtPct(etf.daily_change_pct ?? etf.return_1d)}</td>
+              <td class="text-right ${ytdCls}">${fmtPct(etf.ytd_return_pct ?? etf.return_ytd)}</td>
+              <td class="text-right ${y1Cls}">${fmtPct(etf.one_year_return_pct ?? etf.return_1y)}</td>
+              <td class="text-right">${fmtNum(etf.vol_3y_pct ?? etf.volatility)}%</td>
+              <td class="text-right">${fmtNum(etf.yield_ttm ?? etf.dividend_yield)}%</td>
               <td class="text-center">
                 <button class="action-button details-toggle" aria-expanded="false" onclick="toggleEtfAzDetails(this)">
                   <i class="fas fa-chevron-down"></i>
@@ -1351,37 +1254,40 @@
               </td>
             `;
 
-            const dCountry = getCountry(etf) || '—';
-            const dFund    = getFundType(etf) || '—';
-            const dSector  = getSector(etf) || '—';
+            // ---------- Détails enrichis ----------
+            const sectors = toSectors(etf); // [{s,w}]
+            const holdings = toHoldings(etf); // [{t,n,w}]
+            const topSector = sectors[0] ? `${sectors[0].s}${sectors[0].w!=null ? ' — '+fmtNum(sectors[0].w)+'%' : ''}` : (etf.sector_top || '—');
+
+            const sectorsHTML = sectors.length
+              ? sectors.map(x => `<span class="inline-block px-2 py-1 rounded bg-white/5 border border-white/10 mr-1 mb-1 text-xs">
+                                    ${x.s}${x.w!=null?` <span class="opacity-60">(${fmtNum(x.w)}%)</span>`:''}
+                                  </span>`).join('')
+              : '<span class="opacity-60">—</span>';
+
+            const holdingsHTML = holdings.length
+              ? holdings.map(h => `<span class="inline-block px-2 py-1 rounded bg-white/5 border border-white/10 mr-1 mb-1 text-xs">
+                                      <strong>${h.t || '—'}</strong>${h.n?` — ${h.n}`:''}${h.w!=null?` <span class="opacity-60">(${fmtNum(h.w)}%)</span>`:''}
+                                    </span>`).join('')
+              : '<span class="opacity-60">—</span>';
+
             const details = document.createElement('tr');
             details.className = 'details-row hidden';
             details.innerHTML = `
-              <td colspan="11">
+              <td colspan="10">
                 <div class="grid md:grid-cols-3 gap-6 p-4 text-sm">
                   <div>
-                    <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Informations</div>
-                    <div class="space-y-1">
-                      <div><span class="opacity-60">Nom:</span> <strong>${etf.name || '—'}</strong></div>
-                      <div><span class="opacity-60">Ticker/ISIN:</span> ${etf.ticker || '—'} ${etf.isin ? ' • '+etf.isin : ''}</div>
-                      <div><span class="opacity-60">Pays:</span> ${dCountry}</div>
-                    </div>
+                    <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Objectif du fonds</div>
+                    <p class="leading-relaxed">${etf.objective || '—'}</p>
                   </div>
                   <div>
-                    <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Structure</div>
-                    <div class="space-y-1">
-                      <div><span class="opacity-60">Type de fonds:</span> ${dFund}</div>
-                      <div><span class="opacity-60">Secteur:</span> ${dSector}</div>
-                      <div><span class="opacity-60">Source:</span> ${etf.dataset || '—'}</div>
-                    </div>
+                    <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Secteurs</div>
+                    <div class="mb-2"><span class="opacity-60">Top secteur:</span> <strong>${topSector}</strong></div>
+                    <div class="flex flex-wrap">${sectorsHTML}</div>
                   </div>
                   <div>
-                    <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Marché</div>
-                    <div class="space-y-1">
-                      <div><span class="opacity-60">AUM:</span> ${fmtAUM(etf.aum)}</div>
-                      <div><span class="opacity-60">TER:</span> ${fmtNum(etf.ter)}%</div>
-                      <div><span class="opacity-60">Devise:</span> ${etf.currency || 'EUR'}</div>
-                    </div>
+                    <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Top holdings</div>
+                    <div class="flex flex-wrap">${holdingsHTML}</div>
                   </div>
                 </div>
               </td>
@@ -1397,8 +1303,9 @@
         $('#etf-az-container')?.classList.remove('hidden');
       }
 
-      // ---------- Wiring ----------
+      // ---------- Interactions ----------
       function wireControls(){
+        // portée
         $$('#etf-az-controls .pill').forEach(btn => {
           btn.addEventListener('click', ()=>{
             $$('#etf-az-controls .pill').forEach(b=>b.setAttribute('aria-selected','false'));
@@ -1408,6 +1315,7 @@
             render();
           });
         });
+        // sous-filtres
         $('#etf-az-country')?.addEventListener('change', e=>{ fCountry = e.target.value || ''; render(); });
         $('#etf-az-fundtype')?.addEventListener('change', e=>{ fFundType = e.target.value || ''; render(); });
         $('#etf-az-sector')?.addEventListener('change',  e=>{ fSector   = e.target.value || ''; render(); });
@@ -1418,7 +1326,7 @@
         try{
           buildTabs();
           wireControls();
-
+          // attendre que etf-script.js ait chargé les données
           let tries = 0;
           while ((!window.ETFData || !Array.isArray(window.ETFData.getData?.()) || window.ETFData.getData().length===0) && tries<40){
             await new Promise(r=>setTimeout(r, 125));
@@ -1439,7 +1347,6 @@
           $('#etf-az-error')?.classList.remove('hidden');
         }
       }
-
       document.addEventListener('DOMContentLoaded', init);
     })();
     </script>
