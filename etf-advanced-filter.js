@@ -18,6 +18,7 @@ const CONFIG = {
     TRANSLATE_OBJECTIVE: process.env.TRANSLATE_OBJECTIVE === '1',
     TRANSLATOR: process.env.TRANSLATOR || 'deepl', // 'deepl' | 'azure'
     DEEPL_API_KEY: process.env.DEEPL_API_KEY || null,
+    DEEPL_API_ENDPOINT: process.env.DEEPL_API_ENDPOINT || 'https://api-free.deepl.com', // NEW: configurable
     AZURE_TRANSLATOR_KEY: process.env.AZURE_TRANSLATOR_KEY || null,
     AZURE_TRANSLATOR_ENDPOINT: process.env.AZURE_TRANSLATOR_ENDPOINT || 'https://api.cognitive.microsofttranslator.com',
     AZURE_TRANSLATOR_REGION: process.env.AZURE_TRANSLATOR_REGION || process.env.AZURE_REGION || null,
@@ -77,8 +78,9 @@ async function translateText(text, to='fr') {
     let translated = null;
     if (useDeepL) {
       const params = new URLSearchParams({ text, target_lang: to.toUpperCase(), source_lang: 'EN' });
+      const base = CONFIG.DEEPL_API_ENDPOINT || 'https://api-free.deepl.com';
       const resp = await withTranslationSlot(() =>
-        axios.post('https://api-free.deepl.com/v2/translate', params, {
+        axios.post(`${base.replace(/\/$/,'')}/v2/translate`, params, {
           headers: {
             'Authorization': `DeepL-Auth-Key ${CONFIG.DEEPL_API_KEY}`,
             'Content-Type': 'application/x-www-form-urlencoded'
@@ -678,7 +680,7 @@ async function filterETFs() {
     console.log(`📂  Dossier de sortie: ${OUT_DIR}\n`);
     
     if (CONFIG.TRANSLATE_OBJECTIVE) {
-        console.log(`🌐  Traduction: ACTIVÉE (${CONFIG.TRANSLATOR})\n`);
+        console.log(`🌐  Traduction: ACTIVÉE (${CONFIG.TRANSLATOR} - ${CONFIG.TRANSLATOR === 'deepl' ? CONFIG.DEEPL_API_ENDPOINT : 'Azure'})\n`);
     }
     
     // Garantir que le dossier de sortie existe
