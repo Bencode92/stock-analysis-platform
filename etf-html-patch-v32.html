@@ -1,0 +1,185 @@
+<!-- etf.html PATCH v3.2 - À ajouter/modifier dans votre fichier etf.html -->
+
+<!-- ============================================= -->
+<!-- 1) AJOUTER avant </body> (fin du fichier) -->
+<!-- ============================================= -->
+
+<!-- Script ETF principal (déjà présent, vérifier l'ordre) -->
+<script src="etf-script.js"></script>
+
+<!-- NOUVEAU: Data Adapter pour unifier les données -->
+<script src="etf-data-adapter.js"></script>
+
+<!-- Scripts MC (ordre important!) -->
+<link rel="stylesheet" href="mc-styles.css">
+<script src="etf-mc-integration.js"></script>
+<script src="etf-mc-module.js"></script>
+
+
+<!-- ============================================= -->
+<!-- 2) REMPLACER la section Composer Multi-Critères -->
+<!-- ============================================= -->
+<!-- Cherchez: <section id="etf-mc-section"> et remplacez TOUTE la section jusqu'à </section> -->
+
+<section id="etf-mc-section" class="section">
+    <div class="section-highlight-top" style="position: relative; height: 2px; margin: 0 auto 20px; max-width: 500px; background: linear-gradient(90deg, transparent, rgba(0,255,255,0.6) 15%, rgba(0,255,255,0.8) 50%, rgba(0,255,255,0.6) 85%, transparent); box-shadow: 0 0 15px rgba(0,255,255,0.3);"></div>
+    <h2 class="composer-title" style="font-size: 1.3rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #00ffff !important; text-align: center; margin-bottom: 20px; text-shadow: 0 0 10px rgba(0,255,255,0.4);">Top 10 ETFs — Composer multi-critères v3.2</h2>
+    <div class="section-highlight" style="position: relative; height: 2px; margin: 0 auto 30px; max-width: 300px; background: linear-gradient(90deg, transparent, rgba(0,255,255,0.6) 20%, rgba(0,255,255,0.6) 80%, transparent);"></div>
+    
+    <div class="composer-grid" style="display: grid; grid-template-columns: minmax(420px, 500px) 1fr; gap: 24px;">
+        <!-- Colonne gauche : Filtres ETF améliorés -->
+        <aside class="composer-filters glassmorphism rounded-lg p-4" role="complementary" aria-label="Filtres ETF">
+            <!-- IMPORTANT: Notez les attributs data-role et id -->
+            <fieldset data-role="metrics">
+                <legend class="text-sm opacity-70 mb-2">Critères de sélection ETF (v3.2)</legend>
+                <div class="flex flex-wrap gap-2" id="etf-mc-metrics">
+                    <!-- Métriques principales -->
+                    <label class="mc-pill" title="Total Expense Ratio - Frais annuels">
+                        <input id="etf-m-ter" type="checkbox" checked> TER ↓
+                    </label>
+                    <label class="mc-pill" title="Assets Under Management en millions $">
+                        <input id="etf-m-aum" type="checkbox" checked> AUM ↑
+                    </label>
+                    <label class="mc-pill" title="Performance journalière">
+                        <input id="etf-m-return_1d" type="checkbox"> Perf Daily ↑
+                    </label>
+                    <label class="mc-pill" title="Performance Year-to-Date">
+                        <input id="etf-m-return_ytd" type="checkbox" checked> YTD ↑
+                    </label>
+                    <label class="mc-pill" title="Performance sur 1 an">
+                        <input id="etf-m-return_1y" type="checkbox"> Perf 1Y ↑
+                    </label>
+                    <label class="mc-pill" title="Volatilité sur 3 ans">
+                        <input id="etf-m-volatility" type="checkbox" checked> Vol 3Y ↓
+                    </label>
+                    <label class="mc-pill" title="Rendement en dividendes">
+                        <input id="etf-m-dividend_yield" type="checkbox"> Yield TTM ↑
+                    </label>
+                    
+                    <!-- Nouvelles métriques v3.2 -->
+                    <label class="mc-pill" title="Rendement net après frais (obligations)" style="border-color: rgba(132, 204, 22, 0.5);">
+                        <input id="etf-m-yield_net" type="checkbox"> Yield net ↑
+                    </label>
+                    <label class="mc-pill" title="Ratio rendement/volatilité" style="border-color: rgba(6, 182, 212, 0.5);">
+                        <input id="etf-m-sharpe_proxy" type="checkbox" checked> R/Vol ↑
+                    </label>
+                    <label class="mc-pill" title="Score de qualité des données" style="border-color: rgba(147, 51, 234, 0.5);">
+                        <input id="etf-m-quality" type="checkbox"> Qualité ↑
+                    </label>
+                </div>
+            </fieldset>
+
+            <fieldset role="radiogroup" aria-label="Mode de tri">
+                <legend class="text-xs opacity-60 mb-2">Mode de tri</legend>
+                <div class="flex gap-2">
+                    <label class="mc-pill">
+                        <input type="radio" name="etf-mc-mode" value="balanced" checked> 
+                        Équilibre auto
+                    </label>
+                    <label class="mc-pill">
+                        <input type="radio" name="etf-mc-mode" value="lexico"> 
+                        Priorités
+                    </label>
+                </div>
+            </fieldset>
+
+            <!-- IMPORTANT: Notez data-role="filters" et id="etf-mc-filters" -->
+            <fieldset data-role="filters" id="etf-mc-filters">
+                <legend class="text-sm opacity-70 mb-2">Filtres avancés</legend>
+                <div class="space-y-2 mb-2">
+                    <div class="flex gap-2 items-center">
+                        <label class="text-xs opacity-70 min-w-[60px]">Type:</label>
+                        <select id="etf-filter-type" class="mini-select flex-1" style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
+                            <option value="all">Tous types</option>
+                            <option value="equity">Actions (Equity)</option>
+                            <option value="bonds">Obligations (Bonds)</option>
+                            <option value="commodity">Matières premières</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <label class="text-xs opacity-70 min-w-[60px]">TER max:</label>
+                        <input id="etf-filter-ter" type="number" step="0.01" placeholder="0.50" 
+                               class="mini-input flex-1" style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
+                        <span class="text-xs opacity-60">%</span>
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <label class="text-xs opacity-70 min-w-[60px]">AUM min:</label>
+                        <input id="etf-filter-aum" type="number" placeholder="100" 
+                               class="mini-input flex-1" style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
+                        <span class="text-xs opacity-60">M$</span>
+                    </div>
+                    
+                    <!-- NOUVEAU: Slider qualité v3.2 -->
+                    <div class="flex gap-2 items-center">
+                        <label class="text-xs opacity-70 min-w-[60px]">Qualité min:</label>
+                        <input id="etf-filter-quality" type="range" min="0" max="100" value="80" 
+                               class="flex-1" style="accent-color: #00ffff;">
+                        <span id="quality-value" class="text-xs font-bold min-w-[30px]">80</span>
+                    </div>
+                    
+                    <!-- Toggle Leveraged/Inverse -->
+                    <div class="lev-toggle-container" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(255, 50, 50, 0.05); border: 1px solid rgba(255, 50, 50, 0.2); border-radius: 8px; margin-top: 8px;">
+                        <input id="etf-filter-leveraged" type="checkbox" checked style="accent-color: #ff6b6b;">
+                        <label for="etf-filter-leveraged" class="text-sm font-medium">
+                            Exclure ETFs Leveraged/Inverse
+                        </label>
+                        <span class="text-xs opacity-60 ml-2">(recommandé)</span>
+                    </div>
+                </div>
+            </fieldset>
+
+            <div class="border-t border-white/10 pt-4">
+                <div class="flex gap-2">
+                    <button id="etf-mc-apply" class="search-button flex-1">
+                        <i class="fas fa-magic mr-2"></i>Appliquer
+                    </button>
+                    <button id="etf-mc-reset" class="action-button" title="Réinitialiser (Esc)">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                </div>
+                <div id="etf-mc-summary" class="text-xs opacity-60 mt-2"></div>
+                <div class="text-xs opacity-40 mt-1">
+                    💡 <strong>Auto-recalcul</strong> activé • <kbd>Ctrl+Enter</kbd> pour forcer • <kbd>Esc</kbd> pour reset
+                </div>
+            </div>
+        </aside>
+
+        <!-- Colonne droite : Résultats -->
+        <div>
+            <!-- Indicateur de chargement -->
+            <div id="mc-loading" class="hidden">
+                <div class="loading-shimmer rounded-lg p-8 text-center">
+                    <div class="inline-block">
+                        <div class="loader"></div>
+                        <p class="mt-4 text-cyan-400">Calcul en cours...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Résultats -->
+            <div id="etf-mc-results" class="glassmorphism rounded-lg p-4">
+                <div class="stock-cards-container">
+                    <div class="text-center text-cyan-400 py-4">
+                        Sélectionnez vos critères • <strong>Auto-recalcul</strong> activé
+                        <div class="text-xs opacity-60 mt-2">
+                            Version 3.2 avec performances optimisées et sauvegarde des préférences
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ============================================= -->
+<!-- 3) NOTES IMPORTANTES -->
+<!-- ============================================= -->
+<!-- 
+    - L'ordre des scripts est CRUCIAL
+    - Les attributs data-role et id sont OBLIGATOIRES
+    - Le data-adapter.js unifie le format des données
+    - Le module v3.2 utilise les événements (pas de polling)
+    - Les préférences sont sauvegardées dans localStorage
+    - L'auto-recalcul est activé avec debounce de 120ms
+-->
