@@ -1,4 +1,4 @@
-// Module MC adapté pour ETFs - v3.9.0 FIXED (corrections affichage + protection nom)
+// Module MC adapté pour ETFs - v3.10.0 AUTO-FIT (métriques auto-ajustées comme Actions)
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const fmt=(n,d=2)=>Number.isFinite(+n)?(+n).toFixed(d):'—';
@@ -14,8 +14,8 @@
     const root=document.querySelector('#etf-mc-section');
     // FIX A: Sélecteurs multiples pour le conteneur
     const results=document.querySelector('#etf-mc-results .stock-cards-container, #etf-mc-results .etf-cards-container, #etf-mc-results');
-    if(!root||!results){console.error('❌ ETF MC v3.9.0: DOM manquant');return;}
-    console.log('✅ ETF MC v3.9.0: Module initialisé (avec fixes affichage)');
+    if(!root||!results){console.error('❌ ETF MC v3.10.0: DOM manquant');return;}
+    console.log('✅ ETF MC v3.10.0: Module initialisé (auto-fit comme Actions)');
 
     // Masquer les pills indésirables si elles existent dans l'UI
     ['sharpe_proxy','track_error','tracking_error','return_3y'].forEach(id=>{
@@ -23,40 +23,53 @@
       if(el) el.remove();
     });
 
-    if(!document.getElementById('etf-mc-v39-styles')){
-      const s=document.createElement('style'); s.id='etf-mc-v39-styles'; s.textContent=`
+    if(!document.getElementById('etf-mc-v310-styles')){
+      const s=document.createElement('style'); s.id='etf-mc-v310-styles'; s.textContent=`
       #etf-mc-results .stock-cards-container{display:block}
       #etf-mc-results .stock-cards-container>.etf-card{margin-bottom:.6rem}
-      /* FIX 3: Grille avec protection du nom */
+      /* PATCH 1: La 3e colonne prend tout le reste */
       .etf-card{
         display:grid;
-        grid-template-columns:52px minmax(240px,1fr) minmax(360px,auto);
+        grid-template-columns: 52px minmax(240px,0.8fr) 1fr;
         gap:14px;align-items:center;padding:14px;border-radius:14px;
         background:linear-gradient(135deg,rgba(0,86,180,.12),rgba(0,140,255,.08));
         border:1px solid rgba(0,160,255,.22);transition:.2s ease
       }
       @media (max-width:1100px){
-        .etf-card{grid-template-columns:52px minmax(200px,1fr) minmax(300px,auto)}
+        .etf-card{grid-template-columns:52px minmax(200px,0.8fr) 1fr}
       }
       @media (max-width:860px){
-        .etf-card{grid-template-columns:52px minmax(170px,1fr) minmax(260px,auto)}
+        .etf-card{grid-template-columns:52px minmax(170px,0.8fr) 1fr}
       }
       .etf-card:hover{background:linear-gradient(135deg,rgba(0,86,180,.18),rgba(0,140,255,.12));border-color:rgba(0,200,255,.42);transform:translateX(2px)}
       .etf-rank{width:52px;height:52px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;background:rgba(0,160,255,.18);color:#9fd6ff;box-shadow:0 0 14px rgba(0,160,255,.28)}
-      .etf-info{min-width:240px}
-      .etf-name{font-weight:700;min-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:8px}
+      /* PATCH 3: Protection du nom avec clamp */
+      .etf-info{min-width:clamp(220px,26vw,380px)}
+      .etf-name{
+        font-weight:700;
+        min-width:0;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+        display:flex;align-items:center;gap:8px
+      }
       .badge{font-size:.65rem;padding:3px 8px;border-radius:7px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;border:1px solid rgba(0,220,255,.35);color:#00e5ff;background:rgba(0,220,255,.12)}
       .badge.warn{color:#ff9aa7;border-color:rgba(255,90,90,.35);background:rgba(255,90,90,.12)}
       .micro{font-size:.8rem;opacity:.6;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      /* PATCH 2: Métriques en grid auto-flow (comme Actions) */
       #etf-mc-results .etf-card .metrics{
-        display:flex;align-items:center;gap:20px;
-        flex-wrap:nowrap;white-space:nowrap;
-        overflow-x:auto;scrollbar-width:thin;
-        flex:0 1 auto
+        display:grid;align-items:center;
+        grid-auto-flow:column;
+        grid-auto-columns:minmax(clamp(68px,9vw,100px),max-content);
+        gap:clamp(10px,1.4vw,18px);
+        overflow:visible;
+        white-space:normal;
       }
-      #etf-mc-results .etf-card .metric-col{display:inline-flex;flex-direction:column;min-width:90px}
+      #etf-mc-results .etf-card .metric-col{display:flex;flex-direction:column;min-width:0}
       #etf-mc-results .etf-card .metric-col .k{text-transform:uppercase;letter-spacing:.5px;font-weight:700;font-size:.82rem;opacity:.65}
       #etf-mc-results .etf-card .metric-col .v{font-weight:800;font-size:1.10rem;line-height:1;font-variant-numeric:tabular-nums}
+      /* Option compacte pour tout sur une ligne */
+      #etf-mc-results .etf-card .metrics{gap:clamp(6px,1vw,12px)}
+      #etf-mc-results .etf-card .metric-col .k{font-size:.78rem}
+      #etf-mc-results .etf-card .metric-col .v{font-size:clamp(.90rem,1.05vw,1.05rem)}
       #etf-mc-results .etf-card .chips{display:none!important}
       .g{color:#34d399}.y{color:#fbbf24}.r{color:#f87171}
       .facet-group{margin-top:10px}.facet-head{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:.85rem;opacity:.85}
