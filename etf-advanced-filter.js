@@ -1108,7 +1108,7 @@ async function filterETFs() {
             const wPct = (h.weight != null) ? (h.weight * 100).toFixed(2) : '';
             const cells = [etfSym, rank, hSym, hName, wPct].map(v => {
                 const s = String(v);
-                return /[",\n]/.test(s) ? `"${s}\"` : s;
+                return /[",\n]/.test(s) ? `"${s}"` : s;
             });
             return cells.join(',');
         });
