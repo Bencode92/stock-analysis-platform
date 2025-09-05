@@ -1,6 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
-// v11.7: Traduction française des objectifs via DeepL/Azure/OpenAI
+// v11.8: Limite configurable pour la longueur des objectifs
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -13,6 +13,9 @@ const OUT_DIR = process.env.OUT_DIR || 'data';
 const CONFIG = {
     API_KEY: process.env.TWELVE_DATA_API_KEY,
     DEBUG: process.env.DEBUG === '1',
+    
+    // Limite de longueur pour les objectifs (0 = illimité)
+    OBJECTIVE_MAXLEN: Number(process.env.OBJECTIVE_MAXLEN || 0),
     
     // Traduction (optionnelle)
     TRANSLATE_OBJECTIVE: process.env.TRANSLATE_OBJECTIVE === '1',
@@ -260,10 +263,19 @@ function topN(arr, key, n = 5) {
     return sortDescBy(arr, key).slice(0, n);
 }
 
-function sanitizeText(s, max = 240) {
+// Nettoie et optionnellement tronque les objectifs
+function clipObjective(s) {
+    const t = (!s || typeof s !== 'string') ? '' : s.replace(/\s+/g, ' ').trim();
+    const L = CONFIG.OBJECTIVE_MAXLEN;
+    // Si L = 0 ou négatif, pas de limite
+    return (L > 0 && t.length > L) ? t.slice(0, L - 1) + '…' : t;
+}
+
+// Fonction legacy pour rétro-compatibilité (garde le même nom mais utilise CONFIG)
+function sanitizeText(s, max = CONFIG.OBJECTIVE_MAXLEN || 240) {
     if (!s || typeof s !== 'string') return '';
     const t = s.replace(/\s+/g, ' ').trim();
-    return t.length > max ? t.slice(0, max - 1) + '…' : t;
+    return (max > 0 && t.length > max) ? t.slice(0, max - 1) + '…' : t;
 }
 
 function cleanSymbol(symbol) {
@@ -582,8 +594,8 @@ async function fetchWeeklyPack(symbolParam, item) {
         yield_ttm: (s.yield != null) ? Number(s.yield) : null,
         currency: s.currency || null,
         fund_type: s.fund_type || null,
-        objective: sanitizeText(objectiveFr || overviewRaw), // <= FR si dispo
-        objective_en: sanitizeText(overviewRaw),             // debug (reste dans JSON)
+        objective: clipObjective(objectiveFr || overviewRaw), // <= FR si dispo avec limite configurable
+        objective_en: clipObjective(overviewRaw),             // debug (reste dans JSON) avec limite configurable
         domicile: s.domicile || item.Country || null,
         as_of_summary: now,
         as_of_composition: now
@@ -718,10 +730,11 @@ async function processListing(item) {
 
 // Fonction principale
 async function filterETFs() {
-    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS v11.7\n');
+    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS v11.8\n');
     console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
     console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max`);
-    console.log(`📂  Dossier de sortie: ${OUT_DIR}\n`);
+    console.log(`📂  Dossier de sortie: ${OUT_DIR}`);
+    console.log(`📝  Limite objectifs: ${CONFIG.OBJECTIVE_MAXLEN || 'ILLIMITÉ'} caractères\n`);
     
     if (CONFIG.TRANSLATE_OBJECTIVE) {
         let translatorInfo = CONFIG.TRANSLATOR;
@@ -910,6 +923,13 @@ async function filterETFs() {
     const translatedCount = results.etfs.filter(e => e.objective !== e.objective_en).length + 
                            results.bonds.filter(e => e.objective !== e.objective_en).length;
     
+    // Stats longueur des objectifs
+    const objectiveLengths = [...results.etfs, ...results.bonds].map(e => (e.objective || '').length).filter(l => l > 0);
+    const maxObjectiveLength = Math.max(...objectiveLengths, 0);
+    const avgObjectiveLength = objectiveLengths.length > 0 
+        ? Math.round(objectiveLengths.reduce((a, b) => a + b, 0) / objectiveLengths.length)
+        : 0;
+    
     // Pour compatibilité, ajouter les stats data_quality
     results.stats.data_quality = {
         with_aum: results.etfs.filter(e => e.aum_usd != null).length,
@@ -936,6 +956,13 @@ async function filterETFs() {
             cache_size: Object.keys(translationCache).length
         };
     }
+    
+    // Stats objectives
+    results.stats.objectives = {
+        max_length: maxObjectiveLength,
+        avg_length: avgObjectiveLength,
+        limit_used: CONFIG.OBJECTIVE_MAXLEN || 'unlimited'
+    };
     
     // Analyser les raisons de rejet
     const rejectionReasons = {};
@@ -964,7 +991,8 @@ async function filterETFs() {
             total_etfs: results.stats.etfs_retained,
             total_bonds: results.stats.bonds_retained,
             data_quality: results.stats.data_quality,
-            translation: results.stats.translation
+            translation: results.stats.translation,
+            objectives: results.stats.objectives
         }
     };
     const weeklyPath = path.join(OUT_DIR, 'weekly_snapshot.json');
@@ -1130,6 +1158,7 @@ async function filterETFs() {
     console.log(`Rejetés: ${results.rejected.length}`);
     console.log(`Holdings ETFs: ${etfPositionsCount} positions (Top10)`);
     console.log(`Holdings Bonds: ${bondsPositionsCount} positions (Top10)`);
+    console.log(`Objectifs: max ${maxObjectiveLength} car, moy ${avgObjectiveLength} car (limite: ${CONFIG.OBJECTIVE_MAXLEN || 'illimitée'})`);
     if (CONFIG.TRANSLATE_OBJECTIVE) {
         console.log(`Traductions: ${translatedCount} objectifs traduits`);
         console.log(`Cache: ${Object.keys(translationCache).length} entrées`);
@@ -1171,6 +1200,8 @@ async function filterETFs() {
         fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `etf_holdings_rows=${narrowRows.length}\n`);
         fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_holdings_rows=${bondsNarrowRows.length}\n`);
         fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `total_holdings_positions=${etfPositionsCount + bondsPositionsCount}\n`);
+        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `max_objective_length=${maxObjectiveLength}\n`);
+        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `avg_objective_length=${avgObjectiveLength}\n`);
         if (CONFIG.TRANSLATE_OBJECTIVE) {
             fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `translated_count=${translatedCount}\n`);
         }
