@@ -166,24 +166,38 @@
     return arr.slice(0,10);
   }
 
-  // Rendu résultats - AFFICHAGE UNE LIGNE
+  // Rendu résultats — UNE LIGNE, sans duplication
   function render(indices) {
     const container = document.getElementById('crypto-mc-results');
     if (!container) return;
 
-    // Garantir / reconfigurer le wrapper en "liste" (une ligne par item)
-    let wrap = container.querySelector('.stock-cards-container');
+    // --- Garantir un SEUL wrapper réutilisable
+    let wrap = container.querySelector('#crypto-mc-list');
     if (!wrap) {
-      wrap = document.createElement('div');
-      container.appendChild(wrap);
+      // S'il existe déjà un .stock-cards-container, on le recycle
+      const existing = container.querySelector('.stock-cards-container');
+      if (existing) {
+        wrap = existing;
+        wrap.id = 'crypto-mc-list';
+      } else {
+        wrap = document.createElement('div');
+        wrap.className = 'stock-cards-container';
+        wrap.id = 'crypto-mc-list';
+        container.appendChild(wrap);
+      }
     }
-    // ⚠️ On neutralise la grille définie par .stock-cards-container
-    wrap.className = '';                    // on retire la classe qui impose la grille
-    wrap.style.display = 'block';           // liste verticale
+    // Nettoyage défensif: supprimer d'éventuels wrappers créés par erreur
+    container.querySelectorAll('.stock-cards-container, #crypto-mc-list').forEach(el => {
+      if (el !== wrap) el.remove();
+    });
+
+    // --- Forcer l'affichage vertical (1 ligne par item) SANS retirer la classe
+    wrap.classList.add('space-y-2');
+    wrap.style.display = 'block';
     wrap.style.gridTemplateColumns = 'none';
     wrap.style.gap = '0';
-    wrap.classList.add('space-y-2');        // petit espace entre les lignes
 
+    // --- Contenu
     wrap.innerHTML = '';
     if (!indices.length) {
       wrap.innerHTML = `<div class="text-center text-cyan-400 py-4">
@@ -196,7 +210,6 @@
       const r = state.data[i];
       const price = fmtPrice(toNum(r.last_close), r.currency_quote);
 
-      // Colonnes de métriques : compactes, sans retour ligne
       const cols = state.selected.map(m => {
         const raw = state.cache[m]?.raw[i];
         if (!Number.isFinite(raw)) return '';
@@ -213,10 +226,7 @@
       }).join('');
 
       const card = document.createElement('div');
-      // ✅ Tout tient sur UNE LIGNE + pas de wrap + scroll horizontal si trop serré
-      card.className = 'glassmorphism rounded-lg p-3 flex items-center gap-4 ' +
-                       'overflow-x-auto whitespace-nowrap';
-
+      card.className = 'glassmorphism rounded-lg p-3 flex items-center gap-4 overflow-x-auto whitespace-nowrap';
       card.innerHTML = `
         <div class="rank text-2xl font-bold shrink-0">#${rank + 1}</div>
         <div class="flex-1 min-w-0">
