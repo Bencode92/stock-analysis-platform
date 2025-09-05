@@ -1,5 +1,5 @@
 /**
- * crypto-script.js — version CSV avec volatilité
+ * crypto-script.js — version CSV avec volatilité (sans tops volatilité)
  * Source: data/filtered/Crypto_filtered_volatility.csv
  * Champs utilisés: symbol, currency_base, currency_quote, last_close, last_datetime,
  *                  ret_1d_pct, ret_7d_pct, ret_30d_pct, ret_90d_pct,
@@ -10,10 +10,9 @@ document.addEventListener('DOMContentLoaded', function () {
   // --- État global
   let cryptoData = {
     indices: {},      // { a: [coins...], ... }
-    top_performers: { // tops 24h, 90j et volatilité
+    top_performers: { // tops 24h et 90j seulement
       daily: { best: [], worst: [] },
-      qtr:   { best: [], worst: [] },
-      vol:   { high: [], low: [] }
+      qtr:   { best: [], worst: [] }
     },
     meta: { timestamp: null, count: 0, isStale: false, source: "CSV filtré avec volatilité" }
   };
@@ -82,7 +81,7 @@ document.addEventListener('DOMContentLoaded', function () {
       // Par lettre
       cryptoData.indices = organizeByLetter(coins);
 
-      // Tops (24h / 90j / volatilité)
+      // Tops (24h / 90j seulement)
       cryptoData.top_performers = {
         daily: {
           best: topN(coins, c => c.ret1d, 10, 'desc'),
@@ -91,10 +90,6 @@ document.addEventListener('DOMContentLoaded', function () {
         qtr: {
           best: topN(coins, c => c.ret90d, 10, 'desc'),
           worst: topN(coins, c => c.ret90d, 10, 'asc')
-        },
-        vol: {
-          high: topN(coins, c => c.vol30, 10, 'desc'),
-          low:  topN(coins, c => c.vol30, 10, 'asc')
         }
       };
 
@@ -181,21 +176,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // --------- Top 10 cartes ---------
   function updateTopTenCrypto() {
-    const { daily, qtr, vol } = cryptoData.top_performers || {};
+    const { daily, qtr } = cryptoData.top_performers || {};
 
     renderTopTenCards('top-daily-gainers', daily?.best,  c => c.ret1d);
     renderTopTenCards('top-daily-losers',  daily?.worst, c => c.ret1d);
 
     renderTopTenCards('top-qtr-gainers',   qtr?.best,    c => c.ret90d);
     renderTopTenCards('top-qtr-losers',    qtr?.worst,   c => c.ret90d);
-
-    // Nouveaux tops volatilité avec affichage neutre
-    renderTopTenCards('top-vol30-high',    vol?.high,    c => c.vol30, { neutral: true, suffix: '% (ann.)' });
-    renderTopTenCards('top-vol30-low',     vol?.low,     c => c.vol30, { neutral: true, suffix: '% (ann.)' });
   }
 
-  function renderTopTenCards(containerId, list, valFn, options = {}) {
-    const { neutral = false, suffix = '%' } = options;
+  function renderTopTenCards(containerId, list, valFn) {
     const container = byId(containerId);
     if (!container) return;
     container.innerHTML = '';
@@ -213,7 +203,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     list.slice(0, 10).forEach((c, i) => {
       const v = valFn(c);
-      const cls = neutral ? 'neutral' : valClass(v);
+      const cls = valClass(v);
       const rankStyle =
         i === 0 ? 'bg-amber-500 text-white' :
         i === 1 ? 'bg-gray-300 text-gray-800' :
@@ -227,7 +217,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <div class="stock-name">${esc(c.symbol || c.name || '-')}</div>
           <div class="stock-fullname">${esc(c.name || '-')}</div>
         </div>
-        <div class="stock-performance ${cls}">${Number.isFinite(v) ? v.toFixed(2) + suffix : '-'}</div>
+        <div class="stock-performance ${cls}">${formatPct(v)}</div>
       `;
       wrap.appendChild(card);
     });
@@ -546,11 +536,10 @@ document.addEventListener('DOMContentLoaded', function () {
     cryptoData.meta = { timestamp: new Date().toISOString(), count: demo.length, isStale: false, source: 'demo avec volatilité' };
     cryptoData.top_performers = {
       daily: { best: topN(demo, c => c.ret1d, 10, 'desc'), worst: topN(demo, c => c.ret1d, 10, 'asc') },
-      qtr:   { best: topN(demo, c => c.ret90d, 10, 'desc'), worst: topN(demo, c => c.ret90d, 10, 'asc') },
-      vol:   { high: topN(demo, c => c.vol30, 10, 'desc'), low:  topN(demo, c => c.vol30, 10, 'asc') }
+      qtr:   { best: topN(demo, c => c.ret90d, 10, 'desc'), worst: topN(demo, c => c.ret90d, 10, 'asc') }
     };
     renderCryptoData();
     updateTopTenCrypto();
-    showNotification('Utilisation de données de démonstration avec volatilité', 'warning');
+    showNotification('Utilisation de données de démonstration', 'warning');
   }
 });
