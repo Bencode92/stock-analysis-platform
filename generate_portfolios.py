@@ -6,10 +6,212 @@ import locale
 import time
 import random
 import re
+from pathlib import Path
+import pandas as pd
+
 # Importer les fonctions d'ajustement des portefeuilles
 from portfolio_adjuster import check_portfolio_constraints, adjust_portfolios, get_portfolio_prompt_additions, valid_etfs_cache, valid_bonds_cache
 # Importer la fonction de formatage du brief
 from brief_formatter import format_brief_data
+
+# ============= NOUVELLES FONCTIONS HELPER POUR LES NOUVEAUX FICHIERS =============
+
+def build_lists_summary_from_stocks_files(stocks_paths):
+    """Remplace filter_lists_data(lists_data) avec les nouveaux stocks_*.json."""
+    def load_json_safe(p):
+        try:
+            with open(p, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"  ⚠️ Impossible de charger {p}: {str(e)}")
+            return {}
+    
+    def fnum(x):
+        s = re.sub(r'[^0-9.\-]', '', str(x or ''))
+        try: 
+            return float(s) if s not in ('', '-', '.', '-.') else 0.0
+        except: 
+            return 0.0
+
+    by_sector, by_country = {}, {}
+    total_stocks_loaded = 0
+    
+    for p in stocks_paths:
+        data = load_json_safe(p)
+        items = data.get("stocks", [])
+        print(f"  📊 {p.name}: {len(items)} stocks trouvées")
+        total_stocks_loaded += len(items)
+        
+        for it in items:
+            name = it.get("name") or it.get("ticker") or ""
+            sector = it.get("sector") or "Non classé"
+            country = it.get("country") or "Non précisé"
+            ytd = it.get("perf_ytd") or it.get("ytd") or it.get("perf_1y") or 0
+            daily = it.get("perf_1d") or it.get("change_percent") or 0
+            ytd_v, daily_v = fnum(ytd), fnum(daily)
+            
+            # Même filtre que l'ancien: YTD [-5,120], Daily > -10
+            if -5 <= ytd_v <= 120 and daily_v > -10:
+                # Ajouter des tags pour les actifs potentiellement intéressants
+                display_name = name
+                if ytd_v > 50 and daily_v < 0:
+                    display_name = f"🚩 {name} (potentielle surévaluation)"
+                elif ytd_v > 10 and daily_v < -5:
+                    display_name = f"📉 {name} (forte baisse récente mais secteur haussier)"
+                
+                row = {
+                    "name": display_name,
+                    "ytd": ytd_v,
+                    "daily": daily_v,
+                    "sector": sector,
+                    "country": country,
+                    "original_name": name
+                }
+                by_sector.setdefault(sector, []).append(row)
+                by_country.setdefault(country, []).append(row)
+
+    print(f"  ✅ Total stocks chargées: {total_stocks_loaded}")
+    print(f"  ✅ Stocks filtrées (YTD -5% à 120% et Daily > -10%): {sum(len(v) for v in by_sector.values())}")
+
+    lines = ["📋 TOP 5 ACTIFS PAR SECTEUR (YTD -5% à 120% et Daily > -10%) :"]
+    total = 0
+    
+    for sector in sorted(by_sector.keys()):
+        xs = sorted(by_sector[sector], key=lambda r: r["ytd"], reverse=True)[:5]
+        if not xs: continue
+        lines.append(f"\n🏭 SECTEUR: {sector.upper()} ({len(xs)} actifs)")
+        for r in xs:
+            country_info = f" | Pays: {r['country']}" if r['country'] != "Non précisé" else ""
+            lines.append(f"• {r['name']}: YTD {r['ytd']:.2f}%, Daily {r['daily']:.2f}%{country_info}")
+        total += len(xs)
+    
+    lines.insert(1, f"Total: {total} actifs répartis dans {len(by_sector)} secteurs")
+
+    lines.append("\n🌍 TOP 5 ACTIFS PAR PAYS (YTD -5% à 120% et Daily > -10%) :")
+    total_pays = sum(min(5, len(by_country[c])) for c in by_country)
+    lines.append(f"Total: {total_pays} actifs répartis dans {len(by_country)} pays")
+    
+    for country in sorted(by_country.keys()):
+        xs = sorted(by_country[country], key=lambda r: r["ytd"], reverse=True)[:5]
+        if not xs: continue
+        lines.append(f"\n📌 PAYS: {country.upper()} ({len(xs)} actifs)")
+        for r in xs:
+            sector_info = f" | Secteur: {r['sector']}" if r['sector'] != "Non classé" else ""
+            lines.append(f"• {r['name']}: YTD {r['ytd']:.2f}%, Daily {r['daily']:.2f}%{sector_info}")
+    
+    return "\n".join(lines) if total or total_pays else "Aucune donnée d'actifs significative"
+
+def load_etf_dict_from_csvs(etf_csv_path, bonds_csv_path):
+    """Construit le dict attendu par filter_etf_data() à partir des CSV."""
+    etf = {"top50_etfs": [], "top_short_term_etfs": [], "top_bond_etfs": []}
+    
+    # Charger les ETF obligataires
+    try:
+        if Path(bonds_csv_path).exists():
+            bdf = pd.read_csv(bonds_csv_path)
+            print(f"  📊 ETF obligataires: {len(bdf)} trouvés")
+            
+            # Trouver les colonnes pertinentes
+            name_col = next((c for c in bdf.columns if str(c).lower() in ["name","etf_name","long_name","symbol"]), None)
+            ytd_col = next((c for c in bdf.columns if "ytd" in str(c).lower()), None)
+            
+            if name_col:
+                for _, r in bdf.iterrows():
+                    etf["top_bond_etfs"].append({
+                        "name": str(r[name_col]),
+                        "ytd": str(r[ytd_col]) if ytd_col and pd.notna(r[ytd_col]) else "N/A"
+                    })
+    except Exception as e:
+        print(f"  ⚠️ Erreur lors du chargement des bonds: {str(e)}")
+    
+    # Charger les ETF standards
+    try:
+        if Path(etf_csv_path).exists():
+            df = pd.read_csv(etf_csv_path)
+            print(f"  📊 ETF standards: {len(df)} trouvés")
+            
+            # Trouver les colonnes pertinentes
+            name_col = next((c for c in df.columns if str(c).lower() in ["name","etf_name","long_name","symbol"]), None)
+            ytd_col = next((c for c in df.columns if "ytd" in str(c).lower()), None)
+            dur_col = next((c for c in df.columns if "duration" in str(c).lower()), None)
+            
+            if name_col:
+                # Top 50 ETF par performance YTD
+                if ytd_col:
+                    df_sorted = df.sort_values(ytd_col, ascending=False)
+                else:
+                    df_sorted = df
+                    
+                for _, r in df_sorted.head(50).iterrows():
+                    etf["top50_etfs"].append({
+                        "name": str(r[name_col]),
+                        "ytd": str(r[ytd_col]) if ytd_col and pd.notna(r[ytd_col]) else "N/A"
+                    })
+                
+                # ETF court terme (heuristique)
+                if dur_col and dur_col in df.columns:
+                    short = df[df[dur_col] <= 1.0]
+                else:
+                    # Recherche par nom si pas de colonne duration
+                    pattern = r"short\s*term|ultra\s*short|0[-–]1|1[-–]3\s*year"
+                    short = df[df[name_col].astype(str).str.contains(pattern, case=False, regex=True)]
+                
+                for _, r in short.head(20).iterrows():
+                    etf["top_short_term_etfs"].append({
+                        "name": str(r[name_col]),
+                        "oneMonth": "N/A"
+                    })
+    except Exception as e:
+        print(f"  ⚠️ Erreur lors du chargement des ETF: {str(e)}")
+    
+    return etf
+
+def load_crypto_dict_from_csv(csv_path):
+    """Construit une structure minimale compatible filter_crypto_data()."""
+    out = {"categories": {"main": []}}
+    
+    try:
+        if Path(csv_path).exists():
+            df = pd.read_csv(csv_path)
+            print(f"  🪙 Cryptos: {len(df)} trouvées dans le CSV")
+        else:
+            print(f"  ⚠️ Fichier crypto non trouvé: {csv_path}")
+            return out
+    except Exception as e:
+        print(f"  ⚠️ Erreur lors du chargement des cryptos: {str(e)}")
+        return out
+    
+    # Mapper les colonnes
+    cols = {c.lower(): c for c in df.columns}
+    c_sym = next((cols[x] for x in cols if x in ["symbol","pair"]), None)
+    c_r1 = next((cols[x] for x in cols if x in ["ret_1d_pct","ret_1d","ret_1d%","perf_1d"]), None)
+    c_r7 = next((cols[x] for x in cols if x in ["ret_7d_pct","ret_7d","ret_7d%","perf_7d"]), None)
+    c_pr = next((cols[x] for x in cols if "last_close" in x or "price" in x), None)
+    c_tier = next((cols[x] for x in cols if "tier1" in x), None)
+    
+    def as_bool(v):
+        return str(v).lower() in ["true","1","yes"]
+    
+    cryptos_added = 0
+    for _, r in df.iterrows():
+        # Filtrer par tier si la colonne existe
+        if c_tier and not as_bool(r[c_tier]):
+            continue
+            
+        name = str(r[c_sym]) if c_sym else ""
+        out["categories"]["main"].append({
+            "name": name,
+            "symbol": name,
+            "price": str(r[c_pr]) if c_pr and pd.notna(r[c_pr]) else "",
+            "change_24h": f"{r[c_r1]}%" if c_r1 and pd.notna(r[c_r1]) else "0%",
+            "change_7d": f"{r[c_r7]}%" if c_r7 and pd.notna(r[c_r7]) else "0%",
+        })
+        cryptos_added += 1
+    
+    print(f"  ✅ Cryptos ajoutées au dict: {cryptos_added}")
+    return out
+
+# ============= FONCTIONS ORIGINALES (gardées intactes) =============
 
 def get_current_month_fr():
     """Retourne le nom du mois courant en français."""
@@ -381,7 +583,7 @@ def filter_lists_data(lists_data):
 def filter_etf_data(etfs_data):
     """Filtre les ETF par catégories."""
     if not etfs_data or not isinstance(etfs_data, dict):
-        return "Aucune donnée ETF disponible"
+        return "Aucune donnée ETF disponible", []
     
     summary = []
 
@@ -565,7 +767,7 @@ def filter_themes_data(themes_data):
                 reason = theme.get("reason", "")
                 score = theme.get("score", "")
                 if name:
-                    summary.append(f"• {name}: {reason} (Score: {score})")
+                    summary.append(f"• {name}: {reason} (Score: {score}")
     
     # Traiter les tendances baissières
     if "bearish" in themes_data and isinstance(themes_data["bearish"], list):
@@ -576,7 +778,7 @@ def filter_themes_data(themes_data):
                 reason = theme.get("reason", "")
                 score = theme.get("score", "")
                 if name:
-                    summary.append(f"• {name}: {reason} (Score: {score})")
+                    summary.append(f"• {name}: {reason} (Score: {score}")
     
     # Traiter les tendances neutres ou émergentes si elles existent
     if "emerging" in themes_data and isinstance(themes_data["emerging"], list):
@@ -662,35 +864,32 @@ if (window.recordDebugFile) {{
     
     return debug_file, html_file
 
-def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data=None, themes_data=None, brief_data=None):
-    """Génère trois portefeuilles optimisés en combinant les données fournies et le contexte actuel du marché."""
+def generate_portfolios(filtered_data):
+    """Version modifiée qui reçoit les données déjà filtrées dans un dictionnaire."""
     api_key = os.environ.get('API_CHAT')
     if not api_key:
         raise ValueError("La clé API OpenAI (API_CHAT) n'est pas définie.")
     
-    # Obtenir le mois courant en français
     current_month = get_current_month_fr()
     
-    # ===== OPTIMISATION : FILTRER LES DONNÉES =====
-    # Filtrer les données pour réduire la taille
-    filtered_news = filter_news_data(news_data)
-    filtered_markets = filter_markets_data(markets_data)
-    filtered_sectors = filter_sectors_data(sectors_data)
-    filtered_lists = filter_lists_data(lists_data)
-    filtered_etfs, bond_etf_names = filter_etf_data(etfs_data)  # Récupère aussi la liste des noms d'ETF obligataires
-    filtered_crypto = filter_crypto_data(crypto_data) if crypto_data else "Aucune donnée de crypto-monnaie disponible"
-    # Ajouter le filtrage des tendances thématiques
-    filtered_themes = filter_themes_data(themes_data) if themes_data else "Aucune donnée de tendances thématiques disponible"
-    # Traiter le résumé d'actualités complet
-    filtered_brief = format_brief_data(brief_data) if brief_data else "Aucun résumé d'actualités complet disponible"
+    # Récupérer les données pré-filtrées du dictionnaire
+    filtered_news = filtered_data.get('news', "Aucune donnée d'actualité disponible")
+    filtered_markets = filtered_data.get('markets', "Aucune donnée de marché disponible")
+    filtered_sectors = filtered_data.get('sectors', "Aucune donnée sectorielle disponible")
+    filtered_lists = filtered_data.get('lists', "Aucune donnée d'actifs disponible")
+    filtered_etfs = filtered_data.get('etfs', "Aucune donnée ETF disponible")
+    filtered_crypto = filtered_data.get('crypto', "Aucune donnée crypto disponible")
+    filtered_themes = filtered_data.get('themes', "Aucune donnée de tendances disponible")
+    filtered_brief = filtered_data.get('brief', "Aucun résumé disponible")
+    bond_etf_names = filtered_data.get('bond_etf_names', [])
     
-    # Formater la liste des ETF obligataires pour le prompt
+    # Formater la liste des ETF obligataires
     bond_etf_list = "\n".join([f"- {name}" for name in bond_etf_names])
     
-    # Ajouter des logs pour déboguer les entrées
-    print(f"🔍 Longueur des données FILTRÉES:")
+    # Logs de débogage
+    print(f"\n🔍 Longueur des données FILTRÉES:")
     print(f"  📰 Actualités: {len(filtered_news)} caractères")
-    print(f"  📜 Résumé d'actualités complet: {len(filtered_brief)} caractères")
+    print(f"  📜 Brief: {len(filtered_brief)} caractères")
     print(f"  📈 Marché: {len(filtered_markets)} caractères")
     print(f"  🏭 Secteurs: {len(filtered_sectors)} caractères")
     print(f"  📋 Listes: {len(filtered_lists)} caractères")
@@ -716,7 +915,7 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     print(filtered_crypto[:200] + "..." if len(filtered_crypto) > 200 else filtered_crypto)
     print("\n----- THÈMES (données filtrées) -----")
     print(filtered_themes[:200] + "..." if len(filtered_themes) > 200 else filtered_themes)
-    print("\n===========================================")
+    print("\n=========================================")
     
     # Afficher la liste des ETF obligataires trouvés
     print(f"\n📊 ETF obligataires trouvés: {len(bond_etf_names)}")
@@ -986,7 +1185,7 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
                 "temperature": 0.3           # 👈 Température réduite
             }
             
-            print(f"🚀 Envoi de la requête à l'API OpenAI (tentative {attempt+1}/{max_retries})...")
+            print(f"\n🚀 Envoi de la requête à l'API OpenAI (tentative {attempt+1}/{max_retries})...")
             response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
             response.raise_for_status()
             
@@ -1007,7 +1206,7 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
             # Vérifier que le contenu est bien du JSON valide
             portfolios = json.loads(content)
             
-            print("✅ Portefeuilles générés")
+            print("\n✅ Portefeuilles générés avec succès")
             
             # Afficher un résumé des actifs par portefeuille
             for portfolio_type, portfolio in portfolios.items():
@@ -1108,50 +1307,117 @@ def update_history_index(history_file, portfolio_data):
         print("⚠️ Avertissement: Erreur lors de la mise à jour de l'index: {}".format(str(e)))
 
 def main():
+    """Version modifiée pour utiliser les nouveaux fichiers."""
     print("🔍 Chargement des données financières...")
-    # Charger les données JSON directement depuis le dossier data/
-    news_data = load_json_data('data/news.json')
+    print("=" * 60)
+    
+    # ========== CHARGEMENT DES DONNÉES DEPUIS LES NOUVEAUX FICHIERS ==========
+    
+    # 1. Données inchangées (gardent les anciens formats)
+    print("\n📂 Chargement des fichiers JSON standards...")
     markets_data = load_json_data('data/markets.json')
     sectors_data = load_json_data('data/sectors.json')
-    lists_data = load_json_data('data/lists.json')
-    etfs_data = load_json_data('data/etf.json')
-    crypto_data = load_json_data('data/crypto_lists.json')
-    # Ajouter le chargement des tendances thématiques
     themes_data = load_json_data('data/themes.json')
+    news_data = load_json_data('data/news.json')  # ou news_digest.json si disponible
     
-    # Essayer de charger le résumé d'actualités complet depuis différents emplacements possibles
+    # 2. Nouveaux fichiers stocks
+    print("\n📂 Chargement des nouveaux fichiers stocks...")
+    stocks_files = [
+        Path('data/stocks_us.json'),
+        Path('data/stocks_europe.json'),
+        Path('data/stocks_asia.json')
+    ]
+    stocks_files_exist = [f for f in stocks_files if f.exists()]
+    print(f"  Fichiers trouvés: {[f.name for f in stocks_files_exist]}")
+    
+    # 3. Nouveaux fichiers ETF
+    print("\n📂 Chargement des nouveaux fichiers ETF/Bonds...")
+    etf_csv = Path('data/combined_etfs.csv')
+    bonds_csv = Path('data/combined_bonds.csv')
+    print(f"  ETF CSV existe: {etf_csv.exists()}")
+    print(f"  Bonds CSV existe: {bonds_csv.exists()}")
+    
+    # 4. Nouveau fichier crypto
+    print("\n📂 Chargement du nouveau fichier crypto...")
+    crypto_csv = Path('data/filtered/Crypto_filtered_volatility.csv')
+    print(f"  Crypto CSV existe: {crypto_csv.exists()}")
+    
+    # 5. Brief stratégique
+    print("\n📂 Recherche du brief stratégique...")
     brief_data = None
     brief_paths = ['brief_ia.json', './brief_ia.json', 'data/brief_ia.json']
-    
     for path in brief_paths:
         try:
-            with open(path, 'r', encoding='utf-8') as file:
-                brief_data = json.load(file)
-                print(f"✅ Résumé d'actualités chargé avec succès depuis {path}")
+            with open(path, 'r', encoding='utf-8') as f:
+                brief_data = json.load(f)
+                print(f"  ✅ Brief chargé depuis {path}")
                 break
-        except Exception as e:
-            print(f"⚠️ Impossible de charger {path}: {str(e)}")
+        except Exception:
+            pass
     
     if brief_data is None:
-        print("⚠️ Aucun fichier brief_ia.json trouvé parmi les chemins testés")
+        print("  ⚠️ Aucun fichier brief_ia.json trouvé")
     
-    print("🧠 Génération des portefeuilles optimisés...")
-    portfolios = generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data, themes_data, brief_data)
+    print("\n" + "=" * 60)
     
-    print("💾 Sauvegarde des portefeuilles...")
+    # ========== FILTRAGE ET PRÉPARATION DES DONNÉES ==========
+    
+    print("\n🔄 Filtrage et préparation des données...")
+    
+    # Créer le résumé des stocks (remplace l'ancien filter_lists_data)
+    filtered_lists = build_lists_summary_from_stocks_files(stocks_files_exist)
+    
+    # Charger et filtrer les ETF
+    etfs_data = load_etf_dict_from_csvs(str(etf_csv), str(bonds_csv))
+    filtered_etfs, bond_etf_names = filter_etf_data(etfs_data)
+    
+    # Charger et filtrer les cryptos
+    crypto_data = load_crypto_dict_from_csv(str(crypto_csv))
+    filtered_crypto = filter_crypto_data(crypto_data)
+    
+    # Filtrer les autres données avec les fonctions existantes
+    filtered_news = filter_news_data(news_data) if news_data else "Aucune donnée d'actualité disponible"
+    filtered_markets = filter_markets_data(markets_data) if markets_data else "Aucune donnée de marché disponible"
+    filtered_sectors = filter_sectors_data(sectors_data) if sectors_data else "Aucune donnée sectorielle disponible"
+    filtered_themes = filter_themes_data(themes_data) if themes_data else "Aucune donnée de tendances disponible"
+    filtered_brief = format_brief_data(brief_data) if brief_data else "Aucun résumé d'actualités disponible"
+    
+    # ========== GÉNÉRATION DES PORTEFEUILLES ==========
+    
+    print("\n🧠 Génération des portefeuilles optimisés...")
+    
+    # Préparer le dictionnaire des données filtrées
+    filtered_data = {
+        'news': filtered_news,
+        'markets': filtered_markets,
+        'sectors': filtered_sectors,
+        'lists': filtered_lists,
+        'etfs': filtered_etfs,
+        'crypto': filtered_crypto,
+        'themes': filtered_themes,
+        'brief': filtered_brief,
+        'bond_etf_names': bond_etf_names
+    }
+    
+    # Générer les portefeuilles
+    portfolios = generate_portfolios(filtered_data)
+    
+    # ========== SAUVEGARDE ==========
+    
+    print("\n💾 Sauvegarde des portefeuilles...")
     save_portfolios(portfolios)
     
-    print("✨ Traitement terminé!")
+    print("\n✨ Traitement terminé!")
 
 def load_json_data(file_path):
     """Charger des données depuis un fichier JSON."""
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             data = json.load(file)
-            print(f"✅ Données JSON chargées avec succès depuis {file_path}")
+            print(f"  ✅ {file_path}: {len(data)} entrées")
             return data
     except Exception as e:
-        print(f"❌ Erreur lors du chargement de {file_path}: {str(e)}")
+        print(f"  ❌ Erreur {file_path}: {str(e)}")
         return {}
 
 if __name__ == "__main__":
