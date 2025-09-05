@@ -1,6 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
-// v11.7: Traduction française des objectifs via DeepL/Azure/OpenAI
+// v11.8: Ajout OBJECTIVE_MAXLEN configurable pour limiter la longueur des objectifs
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -27,6 +27,9 @@ const CONFIG = {
     OPENAI_BASE_URL: (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/,''),
     OPENAI_MODEL: process.env.OPENAI_MODEL || 'gpt-4o-mini',
     TRANSLATION_CONCURRENCY: Number(process.env.TRANSLATION_CONCURRENCY || 2),
+    
+    // Longueur max pour les objectifs (nouveau)
+    OBJECTIVE_MAXLEN: Number(process.env.OBJECTIVE_MAXLEN || 400),
     
     // Seuils différenciés
     MIN_ADV_USD_ETF: 1_000_000,    // 1M$ pour ETF
@@ -582,8 +585,8 @@ async function fetchWeeklyPack(symbolParam, item) {
         yield_ttm: (s.yield != null) ? Number(s.yield) : null,
         currency: s.currency || null,
         fund_type: s.fund_type || null,
-        objective: sanitizeText(objectiveFr || overviewRaw), // <= FR si dispo
-        objective_en: sanitizeText(overviewRaw),             // debug (reste dans JSON)
+        objective: sanitizeText(objectiveFr || overviewRaw, CONFIG.OBJECTIVE_MAXLEN), // <= Utilise OBJECTIVE_MAXLEN
+        objective_en: sanitizeText(overviewRaw, CONFIG.OBJECTIVE_MAXLEN),              // <= Utilise OBJECTIVE_MAXLEN
         domicile: s.domicile || item.Country || null,
         as_of_summary: now,
         as_of_composition: now
@@ -718,9 +721,10 @@ async function processListing(item) {
 
 // Fonction principale
 async function filterETFs() {
-    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS v11.7\n');
+    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS v11.8\n');
     console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
     console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max`);
+    console.log(`📏  Longueur max objectifs: ${CONFIG.OBJECTIVE_MAXLEN} caractères`);
     console.log(`📂  Dossier de sortie: ${OUT_DIR}\n`);
     
     if (CONFIG.TRANSLATE_OBJECTIVE) {
