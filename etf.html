@@ -1218,12 +1218,14 @@
       function indexByLetter(list){
         const map = {}; 'abcdefghijklmnopqrstuvwxyz'.split('').forEach(l=>map[l]=[]);
         list.forEach(e => {
-          const keySrc = String(e.name || e.ticker || e.isin || '').trim();
+          // CORRECTION: Prioriser le ticker pour le classement alphabétique
+          const keySrc = String(e.ticker || e.isin || e.name || '').trim();
           if (!keySrc) return;
           const first = keySrc[0].toLowerCase();
           if (map[first]) map[first].push(e);
         });
-        Object.keys(map).forEach(l => map[l].sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''))))
+        // Trier par ticker au lieu du nom
+        Object.keys(map).forEach(l => map[l].sort((a,b)=> String(a.ticker||a.name||'').localeCompare(String(b.ticker||b.name||''))))
         return map;
       }
       function uniqSorted(arr){ return [...new Set(arr.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b))); }
