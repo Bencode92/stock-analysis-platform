@@ -1,19 +1,21 @@
 /**
- * crypto-script.js — version CSV
+ * crypto-script.js — version CSV avec volatilité
  * Source: data/filtered/Crypto_filtered_volatility.csv
  * Champs utilisés: symbol, currency_base, currency_quote, last_close, last_datetime,
- *                  ret_1d_pct, ret_7d_pct, ret_30d_pct, ret_90d_pct
+ *                  ret_1d_pct, ret_7d_pct, ret_30d_pct, ret_90d_pct,
+ *                  vol_7d_annual_pct, vol_30d_annual_pct, atr14_pct, drawdown_90d_pct
  */
 
 document.addEventListener('DOMContentLoaded', function () {
   // --- État global
   let cryptoData = {
     indices: {},      // { a: [coins...], ... }
-    top_performers: { // tops 24h et 90j
+    top_performers: { // tops 24h, 90j et volatilité
       daily: { best: [], worst: [] },
-      qtr:   { best: [], worst: [] }
+      qtr:   { best: [], worst: [] },
+      vol:   { high: [], low: [] }
     },
-    meta: { timestamp: null, count: 0, isStale: false, source: "CSV filtré" }
+    meta: { timestamp: null, count: 0, isStale: false, source: "CSV filtré avec volatilité" }
   };
 
   let isLoading = false;
@@ -55,16 +57,20 @@ document.addEventListener('DOMContentLoaded', function () {
       const text = await res.text();
       const rows = csvToObjects(text);
 
-      // Adapter/typer
+      // Adapter/typer avec tous les champs
       const coins = rows.map(r => ({
         name: r.currency_base || r.symbol || '',
         symbol: r.symbol || '',
         quote: r.currency_quote || 'US Dollar',
         price: toNum(r.last_close),
-        ret1d: toNum(r.ret_1d_pct),
-        ret7d: toNum(r.ret_7d_pct),
+        ret1d:  toNum(r.ret_1d_pct),
+        ret7d:  toNum(r.ret_7d_pct),
         ret30d: toNum(r.ret_30d_pct),
         ret90d: toNum(r.ret_90d_pct),
+        vol7:   toNum(r.vol_7d_annual_pct),
+        vol30:  toNum(r.vol_30d_annual_pct),
+        atr14:  toNum(r.atr14_pct),
+        dd90:   toNum(r.drawdown_90d_pct),
         last_datetime: r.last_datetime || null
       })).filter(c => c.name);
 
@@ -76,7 +82,7 @@ document.addEventListener('DOMContentLoaded', function () {
       // Par lettre
       cryptoData.indices = organizeByLetter(coins);
 
-      // Tops (24h / 90j)
+      // Tops (24h / 90j / volatilité)
       cryptoData.top_performers = {
         daily: {
           best: topN(coins, c => c.ret1d, 10, 'desc'),
@@ -85,6 +91,10 @@ document.addEventListener('DOMContentLoaded', function () {
         qtr: {
           best: topN(coins, c => c.ret90d, 10, 'desc'),
           worst: topN(coins, c => c.ret90d, 10, 'asc')
+        },
+        vol: {
+          high: topN(coins, c => c.vol30, 10, 'desc'),
+          low:  topN(coins, c => c.vol30, 10, 'asc')
         }
       };
 
@@ -129,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!items.length) {
           body.innerHTML = `
             <tr>
-              <td colspan="7" class="text-center py-4 text-gray-400">
+              <td colspan="9" class="text-center py-4 text-gray-400">
                 <i class="fas fa-info-circle mr-2"></i>
                 Aucune cryptomonnaie disponible pour cette lettre
               </td>
@@ -152,6 +162,8 @@ document.addEventListener('DOMContentLoaded', function () {
             <td class="${td7dCls}">${formatPct(c.ret7d)}</td>
             <td class="${td30dCls}">${formatPct(c.ret30d)}</td>
             <td class="${td90dCls}">${formatPct(c.ret90d)}</td>
+            <td class="neutral">${formatPct(c.vol7)}</td>
+            <td class="neutral">${formatPct(c.vol30)}</td>
           `;
           body.appendChild(row);
         });
@@ -169,16 +181,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // --------- Top 10 cartes ---------
   function updateTopTenCrypto() {
-    const { daily, qtr } = cryptoData.top_performers || {};
+    const { daily, qtr, vol } = cryptoData.top_performers || {};
 
     renderTopTenCards('top-daily-gainers', daily?.best,  c => c.ret1d);
     renderTopTenCards('top-daily-losers',  daily?.worst, c => c.ret1d);
 
     renderTopTenCards('top-qtr-gainers',   qtr?.best,    c => c.ret90d);
     renderTopTenCards('top-qtr-losers',    qtr?.worst,   c => c.ret90d);
+
+    // Nouveaux tops volatilité avec affichage neutre
+    renderTopTenCards('top-vol30-high',    vol?.high,    c => c.vol30, { neutral: true, suffix: '% (ann.)' });
+    renderTopTenCards('top-vol30-low',     vol?.low,     c => c.vol30, { neutral: true, suffix: '% (ann.)' });
   }
 
-  function renderTopTenCards(containerId, list, valFn) {
+  function renderTopTenCards(containerId, list, valFn, options = {}) {
+    const { neutral = false, suffix = '%' } = options;
     const container = byId(containerId);
     if (!container) return;
     container.innerHTML = '';
@@ -196,7 +213,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     list.slice(0, 10).forEach((c, i) => {
       const v = valFn(c);
-      const cls = valClass(v);
+      const cls = neutral ? 'neutral' : valClass(v);
       const rankStyle =
         i === 0 ? 'bg-amber-500 text-white' :
         i === 1 ? 'bg-gray-300 text-gray-800' :
@@ -210,7 +227,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <div class="stock-name">${esc(c.symbol || c.name || '-')}</div>
           <div class="stock-fullname">${esc(c.name || '-')}</div>
         </div>
-        <div class="stock-performance ${cls}">${formatPct(v)}</div>
+        <div class="stock-performance ${cls}">${Number.isFinite(v) ? v.toFixed(2) + suffix : '-'}</div>
       `;
       wrap.appendChild(card);
     });
@@ -372,6 +389,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 <th>% 7J</th>
                 <th>% 30J</th>
                 <th>% 90J</th>
+                <th>VOL 7J (ann.)</th>
+                <th>VOL 30J (ann.)</th>
               </tr>
             </thead>
             <tbody id="${letter}-indices-body"></tbody>
@@ -384,11 +403,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // --------- Utilitaires ---------
   function csvToObjects(text) {
-    // parsing simple (CSV sans guillemets imbriqués)
+    // parsing amélioré pour gérer les virgules dans les valeurs entre guillemets
     const lines = text.trim().split(/\r?\n/);
     const headers = lines[0].split(',').map(h => h.trim());
+    
     return lines.slice(1).map(line => {
-      const cells = line.split(',').map(c => c.trim());
+      // Gère les valeurs avec virgules entre guillemets
+      const cells = line.match(/(".*?"|[^,]+)/g)?.map(c => 
+        c.trim().replace(/^"|"$/g, '')
+      ) || [];
+      
       const obj = {};
       headers.forEach((h, i) => (obj[h] = cells[i] ?? ''));
       return obj;
@@ -438,7 +462,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function valClass(v) {
     if (!Number.isFinite(v) || v === 0) return 'neutral';
     return v > 0 ? 'positive' : 'negative';
-    }
+  }
 
   function formatPct(v) {
     if (!Number.isFinite(v)) return '-';
@@ -513,19 +537,20 @@ document.addEventListener('DOMContentLoaded', function () {
   // --------- Données de démo (fallback visuel) ---------
   function loadDemoData() {
     const demo = [
-      { name: "Bitcoin",  symbol: "BTC", quote: "US Dollar", price: 62150.25, ret1d: 1.2,  ret7d: 3.5,  ret30d: 12.2, ret90d: 45.8 },
-      { name: "Ethereum", symbol: "ETH", quote: "US Dollar", price: 3340.18,  ret1d: 2.5,  ret7d: 4.1,  ret30d: 10.0, ret90d: 32.9 },
-      { name: "Solana",   symbol: "SOL", quote: "US Dollar", price: 146.75,   ret1d: 5.3,  ret7d: 7.5,  ret30d: 22.0, ret90d: 120.1 },
-      { name: "Cardano",  symbol: "ADA", quote: "US Dollar", price: 0.65,     ret1d: -1.2, ret7d: -2.5, ret30d: 5.0,  ret90d: -12.5 },
+      { name: "Bitcoin",  symbol: "BTC", quote: "US Dollar", price: 62150.25, ret1d: 1.2,  ret7d: 3.5,  ret30d: 12.2, ret90d: 45.8,  vol7: 68.5, vol30: 72.3, atr14: 3.2, dd90: -18.5 },
+      { name: "Ethereum", symbol: "ETH", quote: "US Dollar", price: 3340.18,  ret1d: 2.5,  ret7d: 4.1,  ret30d: 10.0, ret90d: 32.9,  vol7: 75.2, vol30: 78.9, atr14: 4.1, dd90: -22.3 },
+      { name: "Solana",   symbol: "SOL", quote: "US Dollar", price: 146.75,   ret1d: 5.3,  ret7d: 7.5,  ret30d: 22.0, ret90d: 120.1, vol7: 95.3, vol30: 98.7, atr14: 5.8, dd90: -35.2 },
+      { name: "Cardano",  symbol: "ADA", quote: "US Dollar", price: 0.65,     ret1d: -1.2, ret7d: -2.5, ret30d: 5.0,  ret90d: -12.5, vol7: 82.1, vol30: 85.6, atr14: 4.5, dd90: -42.1 },
     ];
     cryptoData.indices = organizeByLetter(demo);
-    cryptoData.meta = { timestamp: new Date().toISOString(), count: demo.length, isStale: false, source: 'demo' };
+    cryptoData.meta = { timestamp: new Date().toISOString(), count: demo.length, isStale: false, source: 'demo avec volatilité' };
     cryptoData.top_performers = {
       daily: { best: topN(demo, c => c.ret1d, 10, 'desc'), worst: topN(demo, c => c.ret1d, 10, 'asc') },
-      qtr:   { best: topN(demo, c => c.ret90d, 10, 'desc'), worst: topN(demo, c => c.ret90d, 10, 'asc') }
+      qtr:   { best: topN(demo, c => c.ret90d, 10, 'desc'), worst: topN(demo, c => c.ret90d, 10, 'asc') },
+      vol:   { high: topN(demo, c => c.vol30, 10, 'desc'), low:  topN(demo, c => c.vol30, 10, 'asc') }
     };
     renderCryptoData();
     updateTopTenCrypto();
-    showNotification('Utilisation de données de démonstration', 'warning');
+    showNotification('Utilisation de données de démonstration avec volatilité', 'warning');
   }
 });
