@@ -1159,6 +1159,12 @@
                          <button class="top-tab-btn" data-index="qtr-losers">
                              <i class="fas fa-calendar-times text-orange-400 mr-2"></i> Baisses 3 mois
                          </button>
+                         <button class="top-tab-btn" data-index="vol30-high">
+                             <i class="fas fa-bolt text-yellow-400 mr-2"></i> Plus volatiles 30j
+                         </button>
+                         <button class="top-tab-btn" data-index="vol30-low">
+                             <i class="fas fa-wind text-cyan-400 mr-2"></i> Moins volatiles 30j
+                         </button>
                      </div>
                      
                      <!-- Conteneurs pour chaque vue (seul le premier est visible par défaut) -->
@@ -1181,6 +1187,18 @@
                      </div>
                      
                      <div id="top-qtr-losers" class="top-stocks-content hidden">
+                         <div class="stock-cards-container">
+                             <!-- Les cartes seront générées dynamiquement ici -->
+                         </div>
+                     </div>
+
+                     <div id="top-vol30-high" class="top-stocks-content hidden">
+                         <div class="stock-cards-container">
+                             <!-- Les cartes seront générées dynamiquement ici -->
+                         </div>
+                     </div>
+
+                     <div id="top-vol30-low" class="top-stocks-content hidden">
                          <div class="stock-cards-container">
                              <!-- Les cartes seront générées dynamiquement ici -->
                          </div>
@@ -1258,7 +1276,7 @@
                  
                  <!-- Source et avertissement -->
                  <div class="text-center text-sm text-gray-400 mb-6 p-4 glassmorphism rounded-lg bg-opacity-50">
-                     <p id="source-link">Source: données CSV filtrées</p>
+                     <p id="source-link">Source: données CSV filtrées avec métriques de volatilité</p>
                      <p class="mt-2">Les données sont actualisées régulièrement mais peuvent accuser un retard par rapport aux marchés en temps réel.</p>
                  </div>
              </div>
