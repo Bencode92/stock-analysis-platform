@@ -1145,7 +1145,7 @@
                  <div class="top-stocks-container mb-10">
                      <h2 class="section-title mb-4">Performances Crypto</h2>
                      
-                     <!-- Onglets pour changer de vue avec les nouveaux libellés -->
+                     <!-- Onglets pour changer de vue (SANS les onglets volatiles) -->
                      <div class="index-tabs">
                          <button class="top-tab-btn active" data-index="daily-gainers">
                              <i class="fas fa-arrow-up text-green-400 mr-2"></i> Hausses en 24h
@@ -1158,12 +1158,6 @@
                          </button>
                          <button class="top-tab-btn" data-index="qtr-losers">
                              <i class="fas fa-calendar-times text-orange-400 mr-2"></i> Baisses 3 mois
-                         </button>
-                         <button class="top-tab-btn" data-index="vol30-high">
-                             <i class="fas fa-bolt text-yellow-400 mr-2"></i> Plus volatiles 30j
-                         </button>
-                         <button class="top-tab-btn" data-index="vol30-low">
-                             <i class="fas fa-wind text-cyan-400 mr-2"></i> Moins volatiles 30j
                          </button>
                      </div>
                      
@@ -1187,18 +1181,6 @@
                      </div>
                      
                      <div id="top-qtr-losers" class="top-stocks-content hidden">
-                         <div class="stock-cards-container">
-                             <!-- Les cartes seront générées dynamiquement ici -->
-                         </div>
-                     </div>
-
-                     <div id="top-vol30-high" class="top-stocks-content hidden">
-                         <div class="stock-cards-container">
-                             <!-- Les cartes seront générées dynamiquement ici -->
-                         </div>
-                     </div>
-
-                     <div id="top-vol30-low" class="top-stocks-content hidden">
                          <div class="stock-cards-container">
                              <!-- Les cartes seront générées dynamiquement ici -->
                          </div>
