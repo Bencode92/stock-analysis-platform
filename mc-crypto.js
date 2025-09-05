@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v2
+// mc-crypto.js — Composer multi-critères (Crypto) v2.1 - UI Optimisée
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -296,6 +296,60 @@
     }
   }
 
+  // ==== Nouvelle fonction pour compacter l'UI des filtres
+  function compactFilterUI() {
+    const row = $('#cf-add')?.parentElement; // la rangée qui contient metric/op/val/%/+
+    if (!row) return;
+
+    // Mise en page compacte (une seule ligne, pas de débordement)
+    row.style.display = 'grid';
+    row.style.gridTemplateColumns = 'minmax(120px,1fr) 56px 72px 18px 34px';
+    row.style.gap = '6px';
+    row.style.alignItems = 'center';
+    row.style.maxWidth = '100%';
+    row.style.overflow = 'hidden';
+    row.style.whiteSpace = 'nowrap';
+
+    // Champs compacts
+    const metric = $('#cf-metric');
+    const op = $('#cf-op');
+    const val = $('#cf-val');
+    const add = $('#cf-add');
+
+    if (metric) { 
+      metric.style.minWidth = '0'; 
+      metric.style.flex = '1 1 auto';
+      metric.style.fontSize = '0.8rem';
+    }
+    if (op) { 
+      op.style.width = '56px';
+      op.style.fontSize = '0.8rem';
+    }
+    if (val) { 
+      val.style.width = '72px'; 
+      val.setAttribute('step','0.1');
+      val.style.fontSize = '0.8rem';
+    }
+    if (add) {
+      add.style.width = '34px';
+      add.style.height = '34px';
+      add.style.padding = '0';
+      add.style.display = 'inline-flex';
+      add.style.alignItems = 'center';
+      add.style.justifyContent = 'center';
+      add.style.fontSize = '0.8rem';
+    }
+
+    // Le "%" (si c'est l'élément juste après l'input)
+    const unit = val?.nextElementSibling;
+    if (unit) { 
+      unit.style.fontSize = '12px'; 
+      unit.style.opacity = '0.6'; 
+      unit.style.textAlign = 'center';
+      unit.style.whiteSpace = 'nowrap';
+    }
+  }
+
   // ==== UI bindings
   function wireUI() {
     // checkboxes métriques
@@ -353,6 +407,7 @@
 
     drawFilters();
     updatePriorityUI();
+    compactFilterUI();  // Appel de la fonction d'optimisation UI
   }
 
   function drawFilters() {
@@ -364,8 +419,10 @@
                    : (f.operator==='<'||f.operator==='<=') ? 'text-red-400'
                    : 'text-yellow-400';
       return `<div class="filter-item flex items-center gap-2 p-2 rounded bg-white/5">
-        <span class="flex-1">${lab} <span class="${color} font-semibold">${f.operator} ${f.value}%</span></span>
-        <button class="remove-filter text-red-400 hover:text-red-300 text-sm" data-i="${idx}"><i class="fas fa-times"></i></button>
+        <span class="flex-1 min-w-0">
+          <span class="whitespace-nowrap overflow-hidden text-ellipsis">${lab} <span class="${color} font-semibold">${f.operator} ${f.value}%</span></span>
+        </span>
+        <button class="remove-filter text-red-400 hover:text-red-300 text-sm shrink-0" data-i="${idx}"><i class="fas fa-times"></i></button>
       </div>`;
     }).join('') || '<div class="text-xs opacity-50 text-center py-2">Aucun filtre</div>';
     cont.querySelectorAll('.remove-filter').forEach(btn=>{
@@ -445,27 +502,54 @@
 
   // --- boot robuste : lance init() tout de suite si le DOM est déjà prêt
   function boot() {
-    // (facultatif) petits styles inline
-    document.querySelectorAll('.mc-pill').forEach(x=>{
-      x.style.display = 'inline-flex';
-      x.style.alignItems = 'center';
-      x.style.gap = '6px';
-      x.style.padding = x.style.padding || '6px 12px';
-      x.style.borderRadius = x.style.borderRadius || '8px';
-      x.style.fontSize = '0.85rem';
-      x.style.cursor = 'pointer';
-      x.style.transition = 'all 0.2s';
-      x.style.border = '1px solid rgba(0, 255, 135, 0.3)';
-      x.style.backgroundColor = 'rgba(0, 255, 135, 0.1)';
-    });
-    document.querySelectorAll('.mini-input, .mini-select').forEach(x=>{
-      x.style.padding = '6px 8px';
-      x.style.borderRadius = '6px';
-      x.style.fontSize = '0.85rem';
-      x.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
-      x.style.border = '1px solid rgba(255, 255, 255, 0.2)';
-      x.style.color = 'white';
-    });
+    // Styles CSS compacts pour les filtres
+    const mcCompactCSS = document.createElement('style');
+    mcCompactCSS.textContent = `
+      #crypto-mc-filters .filter-item { 
+        padding: 6px 8px; 
+        font-size: 0.85rem; 
+      }
+      #crypto-mc-filters .filter-item .flex-1 { 
+        min-width: 0; 
+      }
+      #crypto-mc-filters .filter-item .flex-1 > span { 
+        white-space: nowrap; 
+        overflow: hidden; 
+        text-overflow: ellipsis;
+        display: block;
+      }
+      /* Amélioration des pills */
+      .mc-pill {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        padding: 6px 12px !important;
+        border-radius: 8px !important;
+        font-size: 0.85rem !important;
+        cursor: pointer !important;
+        transition: all 0.2s !important;
+        border: 1px solid rgba(0, 255, 135, 0.3) !important;
+        background-color: rgba(0, 255, 135, 0.1) !important;
+      }
+      .mc-pill:hover {
+        background-color: rgba(0, 255, 135, 0.2) !important;
+        transform: translateY(-1px);
+      }
+      .mc-pill.is-checked {
+        background-color: rgba(0, 255, 135, 0.25) !important;
+        border-color: var(--accent-color) !important;
+      }
+      /* Inputs et selects compacts */
+      .mini-input, .mini-select {
+        padding: 6px 8px !important;
+        border-radius: 6px !important;
+        font-size: 0.85rem !important;
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: white !important;
+      }
+    `;
+    document.head.appendChild(mcCompactCSS);
 
     init().catch(err => {
       console.error('mc-crypto init:', err);
