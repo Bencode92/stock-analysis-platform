@@ -31,6 +31,7 @@ jobs:
         TRANSLATOR: 'openai'
         API_CHAT: ${{ secrets.API_CHAT }}      # votre clé OpenAI
         OPENAI_MODEL: 'gpt-4o-mini'            # modèle économique et efficace
+        OBJECTIVE_MAXLEN: '0'                  # 0 = texte complet (pas de limite)
         DEBUG: '0'                              # mettre à 1 pour voir les logs détaillés
       run: node etf-advanced-filter.js
     
