@@ -353,14 +353,36 @@
     render(topIdx);
   }
 
+  // Fetch robuste (essaie plusieurs chemins)
+  async function fetchFirst(paths) {
+    for (const p of paths) {
+      try {
+        const url = new URL(p, document.baseURI).href + `?t=${Date.now()}`;
+        const r = await fetch(url, { cache: 'no-store' });
+        if (r.ok) return await r.text();
+        console.warn('CSV miss:', url, r.status);
+      } catch (e) {
+        console.warn('CSV error:', p, e);
+      }
+    }
+    throw new Error('CSV introuvable sur les chemins testés.');
+  }
+
   // Load
   async function init() {
     const root = document.getElementById('crypto-mc');
     if (!root) return;
-    const res = await fetch(CSV_URL + `?t=${Date.now()}`);
-    if (!res.ok) throw new Error(`CSV HTTP ${res.status}`);
-    const text = await res.text();
+
+    const text = await fetchFirst([
+      'data/filtered/Crypto_filtered_volatility.csv',   // relatif courant
+      '/data/filtered/Crypto_filtered_volatility.csv',  // absolu depuis la racine
+      '../data/filtered/Crypto_filtered_volatility.csv',
+      '../../data/filtered/Crypto_filtered_volatility.csv',
+      '/stock-analysis-platform/data/filtered/Crypto_filtered_volatility.csv'  // GitHub Pages
+    ]);
+
     const rows = parseTable(text);
+    console.log('CSV lignes:', rows.length, 'colonnes:', Object.keys(rows[0]||{}));
 
     state.data = rows.map(r=>{
       // token = "AAVE" si "AAVE/USD"
@@ -374,8 +396,9 @@
     refresh();
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    // Styles pour les pills
+  // --- boot robuste : lance init() tout de suite si le DOM est déjà prêt
+  function boot() {
+    // (facultatif) petits styles inline
     document.querySelectorAll('.mc-pill').forEach(x=>{
       x.style.display = 'inline-flex';
       x.style.alignItems = 'center';
@@ -388,8 +411,6 @@
       x.style.border = '1px solid rgba(0, 255, 135, 0.3)';
       x.style.backgroundColor = 'rgba(0, 255, 135, 0.1)';
     });
-    
-    // Styles pour inputs
     document.querySelectorAll('.mini-input, .mini-select').forEach(x=>{
       x.style.padding = '6px 8px';
       x.style.borderRadius = '6px';
@@ -398,11 +419,17 @@
       x.style.border = '1px solid rgba(255, 255, 255, 0.2)';
       x.style.color = 'white';
     });
-    
+
     init().catch(err=>{
-      console.error('mc-crypto:', err);
-      const wrap = $('#crypto-mc-results')?.querySelector('.stock-cards-container');
+      console.error('mc-crypto init:', err);
+      const wrap = document.getElementById('crypto-mc-results')?.querySelector('.stock-cards-container');
       if (wrap) wrap.innerHTML = '<div class="text-center text-red-400 py-4">Erreur de chargement</div>';
     });
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
 })();
