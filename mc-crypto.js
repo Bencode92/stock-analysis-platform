@@ -166,31 +166,37 @@
     return arr.slice(0,10);
   }
 
-  // Rendu résultats (ROBUSTE)
+  // Rendu résultats - AFFICHAGE UNE LIGNE
   function render(indices) {
     const container = document.getElementById('crypto-mc-results');
-    if (!container) {
-      console.warn('mc-crypto: #crypto-mc-results introuvable au rendu.');
-      return; // on sort proprement
-    }
+    if (!container) return;
 
-    // Garantir le wrapper (le créer si absent)
+    // Garantir / reconfigurer le wrapper en "liste" (une ligne par item)
     let wrap = container.querySelector('.stock-cards-container');
     if (!wrap) {
       wrap = document.createElement('div');
-      wrap.className = 'stock-cards-container';
       container.appendChild(wrap);
     }
+    // ⚠️ On neutralise la grille définie par .stock-cards-container
+    wrap.className = '';                    // on retire la classe qui impose la grille
+    wrap.style.display = 'block';           // liste verticale
+    wrap.style.gridTemplateColumns = 'none';
+    wrap.style.gap = '0';
+    wrap.classList.add('space-y-2');        // petit espace entre les lignes
 
     wrap.innerHTML = '';
     if (!indices.length) {
-      wrap.innerHTML = `<div class="text-center text-cyan-400 py-4"><i class="fas fa-filter mr-2"></i>Aucune crypto ne passe les filtres</div>`;
+      wrap.innerHTML = `<div class="text-center text-cyan-400 py-4">
+        <i class="fas fa-filter mr-2"></i>Aucune crypto ne passe les filtres
+      </div>`;
       return;
     }
 
     indices.forEach((i, rank) => {
       const r = state.data[i];
       const price = fmtPrice(toNum(r.last_close), r.currency_quote);
+
+      // Colonnes de métriques : compactes, sans retour ligne
       const cols = state.selected.map(m => {
         const raw = state.cache[m]?.raw[i];
         if (!Number.isFinite(raw)) return '';
@@ -199,19 +205,28 @@
         const cls = !isMax
           ? (raw < 20 ? 'text-green-400' : raw > 40 ? 'text-red-400' : 'text-yellow-400')
           : (raw >= 0 ? 'text-green-400' : 'text-red-400');
-        return `<div class="text-right"><div class="text-xs opacity-60">${METRICS[m].label}</div><div class="${cls} font-semibold">${val}</div></div>`;
+        return `
+          <div class="text-right whitespace-nowrap">
+            <div class="text-xs opacity-60">${METRICS[m].label}</div>
+            <div class="${cls} font-semibold">${val}</div>
+          </div>`;
       }).join('');
 
       const card = document.createElement('div');
-      card.className = 'glassmorphism rounded-lg p-3 flex items-center gap-4';
+      // ✅ Tout tient sur UNE LIGNE + pas de wrap + scroll horizontal si trop serré
+      card.className = 'glassmorphism rounded-lg p-3 flex items-center gap-4 ' +
+                       'overflow-x-auto whitespace-nowrap';
+
       card.innerHTML = `
-        <div class="rank text-2xl font-bold">#${rank + 1}</div>
-        <div class="flex-1">
-          <div class="font-semibold">${esc(r.token || r.symbol || '-')}</div>
-          <div class="text-xs opacity-60">${esc(r.currency_base || '-')} • ${esc(r.exchange_used || '')}</div>
-          <div class="text-xs opacity-40">${price}</div>
+        <div class="rank text-2xl font-bold shrink-0">#${rank + 1}</div>
+        <div class="flex-1 min-w-0">
+          <div class="font-semibold truncate">${esc(r.token || r.symbol || '-')}</div>
+          <div class="text-xs opacity-60 truncate">
+            ${esc(r.currency_base || '-')} • ${esc(r.exchange_used || '')}
+          </div>
+          <div class="text-xs opacity-40 truncate">${price}</div>
         </div>
-        <div class="flex gap-4">${cols}</div>
+        <div class="flex items-center gap-6 ml-2 whitespace-nowrap shrink-0">${cols}</div>
       `;
       wrap.appendChild(card);
     });
