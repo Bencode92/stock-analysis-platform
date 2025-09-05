@@ -1,6 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
-// v11.6: Traduction française des objectifs via DeepL/Azure
+// v11.7: Traduction française des objectifs via DeepL/Azure/OpenAI
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -16,12 +16,16 @@ const CONFIG = {
     
     // Traduction (optionnelle)
     TRANSLATE_OBJECTIVE: process.env.TRANSLATE_OBJECTIVE === '1',
-    TRANSLATOR: process.env.TRANSLATOR || 'deepl', // 'deepl' | 'azure'
+    TRANSLATOR: process.env.TRANSLATOR || 'deepl', // 'deepl' | 'azure' | 'openai'
     DEEPL_API_KEY: process.env.DEEPL_API_KEY || null,
     DEEPL_API_ENDPOINT: process.env.DEEPL_API_ENDPOINT || 'https://api-free.deepl.com', // NEW: configurable
     AZURE_TRANSLATOR_KEY: process.env.AZURE_TRANSLATOR_KEY || null,
     AZURE_TRANSLATOR_ENDPOINT: process.env.AZURE_TRANSLATOR_ENDPOINT || 'https://api.cognitive.microsofttranslator.com',
     AZURE_TRANSLATOR_REGION: process.env.AZURE_TRANSLATOR_REGION || process.env.AZURE_REGION || null,
+    // OpenAI config NEW
+    OPENAI_API_KEY: process.env.API_CHAT || process.env.OPENAI_API_KEY || null,
+    OPENAI_BASE_URL: (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/,''),
+    OPENAI_MODEL: process.env.OPENAI_MODEL || 'gpt-4o-mini',
     TRANSLATION_CONCURRENCY: Number(process.env.TRANSLATION_CONCURRENCY || 2),
     
     // Seuils différenciés
@@ -65,11 +69,48 @@ async function withTranslationSlot(fn) {
   translationActive++;
   try { return await fn(); } finally { translationActive--; }
 }
+
+// Fonction OpenAI NEW
+async function translateWithOpenAI(text, to = 'fr') {
+  const base = CONFIG.OPENAI_BASE_URL; // ex: https://api.openai.com/v1
+  const headers = {
+    'Authorization': `Bearer ${CONFIG.OPENAI_API_KEY}`,
+    'Content-Type': 'application/json'
+  };
+
+  // Prompt de traduction : style sobre financier, pas de reformulation inutile.
+  const messages = [
+    {
+      role: 'system',
+      content:
+        "Tu es un traducteur financier professionnel. Traduis en français (France)," +
+        " style neutre et précis, garde les tickers, acronymes et chiffres. " +
+        "Ne rajoute rien, ne supprime rien. Renvoie uniquement le texte traduit."
+    },
+    { role: 'user', content: String(text) }
+  ];
+
+  // On utilise l'API Chat Completions (simple et stable) ; modèle configurable via OPENAI_MODEL.
+  const body = {
+    model: CONFIG.OPENAI_MODEL,
+    temperature: 0.2,
+    messages
+  };
+
+  const resp = await withTranslationSlot(() =>
+    axios.post(`${base}/chat/completions`, body, { headers })
+  );
+
+  return resp?.data?.choices?.[0]?.message?.content?.trim() || null;
+}
+
 async function translateText(text, to='fr') {
   if (!text || !CONFIG.TRANSLATE_OBJECTIVE) return null;
   const useDeepL = CONFIG.TRANSLATOR === 'deepl' && CONFIG.DEEPL_API_KEY;
   const useAzure = CONFIG.TRANSLATOR === 'azure' && CONFIG.AZURE_TRANSLATOR_KEY;
-  if (!useDeepL && !useAzure) return null;
+  const useOpenAI = CONFIG.TRANSLATOR === 'openai' && CONFIG.OPENAI_API_KEY;
+  
+  if (!useDeepL && !useAzure && !useOpenAI) return null;
 
   const key = tKey(text, to);
   if (translationCache[key]) return translationCache[key];
@@ -100,7 +141,10 @@ async function translateText(text, to='fr') {
         })
       );
       translated = resp?.data?.[0]?.translations?.[0]?.text || null;
+    } else if (useOpenAI) {
+      translated = await translateWithOpenAI(text, to);
     }
+    
     if (translated) {
       translationCache[key] = translated;
       return translated;
@@ -674,13 +718,19 @@ async function processListing(item) {
 
 // Fonction principale
 async function filterETFs() {
-    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS v11.6\n');
+    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS v11.7\n');
     console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
     console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max`);
     console.log(`📂  Dossier de sortie: ${OUT_DIR}\n`);
     
     if (CONFIG.TRANSLATE_OBJECTIVE) {
-        console.log(`🌐  Traduction: ACTIVÉE (${CONFIG.TRANSLATOR} - ${CONFIG.TRANSLATOR === 'deepl' ? CONFIG.DEEPL_API_ENDPOINT : 'Azure'})\n`);
+        let translatorInfo = CONFIG.TRANSLATOR;
+        if (CONFIG.TRANSLATOR === 'deepl') {
+            translatorInfo += ` (${CONFIG.DEEPL_API_ENDPOINT})`;
+        } else if (CONFIG.TRANSLATOR === 'openai') {
+            translatorInfo += ` (${CONFIG.OPENAI_MODEL})`;
+        }
+        console.log(`🌐  Traduction: ACTIVÉE (${translatorInfo})\n`);
     }
     
     // Garantir que le dossier de sortie existe
@@ -1008,7 +1058,7 @@ async function filterETFs() {
 
     const bondsCsvPath = path.join(OUT_DIR, 'weekly_snapshot_bonds.csv');
     await fs.writeFile(bondsCsvPath, csvHeaderBonds + (csvRowsBonds ? csvRowsBonds + '\n' : ''));
-    console.log(`📝 CSV Bonds (enriched): ${results.bonds.length} ligne(s) → ${bondsCsvPath}`);
+    console.log(`📝 CSV Bonds (enriched): ${results.bonds.length} ligne(s) → ${bondsCsvPath}`)
     
     // === CSV Holdings ETFs (Top10 only, narrow) ===
     const narrowHeader = 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n';
@@ -1058,7 +1108,7 @@ async function filterETFs() {
             const wPct = (h.weight != null) ? (h.weight * 100).toFixed(2) : '';
             const cells = [etfSym, rank, hSym, hName, wPct].map(v => {
                 const s = String(v);
-                return /[",\n]/.test(s) ? `"${s}"` : s;
+                return /[",\n]/.test(s) ? `"${s}\"` : s;
             });
             return cells.join(',');
         });
