@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v2.1 - UI Optimisée
+// mc-crypto.js — Composer multi-critères (Crypto) v2.2 - UI Compact Permanent
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -104,7 +104,7 @@
 
   // Filtres personnalisés
   function passCustomFilters(i) {
-    const q = (v)=>Math.round(v*10)/10; // quantisation 0.1 comme ton module actions
+    const q = (v)=>Math.round(v*10)/10; // quantisation 0.1
     for (const f of state.filters) {
       const raw = state.cache[f.metric]?.raw[i];
       if (!Number.isFinite(raw)) return false;
@@ -296,58 +296,22 @@
     }
   }
 
-  // ==== Nouvelle fonction pour compacter l'UI des filtres
+  // ==== Fonction pour compacter l'UI des filtres (sera rappelée automatiquement)
   function compactFilterUI() {
     const row = $('#cf-add')?.parentElement; // la rangée qui contient metric/op/val/%/+
     if (!row) return;
 
-    // Mise en page compacte (une seule ligne, pas de débordement)
+    // Ajoute une classe pour le ciblage CSS
+    row.classList.add('filter-controls');
+
+    // Application directe des styles (fallback si le CSS n'est pas appliqué)
     row.style.display = 'grid';
-    row.style.gridTemplateColumns = 'minmax(120px,1fr) 56px 72px 18px 34px';
+    row.style.gridTemplateColumns = 'minmax(120px,1fr) 56px 72px 14px 34px';
     row.style.gap = '6px';
     row.style.alignItems = 'center';
     row.style.maxWidth = '100%';
     row.style.overflow = 'hidden';
     row.style.whiteSpace = 'nowrap';
-
-    // Champs compacts
-    const metric = $('#cf-metric');
-    const op = $('#cf-op');
-    const val = $('#cf-val');
-    const add = $('#cf-add');
-
-    if (metric) { 
-      metric.style.minWidth = '0'; 
-      metric.style.flex = '1 1 auto';
-      metric.style.fontSize = '0.8rem';
-    }
-    if (op) { 
-      op.style.width = '56px';
-      op.style.fontSize = '0.8rem';
-    }
-    if (val) { 
-      val.style.width = '72px'; 
-      val.setAttribute('step','0.1');
-      val.style.fontSize = '0.8rem';
-    }
-    if (add) {
-      add.style.width = '34px';
-      add.style.height = '34px';
-      add.style.padding = '0';
-      add.style.display = 'inline-flex';
-      add.style.alignItems = 'center';
-      add.style.justifyContent = 'center';
-      add.style.fontSize = '0.8rem';
-    }
-
-    // Le "%" (si c'est l'élément juste après l'input)
-    const unit = val?.nextElementSibling;
-    if (unit) { 
-      unit.style.fontSize = '12px'; 
-      unit.style.opacity = '0.6'; 
-      unit.style.textAlign = 'center';
-      unit.style.whiteSpace = 'nowrap';
-    }
   }
 
   // ==== UI bindings
@@ -389,6 +353,7 @@
       state.filters.push({metric,operator,value});
       $('#cf-val').value='';
       drawFilters();
+      compactFilterUI(); // Re-compacte après ajout
       refresh(false);
     });
 
@@ -402,12 +367,20 @@
       document.querySelector('input[name="mc-mode"][value="balanced"]').checked = true;
       drawFilters();
       updatePriorityUI();
+      compactFilterUI(); // Re-compacte après reset
       refresh(true);
     });
 
     drawFilters();
     updatePriorityUI();
-    compactFilterUI();  // Appel de la fonction d'optimisation UI
+    compactFilterUI();
+    
+    // Re-compacte à chaque interaction et au redimensionnement
+    const root = document.getElementById('crypto-mc');
+    if (root) {
+      ['change','click'].forEach(evt => root.addEventListener(evt, compactFilterUI, {passive:true}));
+    }
+    window.addEventListener('resize', compactFilterUI, {passive:true});
   }
 
   function drawFilters() {
@@ -430,6 +403,7 @@
         const i = parseInt(e.currentTarget.dataset.i,10);
         state.filters.splice(i,1);
         drawFilters();
+        compactFilterUI(); // Re-compacte après suppression
         refresh(false);
       });
     });
@@ -502,22 +476,57 @@
 
   // --- boot robuste : lance init() tout de suite si le DOM est déjà prêt
   function boot() {
-    // Styles CSS compacts pour les filtres
+    // CSS permanent avec ciblage automatique via :has() et classe fallback
     const mcCompactCSS = document.createElement('style');
     mcCompactCSS.textContent = `
+      /* Ligne des filtres personnalisés — compacte, une seule ligne, pas d'overflow */
+      #crypto-mc fieldset > div:has(#cf-metric,#cf-op,#cf-val,#cf-add),
+      #crypto-mc .filter-controls {
+        display: grid !important;
+        grid-template-columns: minmax(120px,1fr) 56px 72px 14px 34px !important;
+        gap: 6px !important;
+        align-items: center !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        max-width: 100% !important;
+      }
+
+      #cf-metric { min-width: 0 !important; font-size: 0.8rem !important; }
+      #cf-op { width: 56px !important; font-size: 0.8rem !important; }
+      #cf-val { width: 72px !important; font-size: 0.8rem !important; }
+      #cf-add { 
+        width: 34px !important; 
+        height: 34px !important; 
+        padding: 0 !important;
+        display: inline-flex !important; 
+        align-items: center !important; 
+        justify-content: center !important;
+        font-size: 0.8rem !important;
+      }
+
+      /* Le symbole % juste après l'input */
+      #cf-val + span { 
+        font-size: 12px !important; 
+        opacity: .6 !important; 
+        text-align: center !important; 
+        white-space: nowrap !important; 
+      }
+
+      /* Les "pills" des filtres ajoutés restent fines */
       #crypto-mc-filters .filter-item { 
-        padding: 6px 8px; 
-        font-size: 0.85rem; 
+        padding: 6px 8px !important; 
+        font-size: .85rem !important; 
       }
       #crypto-mc-filters .filter-item .flex-1 { 
-        min-width: 0; 
+        min-width: 0 !important; 
       }
       #crypto-mc-filters .filter-item .flex-1 > span { 
         white-space: nowrap; 
         overflow: hidden; 
-        text-overflow: ellipsis;
+        text-overflow: ellipsis; 
         display: block;
       }
+
       /* Amélioration des pills */
       .mc-pill {
         display: inline-flex !important;
@@ -539,6 +548,7 @@
         background-color: rgba(0, 255, 135, 0.25) !important;
         border-color: var(--accent-color) !important;
       }
+      
       /* Inputs et selects compacts */
       .mini-input, .mini-select {
         padding: 6px 8px !important;
