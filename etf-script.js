@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const base = {
             ...etf,
             ticker: etf.ticker || etf.symbol || '-',
-            name: etf.name || etf.objective?.slice(0, 60) || '-',
+          name: etf.name || etf.long_name || etf.fund_name || etf.symbol || '-',
 
             ter: parseFloat(etf.total_expense_ratio ?? etf.expense_ratio ?? etf.ter ?? 0),
             aum: parseFloat(etf.aum_usd ?? etf.aum ?? etf.net_assets ?? 0),
