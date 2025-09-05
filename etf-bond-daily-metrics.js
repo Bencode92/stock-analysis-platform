@@ -2,7 +2,7 @@
 // Daily scrape: perfs & risque, et fusion avec le weekly snapshot
 // Calcule: daily % (quote), YTD %, 1Y %, Vol 3Y % (annualisée) depuis /time_series
 // Sorties: data/daily_metrics.json, data/daily_metrics_*.csv, data/combined_*.{json,csv}
-// v2.0: Enrichissement des bonds avec sectors/countries/holdings comme les ETFs
+// v2.1: Ajout du champ "name" depuis weekly vers tous les exports daily
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -200,6 +200,7 @@ function rowsToItems(rows, type){
   return rows.map(r => ({
     type,
     symbol: r.symbol,
+    name: r.name || null,  // NEW: ajout du nom depuis weekly
     isin: r.isin || null,
     mic_code: r.mic_code || null,
     currency: r.currency || null
@@ -274,22 +275,22 @@ async function main(){
     await fs.mkdir(OUT_DIR, { recursive: true });
     await fs.writeFile(path.join(OUT_DIR, 'daily_metrics.json'), JSON.stringify({ timestamp: todayISO(), etfs: [], bonds: [] }, null, 2));
     await writeCSV(path.join(OUT_DIR, 'daily_metrics_etfs.csv'),
-                   [], ['symbol','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of']);
+                   [], ['symbol','name','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of']);
     await writeCSV(path.join(OUT_DIR, 'daily_metrics_bonds.csv'),
-                   [], ['symbol','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of']);
+                   [], ['symbol','name','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of']);
     await fs.writeFile(path.join(OUT_DIR, 'combined_snapshot.json'), JSON.stringify({ timestamp: todayISO(), etfs: [], bonds: [] }, null, 2));
     await writeCSV(path.join(OUT_DIR, 'combined_etfs.csv'),
-                   [], ['symbol','isin','mic_code','currency','fund_type','etf_type','leverage','aum_usd','total_expense_ratio','yield_ttm',
+                   [], ['symbol','name','isin','mic_code','currency','fund_type','etf_type','leverage','aum_usd','total_expense_ratio','yield_ttm',
                         'objective','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of',
                         'sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5',
                         'holding_top','holdings_top10','data_quality_score']);
     await writeCSV(path.join(OUT_DIR, 'combined_bonds.csv'),
-                   [], ['symbol','isin','mic_code','currency','fund_type','etf_type','aum_usd','total_expense_ratio','yield_ttm',
+                   [], ['symbol','name','isin','mic_code','currency','fund_type','etf_type','aum_usd','total_expense_ratio','yield_ttm',
                         'objective','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of',
                         'sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5',
                         'holding_top','holdings_top10','data_quality_score']);
     await writeCSV(path.join(OUT_DIR, 'combined_etfs_exposure.csv'),
-                   [], ['symbol','isin','mic_code','currency','fund_type','etf_type','leverage','aum_usd','total_expense_ratio','yield_ttm',
+                   [], ['symbol','name','isin','mic_code','currency','fund_type','etf_type','leverage','aum_usd','total_expense_ratio','yield_ttm',
                         'objective','sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5',
                         'holding_top','holdings_top10','data_quality_score']);
     await fs.writeFile(path.join(OUT_DIR, 'combined_bonds_holdings.csv'), 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n');
@@ -321,20 +322,26 @@ async function main(){
     }
   }
 
-  // 4) Ecriture des daily CSV/JSON
+  // 4) Ecriture des daily CSV/JSON avec name
   await fs.mkdir(OUT_DIR, { recursive: true });
 
-  const etfDaily = etfs.map(e => ({ ...metricsMap.get(e.symbol) }));
-  const bondDaily = bonds.map(b => ({ ...metricsMap.get(b.symbol) }));
+  const etfDaily = etfs.map(e => ({
+    name: e.name || '',  // NEW: ajout du nom
+    ...metricsMap.get(e.symbol)
+  }));
+  const bondDaily = bonds.map(b => ({
+    name: b.name || '',  // NEW: ajout du nom
+    ...metricsMap.get(b.symbol)
+  }));
 
   await fs.writeFile(path.join(OUT_DIR, 'daily_metrics.json'),
     JSON.stringify({ timestamp: todayISO(), etfs: etfDaily, bonds: bondDaily }, null, 2));
 
   await writeCSV(path.join(OUT_DIR, 'daily_metrics_etfs.csv'),
-    etfDaily, ['symbol','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of']);
+    etfDaily, ['symbol','name','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of']);
 
   await writeCSV(path.join(OUT_DIR, 'daily_metrics_bonds.csv'),
-    bondDaily, ['symbol','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of']);
+    bondDaily, ['symbol','name','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of']);
 
   console.log('💾 Daily JSON/CSV écrits.');
 
@@ -382,6 +389,7 @@ async function main(){
   // Normalisation "exposure" pour bonds (comme pour ETFs)
   const bondExposure = weeklyBonds.map(e => ({
     symbol: e.symbol,
+    name: e.name || '',  // NEW: ajout du nom
     isin: e.isin || '',
     mic_code: e.mic_code || '',
     currency: e.currency || '',
@@ -437,7 +445,7 @@ async function main(){
 
   await writeCSV(path.join(OUT_DIR, 'combined_bonds.csv'),
     bondMergedWithExposure, [
-      'symbol','isin','mic_code','currency','fund_type','etf_type',
+      'symbol','name','isin','mic_code','currency','fund_type','etf_type',  // NEW: ajout name
       'aum_usd','total_expense_ratio','yield_ttm','objective',
       'daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of',
       'sector_top','sector_top_weight','country_top','country_top_weight',
@@ -450,6 +458,7 @@ async function main(){
   // --- ETFs EXPOSURE (à partir des CSV normalisés) ---
   const etfExposure = weeklyEtfs.map(e => ({
     symbol: e.symbol,
+    name: e.name || '',  // NEW: ajout du nom
     isin: e.isin || '',
     mic_code: e.mic_code || '',
     currency: e.currency || '',
@@ -489,7 +498,7 @@ async function main(){
 
   await writeCSV(path.join(OUT_DIR, 'combined_etfs_exposure.csv'),
     etfExposure, [
-      'symbol','isin','mic_code','currency','fund_type','etf_type','leverage',
+      'symbol','name','isin','mic_code','currency','fund_type','etf_type','leverage',  // NEW: ajout name
       'aum_usd','total_expense_ratio','yield_ttm','objective',
       'sector_top','sector_top_weight','country_top','country_top_weight',
       'sector_top5','country_top5',
@@ -518,7 +527,7 @@ async function main(){
 
   await writeCSV(path.join(OUT_DIR, 'combined_etfs.csv'),
     etfMergedWithExposure, [
-      'symbol','isin','mic_code','currency','fund_type','etf_type','leverage',
+      'symbol','name','isin','mic_code','currency','fund_type','etf_type','leverage',  // NEW: ajout name
       'aum_usd','total_expense_ratio','yield_ttm','objective',
       'daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of',
       'sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5',
