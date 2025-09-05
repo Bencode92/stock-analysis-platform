@@ -1153,11 +1153,11 @@
                          <button class="top-tab-btn" data-index="daily-losers">
                              <i class="fas fa-arrow-down text-red-500 mr-2"></i> Baisses en 24h
                          </button>
-                         <button class="top-tab-btn" data-index="ytd-gainers">
-                             <i class="fas fa-calendar-check text-blue-400 mr-2"></i> Hausses 7d
+                         <button class="top-tab-btn" data-index="qtr-gainers">
+                             <i class="fas fa-calendar-check text-blue-400 mr-2"></i> Hausses 3 mois
                          </button>
-                         <button class="top-tab-btn" data-index="ytd-losers">
-                             <i class="fas fa-calendar-times text-orange-400 mr-2"></i> Baisses 7d
+                         <button class="top-tab-btn" data-index="qtr-losers">
+                             <i class="fas fa-calendar-times text-orange-400 mr-2"></i> Baisses 3 mois
                          </button>
                      </div>
                      
@@ -1165,14 +1165,6 @@
                      <div id="top-daily-gainers" class="top-stocks-content">
                          <div class="stock-cards-container">
                              <!-- Les cartes seront générées dynamiquement ici -->
-                             <div class="stock-card">
-                                 <div class="rank">#1</div>
-                                 <div class="stock-info">
-                                     <div class="stock-name">BTC</div>
-                                     <div class="stock-fullname">Bitcoin</div>
-                                 </div>
-                                 <div class="stock-performance positive">Chargement...</div>
-                             </div>
                          </div>
                      </div>
                      
@@ -1182,13 +1174,13 @@
                          </div>
                      </div>
                      
-                     <div id="top-ytd-gainers" class="top-stocks-content hidden">
+                     <div id="top-qtr-gainers" class="top-stocks-content hidden">
                          <div class="stock-cards-container">
                              <!-- Les cartes seront générées dynamiquement ici -->
                          </div>
                      </div>
                      
-                     <div id="top-ytd-losers" class="top-stocks-content hidden">
+                     <div id="top-qtr-losers" class="top-stocks-content hidden">
                          <div class="stock-cards-container">
                              <!-- Les cartes seront générées dynamiquement ici -->
                          </div>
@@ -1259,107 +1251,14 @@
                          </div>
                          
                          <div id="indices-container" class="hidden">
-                             <!-- Contenu pour chaque lettre -->
-                             <div id="a-indices" class="region-content">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>NOM</th>
-                                                 <th>SYMBOLE</th>
-                                                 <th>PRIX</th>
-                                                 <th>% 1H</th>
-                                                 <th>% 24H</th>
-                                                 <th>% 7D</th>
-                                                 <th>VOLUME</th>
-                                                 <th>MARKET CAPITALISATION</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="a-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- B -->
-                             <div id="b-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>NOM</th>
-                                                 <th>SYMBOLE</th>
-                                                 <th>PRIX</th>
-                                                 <th>% 1H</th>
-                                                 <th>% 24H</th>
-                                                 <th>% 7D</th>
-                                                 <th>VOLUME</th>
-                                                 <th>MARKET CAPITALISATION</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="b-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- C -->
-                             <div id="c-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>NOM</th>
-                                                 <th>SYMBOLE</th>
-                                                 <th>PRIX</th>
-                                                 <th>% 1H</th>
-                                                 <th>% 24H</th>
-                                                 <th>% 7D</th>
-                                                 <th>VOLUME</th>
-                                                 <th>MARKET CAPITALISATION</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="c-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- D -->
-                             <div id="d-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>NOM</th>
-                                                 <th>SYMBOLE</th>
-                                                 <th>PRIX</th>
-                                                 <th>% 1H</th>
-                                                 <th>% 24H</th>
-                                                 <th>% 7D</th>
-                                                 <th>VOLUME</th>
-                                                 <th>MARKET CAPITALISATION</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="d-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- E-Z - Structure similaire répétée pour chaque lettre -->
-                             <!-- Pour alléger le fichier, je ne les affiche pas tous dans cet exemple -->
+                             <!-- Les sections pour chaque lettre seront générées dynamiquement par le JS -->
                          </div>
                      </div>
                  </div>
                  
                  <!-- Source et avertissement -->
                  <div class="text-center text-sm text-gray-400 mb-6 p-4 glassmorphism rounded-lg bg-opacity-50">
-                     <p id="source-link">Sources: <a href="https://coinmarketcap.com/fr/" target="_blank" class="text-green-400 hover:underline">CoinMarketCap</a></p>
+                     <p id="source-link">Source: données CSV filtrées</p>
                      <p class="mt-2">Les données sont actualisées régulièrement mais peuvent accuser un retard par rapport aux marchés en temps réel.</p>
                  </div>
              </div>
