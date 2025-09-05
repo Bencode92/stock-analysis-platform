@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v2.2 - UI Compact Permanent
+// mc-crypto.js — Composer multi-critères (Crypto) v2.3 - Priorités fonctionnelles
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -22,7 +22,8 @@
     selected: ['ret_1d','ret_90d'],
     mode: 'balanced',                // 'balanced' | 'lexico'
     filters: [],                     // [{metric,operator,value}]
-    cache: {}                        // {metric:{raw,rankPct,sorted,iqr}}
+    cache: {},                       // {metric:{raw,rankPct,sorted,iqr}}
+    pref: {}                        // préférences direction (optionnel pour ↑↓)
   };
 
   // ---- Utils
@@ -130,6 +131,11 @@
     return kept;
   }
 
+  // Helper pour obtenir la direction d'un critère (avec pref optionnel)
+  function isMax(m) {
+    return state.pref?.[m] ?? METRICS[m].max;
+  }
+
   // Scores
   function scoreBalanced(indices) {
     const out=[];
@@ -138,7 +144,7 @@
       for (const m of state.selected) {
         let p = state.cache[m].rankPct[i];
         if (!Number.isFinite(p)) continue;
-        if (!METRICS[m].max) p = 1 - p;
+        if (!isMax(m)) p = 1 - p;
         s+=p; k++;
       }
       if (k>0) out.push({i, score:s/k});
@@ -154,7 +160,7 @@
       if (!Number.isFinite(pa) && !Number.isFinite(pb)) continue;
       if (!Number.isFinite(pa)) return 1;
       if (!Number.isFinite(pb)) return -1;
-      if (!METRICS[m].max) { pa = 1-pa; pb = 1-pb; }
+      if (!isMax(m)) { pa = 1-pa; pb = 1-pb; }
       if (pa !== pb) return pb - pa;
     }
     const ta = state.data[a].token, tb = state.data[b].token;
@@ -213,9 +219,9 @@
       const cols = state.selected.map(m => {
         const raw = state.cache[m]?.raw[i];
         if (!Number.isFinite(raw)) return '';
-        const isMax = METRICS[m].max;
+        const dir = isMax(m);
         const val = fmtPct(raw);
-        const cls = !isMax
+        const cls = !dir
           ? (raw < 20 ? 'text-green-400' : raw > 40 ? 'text-red-400' : 'text-yellow-400')
           : (raw >= 0 ? 'text-green-400' : 'text-red-400');
         return `
@@ -250,49 +256,107 @@
     el.innerHTML = `<strong>${mode}</strong> • ${labels} • ${kept}/${total} cryptos`;
   }
 
-  // ==== Priorités (drag & drop)
+  // ==== Nouvelles fonctions pour le mode Priorités fonctionnel ====
+  
+  // Normalise la valeur du radio en 'balanced' | 'lexico'
+  function setModeFromUI() {
+    const v = document.querySelector('input[name="mc-mode"]:checked')?.value || 'balanced';
+    // Détecte si la valeur contient "prior" ou "lexico" (case insensitive)
+    state.mode = /lexico|prior/i.test(v) ? 'lexico' : 'balanced';
+  }
+
+  // Crée le bloc "Ordre des priorités" si absent
+  function ensurePriorityContainer() {
+    let box = $('#crypto-priority-container');
+    if (!box) {
+      // Le place après le fieldset "Mode de tri" ou dans le conteneur principal
+      const modeFs = document.querySelector('#crypto-mc fieldset[role="radiogroup"]') 
+                  || document.querySelector('#crypto-mc fieldset:has(input[name="mc-mode"])') 
+                  || document.querySelector('#crypto-mc');
+      if (!modeFs) return;
+
+      box = document.createElement('div');
+      box.id = 'crypto-priority-container';
+      box.className = 'mt-3 p-3 rounded bg-white/5';
+      box.style.display = 'none'; // caché par défaut
+      box.innerHTML = `
+        <div class="text-xs opacity-70 mb-2">Ordre des priorités (glisser-déposer)</div>
+        <div id="crypto-priority-list" class="space-y-1"></div>
+      `;
+      
+      // L'insère après le fieldset ou à la fin
+      if (modeFs.tagName === 'FIELDSET') {
+        modeFs.parentNode.insertBefore(box, modeFs.nextSibling);
+      } else {
+        modeFs.appendChild(box);
+      }
+    }
+  }
+
+  // ==== Priorités (drag & drop) - version améliorée
   function updatePriorityUI() {
+    ensurePriorityContainer(); // Crée au besoin
+    
     const box = $('#crypto-priority-container');
     const list = $('#crypto-priority-list');
     if (!box || !list) return;
-    box.style.display = state.mode==='lexico' ? 'block' : 'none';
-    if (state.mode!=='lexico') { list.innerHTML=''; return; }
+    
+    box.style.display = state.mode === 'lexico' ? 'block' : 'none';
+    if (state.mode !== 'lexico') { 
+      list.innerHTML = ''; 
+      return; 
+    }
 
     list.innerHTML = state.selected.map((m,i)=>`
       <div class="priority-item flex items-center gap-2 p-2 rounded bg-white/5 cursor-move"
            draggable="true" data-metric="${m}">
         <span class="drag-handle">☰</span>
         <span class="text-xs opacity-50">${i+1}.</span>
-        <span class="flex-1">${METRICS[m].label} ${METRICS[m].max?'↑':'↓'}</span>
+        <span class="flex-1">${METRICS[m].label} ${isMax(m)?'↑':'↓'}</span>
       </div>
     `).join('') || '<div class="text-xs opacity-50">Coche au moins un critère</div>';
 
     const items = list.querySelectorAll('.priority-item');
-    let dragged=null;
-    items.forEach(item=>{
-      item.addEventListener('dragstart',e=>{ dragged=item; item.classList.add('opacity-50'); });
-      item.addEventListener('dragend',e=>{ item.classList.remove('opacity-50'); dragged=null; });
-      item.addEventListener('dragover',e=>{
+    let dragged = null;
+    
+    items.forEach(item => {
+      item.addEventListener('dragstart', e => { 
+        dragged = item; 
+        item.classList.add('dragging'); 
+      });
+      
+      item.addEventListener('dragend', e => { 
+        item.classList.remove('dragging'); 
+        dragged = null; 
+      });
+      
+      item.addEventListener('dragover', e => {
         e.preventDefault();
         const after = getAfterElement(list, e.clientY);
-        if (!after) list.appendChild(dragged);
-        else list.insertBefore(dragged, after);
+        if (!after) {
+          list.appendChild(dragged);
+        } else {
+          list.insertBefore(dragged, after);
+        }
       });
-      item.addEventListener('drop',()=>{
-        state.selected = Array.from(list.querySelectorAll('.priority-item')).map(x=>x.dataset.metric);
+      
+      item.addEventListener('drop', () => {
+        state.selected = Array.from(list.querySelectorAll('.priority-item')).map(x => x.dataset.metric);
         refresh(false);
         updatePriorityUI();
       });
     });
 
     function getAfterElement(container, y) {
-      const els = [...container.querySelectorAll('.priority-item:not(.opacity-50)')];
-      return els.reduce((closest, child)=>{
+      const els = [...container.querySelectorAll('.priority-item:not(.dragging)')];
+      return els.reduce((closest, child) => {
         const box = child.getBoundingClientRect();
         const offset = y - box.top - box.height/2;
-        if (offset < 0 && offset > closest.offset) return {offset, element:child};
-        else return closest;
-      }, {offset:Number.NEGATIVE_INFINITY}).element;
+        if (offset < 0 && offset > closest.offset) {
+          return {offset, element:child};
+        }
+        return closest;
+      }, {offset: Number.NEGATIVE_INFINITY}).element;
     }
   }
 
@@ -335,14 +399,19 @@
       });
     });
 
-    // mode
-    document.querySelectorAll('input[name="mc-mode"]').forEach(r=>{
-      r.addEventListener('change',()=>{
-        state.mode = r.value;
+    // mode - version améliorée
+    document.querySelectorAll('input[name="mc-mode"]').forEach(r => {
+      r.addEventListener('change', () => {
+        setModeFromUI();
         updatePriorityUI();
         refresh(false);
       });
     });
+
+    // État initial du mode + priorités
+    setModeFromUI();
+    ensurePriorityContainer();
+    updatePriorityUI();
 
     // filtres personnalisés
     $('#cf-add')?.addEventListener('click',()=>{
@@ -363,8 +432,18 @@
       state.selected = ['ret_1d','ret_90d'];
       state.mode = 'balanced';
       state.filters = [];
-      Object.keys(METRICS).forEach(id=>{ const cb=$(`m-${id}`); if (cb) cb.checked = state.selected.includes(id); cb?.dispatchEvent(new Event('change')); });
-      document.querySelector('input[name="mc-mode"][value="balanced"]').checked = true;
+      state.pref = {}; // Reset des préférences
+      Object.keys(METRICS).forEach(id=>{ 
+        const cb=$(`m-${id}`); 
+        if (cb) {
+          cb.checked = state.selected.includes(id); 
+          cb?.dispatchEvent(new Event('change')); 
+        }
+      });
+      const balancedRadio = document.querySelector('input[name="mc-mode"][value="balanced"]') 
+                         || document.querySelector('input[name="mc-mode"]');
+      if (balancedRadio) balancedRadio.checked = true;
+      setModeFromUI();
       drawFilters();
       updatePriorityUI();
       compactFilterUI(); // Re-compacte après reset
@@ -376,7 +455,7 @@
     compactFilterUI();
     
     // Re-compacte à chaque interaction et au redimensionnement
-    const root = document.getElementById('crypto-mc');
+    const root = $('#crypto-mc');
     if (root) {
       ['change','click'].forEach(evt => root.addEventListener(evt, compactFilterUI, {passive:true}));
     }
@@ -557,6 +636,28 @@
         background-color: rgba(255, 255, 255, 0.05) !important;
         border: 1px solid rgba(255, 255, 255, 0.2) !important;
         color: white !important;
+      }
+      
+      /* Styles pour le drag & drop des priorités */
+      #crypto-priority-list .priority-item { 
+        user-select: none; 
+        transition: all 0.2s;
+      }
+      #crypto-priority-list .priority-item .drag-handle { 
+        cursor: grab; 
+        opacity: .7; 
+      }
+      #crypto-priority-list .priority-item.dragging { 
+        opacity: .5; 
+        transform: scale(0.95);
+      }
+      #crypto-priority-list .priority-item:hover {
+        background-color: rgba(0, 255, 135, 0.15) !important;
+      }
+      
+      /* Animation du conteneur des priorités */
+      #crypto-priority-container {
+        transition: all 0.3s ease;
       }
     `;
     document.head.appendChild(mcCompactCSS);
