@@ -158,6 +158,12 @@
                 color: #06ffa5 !important;
             }
             
+            .alert-box.warning {
+                background: rgba(255, 193, 7, 0.1) !important;
+                border: 1px solid rgba(255, 193, 7, 0.3) !important;
+                color: #ffc107 !important;
+            }
+            
             .footer {
                 background: #0a0a0a !important;
                 color: #606060 !important;
@@ -170,6 +176,11 @@
             
             .key-metrics {
                 page-break-inside: avoid !important;
+            }
+            
+            /* Notes small-note en impression */
+            .small-note {
+                color: #555 !important;
             }
         }
 
@@ -461,6 +472,14 @@
             color: #ff3366;
         }
 
+        .professional-table .optional-row {
+            background: rgba(255, 193, 7, 0.05);
+        }
+
+        .professional-table .optional-row td {
+            color: #ffc107;
+        }
+
         .number.positive {
             color: #06ffa5;
             font-weight: 600;
@@ -500,6 +519,12 @@
             background: rgba(6, 255, 165, 0.1);
             border: 1px solid rgba(6, 255, 165, 0.3);
             color: #06ffa5;
+        }
+
+        .alert-box.warning {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            color: #ffc107;
         }
 
         .conformity-grid {
@@ -724,6 +749,14 @@
 
         .scenario-3 {
             background: rgba(23, 162, 184, 0.1) !important;
+        }
+        
+        /* Mini notes grisées (écran) */
+        .small-note {
+            font-size: 12px;
+            color: #a0a0a0;
+            margin-top: 10px;
+            font-style: italic;
         }
 
         @media screen and (max-width: 768px) {
@@ -1157,6 +1190,175 @@
 
             <div class="alert-box info">
                 📊 Les trois scénarios sont rentables dès le 2ème mois après le lancement grâce au modèle ultra-lean
+            </div>
+        </div>
+
+        <!-- NOUVELLE SECTION : Investissements Post-Rentabilité 2026 -->
+        <div class="content-page page-break">
+            <h2 class="section-header">Investissements Post-Rentabilité 2026</h2>
+            
+            <div class="alert-box warning">
+                <strong>Important</strong> : Ces investissements sont <strong>100% OPTIONNELS</strong> et interviennent UNIQUEMENT après le break-even (Nov 2025)
+                <br>• Financés par les cash-flows positifs (EBITDA 2026: 59K€) ou financement non-dilutif
+                <br>• NON NÉCESSAIRES pour atteindre la rentabilité (106 clients suffisent avec 400€/mois)
+                <br>• Permettent d'accélérer la croissance une fois le PMF validé
+            </div>
+
+            <div class="subsection">
+                <h3 class="subsection-title">Investissements optionnels selon cash disponible</h3>
+                
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Type d'investissement</th>
+                            <th>Timing</th>
+                            <th class="number">Scénario Lean<br>(Autofinancé)</th>
+                            <th class="number">Scénario Standard<br>(Cash-flow 2026)</th>
+                            <th class="number">Scénario Ambitieux<br>(+10K€ externe)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="optional-row">
+                            <td><strong>📱 App mobile</strong></td>
+                            <td>T1-T2 2026</td>
+                            <td class="number">3 000€<br>(PWA simple)</td>
+                            <td class="number">8 000€<br>(React Native)</td>
+                            <td class="number">20 000€<br>(Native iOS/Android)</td>
+                        </tr>
+                        <tr class="optional-row">
+                            <td><strong>⚖️ Audit juridique</strong><br>AMF + fiscal + immo</td>
+                            <td>T2 2026</td>
+                            <td class="number">2 000€<br>(Essentiel)</td>
+                            <td class="number">4 000€<br>(Complet)</td>
+                            <td class="number">6 000€<br>(Premium)</td>
+                        </tr>
+                        <tr class="optional-row">
+                            <td><strong>🔒 Audit technique</strong><br>Sécurité & pentest</td>
+                            <td>T2 2026</td>
+                            <td class="number">2 500€<br>(Basique)</td>
+                            <td class="number">4 500€<br>(Standard)</td>
+                            <td class="number">8 000€<br>(Approfondi)</td>
+                        </tr>
+                        <tr class="optional-row">
+                            <td><strong>🎬 Production TikTok</strong><br>(par mois)</td>
+                            <td>À partir T3 2026</td>
+                            <td class="number">DIY<br>(0€)</td>
+                            <td class="number">900€/mois<br>(8 vidéos)</td>
+                            <td class="number">2 000€/mois<br>(15+ vidéos)</td>
+                        </tr>
+                        <tr class="optional-row">
+                            <td><strong>📲 Stores</strong><br>Apple + Google</td>
+                            <td>Si app mobile</td>
+                            <td class="number">120€/an</td>
+                            <td class="number">120€/an</td>
+                            <td class="number">120€/an</td>
+                        </tr>
+                        
+                        <tr class="highlight-row">
+                            <td><strong>TOTAL ONE-SHOT</strong></td>
+                            <td>2026</td>
+                            <td class="number"><strong>7 620€</strong></td>
+                            <td class="number"><strong>16 620€</strong></td>
+                            <td class="number"><strong>34 120€</strong></td>
+                        </tr>
+                        
+                        <tr>
+                            <td><strong>Récurrent mensuel</strong></td>
+                            <td>Post T3 2026</td>
+                            <td class="number"><strong>0€</strong></td>
+                            <td class="number"><strong>900€</strong></td>
+                            <td class="number"><strong>2 000€</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <p class="small-note">
+                    Notes : Montants HT (ajouter TVA 20%). App mobile = wrapper PWA (Lean), React Native cross-platform (Standard), ou native avec agence (Ambitieux).
+                    TikTok = montage + sous-titres + déclinaisons sociales. Volume ajustable selon traction.
+                </p>
+            </div>
+
+            <div class="subsection">
+                <h3 class="subsection-title">Conditions de déclenchement des investissements</h3>
+                
+                <div class="highlights">
+                    <div class="highlight-card">
+                        <div class="highlight-icon">✅</div>
+                        <div class="highlight-title">App mobile</div>
+                        <div class="highlight-text">SI > 1000 clients actifs<br>ET demande récurrente<br>ET cash disponible > 20K€</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-icon">✅</div>
+                        <div class="highlight-title">Audits juridique/tech</div>
+                        <div class="highlight-text">SI MRR > 10K€<br>ET expansion prévue<br>OU exigence partenaire</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-icon">✅</div>
+                        <div class="highlight-title">TikTok Pro</div>
+                        <div class="highlight-text">SI > 10K vues/vidéo<br>ET croissance > 20%/mois<br>ET ROI prouvé</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-icon">❌</div>
+                        <div class="highlight-title">Jamais prioritaire</div>
+                        <div class="highlight-text">Bureaux physiques<br>Recrutements massifs<br>Publicité payante agressive</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="subsection">
+                <h3 class="subsection-title">Impact sur les projections financières</h3>
+                
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Scénario</th>
+                            <th class="number">EBITDA 2026<br>avant invest.</th>
+                            <th class="number">Investissements<br>2026</th>
+                            <th class="number">EBITDA net<br>2026</th>
+                            <th class="number">Clients fin<br>2026</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Sans investissement</strong></td>
+                            <td class="number positive">59 200€</td>
+                            <td class="number">0€</td>
+                            <td class="number positive"><strong>59 200€</strong></td>
+                            <td class="number">2 000</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Lean (autofinancé)</strong></td>
+                            <td class="number positive">59 200€</td>
+                            <td class="number">-7 620€</td>
+                            <td class="number positive"><strong>51 580€</strong></td>
+                            <td class="number">2 200</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Standard (réinvestissement)</strong></td>
+                            <td class="number positive">59 200€</td>
+                            <td class="number">-27 420€*</td>
+                            <td class="number positive"><strong>31 780€</strong></td>
+                            <td class="number">2 500</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Ambitieux (+10K€ externe)</strong></td>
+                            <td class="number positive">69 200€**</td>
+                            <td class="number">-52 120€*</td>
+                            <td class="number positive"><strong>17 080€</strong></td>
+                            <td class="number">3 000</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <p class="small-note">
+                    * Inclut TikTok récurrent sur 6 mois (T3-T4 2026)<br>
+                    ** Inclut 10K€ de financement externe non-dilutif
+                </p>
+                
+                <div class="alert-box success">
+                    <strong>Conclusion</strong> : Même avec les investissements maximaux, NOVIS reste profitable en 2026. 
+                    Le modèle ultra-lean (400€/mois) garantit la viabilité, les investissements ne font qu'accélérer la croissance.
+                </div>
             </div>
         </div>
 
