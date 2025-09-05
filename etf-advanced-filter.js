@@ -1,6 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
-// v11.7: Traduction française des objectifs via DeepL/Azure/OpenAI
+// v11.8: Limite configurable pour objectives via OBJECTIVE_MAXLEN
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -27,6 +27,9 @@ const CONFIG = {
     OPENAI_BASE_URL: (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/,''),
     OPENAI_MODEL: process.env.OPENAI_MODEL || 'gpt-4o-mini',
     TRANSLATION_CONCURRENCY: Number(process.env.TRANSLATION_CONCURRENCY || 2),
+    
+    // NEW: Limite configurable pour objectives (0 = illimité)
+    OBJECTIVE_MAXLEN: Number(process.env.OBJECTIVE_MAXLEN || 0),
     
     // Seuils différenciés
     MIN_ADV_USD_ETF: 1_000_000,    // 1M$ pour ETF
@@ -260,10 +263,11 @@ function topN(arr, key, n = 5) {
     return sortDescBy(arr, key).slice(0, n);
 }
 
-function sanitizeText(s, max = 240) {
-    if (!s || typeof s !== 'string') return '';
-    const t = s.replace(/\s+/g, ' ').trim();
-    return t.length > max ? t.slice(0, max - 1) + '…' : t;
+// NEW: Helper pour clipper les objectifs avec limite configurable
+function clipObjective(s) {
+    const t = (!s || typeof s !== 'string') ? '' : s.replace(/\s+/g, ' ').trim();
+    const L = CONFIG.OBJECTIVE_MAXLEN;
+    return (L > 0 && t.length > L) ? t.slice(0, L - 1) + '…' : t;
 }
 
 function cleanSymbol(symbol) {
@@ -582,8 +586,8 @@ async function fetchWeeklyPack(symbolParam, item) {
         yield_ttm: (s.yield != null) ? Number(s.yield) : null,
         currency: s.currency || null,
         fund_type: s.fund_type || null,
-        objective: sanitizeText(objectiveFr || overviewRaw), // <= FR si dispo
-        objective_en: sanitizeText(overviewRaw),             // debug (reste dans JSON)
+        objective: clipObjective(objectiveFr || overviewRaw), // <= FR si dispo avec nouvelle limite
+        objective_en: clipObjective(overviewRaw),             // debug (reste dans JSON) avec nouvelle limite
         domicile: s.domicile || item.Country || null,
         as_of_summary: now,
         as_of_composition: now
@@ -718,10 +722,11 @@ async function processListing(item) {
 
 // Fonction principale
 async function filterETFs() {
-    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS v11.7\n');
+    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS v11.8\n');
     console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
     console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max`);
-    console.log(`📂  Dossier de sortie: ${OUT_DIR}\n`);
+    console.log(`📂  Dossier de sortie: ${OUT_DIR}`);
+    console.log(`📏  Limite objectives: ${CONFIG.OBJECTIVE_MAXLEN > 0 ? CONFIG.OBJECTIVE_MAXLEN + ' caractères' : 'Illimité'}\n`);
     
     if (CONFIG.TRANSLATE_OBJECTIVE) {
         let translatorInfo = CONFIG.TRANSLATOR;
@@ -1134,6 +1139,7 @@ async function filterETFs() {
         console.log(`Traductions: ${translatedCount} objectifs traduits`);
         console.log(`Cache: ${Object.keys(translationCache).length} entrées`);
     }
+    console.log(`Limite objectives: ${CONFIG.OBJECTIVE_MAXLEN > 0 ? CONFIG.OBJECTIVE_MAXLEN + ' caractères' : 'Illimité'}`);
     console.log(`Temps total: ${results.stats.elapsed_seconds}s`);
     
     console.log('\n📊 Qualité des données:');
