@@ -353,19 +353,20 @@
     render(topIdx);
   }
 
-  // Fetch robuste (essaie plusieurs chemins)
+  // Fetch robuste avec diagnostic détaillé
   async function fetchFirst(paths) {
+    const tried = [];
     for (const p of paths) {
       try {
-        const url = new URL(p, document.baseURI).href + `?t=${Date.now()}`;
+        const url = new URL(p, location.href).href + `?t=${Date.now()}`;
         const r = await fetch(url, { cache: 'no-store' });
+        tried.push(`${r.status} ${url}`);
         if (r.ok) return await r.text();
-        console.warn('CSV miss:', url, r.status);
       } catch (e) {
-        console.warn('CSV error:', p, e);
+        tried.push(`ERR ${p} ${e.message}`);
       }
     }
-    throw new Error('CSV introuvable sur les chemins testés.');
+    throw new Error('CSV introuvable. Tentatives:\n' + tried.join('\n'));
   }
 
   // Load
@@ -373,13 +374,18 @@
     const root = document.getElementById('crypto-mc');
     if (!root) return;
 
+    const HERE = location.href.replace(/[^/]*$/, '');   // dossier courant de la page
+    const ROOT = location.origin + '/';                  // racine du site
+
     const text = await fetchFirst([
-      'data/filtered/Crypto_filtered_volatility.csv',   // relatif courant
-      '/data/filtered/Crypto_filtered_volatility.csv',  // absolu depuis la racine
+      HERE + 'data/filtered/Crypto_filtered_volatility.csv',      // si la page est au root
+      ROOT + 'data/filtered/Crypto_filtered_volatility.csv',      // racine absolue
+      ROOT + 'stock-analysis-platform/data/filtered/Crypto_filtered_volatility.csv', // GitHub Pages
       '../data/filtered/Crypto_filtered_volatility.csv',
       '../../data/filtered/Crypto_filtered_volatility.csv',
-      '/stock-analysis-platform/data/filtered/Crypto_filtered_volatility.csv'  // GitHub Pages
-    ]);
+      // 👉 Option : autorise une surcharge manuelle depuis une variable globale
+      (window.CRYPTO_CSV_URL || '')
+    ].filter(Boolean));
 
     const rows = parseTable(text);
     console.log('CSV lignes:', rows.length, 'colonnes:', Object.keys(rows[0]||{}));
@@ -420,10 +426,16 @@
       x.style.color = 'white';
     });
 
-    init().catch(err=>{
+    init().catch(err => {
       console.error('mc-crypto init:', err);
       const wrap = document.getElementById('crypto-mc-results')?.querySelector('.stock-cards-container');
-      if (wrap) wrap.innerHTML = '<div class="text-center text-red-400 py-4">Erreur de chargement</div>';
+      if (wrap) {
+        wrap.innerHTML = `
+          <div class="text-center text-red-400 py-4">
+            Erreur de chargement<br>
+            <pre class="text-xs opacity-70 text-left overflow-auto mt-2" style="white-space:pre-wrap">${String(err.message)}</pre>
+          </div>`;
+      }
     });
   }
 
