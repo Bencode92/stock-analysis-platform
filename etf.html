@@ -729,6 +729,17 @@
             opacity: 0.4; 
             cursor: not-allowed; 
         }
+        
+        /* ETF A→Z – barre de recherche */
+        .search-container{max-width:100%}
+        .search-wrapper{position:relative}
+        .dark #etf-az-search{background-color:rgba(255,255,255,.07);border-color:var(--card-border);color:var(--text-color)}
+        .light #etf-az-search{background-color:rgba(0,0,0,.05);border-color:rgba(0,0,0,.1);color:var(--light-text-color)}
+        #etf-az-search:focus{border-color:var(--accent-color);box-shadow:var(--accent-glow)}
+        .clear-btn{cursor:pointer;padding:5px;font-size:14px}
+        .clear-btn:hover{color:var(--accent-color)}
+        /* surlignage des hits */
+        .search-highlight{background:var(--accent-subtle);border-radius:4px;padding:0 2px}
     </style>
 </head>
 <body class="dark">
@@ -990,6 +1001,31 @@
                       </div>
                     </div>
 
+                    <!-- Barre de recherche (ETF A→Z) -->
+                    <div class="search-container mt-3">
+                      <div class="search-wrapper relative">
+                        <input
+                          type="text"
+                          id="etf-az-search"
+                          placeholder="Rechercher un ETF (ticker, nom, ISIN…)"
+                          class="w-full py-3 px-12 rounded-lg border bg-white/5 border-white/10 focus:outline-none focus:ring-0"
+                          autocomplete="off"
+                          aria-label="Rechercher un ETF"
+                        />
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 opacity-70"></i>
+                        <button
+                          id="etf-az-clear"
+                          class="clear-btn absolute right-4 top-1/2 -translate-y-1/2 opacity-0 transition-opacity duration-200"
+                          aria-label="Effacer la recherche"
+                        >
+                          <i class="fas fa-times"></i>
+                        </button>
+                      </div>
+                      <div id="etf-az-search-info" class="mt-2 text-sm opacity-70 hidden">
+                        <span id="etf-az-search-count">0</span> résultat(s)
+                      </div>
+                    </div>
+
                     <!-- petite barre d'infos -->
                     <div class="text-xs opacity-60 mt-3">
                       <span>⚡ <span id="etf-az-count">0</span> lignes affichées</span>
@@ -1028,9 +1064,9 @@
     <script src="etf-mc-integration.js"></script>
     <script src="etf-mc-module.js"></script>
     
-    <!-- Script A→Z ETFs amélioré avec helpers -->
+    <!-- Script A→Z ETFs amélioré avec helpers et recherche -->
     <script>
-    /* etf-az.js — A→Z ETFs avec helpers pour ticker et nom */
+    /* etf-az.js — A→Z ETFs avec helpers pour ticker et nom + RECHERCHE */
     (function () {
       const $  = s => document.querySelector(s);
       const $$ = s => Array.from(document.querySelectorAll(s));
@@ -1130,6 +1166,32 @@
       let dataAll = [];
       let indexAZ = {};
       let lastUpdate = null;
+
+      // --- Recherche texte ---
+      let q = '';
+
+      const escapeRegExp = s => s ? s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
+
+      function highlight(str){
+        if (!q || !str) return str || '—';
+        const re = new RegExp(escapeRegExp(q), 'ig');
+        return String(str).replace(re, m => `<span class="search-highlight">${m}</span>`);
+      }
+
+      // filtre sur plusieurs champs (ticker, isin, nom, pays, secteur, type)
+      function applyTextSearch(list){
+        if (!q) return list;
+        const needle = q.toLowerCase();
+        return list.filter(e => {
+          const fields = [getTicker(e), e.isin, getName(e), getCountry(e), getSectorMain(e), getFundType(e)];
+          return fields.some(f => f && String(f).toLowerCase().includes(needle));
+        });
+      }
+
+      // petit debounce
+      const debounce = (fn, ms=120) => { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
+
+      function uniqSorted(arr){ return [...new Set(arr.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b))); }
 
       // ---------- UI (onglets + tables) ----------
       function buildTabs(){
@@ -1234,10 +1296,9 @@
           if (map[first]) map[first].push(e);
         });
         // Trier par ticker avec helper
-        Object.keys(map).forEach(l => map[l].sort((a,b)=> String(getTicker(a)).localeCompare(String(getTicker(b)))))
+        Object.keys(map).forEach(l => map[l].sort((a,b)=> String(getTicker(a)).localeCompare(String(getTicker(b)))));
         return map;
       }
-      function uniqSorted(arr){ return [...new Set(arr.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b))); }
 
       function populateDropdowns(list){
         const countries = uniqSorted(list.map(getCountry));
@@ -1256,11 +1317,27 @@
 
       // ---------- Render ----------
       function render(){
-        const scoped = takeScope(dataAll);
-        const filtered = applySubfilters(scoped);
+        const scoped   = takeScope(dataAll);
+        const searched = applyTextSearch(scoped);   // recherche texte
+        const filtered = applySubfilters(searched); // puis sous-filtres
         indexAZ = indexByLetter(filtered);
 
         $('#etf-az-count').textContent = filtered.length;
+        // Info recherche + bouton clear + forcer l'onglet TOUS quand on tape
+        const info = $('#etf-az-search-info');
+        const cnt  = $('#etf-az-search-count');
+        const clr  = $('#etf-az-clear');
+        if (info && cnt) { info.classList.toggle('hidden', !q); cnt.textContent = filtered.length; }
+        if (clr) clr.style.opacity = q ? '1' : '0';
+        if (q){
+          const allBtn = $$('#etf-az-tabs .region-tab').find(b => b.dataset.letter === 'all');
+          if (allBtn){
+            $$('#etf-az-tabs .region-tab').forEach(t => t.classList.remove('active'));
+            allBtn.classList.add('active');
+          }
+          $$('#etf-az-container .etf-letter').forEach(div => div.classList.remove('hidden'));
+        }
+        
         if (lastUpdate) $('#etf-az-lastupdate').textContent = new Date(lastUpdate).toLocaleString('fr-FR');
 
         'abcdefghijklmnopqrstuvwxyz'.split('').forEach(l => {
@@ -1282,11 +1359,14 @@
             const ytdCls = clsPct(etf.return_ytd);
             const y1Cls  = clsPct(etf.return_1y);
 
+            const tickerHTML = highlight(getTicker(etf));
+            const nameHTML   = highlight(getName(etf));
+
             const row = document.createElement('tr');
             row.innerHTML = `
               <td class="py-2 px-3">
-                <div class="font-medium">${getTicker(etf)}</div>
-                <div class="text-xs opacity-70 mt-1">${getName(etf)}</div>
+                <div class="font-medium">${tickerHTML}</div>
+                <div class="text-xs opacity-70 mt-1">${nameHTML}</div>
               </td>
               <td class="text-right"><span class="ter-badge">${fmtPctSmart(etf.total_expense_ratio ?? etf.ter)}</span></td>
               <td class="text-right"><span class="aum-badge">${fmtAUM(etf.aum_usd ?? etf.aum)}</span></td>
@@ -1368,6 +1448,24 @@
         $('#etf-az-country')?.addEventListener('change', e=>{ fCountry = e.target.value || ''; render(); });
         $('#etf-az-fundtype')?.addEventListener('change', e=>{ fFundType = e.target.value || ''; render(); });
         $('#etf-az-sector')?.addEventListener('change',  e=>{ fSector   = e.target.value || ''; render(); });
+        
+        // recherche
+        const searchInput = $('#etf-az-search');
+        const clearBtn    = $('#etf-az-clear');
+
+        if (searchInput){
+          searchInput.addEventListener('input', debounce(e => { q = e.target.value.trim(); render(); }));
+          searchInput.addEventListener('keydown', e => {
+            if (e.key === 'Escape'){ q = ''; searchInput.value=''; render(); }
+          });
+        }
+        if (clearBtn){
+          clearBtn.addEventListener('click', () => {
+            q = '';
+            if (searchInput){ searchInput.value = ''; searchInput.focus(); }
+            render();
+          });
+        }
       }
 
       // ---------- Boot ----------
