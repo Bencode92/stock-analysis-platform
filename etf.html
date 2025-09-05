@@ -1028,12 +1028,21 @@
     <script src="etf-mc-integration.js"></script>
     <script src="etf-mc-module.js"></script>
     
-    <!-- Script A→Z ETFs amélioré avec corrections -->
+    <!-- Script A→Z ETFs amélioré avec helpers -->
     <script>
-    /* etf-az.js — A→Z ETFs avec corrections de formatage */
+    /* etf-az.js — A→Z ETFs avec helpers pour ticker et nom */
     (function () {
       const $  = s => document.querySelector(s);
       const $$ = s => Array.from(document.querySelectorAll(s));
+
+      // ---------- Helpers pour ticker et nom ----------
+      function getTicker(e){ 
+        return e.ticker || e.symbol || e.isin || '—'; 
+      }
+      
+      function getName(e){ 
+        return e.name || e.long_name || e.fund_name || e.full_name || '—'; 
+      }
 
       // ---------- Formatage corrigé ----------
       const NF_INT = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
@@ -1218,14 +1227,14 @@
       function indexByLetter(list){
         const map = {}; 'abcdefghijklmnopqrstuvwxyz'.split('').forEach(l=>map[l]=[]);
         list.forEach(e => {
-          // CORRECTION: Prioriser le ticker pour le classement alphabétique
-          const keySrc = String(e.ticker || e.isin || e.name || '').trim();
-          if (!keySrc) return;
+          // Utiliser getTicker pour le classement alphabétique
+          const keySrc = String(getTicker(e)).trim();
+          if (!keySrc || keySrc === '—') return;
           const first = keySrc[0].toLowerCase();
           if (map[first]) map[first].push(e);
         });
-        // Trier par ticker au lieu du nom
-        Object.keys(map).forEach(l => map[l].sort((a,b)=> String(a.ticker||a.name||'').localeCompare(String(b.ticker||b.name||''))))
+        // Trier par ticker avec helper
+        Object.keys(map).forEach(l => map[l].sort((a,b)=> String(getTicker(a)).localeCompare(String(getTicker(b)))))
         return map;
       }
       function uniqSorted(arr){ return [...new Set(arr.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b))); }
@@ -1276,8 +1285,8 @@
             const row = document.createElement('tr');
             row.innerHTML = `
               <td class="py-2 px-3">
-                <div class="font-medium">${etf.ticker || etf.isin || '—'}</div>
-                <div class="text-xs opacity-70 mt-1">${etf.name || '—'}</div>
+                <div class="font-medium">${getTicker(etf)}</div>
+                <div class="text-xs opacity-70 mt-1">${getName(etf)}</div>
               </td>
               <td class="text-right"><span class="ter-badge">${fmtPctSmart(etf.total_expense_ratio ?? etf.ter)}</span></td>
               <td class="text-right"><span class="aum-badge">${fmtAUM(etf.aum_usd ?? etf.aum)}</span></td>
