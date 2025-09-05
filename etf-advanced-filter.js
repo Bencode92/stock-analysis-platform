@@ -1,6 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
-// v11.8: Ajout OBJECTIVE_MAXLEN configurable pour limiter la longueur des objectifs
+// v11.9: Ajout récupération et export des noms ETF/Bond
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -303,10 +303,22 @@ function detectETFType(symbol, name, objective) {
     return { type: 'standard' };
 }
 
+// NEW: Fonction helper pour lookup du nom via symbol_search
+async function lookupNameViaSearch(sym) {
+  try {
+    const r = await axios.get('https://api.twelvedata.com/symbol_search', {
+      params: { symbol: sym, apikey: CONFIG.API_KEY }
+    });
+    const hit = r.data?.data?.[0];
+    return hit?.instrument_name || hit?.name || null;
+  } catch { return null; }
+}
+
 // Fonction pour filtrer uniquement les champs hebdomadaires
 function pickWeekly(etf) {
     return {
         symbol: etf.symbol,
+        name: etf.name || null,  // NEW: ajout du nom
         isin: etf.isin || null,
         mic_code: etf.mic_code || null,
         currency: etf.currency || null,
@@ -573,6 +585,14 @@ async function fetchWeeklyPack(symbolParam, item) {
     const s = sumRes?.data?.etf?.summary || {};
     const c = compRes?.data?.etf?.composition || {};
 
+    // NEW: consolider le nom depuis summary
+    const fundName =
+      sumRes?.data?.etf?.name ||
+      s?.fund_name ||
+      s?.name ||
+      item?.name || // fallback au nom vu dans /quote
+      null;
+
     // summary (+ traduction FR optionnelle)
     const overviewRaw = s.overview || '';
     let objectiveFr = null;
@@ -580,6 +600,7 @@ async function fetchWeeklyPack(symbolParam, item) {
       objectiveFr = await translateText(overviewRaw, 'fr');
     }
     const pack = {
+        name: fundName,  // NEW: ajout du nom
         aum_usd: (s.net_assets != null) ? Number(s.net_assets) : null,
         total_expense_ratio: (s.expense_ratio_net != null) ? Math.abs(Number(s.expense_ratio_net)) : null,
         yield_ttm: (s.yield != null) ? Number(s.yield) : null,
@@ -679,6 +700,15 @@ async function processListing(item) {
         
         const { symbolParam, quote } = resolved;
         
+        // NEW: récupérer le nom depuis quote
+        const nameFromQuote = quote.name || quote.instrument_name || quote.fund_name || null;
+        
+        // NEW: fallback via symbol_search si pas de nom
+        let finalName = nameFromQuote;
+        if (!finalName && CONFIG.DEBUG) {
+            finalName = await lookupNameViaSearch(cleanSymbol(item.symbol));
+        }
+        
         // Obtenir la devise depuis quote
         const currency = quote.currency || 'USD';
         const fx = await fxToUSD(currency);
@@ -701,6 +731,7 @@ async function processListing(item) {
         // Retourner toutes les infos sans décider pass/fail
         return {
             ...item,
+            name: finalName,  // NEW: ajout du nom
             symbolParam,
             currency,
             fx_rate: fx,
@@ -721,7 +752,7 @@ async function processListing(item) {
 
 // Fonction principale
 async function filterETFs() {
-    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS v11.8\n');
+    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS v11.9\n');
     console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
     console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max`);
     console.log(`📏  Longueur max objectifs: ${CONFIG.OBJECTIVE_MAXLEN} caractères`);
@@ -978,7 +1009,7 @@ async function filterETFs() {
 
     // CSV hebdo ETF avec holdings
     const csvHeaderEtf = [
-        'symbol','isin','mic_code','currency','fund_type','etf_type',
+        'symbol','name','isin','mic_code','currency','fund_type','etf_type',  // NEW: ajout 'name'
         'aum_usd','total_expense_ratio','yield_ttm',
         'objective',
         'sector_top','sector_top_weight',
@@ -989,6 +1020,7 @@ async function filterETFs() {
     ].join(',') + '\n';
 
     const csvRowsEtf = results.etfs.map(e => {
+        const nameCell = `"${(e.name || '').replace(/"/g,'""')}"`;
         const sectorTop = e.sector_top ? e.sector_top.sector : '';
         const sectorTopW = e.sector_top?.weight != null ? (e.sector_top.weight*100).toFixed(2) : '';
         const countryTop = e.country_top ? e.country_top.country : (e.domicile || '');
@@ -1007,7 +1039,7 @@ async function filterETFs() {
         const objective = `"${(e.objective || '').replace(/"/g, '""')}"`;
 
         return [
-            e.symbol, e.isin || '', e.mic_code || '', e.currency || '', e.fund_type || '', e.etf_type || '',
+            e.symbol, nameCell, e.isin || '', e.mic_code || '', e.currency || '', e.fund_type || '', e.etf_type || '',
             e.aum_usd ?? '', e.total_expense_ratio ?? '', e.yield_ttm ?? '',
             objective,
             `"${sectorTop}"`, sectorTopW,
@@ -1025,7 +1057,7 @@ async function filterETFs() {
 
     // === CSV hebdo BONDS (ENRICHED, même structure que ETFs) ===
     const csvHeaderBonds = [
-        'symbol','isin','mic_code','currency','fund_type','etf_type',
+        'symbol','name','isin','mic_code','currency','fund_type','etf_type',  // NEW: ajout 'name'
         'aum_usd','total_expense_ratio','yield_ttm',
         'objective',
         'sector_top','sector_top_weight',
@@ -1036,6 +1068,7 @@ async function filterETFs() {
     ].join(',') + '\n';
 
     const csvRowsBonds = results.bonds.map(e => {
+        const nameCell = `"${(e.name || '').replace(/"/g,'""')}"`;
         const sectorTop = e.sector_top ? e.sector_top.sector : '';
         const sectorTopW = e.sector_top?.weight != null ? (e.sector_top.weight*100).toFixed(2) : '';
         const countryTop = e.country_top ? e.country_top.country : (e.domicile || '');
@@ -1049,7 +1082,7 @@ async function filterETFs() {
         const objective = `"${(e.objective || '').replace(/"/g,'""')}"`;
 
         return [
-            e.symbol, e.isin || '', e.mic_code || '', e.currency || '', e.fund_type || '', e.etf_type || '',
+            e.symbol, nameCell, e.isin || '', e.mic_code || '', e.currency || '', e.fund_type || '', e.etf_type || '',
             e.aum_usd ?? '', e.total_expense_ratio ?? '', e.yield_ttm ?? '',
             objective,
             `"${sectorTop}"`, sectorTopW,
