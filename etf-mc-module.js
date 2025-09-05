@@ -1,4 +1,4 @@
-// Module MC adapté pour ETFs - v4.4 avec nettoyage automatique
+// Module MC adapté pour ETFs - v4.5 avec affichage ticker/nom amélioré
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const num=x=>Number.isFinite(+x)?+x:NaN, str=s=>s==null?'':String(s);
@@ -6,6 +6,10 @@
   
   // Seuil pour ignorer les valeurs quasi-zéro
   const ZERO_EPS = 0.01;
+  
+  // Helpers d'identification
+  const getTicker = (e) => e?.ticker || e?.symbol || e?.isin || '';
+  const getName   = (e) => e?.name || e?.long_name || e?.fund_name || e?.full_name || '';
   
   // Parse top5 en ignorant les 0%
   function parseTopList(listStr, keyLabel, keyWeight){
@@ -42,15 +46,15 @@
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results');
     const summary=document.getElementById('etf-mc-summary');
-    if(!root||!results){console.error('❌ ETF MC v4.4: DOM manquant');return;}
-    console.log('✅ ETF MC v4.4: Nettoyage automatique des données');
+    if(!root||!results){console.error('❌ ETF MC v4.5: DOM manquant');return;}
+    console.log('✅ ETF MC v4.5: Affichage ticker/nom amélioré');
 
     // Harmonisation du conteneur
     results.classList.add('glassmorphism','rounded-lg','p-4');
 
     // Styles harmonisés
-    if(!document.getElementById('etf-mc-v44-styles')){
-      const s=document.createElement('style'); s.id='etf-mc-v44-styles'; s.textContent=`
+    if(!document.getElementById('etf-mc-v45-styles')){
+      const s=document.createElement('style'); s.id='etf-mc-v45-styles'; s.textContent=`
       #etf-mc-results { display:block }
       #etf-mc-results .space-y-2 > div { margin-bottom: .75rem }
       #etf-mc-results .etf-card{
@@ -515,7 +519,10 @@
         
         const levBadge = e.__lev ? '<span class="badge" style="color:#ff9aa7;border-color:rgba(255,90,90,.35);background:rgba(255,90,90,.12)">LEV/INV</span>' : '';
         const singleBadge = e.__singleStock ? '<span class="badge" style="color:#a7f3d0;border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.10)">Action unique</span>' : '';
-        const name = esc(e.long_name||e.fund_name||e.name||e.symbol||e.ticker||'—');
+        
+        // Utiliser getTicker et getName pour l'affichage
+        const titleTicker = esc(e.__ticker || '—');
+        const titleName   = esc(e.__name || '');
 
         const colsHTML = state.selectedMetrics.map(m=>{
           const d=METRICS[m]; if(!d) return '';
@@ -549,7 +556,11 @@
         card.innerHTML=`
           <div class="etf-rank">#${i+1}</div>
           <div class="etf-info">
-            <div class="etf-name" title="${name}">${name} ${typeBadge} ${levBadge} ${singleBadge}</div>
+            <div class="etf-name" title="${titleTicker}${titleName?' — '+titleName:''}">
+              <span class="font-semibold">${titleTicker}</span>
+              ${titleName ? `<span class="opacity-70"> — ${titleName}</span>` : ''}
+              ${typeBadge} ${levBadge} ${singleBadge}
+            </div>
             ${micro?`<div class="micro">${micro}</div>`:''}
           </div>
           <div class="metrics">${colsHTML}</div>`;
@@ -611,6 +622,8 @@
         
         return {
           ...e,
+          __ticker: getTicker(e),  // NEW: enrichir avec ticker
+          __name:   getName(e),    // NEW: enrichir avec nom
           __kind: classify(e),
           __lev: __levFlag,
           __singleStock,
@@ -705,6 +718,7 @@
     syncSelectedFromUI();
     setupCustomFiltersUI();
     setTimeout(()=>compute(), 300);
-    window.ETF_MC={compute,state,METRICS,cache};
+    // NEW: Ajouter l'alias calculate pour compute
+    window.ETF_MC={compute,state,METRICS,cache, calculate: compute};
   }
 })();
