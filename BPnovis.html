@@ -192,12 +192,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 48px;
-            font-weight: bold;
+            font-size: 36px;
+            font-weight: 900;
+            color: #000;
             margin-bottom: 40px;
             box-shadow: 0 10px 40px rgba(6, 255, 165, 0.3);
             position: relative;
             z-index: 1;
+            letter-spacing: -2px;
         }
 
         .cover-title {
@@ -247,6 +249,7 @@
         .executive-summary {
             padding: 60px;
             background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            min-height: 100vh;
         }
 
         .section-header {
@@ -279,8 +282,8 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            min-height: 180px;
+            justify-content: flex-start;
+            min-height: 200px;
         }
 
         .metric-box::before {
@@ -306,9 +309,6 @@
             letter-spacing: 0.5px;
             margin-bottom: 12px;
             font-weight: 600;
-            height: 20px;
-            display: flex;
-            align-items: center;
         }
 
         .metric-value {
@@ -318,9 +318,6 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 8px;
-            height: 45px;
-            display: flex;
-            align-items: center;
         }
 
         .metric-value.negative {
@@ -339,14 +336,12 @@
             font-size: 14px;
             color: #a0a0a0;
             line-height: 1.6;
-            flex-grow: 1;
-            display: flex;
-            align-items: flex-start;
         }
 
         .content-page {
             padding: 60px;
             background: #0f0f0f;
+            min-height: 100vh;
         }
 
         .subsection {
@@ -370,7 +365,7 @@
             border: 1px solid rgba(6, 255, 165, 0.1);
             border-radius: 12px;
             overflow: hidden;
-            table-layout: fixed;
+            table-layout: auto;
         }
 
         .professional-table thead {
@@ -387,6 +382,7 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
             vertical-align: middle;
+            white-space: nowrap;
         }
 
         .professional-table th.number,
@@ -670,9 +666,6 @@
         .highlight-icon {
             font-size: 28px;
             margin-bottom: 12px;
-            height: 35px;
-            display: flex;
-            align-items: center;
         }
 
         .highlight-title {
@@ -680,9 +673,6 @@
             color: #06ffa5;
             margin-bottom: 8px;
             font-size: 16px;
-            height: 24px;
-            display: flex;
-            align-items: center;
         }
 
         .highlight-text {
@@ -715,19 +705,22 @@
             }
             
             .highlights {
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                grid-template-columns: 1fr;
             }
             
             .professional-table {
                 font-size: 12px;
                 display: block;
                 overflow-x: auto;
-                white-space: nowrap;
             }
             
             .professional-table th,
             .professional-table td {
                 padding: 10px 12px;
+            }
+            
+            .cover-info {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -754,10 +747,10 @@
             .highlight-card {
                 min-height: auto !important;
                 padding: 15px !important;
+                break-inside: avoid !important;
             }
             
             .professional-table {
-                table-layout: fixed !important;
                 width: 100% !important;
                 page-break-inside: avoid !important;
             }
@@ -765,6 +758,11 @@
             .professional-table td,
             .professional-table th {
                 font-size: 10pt !important;
+            }
+            
+            .content-page,
+            .executive-summary {
+                min-height: auto !important;
             }
         }
     </style>
@@ -775,7 +773,7 @@
     <div class="document">
         <!-- Cover Page -->
         <div class="cover-page">
-            <div class="company-logo">💎</div>
+            <div class="company-logo">NV</div>
             
             <h1 class="cover-title">Business Plan 2025-2028</h1>
             <p class="cover-subtitle">
@@ -871,11 +869,11 @@
                 <table class="professional-table">
                     <thead>
                         <tr>
-                            <th style="width: 15%">Période</th>
-                            <th style="width: 20%">Phase</th>
-                            <th style="width: 35%">Livrables</th>
-                            <th class="number" style="width: 15%">Budget mensuel</th>
-                            <th class="number" style="width: 15%">Budget total</th>
+                            <th>Période</th>
+                            <th>Phase</th>
+                            <th>Livrables</th>
+                            <th class="number">Budget mensuel</th>
+                            <th class="number">Budget total</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1008,12 +1006,12 @@
                 <table class="professional-table">
                     <thead>
                         <tr>
-                            <th style="width: 25%">Période</th>
-                            <th class="number" style="width: 15%">Q4 2025<br>(3 mois)</th>
-                            <th class="number" style="width: 15%">2026<br>(Année 1)</th>
-                            <th class="number" style="width: 15%">2027<br>(Année 2)</th>
-                            <th class="number" style="width: 15%">2028<br>(Année 3)</th>
-                            <th class="number" style="width: 15%">Total</th>
+                            <th>Période</th>
+                            <th class="number">Q4 2025<br>(3 mois)</th>
+                            <th class="number">2026<br>(Année 1)</th>
+                            <th class="number">2027<br>(Année 2)</th>
+                            <th class="number">2028<br>(Année 3)</th>
+                            <th class="number">Total</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1186,10 +1184,10 @@
                 <table class="professional-table">
                     <thead>
                         <tr>
-                            <th style="width: 35%">Métrique</th>
-                            <th class="number" style="width: 20%">Valeur cible</th>
-                            <th style="width: 25%">Benchmark SaaS B2C</th>
-                            <th style="width: 20%">Statut</th>
+                            <th>Métrique</th>
+                            <th class="number">Valeur cible</th>
+                            <th>Benchmark SaaS B2C</th>
+                            <th>Statut</th>
                         </tr>
                     </thead>
                     <tbody>
