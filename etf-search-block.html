@@ -1,0 +1,35 @@
+<!-- etf-search-block.html - Bloc HTML à intégrer dans etf.html -->
+<!-- 
+  INSTRUCTIONS D'INTÉGRATION :
+  1. Copiez ce bloc HTML
+  2. Collez-le dans etf.html, dans la section <div id="etf-az-controls"> 
+  3. Placez-le APRÈS la grille des filtres (Pays/Type/Secteur) et AVANT la ligne d'infos "⚡ X lignes affichées"
+-->
+
+<!-- Barre de recherche ETF A→Z -->
+<div class="search-container mt-3">
+  <div class="search-wrapper relative">
+    <input
+      type="text"
+      id="etf-az-search"
+      placeholder="Rechercher un ETF (ticker, nom, ISIN, pays, secteur…)"
+      class="w-full py-3 px-12 rounded-lg border bg-white/5 border-white/10 focus:outline-none focus:ring-0"
+      autocomplete="off"
+      aria-label="Rechercher un ETF"
+      aria-describedby="etf-az-search-info"
+    />
+    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 opacity-70"></i>
+    <button
+      id="etf-az-clear"
+      class="clear-btn absolute right-4 top-1/2 -translate-y-1/2 opacity-0 transition-opacity duration-200"
+      aria-label="Effacer la recherche"
+      tabindex="-1"
+    >
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div id="etf-az-search-info" class="mt-2 text-sm opacity-70 hidden" aria-live="polite">
+    <span id="etf-az-search-count">0</span> résultat(s) trouvé(s)
+    <span id="etf-az-search-hint" class="ml-2 text-xs opacity-60"></span>
+  </div>
+</div>
