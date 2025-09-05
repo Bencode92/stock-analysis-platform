@@ -25,10 +25,19 @@ const CONFIG = {
     LOOKBACK_DAYS: 90,
     ATR_PERIOD: 14,    // Période pour l'ATR
     DD_WINDOW: 90,     // Fenêtre pour le drawdown
-    API_KEY: process.env.TWELVE_DATA_KEY || '',
+    API_KEY: process.env.TWELVE_DATA_API_KEY
+          || process.env.TWELVE_DATA_KEY
+          || process.env.TWELVE_DATA_API
+          || '',
     RATE_LIMIT_DELAY: 8100,  // 8.1s entre requêtes (API limit)
     CACHE_TTL: 3600000,  // 1 heure en ms
 };
+
+// Stop clair si pas d'API key
+if (!CONFIG.API_KEY) {
+  console.error('❌ Twelve Data API key manquante (TWELVE_DATA_API_KEY / TWELVE_DATA_KEY / TWELVE_DATA_API)');
+  process.exit(1);
+}
 
 // Liste des exchanges Tier-1
 const TIER1_EXCHANGES = ['binance', 'coinbase', 'kraken', 'bitstamp', 'gemini'];
@@ -538,3 +547,116 @@ if (typeof window !== 'undefined') {
 // Log de démarrage
 console.log('Crypto Volatility & Returns Module loaded successfully');
 console.log(`Configuration: Interval=${CONFIG.INTERVAL}, Lookback=${CONFIG.LOOKBACK_DAYS} days`);
+
+// =========================
+// MAIN (lecture/écriture)
+// =========================
+if (require.main === module) {
+  const fs = require('fs/promises');
+  const path = require('path');
+  const { parse } = require('csv-parse/sync');
+
+  function parseExchanges(raw) {
+    if (!raw) return [];
+    try {
+      const arr = JSON.parse(String(raw).replace(/'/g,'"'));
+      return Array.isArray(arr) ? arr : [];
+    } catch {
+      return String(raw)
+        .replace(/^\[|\]$/g,'')
+        .split(/[;,]/)
+        .map(s => s.trim())
+        .filter(Boolean);
+    }
+  }
+
+  async function readCryptoCSV(file) {
+    const txt = await fs.readFile(file, 'utf8');
+    const rows = parse(txt, { columns: true, skip_empty_lines: true, bom: true });
+    return rows.map(r => ({
+      symbol: (r.symbol || r.Symbol || '').trim(),
+      base: (r.currency_base || r.base || r.Base || r.symbol || '').trim(),
+      quote: (r.currency_quote || r.quote || r.Quote || 'USD').trim(),
+      exchanges: parseExchanges(r.available_exchanges || r.exchanges || '["Binance","Coinbase"]')
+    })).filter(x => x.symbol);
+  }
+
+  async function writeCSV(file, header, rowsAsObjects) {
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    const esc = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
+    const content = [header.join(','), ...rowsAsObjects.map(r => header.map(h => r[h] ?? '').map(esc).join(','))].join('\n');
+    await fs.writeFile(file, content, 'utf8');
+  }
+
+  function buildTop10(metrics, key, desc = true) {
+    const num = x => (x === '' || x == null) ? NaN : Number(x);
+    const m = metrics.filter(r => Number.isFinite(num(r[key])));
+    m.sort((a,b) => desc ? num(b[key]) - num(a[key]) : num(a[key]) - num(b[key]));
+    return m.slice(0, 10);
+  }
+
+  (async () => {
+    const DATA_DIR = process.env.DATA_DIR || 'data';
+    const OUT_DIR  = process.env.OUTPUT_DIR || 'data/filtered';
+    const listFile = path.join(DATA_DIR, 'Crypto.csv');
+
+    // 1) Lire la liste
+    const cryptoList = await readCryptoCSV(listFile);
+    if (!cryptoList.length) {
+      console.error('❌ Aucune crypto dans data/Crypto.csv');
+      process.exit(1);
+    }
+
+    // 2) Calculer toutes les métriques
+    const table = await generateVolatilityReport(cryptoList); // [header, ...rows]
+    const header = table[0];
+    const rows   = table.slice(1).map(r => Object.fromEntries(header.map((h,i)=>[h, r[i]])));
+
+    // 3) Fichier complet
+    await writeCSV(path.join(OUT_DIR,'crypto_all_metrics.csv'), header, rows);
+    console.log(`✅ Écrit: ${path.join(OUT_DIR,'crypto_all_metrics.csv')} (${rows.length} lignes)`);
+
+    // 4) Top10 momentum & volatilité
+    const topMomentum = buildTop10(rows, 'ret_30d_pct', true);
+    const topVol      = buildTop10(rows, 'vol_30d_annual_pct', true);
+
+    // On conserve les index attendus par le awk du résumé (1:symbol, 4:exchange, 9:ret_30d, 11:vol_30d)
+    const outHeader = [
+      'symbol','dummy2','dummy3','exchange_used',
+      'c5','c6','c7','c8','ret_30d_pct','c10','vol_30d_annual_pct'
+    ];
+    const mapForTop = r => ({
+      symbol: r.symbol,
+      dummy2:'', dummy3:'', exchange_used: r.exchange_used,
+      c5:'', c6:'', c7:'', c8:'',
+      ret_30d_pct: r.ret_30d_pct,
+      c10:'',
+      vol_30d_annual_pct: r.vol_30d_annual_pct
+    });
+    await writeCSV(path.join(OUT_DIR,'Top10_momentum.csv'),   outHeader, topMomentum.map(mapForTop));
+    await writeCSV(path.join(OUT_DIR,'Top10_volatility.csv'), outHeader, topVol.map(mapForTop));
+    console.log('✅ Écrit: Top10_momentum.csv & Top10_volatility.csv');
+
+    // 5) Filtres acceptés/rejetés + raison
+    const MIN_VOL_30D = Number(process.env.MIN_VOL_30D || '30');
+    const MAX_VOL_30D = Number(process.env.MAX_VOL_30D || '500');
+    const MIN_RET_7D  = Number(process.env.MIN_RET_7D  || '-50');
+
+    const accepted = [];
+    const rejected = [];
+    for (const r of rows) {
+      const v30  = Number(r.vol_30d_annual_pct);
+      const ret7 = Number(r.ret_7d_pct);
+      let reason = '';
+      if (!Number.isFinite(v30) || !Number.isFinite(ret7)) reason = 'missing_metrics';
+      else if (v30 < MIN_VOL_30D || v30 > MAX_VOL_30D || ret7 < MIN_RET_7D) reason = 'thresholds';
+      (reason ? rejected : accepted).push(reason ? { ...r, reason } : r);
+    }
+    await writeCSV(path.join(OUT_DIR,'Crypto_filtered_volatility.csv'), header, accepted);
+    await writeCSV(path.join(OUT_DIR,'Crypto_rejected_volatility.csv'), [...header,'reason'], rejected);
+    console.log('✅ Écrit: Crypto_filtered_volatility.csv & Crypto_rejected_volatility.csv');
+  })().catch(e => {
+    console.error('❌ Erreur main:', e);
+    process.exit(1);
+  });
+}
