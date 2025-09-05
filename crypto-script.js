@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // --- Boot
   createAlphabetSections();
   initAlphabetTabs();
+  initDefaultTab(); // Ajout: Active la lettre "A" par défaut
   initSearchFunctionality();
   updateMarketTime();
   setInterval(updateMarketTime, 1000);
@@ -355,6 +356,23 @@ document.addEventListener('DOMContentLoaded', function () {
         byId(`${key}-indices`)?.classList.remove('hidden');
       });
     });
+  }
+
+  // Nouvelle fonction pour activer l'onglet par défaut
+  function initDefaultTab() {
+    // Active la lettre "A" par défaut
+    const defaultTab = document.querySelector('.region-tab[data-region="a"]');
+    const defaultContent = document.getElementById('a-indices');
+    
+    if (defaultTab && defaultContent) {
+      // Active l'onglet "A"
+      document.querySelectorAll('.region-tab').forEach(t => t.classList.remove('active'));
+      defaultTab.classList.add('active');
+      
+      // Affiche le contenu de "A"
+      document.querySelectorAll('.region-content').forEach(c => c.classList.add('hidden'));
+      defaultContent.classList.remove('hidden');
+    }
   }
 
   function createAlphabetSections() {
