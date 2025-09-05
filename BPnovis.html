@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Business Plan NOVIS 2025-2028</title>
+    
+    <!-- Police Google avec link (plus fiable pour PDF) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    
     <style>
         * {
             margin: 0;
@@ -44,29 +47,29 @@
                 margin: 15mm;
             }
             
-            body {
-                background: #fff !important;
-                color: #000 !important;
-                padding: 0;
-            }
-            
-            /* Force visibility for animated elements */
+            /* ========== FIX CRITIQUE : FORCER LA VISIBILITÉ ========== */
             .metric-box, .highlight-card, .trigger-card, .option-card {
                 opacity: 1 !important;
                 transform: none !important;
                 transition: none !important;
             }
             
-            /* Disable all animations */
+            /* Désactiver toutes les animations */
             * {
                 animation: none !important;
                 transition: none !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+            
+            body {
+                background: #000 !important;
+                color: #e0e0e0 !important;
+                padding: 0;
             }
             
             .page-break {
-                break-before: page;
                 page-break-before: always;
             }
             
@@ -75,182 +78,98 @@
             }
             
             .document {
-                box-shadow: none !important;
-                border: none !important;
-                border-radius: 0 !important;
-                background: #fff !important;
+                box-shadow: none;
+                border: 1px solid rgba(6, 255, 165, 0.2);
+                background: #0f0f0f !important;
             }
             
-            .cover-page {
-                background: #fff !important;
-                color: #000 !important;
-                page-break-after: always;
-            }
-            
+            /* Masquer les éléments décoratifs qui peuvent causer des problèmes */
             .cover-page::before {
                 display: none !important;
             }
             
-            .content-page, .executive-summary {
-                background: #fff !important;
-                color: #000 !important;
+            .cover-page {
+                background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%) !important;
+                color: #e0e0e0 !important;
             }
             
-            /* Convert gradient text to solid colors */
+            .content-page, .executive-summary {
+                background: #0f0f0f !important;
+                color: #e0e0e0 !important;
+            }
+            
+            /* Fix pour les textes en dégradé */
             h1, h2, h3, .section-header {
                 background: none !important;
                 -webkit-background-clip: initial !important;
                 -webkit-text-fill-color: initial !important;
-                color: #00a866 !important;
+                color: #06ffa5 !important;
             }
             
             .metric-value {
                 background: none !important;
                 -webkit-background-clip: initial !important;
                 -webkit-text-fill-color: initial !important;
-                color: #00a866 !important;
+                color: #06ffa5 !important;
+            }
+            
+            .metric-value.negative {
+                color: #ff3366 !important;
+            }
+            
+            .metric-value.neutral {
+                color: #ffc107 !important;
             }
             
             .metric-box, .highlight-card {
-                background: #f8f8f8 !important;
-                border: 2px solid #00a866 !important;
-                color: #000 !important;
+                background: linear-gradient(135deg, rgba(6, 255, 165, 0.05), rgba(6, 255, 165, 0.02)) !important;
+                border: 1px solid rgba(6, 255, 165, 0.2) !important;
+                color: #e0e0e0 !important;
             }
             
             .professional-table {
-                background: #fff !important;
-                color: #000 !important;
+                background: rgba(6, 255, 165, 0.02) !important;
+                color: #c0c0c0 !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
             }
             
             .professional-table thead {
-                background: #00a866 !important;
+                background: rgba(6, 255, 165, 0.1) !important;
             }
             
             .professional-table th {
-                color: #fff !important;
-                background: #00a866 !important;
+                color: #06ffa5 !important;
             }
             
             .professional-table td {
-                color: #000 !important;
-                border-color: #ddd !important;
-            }
-            
-            .professional-table .highlight-row {
-                background: #e8f5e9 !important;
-            }
-            
-            .professional-table .total-row {
-                background: #c8e6c9 !important;
-            }
-            
-            .alert-box {
-                color: #000 !important;
-                border: 2px solid #00a866 !important;
-                background: #f0f0f0 !important;
+                color: #c0c0c0 !important;
             }
             
             .alert-box.info {
-                background: #e3f2fd !important;
-                border-color: #1976d2 !important;
+                background: rgba(23, 162, 184, 0.1) !important;
+                border: 1px solid rgba(23, 162, 184, 0.3) !important;
+                color: #17a2b8 !important;
             }
             
             .alert-box.success {
-                background: #e8f5e9 !important;
-                border-color: #00a866 !important;
-            }
-            
-            .conformity-card.do {
-                background: #e8f5e9 !important;
-                border: 2px solid #00a866 !important;
-            }
-            
-            .conformity-card.dont {
-                background: #ffebee !important;
-                border: 2px solid #c62828 !important;
-            }
-            
-            .conformity-title {
-                color: #000 !important;
-            }
-            
-            .conformity-list li {
-                color: #000 !important;
-            }
-            
-            .option-card {
-                background: #f5f5f5 !important;
-                border: 2px solid #00a866 !important;
-                page-break-inside: avoid !important;
-            }
-            
-            .option-number {
-                background: #00a866 !important;
-                color: #fff !important;
-            }
-            
-            .option-title {
-                color: #00a866 !important;
-            }
-            
-            .option-metrics strong {
-                color: #00a866 !important;
+                background: rgba(6, 255, 165, 0.1) !important;
+                border: 1px solid rgba(6, 255, 165, 0.3) !important;
+                color: #06ffa5 !important;
             }
             
             .footer {
-                background: #f5f5f5 !important;
-                color: #666 !important;
-                border-top: 2px solid #00a866 !important;
+                background: #0a0a0a !important;
+                color: #606060 !important;
             }
             
-            .company-logo {
-                background: #00a866 !important;
-                color: #fff !important;
-                box-shadow: none !important;
+            /* Éviter les coupures de page indésirables */
+            .subsection {
+                page-break-inside: avoid !important;
             }
             
-            .cover-title {
-                color: #00a866 !important;
-                background: none !important;
-                -webkit-text-fill-color: initial !important;
-            }
-            
-            .cover-subtitle {
-                color: #666 !important;
-            }
-            
-            .cover-info-item strong {
-                color: #00a866 !important;
-            }
-            
-            .number.positive {
-                color: #00a866 !important;
-            }
-            
-            .number.negative {
-                color: #c62828 !important;
-            }
-            
-            .subsection-title {
-                color: #00a866 !important;
-            }
-            
-            .highlight-title {
-                color: #00a866 !important;
-            }
-            
-            .highlight-text {
-                color: #666 !important;
-            }
-            
-            .metric-label {
-                color: #666 !important;
-            }
-            
-            .metric-detail {
-                color: #333 !important;
+            .key-metrics {
+                page-break-inside: avoid !important;
             }
         }
 
@@ -647,6 +566,34 @@
             color: #ff3366;
         }
 
+        .triggers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .trigger-card {
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.05), rgba(255, 193, 7, 0.02));
+            border: 1px solid rgba(255, 193, 7, 0.2);
+            border-radius: 12px;
+            border-left: 4px solid #ffc107;
+        }
+
+        .trigger-metric {
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffc107;
+            margin-bottom: 8px;
+        }
+
+        .trigger-action {
+            font-size: 14px;
+            color: #c0c0c0;
+            line-height: 1.6;
+        }
+
         .option-cards {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -761,6 +708,22 @@
             color: #a0a0a0;
             line-height: 1.6;
             flex-grow: 1;
+        }
+
+        .scenario-table {
+            margin: 30px 0;
+        }
+
+        .scenario-1 {
+            background: rgba(6, 255, 165, 0.1) !important;
+        }
+
+        .scenario-2 {
+            background: rgba(255, 193, 7, 0.1) !important;
+        }
+
+        .scenario-3 {
+            background: rgba(23, 162, 184, 0.1) !important;
         }
 
         @media screen and (max-width: 768px) {
@@ -1365,7 +1328,10 @@
     </div>
 
     <script>
-        // Fonction pour s'assurer que tout est visible avant l'impression
+        // Date fixée en dur - pas de mise à jour automatique
+        // Pour modifier la date, changez directement dans le HTML
+        
+        // ========== FIX CRITIQUE POUR L'IMPRESSION ==========
         const resetForPrint = () => {
             document.querySelectorAll('.metric-box, .highlight-card, .trigger-card, .option-card')
                 .forEach(el => {
@@ -1377,34 +1343,29 @@
 
         // Forcer la visibilité avant l'impression
         window.onbeforeprint = resetForPrint;
+        
+        // Animation au scroll (uniquement pour l'écran, pas l'impression)
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
 
-        // Animation au scroll UNIQUEMENT sur écran
-        if (window.matchMedia && !window.matchMedia('print').matches) {
-            const observerOptions = {
-                threshold: 0.1,
-                rootMargin: '0px 0px -100px 0px'
-            };
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
 
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.style.opacity = '1';
-                        entry.target.style.transform = 'translateY(0)';
-                    }
-                });
-            }, observerOptions);
-
-            // Animation uniquement si on n'est pas en mode print
-            document.addEventListener('DOMContentLoaded', () => {
-                // Attendre que le DOM soit chargé
-                setTimeout(() => {
-                    document.querySelectorAll('.metric-box, .highlight-card, .trigger-card, .option-card').forEach(el => {
-                        el.style.opacity = '0';
-                        el.style.transform = 'translateY(20px)';
-                        el.style.transition = 'all 0.6s ease';
-                        observer.observe(el);
-                    });
-                }, 100);
+        // N'appliquer les animations qu'en mode écran (pas print)
+        if (!window.matchMedia('print').matches) {
+            document.querySelectorAll('.metric-box, .highlight-card, .trigger-card, .option-card').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'all 0.6s ease';
+                observer.observe(el);
             });
         }
     </script>
