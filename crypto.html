@@ -1006,6 +1006,11 @@
              transform: translateY(-1px);
          }
          
+         .mc-pill.is-checked {
+             background-color: rgba(0, 255, 135, 0.25);
+             border-color: var(--accent-color);
+         }
+         
          .mc-pill input[type="checkbox"],
          .mc-pill input[type="radio"] {
              margin: 0;
@@ -1054,6 +1059,24 @@
              display: block;
              margin-bottom: 0.5rem;
              font-weight: 500;
+         }
+         
+         /* Styles pour drag & drop */
+         .priority-item {
+             transition: all 0.2s;
+         }
+         
+         .priority-item.opacity-50 {
+             opacity: 0.5;
+         }
+         
+         .priority-item:hover {
+             background-color: rgba(0, 255, 135, 0.15) !important;
+         }
+         
+         .drag-handle {
+             cursor: move;
+             opacity: 0.5;
          }
 
          /* Responsive */
@@ -1266,17 +1289,15 @@
                        <fieldset>
                          <legend class="text-sm opacity-70 mb-2">Critères sélectionnés = Ordre de priorité</legend>
                          <div class="flex flex-wrap gap-2">
-                           <!-- Perf -->
-                           <label class="mc-pill"><input type="checkbox" id="m-ret_1d"  checked> Perf 24h ↑</label>
-                           <label class="mc-pill"><input type="checkbox" id="m-ret_7d">  Perf 7j ↑</label>
+                           <label class="mc-pill"><input type="checkbox" id="m-ret_1d" checked> Perf 24h ↑</label>
+                           <label class="mc-pill"><input type="checkbox" id="m-ret_7d"> Perf 7j ↑</label>
                            <label class="mc-pill"><input type="checkbox" id="m-ret_30d"> Perf 30j ↑</label>
-                           <label class="mc-pill"><input type="checkbox" id="m-ret_90d"> Perf 90j ↑</label>
-                           <label class="mc-pill"><input type="checkbox" id="m-ret_1y">  Perf 1 an ↑</label>
-                           <!-- Risque -->
-                           <label class="mc-pill"><input type="checkbox" id="m-vol_7d">  Vol 7j (ann.) ↓</label>
+                           <label class="mc-pill"><input type="checkbox" id="m-ret_90d" checked> Perf 90j ↑</label>
+                           <label class="mc-pill"><input type="checkbox" id="m-ret_1y"> Perf 1 an ↑</label>
+                           <label class="mc-pill"><input type="checkbox" id="m-vol_7d"> Vol 7j (ann.) ↓</label>
                            <label class="mc-pill"><input type="checkbox" id="m-vol_30d"> Vol 30j (ann.) ↓</label>
-                           <label class="mc-pill"><input type="checkbox" id="m-atr14">   ATR14% ↓</label>
-                           <label class="mc-pill"><input type="checkbox" id="m-dd90">    Drawdown 90j ↓</label>
+                           <label class="mc-pill"><input type="checkbox" id="m-atr14"> ATR14% ↓</label>
+                           <label class="mc-pill"><input type="checkbox" id="m-dd90"> Drawdown 90j ↓</label>
                          </div>
                        </fieldset>
 
@@ -1286,18 +1307,10 @@
                            <label class="mc-pill"><input type="radio" name="mc-mode" value="balanced" checked> Équilibre</label>
                            <label class="mc-pill"><input type="radio" name="mc-mode" value="lexico"> Priorités</label>
                          </div>
-                         <div id="crypto-mc-priorities" class="mt-3 text-xs opacity-60"></div>
-                       </fieldset>
-
-                       <fieldset>
-                         <legend class="text-sm opacity-70 mb-2">Filtres rapides</legend>
-                         <div class="flex flex-col gap-2">
-                           <label class="mc-row"><input type="checkbox" id="f-tier1" class="mr-2" disabled> Tier-1 uniquement</label>
-                           <label class="mc-row"><input type="checkbox" id="f-nonstale" class="mr-2" checked disabled> Exclure "stale"</label>
-                           <div class="mc-row items-center">
-                             <span class="text-xs opacity-70 mr-2">Min. data points:</span>
-                             <input id="f-minpoints" type="number" value="0" min="0" step="10" class="mini-input" style="width:90px;">
-                           </div>
+                         <!-- liste draggable des priorités -->
+                         <div id="crypto-priority-container" class="mt-3 p-3 rounded bg-white/5" style="display:none">
+                           <div class="text-xs opacity-70 mb-2">Ordre des priorités (glisser-déposer)</div>
+                           <div id="crypto-priority-list" class="space-y-1"></div>
                          </div>
                        </fieldset>
 
