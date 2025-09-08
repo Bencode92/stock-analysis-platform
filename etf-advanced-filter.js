@@ -29,7 +29,7 @@ const CONFIG = {
     TRANSLATION_CONCURRENCY: Number(process.env.TRANSLATION_CONCURRENCY || 2),
     
     // Longueur max pour les objectifs (nouveau)
-    OBJECTIVE_MAXLEN: Number(process.env.OBJECTIVE_MAXLEN || 400),
+    OBJECTIVE_MAXLEN: Number(process.env.OBJECTIVE_MAXLEN || 500),
     
     // Seuils différenciés
     MIN_ADV_USD_ETF: 1_000_000,    // 1M$ pour ETF
