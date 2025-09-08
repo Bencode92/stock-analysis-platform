@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v2.6 - Auto-bascule en mode Priorités
+// mc-crypto.js — Composer multi-critères (Crypto) v2.7 - Correction bugs opérateurs et priorités
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -31,7 +31,7 @@
 
   // ---- Utils
   const $ = (id) => document.getElementById(id);
-  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const esc = (s) => String(s ?? '').replace(/[&<>\"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":"&#39;"}[m]));
   const toNum = (x) => {
     if (x == null || x === '') return NaN;
     if (typeof x === 'number') return x;
@@ -106,19 +106,28 @@
     });
   }
 
-  // Filtres personnalisés
+  // Filtres personnalisés - CORRIGÉ pour gérer les entités HTML
   function passCustomFilters(i) {
     const q = (v)=>Math.round(v*10)/10; // quantisation 0.1
     for (const f of state.filters) {
       const raw = state.cache[f.metric]?.raw[i];
       if (!Number.isFinite(raw)) return false;
       const v = q(raw), x = q(f.value);
-      if (f.operator === '>=' && !(v>=x)) return false;
-      if (f.operator === '>'  && !(v> x)) return false;
-      if (f.operator === '='  && !(v===x))return false;
-      if (f.operator === '<'  && !(v< x)) return false;
-      if (f.operator === '<=' && !(v<=x)) return false;
-      if (f.operator === '!=' && !(v!==x))return false;
+      
+      // Décodage des entités HTML si nécessaire
+      let op = f.operator;
+      if (op === '&gt;=') op = '>=';
+      if (op === '&gt;') op = '>';
+      if (op === '&lt;=') op = '<=';
+      if (op === '&lt;') op = '<';
+      if (op === '&ne;') op = '!=';
+      
+      if (op === '>=' && !(v>=x)) return false;
+      if (op === '>'  && !(v> x)) return false;
+      if (op === '='  && !(v===x))return false;
+      if (op === '<'  && !(v< x)) return false;
+      if (op === '<=' && !(v<=x)) return false;
+      if (op === '!=' && !(v!==x))return false;
     }
     return true;
   }
@@ -308,11 +317,16 @@
     }
   }
 
-  // ==== Priorités (drag & drop) - version simplifiée
+  // ==== Priorités (drag & drop) - version améliorée avec re-binding robuste
   function updatePriorityUI() {
     const box = $('#crypto-priority-container');
     const list = $('#crypto-priority-list');
     if (!box || !list) return;
+    
+    // Force l'affichage si on est en mode lexico
+    if (state.mode === 'lexico') {
+      togglePrioBox(true);
+    }
     
     // L'affichage est désormais piloté par togglePrioBox
     if (state.mode !== 'lexico') { 
@@ -473,12 +487,20 @@
       applyModeFromTarget(checkedRadio);
     }
 
-    // filtres personnalisés
+    // filtres personnalisés - CORRIGÉ pour gérer les valeurs du select
     $('#cf-add')?.addEventListener('click',()=>{
       const metric = $('#cf-metric').value;
-      const operator = $('#cf-op').value;
+      let operator = $('#cf-op').value;
       const value = parseFloat($('#cf-val').value);
       if (!metric || isNaN(value)) return;
+      
+      // Décodage préventif des entités HTML si présentes
+      if (operator === '&gt;=') operator = '>=';
+      if (operator === '&gt;') operator = '>';
+      if (operator === '&lt;=') operator = '<=';
+      if (operator === '&lt;') operator = '<';
+      if (operator === '&ne;') operator = '!=';
+      
       state.filters.push({metric,operator,value});
       $('#cf-val').value='';
       drawFilters();
@@ -518,6 +540,22 @@
     // Re-compacte à chaque interaction et au redimensionnement
     ['change','click'].forEach(evt => rootMc.addEventListener(evt, compactFilterUI, {passive:true}));
     window.addEventListener('resize', compactFilterUI, {passive:true});
+    
+    // NOUVEAU: Fonction de debug exposée
+    if (window.DEBUG_MC || true) { // Toujours exposé pour faciliter le debug
+      window.MC.refreshPriorityList = () => {
+        console.log('MC State:', {
+          mode: state.mode,
+          selected: state.selected,
+          filters: state.filters.length,
+          data: state.data.length
+        });
+        updatePriorityUI();
+        refresh(false);
+      };
+      
+      window.MC.forceLexico = () => forcePriorities({scroll: true});
+    }
   }
 
   function drawFilters() {
@@ -525,12 +563,20 @@
     if (!cont) return;
     cont.innerHTML = state.filters.map((f,idx)=>{
       const lab = METRICS[f.metric].label;
-      const color = (f.operator==='>='||f.operator==='>') ? 'text-green-400'
-                   : (f.operator==='<'||f.operator==='<=') ? 'text-red-400'
+      // Normalisation de l'opérateur pour l'affichage
+      let displayOp = f.operator;
+      if (displayOp === '&gt;=') displayOp = '>=';
+      if (displayOp === '&gt;') displayOp = '>';
+      if (displayOp === '&lt;=') displayOp = '<=';
+      if (displayOp === '&lt;') displayOp = '<';
+      if (displayOp === '&ne;') displayOp = '!=';
+      
+      const color = (displayOp==='>='||displayOp==='>') ? 'text-green-400'
+                   : (displayOp==='<'||displayOp==='<=') ? 'text-red-400'
                    : 'text-yellow-400';
       return `<div class="filter-item flex items-center gap-2 p-2 rounded bg-white/5">
         <span class="flex-1 min-w-0">
-          <span class="whitespace-nowrap overflow-hidden text-ellipsis">${lab} <span class="${color} font-semibold">${f.operator} ${f.value}%</span></span>
+          <span class="whitespace-nowrap overflow-hidden text-ellipsis">${lab} <span class="${color} font-semibold">${displayOp} ${f.value}%</span></span>
         </span>
         <button class="remove-filter text-red-400 hover:text-red-300 text-sm shrink-0" data-i="${idx}"><i class="fas fa-times"></i></button>
       </div>`;
