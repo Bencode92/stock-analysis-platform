@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v4.4 - Amélioration affichage Top Performances
+// mc-crypto.js — Composer multi-critères (Crypto) v4.5 - Priorités intelligentes avec tolérance near-tie
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -17,6 +17,19 @@
     dd90:    {label:'Drawdown 90j',  col:'drawdown_90d_pct',  unit:'%', max:false},
   };
 
+  // --- Tolérance (v4.5 - Priorités intelligentes)
+  const GAP_FLOOR = {        // planchers de gaps (en points de %)
+    ret_1d: 0.5, ret_7d: 0.4, ret_30d: 0.35, ret_90d: 0.30, ret_1y: 0.25,
+    vol_7d: 0.20, vol_30d: 0.20, atr14: 0.15, dd90: 0.25
+  };
+  const TOL_PRESET = { c: 0.6, kappa: 1.5 };
+  const MIN_TOL_P = 0.012;    // plancher 1.2 pp sur diff. de percentiles
+  const TOP_N = 10;
+  const ALLOW_MISSING = 1;    // tolère 1 critère manquant
+
+  // --- Stablecoins à exclure
+  const STABLES = new Set(['USDT','USDC','DAI','TUSD','FDUSD','PYUSD','EURT','EURS','USDE','BUSD','UST']);
+
   const state = {
     data: [],
     selected: ['ret_1d','ret_90d'],
@@ -31,7 +44,7 @@
 
   // ---- Utils
   const $ = (id) => document.getElementById(id);
-  const esc = (s) => String(s ?? '').replace(/[&<>\"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":"&#39;"}[m]));
+  const esc = (s) => String(s ?? '').replace(/[&<>\"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));
   const toNum = (x) => {
     if (x == null || x === '') return NaN;
     if (typeof x === 'number') return x;
@@ -386,10 +399,43 @@
     });
   }
 
+  // === v4.5 - Helpers near-tie ===
+  const localWindow = (len) => Math.max(6, Math.min(40, Math.ceil(0.03 * len)));
+
+  function localGap(sorted, v) {
+    const a = sorted, n = a?.length || 0;
+    if (!n) return Infinity;
+    // binary search
+    let lo = 0, hi = n;
+    while (lo < hi) { const mid = (lo + hi) >> 1; (a[mid] < v) ? lo = mid + 1 : hi = mid; }
+    const W = localWindow(n);
+    const i = Math.min(Math.max(lo, 1), n - 2);
+    const start = Math.max(1, i - W);
+    const end   = Math.min(n - 2, i + W);
+    const gaps = [];
+    for (let j = start - 1; j <= end; j++) gaps.push(Math.abs(a[j + 1] - a[j]));
+    gaps.sort((x, y) => x - y);
+    return gaps.length ? gaps[Math.floor(gaps.length / 2)] : Infinity;
+  }
+
+  function nearTie(metric, vA, vB, dPct, n) {
+    const c = TOL_PRESET.c;
+    const baseP = c / Math.sqrt(Math.max(2, n));
+    const { sorted = [], iqr = 1 } = state.cache[metric] || {};
+    const gLoc = sorted.length ? localGap(sorted, (vA + vB) / 2) : 0;
+    const tolV = Math.max(TOL_PRESET.kappa * (gLoc / iqr), (GAP_FLOOR[metric] || 0) / iqr);
+    const nearV = sorted.length ? (Math.abs(vA - vB) / iqr <= tolV) : false;
+    const nearP = Math.abs(dPct) <= Math.max(baseP, MIN_TOL_P);
+    return nearV || nearP;
+  }
+
   // v4.3 - Filtres personnalisés avec PRÉCISION ACCRUE (pas d'arrondi agressif)
   function passCustomFilters(i) {
     const EPS = 0.01; // tolérance réduite à 0.01% (uniquement pour l'égalité)
     for (const f of state.filters) {
+      // Skip auto filters in validation (they are handled differently)
+      if (f.__auto) continue;
+      
       const raw = state.cache[f.metric]?.raw[i];
       if (!Number.isFinite(raw)) return false;
 
@@ -414,13 +460,26 @@
     return true;
   }
 
-  // Pool d'indices retenus
+  // === v4.5 - Pool avec exclusion stablecoins et tolérance missing ===
   function poolIndices() {
     const kept = [];
-    for (let i=0;i<state.data.length;i++) {
+    const req = state.selected;
+    
+    for (let i = 0; i < state.data.length; i++) {
+      // Exclusion des stablecoins
+      const tk = String(state.data[i].token || '').toUpperCase();
+      if (STABLES.has(tk)) continue;
+      
+      // Filtres personnalisés
       if (!passCustomFilters(i)) continue;
-      if (!state.selected.some(m => Number.isFinite(state.cache[m]?.raw[i]))) continue;
-      kept.push(i);
+      
+      // Tolérance aux métriques manquantes
+      let valid = 0;
+      for (const m of req) {
+        const v = state.cache[m]?.raw[i];
+        if (Number.isFinite(v)) valid++;
+      }
+      if (valid >= Math.max(1, req.length - ALLOW_MISSING)) kept.push(i);
     }
     return kept;
   }
@@ -447,23 +506,64 @@
     return out.slice(0,10).map(e=>e.i);
   }
 
-  function cmpLexico(a,b) {
-    for (const m of state.selected) {
-      let pa = state.cache[m].rankPct[a];
-      let pb = state.cache[m].rankPct[b];
-      if (!Number.isFinite(pa) && !Number.isFinite(pb)) continue;
-      if (!Number.isFinite(pa)) return 1;
-      if (!Number.isFinite(pb)) return -1;
-      if (!isMax(m)) { pa = 1-pa; pb = 1-pb; }
-      if (pa !== pb) return pb - pa;
+  // === v4.5 - Comparateur intelligent avec near-tie ===
+  function smarterCompare(a, b, prios) {
+    const n = state.data.length;
+    for (let i = 0; i < prios.length; i++) {
+      const m = prios[i];
+      let pA = state.cache[m].rankPct[a], pB = state.cache[m].rankPct[b];
+      if (!Number.isFinite(pA) && !Number.isFinite(pB)) continue;
+      if (!Number.isFinite(pA)) return 1;
+      if (!Number.isFinite(pB)) return -1;
+      if (!isMax(m)) { pA = 1 - pA; pB = 1 - pB; }
+      const vA = state.cache[m].raw[a], vB = state.cache[m].raw[b];
+      const dPct = pA - pB;
+      if (!nearTie(m, vA, vB, dPct, n)) return dPct > 0 ? -1 : 1;
     }
-    const ta = state.data[a].token, tb = state.data[b].token;
-    return String(ta).localeCompare(String(tb));
+    // tie-break pondéré (poids décroissants)
+    const weights = prios.map((_, i) => Math.pow(0.5, i));
+    let sA = 0, sB = 0;
+    for (let i = 0; i < prios.length; i++) {
+      let pA = state.cache[prios[i]].rankPct[a], pB = state.cache[prios[i]].rankPct[b];
+      if (!isMax(prios[i])) { pA = 1 - pA; pB = 1 - pB; }
+      sA += (pA || 0) * weights[i];
+      sB += (pB || 0) * weights[i];
+    }
+    if (sA !== sB) return sB - sA;
+    return String(state.data[a].token || '').localeCompare(String(state.data[b].token || ''));
   }
 
+  // === v4.5 - Staging pour scalabilité ===
   function scoreLexico(indices) {
-    const arr = indices.slice().sort(cmpLexico);
-    return arr.slice(0,10);
+    let candidates = indices.slice();
+    if (candidates.length > 600) {
+      // Stage 1: top 120 sur le premier critère
+      candidates.sort((a, b) => smarterCompare(a, b, [state.selected[0]]));
+      candidates = candidates.slice(0, 120);
+      // Stage 2: top 40 sur les deux premiers
+      if (state.selected.length > 1) {
+        candidates.sort((a, b) => smarterCompare(a, b, [state.selected[0], state.selected[1]]));
+        candidates = candidates.slice(0, 40);
+      }
+    }
+    candidates.sort((a, b) => smarterCompare(a, b, state.selected));
+    return candidates.slice(0, TOP_N);
+  }
+
+  // === v4.5 - Garde-fous automatiques ===
+  function ensureCryptoAutoFilters() {
+    let added = false;
+    const perfSelected = state.selected.some(m => /^ret_/.test(m));
+    const hasRiskCap = state.filters.some(f => f.__auto && (f.metric === 'vol_30d' || f.metric === 'dd90'));
+    if (perfSelected && !hasRiskCap && state.cache?.vol_30d) {
+      state.filters.push({ metric: 'vol_30d', operator: '<=', value: 150, __auto: true, __reason: 'riskCap' }); // 150% annu.
+      added = true;
+    }
+    return added;
+  }
+
+  function cleanupAutoFilters() {
+    state.filters = state.filters.filter(f => !f.__auto);
   }
 
   // Rendu résultats — UNE LIGNE, sans duplication
@@ -702,7 +802,7 @@
     const map = {'&gt;=':'>=','&gt;':'>','&lt;=':'<=','&lt;':'<','&ne;':'!='};
     operator = map[operator] || operator;
 
-    const idx = state.filters.findIndex(f => f.metric === metric && f.operator === operator);
+    const idx = state.filters.findIndex(f => f.metric === metric && f.operator === operator && !f.__auto);
     if (idx >= 0) state.filters[idx].value = value;
     else          state.filters.push({ metric, operator, value });
 
@@ -902,11 +1002,15 @@
     }
   }
 
-  // FIX: Pills renderer cherche TOUS les conteneurs possibles
+  // === v4.5 - Masquer les filtres auto dans l'UI ===
   function drawFilters() {
     const cont = q('#crypto-cf-pills, #cf-pills, #crypto-mc-filters');
     if (!cont) return;
-    cont.innerHTML = state.filters.map((f,idx)=>{
+    
+    // Filtrer les filtres auto
+    const visible = state.filters.filter(f => !f.__auto);
+    
+    cont.innerHTML = visible.map((f,idx)=>{
       const lab = METRICS[f.metric].label;
       // Normalisation de l'opérateur pour l'affichage
       let displayOp = f.operator;
@@ -919,13 +1023,18 @@
       const color = (displayOp==='>='||displayOp==='>') ? 'text-green-400'
                    : (displayOp==='<'||displayOp==='<=') ? 'text-red-400'
                    : 'text-yellow-400';
+      
+      // Utiliser l'index dans le tableau filtré pour la suppression
+      const realIdx = state.filters.indexOf(f);
+      
       return `<div class="filter-item flex items-center gap-2 p-2 rounded bg-white/5">
         <span class="flex-1 min-w-0">
           <span class="whitespace-nowrap overflow-hidden text-ellipsis">${lab} <span class="${color} font-semibold">${displayOp} ${fmtFR(f.value)}%</span></span>
         </span>
-        <button class="remove-filter text-red-400 hover:text-red-300 text-sm shrink-0" data-i="${idx}"><i class="fas fa-times"></i></button>
+        <button class="remove-filter text-red-400 hover:text-red-300 text-sm shrink-0" data-i="${realIdx}"><i class="fas fa-times"></i></button>
       </div>`;
     }).join('') || '<div class="text-xs opacity-50 text-center py-2">Aucun filtre</div>';
+    
     cont.querySelectorAll('.remove-filter').forEach(btn=>{
       btn.addEventListener('click',e=>{
         const i = parseInt(e.currentTarget.dataset.i,10);
@@ -941,16 +1050,23 @@
   function refresh(){
     if (!document.getElementById('crypto-mc-results')) return;
     
+    // Garde-fous auto uniquement en Priorités
+    if (state.mode === 'lexico') ensureCryptoAutoFilters();
+    
     const total = state.data.length;
     if (!state.selected.length) {
       setSummary(total, 0);
       render([]);
+      cleanupAutoFilters(); // Nettoyage
       return;
     }
     const pool = poolIndices();
     setSummary(total, pool.length);
     const topIdx = (state.mode==='balanced') ? scoreBalanced(pool) : scoreLexico(pool);
     render(topIdx);
+    
+    // Nettoyage pour ne pas figer les filtres auto
+    cleanupAutoFilters();
   }
 
   // Fetch robuste avec diagnostic détaillé
