@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v2.7 - Correction bugs opérateurs et priorités
+// mc-crypto.js — Composer multi-critères (Crypto) v2.8 - Mode Équilibre par défaut
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -283,7 +283,7 @@
     box.classList.toggle('hidden', !show);
   }
 
-  // ==== NOUVEAU : Force le passage en mode Priorités
+  // ==== Force le passage en mode Priorités (utile pour debug uniquement)
   function forcePriorities({scroll=true} = {}) {
     const rootMc = document.getElementById('crypto-mc');
     if (!rootMc) return;
@@ -410,7 +410,7 @@
     const rootMc = document.getElementById('crypto-mc');
     if (!rootMc) return;
 
-    // ==== MODIFIÉ : checkboxes métriques avec auto-bascule
+    // ==== MODIFIÉ : checkboxes métriques SANS auto-bascule
     Object.keys(METRICS).forEach(id=>{
       const cb = $(`m-${id}`);
       if (!cb) return;
@@ -422,28 +422,20 @@
 
       cb.addEventListener('change', ()=>{
         if (cb.checked) {
-          if (!state.selected.includes(id)) state.selected.push(id); // l'ordre de clic = priorité
+          if (!state.selected.includes(id)) state.selected.push(id); // append à la fin
         } else {
           state.selected = state.selected.filter(x=>x!==id);
         }
         sync();
-        // 👉 NOUVEAU : bascule auto en Priorités dès qu'on touche un critère
-        forcePriorities({scroll: false});
+        
+        // ⚠️ Ne PAS forcer le mode Priorités ici.
+        // Si on est déjà en Priorités, on rafraîchit juste la liste.
+        if (state.mode === 'lexico') {
+          updatePriorityUI();
+        }
+        refresh(false);
       });
     });
-
-    // ==== NOUVEAU : Détection des clics sur la zone des pills (pour re-clics)
-    const pillsZone = rootMc.querySelector('fieldset .flex.flex-wrap.gap-2');
-    if (pillsZone) {
-      pillsZone.addEventListener('click', (e) => {
-        // Si on clique sur une pill (mais pas sur le checkbox lui-même qui a déjà son handler)
-        if (e.target.closest('.mc-pill') && !e.target.matches('input')) {
-          if (state.mode !== 'lexico') {
-            forcePriorities({scroll: false});
-          }
-        }
-      });
-    }
 
     // ---- Radios "Mode de tri" (ultra-robuste avec délégation)
     function applyModeFromTarget(t){
@@ -541,7 +533,7 @@
     ['change','click'].forEach(evt => rootMc.addEventListener(evt, compactFilterUI, {passive:true}));
     window.addEventListener('resize', compactFilterUI, {passive:true});
     
-    // NOUVEAU: Fonction de debug exposée
+    // NOUVEAU: Fonctions de debug exposées
     if (window.DEBUG_MC || true) { // Toujours exposé pour faciliter le debug
       window.MC.refreshPriorityList = () => {
         console.log('MC State:', {
