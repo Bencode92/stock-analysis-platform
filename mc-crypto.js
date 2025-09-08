@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v3.8 - Support double IDs (legacy + namespaced)
+// mc-crypto.js — Composer multi-critères (Crypto) v3.9 - Fix affichage des pills dans le bon conteneur
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -137,8 +137,8 @@
   }
 
   function ensureFilterControls(root) {
-    // only check inside the crypto box
-    if (q('#crypto-cf-add')) return;
+    // FIX: détecte l'UI existante avec tous les IDs possibles
+    if (q('#crypto-cf-add') || q('#cf-add')) return;
 
     const filterSection = document.createElement('fieldset');
     filterSection.className = 'mb-4';
@@ -716,6 +716,7 @@
       // "+" button — handle both legacy and namespaced ids
       if (e.target.closest('#crypto-cf-add, #cf-add')) {
         e.preventDefault();
+        e.stopImmediatePropagation(); // FIX: bloque les autres handlers sur le même élément
         e.stopPropagation();
         addFilterNow();
       }
@@ -794,9 +795,9 @@
     }
   }
 
-  // Pills renderer (tolerant - works with both IDs)
+  // FIX: Pills renderer cherche TOUS les conteneurs possibles
   function drawFilters() {
-    const cont = q('#crypto-cf-pills') || q('#cf-pills');
+    const cont = q('#crypto-cf-pills, #cf-pills, #crypto-mc-filters');
     if (!cont) return;
     cont.innerHTML = state.filters.map((f,idx)=>{
       const lab = METRICS[f.metric].label;
@@ -946,14 +947,20 @@
       }
 
       /* Les "pills" des filtres ajoutés restent fines */
-      #crypto-cf-pills .filter-item, #cf-pills .filter-item { 
+      #crypto-cf-pills .filter-item, 
+      #cf-pills .filter-item, 
+      #crypto-mc-filters .filter-item { 
         padding: 6px 8px !important; 
         font-size: .85rem !important; 
       }
-      #crypto-cf-pills .filter-item .flex-1, #cf-pills .filter-item .flex-1 { 
+      #crypto-cf-pills .filter-item .flex-1, 
+      #cf-pills .filter-item .flex-1,
+      #crypto-mc-filters .filter-item .flex-1 { 
         min-width: 0 !important; 
       }
-      #crypto-cf-pills .filter-item .flex-1 > span, #cf-pills .filter-item .flex-1 > span { 
+      #crypto-cf-pills .filter-item .flex-1 > span, 
+      #cf-pills .filter-item .flex-1 > span,
+      #crypto-mc-filters .filter-item .flex-1 > span { 
         white-space: nowrap; 
         overflow: hidden; 
         text-overflow: ellipsis; 
