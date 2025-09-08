@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v2.8 - Mode Équilibre par défaut
+// mc-crypto.js — Composer multi-critères (Crypto) v2.9 - Synchronisation des checkboxes
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -40,6 +40,19 @@
   };
   const fmtPct = (v) => Number.isFinite(v) ? `${v>0?'+':''}${v.toFixed(2)}%` : '–';
   const fmtPrice = (p, quote) => Number.isFinite(p) ? `${(quote||'US Dollar').toLowerCase().includes('euro')?'€':'$'}${p.toLocaleString('fr-FR',{maximumFractionDigits:8})}` : '–';
+
+  // Sync les critères sélectionnés depuis l'état des checkboxes
+  function syncSelectedFromCheckboxes() {
+    const ids = [];
+    Object.keys(METRICS).forEach(id => {
+      const cb = document.getElementById(`m-${id}`);
+      if (cb && cb.checked) ids.push(id);
+    });
+    // Conserve l'ordre actuel pour ceux déjà présents, puis ajoute les nouveaux cochés
+    const keep = state.selected.filter(id => ids.includes(id));
+    const add  = ids.filter(id => !keep.includes(id));
+    state.selected = keep.concat(add);
+  }
 
   // CSV/TSV parser avec auto-détection du séparateur
   function parseTable(text) {
@@ -447,6 +460,11 @@
       const isLexico = v === 'lexico' || /lexico|prior|prio/.test(labelTxt);
       state.mode = isLexico ? 'lexico' : 'balanced';
       
+      // Synchronise les critères sélectionnés quand on passe en Priorités
+      if (isLexico) {
+        syncSelectedFromCheckboxes();   // ← aligne la sélection
+      }
+      
       // Effet visuel sur les pills radio
       rootMc.querySelectorAll('input[name="mc-mode"]').forEach(x=>{
         x.closest('.mc-pill')?.classList.toggle('is-checked', x.checked);
@@ -470,6 +488,9 @@
       }
     });
 
+    // Synchronise à l'init
+    syncSelectedFromCheckboxes();
+    
     // État initial - cherche le radio checked ou prend le premier
     const checkedRadio = rootMc.querySelector('input[name="mc-mode"]:checked') 
                       || rootMc.querySelector('input[name="mc-mode"][value="balanced"]')
@@ -514,6 +535,7 @@
           cb?.dispatchEvent(new Event('change')); 
         }
       });
+      syncSelectedFromCheckboxes(); // Synchronise après reset
       const balancedRadio = rootMc.querySelector('input[name="mc-mode"][value="balanced"]') 
                          || rootMc.querySelector('input[name="mc-mode"]');
       if (balancedRadio) {
@@ -547,6 +569,7 @@
       };
       
       window.MC.forceLexico = () => forcePriorities({scroll: true});
+      window.MC.syncSelected = () => syncSelectedFromCheckboxes();
     }
   }
 
