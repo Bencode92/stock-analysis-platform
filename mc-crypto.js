@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v3.9 - Fix affichage des pills dans le bon conteneur
+// mc-crypto.js — Composer multi-critères (Crypto) v4.1 - Compteurs, Top 10 et blindage total
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -66,6 +66,68 @@
       parent.appendChild(el);
     }
     return el;
+  }
+
+  // --- MAJ compteur + horodatage + expose global pour d'autres scripts
+  function updateHeaderCounters() {
+    const n = state.data.length;
+    const cnt = document.getElementById('crypto-count');
+    if (cnt) cnt.textContent = n.toLocaleString('fr-FR');
+
+    const t = document.getElementById('last-update-time');
+    if (t) {
+      const now = new Date();
+      t.textContent = now.toLocaleString('fr-FR', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+    }
+    // Utile si un autre script veut lire les données
+    window.CRYPTO_ROWS = state.data;
+  }
+
+  // --- Rendu des 4 Top 10 (24h + 90j, hausses & baisses)
+  function renderTop10Blocks() {
+    const rows = state.data.map(r => ({
+      token: r.token,
+      name: r.currency_base || r.token || '',
+      ex: r.exchange_used || '',
+      price: toNum(r.last_close),
+      d1: toNum(r.ret_1d_pct),
+      q3: toNum(r.ret_90d_pct),
+      currency_quote: r.currency_quote
+    }));
+
+    const top = (list, key, asc=false) =>
+      list.filter(x => Number.isFinite(x[key]))
+          .sort((a,b) => asc ? a[key]-b[key] : b[key]-a[key])
+          .slice(0, 10);
+
+    paintTop('#top-daily-gainers .stock-cards-container', top(rows, 'd1', false), 'd1');
+    paintTop('#top-daily-losers .stock-cards-container',  top(rows, 'd1', true),  'd1');
+    paintTop('#top-qtr-gainers .stock-cards-container',   top(rows, 'q3', false), 'q3');
+    paintTop('#top-qtr-losers .stock-cards-container',    top(rows, 'q3', true),  'q3');
+  }
+
+  function paintTop(selector, arr, key) {
+    const el = document.querySelector(selector);
+    if (!el) return;
+    if (!arr.length) {
+      el.innerHTML = '<div class="py-6 text-center opacity-60">Aucune donnée</div>';
+      return;
+    }
+    el.innerHTML = arr.map((r, i) => `
+      <div class="stock-card">
+        <div class="rank">#${i+1}</div>
+        <div class="stock-info">
+          <div class="stock-name">
+            ${esc(r.token)}
+            <span class="stock-fullname">${esc(r.name)} • ${esc(r.ex)}</span>
+          </div>
+          <div class="text-xs opacity-60">${fmtPrice(r.price, r.currency_quote)}</div>
+        </div>
+        <div class="stock-performance ${r[key] >= 0 ? 'positive' : 'negative'}">${fmtPct(r[key])}</div>
+      </div>
+    `).join('');
   }
 
   function ensureMcShell(root) {
@@ -588,14 +650,23 @@
     row.style.whiteSpace = 'nowrap';
   }
 
-  // NOUVELLE FONCTION: Ajoute un filtre immédiatement (supporte les deux sets d'IDs)
+  // v4.1 - REFACTORISÉE: Lecture scopée + pas de fallback à 0
   function addFilterNow() {
-    const metric   = q('#crypto-cf-metric')?.value || q('#cf-metric')?.value;
-    let   operator = q('#crypto-cf-op')?.value     || q('#cf-op')?.value;
-    const valueRaw = q('#crypto-cf-val')?.value    || q('#cf-val')?.value;
-    const value    = toNumUI(valueRaw);
+    const root = document.getElementById('crypto-mc');
+    const metricEl = root?.querySelector('#crypto-cf-metric') || root?.querySelector('#cf-metric');
+    const opEl     = root?.querySelector('#crypto-cf-op')     || root?.querySelector('#cf-op');
+    const valEl    = root?.querySelector('#crypto-cf-val')    || root?.querySelector('#cf-val');
+    if (!metricEl || !opEl || !valEl) return;
 
-    if (!metric || !Number.isFinite(value)) return;
+    const metric   = metricEl.value;
+    let   operator = opEl.value;
+    const valueRaw = valEl.value;                // ← on lit d'abord
+    const value    = toNumUI(valueRaw);          // "10" -> 10 ; "10,5" -> 10.5 ; " 10 % " -> 10
+
+    if (!metric || !Number.isFinite(value)) {
+      console.warn('addFilterNow: valeur invalide', { valueRaw });
+      return;                                    // ← jamais de 0 par défaut
+    }
 
     const map = {'&gt;=':'>=','&gt;':'>','&lt;=':'<=','&lt;':'<','&ne;':'!='};
     operator = map[operator] || operator;
@@ -604,16 +675,13 @@
     if (idx >= 0) state.filters[idx].value = value;
     else          state.filters.push({ metric, operator, value });
 
-    // reset + focus whichever input exists
-    const valInput = q('#crypto-cf-val') || q('#cf-val');
-    if (valInput) {
-      valInput.value = '';
-      valInput.focus();
-    }
+    // on nettoie seulement APRÈS avoir ajouté
+    valEl.value = '';
+    valEl.focus();
 
     drawFilters();
     compactFilterUI();
-    refresh();  // apply immediately
+    refresh();                                   // applique immédiatement
   }
 
   // ==== UI bindings avec délégation robuste
@@ -722,9 +790,17 @@
       }
     });
 
-    // Also bind directly in case delegation misses it (Safari/iframes etc.)
-    q('#crypto-cf-add')?.addEventListener('click', (e)=>{ e.preventDefault(); addFilterNow(); });
-    q('#cf-add')?.addEventListener('click',        (e)=>{ e.preventDefault(); addFilterNow(); });
+    // v4.1 - BLINDAGE: Binding direct en phase de capture pour passer AVANT tout le monde
+    ['#crypto-cf-add', '#cf-add'].forEach(sel => {
+      const btn = (document.getElementById('crypto-mc') || document).querySelector(sel);
+      if (!btn) return;
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation(); // ← bloque les handlers hérités qui remettent 0%
+        addFilterNow();
+      }, true); // ← phase de capture : on passe AVANT tout le monde
+    });
 
     // Enter key adds the filter
     (q('#crypto-cf-val') || q('#cf-val'))?.addEventListener('keydown', (e)=>{
@@ -902,9 +978,16 @@
       return { ...r, token };
     });
 
+    // NOUVEAU: Met à jour les compteurs et Top 10
+    updateHeaderCounters();   // met à jour "X cryptomonnaies listées" + heure
+    renderTop10Blocks();      // remplit les 4 Top 10
+
     buildCache();
     wireUI();
     refresh();
+
+    // Optionnel: déclenche un événement pour d'autres scripts
+    window.dispatchEvent(new CustomEvent('cryptoDataReady', { detail: state.data }));
   }
 
   // --- boot robuste : lance init() tout de suite si le DOM est déjà prêt
