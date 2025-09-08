@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v3.0 - Fix synchronisation priorités
+// mc-crypto.js — Composer multi-critères (Crypto) v3.1 - Version autonome plug-and-play
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -40,6 +40,141 @@
   };
   const fmtPct = (v) => Number.isFinite(v) ? `${v>0?'+':''}${v.toFixed(2)}%` : '–';
   const fmtPrice = (p, quote) => Number.isFinite(p) ? `${(quote||'US Dollar').toLowerCase().includes('euro')?'€':'$'}${p.toLocaleString('fr-FR',{maximumFractionDigits:8})}` : '–';
+
+  // Helpers "garantis-moi ce noeud"
+  function ensureEl(parent, id, html) {
+    let el = document.getElementById(id);
+    if (!el) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html.trim();
+      el = tmp.firstElementChild;
+      parent.appendChild(el);
+    }
+    return el;
+  }
+
+  function ensureMcShell(root) {
+    // résumé
+    ensureEl(root, 'crypto-mc-summary',
+      '<div id="crypto-mc-summary" class="text-xs opacity-70 mb-2"></div>');
+
+    // conteneur priorités + liste
+    ensureEl(root, 'crypto-priority-container',
+      '<div id="crypto-priority-container" class="hidden mt-3 p-3 rounded bg-white/5"><div class="text-xs opacity-70 mb-2">Ordre des priorités (glisser-déposer)</div><div id="crypto-priority-list" class="space-y-1"></div></div>');
+
+    // filtres "pills"
+    ensureEl(root, 'crypto-mc-filters',
+      '<div id="crypto-mc-filters" class="space-y-2"></div>');
+
+    // résultats
+    ensureEl(root, 'crypto-mc-results',
+      '<div id="crypto-mc-results" class="glassmorphism rounded-lg p-4"><div class="stock-cards-container" id="crypto-mc-list"></div></div>');
+  }
+
+  function ensureModeRadios(root) {
+    if (root.querySelector('input[name="mc-mode"]')) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'mb-4 flex gap-2';
+    wrap.innerHTML = `
+      <fieldset role="radiogroup" aria-label="Mode de tri" class="w-full">
+        <legend class="text-xs opacity-60 mb-2">Mode de tri</legend>
+        <div class="flex gap-2">
+          <label class="mc-pill"><input type="radio" name="mc-mode" value="balanced" checked> Équilibre</label>
+          <label class="mc-pill"><input type="radio" name="mc-mode" value="lexico"> Priorités</label>
+        </div>
+      </fieldset>
+    `;
+    // Cherche où l'insérer (après les métriques ou au début)
+    const metrics = root.querySelector('#crypto-mc-metrics, fieldset:first-child');
+    if (metrics && metrics.nextSibling) {
+      root.insertBefore(wrap, metrics.nextSibling);
+    } else {
+      root.appendChild(wrap);
+    }
+  }
+
+  function ensureMetricCheckboxes(root) {
+    // s'il existe déjà au moins une checkbox métrique, ne rien faire
+    if (Object.keys(METRICS).some(id => document.getElementById('m-' + id))) return;
+
+    // conteneur dédié (ou créé à la volée)
+    let holder = root.querySelector('#crypto-mc-metrics, fieldset:first-child');
+    if (!holder) {
+      holder = document.createElement('fieldset');
+      holder.className = 'mb-4';
+      holder.innerHTML = '<legend class="text-sm opacity-70 mb-2">Critères sélectionnés = Ordre de priorité</legend><div id="crypto-mc-metrics" class="flex flex-wrap gap-2"></div>';
+      root.insertBefore(holder, root.firstChild);
+      holder = holder.querySelector('#crypto-mc-metrics');
+    }
+
+    // Si c'est un fieldset, cherche le conteneur des pills dedans
+    if (holder.tagName === 'FIELDSET') {
+      const inner = holder.querySelector('.flex.flex-wrap.gap-2, div');
+      if (inner) holder = inner;
+    }
+
+    holder.innerHTML = Object.entries(METRICS).map(([id, m]) => {
+      const checked = state.selected.includes(id) ? 'checked' : '';
+      const dir = m.max ? '↑' : '↓';
+      return `
+        <label class="mc-pill ${checked ? 'is-checked' : ''}">
+          <input type="checkbox" id="m-${id}" ${checked}>
+          ${m.label} ${dir}
+        </label>
+      `;
+    }).join('');
+  }
+
+  function ensureFilterControls(root) {
+    if (document.getElementById('cf-add')) return;
+    
+    const filterSection = document.createElement('fieldset');
+    filterSection.className = 'mb-4';
+    filterSection.innerHTML = `
+      <legend class="text-sm opacity-70 mb-2">Filtres personnalisés</legend>
+      <div id="crypto-mc-filters" class="space-y-2 mb-2"></div>
+      <div class="flex gap-1 items-center filter-controls">
+        <select id="cf-metric" class="mini-select" style="flex:1.4;">
+          ${Object.entries(METRICS).map(([id, m]) => 
+            `<option value="${id}">${m.label}</option>`
+          ).join('')}
+        </select>
+        <select id="cf-op" class="mini-select" style="width:58px;">
+          <option value=">=">&ge;</option>
+          <option value=">">&gt;</option>
+          <option value="=">=</option>
+          <option value="<">&lt;</option>
+          <option value="<=">&le;</option>
+          <option value="!=">&ne;</option>
+        </select>
+        <input id="cf-val" type="number" step="0.1" class="mini-input" style="width:80px;" placeholder="0">
+        <span class="text-xs opacity-60">%</span>
+        <button id="cf-add" class="action-button" style="padding:6px 10px;"><i class="fas fa-plus"></i></button>
+      </div>
+    `;
+    
+    // Insérer après le conteneur des priorités ou à la fin
+    const prioContainer = root.querySelector('#crypto-priority-container');
+    if (prioContainer && prioContainer.parentElement === root) {
+      root.insertBefore(filterSection, prioContainer.nextSibling);
+    } else {
+      root.appendChild(filterSection);
+    }
+  }
+
+  function ensureActionButtons(root) {
+    if (document.getElementById('crypto-mc-apply')) return;
+    
+    const actions = document.createElement('div');
+    actions.className = 'border-t border-white/10 pt-4';
+    actions.innerHTML = `
+      <div class="flex gap-2">
+        <button id="crypto-mc-apply" class="search-button flex-1"><i class="fas fa-magic mr-2"></i>Appliquer</button>
+        <button id="crypto-mc-reset" class="action-button"><i class="fas fa-undo"></i></button>
+      </div>
+    `;
+    root.appendChild(actions);
+  }
 
   // Sync les critères sélectionnés depuis l'état des checkboxes
   function syncSelectedFromCheckboxes() {
@@ -434,6 +569,12 @@
     const rootMc = document.getElementById('crypto-mc');
     if (!rootMc) return;
 
+    // Créer l'UI si elle n'existe pas
+    ensureModeRadios(rootMc);
+    ensureMetricCheckboxes(rootMc);
+    ensureFilterControls(rootMc);
+    ensureActionButtons(rootMc);
+
     // ==== MODIFIÉ : checkboxes métriques SANS auto-bascule
     Object.keys(METRICS).forEach(id=>{
       const cb = $(`m-${id}`);
@@ -588,8 +729,8 @@
     ['change','click'].forEach(evt => rootMc.addEventListener(evt, compactFilterUI, {passive:true}));
     window.addEventListener('resize', compactFilterUI, {passive:true});
     
-    // NOUVEAU: Fonctions de debug exposées
-    if (window.DEBUG_MC || true) { // Toujours exposé pour faciliter le debug
+    // CORRIGÉ: Debug désactivé par défaut (enlève le || true)
+    if (window.DEBUG_MC) {
       window.MC.refreshPriorityList = () => {
         console.log('MC State:', {
           mode: state.mode,
@@ -660,6 +801,7 @@
   async function fetchFirst(paths) {
     const tried = [];
     for (const p of paths) {
+      if (!p) continue; // Skip empty paths
       try {
         const url = new URL(p, location.href).href + `?t=${Date.now()}`;
         const r = await fetch(url, { cache: 'no-store' });
@@ -677,17 +819,28 @@
     const root = document.getElementById('crypto-mc');
     if (!root) return;
 
+    // Créer la structure de base si elle n'existe pas
+    ensureMcShell(root);
+
     const HERE = location.href.replace(/[^/]*$/, '');   // dossier courant de la page
     const ROOT = location.origin + '/';                  // racine du site
 
+    // MODIFIÉ: Utilise vraiment CSV_URL avec override possible
     const text = await fetchFirst([
-      HERE + 'data/filtered/Crypto_filtered_volatility.csv',      // si la page est au root
-      ROOT + 'data/filtered/Crypto_filtered_volatility.csv',      // racine absolue
-      ROOT + 'stock-analysis-platform/data/filtered/Crypto_filtered_volatility.csv', // GitHub Pages
-      '../data/filtered/Crypto_filtered_volatility.csv',
-      '../../data/filtered/Crypto_filtered_volatility.csv',
-      // 👉 Option : autorise une surcharge manuelle depuis une variable globale
-      (window.CRYPTO_CSV_URL || '')
+      // 1) override optionnel à poser dans la page avant le script
+      window.CRYPTO_CSV_URL,
+      // 2) chemin "officiel" de ce module
+      CSV_URL,
+      // 3) variantes robustes
+      new URL(CSV_URL, HERE).href,
+      new URL(CSV_URL, ROOT).href,
+      new URL('stock-analysis-platform/' + CSV_URL, ROOT).href,
+      '../' + CSV_URL,
+      '../../' + CSV_URL,
+      // Anciens fallbacks pour compatibilité
+      HERE + 'data/filtered/Crypto_filtered_volatility.csv',
+      ROOT + 'data/filtered/Crypto_filtered_volatility.csv',
+      ROOT + 'stock-analysis-platform/data/filtered/Crypto_filtered_volatility.csv',
     ].filter(Boolean));
 
     const rows = parseTable(text);
@@ -810,6 +963,32 @@
       /* Animation du conteneur des priorités */
       #crypto-priority-container {
         transition: all 0.3s ease;
+      }
+
+      /* Boutons d'action */
+      .action-button, .search-button {
+        padding: 8px 16px !important;
+        border-radius: 6px !important;
+        font-weight: 500 !important;
+        transition: all 0.2s !important;
+        cursor: pointer !important;
+      }
+      
+      .action-button {
+        background-color: rgba(0, 255, 135, 0.1) !important;
+        color: var(--accent-color, #00FF87) !important;
+        border: 1px solid rgba(0, 255, 135, 0.3) !important;
+      }
+      
+      .search-button {
+        background-color: var(--accent-color, #00FF87) !important;
+        color: #0a1929 !important;
+        border: none !important;
+      }
+      
+      .action-button:hover, .search-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 255, 135, 0.3);
       }
     `;
     document.head.appendChild(mcCompactCSS);
