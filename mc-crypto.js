@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v4.3 - Précision filtres + dédup Top 10
+// mc-crypto.js — Composer multi-critères (Crypto) v4.4 - Amélioration affichage Top Performances
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -119,24 +119,43 @@
     paintTop('#top-qtr-losers .stock-cards-container',    topByMetricUnique(rows, 'q3', true),  'q3'); // min
   }
 
+  // Raccourci nom d'exchange pour l'affichage
+  function shortEx(ex){
+    const x = String(ex||'').toLowerCase();
+    if (x.includes('coinbase')) return 'Coinbase';
+    if (x.includes('binance'))  return 'Binance';
+    if (x.includes('kraken'))   return 'Kraken';
+    return ex || '';
+  }
+
   function paintTop(selector, arr, key) {
     const el = document.querySelector(selector);
     if (!el) return;
-    if (!arr.length) {
+
+    if (!arr || !arr.length) {
       el.innerHTML = '<div class="py-6 text-center opacity-60">Aucune donnée</div>';
       return;
     }
+
     el.innerHTML = arr.map((r, i) => `
-      <div class="stock-card">
+      <div class="stock-card topcard">
         <div class="rank">#${i+1}</div>
+
         <div class="stock-info">
           <div class="stock-name">
-            ${esc(r.token)}
-            <span class="stock-fullname">${esc(r.name)} • ${esc(r.ex)}</span>
+            <span class="ticker">${esc(r.token)}</span>
           </div>
-          <div class="text-xs opacity-60">${fmtPrice(r.price, r.currency_quote)}</div>
+          <div class="stock-fullname">
+            ${esc(r.name)}${r.ex ? ` • ${esc(shortEx(r.ex))}` : ''}
+          </div>
+          <div class="price text-xs opacity-60">
+            ${fmtPrice(r.price, r.currency_quote)}
+          </div>
         </div>
-        <div class="stock-performance ${r[key] >= 0 ? 'positive' : 'negative'}">${fmtPct(r[key])}</div>
+
+        <div class="stock-performance ${r[key] >= 0 ? 'positive' : 'negative'}">
+          ${fmtPct(r[key])}
+        </div>
       </div>
     `).join('');
   }
