@@ -1079,6 +1079,86 @@
              opacity: 0.5;
          }
 
+         /* Performances Crypto — lisibilité des cartes */
+         .top-stocks-container .stock-cards-container {
+             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+             gap: 20px;
+         }
+
+         .top-stocks-container .stock-card.topcard {
+             align-items: flex-start;
+             padding: 14px 16px;
+             overflow: hidden;
+         }
+
+         .top-stocks-container .stock-card .rank {
+             flex: 0 0 32px;
+             width: 32px;
+             height: 32px;
+             margin-right: 12px;
+         }
+
+         .top-stocks-container .stock-info {
+             min-width: 0;
+         }
+
+         .top-stocks-container .stock-name {
+             display: flex;
+             align-items: baseline;
+             gap: 8px;
+         }
+
+         .top-stocks-container .stock-name .ticker {
+             font-weight: 800;
+             letter-spacing: .2px;
+         }
+
+         .top-stocks-container .stock-fullname {
+             display: block;
+             font-size: .9rem;
+             opacity: .7;
+             max-width: 260px;
+             white-space: nowrap;
+             overflow: hidden;
+             text-overflow: ellipsis;
+         }
+
+         .top-stocks-container .stock-performance {
+             margin-left: auto;
+             min-width: 84px;
+             text-align: right;
+         }
+
+         .top-stocks-container .price {
+             margin-top: 2px;
+         }
+
+         /* Animation subtile au survol */
+         .top-stocks-container .stock-card.topcard {
+             transition: transform 0.2s ease, box-shadow 0.2s ease;
+         }
+
+         .top-stocks-container .stock-card.topcard:hover {
+             transform: translateY(-2px);
+             box-shadow: 0 8px 20px rgba(0, 255, 135, 0.15);
+         }
+
+         /* Effet sur le rang pour les top 3 */
+         .top-stocks-container .stock-card:nth-child(1) .rank {
+             background: linear-gradient(135deg, #FFD700, #FFA500);
+             color: #000;
+         }
+
+         .top-stocks-container .stock-card:nth-child(2) .rank {
+             background: linear-gradient(135deg, #C0C0C0, #B8B8B8);
+             color: #000;
+         }
+
+         .top-stocks-container .stock-card:nth-child(3) .rank {
+             background: linear-gradient(135deg, #CD7F32, #B87333);
+             color: #fff;
+         }
+
          /* Responsive */
          @media (max-width: 768px) {
              .main-header {
