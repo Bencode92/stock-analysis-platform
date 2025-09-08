@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v3.6 - Fix définitif du doublon d'ID
+// mc-crypto.js — Composer multi-critères (Crypto) v3.7 - IDs namespaced pour éviter les collisions
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -52,6 +52,10 @@
   // NOUVEAU: Format français pour l'affichage
   const fmtFR = (n)=> Number(n).toLocaleString('fr-FR',{maximumFractionDigits:2});
 
+  // Scope helpers (inside this IIFE)
+  const rootMc = () => document.getElementById('crypto-mc');
+  const q  = (sel) => rootMc()?.querySelector(sel);       // scoped query
+
   // Helpers "garantis-moi ce noeud"
   function ensureEl(parent, id, html) {
     let el = document.getElementById(id);
@@ -72,8 +76,6 @@
     // conteneur priorités + liste
     ensureEl(root, 'crypto-priority-container',
       '<div id="crypto-priority-container" class="hidden mt-3 p-3 rounded bg-white/5"><div class="text-xs opacity-70 mb-2">Ordre des priorités (glisser-déposer)</div><div id="crypto-priority-list" class="space-y-1"></div></div>');
-
-    // SUPPRIMÉ: le conteneur doublon mc-filters-shell n'est plus créé ici
 
     // résultats
     ensureEl(root, 'crypto-mc-results',
@@ -135,20 +137,19 @@
   }
 
   function ensureFilterControls(root) {
-    if (document.getElementById('cf-add')) return;
-    
+    // only check inside the crypto box
+    if (q('#crypto-cf-add')) return;
+
     const filterSection = document.createElement('fieldset');
     filterSection.className = 'mb-4';
     filterSection.innerHTML = `
       <legend class="text-sm opacity-70 mb-2">Filtres personnalisés</legend>
-      <div id="mc-filter-pills" class="space-y-2 mb-2"></div>
+      <div id="crypto-cf-pills" class="space-y-2 mb-2"></div>
       <div class="flex gap-1 items-center filter-controls">
-        <select id="cf-metric" class="mini-select" style="flex:1.4;">
-          ${Object.entries(METRICS).map(([id, m]) => 
-            `<option value="${id}">${m.label}</option>`
-          ).join('')}
+        <select id="crypto-cf-metric" class="mini-select" style="flex:1.4;">
+          ${Object.entries(METRICS).map(([id, m]) => `<option value="${id}">${m.label}</option>`).join('')}
         </select>
-        <select id="cf-op" class="mini-select" style="width:58px;">
+        <select id="crypto-cf-op" class="mini-select" style="width:58px;">
           <option value=">=">&ge;</option>
           <option value=">">&gt;</option>
           <option value="=">=</option>
@@ -156,15 +157,13 @@
           <option value="<=">&le;</option>
           <option value="!=">&ne;</option>
         </select>
-        <input id="cf-val" type="number" step="0.1" class="mini-input" style="width:80px;" placeholder="0">
+        <input id="crypto-cf-val" type="number" step="0.1" class="mini-input" style="width:80px;" placeholder="0">
         <span class="text-xs opacity-60">%</span>
-        <button id="cf-add" type="button" class="action-button" style="padding:6px 10px;" aria-label="Ajouter le filtre">
+        <button id="crypto-cf-add" type="button" class="action-button" style="padding:6px 10px;" aria-label="Ajouter le filtre">
           <i class="fas fa-plus"></i>
         </button>
       </div>
     `;
-    
-    // Insérer après le conteneur des priorités ou à la fin
     const prioContainer = root.querySelector('#crypto-priority-container');
     if (prioContainer && prioContainer.parentElement === root) {
       root.insertBefore(filterSection, prioContainer.nextSibling);
@@ -199,7 +198,7 @@
       box.className = 'hidden mt-3 p-3 rounded bg-white/5';
       box.innerHTML = '<div class="text-xs opacity-70 mb-2">Ordre des priorités (glisser-déposer)</div>';
       // place le panneau avant les filtres si possible
-      const before = document.getElementById('mc-filter-pills') || document.getElementById('crypto-mc-results');
+      const before = document.getElementById('crypto-cf-pills') || document.getElementById('crypto-mc-results');
       root.insertBefore(box, before || null);
     }
 
@@ -481,22 +480,22 @@
 
   // ==== Force le passage en mode Priorités (utile pour debug uniquement)
   function forcePriorities({scroll=true} = {}) {
-    const rootMc = document.getElementById('crypto-mc');
-    if (!rootMc) return;
+    const rootMcEl = document.getElementById('crypto-mc');
+    if (!rootMcEl) return;
 
     // Coche le radio "Priorités"
-    const pr = rootMc.querySelector('input[name="mc-mode"][value="lexico"]')
-             || Array.from(rootMc.querySelectorAll('input[name="mc-mode"]')).find(r => 
+    const pr = rootMcEl.querySelector('input[name="mc-mode"][value="lexico"]')
+             || Array.from(rootMcEl.querySelectorAll('input[name="mc-mode"]')).find(r => 
                   /prior|prio|lexico/.test(r.value?.toLowerCase() || '') ||
                   /prior|prio/.test(r.closest('label')?.textContent?.toLowerCase() || '')
                 )
-             || rootMc.querySelector('input[name="mc-mode"]'); // fallback
+             || rootMcEl.querySelector('input[name="mc-mode"]'); // fallback
     
     if (pr) pr.checked = true;
 
     // État + habillage visuel
     state.mode = 'lexico';
-    rootMc.querySelectorAll('input[name="mc-mode"]').forEach(x=>{
+    rootMcEl.querySelectorAll('input[name="mc-mode"]').forEach(x=>{
       x.closest('.mc-pill')?.classList.toggle('is-checked', x.checked);
     });
 
@@ -577,13 +576,9 @@
 
   // ==== Fonction pour compacter l'UI des filtres (sera rappelée automatiquement)
   function compactFilterUI() {
-    const row = $('#cf-add')?.parentElement; // la rangée qui contient metric/op/val/%/+
+    const row = q('#crypto-cf-add')?.parentElement;
     if (!row) return;
-
-    // Ajoute une classe pour le ciblage CSS
     row.classList.add('filter-controls');
-
-    // Application directe des styles (fallback si le CSS n'est pas appliqué)
     row.style.display = 'grid';
     row.style.gridTemplateColumns = 'minmax(120px,1fr) 56px 72px 14px 34px';
     row.style.gap = '6px';
@@ -595,14 +590,14 @@
 
   // ==== UI bindings avec délégation robuste
   function wireUI() {
-    const rootMc = document.getElementById('crypto-mc');
-    if (!rootMc) return;
+    const rootMcEl = document.getElementById('crypto-mc');
+    if (!rootMcEl) return;
 
     // Créer l'UI si elle n'existe pas
-    ensureModeRadios(rootMc);
-    ensureMetricCheckboxes(rootMc);
-    ensureFilterControls(rootMc);
-    ensureActionButtons(rootMc);
+    ensureModeRadios(rootMcEl);
+    ensureMetricCheckboxes(rootMcEl);
+    ensureFilterControls(rootMcEl);
+    ensureActionButtons(rootMcEl);
 
     // ==== MODIFIÉ : checkboxes métriques avec MAJ immédiate de la liste
     Object.keys(METRICS).forEach(id=>{
@@ -648,7 +643,7 @@
       }
       
       // Effet visuel sur les pills radio
-      rootMc.querySelectorAll('input[name="mc-mode"]').forEach(x=>{
+      rootMcEl.querySelectorAll('input[name="mc-mode"]').forEach(x=>{
         x.closest('.mc-pill')?.classList.toggle('is-checked', x.checked);
       });
       
@@ -668,21 +663,21 @@
     }
 
     // Délégation sur le conteneur pour ne rater aucun event - AJOUT input et click
-    rootMc.addEventListener('change', (e)=>{
+    rootMcEl.addEventListener('change', (e)=>{
       if (e.target && e.target.name === 'mc-mode') {
         applyModeFromTarget(e.target);
       }
     });
 
     // NOUVEAU: Support des événements input et click pour Safari/mobile
-    rootMc.addEventListener('input', (e)=>{
+    rootMcEl.addEventListener('input', (e)=>{
       if (e.target && e.target.name === 'mc-mode') {
         applyModeFromTarget(e.target);
       }
     });
 
-    // ==== DÉLÉGATION COMPLÈTE: clic sur le bouton + (infaillible)
-    rootMc.addEventListener('click', (e) => {
+    // Delegation on crypto panel (no cross-module bleed)
+    rootMcEl.addEventListener('click', (e) => {
       // Gestion du mode radio
       const lbl = e.target.closest('label');
       if (lbl) {
@@ -694,15 +689,16 @@
         }
       }
       
-      // Gestion du bouton + pour ajouter un filtre
-      const addBtn = e.target.closest('#cf-add');
+      const addBtn = e.target.closest('#crypto-cf-add');
       if (!addBtn) return;
+
       e.preventDefault();
       e.stopPropagation();
 
-      const metric   = $('#cf-metric')?.value;
-      let   operator = $('#cf-op')?.value;
-      const value    = toNumUI($('#cf-val')?.value);
+      const metric   = q('#crypto-cf-metric')?.value;
+      let   operator = q('#crypto-cf-op')?.value;
+      const valueRaw = q('#crypto-cf-val')?.value;
+      const value    = toNumUI(valueRaw);
 
       if (!metric || !Number.isFinite(value)) return;
 
@@ -710,31 +706,27 @@
       operator = map[operator] || operator;
 
       const idx = state.filters.findIndex(f => f.metric === metric && f.operator === operator);
-      if (idx >= 0) state.filters[idx].value = value;
-      else          state.filters.push({ metric, operator, value });
+      if (idx >= 0) state.filters[idx].value = value; else state.filters.push({ metric, operator, value });
 
-      $('#cf-val').value = '';
+      q('#crypto-cf-val').value = '';
+      q('#crypto-cf-val').focus();
+
       drawFilters();
       compactFilterUI();
-      refresh(); // applique immédiatement
+      refresh();   // apply immediately
     });
 
-    // Entrée clavier = ajouter
-    $('#cf-val')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const btn = document.getElementById('cf-add');
-        btn?.click();
-      }
+    q('#crypto-cf-val')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); q('#crypto-cf-add')?.click(); }
     });
 
     // Synchronise à l'init
     syncSelectedFromCheckboxes();
     
     // État initial - cherche le radio checked ou prend le premier
-    const checkedRadio = rootMc.querySelector('input[name="mc-mode"]:checked') 
-                      || rootMc.querySelector('input[name="mc-mode"][value="balanced"]')
-                      || rootMc.querySelector('input[name="mc-mode"]');
+    const checkedRadio = rootMcEl.querySelector('input[name="mc-mode"]:checked') 
+                      || rootMcEl.querySelector('input[name="mc-mode"][value="balanced"]')
+                      || rootMcEl.querySelector('input[name="mc-mode"]');
     if (checkedRadio) {
       checkedRadio.checked = true; // Force le checked si nécessaire
       applyModeFromTarget(checkedRadio);
@@ -755,8 +747,8 @@
         }
       });
       syncSelectedFromCheckboxes(); // Synchronise après reset
-      const balancedRadio = rootMc.querySelector('input[name="mc-mode"][value="balanced"]') 
-                         || rootMc.querySelector('input[name="mc-mode"]');
+      const balancedRadio = rootMcEl.querySelector('input[name="mc-mode"][value="balanced"]') 
+                         || rootMcEl.querySelector('input[name="mc-mode"]');
       if (balancedRadio) {
         balancedRadio.checked = true;
         applyModeFromTarget(balancedRadio);
@@ -771,7 +763,7 @@
     compactFilterUI();
     
     // Re-compacte à chaque interaction et au redimensionnement
-    ['change','click'].forEach(evt => rootMc.addEventListener(evt, compactFilterUI, {passive:true}));
+    ['change','click'].forEach(evt => rootMcEl.addEventListener(evt, compactFilterUI, {passive:true}));
     window.addEventListener('resize', compactFilterUI, {passive:true});
     
     // CORRIGÉ: Debug désactivé par défaut (enlève le || true)
@@ -792,9 +784,9 @@
     }
   }
 
-  // MODIFIÉ: drawFilters pointe vers le bon conteneur mc-filter-pills
+  // Pills renderer
   function drawFilters() {
-    const cont = document.getElementById('mc-filter-pills');
+    const cont = q('#crypto-cf-pills');
     if (!cont) return;
     cont.innerHTML = state.filters.map((f,idx)=>{
       const lab = METRICS[f.metric].label;
@@ -910,7 +902,7 @@
     const mcCompactCSS = document.createElement('style');
     mcCompactCSS.textContent = `
       /* Ligne des filtres personnalisés — compacte, une seule ligne, pas d'overflow */
-      #crypto-mc fieldset > div:has(#cf-metric,#cf-op,#cf-val,#cf-add),
+      #crypto-mc fieldset > div:has(#crypto-cf-metric,#crypto-cf-op,#crypto-cf-val,#crypto-cf-add),
       #crypto-mc .filter-controls {
         display: grid !important;
         grid-template-columns: minmax(120px,1fr) 56px 72px 14px 34px !important;
@@ -921,10 +913,10 @@
         max-width: 100% !important;
       }
 
-      #cf-metric { min-width: 0 !important; font-size: 0.8rem !important; }
-      #cf-op { width: 56px !important; font-size: 0.8rem !important; }
-      #cf-val { width: 72px !important; font-size: 0.8rem !important; }
-      #cf-add { 
+      #crypto-cf-metric { min-width: 0 !important; font-size: 0.8rem !important; }
+      #crypto-cf-op { width: 56px !important; font-size: 0.8rem !important; }
+      #crypto-cf-val { width: 72px !important; font-size: 0.8rem !important; }
+      #crypto-cf-add { 
         width: 34px !important; 
         height: 34px !important; 
         padding: 0 !important;
@@ -935,7 +927,7 @@
       }
 
       /* Le symbole % juste après l'input */
-      #cf-val + span { 
+      #crypto-cf-val + span { 
         font-size: 12px !important; 
         opacity: .6 !important; 
         text-align: center !important; 
@@ -943,14 +935,14 @@
       }
 
       /* Les "pills" des filtres ajoutés restent fines */
-      #mc-filter-pills .filter-item { 
+      #crypto-cf-pills .filter-item { 
         padding: 6px 8px !important; 
         font-size: .85rem !important; 
       }
-      #mc-filter-pills .filter-item .flex-1 { 
+      #crypto-cf-pills .filter-item .flex-1 { 
         min-width: 0 !important; 
       }
-      #mc-filter-pills .filter-item .flex-1 > span { 
+      #crypto-cf-pills .filter-item .flex-1 > span { 
         white-space: nowrap; 
         overflow: hidden; 
         text-overflow: ellipsis; 
