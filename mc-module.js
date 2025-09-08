@@ -1,4 +1,4 @@
-// ===== MC (Multi-Critères) – Module Optimisé v2.4 avec Payout Ratio et Comparaison Quantisée ===================
+// ===== MC (Multi-Critères) – Module Optimisé v2.5 avec Auto-filtrage dividendes en mode Priorités ===================
 (function(){
   // Attendre que le DOM soit prêt
   if (!document.querySelector('#mc-section')) {
@@ -37,6 +37,9 @@
   const TOP_N = 10;
   const ALLOW_MISSING = 1; // NOUVEAU: Tolérer 1 critère manquant
   const CONFIG = { DEBUG: false }; // Config pour debug
+  
+  // NEW v2.5: Seuil minimum de rendement exigé en mode Priorités
+  const MIN_DY_LEXICO = 1.0; // 1% minimum pour éviter le "bruit" des actions sans dividende
 
   // Cache global pour les métriques
   const cache = {};
@@ -133,7 +136,8 @@
         metric: 'payout_ratio', 
         operator: '<', 
         value: 100, 
-        __auto: true // Marqueur pour identifier ce filtre automatique
+        __auto: true, // Marqueur pour identifier ce filtre automatique
+        __reason: 'yieldTrap' // NEW v2.5: Ajout de la raison
       });
       masks.custom = null; // Invalider le cache
       if (CONFIG.DEBUG) {
@@ -144,10 +148,36 @@
     return false;
   }
 
-  function cleanupAutoYieldTrap() {
-    const index = (state.customFilters||[]).findIndex(f => f.__auto);
-    if (index >= 0) {
-      state.customFilters.splice(index, 1);
+  // NEW v2.5: Filtre auto "rendement ≥ 1%" quand Dividende + Priorités
+  function ensureMinDivYieldForPriorities() {
+    const hasDY = state.selectedMetrics.includes('dividend_yield');
+    const isPriorities = state.mode === 'lexico';
+    const already = (state.customFilters||[]).some(f =>
+      f.__auto && f.metric === 'dividend_yield' && f.operator === '>=' && f.value >= MIN_DY_LEXICO
+    );
+    
+    if (hasDY && isPriorities && !already) {
+      state.customFilters.push({
+        metric: 'dividend_yield',
+        operator: '>=',
+        value: MIN_DY_LEXICO,
+        __auto: true,                // caché dans l'UI
+        __reason: 'minDYforPriorities' // raison du filtre auto
+      });
+      masks.custom = null; // Invalider le cache
+      if (CONFIG.DEBUG) {
+        console.log(`🛡️ Auto: dividend_yield ≥ ${MIN_DY_LEXICO}% en mode Priorités`);
+      }
+      return true;
+    }
+    return false;
+  }
+
+  // CHANGED v2.5: Généraliser le nettoyage des filtres auto (remplace cleanupAutoYieldTrap)
+  function cleanupAutoFilters() {
+    const before = state.customFilters.length;
+    state.customFilters = (state.customFilters||[]).filter(f => !f.__auto);
+    if (state.customFilters.length !== before) {
       masks.custom = null; // Invalider le cache
     }
   }
@@ -668,6 +698,8 @@
         </div>
         <div id="priority-explanation" class="hidden">
           <strong>Mode Priorités intelligentes :</strong> Tri par ordre avec tolérance locale basée sur la densité de distribution.
+          ${/* NEW v2.5 */''}
+          <br><em>Note : Si "Dividende" est sélectionné, seules les actions avec rendement ≥ ${MIN_DY_LEXICO}% sont affichées.</em>
         </div>
       `;
       modeContainer.appendChild(explanation);
@@ -1110,6 +1142,7 @@
     summary.innerHTML = `<strong>${mode}</strong> • ${labels || 'Aucun critère'} • ${visibleFilters} filtres${geoText} • ${kept}/${total} actions`;
   }
 
+  // CHANGED v2.5: Fonction compute modifiée avec les deux protections auto
   async function compute(){
     console.log('🔍 MC: Calcul avec filtres géo:', state.geoFilters);
     
@@ -1130,8 +1163,9 @@
       return;
     }
     
-    // NOUVEAU: Protection yield-trap automatique
+    // NEW v2.5: Protections automatiques
     const hadAutoTrap = ensureYieldTrapOnce();
+    const hadAutoMinDY = ensureMinDivYieldForPriorities();
     
     // Utiliser les masques optimisés
     console.time('Filtrage');
@@ -1146,8 +1180,8 @@
     
     if (pool.length === 0) {
       results.innerHTML = '<div class="text-center text-cyan-400 py-4"><i class="fas fa-exclamation-triangle mr-2"></i>Aucune action ne passe les filtres</div>';
-      // NOUVEAU: Nettoyer le filtre auto si appliqué
-      if (hadAutoTrap) cleanupAutoYieldTrap();
+      // CHANGED v2.5: nettoie tous les filtres auto si ajoutés
+      if (hadAutoTrap || hadAutoMinDY) cleanupAutoFilters();
       return;
     }
     
@@ -1162,10 +1196,10 @@
     console.timeEnd('Ranking');
     
     render(out);
-    console.log(`✅ MC: ${pool.length} actions filtrées, mode: ${state.mode}`);
+    console.log(`✅ MC: ${pool.length} actions filtrées, mode: ${state.mode}`)
     
-    // NOUVEAU: Nettoyer le filtre auto après le rendu
-    if (hadAutoTrap) cleanupAutoYieldTrap();
+    // CHANGED v2.5: nettoie tous les filtres auto une fois le rendu fait
+    if (hadAutoTrap || hadAutoMinDY) cleanupAutoFilters();
   }
 
   // Event listeners
@@ -1246,7 +1280,7 @@
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module v2.4 avec comparaison quantisée et popover payout');
+    console.log('✅ MC Module v2.5 avec auto-filtrage dividendes en mode Priorités');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
