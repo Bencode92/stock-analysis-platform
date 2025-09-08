@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v3.7 - IDs namespaced pour éviter les collisions
+// mc-crypto.js — Composer multi-critères (Crypto) v3.8 - Support double IDs (legacy + namespaced)
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -576,7 +576,7 @@
 
   // ==== Fonction pour compacter l'UI des filtres (sera rappelée automatiquement)
   function compactFilterUI() {
-    const row = q('#crypto-cf-add')?.parentElement;
+    const row = q('#crypto-cf-add')?.parentElement || q('#cf-add')?.parentElement;
     if (!row) return;
     row.classList.add('filter-controls');
     row.style.display = 'grid';
@@ -586,6 +586,34 @@
     row.style.maxWidth = '100%';
     row.style.overflow = 'hidden';
     row.style.whiteSpace = 'nowrap';
+  }
+
+  // NOUVELLE FONCTION: Ajoute un filtre immédiatement (supporte les deux sets d'IDs)
+  function addFilterNow() {
+    const metric   = q('#crypto-cf-metric')?.value || q('#cf-metric')?.value;
+    let   operator = q('#crypto-cf-op')?.value     || q('#cf-op')?.value;
+    const valueRaw = q('#crypto-cf-val')?.value    || q('#cf-val')?.value;
+    const value    = toNumUI(valueRaw);
+
+    if (!metric || !Number.isFinite(value)) return;
+
+    const map = {'&gt;=':'>=','&gt;':'>','&lt;=':'<=','&lt;':'<','&ne;':'!='};
+    operator = map[operator] || operator;
+
+    const idx = state.filters.findIndex(f => f.metric === metric && f.operator === operator);
+    if (idx >= 0) state.filters[idx].value = value;
+    else          state.filters.push({ metric, operator, value });
+
+    // reset + focus whichever input exists
+    const valInput = q('#crypto-cf-val') || q('#cf-val');
+    if (valInput) {
+      valInput.value = '';
+      valInput.focus();
+    }
+
+    drawFilters();
+    compactFilterUI();
+    refresh();  // apply immediately
   }
 
   // ==== UI bindings avec délégation robuste
@@ -676,48 +704,30 @@
       }
     });
 
-    // Delegation on crypto panel (no cross-module bleed)
+    // Delegation on the crypto panel (works for both ids)
     rootMcEl.addEventListener('click', (e) => {
-      // Gestion du mode radio
+      // toggle radios if a radio-label was clicked
       const lbl = e.target.closest('label');
       if (lbl) {
         const inp = lbl.querySelector('input[name="mc-mode"]');
-        if (inp && inp.name === 'mc-mode') {
-          inp.checked = true;
-          applyModeFromTarget(inp);
-          return;
-        }
+        if (inp) { inp.checked = true; applyModeFromTarget(inp); return; }
       }
-      
-      const addBtn = e.target.closest('#crypto-cf-add');
-      if (!addBtn) return;
 
-      e.preventDefault();
-      e.stopPropagation();
-
-      const metric   = q('#crypto-cf-metric')?.value;
-      let   operator = q('#crypto-cf-op')?.value;
-      const valueRaw = q('#crypto-cf-val')?.value;
-      const value    = toNumUI(valueRaw);
-
-      if (!metric || !Number.isFinite(value)) return;
-
-      const map = {'&gt;=':'>=','&gt;':'>','&lt;=':'<=','&lt;':'<','&ne;':'!='};
-      operator = map[operator] || operator;
-
-      const idx = state.filters.findIndex(f => f.metric === metric && f.operator === operator);
-      if (idx >= 0) state.filters[idx].value = value; else state.filters.push({ metric, operator, value });
-
-      q('#crypto-cf-val').value = '';
-      q('#crypto-cf-val').focus();
-
-      drawFilters();
-      compactFilterUI();
-      refresh();   // apply immediately
+      // "+" button — handle both legacy and namespaced ids
+      if (e.target.closest('#crypto-cf-add, #cf-add')) {
+        e.preventDefault();
+        e.stopPropagation();
+        addFilterNow();
+      }
     });
 
-    q('#crypto-cf-val')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); q('#crypto-cf-add')?.click(); }
+    // Also bind directly in case delegation misses it (Safari/iframes etc.)
+    q('#crypto-cf-add')?.addEventListener('click', (e)=>{ e.preventDefault(); addFilterNow(); });
+    q('#cf-add')?.addEventListener('click',        (e)=>{ e.preventDefault(); addFilterNow(); });
+
+    // Enter key adds the filter
+    (q('#crypto-cf-val') || q('#cf-val'))?.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter') { e.preventDefault(); addFilterNow(); }
     });
 
     // Synchronise à l'init
@@ -784,9 +794,9 @@
     }
   }
 
-  // Pills renderer
+  // Pills renderer (tolerant - works with both IDs)
   function drawFilters() {
-    const cont = q('#crypto-cf-pills');
+    const cont = q('#crypto-cf-pills') || q('#cf-pills');
     if (!cont) return;
     cont.innerHTML = state.filters.map((f,idx)=>{
       const lab = METRICS[f.metric].label;
@@ -903,6 +913,7 @@
     mcCompactCSS.textContent = `
       /* Ligne des filtres personnalisés — compacte, une seule ligne, pas d'overflow */
       #crypto-mc fieldset > div:has(#crypto-cf-metric,#crypto-cf-op,#crypto-cf-val,#crypto-cf-add),
+      #crypto-mc fieldset > div:has(#cf-metric,#cf-op,#cf-val,#cf-add),
       #crypto-mc .filter-controls {
         display: grid !important;
         grid-template-columns: minmax(120px,1fr) 56px 72px 14px 34px !important;
@@ -913,10 +924,10 @@
         max-width: 100% !important;
       }
 
-      #crypto-cf-metric { min-width: 0 !important; font-size: 0.8rem !important; }
-      #crypto-cf-op { width: 56px !important; font-size: 0.8rem !important; }
-      #crypto-cf-val { width: 72px !important; font-size: 0.8rem !important; }
-      #crypto-cf-add { 
+      #crypto-cf-metric, #cf-metric { min-width: 0 !important; font-size: 0.8rem !important; }
+      #crypto-cf-op, #cf-op { width: 56px !important; font-size: 0.8rem !important; }
+      #crypto-cf-val, #cf-val { width: 72px !important; font-size: 0.8rem !important; }
+      #crypto-cf-add, #cf-add { 
         width: 34px !important; 
         height: 34px !important; 
         padding: 0 !important;
@@ -927,7 +938,7 @@
       }
 
       /* Le symbole % juste après l'input */
-      #crypto-cf-val + span { 
+      #crypto-cf-val + span, #cf-val + span { 
         font-size: 12px !important; 
         opacity: .6 !important; 
         text-align: center !important; 
@@ -935,14 +946,14 @@
       }
 
       /* Les "pills" des filtres ajoutés restent fines */
-      #crypto-cf-pills .filter-item { 
+      #crypto-cf-pills .filter-item, #cf-pills .filter-item { 
         padding: 6px 8px !important; 
         font-size: .85rem !important; 
       }
-      #crypto-cf-pills .filter-item .flex-1 { 
+      #crypto-cf-pills .filter-item .flex-1, #cf-pills .filter-item .flex-1 { 
         min-width: 0 !important; 
       }
-      #crypto-cf-pills .filter-item .flex-1 > span { 
+      #crypto-cf-pills .filter-item .flex-1 > span, #cf-pills .filter-item .flex-1 > span { 
         white-space: nowrap; 
         overflow: hidden; 
         text-overflow: ellipsis; 
