@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v2.3 - Priorités fonctionnelles
+// mc-crypto.js — Composer multi-critères (Crypto) v2.4 - Mode Priorités robuste
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -25,6 +25,9 @@
     cache: {},                       // {metric:{raw,rankPct,sorted,iqr}}
     pref: {}                        // préférences direction (optionnel pour ↑↓)
   };
+
+  // Expose pour debug console
+  window.MC = { state, METRICS };
 
   // ---- Utils
   const $ = (id) => document.getElementById(id);
@@ -256,40 +259,50 @@
     el.innerHTML = `<strong>${mode}</strong> • ${labels} • ${kept}/${total} cryptos`;
   }
 
-  // ==== Nouvelles fonctions pour le mode Priorités fonctionnel ====
+  // ==== VERSION ROBUSTE : Mode Priorités fonctionnel ====
   
-  // Normalise la valeur du radio en 'balanced' | 'lexico'
+  // Normalise la valeur du radio en 'balanced' | 'lexico' même si value est absente
   function setModeFromUI() {
-    const v = document.querySelector('input[name="mc-mode"]:checked')?.value || 'balanced';
-    // Détecte si la valeur contient "prior" ou "lexico" (case insensitive)
-    state.mode = /lexico|prior/i.test(v) ? 'lexico' : 'balanced';
+    const root = document.getElementById('crypto-mc') || document;
+    const checked = root.querySelector('input[name="mc-mode"]:checked');
+
+    const rawVal = (checked?.value || '').toLowerCase();
+    const labelTxt = (checked?.closest('label')?.textContent || checked?.labels?.[0]?.textContent || '').toLowerCase();
+    const idCls = ((checked?.id || '') + ' ' + (checked?.className || '')).toLowerCase();
+
+    const isLexico = /lexico|prior|prio/.test(rawVal) || /lexico|prior|prio/.test(labelTxt) || /lexico|prior|prio/.test(idCls);
+    state.mode = isLexico ? 'lexico' : 'balanced';
+    
+    console.log('Mode détecté:', state.mode, {rawVal, labelTxt, idCls}); // Debug
   }
 
-  // Crée le bloc "Ordre des priorités" si absent
+  // Crée le bloc "Ordre des priorités" juste sous la zone "Mode de tri"
   function ensurePriorityContainer() {
-    let box = $('#crypto-priority-container');
-    if (!box) {
-      // Le place après le fieldset "Mode de tri" ou dans le conteneur principal
-      const modeFs = document.querySelector('#crypto-mc fieldset[role="radiogroup"]') 
-                  || document.querySelector('#crypto-mc fieldset:has(input[name="mc-mode"])') 
-                  || document.querySelector('#crypto-mc');
-      if (!modeFs) return;
+    if (document.getElementById('crypto-priority-container')) return;
 
-      box = document.createElement('div');
-      box.id = 'crypto-priority-container';
-      box.className = 'mt-3 p-3 rounded bg-white/5';
-      box.style.display = 'none'; // caché par défaut
-      box.innerHTML = `
-        <div class="text-xs opacity-70 mb-2">Ordre des priorités (glisser-déposer)</div>
-        <div id="crypto-priority-list" class="space-y-1"></div>
-      `;
-      
-      // L'insère après le fieldset ou à la fin
-      if (modeFs.tagName === 'FIELDSET') {
-        modeFs.parentNode.insertBefore(box, modeFs.nextSibling);
-      } else {
-        modeFs.appendChild(box);
-      }
+    const root = document.getElementById('crypto-mc') || document;
+
+    // ancre = fieldset contenant les radios, sinon un conteneur logique, sinon root
+    const anyRadio = root.querySelector('input[name="mc-mode"]');
+    const anchor = anyRadio?.closest('fieldset')
+      || root.querySelector('[data-mc-mode-group]')
+      || root.querySelector('.mode-de-tri')
+      || root;
+
+    const box = document.createElement('div');
+    box.id = 'crypto-priority-container';
+    box.className = 'mt-3 p-3 rounded bg-white/5';
+    box.style.display = 'none';
+    box.innerHTML = `
+      <div class="text-xs opacity-70 mb-2">Ordre des priorités (glisser-déposer)</div>
+      <div id="crypto-priority-list" class="space-y-1"></div>
+    `;
+
+    // insertion juste après l'ancre
+    if (anchor.parentNode) {
+      anchor.parentNode.insertBefore(box, anchor.nextSibling);
+    } else {
+      root.appendChild(box);
     }
   }
 
@@ -399,16 +412,23 @@
       });
     });
 
-    // mode - version améliorée
-    document.querySelectorAll('input[name="mc-mode"]').forEach(r => {
+    // mode - version robuste
+    const radios = document.querySelectorAll('#crypto-mc input[name="mc-mode"]');
+    radios.forEach(r => {
+      // Sécurise une value utile si absente (facilite les prochains changements)
+      if (!r.value || r.value === 'on') {
+        const txt = (r.closest('label')?.textContent || r.labels?.[0]?.textContent || '').toLowerCase();
+        r.value = /prior|prio|lexico/.test(txt) ? 'lexico' : 'balanced';
+      }
       r.addEventListener('change', () => {
         setModeFromUI();
+        ensurePriorityContainer();
         updatePriorityUI();
         refresh(false);
       });
     });
 
-    // État initial du mode + priorités
+    // État initial
     setModeFromUI();
     ensurePriorityContainer();
     updatePriorityUI();
