@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v3.4 - Application immédiate des filtres
+// mc-crypto.js — Composer multi-critères (Crypto) v3.5 - Fix doublon ID et délégation robuste
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -73,9 +73,9 @@
     ensureEl(root, 'crypto-priority-container',
       '<div id="crypto-priority-container" class="hidden mt-3 p-3 rounded bg-white/5"><div class="text-xs opacity-70 mb-2">Ordre des priorités (glisser-déposer)</div><div id="crypto-priority-list" class="space-y-1"></div></div>');
 
-    // filtres "pills"
-    ensureEl(root, 'crypto-mc-filters',
-      '<div id="crypto-mc-filters" class="space-y-2"></div>');
+    // conteneur générique (éviter l'ID utilisé par le panneau des filtres)
+    ensureEl(root, 'mc-filters-shell',
+      '<div id="mc-filters-shell" class="space-y-2"></div>');
 
     // résultats
     ensureEl(root, 'crypto-mc-results',
@@ -143,7 +143,7 @@
     filterSection.className = 'mb-4';
     filterSection.innerHTML = `
       <legend class="text-sm opacity-70 mb-2">Filtres personnalisés</legend>
-      <div id="crypto-mc-filters" class="space-y-2 mb-2"></div>
+      <div id="cf-pills" class="space-y-2 mb-2"></div>
       <div class="flex gap-1 items-center filter-controls">
         <select id="cf-metric" class="mini-select" style="flex:1.4;">
           ${Object.entries(METRICS).map(([id, m]) => 
@@ -201,7 +201,7 @@
       box.className = 'hidden mt-3 p-3 rounded bg-white/5';
       box.innerHTML = '<div class="text-xs opacity-70 mb-2">Ordre des priorités (glisser-déposer)</div>';
       // place le panneau avant les filtres si possible
-      const before = document.getElementById('crypto-mc-filters') || document.getElementById('crypto-mc-results');
+      const before = document.getElementById('cf-pills') || document.getElementById('crypto-mc-results');
       root.insertBefore(box, before || null);
     }
 
@@ -683,15 +683,47 @@
       }
     });
 
-    rootMc.addEventListener('click', (e)=>{
+    // ==== MODIFIÉ: Délégation pour le bouton + (ultra-robuste)
+    rootMc.addEventListener('click', (e) => {
+      // Gestion du mode radio
       const lbl = e.target.closest('label');
       if (lbl) {
         const inp = lbl.querySelector('input[name="mc-mode"]');
         if (inp && inp.name === 'mc-mode') {
           inp.checked = true;      // force l'état visuel
           applyModeFromTarget(inp); // et applique le mode
+          return;
         }
       }
+      
+      // Gestion du bouton + pour ajouter un filtre
+      const addBtn = e.target.closest('#cf-add');
+      if (!addBtn) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const metric   = $('#cf-metric')?.value;
+      let   operator = $('#cf-op')?.value;
+      const valueRaw = $('#cf-val')?.value;
+      const value    = toNumUI(valueRaw);
+
+      if (!metric || !Number.isFinite(value)) return;
+
+      const map = {'&gt;=':'>=','&gt;':'>','&lt;=':'<=','&lt;':'<','&ne;':'!='};
+      operator = map[operator] || operator;
+
+      // upsert
+      const idx = state.filters.findIndex(f => f.metric === metric && f.operator === operator);
+      if (idx >= 0) state.filters[idx].value = value;
+      else          state.filters.push({ metric, operator, value });
+
+      $('#cf-val').value = '';
+      $('#cf-val').focus();
+
+      drawFilters();
+      compactFilterUI();
+      refresh();             // applique immédiatement
     });
 
     // Synchronise à l'init
@@ -705,37 +737,6 @@
       checkedRadio.checked = true; // Force le checked si nécessaire
       applyModeFromTarget(checkedRadio);
     }
-
-    // ==== MODIFIÉ: Applique immédiatement le filtre quand on clique sur +
-    $('#cf-add')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const metric   = $('#cf-metric')?.value;
-      let   operator = $('#cf-op')?.value;
-      const valueRaw = $('#cf-val')?.value;
-      const value    = toNumUI(valueRaw);     // <- gère "0,8", " 1.2 % ", etc.
-
-      if (!metric || !Number.isFinite(value)) return;
-
-      // Normalise d'éventuelles entités HTML (>=, <=, …)
-      const map = {'&gt;=':'>=','&gt;':'>','&lt;=':'<=','&lt;':'<','&ne;':'!='};
-      operator = map[operator] || operator;
-
-      // Upsert (si même metric+operator existe, on met juste à jour la valeur)
-      const idx = state.filters.findIndex(f => f.metric === metric && f.operator === operator);
-      if (idx >= 0) state.filters[idx].value = value;
-      else          state.filters.push({ metric, operator, value });
-
-      // Reset champ + focus agréable
-      $('#cf-val').value = '';
-      $('#cf-val').focus();
-
-      // Affiche la "pill" et applique TOUT DE SUITE
-      drawFilters();
-      compactFilterUI();
-      refresh();                 // <- recalcul immédiat des résultats
-    });
 
     // Bonus: Enter dans l'input valeur = clic sur +
     $('#cf-val')?.addEventListener('keydown', (e) => {
@@ -797,9 +798,9 @@
     }
   }
 
-  // MODIFIÉ: drawFilters avec format français et refresh immédiat sur suppression
+  // MODIFIÉ: drawFilters utilise le bon ID et refresh immédiat sur suppression
   function drawFilters() {
-    const cont = $('#crypto-mc-filters');
+    const cont = document.getElementById('cf-pills');
     if (!cont) return;
     cont.innerHTML = state.filters.map((f,idx)=>{
       const lab = METRICS[f.metric].label;
@@ -948,14 +949,14 @@
       }
 
       /* Les "pills" des filtres ajoutés restent fines */
-      #crypto-mc-filters .filter-item { 
+      #cf-pills .filter-item { 
         padding: 6px 8px !important; 
         font-size: .85rem !important; 
       }
-      #crypto-mc-filters .filter-item .flex-1 { 
+      #cf-pills .filter-item .flex-1 { 
         min-width: 0 !important; 
       }
-      #crypto-mc-filters .filter-item .flex-1 > span { 
+      #cf-pills .filter-item .flex-1 > span { 
         white-space: nowrap; 
         overflow: hidden; 
         text-overflow: ellipsis; 
