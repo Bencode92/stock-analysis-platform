@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v3.2 - Synchronisation immédiate des priorités
+// mc-crypto.js — Composer multi-critères (Crypto) v3.3 - Fix filtres personnalisés format FR
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -40,6 +40,17 @@
   };
   const fmtPct = (v) => Number.isFinite(v) ? `${v>0?'+':''}${v.toFixed(2)}%` : '–';
   const fmtPrice = (p, quote) => Number.isFinite(p) ? `${(quote||'US Dollar').toLowerCase().includes('euro')?'€':'$'}${p.toLocaleString('fr-FR',{maximumFractionDigits:8})}` : '–';
+  
+  // NOUVEAU: Convertit "0,8", " 1.25 % " -> 0.8, 1.25 (format FR)
+  function toNumUI(s) {
+    if (typeof s === 'number') return s;
+    if (s == null) return NaN;
+    const v = Number(String(s).trim().replace(/\s/g,'').replace('%','').replace(',','.'));
+    return Number.isFinite(v) ? v : NaN;
+  }
+  
+  // NOUVEAU: Format français pour l'affichage
+  const fmtFR = (n)=> Number(n).toLocaleString('fr-FR',{maximumFractionDigits:2});
 
   // Helpers "garantis-moi ce noeud"
   function ensureEl(parent, id, html) {
@@ -284,28 +295,29 @@
     });
   }
 
-  // Filtres personnalisés - CORRIGÉ pour gérer les entités HTML
+  // NOUVEAU: Filtres personnalisés avec tolérance et support entités HTML
   function passCustomFilters(i) {
-    const q = (v)=>Math.round(v*10)/10; // quantisation 0.1
+    const EPS = 0.05; // tolérance 0,05 point de % (~0,05%)
     for (const f of state.filters) {
       const raw = state.cache[f.metric]?.raw[i];
       if (!Number.isFinite(raw)) return false;
-      const v = q(raw), x = q(f.value);
-      
-      // Décodage des entités HTML si nécessaire
+
+      // on travaille à 0,1 près pour stabiliser
+      const v = Math.round(raw * 10) / 10;
+      const x = Math.round(Number(f.value) * 10) / 10;
+
       let op = f.operator;
-      if (op === '&gt;=') op = '>=';
-      if (op === '&gt;') op = '>';
-      if (op === '&lt;=') op = '<=';
-      if (op === '&lt;') op = '<';
-      if (op === '&ne;') op = '!=';
-      
-      if (op === '>=' && !(v>=x)) return false;
-      if (op === '>'  && !(v> x)) return false;
-      if (op === '='  && !(v===x))return false;
-      if (op === '<'  && !(v< x)) return false;
-      if (op === '<=' && !(v<=x)) return false;
-      if (op === '!=' && !(v!==x))return false;
+      const map = {'&gt;=':'>=','&gt;':'>','&lt;=':'<=','&lt;':'<','&ne;':'!='};
+      op = map[op] || op;
+
+      if (op === '>=') { if (!(v >= x)) return false; }
+      else if (op === '>')  { if (!(v >  x)) return false; }
+      else if (op === '<=') { if (!(v <= x)) return false; }
+      else if (op === '<')  { if (!(v <  x)) return false; }
+      else if (op === '!=') { if (!(Math.abs(v - x) > EPS)) return false; }
+      else { // '=' (ou tout autre) -> quasi-égalité
+        if (!(Math.abs(v - x) <= EPS)) return false;
+      }
     }
     return true;
   }
@@ -692,25 +704,26 @@
       applyModeFromTarget(checkedRadio);
     }
 
-    // filtres personnalisés - CORRIGÉ pour gérer les valeurs du select
-    $('#cf-add')?.addEventListener('click',()=>{
-      const metric = $('#cf-metric').value;
-      let operator = $('#cf-op').value;
-      const value = parseFloat($('#cf-val').value);
-      if (!metric || isNaN(value)) return;
-      
-      // Décodage préventif des entités HTML si présentes
-      if (operator === '&gt;=') operator = '>=';
-      if (operator === '&gt;') operator = '>';
-      if (operator === '&lt;=') operator = '<=';
-      if (operator === '&lt;') operator = '<';
-      if (operator === '&ne;') operator = '!=';
-      
-      state.filters.push({metric,operator,value});
-      $('#cf-val').value='';
+    // NOUVEAU: filtres personnalisés avec support virgule FR et preventDefault
+    $('#cf-add')?.addEventListener('click',(e)=>{
+      e.preventDefault(); // évite tout submit ou scroll involontaire
+
+      const metric   = $('#cf-metric')?.value;
+      let   operator = $('#cf-op')?.value;
+      const valueRaw = $('#cf-val')?.value;
+      const value    = toNumUI(valueRaw);
+
+      if (!metric || !Number.isFinite(value)) return;
+
+      // normalise d'éventuelles entités HTML (sécurité)
+      const map = {'&gt;=':'>=','&gt;':'>','&lt;=':'<=','&lt;':'<','&ne;':'!='};
+      operator = map[operator] || operator;
+
+      state.filters.push({ metric, operator, value });
+      $('#cf-val').value = '';
       drawFilters();
       compactFilterUI(); // Re-compacte après ajout
-      refresh(false);
+      refresh(); // recalcul immédiat
     });
 
     $('#crypto-mc-apply')?.addEventListener('click',()=>refresh(true));
@@ -765,6 +778,7 @@
     }
   }
 
+  // MODIFIÉ: drawFilters avec format français
   function drawFilters() {
     const cont = $('#crypto-mc-filters');
     if (!cont) return;
@@ -783,7 +797,7 @@
                    : 'text-yellow-400';
       return `<div class="filter-item flex items-center gap-2 p-2 rounded bg-white/5">
         <span class="flex-1 min-w-0">
-          <span class="whitespace-nowrap overflow-hidden text-ellipsis">${lab} <span class="${color} font-semibold">${displayOp} ${f.value}%</span></span>
+          <span class="whitespace-nowrap overflow-hidden text-ellipsis">${lab} <span class="${color} font-semibold">${displayOp} ${fmtFR(f.value)}%</span></span>
         </span>
         <button class="remove-filter text-red-400 hover:text-red-300 text-sm shrink-0" data-i="${idx}"><i class="fas fa-times"></i></button>
       </div>`;
