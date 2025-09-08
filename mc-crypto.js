@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v4.1 - Compteurs, Top 10 et blindage total
+// mc-crypto.js — Composer multi-critères (Crypto) v4.3 - Précision filtres + dédup Top 10
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -85,7 +85,22 @@
     window.CRYPTO_ROWS = state.data;
   }
 
-  // --- Rendu des 4 Top 10 (24h + 90j, hausses & baisses)
+  // v4.3 - Choisit 1 seule ligne par token en gardant la meilleure selon la vue
+  function topByMetricUnique(list, key, asc = false) {
+    // asc=false => on veut le max ; asc=true => on veut le min
+    const best = new Map(); // token -> row retenue
+    for (const r of list) {
+      const v = r[key];
+      if (!Number.isFinite(v)) continue;
+      const prev = best.get(r.token);
+      if (!prev || (asc ? v < prev[key] : v > prev[key])) best.set(r.token, r);
+    }
+    return Array.from(best.values())
+      .sort((a, b) => asc ? a[key] - b[key] : b[key] - a[key])
+      .slice(0, 10);
+  }
+
+  // v4.3 - Rendu des 4 Top 10 SANS DOUBLONS
   function renderTop10Blocks() {
     const rows = state.data.map(r => ({
       token: r.token,
@@ -97,15 +112,11 @@
       currency_quote: r.currency_quote
     }));
 
-    const top = (list, key, asc=false) =>
-      list.filter(x => Number.isFinite(x[key]))
-          .sort((a,b) => asc ? a[key]-b[key] : b[key]-a[key])
-          .slice(0, 10);
-
-    paintTop('#top-daily-gainers .stock-cards-container', top(rows, 'd1', false), 'd1');
-    paintTop('#top-daily-losers .stock-cards-container',  top(rows, 'd1', true),  'd1');
-    paintTop('#top-qtr-gainers .stock-cards-container',   top(rows, 'q3', false), 'q3');
-    paintTop('#top-qtr-losers .stock-cards-container',    top(rows, 'q3', true),  'q3');
+    // Dédupliqué par token + bon extrême pour chaque vue
+    paintTop('#top-daily-gainers .stock-cards-container', topByMetricUnique(rows, 'd1', false), 'd1'); // max
+    paintTop('#top-daily-losers .stock-cards-container',  topByMetricUnique(rows, 'd1', true),  'd1'); // min
+    paintTop('#top-qtr-gainers .stock-cards-container',   topByMetricUnique(rows, 'q3', false), 'q3'); // max
+    paintTop('#top-qtr-losers .stock-cards-container',    topByMetricUnique(rows, 'q3', true),  'q3'); // min
   }
 
   function paintTop(selector, arr, key) {
@@ -219,7 +230,7 @@
           <option value="<=">&le;</option>
           <option value="!=">&ne;</option>
         </select>
-        <input id="crypto-cf-val" type="number" step="0.1" class="mini-input" style="width:80px;" placeholder="0">
+        <input id="crypto-cf-val" type="number" step="0.01" class="mini-input" style="width:80px;" placeholder="0">
         <span class="text-xs opacity-60">%</span>
         <button id="crypto-cf-add" type="button" class="action-button" style="padding:6px 10px;" aria-label="Ajouter le filtre">
           <i class="fas fa-plus"></i>
@@ -356,27 +367,28 @@
     });
   }
 
-  // NOUVEAU: Filtres personnalisés avec tolérance et support entités HTML
+  // v4.3 - Filtres personnalisés avec PRÉCISION ACCRUE (pas d'arrondi agressif)
   function passCustomFilters(i) {
-    const EPS = 0.05; // tolérance 0,05 point de % (~0,05%)
+    const EPS = 0.01; // tolérance réduite à 0.01% (uniquement pour l'égalité)
     for (const f of state.filters) {
       const raw = state.cache[f.metric]?.raw[i];
       if (!Number.isFinite(raw)) return false;
 
-      // on travaille à 0,1 près pour stabiliser
-      const v = Math.round(raw * 10) / 10;
-      const x = Math.round(Number(f.value) * 10) / 10;
+      // v4.3: Arrondi à 0.01 près au lieu de 0.1 (100x plus précis)
+      const v = Math.round(raw * 100) / 100;
+      const x = Math.round(Number(f.value) * 100) / 100;
 
       let op = f.operator;
       const map = {'&gt;=':'>=','&gt;':'>','&lt;=':'<=','&lt;':'<','&ne;':'!='};
       op = map[op] || op;
 
+      // Pour les opérateurs stricts, pas de tolérance
       if (op === '>=') { if (!(v >= x)) return false; }
       else if (op === '>')  { if (!(v >  x)) return false; }
       else if (op === '<=') { if (!(v <= x)) return false; }
       else if (op === '<')  { if (!(v <  x)) return false; }
       else if (op === '!=') { if (!(Math.abs(v - x) > EPS)) return false; }
-      else { // '=' (ou tout autre) -> quasi-égalité
+      else { // '=' -> quasi-égalité avec tolérance minimale
         if (!(Math.abs(v - x) <= EPS)) return false;
       }
     }
