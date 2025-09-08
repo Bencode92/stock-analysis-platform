@@ -3,7 +3,8 @@
  * Source: data/filtered/Crypto_filtered_volatility.csv
  * Champs utilisés: symbol, currency_base, currency_quote, last_close, last_datetime,
  *                  ret_1d_pct, ret_7d_pct, ret_30d_pct, ret_90d_pct,
- *                  vol_7d_annual_pct, vol_30d_annual_pct, atr14_pct, drawdown_90d_pct
+ *                  vol_7d_annual_pct, vol_30d_annual_pct, atr14_pct, drawdown_90d_pct,
+ *                  exchange_used, exchange_normalized
  */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -57,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const text = await res.text();
       const rows = csvToObjects(text);
 
-      // Adapter/typer avec tous les champs
+      // Adapter/typer avec tous les champs (ajout des exchanges)
       const coins = rows.map(r => ({
         name: r.currency_base || r.symbol || '',
         symbol: r.symbol || '',
@@ -71,6 +72,7 @@ document.addEventListener('DOMContentLoaded', function () {
         vol30:  toNum(r.vol_30d_annual_pct),
         atr14:  toNum(r.atr14_pct),
         dd90:   toNum(r.drawdown_90d_pct),
+        exchange_used: r.exchange_used || r.exchanges_used || r.exchange_normalized || '',
         last_datetime: r.last_datetime || null
       })).filter(c => c.name);
 
@@ -108,6 +110,58 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  // --------- Nouvelle fonction pour formater les exchanges ---------
+  function formatExchanges(e) {
+    // prend exchange_used en priorité, sinon exchange_normalized
+    const raw = e.exchange_used ?? e.exchanges_used ?? e.exchange_normalized ?? '';
+    if (!raw) return '—';
+
+    let list = [];
+    if (Array.isArray(raw)) list = raw;
+    else if (typeof raw === 'string') list = raw.split(/[|,;]+/);
+    else list = [String(raw)];
+
+    // nettoyage + capitalisation simple
+    const pretty = list
+      .map(s => String(s).trim())
+      .filter(Boolean)
+      .map(s => {
+        // Garde les noms connus tels quels, sinon capitalise
+        const lower = s.toLowerCase();
+        if (lower.includes('coinbase')) return 'Coinbase';
+        if (lower.includes('binance')) return 'Binance';
+        if (lower.includes('kraken')) return 'Kraken';
+        if (lower.includes('okx')) return 'OKX';
+        if (lower.includes('bybit')) return 'Bybit';
+        if (lower.includes('kucoin')) return 'KuCoin';
+        if (lower.includes('gate')) return 'Gate.io';
+        if (lower.includes('huobi')) return 'Huobi';
+        if (lower.includes('bitfinex')) return 'Bitfinex';
+        if (lower.includes('crypto.com')) return 'Crypto.com';
+        // Sinon capitalisation standard
+        return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+      });
+
+    const uniq = [...new Set(pretty)];
+    
+    // Tronquer si trop long
+    if (uniq.length > 3) {
+      return uniq.slice(0, 2).join(', ') + ` +${uniq.length - 2}`;
+    }
+    
+    return uniq.length ? uniq.join(', ') : '—';
+  }
+
+  // --------- Fonction pour obtenir la classe CSS du drawdown ---------
+  function getDrawdownClass(dd) {
+    const val = Math.abs(toNum(dd));
+    if (!Number.isFinite(val)) return 'neutral';
+    if (val > 50) return 'text-red-500';     // Très risqué
+    if (val > 30) return 'text-red-400';     // Risqué
+    if (val > 15) return 'text-orange-400';  // Modéré
+    return 'text-yellow-400';                // Faible
+  }
+
   // --------- Rendu principal ---------
   function renderCryptoData() {
     try {
@@ -135,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!items.length) {
           body.innerHTML = `
             <tr>
-              <td colspan="9" class="text-center py-4 text-gray-400">
+              <td colspan="10" class="text-center py-4 text-gray-400">
                 <i class="fas fa-info-circle mr-2"></i>
                 Aucune cryptomonnaie disponible pour cette lettre
               </td>
@@ -148,6 +202,7 @@ document.addEventListener('DOMContentLoaded', function () {
           const td7dCls = valClass(c.ret7d);
           const td30dCls = valClass(c.ret30d);
           const td90dCls = valClass(c.ret90d);
+          const ddCls = getDrawdownClass(c.dd90);
 
           const row = document.createElement('tr');
           row.innerHTML = `
@@ -158,8 +213,9 @@ document.addEventListener('DOMContentLoaded', function () {
             <td class="${td7dCls}">${formatPct(c.ret7d)}</td>
             <td class="${td30dCls}">${formatPct(c.ret30d)}</td>
             <td class="${td90dCls}">${formatPct(c.ret90d)}</td>
-            <td class="neutral">${formatPct(c.vol7)}</td>
+            <td class="${ddCls}" title="Perte maximale sur 90 jours">${formatPct(c.dd90)}</td>
             <td class="neutral">${formatPct(c.vol30)}</td>
+            <td class="text-sm opacity-80">${formatExchanges(c)}</td>
           `;
           body.appendChild(row);
         });
@@ -397,8 +453,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 <th>% 7J</th>
                 <th>% 30J</th>
                 <th>% 90J</th>
-                <th>VOL 7J (ann.)</th>
+                <th>MAX DD 90J</th>
                 <th>VOL 30J (ann.)</th>
+                <th>EXCHANGES</th>
               </tr>
             </thead>
             <tbody id="${letter}-indices-body"></tbody>
@@ -545,10 +602,10 @@ document.addEventListener('DOMContentLoaded', function () {
   // --------- Données de démo (fallback visuel) ---------
   function loadDemoData() {
     const demo = [
-      { name: "Bitcoin",  symbol: "BTC", quote: "US Dollar", price: 62150.25, ret1d: 1.2,  ret7d: 3.5,  ret30d: 12.2, ret90d: 45.8,  vol7: 68.5, vol30: 72.3, atr14: 3.2, dd90: -18.5 },
-      { name: "Ethereum", symbol: "ETH", quote: "US Dollar", price: 3340.18,  ret1d: 2.5,  ret7d: 4.1,  ret30d: 10.0, ret90d: 32.9,  vol7: 75.2, vol30: 78.9, atr14: 4.1, dd90: -22.3 },
-      { name: "Solana",   symbol: "SOL", quote: "US Dollar", price: 146.75,   ret1d: 5.3,  ret7d: 7.5,  ret30d: 22.0, ret90d: 120.1, vol7: 95.3, vol30: 98.7, atr14: 5.8, dd90: -35.2 },
-      { name: "Cardano",  symbol: "ADA", quote: "US Dollar", price: 0.65,     ret1d: -1.2, ret7d: -2.5, ret30d: 5.0,  ret90d: -12.5, vol7: 82.1, vol30: 85.6, atr14: 4.5, dd90: -42.1 },
+      { name: "Bitcoin",  symbol: "BTC", quote: "US Dollar", price: 62150.25, ret1d: 1.2,  ret7d: 3.5,  ret30d: 12.2, ret90d: 45.8,  vol7: 68.5, vol30: 72.3, atr14: 3.2, dd90: -18.5, exchange_used: "Binance|Coinbase|Kraken" },
+      { name: "Ethereum", symbol: "ETH", quote: "US Dollar", price: 3340.18,  ret1d: 2.5,  ret7d: 4.1,  ret30d: 10.0, ret90d: 32.9,  vol7: 75.2, vol30: 78.9, atr14: 4.1, dd90: -22.3, exchange_used: "Coinbase|Binance" },
+      { name: "Solana",   symbol: "SOL", quote: "US Dollar", price: 146.75,   ret1d: 5.3,  ret7d: 7.5,  ret30d: 22.0, ret90d: 120.1, vol7: 95.3, vol30: 98.7, atr14: 5.8, dd90: -35.2, exchange_used: "Binance|OKX|Bybit" },
+      { name: "Cardano",  symbol: "ADA", quote: "US Dollar", price: 0.65,     ret1d: -1.2, ret7d: -2.5, ret30d: 5.0,  ret90d: -12.5, vol7: 82.1, vol30: 85.6, atr14: 4.5, dd90: -42.1, exchange_used: "Kraken" },
     ];
     cryptoData.indices = organizeByLetter(demo);
     cryptoData.meta = { timestamp: new Date().toISOString(), count: demo.length, isStale: false, source: 'demo avec volatilité' };
