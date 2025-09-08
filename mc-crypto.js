@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v3.1 - Version autonome plug-and-play
+// mc-crypto.js — Composer multi-critères (Crypto) v3.2 - Synchronisation immédiate des priorités
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -174,6 +174,36 @@
       </div>
     `;
     root.appendChild(actions);
+  }
+
+  // NOUVEAU HELPER: Garantit la présence du panneau + liste des priorités
+  function ensurePriorityList() {
+    const root = document.getElementById('crypto-mc');
+    if (!root) return null;
+
+    let box = document.getElementById('crypto-priority-container');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'crypto-priority-container';
+      box.className = 'hidden mt-3 p-3 rounded bg-white/5';
+      box.innerHTML = '<div class="text-xs opacity-70 mb-2">Ordre des priorités (glisser-déposer)</div>';
+      // place le panneau avant les filtres si possible
+      const before = document.getElementById('crypto-mc-filters') || document.getElementById('crypto-mc-results');
+      root.insertBefore(box, before || null);
+    }
+
+    let list = document.getElementById('crypto-priority-list');
+    if (!list) {
+      list = document.createElement('div');
+      list.id = 'crypto-priority-list';
+      list.className = 'space-y-1';
+      box.appendChild(list);
+    }
+
+    // Legacy : masque d'anciennes zones texte champ "ordre"
+    box.querySelectorAll('input,textarea').forEach(el => (el.style.display = 'none'));
+
+    return list;
   }
 
   // Sync les critères sélectionnés depuis l'état des checkboxes
@@ -471,28 +501,25 @@
     }
   }
 
-  // ==== Priorités (drag & drop) - VERSION AMÉLIORÉE avec resynchronisation défensive
+  // NOUVELLE VERSION COMPLÈTE de updatePriorityUI
   function updatePriorityUI() {
-    const box = $('#crypto-priority-container');
-    const list = $('#crypto-priority-list');
-    if (!box || !list) return;
-    
-    // Force l'affichage si on est en mode lexico
+    const list = ensurePriorityList();
+    const box  = document.getElementById('crypto-priority-container');
+    if (!list || !box) return;
+
+    // Affiche/masque selon le mode
     if (state.mode === 'lexico') {
       togglePrioBox(true);
-    }
-    
-    // L'affichage est désormais piloté par togglePrioBox
-    if (state.mode !== 'lexico') { 
-      list.innerHTML = ''; 
-      return; 
+    } else {
+      togglePrioBox(false);
+      list.innerHTML = '';
+      return;
     }
 
-    // NOUVEAU: si selected est vide mais qu'il y a des cases cochées, resynchronise
-    if (!state.selected.length) {
-      syncSelectedFromCheckboxes();
-    }
+    // Toujours synchroniser avec l'état des cases cochées
+    syncSelectedFromCheckboxes();
 
+    // Construire la pile des priorités
     list.innerHTML = state.selected.map((m,i)=>`
       <div class="priority-item flex items-center gap-2 p-2 rounded bg-white/5 cursor-move"
            draggable="true" data-metric="${m}">
@@ -502,48 +529,38 @@
       </div>
     `).join('') || '<div class="text-xs opacity-50">Coche au moins un critère</div>';
 
+    // DnD
     const items = list.querySelectorAll('.priority-item');
     let dragged = null;
-    
+
     items.forEach(item => {
-      item.addEventListener('dragstart', e => { 
-        dragged = item; 
-        item.classList.add('dragging'); 
-      });
-      
-      item.addEventListener('dragend', e => { 
-        item.classList.remove('dragging'); 
-        dragged = null; 
-      });
-      
-      item.addEventListener('dragover', e => {
-        e.preventDefault();
-        const after = getAfterElement(list, e.clientY);
-        if (!after) {
-          list.appendChild(dragged);
-        } else {
-          list.insertBefore(dragged, after);
-        }
-      });
-      
-      item.addEventListener('drop', () => {
-        state.selected = Array.from(list.querySelectorAll('.priority-item')).map(x => x.dataset.metric);
-        refresh(false);
-        updatePriorityUI();
-      });
+      item.addEventListener('dragstart', () => { dragged = item; item.classList.add('dragging'); });
+      item.addEventListener('dragend',   () => { item.classList.remove('dragging'); dragged = null; });
     });
 
     function getAfterElement(container, y) {
       const els = [...container.querySelectorAll('.priority-item:not(.dragging)')];
       return els.reduce((closest, child) => {
         const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height/2;
-        if (offset < 0 && offset > closest.offset) {
-          return {offset, element:child};
-        }
-        return closest;
-      }, {offset: Number.NEGATIVE_INFINITY}).element;
+        const offset = y - box.top - box.height / 2;
+        return (offset < 0 && offset > closest.offset) ? { offset, element: child } : closest;
+      }, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
     }
+
+    // On gère le dragover/drop au niveau de la LISTE (robuste)
+    list.addEventListener('dragover', e => {
+      if (!dragged) return;
+      e.preventDefault();
+      const after = getAfterElement(list, e.clientY);
+      if (!after) list.appendChild(dragged);
+      else list.insertBefore(dragged, after);
+    });
+
+    list.addEventListener('drop', () => {
+      state.selected = Array.from(list.querySelectorAll('.priority-item')).map(x => x.dataset.metric);
+      refresh(false);        // recalcul du top avec le nouvel ordre
+      updatePriorityUI();    // renumérotation 1., 2., 3., …
+    }, { once: true });      // évite d'empiler des listeners
   }
 
   // ==== Fonction pour compacter l'UI des filtres (sera rappelée automatiquement)
@@ -575,7 +592,7 @@
     ensureFilterControls(rootMc);
     ensureActionButtons(rootMc);
 
-    // ==== MODIFIÉ : checkboxes métriques SANS auto-bascule
+    // ==== MODIFIÉ : checkboxes métriques avec MAJ immédiate de la liste
     Object.keys(METRICS).forEach(id=>{
       const cb = $(`m-${id}`);
       if (!cb) return;
@@ -585,19 +602,20 @@
       const sync = ()=> pill && pill.classList.toggle('is-checked', cb.checked);
       sync();
 
+      // NOUVEAU HANDLER SIMPLIFIÉ
       cb.addEventListener('change', ()=>{
         if (cb.checked) {
-          if (!state.selected.includes(id)) state.selected.push(id); // append à la fin
+          if (!state.selected.includes(id)) state.selected.push(id); // append
         } else {
           state.selected = state.selected.filter(x=>x!==id);
         }
-        sync();
-        
-        // ⚠️ Ne PAS forcer le mode Priorités ici.
-        // Si on est déjà en Priorités, on rafraîchit juste la liste.
-        if (state.mode === 'lexico') {
-          updatePriorityUI();
-        }
+
+        // visuel de la pill
+        const pill = cb.closest('.mc-pill');
+        pill && pill.classList.toggle('is-checked', cb.checked);
+
+        // MAJ immédiate de la liste des priorités (elle s'affichera seulement en mode "Priorités")
+        updatePriorityUI();
         refresh(false);
       });
     });
