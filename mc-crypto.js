@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v2.5 - Mode Priorités ultra-robuste
+// mc-crypto.js — Composer multi-critères (Crypto) v2.6 - Auto-bascule en mode Priorités
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -274,6 +274,40 @@
     box.classList.toggle('hidden', !show);
   }
 
+  // ==== NOUVEAU : Force le passage en mode Priorités
+  function forcePriorities({scroll=true} = {}) {
+    const rootMc = document.getElementById('crypto-mc');
+    if (!rootMc) return;
+
+    // Coche le radio "Priorités"
+    const pr = rootMc.querySelector('input[name="mc-mode"][value="lexico"]')
+             || Array.from(rootMc.querySelectorAll('input[name="mc-mode"]')).find(r => 
+                  /prior|prio|lexico/.test(r.value?.toLowerCase() || '') ||
+                  /prior|prio/.test(r.closest('label')?.textContent?.toLowerCase() || '')
+                )
+             || rootMc.querySelector('input[name="mc-mode"]'); // fallback
+    
+    if (pr) pr.checked = true;
+
+    // État + habillage visuel
+    state.mode = 'lexico';
+    rootMc.querySelectorAll('input[name="mc-mode"]').forEach(x=>{
+      x.closest('.mc-pill')?.classList.toggle('is-checked', x.checked);
+    });
+
+    togglePrioBox(true);
+    updatePriorityUI();
+    refresh(false);
+
+    // Scroll optionnel vers le panneau des priorités
+    if (scroll) {
+      setTimeout(() => {
+        document.getElementById('crypto-priority-container')
+          ?.scrollIntoView({behavior:'smooth', block:'nearest'});
+      }, 100);
+    }
+  }
+
   // ==== Priorités (drag & drop) - version simplifiée
   function updatePriorityUI() {
     const box = $('#crypto-priority-container');
@@ -362,24 +396,40 @@
     const rootMc = document.getElementById('crypto-mc');
     if (!rootMc) return;
 
-    // checkboxes métriques
+    // ==== MODIFIÉ : checkboxes métriques avec auto-bascule
     Object.keys(METRICS).forEach(id=>{
       const cb = $(`m-${id}`);
       if (!cb) return;
       cb.checked = state.selected.includes(id);
-      // état visuel "is-checked"
+      
       const pill = cb.closest('.mc-pill');
       const sync = ()=> pill && pill.classList.toggle('is-checked', cb.checked);
       sync();
 
-      cb.addEventListener('change',()=>{
-        if (cb.checked) { if (!state.selected.includes(id)) state.selected.push(id); }
-        else            { state.selected = state.selected.filter(x=>x!==id); }
+      cb.addEventListener('change', ()=>{
+        if (cb.checked) {
+          if (!state.selected.includes(id)) state.selected.push(id); // l'ordre de clic = priorité
+        } else {
+          state.selected = state.selected.filter(x=>x!==id);
+        }
         sync();
-        updatePriorityUI();
-        refresh(false);
+        // 👉 NOUVEAU : bascule auto en Priorités dès qu'on touche un critère
+        forcePriorities({scroll: false});
       });
     });
+
+    // ==== NOUVEAU : Détection des clics sur la zone des pills (pour re-clics)
+    const pillsZone = rootMc.querySelector('fieldset .flex.flex-wrap.gap-2');
+    if (pillsZone) {
+      pillsZone.addEventListener('click', (e) => {
+        // Si on clique sur une pill (mais pas sur le checkbox lui-même qui a déjà son handler)
+        if (e.target.closest('.mc-pill') && !e.target.matches('input')) {
+          if (state.mode !== 'lexico') {
+            forcePriorities({scroll: false});
+          }
+        }
+      });
+    }
 
     // ---- Radios "Mode de tri" (ultra-robuste avec délégation)
     function applyModeFromTarget(t){
