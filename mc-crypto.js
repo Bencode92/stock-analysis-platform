@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v2.9 - Synchronisation des checkboxes
+// mc-crypto.js — Composer multi-critères (Crypto) v3.0 - Fix synchronisation priorités
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -283,17 +283,23 @@
 
   // ==== VERSION ULTRA-ROBUSTE : Gestion centralisée de l'affichage ====
   
-  // Helper robuste pour toggle le panneau priorités
+  // Helper robuste pour toggle le panneau priorités - VERSION RENFORCÉE
   function togglePrioBox(show){
     const box = document.getElementById('crypto-priority-container');
     if (!box) {
       console.warn('Priority container not found');
       return;
     }
-    // Force conversion booléenne et double sécurité
+    // Force conversion booléenne et triple sécurité
     show = !!show;
-    box.style.display = show ? '' : 'none';
     box.classList.toggle('hidden', !show);
+    if (show) {
+      box.hidden = false;
+      box.style.removeProperty('display');
+    } else {
+      box.hidden = true;
+      box.style.display = 'none';
+    }
   }
 
   // ==== Force le passage en mode Priorités (utile pour debug uniquement)
@@ -330,7 +336,7 @@
     }
   }
 
-  // ==== Priorités (drag & drop) - version améliorée avec re-binding robuste
+  // ==== Priorités (drag & drop) - VERSION AMÉLIORÉE avec resynchronisation défensive
   function updatePriorityUI() {
     const box = $('#crypto-priority-container');
     const list = $('#crypto-priority-list');
@@ -345,6 +351,11 @@
     if (state.mode !== 'lexico') { 
       list.innerHTML = ''; 
       return; 
+    }
+
+    // NOUVEAU: si selected est vide mais qu'il y a des cases cochées, resynchronise
+    if (!state.selected.length) {
+      syncSelectedFromCheckboxes();
     }
 
     list.innerHTML = state.selected.map((m,i)=>`
@@ -450,7 +461,7 @@
       });
     });
 
-    // ---- Radios "Mode de tri" (ultra-robuste avec délégation)
+    // ---- Radios "Mode de tri" (ultra-robuste avec délégation) - VERSION AMÉLIORÉE
     function applyModeFromTarget(t){
       if (!t) return;
       const v = (t.value || '').toLowerCase();
@@ -472,8 +483,12 @@
       
       // Toggle centralisé du panneau priorités
       togglePrioBox(state.mode === 'lexico');
-      updatePriorityUI();
-      refresh(false);
+      
+      // NOUVEAU: laisse le DOM respirer, puis build la liste
+      requestAnimationFrame(() => {
+        updatePriorityUI();
+        refresh(false);
+      });
       
       // Debug optionnel
       if (window.DEBUG_MC) {
@@ -481,10 +496,28 @@
       }
     }
 
-    // Délégation sur le conteneur pour ne rater aucun event
+    // Délégation sur le conteneur pour ne rater aucun event - AJOUT input et click
     rootMc.addEventListener('change', (e)=>{
       if (e.target && e.target.name === 'mc-mode') {
         applyModeFromTarget(e.target);
+      }
+    });
+
+    // NOUVEAU: Support des événements input et click pour Safari/mobile
+    rootMc.addEventListener('input', (e)=>{
+      if (e.target && e.target.name === 'mc-mode') {
+        applyModeFromTarget(e.target);
+      }
+    });
+
+    rootMc.addEventListener('click', (e)=>{
+      const lbl = e.target.closest('label');
+      if (lbl) {
+        const inp = lbl.querySelector('input[name="mc-mode"]');
+        if (inp && inp.name === 'mc-mode') {
+          inp.checked = true;      // force l'état visuel
+          applyModeFromTarget(inp); // et applique le mode
+        }
       }
     });
 
