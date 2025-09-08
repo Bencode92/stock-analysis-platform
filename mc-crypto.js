@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v3.3 - Fix filtres personnalisés format FR
+// mc-crypto.js — Composer multi-critères (Crypto) v3.4 - Application immédiate des filtres
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -160,7 +160,9 @@
         </select>
         <input id="cf-val" type="number" step="0.1" class="mini-input" style="width:80px;" placeholder="0">
         <span class="text-xs opacity-60">%</span>
-        <button id="cf-add" class="action-button" style="padding:6px 10px;"><i class="fas fa-plus"></i></button>
+        <button id="cf-add" type="button" class="action-button" style="padding:6px 10px;" aria-label="Ajouter le filtre">
+          <i class="fas fa-plus"></i>
+        </button>
       </div>
     `;
     
@@ -704,26 +706,43 @@
       applyModeFromTarget(checkedRadio);
     }
 
-    // NOUVEAU: filtres personnalisés avec support virgule FR et preventDefault
-    $('#cf-add')?.addEventListener('click',(e)=>{
-      e.preventDefault(); // évite tout submit ou scroll involontaire
+    // ==== MODIFIÉ: Applique immédiatement le filtre quand on clique sur +
+    $('#cf-add')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
 
       const metric   = $('#cf-metric')?.value;
       let   operator = $('#cf-op')?.value;
       const valueRaw = $('#cf-val')?.value;
-      const value    = toNumUI(valueRaw);
+      const value    = toNumUI(valueRaw);     // <- gère "0,8", " 1.2 % ", etc.
 
       if (!metric || !Number.isFinite(value)) return;
 
-      // normalise d'éventuelles entités HTML (sécurité)
+      // Normalise d'éventuelles entités HTML (>=, <=, …)
       const map = {'&gt;=':'>=','&gt;':'>','&lt;=':'<=','&lt;':'<','&ne;':'!='};
       operator = map[operator] || operator;
 
-      state.filters.push({ metric, operator, value });
+      // Upsert (si même metric+operator existe, on met juste à jour la valeur)
+      const idx = state.filters.findIndex(f => f.metric === metric && f.operator === operator);
+      if (idx >= 0) state.filters[idx].value = value;
+      else          state.filters.push({ metric, operator, value });
+
+      // Reset champ + focus agréable
       $('#cf-val').value = '';
+      $('#cf-val').focus();
+
+      // Affiche la "pill" et applique TOUT DE SUITE
       drawFilters();
-      compactFilterUI(); // Re-compacte après ajout
-      refresh(); // recalcul immédiat
+      compactFilterUI();
+      refresh();                 // <- recalcul immédiat des résultats
+    });
+
+    // Bonus: Enter dans l'input valeur = clic sur +
+    $('#cf-val')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        $('#cf-add')?.click();
+      }
     });
 
     $('#crypto-mc-apply')?.addEventListener('click',()=>refresh(true));
@@ -778,7 +797,7 @@
     }
   }
 
-  // MODIFIÉ: drawFilters avec format français
+  // MODIFIÉ: drawFilters avec format français et refresh immédiat sur suppression
   function drawFilters() {
     const cont = $('#crypto-mc-filters');
     if (!cont) return;
@@ -808,7 +827,7 @@
         state.filters.splice(i,1);
         drawFilters();
         compactFilterUI(); // Re-compacte après suppression
-        refresh(false);
+        refresh();  // MODIFIÉ: réapplique immédiatement sans attendre
       });
     });
   }
