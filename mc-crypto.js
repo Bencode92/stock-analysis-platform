@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v2.4 - Mode Priorités robuste
+// mc-crypto.js — Composer multi-critères (Crypto) v2.5 - Mode Priorités ultra-robuste
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -259,62 +259,28 @@
     el.innerHTML = `<strong>${mode}</strong> • ${labels} • ${kept}/${total} cryptos`;
   }
 
-  // ==== VERSION ROBUSTE : Mode Priorités fonctionnel ====
+  // ==== VERSION ULTRA-ROBUSTE : Gestion centralisée de l'affichage ====
   
-  // Normalise la valeur du radio en 'balanced' | 'lexico' même si value est absente
-  function setModeFromUI() {
-    const root = document.getElementById('crypto-mc') || document;
-    const checked = root.querySelector('input[name="mc-mode"]:checked');
-
-    const rawVal = (checked?.value || '').toLowerCase();
-    const labelTxt = (checked?.closest('label')?.textContent || checked?.labels?.[0]?.textContent || '').toLowerCase();
-    const idCls = ((checked?.id || '') + ' ' + (checked?.className || '')).toLowerCase();
-
-    const isLexico = /lexico|prior|prio/.test(rawVal) || /lexico|prior|prio/.test(labelTxt) || /lexico|prior|prio/.test(idCls);
-    state.mode = isLexico ? 'lexico' : 'balanced';
-    
-    console.log('Mode détecté:', state.mode, {rawVal, labelTxt, idCls}); // Debug
-  }
-
-  // Crée le bloc "Ordre des priorités" juste sous la zone "Mode de tri"
-  function ensurePriorityContainer() {
-    if (document.getElementById('crypto-priority-container')) return;
-
-    const root = document.getElementById('crypto-mc') || document;
-
-    // ancre = fieldset contenant les radios, sinon un conteneur logique, sinon root
-    const anyRadio = root.querySelector('input[name="mc-mode"]');
-    const anchor = anyRadio?.closest('fieldset')
-      || root.querySelector('[data-mc-mode-group]')
-      || root.querySelector('.mode-de-tri')
-      || root;
-
-    const box = document.createElement('div');
-    box.id = 'crypto-priority-container';
-    box.className = 'mt-3 p-3 rounded bg-white/5';
-    box.style.display = 'none';
-    box.innerHTML = `
-      <div class="text-xs opacity-70 mb-2">Ordre des priorités (glisser-déposer)</div>
-      <div id="crypto-priority-list" class="space-y-1"></div>
-    `;
-
-    // insertion juste après l'ancre
-    if (anchor.parentNode) {
-      anchor.parentNode.insertBefore(box, anchor.nextSibling);
-    } else {
-      root.appendChild(box);
+  // Helper robuste pour toggle le panneau priorités
+  function togglePrioBox(show){
+    const box = document.getElementById('crypto-priority-container');
+    if (!box) {
+      console.warn('Priority container not found');
+      return;
     }
+    // Force conversion booléenne et double sécurité
+    show = !!show;
+    box.style.display = show ? '' : 'none';
+    box.classList.toggle('hidden', !show);
   }
 
-  // ==== Priorités (drag & drop) - version améliorée
+  // ==== Priorités (drag & drop) - version simplifiée
   function updatePriorityUI() {
-    ensurePriorityContainer(); // Crée au besoin
-    
     const box = $('#crypto-priority-container');
     const list = $('#crypto-priority-list');
     if (!box || !list) return;
     
-    box.style.display = state.mode === 'lexico' ? 'block' : 'none';
+    // L'affichage est désormais piloté par togglePrioBox
     if (state.mode !== 'lexico') { 
       list.innerHTML = ''; 
       return; 
@@ -391,8 +357,11 @@
     row.style.whiteSpace = 'nowrap';
   }
 
-  // ==== UI bindings
+  // ==== UI bindings avec délégation robuste
   function wireUI() {
+    const rootMc = document.getElementById('crypto-mc');
+    if (!rootMc) return;
+
     // checkboxes métriques
     Object.keys(METRICS).forEach(id=>{
       const cb = $(`m-${id}`);
@@ -412,26 +381,47 @@
       });
     });
 
-    // mode - version robuste
-    const radios = document.querySelectorAll('#crypto-mc input[name="mc-mode"]');
-    radios.forEach(r => {
-      // Sécurise une value utile si absente (facilite les prochains changements)
-      if (!r.value || r.value === 'on') {
-        const txt = (r.closest('label')?.textContent || r.labels?.[0]?.textContent || '').toLowerCase();
-        r.value = /prior|prio|lexico/.test(txt) ? 'lexico' : 'balanced';
-      }
-      r.addEventListener('change', () => {
-        setModeFromUI();
-        ensurePriorityContainer();
-        updatePriorityUI();
-        refresh(false);
+    // ---- Radios "Mode de tri" (ultra-robuste avec délégation)
+    function applyModeFromTarget(t){
+      if (!t) return;
+      const v = (t.value || '').toLowerCase();
+      const labelTxt = (t.closest('label')?.textContent || t.labels?.[0]?.textContent || '').toLowerCase();
+      
+      // Détection intelligente du mode basée sur value OU texte du label
+      const isLexico = v === 'lexico' || /lexico|prior|prio/.test(labelTxt);
+      state.mode = isLexico ? 'lexico' : 'balanced';
+      
+      // Effet visuel sur les pills radio
+      rootMc.querySelectorAll('input[name="mc-mode"]').forEach(x=>{
+        x.closest('.mc-pill')?.classList.toggle('is-checked', x.checked);
       });
+      
+      // Toggle centralisé du panneau priorités
+      togglePrioBox(state.mode === 'lexico');
+      updatePriorityUI();
+      refresh(false);
+      
+      // Debug optionnel
+      if (window.DEBUG_MC) {
+        console.log(`Mode: ${state.mode}`, {value: v, label: labelTxt});
+      }
+    }
+
+    // Délégation sur le conteneur pour ne rater aucun event
+    rootMc.addEventListener('change', (e)=>{
+      if (e.target && e.target.name === 'mc-mode') {
+        applyModeFromTarget(e.target);
+      }
     });
 
-    // État initial
-    setModeFromUI();
-    ensurePriorityContainer();
-    updatePriorityUI();
+    // État initial - cherche le radio checked ou prend le premier
+    const checkedRadio = rootMc.querySelector('input[name="mc-mode"]:checked') 
+                      || rootMc.querySelector('input[name="mc-mode"][value="balanced"]')
+                      || rootMc.querySelector('input[name="mc-mode"]');
+    if (checkedRadio) {
+      checkedRadio.checked = true; // Force le checked si nécessaire
+      applyModeFromTarget(checkedRadio);
+    }
 
     // filtres personnalisés
     $('#cf-add')?.addEventListener('click',()=>{
@@ -460,12 +450,13 @@
           cb?.dispatchEvent(new Event('change')); 
         }
       });
-      const balancedRadio = document.querySelector('input[name="mc-mode"][value="balanced"]') 
-                         || document.querySelector('input[name="mc-mode"]');
-      if (balancedRadio) balancedRadio.checked = true;
-      setModeFromUI();
+      const balancedRadio = rootMc.querySelector('input[name="mc-mode"][value="balanced"]') 
+                         || rootMc.querySelector('input[name="mc-mode"]');
+      if (balancedRadio) {
+        balancedRadio.checked = true;
+        applyModeFromTarget(balancedRadio);
+      }
       drawFilters();
-      updatePriorityUI();
       compactFilterUI(); // Re-compacte après reset
       refresh(true);
     });
@@ -475,10 +466,7 @@
     compactFilterUI();
     
     // Re-compacte à chaque interaction et au redimensionnement
-    const root = $('#crypto-mc');
-    if (root) {
-      ['change','click'].forEach(evt => root.addEventListener(evt, compactFilterUI, {passive:true}));
-    }
+    ['change','click'].forEach(evt => rootMc.addEventListener(evt, compactFilterUI, {passive:true}));
     window.addEventListener('resize', compactFilterUI, {passive:true});
   }
 
