@@ -1,7 +1,7 @@
 /**
  * etf-script.js - Script principal pour la page ETF avec Top 10 et fonctionnalités complètes
  * Similaire à liste-script.js mais adapté aux ETFs
- * v2.1 - Amélioration lisibilité avec badges et noms multi-lignes
+ * v2.2 - Ajout du filtre spéculatif (Lev./Inverse) pour Top 10
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -111,11 +111,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
     
-    // État pour le Top 10
+    // État pour le Top 10 avec filtre spéculatif
     let topFilters = {
         type: 'GLOBAL',
         direction: 'up',
-        timeframe: 'daily'
+        timeframe: 'daily',
+        spec: 'all'  // NEW: all | no | only
     };
     
     // Mise à jour de l'horloge
@@ -183,7 +184,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const base = {
             ...etf,
             ticker: etf.ticker || etf.symbol || '-',
-          name: etf.name || etf.long_name || etf.fund_name || etf.symbol || '-',
+            name: etf.name || etf.long_name || etf.fund_name || etf.symbol || '-',
 
             ter: parseFloat(etf.total_expense_ratio ?? etf.expense_ratio ?? etf.ter ?? 0),
             aum: parseFloat(etf.aum_usd ?? etf.aum ?? etf.net_assets ?? 0),
@@ -236,14 +237,26 @@ document.addEventListener('DOMContentLoaded', function() {
         etfsData.topPerformers.ytd.worst = sortedYTD.slice(-10).reverse();
     }
     
-    // Helper pour détecter si ETF spéculatif
+    // Détection améliorée des ETFs spéculatifs
     function isSpeculative(e) {
         const t = String(e.etf_type || '').toLowerCase();
+        const n = String(e.name || '').toLowerCase();
+        const k = String(e.ticker || '').toLowerCase();
         const lev = Number(e.leverage);
-        return t.includes('inverse') || t.includes('leverag') || (Number.isFinite(lev) && lev !== 0);
+
+        // Check type field
+        if (t.includes('inverse') || t.includes('leverag') || t.includes('trading')) return true;
+
+        // Check leverage value
+        if (Number.isFinite(lev) && lev !== 0 && Math.abs(lev) !== 1) return true;
+
+        // Check patterns in name or ticker
+        const patterns = ['inverse', 'short', 'bear', '2x', '3x', '-1x', '-2x', '-3x', 
+                         'ultra', 'geared', 'leveraged', 'proshares', 'direxion'];
+        return patterns.some(p => n.includes(p) || k.includes(p));
     }
     
-    // Render Top 10 ETFs - AVEC BADGES AMÉLIORÉS
+    // Render Top 10 ETFs - AVEC FILTRE SPÉCULATIF
     function renderTopTenETFs() {
         const container = document.querySelector('#top-global-container .stock-cards-container');
         if (!container) return;
@@ -255,6 +268,13 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (topFilters.type === 'BONDS') {
             data = data.filter(e => e.dataset === 'bonds');
         } // GLOBAL = etf + bonds (pas de filtre)
+
+        // Filtre levier/inverse
+        if (topFilters.spec === 'no') {
+            data = data.filter(e => !isSpeculative(e));
+        } else if (topFilters.spec === 'only') {
+            data = data.filter(isSpeculative);
+        }
 
         // Trier selon metric active
         const perfKey = topFilters.timeframe === 'daily' ? 'return_1d' : 'return_ytd';
@@ -310,9 +330,16 @@ document.addEventListener('DOMContentLoaded', function() {
             container.innerHTML = '<div class="text-center text-gray-400 py-4">Aucune donnée disponible</div>';
         }
 
-        // hint dynamique
+        // Mise à jour du hint dynamique
         const hint = document.getElementById('hint-text');
-        if (hint) hint.textContent = `Top ${topFilters.direction === 'up' ? 'hausses' : 'baisses'} — ${topFilters.timeframe === 'daily' ? 'Jour' : 'YTD'}`;
+        if (hint) {
+            let specLabel = '';
+            if (topFilters.spec === 'no') specLabel = ' • sans spéculatif';
+            if (topFilters.spec === 'only') specLabel = ' • lev./inverse';
+            
+            hint.textContent = `Top ${topFilters.direction === 'up' ? 'hausses' : 'baisses'} — ${
+                topFilters.timeframe === 'daily' ? 'Jour' : 'YTD'}${specLabel}`;
+        }
     }
     
     // Filtrage pour la table complète - BASÉ SUR DATASET
@@ -540,6 +567,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    // Top 10 - Filtre spéculatif (levier/inverse)
+    document.querySelectorAll('.tp-spec .pill').forEach(pill => {
+        pill.addEventListener('click', function() {
+            document.querySelectorAll('.tp-spec .pill').forEach(p => 
+                p.setAttribute('aria-selected', 'false'));
+            this.setAttribute('aria-selected', 'true');
+            topFilters.spec = this.dataset.spec; // all | no | only
+            renderTopTenETFs();
+        });
+    });
+    
     // Onglets de type (table complète)
     document.querySelectorAll('.region-tab').forEach(tab => {
         tab.addEventListener('click', function() {
@@ -626,4 +664,4 @@ document.addEventListener('DOMContentLoaded', function() {
     loadETFData();
 });
 
-console.log('✅ ETF Script v2.1 - Amélioration lisibilité avec badges et noms multi-lignes');
+console.log('✅ ETF Script v2.2 - Filtre spéculatif ajouté pour Top 10');

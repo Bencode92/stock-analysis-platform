@@ -502,9 +502,10 @@
             align-items: center;
             margin-bottom: 16px;
             padding: 8px 0;
+            flex-wrap: wrap;
         }
         
-        .tp-regions, .tp-filters {
+        .tp-regions, .tp-filters, .tp-spec {
             display: flex;
             gap: 12px;
             align-items: center;
@@ -588,6 +589,13 @@
         .pill[aria-selected="true"] {
             color: var(--accent-color);
             opacity: 1;
+        }
+        
+        /* Style spécial pour le filtre "Lev./Inverse only" */
+        .tp-spec .pill[data-spec="only"][aria-selected="true"] {
+            background: rgba(255, 50, 50, 0.1);
+            border-color: rgba(255, 50, 50, 0.3);
+            color: #ff6b6b;
         }
         
         .pills-separator {
@@ -859,6 +867,19 @@
                             </button>
                             <button class="pill" data-frame="ytd" aria-selected="false">
                                 <i class="fas fa-calendar-check"></i>YTD
+                            </button>
+                        </div>
+
+                        <!-- Filtre Levier / Inverse -->
+                        <div class="pills tp-spec" role="tablist" aria-label="Levier">
+                            <button class="pill" data-spec="all" aria-selected="true" title="Afficher tous les ETFs">
+                                <i class="fas fa-filter"></i>Tous
+                            </button>
+                            <button class="pill" data-spec="no" aria-selected="false" title="Exclure ETFs à effet de levier et inverses (recommandé)">
+                                <i class="fas fa-shield-halved"></i>Sans spéculatif
+                            </button>
+                            <button class="pill" data-spec="only" aria-selected="false" title="Uniquement ETFs spéculatifs (risque élevé)">
+                                <i class="fas fa-bolt"></i>Lev./Inverse
                             </button>
                         </div>
 
