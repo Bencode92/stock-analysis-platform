@@ -1,15 +1,15 @@
 // stock-advanced-filter.js
-// Version 3.13 - Yield trailing/forward, moyenne dividendes années pleines, toggle ADR
-// Améliorations v3.13:
+// Version 3.14 - FIX BUG ADR: Correction détection US pour éviter faux positifs Euronext
+// Améliorations v3.14:
+// - Correction isUS() pour éviter de matcher "Nyse Euronext - Euronext Paris"
+// - Priorisation MIC pour Europe dans tdParamTrials()
+// - Court-circuit dans resolveSymbolSmart() pour Europe/Asie
+// - Logging debug amélioré pour tracer les ADR
+// v3.13:
 // - Séparation dividend_yield trailing vs forward avec ordre strict
 // - Moyenne dividendes sur années complètes uniquement (excluant année courante)
 // - Toggle KEEP_ADR pour supprimer complètement les ADR si voulu
 // - Source du yield tracée (TTM api/calc/FWD)
-// v3.12:
-// - Détection et rebasculement des ADR vers région US
-// - Helper micForRegion pour éviter MIC US sur pays non-US
-// - Blocage fallback US dans resolveSymbolSmart
-// - Tag is_adr pour traçabilité
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -41,7 +41,9 @@ const successCache = new Map();
 // Constantes ADR
 const US_MICS = new Set(['XNAS','XNGS','XNYS','BATS','ARCX','IEXG']);
 const isUSMic = (mic) => US_MICS.has(mic);
-const isADRLike = s => isUS(s.exchange) && normalize(s.country) !== 'united states';
+
+// ⚠️ CORRECTION v3.14: isADRLike utilise maintenant la nouvelle fonction isUS avec 2 params
+const isADRLike = s => isUS(s.exchange, s.country) && normalize(s.country) !== 'united states';
 
 async function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -107,13 +109,19 @@ function pickNumDeep(obj, paths) {
 
 // ───────── Helpers centralisés pour stratégie d'essais ─────────
 
-// Détecte si US
-const isUS = (ex='') => /nasdaq|new york stock exchange|nyse|bats|cboe/i.test(ex);
+// ✅ CORRECTION v3.14: Détection US robuste (évite faux positif "Nyse Euronext")
+const isUS = (ex = '', country = '') => {
+  const mic = toMIC(ex, country);
+  if (mic) return isUSMic(mic);
+  // Regex plus stricte avec word boundary et exclusion Euronext
+  return /\b(NASDAQ|New York Stock Exchange|NYSE(?!\s*Euronext)|NYSE\s*Arca|NYSE\s*American|CBOE|BATS)\b/i
+    .test(ex || '');
+};
 
 // Mappe échange → nom attendu TD pour US
 function usExchangeName(ex='') {
     if (/nasdaq/i.test(ex)) return 'NASDAQ';
-    if (/new york stock exchange|nyse/i.test(ex)) return 'NYSE';
+    if (/new york stock exchange|nyse(?!\s*euronext)/i.test(ex)) return 'NYSE';
     if (/bats|cboe/i.test(ex)) return 'BATS';
     return null;
 }
@@ -128,6 +136,7 @@ function micForRegion(stock) {
     return mic;
 }
 
+// ✅ CORRECTION v3.14: Priorisation MIC pour Europe
 // Construit la liste d'essais de paramètres selon la région
 function tdParamTrials(symbol, stock, resolvedSym=null) {
     // si resolvedSym = "SYM:MIC", on récupère aussi le MIC
@@ -140,15 +149,16 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
     const mic = micFromResolved || micForRegion(stock);
     const trials = [];
 
-    if (isUS(stock.exchange)) {
+    if (isUS(stock.exchange, stock.country)) {
         const ex = usExchangeName(stock.exchange);
         if (ex) trials.push({ symbol: base, exchange: ex }); // US: utiliser exchange=
         trials.push({ symbol: base });                        // ticker pur
         if (mic) trials.push({ symbol: `${base}:${mic}` });  // dernier recours
     } else {
+        // 🚀 PRIORITÉ MIC pour Europe/Asie (v3.14)
         if (mic) {
-            trials.push({ symbol: base, mic_code: mic });      // non-US: mic_code=
-            trials.push({ symbol: `${base}:${mic}` });         // ou suffixe
+            trials.push({ symbol: `${base}:${mic}` });         // PRIORITÉ 1: suffixe SYM:MIC
+            trials.push({ symbol: base, mic_code: mic });      // PRIORITÉ 2: mic_code=
         }
         trials.push({ symbol: base });                        // fallback final
         
@@ -346,9 +356,19 @@ function resolveSymbol(symbol, stock) {
     return mic ? `${symbol}:${mic}` : symbol;
 }
 
+// ✅ CORRECTION v3.14: Court-circuit pour Europe/Asie
 // Résolution "smart": test direct, sinon /stocks → meilleur candidat
 async function resolveSymbolSmart(symbol, stock) {
     const mic = toMIC(stock.exchange, stock.country);
+
+    // 🚀 FAST PATH v3.14: Priorité absolue pour Europe/Asie avec MIC connu
+    if (mic && !isUSMic(mic)) {
+        const qEU = await tryQuote(symbol, mic);
+        if (qEU && nameLooksRight(qEU.name, stock.name)) {
+            if (CONFIG.DEBUG) console.log(`[FAST PATH] ${symbol} → ${symbol}:${mic} (${stock.country})`);
+            return `${symbol}:${mic}`;
+        }
+    }
 
     // 1) essai direct sur le ticker (avec MIC si dispo)
     const q = await tryQuote(symbol, mic);
@@ -746,8 +766,18 @@ async function enrichStock(stock) {
     const resolved = await resolveSymbolSmart(stock.symbol, stock);
     if (CONFIG.DEBUG) console.log('[RESOLVED]', stock.symbol, '→', resolved || '(none)');
     
+    // 📊 LOGGING v3.14: Détection ADR améliorée
+    const wasADR = isADRLike(stock);
+    if (CONFIG.DEBUG && resolved) {
+        console.log(`[RESOLVE] ${stock.symbol} | Exchange: "${stock.exchange}" | Country: ${stock.country}`);
+        console.log(`  → Resolved: ${resolved} | ADR? ${wasADR}`);
+        if (wasADR && stock.country === 'France') {
+            console.warn(`  ⚠️ French stock marked as ADR - CHECK THIS!`);
+        }
+    }
+    
     // Si on n'a rien résolu et que l'exchange du CSV est US alors que le pays n'est pas US → ADR
-    if (!resolved && isUS(stock.exchange) && normalize(stock.country) !== 'united states') {
+    if (!resolved && isUS(stock.exchange, stock.country) && normalize(stock.country) !== 'united states') {
         if (CONFIG.DEBUG) console.log(`[ADR] ${stock.symbol} détecté comme ADR`);
         stock.is_adr = true; // Tag pour traçabilité
         // On continue avec le symbole brut pour récupérer les données US
@@ -1047,7 +1077,7 @@ function buildOverview(byRegion){
 }
 
 async function main() { 
-    console.log('📊 Enrichissement complet des stocks (v3.13 avec yield trailing/forward)\\n');
+    console.log('📊 Enrichissement complet des stocks (v3.14 - FIX BUG ADR Euronext)\\n');
     await fs.mkdir(OUT_DIR, { recursive: true });
     
     const [usStocks, europeStocks, asiaStocks] = await Promise.all([
