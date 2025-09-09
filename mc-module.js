@@ -1,4 +1,4 @@
-// ===== MC (Multi-Critères) – Module Optimisé v3.0 avec Dividendes REG vs SPÉ ===================
+// ===== MC (Multi-Critères) – Module Optimisé v3.1 avec Dividendes REG vs TTM ===================
 (function(){
   // Attendre que le DOM soit prêt
   if (!document.querySelector('#mc-section')) {
@@ -20,8 +20,8 @@
   // ==== CONSTANTES PERFORMANCE ====
   const GAP_FLOOR = { 
     ytd: 0.3, 
-    dividend_yield_reg: 0.1,     // MODIFIÉ: pour régulier
-    dividend_yield_special: 0.15, // NOUVEAU: pour spécial
+    dividend_yield_reg: 0.1,     // Pour régulier
+    dividend_yield_ttm: 0.15,    // Pour TTM
     volatility_3y: 0.2, 
     max_drawdown_3y: 0.3,
     perf_daily: 0.5,
@@ -32,16 +32,14 @@
     payout_ratio: 0.2
   };
   
-  // MODIFIÉ: Tolérance percentile ajustée
   const TOL_PRESET = { c: 0.6, kappa: 1.5 }; 
   const MIN_TOL_P = 0.012; // Plancher à 1.2pp
   const TOP_N = 10;
   const ALLOW_MISSING = 1; // Tolérer 1 critère manquant
   const CONFIG = { DEBUG: false }; // Config pour debug
   
-  // NEW v3.0: Seuils pour filtrage auto
-  const MIN_DY_REG_LEXICO = 0.5;    // 0.5% minimum pour régulier en mode Priorités
-  const MIN_DY_SPECIAL_LEXICO = 2.0; // 2% minimum pour spécial en mode Priorités
+  // Seuils pour filtrage auto
+  const MIN_DY_REG_LEXICO = 1.0;    // 1% minimum pour régulier en mode Priorités
 
   // Cache global pour les métriques
   const cache = {};
@@ -58,10 +56,28 @@
     return parseFloat(t);
   };
 
-  // MODIFIÉ v3.0: métriques avec REG et SPÉ séparés
+  // Helpers pour dividendes v3.1
+  const getDivReg = s => {
+    const val = Number.isFinite(s.dividend_yield_regular) 
+      ? s.dividend_yield_regular
+      : (s.dividend_yield_src === 'REG' && Number.isFinite(s.dividend_yield) ? s.dividend_yield : NaN);
+    return p(val);
+  };
+
+  const getDivTTM = s => {
+    if (Number.isFinite(s.dividend_yield_ttm)) {
+      return s.dividend_yield_ttm;
+    }
+    if (Number.isFinite(s.total_dividends_ttm) && Number.isFinite(s.price) && s.price > 0) {
+      return (s.total_dividends_ttm / s.price) * 100;
+    }
+    return NaN;
+  };
+
+  // MÉTRIQUES v3.1 avec REG et TTM
   const METRICS = {
     // Performance
-    perf_daily:      {label:'Perf Daily',     unit:'%', get:s=>p(s.perf_daily||s.daily||s.perf_1d), max:true},
+    perf_daily:      {label:'Perf Daily',     unit:'%', get:s=>p(s.perf_daily||s.daily||s.perf_1d||s.change_percent), max:true},
     perf_1m:         {label:'Perf 1M',        unit:'%', get:s=>p(s.perf_1m),        max:true},
     perf_3m:         {label:'Perf 3M',        unit:'%', get:s=>p(s.perf_3m),        max:true},
     ytd:             {label:'YTD',            unit:'%', get:s=>p(s.perf_ytd||s.ytd),max:true},
@@ -70,20 +86,20 @@
     // Risque
     volatility_3y:   {label:'Vol 3Y',         unit:'%', get:s=>p(s.volatility_3y),  max:false},
     max_drawdown_3y: {label:'Max DD 3Y',      unit:'%', get:s=>p(s.max_drawdown_3y),max:false},
-    // NOUVEAU v3.0: Dividendes séparés
+    // Dividendes v3.1
     dividend_yield_reg: {
       label: 'Div. REG',
       unit: '%',
-      get: s => p(s.dividend_yield_regular ?? s.dividend_yield), // Fallback sur ancien champ
+      get: getDivReg,
       max: true,
-      tooltip: 'Dividendes réguliers/récurrents (trimestriels/annuels stables)'
+      tooltip: 'Dividendes réguliers/récurrents (stables)'
     },
-    dividend_yield_special: {
-      label: 'Div. SPÉ',
-      unit: '%', 
-      get: s => p(s.dividend_yield_special ?? 0), // 0 si pas de spéciaux
+    dividend_yield_ttm: {
+      label: 'Div. TTM',
+      unit: '%',
+      get: getDivTTM,
       max: true,
-      tooltip: 'Dividendes spéciaux/exceptionnels (bonus, one-time)'
+      tooltip: 'Total des dividendes versés sur 12 mois (réguliers + spéciaux)'
     },
     // Payout ratio
     payout_ratio: {
@@ -114,12 +130,12 @@
   const resetBtn=document.getElementById('mc-reset');
   const summary=document.getElementById('mc-summary');
 
-  // état et données - MODIFIÉ: dividendes réguliers par défaut
+  // état et données
   const state={ 
     mode:'balanced', 
     data:[], 
     loading:false,
-    selectedMetrics: ['ytd', 'dividend_yield_reg'], // MODIFIÉ v3.0
+    selectedMetrics: ['ytd', 'dividend_yield_reg'], // REG par défaut
     customFilters: [],
     geoFilters: {
       region: 'all',
@@ -138,7 +154,7 @@
     computeTimer = setTimeout(compute, 150);
   };
 
-  // MODIFIÉ v3.0: Protection yield-trap pour dividende régulier
+  // Protection yield-trap pour dividende régulier
   function ensureYieldTrapOnce() {
     const hasREG = state.selectedMetrics.includes('dividend_yield_reg');
     const hasPayoutMetric = state.selectedMetrics.includes('payout_ratio');
@@ -151,10 +167,10 @@
         metric: 'payout_ratio', 
         operator: '<', 
         value: 100, 
-        __auto: true, // Marqueur pour identifier ce filtre automatique
-        __reason: 'yieldTrap' // Raison du filtre
+        __auto: true,
+        __reason: 'yieldTrap'
       });
-      masks.custom = null; // Invalider le cache
+      masks.custom = null;
       if (CONFIG.DEBUG) {
         console.log('🛡️ Protection yield-trap activée: payout < 100% appliqué automatiquement');
       }
@@ -163,14 +179,11 @@
     return false;
   }
 
-  // MODIFIÉ v3.0: Filtres auto pour REG et SPÉ
+  // Filtre auto minimum pour REG en mode Priorités
   function ensureMinDivYieldForPriorities() {
     const hasREG = state.selectedMetrics.includes('dividend_yield_reg');
-    const hasSPE = state.selectedMetrics.includes('dividend_yield_special');
     const isPriorities = state.mode === 'lexico';
-    let added = false;
     
-    // Filtre pour régulier
     if (hasREG && isPriorities) {
       const already = (state.customFilters||[]).some(f =>
         f.__auto && f.metric === 'dividend_yield_reg' && f.operator === '>=' && f.value >= MIN_DY_REG_LEXICO
@@ -184,36 +197,15 @@
           __auto: true,
           __reason: 'minREGforPriorities'
         });
-        added = true;
+        masks.custom = null;
+        if (CONFIG.DEBUG) {
+          console.log(`🛡️ Auto: filtre minimum appliqué pour Priorités`);
+        }
+        return true;
       }
     }
     
-    // Filtre pour spécial
-    if (hasSPE && isPriorities) {
-      const already = (state.customFilters||[]).some(f =>
-        f.__auto && f.metric === 'dividend_yield_special' && f.operator === '>=' && f.value >= MIN_DY_SPECIAL_LEXICO
-      );
-      
-      if (!already) {
-        state.customFilters.push({
-          metric: 'dividend_yield_special',
-          operator: '>=',
-          value: MIN_DY_SPECIAL_LEXICO,
-          __auto: true,
-          __reason: 'minSPEforPriorities'
-        });
-        added = true;
-      }
-    }
-    
-    if (added) {
-      masks.custom = null; // Invalider le cache
-      if (CONFIG.DEBUG) {
-        console.log(`🛡️ Auto: filtres minimums appliqués pour Priorités`);
-      }
-    }
-    
-    return added;
+    return false;
   }
 
   // Généraliser le nettoyage des filtres auto
@@ -693,7 +685,7 @@
     }, { offset: Number.NEGATIVE_INFINITY }).element;
   }
 
-  // MODIFIÉ v3.0: Synchroniser checkboxes avec les nouvelles métriques
+  // Synchroniser checkboxes v3.1 avec REG/TTM
   function setupMetricCheckboxes() {
     // REMPLACER L'ANCIEN HTML des checkboxes
     const pillsContainer = root.querySelector('.flex.flex-wrap.gap-2');
@@ -709,14 +701,14 @@
         <!-- Risque -->
         <label class="mc-pill"><input id="m-volatility_3y" type="checkbox" aria-label="Volatilité 3 ans"> Vol 3Y ↓</label>
         <label class="mc-pill"><input id="m-max_drawdown_3y" type="checkbox" aria-label="Drawdown maximum 3 ans"> Max DD 3Y ↓</label>
-        <!-- NOUVEAU v3.0: Dividendes séparés -->
-        <label class="mc-pill" title="Dividendes réguliers/récurrents (trimestriels/annuels stables)">
+        <!-- Dividendes v3.1 REG/TTM -->
+        <label class="mc-pill" title="Dividendes réguliers/récurrents">
           <input id="m-dividend_yield_reg" type="checkbox" checked aria-label="Dividende régulier"> 
           <i class="fas fa-calendar-check text-xs mr-1"></i>Div. REG ↑
         </label>
-        <label class="mc-pill" title="Dividendes spéciaux/exceptionnels (bonus, one-time)">
-          <input id="m-dividend_yield_special" type="checkbox" aria-label="Dividende spécial"> 
-          <i class="fas fa-gift text-xs mr-1"></i>Div. SPÉ ↑
+        <label class="mc-pill" title="Total des dividendes sur 12 mois (REG + spéciaux)">
+          <input id="m-dividend_yield_ttm" type="checkbox" aria-label="Dividende TTM"> 
+          <i class="fas fa-receipt text-xs mr-1"></i>Div. TTM ↑
         </label>
         <!-- Payout -->
         <label class="mc-pill" title="Ratio dividendes/bénéfices (plus bas = plus soutenable). Cible: <60% excellent, 60-80% bon, >100% risqué">
@@ -759,7 +751,7 @@
     });
   }
 
-  // MODIFIÉ v3.0: Explication mise à jour pour REG/SPÉ
+  // Explication mise à jour v3.1
   function addExplanation() {
     const modeContainer = root.querySelector('fieldset[role="radiogroup"]');
     if (modeContainer && !document.getElementById('mode-explanation')) {
@@ -773,7 +765,6 @@
         <div id="priority-explanation" class="hidden">
           <strong>Mode Priorités intelligentes :</strong> Tri par ordre avec tolérance locale basée sur la densité de distribution.
           <br><em>Note : Si "Div. REG" est sélectionné, seules les actions avec rendement régulier ≥ ${MIN_DY_REG_LEXICO}% sont affichées.</em>
-          <br><em>Si "Div. SPÉ" est sélectionné, seules les actions avec rendement spécial ≥ ${MIN_DY_SPECIAL_LEXICO}% sont affichées.</em>
         </div>
       `;
       modeContainer.appendChild(explanation);
@@ -1095,7 +1086,7 @@
       .map(i => ({ s: state.data[i], score: NaN }));
   }
 
-  // MODIFIÉ v3.0: RENDU avec icônes pour REG/SPÉ
+  // RENDU v3.1 avec REG/TTM et badge "incl. spé"
   function render(entries){
     results.innerHTML='';
     results.className = 'space-y-2';
@@ -1121,7 +1112,7 @@
       const tkr = e.s.ticker || e.s.symbol || (e.s.name||'').split(' ')[0] || '—';
       
       // Formatage amélioré avec coloration contextuelle et icônes
-      const metricValues = state.selectedMetrics.map(m => {
+      let metricValues = state.selectedMetrics.map(m => {
         const raw = e.s.metrics ? e.s.metrics[m] : METRICS[m].get(e.s);
         if (!Number.isFinite(raw)) return '';
 
@@ -1139,10 +1130,12 @@
           colorClass = raw > 3 ? 'text-green-400' : 
                       raw > 1.5 ? 'text-cyan-400' : 
                       'text-yellow-400';
-        } else if (m === 'dividend_yield_special') {
-          // Dividende spécial avec icône cadeau
-          icon = '<i class="fas fa-gift text-xs mr-1"></i>';
-          colorClass = raw > 0 ? 'text-cyan-400' : 'text-gray-500';
+        } else if (m === 'dividend_yield_ttm') {
+          // TTM avec icône receipt
+          icon = '<i class="fas fa-receipt text-xs mr-1"></i>';
+          colorClass = raw > 4 ? 'text-green-400' : 
+                      raw > 2 ? 'text-cyan-400' : 
+                      'text-yellow-400';
         } else if (m === 'payout_ratio') {
           // Coloration spéciale pour payout ratio
           colorClass = raw < 30 ? 'text-green-500' :      // Conservative
@@ -1172,6 +1165,18 @@
         `;
       }).filter(Boolean).join('');
       
+      // Ajouter Div. TTM si non sélectionné (affichage informatif)
+      if (!state.selectedMetrics.includes('dividend_yield_ttm')) {
+        const v = getDivTTM(e.s);
+        if (Number.isFinite(v)) {
+          metricValues += `
+            <div class="text-right">
+              <div class="text-xs opacity-60"><i class="fas fa-receipt text-xs mr-1"></i>${METRICS.dividend_yield_ttm.label}</div>
+              <div class="text-cyan-400 font-semibold">${v.toFixed(1)}%</div>
+            </div>`;
+        }
+      }
+      
       let regionIcon = '';
       if (e.s.region === 'US') {
         regionIcon = '🇺🇸';
@@ -1181,11 +1186,12 @@
         regionIcon = '🌏';
       }
       
-      // Ajouter badge si dividende spécial élevé
+      // Badge si TTM dépasse nettement le REG (présence de spéciaux)
+      const reg = getDivReg(e.s);
+      const ttm = getDivTTM(e.s);
       let specialBadge = '';
-      const specialYield = e.s.dividend_yield_special ?? 0;
-      if (specialYield > 2) {
-        specialBadge = '<span class="ml-2 px-2 py-0.5 text-xs bg-cyan-500/20 text-cyan-400 rounded-full">SPÉ</span>';
+      if (Number.isFinite(reg) && Number.isFinite(ttm) && ttm - reg >= 0.5) {
+        specialBadge = '<span class="ml-2 px-2 py-0.5 text-xs bg-cyan-500/20 text-cyan-400 rounded-full">incl. spé</span>';
       }
       
       card.innerHTML=`
@@ -1235,7 +1241,7 @@
     summary.innerHTML = `<strong>${mode}</strong> • ${labels || 'Aucun critère'} • ${visibleFilters} filtres${geoText} • ${kept}/${total} actions`;
   }
 
-  // MODIFIÉ v3.0: Fonction compute avec protections auto pour REG et SPÉ
+  // Fonction compute avec protections auto pour REG
   async function compute(){
     console.log('🔍 MC: Calcul avec filtres géo:', state.geoFilters);
     
@@ -1319,7 +1325,7 @@
   
   if (resetBtn) {
     resetBtn.addEventListener('click', ()=>{
-      state.selectedMetrics = ['ytd', 'dividend_yield_reg']; // MODIFIÉ v3.0
+      state.selectedMetrics = ['ytd', 'dividend_yield_reg'];
       state.customFilters = [];
       state.geoFilters = { region: 'all', country: 'all', sector: 'all' };
       
@@ -1373,7 +1379,7 @@
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module v3.0 avec dividendes REG vs SPÉ');
+    console.log('✅ MC Module v3.1 avec dividendes REG vs TTM');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
