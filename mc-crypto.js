@@ -1376,6 +1376,46 @@
     `;
     document.head.appendChild(mcCompactCSS);
 
+    // === Titre "TOP 10 — COMPOSER MULTI-CRITÈRES" en violet (style Actions) ===
+    const mcTitleCSS = document.createElement('style');
+    mcTitleCSS.textContent = `
+      .mc-crypto-title{
+        color:#a78bfa;                 /* violet */
+        text-transform:uppercase;
+        letter-spacing:.08em;
+        font-weight:800;
+        text-align:center;
+        margin: 0 0 14px;
+        font-size: clamp(18px,2vw,20px);
+      }
+      .mc-crypto-title::after{
+        content:'';
+        display:block;
+        height:2px;
+        width:240px;
+        margin:8px auto 0;
+        background:linear-gradient(90deg,transparent,#a78bfa,transparent);
+        opacity:.75;
+      }
+    `;
+    document.head.appendChild(mcTitleCSS);
+
+    // Remplace le libellé et applique le style au titre de la section Crypto
+    (function setCryptoMcTitle(){
+      const root = document.getElementById('crypto-mc');
+      if (!root) return;
+      // essaie d'attraper le titre le plus proche de #crypto-mc (robuste)
+      const prev = root.previousElementSibling;
+      let title =
+        root.closest('section, .section, .panel, .card, .block')?.querySelector('.section-title')
+        || (prev && prev.classList?.contains('section-title') ? prev : null);
+
+      if (title) {
+        title.textContent = 'TOP 10 — COMPOSER MULTI-CRITÈRES';
+        title.classList.add('mc-crypto-title');   // applique le style violet
+      }
+    })();
+
     init().catch(err => {
       console.error('mc-crypto init:', err);
       const wrap = document.getElementById('crypto-mc-results')?.querySelector('.stock-cards-container');
