@@ -27,17 +27,26 @@ on:
         required: false
         default: '-50'
 
+# NEW: Verrou GLOBAL + priorité (préemption)
+concurrency:
+  group: repo-writes-global                 # => utiliser ce même group dans les autres workflows qui pushent
+  cancel-in-progress: true                  # => ce workflow annule les autres runs du même group
+
+# NEW: Permissions par défaut pour tous les jobs
+permissions:
+  contents: write
+
 jobs:
   update-crypto-data:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     outputs:
       data_updated: ${{ steps.update.outputs.updated }}
       
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0                      # NEW: nécessaire pour rebase propre
     
     - name: Setup Python
       uses: actions/setup-python@v4
@@ -84,24 +93,34 @@ jobs:
     - name: Commit updated data
       if: steps.update.outputs.updated == 'true'
       run: |
-        git config --local user.email "actions@github.com"
-        git config --local user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git config user.name "github-actions[bot]"
         git add data/Crypto.csv || true
         git add data/crypto_lists.json || true
         git diff --staged --quiet || git commit -m "Update crypto data [skip ci]"
-        git push
+        # NEW: push robuste: fetch + rebase + retry
+        BRANCH="${GITHUB_REF_NAME:-main}"
+        for i in 1 2 3; do
+          git fetch origin
+          git rebase "origin/$BRANCH" || { git rebase --abort || true; }
+          if git push origin "HEAD:$BRANCH"; then
+            exit 0
+          fi
+          echo "Retry push ($i/3)..." && sleep $((RANDOM%5+2))
+        done
+        echo "❌ Échec du push après 3 tentatives" >&2
+        exit 1
 
   analyze-and-filter-cryptos:
     needs: update-crypto-data
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        ref: ${{ github.ref }}  # Pull latest changes
+        fetch-depth: 0                      # NEW: pour rebase/push propre
+        ref: ${{ github.ref }}              # Pull latest changes
     
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -143,11 +162,22 @@ jobs:
     - name: Commit results
       if: success()
       run: |
-        git config --local user.email "actions@github.com"
-        git config --local user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git config user.name "github-actions[bot]"
         git add data/filtered/*.csv || true
         git diff --staged --quiet || git commit -m "Update crypto analysis results [skip ci]"
-        git push
+        # NEW: push robuste
+        BRANCH="${GITHUB_REF_NAME:-main}"
+        for i in 1 2 3; do
+          git fetch origin
+          git rebase "origin/$BRANCH" || { git rebase --abort || true; }
+          if git push origin "HEAD:$BRANCH"; then
+            exit 0
+          fi
+          echo "Retry push ($i/3)..." && sleep $((RANDOM%5+2))
+        done
+        echo "❌ Échec du push après 3 tentatives" >&2
+        exit 1
     
     - name: Generate summary
       if: always()
