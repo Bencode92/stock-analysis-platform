@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v4.6 - Grille respectée + Thème violet
+// mc-crypto.js — Composer multi-critères (Crypto) v4.5 - Priorités intelligentes avec tolérance near-tie
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -566,11 +566,39 @@
     state.filters = state.filters.filter(f => !f.__auto);
   }
 
-  // v4.6 - Rendu résultats — RESPECTE LA GRILLE EXISTANTE
+  // Rendu résultats — UNE LIGNE, sans duplication
   function render(indices) {
-    const wrap = document.querySelector('#crypto-mc-results .stock-cards-container');
-    if (!wrap) return;
+    const container = document.getElementById('crypto-mc-results');
+    if (!container) return;
 
+    // --- Garantir un SEUL wrapper réutilisable
+    let wrap = container.querySelector('#crypto-mc-list');
+    if (!wrap) {
+      // S'il existe déjà un .stock-cards-container, on le recycle
+      const existing = container.querySelector('.stock-cards-container');
+      if (existing) {
+        wrap = existing;
+        wrap.id = 'crypto-mc-list';
+      } else {
+        wrap = document.createElement('div');
+        wrap.className = 'stock-cards-container';
+        wrap.id = 'crypto-mc-list';
+        container.appendChild(wrap);
+      }
+    }
+    // Nettoyage défensif: supprimer d'éventuels wrappers créés par erreur
+    container.querySelectorAll('.stock-cards-container, #crypto-mc-list').forEach(el => {
+      if (el !== wrap) el.remove();
+    });
+
+    // --- Forcer l'affichage vertical (1 ligne par item) SANS retirer la classe
+    wrap.classList.add('space-y-2');
+    wrap.style.display = 'block';
+    wrap.style.gridTemplateColumns = 'none';
+    wrap.style.gap = '0';
+
+    // --- Contenu
+    wrap.innerHTML = '';
     if (!indices.length) {
       wrap.innerHTML = `<div class="text-center text-cyan-400 py-4">
         <i class="fas fa-filter mr-2"></i>Aucune crypto ne passe les filtres
@@ -578,18 +606,7 @@
       return;
     }
 
-    // Dédup par token pour éviter les doublons multi-exchange
-    const seen = new Set();
-    const finalIdx = [];
-    for (const i of indices) {
-      const t = String(state.data[i]?.token || '').toUpperCase();
-      if (!t || seen.has(t)) continue;
-      seen.add(t);
-      finalIdx.push(i);
-      if (finalIdx.length === TOP_N) break;
-    }
-
-    wrap.innerHTML = finalIdx.map((i, rank) => {
+    indices.forEach((i, rank) => {
       const r = state.data[i];
       const price = fmtPrice(toNum(r.last_close), r.currency_quote);
 
@@ -608,26 +625,21 @@
           </div>`;
       }).join('');
 
-      // Utilise exactement la même structure que le Top 10
-      return `
-        <div class="stock-card topcard">
-          <div class="rank">#${rank + 1}</div>
-
-          <div class="stock-info">
-            <div class="stock-name">
-              <span class="ticker">${esc(r.token || r.symbol || '-')}</span>
-            </div>
-            <div class="stock-fullname">
-              ${esc(r.currency_base || '-')}${r.exchange_used ? ` • ${esc(r.exchange_used)}` : ''}
-            </div>
-            <div class="price text-xs opacity-60">${price}</div>
+      const card = document.createElement('div');
+      card.className = 'glassmorphism rounded-lg p-3 flex items-center gap-4 overflow-x-auto whitespace-nowrap';
+      card.innerHTML = `
+        <div class="rank text-2xl font-bold shrink-0">#${rank + 1}</div>
+        <div class="flex-1 min-w-0">
+          <div class="font-semibold truncate">${esc(r.token || r.symbol || '-')}</div>
+          <div class="text-xs opacity-60 truncate">
+            ${esc(r.currency_base || '-')} • ${esc(r.exchange_used || '')}
           </div>
-
-          <div class="flex items-center gap-6 ml-2 whitespace-nowrap shrink-0">
-            ${cols}
-          </div>
-        </div>`;
-    }).join('');
+          <div class="text-xs opacity-40 truncate">${price}</div>
+        </div>
+        <div class="flex items-center gap-6 ml-2 whitespace-nowrap shrink-0">${cols}</div>
+      `;
+      wrap.appendChild(card);
+    });
   }
 
   function setSummary(total, kept){
@@ -1185,7 +1197,7 @@
         display: block;
       }
 
-      /* v4.6 - Pills & boutons basés sur les variables d'accent */
+      /* Amélioration des pills */
       .mc-pill {
         display: inline-flex !important;
         align-items: center !important;
@@ -1195,15 +1207,15 @@
         font-size: 0.85rem !important;
         cursor: pointer !important;
         transition: all 0.2s !important;
-        border: 1px solid var(--card-border) !important;
-        background-color: var(--accent-subtle) !important;
+        border: 1px solid rgba(0, 255, 135, 0.3) !important;
+        background-color: rgba(0, 255, 135, 0.1) !important;
       }
       .mc-pill:hover {
-        background-color: var(--accent-medium) !important;
+        background-color: rgba(0, 255, 135, 0.2) !important;
         transform: translateY(-1px);
       }
       .mc-pill.is-checked {
-        background-color: var(--accent-subtle) !important;
+        background-color: rgba(0, 255, 135, 0.25) !important;
         border-color: var(--accent-color) !important;
       }
       
@@ -1231,7 +1243,7 @@
         transform: scale(0.95);
       }
       #crypto-priority-list .priority-item:hover {
-        background-color: var(--accent-subtle) !important;
+        background-color: rgba(0, 255, 135, 0.15) !important;
       }
       
       /* Animation du conteneur des priorités */
@@ -1239,7 +1251,7 @@
         transition: all 0.3s ease;
       }
 
-      /* Boutons d'action basés sur les variables CSS */
+      /* Boutons d'action */
       .action-button, .search-button {
         padding: 8px 16px !important;
         border-radius: 6px !important;
@@ -1249,20 +1261,20 @@
       }
       
       .action-button {
-        background-color: var(--accent-subtle) !important;
-        color: var(--accent-color) !important;
-        border: 1px solid var(--accent-medium) !important;
+        background-color: rgba(0, 255, 135, 0.1) !important;
+        color: var(--accent-color, #00FF87) !important;
+        border: 1px solid rgba(0, 255, 135, 0.3) !important;
       }
       
       .search-button {
-        background-color: var(--accent-color) !important;
+        background-color: var(--accent-color, #00FF87) !important;
         color: #0a1929 !important;
         border: none !important;
       }
       
       .action-button:hover, .search-button:hover {
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-color) 40%, transparent);
+        box-shadow: 0 4px 12px rgba(0, 255, 135, 0.3);
       }
     `;
     document.head.appendChild(mcCompactCSS);
