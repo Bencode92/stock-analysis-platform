@@ -3,25 +3,39 @@ name: ETF Advanced Filter
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 14 * * 1-5'  # 14h UTC = 16h Paris été (CEST) / 15h Paris hiver (CET)
+    - cron: '0 14 * * 1-5'  # 14h UTC = 16h Paris (été) / 15h Paris (hiver)
+
+# 🔒 Verrou global (même group que les autres workflows qui poussent)
+# Non prioritaire : attend / se fait annuler si le workflow Crypto (prioritaire) démarre
+concurrency:
+  group: repo-writes-global
+  cancel-in-progress: false
+
+# ✅ Permissions pour pousser avec GITHUB_TOKEN
+permissions:
+  contents: write
 
 jobs:
   filter-etfs:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0   # nécessaire pour rebase correct
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-    
+        cache: 'npm'
+
     - name: Install dependencies
-      run: npm install csv-parse axios
-    
+      # npm ci (si lock présent) ; sinon fallback minimal
+      run: |
+        npm ci || npm install csv-parse axios
+
     - name: Run ETF filter
       id: run_filter
       env:
@@ -29,36 +43,58 @@ jobs:
         # === TRADUCTION ACTIVÉE ===
         TRANSLATE_OBJECTIVE: '1'
         TRANSLATOR: 'openai'
-        API_CHAT: ${{ secrets.API_CHAT }}      # votre clé OpenAI
-        OPENAI_MODEL: 'gpt-4o-mini'            # modèle économique et efficace
-        DEBUG: '0'                              # mettre à 1 pour voir les logs détaillés
+        API_CHAT: ${{ secrets.API_CHAT }}
+        OPENAI_MODEL: 'gpt-4o-mini'
+        DEBUG: '0'
       run: node etf-advanced-filter.js
-    
+
     - name: Check holdings files
       run: |
         echo "📁 Contenu du dossier data:"
-        ls -lh data/
+        ls -lh data/ || true
         echo ""
         echo "📋 Holdings ETFs (premières lignes):"
         head -n 5 data/combined_etfs_holdings.csv || echo "❌ Fichier non trouvé"
         echo ""
         echo "📋 Holdings Bonds (premières lignes):"
         head -n 5 data/combined_bonds_holdings.csv || echo "❌ Fichier non trouvé"
-    
-    - name: Commit results
+
+    - name: Commit results (rebase + retry safe push)
       run: |
-        git config --local user.email "actions@github.com"
-        git config --local user.name "GitHub Actions"
-        
-        # Ajouter tous les fichiers générés (incluant les CSV holdings et cache traduction)
-        git add data/filtered_advanced.json data/weekly_snapshot.json \
-                data/weekly_snapshot_etfs.csv data/weekly_snapshot_bonds.csv \
-                data/combined_etfs_holdings.csv data/combined_bonds_holdings.csv \
-                data/objective_translations.cache.json || true
-        
-        # Ajouter package.json et package-lock.json si modifiés
-        git add -f package.json package-lock.json || true
-        
-        # Commit même s'il n'y a aucun diff (force avec --allow-empty)
-        git commit -m "Update filtered ETFs + bonds with holdings (FR objectives) [skip ci]" --allow-empty
-        git push
+        set -e
+        git config user.email "actions@github.com"
+        git config user.name "github-actions[bot]"
+
+        # Ajouter tous les fichiers générés (silencieux si absents)
+        git add data/filtered_advanced.json 2>/dev/null || true
+        git add data/weekly_snapshot.json 2>/dev/null || true
+        git add data/weekly_snapshot_etfs.csv 2>/dev/null || true
+        git add data/weekly_snapshot_bonds.csv 2>/dev/null || true
+        git add data/combined_etfs_holdings.csv 2>/dev/null || true
+        git add data/combined_bonds_holdings.csv 2>/dev/null || true
+        git add data/objective_translations.cache.json 2>/dev/null || true
+
+        # Versionne package* si modifiés (optionnel)
+        git add -f package.json package-lock.json 2>/dev/null || true
+
+        # Commit seulement s'il y a des changements
+        if git diff --quiet && git diff --staged --quiet; then
+          echo "ℹ️ Rien à committer"
+          exit 0
+        fi
+
+        git commit -m "Update filtered ETFs + bonds with holdings (FR objectives) [skip ci]"
+
+        # Push robuste : fetch + rebase + 3 tentatives
+        BRANCH="${GITHUB_REF_NAME:-main}"
+        for i in 1 2 3; do
+          git fetch origin
+          git rebase "origin/$BRANCH" || { git rebase --abort || true; }
+          if git push origin "HEAD:$BRANCH"; then
+            echo "✅ Push réussi"
+            exit 0
+          fi
+          echo "↻ Retry push ($i/3)..." && sleep $((RANDOM%5+2))
+        done
+        echo "❌ Échec du push après 3 tentatives" >&2
+        exit 1
