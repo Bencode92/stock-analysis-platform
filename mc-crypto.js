@@ -1,4 +1,5 @@
 // mc-crypto.js — Composer multi-critères (Crypto) v4.5 - Priorités intelligentes avec tolérance near-tie
+// THEME VIOLET pour la section Crypto
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -44,7 +45,7 @@
 
   // ---- Utils
   const $ = (id) => document.getElementById(id);
-  const esc = (s) => String(s ?? '').replace(/[&<>\"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const toNum = (x) => {
     if (x == null || x === '') return NaN;
     if (typeof x === 'number') return x;
@@ -600,7 +601,7 @@
     // --- Contenu
     wrap.innerHTML = '';
     if (!indices.length) {
-      wrap.innerHTML = `<div class="text-center text-cyan-400 py-4">
+      wrap.innerHTML = `<div class="text-center text-purple-400 py-4">
         <i class="fas fa-filter mr-2"></i>Aucune crypto ne passe les filtres
       </div>`;
       return;
@@ -1139,6 +1140,21 @@
 
   // --- boot robuste : lance init() tout de suite si le DOM est déjà prêt
   function boot() {
+    // ---- THEME VIOLET (Crypto) ----
+    const PURPLE = '#a78bfa';
+    const PURPLE_SUBTLE = 'rgba(167,139,250,.12)';
+    const PURPLE_MEDIUM = 'rgba(167,139,250,.35)';
+    const PURPLE_STRONG = 'rgba(167,139,250,.70)';
+    const PURPLE_BORDER = 'rgba(167,139,250,.25)';
+
+    // Force les variables d'accent sur cette page (ne change rien d'autre)
+    const r = document.documentElement.style;
+    r.setProperty('--accent-color',  PURPLE);
+    r.setProperty('--accent-subtle', PURPLE_SUBTLE);
+    r.setProperty('--accent-medium', PURPLE_MEDIUM);
+    r.setProperty('--accent-strong', PURPLE_STRONG);
+    r.setProperty('--card-border',   PURPLE_BORDER);
+
     // CSS permanent avec ciblage automatique via :has() et classe fallback
     const mcCompactCSS = document.createElement('style');
     mcCompactCSS.textContent = `
@@ -1197,7 +1213,7 @@
         display: block;
       }
 
-      /* Amélioration des pills */
+      /* Amélioration des pills - THEME VIOLET */
       .mc-pill {
         display: inline-flex !important;
         align-items: center !important;
@@ -1207,15 +1223,15 @@
         font-size: 0.85rem !important;
         cursor: pointer !important;
         transition: all 0.2s !important;
-        border: 1px solid rgba(0, 255, 135, 0.3) !important;
-        background-color: rgba(0, 255, 135, 0.1) !important;
+        border: 1px solid rgba(167, 139, 250, 0.35) !important;
+        background-color: rgba(167, 139, 250, 0.12) !important;
       }
       .mc-pill:hover {
-        background-color: rgba(0, 255, 135, 0.2) !important;
+        background-color: rgba(167, 139, 250, 0.20) !important;
         transform: translateY(-1px);
       }
       .mc-pill.is-checked {
-        background-color: rgba(0, 255, 135, 0.25) !important;
+        background-color: rgba(167, 139, 250, 0.25) !important;
         border-color: var(--accent-color) !important;
       }
       
@@ -1243,7 +1259,7 @@
         transform: scale(0.95);
       }
       #crypto-priority-list .priority-item:hover {
-        background-color: rgba(0, 255, 135, 0.15) !important;
+        background-color: rgba(167, 139, 250, 0.15) !important;
       }
       
       /* Animation du conteneur des priorités */
@@ -1251,7 +1267,7 @@
         transition: all 0.3s ease;
       }
 
-      /* Boutons d'action */
+      /* Boutons d'action - THEME VIOLET */
       .action-button, .search-button {
         padding: 8px 16px !important;
         border-radius: 6px !important;
@@ -1261,20 +1277,20 @@
       }
       
       .action-button {
-        background-color: rgba(0, 255, 135, 0.1) !important;
-        color: var(--accent-color, #00FF87) !important;
-        border: 1px solid rgba(0, 255, 135, 0.3) !important;
+        background-color: rgba(167, 139, 250, 0.12) !important;
+        color: var(--accent-color, #a78bfa) !important;
+        border: 1px solid rgba(167, 139, 250, 0.35) !important;
       }
       
       .search-button {
-        background-color: var(--accent-color, #00FF87) !important;
+        background-color: var(--accent-color, #a78bfa) !important;
         color: #0a1929 !important;
         border: none !important;
       }
       
       .action-button:hover, .search-button:hover {
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 255, 135, 0.3);
+        box-shadow: 0 4px 12px rgba(167, 139, 250, 0.30);
       }
     `;
     document.head.appendChild(mcCompactCSS);
