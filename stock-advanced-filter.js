@@ -1,15 +1,15 @@
 // stock-advanced-filter.js
-// Version 3.14 - FIX BUG ADR: Correction détection US pour éviter faux positifs Euronext
-// Améliorations v3.14:
+// Version 3.15 - PATCH DIVIDENDES: Gestion intelligente splits + dividendes spéciaux
+// Améliorations v3.15:
+// - Détection et ajustement automatique des splits d'actions
+// - Identification des dividendes spéciaux via médiane
+// - Yield régulier vs TTM avec sélection intelligente
+// - Support ETR (split 2-for-1) et AFG (spéciaux fréquents)
+// v3.14:
 // - Correction isUS() pour éviter de matcher "Nyse Euronext - Euronext Paris"
 // - Priorisation MIC pour Europe dans tdParamTrials()
 // - Court-circuit dans resolveSymbolSmart() pour Europe/Asie
 // - Logging debug amélioré pour tracer les ADR
-// v3.13:
-// - Séparation dividend_yield trailing vs forward avec ordre strict
-// - Moyenne dividendes sur années complètes uniquement (excluant année courante)
-// - Toggle KEEP_ADR pour supprimer complètement les ADR si voulu
-// - Source du yield tracée (TTM api/calc/FWD)
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -617,6 +617,7 @@ async function getDividendData(symbol, stock) {
         return {
             dividend_yield_ttm: parseNumberLoose(data.meta?.dividend_yield) ?? null,
             dividends_history: dividends.sort((a,b)=>b.ex_date.localeCompare(a.ex_date)).slice(0,10),
+            dividends_full: dividends,  // v3.15: AJOUT série complète
             avg_dividend_per_year: avgPerYear,
             total_dividends_ttm: totalTTM,
             dividend_growth_3y: dividendGrowth
@@ -677,6 +678,10 @@ async function getStatisticsData(symbol, stock) {
             'overview.shares_outstanding',
             'financials.shares_outstanding'
         ]);
+        
+        // v3.15: AJOUT split info
+        const last_split_factor = root?.dividends_and_splits?.last_split_factor ?? null;
+        const last_split_date   = root?.dividends_and_splits?.last_split_date   ?? null;
 
         return {
             market_cap: Number.isFinite(market_cap) ? market_cap : null,
@@ -686,7 +691,9 @@ async function getStatisticsData(symbol, stock) {
             dividend_yield_trailing_pct: Number.isFinite(trailing_yield) ? trailing_yield * 100 : null,
             dividend_yield_forward_pct: Number.isFinite(forward_yield) ? forward_yield * 100 : null,
             beta: Number.isFinite(beta) ? beta : null,
-            shares_outstanding: Number.isFinite(shares_outstanding) ? shares_outstanding : null
+            shares_outstanding: Number.isFinite(shares_outstanding) ? shares_outstanding : null,
+            last_split_factor,
+            last_split_date
         };
     } catch (error) {
         if (CONFIG.DEBUG) console.error('[STATISTICS EXCEPTION]', symbol, error.message);
@@ -757,6 +764,27 @@ function calculateDividendGrowth(history) {
     const cagr = (Math.pow(last / first, 1 / n) - 1) * 100;
     
     return Number(cagr.toFixed(2));
+}
+
+// ---------- DIVIDENDS HELPERS (v3.15) ----------
+function parseSplitFactor(s){
+  if (!s) return 1;
+  const m = /(\d+)\s*[-/]?\s*for\s*[-/]?\s*(\d+)/i.exec(s) || /(\d+)\s*[-/]\s*(\d+)/.exec(s);
+  if (!m) return 1;
+  const a = +m[1], b = +m[2];
+  return (a>0 && b>0) ? a/b : 1;  // "2-for-1" => 2
+}
+
+function adjustDividendsForSplit(divs, splitDate, factor){
+  if (!splitDate || factor === 1) return divs;
+  const sd = new Date(splitDate);
+  return divs.map(d => (new Date(d.ex_date) < sd ? { ...d, amount: (d.amount || 0) / factor } : d));
+}
+
+function median(arr){
+  const a = (arr||[]).filter(Number.isFinite).slice().sort((x,y)=>x-y);
+  const n = a.length; if (!n) return null;
+  return n%2 ? a[(n-1)/2] : (a[n/2-1] + a[n/2]) / 2;
 }
 
 async function enrichStock(stock) {
@@ -840,22 +868,53 @@ async function enrichStock(stock) {
             ? stats.shares_outstanding * price
             : null);
     
-    // v3.13: Dividend yield avec ordre strict TTM(api) → TTM(calc) → FWD
-    const dps_ttm = (typeof dividends?.total_dividends_ttm === 'number') ? dividends.total_dividends_ttm : null;
-    const yTrail = Number.isFinite(stats?.dividend_yield_trailing_pct) ? stats.dividend_yield_trailing_pct : null;
-    const yFwd   = Number.isFinite(stats?.dividend_yield_forward_pct)  ? stats.dividend_yield_forward_pct  : null;
-    
+    // ---- Dividend yields (split-aware + specials) v3.15 ----
+    const splitF = parseSplitFactor(stats?.last_split_factor);
+    const splitD = stats?.last_split_date ? new Date(stats.last_split_date) : null;
+    const recentSplit = !!(splitD && ((Date.now() - splitD.getTime())/86400000) < 450);
+
+    // Série complète ajustée split
+    const fullDivsRaw = dividends?.dividends_full || [];
+    const fullDivs = adjustDividendsForSplit(fullDivsRaw, splitD, splitF)
+      .sort((a,b)=>b.ex_date.localeCompare(a.ex_date));
+
+    // TTM(calc) sur 12 mois
+    const oneYearAgo = new Date(); oneYearAgo.setFullYear(oneYearAgo.getFullYear()-1);
+    const ttmSumCalc = fullDivs.filter(d => new Date(d.ex_date) > oneYearAgo)
+                               .reduce((s,d)=>s + (d.amount || 0), 0);
+
+    // Détection "spéciaux" via médiane récente
+    const recentAmts = fullDivs.slice(0,8).map(d=>d.amount).filter(a=>a>0);
+    const m = median(recentAmts);
+    const isSpecial = (a) => (m != null) && a > m * 1.6;      // seuil simple & robuste
+    const ttmSpecial = fullDivs.filter(d => new Date(d.ex_date) > oneYearAgo && isSpecial(d.amount))
+                               .reduce((s,d)=>s + d.amount, 0);
+    const specialShare = ttmSumCalc>0 ? (ttmSpecial/ttmSumCalc*100) : 0;
+
+    // Yield régulier = médiane des montants non spéciaux récents ×4
+    const regularQ = median(recentAmts.filter(a => !isSpecial(a)));
+    const annualRegular = regularQ ? regularQ * 4 : null;
+
+    // Yields candidats
+    const yield_ttm_api  = Number.isFinite(stats?.dividend_yield_trailing_pct) ? +stats.dividend_yield_trailing_pct.toFixed(2) : null;
+    const yield_ttm_calc = (price>0 && ttmSumCalc) ? +(ttmSumCalc/price*100).toFixed(2) : null;
+    const yield_regular  = (price>0 && annualRegular) ? +(annualRegular/price*100).toFixed(2) : null;
+    const yield_fwd      = Number.isFinite(stats?.dividend_yield_forward_pct) ? +stats.dividend_yield_forward_pct.toFixed(2) : null;
+
+    // Choix du yield principal (celui qui s'affiche et sert au tri)
     let dividendYield = null, dividend_yield_src = null;
-    
-    if (Number.isFinite(yTrail)) {
-        dividendYield = Number(yTrail.toFixed(2));
-        dividend_yield_src = 'TTM (api)';
-    } else if (Number.isFinite(dps_ttm) && Number.isFinite(price) && price > 0) {
-        dividendYield = Number((dps_ttm / price * 100).toFixed(2));
-        dividend_yield_src = 'TTM (calc)';
-    } else if (Number.isFinite(yFwd)) {
-        dividendYield = Number(yFwd.toFixed(2));
-        dividend_yield_src = 'FWD';
+
+    if (recentSplit) {
+      if (yield_ttm_calc != null) { dividendYield = yield_ttm_calc; dividend_yield_src = 'TTM (calc, split-adj)'; }
+      else if (yield_regular != null) { dividendYield = yield_regular; dividend_yield_src = 'REG'; }
+      else if (yield_fwd != null) { dividendYield = yield_fwd; dividend_yield_src = 'FWD'; }
+    } else if (specialShare >= 30 && yield_regular != null) {   // ex: AFG
+      dividendYield = yield_regular; dividend_yield_src = 'REG';
+    } else {
+      if (yield_ttm_api != null) { dividendYield = yield_ttm_api; dividend_yield_src = 'TTM (api)'; }
+      else if (yield_ttm_calc != null) { dividendYield = yield_ttm_calc; dividend_yield_src = 'TTM (calc)'; }
+      else if (yield_regular != null) { dividendYield = yield_regular; dividend_yield_src = 'REG'; }
+      else if (yield_fwd != null) { dividendYield = yield_fwd; dividend_yield_src = 'FWD'; }
     }
     
     // EPS & Payout (multi-source)
@@ -869,17 +928,22 @@ async function enrichStock(stock) {
     let payout_ratio_ttm = null;
     if (Number.isFinite(stats?.payout_ratio_api_pct)) {
         payout_ratio_ttm = stats.payout_ratio_api_pct;
-    } else if (Number.isFinite(dps_ttm) && Number.isFinite(eps_ttm) && dps_ttm > 0 && eps_ttm > 0) {
-        payout_ratio_ttm = (dps_ttm / eps_ttm) * 100;
-    } else if (Number.isFinite(yTrail) && Number.isFinite(stats?.pe_ratio)) {
+    } else if (Number.isFinite(ttmSumCalc) && Number.isFinite(eps_ttm) && ttmSumCalc > 0 && eps_ttm > 0) {
+        payout_ratio_ttm = (ttmSumCalc / eps_ttm) * 100;
+    } else if (Number.isFinite(yield_ttm_calc) && Number.isFinite(stats?.pe_ratio)) {
         // Identité: payout% ≈ dividend_yield% × P/E (si pas d'EPS/DPS)
-        payout_ratio_ttm = yTrail * stats.pe_ratio;
+        payout_ratio_ttm = yield_ttm_calc * stats.pe_ratio;
     }
 
     // Nettoyage & bornage
     if (Number.isFinite(payout_ratio_ttm)) {
         payout_ratio_ttm = Math.min(200, Number(payout_ratio_ttm.toFixed(1)));
     }
+    
+    // v3.15: Payout ratio régulier
+    const payout_ratio_regular = (Number.isFinite(eps_ttm) && Number.isFinite(annualRegular) && annualRegular>0)
+      ? Math.min(200, +((annualRegular/eps_ttm)*100).toFixed(1))
+      : null;
 
     // 3) Statut & couverture
     let payout_status = null;
@@ -891,15 +955,15 @@ async function enrichStock(stock) {
             payout_ratio_ttm < 80  ? 'high'         :
             payout_ratio_ttm < 100 ? 'very_high'    : 'unsustainable';
 
-        if (Number.isFinite(eps_ttm) && Number.isFinite(dps_ttm) && dps_ttm > 0) {
-            dividend_coverage = Number((eps_ttm / dps_ttm).toFixed(2));
+        if (Number.isFinite(eps_ttm) && Number.isFinite(ttmSumCalc) && ttmSumCalc > 0) {
+            dividend_coverage = Number((eps_ttm / ttmSumCalc).toFixed(2));
         }
     }
     
     // Logs DEBUG pour le payout ratio
-    if (CONFIG.DEBUG && (dps_ttm !== null || eps_ttm !== null)) {
+    if (CONFIG.DEBUG && (ttmSumCalc !== null || eps_ttm !== null)) {
         console.log(
-            `[PAYOUT] ${stock.symbol}: DPS=${dps_ttm?.toFixed(4) || 'N/A'}, EPS=${eps_ttm?.toFixed(4) || 'N/A'}, ` +
+            `[PAYOUT] ${stock.symbol}: DPS=${ttmSumCalc?.toFixed(4) || 'N/A'}, EPS=${eps_ttm?.toFixed(4) || 'N/A'}, ` +
             `P/E=${stats?.pe_ratio || 'N/A'}, Payout=${payout_ratio_ttm || 'N/A'}% (${payout_status || 'N/A'}), ` +
             `Source: ${stats?.payout_ratio_api_pct ? 'API' : eps_ttm ? 'DPS/EPS' : 'yield×P/E'}`
         );
@@ -946,16 +1010,21 @@ async function enrichStock(stock) {
         perf_1y: perf.performances?.year_1 || null,
         perf_3y: perf.performances?.year_3 || null,
         
-        // Métriques de dividendes enrichies
-        dividend_yield: dividendYield,
-        dividend_yield_src,  // v3.13: source du yield
+        // Métriques de dividendes enrichies v3.15
+        dividend_yield: dividendYield,                 // yield choisi (affichage & tri)
+        dividend_yield_src,                            // 'TTM (api)' | 'TTM (calc, split-adj)' | 'REG' | 'FWD'
+        dividend_yield_ttm: yield_ttm_calc ?? yield_ttm_api,
+        dividend_yield_regular: yield_regular,
+        dividend_yield_forward: yield_fwd,
+        dividend_special_share_ttm: Number(specialShare.toFixed(1)),  // % du TTM venant de spéciaux
         dividends_history: dividends?.dividends_history || [],
         avg_dividend_year: Number(dividends?.avg_dividend_per_year?.toFixed?.(2) ?? dividends?.avg_dividend_per_year ?? null),
-        total_dividends_ttm: dps_ttm,              
+        total_dividends_ttm: ttmSumCalc,              
         dividend_growth_3y: dividends?.dividend_growth_3y || null,  
         
         // MÉTRIQUES PAYOUT
-        payout_ratio_ttm,                          
+        payout_ratio_ttm,
+        payout_ratio_regular,                          
         payout_status,                             
         dividend_coverage,                         
         
@@ -1077,7 +1146,7 @@ function buildOverview(byRegion){
 }
 
 async function main() { 
-    console.log('📊 Enrichissement complet des stocks (v3.14 - FIX BUG ADR Euronext)\\n');
+    console.log('📊 Enrichissement complet des stocks (v3.15 - PATCH DIVIDENDES)\n');
     await fs.mkdir(OUT_DIR, { recursive: true });
     
     const [usStocks, europeStocks, asiaStocks] = await Promise.all([
@@ -1086,7 +1155,7 @@ async function main() {
         loadStockCSV('data/filtered/Actions_Asie_filtered.csv')
     ]);
     
-    console.log(`Stocks: US ${usStocks.length} | Europe ${europeStocks.length} | Asie ${asiaStocks.length}\\n`);
+    console.log(`Stocks: US ${usStocks.length} | Europe ${europeStocks.length} | Asie ${asiaStocks.length}\n`);
     
     // Détection et rebasculement des ADR
     const adrFromEurope = [];
@@ -1128,7 +1197,7 @@ async function main() {
     const byRegion = {};
     
     for (const region of regions) {
-        console.log(`\\n🌍 ${region.name.toUpperCase()}`);
+        console.log(`\n🌍 ${region.name.toUpperCase()}`);
         const enrichedStocks = [];
         
         for (let i = 0; i < region.stocks.length; i += CONFIG.CHUNK_SIZE) {
@@ -1167,14 +1236,14 @@ async function main() {
     const withPE = allStocks.filter(s => s.pe_ratio !== null);
     const adrCount = allStocks.filter(s => s.is_adr).length;
     
-    console.log('\\n📊 Statistiques des métriques:');
+    console.log('\n📊 Statistiques des métriques:');
     console.log(`  - Actions avec P/E ratio: ${withPE.length}/${allStocks.length}`);
     console.log(`  - Actions avec EPS TTM: ${withEPS.length}/${allStocks.length}`);
     console.log(`  - Actions avec payout ratio: ${withPayout.length}/${allStocks.length}`);
     if (KEEP_ADR) console.log(`  - ADR dans US: ${adrCount}`);
     
     if (withPayout.length > 0) {
-        console.log('\\n📊 Distribution Payout Ratio:');
+        console.log('\n📊 Distribution Payout Ratio:');
         console.log(`  - Conservative (<30%): ${withPayout.filter(s => s.payout_status === 'conservative').length}`);
         console.log(`  - Modéré (30-60%): ${withPayout.filter(s => s.payout_status === 'moderate').length}`);
         console.log(`  - Élevé (60-80%): ${withPayout.filter(s => s.payout_status === 'high').length}`);
@@ -1182,7 +1251,7 @@ async function main() {
         console.log(`  - Non soutenable (>100%): ${withPayout.filter(s => s.payout_status === 'unsustainable').length}`);
     }
     
-    console.log(`\\n📊 Cache hits: ${successCache.size} symboles optimisés`);
+    console.log(`\n📊 Cache hits: ${successCache.size} symboles optimisés`);
 }
 
 if (!CONFIG.API_KEY) {
