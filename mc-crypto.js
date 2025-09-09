@@ -1,5 +1,5 @@
 // mc-crypto.js — Composer multi-critères (Crypto) v4.5 - Priorités intelligentes avec tolérance near-tie
-// THEME VIOLET pour la section Crypto
+// THEME VIOLET uniquement pour le Composer multi-critères (le reste garde le thème vert)
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -285,8 +285,8 @@
     actions.className = 'border-t border-white/10 pt-4';
     actions.innerHTML = `
       <div class="flex gap-2">
-        <button id="crypto-mc-apply" class="search-button flex-1"><i class="fas fa-magic mr-2"></i>Appliquer</button>
-        <button id="crypto-mc-reset" class="action-button"><i class="fas fa-undo"></i></button>
+        <button id="crypto-mc-apply" class="mc-search-button flex-1"><i class="fas fa-magic mr-2"></i>Appliquer</button>
+        <button id="crypto-mc-reset" class="mc-action-button"><i class="fas fa-undo"></i></button>
       </div>
     `;
     root.appendChild(actions);
@@ -1140,21 +1140,7 @@
 
   // --- boot robuste : lance init() tout de suite si le DOM est déjà prêt
   function boot() {
-    // ---- THEME VIOLET (Crypto) ----
-    const PURPLE = '#a78bfa';
-    const PURPLE_SUBTLE = 'rgba(167,139,250,.12)';
-    const PURPLE_MEDIUM = 'rgba(167,139,250,.35)';
-    const PURPLE_STRONG = 'rgba(167,139,250,.70)';
-    const PURPLE_BORDER = 'rgba(167,139,250,.25)';
-
-    // Force les variables d'accent sur cette page (ne change rien d'autre)
-    const r = document.documentElement.style;
-    r.setProperty('--accent-color',  PURPLE);
-    r.setProperty('--accent-subtle', PURPLE_SUBTLE);
-    r.setProperty('--accent-medium', PURPLE_MEDIUM);
-    r.setProperty('--accent-strong', PURPLE_STRONG);
-    r.setProperty('--card-border',   PURPLE_BORDER);
-
+    // ---- THEME VIOLET UNIQUEMENT POUR LE COMPOSER (pas les variables globales) ----
     // CSS permanent avec ciblage automatique via :has() et classe fallback
     const mcCompactCSS = document.createElement('style');
     mcCompactCSS.textContent = `
@@ -1213,8 +1199,8 @@
         display: block;
       }
 
-      /* Amélioration des pills - THEME VIOLET */
-      .mc-pill {
+      /* ===== THEME VIOLET UNIQUEMENT DANS #crypto-mc ===== */
+      #crypto-mc .mc-pill {
         display: inline-flex !important;
         align-items: center !important;
         gap: 6px !important;
@@ -1226,17 +1212,17 @@
         border: 1px solid rgba(167, 139, 250, 0.35) !important;
         background-color: rgba(167, 139, 250, 0.12) !important;
       }
-      .mc-pill:hover {
+      #crypto-mc .mc-pill:hover {
         background-color: rgba(167, 139, 250, 0.20) !important;
         transform: translateY(-1px);
       }
-      .mc-pill.is-checked {
+      #crypto-mc .mc-pill.is-checked {
         background-color: rgba(167, 139, 250, 0.25) !important;
-        border-color: var(--accent-color) !important;
+        border-color: #a78bfa !important;
       }
       
       /* Inputs et selects compacts */
-      .mini-input, .mini-select {
+      #crypto-mc .mini-input, #crypto-mc .mini-select {
         padding: 6px 8px !important;
         border-radius: 6px !important;
         font-size: 0.85rem !important;
@@ -1267,8 +1253,10 @@
         transition: all 0.3s ease;
       }
 
-      /* Boutons d'action - THEME VIOLET */
-      .action-button, .search-button {
+      /* Boutons d'action - THEME VIOLET UNIQUEMENT DANS #crypto-mc */
+      #crypto-mc .mc-action-button, 
+      #crypto-mc .mc-search-button,
+      #crypto-mc .action-button {
         padding: 8px 16px !important;
         border-radius: 6px !important;
         font-weight: 500 !important;
@@ -1276,19 +1264,22 @@
         cursor: pointer !important;
       }
       
-      .action-button {
+      #crypto-mc .mc-action-button,
+      #crypto-mc .action-button {
         background-color: rgba(167, 139, 250, 0.12) !important;
-        color: var(--accent-color, #a78bfa) !important;
+        color: #a78bfa !important;
         border: 1px solid rgba(167, 139, 250, 0.35) !important;
       }
       
-      .search-button {
-        background-color: var(--accent-color, #a78bfa) !important;
+      #crypto-mc .mc-search-button {
+        background-color: #a78bfa !important;
         color: #0a1929 !important;
         border: none !important;
       }
       
-      .action-button:hover, .search-button:hover {
+      #crypto-mc .mc-action-button:hover, 
+      #crypto-mc .mc-search-button:hover,
+      #crypto-mc .action-button:hover {
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(167, 139, 250, 0.30);
       }
