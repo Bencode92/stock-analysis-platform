@@ -627,7 +627,7 @@
       }).join('');
 
       const card = document.createElement('div');
-      card.className = 'glassmorphism rounded-lg p-3 flex items-center gap-4 overflow-x-auto whitespace-nowrap';
+      card.className = 'glassmorphism rounded-lg p-3 flex items-center gap-4 overflow-x-auto whitespace-nowrap stock-card-mc';
       card.innerHTML = `
         <div class="rank text-2xl font-bold shrink-0">#${rank + 1}</div>
         <div class="flex-1 min-w-0">
@@ -1213,7 +1213,7 @@
         background-color: rgba(167, 139, 250, 0.12) !important;
       }
       #crypto-mc .mc-pill:hover {
-        background-color: rgba(167, 139, 250, 0.20) !important;
+        background-color: rgba(167, 139, 250, 0.22) !important;
         transform: translateY(-1px);
       }
       #crypto-mc .mc-pill.is-checked {
@@ -1251,6 +1251,8 @@
       /* Animation du conteneur des priorités */
       #crypto-priority-container {
         transition: all 0.3s ease;
+        background: rgba(92, 72, 120, 0.08) !important;
+        border: 1px solid rgba(167, 139, 250, 0.25) !important;
       }
 
       /* Boutons d'action - THEME VIOLET UNIQUEMENT DANS #crypto-mc */
@@ -1281,7 +1283,95 @@
       #crypto-mc .mc-search-button:hover,
       #crypto-mc .action-button:hover {
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(167, 139, 250, 0.30);
+        box-shadow: 0 4px 12px rgba(167, 139, 250, 0.30) !important;
+      }
+
+      /* ===== NOUVEAUX STYLES POUR COMPLETER LE THEME VIOLET ===== */
+      
+      /* Accent violet pour le titre de la section */
+      #crypto-mc .section-title::before {
+        background: #a78bfa !important;
+        box-shadow: 0 0 8px rgba(167, 139, 250, .8) !important;
+      }
+
+      /* Cartes (panneau gauche + résultats) en violet */
+      #crypto-mc .glassmorphism {
+        background: rgba(46, 24, 67, .42) !important;
+        border: 1px solid rgba(167, 139, 250, .28) !important;
+        box-shadow: 0 0 0 1px rgba(167, 139, 250, .10) inset,
+                   0 8px 24px rgba(167, 139, 250, .09) !important;
+      }
+
+      /* Liste Top 10 (rang + ligne) */
+      #crypto-mc .stock-card-mc {
+        background: rgba(25, 14, 40, .45) !important;
+        border: 1px solid rgba(167, 139, 250, .22) !important;
+      }
+      #crypto-mc .stock-card-mc:hover {
+        box-shadow: 0 10px 28px rgba(167, 139, 250, .18) !important;
+        transform: translateY(-2px);
+      }
+
+      /* Bulle du rang - violet pour tous sauf top 3 */
+      #crypto-mc .stock-card-mc .rank {
+        background: rgba(167, 139, 250, .22) !important;
+        color: #c4b5fd !important;
+        border: 1px solid rgba(167, 139, 250, .35) !important;
+        width: 40px !important;
+        height: 40px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 50% !important;
+        font-weight: 800 !important;
+      }
+
+      /* Top 3 avec couleurs or/argent/bronze */
+      #crypto-mc .stock-card-mc:nth-child(1) .rank {
+        background: linear-gradient(135deg, #FFD700, #FFA500) !important;
+        color: #000 !important;
+        border: none !important;
+      }
+      #crypto-mc .stock-card-mc:nth-child(2) .rank {
+        background: linear-gradient(135deg, #C0C0C0, #B8B8B8) !important;
+        color: #000 !important;
+        border: none !important;
+      }
+      #crypto-mc .stock-card-mc:nth-child(3) .rank {
+        background: linear-gradient(135deg, #CD7F32, #B87333) !important;
+        color: #fff !important;
+        border: none !important;
+      }
+
+      /* Accent violet sur les libellés des colonnes métriques */
+      #crypto-mc .stock-card-mc .text-xs.opacity-60 {
+        color: rgba(196, 181, 253, .85) !important;
+      }
+
+      /* Conteneur de résultats avec teinte violette supplémentaire */
+      #crypto-mc #crypto-mc-results {
+        background: rgba(32, 16, 50, .45) !important;
+        border-color: rgba(167, 139, 250, .32) !important;
+      }
+
+      /* Résumé avec accent violet */
+      #crypto-mc #crypto-mc-summary {
+        color: rgba(196, 181, 253, .9) !important;
+      }
+
+      /* Filtres personnalisés - teinte violette */
+      #crypto-mc #crypto-cf-pills .filter-item,
+      #crypto-mc #crypto-mc-filters .filter-item {
+        background: rgba(92, 72, 120, 0.12) !important;
+        border: 1px solid rgba(167, 139, 250, 0.2) !important;
+      }
+
+      /* Légendes et textes secondaires en violet clair */
+      #crypto-mc legend,
+      #crypto-mc .text-xs.opacity-70,
+      #crypto-mc .text-xs.opacity-60,
+      #crypto-mc .text-xs.opacity-50 {
+        color: rgba(196, 181, 253, .7) !important;
       }
     `;
     document.head.appendChild(mcCompactCSS);
