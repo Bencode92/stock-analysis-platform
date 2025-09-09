@@ -1,15 +1,15 @@
 // stock-advanced-filter.js
-// Version 3.15 - PATCH DIVIDENDES: Gestion intelligente splits + dividendes spéciaux
+// Version 3.16 - FIX: Contexte complet + ADR Euronext
+// Corrections v3.16:
+// - Garde le contexte complet (exchange/country) dans tous les appels
+// - Amélioration détection pays US avec fonction dédiée
+// - Correction ADR pour Euronext Paris sans casser US
+// - Sécurisation fallback prix depuis time_series
 // Améliorations v3.15:
 // - Détection et ajustement automatique des splits d'actions
 // - Identification des dividendes spéciaux via médiane
 // - Yield régulier vs TTM avec sélection intelligente
 // - Support ETR (split 2-for-1) et AFG (spéciaux fréquents)
-// v3.14:
-// - Correction isUS() pour éviter de matcher "Nyse Euronext - Euronext Paris"
-// - Priorisation MIC pour Europe dans tdParamTrials()
-// - Court-circuit dans resolveSymbolSmart() pour Europe/Asie
-// - Logging debug amélioré pour tracer les ADR
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -42,8 +42,15 @@ const successCache = new Map();
 const US_MICS = new Set(['XNAS','XNGS','XNYS','BATS','ARCX','IEXG']);
 const isUSMic = (mic) => US_MICS.has(mic);
 
-// ⚠️ CORRECTION v3.14: isADRLike utilise maintenant la nouvelle fonction isUS avec 2 params
-const isADRLike = s => isUS(s.exchange, s.country) && normalize(s.country) !== 'united states';
+// ✅ v3.16: Helper dédié pour détecter pays US
+const isUSCountry = (c='') => {
+  const s = normalize(c);
+  return s === 'united states' || s === 'usa' || s === 'us' ||
+         s === 'etats-unis' || s === 'états-unis' || s === 'etats unis';
+};
+
+// ✅ v3.16: Utilise isUSCountry au lieu de normalize(...) !== 'united states'
+const isADRLike = s => isUS(s.exchange, s.country) && !isUSCountry(s.country);
 
 async function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -128,11 +135,11 @@ function usExchangeName(ex='') {
 
 const normalize = s => (s||'').toLowerCase().trim();
 
-// MIC safe pour éviter ADR
+// MIC safe pour éviter ADR - v3.16: utilise isUSCountry
 function micForRegion(stock) {
     const mic = toMIC(stock.exchange, stock.country);
     // si l'exchange est US mais le pays n'est pas US → ne pas forcer MIC US (évite ADR)
-    if (normalize(stock.country) !== 'united states' && isUSMic(mic)) return null;
+    if (!isUSCountry(stock.country) && isUSMic(mic)) return null;
     return mic;
 }
 
@@ -320,14 +327,14 @@ async function tdStocksLookup({ symbol, country, exchange }) {
     } catch { return []; }
 }
 
-// Score des candidats /stocks
+// Score des candidats /stocks - v3.16: utilise isUSCountry
 function rankCandidate(c, wanted){
     let s = 0;
     const micWanted = toMIC(wanted.exchange, wanted.country);
     if (micWanted && c.mic_code === micWanted) s += 3;                             // MIC exact
     if (normalize(c.exchange).includes(normalize(wanted.exchange))) s += 2;        // libellé d'exchange
     if (LSE_IOB.test(c.symbol)) s += 1;                                            // LSE "0XXX"
-    if (US_EXCH.test(c.exchange||"") && normalize(wanted.country) !== 'united states') s -= 3; // évite ADR US
+    if (US_EXCH.test(c.exchange||"") && !isUSCountry(wanted.country)) s -= 3;     // évite ADR US
     return s;
 }
 
@@ -357,7 +364,7 @@ function resolveSymbol(symbol, stock) {
 }
 
 // ✅ CORRECTION v3.14: Court-circuit pour Europe/Asie
-// Résolution "smart": test direct, sinon /stocks → meilleur candidat
+// Résolution "smart": test direct, sinon /stocks → meilleur candidat - v3.16: utilise isUSCountry
 async function resolveSymbolSmart(symbol, stock) {
     const mic = toMIC(stock.exchange, stock.country);
 
@@ -373,7 +380,7 @@ async function resolveSymbolSmart(symbol, stock) {
     // 1) essai direct sur le ticker (avec MIC si dispo)
     const q = await tryQuote(symbol, mic);
     const looksUS  = q?.exchange && US_EXCH.test(q.exchange);
-    const okMarket = !(looksUS && normalize(stock.country) !== 'united states');
+    const okMarket = !(looksUS && !isUSCountry(stock.country));
     const okName   = q?.name ? nameLooksRight(q.name, stock.name) : true;
 
     if (q && okMarket && okName) {
@@ -393,7 +400,7 @@ async function resolveSymbolSmart(symbol, stock) {
         // On valide que le quote obtenu colle au nom/marché
         const qBest = await tryQuote(best.symbol, best.mic_code);
         if (qBest) {
-            const okM = !(US_EXCH.test(qBest.exchange||"") && normalize(stock.country) !== 'united states');
+            const okM = !(US_EXCH.test(qBest.exchange||"") && !isUSCountry(stock.country));
             const okN = nameLooksRight(qBest.name || '', stock.name);
             if (okM && okN) return bestSym;
         }
@@ -403,7 +410,7 @@ async function resolveSymbolSmart(symbol, stock) {
     const fallback = resolveSymbol(symbol, stock);
     
     // Si le fallback atterrit sur un MIC US alors que le country n'est pas US → refuse (évite ADR)
-    if (normalize(stock.country) !== 'united states' && /:(XNAS|XNGS|XNYS|BATS|ARCX|IEXG)\b/.test(fallback)) {
+    if (!isUSCountry(stock.country) && /:(XNAS|XNGS|XNYS|BATS|ARCX|IEXG)\b/.test(fallback)) {
         return null; // on laisse la suite gérer (ça évite de rebasculer en US)
     }
     return fallback;
@@ -437,13 +444,13 @@ async function loadStockCSV(filepath) {
     }
 }
 
-// ───────── Fonctions refactorisées avec fetchTD ─────────
+// ───────── Fonctions refactorisées avec fetchTD - v3.16: contexte complet ─────────
 
 async function getQuoteData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.QUOTE);
-        const resolved = typeof stock === 'string' ? symbol : resolveSymbol(symbol, stock);
-        const trials = tdParamTrials(symbol, typeof stock === 'string' ? {exchange:'',country:''} : stock, resolved);
+        const resolved = resolveSymbol(symbol, stock);
+        const trials = tdParamTrials(symbol, stock, resolved);
 
         const data = await fetchTD('quote', trials);
         if (!data) return null;
@@ -480,8 +487,8 @@ async function getQuoteData(symbol, stock) {
 async function getPerformanceData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.TIME_SERIES);
-        const resolved = typeof stock === 'string' ? symbol : resolveSymbol(symbol, stock);
-        const trials = tdParamTrials(symbol, typeof stock === 'string' ? {exchange:'',country:''} : stock, resolved);
+        const resolved = resolveSymbol(symbol, stock);
+        const trials = tdParamTrials(symbol, stock, resolved);
 
         const data = await fetchTD('time_series', trials, {
             interval: '1day', outputsize: 900, order: 'ASC', adjusted: true
@@ -569,8 +576,8 @@ async function getPerformanceData(symbol, stock) {
 async function getDividendData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.DIVIDENDS);
-        const resolved = typeof stock === 'string' ? symbol : resolveSymbol(symbol, stock);
-        const trials = tdParamTrials(symbol, typeof stock === 'string' ? {exchange:'',country:''} : stock, resolved);
+        const resolved = resolveSymbol(symbol, stock);
+        const trials = tdParamTrials(symbol, stock, resolved);
 
         const todayISO = new Date().toISOString().slice(0,10);
         const threeY = new Date(); 
@@ -631,8 +638,8 @@ async function getDividendData(symbol, stock) {
 async function getStatisticsData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.STATISTICS);
-        const resolved = typeof stock === 'string' ? symbol : resolveSymbol(symbol, stock);
-        const trials = tdParamTrials(symbol, typeof stock === 'string' ? {exchange:'',country:''} : stock, resolved);
+        const resolved = resolveSymbol(symbol, stock);
+        const trials = tdParamTrials(symbol, stock, resolved);
         
         const data = await fetchTD('statistics', trials, { dp: 6 });
         if (!data) return {};
@@ -701,16 +708,16 @@ async function getStatisticsData(symbol, stock) {
     }
 }
 
-// Market cap avec handling spécial pour symboles déjà résolus
-async function getMarketCapDirect(symbolOrResolved, stock) {
+// Market cap avec handling spécial pour symboles déjà résolus - v3.16: contexte complet
+async function getMarketCapDirect(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.MARKET_CAP);
         
         // Si déjà résolu avec :MIC, ne pas re-résoudre
-        const isResolved = /:/.test(symbolOrResolved);
+        const isResolved = /:/.test(symbol);
         const trials = isResolved 
-            ? [{ symbol: symbolOrResolved }]
-            : tdParamTrials(symbolOrResolved, stock || {exchange:'',country:''});
+            ? [{ symbol }]
+            : tdParamTrials(symbol, stock);
         
         const data = await fetchTD('market_cap', trials);
         if (!data) return null;
@@ -733,7 +740,7 @@ async function getMarketCapDirect(symbolOrResolved, stock) {
         const mc = parseNumberLoose(raw);
         return Number.isFinite(mc) ? mc : null;
     } catch (e) {
-        if (CONFIG.DEBUG) console.error('[MARKET_CAP EXC]', symbolOrResolved, e.message);
+        if (CONFIG.DEBUG) console.error('[MARKET_CAP EXC]', symbol, e.message);
         return null;
     }
 }
@@ -805,19 +812,21 @@ async function enrichStock(stock) {
     }
     
     // Si on n'a rien résolu et que l'exchange du CSV est US alors que le pays n'est pas US → ADR
-    if (!resolved && isUS(stock.exchange, stock.country) && normalize(stock.country) !== 'united states') {
+    if (!resolved && isUS(stock.exchange, stock.country) && !isUSCountry(stock.country)) {
         if (CONFIG.DEBUG) console.log(`[ADR] ${stock.symbol} détecté comme ADR`);
         stock.is_adr = true; // Tag pour traçabilité
         // On continue avec le symbole brut pour récupérer les données US
     }
     
-    // On calcule tout en parallèle
+    // ✅ v3.16: On calcule tout en parallèle avec contexte complet
+    const sym = resolved || stock.symbol;  // symbole final (évent. suffixé :MIC)
+    const ctx = stock;                     // garde exchange + country d'origine
     const [perf, quote, dividends, stats, mcDirect] = await Promise.all([
-        getPerformanceData(resolved || stock.symbol, resolved ? 'resolved' : stock),
-        resolved ? getQuoteData(resolved, 'resolved') : getQuoteData(stock.symbol, stock),
-        getDividendData(resolved || stock.symbol, resolved ? 'resolved' : stock),
-        getStatisticsData(resolved || stock.symbol, resolved ? 'resolved' : stock),
-        getMarketCapDirect(resolved || stock.symbol, resolved ? 'resolved' : stock)
+        getPerformanceData(sym, ctx),
+        getQuoteData(sym, ctx),
+        getDividendData(sym, ctx),
+        getStatisticsData(sym, ctx),
+        getMarketCapDirect(sym, ctx)
     ]);
     
     // Fallback prix & range depuis la série si quote indisponible
@@ -825,8 +834,8 @@ async function enrichStock(stock) {
     let change_percent = quote?.percent_change ?? null;
     let range_52w = quote?.fifty_two_week?.range ?? null;
     
-    // Si pas de quote, mais time_series OK
-    if (!quote && perf && perf.volatility_3y) {
+    // ✅ v3.16: sécurisation du fallback prix depuis time_series
+    if (!quote && perf && Number.isFinite(perf.__last_close)) {
         const p = perf.__last_close;
         const prev = perf.__prev_close;
         price = p ?? null;
@@ -1146,7 +1155,7 @@ function buildOverview(byRegion){
 }
 
 async function main() { 
-    console.log('📊 Enrichissement complet des stocks (v3.15 - PATCH DIVIDENDES)\n');
+    console.log('📊 Enrichissement complet des stocks (v3.16 - FIX CONTEXTE + ADR)\n');
     await fs.mkdir(OUT_DIR, { recursive: true });
     
     const [usStocks, europeStocks, asiaStocks] = await Promise.all([
