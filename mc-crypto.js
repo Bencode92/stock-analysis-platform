@@ -1302,63 +1302,6 @@
                    0 8px 24px rgba(167, 139, 250, .09) !important;
       }
 
-      /* Liste Top 10 (rang + ligne) */
-      #crypto-mc .stock-card-mc {
-        background: rgba(25, 14, 40, .45) !important;
-        border: 1px solid rgba(167, 139, 250, .22) !important;
-      }
-      #crypto-mc .stock-card-mc:hover {
-        box-shadow: 0 10px 28px rgba(167, 139, 250, .18) !important;
-        transform: translateY(-2px);
-      }
-
-      /* Bulle du rang - violet pour tous sauf top 3 */
-      #crypto-mc .stock-card-mc .rank {
-        background: rgba(167, 139, 250, .22) !important;
-        color: #c4b5fd !important;
-        border: 1px solid rgba(167, 139, 250, .35) !important;
-        width: 40px !important;
-        height: 40px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        border-radius: 50% !important;
-        font-weight: 800 !important;
-      }
-
-      /* Top 3 avec couleurs or/argent/bronze */
-      #crypto-mc .stock-card-mc:nth-child(1) .rank {
-        background: linear-gradient(135deg, #FFD700, #FFA500) !important;
-        color: #000 !important;
-        border: none !important;
-      }
-      #crypto-mc .stock-card-mc:nth-child(2) .rank {
-        background: linear-gradient(135deg, #C0C0C0, #B8B8B8) !important;
-        color: #000 !important;
-        border: none !important;
-      }
-      #crypto-mc .stock-card-mc:nth-child(3) .rank {
-        background: linear-gradient(135deg, #CD7F32, #B87333) !important;
-        color: #fff !important;
-        border: none !important;
-      }
-
-      /* Accent violet sur les libellés des colonnes métriques */
-      #crypto-mc .stock-card-mc .text-xs.opacity-60 {
-        color: rgba(196, 181, 253, .85) !important;
-      }
-
-      /* Conteneur de résultats avec teinte violette supplémentaire */
-      #crypto-mc #crypto-mc-results {
-        background: rgba(32, 16, 50, .45) !important;
-        border-color: rgba(167, 139, 250, .32) !important;
-      }
-
-      /* Résumé avec accent violet */
-      #crypto-mc #crypto-mc-summary {
-        color: rgba(196, 181, 253, .9) !important;
-      }
-
       /* Filtres personnalisés - teinte violette */
       #crypto-mc #crypto-cf-pills .filter-item,
       #crypto-mc #crypto-mc-filters .filter-item {
@@ -1376,31 +1319,151 @@
     `;
     document.head.appendChild(mcCompactCSS);
 
-    // === Titre "TOP 10 — COMPOSER MULTI-CRITÈRES" en violet (style Actions) ===
+    // === NOUVEAU CSS AMÉLIORÉ: Titre centré + cartes violet plus clair ===
     const mcTitleCSS = document.createElement('style');
     mcTitleCSS.textContent = `
-      .mc-crypto-title{
-        color:#a78bfa;                 /* violet */
-        text-transform:uppercase;
-        letter-spacing:.08em;
-        font-weight:800;
-        text-align:center;
-        margin: 0 0 14px;
-        font-size: clamp(18px,2vw,20px);
+      /* Centre le titre même si le parent est en flex */
+      .mc-crypto-title,
+      #crypto-mc .section-title {
+        display: block !important;
+        width: 100% !important;
+        text-align: center !important;
+        color: #a78bfa !important;
+        text-transform: uppercase !important;
+        letter-spacing: .08em !important;
+        font-weight: 800 !important;
+        margin: 0 0 14px !important;
+        font-size: clamp(18px, 2vw, 20px) !important;
       }
-      .mc-crypto-title::after{
-        content:'';
-        display:block;
-        height:2px;
-        width:240px;
-        margin:8px auto 0;
-        background:linear-gradient(90deg,transparent,#a78bfa,transparent);
-        opacity:.75;
+      
+      .mc-crypto-title::after,
+      #crypto-mc .section-title::after {
+        content: '';
+        display: block;
+        height: 2px;
+        width: 240px;
+        margin: 8px auto 0;
+        background: linear-gradient(90deg, transparent, #a78bfa, transparent);
+        opacity: .75;
+        animation: subtle-glow 3s ease-in-out infinite;
+      }
+
+      @keyframes subtle-glow {
+        0%, 100% { opacity: 0.75; }
+        50% { opacity: 1; }
+      }
+
+      /* Centre visuellement le bloc résultats comme sur Actions */
+      #crypto-mc #crypto-mc-results {
+        max-width: 1120px;
+        margin: 0 auto;
+      }
+
+      /* --- Résultats: violet plus clair (façon Actions) --- */
+      /* Conteneur "liste" */
+      #crypto-mc .stock-cards-container {
+        gap: 10px !important;
+      }
+
+      /* Chaque ligne résultat (la carte de la crypto) */
+      #crypto-mc .stock-card-mc {
+        background: rgba(167, 139, 250, .14) !important;
+        border: 1px solid rgba(167, 139, 250, .30) !important;
+        box-shadow: 0 6px 20px rgba(167, 139, 250, .12) !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      }
+      
+      #crypto-mc .stock-card-mc:hover {
+        background: rgba(167, 139, 250, .20) !important;
+        box-shadow: 0 10px 28px rgba(167, 139, 250, .18) !important;
+        transform: translateY(-2px);
+      }
+
+      /* Gradient subtil sur les Top 3 */
+      #crypto-mc .stock-card-mc:nth-child(1),
+      #crypto-mc .stock-card-mc:nth-child(2),
+      #crypto-mc .stock-card-mc:nth-child(3) {
+        background: linear-gradient(135deg, 
+          rgba(167, 139, 250, .16), 
+          rgba(167, 139, 250, .12)) !important;
+      }
+
+      /* Micro-interaction sur les métriques */
+      #crypto-mc .stock-card-mc [class*="text-green"],
+      #crypto-mc .stock-card-mc [class*="text-red"] {
+        transition: transform 0.2s;
+      }
+      
+      #crypto-mc .stock-card-mc:hover [class*="text-green"],
+      #crypto-mc .stock-card-mc:hover [class*="text-red"] {
+        transform: scale(1.05);
+      }
+
+      /* Légère éclaircie du panneau de droite */
+      #crypto-mc #crypto-mc-results.glassmorphism {
+        background: rgba(46, 24, 67, .28) !important;
+        border-color: rgba(167, 139, 250, .30) !important;
+      }
+
+      /* Bulle de rang: un peu plus lumineuse pour matcher les cartes */
+      #crypto-mc .stock-card-mc .rank {
+        background: rgba(167, 139, 250, .28) !important;
+        color: #f5f3ff !important;
+        border: 1px solid rgba(167, 139, 250, .40) !important;
+        width: 40px !important;
+        height: 40px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 50% !important;
+        font-weight: 800 !important;
+      }
+
+      /* Top 3 avec couleurs or/argent/bronze */
+      #crypto-mc .stock-card-mc:nth-child(1) .rank {
+        background: linear-gradient(135deg, #FFD700, #FFA500) !important;
+        color: #000 !important;
+        border: none !important;
+      }
+      
+      #crypto-mc .stock-card-mc:nth-child(2) .rank {
+        background: linear-gradient(135deg, #C0C0C0, #B8B8B8) !important;
+        color: #000 !important;
+        border: none !important;
+      }
+      
+      #crypto-mc .stock-card-mc:nth-child(3) .rank {
+        background: linear-gradient(135deg, #CD7F32, #B87333) !important;
+        color: #fff !important;
+        border: none !important;
+      }
+
+      /* Accent violet sur les libellés des colonnes métriques */
+      #crypto-mc .stock-card-mc .text-xs.opacity-60 {
+        color: rgba(196, 181, 253, .85) !important;
+      }
+
+      /* Résumé avec accent violet */
+      #crypto-mc #crypto-mc-summary {
+        color: rgba(196, 181, 253, .9) !important;
+      }
+
+      /* Mobile: ajuster la largeur max */
+      @media (max-width: 768px) {
+        #crypto-mc #crypto-mc-results {
+          max-width: 100%;
+          padding: 0 8px;
+        }
+        
+        .mc-crypto-title::after,
+        #crypto-mc .section-title::after {
+          width: 60%;
+        }
       }
     `;
     document.head.appendChild(mcTitleCSS);
 
-    // Remplace le libellé et applique le style au titre de la section Crypto
+    // === Titre "TOP 10 — COMPOSER MULTI-CRITÈRES" en violet (style Actions) ===
     (function setCryptoMcTitle(){
       const root = document.getElementById('crypto-mc');
       if (!root) return;
