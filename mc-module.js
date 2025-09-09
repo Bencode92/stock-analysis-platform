@@ -1,4 +1,5 @@
-// ===== MC (Multi-Critères) – Module Optimisé v3.1 avec Dividendes REG vs TTM ===================
+// ===== MC (Multi-Critères) – Module Optimisé v3.2 avec Dividendes REG vs TTM ===================
+// v3.2: Div. TTM n'apparaît que si coché (cohérence UX)
 (function(){
   // Attendre que le DOM soit prêt
   if (!document.querySelector('#mc-section')) {
@@ -1086,7 +1087,7 @@
       .map(i => ({ s: state.data[i], score: NaN }));
   }
 
-  // RENDU v3.1 avec REG/TTM et badge "incl. spé"
+  // RENDU v3.2 - SUPPRESSION du bloc Div. TTM non sélectionné
   function render(entries){
     results.innerHTML='';
     results.className = 'space-y-2';
@@ -1165,17 +1166,9 @@
         `;
       }).filter(Boolean).join('');
       
-      // Ajouter Div. TTM si non sélectionné (affichage informatif)
-      if (!state.selectedMetrics.includes('dividend_yield_ttm')) {
-        const v = getDivTTM(e.s);
-        if (Number.isFinite(v)) {
-          metricValues += `
-            <div class="text-right">
-              <div class="text-xs opacity-60"><i class="fas fa-receipt text-xs mr-1"></i>${METRICS.dividend_yield_ttm.label}</div>
-              <div class="text-cyan-400 font-semibold">${v.toFixed(1)}%</div>
-            </div>`;
-        }
-      }
+      // *** BLOC SUPPRIMÉ (v3.2) ***
+      // Div. TTM n'apparaît plus automatiquement si non coché
+      // pour cohérence UX : on n'affiche que ce que l'utilisateur sélectionne
       
       let regionIcon = '';
       if (e.s.region === 'US') {
@@ -1379,7 +1372,7 @@
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module v3.1 avec dividendes REG vs TTM');
+    console.log('✅ MC Module v3.2 - Cohérence UX: Div. TTM visible uniquement si coché');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
