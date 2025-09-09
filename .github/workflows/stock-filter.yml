@@ -3,50 +3,81 @@ name: Stock Advanced Filter
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 14 * * 1-5'  # 14h UTC = 15h Paris (jours ouvrés)
+    - cron: '0 14 * * 1-5'  # 14:00 UTC (15h/16h Paris selon DST), jours ouvrés
+
+# 🔒 Verrou global (même que le workflow Crypto)
+# Ce workflow N'EST PAS prioritaire (il n'annule pas les autres)
+concurrency:
+  group: repo-writes-global
+  cancel-in-progress: false
+
+# ✅ Permissions nécessaires pour push via GITHUB_TOKEN
+permissions:
+  contents: write
 
 jobs:
   filter-stocks:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
+    - name: Checkout repository
+      uses: actions/checkout@v4
       with:
-        node-version: '18'
-    
+        fetch-depth: 0   # indispensable pour rebase propre
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
     - name: Install dependencies
-      run: npm install csv-parse axios
-    
+      # Si tu n'as pas de package-lock.json, npm ci échouera -> fallback npm install ciblé
+      run: |
+        npm ci || npm install csv-parse axios
+
     - name: Run Stock Advanced Filter
       env:
         TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
         INCLUDE_OPTIONS: '1'  # Activer les options
       run: node stock-advanced-filter.js
-    
+
     - name: Debug - Check generated files
       run: |
         echo "📂 Vérification des fichiers générés:"
-        ls -la data/
+        ls -la data/ || true
         git status --porcelain
-    
-    - name: Commit results
+
+    - name: Commit results (rebase + retry safe push)
       run: |
-        git config --local user.email "actions@github.com"
-        git config --local user.name "GitHub Actions"
-        
-        # Ajouter tous les JSON générés (Option B robuste)
-        git add data/*.json
-        
-        # Alternative Option A (plus ciblée):
-        # git add data/stocks_us.json data/stocks_europe.json data/stocks_asia.json
-        # git add data/tops_overview.json
-        
-        # Ajouter package.json et package-lock.json si modifiés
-        git add -f package.json package-lock.json || true
-        
+        set -e
+        git config user.email "actions@github.com"
+        git config user.name "github-actions[bot]"
+
+        # Ajouter tous les JSON générés
+        git add data/*.json 2>/dev/null || true
+
+        # (Optionnel) si tu veux versionner ces fichiers quand modifiés
+        git add -f package.json package-lock.json 2>/dev/null || true
+
         # Commit seulement s'il y a des changements
-        git diff --quiet && git diff --staged --quiet || git commit -m "Update stocks data [skip ci]"
-        git push
+        if git diff --quiet && git diff --staged --quiet; then
+          echo "ℹ️ Rien à committer"
+          exit 0
+        fi
+
+        git commit -m "Update stocks data [skip ci]"
+
+        # Push robuste: fetch + rebase + 3 tentatives
+        BRANCH="${GITHUB_REF_NAME:-main}"
+        for i in 1 2 3; do
+          git fetch origin
+          git rebase "origin/$BRANCH" || { git rebase --abort || true; }
+          if git push origin "HEAD:$BRANCH"; then
+            echo "✅ Push réussi"
+            exit 0
+          fi
+          echo "↻ Retry push ($i/3)..." && sleep $((RANDOM%5+2))
+        done
+        echo "❌ Échec du push après 3 tentatives" >&2
+        exit 1
