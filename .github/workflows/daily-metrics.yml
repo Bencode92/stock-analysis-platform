@@ -3,41 +3,197 @@ name: Daily ETF/Bond Metrics
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 16 * * 1-5'  # 16:00 UTC ~ 18:00 Paris (CEST) les jours ouvrés
+    - cron: '0 16 * * 1-5'  # 16:00 UTC ~ 18:00 Paris (CEST), jours ouvrés
+
+# 🔒 Verrou global partagé avec les autres workflows qui pushent
+concurrency:
+  group: repo-writes-global
+  cancel-in-progress: false   # non prioritaire (les autres workflows prioritaires peuvent continuer)
+
+# ✅ Autorise le push via GITHUB_TOKEN
+permissions:
+  contents: write
+  issues: write  # Pour créer des issues en cas d'erreur
 
 jobs:
   daily-metrics:
     runs-on: ubuntu-latest
+    timeout-minutes: 30  # Évite les jobs bloqués
+    
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # nécessaire pour un rebase propre
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
+          cache: 'npm'
 
-      - name: Install deps
-        run: npm install axios csv-parse
+      - name: Install dependencies
+        run: |
+          npm ci --prefer-offline --no-audit || npm install axios csv-parse
 
       - name: Run daily metrics
         id: run_daily
         env:
           TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
-        run: node etf-bond-daily-metrics.js
-
-      - name: Commit results
+          NODE_ENV: production
         run: |
-          git config --local user.email "actions@github.com"
-          git config --local user.name "GitHub Actions"
+          # Créer un dossier pour les logs
+          mkdir -p logs
+          
+          # Exécuter avec capture des logs
+          node etf-bond-daily-metrics.js 2>&1 | tee logs/daily-$(date +%Y%m%d).log
+          
+          # Sauvegarder le code de sortie
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
 
-          git add data/daily_metrics.json \
-                  data/daily_metrics_etfs.csv data/daily_metrics_bonds.csv \
-                  data/combined_snapshot.json \
-                  data/combined_etfs.csv data/combined_bonds.csv \
-                  data/combined_etfs_exposure.csv \
-                  data/combined_etfs_holdings.csv \
-                  data/combined_bonds_holdings.csv
+      - name: Validate output
+        run: |
+          # Validation minimale des fichiers JSON
+          node -e "
+            const fs = require('fs');
+            const files = [
+              'data/daily_metrics.json',
+              'data/combined_snapshot.json'
+            ];
+            
+            for (const file of files) {
+              if (!fs.existsSync(file)) {
+                console.error('❌ Missing: ' + file);
+                process.exit(1);
+              }
+              
+              try {
+                const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+                const etfCount = data.etfs?.length || 0;
+                const bondCount = data.bonds?.length || 0;
+                console.log('✅ ' + file + ' - ETFs: ' + etfCount + ', Bonds: ' + bondCount);
+                
+                if (etfCount === 0 && bondCount === 0) {
+                  console.warn('⚠️  Warning: No data found in ' + file);
+                }
+              } catch (e) {
+                console.error('❌ Invalid JSON in ' + file + ':', e.message);
+                process.exit(1);
+              }
+            }
+            
+            // Vérifier que les CSV ne sont pas vides
+            const csvFiles = [
+              'data/combined_etfs.csv',
+              'data/combined_bonds.csv'
+            ];
+            
+            for (const file of csvFiles) {
+              if (fs.existsSync(file)) {
+                const lines = fs.readFileSync(file, 'utf8').split('\\n').length;
+                console.log('✅ ' + file + ' - ' + lines + ' lines');
+                if (lines < 2) {
+                  console.warn('⚠️  Warning: ' + file + ' seems empty');
+                }
+              }
+            }
+          "
 
-          # Commit seulement s'il y a des changements
-          git diff --quiet && git diff --staged --quiet || git commit -m "Update daily ETF/Bond metrics [skip ci]"
-          git push
+      - name: Commit and push results
+        run: |
+          set -e
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+          # Add all data files (avec gestion d'erreur silencieuse)
+          git add data/daily_metrics.json                          2>/dev/null || true
+          git add data/daily_metrics_etfs.csv                      2>/dev/null || true
+          git add data/daily_metrics_bonds.csv                     2>/dev/null || true
+          git add data/combined_snapshot.json                      2>/dev/null || true
+          git add data/combined_etfs.csv                           2>/dev/null || true
+          git add data/combined_bonds.csv                          2>/dev/null || true
+          git add data/combined_etfs_exposure.csv                  2>/dev/null || true
+          git add data/combined_etfs_holdings.csv                  2>/dev/null || true
+          git add data/combined_bonds_holdings.csv                 2>/dev/null || true
+
+          # Check for changes
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "ℹ️  No changes to commit"
+            exit 0
+          fi
+
+          # Commit with detailed timestamp
+          TIMESTAMP=$(date +'%Y-%m-%d %H:%M:%S UTC')
+          git commit -m "📊 Update daily ETF/Bond metrics - $TIMESTAMP [skip ci]"
+
+          # Push robuste : fetch + rebase + 3 tentatives
+          BRANCH="${GITHUB_REF_NAME:-main}"
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          
+          echo "🔄 Starting push to branch: $BRANCH"
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "→ Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES..."
+            
+            # Fetch latest changes
+            git fetch origin "$BRANCH"
+            
+            # Try to rebase
+            if git rebase "origin/$BRANCH"; then
+              # Try to push
+              if git push origin "HEAD:$BRANCH"; then
+                echo "✅ Push successful!"
+                exit 0
+              else
+                echo "⚠️  Push failed, will retry..."
+              fi
+            else
+              echo "⚠️  Rebase failed, aborting..."
+              git rebase --abort || true
+            fi
+            
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            
+            # Wait with random delay to avoid collision
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              WAIT_TIME=$((RANDOM % 5 + 2))
+              echo "⏳ Waiting ${WAIT_TIME}s before retry..."
+              sleep $WAIT_TIME
+            fi
+          done
+          
+          echo "❌ Failed to push after $MAX_RETRIES attempts"
+          exit 1
+
+      - name: Upload logs as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: etf-metrics-logs-${{ github.run_number }}
+          path: logs/
+          retention-days: 7
+
+      - name: Create issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Créer une issue uniquement si le workflow a vraiment échoué
+          TITLE="⚠️ ETF Daily Metrics Failed - $(date +'%Y-%m-%d')"
+          BODY="The daily ETF/Bond metrics workflow failed.
+
+          **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          **Time:** $(date +'%Y-%m-%d %H:%M:%S UTC')
+          **Branch:** ${{ github.ref_name }}
+          
+          Please check the logs for more details."
+          
+          # Vérifier s'il n'y a pas déjà une issue ouverte aujourd'hui
+          existing=$(gh issue list --label "workflow-failure" --state open --json title --jq ".[].title" | grep "$(date +'%Y-%m-%d')" || true)
+          
+          if [ -z "$existing" ]; then
+            gh issue create --title "$TITLE" --body "$BODY" --label "workflow-failure,automated" || true
+          else
+            echo "ℹ️  Issue already exists for today"
+          fi
