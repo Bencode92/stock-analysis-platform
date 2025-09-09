@@ -157,7 +157,7 @@ async function tryQuote(sym, mic){
 }
 
 // ───────── NOUVELLES FONCTIONS POUR VOLUMES CONSOLIDÉS ─────────
-async function getLastDailyVolume(sym, mic) {
+async function getYesterdayVolume(sym, mic) {
   // Check cache
   const cacheKey = `daily:${sym}:${mic || 'default'}`;
   const cached = volumeCache.get(cacheKey);
@@ -171,8 +171,8 @@ async function getLastDailyVolume(sym, mic) {
       params: { 
         ...params, 
         interval: '1day', 
-        outputsize: 5,  // 5 jours pour plus de robustesse
-        order: 'DESC', 
+        outputsize: 5,  // 5 derniers jours
+        order: 'DESC',  // Plus récent en premier
         apikey: API_KEY 
       },
       timeout: 15000
@@ -181,21 +181,17 @@ async function getLastDailyVolume(sym, mic) {
     const arr = Array.isArray(data?.values) ? data.values : [];
     if (!arr.length) return 0;
 
-    // Détection intelligente du dernier jour complet
-    const now = new Date();
-    const marketClose = new Date(now);
-    marketClose.setHours(16, 0, 0, 0); // 16h ET close
+    // SIMPLICITÉ : On prend TOUJOURS la 2ème barre (hier) ou la 1ère si pas de 2ème
+    // arr[0] = aujourd'hui (potentiellement incomplet)
+    // arr[1] = hier (toujours complet)
+    const yesterdayBar = arr[1] || arr[0];  // Fallback sur arr[0] si on n'a qu'une barre
     
-    // Si on est après la clôture, on peut prendre aujourd'hui
-    const useToday = now >= marketClose;
-    const today = now.toISOString().slice(0,10);
+    const volume = Number(yesterdayBar?.volume) || 0;
     
-    // Trouve la dernière barre complète
-    const bar = useToday 
-      ? arr[0] 
-      : arr.find(b => (b.datetime||'').slice(0,10) < today) || arr[0];
-    
-    const volume = Number(bar?.volume) || 0;
+    // Log pour debug
+    if (yesterdayBar) {
+      console.log(`     📅 Volume J-1 (${yesterdayBar.datetime}): ${volume.toLocaleString()}`);
+    }
     
     // Cache le résultat
     volumeCache.set(cacheKey, { volume, timestamp: Date.now() });
@@ -239,18 +235,18 @@ async function bestVolume(sym, mic, quote, thr, region) {
   const volQuote = quote ? (Number(quote.volume) || 0) : 0;
   const volAvg = quote ? (Number(quote.average_volume) || 0) : 0;
   
-  // Pour les US, on privilégie toujours la daily ou average (quote.volume est trompeur)
+  // Pour les US, on privilégie TOUJOURS la veille ou la moyenne (quote.volume est trompeur)
   const isUS = region === 'US' || ['XNAS', 'XNYS', 'BATS'].includes(mic);
   
   if (isUS) {
-    // US : on prend direct la moyenne ou daily (quote.volume est souvent IEX partiel)
-    const volDaily = await getLastDailyVolume(sym, mic);
+    // US : TOUJOURS prendre le volume d'HIER (complet) ou la moyenne 3 mois
+    const volYesterday = await getYesterdayVolume(sym, mic);
     const volStats = volAvg || await getAverageVolume(sym, mic);
     
     return {
-      vol: Math.max(volDaily, volStats),
-      source: volDaily > volStats ? 'daily' : 'avg3m',
-      details: { quote: volQuote, daily: volDaily, avg: volStats }
+      vol: Math.max(volYesterday, volStats),
+      source: volYesterday > volStats ? 'J-1' : 'avg3m',
+      details: { quote: volQuote, yesterday: volYesterday, avg: volStats }
     };
   } else {
     // Non-US : on fait confiance au quote.volume d'abord
@@ -258,22 +254,22 @@ async function bestVolume(sym, mic, quote, thr, region) {
       return {
         vol: Math.max(volQuote, volAvg),
         source: volQuote > volAvg ? 'quote' : 'avg',
-        details: { quote: volQuote, avg: volAvg, daily: 0 }
+        details: { quote: volQuote, avg: volAvg, yesterday: 0 }
       };
     }
     
-    // Fallback sur daily si nécessaire
-    const volDaily = await getLastDailyVolume(sym, mic);
+    // Fallback sur volume d'hier si nécessaire
+    const volYesterday = await getYesterdayVolume(sym, mic);
     return {
-      vol: Math.max(volQuote, volAvg, volDaily),
-      source: volDaily > Math.max(volQuote, volAvg) ? 'daily' : (volQuote > volAvg ? 'quote' : 'avg'),
-      details: { quote: volQuote, avg: volAvg, daily: volDaily }
+      vol: Math.max(volQuote, volAvg, volYesterday),
+      source: volYesterday > Math.max(volQuote, volAvg) ? 'J-1' : (volQuote > volAvg ? 'quote' : 'avg'),
+      details: { quote: volQuote, avg: volAvg, yesterday: volYesterday }
     };
   }
 }
 
 const HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché'];
-const REJ_HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché','Volume','Volume_Source','Volume_Quote','Volume_Daily','Volume_Avg','Seuil','MIC','Symbole','Source','Raison'];
+const REJ_HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché','Volume','Volume_Source','Volume_Quote','Volume_Yesterday','Volume_Avg','Seuil','MIC','Symbole','Source','Raison'];
 
 const csvLine = obj => HEADER.map(h => `"${String(obj[h] ?? '').replace(/"/g,'""')}"`).join(',');
 
@@ -343,7 +339,7 @@ async function throttle() {
 }
 
 (async ()=>{
-  console.log('🚀 Démarrage du filtrage par volume (v2 - volumes consolidés)\n');
+  console.log('🚀 Démarrage du filtrage par volume (v2.1 - Volume J-1 pour US)\n');
   const allOutputs = [];
   const allRejected = [];
   const stats = { total: 0, passed: 0, failed: 0 };
@@ -405,7 +401,7 @@ async function throttle() {
         
         // Log détaillé pour debug des rejets US suspects
         if (region === 'US' && details) {
-          console.log(`     └─ Details: quote=${(details.quote||0).toLocaleString()}, daily=${(details.daily||0).toLocaleString()}, avg=${(details.avg||0).toLocaleString()}`);
+          console.log(`     └─ Details: quote=${(details.quote||0).toLocaleString()}, J-1=${(details.yesterday||0).toLocaleString()}, avg=${(details.avg||0).toLocaleString()}`);
         }
         
         rejected.push({
@@ -418,7 +414,7 @@ async function throttle() {
           'Volume': vol,
           'Volume_Source': source,
           'Volume_Quote': details?.quote || 0,
-          'Volume_Daily': details?.daily || 0,
+          'Volume_Yesterday': details?.yesterday || 0,
           'Volume_Avg': details?.avg || 0,
           'Seuil': thr,
           'MIC': mic || '',
@@ -468,7 +464,7 @@ async function throttle() {
   console.log('\n📈 ANALYSE DES REJETS PAR BOURSE:');
   const byMic = {};
   const bySource = { MIC: 0, REGION: 0 };
-  const byVolumeSource = { quote: 0, daily: 0, avg: 0, avg3m: 0 };
+  const byVolumeSource = { quote: 0, 'J-1': 0, avg: 0, avg3m: 0 };
   
   allRejected.forEach(r => {
     const micKey = r.MIC || 'N/A';
@@ -527,7 +523,8 @@ async function throttle() {
   console.log('\n' + '='.repeat(50));
   console.log(`Fichiers acceptés dans: ${OUT_DIR}/`);
   console.log(`Fichiers rejetés dans: ${OUT_DIR}/`);
-  console.log('\n✨ Version 2.0 - Utilisation des volumes consolidés pour US');
+  console.log('\n✨ Version 2.1 - Utilise TOUJOURS le volume J-1 (veille) pour US');
+  console.log('   → Garantit un volume journalier complet (pas de partiel intraday)');
   
   // Pour GitHub Actions
   if (process.env.GITHUB_OUTPUT) {
