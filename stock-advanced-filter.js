@@ -1,5 +1,9 @@
 // stock-advanced-filter.js
-// Version 3.17 - PATCH: Détection fréquence dividendes + anti double-ajustement split
+// Version 3.17.1 - GARDE-FOU ETR: Détection conflits FWD vs TTM
+// Corrections v3.17.1:
+// - Ajout garde-fou pour conflits de rendements (écart >40% sans split ni spéciaux)
+// - Résolution conservatrice privilégiant REG ou valeur minimale
+// - Objet debug_dividends pour traçabilité complète
 // Corrections v3.17:
 // - Détection intelligente des splits déjà ajustés par l'API
 // - Estimation dynamique de la fréquence des dividendes (annuel/semestriel/trimestriel)
@@ -987,6 +991,8 @@ async function enrichStock(stock) {
 
     // Choix du yield "principal" pour le tri/affichage
     let dividendYield, dividend_yield_src;
+    let debug_dividends = null; // v3.17.1: Variable de debug
+    
     if (recentSplit) {
       dividendYield = dividend_yield_ttm; dividend_yield_src = 'TTM (calc, split-adj)';
     } else if (specialShare >= 30 && Number.isFinite(yield_regular)) {
@@ -996,6 +1002,53 @@ async function enrichStock(stock) {
       dividend_yield_src = (dividend_yield_ttm != null) ? 'TTM' :
                            (yield_regular != null)       ? 'REG'  :
                            (yield_fwd != null)           ? 'FWD'  : null;
+    }
+
+    // --- v3.17.1: GARDE-FOU ETR - Détection conflits de rendements ---
+    {
+      const vals = [yield_ttm_api, yield_ttm_calc, yield_regular, yield_fwd]
+        .filter(v => Number.isFinite(v) && v > 0);
+      let dividend_consistency = 'ok';
+
+      if (Number.isFinite(yield_fwd) && Number.isFinite(yield_ttm_calc) && !recentSplit && specialShare < 15) {
+        const maxv = Math.max(yield_fwd, yield_ttm_calc);
+        const minv = Math.min(yield_fwd, yield_ttm_calc);
+        const conflict = (maxv / minv) > 1.4; // > +40%
+
+        if (conflict) {
+          dividend_consistency = 'conflict';
+          
+          // Log en mode DEBUG
+          if (CONFIG.DEBUG) {
+            console.log(`[YIELD CONFLICT] ${stock.symbol}: FWD=${yield_fwd}% vs TTM_CALC=${yield_ttm_calc}% (ratio=${(maxv/minv).toFixed(2)}) → Using ${dividend_yield_src}`);
+          }
+
+          // ⚖️ Choisir le plus "sain" :
+          if (Number.isFinite(yield_regular)) {
+            dividendYield = yield_regular;
+            dividend_yield_src = 'REG';
+          } else {
+            const chosen = Math.min(yield_fwd, yield_ttm_calc);
+            dividendYield = chosen;
+            dividend_yield_src = (chosen === yield_fwd ? 'FWD' : 'TTM (calc)');
+          }
+        }
+      }
+
+      // Expose pour debug/affichage
+      debug_dividends = {
+        price_used: price ?? null,
+        ttm_sum_calc: Number.isFinite(ttmSumCalc) ? +ttmSumCalc.toFixed(6) : null,
+        quarterly_median: regularQ ?? null,
+        special_share_ttm_pct: +specialShare.toFixed(1),
+        api_trailing_pct: Number.isFinite(yield_ttm_api) ? +yield_ttm_api.toFixed(2) : null,
+        api_forward_pct: Number.isFinite(yield_fwd) ? +yield_fwd.toFixed(2) : null,
+        consistency: dividend_consistency,
+        frequency_detected: freq,
+        recent_split: recentSplit,
+        split_date: stats?.last_split_date || null,
+        conflict_ratio: dividend_consistency === 'conflict' ? (Math.max(yield_fwd, yield_ttm_calc) / Math.min(yield_fwd, yield_ttm_calc)).toFixed(2) : null
+      };
     }
 
     // EPS & Payout (multi-source)
@@ -1120,6 +1173,9 @@ async function enrichStock(stock) {
         max_drawdown_ytd: perf.max_drawdown_ytd,
         max_drawdown_3y: perf.max_drawdown_3y,
         
+        // v3.17.1: Ajout de l'objet de debug
+        debug_dividends,
+        
         last_updated: new Date().toISOString()
     };
 }
@@ -1228,7 +1284,7 @@ function buildOverview(byRegion){
 }
 
 async function main() { 
-    console.log('📊 Enrichissement complet des stocks (v3.17 - PATCH DIVIDENDES)\\n');
+    console.log('📊 Enrichissement complet des stocks (v3.17.1 - GARDE-FOU ETR)\n');
     await fs.mkdir(OUT_DIR, { recursive: true });
     
     const [usStocks, europeStocks, asiaStocks] = await Promise.all([
@@ -1237,7 +1293,7 @@ async function main() {
         loadStockCSV('data/filtered/Actions_Asie_filtered.csv')
     ]);
     
-    console.log(`Stocks: US ${usStocks.length} | Europe ${europeStocks.length} | Asie ${asiaStocks.length}\\n`);
+    console.log(`Stocks: US ${usStocks.length} | Europe ${europeStocks.length} | Asie ${asiaStocks.length}\n`);
     
     // Détection et rebasculement des ADR
     const adrFromEurope = [];
@@ -1279,7 +1335,7 @@ async function main() {
     const byRegion = {};
     
     for (const region of regions) {
-        console.log(`\\n🌍 ${region.name.toUpperCase()}`);
+        console.log(`\n🌍 ${region.name.toUpperCase()}`);
         const enrichedStocks = [];
         
         for (let i = 0; i < region.stocks.length; i += CONFIG.CHUNK_SIZE) {
@@ -1317,15 +1373,17 @@ async function main() {
     const withEPS = allStocks.filter(s => s.eps_ttm !== null);
     const withPE = allStocks.filter(s => s.pe_ratio !== null);
     const adrCount = allStocks.filter(s => s.is_adr).length;
+    const withConflict = allStocks.filter(s => s.debug_dividends?.consistency === 'conflict').length;
     
-    console.log('\\n📊 Statistiques des métriques:');
+    console.log('\n📊 Statistiques des métriques:');
     console.log(`  - Actions avec P/E ratio: ${withPE.length}/${allStocks.length}`);
     console.log(`  - Actions avec EPS TTM: ${withEPS.length}/${allStocks.length}`);
     console.log(`  - Actions avec payout ratio: ${withPayout.length}/${allStocks.length}`);
+    console.log(`  - Actions avec conflits de rendements: ${withConflict}/${allStocks.length}`);
     if (KEEP_ADR) console.log(`  - ADR dans US: ${adrCount}`);
     
     if (withPayout.length > 0) {
-        console.log('\\n📊 Distribution Payout Ratio:');
+        console.log('\n📊 Distribution Payout Ratio:');
         console.log(`  - Conservative (<30%): ${withPayout.filter(s => s.payout_status === 'conservative').length}`);
         console.log(`  - Modéré (30-60%): ${withPayout.filter(s => s.payout_status === 'moderate').length}`);
         console.log(`  - Élevé (60-80%): ${withPayout.filter(s => s.payout_status === 'high').length}`);
@@ -1333,7 +1391,7 @@ async function main() {
         console.log(`  - Non soutenable (>100%): ${withPayout.filter(s => s.payout_status === 'unsustainable').length}`);
     }
     
-    console.log(`\\n📊 Cache hits: ${successCache.size} symboles optimisés`);
+    console.log(`\n📊 Cache hits: ${successCache.size} symboles optimisés`);
 }
 
 if (!CONFIG.API_KEY) {
