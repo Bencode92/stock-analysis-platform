@@ -1,5 +1,10 @@
 // stock-advanced-filter.js
-// Version 3.17.3 - FIX regex cassée dans resolveSymbolSmart
+// Version 3.17.4 - FIX cache dividendes et étiquettes TTM
+// Corrections v3.17.4:
+// - Désactivation du réordonnancement cache pour endpoints sensibles (dividends, time_series)
+// - Clé de cache précise incluant exchange et mic_code
+// - Correction des étiquettes de source pour refléter la vraie origine (API vs calc)
+// - Ajout de logs debug pour la fenêtre TTM
 // Corrections v3.17.3:
 // - Fix regex cassée avec parenthèses non fermées dans resolveSymbolSmart
 // - Utilisation directe du Set US_MICS pour éviter les erreurs de regex
@@ -208,16 +213,20 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
     return trials;
 }
 
-// Appel générique avec séquence d'essais (et logs DEBUG)
-async function fetchTD(endpoint, trials, extraParams={}) {
-    const cacheKey = `${trials[0].symbol}_${endpoint}`;
-    const cached = successCache.get(cacheKey);
-    
-    // Si on a déjà un format qui marche, l'essayer en premier
-    if (cached) {
-        trials = [cached, ...trials.filter(t => JSON.stringify(t) !== JSON.stringify(cached))];
+// ✅ v3.17.4: FIX cache avec clé précise et désactivation du réordonnancement pour endpoints sensibles
+async function fetchTD(endpoint, trials, extraParams = {}) {
+    // Clé de cache précise incluant tous les paramètres importants
+    const makeKey = (t) => `${endpoint}:${t.symbol || ''}:${t.exchange || ''}:${t.mic_code || ''}`;
+
+    // ⚠️ Pour les endpoints sensibles, on ne réordonne PAS par cache
+    const CACHE_REORDER_UNSAFE = ['dividends', 'time_series', 'splits'];
+    const cacheReorderUnsafe = CACHE_REORDER_UNSAFE.includes(endpoint);
+
+    let cachedParams = successCache.get(makeKey(trials[0]));
+    if (cachedParams && !cacheReorderUnsafe) {
+        trials = [cachedParams, ...trials.filter(t => makeKey(t) !== makeKey(cachedParams))];
     }
-    
+
     for (const p of trials) {
         try {
             const { data } = await axios.get(`https://api.twelvedata.com/${endpoint}`, {
@@ -225,7 +234,7 @@ async function fetchTD(endpoint, trials, extraParams={}) {
                 timeout: 15000
             });
             if (data && data.status !== 'error') {
-                successCache.set(cacheKey, p); // Mémoriser le succès
+                successCache.set(makeKey(p), p);   // ✅ on mémorise par paramètres exacts
                 if (CONFIG.DEBUG) console.log(`[TD OK ${endpoint}]`, p);
                 return data;
             }
@@ -950,7 +959,7 @@ async function enrichStock(stock) {
             ? stats.shares_outstanding * price
             : null);
     
-    // ---- Dividend yields (split-aware + specials) v3.17 ----
+    // ---- Dividend yields (split-aware + specials) v3.17.4 ----
     const splitF = parseSplitFactor(stats?.last_split_factor);
     const splitD = stats?.last_split_date ? new Date(stats.last_split_date) : null;
     const recentSplit = !!(splitD && ((Date.now() - splitD.getTime())/86400000) < 450);
@@ -963,6 +972,12 @@ async function enrichStock(stock) {
     // Fenêtre TTM
     const oneYearAgo = new Date(); oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
     const last12m = fullDivs.filter(d => new Date(d.ex_date) > oneYearAgo);
+
+    // ✅ v3.17.4: Log de debug pour la fenêtre TTM
+    if (CONFIG.DEBUG && last12m.length > 0) {
+        const windowDbg = last12m.map(d => `${d.ex_date}:${d.amount}`).join(', ');
+        console.log(`[TTM WINDOW ${stock.symbol}]`, windowDbg, '| sum =', last12m.reduce((s, d) => s + d.amount, 0).toFixed(3));
+    }
 
     // Médiane récente & détection "spéciaux"
     const recentAmts = fullDivs.slice(0, 8).map(d => d.amount).filter(a => a > 0);
@@ -1000,28 +1015,36 @@ async function enrichStock(stock) {
     const expectedMin = Math.max(1, Math.floor(freq * 0.6));
     let   dividend_yield_ttm = yield_ttm_calc;
 
+    // ✅ v3.17.4: Tracker de source TTM
+    let usedTtmSource = 'calc';
+
     if (yield_ttm_api != null && (dividend_yield_ttm == null ||
         nonSpecCount12m < expectedMin ||
         dividend_yield_ttm <= 0 || dividend_yield_ttm > 20)) {
       dividend_yield_ttm = yield_ttm_api;
+      usedTtmSource = 'api'; // ✅ v3.17.4
     }
 
     // Régularise REG vs TTM (pas de spéciaux → REG doit ~ TTM)
     yield_regular = clampRegToTTM(yield_regular, dividend_yield_ttm, specialShare >= 20);
 
-    // Choix du yield "principal" pour le tri/affichage
+    // ✅ v3.17.4: Choix du yield avec traçabilité de source
     let dividendYield, dividend_yield_src;
-    let debug_dividends = null; // v3.17.1: Variable de debug
+    let debug_dividends = null;
     
     if (recentSplit) {
-      dividendYield = dividend_yield_ttm; dividend_yield_src = 'TTM (calc, split-adj)';
+      dividendYield = dividend_yield_ttm;
+      dividend_yield_src = usedTtmSource === 'api' 
+        ? 'TTM (API override)' 
+        : 'TTM (calc, split-adj)';
     } else if (specialShare >= 30 && Number.isFinite(yield_regular)) {
-      dividendYield = yield_regular;      dividend_yield_src = 'REG';
+      dividendYield = yield_regular;
+      dividend_yield_src = 'REG';
     } else {
       dividendYield = dividend_yield_ttm ?? yield_regular ?? yield_fwd ?? null;
-      dividend_yield_src = (dividend_yield_ttm != null) ? 'TTM' :
-                           (yield_regular != null)       ? 'REG'  :
-                           (yield_fwd != null)           ? 'FWD'  : null;
+      dividend_yield_src = (dividend_yield_ttm != null) 
+        ? (usedTtmSource === 'api' ? 'TTM (API)' : 'TTM')
+        : (yield_regular != null ? 'REG' : (yield_fwd != null ? 'FWD' : null));
     }
 
     // --- v3.17.1: GARDE-FOU ETR - Détection conflits de rendements ---
@@ -1055,7 +1078,7 @@ async function enrichStock(stock) {
         }
       }
 
-      // Expose pour debug/affichage
+      // ✅ v3.17.4: Expose pour debug/affichage avec source correcte
       debug_dividends = {
         price_used: price ?? null,
         ttm_sum_calc: Number.isFinite(ttmSumCalc) ? +ttmSumCalc.toFixed(6) : null,
@@ -1067,7 +1090,9 @@ async function enrichStock(stock) {
         frequency_detected: freq,
         recent_split: recentSplit,
         split_date: stats?.last_split_date || null,
-        dividend_yield_src: dividend_yield_src,  // v3.17.2: Ajout pour traçabilité
+        dividend_yield_src: dividend_yield_src,  // ✅ v3.17.4: Source correcte
+        ttm_source: usedTtmSource, // ✅ v3.17.4: Nouveau champ pour traçabilité
+        ttm_window_count: last12m.length, // ✅ v3.17.4: Nombre de dividendes dans la fenêtre
         conflict_ratio: dividend_consistency === 'conflict' ? (Math.max(yield_fwd, yield_ttm_calc) / Math.min(yield_fwd, yield_ttm_calc)).toFixed(2) : null
       };
     }
@@ -1166,7 +1191,7 @@ async function enrichStock(stock) {
         perf_1y: perf.performances?.year_1 || null,
         perf_3y: perf.performances?.year_3 || null,
         
-        // Métriques de dividendes enrichies v3.17
+        // Métriques de dividendes enrichies v3.17.4
         dividend_yield: dividendYield,
         dividend_yield_src,
         dividend_yield_ttm: dividend_yield_ttm,
@@ -1194,7 +1219,7 @@ async function enrichStock(stock) {
         max_drawdown_ytd: perf.max_drawdown_ytd,
         max_drawdown_3y: perf.max_drawdown_3y,
         
-        // v3.17.1: Ajout de l'objet de debug
+        // v3.17.1/v3.17.4: Ajout de l'objet de debug amélioré
         debug_dividends,
         
         last_updated: new Date().toISOString()
@@ -1305,7 +1330,7 @@ function buildOverview(byRegion){
 }
 
 async function main() { 
-    console.log('📊 Enrichissement complet des stocks (v3.17.3 - FIX regex cassée)\n');
+    console.log('📊 Enrichissement complet des stocks (v3.17.4 - FIX cache dividendes et étiquettes TTM)\n');
     await fs.mkdir(OUT_DIR, { recursive: true });
     
     const [usStocks, europeStocks, asiaStocks] = await Promise.all([
