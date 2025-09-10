@@ -1,5 +1,8 @@
 // stock-advanced-filter.js
-// Version 3.17.2 - FIX parseSplitFactor pour format "2:1" (Twelve Data)
+// Version 3.17.3 - FIX regex cassée dans resolveSymbolSmart
+// Corrections v3.17.3:
+// - Fix regex cassée avec parenthèses non fermées dans resolveSymbolSmart
+// - Utilisation directe du Set US_MICS pour éviter les erreurs de regex
 // Corrections v3.17.2:
 // - Fix parseSplitFactor pour accepter "2:1", "2/1", "2-1", "2 for 1", etc.
 // - Résolution du bug ETR (split 2:1 non reconnu → dividendes mal ajustés)
@@ -377,6 +380,7 @@ function resolveSymbol(symbol, stock) {
 }
 
 // ✅ CORRECTION v3.14: Court-circuit pour Europe/Asie
+// ✅ CORRECTION v3.17.3: Fix regex cassée avec variante robuste sans regex
 // Résolution "smart": test direct, sinon /stocks → meilleur candidat - v3.16: utilise isUSCountry
 async function resolveSymbolSmart(symbol, stock) {
     const mic = toMIC(stock.exchange, stock.country);
@@ -422,10 +426,15 @@ async function resolveSymbolSmart(symbol, stock) {
     // 3) dernier recours : mapping simple
     const fallback = resolveSymbol(symbol, stock);
     
+    // ✅ v3.17.3: Variante robuste sans regex pour éviter les erreurs de syntaxe
     // Si le fallback atterrit sur un MIC US alors que le country n'est pas US → refuse (évite ADR)
-    if (!isUSCountry(stock.country) && /:([s](XNAS|XNGS|XNYS|BATS|ARCX|IEXG)\b/.test(fallback)) {
-        return null; // on laisse la suite gérer (ça évite de rebasculer en US)
+    // extrait le MIC s'il y en a un : "SYM:MIC"
+    const micInFallback = fallback && fallback.includes(':') ? fallback.split(':')[1] : null;
+    
+    if (!isUSCountry(stock.country) && micInFallback && US_MICS.has(micInFallback)) {
+        return null; // évite ADR US quand le pays n'est pas US
     }
+    
     return fallback;
 }
 
@@ -1296,7 +1305,7 @@ function buildOverview(byRegion){
 }
 
 async function main() { 
-    console.log('📊 Enrichissement complet des stocks (v3.17.2 - FIX parseSplitFactor)\n');
+    console.log('📊 Enrichissement complet des stocks (v3.17.3 - FIX regex cassée)\n');
     await fs.mkdir(OUT_DIR, { recursive: true });
     
     const [usStocks, europeStocks, asiaStocks] = await Promise.all([
