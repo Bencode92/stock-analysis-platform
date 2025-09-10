@@ -1,5 +1,8 @@
 // stock-advanced-filter.js
-// Version 3.17.1 - GARDE-FOU ETR: Détection conflits FWD vs TTM
+// Version 3.17.2 - FIX parseSplitFactor pour format "2:1" (Twelve Data)
+// Corrections v3.17.2:
+// - Fix parseSplitFactor pour accepter "2:1", "2/1", "2-1", "2 for 1", etc.
+// - Résolution du bug ETR (split 2:1 non reconnu → dividendes mal ajustés)
 // Corrections v3.17.1:
 // - Ajout garde-fou pour conflits de rendements (écart >40% sans split ni spéciaux)
 // - Résolution conservatrice privilégiant REG ou valeur minimale
@@ -420,7 +423,7 @@ async function resolveSymbolSmart(symbol, stock) {
     const fallback = resolveSymbol(symbol, stock);
     
     // Si le fallback atterrit sur un MIC US alors que le country n'est pas US → refuse (évite ADR)
-    if (!isUSCountry(stock.country) && /:(XNAS|XNGS|XNYS|BATS|ARCX|IEXG)\b/.test(fallback)) {
+    if (!isUSCountry(stock.country) && /:([s](XNAS|XNGS|XNYS|BATS|ARCX|IEXG)\b/.test(fallback)) {
         return null; // on laisse la suite gérer (ça évite de rebasculer en US)
     }
     return fallback;
@@ -784,12 +787,20 @@ function calculateDividendGrowth(history) {
 }
 
 // ---------- DIVIDENDS HELPERS (v3.15) ----------
+// ✅ FIX v3.17.2: parseSplitFactor corrigé pour reconnaître "2:1" de Twelve Data
 function parseSplitFactor(s){
   if (!s) return 1;
-  const m = /(\d+)\s*[-/]?\s*for\s*[-/]?\s*(\d+)/i.exec(s) || /(\d+)\s*[-/]\s*(\d+)/.exec(s);
+  const str = String(s).trim();
+
+  // Accepte: "2:1", "2/1", "2-1", "2 for 1", "2-for-1", "2 / 1", etc.
+  const m = str.match(/(\d+(?:\.\d+)?)\s*(?:[:\/-]|\s*for\s*)\s*(\d+(?:\.\d+)?)/i);
   if (!m) return 1;
-  const a = +m[1], b = +m[2];
-  return (a>0 && b>0) ? a/b : 1;  // "2-for-1" => 2
+
+  const a = parseFloat(m[1]);
+  const b = parseFloat(m[2]);
+  if (!Number.isFinite(a) || !Number.isFinite(b) || a <= 0 || b <= 0) return 1;
+
+  return a / b; // "2:1" => 2 ; "1:2" => 0.5
 }
 
 function adjustDividendsForSplit(divs, splitDate, factor){
@@ -1047,6 +1058,7 @@ async function enrichStock(stock) {
         frequency_detected: freq,
         recent_split: recentSplit,
         split_date: stats?.last_split_date || null,
+        dividend_yield_src: dividend_yield_src,  // v3.17.2: Ajout pour traçabilité
         conflict_ratio: dividend_consistency === 'conflict' ? (Math.max(yield_fwd, yield_ttm_calc) / Math.min(yield_fwd, yield_ttm_calc)).toFixed(2) : null
       };
     }
@@ -1284,7 +1296,7 @@ function buildOverview(byRegion){
 }
 
 async function main() { 
-    console.log('📊 Enrichissement complet des stocks (v3.17.1 - GARDE-FOU ETR)\n');
+    console.log('📊 Enrichissement complet des stocks (v3.17.2 - FIX parseSplitFactor)\n');
     await fs.mkdir(OUT_DIR, { recursive: true });
     
     const [usStocks, europeStocks, asiaStocks] = await Promise.all([
