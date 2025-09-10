@@ -1,0 +1,384 @@
+/* 
+ * dividend-styles.css
+ * Styles pour l'affichage des dividendes et indicateurs de splits
+ * Compatible avec le thème dark/light de TradePulse
+ */
+
+/* ========================================
+   INDICATEURS DE SPLIT
+   ======================================== */
+
+/* Badge pour indiquer un split récent */
+.split-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  margin-left: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 4px;
+  animation: pulse-split 2s infinite;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+}
+
+@keyframes pulse-split {
+  0%, 100% { 
+    opacity: 1; 
+    transform: scale(1); 
+    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+  }
+  50% { 
+    opacity: 0.85; 
+    transform: scale(0.95); 
+    box-shadow: 0 1px 2px rgba(102, 126, 234, 0.2);
+  }
+}
+
+/* ========================================
+   INDICATEURS DE CONFIANCE
+   ======================================== */
+
+/* Conteneur pour les métriques de dividende */
+.dividend-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Indicateurs de confiance colorés */
+.confidence-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 4px;
+}
+
+.confidence-high {
+  background-color: #00ff87;
+  box-shadow: 0 0 4px rgba(0, 255, 135, 0.6);
+}
+
+.confidence-medium {
+  background-color: #ffd93d;
+  box-shadow: 0 0 4px rgba(255, 217, 61, 0.6);
+}
+
+.confidence-low {
+  background-color: #ff6b6b;
+  box-shadow: 0 0 4px rgba(255, 107, 107, 0.6);
+}
+
+.confidence-none {
+  background-color: #6c757d;
+  opacity: 0.5;
+}
+
+/* Source du dividende */
+.dividend-source {
+  font-size: 0.7rem;
+  opacity: 0.65;
+  font-style: italic;
+  margin-left: 6px;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+}
+
+/* Mode light */
+.light .dividend-source {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+/* ========================================
+   PAYOUT RATIO STYLES
+   ======================================== */
+
+/* Classes de payout ratio avec couleurs adaptées */
+.payout-excellent {
+  color: #00ff87;
+  font-weight: 600;
+}
+
+.payout-good {
+  color: #4ade80;
+  font-weight: 600;
+}
+
+.payout-warning {
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+.payout-danger {
+  color: #fb923c;
+  font-weight: 600;
+}
+
+.payout-critical {
+  color: #ef4444;
+  font-weight: 700;
+  animation: blink-critical 2s infinite;
+}
+
+@keyframes blink-critical {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Badge secteur spécial (REIT, Utilities) */
+.sector-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  margin-left: 6px;
+  background: rgba(0, 255, 135, 0.15);
+  border: 1px solid rgba(0, 255, 135, 0.3);
+  color: var(--accent-color);
+  font-size: 0.65rem;
+  font-weight: 600;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* ========================================
+   TOOLTIPS DE DEBUG
+   ======================================== */
+
+/* Conteneur avec tooltip de debug */
+.dividend-debug {
+  position: relative;
+  cursor: help;
+  border-bottom: 1px dotted rgba(0, 255, 135, 0.4);
+}
+
+.dividend-debug:hover::after {
+  content: attr(data-debug);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  background: rgba(10, 25, 41, 0.95);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-family: 'Monaco', 'Consolas', monospace;
+  white-space: pre-wrap;
+  max-width: 350px;
+  z-index: 1000;
+  border: 1px solid rgba(0, 255, 135, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.2s ease-in;
+}
+
+.dividend-debug:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 2px;
+  border: 6px solid transparent;
+  border-top-color: rgba(10, 25, 41, 0.95);
+  z-index: 1001;
+  animation: fadeIn 0.2s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ========================================
+   TABLEAU DES DÉTAILS
+   ======================================== */
+
+/* Ligne de détails avec métriques avancées */
+.details-dividend-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  padding: 12px;
+  background: rgba(0, 255, 135, 0.02);
+  border-radius: 6px;
+  border: 1px solid rgba(0, 255, 135, 0.1);
+  margin-top: 8px;
+}
+
+.dividend-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dividend-detail-label {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dividend-detail-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Timeline des dividendes */
+.dividend-timeline {
+  display: flex;
+  gap: 4px;
+  padding: 8px 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.dividend-timeline::-webkit-scrollbar {
+  height: 4px;
+}
+
+.dividend-timeline::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+}
+
+.dividend-timeline::-webkit-scrollbar-thumb {
+  background: var(--accent-subtle);
+  border-radius: 2px;
+}
+
+.timeline-item {
+  min-width: 60px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.7rem;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.timeline-item:hover {
+  background: rgba(0, 255, 135, 0.1);
+  border-color: rgba(0, 255, 135, 0.3);
+  transform: translateY(-2px);
+}
+
+.timeline-item.split-adjusted {
+  background: linear-gradient(135deg, 
+    rgba(102, 126, 234, 0.1) 0%, 
+    rgba(118, 75, 162, 0.1) 100%);
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+.timeline-date {
+  display: block;
+  opacity: 0.6;
+  margin-bottom: 2px;
+}
+
+.timeline-amount {
+  display: block;
+  font-weight: 600;
+}
+
+/* ========================================
+   ANIMATIONS DE CHARGEMENT
+   ======================================== */
+
+.dividend-loading {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(0, 255, 135, 0.2);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-left: 8px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+
+@media (max-width: 768px) {
+  .details-dividend-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .dividend-timeline {
+    padding: 4px 0;
+  }
+  
+  .timeline-item {
+    min-width: 50px;
+    padding: 3px 6px;
+    font-size: 0.65rem;
+  }
+  
+  .split-badge {
+    font-size: 0.6rem;
+    padding: 1px 6px;
+  }
+  
+  .dividend-debug:hover::after {
+    max-width: 250px;
+    font-size: 0.7rem;
+  }
+}
+
+/* ========================================
+   INTÉGRATION THÈME LIGHT
+   ======================================== */
+
+.light .split-badge {
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.2);
+}
+
+.light .dividend-debug:hover::after {
+  background: rgba(255, 255, 255, 0.98);
+  color: #1a202c;
+  border-color: rgba(0, 210, 110, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.light .dividend-debug:hover::before {
+  border-top-color: rgba(255, 255, 255, 0.98);
+}
+
+.light .details-dividend-section {
+  background: rgba(0, 210, 110, 0.03);
+  border-color: rgba(0, 210, 110, 0.15);
+}
+
+.light .timeline-item {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.light .timeline-item:hover {
+  background: rgba(0, 210, 110, 0.08);
+  border-color: rgba(0, 210, 110, 0.3);
+}
+
+.light .timeline-item.split-adjusted {
+  background: linear-gradient(135deg, 
+    rgba(102, 126, 234, 0.08) 0%, 
+    rgba(118, 75, 162, 0.08) 100%);
+}
+
+.light .dividend-timeline::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.light .dividend-timeline::-webkit-scrollbar-thumb {
+  background: rgba(0, 210, 110, 0.3);
+}
