@@ -1,5 +1,5 @@
 // Script d'intégration pour ajouter le composeur multi-critères avec nouvelle structure
-// Version 1.1 - Ajout du payout ratio
+// Version 1.2 - Fix double chargement du module
 
 // 1. Ajouter les styles CSS améliorés (avec idempotence)
 if (!document.getElementById('mc-styles')) {
@@ -247,6 +247,12 @@ if (!document.getElementById('mc-styles')) {
     display: none;
   }
   
+  /* Indicateur de compute */
+  #mc-results.computing {
+    opacity: 0.8;
+    pointer-events: none;
+  }
+  
   /* Conteneur de résultats verticaux */
   #mc-results .space-y-2 > div {
     margin-bottom: 0.5rem;
@@ -451,6 +457,20 @@ if (!document.getElementById('mc-styles')) {
     margin-left: 2px;
     cursor: help;
   }
+  
+  /* Popover pour infos payout */
+  .mc-tip {
+    position: fixed;
+    background: rgba(10, 25, 41, 0.95);
+    border: 1px solid #00ffff;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 0.85rem;
+    color: #fff;
+    z-index: 10000;
+    max-width: 300px;
+    box-shadow: 0 4px 12px rgba(0, 255, 255, 0.3);
+  }
   `;
   document.head.appendChild(mcStyles);
 }
@@ -513,22 +533,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <fieldset>
         <legend class="text-sm opacity-70 mb-2">Critères sélectionnés = Ordre de priorité</legend>
         <div class="flex flex-wrap gap-2">
-          <!-- Performance (organisé par période) -->
-          <label class="mc-pill"><input id="m-perf_daily" type="checkbox" aria-label="Performance journalière"> Perf Daily ↑</label>
-          <label class="mc-pill"><input id="m-perf_1m" type="checkbox" aria-label="Performance 1 mois"> Perf 1M ↑</label>
-          <label class="mc-pill"><input id="m-perf_3m" type="checkbox" aria-label="Performance 3 mois"> Perf 3M ↑</label>
-          <label class="mc-pill"><input id="m-ytd" type="checkbox" checked aria-label="Year to date"> YTD ↑</label>
-          <label class="mc-pill"><input id="m-perf_1y" type="checkbox" aria-label="Performance 1 an"> Perf 1Y ↑</label>
-          <label class="mc-pill"><input id="m-perf_3y" type="checkbox" aria-label="Performance 3 ans"> Perf 3Y ↑</label>
-          <!-- Risque -->
-          <label class="mc-pill"><input id="m-volatility_3y" type="checkbox" aria-label="Volatilité 3 ans"> Vol 3Y ↓</label>
-          <label class="mc-pill"><input id="m-max_drawdown_3y" type="checkbox" aria-label="Drawdown maximum 3 ans"> Max DD 3Y ↓</label>
-          <!-- Dividende & Payout -->
-          <label class="mc-pill"><input id="m-dividend_yield" type="checkbox" checked aria-label="Rendement dividende"> Div. Yield ↑</label>
-          <label class="mc-pill" title="Ratio dividendes/bénéfices (plus bas = plus soutenable). Cible: <60% excellent, 60-80% bon, >100% risqué">
-            <input id="m-payout_ratio" type="checkbox" aria-label="Payout ratio">
-            <span>Payout ↓ <i class="fas fa-info-circle info-icon"></i></span>
-          </label>
+          <!-- Les checkboxes seront remplies par mc-module.js -->
         </div>
       </fieldset>
 
@@ -587,16 +592,16 @@ document.addEventListener('DOMContentLoaded', function() {
         actionsParLettre.parentElement.setAttribute('data-section', 'letters');
     }
     
-    // Charger le module MC sans setTimeout
-    if (!window.MC) {
-        const script = document.createElement('script');
-        script.src = 'mc-module.js';
-        script.defer = true;
-        script.addEventListener('load', () => {
-            console.log('✅ MC module prêt avec payout ratio');
-        });
-        document.body.appendChild(script);
+    // ✅ FIX: Ne plus charger dynamiquement le module MC
+    // Le module est maintenant chargé uniquement depuis liste.html
+    // Cela évite le double chargement qui causait des problèmes de performance
+    
+    // Juste vérifier que le module est prêt
+    if (window.MC) {
+        console.log('✅ Module MC déjà chargé');
+    } else {
+        console.log('⏳ En attente du chargement du module MC depuis liste.html...');
     }
 });
 
-console.log('✅ Script d\'intégration MC v1.1 avec payout ratio chargé');
+console.log('✅ Script d\'intégration MC v1.2 - Fix double chargement');
