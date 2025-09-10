@@ -9,6 +9,7 @@
  * v1.2: Fix recherche - fermeture systématique des détails ouverts
  * v1.3: Fix définitif - ne jamais réafficher les details-row lors du clear
  * v1.4: Changement des labels "Rendement" → "Dividende TTM" et "Payout" → "Payout TTM"
+ * v1.5: Affichage des valeurs dividend_yield_ttm et payout_ratio_ttm depuis les JSON
  */
 
 // NOUVEAU: Fonction globale pour fermer tous les détails
@@ -565,8 +566,14 @@ document.addEventListener('DOMContentLoaded', function() {
             ASIA: '<i class="fas fa-globe-asia text-xs ml-1 text-red-400" title="Asie"></i>'
         }[region] || '';
         
-        // NOUVEAU: Calculer le payout
+        // NOUVEAU: Calculer le payout depuis payout_ratio_ttm
         const payout = computePayoutMeta(r);
+        
+        // MODIFIÉ v1.5: Récupérer dividend_yield_ttm avec fallbacks
+        const divTTMRaw = r.dividend_yield_ttm 
+                     ?? r.dividend_yield_ttm_pct 
+                     ?? r.dividend_yield     // fallback si pas de TTM
+                     ?? r.dividend_yield_forward;
         
         return {
             name,
@@ -586,7 +593,9 @@ document.addEventListener('DOMContentLoaded', function() {
             data_exchange: r.data_exchange || 'Boursorama',
             sector: r.sector || null,
             volatility_3y: r.volatility_3y ? pctToStr(r.volatility_3y) : '-',
-            dividend_yield: r.dividend_yield ? pctToStr(r.dividend_yield) : '-',
+            // MODIFIÉ v1.5: Utiliser dividend_yield_ttm au lieu de dividend_yield
+            dividend_yield_ttm: divTTMRaw != null ? pctToStr(divTTMRaw) : '-',
+            dividend_yield: r.dividend_yield ? pctToStr(r.dividend_yield) : '-', // garder en backup
             market_cap: r.market_cap ? Number(r.market_cap).toLocaleString('fr-FR') : null,
             range_52w: r.range_52w || null,
             perf_1m: r.perf_1m ? pctToStr(r.perf_1m) : null,
@@ -1371,7 +1380,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             const ytdClass = stock.ytd && stock.ytd.includes('-') ? 'negative' : 'positive';
                             const perf1yClass = stock.perf_1y && stock.perf_1y.includes('-') ? 'negative' : 'positive';
                             
-                            // NOUVEAU: Bouton avec aria-expanded
+                            // MODIFIÉ v1.5: Utiliser dividend_yield_ttm au lieu de dividend_yield
                             row.innerHTML = `
                                 <td class="py-2 px-3">
                                     <div class="font-medium">${stock.name || '-'} ${stock.marketIcon}</div>
@@ -1386,7 +1395,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <td class="text-right ${ytdClass}">${stock.ytd || '-'}</td>
                                 <td class="text-right ${perf1yClass}">${stock.perf_1y || '-'}</td>
                                 <td class="text-right">${stock.volatility_3y || '-'}</td>
-                                <td class="text-right">${stock.dividend_yield || '-'}</td>
+                                <td class="text-right">${stock.dividend_yield_ttm || stock.dividend_yield || '-'}</td>
                                 <td class="text-right">${stock.volume || '-'}</td>
                                 <td class="text-center">
                                   <button type="button" onclick="toggleDetailsRow(this)" 
@@ -1427,7 +1436,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Métriques</div>
                                             <div class="space-y-1 text-sm">
                                                 <div><span class="opacity-60">Volatilité 3Y:</span> ${stock.volatility_3y || '–'}</div>
-                                                <div><span class="opacity-60">Dividende TTM:</span> ${stock.dividend_yield_ttm || '–'}</div>
+                                                <div><span class="opacity-60">Dividende TTM:</span> ${stock.dividend_yield_ttm || stock.dividend_yield || '–'}</div>
                                                 
                                                 <!-- 👉 MODIFIÉ: "Payout TTM" au lieu de "Payout" -->
                                                 <div><span class="opacity-60">Payout TTM:</span> <span class="${stock.payout_class}">
@@ -1635,6 +1644,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         return 0;
+    }
+    
+    /**
+     * Parse percentage strings like "+4.25%" to number 4.25
+     */
+    function parsePercentage(value) {
+        if (!value || value === '-') return 0;
+        const str = String(value).replace(/[+%\s]/g, '').replace(',', '.');
+        return parseFloat(str) || 0;
     }
     
     /**
@@ -2271,38 +2289,22 @@ document.addEventListener('DOMContentLoaded', function() {
             lightIcon.style.display = 'none';
         }
         
-        themeToggleBtn.addEventListener('click', function() {
-            document.body.classList.toggle('dark');
-            document.body.classList.toggle('light');
-            document.documentElement.classList.toggle('dark');
-            
+        themeToggleBtn?.addEventListener('click', function() {
             if (document.body.classList.contains('dark')) {
-                darkIcon.style.display = 'block';
-                lightIcon.style.display = 'none';
-                localStorage.setItem('theme', 'dark');
-            } else {
+                document.body.classList.remove('dark');
+                document.body.classList.add('light');
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
                 darkIcon.style.display = 'none';
                 lightIcon.style.display = 'block';
-                localStorage.setItem('theme', 'light');
+            } else {
+                document.body.classList.add('dark');
+                document.body.classList.remove('light');
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                darkIcon.style.display = 'block';
+                lightIcon.style.display = 'none';
             }
         });
-    }
-    
-    /**
-     * Fonction pour parser un pourcentage en nombre
-     */
-    function parsePercentage(percentStr) {
-        if (!percentStr || percentStr === '-') return 0;
-        
-        // Remplacer les virgules par des points pour les décimales
-        let cleanStr = percentStr.replace(',', '.');
-        
-        // Supprimer les symboles +, %, etc.
-        cleanStr = cleanStr.replace(/[+%]/g, '');
-        
-        // Gérer les nombres négatifs qui utilisent un caractère spécial pour le moins
-        cleanStr = cleanStr.replace(/[\u2212\u2013\u2014]/g, '-');
-        
-        return parseFloat(cleanStr) || 0;
     }
 });
