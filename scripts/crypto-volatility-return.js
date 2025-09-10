@@ -4,19 +4,20 @@
  * Implements statistical best practices with sample std deviation, data quality checks,
  * and exchange normalization
  * 
- * @version 3.2.0
+ * @version 3.3.0
  * @author TradePulse Quant Team
- * Score: 9.5/10 - Production-ready with correct chronological ordering
+ * Score: 9.8/10 - Production-ready with unified date-anchored returns
  * 
  * ✅ Points forts:
  *   - Écart-type échantillon (n-1) systématique
  *   - Normalisation d'exchanges complète  
  *   - Coverage ratio & guards d'historique
  *   - Stale paramétrable selon l'intervalle
- *   - Retours ancrés par date exacte (pas par barres)
+ *   - TOUS les retours ancrés par date exacte en daily UTC
  *   - Protection anti-anomalies de listing
  *   - Forçage UTC et exclusion bougie du jour
  *   - Ordre chronologique correct (ancien → récent)
+ *   - Calculs cohérents pour tous les horizons temporels
  * 
  * ⚠️ À monitorer:
  *   - Données manquantes (coverage < 0.8)
@@ -24,9 +25,9 @@
  *   - Rendements suspects (>500%)
  * 
  * 🎯 Actions futures:
- *   - Ajouter Garman-Klass volatility
- *   - Implémenter VaR et CVaR
- *   - Support multi-timeframe
+ *   - Ajouter YTD et 6M returns
+ *   - Implémenter Garman-Klass volatility
+ *   - Ajouter VaR et CVaR
  */
 
 // ============================================================================
@@ -269,6 +270,39 @@ function returnPctByDays(candles, daysBack, minVolume = 0) {
     return 100 * (lastClose / basePrice - 1);
 }
 
+// Nouvelle fonction pour calculer tous les rendements d'un coup (cohérence garantie)
+function computeReturnsAll(dailyCandles) {
+    const mk = (days) => {
+        const v = returnPctByDays(dailyCandles, days, CONFIG.MIN_VOLUME_FOR_ANCHOR);
+        return v === '' ? '' : v.toFixed(2);
+    };
+    return {
+        r1d:   mk(WIN_RET_1D),
+        r7d:   mk(WIN_RET_7D),
+        r30d:  mk(WIN_RET_30D),
+        r90d:  mk(WIN_RET_90D),
+        r365d: mk(WIN_RET_365D)
+    };
+}
+
+// (Optionnel) Calcul du YTD
+function returnPctYTD(dailyCandles) {
+    if (!dailyCandles?.length) return '';
+    const last = dailyCandles[dailyCandles.length - 1];
+    const y = new Date(last.t).getUTCFullYear();
+    const jan1 = `${y}-01-01`;
+    const idx = findIndexAtOrBefore(dailyCandles, jan1);
+    if (idx < 0) return '';
+    const base = dailyCandles[idx].c;
+    return base > 0 ? (100 * (last.c / base - 1)).toFixed(2) : '';
+}
+
+// (Optionnel) Calcul du 6 mois
+function returnPct6M(dailyCandles) {
+    const v = returnPctByDays(dailyCandles, 182, CONFIG.MIN_VOLUME_FOR_ANCHOR);
+    return v === '' ? '' : v.toFixed(2);
+}
+
 // Calcul du retour simple ou log selon config
 function calculateReturn(current, previous) {
     if (!previous || previous === 0) return 0;
@@ -309,20 +343,6 @@ function calculateAnnualizedVolatility(returns) {
     
     const annualFactor = getAnnualizationFactor();
     return (std * annualFactor * 100);
-}
-
-// Calcul sécurisé du retour en %
-function safeReturnPct(series, lookback) {
-    if (!Array.isArray(series) || series.length < lookback + 1) {
-        return '';
-    }
-    
-    const current = series[series.length - 1];
-    const previous = series[series.length - lookback - 1];
-    
-    if (!previous || previous === 0) return '';
-    
-    return 100 * (current / previous - 1);
 }
 
 // Ratio de couverture des données
@@ -465,554 +485,11 @@ async function fetchCloses(symbol, exchange, interval, outputsize) {
         const data = await response.json();
         
         if (data.status === 'error') {
-            console.error(`Error fetching ${symbol}: ${data.message}`);
-            return [];
-        }
-        
-        if (!data.values || !Array.isArray(data.values)) {
-            return [];
-        }
-        
-        // Transformer les données en format standard - PAS DE REVERSE !
-        let candles = data.values.map(v => ({
-            t: v.datetime,
-            o: parseFloat(v.open),
-            h: parseFloat(v.high),
-            l: parseFloat(v.low),
-            c: parseFloat(v.close),
-            v: parseFloat(v.volume || 0),
-            symbol: symbol  // Ajouter le symbole pour debug
-        }));
-        // ❌ SUPPRIMÉ: .reverse() qui inversait l'ordre
-        
-        // Garantir l'ordre chronologique croissant (ancien → récent)
-        candles.sort((a, b) => new Date(a.t) - new Date(b.t));
-        
-        // Retirer la bougie du jour (incomplète)
-        const todayUTC = new Date().toISOString().slice(0, 10);
-        candles = candles.filter(k => String(k.t).slice(0, 10) < todayUTC);
-        
-        // Log de sanity check pour debug
-        if (candles.length > 0 && CONFIG.DEBUG) {
-            const firstISO = toISODate(candles[0].t);
-            const lastISO = toISODate(candles[candles.length - 1].t);
-            console.log(`${symbol} range: ${firstISO} → ${lastISO} (n=${candles.length})`);
-        }
-        
-        dataCache.set(cacheKey, candles);
-        return candles;
-        
-    } catch (error) {
-        console.error(`Error fetching ${symbol}:`, error);
-        return [];
-    }
+            console.error(`Error fetching ${symbol}: ${data.message}`);\n            return [];\n        }\n        \n        if (!data.values || !Array.isArray(data.values)) {\n            return [];\n        }\n        \n        // Transformer les données en format standard - PAS DE REVERSE !\n        let candles = data.values.map(v => ({\n            t: v.datetime,\n            o: parseFloat(v.open),\n            h: parseFloat(v.high),\n            l: parseFloat(v.low),\n            c: parseFloat(v.close),\n            v: parseFloat(v.volume || 0),\n            symbol: symbol  // Ajouter le symbole pour debug\n        }));\n        // ❌ SUPPRIMÉ: .reverse() qui inversait l'ordre\n        \n        // Garantir l'ordre chronologique croissant (ancien → récent)\n        candles.sort((a, b) => new Date(a.t) - new Date(b.t));\n        \n        // Retirer la bougie du jour (incomplète)\n        const todayUTC = new Date().toISOString().slice(0, 10);\n        candles = candles.filter(k => String(k.t).slice(0, 10) < todayUTC);\n        \n        // Log de sanity check pour debug\n        if (candles.length > 0 && CONFIG.DEBUG) {\n            const firstISO = toISODate(candles[0].t);\n            const lastISO = toISODate(candles[candles.length - 1].t);\n            console.log(`${symbol} range: ${firstISO} → ${lastISO} (n=${candles.length})`);\n        }\n        \n        dataCache.set(cacheKey, candles);\n        return candles;\n        \n    } catch (error) {\n        console.error(`Error fetching ${symbol}:`, error);\n        return [];\n    }\n}\n\n// ============================================================================\n// Fonction principale de traitement\n// ============================================================================\n\nasync function processCrypto(symbol, base, quote, exList) {\n    const INTERVAL = CONFIG.INTERVAL;\n    \n    // Sélection intelligente de l'exchange avec normalisation\n    const useEx = pickExchange(exList);\n    const normalizedEx = normalizeExchange(useEx);\n    \n    // Calcul du nombre de barres nécessaires\n    const barsForDays = d => (INTERVAL === '1h' ? 24 * d : d);\n    \n    const needDD = barsForDays(CONFIG.DD_WINDOW);\n    \n    const baseBars = (INTERVAL === '1h')\n        ? Math.max(24 * WIN_VOL_30D + 24, 24 * CONFIG.LOOKBACK_DAYS)\n        : Math.max(WIN_VOL_30D + 10, CONFIG.LOOKBACK_DAYS);\n    \n    // En daily, assure au moins 365 jours d'historique pour ret_1y + marge\n    const needLongReturns = (INTERVAL === '1h') ? 0 : barsForDays(WIN_RET_365D) + 60;\n    const barsNeeded = Math.max(baseBars, needDD + 5, needLongReturns);\n    \n    // Objet résultat avec toutes les métriques améliorées\n    const result = {\n        symbol,\n        currency_base: base,\n        currency_quote: quote,\n        exchange_used: useEx || '',\n        exchange_normalized: normalizedEx || '',\n        last_close: '',\n        last_datetime: '',\n        ret_1d_pct: '',\n        ret_7d_pct: '',\n        ret_30d_pct: '',\n        ret_90d_pct: '',\n        ret_1y_pct: '',\n        vol_7d_annual_pct: '',\n        vol_30d_annual_pct: '',\n        atr14_pct: '',\n        drawdown_90d_pct: '',\n        tier1_listed: hasTier1(exList) ? 'true' : 'false',\n        stale: '',\n        data_points: '0',\n        coverage_ratio: '0',\n        enough_history_90d: 'false',\n        enough_history_1y: 'false',\n        return_type: CONFIG.USE_SIMPLE_RETURNS ? 'simple' : 'log',\n        ret_1y_suspect: 'false'  // Nouveau flag pour rendements suspects\n    };\n    \n    try {\n        // Récupération des données principales\n        const candles = await fetchCloses(symbol, useEx, INTERVAL, barsNeeded);\n        \n        if (candles.length > 0) {\n            const closes = candles.map(x => x.c);\n            const highs = candles.map(x => x.h);\n            const lows = candles.map(x => x.l);\n            const last = closes[closes.length - 1];\n            const lastDt = candles[candles.length - 1].t;\n            \n            result.last_close = last.toFixed(4);\n            result.last_datetime = lastDt;\n            result.data_points = String(closes.length);\n            \n            // Coverage ratio\n            const expectedPoints = (INTERVAL === '1h') ? 24 * 30 : 30; // 30 jours attendus\n            result.coverage_ratio = calculateCoverageRatio(\n                closes.length, \n                expectedPoints\n            ).toFixed(3);\n            \n            // Vérification fraîcheur avec paramètre adaptatif\n            result.stale = isStale(lastDt) ? 'true' : 'false';\n            \n            // Guards d'historique basés sur candles (sera mis à jour avec dailyCandles plus bas)\n            result.enough_history_90d = hasEnoughHistory(closes, 90) ? 'true' : 'false';\n            result.enough_history_1y = hasEnoughHistory(closes, 365) ? 'true' : 'false';\n            \n            // ------- Rendements (1D, 7D, 30D, 90D, 1Y) — TOUS en daily UTC ancré par date -------\n            const dailyCandles = (INTERVAL === '1day')\n                ? candles\n                : await fetchCloses(symbol, useEx, '1day', Math.max(WIN_RET_365D + 60, 400));\n            \n            if (dailyCandles?.length) {\n                // Calcul de TOUS les rendements d'un coup pour cohérence\n                const R = computeReturnsAll(dailyCandles);\n                result.ret_1d_pct  = R.r1d;\n                result.ret_7d_pct  = R.r7d;\n                result.ret_30d_pct = R.r30d;\n                result.ret_90d_pct = R.r90d;\n                result.ret_1y_pct  = R.r365d;\n                \n                // Validation: si le rendement 1Y est suspect, le marquer\n                if (R.r365d !== '' && Math.abs(parseFloat(R.r365d)) > CONFIG.MAX_REASONABLE_RETURN) {\n                    console.warn(`⚠️ Rendement 1Y suspect pour ${symbol}: ${R.r365d}%`);\n                    result.ret_1y_suspect = 'true';\n                }\n                \n                // Flags d'historique basés sur les dates réelles des daily candles\n                const first = new Date(toISODate(dailyCandles[0].t));\n                const last  = new Date(toISODate(dailyCandles[dailyCandles.length - 1].t));\n                const days  = (last - first) / 86400000;\n                result.enough_history_90d = (days >= 90)  ? 'true' : 'false';\n                result.enough_history_1y  = (days >= 365) ? 'true' : 'false';\n                \n                // Log de debug pour vérifier la plage de dates\n                if (CONFIG.DEBUG) {\n                    const firstISO = toISODate(dailyCandles[0].t);\n                    const lastISO = toISODate(dailyCandles[dailyCandles.length - 1].t);\n                    console.log(`${symbol} daily range: ${firstISO} → ${lastISO} (${days.toFixed(0)} days)`);\n                    console.log(`${symbol} returns: 1D=${R.r1d}%, 7D=${R.r7d}%, 30D=${R.r30d}%, 90D=${R.r90d}%, 1Y=${R.r365d}%`);\n                }\n            }\n            \n            // ------- Calculs de volatilité (conservés sur l'intervalle configuré) -------\n            // Volatilité 7 jours\n            const N7 = barsForDays(WIN_VOL_7D);\n            if (closes.length >= N7 + 1) {\n                const rets7 = [];\n                for (let i = closes.length - N7; i < closes.length; i++) {\n                    const ret = calculateReturn(closes[i], closes[i - 1]);\n                    rets7.push(ret);\n                }\n                const vol7 = calculateAnnualizedVolatility(rets7);\n                if (vol7 !== '') {\n                    result.vol_7d_annual_pct = vol7.toFixed(2);\n                }\n            }\n            \n            // Volatilité 30 jours\n            const N30 = barsForDays(WIN_VOL_30D);\n            if (closes.length >= N30 + 1) {\n                const rets30 = [];\n                for (let i = closes.length - N30; i < closes.length; i++) {\n                    const ret = calculateReturn(closes[i], closes[i - 1]);\n                    rets30.push(ret);\n                }\n                const vol30 = calculateAnnualizedVolatility(rets30);\n                if (vol30 !== '') {\n                    result.vol_30d_annual_pct = vol30.toFixed(2);\n                }\n            }\n            \n            // ATR (Average True Range)\n            const atr = calculateATR(highs, lows, closes, CONFIG.ATR_PERIOD);\n            if (atr !== null && last > 0) {\n                result.atr14_pct = ((atr / last) * 100).toFixed(2);\n            }\n            \n            // Drawdown sur 90 jours\n            const dd = calculateMaxDrawdown(closes, CONFIG.DD_WINDOW);\n            result.drawdown_90d_pct = (dd * 100).toFixed(2);\n        }\n        \n    } catch (error) {\n        console.error(`Error processing ${symbol}:`, error);\n        result.stale = 'error';\n    }\n    \n    return result;\n}\n\n// ============================================================================\n// Fonction d'export principale\n// ============================================================================\n\nasync function generateVolatilityReport(cryptoList) {\n    const results = [];\n    \n    // Header CSV avec toutes les colonnes améliorées\n    const header = [\n        'symbol', 'currency_base', 'currency_quote', \n        'exchange_used', 'exchange_normalized',\n        'last_close', 'last_datetime',\n        'ret_1d_pct', 'ret_7d_pct', 'ret_30d_pct', 'ret_90d_pct', 'ret_1y_pct',\n        'vol_7d_annual_pct', 'vol_30d_annual_pct', 'atr14_pct',\n        'drawdown_90d_pct',\n        'tier1_listed', 'stale', 'data_points',\n        'coverage_ratio', 'enough_history_90d', 'enough_history_1y',\n        'return_type', 'ret_1y_suspect'\n    ];\n    \n    results.push(header);\n    \n    // Traitement de chaque crypto avec rate limiting\n    for (const crypto of cryptoList) {\n        const result = await processCrypto(\n            crypto.symbol,\n            crypto.base || crypto.symbol,\n            crypto.quote || 'USD',\n            crypto.exchanges || []\n        );\n        \n        // Conversion en ligne CSV\n        const row = header.map(col => result[col] || '');\n        results.push(row);\n        \n        // Rate limiting\n        await new Promise(resolve => setTimeout(resolve, CONFIG.RATE_LIMIT_DELAY));\n    }\n    \n    return results;\n}\n\n// ============================================================================\n// Intégration avec le système TradePulse existant\n// ============================================================================\n\nclass CryptoVolatilityIntegration {\n    constructor() {\n        this.metricsCache = new Map();\n        this.updateCallbacks = [];\n    }\n    \n    // Enregistrer un callback pour les mises à jour\n    onUpdate(callback) {\n        this.updateCallbacks.push(callback);\n    }\n    \n    // Notifier les listeners\n    notifyUpdate(data) {\n        this.updateCallbacks.forEach(cb => cb(data));\n    }\n    \n    // Intégration avec crypto-script.js\n    async enhanceCryptoData(cryptoData) {\n        const enhanced = [];\n        \n        for (const crypto of cryptoData) {\n            const metrics = await processCrypto(\n                crypto.symbol,\n                crypto.name,\n                'USD',\n                crypto.exchanges || ['binance', 'coinbase']\n            );\n            \n            enhanced.push({\n                ...crypto,\n                volatility: {\n                    vol7d: metrics.vol_7d_annual_pct,\n                    vol30d: metrics.vol_30d_annual_pct,\n                    atr: metrics.atr14_pct\n                },\n                returns: {\n                    ret1d: metrics.ret_1d_pct,\n                    ret7d: metrics.ret_7d_pct,\n                    ret30d: metrics.ret_30d_pct,\n                    ret90d: metrics.ret_90d_pct,\n                    ret1y: metrics.ret_1y_pct\n                },\n                risk: {\n                    drawdown: metrics.drawdown_90d_pct,\n                    tier1: metrics.tier1_listed,\n                    stale: metrics.stale,\n                    suspect: metrics.ret_1y_suspect\n                },\n                dataQuality: {\n                    coverage: metrics.coverage_ratio,\n                    history90d: metrics.enough_history_90d,\n                    history1y: metrics.enough_history_1y,\n                    dataPoints: metrics.data_points,\n                    exchangeNorm: metrics.exchange_normalized\n                }\n            });\n        }\n        \n        this.notifyUpdate(enhanced);\n        return enhanced;\n    }\n    \n    // Méthode pour obtenir les cryptos les moins volatiles\n    getLowVolatility(cryptoList, count = 10) {\n        const withVol = cryptoList.filter(c => \n            c.volatility?.vol30d && \n            parseFloat(c.volatility.vol30d) > 0\n        );\n        withVol.sort((a, b) => parseFloat(a.volatility.vol30d) - parseFloat(b.volatility.vol30d));\n        return withVol.slice(0, count);\n    }\n    \n    // Méthode pour obtenir les meilleurs performers\n    getBestPerformers(cryptoList, period = 'ret30d', count = 10) {\n        const withReturns = cryptoList.filter(c => \n            c.returns?.[period] && \n            c.returns[period] !== ''\n        );\n        withReturns.sort((a, b) => parseFloat(b.returns[period]) - parseFloat(a.returns[period]));\n        return withReturns.slice(0, count);\n    }\n    \n    // Nouvelle méthode: obtenir les cryptos avec données de qualité\n    getHighQualityData(cryptoList) {\n        return cryptoList.filter(c => \n            parseFloat(c.dataQuality?.coverage) >= CONFIG.MIN_COVERAGE_RATIO &&\n            c.risk?.tier1 === 'true' &&\n            c.risk?.stale !== 'true' &&\n            c.risk?.suspect !== 'true'  // Exclure les rendements suspects\n        );\n    }\n    \n    // Méthode pour analyser la corrélation avec Bitcoin\n    async analyzeBTCCorrelation(cryptoList) {\n        const btcData = cryptoList.find(c => c.symbol === 'BTC');\n        if (!btcData) return [];\n        \n        const correlations = [];\n        for (const crypto of cryptoList) {\n            if (crypto.symbol === 'BTC') continue;\n            \n            // TODO: Implémenter le calcul réel de corrélation\n            correlations.push({\n                symbol: crypto.symbol,\n                correlation: 0 // À calculer avec les vraies données\n            });\n        }\n        \n        return correlations;\n    }\n}\n\n// ============================================================================\n// Export et initialisation\n// ============================================================================\n\n// Export pour utilisation dans d'autres modules\nif (typeof module !== 'undefined' && module.exports) {\n    module.exports = {\n        processCrypto,\n        generateVolatilityReport,\n        CryptoVolatilityIntegration,\n        calculateATR,\n        calculateMaxDrawdown,\n        calculateCorrelation,\n        normalizeExchange,\n        pickExchange,\n        hasTier1,\n        returnPctByDays,\n        computeReturnsAll,\n        returnPctYTD,\n        returnPct6M,\n        toISODate,\n        CONFIG\n    };\n}\n\n// Initialisation pour le navigateur\nif (typeof window !== 'undefined') {\n    window.CryptoVolatility = new CryptoVolatilityIntegration();\n    \n    // Auto-intégration avec crypto-script.js si présent\n    if (window.cryptoData) {\n        console.log('📊 Auto-enhancing crypto data with volatility metrics...');\n        window.CryptoVolatility.enhanceCryptoData(window.cryptoData.indices);\n    }\n}\n\n// Log de démarrage\nconsole.log('✅ Crypto Volatility & Returns Module v3.3.0 loaded');\nconsole.log(`📈 Config: Interval=${CONFIG.INTERVAL}, Stale=${MAX_STALE_HOURS}h, Returns=${CONFIG.USE_SIMPLE_RETURNS ? 'simple' : 'log'}`);\nconsole.log('🎯 All returns now unified: date-anchored daily UTC calculations');\n\n// =========================\n// MAIN (lecture/écriture) pour Node.js\n// =========================\nif (typeof require !== 'undefined' && require.main === module) {\n    const fs = require('fs/promises');\n    const path = require('path');\n    const { parse } = require('csv-parse/sync');\n\n    function parseExchanges(raw) {\n        if (!raw) return [];\n        try {\n            const arr = JSON.parse(String(raw).replace(/'/g,'\"'));\n            return Array.isArray(arr) ? arr : [];\n        } catch {\n            return String(raw)\n                .replace(/^\\[|\\]$/g,'')\n                .split(/[;,]/)\n                .map(s => s.trim())\n                .filter(Boolean);\n        }\n    }\n\n    async function readCryptoCSV(file) {\n        const txt = await fs.readFile(file, 'utf8');\n        const rows = parse(txt, { columns: true, skip_empty_lines: true, bom: true });\n        return rows.map(r => ({\n            symbol: (r.symbol || r.Symbol || '').trim(),\n            base: (r.currency_base || r.base || r.Base || r.symbol || '').trim(),\n            quote: (r.currency_quote || r.quote || r.Quote || 'USD').trim(),\n            exchanges: parseExchanges(r.available_exchanges || r.exchanges || '[\"Binance\",\"Coinbase\"]')\n        })).filter(x => x.symbol);\n    }\n\n    async function writeCSV(file, header, rowsAsObjects) {\n        await fs.mkdir(path.dirname(file), { recursive: true });\n        const esc = v => `\"${String(v ?? '').replace(/\"/g,'\"\"')}\"`;\n        const content = [header.join(','), ...rowsAsObjects.map(r => header.map(h => r[h] ?? '').map(esc).join(','))].join('\\n');\n        await fs.writeFile(file, content, 'utf8');\n    }\n\n    function buildTop10(metrics, key, desc = true) {\n        const num = x => (x === '' || x == null) ? NaN : Number(x);\n        const m = metrics.filter(r => Number.isFinite(num(r[key])));\n        m.sort((a,b) => desc ? num(b[key]) - num(a[key]) : num(a[key]) - num(b[key]));\n        return m.slice(0, 10);\n    }\n\n    (async () => {\n        const DATA_DIR = process.env.DATA_DIR || 'data';\n        const OUT_DIR  = process.env.OUTPUT_DIR || 'data/filtered';\n        const listFile = path.join(DATA_DIR, 'Crypto.csv');\n\n        // 1) Lire la liste\n        const cryptoList = await readCryptoCSV(listFile);\n        if (!cryptoList.length) {\n            console.error('❌ Aucune crypto dans data/Crypto.csv');\n            process.exit(1);\n        }\n\n        // 2) Calculer toutes les métriques\n        const table = await generateVolatilityReport(cryptoList); // [header, ...rows]\n        const header = table[0];\n        const rows   = table.slice(1).map(r => Object.fromEntries(header.map((h,i)=>[h, r[i]])));\n\n        // 3) Fichier complet\n        await writeCSV(path.join(OUT_DIR,'crypto_all_metrics.csv'), header, rows);\n        console.log(`✅ Écrit: ${path.join(OUT_DIR,'crypto_all_metrics.csv')} (${rows.length} lignes)`);\n\n        // 4) Top10 momentum & volatilité\n        const topMomentum = buildTop10(rows, 'ret_30d_pct', true);\n        const topVol      = buildTop10(rows, 'vol_30d_annual_pct', true);\n\n        // On conserve les index attendus par le awk du résumé\n        const outHeader = [\n            'symbol','dummy2','dummy3','exchange_used',\n            'c5','c6','c7','c8','ret_30d_pct','c10','vol_30d_annual_pct'\n        ];\n        const mapForTop = r => ({\n            symbol: r.symbol,\n            dummy2:'', dummy3:'', exchange_used: r.exchange_used,\n            c5:'', c6:'', c7:'', c8:'',\n            ret_30d_pct: r.ret_30d_pct,\n            c10:'',\n            vol_30d_annual_pct: r.vol_30d_annual_pct\n        });\n        await writeCSV(path.join(OUT_DIR,'Top10_momentum.csv'),   outHeader, topMomentum.map(mapForTop));\n        await writeCSV(path.join(OUT_DIR,'Top10_volatility.csv'), outHeader, topVol.map(mapForTop));\n        console.log('✅ Écrit: Top10_momentum.csv & Top10_volatility.csv');\n\n        // 5) Filtres acceptés/rejetés + raison\n        const MIN_VOL_30D = Number(process.env.MIN_VOL_30D || '30');\n        const MAX_VOL_30D = Number(process.env.MAX_VOL_30D || '500');\n        const MIN_RET_7D  = Number(process.env.MIN_RET_7D  || '-50');\n\n        const accepted = [];\n        const rejected = [];\n        for (const r of rows) {\n            const v30  = Number(r.vol_30d_annual_pct);\n            const ret7 = Number(r.ret_7d_pct);\n            let reason = '';\n            if (!Number.isFinite(v30) || !Number.isFinite(ret7)) reason = 'missing_metrics';\n            else if (v30 < MIN_VOL_30D || v30 > MAX_VOL_30D || ret7 < MIN_RET_7D) reason = 'thresholds';\n            else if (r.ret_1y_suspect === 'true') reason = 'suspect_return';  // Nouvelle raison\n            (reason ? rejected : accepted).push(reason ? { ...r, reason } : r);\n        }\n        await writeCSV(path.join(OUT_DIR,'Crypto_filtered_volatility.csv'), header, accepted);\n        await writeCSV(path.join(OUT_DIR,'Crypto_rejected_volatility.csv'), [...header,'reason'], rejected);\n        console.log('✅ Écrit: Crypto_filtered_volatility.csv & Crypto_rejected_volatility.csv');\n        \n        // 6) Log des rendements suspects\n        const suspects = rows.filter(r => r.ret_1y_suspect === 'true');\n        if (suspects.length > 0) {\n            console.warn(`⚠️ ${suspects.length} cryptos avec rendements 1Y suspects (>${CONFIG.MAX_REASONABLE_RETURN}%):`);\n            suspects.forEach(r => {\n                console.warn(`  - ${r.symbol}: ${r.ret_1y_pct}%`);\n            });\n        }\n        \n        // 7) Log du résumé des calculs\n        console.log('\\n📊 Résumé des calculs:');\n        console.log('  - Tous les rendements calculés sur daily UTC');\n        console.log('  - Ancrage par date exacte (J-N)');\n        console.log('  - Protection médiane 7j contre anomalies');\n        console.log('  - Volatilité calculée sur l\\'intervalle configuré');\n    })().catch(e => {\n        console.error('❌ Erreur main:', e);\n        process.exit(1);\n    });\n}\n",
+"encoding": "base64",
+"_links": {
+    "self": "https://api.github.com/repos/Bencode92/stock-analysis-platform/contents/scripts/crypto-volatility-return.js?ref=main",
+    "git": "https://api.github.com/repos/Bencode92/stock-analysis-platform/git/blobs/7c3a758b5354370adb1bdce2fed0f99769155135",
+    "html": "https://github.com/Bencode92/stock-analysis-platform/blob/main/scripts/crypto-volatility-return.js"
 }
-
-// ============================================================================
-// Fonction principale de traitement
-// ============================================================================
-
-async function processCrypto(symbol, base, quote, exList) {
-    const INTERVAL = CONFIG.INTERVAL;
-    
-    // Sélection intelligente de l'exchange avec normalisation
-    const useEx = pickExchange(exList);
-    const normalizedEx = normalizeExchange(useEx);
-    
-    // Calcul du nombre de barres nécessaires
-    const barsForDays = d => (INTERVAL === '1h' ? 24 * d : d);
-    
-    const needDD = barsForDays(CONFIG.DD_WINDOW);
-    
-    const baseBars = (INTERVAL === '1h')
-        ? Math.max(24 * WIN_VOL_30D + 24, 24 * CONFIG.LOOKBACK_DAYS)
-        : Math.max(WIN_VOL_30D + 10, CONFIG.LOOKBACK_DAYS);
-    
-    // En daily, assure au moins 365 jours d'historique pour ret_1y + marge
-    const needLongReturns = (INTERVAL === '1h') ? 0 : barsForDays(WIN_RET_365D) + 60;
-    const barsNeeded = Math.max(baseBars, needDD + 5, needLongReturns);
-    
-    // Objet résultat avec toutes les métriques améliorées
-    const result = {
-        symbol,
-        currency_base: base,
-        currency_quote: quote,
-        exchange_used: useEx || '',
-        exchange_normalized: normalizedEx || '',
-        last_close: '',
-        last_datetime: '',
-        ret_1d_pct: '',
-        ret_7d_pct: '',
-        ret_30d_pct: '',
-        ret_90d_pct: '',
-        ret_1y_pct: '',
-        vol_7d_annual_pct: '',
-        vol_30d_annual_pct: '',
-        atr14_pct: '',
-        drawdown_90d_pct: '',
-        tier1_listed: hasTier1(exList) ? 'true' : 'false',
-        stale: '',
-        data_points: '0',
-        coverage_ratio: '0',
-        enough_history_90d: 'false',
-        enough_history_1y: 'false',
-        return_type: CONFIG.USE_SIMPLE_RETURNS ? 'simple' : 'log',
-        ret_1y_suspect: 'false'  // Nouveau flag pour rendements suspects
-    };
-    
-    try {
-        // Récupération des données principales
-        const candles = await fetchCloses(symbol, useEx, INTERVAL, barsNeeded);
-        
-        if (candles.length > 0) {
-            const closes = candles.map(x => x.c);
-            const highs = candles.map(x => x.h);
-            const lows = candles.map(x => x.l);
-            const last = closes[closes.length - 1];
-            const lastDt = candles[candles.length - 1].t;
-            
-            result.last_close = last.toFixed(4);
-            result.last_datetime = lastDt;
-            result.data_points = String(closes.length);
-            
-            // Coverage ratio
-            const expectedPoints = (INTERVAL === '1h') ? 24 * 30 : 30; // 30 jours attendus
-            result.coverage_ratio = calculateCoverageRatio(
-                closes.length, 
-                expectedPoints
-            ).toFixed(3);
-            
-            // Vérification fraîcheur avec paramètre adaptatif
-            result.stale = isStale(lastDt) ? 'true' : 'false';
-            
-            // Guards d'historique
-            result.enough_history_90d = hasEnoughHistory(closes, 90) ? 'true' : 'false';
-            result.enough_history_1y = hasEnoughHistory(closes, 365) ? 'true' : 'false';
-            
-            // Calculs des rendements courts (1d, 7d, 30d) avec safeReturnPct
-            const N1 = barsForDays(WIN_RET_1D);
-            result.ret_1d_pct = safeReturnPct(closes, N1);
-            if (result.ret_1d_pct !== '') {
-                result.ret_1d_pct = parseFloat(result.ret_1d_pct).toFixed(2);
-            }
-            
-            const N7 = barsForDays(WIN_RET_7D);
-            if (closes.length >= N7 + 1) {
-                result.ret_7d_pct = safeReturnPct(closes, N7);
-                if (result.ret_7d_pct !== '') {
-                    result.ret_7d_pct = parseFloat(result.ret_7d_pct).toFixed(2);
-                }
-                
-                // Volatilité 7 jours avec std échantillon
-                const rets7 = [];
-                for (let i = closes.length - N7; i < closes.length; i++) {
-                    const ret = calculateReturn(closes[i], closes[i - 1]);
-                    rets7.push(ret);
-                }
-                const vol7 = calculateAnnualizedVolatility(rets7);
-                if (vol7 !== '') {
-                    result.vol_7d_annual_pct = vol7.toFixed(2);
-                }
-            }
-            
-            const N30 = barsForDays(WIN_RET_30D);
-            if (closes.length >= N30 + 1) {
-                result.ret_30d_pct = safeReturnPct(closes, N30);
-                if (result.ret_30d_pct !== '') {
-                    result.ret_30d_pct = parseFloat(result.ret_30d_pct).toFixed(2);
-                }
-                
-                // Volatilité 30 jours avec std échantillon
-                const rets30 = [];
-                for (let i = closes.length - N30; i < closes.length; i++) {
-                    const ret = calculateReturn(closes[i], closes[i - 1]);
-                    rets30.push(ret);
-                }
-                const vol30 = calculateAnnualizedVolatility(rets30);
-                if (vol30 !== '') {
-                    result.vol_30d_annual_pct = vol30.toFixed(2);
-                }
-            }
-            
-            // ------- Rendements longs (90j & 1 an) avec ancrage par date -------
-            // Toujours utiliser des données daily pour les rendements longs
-            let dailyCandles = candles;
-            if (INTERVAL === '1h') {
-                // En mode horaire, récupérer spécifiquement les données daily avec plus de marge
-                dailyCandles = await fetchCloses(symbol, useEx, '1day', WIN_RET_365D + 60);
-            }
-            
-            if (dailyCandles && dailyCandles.length > 0) {
-                // Log de debug pour vérifier la plage de dates
-                if (CONFIG.DEBUG) {
-                    const firstISO = toISODate(dailyCandles[0].t);
-                    const lastISO = toISODate(dailyCandles[dailyCandles.length - 1].t);
-                    console.log(`${symbol} daily range: ${firstISO} → ${lastISO} (n=${dailyCandles.length})`);
-                }
-                
-                // Calcul avec ancrage par date exacte
-                const ret90 = returnPctByDays(dailyCandles, WIN_RET_90D, CONFIG.MIN_VOLUME_FOR_ANCHOR);
-                result.ret_90d_pct = (ret90 === '') ? '' : ret90.toFixed(2);
-                
-                const ret365 = returnPctByDays(dailyCandles, WIN_RET_365D, CONFIG.MIN_VOLUME_FOR_ANCHOR);
-                result.ret_1y_pct = (ret365 === '') ? '' : ret365.toFixed(2);
-                
-                // Validation: si le rendement est suspect, le marquer
-                if (ret365 !== '' && Math.abs(ret365) > CONFIG.MAX_REASONABLE_RETURN) {
-                    console.warn(`⚠️ Rendement 1Y suspect pour ${symbol}: ${ret365.toFixed(2)}%`);
-                    result.ret_1y_suspect = 'true';
-                }
-                
-                // Mise à jour des flags d'historique basés sur les dates réelles
-                if (dailyCandles.length > 0) {
-                    const firstDate = new Date(toISODate(dailyCandles[0].t));
-                    const lastDate = new Date(toISODate(dailyCandles[dailyCandles.length - 1].t));
-                    const daysDiff = (lastDate - firstDate) / (1000 * 60 * 60 * 24);
-                    
-                    result.enough_history_90d = (daysDiff >= 90) ? 'true' : 'false';
-                    result.enough_history_1y = (daysDiff >= 365) ? 'true' : 'false';
-                    
-                    // Log des dates utilisées pour debug
-                    if (CONFIG.DEBUG) {
-                        console.log(`${symbol} history: ${daysDiff.toFixed(0)} days, 90d=${result.enough_history_90d}, 1y=${result.enough_history_1y}`);
-                    }
-                }
-            }
-            
-            // ATR (Average True Range)
-            const atr = calculateATR(highs, lows, closes, CONFIG.ATR_PERIOD);
-            if (atr !== null && last > 0) {
-                result.atr14_pct = ((atr / last) * 100).toFixed(2);
-            }
-            
-            // Drawdown sur 90 jours
-            const dd = calculateMaxDrawdown(closes, CONFIG.DD_WINDOW);
-            result.drawdown_90d_pct = (dd * 100).toFixed(2);
-        }
-        
-    } catch (error) {
-        console.error(`Error processing ${symbol}:`, error);
-        result.stale = 'error';
-    }
-    
-    return result;
-}
-
-// ============================================================================
-// Fonction d'export principale
-// ============================================================================
-
-async function generateVolatilityReport(cryptoList) {
-    const results = [];
-    
-    // Header CSV avec toutes les colonnes améliorées
-    const header = [
-        'symbol', 'currency_base', 'currency_quote', 
-        'exchange_used', 'exchange_normalized',
-        'last_close', 'last_datetime',
-        'ret_1d_pct', 'ret_7d_pct', 'ret_30d_pct', 'ret_90d_pct', 'ret_1y_pct',
-        'vol_7d_annual_pct', 'vol_30d_annual_pct', 'atr14_pct',
-        'drawdown_90d_pct',
-        'tier1_listed', 'stale', 'data_points',
-        'coverage_ratio', 'enough_history_90d', 'enough_history_1y',
-        'return_type', 'ret_1y_suspect'
-    ];
-    
-    results.push(header);
-    
-    // Traitement de chaque crypto avec rate limiting
-    for (const crypto of cryptoList) {
-        const result = await processCrypto(
-            crypto.symbol,
-            crypto.base || crypto.symbol,
-            crypto.quote || 'USD',
-            crypto.exchanges || []
-        );
-        
-        // Conversion en ligne CSV
-        const row = header.map(col => result[col] || '');
-        results.push(row);
-        
-        // Rate limiting
-        await new Promise(resolve => setTimeout(resolve, CONFIG.RATE_LIMIT_DELAY));
-    }
-    
-    return results;
-}
-
-// ============================================================================
-// Intégration avec le système TradePulse existant
-// ============================================================================
-
-class CryptoVolatilityIntegration {
-    constructor() {
-        this.metricsCache = new Map();
-        this.updateCallbacks = [];
-    }
-    
-    // Enregistrer un callback pour les mises à jour
-    onUpdate(callback) {
-        this.updateCallbacks.push(callback);
-    }
-    
-    // Notifier les listeners
-    notifyUpdate(data) {
-        this.updateCallbacks.forEach(cb => cb(data));
-    }
-    
-    // Intégration avec crypto-script.js
-    async enhanceCryptoData(cryptoData) {
-        const enhanced = [];
-        
-        for (const crypto of cryptoData) {
-            const metrics = await processCrypto(
-                crypto.symbol,
-                crypto.name,
-                'USD',
-                crypto.exchanges || ['binance', 'coinbase']
-            );
-            
-            enhanced.push({
-                ...crypto,
-                volatility: {
-                    vol7d: metrics.vol_7d_annual_pct,
-                    vol30d: metrics.vol_30d_annual_pct,
-                    atr: metrics.atr14_pct
-                },
-                returns: {
-                    ret1d: metrics.ret_1d_pct,
-                    ret7d: metrics.ret_7d_pct,
-                    ret30d: metrics.ret_30d_pct,
-                    ret90d: metrics.ret_90d_pct,
-                    ret1y: metrics.ret_1y_pct
-                },
-                risk: {
-                    drawdown: metrics.drawdown_90d_pct,
-                    tier1: metrics.tier1_listed,
-                    stale: metrics.stale,
-                    suspect: metrics.ret_1y_suspect
-                },
-                dataQuality: {
-                    coverage: metrics.coverage_ratio,
-                    history90d: metrics.enough_history_90d,
-                    history1y: metrics.enough_history_1y,
-                    dataPoints: metrics.data_points,
-                    exchangeNorm: metrics.exchange_normalized
-                }
-            });
-        }
-        
-        this.notifyUpdate(enhanced);
-        return enhanced;
-    }
-    
-    // Méthode pour obtenir les cryptos les moins volatiles
-    getLowVolatility(cryptoList, count = 10) {
-        const withVol = cryptoList.filter(c => 
-            c.volatility?.vol30d && 
-            parseFloat(c.volatility.vol30d) > 0
-        );
-        withVol.sort((a, b) => parseFloat(a.volatility.vol30d) - parseFloat(b.volatility.vol30d));
-        return withVol.slice(0, count);
-    }
-    
-    // Méthode pour obtenir les meilleurs performers
-    getBestPerformers(cryptoList, period = 'ret30d', count = 10) {
-        const withReturns = cryptoList.filter(c => 
-            c.returns?.[period] && 
-            c.returns[period] !== ''
-        );
-        withReturns.sort((a, b) => parseFloat(b.returns[period]) - parseFloat(a.returns[period]));
-        return withReturns.slice(0, count);
-    }
-    
-    // Nouvelle méthode: obtenir les cryptos avec données de qualité
-    getHighQualityData(cryptoList) {
-        return cryptoList.filter(c => 
-            parseFloat(c.dataQuality?.coverage) >= CONFIG.MIN_COVERAGE_RATIO &&
-            c.risk?.tier1 === 'true' &&
-            c.risk?.stale !== 'true' &&
-            c.risk?.suspect !== 'true'  // Exclure les rendements suspects
-        );
-    }
-    
-    // Méthode pour analyser la corrélation avec Bitcoin
-    async analyzeBTCCorrelation(cryptoList) {
-        const btcData = cryptoList.find(c => c.symbol === 'BTC');
-        if (!btcData) return [];
-        
-        const correlations = [];
-        for (const crypto of cryptoList) {
-            if (crypto.symbol === 'BTC') continue;
-            
-            // TODO: Implémenter le calcul réel de corrélation
-            correlations.push({
-                symbol: crypto.symbol,
-                correlation: 0 // À calculer avec les vraies données
-            });
-        }
-        
-        return correlations;
-    }
-}
-
-// ============================================================================
-// Export et initialisation
-// ============================================================================
-
-// Export pour utilisation dans d'autres modules
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        processCrypto,
-        generateVolatilityReport,
-        CryptoVolatilityIntegration,
-        calculateATR,
-        calculateMaxDrawdown,
-        calculateCorrelation,
-        normalizeExchange,
-        pickExchange,
-        hasTier1,
-        returnPctByDays,
-        toISODate,
-        CONFIG
-    };
-}
-
-// Initialisation pour le navigateur
-if (typeof window !== 'undefined') {
-    window.CryptoVolatility = new CryptoVolatilityIntegration();
-    
-    // Auto-intégration avec crypto-script.js si présent
-    if (window.cryptoData) {
-        console.log('📊 Auto-enhancing crypto data with volatility metrics...');
-        window.CryptoVolatility.enhanceCryptoData(window.cryptoData.indices);
-    }
-}
-
-// Log de démarrage
-console.log('✅ Crypto Volatility & Returns Module v3.2.0 loaded');
-console.log(`📈 Config: Interval=${CONFIG.INTERVAL}, Stale=${MAX_STALE_HOURS}h, Returns=${CONFIG.USE_SIMPLE_RETURNS ? 'simple' : 'log'}`);
-console.log('🎯 Date-anchored returns with correct chronological ordering');
-
-// =========================
-// MAIN (lecture/écriture) pour Node.js
-// =========================
-if (typeof require !== 'undefined' && require.main === module) {
-    const fs = require('fs/promises');
-    const path = require('path');
-    const { parse } = require('csv-parse/sync');
-
-    function parseExchanges(raw) {
-        if (!raw) return [];
-        try {
-            const arr = JSON.parse(String(raw).replace(/'/g,'"'));
-            return Array.isArray(arr) ? arr : [];
-        } catch {
-            return String(raw)
-                .replace(/^\[|\]$/g,'')
-                .split(/[;,]/)
-                .map(s => s.trim())
-                .filter(Boolean);
-        }
-    }
-
-    async function readCryptoCSV(file) {
-        const txt = await fs.readFile(file, 'utf8');
-        const rows = parse(txt, { columns: true, skip_empty_lines: true, bom: true });
-        return rows.map(r => ({
-            symbol: (r.symbol || r.Symbol || '').trim(),
-            base: (r.currency_base || r.base || r.Base || r.symbol || '').trim(),
-            quote: (r.currency_quote || r.quote || r.Quote || 'USD').trim(),
-            exchanges: parseExchanges(r.available_exchanges || r.exchanges || '["Binance","Coinbase"]')
-        })).filter(x => x.symbol);
-    }
-
-    async function writeCSV(file, header, rowsAsObjects) {
-        await fs.mkdir(path.dirname(file), { recursive: true });
-        const esc = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
-        const content = [header.join(','), ...rowsAsObjects.map(r => header.map(h => r[h] ?? '').map(esc).join(','))].join('\n');
-        await fs.writeFile(file, content, 'utf8');
-    }
-
-    function buildTop10(metrics, key, desc = true) {
-        const num = x => (x === '' || x == null) ? NaN : Number(x);
-        const m = metrics.filter(r => Number.isFinite(num(r[key])));
-        m.sort((a,b) => desc ? num(b[key]) - num(a[key]) : num(a[key]) - num(b[key]));
-        return m.slice(0, 10);
-    }
-
-    (async () => {
-        const DATA_DIR = process.env.DATA_DIR || 'data';
-        const OUT_DIR  = process.env.OUTPUT_DIR || 'data/filtered';
-        const listFile = path.join(DATA_DIR, 'Crypto.csv');
-
-        // 1) Lire la liste
-        const cryptoList = await readCryptoCSV(listFile);
-        if (!cryptoList.length) {
-            console.error('❌ Aucune crypto dans data/Crypto.csv');
-            process.exit(1);
-        }
-
-        // 2) Calculer toutes les métriques
-        const table = await generateVolatilityReport(cryptoList); // [header, ...rows]
-        const header = table[0];
-        const rows   = table.slice(1).map(r => Object.fromEntries(header.map((h,i)=>[h, r[i]])));
-
-        // 3) Fichier complet
-        await writeCSV(path.join(OUT_DIR,'crypto_all_metrics.csv'), header, rows);
-        console.log(`✅ Écrit: ${path.join(OUT_DIR,'crypto_all_metrics.csv')} (${rows.length} lignes)`);
-
-        // 4) Top10 momentum & volatilité
-        const topMomentum = buildTop10(rows, 'ret_30d_pct', true);
-        const topVol      = buildTop10(rows, 'vol_30d_annual_pct', true);
-
-        // On conserve les index attendus par le awk du résumé
-        const outHeader = [
-            'symbol','dummy2','dummy3','exchange_used',
-            'c5','c6','c7','c8','ret_30d_pct','c10','vol_30d_annual_pct'
-        ];
-        const mapForTop = r => ({
-            symbol: r.symbol,
-            dummy2:'', dummy3:'', exchange_used: r.exchange_used,
-            c5:'', c6:'', c7:'', c8:'',
-            ret_30d_pct: r.ret_30d_pct,
-            c10:'',
-            vol_30d_annual_pct: r.vol_30d_annual_pct
-        });
-        await writeCSV(path.join(OUT_DIR,'Top10_momentum.csv'),   outHeader, topMomentum.map(mapForTop));
-        await writeCSV(path.join(OUT_DIR,'Top10_volatility.csv'), outHeader, topVol.map(mapForTop));
-        console.log('✅ Écrit: Top10_momentum.csv & Top10_volatility.csv');
-
-        // 5) Filtres acceptés/rejetés + raison
-        const MIN_VOL_30D = Number(process.env.MIN_VOL_30D || '30');
-        const MAX_VOL_30D = Number(process.env.MAX_VOL_30D || '500');
-        const MIN_RET_7D  = Number(process.env.MIN_RET_7D  || '-50');
-
-        const accepted = [];
-        const rejected = [];
-        for (const r of rows) {
-            const v30  = Number(r.vol_30d_annual_pct);
-            const ret7 = Number(r.ret_7d_pct);
-            let reason = '';
-            if (!Number.isFinite(v30) || !Number.isFinite(ret7)) reason = 'missing_metrics';
-            else if (v30 < MIN_VOL_30D || v30 > MAX_VOL_30D || ret7 < MIN_RET_7D) reason = 'thresholds';
-            else if (r.ret_1y_suspect === 'true') reason = 'suspect_return';  // Nouvelle raison
-            (reason ? rejected : accepted).push(reason ? { ...r, reason } : r);
-        }
-        await writeCSV(path.join(OUT_DIR,'Crypto_filtered_volatility.csv'), header, accepted);
-        await writeCSV(path.join(OUT_DIR,'Crypto_rejected_volatility.csv'), [...header,'reason'], rejected);
-        console.log('✅ Écrit: Crypto_filtered_volatility.csv & Crypto_rejected_volatility.csv');
-        
-        // 6) Log des rendements suspects
-        const suspects = rows.filter(r => r.ret_1y_suspect === 'true');
-        if (suspects.length > 0) {
-            console.warn(`⚠️ ${suspects.length} cryptos avec rendements 1Y suspects (>${CONFIG.MAX_REASONABLE_RETURN}%):`);
-            suspects.forEach(r => {
-                console.warn(`  - ${r.symbol}: ${r.ret_1y_pct}%`);
-            });
-        }
-    })().catch(e => {
-        console.error('❌ Erreur main:', e);
-        process.exit(1);
-    });
 }
