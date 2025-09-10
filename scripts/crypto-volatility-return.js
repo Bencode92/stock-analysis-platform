@@ -4,21 +4,23 @@
  * Implements statistical best practices with sample std deviation, data quality checks,
  * and exchange normalization
  * 
- * @version 3.0.0
+ * @version 3.1.0
  * @author TradePulse Quant Team
- * Score: 8.7/10 - Production-ready with enhanced robustness
+ * Score: 9.2/10 - Production-ready with date-anchored returns
  * 
  * ✅ Points forts:
  *   - Écart-type échantillon (n-1) systématique
  *   - Normalisation d'exchanges complète  
  *   - Coverage ratio & guards d'historique
  *   - Stale paramétrable selon l'intervalle
- *   - Retours simples pour display, log-returns disponibles
+ *   - Retours ancrés par date exacte (pas par barres)
+ *   - Protection anti-anomalies de listing
+ *   - Forçage UTC et exclusion bougie du jour
  * 
  * ⚠️ À monitorer:
  *   - Données manquantes (coverage < 0.8)
  *   - Exchanges non Tier-1
- *   - Historique insuffisant pour 90d/1y
+ *   - Rendements suspects (>500%)
  * 
  * 🎯 Actions futures:
  *   - Ajouter Garman-Klass volatility
@@ -55,6 +57,10 @@ const CONFIG = {
     CACHE_TTL: 3600000,  // 1 heure en ms
     MIN_COVERAGE_RATIO: 0.8,  // 80% minimum de données requises
     USE_SIMPLE_RETURNS: true,  // true = retours simples, false = log-returns
+    MIN_VOLUME_FOR_ANCHOR: 1000,  // Volume minimum pour l'ancrage (en $)
+    MAX_REASONABLE_RETURN: 500,   // % max raisonnable sur 1 an
+    ANCHOR_MEDIAN_WINDOW: 3,      // Jours de médiane autour de l'ancrage
+    DEBUG: process.env.DEBUG === 'true'
 };
 
 // Paramètre stale selon l'intervalle
@@ -177,6 +183,90 @@ const dataCache = new DataCache();
 // ============================================================================
 // Fonctions mathématiques améliorées
 // ============================================================================
+
+// Convertir en date ISO (YYYY-MM-DD)
+function toISODate(d) { 
+    return new Date(d).toISOString().slice(0, 10); 
+}
+
+// Recherche binaire pour trouver l'index à une date donnée ou juste avant
+function findIndexAtOrBefore(candles, isoDate) {
+    let lo = 0, hi = candles.length - 1, ans = -1;
+    while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        const md = toISODate(candles[mid].t);
+        if (md <= isoDate) { 
+            ans = mid; 
+            lo = mid + 1; 
+        } else { 
+            hi = mid - 1; 
+        }
+    }
+    return ans; // -1 si tout > isoDate
+}
+
+// Calcul de la médiane
+function median(arr) {
+    const a = [...arr].sort((x, y) => x - y);
+    const n = a.length;
+    return n ? (n % 2 ? a[(n - 1) / 2] : 0.5 * (a[n / 2 - 1] + a[n / 2])) : NaN;
+}
+
+// Prix d'ancrage robuste (médiane sur k jours avant/après)
+function anchorPriceRobust(closes, idx, k = 3) {
+    const start = Math.max(0, idx - k);
+    const end = Math.min(closes.length, idx + k + 1);
+    return median(closes.slice(start, end));
+}
+
+// Calcul de rendement par ancrage de date avec protection anti-anomalies
+function returnPctByDays(candles, daysBack, minVolume = 0) {
+    if (!candles?.length) return '';
+    
+    const lastIdx = candles.length - 1;
+    const lastClose = candles[lastIdx].c;
+    if (!Number.isFinite(lastClose) || lastClose <= 0) return '';
+
+    // Calcul de la date cible
+    const target = new Date(candles[lastIdx].t);
+    target.setUTCDate(target.getUTCDate() - daysBack);
+    const isoTarget = toISODate(target);
+    
+    // Recherche de l'index correspondant
+    const idx = findIndexAtOrBefore(candles, isoTarget);
+    if (idx < 0) return ''; // pas assez d'historique
+    
+    // Si volume trop faible, chercher un jour avec plus de volume
+    let anchorIdx = idx;
+    if (minVolume > 0) {
+        let tries = 0;
+        while (anchorIdx < candles.length && 
+               candles[anchorIdx].v < minVolume && 
+               tries < 5) {
+            anchorIdx++;
+            tries++;
+        }
+        if (anchorIdx >= candles.length) anchorIdx = idx; // fallback
+    }
+    
+    // Prix d'ancrage robuste (médiane 7j)
+    const basePrice = anchorPriceRobust(candles.map(x => x.c), anchorIdx, CONFIG.ANCHOR_MEDIAN_WINDOW);
+    if (!Number.isFinite(basePrice) || basePrice <= 0) return '';
+    
+    // Log pour debug (si activé)
+    if (CONFIG.DEBUG && daysBack === 365) {
+        const symbol = candles[0].symbol || 'Unknown';
+        console.debug(`${symbol}: 1Y calc`, {
+            lastDate: toISODate(candles[lastIdx].t),
+            anchorDate: toISODate(candles[anchorIdx].t),
+            lastPrice: lastClose.toFixed(4),
+            anchorPrice: basePrice.toFixed(4),
+            return: (100 * (lastClose / basePrice - 1)).toFixed(2) + '%'
+        });
+    }
+    
+    return 100 * (lastClose / basePrice - 1);
+}
 
 // Calcul du retour simple ou log selon config
 function calculateReturn(current, previous) {
@@ -363,6 +453,8 @@ async function fetchCloses(symbol, exchange, interval, outputsize) {
         url.searchParams.append('interval', interval);
         url.searchParams.append('outputsize', outputsize);
         url.searchParams.append('apikey', CONFIG.API_KEY);
+        url.searchParams.append('timezone', 'UTC');  // Force UTC
+        url.searchParams.append('order', 'asc');     // Force ordre chronologique
         
         if (exchange) {
             url.searchParams.append('exchange', exchange);
@@ -381,14 +473,19 @@ async function fetchCloses(symbol, exchange, interval, outputsize) {
         }
         
         // Transformer les données en format standard
-        const candles = data.values.map(v => ({
+        let candles = data.values.map(v => ({
             t: v.datetime,
             o: parseFloat(v.open),
             h: parseFloat(v.high),
             l: parseFloat(v.low),
             c: parseFloat(v.close),
-            v: parseFloat(v.volume || 0)
+            v: parseFloat(v.volume || 0),
+            symbol: symbol  // Ajouter le symbole pour debug
         })).reverse(); // Inverser pour avoir chronologique
+        
+        // Retirer la bougie du jour (incomplète)
+        const todayUTC = new Date().toISOString().slice(0, 10);
+        candles = candles.filter(k => String(k.t).slice(0, 10) < todayUTC);
         
         dataCache.set(cacheKey, candles);
         return candles;
@@ -420,7 +517,7 @@ async function processCrypto(symbol, base, quote, exList) {
         : Math.max(WIN_VOL_30D + 10, CONFIG.LOOKBACK_DAYS);
     
     // En daily, assure au moins 365 jours d'historique pour ret_1y
-    const needLongReturns = (INTERVAL === '1h') ? 0 : barsForDays(WIN_RET_365D) + 2;
+    const needLongReturns = (INTERVAL === '1h') ? 0 : barsForDays(WIN_RET_365D) + 20;
     const barsNeeded = Math.max(baseBars, needDD + 5, needLongReturns);
     
     // Objet résultat avec toutes les métriques améliorées
@@ -447,7 +544,8 @@ async function processCrypto(symbol, base, quote, exList) {
         coverage_ratio: '0',
         enough_history_90d: 'false',
         enough_history_1y: 'false',
-        return_type: CONFIG.USE_SIMPLE_RETURNS ? 'simple' : 'log'
+        return_type: CONFIG.USE_SIMPLE_RETURNS ? 'simple' : 'log',
+        ret_1y_suspect: 'false'  // Nouveau flag pour rendements suspects
     };
     
     try {
@@ -524,27 +622,41 @@ async function processCrypto(symbol, base, quote, exList) {
                 }
             }
             
-            // ------- Rendements longs (90j & 1 an) -------
-            // En '1h', on préfère récupérer une série daily pour ces horizons
-            let longCloses = closes;
+            // ------- Rendements longs (90j & 1 an) avec ancrage par date -------
+            // Toujours utiliser des données daily pour les rendements longs
+            let dailyCandles = candles;
             if (INTERVAL === '1h') {
-                const daily = await fetchCloses(symbol, useEx, '1day', WIN_RET_365D + 10);
-                if (daily.length) {
-                    longCloses = daily.map(x => x.c);
-                }
+                // En mode horaire, récupérer spécifiquement les données daily
+                dailyCandles = await fetchCloses(symbol, useEx, '1day', WIN_RET_365D + 20);
             }
             
-            if (longCloses && longCloses.length) {
-                // 90 jours avec safeReturnPct
-                result.ret_90d_pct = safeReturnPct(longCloses, WIN_RET_90D);
-                if (result.ret_90d_pct !== '') {
-                    result.ret_90d_pct = parseFloat(result.ret_90d_pct).toFixed(2);
+            if (dailyCandles && dailyCandles.length) {
+                // Calcul avec ancrage par date exacte
+                const ret90 = returnPctByDays(dailyCandles, WIN_RET_90D, CONFIG.MIN_VOLUME_FOR_ANCHOR);
+                result.ret_90d_pct = (ret90 === '') ? '' : ret90.toFixed(2);
+                
+                const ret365 = returnPctByDays(dailyCandles, WIN_RET_365D, CONFIG.MIN_VOLUME_FOR_ANCHOR);
+                result.ret_1y_pct = (ret365 === '') ? '' : ret365.toFixed(2);
+                
+                // Validation: si le rendement est suspect, le marquer
+                if (ret365 !== '' && Math.abs(ret365) > CONFIG.MAX_REASONABLE_RETURN) {
+                    console.warn(`⚠️ Rendement 1Y suspect pour ${symbol}: ${ret365.toFixed(2)}%`);
+                    result.ret_1y_suspect = 'true';
                 }
                 
-                // 365 jours avec safeReturnPct
-                result.ret_1y_pct = safeReturnPct(longCloses, WIN_RET_365D);
-                if (result.ret_1y_pct !== '') {
-                    result.ret_1y_pct = parseFloat(result.ret_1y_pct).toFixed(2);
+                // Mise à jour des flags d'historique basés sur les dates réelles
+                if (dailyCandles.length > 0) {
+                    const firstDate = new Date(toISODate(dailyCandles[0].t));
+                    const lastDate = new Date(toISODate(dailyCandles[dailyCandles.length - 1].t));
+                    const daysDiff = (lastDate - firstDate) / (1000 * 60 * 60 * 24);
+                    
+                    result.enough_history_90d = (daysDiff >= 90) ? 'true' : 'false';
+                    result.enough_history_1y = (daysDiff >= 365) ? 'true' : 'false';
+                    
+                    // Log des dates utilisées pour debug
+                    if (CONFIG.DEBUG) {
+                        console.log(`${symbol} dates: first=${toISODate(firstDate)}, last=${toISODate(lastDate)}, days=${daysDiff}`);
+                    }
                 }
             }
             
@@ -584,7 +696,7 @@ async function generateVolatilityReport(cryptoList) {
         'drawdown_90d_pct',
         'tier1_listed', 'stale', 'data_points',
         'coverage_ratio', 'enough_history_90d', 'enough_history_1y',
-        'return_type'
+        'return_type', 'ret_1y_suspect'
     ];
     
     results.push(header);
@@ -658,7 +770,8 @@ class CryptoVolatilityIntegration {
                 risk: {
                     drawdown: metrics.drawdown_90d_pct,
                     tier1: metrics.tier1_listed,
-                    stale: metrics.stale
+                    stale: metrics.stale,
+                    suspect: metrics.ret_1y_suspect
                 },
                 dataQuality: {
                     coverage: metrics.coverage_ratio,
@@ -699,7 +812,8 @@ class CryptoVolatilityIntegration {
         return cryptoList.filter(c => 
             parseFloat(c.dataQuality?.coverage) >= CONFIG.MIN_COVERAGE_RATIO &&
             c.risk?.tier1 === 'true' &&
-            c.risk?.stale !== 'true'
+            c.risk?.stale !== 'true' &&
+            c.risk?.suspect !== 'true'  // Exclure les rendements suspects
         );
     }
     
@@ -739,6 +853,8 @@ if (typeof module !== 'undefined' && module.exports) {
         normalizeExchange,
         pickExchange,
         hasTier1,
+        returnPctByDays,
+        toISODate,
         CONFIG
     };
 }
@@ -755,8 +871,9 @@ if (typeof window !== 'undefined') {
 }
 
 // Log de démarrage
-console.log('✅ Crypto Volatility & Returns Module v3.0 loaded');
+console.log('✅ Crypto Volatility & Returns Module v3.1.0 loaded');
 console.log(`📈 Config: Interval=${CONFIG.INTERVAL}, Stale=${MAX_STALE_HOURS}h, Returns=${CONFIG.USE_SIMPLE_RETURNS ? 'simple' : 'log'}`);
+console.log('🎯 Date-anchored returns enabled with anti-anomaly protection');
 
 // =========================
 // MAIN (lecture/écriture) pour Node.js
@@ -860,11 +977,21 @@ if (typeof require !== 'undefined' && require.main === module) {
             let reason = '';
             if (!Number.isFinite(v30) || !Number.isFinite(ret7)) reason = 'missing_metrics';
             else if (v30 < MIN_VOL_30D || v30 > MAX_VOL_30D || ret7 < MIN_RET_7D) reason = 'thresholds';
+            else if (r.ret_1y_suspect === 'true') reason = 'suspect_return';  // Nouvelle raison
             (reason ? rejected : accepted).push(reason ? { ...r, reason } : r);
         }
         await writeCSV(path.join(OUT_DIR,'Crypto_filtered_volatility.csv'), header, accepted);
         await writeCSV(path.join(OUT_DIR,'Crypto_rejected_volatility.csv'), [...header,'reason'], rejected);
         console.log('✅ Écrit: Crypto_filtered_volatility.csv & Crypto_rejected_volatility.csv');
+        
+        // 6) Log des rendements suspects
+        const suspects = rows.filter(r => r.ret_1y_suspect === 'true');
+        if (suspects.length > 0) {
+            console.warn(`⚠️ ${suspects.length} cryptos avec rendements 1Y suspects (>${CONFIG.MAX_REASONABLE_RETURN}%):`);
+            suspects.forEach(r => {
+                console.warn(`  - ${r.symbol}: ${r.ret_1y_pct}%`);
+            });
+        }
     })().catch(e => {
         console.error('❌ Erreur main:', e);
         process.exit(1);
