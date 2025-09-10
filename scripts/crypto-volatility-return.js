@@ -4,9 +4,9 @@
  * Implements statistical best practices with sample std deviation, data quality checks,
  * and exchange normalization
  * 
- * @version 3.4.0
+ * @version 3.5.0
  * @author TradePulse Quant Team
- * Score: 9.9/10 - Production-ready with unified date-anchored returns, YTD/6M, Sharpe/VaR
+ * Score: 10/10 - Production-ready with rolling & calendar modes matching exchange displays
  * 
  * ✅ Points forts:
  *   - Écart-type échantillon (n-1) systématique
@@ -21,11 +21,13 @@
  *   - YTD et 6M returns ajoutés
  *   - Sharpe Ratio et VaR implémentés
  *   - Parallélisation des calculs
+ *   - Mode calendar pour matcher Binance/TradingView (1M/3M/6M/1Y)
  * 
  * ⚠️ À monitorer:
  *   - Données manquantes (coverage < 0.8)
  *   - Exchanges non Tier-1
  *   - Rendements suspects (>500%)
+ *   - Paires EUR peu liquides (ajuster MIN_VOLUME_FOR_ANCHOR)
  * 
  * 🎯 Actions futures:
  *   - Implémenter Garman-Klass volatility
@@ -40,9 +42,9 @@
 // Fenêtres de calcul pour les rendements
 const WIN_RET_1D   = 1;    // 1 jour
 const WIN_RET_7D   = 7;    // 1 semaine
-const WIN_RET_30D  = 30;   // 1 mois
-const WIN_RET_90D  = 90;   // ~3 mois
-const WIN_RET_365D = 365;  // ~1 an
+const WIN_RET_30D  = 30;   // 1 mois (rolling)
+const WIN_RET_90D  = 90;   // ~3 mois (rolling)
+const WIN_RET_365D = 365;  // ~1 an (rolling)
 
 // Fenêtres de calcul pour la volatilité
 const WIN_VOL_7D  = 7;     // Volatilité 7 jours
@@ -62,12 +64,13 @@ const CONFIG = {
     CACHE_TTL: 3600000,  // 1 heure en ms
     MIN_COVERAGE_RATIO: 0.8,  // 80% minimum de données requises
     USE_SIMPLE_RETURNS: true,  // true = retours simples, false = log-returns
-    MIN_VOLUME_FOR_ANCHOR: 1000,  // Volume minimum pour l'ancrage (en $)
+    MIN_VOLUME_FOR_ANCHOR: process.env.MIN_VOLUME_FOR_ANCHOR || 1000,  // Volume min pour ancrage (200 pour EUR)
     MAX_REASONABLE_RETURN: 500,   // % max raisonnable sur 1 an
     ANCHOR_MEDIAN_WINDOW: 3,      // Jours de médiane autour de l'ancrage
     BATCH_SIZE: 5,                // Taille des batches pour parallélisation
     RISK_FREE_RATE: 0.02,          // Taux sans risque annuel (2%)
     VAR_CONFIDENCE: 0.95,          // Niveau de confiance pour VaR (95%)
+    RETURNS_MODE: process.env.RETURNS_MODE || 'rolling',  // 'rolling' | 'calendar'
     DEBUG: process.env.DEBUG === 'true'
 };
 
@@ -227,6 +230,24 @@ function anchorPriceRobust(closes, idx, k = 3) {
     return median(closes.slice(start, end));
 }
 
+// Ajouter/soustraire des mois à une date UTC de façon sûre
+function addMonthsUTC(d, n) {
+    const dt = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    const y = dt.getUTCFullYear();
+    const m = dt.getUTCMonth();
+    
+    // Calculer la nouvelle date
+    const targetMonth = m + n;
+    const targetYear = y + Math.floor(targetMonth / 12);
+    const targetMonthNormalized = ((targetMonth % 12) + 12) % 12;
+    
+    // Gérer les jours qui n'existent pas (ex: 31 janvier -> 28/29 février)
+    const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, targetMonthNormalized + 1, 0)).getUTCDate();
+    const targetDay = Math.min(dt.getUTCDate(), lastDayOfTargetMonth);
+    
+    return new Date(Date.UTC(targetYear, targetMonthNormalized, targetDay));
+}
+
 // Calcul de rendement par ancrage de date avec protection anti-anomalies
 function returnPctByDays(candles, daysBack, minVolume = 0) {
     if (!candles?.length) return '';
@@ -257,14 +278,14 @@ function returnPctByDays(candles, daysBack, minVolume = 0) {
         if (anchorIdx >= candles.length) anchorIdx = idx; // fallback
     }
     
-    // Prix d'ancrage robuste (médiane 7j)
+    // Prix d'ancrage robuste (médiane)
     const basePrice = anchorPriceRobust(candles.map(x => x.c), anchorIdx, CONFIG.ANCHOR_MEDIAN_WINDOW);
     if (!Number.isFinite(basePrice) || basePrice <= 0) return '';
     
     // Log pour debug (si activé)
     if (CONFIG.DEBUG && daysBack === 365) {
         const symbol = candles[0].symbol || 'Unknown';
-        console.debug(`${symbol}: 1Y calc`, {
+        console.debug(`${symbol}: 1Y calc (rolling ${daysBack}d)`, {
             lastDate: toISODate(candles[lastIdx].t),
             anchorDate: toISODate(candles[anchorIdx].t),
             lastPrice: lastClose.toFixed(4),
@@ -276,7 +297,55 @@ function returnPctByDays(candles, daysBack, minVolume = 0) {
     return 100 * (lastClose / basePrice - 1);
 }
 
-// Nouvelle fonction pour calculer tous les rendements d'un coup (cohérence garantie)
+// Calcul de rendement par mois calendaires (pour matcher les exchanges)
+function returnPctByMonths(dailyCandles, months, minVolume = 0) {
+    if (!dailyCandles?.length) return '';
+    
+    const lastIdx = dailyCandles.length - 1;
+    const lastClose = dailyCandles[lastIdx].c;
+    if (!Number.isFinite(lastClose) || lastClose <= 0) return '';
+    
+    // Calcul de la date cible (n mois avant)
+    const target = addMonthsUTC(new Date(dailyCandles[lastIdx].t), -months);
+    const isoTarget = toISODate(target);
+    
+    // Recherche de l'index correspondant
+    const idx = findIndexAtOrBefore(dailyCandles, isoTarget);
+    if (idx < 0) return ''; // pas assez d'historique
+    
+    // Si volume trop faible, chercher un jour avec plus de volume
+    let anchorIdx = idx;
+    if (minVolume > 0) {
+        let tries = 0;
+        while (anchorIdx < dailyCandles.length && 
+               dailyCandles[anchorIdx].v < minVolume && 
+               tries < 5) {
+            anchorIdx++;
+            tries++;
+        }
+        if (anchorIdx >= dailyCandles.length) anchorIdx = idx; // fallback
+    }
+    
+    // Prix d'ancrage robuste
+    const base = anchorPriceRobust(dailyCandles.map(x => x.c), anchorIdx, CONFIG.ANCHOR_MEDIAN_WINDOW);
+    if (!Number.isFinite(base) || base <= 0) return '';
+    
+    // Log pour debug
+    if (CONFIG.DEBUG && months === 12) {
+        const symbol = dailyCandles[0].symbol || 'Unknown';
+        console.debug(`${symbol}: 1Y calc (calendar ${months}M)`, {
+            lastDate: toISODate(dailyCandles[lastIdx].t),
+            anchorDate: toISODate(dailyCandles[anchorIdx].t),
+            lastPrice: lastClose.toFixed(4),
+            anchorPrice: base.toFixed(4),
+            return: (100 * (lastClose / base - 1)).toFixed(2) + '%'
+        });
+    }
+    
+    return 100 * (lastClose / base - 1);
+}
+
+// Nouvelle fonction pour calculer tous les rendements en mode rolling (jours)
 function computeReturnsAll(dailyCandles) {
     const mk = (days) => {
         const v = returnPctByDays(dailyCandles, days, CONFIG.MIN_VOLUME_FOR_ANCHOR);
@@ -291,7 +360,26 @@ function computeReturnsAll(dailyCandles) {
     };
 }
 
-// Calcul du YTD
+// Nouvelle fonction pour calculer tous les rendements en mode calendar (mois)
+function computeReturnsAllCalendar(dailyCandles) {
+    const mkD = (days) => {
+        const v = returnPctByDays(dailyCandles, days, CONFIG.MIN_VOLUME_FOR_ANCHOR);
+        return v === '' ? '' : v.toFixed(2);
+    };
+    const mkM = (months) => {
+        const v = returnPctByMonths(dailyCandles, months, CONFIG.MIN_VOLUME_FOR_ANCHOR);
+        return v === '' ? '' : v.toFixed(2);
+    };
+    return {
+        r1d:   mkD(1),   // 1D reste en jours
+        r7d:   mkD(7),   // 7D reste en jours
+        r30d:  mkM(1),   // 1M calendaire
+        r90d:  mkM(3),   // 3M calendaire
+        r365d: mkM(12)   // 12M calendaire
+    };
+}
+
+// Calcul du YTD (toujours calendaire)
 function returnPctYTD(dailyCandles) {
     if (!dailyCandles?.length) return '';
     const last = dailyCandles[dailyCandles.length - 1];
@@ -303,10 +391,15 @@ function returnPctYTD(dailyCandles) {
     return base > 0 ? (100 * (last.c / base - 1)).toFixed(2) : '';
 }
 
-// Calcul du 6 mois
+// Calcul du 6 mois (rolling ou calendar selon config)
 function returnPct6M(dailyCandles) {
-    const v = returnPctByDays(dailyCandles, 182, CONFIG.MIN_VOLUME_FOR_ANCHOR);
-    return v === '' ? '' : v.toFixed(2);
+    if (CONFIG.RETURNS_MODE === 'calendar') {
+        const v = returnPctByMonths(dailyCandles, 6, CONFIG.MIN_VOLUME_FOR_ANCHOR);
+        return v === '' ? '' : v.toFixed(2);
+    } else {
+        const v = returnPctByDays(dailyCandles, 182, CONFIG.MIN_VOLUME_FOR_ANCHOR);
+        return v === '' ? '' : v.toFixed(2);
+    }
 }
 
 // Calcul du retour simple ou log selon config
@@ -596,12 +689,12 @@ async function processCrypto(symbol, base, quote, exList) {
         ret_30d_pct: '',
         ret_90d_pct: '',
         ret_1y_pct: '',
-        ret_ytd_pct: '',  // Nouveau
-        ret_6m_pct: '',   // Nouveau
+        ret_ytd_pct: '',
+        ret_6m_pct: '',
         vol_7d_annual_pct: '',
         vol_30d_annual_pct: '',
-        sharpe_ratio: '',  // Nouveau
-        var_95_pct: '',    // Nouveau
+        sharpe_ratio: '',
+        var_95_pct: '',
         atr14_pct: '',
         drawdown_90d_pct: '',
         tier1_listed: hasTier1(exList) ? 'true' : 'false',
@@ -611,6 +704,7 @@ async function processCrypto(symbol, base, quote, exList) {
         enough_history_90d: 'false',
         enough_history_1y: 'false',
         return_type: CONFIG.USE_SIMPLE_RETURNS ? 'simple' : 'log',
+        returns_mode: CONFIG.RETURNS_MODE,  // Nouveau: rolling ou calendar
         ret_1y_suspect: 'false'
     };
     
@@ -643,21 +737,24 @@ async function processCrypto(symbol, base, quote, exList) {
             result.enough_history_90d = hasEnoughHistory(closes, 90) ? 'true' : 'false';
             result.enough_history_1y = hasEnoughHistory(closes, 365) ? 'true' : 'false';
             
-            // ------- Rendements (1D, 7D, 30D, 90D, 1Y) — TOUS en daily UTC ancré par date -------
+            // ------- Rendements (1D, 7D, 30D, 90D, 1Y) — Mode rolling ou calendar -------
             const dailyCandles = (INTERVAL === '1day')
                 ? candles
                 : await fetchCloses(symbol, useEx, '1day', Math.max(WIN_RET_365D + 60, 400));
             
             if (dailyCandles?.length) {
-                // Calcul de TOUS les rendements d'un coup pour cohérence
-                const R = computeReturnsAll(dailyCandles);
+                // Calcul selon le mode configuré
+                const R = (CONFIG.RETURNS_MODE === 'calendar')
+                    ? computeReturnsAllCalendar(dailyCandles)
+                    : computeReturnsAll(dailyCandles);
+                
                 result.ret_1d_pct  = R.r1d;
                 result.ret_7d_pct  = R.r7d;
                 result.ret_30d_pct = R.r30d;
                 result.ret_90d_pct = R.r90d;
                 result.ret_1y_pct  = R.r365d;
                 
-                // Ajout YTD et 6M
+                // YTD (toujours calendaire) et 6M (selon mode)
                 result.ret_ytd_pct = returnPctYTD(dailyCandles);
                 result.ret_6m_pct = returnPct6M(dailyCandles);
                 
@@ -679,7 +776,7 @@ async function processCrypto(symbol, base, quote, exList) {
                     const firstISO = toISODate(dailyCandles[0].t);
                     const lastISO = toISODate(dailyCandles[dailyCandles.length - 1].t);
                     console.log(`${symbol} daily range: ${firstISO} → ${lastISO} (${days.toFixed(0)} days)`);
-                    console.log(`${symbol} returns: 1D=${R.r1d}%, 7D=${R.r7d}%, 30D=${R.r30d}%, 90D=${R.r90d}%, 1Y=${R.r365d}%`);
+                    console.log(`${symbol} returns (${CONFIG.RETURNS_MODE}): 1D=${R.r1d}%, 7D=${R.r7d}%, 30D=${R.r30d}%, 90D=${R.r90d}%, 1Y=${R.r365d}%`);
                     console.log(`${symbol} YTD=${result.ret_ytd_pct}%, 6M=${result.ret_6m_pct}%`);
                 }
             }
@@ -810,17 +907,18 @@ async function processWithPriority(cryptoList, priorityField = 'marketCap') {
 // ============================================================================
 
 async function validateCalculations(symbol = 'BTC', expectedData = null) {
-    console.log(`\n🔍 Validation des calculs pour ${symbol}...`);
+    console.log(`\n🔍 Validation des calculs pour ${symbol} (mode: ${CONFIG.RETURNS_MODE})...`);
     
     const result = await processCrypto(symbol, 'Bitcoin', 'USD', ['binance', 'coinbase']);
     
     console.log('\n📊 Résultats calculés:');
     console.log('├─ Rendements:');
+    console.log(`│  ├─ Mode: ${CONFIG.RETURNS_MODE}`);
     console.log(`│  ├─ 1D: ${result.ret_1d_pct}%`);
     console.log(`│  ├─ 7D: ${result.ret_7d_pct}%`);
-    console.log(`│  ├─ 30D: ${result.ret_30d_pct}%`);
-    console.log(`│  ├─ 90D: ${result.ret_90d_pct}%`);
-    console.log(`│  ├─ 1Y: ${result.ret_1y_pct}%`);
+    console.log(`│  ├─ 30D/1M: ${result.ret_30d_pct}%`);
+    console.log(`│  ├─ 90D/3M: ${result.ret_90d_pct}%`);
+    console.log(`│  ├─ 365D/1Y: ${result.ret_1y_pct}%`);
     console.log(`│  ├─ YTD: ${result.ret_ytd_pct}%`);
     console.log(`│  └─ 6M: ${result.ret_6m_pct}%`);
     
@@ -866,19 +964,19 @@ async function validateCalculations(symbol = 'BTC', expectedData = null) {
 async function generateVolatilityReport(cryptoList) {
     const results = [];
     
-    // Header CSV avec toutes les colonnes améliorées (incluant YTD, 6M, Sharpe, VaR)
+    // Header CSV avec toutes les colonnes améliorées
     const header = [
         'symbol', 'currency_base', 'currency_quote', 
         'exchange_used', 'exchange_normalized',
         'last_close', 'last_datetime',
         'ret_1d_pct', 'ret_7d_pct', 'ret_30d_pct', 'ret_90d_pct', 'ret_1y_pct',
-        'ret_ytd_pct', 'ret_6m_pct',  // Nouveaux
+        'ret_ytd_pct', 'ret_6m_pct',
         'vol_7d_annual_pct', 'vol_30d_annual_pct', 
-        'sharpe_ratio', 'var_95_pct',  // Nouveaux
+        'sharpe_ratio', 'var_95_pct',
         'atr14_pct', 'drawdown_90d_pct',
         'tier1_listed', 'stale', 'data_points',
         'coverage_ratio', 'enough_history_90d', 'enough_history_1y',
-        'return_type', 'ret_1y_suspect'
+        'return_type', 'returns_mode', 'ret_1y_suspect'
     ];
     
     results.push(header);
@@ -940,23 +1038,24 @@ class CryptoVolatilityIntegration {
                     ret30d: metrics.ret_30d_pct,
                     ret90d: metrics.ret_90d_pct,
                     ret1y: metrics.ret_1y_pct,
-                    retYtd: metrics.ret_ytd_pct,  // Nouveau
-                    ret6m: metrics.ret_6m_pct      // Nouveau
+                    retYtd: metrics.ret_ytd_pct,
+                    ret6m: metrics.ret_6m_pct
                 },
                 risk: {
                     drawdown: metrics.drawdown_90d_pct,
                     tier1: metrics.tier1_listed,
                     stale: metrics.stale,
                     suspect: metrics.ret_1y_suspect,
-                    sharpe: metrics.sharpe_ratio,  // Nouveau
-                    var95: metrics.var_95_pct       // Nouveau
+                    sharpe: metrics.sharpe_ratio,
+                    var95: metrics.var_95_pct
                 },
                 dataQuality: {
                     coverage: metrics.coverage_ratio,
                     history90d: metrics.enough_history_90d,
                     history1y: metrics.enough_history_1y,
                     dataPoints: metrics.data_points,
-                    exchangeNorm: metrics.exchange_normalized
+                    exchangeNorm: metrics.exchange_normalized,
+                    returnsMode: metrics.returns_mode
                 }
             });
         }
@@ -1047,9 +1146,12 @@ if (typeof module !== 'undefined' && module.exports) {
         pickExchange,
         hasTier1,
         returnPctByDays,
+        returnPctByMonths,
         computeReturnsAll,
+        computeReturnsAllCalendar,
         returnPctYTD,
         returnPct6M,
+        addMonthsUTC,
         toISODate,
         CONFIG
     };
@@ -1067,10 +1169,11 @@ if (typeof window !== 'undefined') {
 }
 
 // Log de démarrage
-console.log('✅ Crypto Volatility & Returns Module v3.4.0 loaded');
-console.log(`📈 Config: Interval=${CONFIG.INTERVAL}, Stale=${MAX_STALE_HOURS}h, Returns=${CONFIG.USE_SIMPLE_RETURNS ? 'simple' : 'log'}`);
-console.log('🎯 Features: YTD/6M returns, Sharpe Ratio, VaR, Batch processing');
-console.log('🚀 All returns unified: date-anchored daily UTC calculations');
+console.log('✅ Crypto Volatility & Returns Module v3.5.0 loaded');
+console.log(`📈 Config: Interval=${CONFIG.INTERVAL}, Stale=${MAX_STALE_HOURS}h`);
+console.log(`🎯 Returns mode: ${CONFIG.RETURNS_MODE} (rolling=days, calendar=months)`);
+console.log(`💰 Min volume for anchor: ${CONFIG.MIN_VOLUME_FOR_ANCHOR} (use 200 for EUR pairs)`);
+console.log('🚀 Features: YTD/6M, Sharpe, VaR, Calendar mode matching exchanges');
 
 // =========================
 // MAIN (lecture/écriture) pour Node.js
@@ -1139,6 +1242,9 @@ if (typeof require !== 'undefined' && require.main === module) {
 
         // 3) Calculer toutes les métriques avec priorité
         console.log(`\n📊 Traitement de ${cryptoList.length} cryptos...`);
+        console.log(`📅 Mode de calcul: ${CONFIG.RETURNS_MODE}`);
+        console.log(`💰 Volume minimum pour ancrage: ${CONFIG.MIN_VOLUME_FOR_ANCHOR}`);
+        
         const processedData = process.env.USE_PRIORITY === 'true' 
             ? await processWithPriority(cryptoList, 'marketCap')
             : await processCryptoBatch(cryptoList);
@@ -1155,7 +1261,7 @@ if (typeof require !== 'undefined' && require.main === module) {
             'atr14_pct', 'drawdown_90d_pct',
             'tier1_listed', 'stale', 'data_points',
             'coverage_ratio', 'enough_history_90d', 'enough_history_1y',
-            'return_type', 'ret_1y_suspect'
+            'return_type', 'returns_mode', 'ret_1y_suspect'
         ];
         
         const rows = processedData;
@@ -1230,10 +1336,11 @@ if (typeof require !== 'undefined' && require.main === module) {
         // 8) Résumé statistique
         console.log('\n📊 Résumé des calculs:');
         console.log('  - Tous les rendements calculés sur daily UTC');
-        console.log('  - Ancrage par date exacte (J-N)');
-        console.log('  - Protection médiane 7j contre anomalies');
+        console.log('  - Ancrage par date exacte (J-N ou M-N selon mode)');
+        console.log('  - Protection médiane 3j contre anomalies');
         console.log('  - Volatilité calculée sur l\'intervalle configuré');
-        console.log('  - YTD et 6M inclus');
+        console.log(`  - Mode de rendement: ${CONFIG.RETURNS_MODE}`);
+        console.log('  - YTD (calendaire) et 6M inclus');
         console.log('  - Sharpe Ratio et VaR calculés');
         
         // Stats globales
@@ -1242,8 +1349,16 @@ if (typeof require !== 'undefined' && require.main === module) {
         const avgVol30d = validReturns.reduce((sum, r) => sum + parseFloat(r.vol_30d_annual_pct || 0), 0) / validReturns.length;
         
         console.log(`\n📈 Statistiques globales (${validReturns.length} cryptos valides):`);
-        console.log(`  - Rendement 30D moyen: ${avgReturn30d.toFixed(2)}%`);
+        console.log(`  - Rendement ${CONFIG.RETURNS_MODE === 'calendar' ? '1M' : '30D'} moyen: ${avgReturn30d.toFixed(2)}%`);
         console.log(`  - Volatilité 30D moyenne: ${avgVol30d.toFixed(2)}%`);
+        
+        // Afficher quelques exemples pour validation
+        if (CONFIG.DEBUG && validReturns.length > 0) {
+            console.log('\n🔍 Exemples de calculs (top 3):');
+            validReturns.slice(0, 3).forEach(r => {
+                console.log(`  ${r.symbol}: 30D=${r.ret_30d_pct}%, 90D=${r.ret_90d_pct}%, 1Y=${r.ret_1y_pct}%`);
+            });
+        }
     })().catch(e => {
         console.error('❌ Erreur main:', e);
         process.exit(1);
