@@ -4,7 +4,7 @@
  * Implements statistical best practices with sample std deviation, data quality checks,
  * and exchange normalization
  * 
- * @version 3.6.0
+ * @version 3.6.1
  * @author TradePulse Quant Team
  * Score: 10/10 - Perfect exchange matching with calendar mode and exact anchoring
  * 
@@ -24,7 +24,7 @@
  *   - Exchanges non Tier-1
  *   - Rendements suspects (>500%)
  * 
- * 🎯 Usage optimal pour matcher les exchanges:
+ * 🎯 Configuration optimale pour matcher les exchanges:
  *   RETURNS_MODE=calendar (1M/3M/6M/1Y comme Binance)
  *   ANCHOR_MEDIAN_WINDOW=0 (ancrage exact)
  *   MIN_VOLUME_FOR_ANCHOR=0 (pas de décalage)
@@ -46,7 +46,7 @@ const WIN_RET_365D = 365;  // ~1 an (rolling) ou 1Y (calendar)
 const WIN_VOL_7D  = 7;     // Volatilité 7 jours
 const WIN_VOL_30D = 30;    // Volatilité 30 jours
 
-// Configuration par défaut
+// Configuration par défaut - MODIFIÉE POUR MATCHER LES EXCHANGES
 const CONFIG = {
     INTERVAL: process.env.VOL_INTERVAL || '1day',  // '1h' ou '1day'
     LOOKBACK_DAYS: 90,
@@ -60,14 +60,14 @@ const CONFIG = {
     CACHE_TTL: 3600000,  // 1 heure en ms
     MIN_COVERAGE_RATIO: 0.8,  // 80% minimum de données requises
     USE_SIMPLE_RETURNS: true,  // true = retours simples, false = log-returns
-    MIN_VOLUME_FOR_ANCHOR: Number(process.env.MIN_VOLUME_FOR_ANCHOR ?? 1000),
+    MIN_VOLUME_FOR_ANCHOR: Number(process.env.MIN_VOLUME_FOR_ANCHOR ?? 0),  // Changé de 1000 à 0
     MAX_REASONABLE_RETURN: 500,   // % max raisonnable sur 1 an
-    ANCHOR_MEDIAN_WINDOW: Number(process.env.ANCHOR_MEDIAN_WINDOW ?? 3),
+    ANCHOR_MEDIAN_WINDOW: Number(process.env.ANCHOR_MEDIAN_WINDOW ?? 0),    // Changé de 3 à 0 (ancrage exact)
     BATCH_SIZE: 5,                // Taille des batches pour parallélisation
     RISK_FREE_RATE: 0.02,          // Taux sans risque annuel (2%)
     VAR_CONFIDENCE: 0.95,          // Niveau de confiance pour VaR (95%)
-    RETURNS_MODE: process.env.RETURNS_MODE || 'rolling',  // 'rolling' | 'calendar'
-    INCLUDE_TODAY: process.env.INCLUDE_TODAY === 'true',  // Inclure la bougie du jour
+    RETURNS_MODE: process.env.RETURNS_MODE || 'calendar',  // Changé de 'rolling' à 'calendar'
+    INCLUDE_TODAY: process.env.INCLUDE_TODAY === 'true' || true,  // Changé à true par défaut
     DEBUG: process.env.DEBUG === 'true'
 };
 
@@ -1195,7 +1195,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Log de démarrage
-console.log('✅ Crypto Volatility & Returns Module v3.6.0 loaded');
+console.log('✅ Crypto Volatility & Returns Module v3.6.1 loaded');
 console.log(`📈 Mode: ${CONFIG.RETURNS_MODE} | Anchor: ${CONFIG.ANCHOR_MEDIAN_WINDOW} | MinVol: ${CONFIG.MIN_VOLUME_FOR_ANCHOR}`);
 console.log(`📅 Calendar mode: 1M/3M/6M/1Y (exchange matching) | Rolling: 30D/90D/365D`);
 console.log(`📊 Include today: ${CONFIG.INCLUDE_TODAY} | Stale: ${MAX_STALE_HOURS}h`);
