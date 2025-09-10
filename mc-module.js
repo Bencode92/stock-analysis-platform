@@ -1,5 +1,5 @@
-// ===== MC (Multi-Critères) – Module Optimisé v3.3 avec seuil dividende universel ===================
-// v3.3: Seuil 1% universel pour dividendes, payout manuel uniquement
+// ===== MC (Multi-Critères) – Module Optimisé v3.4 avec Payout TTM unifié ===================
+// v3.4: Payout basé uniquement sur TTM avec fallbacks robustes
 (function(){
   // Attendre que le DOM soit prêt
   if (!document.querySelector('#mc-section')) {
@@ -75,7 +75,7 @@
     return NaN;
   };
 
-  // MÉTRIQUES v3.1 avec REG et TTM
+  // MÉTRIQUES v3.4 avec Payout TTM unifié
   const METRICS = {
     // Performance
     perf_daily:      {label:'Perf Daily',     unit:'%', get:s=>p(s.perf_daily||s.daily||s.perf_1d||s.change_percent), max:true},
@@ -102,26 +102,43 @@
       max: true,
       tooltip: 'Total des dividendes versés sur 12 mois (réguliers + spéciaux)'
     },
-    // Payout ratio
+    // Payout ratio v3.4 - TTM unifié
     payout_ratio: {
-      label: 'Payout',
+      label: 'Payout (TTM)',
       unit: '%',
       get: s => {
-        // Priorité au payout régulier s'il existe
-        const val = p(s.payout_ratio_regular ?? s.payout_ratio ?? s.payout ?? s.payout_ratio_ttm);
+        // 1) Privilégier le payout TTM direct
+        let val = p(s.payout_ratio_ttm);
+
+        // 2) Fallback: calculer TTM si on a les données
+        if (!Number.isFinite(val) && Number.isFinite(s.total_dividends_ttm) && Number.isFinite(s.eps_ttm) && s.eps_ttm > 0) {
+          val = (s.total_dividends_ttm / s.eps_ttm) * 100;
+        }
+
+        // 3) Fallback alternatif: si on a dividend_yield_ttm et PE ratio
+        if (!Number.isFinite(val) && Number.isFinite(s.dividend_yield_ttm) && Number.isFinite(s.pe_ratio) && s.pe_ratio > 0) {
+          // Payout = Dividend Yield × PE Ratio
+          val = s.dividend_yield_ttm * s.pe_ratio;
+        }
+
+        // 4) Fallback ultime: utiliser un champ générique si disponible
+        if (!Number.isFinite(val)) {
+          val = p(s.payout_ratio ?? s.payout ?? s.payout_ratio_regular);
+        }
+
         if (!Number.isFinite(val)) return NaN;
 
-        // REITs/Immobilier : les >100% peuvent être "normaux"
+        // REITs/Immobilier: cap plus haut car ils distribuent souvent >100%
         const isRE = String(s.sector||'').toLowerCase().includes('immobili')
-                   || String(s.sector||'').toLowerCase() === 'real estate'
-                   || /property|immo/i.test(String(s.sector||''))
-                   || /reit/i.test(String(s.name||''))
-                   || /reit/i.test(String(s.exchange||''));
-        
-        // Cap différent pour REITs vs autres
+                  || String(s.sector||'').toLowerCase() === 'real estate'
+                  || /property|immo/i.test(String(s.sector||''))
+                  || /reit/i.test(String(s.name||''))
+                  || /reit/i.test(String(s.exchange||''));
+
+        // Cap intelligent selon le secteur
         return isRE ? Math.min(val, 400) : Math.min(val, 200);
       },
-      max: false // On veut MINIMISER le payout (plus bas = plus soutenable)
+      max: false // On veut MINIMISER le payout
     }
   };
 
@@ -678,7 +695,7 @@
     }, { offset: Number.NEGATIVE_INFINITY }).element;
   }
 
-  // Synchroniser checkboxes v3.1 avec REG/TTM
+  // Synchroniser checkboxes v3.4 avec Payout TTM
   function setupMetricCheckboxes() {
     // REMPLACER L'ANCIEN HTML des checkboxes
     const pillsContainer = root.querySelector('.flex.flex-wrap.gap-2');
@@ -703,10 +720,10 @@
           <input id="m-dividend_yield_ttm" type="checkbox" aria-label="Dividende TTM"> 
           <i class="fas fa-receipt text-xs mr-1"></i>Div. TTM ↑
         </label>
-        <!-- Payout -->
-        <label class="mc-pill" title="Ratio dividendes/bénéfices (plus bas = plus soutenable). Cible: <60% excellent, 60-80% bon, >100% risqué">
-          <input id="m-payout_ratio" type="checkbox" aria-label="Payout ratio">
-          <span>Payout ↓ <i class="fas fa-info-circle info-icon"></i></span>
+        <!-- Payout v3.4 - TTM uniquement -->
+        <label class="mc-pill" title="Ratio dividendes/bénéfices sur 12 mois. Plus bas = plus soutenable. Repères : <60% excellent, 60-80% bon, >100% risqué">
+          <input id="m-payout_ratio" type="checkbox" aria-label="Payout ratio TTM">
+          <span>Payout (TTM) ↓ <i id="payout-info" class="fas fa-info-circle info-icon"></i></span>
         </label>
       `;
     }
@@ -744,7 +761,7 @@
     });
   }
 
-  // Explication mise à jour v3.3
+  // Explication mise à jour v3.4
   function addExplanation() {
     const modeContainer = root.querySelector('fieldset[role="radiogroup"]');
     if (modeContainer && !document.getElementById('mode-explanation')) {
@@ -768,12 +785,19 @@
     }
   }
 
-  // Popover au clic pour l'info payout
+  // Popover au clic pour l'info payout v3.4
   function setupPayoutPopover() {
     const icon = document.getElementById('payout-info');
     if (!icon) return;
 
-    const TEXT = "Payout = dividendes ÷ bénéfices.\\nPlus bas = mieux.\\nRepères : <60% ok, 60–80% moyen, >100% risqué.";
+    const TEXT = "Payout TTM = dividendes ÷ bénéfices (12 mois glissants).\n" +
+                 "Plus bas = meilleure soutenabilité.\n" +
+                 "Repères:\n" +
+                 "• <60% : Excellent (marge de sécurité)\n" +
+                 "• 60-80% : Bon (équilibré)\n" +
+                 "• 80-100% : Élevé (peu de marge)\n" +
+                 "• >100% : Risqué (non soutenable)\n" +
+                 "Note: REITs peuvent avoir >100% (normal).";
 
     let tipEl = null;
     const closeTip = () => { 
@@ -1083,7 +1107,7 @@
       .map(i => ({ s: state.data[i], score: NaN }));
   }
 
-  // RENDU v3.2 - SUPPRESSION du bloc Div. TTM non sélectionné
+  // RENDU v3.4 - Coloration améliorée pour payout
   function render(entries){
     results.innerHTML='';
     results.className = 'space-y-2';
@@ -1134,12 +1158,25 @@
                       raw > 2 ? 'text-cyan-400' : 
                       'text-yellow-400';
         } else if (m === 'payout_ratio') {
-          // Coloration spéciale pour payout ratio
-          colorClass = raw < 30 ? 'text-green-500' :      // Conservative
-                      raw < 60 ? 'text-green-400' :       // Moderate
-                      raw < 80 ? 'text-yellow-400' :      // High
-                      raw < 100 ? 'text-orange-400' :     // Very high
-                      'text-red-400';                     // Unsustainable
+          // Coloration améliorée avec plus de nuances pour payout v3.4
+          const sector = String(e.s.sector||'').toLowerCase();
+          const isREIT = sector.includes('immobili') || sector === 'real estate' || /reit/i.test(String(e.s.name||''));
+          
+          if (isREIT) {
+            // Seuils adaptés pour REITs
+            colorClass = raw < 75 ? 'text-green-500' :      // Excellent pour REIT
+                        raw < 90 ? 'text-green-400' :       // Bon pour REIT
+                        raw < 110 ? 'text-yellow-400' :     // Normal pour REIT
+                        raw < 130 ? 'text-orange-400' :     // Élevé pour REIT
+                        'text-red-400';                     // Très élevé
+          } else {
+            // Seuils standards
+            colorClass = raw < 30 ? 'text-green-500' :      // Ultra conservateur
+                        raw < 60 ? 'text-green-400' :       // Sain
+                        raw < 80 ? 'text-yellow-400' :      // Modéré
+                        raw < 100 ? 'text-orange-400' :     // Élevé
+                        'text-red-400';                     // Non soutenable
+          }
         } else if (m === 'volatility_3y' || m === 'max_drawdown_3y') {
           // Pour les métriques de risque
           colorClass = raw < 15 ? 'text-green-400' : 
@@ -1161,10 +1198,6 @@
           </div>
         `;
       }).filter(Boolean).join('');
-      
-      // *** BLOC SUPPRIMÉ (v3.2) ***
-      // Div. TTM n'apparaît plus automatiquement si non coché
-      // pour cohérence UX : on n'affiche que ce que l'utilisateur sélectionne
       
       let regionIcon = '';
       if (e.s.region === 'US') {
@@ -1374,7 +1407,7 @@
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module v3.3 - Seuil 1% universel pour dividendes, payout manuel uniquement');
+    console.log('✅ MC Module v3.4 - Payout TTM unifié avec fallbacks robustes');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
