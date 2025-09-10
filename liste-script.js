@@ -1427,7 +1427,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Métriques</div>
                                             <div class="space-y-1 text-sm">
                                                 <div><span class="opacity-60">Volatilité 3Y:</span> ${stock.volatility_3y || '–'}</div>
-                                                <div><span class="opacity-60">Dividende TTM:</span> ${stock.dividend_yield || '–'}</div>
+                                                <div><span class="opacity-60">Dividende TTM:</span> ${stock.dividend_yield_ttm || '–'}</div>
                                                 
                                                 <!-- 👉 MODIFIÉ: "Payout TTM" au lieu de "Payout" -->
                                                 <div><span class="opacity-60">Payout TTM:</span> <span class="${stock.payout_class}">
