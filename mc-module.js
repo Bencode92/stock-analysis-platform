@@ -1,4 +1,5 @@
-// ===== MC (Multi-Critères) – Module Optimisé v3.4 avec Payout TTM unifié ===================
+// ===== MC (Multi-Critères) – Module Optimisé v3.5 avec Drag&Drop amélioré ===================
+// v3.5: Optimisation du Drag & Drop avec scheduleCompute() et updatePriorityNumbersOnly()
 // v3.4: Payout basé uniquement sur TTM avec fallbacks robustes
 (function(){
   // Attendre que le DOM soit prêt
@@ -165,11 +166,33 @@
     availableSectors: new Set()
   };
 
-  // Debounce pour auto-recompute
+  // Debounce pour auto-recompute avec indicateur visuel
   let computeTimer;
   const scheduleCompute = () => {
     clearTimeout(computeTimer);
-    computeTimer = setTimeout(compute, 150);
+    
+    // Indicateur de chargement subtil
+    if (results) {
+      results.classList.add('computing');
+      // Ajouter un indicateur visuel temporaire
+      if (!results.querySelector('.compute-indicator')) {
+        const indicator = document.createElement('div');
+        indicator.className = 'compute-indicator';
+        indicator.style.cssText = 'position:absolute;top:10px;right:10px;opacity:0.6;';
+        indicator.innerHTML = '<i class="fas fa-sync fa-spin"></i>';
+        results.appendChild(indicator);
+      }
+    }
+    
+    computeTimer = setTimeout(() => {
+      compute();
+      // Retirer l'indicateur après compute
+      if (results) {
+        results.classList.remove('computing');
+        const indicator = results.querySelector('.compute-indicator');
+        if (indicator) indicator.remove();
+      }
+    }, 150);
   };
 
   // DÉSACTIVÉ: plus d'ajout automatique de "payout < 100%"
@@ -644,39 +667,73 @@
     setupDragAndDrop();
   }
 
-  // Drag & Drop
-  function setupDragAndDrop() {
+  // ✅ NOUVEAU: Helper pour mettre à jour uniquement les numéros
+  function updatePriorityNumbersOnly() {
     const items = document.querySelectorAll('.priority-item');
-    let draggedItem = null;
+    items.forEach((item, index) => {
+      const numSpan = item.querySelector('.priority-number');
+      if (numSpan) {
+        numSpan.textContent = `${index + 1}.`;
+      }
+    });
+  }
+
+  // ✅ DRAG & DROP OPTIMISÉ v3.5 - Basé sur le conteneur
+  function setupDragAndDrop() {
+    const container = document.getElementById('priority-list');
+    if (!container) return;
     
-    items.forEach(item => {
-      item.addEventListener('dragstart', (e) => {
-        draggedItem = e.target;
-        e.target.style.opacity = '0.5';
-        e.target.classList.add('dragging');
-      });
+    let draggedItem = null;
+    let placeholder = null;
+    
+    // Event listeners sur le conteneur (delegation)
+    container.addEventListener('dragstart', (e) => {
+      if (!e.target.classList.contains('priority-item')) return;
+      draggedItem = e.target;
+      e.target.style.opacity = '0.5';
+      e.target.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    
+    container.addEventListener('dragend', (e) => {
+      if (!e.target.classList.contains('priority-item')) return;
+      e.target.style.opacity = '';
+      e.target.classList.remove('dragging');
+      if (placeholder) {
+        placeholder.remove();
+        placeholder = null;
+      }
+      draggedItem = null;
+    });
+    
+    container.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (!draggedItem) return;
       
-      item.addEventListener('dragend', (e) => {
-        e.target.style.opacity = '';
-        e.target.classList.remove('dragging');
-      });
+      const afterElement = getDragAfterElement(container, e.clientY);
+      if (afterElement == null) {
+        container.appendChild(draggedItem);
+      } else {
+        container.insertBefore(draggedItem, afterElement);
+      }
+    });
+    
+    container.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (!draggedItem) return;
       
-      item.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        const afterElement = getDragAfterElement(e.currentTarget.parentNode, e.clientY);
-        if (afterElement == null) {
-          e.currentTarget.parentNode.appendChild(draggedItem);
-        } else {
-          e.currentTarget.parentNode.insertBefore(draggedItem, afterElement);
-        }
-      });
+      // Extraire le nouvel ordre directement depuis le DOM
+      const newOrder = [...container.querySelectorAll('.priority-item')]
+        .map(el => el.dataset.metric);
       
-      item.addEventListener('drop', (e) => {
-        e.preventDefault();
-        const newOrder = [...document.querySelectorAll('.priority-item')].map(el => el.dataset.metric);
-        state.selectedMetrics = newOrder;
-        updatePriorityDisplay();
-      });
+      // Mettre à jour l'état
+      state.selectedMetrics = newOrder;
+      
+      // ✅ CRUCIAL: Mise à jour minimale + recalcul debounced
+      updatePriorityNumbersOnly(); // Mise à jour visuelle minimale
+      scheduleCompute(); // Recalcul automatique avec debounce
+      
+      // Ne PAS appeler updatePriorityDisplay() ici !
     });
   }
   
@@ -1407,7 +1464,7 @@
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module v3.4 - Payout TTM unifié avec fallbacks robustes');
+    console.log('✅ MC Module v3.5 - Drag&Drop optimisé avec scheduleCompute()');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
