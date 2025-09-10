@@ -1,5 +1,5 @@
-// ===== MC (Multi-Critères) – Module Optimisé v3.2 avec Dividendes REG vs TTM ===================
-// v3.2: Div. TTM n'apparaît que si coché (cohérence UX)
+// ===== MC (Multi-Critères) – Module Optimisé v3.3 avec seuil dividende universel ===================
+// v3.3: Seuil 1% universel pour dividendes, payout manuel uniquement
 (function(){
   // Attendre que le DOM soit prêt
   if (!document.querySelector('#mc-section')) {
@@ -39,8 +39,8 @@
   const ALLOW_MISSING = 1; // Tolérer 1 critère manquant
   const CONFIG = { DEBUG: false }; // Config pour debug
   
-  // Seuils pour filtrage auto
-  const MIN_DY_REG_LEXICO = 1.0;    // 1% minimum pour régulier en mode Priorités
+  // Seuil 1% appliqué à tout dividende coché (REG/TTM), dans tous les modes
+  const MIN_DY_SELECTED = 1.0;
 
   // Cache global pour les métriques
   const cache = {};
@@ -155,58 +155,50 @@
     computeTimer = setTimeout(compute, 150);
   };
 
-  // Protection yield-trap pour dividende régulier
+  // DÉSACTIVÉ: plus d'ajout automatique de "payout < 100%"
   function ensureYieldTrapOnce() {
-    const hasREG = state.selectedMetrics.includes('dividend_yield_reg');
-    const hasPayoutMetric = state.selectedMetrics.includes('payout_ratio');
-    const hasPayoutFilter = (state.customFilters||[]).some(f => f.metric === 'payout_ratio');
-    
-    // Ajouter protection seulement si yield régulier est coché sans garde-fou payout
-    if (hasREG && !hasPayoutMetric && !hasPayoutFilter) {
-      // Filtre silencieux: payout < 100%
-      state.customFilters.push({ 
-        metric: 'payout_ratio', 
-        operator: '<', 
-        value: 100, 
-        __auto: true,
-        __reason: 'yieldTrap'
-      });
-      masks.custom = null;
-      if (CONFIG.DEBUG) {
-        console.log('🛡️ Protection yield-trap activée: payout < 100% appliqué automatiquement');
-      }
-      return true;
-    }
+    // Les utilisateurs peuvent toujours l'ajouter manuellement s'ils le souhaitent
     return false;
   }
 
-  // Filtre auto minimum pour REG en mode Priorités
+  // v3.3: Impose ≥ 1% pour CHAQUE métrique dividende cochée (REG/TTM)
+  // Applicable dans TOUS les modes (Équilibre ET Priorités)
   function ensureMinDivYieldForPriorities() {
-    const hasREG = state.selectedMetrics.includes('dividend_yield_reg');
-    const isPriorities = state.mode === 'lexico';
-    
-    if (hasREG && isPriorities) {
-      const already = (state.customFilters||[]).some(f =>
-        f.__auto && f.metric === 'dividend_yield_reg' && f.operator === '>=' && f.value >= MIN_DY_REG_LEXICO
+    let changed = false;
+    const targets = ['dividend_yield_reg', 'dividend_yield_ttm'];
+
+    targets.forEach(metric => {
+      // Ne rien faire si la métrique n'est pas sélectionnée
+      if (!state.selectedMetrics.includes(metric)) return;
+
+      // Vérifier si un filtre auto existe déjà pour cette métrique
+      const already = (state.customFilters || []).some(f =>
+        f.__auto && 
+        f.metric === metric && 
+        f.operator === '>=' && 
+        f.value >= MIN_DY_SELECTED
       );
-      
+
       if (!already) {
+        // Ajouter le filtre auto silencieux
         state.customFilters.push({
-          metric: 'dividend_yield_reg',
+          metric,
           operator: '>=',
-          value: MIN_DY_REG_LEXICO,
+          value: MIN_DY_SELECTED,
           __auto: true,
-          __reason: 'minREGforPriorities'
+          __reason: 'minDYSelected'
         });
-        masks.custom = null;
+        masks.custom = null; // Invalider le cache
+        changed = true;
+        
         if (CONFIG.DEBUG) {
-          console.log(`🛡️ Auto: filtre minimum appliqué pour Priorités`);
+          const label = metric === 'dividend_yield_reg' ? 'REG' : 'TTM';
+          console.log(`🛡️ Auto: filtre ${label} ≥ ${MIN_DY_SELECTED}% appliqué`);
         }
-        return true;
       }
-    }
-    
-    return false;
+    });
+
+    return changed;
   }
 
   // Généraliser le nettoyage des filtres auto
@@ -752,7 +744,7 @@
     });
   }
 
-  // Explication mise à jour v3.1
+  // Explication mise à jour v3.3
   function addExplanation() {
     const modeContainer = root.querySelector('fieldset[role="radiogroup"]');
     if (modeContainer && !document.getElementById('mode-explanation')) {
@@ -765,7 +757,11 @@
         </div>
         <div id="priority-explanation" class="hidden">
           <strong>Mode Priorités intelligentes :</strong> Tri par ordre avec tolérance locale basée sur la densité de distribution.
-          <br><em>Note : Si "Div. REG" est sélectionné, seules les actions avec rendement régulier ≥ ${MIN_DY_REG_LEXICO}% sont affichées.</em>
+        </div>
+        <div class="mt-1 text-cyan-400">
+          <i class="fas fa-info-circle mr-1"></i>
+          <em>Note :</em> Si "Div. REG" ou "Div. TTM" est sélectionné, 
+          seules les actions avec rendement ≥ ${MIN_DY_SELECTED}% sont affichées.
         </div>
       `;
       modeContainer.appendChild(explanation);
@@ -1224,6 +1220,12 @@
     // Compter seulement les filtres visibles (exclure __auto)
     const visibleFilters = state.customFilters.filter(f => !f.__auto).length;
     
+    // Ajouter indicateur pour filtres auto actifs
+    const autoFilters = state.customFilters.filter(f => f.__auto && f.__reason === 'minDYSelected');
+    const autoText = autoFilters.length > 0 
+      ? ` <span class="text-cyan-400">[Auto: Div ≥ ${MIN_DY_SELECTED}%]</span>` 
+      : '';
+    
     const geoActive = [];
     if (state.geoFilters.region !== 'all') geoActive.push(state.geoFilters.region);
     if (state.geoFilters.country !== 'all') geoActive.push(state.geoFilters.country);
@@ -1231,7 +1233,7 @@
     
     const geoText = geoActive.length > 0 ? ` • ${geoActive.join(', ')}` : '';
     
-    summary.innerHTML = `<strong>${mode}</strong> • ${labels || 'Aucun critère'} • ${visibleFilters} filtres${geoText} • ${kept}/${total} actions`;
+    summary.innerHTML = `<strong>${mode}</strong> • ${labels || 'Aucun critère'} • ${visibleFilters} filtres${geoText}${autoText} • ${kept}/${total} actions`;
   }
 
   // Fonction compute avec protections auto pour REG
@@ -1372,7 +1374,7 @@
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module v3.2 - Cohérence UX: Div. TTM visible uniquement si coché');
+    console.log('✅ MC Module v3.3 - Seuil 1% universel pour dividendes, payout manuel uniquement');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
