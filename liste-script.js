@@ -8,6 +8,7 @@
  * v1.1: Intégration du payout ratio dans les métriques détaillées
  * v1.2: Fix recherche - fermeture systématique des détails ouverts
  * v1.3: Fix définitif - ne jamais réafficher les details-row lors du clear
+ * v1.4: Changement des labels "Rendement" → "Dividende TTM" et "Payout" → "Payout TTM"
  */
 
 // NOUVEAU: Fonction globale pour fermer tous les détails
@@ -21,6 +22,34 @@ function closeAllDetails() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    // ===== NOUVEAU: Mise à jour automatique des labels =====
+    // Changer tous les en-têtes "Rendement" en "Dividende TTM"
+    const updateTableHeaders = () => {
+        document.querySelectorAll('.data-table thead th').forEach(th => {
+            const text = th.textContent.trim();
+            if (text === 'Rendement' || text === 'RENDEMENT') {
+                th.textContent = 'DIVIDENDE TTM';
+                th.setAttribute('data-original-label', text); // Pour réversibilité
+                th.title = 'Rendement des dividendes sur les 12 derniers mois';
+                th.style.cursor = 'help';
+            }
+        });
+    };
+    
+    // Observer pour gérer le contenu dynamique
+    const headerObserver = new MutationObserver(() => {
+        updateTableHeaders();
+    });
+    
+    // Observer les changements dans les tableaux
+    document.querySelectorAll('.region-content').forEach(content => {
+        headerObserver.observe(content, { childList: true, subtree: true });
+    });
+    
+    // Mise à jour initiale
+    setTimeout(updateTableHeaders, 100);
+    // ===== FIN DE LA MISE À JOUR DES LABELS =====
+    
     // --- FICHIERS A→Z PAR RÉGION ---
     const AZ_FILES = {
         US:      'data/stocks_us.json',
@@ -1012,7 +1041,7 @@ document.addEventListener('DOMContentLoaded', function() {
      * Charge les données d'actions depuis le fichier JSON approprié (pour les tops NASDAQ/STOXX)
      */
     async function loadStocksData(forceRefresh = false) {
-        // Cette fonction reste pour charger les tops performers NASDAQ/STOXX
+        // Cette fonction reste pour charger les top performers NASDAQ/STOXX
         // Les données A→Z sont maintenant chargées par loadAZDataForCurrentSelection
         
         try {
@@ -1268,6 +1297,9 @@ document.addEventListener('DOMContentLoaded', function() {
      * Affiche les données d'actions dans l'interface
      */
     function renderStocksData() {
+        // Mise à jour des headers à chaque rendu
+        setTimeout(updateTableHeaders, 50);
+        
         try {
             // Mettre à jour l'horodatage
             const timestamp = new Date(stocksData.meta.timestamp);
@@ -1365,7 +1397,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </td>
                             `;
                             
-                            // Ligne de détails (cachée par défaut) - NOUVEAU: avec payout
+                            // Ligne de détails (cachée par défaut) - MODIFIÉ: Labels changés
                             const detailsRow = document.createElement('tr');
                             detailsRow.className = 'details-row hidden';
                             detailsRow.setAttribute('data-for', stockKey);
@@ -1395,10 +1427,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Métriques</div>
                                             <div class="space-y-1 text-sm">
                                                 <div><span class="opacity-60">Volatilité 3Y:</span> ${stock.volatility_3y || '–'}</div>
-                                                <div><span class="opacity-60">Rendement:</span> ${stock.dividend_yield || '–'}</div>
+                                                <div><span class="opacity-60">Dividende TTM:</span> ${stock.dividend_yield || '–'}</div>
                                                 
-                                                <!-- 👉 NOUVELLE LIGNE PAYOUT -->
-                                                <div><span class="opacity-60">Payout:</span> <span class="${stock.payout_class}">
+                                                <!-- 👉 MODIFIÉ: "Payout TTM" au lieu de "Payout" -->
+                                                <div><span class="opacity-60">Payout TTM:</span> <span class="${stock.payout_class}">
                                                   ${stock.payout_ratio || '–'}
                                                 </span></div>
                                                 
@@ -2268,14 +2300,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Supprimer les symboles +, %, etc.
         cleanStr = cleanStr.replace(/[+%]/g, '');
         
-        // Gérer les nombres négatifs qui pourraient être entre parenthèses
-        if (cleanStr.includes('(') && cleanStr.includes(')')) {
-            cleanStr = cleanStr.replace(/[\(\)]/g, '');
-            cleanStr = '-' + cleanStr;
-        }
+        // Gérer les nombres négatifs qui utilisent un caractère spécial pour le moins
+        cleanStr = cleanStr.replace(/[\u2212\u2013\u2014]/g, '-');
         
-        // Parser en nombre
-        const value = parseFloat(cleanStr);
-        return isNaN(value) ? 0 : value;
+        return parseFloat(cleanStr) || 0;
     }
 });
