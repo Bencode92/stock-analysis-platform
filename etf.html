@@ -998,23 +998,16 @@
                     </div>
 
                     <!-- Sous-filtres -->
-                    <div class="grid md:grid-cols-3 gap-3">
+                    <div class="grid md:grid-cols-2 gap-3">
                       <div class="flex items-center gap-2">
-                        <label class="text-xs opacity-70 min-w-[90px]">Pays</label>
-                        <select id="etf-az-country" class="mini-select flex-1"
-                          style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
-                          <option value="">Tous</option>
-                        </select>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <label class="text-xs opacity-70 min-w-[90px]">Type de fonds</label>
+                        <label class="text-xs opacity-70 min-w-[110px]">Type de fonds</label>
                         <select id="etf-az-fundtype" class="mini-select flex-1"
                           style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
                           <option value="">Tous</option>
                         </select>
                       </div>
                       <div class="flex items-center gap-2">
-                        <label class="text-xs opacity-70 min-w-[90px]">Secteur</label>
+                        <label class="text-xs opacity-70 min-w-[110px]">Secteur</label>
                         <select id="etf-az-sector" class="mini-select flex-1"
                           style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
                           <option value="">Tous</option>
@@ -1052,6 +1045,8 @@
                       <span>⚡ <span id="etf-az-count">0</span> lignes affichées</span>
                       <span class="mx-2">•</span>
                       <span>Maj: <span id="etf-az-lastupdate">—</span></span>
+                      <span class="mx-2">•</span>
+                      <span>💡 Astuce: tapez un nom de pays pour filtrer par origine</span>
                     </div>
                   </div>
 
@@ -1202,7 +1197,7 @@
 
       // ---------- État ----------
       let scope = 'GLOBAL'; // GLOBAL | ACTIONS | BONDS
-      let fCountry = '', fFundType = '', fSector = '';
+      let fFundType = '', fSector = '';
       let dataAll = [];
       let indexAZ = {};
       let lastUpdate = null;
@@ -1320,7 +1315,6 @@
       }
       function applySubfilters(list){
         return list.filter(e => {
-          if (fCountry)  { const c=(getCountry(e)||'').toLowerCase(); if (c!==fCountry.toLowerCase()) return false; }
           if (fFundType) { const t=(getFundType(e)||'').toLowerCase(); if (t!==fFundType.toLowerCase()) return false; }
           if (fSector)   { const s=(getSectorMain(e)||'').toLowerCase(); if (s!==fSector.toLowerCase()) return false; }
           return true;
@@ -1341,16 +1335,12 @@
       }
 
       function populateDropdowns(list){
-        const countries = uniqSorted(list.map(getCountry));
         const fundtypes = uniqSorted(list.map(getFundType));
         const sectors   = uniqSorted(list.map(getSectorMain));
-        const cSel = $('#etf-az-country');
         const fSel = $('#etf-az-fundtype');
         const sSel = $('#etf-az-sector');
-        cSel.innerHTML = `<option value="">Tous</option>` + countries.map(v=>`<option value="${v}">${v}</option>`).join('');
-        fSel.innerHTML = `<option value="">Tous</option>` + fundtypes.map(v=>`<option value="${v}">${v}</option>`).join('');
-        sSel.innerHTML = `<option value="">Tous</option>` + sectors.map(v=>`<option value="${v}">${v}</option>`).join('');
-        if (fCountry && countries.includes(fCountry)) cSel.value = fCountry; else fCountry = '';
+        if (fSel) fSel.innerHTML = `<option value="">Tous</option>` + fundtypes.map(v=>`<option value="${v}">${v}</option>`).join('');
+        if (sSel) sSel.innerHTML = `<option value="">Tous</option>` + sectors.map(v=>`<option value="${v}">${v}</option>`).join('');
         if (fFundType && fundtypes.includes(fFundType)) fSel.value = fFundType; else fFundType = '';
         if (fSector && sectors.includes(fSector)) sSel.value = fSector; else fSector = '';
       }
@@ -1485,7 +1475,6 @@
           });
         });
         // sous-filtres
-        $('#etf-az-country')?.addEventListener('change', e=>{ fCountry = e.target.value || ''; render(); });
         $('#etf-az-fundtype')?.addEventListener('change', e=>{ fFundType = e.target.value || ''; render(); });
         $('#etf-az-sector')?.addEventListener('change',  e=>{ fSector   = e.target.value || ''; render(); });
         
