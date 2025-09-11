@@ -395,6 +395,38 @@
                                 </div>
         
                             </div>
+
+                            <!-- Frais -->
+                            <div class="mb-4">
+                              <label class="block mb-2 text-sm font-medium text-gray-300">
+                                Frais
+                                <span class="ml-1 text-green-400 cursor-help" title="Renseignez vos frais pour une simulation réaliste (TER, frais d'enveloppe, frais d'entrée/sortie, etc.).">
+                                  <i class="fas fa-info-circle"></i>
+                                </span>
+                              </label>
+                              <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label class="block text-xs text-gray-400 mb-1">Frais de gestion annuels (%/an)</label>
+                                  <input id="mgmt-fee" type="number" step="0.01" value="0" min="0"
+                                         class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                </div>
+                                <div>
+                                  <label class="block text-xs text-gray-400 mb-1">Frais sur versement (% à l'entrée)</label>
+                                  <input id="entry-fee" type="number" step="0.01" value="0" min="0"
+                                         class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                </div>
+                                <div>
+                                  <label class="block text-xs text-gray-400 mb-1">Frais de sortie (% à la fin)</label>
+                                  <input id="exit-fee" type="number" step="0.01" value="0" min="0"
+                                         class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                </div>
+                                <div>
+                                  <label class="block text-xs text-gray-400 mb-1">Frais fixes annuels (€)</label>
+                                  <input id="fixed-fee" type="number" step="1" value="0" min="0"
+                                         class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                </div>
+                              </div>
+                            </div>
                             
                             <!-- Investment Vehicle -->
                             <div class="mb-4">
@@ -479,12 +511,19 @@
         <p class="text-gray-400 text-sm">Gains générés</p>
     </div>
     
-    <!-- Net d'impôts (prend 2 colonnes sur desktop) -->
-    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center col-span-2">
+    <!-- Net d'impôts -->
+    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
         <p id="result-after-tax" class="text-green-400 text-2xl font-bold mb-1">-- €</p>
         <p class="text-gray-400 text-sm">Net d'impôts</p>
     </div>
-        <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+
+    <!-- Impact total des frais -->
+    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+      <p id="result-fees-impact" class="text-red-400 text-2xl font-bold mb-1">-- €</p>
+      <p class="text-gray-400 text-sm">Impact total des frais</p>
+    </div>
+        
+    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
         <p id="result-annualized-return" class="text-green-400 text-2xl font-bold mb-1">-- %</p>
         <p class="text-gray-400 text-sm">Rendement annualisé</p>
     </div>
@@ -1557,119 +1596,47 @@
                 </div>
             </div>
         </div>
-
-        <!-- Footer -->
-        <footer class="bg-blue-900 bg-opacity-40 backdrop-blur-md border-t border-gray-800 py-4 px-6 text-center mt-12">
-            <div class="flex justify-around flex-wrap gap-4 text-sm text-gray-400">
-                <p class="flex items-center">
-                    <i class="fas fa-calculator text-green-400 mr-2"></i>
-                    Simulateur développé par l'équipe TradePulse
-                </p>
-                <p class="flex items-center">
-                    <i class="fas fa-chart-line text-green-400 mr-2"></i>
-                    Simulations basées sur des données historiques de marché
-                </p>
-                <p class="flex items-center">
-                    <i class="fas fa-clock text-green-400 mr-2"></i>
-                    Dernière mise à jour: <span class="text-green-400 font-medium ml-1 update-time">11/04/2025 14:23:43</span>
-                </p>
-            </div>
-        </footer>
     </div>
 
-    <!-- Bouton du sélecteur de thème -->
+    <!-- Theme toggle -->
     <div class="theme-toggle">
-        <button id="theme-toggle-btn" class="theme-toggle-btn">
-            <i class="fas fa-moon" id="dark-icon"></i>
-            <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
+        <button class="theme-toggle-btn">
+            <i class="fas fa-moon"></i>
         </button>
     </div>
 
-    <!-- Scripts -->
+    <!-- Scripts essentiels -->
     <script type="module" src="js/simulation.js"></script>
     <script type="module" src="js/fiscal-optimizer.js"></script>
-   <script type="module" src="js/budget-epargne.js"></script>
-    <script type="module" src="js/loan-pdf.js"></script>
-    <script src="js/loan-simulator.js"></script>
-    <script src="js/loan-sensitivity.js"></script>
-    <!-- Chargement du script PTZ avec les fonctions clés disponibles immédiatement -->
+    <script type="module" src="js/budget-epargne.js"></script>
+    <script type="module" src="js/loan-simulator.js"></script>
+    <script type="module" src="js/ptz-simulator.js"></script>
+    <!-- Scripts avancés -->
+    <script src="js/simulation-enhancements.js"></script>
+    <script src="js/simulation-fixes.js"></script>
+    <!-- Script de gestion des thèmes -->
     <script>
-        // Définir la fonction simulerPTZ temporaire pour éviter l'erreur pendant le chargement
-        window.simulerPTZ = function() {
-            console.log("Fonction temporaire - en attente du chargement complet");
-            alert("Le simulateur PTZ est en cours de chargement. Veuillez patienter quelques secondes et réessayer.");
-        };
-    </script>
-    <script src="js/ptz-simulator.js"></script>
-    
-    <!-- Script d'initialisation direct du simulateur PTZ -->
-    <script>
-        // Attacher le comportement du bouton PTZ directement sans délai
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log("Initialisation directe du simulateur PTZ");
+        // Mise à jour de l'heure
+        function updateTime() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
             
-            // Fonction pour activer un onglet spécifique
-            function activateTab(targetId) {
-                // Masquer tous les contenus
-                document.querySelectorAll('.simulation-content').forEach(content => {
-                    content.style.display = 'none';
-                });
-                
-                // Désactiver tous les onglets
-                document.querySelectorAll('.simulation-tab').forEach(tab => {
-                    tab.classList.remove('active');
-                });
-                
-                // Afficher le contenu cible
-                const targetContent = document.getElementById(targetId);
-                if (targetContent) {
-                    targetContent.style.display = 'block';
-                    
-                    // Activer l'onglet correspondant
-                    const targetTab = document.querySelector(`.simulation-tab[data-target="${targetId}"]`);
-                    if (targetTab) {
-                        targetTab.classList.add('active');
-                    }
-                }
+            const timeElement = document.getElementById('marketTime');
+            if (timeElement) {
+                timeElement.textContent = `${hours}:${minutes}:${seconds}`;
             }
-            
-            // Vérifier si l'URL contient l'ancre #per
-            if (window.location.hash === '#per') {
-                console.log("Ancre #per détectée - activation de l'onglet PER");
-                activateTab('tax-optimizer');
-                
-                // Scroll jusqu'au simulateur
-                setTimeout(() => {
-                    const perSection = document.getElementById('tax-optimizer');
-                    if (perSection) {
-                        perSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                }, 100);
-            }
-            
-            // Événements pour les onglets
-            document.querySelectorAll('.simulation-tab').forEach(tab => {
-                tab.addEventListener('click', function() {
-                    const targetId = this.getAttribute('data-target');
-                    activateTab(targetId);
-                });
-            });
+        }
+
+        // Mettre à jour l'heure toutes les secondes
+        setInterval(updateTime, 1000);
+        updateTime(); // Initialiser immédiatement
+
+        // Toggle theme (placeholder)
+        document.querySelector('.theme-toggle-btn')?.addEventListener('click', function() {
+            console.log('Theme toggle clicked');
         });
-    </script>
-        <!-- ✅ NOUVEAU : Module loan-pdf.js -->
-    <script type="module">
-      import {
-        createLoanExportButton,
-        activateLoanExportButton
-      } from './loan-pdf.js';
-
-      // 1. Créer le bouton dès le chargement
-      document.addEventListener('DOMContentLoaded', () => {
-        createLoanExportButton();
-      });
-
-      // 2. Exposer la fonction d'activation
-      window.activateLoanExportButton = activateLoanExportButton;
     </script>
 </body>
 </html>
