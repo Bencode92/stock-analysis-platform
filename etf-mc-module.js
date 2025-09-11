@@ -1,4 +1,4 @@
-// Module MC adapté pour ETFs - v4.9.1 avec drag&drop ultra-fluide + fix boutons ▲▼ (index dynamique)
+// Module MC adapté pour ETFs - v4.9.2 avec drag&drop ultra-fluide + fix boutons ▲▼ (scroll stable)
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const num=x=>Number.isFinite(+x)?+x:NaN, str=s=>s==null?'':String(s);
@@ -46,8 +46,8 @@
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results');
     const summary=document.getElementById('etf-mc-summary');
-    if(!root||!results){console.error('❌ ETF MC v4.9.1: DOM manquant');return;}
-    console.log('✅ ETF MC v4.9.1: Ultra-smooth DnD + fix boutons ▲▼ (index dynamique)');
+    if(!root||!results){console.error('❌ ETF MC v4.9.2: DOM manquant');return;}
+    console.log('✅ ETF MC v4.9.2: Ultra-smooth DnD + boutons ▲▼ scroll stable');
 
     // Harmonisation du conteneur
     results.classList.add('glassmorphism','rounded-lg','p-4');
@@ -338,7 +338,7 @@
       if(e.target && e.target.name==='etf-mc-mode'){ state.mode=e.target.value||'balanced'; buildPriorityUI(); scheduleCompute(); }
     });
 
-    // ==== UI Priorités - VERSION ULTRA-FLUIDE + FIX BOUTONS ▲▼ ====
+    // ==== UI Priorités - VERSION ULTRA-FLUIDE + SCROLL STABLE ====
     function buildPriorityUI() {
       let host = root.querySelector('fieldset[role="radiogroup"]') || root.querySelector('#etf-mc-section fieldset:nth-of-type(2)');
       if (!host) return;
@@ -369,35 +369,65 @@
         </div>
       `).join('') || '<div class="text-xs opacity-50">Coche au moins un critère</div>';
 
-      // Helpers ▲▼ + clavier
+      // Helpers ▲▼ + clavier  —————— 1 click = 1 place, sans sauts (SCROLL STABLE)
+      const getScrollParent = (el) => {
+        let p = el.parentElement;
+        while (p) {
+          const oy = getComputedStyle(p).overflowY;
+          if ((oy === 'auto' || oy === 'scroll') && p.scrollHeight > p.clientHeight) return p;
+          p = p.parentElement;
+        }
+        return window; // fallback
+      };
+
       const renumber = () => {
         list.querySelectorAll('.priority-item').forEach((item, idx) => {
           item.querySelector('.priority-number').textContent = `${idx+1}.`;
           item.setAttribute('aria-posinset', String(idx+1));
         });
       };
+
       const commit = () => {
         state.selectedMetrics = [...list.querySelectorAll('.priority-item')].map(el => el.dataset.m);
         renumber();
         scheduleCompute();
       };
-      const moveItem = (from, to) => {
+
+      // core: move 1 step and keep scroll stable
+      const moveItem = (from, to, focusSelector) => {
         const items = [...list.querySelectorAll('.priority-item')];
-        if (to < 0 || to >= items.length) return;
+        if (to < 0 || to >= items.length || from === to) return;
+
         const node = items[from];
         const ref  = (to > from) ? items[to].nextSibling : items[to];
+
+        // freeze scroll
+        const sp = getScrollParent(list);
+        const prevTop = (sp === window) ? window.scrollY : sp.scrollTop;
+
+        // move
         list.insertBefore(node, ref);
+
+        // restore scroll (avoid big jump)
+        if (sp === window) window.scrollTo(window.scrollX, prevTop);
+        else sp.scrollTop = prevTop;
+
+        // keep focus on the same control without scrolling
+        if (focusSelector) {
+          node.querySelector(focusSelector)?.focus?.({ preventScroll: true });
+        }
+
         commit();
       };
 
-      // Boutons ▲▼ — délégation, index calculé au clic (FIX PRINCIPAL!)
+      // ▲▼ buttons — event delegation, index calculé au clic
       list.addEventListener('click', (e) => {
-        // Bonus robustesse : ignorer clics pendant drag
+        // si on est en train de drag, ignorer
         if (typeof list.isDragging !== 'undefined' && list.isDragging) return;
-        
-        const up   = e.target.closest('.btn-up');
-        const down = e.target.closest('.btn-down');
-        if (!up && !down) return;
+
+        const upBtn   = e.target.closest('.btn-up');
+        const downBtn = e.target.closest('.btn-down');
+        if (!upBtn && !downBtn) return;
 
         e.preventDefault();
         e.stopPropagation();
@@ -405,18 +435,18 @@
         const item  = e.target.closest('.priority-item');
         const items = [...list.querySelectorAll('.priority-item')];
         const from  = items.indexOf(item);
-        const to    = from + (up ? -1 : 1);
+        const to    = from + (upBtn ? -1 : 1);
 
-        moveItem(from, to); // moveItem fait commit() derrière
+        moveItem(from, to, upBtn ? '.btn-up' : '.btn-down');
       });
 
-      // Clavier: ↑/↓ pour bouger, Enter/Espace pour "sélection" neutre
+      // Clavier: ↑/↓ = 1 place
       list.addEventListener('keydown', (e) => {
         const item = e.target.closest('.priority-item'); if (!item) return;
         const items = [...list.querySelectorAll('.priority-item')];
         const idx = items.indexOf(item);
-        if (e.key === 'ArrowUp')  { e.preventDefault(); moveItem(idx, idx-1); }
-        if (e.key === 'ArrowDown'){ e.preventDefault(); moveItem(idx, idx+1); }
+        if (e.key === 'ArrowUp')  { e.preventDefault(); moveItem(idx, idx-1, '.btn-up'); }
+        if (e.key === 'ArrowDown'){ e.preventDefault(); moveItem(idx, idx+1, '.btn-down'); }
       });
 
       // Pointer-based DnD (poignée uniquement)
