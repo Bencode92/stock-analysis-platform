@@ -1,4 +1,4 @@
-// Module MC adapté pour ETFs - v4.9 avec drag&drop ultra-fluide (poignée + long-press mobile + auto-scroll + flèches ▲▼ + clavier)
+// Module MC adapté pour ETFs - v4.9.1 avec drag&drop ultra-fluide + fix boutons ▲▼ (index dynamique)
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const num=x=>Number.isFinite(+x)?+x:NaN, str=s=>s==null?'':String(s);
@@ -46,8 +46,8 @@
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results');
     const summary=document.getElementById('etf-mc-summary');
-    if(!root||!results){console.error('❌ ETF MC v4.9: DOM manquant');return;}
-    console.log('✅ ETF MC v4.9: Ultra-smooth DnD (poignée + long-press + auto-scroll + clavier)');
+    if(!root||!results){console.error('❌ ETF MC v4.9.1: DOM manquant');return;}
+    console.log('✅ ETF MC v4.9.1: Ultra-smooth DnD + fix boutons ▲▼ (index dynamique)');
 
     // Harmonisation du conteneur
     results.classList.add('glassmorphism','rounded-lg','p-4');
@@ -338,7 +338,7 @@
       if(e.target && e.target.name==='etf-mc-mode'){ state.mode=e.target.value||'balanced'; buildPriorityUI(); scheduleCompute(); }
     });
 
-    // ==== UI Priorités - VERSION ULTRA-FLUIDE ====
+    // ==== UI Priorités - VERSION ULTRA-FLUIDE + FIX BOUTONS ▲▼ ====
     function buildPriorityUI() {
       let host = root.querySelector('fieldset[role="radiogroup"]') || root.querySelector('#etf-mc-section fieldset:nth-of-type(2)');
       if (!host) return;
@@ -390,10 +390,24 @@
         commit();
       };
 
-      // Boutons ▲▼
-      list.querySelectorAll('.priority-item').forEach((item, idx) => {
-        item.querySelector('.btn-up')?.addEventListener('click', (e) => { e.stopPropagation(); moveItem(idx, idx-1); });
-        item.querySelector('.btn-down')?.addEventListener('click', (e) => { e.stopPropagation(); moveItem(idx, idx+1); });
+      // Boutons ▲▼ — délégation, index calculé au clic (FIX PRINCIPAL!)
+      list.addEventListener('click', (e) => {
+        // Bonus robustesse : ignorer clics pendant drag
+        if (typeof list.isDragging !== 'undefined' && list.isDragging) return;
+        
+        const up   = e.target.closest('.btn-up');
+        const down = e.target.closest('.btn-down');
+        if (!up && !down) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const item  = e.target.closest('.priority-item');
+        const items = [...list.querySelectorAll('.priority-item')];
+        const from  = items.indexOf(item);
+        const to    = from + (up ? -1 : 1);
+
+        moveItem(from, to); // moveItem fait commit() derrière
       });
 
       // Clavier: ↑/↓ pour bouger, Enter/Espace pour "sélection" neutre
@@ -409,11 +423,12 @@
       setupPointerDnD(list);
     }
 
-    // ==== NOUVEAU DRAG&DROP ULTRA-FLUIDE ====
+    // ==== NOUVEAU DRAG&DROP ULTRA-FLUIDE + FIXES ====
     function setupPointerDnD(list){
       let dragging=null, ghost=null, placeholder=null, startY=0, offsetY=0, raf=null;
       let pressTimer=null, started=false, pointerId=null;
       let scrollRAF=null, scrollParent=null, lastClientY=0;
+      let isDragging = false; // Bonus robustesse
 
       const isTouch = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
       const LONG_PRESS_MS = 180;       // délai pour mobile
@@ -437,6 +452,8 @@
       function startDrag(ev, fromTouch=false){
         if (started || !dragging) return;
         started = true;
+        isDragging = true; // Bonus robustesse
+        list.isDragging = true; // Exposer au niveau list pour les boutons
 
         // pointer capture si possible
         try { ev.target.setPointerCapture?.(ev.pointerId); pointerId = ev.pointerId; } catch{}
@@ -547,7 +564,11 @@
 
         document.removeEventListener('pointermove', onPointerMove);
         document.removeEventListener('pointerup', onPointerUp);
-        if (pointerId!=null) { try { document.releasePointerCapture?.(pointerId); } catch{} }
+        
+        // FIX pointer capture (release sur l'élément qui a capturé)
+        if (pointerId!=null && dragging) {
+          try { dragging.releasePointerCapture(pointerId); } catch {}
+        }
         pointerId=null;
 
         if(ghost) ghost.remove(); ghost=null;
@@ -565,6 +586,8 @@
         state.selectedMetrics = items.map(el => el.dataset.m);
         items.forEach((n,i)=> n.querySelector('.priority-number').textContent = (i+1)+'.');
         started=false;
+        isDragging = false; // Bonus robustesse
+        list.isDragging = false; // Exposer au niveau list pour les boutons
         scheduleCompute();
       }
 
