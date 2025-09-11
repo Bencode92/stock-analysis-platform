@@ -162,6 +162,12 @@ document.addEventListener('DOMContentLoaded', function () {
     return 'text-yellow-400';                // Faible
   }
 
+  // --------- NOUVEAU: Formatter pour drawdown (toujours négatif) ---------
+  function formatDD(v) {
+    if (!Number.isFinite(v)) return '-';
+    return v === 0 ? '0.00%' : `-${Math.abs(v).toFixed(2)}%`;
+  }
+
   // --------- Rendu principal ---------
   function renderCryptoData() {
     try {
@@ -213,7 +219,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <td class="${td7dCls}">${formatPct(c.ret7d)}</td>
             <td class="${td30dCls}">${formatPct(c.ret30d)}</td>
             <td class="${td90dCls}">${formatPct(c.ret90d)}</td>
-            <td class="${ddCls}" title="Perte maximale sur 90 jours">${formatPct(c.dd90)}</td>
+            <td class="${ddCls}" title="Perte maximale sur 90 jours">${formatDD(c.dd90)}</td>
             <td class="neutral">${formatPct(c.vol30)}</td>
             <td class="text-sm opacity-80">${formatExchanges(c)}</td>
           `;
@@ -602,10 +608,10 @@ document.addEventListener('DOMContentLoaded', function () {
   // --------- Données de démo (fallback visuel) ---------
   function loadDemoData() {
     const demo = [
-      { name: "Bitcoin",  symbol: "BTC", quote: "US Dollar", price: 62150.25, ret1d: 1.2,  ret7d: 3.5,  ret30d: 12.2, ret90d: 45.8,  vol7: 68.5, vol30: 72.3, atr14: 3.2, dd90: -18.5, exchange_used: "Binance|Coinbase|Kraken" },
-      { name: "Ethereum", symbol: "ETH", quote: "US Dollar", price: 3340.18,  ret1d: 2.5,  ret7d: 4.1,  ret30d: 10.0, ret90d: 32.9,  vol7: 75.2, vol30: 78.9, atr14: 4.1, dd90: -22.3, exchange_used: "Coinbase|Binance" },
-      { name: "Solana",   symbol: "SOL", quote: "US Dollar", price: 146.75,   ret1d: 5.3,  ret7d: 7.5,  ret30d: 22.0, ret90d: 120.1, vol7: 95.3, vol30: 98.7, atr14: 5.8, dd90: -35.2, exchange_used: "Binance|OKX|Bybit" },
-      { name: "Cardano",  symbol: "ADA", quote: "US Dollar", price: 0.65,     ret1d: -1.2, ret7d: -2.5, ret30d: 5.0,  ret90d: -12.5, vol7: 82.1, vol30: 85.6, atr14: 4.5, dd90: -42.1, exchange_used: "Kraken" },
+      { name: "Bitcoin",  symbol: "BTC", quote: "US Dollar", price: 62150.25, ret1d: 1.2,  ret7d: 3.5,  ret30d: 12.2, ret90d: 45.8,  vol7: 68.5, vol30: 72.3, atr14: 3.2, dd90: 18.5, exchange_used: "Binance|Coinbase|Kraken" },
+      { name: "Ethereum", symbol: "ETH", quote: "US Dollar", price: 3340.18,  ret1d: 2.5,  ret7d: 4.1,  ret30d: 10.0, ret90d: 32.9,  vol7: 75.2, vol30: 78.9, atr14: 4.1, dd90: 22.3, exchange_used: "Coinbase|Binance" },
+      { name: "Solana",   symbol: "SOL", quote: "US Dollar", price: 146.75,   ret1d: 5.3,  ret7d: 7.5,  ret30d: 22.0, ret90d: 120.1, vol7: 95.3, vol30: 98.7, atr14: 5.8, dd90: 35.2, exchange_used: "Binance|OKX|Bybit" },
+      { name: "Cardano",  symbol: "ADA", quote: "US Dollar", price: 0.65,     ret1d: -1.2, ret7d: -2.5, ret30d: 5.0,  ret90d: -12.5, vol7: 82.1, vol30: 85.6, atr14: 4.5, dd90: 42.1, exchange_used: "Kraken" },
     ];
     cryptoData.indices = organizeByLetter(demo);
     cryptoData.meta = { timestamp: new Date().toISOString(), count: demo.length, isStale: false, source: 'demo avec volatilité' };
