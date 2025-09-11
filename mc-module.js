@@ -1,4 +1,5 @@
-// ===== MC (Multi-Critères) – Module Optimisé v3.5 avec Drag&Drop amélioré ===================
+// ===== MC (Multi-Critères) – Module Optimisé v3.6 avec Multi-sélection ===================
+// v3.6: Multi-sélection pour Région/Pays/Secteur avec interface améliorée
 // v3.5: Optimisation du Drag & Drop avec scheduleCompute() et updatePriorityNumbersOnly()
 // v3.4: Payout basé uniquement sur TTM avec fallbacks robustes
 (function(){
@@ -149,7 +150,7 @@
   const resetBtn=document.getElementById('mc-reset');
   const summary=document.getElementById('mc-summary');
 
-  // état et données
+  // état et données - v3.6: utilisation de Sets pour multi-sélection
   const state={ 
     mode:'balanced', 
     data:[], 
@@ -157,9 +158,9 @@
     selectedMetrics: ['ytd', 'dividend_yield_reg'], // REG par défaut
     customFilters: [],
     geoFilters: {
-      region: 'all',
-      country: 'all',
-      sector: 'all'
+      regions: new Set(),   // vide = tous
+      countries: new Set(), // vide = tous
+      sectors: new Set()    // vide = tous
     },
     availableRegions: new Set(),
     availableCountries: new Set(),
@@ -250,25 +251,22 @@
     }
   }
 
-  // ==== SYSTÈME DE MASQUES DE FILTRAGE ====
+  // ==== SYSTÈME DE MASQUES DE FILTRAGE - v3.6: multi-sélection ====
   function buildGeoMask() {
     const n = state.data.length;
-    const mask = new Uint8Array(n);
+    const mask = new Uint8Array(n); 
     mask.fill(1);
-    
+
+    const R = state.geoFilters.regions;
+    const C = state.geoFilters.countries;
+    const S = state.geoFilters.sectors;
+
     for (let i = 0; i < n; i++) {
       const s = state.data[i];
-      if (state.geoFilters.region !== 'all' && s.region !== state.geoFilters.region) {
-        mask[i] = 0;
-      }
-      if (state.geoFilters.country !== 'all' && s.country !== state.geoFilters.country) {
-        mask[i] = 0;
-      }
-      if (state.geoFilters.sector !== 'all' && s.sector !== state.geoFilters.sector) {
-        mask[i] = 0;
-      }
+      if (R.size && !R.has(s.region))   { mask[i] = 0; continue; }
+      if (C.size && !C.has(s.country))  { mask[i] = 0; continue; }
+      if (S.size && !S.has(s.sector))   { mask[i] = 0; continue; }
     }
-    
     masks.geo = mask;
     return mask;
   }
@@ -450,84 +448,94 @@
     }
   }
 
-  // Créer l'interface des filtres géographiques
+  // Créer l'interface des filtres - v3.6: avec multi-sélection
   function setupGeoFilters() {
     const geoContainer = document.getElementById('geo-filters-container');
     if (!geoContainer) return;
-    
+
+    const tip = `<div class="text-[10px] opacity-60 mb-1">
+      Astuce : Ctrl/Cmd + clic pour multi-sélectionner. Aucune sélection = tous.
+    </div>`;
+
     geoContainer.innerHTML = `
-      <div class="space-y-2">
-        <div class="flex gap-2 items-center">
-          <label class="text-xs opacity-70 min-w-[60px]">Région:</label>
-          <select id="filter-region" class="mini-select flex-1">
-            <option value="all">Toutes régions</option>
-            ${Array.from(state.availableRegions).map(r => 
-              `<option value="${r}">${r}</option>`
-            ).join('')}
-          </select>
+      <div class="space-y-3">
+        <div>${tip}
+          <div class="flex gap-2 items-start">
+            <label class="text-xs opacity-70 min-w-[60px] mt-2">Région:</label>
+            <select id="filter-region" class="mini-select flex-1" multiple size="4">
+              ${Array.from(state.availableRegions).sort().map(r=>`<option value="${r}">${r}</option>`).join('')}
+            </select>
+          </div>
         </div>
-        <div class="flex gap-2 items-center">
-          <label class="text-xs opacity-70 min-w-[60px]">Pays:</label>
-          <select id="filter-country" class="mini-select flex-1">
-            <option value="all">Tous pays</option>
-            ${Array.from(state.availableCountries).map(c => 
-              `<option value="${c}">${c}</option>`
-            ).join('')}
-          </select>
+
+        <div>
+          <div class="flex gap-2 items-start">
+            <label class="text-xs opacity-70 min-w-[60px] mt-2">Pays:</label>
+            <select id="filter-country" class="mini-select flex-1" multiple size="8"></select>
+          </div>
         </div>
-        <div class="flex gap-2 items-center">
-          <label class="text-xs opacity-70 min-w-[60px]">Secteur:</label>
-          <select id="filter-sector" class="mini-select flex-1">
-            <option value="all">Tous secteurs</option>
-            ${Array.from(state.availableSectors).map(s => 
-              `<option value="${s}">${s}</option>`
-            ).join('')}
-          </select>
+
+        <div>
+          <div class="flex gap-2 items-start">
+            <label class="text-xs opacity-70 min-w-[60px] mt-2">Secteur:</label>
+            <select id="filter-sector" class="mini-select flex-1" multiple size="6">
+              ${Array.from(state.availableSectors).sort().map(s=>`<option value="${s}">${s}</option>`).join('')}
+            </select>
+          </div>
         </div>
       </div>
     `;
-    
-    // Event listeners avec auto-recompute
-    document.getElementById('filter-region')?.addEventListener('change', (e) => {
-      state.geoFilters.region = e.target.value;
-      masks.geo = null; // Invalider le cache
-      updateCountryFilter();
+
+    const getMulti = (sel) => new Set([...sel.selectedOptions].map(o => o.value));
+
+    const regionSel  = document.getElementById('filter-region');
+    const countrySel = document.getElementById('filter-country');
+    const sectorSel  = document.getElementById('filter-sector');
+
+    // init pays selon régions
+    updateCountryFilter();
+
+    regionSel?.addEventListener('change', () => {
+      state.geoFilters.regions = getMulti(regionSel);
+      masks.geo = null;
+      updateCountryFilter();            // recalculer la liste des pays
       scheduleCompute();
     });
-    
-    document.getElementById('filter-country')?.addEventListener('change', (e) => {
-      state.geoFilters.country = e.target.value;
-      masks.geo = null; // Invalider le cache
+
+    countrySel?.addEventListener('change', () => {
+      state.geoFilters.countries = getMulti(countrySel);
+      masks.geo = null;
       scheduleCompute();
     });
-    
-    document.getElementById('filter-sector')?.addEventListener('change', (e) => {
-      state.geoFilters.sector = e.target.value;
-      masks.geo = null; // Invalider le cache
+
+    sectorSel?.addEventListener('change', () => {
+      state.geoFilters.sectors = getMulti(sectorSel);
+      masks.geo = null;
       scheduleCompute();
     });
   }
 
-  // Mettre à jour le filtre pays selon la région sélectionnée
+  // Mettre à jour le filtre pays selon les régions sélectionnées - v3.6
   function updateCountryFilter() {
     const countrySelect = document.getElementById('filter-country');
     if (!countrySelect) return;
-    
-    const filteredCountries = new Set();
+
+    const selectedRegions = state.geoFilters.regions; // Set
+    const filtered = new Set();
+
     state.data.forEach(stock => {
-      if (state.geoFilters.region === 'all' || stock.region === state.geoFilters.region) {
-        if (stock.country) filteredCountries.add(stock.country);
+      if (!selectedRegions.size || selectedRegions.has(stock.region)) {
+        if (stock.country) filtered.add(stock.country);
       }
     });
-    
-    countrySelect.innerHTML = `
-      <option value="all">Tous pays</option>
-      ${Array.from(filteredCountries).sort().map(c => 
-        `<option value="${c}">${c}</option>`
-      ).join('')}
-    `;
-    
-    state.geoFilters.country = 'all';
+
+    const prev = new Set(state.geoFilters.countries); // conserver la sélection
+    const options = Array.from(filtered).sort();
+
+    countrySelect.innerHTML = options.map(c => `<option value="${c}">${c}</option>`).join('');
+
+    // restaurer la sélection (intersection)
+    [...countrySelect.options].forEach(o => { o.selected = prev.has(o.value); });
   }
 
   // Créer l'interface des filtres personnalisables
@@ -536,7 +544,7 @@
     if (!filtersFieldset) return;
     
     filtersFieldset.innerHTML = `
-      <legend class="text-sm opacity-70 mb-2">Filtres géographiques</legend>
+      <legend class="text-sm opacity-70 mb-2">Filtres</legend>
       <div id="geo-filters-container" class="mb-3">
         <!-- Les filtres géo seront ajoutés ici -->
       </div>
@@ -1302,6 +1310,7 @@
     }
   }
 
+  // v3.6: Affichage multi-valeurs dans le résumé
   function setSummary(total, kept){
     if (!summary) return;
     const mode = state.mode==='balanced' ? 'Équilibre' : 'Priorités intelligentes';
@@ -1316,12 +1325,15 @@
       ? ` <span class="text-cyan-400">[Auto: Div ≥ ${MIN_DY_SELECTED}%]</span>` 
       : '';
     
-    const geoActive = [];
-    if (state.geoFilters.region !== 'all') geoActive.push(state.geoFilters.region);
-    if (state.geoFilters.country !== 'all') geoActive.push(state.geoFilters.country);
-    if (state.geoFilters.sector !== 'all') geoActive.push(state.geoFilters.sector);
-    
-    const geoText = geoActive.length > 0 ? ` • ${geoActive.join(', ')}` : '';
+    // v3.6: Affichage des multi-sélections
+    const r = [...state.geoFilters.regions];
+    const c = [...state.geoFilters.countries];
+    const s = [...state.geoFilters.sectors];
+    const parts = [];
+    if (r.length) parts.push(r.join('|'));
+    if (c.length) parts.push(c.join('|'));
+    if (s.length) parts.push(s.join('|'));
+    const geoText = parts.length ? ` • ${parts.join(', ')}` : '';
     
     summary.innerHTML = `<strong>${mode}</strong> • ${labels || 'Aucun critère'} • ${visibleFilters} filtres${geoText}${autoText} • ${kept}/${total} actions`;
   }
@@ -1408,16 +1420,15 @@
     });
   }
   
+  // v3.6: Reset avec Sets vides
   if (resetBtn) {
     resetBtn.addEventListener('click', ()=>{
       state.selectedMetrics = ['ytd', 'dividend_yield_reg'];
       state.customFilters = [];
-      state.geoFilters = { region: 'all', country: 'all', sector: 'all' };
+      state.geoFilters = { regions: new Set(), countries: new Set(), sectors: new Set() };
       
       // Invalider les caches
-      masks.geo = null;
-      masks.custom = null;
-      masks.final = null;
+      masks.geo = masks.custom = masks.final = null;
       
       Object.keys(METRICS).forEach(id => {
         const checkbox = root.querySelector('#m-'+id);
@@ -1434,13 +1445,14 @@
         }
       });
       
-      // Reset filtres géo
-      const regionSelect = document.getElementById('filter-region');
+      // Reset filtres géo - v3.6: vider les multi-sélections
+      const regionSelect  = document.getElementById('filter-region');
       const countrySelect = document.getElementById('filter-country');
-      const sectorSelect = document.getElementById('filter-sector');
-      if (regionSelect) regionSelect.value = 'all';
-      if (countrySelect) countrySelect.value = 'all';
-      if (sectorSelect) sectorSelect.value = 'all';
+      const sectorSelect  = document.getElementById('filter-sector');
+      if (regionSelect)  [...regionSelect.options].forEach(o => o.selected = false);
+      if (countrySelect) [...countrySelect.options].forEach(o => o.selected = false);
+      if (sectorSelect)  [...sectorSelect.options].forEach(o => o.selected = false);
+      updateCountryFilter();
       
       const balancedRadio = modeRadios.find(x=>x.value==='balanced');
       if (balancedRadio) balancedRadio.checked=true;
@@ -1464,7 +1476,7 @@
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module v3.5 - Drag&Drop optimisé avec scheduleCompute()');
+    console.log('✅ MC Module v3.6 - Multi-sélection activée');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
