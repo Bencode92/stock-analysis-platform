@@ -53,6 +53,8 @@
     return Number.isFinite(v) ? v : NaN;
   };
   const fmtPct = (v) => Number.isFinite(v) ? `${v>0?'+':''}${v.toFixed(2)}%` : '–';
+  // NOUVEAU: Formatter spécial pour drawdown (toujours négatif)
+  const fmtDD = (v) => Number.isFinite(v) ? (v === 0 ? '0.00%' : `-${Math.abs(v).toFixed(2)}%`) : '–';
   const fmtPrice = (p, quote) => Number.isFinite(p) ? `${(quote||'US Dollar').toLowerCase().includes('euro')?'€':'$'}${p.toLocaleString('fr-FR',{maximumFractionDigits:8})}` : '–';
   
   // NOUVEAU: Convertit "0,8", " 1.25 % " -> 0.8, 1.25 (format FR)
@@ -615,7 +617,8 @@
         const raw = state.cache[m]?.raw[i];
         if (!Number.isFinite(raw)) return '';
         const dir = isMax(m);
-        const val = fmtPct(raw);
+        // MODIFIÉ: Utilise fmtDD pour le drawdown
+        const val = (m === 'dd90') ? fmtDD(raw) : fmtPct(raw);
         const cls = !dir
           ? (raw < 20 ? 'text-green-400' : raw > 40 ? 'text-red-400' : 'text-yellow-400')
           : (raw >= 0 ? 'text-green-400' : 'text-red-400');
