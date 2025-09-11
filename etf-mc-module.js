@@ -1,4 +1,4 @@
-// Module MC adapté pour ETFs - v4.7 avec drag&drop optimisé
+// Module MC adapté pour ETFs - v4.8 avec drag&drop pointer-based (souris+tactile)
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const num=x=>Number.isFinite(+x)?+x:NaN, str=s=>s==null?'':String(s);
@@ -46,15 +46,15 @@
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results');
     const summary=document.getElementById('etf-mc-summary');
-    if(!root||!results){console.error('❌ ETF MC v4.7: DOM manquant');return;}
-    console.log('✅ ETF MC v4.7: Drag&Drop optimisé');
+    if(!root||!results){console.error('❌ ETF MC v4.8: DOM manquant');return;}
+    console.log('✅ ETF MC v4.8: Drag&Drop pointer-based (souris+tactile)');
 
     // Harmonisation du conteneur
     results.classList.add('glassmorphism','rounded-lg','p-4');
 
-    // Styles harmonisés avec ajout des optimisations drag&drop
-    if(!document.getElementById('etf-mc-v47-styles')){
-      const s=document.createElement('style'); s.id='etf-mc-v47-styles'; s.textContent=`
+    // Styles harmonisés avec nouveau drag&drop pointer-based
+    if(!document.getElementById('etf-mc-v48-styles')){
+      const s=document.createElement('style'); s.id='etf-mc-v48-styles'; s.textContent=`
       #etf-mc-results { display:block }
       #etf-mc-results .space-y-2 > div { margin-bottom: .75rem }
       #etf-mc-results .etf-card{
@@ -88,25 +88,22 @@
       #etf-mc-section .mc-pill:hover{background:rgba(0,255,255,.08);border-color:rgba(0,255,255,.35)}
       #etf-mc-section .mc-pill.is-checked{background:rgba(0,255,255,.2)!important;border-color:#00ffff!important;box-shadow:0 0 12px rgba(0,255,255,.3)}
       #etf-priority-container{margin-top:12px;padding:12px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(0,255,255,.2)}
-      
-      /* === OPTIMISATIONS DRAG&DROP === */
-      #etf-priority-list {
-        contain: layout paint;
-        position: relative;
-      }
-      #etf-priority-list .priority-item{
-        display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;
-        background:rgba(0,255,255,.05);border:1px solid rgba(0,255,255,.2);
-        cursor:move;cursor:grab;user-select:none;margin-bottom:4px;
-        will-change:transform;transition:all .2s ease;
-      }
-      #etf-priority-list .priority-item:active{cursor:grabbing}
+      #etf-priority-list .priority-item{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:rgba(0,255,255,.05);border:1px solid rgba(0,255,255,.2);cursor:move;user-select:none;margin-bottom:4px}
       #etf-priority-list .priority-item:hover{background:rgba(0,255,255,.1);border-color:rgba(0,255,255,.4)}
-      #etf-priority-list .priority-item.dragging{
-        opacity:.5;transform:scale(1.02);z-index:999;
+      #etf-priority-list .priority-item.dragging{opacity:.5}
+      
+      /* === DRAG & DROP POINTER-BASED === */
+      #etf-priority-list{ position:relative; contain:layout paint; touch-action:none; }
+      #etf-priority-list .priority-item{ user-select:none; -webkit-user-select:none; }
+      #etf-priority-list .placeholder{
+        height:40px; border-radius:8px;
+        background:rgba(0,255,255,.08);
+        border:1px dashed rgba(0,255,255,.35);
       }
-      #etf-priority-list.drag-active .priority-item:not(.dragging):hover{
-        background:rgba(0,255,255,.05);
+      .drag-ghost{
+        position:fixed; left:0; top:0; z-index:10000;
+        pointer-events:none; opacity:.9; transform:translate3d(0,0,0);
+        will-change:transform; box-shadow:0 8px 24px rgba(0,0,0,.25);
       }
       
       .facet-group{margin-top:10px}.facet-head{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:.85rem;opacity:.85}
@@ -332,11 +329,11 @@
       if(e.target && e.target.name==='etf-mc-mode'){ state.mode=e.target.value||'balanced'; buildPriorityUI(); scheduleCompute(); }
     });
 
-    // ==== UI Priorités - VERSION OPTIMISÉE DRAG&DROP ====
+    // ==== UI Priorités - VERSION POINTER-BASED ====
     function buildPriorityUI() {
       let host = root.querySelector('fieldset[role="radiogroup"]') || root.querySelector('#etf-mc-section fieldset:nth-of-type(2)');
       if (!host) return;
-      
+
       let box = document.getElementById('etf-priority-container');
       if (!box) {
         box = document.createElement('div');
@@ -347,102 +344,122 @@
         `;
         host.appendChild(box);
       }
-      
+
       box.style.display = (state.mode === 'balanced') ? 'none' : 'block';
-      
+
       const list = box.querySelector('#etf-priority-list');
       list.innerHTML = state.selectedMetrics.map((m, i) => `
-        <div class="priority-item" draggable="true" data-m="${m}">
-          <span>☰</span>
+        <div class="priority-item" data-m="${m}">
+          <span class="drag-handle">☰</span>
           <span class="text-xs opacity-50 mr-2">${i + 1}.</span>
           <span class="flex-1">${METRICS[m]?.label || m} ${METRICS[m]?.max ? '↑' : '↓'}</span>
         </div>
       `).join('') || '<div class="text-xs opacity-50">Coche au moins un critère</div>';
 
-      // Variables de gestion du drag
-      let dragging = null;
-      let raf = null;
+      // 👉 nouveau DnD pointer-based
+      setupPointerDnD(list);
+    }
 
-      // === NOUVEAU : Event delegation sur la liste ===
-      
-      // Dragstart : initialisation (compat Safari)
-      list.addEventListener('dragstart', (e) => {
-        const el = e.target.closest('.priority-item');
-        if (!el) return;
-        
-        dragging = el;
-        el.classList.add('dragging');
-        list.classList.add('drag-active');
-        
-        // Compatibilité Safari : nécessaire setData pour activer le drag
-        if (e.dataTransfer) {
-          e.dataTransfer.effectAllowed = 'move';
-          try { 
-            e.dataTransfer.setData('text/plain', ''); 
-          } catch {}
-        }
-      });
+    // ==== NOUVEAU DRAG&DROP POINTER-BASED ====
+    function setupPointerDnD(list){
+      let dragging=null, ghost=null, placeholder=null, startY=0, offsetY=0, raf=null;
+      const listLeft = () => list.getBoundingClientRect().left + 6; // léger décalage X
 
-      // Dragend : finalisation
-      list.addEventListener('dragend', () => {
-        if (dragging) {
-          dragging.classList.remove('dragging');
+      function placePlaceholder(clientY){
+        const items=[...list.querySelectorAll('.priority-item:not(.dragging)')];
+        let after=null, best=Number.NEGATIVE_INFINITY;
+        for(const el of items){
+          const r=el.getBoundingClientRect();
+          const off = clientY - (r.top + r.height/2);
+          if(off<0 && off>best){ best=off; after=el; }
         }
-        list.classList.remove('drag-active');
-        dragging = null;
-        
-        // Met à jour l'ordre dans l'état
-        state.selectedMetrics = [...list.querySelectorAll('.priority-item')].map(el => el.dataset.m);
-        
-        // Renumérote sans tout reconstruire (performance++)
-        list.querySelectorAll('.priority-item .opacity-50').forEach((n, i) => {
-          n.textContent = (i + 1) + '.';
-        });
-        
-        scheduleCompute();
-      });
-
-      // Fonction helper : trouve l'élément après la position Y
-      function getAfterElement(container, y) {
-        const items = [...container.querySelectorAll('.priority-item:not(.dragging)')];
-        let closest = { 
-          offset: Number.NEGATIVE_INFINITY, 
-          element: null 
-        };
-        
-        for (const el of items) {
-          const rect = el.getBoundingClientRect();
-          const offset = y - rect.top - rect.height / 2;
-          
-          if (offset < 0 && offset > closest.offset) {
-            closest = { offset, element: el };
-          }
-        }
-        
-        return closest.element;
+        if(!after) list.appendChild(placeholder);
+        else list.insertBefore(placeholder, after);
       }
 
-      // Dragover : réordonnancement throttlé
-      list.addEventListener('dragover', (e) => {
-        e.preventDefault(); // Indispensable pour autoriser le drop
-        
-        if (!dragging) return;
-        
-        // Throttling via requestAnimationFrame : 1 op par frame max
-        if (raf) return;
-        
-        raf = requestAnimationFrame(() => {
-          const afterElement = getAfterElement(list, e.clientY);
-          
-          if (!afterElement) {
-            list.appendChild(dragging);
-          } else {
-            list.insertBefore(dragging, afterElement);
-          }
-          
-          raf = null;
-        });
+      function onMoveY(clientY){
+        if(!ghost) return;
+        const y = clientY - offsetY;
+        ghost.style.transform = `translate3d(${listLeft()}px, ${y}px, 0)`;
+        placePlaceholder(clientY);
+      }
+
+      function onPointerMove(e){
+        const y = e.clientY ?? e.touches?.[0]?.clientY;
+        if(y==null) return;
+        e.preventDefault();
+        if(raf) return;
+        raf = requestAnimationFrame(()=>{ onMoveY(y); raf=null; });
+      }
+
+      function endDrag(){
+        document.removeEventListener('pointermove', onPointerMove);
+        document.removeEventListener('pointerup', endDrag);
+        document.removeEventListener('touchmove', onPointerMove, {passive:false});
+        document.removeEventListener('touchend', endDrag);
+
+        if(ghost) ghost.remove(); ghost=null;
+
+        if(dragging){
+          if(placeholder) list.insertBefore(dragging, placeholder);
+          dragging.classList.remove('dragging');
+          dragging.style.removeProperty('opacity');
+          dragging=null;
+        }
+        if(placeholder){ placeholder.remove(); placeholder=null; }
+
+        // MAJ ordre + numérotation + recalcul
+        state.selectedMetrics = [...list.querySelectorAll('.priority-item')].map(el => el.dataset.m);
+        list.querySelectorAll('.priority-item .opacity-50').forEach((n,i)=> n.textContent = (i+1)+'.');
+        scheduleCompute();
+      }
+
+      list.addEventListener('pointerdown', (e)=>{
+        const it = e.target.closest('.priority-item');
+        if(!it) return;
+        e.preventDefault();
+
+        // désactiver un éventuel DnD natif
+        it.setAttribute('draggable','false');
+
+        dragging = it;
+        dragging.classList.add('dragging');
+        dragging.style.opacity = '0.5';
+
+        const r = it.getBoundingClientRect();
+        startY = e.clientY;
+        offsetY = startY - r.top;
+
+        // Placeholder (même hauteur)
+        placeholder = document.createElement('div');
+        placeholder.className = 'placeholder';
+        placeholder.style.height = `${r.height}px`;
+        list.insertBefore(placeholder, it.nextSibling);
+
+        // Ghost (clone qui suit le curseur)
+        ghost = it.cloneNode(true);
+        ghost.classList.add('drag-ghost');
+        ghost.style.width = `${r.width}px`;
+        ghost.style.transform = `translate3d(${listLeft()}px, ${r.top}px, 0)`;
+        document.body.appendChild(ghost);
+
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', endDrag);
       });
+
+      // iOS/Android : shim touch → pointer
+      list.addEventListener('touchstart', (e)=>{
+        const t = e.touches[0];
+        const ev = new PointerEvent('pointerdown', {bubbles:true, clientX:t.clientX, clientY:t.clientY});
+        e.target.dispatchEvent(ev);
+      }, {passive:true});
+
+      list.addEventListener('touchmove', (e)=>{
+        const t = e.touches[0];
+        onPointerMove({ clientY: t.clientY, preventDefault: ()=>e.preventDefault() });
+      }, {passive:false});
+
+      list.addEventListener('touchend', endDrag);
     }
 
     // ==== BUILD CACHE ====
