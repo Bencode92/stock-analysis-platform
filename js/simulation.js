@@ -103,6 +103,66 @@ function showTooltip(message) {
     }, 3000);
 }
 
+// ============================================
+// GESTION DES FRAIS
+// ============================================
+
+/**
+ * Lecture des paramètres de frais depuis l'interface
+ * @returns {Object} Paramètres de frais
+ */
+function readFeeParams() {
+    const mgmt = parseFloat(document.getElementById('mgmt-fee')?.value) || 0;     // %/an
+    const entry = parseFloat(document.getElementById('entry-fee')?.value) || 0;   // % des versements
+    const exit = parseFloat(document.getElementById('exit-fee')?.value) || 0;     // % du capital final
+    const fixed = parseFloat(document.getElementById('fixed-fee')?.value) || 0;   // € / an
+    return { mgmtPct: mgmt/100, entryPct: entry/100, exitPct: exit/100, fixedAnnual: fixed };
+}
+
+/**
+ * Suggestions automatiques de frais selon l'enveloppe
+ */
+function updateFeeSuggestionsByVehicle() {
+    const v = document.getElementById('investment-vehicle').value;
+    const preset = {
+        'assurance-vie': { mgmt: 0.6, entry: 0, exit: 0, fixed: 0 },
+        'pea': { mgmt: 0.2, entry: 0, exit: 0, fixed: 30 },
+        'cto': { mgmt: 0.2, entry: 0.1, exit: 0.1, fixed: 0 },
+        'scpi-av': { mgmt: 1.0, entry: 0, exit: 0, fixed: 0 },
+        'scpi-cto': { mgmt: 0, entry: 12, exit: 0, fixed: 0 },
+        'per': { mgmt: 0.8, entry: 0, exit: 0, fixed: 0 },
+        'livret-a': { mgmt: 0, entry: 0, exit: 0, fixed: 0 },
+        'ldds': { mgmt: 0, entry: 0, exit: 0, fixed: 0 },
+        'lep': { mgmt: 0, entry: 0, exit: 0, fixed: 0 },
+        'crypto-cto': { mgmt: 0, entry: 0.5, exit: 0.5, fixed: 0 }
+    };
+
+    if (v in preset) {
+        const feePreset = preset[v];
+        const mgmtInput = document.getElementById('mgmt-fee');
+        const entryInput = document.getElementById('entry-fee');
+        const exitInput = document.getElementById('exit-fee');
+        const fixedInput = document.getElementById('fixed-fee');
+
+        if (mgmtInput && (parseFloat(mgmtInput.value) || 0) === 0) {
+            mgmtInput.value = feePreset.mgmt.toFixed(2);
+        }
+        if (entryInput && (parseFloat(entryInput.value) || 0) === 0) {
+            entryInput.value = feePreset.entry.toFixed(2);
+        }
+        if (exitInput && (parseFloat(exitInput.value) || 0) === 0) {
+            exitInput.value = feePreset.exit.toFixed(2);
+        }
+        if (fixedInput && (parseFloat(fixedInput.value) || 0) === 0) {
+            fixedInput.value = feePreset.fixed.toString();
+        }
+
+        if (getEnveloppeInfo(v)) {
+            showTooltip(`Frais suggérés appliqués pour ${getEnveloppeInfo(v).label}`);
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Mettre à jour la date du jour
     updateDate();
@@ -126,6 +186,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('investment-vehicle').addEventListener('change', function() {
         updateTaxInfo();
         updateReturnSuggestions();
+        updateFeeSuggestionsByVehicle(); // NOUVEAU: Suggestions de frais
         
         // Relancer la simulation si déjà des résultats
         if (document.querySelector('.result-value').textContent !== '') {
@@ -742,8 +803,8 @@ function runSimulation() {
 }
 
 /**
- * Calcule les résultats d'investissement avec la vraie fiscalité
- * MODIFIÉE : Prend maintenant initialDeposit et periodicAmount séparés + retourne les montants séparés + calcul du rendement annualisé
+ * Calcule les résultats d'investissement avec la vraie fiscalité et les frais
+ * MODIFIÉE : Intégration complète des frais selon la méthodologie proposée
  * @param {number} initialDeposit - Montant initial versé au départ
  * @param {number} periodicAmount - Montant des versements périodiques
  * @param {number} years - Nombre d'années
@@ -753,89 +814,109 @@ function runSimulation() {
 function calculateInvestmentResults(initialDeposit, periodicAmount, years, annualReturn) {
     const vehicleId = document.getElementById('investment-vehicle').value;
     const enveloppe = getEnveloppeInfo(vehicleId);
-    
-    // Mode de versement
+
+    const fees = readFeeParams();
     const isPeriodicMode = document.getElementById('periodic-investment')?.classList.contains('selected');
     const frequency = document.getElementById('investment-frequency')?.value || 'monthly';
-    
-    // ✅ NOUVEAU : Calcul des montants séparés
-    const periodsPerYear = frequency === 'weekly' ? 52 : 
-                          frequency === 'monthly' ? 12 : 
-                          frequency === 'quarterly' ? 4 : 1;
+    const p = (frequency === 'weekly') ? 52 : (frequency === 'monthly') ? 12 : (frequency === 'quarterly') ? 4 : 1;
+    const n = years * p;
 
-    const periodicTotal = isPeriodicMode ? periodicAmount * periodsPerYear * years : 0;
-    const investedTotal = initialDeposit + periodicTotal; // Gardé pour compatibilité
-    
-    // Calcul de la valeur finale
-    let finalAmount = initialDeposit * Math.pow(1 + annualReturn, years);
+    // Versements bruts (ce que l'utilisateur paie)
+    const periodicTotal = isPeriodicMode ? periodicAmount * p * years : 0;
+    const investedTotal = initialDeposit + periodicTotal;
 
+    // Versements nets après frais d'entrée
+    const initialNet   = initialDeposit * (1 - fees.entryPct);
+    const periodicNet  = isPeriodicMode ? periodicAmount * (1 - fees.entryPct) : 0;
+
+    // Taux net par période : (1+r/p)*(1 - fee/p) - 1
+    const rPer = annualReturn / p;
+    const fPer = fees.mgmtPct   / p;
+    const rNetPer = ((1 + rPer) * (1 - fPer)) - 1;
+
+    // --- Capital final SANS frais (référence pour l'impact) ---
+    let finalNoFees = initialDeposit * Math.pow(1 + annualReturn, years);
     if (isPeriodicMode && periodicAmount > 0) {
-        // Calcul pour versements périodiques
-        const totalPeriods = years * periodsPerYear;
-        const periodRate = annualReturn / periodsPerYear;
-        
-        // Formule de la valeur future d'une annuité
-        finalAmount += periodicAmount * ((Math.pow(1 + periodRate, totalPeriods) - 1) / periodRate) * (1 + periodRate);
+        finalNoFees += periodicAmount * ((Math.pow(1 + rPer, n) - 1) / rPer) * (1 + rPer);
     }
-    
-    const gains = finalAmount - investedTotal;
-    
-    // ============================================
-    // ✅ NOUVEAU : CALCUL DU RENDEMENT ANNUALISÉ
-    // ============================================
+
+    // --- Capital final AVEC frais ---
+    // 1) Croissance du dépôt initial (net entrée) au taux net
+    let finalWithFees = initialNet * Math.pow(1 + rNetPer, n);
+
+    // 2) Annuité des versements périodiques (nets)
+    if (isPeriodicMode && periodicNet > 0) {
+        finalWithFees += periodicNet * ((Math.pow(1 + rNetPer, n) - 1) / rNetPer) * (1 + rNetPer);
+    }
+
+    // 3) Frais fixes annuels (convertis par période) retirés régulièrement
+    if (fees.fixedAnnual > 0) {
+        const fixedPer = fees.fixedAnnual / p;
+        // Somme des retraits réguliers (fin de période)
+        const fvFixed = fixedPer * ((Math.pow(1 + rNetPer, n) - 1) / rNetPer);
+        finalWithFees -= fvFixed;
+    }
+
+    // 4) Frais de sortie
+    if (fees.exitPct > 0) {
+        finalWithFees *= (1 - fees.exitPct);
+    }
+
+    const finalAmount = round2(finalWithFees);
+    const gains = round2(finalAmount - investedTotal);
+
+    // Impact total des frais sur le capital final
+    const feesImpact = round2(finalNoFees - finalWithFees);
+
+    // Rendement annualisé (IRR si versements réguliers, sinon CAGR)
     let annualizedReturn;
     if (periodicTotal === 0) {
-        // Versement unique : utiliser CAGR
-        annualizedReturn = calcCAGR({
-            invested: initialDeposit,
-            finalValue: finalAmount,
-            years
-        });
+        annualizedReturn = calcCAGR({ invested: initialDeposit, finalValue: finalAmount, years });
     } else {
-        // Versements périodiques : utiliser IRR
         annualizedReturn = calcIRR({
             initial: initialDeposit,
             periodic: isPeriodicMode ? periodicAmount : 0,
-            periodsPerYear,
+            periodsPerYear: p,
             years,
             finalValue: finalAmount,
-            guess: annualReturn        // Aide Newton à converger
+            guess: annualReturn
         });
     }
-    
-    // Calculer le net après impôts selon l'enveloppe
+
+    // Fiscalité : appliquer sur le gain NET de frais
     let afterTaxAmount = finalAmount;
     let taxAmount = 0;
-    
-    if (enveloppe && enveloppe.fiscalite.calcGainNet) {
-        // Utiliser la fonction de calcul spécifique
-        const netGain = enveloppe.fiscalite.calcGainNet({
-            gain: gains,
-            duree: years,
-            tmi: 0.30, // TMI par défaut, pourrait être un paramètre
-            primesVerseesAvantRachat: 0, // Pour assurance-vie
-            estCouple: false, // Pourrait être un paramètre
-        });
-        
-        afterTaxAmount = investedTotal + netGain;
-        taxAmount = gains - netGain;
+    if (gains > 0) {
+        if (enveloppe && enveloppe.fiscalite.calcGainNet) {
+            const netGain = enveloppe.fiscalite.calcGainNet({
+                gain: gains,
+                duree: years,
+                tmi: 0.30,
+                primesVerseesAvantRachat: 0,
+                estCouple: false,
+            });
+            afterTaxAmount = investedTotal + netGain;
+            taxAmount = round2(gains - netGain);
+        } else {
+            const taxRate = years >= 5 ? TAXES.PRL_SOC : TAXES.PFU_TOTAL;
+            taxAmount = round2(gains * taxRate);
+            afterTaxAmount = round2(finalAmount - taxAmount);
+        }
     } else {
-        // Fallback sur le calcul simple
-        const taxRate = years >= 5 ? TAXES.PRL_SOC : TAXES.PFU_TOTAL;
-        taxAmount = gains * taxRate;
-        afterTaxAmount = finalAmount - taxAmount;
+        taxAmount = 0;
+        afterTaxAmount = finalAmount;
     }
-    
-    // ✅ NOUVEAU : Retour avec montants séparés + rendement annualisé
+
     return {
-        initialDeposit,      // NOUVEAU : Montant initial séparé
-        periodicTotal,       // NOUVEAU : Total des versements périodiques
-        investedTotal,       // GARDÉ : Total investi pour compatibilité
-        finalAmount: round2(finalAmount),
-        gains: round2(gains),
-        afterTaxAmount: round2(afterTaxAmount),
-        taxAmount: round2(taxAmount),
-        annualizedReturn,    // ✅ NOUVEAU : Rendement annualisé
+        initialDeposit,
+        periodicTotal,
+        investedTotal,
+        finalAmount,
+        gains,
+        afterTaxAmount,
+        taxAmount,
+        feesImpact,          // 👈 nouveau
+        annualizedReturn,
         years,
         annualReturn,
         vehicleId,
@@ -882,7 +963,7 @@ function updateBudgetResults(results, years) {
 
 /**
  * Met à jour l'affichage des résultats
- * MODIFIÉE : Utilise les nouveaux IDs HTML pour l'affichage séparé + affichage du rendement annualisé
+ * MODIFIÉE : Utilise les nouveaux IDs HTML pour l'affichage séparé + affichage du rendement annualisé + impact des frais
  * @param {Object} results - Résultats de la simulation
  */
 function updateResultsDisplay(results) {
@@ -900,12 +981,14 @@ function updateResultsDisplay(results) {
     const resultPeriodic = document.getElementById('result-periodic');
     const resultGain = document.getElementById('result-gain');
     const resultAfterTax = document.getElementById('result-after-tax');
+    const resultFeesImpact = document.getElementById('result-fees-impact'); // NOUVEAU
     
     if (resultFinal) resultFinal.textContent = formatter.format(results.finalAmount || 0);
     if (resultInitial) resultInitial.textContent = formatter.format(results.initialDeposit || 0);
     if (resultPeriodic) resultPeriodic.textContent = formatter.format(results.periodicTotal || 0);
     if (resultGain) resultGain.textContent = formatter.format(results.gains || 0);
     if (resultAfterTax) resultAfterTax.textContent = formatter.format(results.afterTaxAmount || 0);
+    if (resultFeesImpact) resultFeesImpact.textContent = formatter.format(results.feesImpact || 0); // NOUVEAU
     
     // ✅ NOUVEAU : Affichage du rendement annualisé
     const resultAnnualized = document.getElementById('result-annualized-return');
@@ -956,7 +1039,7 @@ function updateResultsDisplay(results) {
 
 /**
  * Met à jour le message d'adéquation au profil avec analyse intelligente
- * MODIFIÉE : Inclut l'analyse du rendement annualisé
+ * MODIFIÉE : Inclut l'analyse du rendement annualisé et de l'impact des frais
  * @param {Object} results - Résultats de la simulation
  */
 function updateProfileAdequacy(results) {
@@ -992,6 +1075,19 @@ function updateProfileAdequacy(results) {
             adequacyMessages.push("🎯 Vos versements réguliers améliorent le rendement global");
         } else {
             adequacyMessages.push("📊 L'étalement des versements lisse les performances dans le temps");
+        }
+    }
+
+    // ✅ NOUVEAU : Analyse de l'impact des frais
+    if (results.feesImpact > 0) {
+        const impactPct = (results.feesImpact / results.finalAmount) * 100;
+        if (impactPct > 10) {
+            adequacyScore = Math.max(1, adequacyScore - 1);
+            adequacyMessages.push(`⚠️ Impact des frais élevé (${impactPct.toFixed(1)}% du capital final)`);
+        } else if (impactPct > 5) {
+            adequacyMessages.push(`💰 Impact des frais modéré (${impactPct.toFixed(1)}% du capital final)`);
+        } else {
+            adequacyMessages.push(`✅ Impact des frais faible (${impactPct.toFixed(1)}% du capital final)`);
         }
     }
     
@@ -1136,7 +1232,7 @@ function createChart() {
 
 /**
  * Fonction pour mettre à jour le graphique de simulation
- * MODIFIÉE : Prend maintenant initialDeposit et periodicAmount séparés
+ * MODIFIÉE : Prend maintenant initialDeposit et periodicAmount séparés + courbe "sans frais"
  * @param {number} initialDeposit - Montant initial versé au départ
  * @param {number} periodicAmount - Montant des versements périodiques
  * @param {number} years - Nombre d'années
@@ -1191,6 +1287,42 @@ function updateSimulationChart(initialDeposit, periodicAmount, years, annualRetu
             investedValues.push(initialDeposit);
             totalValues.push(total);
         }
+    }
+
+    // ✅ NOUVEAU : Série "sans frais" pour comparaison visuelle
+    const totalNoFees = [];
+    {
+        const p = (frequency === 'weekly') ? 52 : (frequency === 'monthly') ? 12 : (frequency === 'quarterly') ? 4 : 1;
+        const rPer = annualReturn / p;
+        for (let y = 0; y <= years; y++) {
+            const n = y * p;
+            let val = (initialDeposit) * Math.pow(1 + annualReturn, y);
+            if (isPeriodicMode && periodicAmount > 0) {
+                val += periodicAmount * ((Math.pow(1 + rPer, n) - 1) / rPer) * (1 + rPer);
+            }
+            totalNoFees.push(val);
+        }
+    }
+
+    // Injecter/mettre à jour le dataset pointillé
+    const labelNoFees = 'Capital total (sans frais)';
+    const idx = window.investmentChart.data.datasets.findIndex(d => d.label === labelNoFees);
+    const noFeesDataset = {
+        label: labelNoFees,
+        data: totalNoFees,
+        borderColor: '#94a3b8',
+        backgroundColor: 'transparent',
+        borderDash: [6,4],
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        fill: false,
+        tension: 0.3
+    };
+    if (idx === -1) {
+        window.investmentChart.data.datasets.push(noFeesDataset);
+    } else {
+        window.investmentChart.data.datasets[idx] = noFeesDataset;
     }
     
     // Mettre à jour le graphique
