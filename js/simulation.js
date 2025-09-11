@@ -13,6 +13,43 @@ enveloppes.forEach(env => {
     enveloppesCache.set(env.id, env);
 });
 
+/** ================================
+ *  Préréglages de frais par enveloppe
+ *  (valeurs typiques/conseillées — modifiables)
+ *  mgmt = %/an ; entry = % sur versements ; exit = % à la sortie ; fixed = €/an
+ * ================================= */
+const FEE_PRESETS = {
+  // Actions / enveloppes boursières
+  'pea'      : { mgmt: 0.20, entry: 0.00, exit: 0.00, fixed: 0,   note: 'Courtage low-cost, pas de frais récurrents sur encours chez de nombreux courtiers' },
+  'pea-pme'  : { mgmt: 0.25, entry: 0.00, exit: 0.00, fixed: 0,   note: 'Similaire PEA' },
+  'peac'     : { mgmt: 0.30, entry: 0.00, exit: 0.00, fixed: 0,   note: 'PEA Avenir Climat - frais de tenue parfois un peu supérieurs' },
+  'cto'      : { mgmt: 0.20, entry: 0.00, exit: 0.00, fixed: 0,   note: 'CTO moderne: surtout frais de transaction; pas de frais d'encours' },
+
+  // Assurance-vie / PER
+  'assurance-vie': { mgmt: 0.60, entry: 0.00, exit: 0.00, fixed: 0, note: 'En ligne: ~0.5–0.8%/an sur UC ; 0% entrée/sortie' },
+  'per'          : { mgmt: 0.80, entry: 0.00, exit: 0.00, fixed: 0, note: 'PER individuel en ligne: ~0.6–1.0%/an' },
+
+  // Immobilier collectif
+  'scpi-av' : { mgmt: 1.00, entry: 0.00, exit: 0.00, fixed: 0, note: 'Via AV: surcouche de gestion côté contrat; frais de souscription portés par la SCPI' },
+  'scpi-cto': { mgmt: 0.00, entry: 12.00, exit: 0.00, fixed: 0, note: 'Souscription directe: 10-15% frais d\'entrée; 0% gestion annuelle' },
+  'opci'    : { mgmt: 1.20, entry: 3.00, exit: 0.00, fixed: 0, note: 'OPCI grand public: ~1-1.5%/an + frais entrée modérés' },
+
+  // Épargne réglementée (sans frais)
+  'livret-a'    : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: 'Épargne réglementée - aucun frais' },
+  'ldds'        : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: 'Épargne réglementée - aucun frais' },
+  'lep'         : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: 'Épargne réglementée - aucun frais' },
+  'pel'         : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: 'Épargne réglementée - aucun frais' },
+  'cel'         : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: 'Épargne réglementée - aucun frais' },
+  'livret-jeune': { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: 'Épargne réglementée - aucun frais' },
+
+  // Investissements alternatifs
+  'fcpi-fip'    : { mgmt: 2.50, entry: 5.00, exit: 0.00, fixed: 0, note: 'FCPI/FIP: frais élevés mais réduction IR de 25%' },
+  'crypto-cto'  : { mgmt: 0.00, entry: 0.50, exit: 0.50, fixed: 0, note: 'Plateformes crypto: frais de transaction; pas de gestion' },
+
+  // Défaut pour enveloppes non listées
+  '_default': { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: 'Aucun frais par défaut' }
+};
+
 // ============================================
 // FONCTIONS DE CALCUL DU RENDEMENT ANNUALISÉ
 // ============================================
@@ -120,48 +157,85 @@ function readFeeParams() {
 }
 
 /**
- * Suggestions automatiques de frais selon l'enveloppe
+ * Vérifie si l'utilisateur a modifié les champs de frais
+ * @returns {boolean} true si au moins un champ a été modifié par l'utilisateur
  */
-function updateFeeSuggestionsByVehicle() {
-    const v = document.getElementById('investment-vehicle').value;
-    const preset = {
-        'assurance-vie': { mgmt: 0.6, entry: 0, exit: 0, fixed: 0 },
-        'pea': { mgmt: 0.2, entry: 0, exit: 0, fixed: 30 },
-        'cto': { mgmt: 0.2, entry: 0.1, exit: 0.1, fixed: 0 },
-        'scpi-av': { mgmt: 1.0, entry: 0, exit: 0, fixed: 0 },
-        'scpi-cto': { mgmt: 0, entry: 12, exit: 0, fixed: 0 },
-        'per': { mgmt: 0.8, entry: 0, exit: 0, fixed: 0 },
-        'livret-a': { mgmt: 0, entry: 0, exit: 0, fixed: 0 },
-        'ldds': { mgmt: 0, entry: 0, exit: 0, fixed: 0 },
-        'lep': { mgmt: 0, entry: 0, exit: 0, fixed: 0 },
-        'crypto-cto': { mgmt: 0, entry: 0.5, exit: 0.5, fixed: 0 }
-    };
+function hasUserModifiedFees() {
+    const mgmt = parseFloat(document.getElementById('mgmt-fee')?.value) || 0;
+    const entry = parseFloat(document.getElementById('entry-fee')?.value) || 0;
+    const exit = parseFloat(document.getElementById('exit-fee')?.value) || 0;
+    const fixed = parseFloat(document.getElementById('fixed-fee')?.value) || 0;
+    
+    // Considérer comme "modifié" si au moins une valeur n'est pas 0
+    return mgmt !== 0 || entry !== 0 || exit !== 0 || fixed !== 0;
+}
 
-    if (v in preset) {
-        const feePreset = preset[v];
-        const mgmtInput = document.getElementById('mgmt-fee');
-        const entryInput = document.getElementById('entry-fee');
-        const exitInput = document.getElementById('exit-fee');
-        const fixedInput = document.getElementById('fixed-fee');
+/**
+ * Applique les préréglages de frais selon l'enveloppe sélectionnée
+ * @param {boolean} forceApply - Force l'application même si l'utilisateur a modifié les valeurs
+ */
+function updateFeeSuggestionsByVehicle(forceApply = false) {
+    const vehicleId = document.getElementById('investment-vehicle')?.value;
+    if (!vehicleId) return;
 
-        if (mgmtInput && (parseFloat(mgmtInput.value) || 0) === 0) {
-            mgmtInput.value = feePreset.mgmt.toFixed(2);
-        }
-        if (entryInput && (parseFloat(entryInput.value) || 0) === 0) {
-            entryInput.value = feePreset.entry.toFixed(2);
-        }
-        if (exitInput && (parseFloat(exitInput.value) || 0) === 0) {
-            exitInput.value = feePreset.exit.toFixed(2);
-        }
-        if (fixedInput && (parseFloat(fixedInput.value) || 0) === 0) {
-            fixedInput.value = feePreset.fixed.toString();
-        }
+    // Récupérer les éléments DOM
+    const mgmtInput = document.getElementById('mgmt-fee');
+    const entryInput = document.getElementById('entry-fee');
+    const exitInput = document.getElementById('exit-fee');
+    const fixedInput = document.getElementById('fixed-fee');
 
-        if (getEnveloppeInfo(v)) {
-            showTooltip(`Frais suggérés appliqués pour ${getEnveloppeInfo(v).label}`);
-        }
+    if (!mgmtInput || !entryInput || !exitInput || !fixedInput) return;
+
+    // Vérifier si l'utilisateur a déjà modifié les frais
+    const userHasModified = hasUserModifiedFees();
+    
+    // Si l'utilisateur a modifié et qu'on ne force pas, ne rien faire
+    if (userHasModified && !forceApply) {
+        return;
+    }
+
+    // Récupérer le préréglage pour cette enveloppe
+    const preset = FEE_PRESETS[vehicleId] || FEE_PRESETS['_default'];
+    
+    // Appliquer les valeurs
+    mgmtInput.value = preset.mgmt.toFixed(2);
+    entryInput.value = preset.entry.toFixed(2);
+    exitInput.value = preset.exit.toFixed(2);
+    fixedInput.value = preset.fixed.toString();
+
+    // Afficher une notification informative
+    const enveloppe = getEnveloppeInfo(vehicleId);
+    const enveloppeLabel = enveloppe ? enveloppe.label : vehicleId;
+    
+    if (preset.note && preset !== FEE_PRESETS['_default']) {
+        showTooltip(`Frais suggérés appliqués pour ${enveloppeLabel}`);
+        
+        // Optionnel : afficher la note dans une info-bulle plus détaillée
+        setTimeout(() => {
+            const noteTooltip = document.createElement('div');
+            noteTooltip.className = 'fixed bottom-16 right-4 bg-blue-900 bg-opacity-90 text-white px-3 py-2 rounded-lg shadow-lg z-40 text-sm max-w-xs';
+            noteTooltip.innerHTML = `💡 ${preset.note}`;
+            document.body.appendChild(noteTooltip);
+            
+            setTimeout(() => {
+                noteTooltip.classList.add('animate-fadeOut');
+                setTimeout(() => noteTooltip.remove(), 300);
+            }, 4000);
+        }, 500);
+    } else if (preset === FEE_PRESETS['_default']) {
+        showTooltip(`Frais remis à zéro pour ${enveloppeLabel}`);
     }
 }
+
+/**
+ * Force l'application des préréglages de frais (bouton de reset)
+ */
+function resetFeesToPreset() {
+    updateFeeSuggestionsByVehicle(true);
+}
+
+// Exposer la fonction globalement pour l'utiliser depuis l'interface
+window.resetFeesToPreset = resetFeesToPreset;
 
 document.addEventListener('DOMContentLoaded', function() {
     // Mettre à jour la date du jour
@@ -186,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('investment-vehicle').addEventListener('change', function() {
         updateTaxInfo();
         updateReturnSuggestions();
-        updateFeeSuggestionsByVehicle(); // NOUVEAU: Suggestions de frais
+        updateFeeSuggestionsByVehicle(); // Application automatique (respecte les modifications utilisateur)
         
         // Relancer la simulation si déjà des résultats
         if (document.querySelector('.result-value').textContent !== '') {
@@ -233,7 +307,38 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
+
+    // NOUVEAU : Ajouter un bouton de reset des frais près des champs de frais
+    addFeeResetButton();
 });
+
+/**
+ * Ajoute un bouton de reset des frais à l'interface
+ */
+function addFeeResetButton() {
+    const feesContainer = document.querySelector('#mgmt-fee')?.closest('.mb-4');
+    if (!feesContainer) return;
+
+    // Vérifier si le bouton n'existe pas déjà
+    if (document.getElementById('reset-fees-btn')) return;
+
+    const resetButton = document.createElement('button');
+    resetButton.id = 'reset-fees-btn';
+    resetButton.type = 'button';
+    resetButton.className = 'mt-2 px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded transition-colors';
+    resetButton.innerHTML = '<i class="fas fa-refresh mr-1"></i> Réappliquer les frais suggérés';
+    resetButton.title = 'Remet les frais aux valeurs suggérées pour cette enveloppe';
+    
+    resetButton.addEventListener('click', function() {
+        resetFeesToPreset();
+        // Relancer la simulation si elle est active
+        if (document.querySelector('.result-value').textContent !== '') {
+            setTimeout(runSimulation, 100);
+        }
+    });
+
+    feesContainer.appendChild(resetButton);
+}
 
 /**
  * Calcul fiscal exact avec tranches progressives et optimisation PER
