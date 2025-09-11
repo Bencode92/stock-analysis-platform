@@ -1,5 +1,5 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v4.5 - Priorités intelligentes avec tolérance near-tie
-// THEME VIOLET uniquement pour le Composer multi-critères (le reste garde le thème vert)
+// mc-crypto.js — Composer multi-critères (Crypto) v4.6 - Système de thème modulaire
+// THEME TEAL/EMERAUDE par défaut (remplace le violet)
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
 (function () {
@@ -601,7 +601,7 @@
     // --- Contenu
     wrap.innerHTML = '';
     if (!indices.length) {
-      wrap.innerHTML = `<div class="text-center text-purple-400 py-4">
+      wrap.innerHTML = `<div class="text-center text-teal-400 py-4">
         <i class="fas fa-filter mr-2"></i>Aucune crypto ne passe les filtres
       </div>`;
       return;
@@ -1140,8 +1140,7 @@
 
   // --- boot robuste : lance init() tout de suite si le DOM est déjà prêt
   function boot() {
-    // ---- THEME VIOLET UNIQUEMENT POUR LE COMPOSER (pas les variables globales) ----
-    // CSS permanent avec ciblage automatique via :has() et classe fallback
+    // ---- CSS de base pour compactage et structure ----
     const mcCompactCSS = document.createElement('style');
     mcCompactCSS.textContent = `
       /* Ligne des filtres personnalisés — compacte, une seule ligne, pas d'overflow */
@@ -1199,7 +1198,7 @@
         display: block;
       }
 
-      /* ===== THEME VIOLET UNIQUEMENT DANS #crypto-mc ===== */
+      /* ===== STYLES DE BASE (seront surchargés par le thème) ===== */
       #crypto-mc .mc-pill {
         display: inline-flex !important;
         align-items: center !important;
@@ -1209,16 +1208,6 @@
         font-size: 0.85rem !important;
         cursor: pointer !important;
         transition: all 0.2s !important;
-        border: 1px solid rgba(167, 139, 250, 0.35) !important;
-        background-color: rgba(167, 139, 250, 0.12) !important;
-      }
-      #crypto-mc .mc-pill:hover {
-        background-color: rgba(167, 139, 250, 0.22) !important;
-        transform: translateY(-1px);
-      }
-      #crypto-mc .mc-pill.is-checked {
-        background-color: rgba(167, 139, 250, 0.25) !important;
-        border-color: #a78bfa !important;
       }
       
       /* Inputs et selects compacts */
@@ -1244,18 +1233,13 @@
         opacity: .5; 
         transform: scale(0.95);
       }
-      #crypto-priority-list .priority-item:hover {
-        background-color: rgba(167, 139, 250, 0.15) !important;
-      }
       
       /* Animation du conteneur des priorités */
       #crypto-priority-container {
         transition: all 0.3s ease;
-        background: rgba(92, 72, 120, 0.08) !important;
-        border: 1px solid rgba(167, 139, 250, 0.25) !important;
       }
 
-      /* Boutons d'action - THEME VIOLET UNIQUEMENT DANS #crypto-mc */
+      /* Boutons d'action */
       #crypto-mc .mc-action-button, 
       #crypto-mc .mc-search-button,
       #crypto-mc .action-button {
@@ -1266,126 +1250,15 @@
         cursor: pointer !important;
       }
       
-      #crypto-mc .mc-action-button,
-      #crypto-mc .action-button {
-        background-color: rgba(167, 139, 250, 0.12) !important;
-        color: #a78bfa !important;
-        border: 1px solid rgba(167, 139, 250, 0.35) !important;
-      }
-      
-      #crypto-mc .mc-search-button {
-        background-color: #a78bfa !important;
-        color: #0a1929 !important;
-        border: none !important;
-      }
-      
       #crypto-mc .mc-action-button:hover, 
       #crypto-mc .mc-search-button:hover,
       #crypto-mc .action-button:hover {
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(167, 139, 250, 0.30) !important;
       }
 
-      /* ===== NOUVEAUX STYLES POUR COMPLETER LE THEME VIOLET ===== */
-      
-      /* Accent violet pour le titre de la section */
-      #crypto-mc .section-title::before {
-        background: #a78bfa !important;
-        box-shadow: 0 0 8px rgba(167, 139, 250, .8) !important;
-      }
-
-      /* Cartes (panneau gauche + résultats) en violet */
-      #crypto-mc .glassmorphism {
-        background: rgba(46, 24, 67, .42) !important;
-        border: 1px solid rgba(167, 139, 250, .28) !important;
-        box-shadow: 0 0 0 1px rgba(167, 139, 250, .10) inset,
-                   0 8px 24px rgba(167, 139, 250, .09) !important;
-      }
-
-      /* Filtres personnalisés - teinte violette */
-      #crypto-mc #crypto-cf-pills .filter-item,
-      #crypto-mc #crypto-mc-filters .filter-item {
-        background: rgba(92, 72, 120, 0.12) !important;
-        border: 1px solid rgba(167, 139, 250, 0.2) !important;
-      }
-
-      /* Légendes et textes secondaires en violet clair */
-      #crypto-mc legend,
-      #crypto-mc .text-xs.opacity-70,
-      #crypto-mc .text-xs.opacity-60,
-      #crypto-mc .text-xs.opacity-50 {
-        color: rgba(196, 181, 253, .7) !important;
-      }
-    `;
-    document.head.appendChild(mcCompactCSS);
-
-    // === NOUVEAU CSS AMÉLIORÉ: Titre centré + cartes violet plus clair ===
-    const mcTitleCSS = document.createElement('style');
-    mcTitleCSS.textContent = `
-      /* Centre le titre même si le parent est en flex */
-      .mc-crypto-title,
-      #crypto-mc .section-title {
-        display: block !important;
-        width: 100% !important;
-        text-align: center !important;
-        color: #a78bfa !important;
-        text-transform: uppercase !important;
-        letter-spacing: .08em !important;
-        font-weight: 800 !important;
-        margin: 0 0 14px !important;
-        font-size: clamp(18px, 2vw, 20px) !important;
-      }
-      
-      .mc-crypto-title::after,
-      #crypto-mc .section-title::after {
-        content: '';
-        display: block;
-        height: 2px;
-        width: 240px;
-        margin: 8px auto 0;
-        background: linear-gradient(90deg, transparent, #a78bfa, transparent);
-        opacity: .75;
-        animation: subtle-glow 3s ease-in-out infinite;
-      }
-
-      @keyframes subtle-glow {
-        0%, 100% { opacity: 0.75; }
-        50% { opacity: 1; }
-      }
-
-      /* Centre visuellement le bloc résultats comme sur Actions */
-      #crypto-mc #crypto-mc-results {
-        max-width: 1120px;
-        margin: 0 auto;
-      }
-
-      /* --- Résultats: violet plus clair (façon Actions) --- */
-      /* Conteneur "liste" */
+      /* Cartes résultats */
       #crypto-mc .stock-cards-container {
         gap: 10px !important;
-      }
-
-      /* Chaque ligne résultat (la carte de la crypto) */
-      #crypto-mc .stock-card-mc {
-        background: rgba(167, 139, 250, .14) !important;
-        border: 1px solid rgba(167, 139, 250, .30) !important;
-        box-shadow: 0 6px 20px rgba(167, 139, 250, .12) !important;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-      }
-      
-      #crypto-mc .stock-card-mc:hover {
-        background: rgba(167, 139, 250, .20) !important;
-        box-shadow: 0 10px 28px rgba(167, 139, 250, .18) !important;
-        transform: translateY(-2px);
-      }
-
-      /* Gradient subtil sur les Top 3 */
-      #crypto-mc .stock-card-mc:nth-child(1),
-      #crypto-mc .stock-card-mc:nth-child(2),
-      #crypto-mc .stock-card-mc:nth-child(3) {
-        background: linear-gradient(135deg, 
-          rgba(167, 139, 250, .16), 
-          rgba(167, 139, 250, .12)) !important;
       }
 
       /* Micro-interaction sur les métriques */
@@ -1399,17 +1272,8 @@
         transform: scale(1.05);
       }
 
-      /* Légère éclaircie du panneau de droite */
-      #crypto-mc #crypto-mc-results.glassmorphism {
-        background: rgba(46, 24, 67, .28) !important;
-        border-color: rgba(167, 139, 250, .30) !important;
-      }
-
-      /* Bulle de rang: un peu plus lumineuse pour matcher les cartes */
+      /* Bulle de rang */
       #crypto-mc .stock-card-mc .rank {
-        background: rgba(167, 139, 250, .28) !important;
-        color: #f5f3ff !important;
-        border: 1px solid rgba(167, 139, 250, .40) !important;
         width: 40px !important;
         height: 40px !important;
         display: flex !important;
@@ -1437,15 +1301,45 @@
         color: #fff !important;
         border: none !important;
       }
+    `;
+    document.head.appendChild(mcCompactCSS);
 
-      /* Accent violet sur les libellés des colonnes métriques */
-      #crypto-mc .stock-card-mc .text-xs.opacity-60 {
-        color: rgba(196, 181, 253, .85) !important;
+    // === CSS pour le titre centré ===
+    const mcTitleCSS = document.createElement('style');
+    mcTitleCSS.textContent = `
+      /* Centre le titre même si le parent est en flex */
+      .mc-crypto-title,
+      #crypto-mc .section-title {
+        display: block !important;
+        width: 100% !important;
+        text-align: center !important;
+        text-transform: uppercase !important;
+        letter-spacing: .08em !important;
+        font-weight: 800 !important;
+        margin: 0 0 14px !important;
+        font-size: clamp(18px, 2vw, 20px) !important;
+      }
+      
+      .mc-crypto-title::after,
+      #crypto-mc .section-title::after {
+        content: '';
+        display: block;
+        height: 2px;
+        width: 240px;
+        margin: 8px auto 0;
+        opacity: .75;
+        animation: subtle-glow 3s ease-in-out infinite;
       }
 
-      /* Résumé avec accent violet */
-      #crypto-mc #crypto-mc-summary {
-        color: rgba(196, 181, 253, .9) !important;
+      @keyframes subtle-glow {
+        0%, 100% { opacity: 0.75; }
+        50% { opacity: 1; }
+      }
+
+      /* Centre visuellement le bloc résultats */
+      #crypto-mc #crypto-mc-results {
+        max-width: 1120px;
+        margin: 0 auto;
       }
 
       /* Mobile: ajuster la largeur max */
@@ -1463,7 +1357,157 @@
     `;
     document.head.appendChild(mcTitleCSS);
 
-    // === Titre "TOP 10 — COMPOSER MULTI-CRITÈRES" en violet (style Actions) ===
+    // --- THEME SYSTEM avec TEAL par défaut ---
+    (function initThemeSystem() {
+      const PALETTES = {
+        teal:  { accent:'#14b8a6', accentRgb:'20,184,166', glassRgb:'8,43,39', softRgb:'31,64,55', accentText:'#042f2e' },
+        green: { accent:'#10b981', accentRgb:'16,185,129', glassRgb:'6,31,23', softRgb:'20,48,38', accentText:'#052e16' },
+        blue:  { accent:'#3b82f6', accentRgb:'59,130,246', glassRgb:'13,32,59', softRgb:'30,58,138', accentText:'#0a1929' },
+        amber: { accent:'#f59e0b', accentRgb:'245,158,11', glassRgb:'56,38,0', softRgb:'120,53,15', accentText:'#1f1300' },
+        slate: { accent:'#94a3b8', accentRgb:'148,163,184', glassRgb:'15,23,42', softRgb:'30,41,59', accentText:'#0b1220' },
+      };
+
+      function applyMcTheme(name = 'teal') {
+        const t = PALETTES[name] || PALETTES.teal;
+        
+        const css = `
+        /* Pills, radios, petits boutons */
+        #crypto-mc .mc-pill {
+          border: 1px solid rgba(${t.accentRgb}, .35) !important;
+          background-color: rgba(${t.accentRgb}, .12) !important;
+        }
+        #crypto-mc .mc-pill:hover { 
+          background-color: rgba(${t.accentRgb}, .22) !important; 
+        }
+        #crypto-mc .mc-pill.is-checked { 
+          background-color: rgba(${t.accentRgb}, .25) !important; 
+          border-color: ${t.accent} !important; 
+        }
+
+        /* Panneau priorités */
+        #crypto-priority-container {
+          background: rgba(${t.softRgb}, .08) !important;
+          border: 1px solid rgba(${t.accentRgb}, .25) !important;
+        }
+        #crypto-priority-list .priority-item:hover { 
+          background-color: rgba(${t.accentRgb}, .15) !important; 
+        }
+
+        /* Actions */
+        #crypto-mc .mc-action-button, 
+        #crypto-mc .action-button {
+          background-color: rgba(${t.accentRgb}, .12) !important;
+          color: ${t.accent} !important;
+          border: 1px solid rgba(${t.accentRgb}, .35) !important;
+        }
+        #crypto-mc .mc-search-button {
+          background-color: ${t.accent} !important;
+          color: ${t.accentText} !important;
+          border: none !important;
+        }
+        #crypto-mc .mc-action-button:hover, 
+        #crypto-mc .mc-search-button:hover,
+        #crypto-mc .action-button:hover {
+          box-shadow: 0 4px 12px rgba(${t.accentRgb}, .30) !important;
+        }
+
+        /* Cartes / verre dépoli */
+        #crypto-mc .glassmorphism {
+          background: rgba(${t.glassRgb}, .42) !important;
+          border: 1px solid rgba(${t.accentRgb}, .28) !important;
+          box-shadow: 0 0 0 1px rgba(${t.accentRgb}, .10) inset, 
+                     0 8px 24px rgba(${t.accentRgb}, .09) !important;
+        }
+        #crypto-mc #crypto-cf-pills .filter-item,
+        #crypto-mc #crypto-mc-filters .filter-item {
+          background: rgba(${t.softRgb}, .12) !important;
+          border: 1px solid rgba(${t.accentRgb}, .2) !important;
+        }
+
+        /* Liste résultats (lignes) */
+        #crypto-mc .stock-card-mc {
+          background: rgba(${t.accentRgb}, .14) !important;
+          border: 1px solid rgba(${t.accentRgb}, .30) !important;
+          box-shadow: 0 6px 20px rgba(${t.accentRgb}, .12) !important;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        #crypto-mc .stock-card-mc:hover {
+          background: rgba(${t.accentRgb}, .20) !important;
+          box-shadow: 0 10px 28px rgba(${t.accentRgb}, .18) !important;
+          transform: translateY(-2px);
+        }
+
+        /* Gradient subtil sur les Top 3 */
+        #crypto-mc .stock-card-mc:nth-child(1),
+        #crypto-mc .stock-card-mc:nth-child(2),
+        #crypto-mc .stock-card-mc:nth-child(3) {
+          background: linear-gradient(135deg, 
+            rgba(${t.accentRgb}, .16), 
+            rgba(${t.accentRgb}, .12)) !important;
+        }
+
+        #crypto-mc #crypto-mc-results.glassmorphism {
+          background: rgba(${t.glassRgb}, .28) !important;
+          border-color: rgba(${t.accentRgb}, .30) !important;
+        }
+        
+        #crypto-mc .stock-card-mc .rank {
+          background: rgba(${t.accentRgb}, .28) !important;
+          color: #f8fafc !important;
+          border: 1px solid rgba(${t.accentRgb}, .40) !important;
+        }
+
+        /* Titres + micro textes accent */
+        .mc-crypto-title, 
+        #crypto-mc .section-title { 
+          color: ${t.accent} !important; 
+        }
+        .mc-crypto-title::after, 
+        #crypto-mc .section-title::after {
+          background: linear-gradient(90deg, transparent, ${t.accent}, transparent) !important;
+        }
+        #crypto-mc legend,
+        #crypto-mc .text-xs.opacity-70,
+        #crypto-mc .text-xs.opacity-60,
+        #crypto-mc .text-xs.opacity-50 {
+          color: rgba(${t.accentRgb}, .85) !important;
+        }
+        #crypto-mc #crypto-mc-summary { 
+          color: rgba(${t.accentRgb}, .9) !important; 
+        }
+        `;
+        
+        let tag = document.getElementById('crypto-mc-theme');
+        if (!tag) {
+          tag = document.createElement('style');
+          tag.id = 'crypto-mc-theme';
+          document.head.appendChild(tag);
+        }
+        tag.textContent = css;
+        
+        // Persister le choix
+        try { 
+          localStorage.setItem('crypto-mc-theme', name); 
+        } catch(e) {}
+      }
+
+      // Expose globalement
+      window.applyMcTheme = applyMcTheme;
+      
+      // Appliquer le thème (priorité: localStorage > config > défaut)
+      let theme = 'teal';
+      try {
+        const saved = localStorage.getItem('crypto-mc-theme');
+        if (saved && PALETTES[saved]) theme = saved;
+        else if (window.CRYPTO_MC_THEME && PALETTES[window.CRYPTO_MC_THEME]) {
+          theme = window.CRYPTO_MC_THEME;
+        }
+      } catch(e) {}
+      
+      applyMcTheme(theme);
+    })();
+
+    // === Titre "TOP 10 — COMPOSER MULTI-CRITÈRES" (adapté au thème) ===
     (function setCryptoMcTitle(){
       const root = document.getElementById('crypto-mc');
       if (!root) return;
@@ -1475,7 +1519,7 @@
 
       if (title) {
         title.textContent = 'TOP 10 — COMPOSER MULTI-CRITÈRES';
-        title.classList.add('mc-crypto-title');   // applique le style violet
+        title.classList.add('mc-crypto-title');   // applique le style du thème
       }
     })();
 
