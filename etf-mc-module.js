@@ -1,4 +1,4 @@
-// Module MC adapté pour ETFs - v4.9.2 avec drag&drop ultra-fluide + fix boutons ▲▼ (scroll stable)
+// Module MC adapté pour ETFs - v4.9.3 avec fix écouteurs dupliqués + drag&drop ultra-fluide
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const num=x=>Number.isFinite(+x)?+x:NaN, str=s=>s==null?'':String(s);
@@ -46,8 +46,8 @@
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results');
     const summary=document.getElementById('etf-mc-summary');
-    if(!root||!results){console.error('❌ ETF MC v4.9.2: DOM manquant');return;}
-    console.log('✅ ETF MC v4.9.2: Ultra-smooth DnD + boutons ▲▼ scroll stable');
+    if(!root||!results){console.error('❌ ETF MC v4.9.3: DOM manquant');return;}
+    console.log('✅ ETF MC v4.9.3: Fix écouteurs dupliqués + Ultra-smooth DnD');
 
     // Harmonisation du conteneur
     results.classList.add('glassmorphism','rounded-lg','p-4');
@@ -338,7 +338,7 @@
       if(e.target && e.target.name==='etf-mc-mode'){ state.mode=e.target.value||'balanced'; buildPriorityUI(); scheduleCompute(); }
     });
 
-    // ==== UI Priorités - VERSION ULTRA-FLUIDE + SCROLL STABLE ====
+    // ==== UI Priorités - VERSION AVEC FIX ÉCOUTEURS DUPLIQUÉS ====
     function buildPriorityUI() {
       let host = root.querySelector('fieldset[role="radiogroup"]') || root.querySelector('#etf-mc-section fieldset:nth-of-type(2)');
       if (!host) return;
@@ -420,16 +420,16 @@
         commit();
       };
 
-      // ▲▼ buttons — event delegation, index calculé au clic
-      list.addEventListener('click', (e) => {
-        // si on est en train de drag, ignorer
+      // ===== FIX ÉCOUTEURS DUPLIQUÉS =====
+      
+      // 1) CLICK ▲▼ — attacher une seule fois
+      const onClickArrows = (e) => {
         if (typeof list.isDragging !== 'undefined' && list.isDragging) return;
-
         const upBtn   = e.target.closest('.btn-up');
         const downBtn = e.target.closest('.btn-down');
         if (!upBtn && !downBtn) return;
-
-        e.preventDefault();
+        
+        e.preventDefault(); 
         e.stopPropagation();
 
         const item  = e.target.closest('.priority-item');
@@ -438,23 +438,34 @@
         const to    = from + (upBtn ? -1 : 1);
 
         moveItem(from, to, upBtn ? '.btn-up' : '.btn-down');
-      });
+      };
 
-      // Clavier: ↑/↓ = 1 place
-      list.addEventListener('keydown', (e) => {
-        const item = e.target.closest('.priority-item'); if (!item) return;
+      // 2) CLAVIER — attacher une seule fois
+      const onKeyMove = (e) => {
+        const item = e.target.closest('.priority-item'); 
+        if (!item) return;
         const items = [...list.querySelectorAll('.priority-item')];
         const idx = items.indexOf(item);
-        if (e.key === 'ArrowUp')  { e.preventDefault(); moveItem(idx, idx-1, '.btn-up'); }
-        if (e.key === 'ArrowDown'){ e.preventDefault(); moveItem(idx, idx+1, '.btn-down'); }
-      });
+        if (e.key === 'ArrowUp')   { e.preventDefault(); moveItem(idx, idx-1, '.btn-up'); }
+        if (e.key === 'ArrowDown') { e.preventDefault(); moveItem(idx, idx+1, '.btn-down'); }
+      };
 
-      // Pointer-based DnD (poignée uniquement)
+      // 3) Guard: ne brancher qu'une fois
+      if (!list.dataset.wired) {
+        list.addEventListener('click', onClickArrows);
+        list.addEventListener('keydown', onKeyMove);
+        list.dataset.wired = '1';
+      }
+
+      // 4) DnD — idem: ne brancher qu'une fois
       setupPointerDnD(list);
     }
 
-    // ==== NOUVEAU DRAG&DROP ULTRA-FLUIDE + FIXES ====
+    // ==== NOUVEAU DRAG&DROP ULTRA-FLUIDE + FIX ÉCOUTEURS ====
     function setupPointerDnD(list){
+      if (list.dataset.dndWired === '1') return; // <<< empêche les doublons
+      list.dataset.dndWired = '1';
+      
       let dragging=null, ghost=null, placeholder=null, startY=0, offsetY=0, raf=null;
       let pressTimer=null, started=false, pointerId=null;
       let scrollRAF=null, scrollParent=null, lastClientY=0;
