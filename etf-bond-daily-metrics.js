@@ -2,7 +2,7 @@
 // Daily scrape: perfs & risque, et fusion avec le weekly snapshot
 // Calcule: daily % (quote), YTD %, 1Y %, Vol 3Y % (annualisée) depuis /time_series
 // Sorties: data/daily_metrics.json, data/daily_metrics_*.csv, data/combined_*.{json,csv}
-// v2.1: Ajout du champ "name" depuis weekly vers tous les exports daily
+// v2.2: Ajout filtrage qualité (objective requis) et protection contre valeurs aberrantes
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -40,6 +40,13 @@ const toNum = v => (v==null || v==='') ? null : Number(v);
 const round = (x, dp=2) => (x==null) ? null : Number(x.toFixed(dp));
 const uniqBy = (arr, keyFn) => Array.from(new Map(arr.map(x=>[keyFn(x), x])).values());
 const todayISO = () => new Date().toISOString();
+
+// --- Utilitaires qualité ---
+function hasObjective(x) {
+  const s = (x?.objective ?? '').toString().trim().toLowerCase();
+  return s.length > 0 && s !== 'n/a' && s !== 'na' && s !== 'none';
+}
+function clampAbs(v, maxAbs){ return v==null ? null : (Math.abs(v) > maxAbs ? null : v); } // Protection anti-valeurs aberrantes
 
 function parseMaybeJSON(v) {
   if (!v) return null;
@@ -183,9 +190,10 @@ async function computeMetricsFor(symbolParam){
 
   return {
     as_of: todayISO(),
-    daily_change_pct: round(daily_change_pct, 3),
-    ytd_return_pct: round(ytd_return_pct, 2),
-    one_year_return_pct: round(one_year_return_pct, 2),
+    // Protection contre valeurs aberrantes: >100% daily, >1000% YTD/1Y considérés comme aberrants → null
+    daily_change_pct: round(clampAbs(daily_change_pct, 100), 3),
+    ytd_return_pct: round(clampAbs(ytd_return_pct, 1000), 2),
+    one_year_return_pct: round(clampAbs(one_year_return_pct, 1000), 2),
     vol_3y_pct: round(vol_3y_pct, 2),
     last_close: round(last_close, 4)
   };
@@ -322,7 +330,7 @@ async function main(){
     }
   }
 
-  // 4) Ecriture des daily CSV/JSON avec name
+  // 4) Ecriture des daily CSV/JSON avec name (PAS DE FILTRE - trace brute)
   await fs.mkdir(OUT_DIR, { recursive: true });
 
   const etfDaily = etfs.map(e => ({
@@ -343,7 +351,7 @@ async function main(){
   await writeCSV(path.join(OUT_DIR, 'daily_metrics_bonds.csv'),
     bondDaily, ['symbol','name','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of']);
 
-  console.log('💾 Daily JSON/CSV écrits.');
+  console.log('💾 Daily JSON/CSV écrits (trace brute).');
 
   // 5) Fusion weekly + daily (pour affichage site)
   
@@ -381,8 +389,13 @@ async function main(){
   const etfMerged = mergeWeeklyDaily(weeklyEtfs, new Map(etfDaily.map(x=>[x.symbol,x])));
   const bondMerged = mergeWeeklyDaily(weeklyBonds, new Map(bondDaily.map(x=>[x.symbol,x])));
 
+  // 🚫 Exclure les lignes sans objectif
+  const etfMergedFiltered = etfMerged.filter(hasObjective);
+  const bondMergedFiltered = bondMerged.filter(hasObjective);
+  console.log(`🚯 Filtre "sans objectif": -${etfMerged.length-etfMergedFiltered.length} ETFs, -${bondMerged.length-bondMergedFiltered.length} Bonds`);
+  
   await fs.writeFile(path.join(OUT_DIR, 'combined_snapshot.json'),
-    JSON.stringify({ timestamp: todayISO(), etfs: etfMerged, bonds: bondMerged }, null, 2));
+    JSON.stringify({ timestamp: todayISO(), etfs: etfMergedFiltered, bonds: bondMergedFiltered }, null, 2));
 
   // --- CSV combinés ---
 
@@ -427,7 +440,7 @@ async function main(){
   }));
 
   const exposureByBond = new Map(bondExposure.map(x => [x.symbol, x]));
-  const bondMergedWithExposure = bondMerged.map(row => {
+  const bondMergedWithExposure = bondMergedFiltered.map(row => {
     const ex = exposureByBond.get(row.symbol) || {};
     return {
       ...row,
@@ -443,8 +456,9 @@ async function main(){
     };
   });
 
+  const bondFinal = bondMergedWithExposure.filter(hasObjective);
   await writeCSV(path.join(OUT_DIR, 'combined_bonds.csv'),
-    bondMergedWithExposure, [
+    bondFinal, [
       'symbol','name','isin','mic_code','currency','fund_type','etf_type',  // NEW: ajout name
       'aum_usd','total_expense_ratio','yield_ttm','objective',
       'daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of',
@@ -496,8 +510,10 @@ async function main(){
     data_quality_score: e.data_quality_score ?? ''
   }));
 
+  // Filtrer ETFs exposure aussi
+  const etfExposureFiltered = etfExposure.filter(hasObjective);
   await writeCSV(path.join(OUT_DIR, 'combined_etfs_exposure.csv'),
-    etfExposure, [
+    etfExposureFiltered, [
       'symbol','name','isin','mic_code','currency','fund_type','etf_type','leverage',  // NEW: ajout name
       'aum_usd','total_expense_ratio','yield_ttm','objective',
       'sector_top','sector_top_weight','country_top','country_top_weight',
@@ -508,8 +524,8 @@ async function main(){
   );
 
   // --- Injecter l'expo aussi dans le combined_etfs.csv principal ---
-  const exposureBySymbol = new Map(etfExposure.map(x => [x.symbol, x]));
-  const etfMergedWithExposure = etfMerged.map(row => {
+  const exposureBySymbol = new Map(etfExposureFiltered.map(x => [x.symbol, x]));
+  const etfMergedWithExposure = etfMergedFiltered.map(row => {
     const ex = exposureBySymbol.get(row.symbol) || {};
     return {
       ...row,
@@ -525,8 +541,9 @@ async function main(){
     };
   });
 
+  const etfFinal = etfMergedWithExposure.filter(hasObjective);
   await writeCSV(path.join(OUT_DIR, 'combined_etfs.csv'),
-    etfMergedWithExposure, [
+    etfFinal, [
       'symbol','name','isin','mic_code','currency','fund_type','etf_type','leverage',  // NEW: ajout name
       'aum_usd','total_expense_ratio','yield_ttm','objective',
       'daily_change_pct','ytd_return_pct','one_year_return_pct','vol_3y_pct','last_close','as_of',
@@ -538,7 +555,7 @@ async function main(){
 
   // === NEW: combined_bonds_holdings.csv (Top10 only, narrow) ===
   const bondsHoldingsHeader = 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n';
-  const bondsHoldingsRows = weeklyBonds.flatMap(fund => {
+  const bondsHoldingsRows = weeklyBonds.filter(hasObjective).flatMap(fund => {
     const hs = Array.isArray(fund.holdings_top10) ? fund.holdings_top10 : [];
     // normaliser
     const norm = hs.map(h => ('t' in h)
@@ -564,8 +581,8 @@ async function main(){
   console.log(`📝 Combined BONDS holdings (Top10): ${bondsHoldingsRows.length} lignes → data/combined_bonds_holdings.csv`);
 
   console.log('🔗 Fusions weekly+daily écrites (JSON & CSV).');
-  console.log(`✅ Total: ${etfMergedWithExposure.length} ETFs, ${bondMerged.length} Bonds traités`);
-  console.log(`📊 CSV Exposure créé avec ${etfExposure.length} ETFs`);
+  console.log(`✅ Total: ${etfFinal.length} ETFs, ${bondFinal.length} Bonds traités (après filtrage qualité)`);
+  console.log(`📊 CSV Exposure créé avec ${etfExposureFiltered.length} ETFs`);
   if (leverageByKey.size > 0) {
     console.log(`💪 Leverage injecté pour ${leverageByKey.size/2} ETFs`);
   }
