@@ -1087,7 +1087,7 @@
     
     <!-- Script A→Z ETFs amélioré avec helpers et recherche -->
     <script>
-    /* etf-az.js — A→Z ETFs avec helpers pour ticker et nom + RECHERCHE */
+    /* etf-az.js — A→Z ETFs avec helpers pour ticker et nom + RECHERCHE + FORMATAGE CORRIGÉ */
     (function () {
       const $  = s => document.querySelector(s);
       const $$ = s => Array.from(document.querySelectorAll(s));
@@ -1110,14 +1110,33 @@
         return Number.isFinite(n) ? n.toFixed(d) : '-';
       }
       
-      // Accepte soit 0.0075 (ratio) soit 0.75 (déjà en %) et affiche 0,75%
-      function fmtPctSmart(v, d = 2) {
-        if (v == null || v === '') return '-';
+      // Pour les valeurs déjà en pourcentage (ex: -0.372 -> -0.37%)
+      function fmtPct(v, d = 2, withSign = true) {
+        if (v == null || v === '' || v === '-') return '-';
+        const n = Number(v);
+        if (!Number.isFinite(n)) return '-';
+        
+        // Protection contre les valeurs aberrantes
+        if (Math.abs(n) > 1000) return '-';
+        
+        const formatted = n.toFixed(d);
+        const sign = withSign && n > 0 ? '+' : '';
+        return `${sign}${formatted}%`;
+      }
+      
+      // Pour convertir un ratio en pourcentage (ex: 0.0075 -> 0.75%)
+      function fmtRatioPct(v, d = 2, withSign = false) {
+        if (v == null || v === '' || v === '-') return '-';
         let n = Number(v);
         if (!Number.isFinite(n)) return '-';
-        if (Math.abs(n) <= 1) n *= 100;        // 0.0075 -> 0.75
-        const sign = n >= 0 ? '+' : '';
-        return `${sign}${n.toFixed(d)}%`;
+        
+        // Si la valeur semble déjà être en %, on ne convertit pas
+        if (Math.abs(n) > 1) return fmtPct(n, d, withSign);
+        
+        n *= 100;
+        const formatted = n.toFixed(d);
+        const sign = withSign && n > 0 ? '+' : '';
+        return `${sign}${formatted}%`;
       }
       
       // AUM en valeur entière (ex: 1252394900) -> 1,3 B€, 950 M€, etc.
@@ -1389,14 +1408,14 @@
                 <div class="font-medium">${tickerHTML}</div>
                 <div class="text-xs opacity-70 mt-1">${nameHTML}</div>
               </td>
-              <td class="text-right"><span class="ter-badge">${fmtPctSmart(etf.total_expense_ratio ?? etf.ter)}</span></td>
+              <td class="text-right"><span class="ter-badge">${fmtRatioPct(etf.total_expense_ratio ?? etf.ter)}</span></td>
               <td class="text-right"><span class="aum-badge">${fmtAUM(etf.aum_usd ?? etf.aum)}</span></td>
               <td class="text-right">${fmtNum(etf.last_close ?? etf.price,2)}€</td>
-              <td class="text-right ${chCls}">${fmtPctSmart(etf.daily_change_pct ?? etf.return_1d)}</td>
-              <td class="text-right ${ytdCls}">${fmtPctSmart(etf.ytd_return_pct ?? etf.return_ytd)}</td>
-              <td class="text-right ${y1Cls}">${fmtPctSmart(etf.one_year_return_pct ?? etf.return_1y)}</td>
-              <td class="text-right">${fmtPctSmart(etf.vol_3y_pct ?? etf.volatility)}</td>
-              <td class="text-right">${fmtPctSmart(etf.yield_ttm ?? etf.dividend_yield)}</td>
+              <td class="text-right ${chCls}">${fmtPct(etf.daily_change_pct ?? etf.return_1d)}</td>
+              <td class="text-right ${ytdCls}">${fmtPct(etf.ytd_return_pct ?? etf.return_ytd)}</td>
+              <td class="text-right ${y1Cls}">${fmtPct(etf.one_year_return_pct ?? etf.return_1y)}</td>
+              <td class="text-right">${fmtPct(etf.vol_3y_pct ?? etf.volatility, 2, false)}</td>
+              <td class="text-right">${fmtRatioPct(etf.yield_ttm ?? etf.dividend_yield)}</td>
               <td class="text-center">
                 <button class="action-button details-toggle" aria-expanded="false" onclick="toggleEtfAzDetails(this)">
                   <i class="fas fa-chevron-down"></i>
