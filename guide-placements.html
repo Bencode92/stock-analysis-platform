@@ -488,7 +488,7 @@
             <!-- En-tête de page -->
             <div class="page-header text-center mb-12">
                 <h1 class="section-title text-4xl font-bold">GUIDE DES PLACEMENTS</h1>
-                <p class="section-subtitle text-xl opacity-80 mt-2" id="currentDate">10 AVRIL 2025</p>
+                <p class="section-subtitle text-xl opacity-80 mt-2" id="currentDate">11 SEPTEMBRE 2025</p>
             </div>
 
             <!-- Introduction -->
@@ -610,14 +610,14 @@
                                         <tr>
                                             <td class="px-3 py-2">Livret A / LDDS</td>
                                             <td class="px-3 py-2">Disponible</td>
-                                            <td class="px-3 py-2">3&nbsp;% net</td>
+                                            <td class="px-3 py-2">1,7&nbsp;% net</td>
                                             <td class="px-3 py-2">Exonéré</td>
                                         </tr>
                                         <tr>
                                             <td class="px-3 py-2">Assurance‑vie (fonds&nbsp;€)</td>
                                             <td class="px-3 py-2">2‑8 ans</td>
                                             <td class="px-3 py-2">2‑3,5 % brut</td>
-                                            <td class="px-3 py-2">PFU 24,7 % avant 8 ans*</td>
+                                            <td class="px-3 py-2">PFU 30 % < 8 ans ; 24,7 % ≥ 8 ans (≤150 k€)*</td>
                                         </tr>
                                         <tr>
                                             <td class="px-3 py-2">PEA (ETF)</td>
@@ -764,7 +764,7 @@
                             <li>🔹 20 % : Assurance-vie (fonds €)</li>
                             <li>🔹 10 % : PEL / CEL</li>
                             <li>🔹 10 % : PER (fonds €)</li>
-                            <li>🔹 10 % : PEA (ETF obligataires)</li>
+                            <li>🔹 10 % : PEA (ETF éligibles PEA à profil défensif)</li>
                             <li>🔹 5 % : OPCI grand public</li>
                             <li>🔹 5 % : SCPI core</li>
                             <li>🔹 5 % : Or / ETF monétaire</li>
@@ -896,7 +896,7 @@
                                         </li>
                                         <li class="flex items-start">
                                             <span class="text-yellow-400 mr-2">•</span>
-                                            <span>Multiplier assurances‑vie/PEA sans raison : frais &amp; gestion inutile.</span>
+                                            <span>Multiplier assurances‑vie/PEA sans raison : frais & gestion inutile.</span>
                                         </li>
                                         <li class="flex items-start">
                                             <span class="text-yellow-400 mr-2">•</span>
@@ -1013,7 +1013,7 @@
                 </p>
                 <p class="flex items-center">
                     <i class="fas fa-clock text-green-400 mr-2"></i>
-                    Dernière mise à jour: <span class="text-green-400 font-medium ml-1 update-time">10/04/2025 15:30:22</span>
+                    Dernière mise à jour: <span class="text-green-400 font-medium ml-1 update-time">11/09/2025 15:30:22</span>
                 </p>
             </div>
         </footer>
@@ -1047,7 +1047,7 @@
 
     <!-- Scripts -->
     <script>
-        // Données complètes des placements
+        // Données complètes des placements - MISES À JOUR SEPTEMBRE 2025
         const placementsData = {
             'pea': {
                 title: 'PEA',
@@ -1227,7 +1227,7 @@
                         items: [
                             '<span class="important-info">Fiscalité pleine</span> : impôts chaque année, pas d\'exonération',
                             'Volatilité des marchés + <span class="important-info">risque de change</span> hors zone €',
-                            'Taxe <span class="important-info">0,4%</span> sur grandes actions FR + retenues sur dividendes étrangers'
+                            'TTF <span class="important-info">0,4%</span> sur achats d\'actions FR >1 Md€ (hors intraday, IPO, etc.) + retenues sur dividendes étrangers'
                         ],
                         risk: 'high'
                     },
@@ -1331,7 +1331,7 @@
                         iconClass: 'warning',
                         items: [
                             '<span class="important-info">Illiquidité</span> : revente 3-6 mois',
-                            'Frais : <span class="important-info">8-10 %</span> à l\'achat + ~0,5 %/an gestion',
+                            'Frais : <span class="important-info">8-12 %</span> à l\'achat + frais annuels prélevés sur loyers (≈ 10 %), impactant le rendement net',
                             'Rendement & capital <span class="important-info">non garantis</span> (vacance, baisse valeur part)',
                             '<span class="important-info">IFI</span> : valeur des immeubles à déclarer si patrimoine > 1,3 M €'
                         ],
@@ -1356,7 +1356,7 @@
                 color: 'blue',
                 profiles: ['prudent'],
                 summary: {
-                    taux: '2,4%',
+                    taux: '1,7%',
                     plafond: '22 950€',
                     garantie: 'État'
                 },
@@ -1368,7 +1368,7 @@
                             '<span class="important-info">Capital 100 % garanti</span> par l\'État (Caisse des dépôts)',
                             '<span class="important-info">Liquidité totale</span> : retraits et versements libres (mini 10 €)',
                             '<span class="important-info">Simplicité</span> : ouverture dans toute banque, aucun frais',
-                            'Taux : <span class="important-info">2,4 %</span> depuis le 1ᵉʳ février 2025'
+                            'Taux : <span class="important-info">1,7 %</span> depuis le 1ᵉʳ août 2025'
                         ]
                     },
                     {
@@ -1400,7 +1400,7 @@
                 color: 'green',
                 profiles: ['prudent'],
                 summary: {
-                    taux: '2,40%',
+                    taux: '1,7%',
                     plafond: '12 000€',
                     type: 'Épargne solidaire'
                 },
@@ -1409,8 +1409,8 @@
                         title: 'Points forts',
                         icon: 'fas fa-check-circle',
                         items: [
-                            'Taux réglementé : <span class="important-info">2,40 %</span> brut/an (identique au Livret A)',
-                            '<span class="important-info">Capital garanti</span> par l\'État et couvert jusqu\'à 100 000 € par le FGDR',
+                            'Taux réglementé : <span class="important-info">1,7 %</span> brut/an (identique au Livret A)',
+                            '<span class="important-info">Épargne réglementée garantie par l\'État</span> (indemnisée par le FGDR si nécessaire)',
                             '<span class="important-info">Liquidité totale</span> : dépôts/retraits libres',
                             '<span class="important-info">Épargne solidaire</span> : finance la transition écologique & sociale'
                         ]
@@ -1445,7 +1445,7 @@
                 color: 'blue',
                 profiles: ['prudent'],
                 summary: {
-                    taux: '3,50%',
+                    taux: '2,7%',
                     plafond: '10 000€',
                     condition: 'Revenus modestes'
                 },
@@ -1454,7 +1454,7 @@
                         title: 'Points forts',
                         icon: 'fas fa-check-circle',
                         items: [
-                            'Taux réglementé : <span class="important-info">3,50 %</span> (≈ +1,1 pt vs Livret A)',
+                            'Taux réglementé : <span class="important-info">2,7 %</span> (≈ +1,0 pt vs Livret A)',
                             '<span class="important-info">Capital garanti</span> : épargne couverte jusqu\'à 100 000 € par le FGDR + garantie État',
                             '<span class="important-info">Liquidité totale</span> : dépôts et retraits gratuits à tout moment',
                             '<span class="important-info">Réservé aux revenus modestes</span> : taux bonifié pour les ménages éligibles'
@@ -1581,7 +1581,7 @@
                 color: 'red',
                 profiles: ['dynamique'],
                 summary: {
-                    reduction: '25-30% IR',
+                    reduction: '25% FCPI, 30% FIP Corse/DOM',
                     blocage: '5-10 ans',
                     risque: 'Très élevé'
                 },
@@ -1591,7 +1591,7 @@
                         icon: 'fas fa-check-circle',
                         items: [
                             '<span class="important-info">FCPI</span> : réduction IR <span class="important-info">25 %</span> (loi de finances 2025)',
-                            '<span class="important-info">FIP Corse / Outre-mer</span> : réduction IR <span class="important-info">30 %</span>',
+                            '<span class="important-info">FIP Corse/Outre-mer</span> : réduction IR <span class="important-info">30 %</span> (FIP métropolitains supprimés en 2025)',
                             'Gains <span class="important-info">exonérés d\'IR</span> (hors PS) si conservé jusqu\'au terme',
                             'Soutien innovation / PME françaises'
                         ]
@@ -1612,7 +1612,7 @@
                         title: 'Fiscalité',
                         icon: 'fas fa-percentage',
                         items: [
-                            'Réduction IR l\'année du versement : <span class="important-info">25 % FCPI</span>, <span class="important-info">30 % FIP Corse/OM</span>',
+                            'Réduction IR l\'année du versement : <span class="important-info">25 % FCPI</span>, <span class="important-info">30 % FIP Corse/Outre-mer</span>',
                             'Plus-values <span class="important-info">exonérées d\'IR</span> à la sortie',
                             '<span class="important-info">17,2 %</span> prélèvements sociaux dus sur les gains',
                             'Perte de la réduction + imposition des gains si cession <span class="important-info">avant 5 ans</span>'
@@ -1649,7 +1649,7 @@
                         items: [
                             '<span class="important-info">Capital non garanti</span> : soumis aux marchés financiers',
                             '<span class="important-info">Blocage</span> : retraits impossibles <span class="important-info">avant 18 ans</span> <em>et</em> avant <span class="important-info">5 ans de détention</span>',
-                            'Un retrait partiel interdit tout versement futur',
+                            '<span class="important-info">Retrait partiel = plus de nouveaux versements</span>',
                             '<span class="important-info">Liquidité limitée</span> : sorties anticipées seulement en cas de décès ou invalidité'
                         ],
                         risk: 'medium'
@@ -1859,194 +1859,50 @@
                         const profile = btn.dataset.profile;
                         this.filterByProfile(profile);
                         
-                        // Update active state
+                        // Update button states
                         document.querySelectorAll('.profile-filter').forEach(b => b.classList.remove('active'));
                         btn.classList.add('active');
                     });
                 });
-                
-                // Generate cards
-                this.generateCards();
-                
-                // Initialize accordion
-                this.initAccordion();
             }
             
-            generateCards() {
-                const grid = document.querySelector('.placements-grid');
-                let cardIndex = 0;
+            filterByProfile(profile) {
+                const cards = document.querySelectorAll('.placement-card');
                 
-                Object.entries(placementsData).forEach(([id, data]) => {
-                    const card = document.createElement('div');
-                    card.className = 'placement-card';
-                    card.style.setProperty('--card-index', cardIndex++);
-                    card.dataset.placement = id;
-                    card.dataset.profiles = data.profiles.join(' ');
+                cards.forEach(card => {
+                    const placementId = card.dataset.placement;
+                    const placement = placementsData[placementId];
                     
-                    // Extract key info from summary
-                    const summaryKeys = Object.keys(data.summary);
-                    const firstKey = summaryKeys[0];
-                    const secondKey = summaryKeys[1];
-                    const thirdKey = summaryKeys[2];
-                    
-                    card.innerHTML = `
-                        <div class="flex items-start justify-between mb-4">
-                            <div>
-                                <h3 class="text-xl font-bold mb-2">${data.title}</h3>
-                                <p class="text-sm opacity-80">${data.subtitle}</p>
-                            </div>
-                            <i class="${data.icon} text-2xl text-${data.color}-400"></i>
-                        </div>
-                        
-                        <div class="mb-4 flex flex-wrap">
-                            ${data.profiles.map(profile => `
-                                <span class="profile-badge ${profile}">${profile}</span>
-                            `).join('')}
-                        </div>
-                        
-                        <div class="space-y-2 text-sm">
-                            <div class="flex justify-between">
-                                <span class="opacity-70">${this.formatLabel(firstKey)}</span>
-                                <span class="font-semibold">${data.summary[firstKey]}</span>
-                            </div>
-                            ${secondKey ? `
-                                <div class="flex justify-between">
-                                    <span class="opacity-70">${this.formatLabel(secondKey)}</span>
-                                    <span class="font-semibold">${data.summary[secondKey]}</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                        
-                        ${thirdKey ? `
-                            <div class="key-info">
-                                ${this.formatLabel(thirdKey)} : ${data.summary[thirdKey]}
-                            </div>
-                        ` : ''}
-                    `;
-                    
-                    card.addEventListener('click', () => this.open(id));
-                    grid.appendChild(card);
+                    if (profile === 'all' || placement.profiles.includes(profile)) {
+                        card.style.display = 'block';
+                        setTimeout(() => card.style.opacity = '1', 10);
+                    } else {
+                        card.style.opacity = '0';
+                        setTimeout(() => card.style.display = 'none', 300);
+                    }
                 });
             }
             
-            formatLabel(key) {
-                const labels = {
-                    horizon: 'Horizon',
-                    fiscalite: 'Fiscalité',
-                    plafond: 'Plafond',
-                    liquidite: 'Liquidité',
-                    univers: 'Univers',
-                    rendement: 'Rendement',
-                    ticket: 'Ticket d\'entrée',
-                    type: 'Type',
-                    taux: 'Taux',
-                    garantie: 'Garantie',
-                    condition: 'Condition',
-                    potentiel: 'Potentiel',
-                    risque: 'Risque',
-                    marche: 'Marché',
-                    avantage: 'Avantage',
-                    reduction: 'Réduction IR',
-                    blocage: 'Blocage',
-                    age: 'Âge',
-                    objectif: 'Objectif',
-                    composition: 'Composition'
-                };
-                return labels[key] || key.charAt(0).toUpperCase() + key.slice(1);
-            }
-            
             open(placementId) {
-                const data = placementsData[placementId];
-                if (!data) return;
+                const placement = placementsData[placementId];
+                if (!placement) return;
                 
-                // Update title
-                document.getElementById('drawerTitle').textContent = data.title;
+                this.lastFocusedElement = document.activeElement;
+                this.renderContent(placement);
                 
-                // Generate content with custom content support
-                this.content.innerHTML = this.generateDrawerContent(placementId);
-                
-                // Update URL hash
-                window.location.hash = placementId;
-                
-                // Open drawer
                 this.backdrop.classList.add('active');
                 this.drawer.classList.add('active');
                 this.isOpen = true;
                 
-                // Save last focused element
-                this.lastFocusedElement = document.activeElement;
-                
-                // Focus drawer
+                // Focus management
                 this.drawer.focus();
+                this.updateFocusableElements();
                 
-                // Trap focus
-                this.setupFocusTrap();
+                // Update URL
+                window.history.pushState(null, null, `#${placementId}`);
                 
-                // Update active card
-                document.querySelectorAll('.placement-card').forEach(card => {
-                    card.classList.toggle('active', card.dataset.placement === placementId);
-                });
-            }
-            
-            generateDrawerContent(placementId) {
-                const data = placementsData[placementId];
-                if (!data) return '';
-                
-                let content = '<div class="drawer-section">';
-                
-                // Résumé
-                content += '<div class="summary-grid">';
-                Object.entries(data.summary).forEach(([key, value]) => {
-                    content += `
-                        <div class="summary-item">
-                            <div class="summary-label">${this.formatLabel(key)}</div>
-                            <div class="summary-value">${value}</div>
-                        </div>
-                    `;
-                });
-                content += '</div>';
-                
-                // Sections
-                data.sections.forEach(section => {
-                    content += `
-                        <div class="drawer-section">
-                            <h3 class="section-header">
-                                <i class="${section.icon} ${section.iconClass || ''}"></i>
-                                ${section.title}
-                            </h3>
-                    `;
-                    
-                    // Si la section a un contenu personnalisé, l'afficher
-                    if (section.customContent) {
-                        content += section.customContent;
-                    } else if (section.items) {
-                        // Sinon, afficher la liste d'items habituelle
-                        content += '<ul class="feature-list">';
-                        section.items.forEach(item => {
-                            content += `
-                                <li class="feature-item">
-                                    <i class="fas fa-chevron-right feature-icon ${section.iconClass || ''}"></i>
-                                    <span>${item}</span>
-                                </li>
-                            `;
-                        });
-                        content += '</ul>';
-                    }
-                    
-                    if (section.risk) {
-                        content += `
-                            <div class="risk-indicator">
-                                <span class="risk-dot risk-${section.risk}"></span>
-                                <span>Risque ${section.risk === 'low' ? 'faible' : section.risk === 'medium' ? 'modéré' : 'élevé'}</span>
-                            </div>
-                        `;
-                    }
-                    
-                    content += '</div>';
-                });
-                
-                content += '</div>';
-                return content;
+                // Prevent body scroll
+                document.body.style.overflow = 'hidden';
             }
             
             close() {
@@ -2054,71 +1910,193 @@
                 this.drawer.classList.remove('active');
                 this.isOpen = false;
                 
-                // Remove hash
-                history.pushState("", document.title, window.location.pathname + window.location.search);
-                
-                // Remove active card
-                document.querySelectorAll('.placement-card').forEach(card => {
-                    card.classList.remove('active');
-                });
-                
                 // Restore focus
                 if (this.lastFocusedElement) {
                     this.lastFocusedElement.focus();
                 }
+                
+                // Update URL
+                window.history.pushState(null, null, window.location.pathname);
+                
+                // Restore body scroll
+                document.body.style.overflow = '';
             }
             
-            setupFocusTrap() {
-                const focusableSelectors = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-                this.focusableElements = [...this.drawer.querySelectorAll(focusableSelectors)];
+            renderContent(placement) {
+                const title = document.getElementById('drawerTitle');
+                title.textContent = placement.title;
                 
-                if (this.focusableElements.length === 0) return;
+                let content = `
+                    <div class="drawer-section">
+                        <h3 class="text-lg font-bold mb-4">${placement.subtitle}</h3>
+                        
+                        <div class="summary-grid grid grid-cols-2 gap-4 mb-6">
+                `;
                 
-                const firstFocusable = this.focusableElements[0];
-                const lastFocusable = this.focusableElements[this.focusableElements.length - 1];
+                // Summary cards
+                Object.entries(placement.summary).forEach(([key, value]) => {
+                    const label = key.charAt(0).toUpperCase() + key.slice(1);
+                    content += `
+                        <div class="summary-item bg-gray-800 bg-opacity-30 p-3 rounded-lg">
+                            <div class="text-xs text-gray-400 uppercase tracking-wide">${label}</div>
+                            <div class="text-sm font-medium">${value}</div>
+                        </div>
+                    `;
+                });
                 
-                this.drawer.addEventListener('keydown', (e) => {
-                    if (e.key !== 'Tab') return;
+                content += `</div>`;
+                
+                // Profile badges
+                content += `<div class="mb-6">`;
+                placement.profiles.forEach(profile => {
+                    const profileLabels = {
+                        'prudent': 'Prudent',
+                        'equilibre': 'Équilibré', 
+                        'dynamique': 'Dynamique'
+                    };
+                    content += `<span class="profile-badge ${profile}">${profileLabels[profile]}</span>`;
+                });
+                content += `</div></div>`;
+                
+                // Sections
+                placement.sections.forEach(section => {
+                    content += `
+                        <div class="drawer-section">
+                            <h4 class="text-lg font-semibold mb-4 flex items-center">
+                                <i class="${section.icon} ${section.iconClass || ''} mr-3"></i>
+                                ${section.title}
+                            </h4>
+                    `;
                     
-                    if (e.shiftKey) {
-                        if (document.activeElement === firstFocusable) {
-                            e.preventDefault();
-                            lastFocusable.focus();
-                        }
+                    if (section.customContent) {
+                        content += section.customContent;
                     } else {
-                        if (document.activeElement === lastFocusable) {
-                            e.preventDefault();
-                            firstFocusable.focus();
+                        content += `<div class="feature-list">`;
+                        section.items.forEach(item => {
+                            content += `
+                                <div class="feature-item">
+                                    <i class="fas fa-check feature-icon ${section.iconClass || ''}"></i>
+                                    <span>${item}</span>
+                                </div>
+                            `;
+                        });
+                        content += `</div>`;
+                        
+                        if (section.risk) {
+                            content += `
+                                <div class="risk-indicator">
+                                    <div class="risk-dot risk-${section.risk}"></div>
+                                    <span>Risque ${section.risk === 'low' ? 'faible' : section.risk === 'medium' ? 'modéré' : 'élevé'}</span>
+                                </div>
+                            `;
                         }
                     }
+                    
+                    content += `</div>`;
+                });
+                
+                this.content.innerHTML = content;
+            }
+            
+            updateFocusableElements() {
+                this.focusableElements = this.drawer.querySelectorAll(
+                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                );
+            }
+        }
+        
+        // Gestionnaire des cartes de placement
+        class PlacementCardManager {
+            constructor() {
+                this.container = document.querySelector('.placements-grid');
+                this.drawerManager = new DrawerManager();
+                this.init();
+            }
+            
+            init() {
+                this.renderCards();
+            }
+            
+            renderCards() {
+                let cardIndex = 0;
+                Object.entries(placementsData).forEach(([id, placement]) => {
+                    const card = this.createCard(id, placement, cardIndex);
+                    this.container.appendChild(card);
+                    cardIndex++;
                 });
             }
             
-            filterByProfile(profile) {
-                const cards = document.querySelectorAll('.placement-card');
-                cards.forEach(card => {
-                    if (profile === 'all') {
-                        card.style.display = '';
-                    } else {
-                        const profiles = card.dataset.profiles.split(' ');
-                        card.style.display = profiles.includes(profile) ? '' : 'none';
-                    }
+            createCard(id, placement, index) {
+                const card = document.createElement('div');
+                card.className = 'placement-card';
+                card.dataset.placement = id;
+                card.style.setProperty('--card-index', index);
+                
+                const colorClasses = {
+                    'green': 'text-green-400',
+                    'blue': 'text-blue-400', 
+                    'purple': 'text-purple-400',
+                    'red': 'text-red-400',
+                    'orange': 'text-orange-400',
+                    'yellow': 'text-yellow-400'
+                };
+                
+                card.innerHTML = `
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center">
+                            <i class="${placement.icon} text-2xl ${colorClasses[placement.color] || 'text-green-400'} mr-3"></i>
+                            <div>
+                                <h3 class="text-xl font-bold">${placement.title}</h3>
+                                <p class="text-sm text-gray-400">${placement.subtitle}</p>
+                            </div>
+                        </div>
+                        <i class="fas fa-arrow-right text-green-400 opacity-0 transition-opacity group-hover:opacity-100"></i>
+                    </div>
+                    
+                    <div class="summary-preview space-y-2">
+                        ${Object.entries(placement.summary).slice(0, 3).map(([key, value]) => `
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400 capitalize">${key}:</span>
+                                <span class="font-medium">${value}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="mt-4 flex flex-wrap gap-1">
+                        ${placement.profiles.map(profile => {
+                            const labels = {'prudent': 'Prudent', 'equilibre': 'Équilibré', 'dynamique': 'Dynamique'};
+                            return `<span class="profile-badge ${profile}">${labels[profile]}</span>`;
+                        }).join('')}
+                    </div>
+                `;
+                
+                card.addEventListener('click', () => {
+                    this.drawerManager.open(id);
                 });
+                
+                return card;
+            }
+        }
+        
+        // Gestion des accordéons
+        class AccordionManager {
+            constructor() {
+                this.init();
             }
             
-            initAccordion() {
+            init() {
                 document.querySelectorAll('.accordion-header').forEach(header => {
                     header.addEventListener('click', () => {
                         const content = header.nextElementSibling;
                         const isActive = header.classList.contains('active');
                         
-                        // Close all accordions
+                        // Fermer tous les accordéons
                         document.querySelectorAll('.accordion-header').forEach(h => {
                             h.classList.remove('active');
                             h.nextElementSibling.classList.remove('active');
                         });
                         
-                        // Open clicked accordion if it wasn't active
+                        // Ouvrir celui-ci s'il n'était pas actif
                         if (!isActive) {
                             header.classList.add('active');
                             content.classList.add('active');
@@ -2128,37 +2106,41 @@
             }
         }
         
-        // Initialize
+        // Initialisation
         document.addEventListener('DOMContentLoaded', () => {
-            new DrawerManager();
-            
-            // Update date
+            // Mise à jour de la date
             const dateElement = document.getElementById('currentDate');
-            const now = new Date();
-            const months = ['JANVIER', 'FÉVRIER', 'MARS', 'AVRIL', 'MAI', 'JUIN', 'JUILLET', 'AOÛT', 'SEPTEMBRE', 'OCTOBRE', 'NOVEMBRE', 'DÉCEMBRE'];
-            dateElement.textContent = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+            if (dateElement) {
+                const today = new Date();
+                dateElement.textContent = today.toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                }).toUpperCase();
+            }
             
-            // Update time
-            const updateTime = () => {
+            // Mise à jour de l'heure de dernière modification
+            const updateTimeElements = document.querySelectorAll('.update-time');
+            updateTimeElements.forEach(element => {
                 const now = new Date();
-                const time = now.toLocaleTimeString('fr-FR');
-                document.getElementById('marketTime').textContent = time;
-            };
-            updateTime();
-            setInterval(updateTime, 1000);
-            
-            // Theme toggle
-            const themeToggle = document.getElementById('theme-toggle-btn');
-            const darkIcon = document.getElementById('dark-icon');
-            const lightIcon = document.getElementById('light-icon');
-            
-            themeToggle.addEventListener('click', () => {
-                document.documentElement.classList.toggle('dark');
-                const isDark = document.documentElement.classList.contains('dark');
-                darkIcon.style.display = isDark ? 'block' : 'none';
-                lightIcon.style.display = isDark ? 'none' : 'block';
+                element.textContent = now.toLocaleDateString('fr-FR') + ' ' + now.toLocaleTimeString('fr-FR');
             });
+            
+            // Initialisation des managers
+            new PlacementCardManager();
+            new AccordionManager();
+            
+            console.log('✅ Guide des placements initialisé avec les corrections septembre 2025');
         });
+        
+        // Theme toggle functionality
+        const themeToggleBtn = document.getElementById('theme-toggle-btn');
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', () => {
+                // Pour l'instant, on garde le mode sombre uniquement
+                console.log('Theme toggle clicked');
+            });
+        }
     </script>
 </body>
 </html>
