@@ -1,5 +1,11 @@
 // stock-advanced-filter.js
-// Version 3.19 - FIX run-rate post-split pour TTM incomplet
+// Version 3.20 - FIX run-rate robuste post-split + blocage override API
+// Corrections v3.20:
+// - Blocage de l'override API après split récent (évite l'écrasement du calcul correct)
+// - Run-rate robuste même sans dividendes post-split dans le feed
+// - Utilisation du dernier dividende connu (déjà ajusté) × fréquence
+// - ETR: yield corrigé à ~2.71% au lieu de 5.19% (API incorrecte après split)
+// - Amélioration du logging pour debug des splits
 // Corrections v3.19:
 // - Ajout du run-rate post-split quand TTM incomplet après split
 // - ETR: utilise dernier dividende post-split (0.60) × fréquence (4) = 2.40$ 
@@ -997,7 +1003,7 @@ async function enrichStock(stock) {
             ? stats.shares_outstanding * price
             : null);
     
-    // ---- Dividend yields (split-aware + specials) v3.19 ----
+    // ---- Dividend yields (split-aware + specials) v3.20 ----
     const splitF = parseSplitFactor(stats?.last_split_factor);
     const splitD = stats?.last_split_date ? new Date(stats.last_split_date) : null;
     const recentSplit = !!(splitD && ((Date.now() - splitD.getTime())/86400000) < 450);
@@ -1017,7 +1023,7 @@ async function enrichStock(stock) {
         console.log(`[TTM WINDOW ${stock.symbol}]`, windowDbg, '| sum =', last12m.reduce((s, d) => s + d.amount, 0).toFixed(3));
     }
 
-    // ✅ v3.19: Amélioration - médiane post-split si disponible
+    // ✅ v3.20: Amélioration - médiane post-split si disponible, sinon récents
     const postSplitDivs = splitD ? fullDivs.filter(d => new Date(d.ex_date) >= splitD) : [];
     const recentAmtsAll = fullDivs.slice(0, 8).map(d => d.amount).filter(a => a > 0);
     const recentAmtsPost = postSplitDivs.slice(0, 8).map(d => d.amount).filter(a => a > 0);
@@ -1027,7 +1033,7 @@ async function enrichStock(stock) {
     const m = median(baseAmts);
     const isSpecial = (a) => (m != null) && a > m * 1.6;
 
-    // ✅ v3.19: TTM initial (potentiellement incomplet après split)
+    // ✅ v3.20: TTM initial (potentiellement incomplet après split)
     let ttmSumCalc = last12m.reduce((s, d) => s + (d.amount || 0), 0);
     const ttmSpecial = last12m.filter(d => isSpecial(d.amount))
                               .reduce((s, d) => s + (d.amount || 0), 0);
@@ -1044,18 +1050,22 @@ async function enrichStock(stock) {
     const nonSpecCount12m = last12m.filter(d => !isSpecial(d.amount)).length;
     const expectedMin = Math.max(1, Math.floor(freq * 0.6));
 
-    // ✅ v3.19: NEW - Run-rate post-split si TTM incomplet
-    const lastPostSplitAmt = postSplitDivs.length ? postSplitDivs[0].amount : null;
-    const regFromPost = (Number.isFinite(lastPostSplitAmt) && freq) ? lastPostSplitAmt * freq : null;
+    // ✅ v3.20: NEW - Run-rate robuste même sans dividendes post-split
+    // Priorité : 1) premier post-split, 2) dernier dans TTM, 3) médiane régulière
+    const lastKnownAmt = 
+        (postSplitDivs.length > 0 ? postSplitDivs[0].amount : null) ??
+        (last12m.length > 0 ? last12m[0].amount : null) ??
+        median(baseAmts.filter(a => !isSpecial(a)));
     
     let usedRunRate = false;
-    if (recentSplit && nonSpecCount12m < expectedMin && Number.isFinite(regFromPost)) {
-        // Utiliser le run-rate basé sur le dernier dividende post-split
-        ttmSumCalc = regFromPost;  // 0.60 × 4 = 2.40 pour ETR
+    if (recentSplit && nonSpecCount12m < expectedMin && Number.isFinite(lastKnownAmt) && freq) {
+        // Utiliser le run-rate basé sur le dernier dividende connu
+        ttmSumCalc = lastKnownAmt * freq;  // ex: 0.60 × 4 = 2.40 pour ETR
         usedRunRate = true;
+        
         if (CONFIG.DEBUG) {
             console.log(`[RUN-RATE ${stock.symbol}] TTM incomplet (${nonSpecCount12m}/${expectedMin}), ` +
-                       `using ${lastPostSplitAmt} × ${freq} = ${ttmSumCalc.toFixed(2)}`);
+                       `using ${lastKnownAmt.toFixed(4)} × ${freq} = ${ttmSumCalc.toFixed(2)}`);
         }
     }
 
@@ -1075,21 +1085,44 @@ async function enrichStock(stock) {
 
     let dividend_yield_ttm = yield_ttm_calc;
 
-    // ✅ v3.19: Tracker de source TTM amélioré
+    // ✅ v3.20: Tracker de source TTM amélioré
     let usedTtmSource = usedRunRate ? 'calc-runrate' : 'calc';
 
-    // Décision sur l'utilisation de l'API
-    if (!usedRunRate && yield_ttm_api != null && (dividend_yield_ttm == null ||
+    // ✅ v3.20: BLOCAGE de l'override API si split récent
+    // Ne jamais faire confiance à l'API juste après un split (souvent incorrecte)
+    if (!usedRunRate && !recentSplit && yield_ttm_api != null && (
+        dividend_yield_ttm == null ||
         nonSpecCount12m < expectedMin ||
-        dividend_yield_ttm <= 0 || dividend_yield_ttm > 20)) {
-      dividend_yield_ttm = yield_ttm_api;
-      usedTtmSource = 'api';
+        dividend_yield_ttm <= 0 || 
+        dividend_yield_ttm > 20
+    )) {
+        dividend_yield_ttm = yield_ttm_api;
+        usedTtmSource = 'api';
     }
 
-    // Régularise REG vs TTM (pas de spéciaux → REG doit ~ TTM)
-    yield_regular = clampRegToTTM(yield_regular, dividend_yield_ttm, specialShare >= 20);
+    // ✅ v3.20: Ne pas aligner REG sur un TTM venant de l'API après split
+    const refForClamp = (usedTtmSource === 'api' && recentSplit) ? null : dividend_yield_ttm;
+    yield_regular = clampRegToTTM(yield_regular, refForClamp ?? yield_regular, specialShare >= 20);
 
-    // ✅ v3.19: Choix du yield avec traçabilité de source
+    // ✅ v3.20: Logging amélioré pour debug
+    if (CONFIG.DEBUG) {
+        console.log(`[DIVY GUARD] ${stock.symbol}: recentSplit=${recentSplit}, ` +
+                   `nonSpecCount12m=${nonSpecCount12m}, expectedMin=${expectedMin}, ` +
+                   `usedRunRate=${usedRunRate}, usedTtmSource=${usedTtmSource}, ` +
+                   `api=${yield_ttm_api}%`);
+        
+        if (usedRunRate) {
+            console.log(`[RUN-RATE DETAIL] base=${lastKnownAmt?.toFixed(4)} × freq=${freq} ` +
+                       `=> TTM=${ttmSumCalc.toFixed(2)} => yield=${yield_ttm_calc}%`);
+        }
+        
+        if (recentSplit && yield_ttm_api && Math.abs(yield_ttm_api - (yield_ttm_calc || 0)) > 1) {
+            console.warn(`[SPLIT WARNING] ${stock.symbol}: API yield (${yield_ttm_api}%) ` +
+                        `diverge from calc (${yield_ttm_calc}%) after recent split`);
+        }
+    }
+
+    // ✅ v3.20: Choix du yield avec traçabilité de source
     let dividendYield, dividend_yield_src;
     let debug_dividends = null;
     
@@ -1133,7 +1166,7 @@ async function enrichStock(stock) {
         }
       }
 
-      // ✅ v3.19: Expose pour debug/affichage avec source correcte
+      // ✅ v3.20: Expose pour debug/affichage avec source correcte
       debug_dividends = {
         price_used: price ?? null,
         ttm_sum_calc: Number.isFinite(ttmSumCalc) ? +ttmSumCalc.toFixed(6) : null,
@@ -1149,7 +1182,8 @@ async function enrichStock(stock) {
         dividend_yield_src: dividend_yield_src,
         ttm_source: usedTtmSource,
         ttm_window_count: last12m.length,
-        used_run_rate: usedRunRate, // ✅ v3.19: nouveau flag
+        used_run_rate: usedRunRate, // ✅ v3.20: flag important
+        last_known_amt: lastKnownAmt, // ✅ v3.20: pour debug
         conflict_ratio: dividend_consistency === 'conflict' ? (Math.max(yield_fwd, yield_ttm_calc) / Math.min(yield_fwd, yield_ttm_calc)).toFixed(2) : null
       };
     }
@@ -1248,7 +1282,7 @@ async function enrichStock(stock) {
         perf_1y: perf.performances?.year_1 || null,
         perf_3y: perf.performances?.year_3 || null,
         
-        // Métriques de dividendes enrichies v3.19
+        // Métriques de dividendes enrichies v3.20
         dividend_yield: dividendYield,
         dividend_yield_src,
         dividend_yield_ttm: dividend_yield_ttm,
@@ -1276,7 +1310,7 @@ async function enrichStock(stock) {
         max_drawdown_ytd: perf.max_drawdown_ytd,
         max_drawdown_3y: perf.max_drawdown_3y,
         
-        // v3.19: Ajout de l'objet de debug amélioré
+        // v3.20: Ajout de l'objet de debug amélioré
         debug_dividends,
         
         last_updated: new Date().toISOString()
@@ -1387,7 +1421,7 @@ function buildOverview(byRegion){
 }
 
 async function main() { 
-    console.log('📊 Enrichissement complet des stocks (v3.19 - FIX run-rate post-split pour TTM incomplet)\n');
+    console.log('📊 Enrichissement complet des stocks (v3.20 - FIX run-rate robuste post-split + blocage override API)\n');
     await fs.mkdir(OUT_DIR, { recursive: true });
     
     const [usStocks, europeStocks, asiaStocks] = await Promise.all([
