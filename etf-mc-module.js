@@ -1,4 +1,4 @@
-// Module MC adapté pour ETFs - v4.6 sans filtre Pays
+// Module MC adapté pour ETFs - v4.7 avec drag&drop optimisé
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const num=x=>Number.isFinite(+x)?+x:NaN, str=s=>s==null?'':String(s);
@@ -46,15 +46,15 @@
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results');
     const summary=document.getElementById('etf-mc-summary');
-    if(!root||!results){console.error('❌ ETF MC v4.6: DOM manquant');return;}
-    console.log('✅ ETF MC v4.6: Sans filtre Pays');
+    if(!root||!results){console.error('❌ ETF MC v4.7: DOM manquant');return;}
+    console.log('✅ ETF MC v4.7: Drag&Drop optimisé');
 
     // Harmonisation du conteneur
     results.classList.add('glassmorphism','rounded-lg','p-4');
 
-    // Styles harmonisés
-    if(!document.getElementById('etf-mc-v46-styles')){
-      const s=document.createElement('style'); s.id='etf-mc-v46-styles'; s.textContent=`
+    // Styles harmonisés avec ajout des optimisations drag&drop
+    if(!document.getElementById('etf-mc-v47-styles')){
+      const s=document.createElement('style'); s.id='etf-mc-v47-styles'; s.textContent=`
       #etf-mc-results { display:block }
       #etf-mc-results .space-y-2 > div { margin-bottom: .75rem }
       #etf-mc-results .etf-card{
@@ -88,9 +88,27 @@
       #etf-mc-section .mc-pill:hover{background:rgba(0,255,255,.08);border-color:rgba(0,255,255,.35)}
       #etf-mc-section .mc-pill.is-checked{background:rgba(0,255,255,.2)!important;border-color:#00ffff!important;box-shadow:0 0 12px rgba(0,255,255,.3)}
       #etf-priority-container{margin-top:12px;padding:12px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(0,255,255,.2)}
-      #etf-priority-list .priority-item{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:rgba(0,255,255,.05);border:1px solid rgba(0,255,255,.2);cursor:move;user-select:none;margin-bottom:4px}
+      
+      /* === OPTIMISATIONS DRAG&DROP === */
+      #etf-priority-list {
+        contain: layout paint;
+        position: relative;
+      }
+      #etf-priority-list .priority-item{
+        display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;
+        background:rgba(0,255,255,.05);border:1px solid rgba(0,255,255,.2);
+        cursor:move;cursor:grab;user-select:none;margin-bottom:4px;
+        will-change:transform;transition:all .2s ease;
+      }
+      #etf-priority-list .priority-item:active{cursor:grabbing}
       #etf-priority-list .priority-item:hover{background:rgba(0,255,255,.1);border-color:rgba(0,255,255,.4)}
-      #etf-priority-list .priority-item.dragging{opacity:.5}
+      #etf-priority-list .priority-item.dragging{
+        opacity:.5;transform:scale(1.02);z-index:999;
+      }
+      #etf-priority-list.drag-active .priority-item:not(.dragging):hover{
+        background:rgba(0,255,255,.05);
+      }
+      
       .facet-group{margin-top:10px}.facet-head{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:.85rem;opacity:.85}
       .facet-head .count{opacity:.6;font-size:.75rem}.facet-body{max-height:0;overflow:hidden;transition:max-height .25s ease}
       .facet-group.open .facet-body{max-height:260px}
@@ -314,37 +332,116 @@
       if(e.target && e.target.name==='etf-mc-mode'){ state.mode=e.target.value||'balanced'; buildPriorityUI(); scheduleCompute(); }
     });
 
-    // UI Priorités
-    function buildPriorityUI(){
-      let host=root.querySelector('fieldset[role="radiogroup"]') || root.querySelector('#etf-mc-section fieldset:nth-of-type(2)');
-      if(!host) return;
-      let box=document.getElementById('etf-priority-container');
-      if(!box){
-        box=document.createElement('div');
-        box.id='etf-priority-container';
-        box.innerHTML=`<div class="text-xs opacity-70 mb-2">Ordre des priorités (glisser pour réorganiser)</div>
-                       <div id="etf-priority-list" class="space-y-1"></div>`;
+    // ==== UI Priorités - VERSION OPTIMISÉE DRAG&DROP ====
+    function buildPriorityUI() {
+      let host = root.querySelector('fieldset[role="radiogroup"]') || root.querySelector('#etf-mc-section fieldset:nth-of-type(2)');
+      if (!host) return;
+      
+      let box = document.getElementById('etf-priority-container');
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'etf-priority-container';
+        box.innerHTML = `
+          <div class="text-xs opacity-70 mb-2">Ordre des priorités (glisser pour réorganiser)</div>
+          <div id="etf-priority-list" class="space-y-1"></div>
+        `;
         host.appendChild(box);
       }
-      box.style.display=(state.mode==='balanced')?'none':'block';
-      const list=box.querySelector('#etf-priority-list');
-      list.innerHTML = state.selectedMetrics.map((m,i)=>`
+      
+      box.style.display = (state.mode === 'balanced') ? 'none' : 'block';
+      
+      const list = box.querySelector('#etf-priority-list');
+      list.innerHTML = state.selectedMetrics.map((m, i) => `
         <div class="priority-item" draggable="true" data-m="${m}">
-          <span>☰</span><span class="text-xs opacity-50 mr-2">${i+1}.</span>
-          <span class="flex-1">${METRICS[m]?.label||m} ${METRICS[m]?.max?'↑':'↓'}</span>
-        </div>`).join('') || '<div class="text-xs opacity-50">Coche au moins un critère</div>';
-      const items=list.querySelectorAll('.priority-item'); let dragging=null;
-      items.forEach(it=>{
-        it.addEventListener('dragstart',()=>{dragging=it; it.classList.add('dragging');});
-        it.addEventListener('dragend',()=>{it.classList.remove('dragging'); dragging=null;});
-        it.addEventListener('dragover',e=>{
-          e.preventDefault();
-          const els=[...list.querySelectorAll('.priority-item:not(.dragging)')];
-          let closest={offset:Number.NEGATIVE_INFINITY,el:null};
-          els.forEach(el=>{const r=el.getBoundingClientRect(); const off=e.clientY-r.top-r.height/2; if(off<0&&off>closest.offset) closest={offset:off,el};});
-          if(!closest.el) list.appendChild(dragging); else list.insertBefore(dragging,closest.el);
+          <span>☰</span>
+          <span class="text-xs opacity-50 mr-2">${i + 1}.</span>
+          <span class="flex-1">${METRICS[m]?.label || m} ${METRICS[m]?.max ? '↑' : '↓'}</span>
+        </div>
+      `).join('') || '<div class="text-xs opacity-50">Coche au moins un critère</div>';
+
+      // Variables de gestion du drag
+      let dragging = null;
+      let raf = null;
+
+      // === NOUVEAU : Event delegation sur la liste ===
+      
+      // Dragstart : initialisation (compat Safari)
+      list.addEventListener('dragstart', (e) => {
+        const el = e.target.closest('.priority-item');
+        if (!el) return;
+        
+        dragging = el;
+        el.classList.add('dragging');
+        list.classList.add('drag-active');
+        
+        // Compatibilité Safari : nécessaire setData pour activer le drag
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+          try { 
+            e.dataTransfer.setData('text/plain', ''); 
+          } catch {}
+        }
+      });
+
+      // Dragend : finalisation
+      list.addEventListener('dragend', () => {
+        if (dragging) {
+          dragging.classList.remove('dragging');
+        }
+        list.classList.remove('drag-active');
+        dragging = null;
+        
+        // Met à jour l'ordre dans l'état
+        state.selectedMetrics = [...list.querySelectorAll('.priority-item')].map(el => el.dataset.m);
+        
+        // Renumérote sans tout reconstruire (performance++)
+        list.querySelectorAll('.priority-item .opacity-50').forEach((n, i) => {
+          n.textContent = (i + 1) + '.';
         });
-        it.addEventListener('drop',()=>{ state.selectedMetrics=[...list.querySelectorAll('.priority-item')].map(el=>el.dataset.m); buildPriorityUI(); scheduleCompute(); });
+        
+        scheduleCompute();
+      });
+
+      // Fonction helper : trouve l'élément après la position Y
+      function getAfterElement(container, y) {
+        const items = [...container.querySelectorAll('.priority-item:not(.dragging)')];
+        let closest = { 
+          offset: Number.NEGATIVE_INFINITY, 
+          element: null 
+        };
+        
+        for (const el of items) {
+          const rect = el.getBoundingClientRect();
+          const offset = y - rect.top - rect.height / 2;
+          
+          if (offset < 0 && offset > closest.offset) {
+            closest = { offset, element: el };
+          }
+        }
+        
+        return closest.element;
+      }
+
+      // Dragover : réordonnancement throttlé
+      list.addEventListener('dragover', (e) => {
+        e.preventDefault(); // Indispensable pour autoriser le drop
+        
+        if (!dragging) return;
+        
+        // Throttling via requestAnimationFrame : 1 op par frame max
+        if (raf) return;
+        
+        raf = requestAnimationFrame(() => {
+          const afterElement = getAfterElement(list, e.clientY);
+          
+          if (!afterElement) {
+            list.appendChild(dragging);
+          } else {
+            list.insertBefore(dragging, afterElement);
+          }
+          
+          raf = null;
+        });
       });
     }
 
