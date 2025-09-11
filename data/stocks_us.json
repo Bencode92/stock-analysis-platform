@@ -1,6 +1,6 @@
 {
   "region": "US",
-  "timestamp": "2025-09-11T07:19:32.962Z",
+  "timestamp": "2025-09-11T07:39:55.638Z",
   "stocks": [
     {
       "ticker": "NVDA",
@@ -103,9 +103,10 @@
         "ttm_source": "calc",
         "ttm_window_count": 5,
         "used_run_rate": false,
+        "last_known_amt": 0.01,
         "conflict_ratio": "1.50"
       },
-      "last_updated": "2025-09-11T07:19:31.946Z"
+      "last_updated": "2025-09-11T07:39:54.554Z"
     },
     {
       "ticker": "MSFT",
@@ -208,9 +209,10 @@
         "ttm_source": "calc",
         "ttm_window_count": 4,
         "used_run_rate": false,
+        "last_known_amt": 0.83,
         "conflict_ratio": null
       },
-      "last_updated": "2025-09-11T07:19:31.843Z"
+      "last_updated": "2025-09-11T07:39:54.623Z"
     },
     {
       "ticker": "AAPL",
@@ -313,9 +315,10 @@
         "ttm_source": "calc",
         "ttm_window_count": 4,
         "used_run_rate": false,
+        "last_known_amt": 0.26,
         "conflict_ratio": null
       },
-      "last_updated": "2025-09-11T07:19:31.926Z"
+      "last_updated": "2025-09-11T07:39:54.778Z"
     },
     {
       "ticker": "AMZN",
@@ -377,9 +380,10 @@
         "ttm_source": "api",
         "ttm_window_count": 0,
         "used_run_rate": false,
+        "last_known_amt": null,
         "conflict_ratio": null
       },
-      "last_updated": "2025-09-11T07:19:31.832Z"
+      "last_updated": "2025-09-11T07:39:54.570Z"
     },
     {
       "ticker": "META",
@@ -466,9 +470,10 @@
         "ttm_source": "calc",
         "ttm_window_count": 4,
         "used_run_rate": false,
+        "last_known_amt": 0.525,
         "conflict_ratio": null
       },
-      "last_updated": "2025-09-11T07:19:31.917Z"
+      "last_updated": "2025-09-11T07:39:54.546Z"
     },
     {
       "ticker": "AVGO",
@@ -571,9 +576,10 @@
         "ttm_source": "calc",
         "ttm_window_count": 4,
         "used_run_rate": false,
+        "last_known_amt": 0.59,
         "conflict_ratio": null
       },
-      "last_updated": "2025-09-11T07:19:32.838Z"
+      "last_updated": "2025-09-11T07:39:55.638Z"
     },
     {
       "ticker": "GOOGL",
@@ -660,9 +666,10 @@
         "ttm_source": "calc",
         "ttm_window_count": 4,
         "used_run_rate": false,
+        "last_known_amt": 0.21,
         "conflict_ratio": null
       },
-      "last_updated": "2025-09-11T07:19:32.962Z"
+      "last_updated": "2025-09-11T07:39:55.622Z"
     },
     {
       "ticker": "GOOG",
@@ -749,9 +756,10 @@
         "ttm_source": "calc",
         "ttm_window_count": 4,
         "used_run_rate": false,
+        "last_known_amt": 0.21,
         "conflict_ratio": null
       },
-      "last_updated": "2025-09-11T07:19:32.942Z"
+      "last_updated": "2025-09-11T07:39:55.628Z"
     },
     {
       "ticker": "ETR",
@@ -776,10 +784,10 @@
       "perf_ytd": "17.29",
       "perf_1y": "45.10",
       "perf_3y": "44.94",
-      "dividend_yield": 5.19,
-      "dividend_yield_src": "TTM (API)",
-      "dividend_yield_ttm": 5.19,
-      "dividend_yield_regular": 5.19,
+      "dividend_yield": 2.71,
+      "dividend_yield_src": "TTM (run-rate post-split)",
+      "dividend_yield_ttm": 2.71,
+      "dividend_yield_regular": 2.56,
       "dividend_yield_forward": 5.43,
       "dividend_special_share_ttm": 0,
       "dividends_history": [
@@ -825,12 +833,12 @@
         }
       ],
       "avg_dividend_year": 1.84,
-      "total_dividends_ttm": 0.6,
+      "total_dividends_ttm": 2.4,
       "dividend_growth_3y": 46.45,
       "payout_ratio_ttm": 58.7,
       "payout_ratio_regular": 56.1,
       "payout_status": "moderate",
-      "dividend_coverage": 6.72,
+      "dividend_coverage": 1.68,
       "eps_ttm": 4.03,
       "pe_ratio": 21.87841,
       "volatility_3y": "23.16",
@@ -840,7 +848,7 @@
       "max_drawdown_3y": "51.50",
       "debug_dividends": {
         "price_used": 88.44,
-        "ttm_sum_calc": 0.6,
+        "ttm_sum_calc": 2.4,
         "quarterly_median": 0.565,
         "special_share_ttm_pct": 0,
         "api_trailing_pct": 5.19,
@@ -850,13 +858,14 @@
         "recent_split": true,
         "split_date": "2024-12-13",
         "split_factor": null,
-        "dividend_yield_src": "TTM (API)",
-        "ttm_source": "api",
+        "dividend_yield_src": "TTM (run-rate post-split)",
+        "ttm_source": "calc-runrate",
         "ttm_window_count": 1,
-        "used_run_rate": false,
+        "used_run_rate": true,
+        "last_known_amt": 0.6,
         "conflict_ratio": null
       },
-      "last_updated": "2025-09-11T07:19:32.685Z"
+      "last_updated": "2025-09-11T07:39:55.589Z"
     }
   ],
   "adr_info": null
