@@ -1,4 +1,5 @@
-// ===== MC (Multi-Critères) – Module Optimisé v3.7 avec Tags Multi-Select ===================
+// ===== MC (Multi-Critères) – Module Optimisé v3.7 avec correctif priorités ▲▼ ===================
+// v3.7+: Boutons ▲▼ pour déplacement précis (1 clic = 1 place) + scroll stable
 // v3.7: Système de tags multi-select avec recherche intégrée pour les filtres géographiques
 // v3.6: Multi-sélection pour Région/Pays/Secteur avec interface améliorée
 // v3.5: Optimisation du Drag & Drop avec scheduleCompute() et updatePriorityNumbersOnly()
@@ -21,7 +22,7 @@
 
   console.log('✅ MC: Éléments DOM trouvés');
 
-  // ==== INJECTION DES STYLES POUR LES TAGS ====
+  // ==== INJECTION DES STYLES POUR LES TAGS + BOUTONS ▲▼ ====
   if (!document.querySelector('#mc-tags-styles')) {
     const style = document.createElement('style');
     style.id = 'mc-tags-styles';
@@ -79,6 +80,14 @@
       .msel-option input[type="checkbox"]{accent-color:#00ff87;cursor:pointer}
       .msel-option span{font-size:0.85rem}
       .msel-empty{text-align:center;padding:20px;opacity:0.5;font-size:0.85rem}
+      
+      /* === Boutons priorités ▲▼ === */
+      .btn-up,.btn-down{font-size:.8rem;opacity:.75;padding:2px 6px;border-radius:6px;
+        border:1px solid rgba(0,255,135,.25);background:rgba(0,255,135,.06);
+        cursor:pointer;transition:all 0.2s ease}
+      .btn-up:hover,.btn-down:hover{opacity:1;background:rgba(0,255,135,.12);
+        transform:translateY(-1px)}
+      
       @media (min-width: 1024px){
         .msel-list{grid-template-columns:1fr 1fr}
       }
@@ -853,7 +862,7 @@
     return 'text-yellow-400';
   }
 
-  // Créer/mettre à jour la zone de priorités avec drag & drop
+  // Créer/mettre à jour la zone de priorités avec drag & drop + boutons ▲▼
   function updatePriorityDisplay() {
     let priorityContainer = document.getElementById('priority-container');
     
@@ -877,15 +886,20 @@
     priorityContainer.style.display = state.mode === 'lexico' ? 'block' : 'none';
     
     priorityList.innerHTML = state.selectedMetrics.map((m, i) => `
-      <div class="priority-item flex items-center gap-2 p-2 rounded bg-white/5 cursor-move" 
-           draggable="true" data-metric="${m}">
+      <div class="priority-item flex items-center gap-2 p-2 rounded bg-white/5 cursor-move"
+           draggable="true" data-metric="${m}" role="option" tabindex="0" aria-posinset="${i+1}" aria-setsize="${state.selectedMetrics.length}">
         <span class="drag-handle">☰</span>
         <span class="priority-number text-xs opacity-50">${i+1}.</span>
         <span class="flex-1">${METRICS[m].label} ${METRICS[m].max?'↑':'↓'}</span>
+        <div class="flex gap-1">
+          <button type="button" class="btn-up" aria-label="Monter">▲</button>
+          <button type="button" class="btn-down" aria-label="Descendre">▼</button>
+        </div>
       </div>
     `).join('') || '<div class="text-xs opacity-50">Cochez des critères pour définir les priorités</div>';
     
-    setupDragAndDrop();
+    setupPriorityArrows();   // ⬅️ new
+    setupDragAndDrop();      // (gardé, mais patché ci-dessous pour éviter les doublons)
   }
 
   // ✅ NOUVEAU: Helper pour mettre à jour uniquement les numéros
@@ -899,62 +913,126 @@
     });
   }
 
-  // ✅ DRAG & DROP OPTIMISÉ v3.5 - Basé sur le conteneur
+  // ✅ NOUVEAU: Fonctions pour les boutons ▲▼ avec scroll stable
+  function getScrollParent(el){
+    let p = el.parentElement;
+    while (p){
+      const oy = getComputedStyle(p).overflowY;
+      if ((oy === 'auto' || oy === 'scroll') && p.scrollHeight > p.clientHeight) return p;
+      p = p.parentElement;
+    }
+    return window;
+  }
+
+  function setupPriorityArrows(){
+    const list = document.getElementById('priority-list');
+    if (!list || list.dataset.wired === '1') return;   // 🔒 empêcher les doublons
+    list.dataset.wired = '1';
+
+    const renumber = () => {
+      [...list.querySelectorAll('.priority-item')].forEach((item, idx) => {
+        item.querySelector('.priority-number').textContent = `${idx+1}.`;
+        item.setAttribute('aria-posinset', String(idx+1));
+      });
+    };
+
+    const commit = () => {
+      state.selectedMetrics = [...list.querySelectorAll('.priority-item')].map(el => el.dataset.metric);
+      renumber();
+      scheduleCompute();
+    };
+
+    const moveItem = (from, to, focusSelector) => {
+      const items = [...list.querySelectorAll('.priority-item')];
+      if (to < 0 || to >= items.length || from === to) return;
+      const node = items[from];
+      const ref  = (to > from) ? items[to].nextSibling : items[to];
+
+      // freeze scroll
+      const sp = getScrollParent(list);
+      const prevTop = (sp === window) ? window.scrollY : sp.scrollTop;
+
+      list.insertBefore(node, ref);
+
+      // restore scroll
+      if (sp === window) window.scrollTo(window.scrollX, prevTop);
+      else sp.scrollTop = prevTop;
+
+      // garder le focus sans scroll
+      if (focusSelector) node.querySelector(focusSelector)?.focus?.({ preventScroll: true });
+
+      commit();
+    };
+
+    // click ▲▼ (1 clic = 1 place)
+    list.addEventListener('click', (e) => {
+      if (list.isDragging) return; // ignorer si DnD en cours
+      const up   = e.target.closest('.btn-up');
+      const down = e.target.closest('.btn-down');
+      if (!up && !down) return;
+
+      e.preventDefault(); e.stopPropagation();
+      const item  = e.target.closest('.priority-item');
+      const items = [...list.querySelectorAll('.priority-item')];
+      const from  = items.indexOf(item);
+      const to    = from + (up ? -1 : 1);
+
+      moveItem(from, to, up ? '.btn-up' : '.btn-down');
+    });
+
+    // clavier ↑/↓ (1 place)
+    list.addEventListener('keydown', (e) => {
+      const item = e.target.closest('.priority-item'); if (!item) return;
+      const items = [...list.querySelectorAll('.priority-item')];
+      const idx = items.indexOf(item);
+      if (e.key === 'ArrowUp')   { e.preventDefault(); moveItem(idx, idx-1, '.btn-up'); }
+      if (e.key === 'ArrowDown') { e.preventDefault(); moveItem(idx, idx+1, '.btn-down'); }
+    });
+  }
+
+  // ✅ DRAG & DROP OPTIMISÉ v3.5 - Basé sur le conteneur + protection doublons
   function setupDragAndDrop() {
     const container = document.getElementById('priority-list');
     if (!container) return;
-    
+
+    // 🔒 ne câbler qu'une seule fois
+    if (container.dataset.dndWired === '1') return;
+    container.dataset.dndWired = '1';
+
     let draggedItem = null;
-    let placeholder = null;
-    
-    // Event listeners sur le conteneur (delegation)
+
     container.addEventListener('dragstart', (e) => {
       if (!e.target.classList.contains('priority-item')) return;
       draggedItem = e.target;
+      container.isDragging = true;                 // ⬅️ expose à setupPriorityArrows
       e.target.style.opacity = '0.5';
       e.target.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
     });
-    
+
     container.addEventListener('dragend', (e) => {
       if (!e.target.classList.contains('priority-item')) return;
       e.target.style.opacity = '';
       e.target.classList.remove('dragging');
-      if (placeholder) {
-        placeholder.remove();
-        placeholder = null;
-      }
       draggedItem = null;
+      container.isDragging = false;                // ⬅️ fin du DnD
     });
-    
+
     container.addEventListener('dragover', (e) => {
       e.preventDefault();
       if (!draggedItem) return;
-      
       const afterElement = getDragAfterElement(container, e.clientY);
-      if (afterElement == null) {
-        container.appendChild(draggedItem);
-      } else {
-        container.insertBefore(draggedItem, afterElement);
-      }
+      if (afterElement == null) container.appendChild(draggedItem);
+      else container.insertBefore(draggedItem, afterElement);
     });
-    
+
     container.addEventListener('drop', (e) => {
       e.preventDefault();
       if (!draggedItem) return;
-      
-      // Extraire le nouvel ordre directement depuis le DOM
-      const newOrder = [...container.querySelectorAll('.priority-item')]
-        .map(el => el.dataset.metric);
-      
-      // Mettre à jour l'état
-      state.selectedMetrics = newOrder;
-      
-      // ✅ CRUCIAL: Mise à jour minimale + recalcul debounced
-      updatePriorityNumbersOnly(); // Mise à jour visuelle minimale
-      scheduleCompute(); // Recalcul automatique avec debounce
-      
-      // Ne PAS appeler updatePriorityDisplay() ici !
+      // nouvel ordre depuis le DOM
+      state.selectedMetrics = [...container.querySelectorAll('.priority-item')].map(el => el.dataset.metric);
+      updatePriorityNumbersOnly();
+      scheduleCompute();
     });
   }
   
@@ -1685,7 +1763,7 @@
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module v3.7 - Tags multi-select activés');
+    console.log('✅ MC Module v3.7+ - Correctif priorités ▲▼ appliqué avec succès !');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
