@@ -1,4 +1,5 @@
-// ===== MC (Multi-Critères) – Module Optimisé v3.6 avec Multi-sélection ===================
+// ===== MC (Multi-Critères) – Module Optimisé v3.7 avec Tags Multi-Select ===================
+// v3.7: Système de tags multi-select avec recherche intégrée pour les filtres géographiques
 // v3.6: Multi-sélection pour Région/Pays/Secteur avec interface améliorée
 // v3.5: Optimisation du Drag & Drop avec scheduleCompute() et updatePriorityNumbersOnly()
 // v3.4: Payout basé uniquement sur TTM avec fallbacks robustes
@@ -19,6 +20,77 @@
   }
 
   console.log('✅ MC: Éléments DOM trouvés');
+
+  // ==== INJECTION DES STYLES POUR LES TAGS ====
+  if (!document.querySelector('#mc-tags-styles')) {
+    const style = document.createElement('style');
+    style.id = 'mc-tags-styles';
+    style.textContent = `
+      /* === Tag MultiSelect (msel) === */
+      .msel{position:relative}
+      .msel-label{font-size:.75rem;opacity:.7;min-width:60px;margin-top:.25rem}
+      .msel-trigger{width:100%;display:flex;align-items:center;gap:.5rem;min-height:40px;
+        padding:8px 10px;border-radius:10px;border:1px solid rgba(0,255,135,0.3);
+        background:rgba(0,255,135,0.05);color:#fff;text-align:left;cursor:pointer;
+        transition:all 0.3s ease}
+      .msel-trigger:hover{border-color:#00ff87;background:rgba(0,255,135,0.08);
+        box-shadow:0 0 10px rgba(0,255,135,0.2)}
+      .msel-placeholder{opacity:.5}
+      .msel-chips{display:flex;flex-wrap:wrap;gap:6px;flex:1}
+      .msel-chip{display:inline-flex;align-items:center;gap:6px;
+        padding:4px 8px;border-radius:999px;background:rgba(0,255,135,0.15);
+        border:1px solid rgba(0,255,135,0.35);font-size:.8rem;
+        transition:all 0.2s ease}
+      .msel-chip:hover{background:rgba(0,255,135,0.25);transform:translateY(-1px)}
+      .msel-chip i{opacity:.7;cursor:pointer;transition:color 0.2s}
+      .msel-chip i:hover{color:#ff4757}
+      .msel{--msel-elev:0 8px 24px rgba(0,200,255,.18)}
+      .msel-panel{position:absolute;z-index:60;top:calc(100% + 6px);left:0;right:0;
+        background:linear-gradient(135deg,rgba(10,25,41,0.98),rgba(15,35,55,0.95));
+        backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+        border:1px solid rgba(0,255,135,0.3);border-radius:12px;padding:10px;
+        box-shadow:var(--msel-elev);display:none;max-height:280px;overflow:auto;
+        opacity:0;transform:translateY(-10px);
+        transition:all 0.3s cubic-bezier(0.4,0,0.2,1)}
+      .msel.open .msel-panel{display:block;opacity:1;transform:translateY(0)}
+      .msel-search{width:100%;padding:8px 10px;border-radius:10px;
+        border:1px solid rgba(0,255,135,0.3);
+        background:rgba(0,255,135,0.06);color:#fff;
+        transition:all 0.2s ease}
+      .msel-search:focus{border-color:#00ff87;outline:none;
+        box-shadow:0 0 0 2px rgba(0,255,135,0.2)}
+      .msel-search::placeholder{color:rgba(255,255,255,0.4)}
+      .msel-actions{display:flex;gap:8px;margin:8px 0}
+      .msel-actions button{flex:1;padding:6px 10px;border-radius:8px;
+        border:1px solid rgba(0,255,135,0.3);
+        background:rgba(0,255,135,0.08);color:#00ff87;cursor:pointer;
+        transition:all 0.2s ease;font-size:0.8rem;font-weight:500}
+      .msel-actions button:hover{background:rgba(0,255,135,0.15);
+        transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,255,135,0.2)}
+      .msel-list{margin-top:4px;display:grid;grid-template-columns:1fr;gap:4px;
+        max-height:180px;overflow-y:auto;padding-right:4px}
+      .msel-list::-webkit-scrollbar{width:4px}
+      .msel-list::-webkit-scrollbar-track{background:rgba(255,255,255,0.05);border-radius:2px}
+      .msel-list::-webkit-scrollbar-thumb{background:rgba(0,255,135,0.3);border-radius:2px}
+      .msel-list::-webkit-scrollbar-thumb:hover{background:rgba(0,255,135,0.5)}
+      .msel-option{display:flex;align-items:center;gap:8px;padding:6px 8px;
+        border-radius:8px;cursor:pointer;transition:all 0.2s ease}
+      .msel-option:hover{background:rgba(0,255,135,0.08)}
+      .msel-option input[type="checkbox"]{accent-color:#00ff87;cursor:pointer}
+      .msel-option span{font-size:0.85rem}
+      .msel-empty{text-align:center;padding:20px;opacity:0.5;font-size:0.85rem}
+      @media (min-width: 1024px){
+        .msel-list{grid-template-columns:1fr 1fr}
+      }
+      /* Animation pour les chips */
+      @keyframes chip-enter{
+        from{opacity:0;transform:scale(0.8)}
+        to{opacity:1;transform:scale(1)}
+      }
+      .msel-chip{animation:chip-enter 0.3s ease}
+    `;
+    document.head.appendChild(style);
+  }
 
   // ==== CONSTANTES PERFORMANCE ====
   const GAP_FLOOR = { 
@@ -149,6 +221,9 @@
   const applyBtn=document.getElementById('mc-apply');
   const resetBtn=document.getElementById('mc-reset');
   const summary=document.getElementById('mc-summary');
+
+  // Variables globales pour les contrôles UI
+  let regionUI, countryUI, sectorUI;
 
   // état et données - v3.6: utilisation de Sets pour multi-sélection
   const state={ 
@@ -448,94 +523,232 @@
     }
   }
 
-  // Créer l'interface des filtres - v3.6: avec multi-sélection
-  function setupGeoFilters() {
-    const geoContainer = document.getElementById('geo-filters-container');
-    if (!geoContainer) return;
+  // Helper générique pour un multiselect avec tags + recherche
+  function createTagMultiSelect({container, label, options, selectedSet, placeholder='Sélectionner...', onChange}) {
+    const wrap = document.createElement('div');
+    wrap.className = 'msel';
 
-    const tip = `<div class="text-[10px] opacity-60 mb-1">
-      Astuce : Ctrl/Cmd + clic pour multi-sélectionner. Aucune sélection = tous.
-    </div>`;
-
-    geoContainer.innerHTML = `
-      <div class="space-y-3">
-        <div>${tip}
-          <div class="flex gap-2 items-start">
-            <label class="text-xs opacity-70 min-w-[60px] mt-2">Région:</label>
-            <select id="filter-region" class="mini-select flex-1" multiple size="4">
-              ${Array.from(state.availableRegions).sort().map(r=>`<option value="${r}">${r}</option>`).join('')}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <div class="flex gap-2 items-start">
-            <label class="text-xs opacity-70 min-w-[60px] mt-2">Pays:</label>
-            <select id="filter-country" class="mini-select flex-1" multiple size="8"></select>
-          </div>
-        </div>
-
-        <div>
-          <div class="flex gap-2 items-start">
-            <label class="text-xs opacity-70 min-w-[60px] mt-2">Secteur:</label>
-            <select id="filter-sector" class="mini-select flex-1" multiple size="6">
-              ${Array.from(state.availableSectors).sort().map(s=>`<option value="${s}">${s}</option>`).join('')}
-            </select>
+    wrap.innerHTML = `
+      <div class="flex gap-2 items-start">
+        <label class="msel-label">${label}:</label>
+        <div class="flex-1">
+          <button type="button" class="msel-trigger">
+            <div class="msel-chips"></div>
+            <span class="msel-placeholder">${placeholder}</span>
+          </button>
+          <div class="msel-panel">
+            <input type="text" class="msel-search" placeholder="Rechercher...">
+            <div class="msel-actions">
+              <button type="button" data-act="all">Tout</button>
+              <button type="button" data-act="none">Aucun</button>
+            </div>
+            <div class="msel-list"></div>
           </div>
         </div>
       </div>
     `;
+    container.appendChild(wrap);
 
-    const getMulti = (sel) => new Set([...sel.selectedOptions].map(o => o.value));
+    const trigger  = wrap.querySelector('.msel-trigger');
+    const chipsBox = wrap.querySelector('.msel-chips');
+    const ph       = wrap.querySelector('.msel-placeholder');
+    const panel    = wrap.querySelector('.msel-panel');
+    const search   = wrap.querySelector('.msel-search');
+    const listBox  = wrap.querySelector('.msel-list');
 
-    const regionSel  = document.getElementById('filter-region');
-    const countrySel = document.getElementById('filter-country');
-    const sectorSel  = document.getElementById('filter-sector');
+    let currentOptions = options.slice();
 
-    // init pays selon régions
-    updateCountryFilter();
+    function renderChips() {
+      chipsBox.innerHTML = '';
+      const vals = [...selectedSet].slice(0, 3); // Afficher max 3 chips
+      const more = selectedSet.size - vals.length;
+      
+      ph.style.display = selectedSet.size ? 'none' : '';
+      
+      vals.forEach(v => {
+        const chip = document.createElement('span');
+        chip.className = 'msel-chip';
+        chip.innerHTML = `${v} <i class="fas fa-times" title="Retirer"></i>`;
+        chip.querySelector('i').addEventListener('click', e => {
+          e.stopPropagation();
+          selectedSet.delete(v);
+          syncListChecks();
+          renderChips();
+          onChange?.(new Set(selectedSet));
+        });
+        chipsBox.appendChild(chip);
+      });
+      
+      if (more > 0) {
+        const moreChip = document.createElement('span');
+        moreChip.className = 'msel-chip';
+        moreChip.innerHTML = `+${more} autres`;
+        moreChip.style.background = 'rgba(0,255,135,0.25)';
+        chipsBox.appendChild(moreChip);
+      }
+    }
 
-    regionSel?.addEventListener('change', () => {
-      state.geoFilters.regions = getMulti(regionSel);
-      masks.geo = null;
-      updateCountryFilter();            // recalculer la liste des pays
-      scheduleCompute();
+    function syncListChecks() {
+      listBox.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.checked = selectedSet.has(cb.value);
+      });
+    }
+
+    function renderList(filter = '') {
+      const q = filter.trim().toLowerCase();
+      const items = currentOptions.filter(o => o.toLowerCase().includes(q));
+      
+      if (items.length === 0) {
+        listBox.innerHTML = '<div class="msel-empty">Aucun résultat</div>';
+        return;
+      }
+      
+      listBox.innerHTML = items.map(o => `
+        <label class="msel-option"><input type="checkbox" value="${o}"><span>${o}</span></label>
+      `).join('');
+      
+      syncListChecks();
+      
+      listBox.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+          cb.checked ? selectedSet.add(cb.value) : selectedSet.delete(cb.value);
+          renderChips();
+          onChange?.(new Set(selectedSet));
+        });
+      });
+    }
+
+    // Events
+    trigger.addEventListener('click', () => {
+      wrap.classList.toggle('open');
+      if (wrap.classList.contains('open')) { 
+        search.value=''; 
+        renderList(); 
+        search.focus(); 
+      }
+    });
+    
+    document.addEventListener('click', (e) => {
+      if (!wrap.contains(e.target)) wrap.classList.remove('open');
+    });
+    
+    search.addEventListener('input', () => renderList(search.value));
+    
+    search.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        wrap.classList.remove('open');
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const firstCb = listBox.querySelector('input[type="checkbox"]:not(:checked)');
+        if (firstCb) firstCb.click();
+      }
+    });
+    
+    panel.querySelector('[data-act="all"]').addEventListener('click', () => {
+      currentOptions.forEach(o => selectedSet.add(o));
+      renderList(search.value); 
+      renderChips(); 
+      onChange?.(new Set(selectedSet));
+    });
+    
+    panel.querySelector('[data-act="none"]').addEventListener('click', () => {
+      selectedSet.clear(); 
+      renderList(search.value); 
+      renderChips(); 
+      onChange?.(new Set(selectedSet));
     });
 
-    countrySel?.addEventListener('change', () => {
-      state.geoFilters.countries = getMulti(countrySel);
-      masks.geo = null;
-      scheduleCompute();
+    // API minimaliste pour mises à jour dynamiques
+    return {
+      setOptions(newOpts) {
+        currentOptions = newOpts.slice();
+        // conserver l'intersection
+        [...selectedSet].forEach(v => { 
+          if (!currentOptions.includes(v)) selectedSet.delete(v); 
+        });
+        renderList(search.value); 
+        renderChips();
+      },
+      clear() { 
+        selectedSet.clear(); 
+        renderList(); 
+        renderChips(); 
+      },
+      refresh() { 
+        renderList(search.value); 
+        renderChips(); 
+      }
+    };
+  }
+
+  // Créer l'interface des filtres - v3.7: avec tags multi-select
+  function setupGeoFilters() {
+    const geoContainer = document.getElementById('geo-filters-container');
+    if (!geoContainer) return;
+
+    geoContainer.innerHTML = `
+      <div class="text-[10px] opacity-60 mb-2">
+        <i class="fas fa-info-circle mr-1"></i>
+        Utilisez la recherche et les tags pour filtrer rapidement 🚀
+      </div>
+    `;
+
+    const regions = Array.from(state.availableRegions).sort();
+    const countries = Array.from(state.availableCountries).sort();
+    const sectors = Array.from(state.availableSectors).sort();
+
+    regionUI = createTagMultiSelect({
+      container: geoContainer,
+      label: 'Région',
+      options: regions,
+      selectedSet: state.geoFilters.regions,
+      placeholder: 'Toutes régions',
+      onChange: () => { 
+        masks.geo = null; 
+        updateCountryFilter(); 
+        scheduleCompute(); 
+      }
     });
 
-    sectorSel?.addEventListener('change', () => {
-      state.geoFilters.sectors = getMulti(sectorSel);
-      masks.geo = null;
-      scheduleCompute();
+    countryUI = createTagMultiSelect({
+      container: geoContainer,
+      label: 'Pays',
+      options: countries,
+      selectedSet: state.geoFilters.countries,
+      placeholder: 'Tous pays',
+      onChange: () => { 
+        masks.geo = null; 
+        scheduleCompute(); 
+      }
+    });
+
+    sectorUI = createTagMultiSelect({
+      container: geoContainer,
+      label: 'Secteur',
+      options: sectors,
+      selectedSet: state.geoFilters.sectors,
+      placeholder: 'Tous secteurs',
+      onChange: () => { 
+        masks.geo = null; 
+        scheduleCompute(); 
+      }
     });
   }
 
-  // Mettre à jour le filtre pays selon les régions sélectionnées - v3.6
+  // Mettre à jour le filtre pays selon les régions sélectionnées - v3.7
   function updateCountryFilter() {
-    const countrySelect = document.getElementById('filter-country');
-    if (!countrySelect) return;
-
     const selectedRegions = state.geoFilters.regions; // Set
     const filtered = new Set();
-
+    
     state.data.forEach(stock => {
       if (!selectedRegions.size || selectedRegions.has(stock.region)) {
         if (stock.country) filtered.add(stock.country);
       }
     });
-
-    const prev = new Set(state.geoFilters.countries); // conserver la sélection
+    
     const options = Array.from(filtered).sort();
-
-    countrySelect.innerHTML = options.map(c => `<option value="${c}">${c}</option>`).join('');
-
-    // restaurer la sélection (intersection)
-    [...countrySelect.options].forEach(o => { o.selected = prev.has(o.value); });
+    countryUI?.setOptions(options);
   }
 
   // Créer l'interface des filtres personnalisables
@@ -1310,7 +1523,7 @@
     }
   }
 
-  // v3.6: Affichage multi-valeurs dans le résumé
+  // v3.7: Affichage amélioré du résumé avec compteurs
   function setSummary(total, kept){
     if (!summary) return;
     const mode = state.mode==='balanced' ? 'Équilibre' : 'Priorités intelligentes';
@@ -1325,15 +1538,14 @@
       ? ` <span class="text-cyan-400">[Auto: Div ≥ ${MIN_DY_SELECTED}%]</span>` 
       : '';
     
-    // v3.6: Affichage des multi-sélections
-    const r = [...state.geoFilters.regions];
-    const c = [...state.geoFilters.countries];
-    const s = [...state.geoFilters.sectors];
-    const parts = [];
-    if (r.length) parts.push(r.join('|'));
-    if (c.length) parts.push(c.join('|'));
-    if (s.length) parts.push(s.join('|'));
-    const geoText = parts.length ? ` • ${parts.join(', ')}` : '';
+    // v3.7: Affichage des compteurs de multi-sélections
+    const rN = state.geoFilters.regions.size;
+    const cN = state.geoFilters.countries.size;
+    const sN = state.geoFilters.sectors.size;
+    
+    const geoText = (rN||cN||sN) 
+      ? ` • <span class="text-green-400">${rN ? 'R('+rN+')' : ''} ${cN ? 'P('+cN+')' : ''} ${sN ? 'S('+sN+')' : ''}</span>`.replace(/\s+/g,' ').trim() 
+      : '';
     
     summary.innerHTML = `<strong>${mode}</strong> • ${labels || 'Aucun critère'} • ${visibleFilters} filtres${geoText}${autoText} • ${kept}/${total} actions`;
   }
@@ -1420,7 +1632,7 @@
     });
   }
   
-  // v3.6: Reset avec Sets vides
+  // v3.7: Reset avec nettoyage des UI tags
   if (resetBtn) {
     resetBtn.addEventListener('click', ()=>{
       state.selectedMetrics = ['ytd', 'dividend_yield_reg'];
@@ -1445,14 +1657,11 @@
         }
       });
       
-      // Reset filtres géo - v3.6: vider les multi-sélections
-      const regionSelect  = document.getElementById('filter-region');
-      const countrySelect = document.getElementById('filter-country');
-      const sectorSelect  = document.getElementById('filter-sector');
-      if (regionSelect)  [...regionSelect.options].forEach(o => o.selected = false);
-      if (countrySelect) [...countrySelect.options].forEach(o => o.selected = false);
-      if (sectorSelect)  [...sectorSelect.options].forEach(o => o.selected = false);
-      updateCountryFilter();
+      // Reset des UI de filtres tags
+      regionUI?.clear();
+      countryUI?.clear();
+      sectorUI?.clear();
+      updateCountryFilter(); // Refresh la liste des pays
       
       const balancedRadio = modeRadios.find(x=>x.value==='balanced');
       if (balancedRadio) balancedRadio.checked=true;
@@ -1476,7 +1685,7 @@
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module v3.6 - Multi-sélection activée');
+    console.log('✅ MC Module v3.7 - Tags multi-select activés');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
