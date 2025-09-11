@@ -1,4 +1,4 @@
-// Module MC adapté pour ETFs - v4.5 avec affichage ticker/nom amélioré
+// Module MC adapté pour ETFs - v4.6 sans filtre Pays
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const num=x=>Number.isFinite(+x)?+x:NaN, str=s=>s==null?'':String(s);
@@ -46,15 +46,15 @@
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results');
     const summary=document.getElementById('etf-mc-summary');
-    if(!root||!results){console.error('❌ ETF MC v4.5: DOM manquant');return;}
-    console.log('✅ ETF MC v4.5: Affichage ticker/nom amélioré');
+    if(!root||!results){console.error('❌ ETF MC v4.6: DOM manquant');return;}
+    console.log('✅ ETF MC v4.6: Sans filtre Pays');
 
     // Harmonisation du conteneur
     results.classList.add('glassmorphism','rounded-lg','p-4');
 
     // Styles harmonisés
-    if(!document.getElementById('etf-mc-v45-styles')){
-      const s=document.createElement('style'); s.id='etf-mc-v45-styles'; s.textContent=`
+    if(!document.getElementById('etf-mc-v46-styles')){
+      const s=document.createElement('style'); s.id='etf-mc-v46-styles'; s.textContent=`
       #etf-mc-results { display:block }
       #etf-mc-results .space-y-2 > div { margin-bottom: .75rem }
       #etf-mc-results .etf-card{
@@ -118,15 +118,15 @@
       });
     }, 100);
 
-    // === État & caches ===
+    // === État & caches (SANS countries) ===
     const state={
       mode:'balanced',
       baseFilter:'all',
       selectedMetrics:['return_ytd','ter','aum','return_1y'],
-      filters:{countries:new Set(),sectors:new Set(),fundTypes:new Set(),excludeLeveraged:true},
+      filters:{sectors:new Set(),fundTypes:new Set(),excludeLeveraged:true}, // Pas de countries
       customFilters:[],
       data:[],
-      catalogs:{countries:[],sectors:[],fundTypes:[],counts:{countries:new Map(),sectors:new Map(),fundTypes:new Map()}}
+      catalogs:{sectors:[],fundTypes:[],counts:{sectors:new Map(),fundTypes:new Map()}} // Pas de countries
     };
     const cache = {};
     const masks = { facets:null, custom:null, final:null };
@@ -198,35 +198,32 @@
 
     function recomputeFacetCatalogs(){
       const arr = universeForFacets();
-      const c = new Map(), s = new Map(), f = new Map();
+      const s = new Map(), f = new Map();
       arr.forEach(e=>{
-        (e.__countries||[]).forEach(x=>x && c.set(x,(c.get(x)||0)+1));
         (e.__sectors||[]).forEach(x=>x && s.set(x,(s.get(x)||0)+1));
         const ft = (e.fund_type||'').toString().trim();
         if (ft) f.set(ft,(f.get(ft)||0)+1);
       });
       const top = m => [...m.entries()].sort((a,b)=>b[1]-a[1]).map(([k])=>k);
       state.catalogs = {
-        countries: top(c), sectors: top(s), fundTypes: top(f),
-        counts: { countries:c, sectors:s, fundTypes:f }
+        sectors: top(s), fundTypes: top(f),
+        counts: { sectors:s, fundTypes:f }
       };
-      [['countries',state.filters.countries],
-       ['sectors',state.filters.sectors],
+      [['sectors',state.filters.sectors],
        ['fundTypes',state.filters.fundTypes]].forEach(([k,set])=>{
         [...set].forEach(v=>{ if(!state.catalogs[k].includes(v)) set.delete(v); });
       });
     }
 
     const LABELS = {
-      countries: {"United States":"États-Unis","United Kingdom":"Royaume-Uni","Germany":"Allemagne","France":"France","Switzerland":"Suisse","China":"Chine","Japan":"Japon","Canada":"Canada"},
       sectors: {"Financial Services":"Services financiers","Consumer Cyclical":"Conso. cyclique","Technology":"Technologie","Industrial":"Industrie","Communication Services":"Communication","Basic Materials":"Matériaux de base","Healthcare":"Santé","Energy":"Énergie","Utilities":"Services publics","Real Estate":"Immobilier","Consumer Defensive":"Conso. défensive"},
       fundTypes: {"Intermediate Core Bond":"Obligations core","High Yield Bond":"Obligations haut rendement","Large Growth":"Grande cap. croissance","Emerging Markets":"Marchés émergents"}
     };
 
     function renderDynamicFacets(){
       const host = root.querySelector('fieldset:last-of-type'); if(!host) return;
+      // MODIFIÉ : suppression de Pays du tableau groups
       const groups = [
-        { id:'etf-filter-countries', title:'Pays', key:'countries' },
         { id:'etf-filter-sectors', title:'Secteurs', key:'sectors' },
         { id:'etf-filter-fundtype', title:'Type de fonds', key:'fundTypes' }
       ];
@@ -396,7 +393,8 @@
           if(state.baseFilter === 'bonds' && kind !== 'bonds'){ mask[i]=0; continue; }
         }
         if(state.filters.excludeLeveraged && e.__lev){ mask[i]=0; continue; }
-        if(state.filters.countries.size && !e.__countries.some(c=>state.filters.countries.has(c))) { mask[i]=0; continue; }
+        // MODIFIÉ : suppression du filtre countries
+        // if(state.filters.countries.size && !e.__countries.some(c=>state.filters.countries.has(c))) { mask[i]=0; continue; }
         if(state.filters.sectors.size && !e.__sectors.some(s=>state.filters.sectors.has(s))) { mask[i]=0; continue; }
         if(state.filters.fundTypes.size && !state.filters.fundTypes.has(str(e.fund_type).trim())) { mask[i]=0; continue; }
       }
@@ -575,7 +573,8 @@
       const typeLabel = state.baseFilter === 'equity' ? ' Actions' : state.baseFilter === 'bonds' ? ' Obligations' : '';
       const metrics=state.selectedMetrics.map(m=>METRICS[m]?.label).filter(Boolean).join(' · ');
       const tags=[];
-      if(state.filters.countries.size) tags.push(`Pays(${state.filters.countries.size})`);
+      // MODIFIÉ : suppression du tag Pays
+      // if(state.filters.countries.size) tags.push(`Pays(${state.filters.countries.size})`);
       if(state.filters.sectors.size)   tags.push(`Secteurs(${state.filters.sectors.size})`);
       if(state.filters.fundTypes.size) tags.push(`Type(${state.filters.fundTypes.size})`);
       if(state.filters.excludeLeveraged) tags.push('No Lev/Inv');
@@ -695,7 +694,7 @@
       state.mode='balanced';
       state.baseFilter='all';
       state.selectedMetrics=['return_ytd','ter','aum','return_1y'];
-      state.filters={countries:new Set(),sectors:new Set(),fundTypes:new Set(),excludeLeveraged:true};
+      state.filters={sectors:new Set(),fundTypes:new Set(),excludeLeveraged:true}; // MODIFIÉ : pas de countries
       state.customFilters=[];
       document.querySelectorAll('#etf-base-filter button').forEach(b=>b.classList.remove('active'));
       document.querySelector('#etf-base-filter button[data-type="all"]')?.classList.add('active');
