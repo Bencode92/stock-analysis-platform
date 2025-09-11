@@ -1,4 +1,4 @@
-// Module MC adapté pour ETFs - v4.8 avec drag&drop pointer-based (souris+tactile)
+// Module MC adapté pour ETFs - v4.9 avec drag&drop ultra-fluide (poignée + long-press mobile + auto-scroll + flèches ▲▼ + clavier)
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const num=x=>Number.isFinite(+x)?+x:NaN, str=s=>s==null?'':String(s);
@@ -46,15 +46,15 @@
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results');
     const summary=document.getElementById('etf-mc-summary');
-    if(!root||!results){console.error('❌ ETF MC v4.8: DOM manquant');return;}
-    console.log('✅ ETF MC v4.8: Drag&Drop pointer-based (souris+tactile)');
+    if(!root||!results){console.error('❌ ETF MC v4.9: DOM manquant');return;}
+    console.log('✅ ETF MC v4.9: Ultra-smooth DnD (poignée + long-press + auto-scroll + clavier)');
 
     // Harmonisation du conteneur
     results.classList.add('glassmorphism','rounded-lg','p-4');
 
-    // Styles harmonisés avec nouveau drag&drop pointer-based
-    if(!document.getElementById('etf-mc-v48-styles')){
-      const s=document.createElement('style'); s.id='etf-mc-v48-styles'; s.textContent=`
+    // Styles harmonisés avec nouveau drag&drop ultra-fluide
+    if(!document.getElementById('etf-mc-v49-styles')){
+      const s=document.createElement('style'); s.id='etf-mc-v49-styles'; s.textContent=`
       #etf-mc-results { display:block }
       #etf-mc-results .space-y-2 > div { margin-bottom: .75rem }
       #etf-mc-results .etf-card{
@@ -92,7 +92,7 @@
       #etf-priority-list .priority-item:hover{background:rgba(0,255,255,.1);border-color:rgba(0,255,255,.4)}
       #etf-priority-list .priority-item.dragging{opacity:.5}
       
-      /* === DRAG & DROP POINTER-BASED === */
+      /* === DRAG & DROP ULTRA-FLUIDE === */
       #etf-priority-list{ position:relative; contain:layout paint; touch-action:none; }
       #etf-priority-list .priority-item{ user-select:none; -webkit-user-select:none; }
       #etf-priority-list .placeholder{
@@ -105,6 +105,15 @@
         pointer-events:none; opacity:.9; transform:translate3d(0,0,0);
         will-change:transform; box-shadow:0 8px 24px rgba(0,0,0,.25);
       }
+      
+      /* === NOUVELLES AMÉLIORATIONS === */
+      #etf-priority-list .drag-handle{cursor:grab;opacity:.7}
+      #etf-priority-list .priority-item:active .drag-handle{cursor:grabbing}
+      #etf-priority-list .btn-up, #etf-priority-list .btn-down{
+        font-size:.8rem;opacity:.7;padding:2px 6px;border-radius:6px;border:1px solid rgba(0,255,255,.25);
+        background:rgba(0,255,255,.06)
+      }
+      #etf-priority-list .btn-up:hover, #etf-priority-list .btn-down:hover{opacity:1;background:rgba(0,255,255,.12)}
       
       .facet-group{margin-top:10px}.facet-head{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:.85rem;opacity:.85}
       .facet-head .count{opacity:.6;font-size:.75rem}.facet-body{max-height:0;overflow:hidden;transition:max-height .25s ease}
@@ -329,7 +338,7 @@
       if(e.target && e.target.name==='etf-mc-mode'){ state.mode=e.target.value||'balanced'; buildPriorityUI(); scheduleCompute(); }
     });
 
-    // ==== UI Priorités - VERSION POINTER-BASED ====
+    // ==== UI Priorités - VERSION ULTRA-FLUIDE ====
     function buildPriorityUI() {
       let host = root.querySelector('fieldset[role="radiogroup"]') || root.querySelector('#etf-mc-section fieldset:nth-of-type(2)');
       if (!host) return;
@@ -339,8 +348,8 @@
         box = document.createElement('div');
         box.id = 'etf-priority-container';
         box.innerHTML = `
-          <div class="text-xs opacity-70 mb-2">Ordre des priorités (glisser pour réorganiser)</div>
-          <div id="etf-priority-list" class="space-y-1"></div>
+          <div class="text-xs opacity-70 mb-2">Ordre des priorités (glisser la poignée ☰, ou utilisez ▲▼)</div>
+          <div id="etf-priority-list" class="space-y-1" role="listbox" aria-label="Priorités"></div>
         `;
         host.appendChild(box);
       }
@@ -349,21 +358,115 @@
 
       const list = box.querySelector('#etf-priority-list');
       list.innerHTML = state.selectedMetrics.map((m, i) => `
-        <div class="priority-item" data-m="${m}">
+        <div class="priority-item" data-m="${m}" role="option" tabindex="0" aria-posinset="${i+1}" aria-setsize="${state.selectedMetrics.length}">
           <span class="drag-handle">☰</span>
-          <span class="text-xs opacity-50 mr-2">${i + 1}.</span>
+          <span class="text-xs opacity-50 mr-2 priority-number">${i + 1}.</span>
           <span class="flex-1">${METRICS[m]?.label || m} ${METRICS[m]?.max ? '↑' : '↓'}</span>
+          <div class="flex gap-1">
+            <button type="button" class="btn-up" aria-label="Monter">▲</button>
+            <button type="button" class="btn-down" aria-label="Descendre">▼</button>
+          </div>
         </div>
       `).join('') || '<div class="text-xs opacity-50">Coche au moins un critère</div>';
 
-      // 👉 nouveau DnD pointer-based
+      // Helpers ▲▼ + clavier
+      const renumber = () => {
+        list.querySelectorAll('.priority-item').forEach((item, idx) => {
+          item.querySelector('.priority-number').textContent = `${idx+1}.`;
+          item.setAttribute('aria-posinset', String(idx+1));
+        });
+      };
+      const commit = () => {
+        state.selectedMetrics = [...list.querySelectorAll('.priority-item')].map(el => el.dataset.m);
+        renumber();
+        scheduleCompute();
+      };
+      const moveItem = (from, to) => {
+        const items = [...list.querySelectorAll('.priority-item')];
+        if (to < 0 || to >= items.length) return;
+        const node = items[from];
+        const ref  = (to > from) ? items[to].nextSibling : items[to];
+        list.insertBefore(node, ref);
+        commit();
+      };
+
+      // Boutons ▲▼
+      list.querySelectorAll('.priority-item').forEach((item, idx) => {
+        item.querySelector('.btn-up')?.addEventListener('click', (e) => { e.stopPropagation(); moveItem(idx, idx-1); });
+        item.querySelector('.btn-down')?.addEventListener('click', (e) => { e.stopPropagation(); moveItem(idx, idx+1); });
+      });
+
+      // Clavier: ↑/↓ pour bouger, Enter/Espace pour "sélection" neutre
+      list.addEventListener('keydown', (e) => {
+        const item = e.target.closest('.priority-item'); if (!item) return;
+        const items = [...list.querySelectorAll('.priority-item')];
+        const idx = items.indexOf(item);
+        if (e.key === 'ArrowUp')  { e.preventDefault(); moveItem(idx, idx-1); }
+        if (e.key === 'ArrowDown'){ e.preventDefault(); moveItem(idx, idx+1); }
+      });
+
+      // Pointer-based DnD (poignée uniquement)
       setupPointerDnD(list);
     }
 
-    // ==== NOUVEAU DRAG&DROP POINTER-BASED ====
+    // ==== NOUVEAU DRAG&DROP ULTRA-FLUIDE ====
     function setupPointerDnD(list){
       let dragging=null, ghost=null, placeholder=null, startY=0, offsetY=0, raf=null;
-      const listLeft = () => list.getBoundingClientRect().left + 6; // léger décalage X
+      let pressTimer=null, started=false, pointerId=null;
+      let scrollRAF=null, scrollParent=null, lastClientY=0;
+
+      const isTouch = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
+      const LONG_PRESS_MS = 180;       // délai pour mobile
+      const MOVE_TOL = 6;              // tolérance mouvement avant démarrage
+      const EDGE = 64;                 // zone auto-scroll (px)
+      const MAX_SPEED = 18;            // px/frame
+
+      const listRectLeft = () => list.getBoundingClientRect().left + 6;
+
+      const getScrollParent = (el) => {
+        let p = el.parentElement;
+        while (p) {
+          const style = getComputedStyle(p);
+          const oy = style.overflowY;
+          if ((oy === 'auto' || oy === 'scroll') && p.scrollHeight > p.clientHeight) return p;
+          p = p.parentElement;
+        }
+        return window; // fallback
+      };
+
+      function startDrag(ev, fromTouch=false){
+        if (started || !dragging) return;
+        started = true;
+
+        // pointer capture si possible
+        try { ev.target.setPointerCapture?.(ev.pointerId); pointerId = ev.pointerId; } catch{}
+
+        const r = dragging.getBoundingClientRect();
+        offsetY = (ev.clientY ?? r.top) - r.top;
+
+        // placeholder
+        placeholder = document.createElement('div');
+        placeholder.className = 'placeholder';
+        placeholder.style.height = `${r.height}px`;
+        dragging.after(placeholder);
+
+        // ghost
+        ghost = dragging.cloneNode(true);
+        ghost.classList.add('drag-ghost');
+        ghost.style.width = `${r.width}px`;
+        ghost.style.transform = `translate3d(${listRectLeft()}px, ${r.top}px, 0)`;
+        document.body.appendChild(ghost);
+
+        dragging.classList.add('dragging');
+        dragging.style.opacity = '0.5';
+
+        scrollParent = getScrollParent(list);
+        ensureAutoScrollLoop(); // démarre la boucle
+        document.addEventListener('pointermove', onPointerMove, {passive:false});
+        document.addEventListener('pointerup', onPointerUp, {passive:false});
+      }
+
+      function clearPressTimer(){ if (pressTimer){ clearTimeout(pressTimer); pressTimer=null; } }
 
       function placePlaceholder(clientY){
         const items=[...list.querySelectorAll('.priority-item:not(.dragging)')];
@@ -379,24 +482,73 @@
 
       function onMoveY(clientY){
         if(!ghost) return;
+        lastClientY = clientY;
         const y = clientY - offsetY;
-        ghost.style.transform = `translate3d(${listLeft()}px, ${y}px, 0)`;
+        ghost.style.transform = `translate3d(${listRectLeft()}px, ${y}px, 0)`;
         placePlaceholder(clientY);
       }
 
       function onPointerMove(e){
-        const y = e.clientY ?? e.touches?.[0]?.clientY;
-        if(y==null) return;
+        if (!dragging) return;
+        const y = e.clientY ?? e.touches?.[0]?.clientY; if (y==null) return;
+        if (!started){
+          // Annuler long-press si mouvement trop grand avant démarrage
+          const dy = Math.abs(y - startY);
+          if (dy > MOVE_TOL) { clearPressTimer(); return; }
+        }
         e.preventDefault();
-        if(raf) return;
+        if (raf) return;
         raf = requestAnimationFrame(()=>{ onMoveY(y); raf=null; });
       }
 
-      function endDrag(){
+      function ensureAutoScrollLoop(){
+        if (scrollRAF) return;
+        const step = () => {
+          if (!started) { scrollRAF=null; return; }
+          const sp = scrollParent;
+          let vpTop, vpBottom, scrollFn, canScroll = false, speed=0;
+
+          if (sp === window){
+            vpTop = window.scrollY;
+            vpBottom = vpTop + window.innerHeight;
+            scrollFn = (dy)=>window.scrollTo(window.scrollX, vpTop + dy);
+            canScroll = true;
+          } else {
+            vpTop = sp.scrollTop;
+            vpBottom = vpTop + sp.clientHeight;
+            scrollFn = (dy)=>{ sp.scrollTop = vpTop + dy; };
+            canScroll = sp.scrollHeight > sp.clientHeight;
+          }
+
+          if (canScroll && lastClientY){
+            const box = (sp === window) ? {top:0, bottom: window.innerHeight}
+                                        : sp.getBoundingClientRect();
+            const distTop = lastClientY - box.top;
+            const distBot = box.bottom - lastClientY;
+
+            let dy = 0;
+            if (distTop < EDGE)  dy = -Math.ceil((EDGE - distTop)/EDGE * MAX_SPEED);
+            else if (distBot < EDGE) dy =  Math.ceil((EDGE - distBot)/EDGE * MAX_SPEED);
+
+            if (dy !== 0) {
+              scrollFn(dy);
+              // replacer le placeholder après scroll (car layout a bougé)
+              placePlaceholder(lastClientY);
+            }
+          }
+          scrollRAF = requestAnimationFrame(step);
+        };
+        scrollRAF = requestAnimationFrame(step);
+      }
+
+      function finishDrag(){
+        // cleanup auto-scroll
+        if (scrollRAF){ cancelAnimationFrame(scrollRAF); scrollRAF=null; }
+
         document.removeEventListener('pointermove', onPointerMove);
-        document.removeEventListener('pointerup', endDrag);
-        document.removeEventListener('touchmove', onPointerMove, {passive:false});
-        document.removeEventListener('touchend', endDrag);
+        document.removeEventListener('pointerup', onPointerUp);
+        if (pointerId!=null) { try { document.releasePointerCapture?.(pointerId); } catch{} }
+        pointerId=null;
 
         if(ghost) ghost.remove(); ghost=null;
 
@@ -408,58 +560,48 @@
         }
         if(placeholder){ placeholder.remove(); placeholder=null; }
 
-        // MAJ ordre + numérotation + recalcul
-        state.selectedMetrics = [...list.querySelectorAll('.priority-item')].map(el => el.dataset.m);
-        list.querySelectorAll('.priority-item .opacity-50').forEach((n,i)=> n.textContent = (i+1)+'.');
+        // MAJ ordre + numérotation + compute (une fois)
+        const items = [...list.querySelectorAll('.priority-item')];
+        state.selectedMetrics = items.map(el => el.dataset.m);
+        items.forEach((n,i)=> n.querySelector('.priority-number').textContent = (i+1)+'.');
+        started=false;
         scheduleCompute();
       }
 
+      function onPointerUp(e){ e.preventDefault(); clearPressTimer(); finishDrag(); }
+
+      // Démarrage : poignée uniquement
       list.addEventListener('pointerdown', (e)=>{
-        const it = e.target.closest('.priority-item');
-        if(!it) return;
-        e.preventDefault();
+        const handle = e.target.closest('.drag-handle');
+        const item = e.target.closest('.priority-item');
+        if (!handle || !item) return;
 
-        // désactiver un éventuel DnD natif
-        it.setAttribute('draggable','false');
+        e.preventDefault(); // évite sélection texte
+        dragging = item;
+        startY = e.clientY ?? item.getBoundingClientRect().top;
 
-        dragging = it;
-        dragging.classList.add('dragging');
-        dragging.style.opacity = '0.5';
-
-        const r = it.getBoundingClientRect();
-        startY = e.clientY;
-        offsetY = startY - r.top;
-
-        // Placeholder (même hauteur)
-        placeholder = document.createElement('div');
-        placeholder.className = 'placeholder';
-        placeholder.style.height = `${r.height}px`;
-        list.insertBefore(placeholder, it.nextSibling);
-
-        // Ghost (clone qui suit le curseur)
-        ghost = it.cloneNode(true);
-        ghost.classList.add('drag-ghost');
-        ghost.style.width = `${r.width}px`;
-        ghost.style.transform = `translate3d(${listLeft()}px, ${r.top}px, 0)`;
-        document.body.appendChild(ghost);
-
-        document.addEventListener('pointermove', onPointerMove);
-        document.addEventListener('pointerup', endDrag);
+        if (isTouch){
+          clearPressTimer();
+          pressTimer = setTimeout(()=> startDrag(e), LONG_PRESS_MS);
+          // Si mouvement pendant l'attente, on annule
+          const cancelIfMove = (ev)=>{
+            const y = ev.clientY ?? ev.touches?.[0]?.clientY; if (y==null) return;
+            if (Math.abs(y - startY) > MOVE_TOL){ clearPressTimer(); list.removeEventListener('pointermove', cancelIfMove); }
+          };
+          list.addEventListener('pointermove', cancelIfMove, {passive:true, once:true});
+        } else {
+          startDrag(e);
+        }
       });
 
-      // iOS/Android : shim touch → pointer
+      // Shim touch → pointer pour compat iOS très ancienne (sécurisé)
       list.addEventListener('touchstart', (e)=>{
         const t = e.touches[0];
-        const ev = new PointerEvent('pointerdown', {bubbles:true, clientX:t.clientX, clientY:t.clientY});
+        const handle = e.target.closest('.drag-handle');
+        if (!handle) return;
+        const ev = new PointerEvent('pointerdown', {bubbles:true, clientX:t.clientX, clientY:t.clientY, pointerType:'touch'});
         e.target.dispatchEvent(ev);
       }, {passive:true});
-
-      list.addEventListener('touchmove', (e)=>{
-        const t = e.touches[0];
-        onPointerMove({ clientY: t.clientY, preventDefault: ()=>e.preventDefault() });
-      }, {passive:false});
-
-      list.addEventListener('touchend', endDrag);
     }
 
     // ==== BUILD CACHE ====
