@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Diagnostic de simulation.js</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f0f0f0; }
+        .test { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .pass { background: #d4edda; border: 1px solid #c3e6cb; }
+        .fail { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .warn { background: #fff3cd; border: 1px solid #ffeaa7; }
+        pre { background: #000; color: #00ff00; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .status { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Diagnostic JS modules</h1>
+    <p>Ce fichier teste le chargement des modules JavaScript pour identifier le problème.</p>
+    
+    <div id="results"></div>
+    
+    <script>
+        const results = document.getElementById('results');
+        
+        function addTest(name, status, details) {
+            const className = status === 'PASS' ? 'pass' : status === 'FAIL' ? 'fail' : 'warn';
+            const div = document.createElement('div');
+            div.className = `test ${className}`;
+            div.innerHTML = `
+                <div class="status">${status}: ${name}</div>
+                ${details ? `<pre>${details}</pre>` : ''}
+            `;
+            results.appendChild(div);
+        }
+        
+        async function runDiagnostic() {
+            // Test 1: Vérifier le fetch des fichiers JS
+            try {
+                const response = await fetch('js/simulation.js');
+                const contentType = response.headers.get('content-type');
+                const content = await response.text();
+                
+                if (contentType && contentType.includes('text/javascript')) {
+                    if (content.startsWith('/**')) {
+                        addTest('Fichier simulation.js', 'PASS', `Content-Type: ${contentType}\nTaille: ${content.length} caractères`);
+                    } else {
+                        addTest('Fichier simulation.js', 'FAIL', `Content-Type OK mais contenu incorrect:\n${content.substring(0, 200)}...`);
+                    }
+                } else {
+                    addTest('Fichier simulation.js', 'FAIL', `Content-Type: ${contentType || 'undefined'}\nContenu reçu:\n${content.substring(0, 500)}...`);
+                }
+            } catch (error) {
+                addTest('Fichier simulation.js', 'FAIL', `Erreur fetch: ${error.message}`);
+            }
+            
+            // Test 2: Vérifier fiscal-enveloppes.js
+            try {
+                const response = await fetch('js/fiscal-enveloppes.js');
+                const contentType = response.headers.get('content-type');
+                const content = await response.text();
+                
+                if (contentType && contentType.includes('text/javascript')) {
+                    if (content.includes('export const TAXES')) {
+                        addTest('Fichier fiscal-enveloppes.js', 'PASS', `Content-Type: ${contentType}\nTaille: ${content.length} caractères`);
+                    } else {
+                        addTest('Fichier fiscal-enveloppes.js', 'FAIL', `Content-Type OK mais contenu incorrect:\n${content.substring(0, 200)}...`);
+                    }
+                } else {
+                    addTest('Fichier fiscal-enveloppes.js', 'FAIL', `Content-Type: ${contentType || 'undefined'}\nContenu reçu:\n${content.substring(0, 500)}...`);
+                }
+            } catch (error) {
+                addTest('Fichier fiscal-enveloppes.js', 'FAIL', `Erreur fetch: ${error.message}`);
+            }
+            
+            // Test 3: Vérifier l'import
+            try {
+                const module = await import('./js/simulation.js');
+                addTest('Import simulation.js', 'PASS', `Module chargé avec succès\nExports: ${Object.keys(module).join(', ') || 'aucun export'}`);
+            } catch (error) {
+                addTest('Import simulation.js', 'FAIL', `Erreur import: ${error.message}\nStack: ${error.stack}`);
+            }
+            
+            // Test 4: Vérifier les éléments DOM requis
+            const requiredElements = [
+                'simulate-button',
+                'investment-vehicle', 
+                'duration-slider',
+                'return-slider',
+                'mgmt-fee',
+                'entry-fee'
+            ];
+            
+            const missingElements = requiredElements.filter(id => !document.getElementById(id));
+            if (missingElements.length === 0) {
+                addTest('Éléments DOM', 'PASS', 'Tous les éléments requis sont présents');
+            } else {
+                addTest('Éléments DOM', 'WARN', `Éléments manquants (normal sur cette page de test):\n${missingElements.join(', ')}`);
+            }
+            
+            // Test 5: Vérifier la configuration serveur
+            addTest('Informations serveur', 'INFO', `
+URL actuelle: ${window.location.href}
+User-Agent: ${navigator.userAgent}
+Protocole: ${window.location.protocol}
+Host: ${window.location.host}
+            `);
+        }
+        
+        // Lancer le diagnostic
+        runDiagnostic().catch(console.error);
+    </script>
+</body>
+</html>
