@@ -62,6 +62,87 @@ const FEE_PRESETS = {
 };
 
 // ============================================
+// ✅ NOUVELLES FONCTIONS pour l'UX périodique
+// ============================================
+
+/**
+ * Retourne le libellé de fréquence en français
+ */
+function getFrequencyLabel(freq) {
+    return { 
+        weekly: 'semaine', 
+        monthly: 'mois', 
+        quarterly: 'trimestre', 
+        annually: 'an' 
+    }[freq] || 'période';
+}
+
+/**
+ * Retourne le nombre de périodes par année
+ */
+function getPeriodsPerYear(freq) {
+    return freq === 'weekly' ? 52 : 
+           freq === 'monthly' ? 12 : 
+           freq === 'quarterly' ? 4 : 1;
+}
+
+/**
+ * Met à jour l'interface du montant périodique avec suffixe et aide
+ */
+function updatePeriodicUI() {
+    const freq = document.getElementById('investment-frequency')?.value || 'monthly';
+    const amount = parseFloat(document.getElementById('periodic-investment-amount')?.value) || 0;
+    const suffix = document.getElementById('periodic-suffix');
+    const help = document.getElementById('periodic-help');
+
+    if (!suffix || !help) return;
+
+    const label = getFrequencyLabel(freq);
+    suffix.textContent = '/' + (freq === 'annually' ? 'an' : label);
+
+    const yearly = amount * getPeriodsPerYear(freq);
+    const formattedYearly = new Intl.NumberFormat('fr-FR', {
+        style: 'currency', 
+        currency: 'EUR', 
+        maximumFractionDigits: 0
+    }).format(yearly);
+
+    help.innerHTML = `Par ${label} • soit <strong>${formattedYearly}/an</strong>`;
+}
+
+/**
+ * Validation intelligente avec suggestions contextuelles
+ */
+function validatePeriodicAmount() {
+    const freq = document.getElementById('investment-frequency')?.value || 'monthly';
+    const amount = parseFloat(document.getElementById('periodic-investment-amount')?.value) || 0;
+    const help = document.getElementById('periodic-help');
+    
+    if (!help) return;
+    
+    const yearly = amount * getPeriodsPerYear(freq);
+    const label = getFrequencyLabel(freq);
+    
+    // Suggestions contextuelles selon le montant annuel
+    let suggestion = '';
+    if (yearly < 1000) {
+        suggestion = ' • 💡 Montant faible pour investissement long terme';
+    } else if (yearly > 20000) {
+        suggestion = ' • ⚠️ Vérifiez les plafonds réglementaires';
+    } else if (yearly >= 5000) {
+        suggestion = ' • ✅ Montant adapté pour un objectif patrimonial';
+    }
+    
+    const formattedYearly = new Intl.NumberFormat('fr-FR', {
+        style: 'currency', 
+        currency: 'EUR', 
+        maximumFractionDigits: 0
+    }).format(yearly);
+    
+    help.innerHTML = `Par ${label} • soit <strong>${formattedYearly}/an</strong>${suggestion}`;
+}
+
+// ============================================
 // FONCTIONS DE CALCUL DU RENDEMENT ANNUALISÉ
 // ============================================
 
@@ -323,6 +404,10 @@ function setAllFeesZero() {
 window.resetFeesToPreset = resetFeesToPreset;
 window.setAllFeesZero = setAllFeesZero;
 
+// ============================================
+// ✅ EVENT LISTENERS ET INITIALISATION
+// ============================================
+
 document.addEventListener('DOMContentLoaded', function() {
     // Mettre à jour la date du jour
     updateDate();
@@ -369,13 +454,18 @@ document.addEventListener('DOMContentLoaded', function() {
             toggleInvestmentMode('periodic'); // Utilisation cohérente du terme 'periodic'
             checkPlafondLimits(); // Garde l'alerte plafond
             updateFixedFeeTooltip(); // Mettre à jour le tooltip selon le mode
+            // ✅ NOUVEAU : Mettre à jour l'UI périodique
+            setTimeout(() => {
+                updatePeriodicUI();
+            }, 100);
         });
     }
 
-    // ✅ NOUVEAU : Listener pour le changement de fréquence
+    // ✅ NOUVEAU : Listeners pour le champ périodique
     const frequencySelect = document.getElementById('investment-frequency');
     if (frequencySelect) {
         frequencySelect.addEventListener('change', function() {
+            updatePeriodicUI(); // Met à jour le suffixe et l'aide
             updateFixedFeeTooltip();
             // Relancer la simulation si déjà des résultats
             if (document.querySelector('.result-value')?.textContent !== '') {
@@ -383,6 +473,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // ✅ NOUVEAU : Listener pour la saisie du montant périodique
+    document.getElementById('periodic-investment-amount')?.addEventListener('input', updatePeriodicUI);
+    document.getElementById('periodic-investment-amount')?.addEventListener('blur', validatePeriodicAmount);
     
     // Initialiser les onglets de simulation
     initSimulationTabs();
@@ -411,53 +505,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // NOUVEAU : Ajouter un bouton de reset des frais près des champs de frais
     addFeeResetButton();
 
-    // ✅ NOUVEAU : Initialiser le tooltip des frais fixes
+    // ✅ NOUVEAU : Initialiser le tooltip des frais fixes et l'UI périodique
     setTimeout(() => {
         updateFixedFeeTooltip();
-    }, 500); // Petit délai pour s'assurer que le DOM est entièrement chargé
+        updatePeriodicUI(); // Initialiser l'affichage périodique
+    }, 500);
 });
-
-/**
- * Ajoute un bouton de reset des frais à l'interface
- */
-function addFeeResetButton() {
-    const feesContainer = document.querySelector('#mgmt-fee')?.closest('.mb-4');
-    if (!feesContainer) return;
-
-    // Vérifier si les boutons n'existent pas déjà
-    if (document.getElementById('reset-fees-btn')) return;
-
-    const buttonsContainer = document.createElement('div');
-    buttonsContainer.className = 'mt-2 flex gap-2';
-
-    const resetButton = document.createElement('button');
-    resetButton.id = 'reset-fees-btn';
-    resetButton.type = 'button';
-    resetButton.className = 'px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded transition-colors';
-    resetButton.innerHTML = '<i class="fas fa-refresh mr-1"></i> Frais suggérés';
-    resetButton.title = 'Remet les frais aux valeurs suggérées pour cette enveloppe';
-    
-    resetButton.addEventListener('click', function() {
-        resetFeesToPreset();
-        // Relancer la simulation si elle est active
-        if (document.querySelector('.result-value')?.textContent !== '') {
-            setTimeout(runSimulation, 100);
-        }
-    });
-
-    const zeroButton = document.createElement('button');
-    zeroButton.id = 'zero-fees-btn';
-    zeroButton.type = 'button';
-    zeroButton.className = 'px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors';
-    zeroButton.innerHTML = '<i class="fas fa-times mr-1"></i> Zéro frais';
-    zeroButton.title = 'Met tous les frais à zéro';
-    
-    zeroButton.addEventListener('click', setAllFeesZero);
-
-    buttonsContainer.appendChild(resetButton);
-    buttonsContainer.appendChild(zeroButton);
-    feesContainer.appendChild(buttonsContainer);
-}
 
 /**
  * Calcul fiscal exact avec tranches progressives et optimisation PER
@@ -999,8 +1052,8 @@ function runSimulation() {
     // Simuler un délai pour l'effet visuel
     setTimeout(() => {
         // ✅ NOUVEAU : Détection du mode périodique CORRIGÉE
-        const isPeriodicMode = document.getElementById('periodic-investment')
-                              ?.classList.contains('selected');
+        const isPeriodicMode = document.getElementById('periodic-investment')?
+                              .classList.contains('selected');
 
         // ✅ NOUVEAU : Lecture sécurisée du montant initial
         const initialDeposit = parseFloat(
@@ -1638,6 +1691,7 @@ window.toggleInvestmentMode = toggleInvestmentMode;
 /**
  * Vérifie les plafonds et affiche une alerte discrète
  * Seulement quand on dépasse ou ≥ 80% du plafond
+ * ✅ CORRECTIF : Utilise les bons IDs
  */
 function checkPlafondLimits() {
     const vehicleId = document.getElementById('investment-vehicle')?.value;
@@ -1645,17 +1699,14 @@ function checkPlafondLimits() {
     const years = parseInt(document.getElementById('duration-slider')?.value || 10);
     const enveloppe = getEnveloppeInfo(vehicleId);
     
-    // Récupérer le bon montant selon le mode
+    // ✅ CORRECTIF : Lecture des montants avec les bons IDs
     let amount;
     if (isPeriodicMode) {
-        const periodicAmountElement = document.getElementById('periodic-investment-amount');
-        if (periodicAmountElement) {
-            amount = parseFloat(periodicAmountElement.value) || 100;
-        } else {
-            amount = parseFloat(document.getElementById('investment-amount')?.value) || 100;
-        }
+        const el = document.getElementById('periodic-investment-amount');
+        amount = parseFloat(el?.value) || 100;
     } else {
-        amount = parseFloat(document.getElementById('investment-amount')?.value) || 1000;
+        const el = document.getElementById('initial-investment-amount');
+        amount = parseFloat(el?.value) || 1000;
     }
     
     if (!enveloppe || !enveloppe.plafond) {
@@ -1669,9 +1720,7 @@ function checkPlafondLimits() {
     let totalAmount = amount;
     if (isPeriodicMode) {
         const frequency = document.getElementById('investment-frequency')?.value || 'monthly';
-        const periodsPerYear = frequency === 'weekly' ? 52 : 
-                              frequency === 'monthly' ? 12 : 
-                              frequency === 'quarterly' ? 4 : 1;
+        const periodsPerYear = getPeriodsPerYear(frequency);
         totalAmount = amount * periodsPerYear * years;
     }
     
@@ -1690,7 +1739,7 @@ function checkPlafondLimits() {
         // Trouver le bon conteneur parent selon le mode
         const parentElement = isPeriodicMode && document.getElementById('periodic-amount-container')
             ? document.getElementById('periodic-amount-container')
-            : document.getElementById('investment-amount')?.parentElement;
+            : document.getElementById('initial-investment-amount')?.parentElement;
         
         if (parentElement) {
             parentElement.appendChild(alertElement);
@@ -1854,13 +1903,54 @@ updateResultsDisplay = function(results) {
     showPlafondBadgeInResults(results);
 };
 
-// Event listeners pour la gestion des plafonds
+/**
+ * Ajoute un bouton de reset des frais à l'interface
+ */
+function addFeeResetButton() {
+    const feesContainer = document.querySelector('#mgmt-fee')?.closest('.mb-4');
+    if (!feesContainer) return;
+
+    // Vérifier si les boutons n'existent pas déjà
+    if (document.getElementById('reset-fees-btn')) return;
+
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.className = 'mt-2 flex gap-2';
+
+    const resetButton = document.createElement('button');
+    resetButton.id = 'reset-fees-btn';
+    resetButton.type = 'button';
+    resetButton.className = 'px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded transition-colors';
+    resetButton.innerHTML = '<i class="fas fa-refresh mr-1"></i> Frais suggérés';
+    resetButton.title = 'Remet les frais aux valeurs suggérées pour cette enveloppe';
+    
+    resetButton.addEventListener('click', function() {
+        resetFeesToPreset();
+        // Relancer la simulation si elle est active
+        if (document.querySelector('.result-value')?.textContent !== '') {
+            setTimeout(runSimulation, 100);
+        }
+    });
+
+    const zeroButton = document.createElement('button');
+    zeroButton.id = 'zero-fees-btn';
+    zeroButton.type = 'button';
+    zeroButton.className = 'px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors';
+    zeroButton.innerHTML = '<i class="fas fa-times mr-1"></i> Zéro frais';
+    zeroButton.title = 'Met tous les frais à zéro';
+    
+    zeroButton.addEventListener('click', setAllFeesZero);
+
+    buttonsContainer.appendChild(resetButton);
+    buttonsContainer.appendChild(zeroButton);
+    feesContainer.appendChild(buttonsContainer);
+}
+
+// ✅ NOUVEAU : Event listeners pour la gestion des plafonds
 document.addEventListener('DOMContentLoaded', function() {
     // Listeners pour l'alerte temps réel
     const inputs = [
-        'investment-amount',
         'periodic-investment-amount',
-        'initial-investment-amount',
+        'initial-investment-amount', 
         'duration-slider',
         'investment-frequency'
     ];
