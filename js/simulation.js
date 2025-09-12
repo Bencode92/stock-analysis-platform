@@ -151,6 +151,38 @@ function showTooltip(message) {
     }, 3000);
 }
 
+// === UI Montant périodique (suffixe + rappel annuel) =====================
+
+function freqLabelFR(freq) {
+  return { weekly:'semaine', monthly:'mois', quarterly:'trimestre', annually:'an' }[freq] || 'période';
+}
+function periodsPerYear(freq) {
+  return freq === 'weekly' ? 52 : freq === 'monthly' ? 12 : freq === 'quarterly' ? 4 : 1;
+}
+
+function updatePeriodicUI() {
+  const isPeriodic = document.getElementById('periodic-investment')?.classList.contains('selected');
+  const periodicContainer = document.getElementById('periodic-amount-container');
+  if (periodicContainer) periodicContainer.style.display = isPeriodic ? 'block' : 'none';
+
+  const freq = document.getElementById('investment-frequency')?.value || 'monthly';
+  const label = freqLabelFR(freq);
+
+  const amtEl = document.getElementById('periodic-investment-amount');
+  const suffixEl = document.getElementById('periodic-suffix');
+  const helpEl = document.getElementById('periodic-help');
+
+  const amount = parseFloat(String(amtEl?.value ?? '0').replace(',', '.')) || 0;
+  const yearly = amount * periodsPerYear(freq);
+
+  if (suffixEl) suffixEl.textContent = '/' + (freq === 'annually' ? 'an' : label);
+  if (helpEl)  helpEl.textContent = `Par ${label} • soit ${formatMoney(yearly)}/an`;
+
+  // Afficher/masquer le sélecteur de fréquence
+  const freqContainer = document.getElementById('frequency-container');
+  if (freqContainer) freqContainer.style.display = isPeriodic ? 'block' : 'none';
+}
+
 /**
  * Génère un tooltip explicatif pour les frais fixes selon la fréquence
  * @returns {string} Texte du tooltip avec exemple de calcul
@@ -415,6 +447,17 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
         updateFixedFeeTooltip();
     }, 500); // Petit délai pour s'assurer que le DOM est entièrement chargé
+
+    // ✅ NOUVEAU : Initialiser UI périodique
+    setTimeout(() => {
+        updatePeriodicUI();
+    }, 100);
+
+    // ✅ NOUVEAU : Event listeners pour UI périodique
+    document.getElementById('investment-frequency')?.addEventListener('change', updatePeriodicUI);
+    document.getElementById('periodic-investment-amount')?.addEventListener('input', updatePeriodicUI);
+    document.getElementById('periodic-investment')?.addEventListener('click', () => setTimeout(updatePeriodicUI, 0));
+    document.getElementById('unique-investment')?.addEventListener('click', () => setTimeout(updatePeriodicUI, 0));
 });
 
 /**
@@ -1587,6 +1630,9 @@ function toggleInvestmentMode(mode) {
     const frequencyContainer = document.getElementById('frequency-container');
     
     if (!uniqueButton || !periodicButton || !frequencyContainer) return;
+
+    const initialAmountContainer = document.getElementById('initial-amount-container'); // <-- ID HTML actuel
+    const periodicAmountContainer = document.getElementById('periodic-amount-container');
     
     if (mode === 'unique') {
         // Versement unique actif
@@ -1597,11 +1643,7 @@ function toggleInvestmentMode(mode) {
         periodicButton.classList.add('text-gray-300');
         
         frequencyContainer.style.display = 'none';
-        
-        // Gestion de l'affichage des montants si les conteneurs existent
-        const uniqueAmountContainer = document.getElementById('unique-amount-container');
-        const periodicAmountContainer = document.getElementById('periodic-amount-container');
-        if (uniqueAmountContainer) uniqueAmountContainer.style.display = 'block';
+        if (initialAmountContainer) initialAmountContainer.style.display = 'block';
         if (periodicAmountContainer) periodicAmountContainer.style.display = 'none';
         
     } else if (mode === 'periodic') {
@@ -1613,19 +1655,14 @@ function toggleInvestmentMode(mode) {
         uniqueButton.classList.add('text-gray-300');
         
         frequencyContainer.style.display = 'block';
-        
-        // Gestion de l'affichage des montants si les conteneurs existent
-        const uniqueAmountContainer = document.getElementById('unique-amount-container');
-        const periodicAmountContainer = document.getElementById('periodic-amount-container');
-        if (uniqueAmountContainer) uniqueAmountContainer.style.display = 'none';
+        if (initialAmountContainer) initialAmountContainer.style.display = 'block'; // on garde le dépôt initial visible
         if (periodicAmountContainer) periodicAmountContainer.style.display = 'block';
     }
     
-    // Si une simulation est déjà active, la mettre à jour
-    const resultValue = document.querySelector('.result-value')?.textContent;
-    if (resultValue && resultValue !== '') {
-        runSimulation();
-    }
+    // Met à jour l'UI périodique (suffixe + aide/an) et relance si déjà simulé
+    updatePeriodicUI();
+    const hasResults = document.querySelector('.result-value')?.textContent?.trim();
+    if (hasResults) runSimulation();
 }
 
 // Rendre la fonction globale pour être accessible depuis le HTML
@@ -1655,7 +1692,8 @@ function checkPlafondLimits() {
             amount = parseFloat(document.getElementById('investment-amount')?.value) || 100;
         }
     } else {
-        amount = parseFloat(document.getElementById('investment-amount')?.value) || 1000;
+        // ✅ CORRECTIF : ID corrigé pour mode unique
+        amount = parseFloat(document.getElementById('initial-investment-amount')?.value) || 1000;
     }
     
     if (!enveloppe || !enveloppe.plafond) {
