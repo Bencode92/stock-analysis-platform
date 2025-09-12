@@ -156,14 +156,24 @@ function showTooltip(message) {
 // ============================================
 
 /**
+ * Fonction utilitaire pour parser les nombres avec gestion virgule/point
+ * @param {string} id - ID de l'élément à lire
+ * @returns {number} Valeur numérique
+ */
+function parseNumeric(id) {
+    const value = (document.getElementById(id)?.value ?? '0').toString().replace(',', '.');
+    return parseFloat(value) || 0;
+}
+
+/**
  * Lecture des paramètres de frais depuis l'interface
  * @returns {Object} Paramètres de frais
  */
 function readFeeParams() {
-    const mgmt = parseFloat(document.getElementById('mgmt-fee')?.value) || 0;     // %/an
-    const entry = parseFloat(document.getElementById('entry-fee')?.value) || 0;   // % des versements
-    const exit = parseFloat(document.getElementById('exit-fee')?.value) || 0;     // % du capital final
-    const fixed = parseFloat(document.getElementById('fixed-fee')?.value) || 0;   // € / an
+    const mgmt = parseNumeric('mgmt-fee');     // %/an
+    const entry = parseNumeric('entry-fee');  // % des versements
+    const exit = parseNumeric('exit-fee');    // % du capital final
+    const fixed = parseNumeric('fixed-fee');  // € / an
     return { mgmtPct: mgmt/100, entryPct: entry/100, exitPct: exit/100, fixedAnnual: fixed };
 }
 
@@ -172,10 +182,10 @@ function readFeeParams() {
  * @returns {boolean} true si au moins un champ a été modifié par l'utilisateur
  */
 function hasUserModifiedFees() {
-    const mgmt = parseFloat(document.getElementById('mgmt-fee')?.value) || 0;
-    const entry = parseFloat(document.getElementById('entry-fee')?.value) || 0;
-    const exit = parseFloat(document.getElementById('exit-fee')?.value) || 0;
-    const fixed = parseFloat(document.getElementById('fixed-fee')?.value) || 0;
+    const mgmt = parseNumeric('mgmt-fee');
+    const entry = parseNumeric('entry-fee');
+    const exit = parseNumeric('exit-fee');
+    const fixed = parseNumeric('fixed-fee');
     
     // Considérer comme "modifié" si au moins une valeur n'est pas 0
     return mgmt !== 0 || entry !== 0 || exit !== 0 || fixed !== 0;
@@ -954,7 +964,7 @@ function runSimulation() {
 
 /**
  * Calcule les résultats d'investissement avec la vraie fiscalité et les frais
- * MODIFIÉE : Short-circuit "zero-fees" pour éviter les écarts numériques
+ * MODIFIÉE : Correction de l'incohérence de capitalisation avec taux périodique effectif
  * @param {number} initialDeposit - Montant initial versé au départ
  * @param {number} periodicAmount - Montant des versements périodiques
  * @param {number} years - Nombre d'années
@@ -979,9 +989,11 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
     const initialNet  = initialDeposit * (1 - fees.entryPct);
     const periodicNet = isPeriodicMode ? periodicAmount * (1 - fees.entryPct) : 0;
 
-    // --- Capital final SANS frais (référence) ---
-    const rPer = annualReturn / p;
-    let finalNoFees = initialDeposit * Math.pow(1 + annualReturn, years);
+    // ✅ CORRECTIF : Taux périodique effectif — garantit (1+rPer)^p = (1+annualReturn)
+    const rPer = Math.pow(1 + annualReturn, 1 / p) - 1;
+
+    // ✅ CORRECTIF : Capital final SANS frais — même base de capitalisation que "AVEC frais"
+    let finalNoFees = initialDeposit * Math.pow(1 + rPer, n);
     if (isPeriodicMode && periodicAmount > 0) {
         finalNoFees += periodicAmount * ((Math.pow(1 + rPer, n) - 1) / rPer) * (1 + rPer);
     }
@@ -994,6 +1006,7 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
         finalWithFees = finalNoFees; // pas d'écart possible
     } else {
         // --- Capital final AVEC frais ---
+        // Taux net avec frais de gestion (proratisé par période)
         const fPer = fees.mgmtPct / p;
         const rNetPer = ((1 + rPer) * (1 - fPer)) - 1;
 
@@ -1403,13 +1416,14 @@ function updateSimulationChart(initialDeposit, periodicAmount, years, annualRetu
     const investedValues = [];
     const totalValues = [];
     
+    // ✅ CORRECTIF : Utilisation cohérente du taux périodique effectif pour le graphique
+    const periodsPerYear = frequency === 'weekly' ? 52 : 
+                          frequency === 'monthly' ? 12 : 
+                          frequency === 'quarterly' ? 4 : 1;
+    const periodRate = Math.pow(1 + annualReturn, 1 / periodsPerYear) - 1;
+    
     if (isPeriodicMode && periodicAmount > 0) {
         // Pour versements périodiques avec montant initial
-        const periodsPerYear = frequency === 'weekly' ? 52 : 
-                              frequency === 'monthly' ? 12 : 
-                              frequency === 'quarterly' ? 4 : 1;
-        const periodRate = annualReturn / periodsPerYear;
-        
         for (let year = 0; year <= years; year++) {
             if (year === 0) {
                 investedValues.push(initialDeposit);
@@ -1419,7 +1433,7 @@ function updateSimulationChart(initialDeposit, periodicAmount, years, annualRetu
                 const periods = year * periodsPerYear;
                 
                 // Valeur du dépôt initial après croissance
-                const initialGrowth = initialDeposit * Math.pow(1 + annualReturn, year);
+                const initialGrowth = initialDeposit * Math.pow(1 + periodRate, periods);
                 
                 // Valeur des versements périodiques
                 const periodicGrowth = periodicAmount * ((Math.pow(1 + periodRate, periods) - 1) / periodRate) * (1 + periodRate);
@@ -1432,25 +1446,26 @@ function updateSimulationChart(initialDeposit, periodicAmount, years, annualRetu
         }
     } else {
         // Pour versement unique (seulement montant initial)
-        let total = initialDeposit;
-        investedValues.push(initialDeposit);
-        totalValues.push(initialDeposit);
-        
-        for (let i = 1; i <= years; i++) {
-            total *= (1 + annualReturn);
-            investedValues.push(initialDeposit);
-            totalValues.push(total);
+        for (let i = 0; i <= years; i++) {
+            if (i === 0) {
+                investedValues.push(initialDeposit);
+                totalValues.push(initialDeposit);
+            } else {
+                const total = initialDeposit * Math.pow(1 + annualReturn, i);
+                investedValues.push(initialDeposit);
+                totalValues.push(total);
+            }
         }
     }
 
     // ✅ NOUVEAU : Série "sans frais" pour comparaison visuelle
     const totalNoFees = [];
     {
-        const p = (frequency === 'weekly') ? 52 : (frequency === 'monthly') ? 12 : (frequency === 'quarterly') ? 4 : 1;
-        const rPer = annualReturn / p;
+        const p = periodsPerYear;
+        const rPer = Math.pow(1 + annualReturn, 1 / p) - 1;
         for (let y = 0; y <= years; y++) {
             const n = y * p;
-            let val = (initialDeposit) * Math.pow(1 + annualReturn, y);
+            let val = initialDeposit * Math.pow(1 + rPer, n);
             if (isPeriodicMode && periodicAmount > 0) {
                 val += periodicAmount * ((Math.pow(1 + rPer, n) - 1) / rPer) * (1 + rPer);
             }
