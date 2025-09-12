@@ -151,6 +151,54 @@ function showTooltip(message) {
     }, 3000);
 }
 
+/**
+ * Génère un tooltip explicatif pour les frais fixes selon la fréquence
+ * @returns {string} Texte du tooltip avec exemple de calcul
+ */
+function getFixedFeeTooltip() {
+    const frequency = document.getElementById('investment-frequency')?.value || 'monthly';
+    const isPeriodicMode = document.getElementById('periodic-investment')?.classList.contains('selected');
+    
+    // Si pas en mode périodique, tooltip simple
+    if (!isPeriodicMode) {
+        return `Frais fixes prélevés chaque fin d'année sur le capital. Ex: 120€/an pendant 10 ans = 1200€ total`;
+    }
+    
+    const periods = { weekly: 52, monthly: 12, quarterly: 4, annually: 1 };
+    const p = periods[frequency];
+    const frequencyLabels = { 
+        weekly: 'semaine', 
+        monthly: 'mois', 
+        quarterly: 'trimestre', 
+        annually: 'année' 
+    };
+    
+    const label = frequencyLabels[frequency];
+    
+    // Exemples concrets selon la fréquence
+    const example = frequency === 'weekly' ? 120 : 
+                   frequency === 'monthly' ? 120 : 
+                   frequency === 'quarterly' ? 120 : 120;
+    
+    const examplePerPeriod = (example / p).toFixed(2);
+    
+    return `Frais fixes annuels répartis sur chaque ${label}. Ex: ${example}€/an = ${examplePerPeriod}€ par ${label} pendant toute la durée d'investissement`;
+}
+
+/**
+ * Met à jour le tooltip des frais fixes dynamiquement
+ */
+function updateFixedFeeTooltip() {
+    const fixedFeeElement = document.getElementById('fixed-fee');
+    if (fixedFeeElement) {
+        const tooltipIcon = fixedFeeElement.parentElement?.querySelector('.loan-option-info, .cursor-help i');
+        if (tooltipIcon) {
+            tooltipIcon.title = getFixedFeeTooltip();
+            tooltipIcon.setAttribute('title', getFixedFeeTooltip());
+        }
+    }
+}
+
 // ============================================
 // GESTION DES FRAIS
 // ============================================
@@ -246,6 +294,9 @@ function updateFeeSuggestionsByVehicle(forceApply = false) {
     } else if (preset === FEE_PRESETS['_default']) {
         showTooltip(`Frais remis à zéro pour ${enveloppeLabel}`);
     }
+
+    // Mettre à jour le tooltip des frais fixes après modification
+    updateFixedFeeTooltip();
 }
 
 /**
@@ -265,6 +316,7 @@ function setAllFeesZero() {
     });
     runSimulation();
     showTooltip('Tous les frais ont été remis à zéro');
+    updateFixedFeeTooltip(); // Mettre à jour le tooltip après modification
 }
 
 // Exposer les fonctions globalement pour l'utiliser depuis l'interface
@@ -310,11 +362,25 @@ document.addEventListener('DOMContentLoaded', function() {
         uniqueBtn.addEventListener('click', () => {
             toggleInvestmentMode('unique');
             checkPlafondLimits(); // Garde l'alerte plafond
+            updateFixedFeeTooltip(); // Mettre à jour le tooltip selon le mode
         });
         
         periodicBtn.addEventListener('click', () => {
             toggleInvestmentMode('periodic'); // Utilisation cohérente du terme 'periodic'
             checkPlafondLimits(); // Garde l'alerte plafond
+            updateFixedFeeTooltip(); // Mettre à jour le tooltip selon le mode
+        });
+    }
+
+    // ✅ NOUVEAU : Listener pour le changement de fréquence
+    const frequencySelect = document.getElementById('investment-frequency');
+    if (frequencySelect) {
+        frequencySelect.addEventListener('change', function() {
+            updateFixedFeeTooltip();
+            // Relancer la simulation si déjà des résultats
+            if (document.querySelector('.result-value')?.textContent !== '') {
+                runSimulation();
+            }
         });
     }
     
@@ -344,6 +410,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // NOUVEAU : Ajouter un bouton de reset des frais près des champs de frais
     addFeeResetButton();
+
+    // ✅ NOUVEAU : Initialiser le tooltip des frais fixes
+    setTimeout(() => {
+        updateFixedFeeTooltip();
+    }, 500); // Petit délai pour s'assurer que le DOM est entièrement chargé
 });
 
 /**
