@@ -964,7 +964,7 @@ function runSimulation() {
 
 /**
  * Calcule les résultats d'investissement avec la vraie fiscalité et les frais
- * MODIFIÉE : Correction de l'incohérence de capitalisation avec taux périodique effectif
+ * MODIFIÉE : Correction de l'incohérence de capitalisation avec taux périodique effectif + prélèvement annuel des frais fixes
  * @param {number} initialDeposit - Montant initial versé au départ
  * @param {number} periodicAmount - Montant des versements périodiques
  * @param {number} years - Nombre d'années
@@ -1018,11 +1018,16 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
             finalWithFees += periodicNet * ((Math.pow(1 + rNetPer, n) - 1) / rNetPer) * (1 + rNetPer);
         }
 
-        // 3) Frais fixes annuels (convertis par période) retirés régulièrement
+        // ✅ CORRECTIF : 3) Frais fixes annuels (prélevés chaque fin d'année)
         if (fees.fixedAnnual > 0) {
-            const fixedPer = fees.fixedAnnual / p;
-            const fvFixed = fixedPer * ((Math.pow(1 + rNetPer, n) - 1) / rNetPer);
-            finalWithFees -= fvFixed;
+            let fixedImpact = 0;
+            for (let year = 1; year <= years; year++) {
+                // Prélèvement en fin d'année, actualisé jusqu'à la fin
+                const periodsRemaining = (years - year) * p;
+                const presentValue = fees.fixedAnnual * Math.pow(1 + rNetPer, periodsRemaining);
+                fixedImpact += presentValue;
+            }
+            finalWithFees -= fixedImpact;
         }
 
         // 4) Frais de sortie à la fin
