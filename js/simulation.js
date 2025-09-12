@@ -14,40 +14,51 @@ enveloppes.forEach(env => {
 });
 
 /** ================================
- *  Préréglages de frais par enveloppe
+ *  Préréglages de frais par enveloppe (FR 09/2025)
  *  (valeurs typiques/conseillées — modifiables)
  *  mgmt = %/an ; entry = % sur versements ; exit = % à la sortie ; fixed = €/an
  * ================================= */
+// Données marché FR (09/2025) — baselines "low-cost"
 const FEE_PRESETS = {
   // Actions / enveloppes boursières
-  'pea'      : { mgmt: 0.20, entry: 0.00, exit: 0.00, fixed: 0,   note: `Courtage low-cost, pas de frais récurrents sur l'encours chez de nombreux courtiers` },
-  'pea-pme'  : { mgmt: 0.25, entry: 0.00, exit: 0.00, fixed: 0,   note: `Similaire PEA` },
-  'peac'     : { mgmt: 0.30, entry: 0.00, exit: 0.00, fixed: 0,   note: `PEA Avenir Climat - frais de tenue parfois un peu supérieurs` },
-  'cto'      : { mgmt: 0.20, entry: 0.00, exit: 0.00, fixed: 0,   note: `CTO moderne: surtout frais de transaction; pas de frais d'encours` },
+  pea:     { mgmt: 0.00, entry: 0.10, exit: 0.10, fixed: 0,
+             note: `PEA courtier en ligne : 0 % sur encours ; ~0,1 % par ordre (achat/vente)` },
+  'pea-pme':{ mgmt: 0.00, entry: 0.10, exit: 0.10, fixed: 0,
+             note: `Identique PEA (plafonds/fiscalité à part)` },
+  peac:    { mgmt: 0.70, entry: 1.00, exit: 0.00, fixed: 0,
+             note: `PEAC : ~0,70 %/an ; 1 % sur versements ; transfert sortant 1 % si <5 ans` },
+  cto:     { mgmt: 0.00, entry: 0.10, exit: 0.10, fixed: 0,
+             note: `CTO courtier en ligne : 0 % encours ; ~0,1 % par ordre` },
 
-  // Assurance-vie / PER
-  'assurance-vie': { mgmt: 0.60, entry: 0.00, exit: 0.00, fixed: 0, note: `En ligne: ~0.5–0.8%/an sur UC ; 0% entrée/sortie` },
-  'per'          : { mgmt: 0.80, entry: 0.00, exit: 0.00, fixed: 0, note: `PER individuel en ligne: ~0.6–1.0%/an` },
+  // Assurantiel
+  'assurance-vie': { mgmt: 0.50, entry: 0.00, exit: 0.00, fixed: 0,
+                     note: `Contrats en ligne : 0 % entrée ; 0,5–0,6 %/an sur UC` },
+  per:             { mgmt: 0.70, entry: 0.00, exit: 0.00, fixed: 0,
+                     note: `PER individuel en ligne : ≤0,7 %/an ; 0 % entrée/arbitrages` },
 
-  // Immobilier collectif
-  'scpi-av' : { mgmt: 1.00, entry: 0.00, exit: 0.00, fixed: 0, note: `Via AV: surcouche de gestion côté contrat; frais de souscription portés par la SCPI` },
-  'scpi-cto': { mgmt: 0.00, entry: 12.00, exit: 0.00, fixed: 0, note: `Souscription directe: 10-15% frais d'entrée; 0% gestion annuelle` },
-  'opci'    : { mgmt: 1.20, entry: 3.00, exit: 0.00, fixed: 0, note: `OPCI grand public: ~1-1.5%/an + frais entrée modérés` },
+  // Pierre-papier
+  'scpi-av':  { mgmt: 0.50, entry: 2.00, exit: 0.00, fixed: 0,
+                note: `SCPI via AV : +0,5–0,7 %/an (contrat) ; 2–6 % d'entrée (parfois 0 %)` },
+  'scpi-cto': { mgmt: 0.00, entry: 10.00, exit: 0.00, fixed: 0,
+                note: `SCPI en direct : 8–12 % de souscription ; gestion prélevée sur loyers` },
+  opci:       { mgmt: 1.50, entry: 3.00,  exit: 0.00, fixed: 0,
+                note: `OPCI : 1–2 %/an ; 2–5 % d'entrée` },
 
-  // Épargne réglementée (sans frais)
-  'livret-a'    : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: `Épargne réglementée - aucun frais` },
-  'ldds'        : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: `Épargne réglementée - aucun frais` },
-  'lep'         : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: `Épargne réglementée - aucun frais` },
-  'pel'         : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: `Épargne réglementée - aucun frais` },
-  'cel'         : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: `Épargne réglementée - aucun frais` },
-  'livret-jeune': { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: `Épargne réglementée - aucun frais` },
+  // Épargne réglementée
+  'livret-a':     { mgmt: 0, entry: 0, exit: 0, fixed: 0, note: `Aucun frais réglementaire` },
+  ldds:           { mgmt: 0, entry: 0, exit: 0, fixed: 0, note: `Aucun frais réglementaire` },
+  lep:            { mgmt: 0, entry: 0, exit: 0, fixed: 0, note: `Aucun frais réglementaire` },
+  pel:            { mgmt: 0, entry: 0, exit: 0, fixed: 0, note: `Aucun frais (hors transfert)` },
+  cel:            { mgmt: 0, entry: 0, exit: 0, fixed: 0, note: `Aucun frais` },
+  'livret-jeune': { mgmt: 0, entry: 0, exit: 0, fixed: 0, note: `Aucun frais réglementaire` },
 
-  // Investissements alternatifs
-  'fcpi-fip'    : { mgmt: 2.50, entry: 5.00, exit: 0.00, fixed: 0, note: `FCPI/FIP: frais élevés mais réduction IR de 25%` },
-  'crypto-cto'  : { mgmt: 0.00, entry: 0.50, exit: 0.50, fixed: 0, note: `Plateformes crypto: frais de transaction; pas de gestion` },
+  // Défisc / alternatifs
+  'fcpi-fip':   { mgmt: 3.50, entry: 4.00, exit: 0.00, fixed: 0,
+                  note: `FCPI/FIP : 3–4 %/an ; 4–5 % d'entrée` },
+  'crypto-cto': { mgmt: 0.00, entry: 0.10, exit: 0.10, fixed: 0,
+                  note: `Crypto : ~0,1 % maker/taker ; 0 % encours` },
 
-  // Défaut pour enveloppes non listées
-  '_default': { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: `Aucun frais par défaut` }
+  _default: { mgmt: 0, entry: 0, exit: 0, fixed: 0, note: `Aucun frais par défaut` }
 };
 
 // ============================================
@@ -234,8 +245,21 @@ function resetFeesToPreset() {
     updateFeeSuggestionsByVehicle(true);
 }
 
-// Exposer la fonction globalement pour l'utiliser depuis l'interface
+/**
+ * Met tous les frais à zéro (bouton zéro frais)
+ */
+function setAllFeesZero() {
+    ['mgmt-fee','entry-fee','exit-fee','fixed-fee'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '0';
+    });
+    runSimulation();
+    showTooltip('Tous les frais ont été remis à zéro');
+}
+
+// Exposer les fonctions globalement pour l'utiliser depuis l'interface
 window.resetFeesToPreset = resetFeesToPreset;
+window.setAllFeesZero = setAllFeesZero;
 
 document.addEventListener('DOMContentLoaded', function() {
     // Mettre à jour la date du jour
@@ -319,14 +343,17 @@ function addFeeResetButton() {
     const feesContainer = document.querySelector('#mgmt-fee')?.closest('.mb-4');
     if (!feesContainer) return;
 
-    // Vérifier si le bouton n'existe pas déjà
+    // Vérifier si les boutons n'existent pas déjà
     if (document.getElementById('reset-fees-btn')) return;
+
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.className = 'mt-2 flex gap-2';
 
     const resetButton = document.createElement('button');
     resetButton.id = 'reset-fees-btn';
     resetButton.type = 'button';
-    resetButton.className = 'mt-2 px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded transition-colors';
-    resetButton.innerHTML = '<i class="fas fa-refresh mr-1"></i> Réappliquer les frais suggérés';
+    resetButton.className = 'px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded transition-colors';
+    resetButton.innerHTML = '<i class="fas fa-refresh mr-1"></i> Frais suggérés';
     resetButton.title = 'Remet les frais aux valeurs suggérées pour cette enveloppe';
     
     resetButton.addEventListener('click', function() {
@@ -337,7 +364,18 @@ function addFeeResetButton() {
         }
     });
 
-    feesContainer.appendChild(resetButton);
+    const zeroButton = document.createElement('button');
+    zeroButton.id = 'zero-fees-btn';
+    zeroButton.type = 'button';
+    zeroButton.className = 'px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors';
+    zeroButton.innerHTML = '<i class="fas fa-times mr-1"></i> Zéro frais';
+    zeroButton.title = 'Met tous les frais à zéro';
+    
+    zeroButton.addEventListener('click', setAllFeesZero);
+
+    buttonsContainer.appendChild(resetButton);
+    buttonsContainer.appendChild(zeroButton);
+    feesContainer.appendChild(buttonsContainer);
 }
 
 /**
@@ -916,7 +954,7 @@ function runSimulation() {
 
 /**
  * Calcule les résultats d'investissement avec la vraie fiscalité et les frais
- * MODIFIÉE : Intégration complète des frais selon la méthodologie proposée
+ * MODIFIÉE : Short-circuit "zero-fees" pour éviter les écarts numériques
  * @param {number} initialDeposit - Montant initial versé au départ
  * @param {number} periodicAmount - Montant des versements périodiques
  * @param {number} years - Nombre d'années
@@ -938,49 +976,56 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
     const investedTotal = initialDeposit + periodicTotal;
 
     // Versements nets après frais d'entrée
-    const initialNet   = initialDeposit * (1 - fees.entryPct);
-    const periodicNet  = isPeriodicMode ? periodicAmount * (1 - fees.entryPct) : 0;
+    const initialNet  = initialDeposit * (1 - fees.entryPct);
+    const periodicNet = isPeriodicMode ? periodicAmount * (1 - fees.entryPct) : 0;
 
-    // Taux net par période : (1+r/p)*(1 - fee/p) - 1
+    // --- Capital final SANS frais (référence) ---
     const rPer = annualReturn / p;
-    const fPer = fees.mgmtPct   / p;
-    const rNetPer = ((1 + rPer) * (1 - fPer)) - 1;
-
-    // --- Capital final SANS frais (référence pour l'impact) ---
     let finalNoFees = initialDeposit * Math.pow(1 + annualReturn, years);
     if (isPeriodicMode && periodicAmount > 0) {
         finalNoFees += periodicAmount * ((Math.pow(1 + rPer, n) - 1) / rPer) * (1 + rPer);
     }
 
-    // --- Capital final AVEC frais ---
-    // 1) Croissance du dépôt initial (net entrée) au taux net
-    let finalWithFees = initialNet * Math.pow(1 + rNetPer, n);
+    // ✅ Raccourci "zéro frais"
+    const noFees = fees.mgmtPct === 0 && fees.entryPct === 0 && fees.exitPct === 0 && fees.fixedAnnual === 0;
 
-    // 2) Annuité des versements périodiques (nets)
-    if (isPeriodicMode && periodicNet > 0) {
-        finalWithFees += periodicNet * ((Math.pow(1 + rNetPer, n) - 1) / rNetPer) * (1 + rNetPer);
-    }
+    let finalWithFees;
+    if (noFees) {
+        finalWithFees = finalNoFees; // pas d'écart possible
+    } else {
+        // --- Capital final AVEC frais ---
+        const fPer = fees.mgmtPct / p;
+        const rNetPer = ((1 + rPer) * (1 - fPer)) - 1;
 
-    // 3) Frais fixes annuels (convertis par période) retirés régulièrement
-    if (fees.fixedAnnual > 0) {
-        const fixedPer = fees.fixedAnnual / p;
-        // Somme des retraits réguliers (fin de période)
-        const fvFixed = fixedPer * ((Math.pow(1 + rNetPer, n) - 1) / rNetPer);
-        finalWithFees -= fvFixed;
-    }
+        // 1) Croissance du dépôt initial (net entrée) au taux net
+        finalWithFees = initialNet * Math.pow(1 + rNetPer, n);
 
-    // 4) Frais de sortie
-    if (fees.exitPct > 0) {
-        finalWithFees *= (1 - fees.exitPct);
+        // 2) Annuité des versements périodiques (nets)
+        if (isPeriodicMode && periodicNet > 0) {
+            finalWithFees += periodicNet * ((Math.pow(1 + rNetPer, n) - 1) / rNetPer) * (1 + rNetPer);
+        }
+
+        // 3) Frais fixes annuels (convertis par période) retirés régulièrement
+        if (fees.fixedAnnual > 0) {
+            const fixedPer = fees.fixedAnnual / p;
+            const fvFixed = fixedPer * ((Math.pow(1 + rNetPer, n) - 1) / rNetPer);
+            finalWithFees -= fvFixed;
+        }
+
+        // 4) Frais de sortie à la fin
+        if (fees.exitPct > 0) {
+            finalWithFees *= (1 - fees.exitPct);
+        }
     }
 
     const finalAmount = round2(finalWithFees);
     const gains = round2(finalAmount - investedTotal);
 
-    // Impact total des frais sur le capital final
-    const feesImpact = round2(finalNoFees - finalWithFees);
+    // Impact des frais – sans bruit numérique
+    let feesImpact = round2(finalNoFees - finalWithFees);
+    if (Math.abs(feesImpact) < 0.01) feesImpact = 0; // tue les centimes résiduels
 
-    // Rendement annualisé (IRR si versements réguliers, sinon CAGR)
+    // Rendement annualisé (IRR si périodique)
     let annualizedReturn;
     if (periodicTotal === 0) {
         annualizedReturn = calcCAGR({ invested: initialDeposit, finalValue: finalAmount, years });
@@ -995,7 +1040,7 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
         });
     }
 
-    // Fiscalité : appliquer sur le gain NET de frais
+    // Fiscalité sur le gain net (inchangé)
     let afterTaxAmount = finalAmount;
     let taxAmount = 0;
     if (gains > 0) {
@@ -1014,9 +1059,6 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
             taxAmount = round2(gains * taxRate);
             afterTaxAmount = round2(finalAmount - taxAmount);
         }
-    } else {
-        taxAmount = 0;
-        afterTaxAmount = finalAmount;
     }
 
     return {
@@ -1027,7 +1069,7 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
         gains,
         afterTaxAmount,
         taxAmount,
-        feesImpact,          // 👈 nouveau
+        feesImpact,
         annualizedReturn,
         years,
         annualReturn,
