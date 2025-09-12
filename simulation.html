@@ -343,45 +343,29 @@
                                            class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
                                 </div>
                                 
-<!-- ✅ MONTANT PÉRIODIQUE : visible uniquement en mode périodique -->
-<div id="periodic-amount-container" class="mb-2" style="display:none;">
-  <label class="block mb-1 text-sm font-medium text-gray-300">
-    Montant périodique
-    <span class="ml-1 text-green-400 cursor-help" title="Somme versée à chaque période choisie (hebdo, mensuel, trimestriel ou annuel)">
-      <i class="fas fa-info-circle"></i>
-    </span>
-  </label>
-
-  <div class="relative">
-    <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400">€</span>
-    <input type="number" id="periodic-investment-amount" value="100" min="1"
-           class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full pl-8 pr-20">
-    <span id="periodic-suffix"
-          class="absolute inset-y-0 right-3 flex items-center text-gray-400 text-sm pointer-events-none">/mois</span>
-  </div>
-
-  <p id="periodic-help" class="text-xs text-gray-400 mt-1">Par mois • soit 1 200 €/an</p>
-</div>
-
-<div class="flex mt-2 bg-blue-800 bg-opacity-30 rounded-md overflow-hidden">
-  <button id="unique-investment" class="flex-1 py-2 px-3 text-sm font-medium text-green-400 bg-green-900 bg-opacity-30 selected">
-    Versement unique
-  </button>
-  <button id="periodic-investment" class="flex-1 py-2 px-3 text-sm font-medium text-gray-300">
-    Versement périodique
-  </button>
-</div>
-
-<div id="frequency-container" class="mt-3" style="display:none;">
-  <label class="block mb-2 text-sm font-medium text-gray-300">Fréquence de versement</label>
-  <select id="investment-frequency" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-    <option value="weekly">Hebdomadaire</option>
-    <option value="monthly" selected>Mensuel</option>
-    <option value="quarterly">Trimestriel</option>
-    <option value="annually">Annuel</option>
-  </select>
-</div>
-
+                                <!-- ✅ MONTANT PÉRIODIQUE : visible uniquement en mode périodique -->
+                                <div id="periodic-amount-container" style="display: none;">
+                                    <input type="number" id="periodic-investment-amount" value="100" min="1" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full mb-2">
+                                    <p class="text-xs text-gray-400">Montant par période (mensuel, trimestriel ou annuel)</p>
+                                </div>
+                                
+                                <div class="flex mt-2 bg-blue-800 bg-opacity-30 rounded-md overflow-hidden">
+                                    <button id="unique-investment" class="flex-1 py-2 px-3 text-sm font-medium text-green-400 bg-green-900 bg-opacity-30 selected">Versement unique</button>
+                                    <button id="periodic-investment" class="flex-1 py-2 px-3 text-sm font-medium text-gray-300">Versement périodique</button>
+                                </div>
+                                
+                                <div id="frequency-container" class="mt-3" style="display: none;">
+                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                        Fréquence de versement
+                                    </label>
+                                    <select id="investment-frequency" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                        <option value="weekly">Hebdomadaire</option>
+                                        <option value="monthly">Mensuel</option>
+                                        <option value="quarterly">Trimestriel</option>
+                                        <option value="annually">Annuel</option>
+                                    </select>
+                                </div>
+                            </div>
                             
                             <!-- Investment Duration -->
                             <div class="mb-4">
@@ -1512,6 +1496,150 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Scénarios & Formations -->
+            <div class="mt-12">
+                <h2 class="text-2xl font-bold mb-6 text-green-400 flex items-center">
+                    <i class="fas fa-lightbulb mr-3"></i>
+                    Scénarios et formations
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Analyses de scénarios -->
+                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
+                            <i class="fas fa-flask mr-2"></i>
+                            Analyse de scénarios
+                        </h3>
+                        
+                        <div class="scenario-block">
+                            <h4 class="font-medium mb-2">Que se passe-t-il en cas de krach boursier ?</h4>
+                            <p class="text-sm text-gray-300 mb-3">Simulation d'une baisse de 30% suivie d'une reprise progressive sur 5 ans.</p>
+                            <button class="text-green-400 text-sm font-medium flex items-center btn-scenario-krach">
+                                Simuler ce scénario <i class="fas fa-chevron-right ml-2"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="scenario-block">
+                            <h4 class="font-medium mb-2">Investissement progressif vs somme forfaitaire</h4>
+                            <p class="text-sm text-gray-300 mb-3">Comparaison entre investir une somme d'un coup ou progressivement.</p>
+                            <button class="text-green-400 text-sm font-medium flex items-center btn-scenario-progressif">
+                                Simuler ce scénario <i class="fas fa-chevron-right ml-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Formations recommandées -->
+                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
+                            <i class="fas fa-graduation-cap mr-2"></i>
+                            Formations recommandées
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
+                                    <i class="fas fa-chart-line text-green-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium">L'effet des intérêts composés</h4>
+                                    <p class="text-xs text-gray-400">12 min de lecture</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
+                                    <i class="fas fa-file-invoice-dollar text-green-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium">Choisir le bon véhicule fiscal</h4>
+                                    <p class="text-xs text-gray-400">15 min de lecture</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
+                                    <i class="fas fa-balance-scale text-green-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium">Répartition d'actifs: principes</h4>
+                                    <p class="text-xs text-gray-400">18 min de lecture</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Questions fréquentes -->
+                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
+                            <i class="fas fa-question-circle mr-2"></i>
+                            Questions fréquentes
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <h4 class="font-medium mb-1">Comment estimer le rendement ?</h4>
+                                <p class="text-sm text-gray-300">Le rendement dépend de l'actif. Pour les indices boursiers, 7-10% est une estimation historique raisonnable sur le long terme.</p>
+                            </div>
+                            
+                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <h4 class="font-medium mb-1">Quelle durée d'investissement privilégier ?</h4>
+                                <p class="text-sm text-gray-300">Plus la durée est longue, plus l'effet des intérêts composés est puissant. Pour les actions, un horizon de 8-10 ans minimum est recommandé.</p>
+                            </div>
+                            
+                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <h4 class="font-medium mb-1">Quelle enveloppe choisir pour quel objectif ?</h4>
+                                <p class="text-sm text-gray-300">PEA pour les investissements en actions sur le long terme, Assurance-vie pour la flexibilité, PER pour la retraite.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Theme toggle -->
+    <div class="theme-toggle">
+        <button class="theme-toggle-btn">
+            <i class="fas fa-moon"></i>
+        </button>
+    </div>
+
+    <!-- Scripts essentiels -->
+    <script type="module" src="js/simulation.js"></script>
+    <script type="module" src="js/fiscal-optimizer.js"></script>
+    <script type="module" src="js/budget-epargne.js"></script>
+    <script type="module" src="js/loan-simulator.js"></script>
+    <script type="module" src="js/ptz-simulator.js"></script>
+    <!-- Scripts avancés -->
+    <script src="js/simulation-enhancements.js"></script>
+    <script src="js/simulation-fixes.js"></script>
+    <!-- Script de gestion des thèmes -->
+    <script>
+        // Mise à jour de l'heure
+        function updateTime() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            
+            const timeElement = document.getElementById('marketTime');
+            if (timeElement) {
+                timeElement.textContent = `${hours}:${minutes}:${seconds}`;
+            }
+        }
+
+        // Mettre à jour l'heure toutes les secondes
+        setInterval(updateTime, 1000);
+        updateTime(); // Initialiser immédiatement
+
+        // Toggle theme (placeholder)
+        document.querySelector('.theme-toggle-btn')?.addEventListener('click', function() {
+            console.log('Theme toggle clicked');
+        });
+    </script>
+</body>
+</html>
 
             <!-- Scénarios & Formations -->
             <div class="mt-12">
