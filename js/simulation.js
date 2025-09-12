@@ -20,34 +20,34 @@ enveloppes.forEach(env => {
  * ================================= */
 const FEE_PRESETS = {
   // Actions / enveloppes boursières
-  'pea'      : { mgmt: 0.20, entry: 0.00, exit: 0.00, fixed: 0,   note: 'Courtage low-cost, pas de frais récurrents sur encours chez de nombreux courtiers' },
-  'pea-pme'  : { mgmt: 0.25, entry: 0.00, exit: 0.00, fixed: 0,   note: 'Similaire PEA' },
-  'peac'     : { mgmt: 0.30, entry: 0.00, exit: 0.00, fixed: 0,   note: 'PEA Avenir Climat - frais de tenue parfois un peu supérieurs' },
-  'cto'      : { mgmt: 0.20, entry: 0.00, exit: 0.00, fixed: 0,   note: 'CTO moderne: surtout frais de transaction; pas de frais d'encours' },
+  'pea'      : { mgmt: 0.20, entry: 0.00, exit: 0.00, fixed: 0,   note: `Courtage low-cost, pas de frais récurrents sur l'encours chez de nombreux courtiers` },
+  'pea-pme'  : { mgmt: 0.25, entry: 0.00, exit: 0.00, fixed: 0,   note: `Similaire PEA` },
+  'peac'     : { mgmt: 0.30, entry: 0.00, exit: 0.00, fixed: 0,   note: `PEA Avenir Climat - frais de tenue parfois un peu supérieurs` },
+  'cto'      : { mgmt: 0.20, entry: 0.00, exit: 0.00, fixed: 0,   note: `CTO moderne: surtout frais de transaction; pas de frais d'encours` },
 
   // Assurance-vie / PER
-  'assurance-vie': { mgmt: 0.60, entry: 0.00, exit: 0.00, fixed: 0, note: 'En ligne: ~0.5–0.8%/an sur UC ; 0% entrée/sortie' },
-  'per'          : { mgmt: 0.80, entry: 0.00, exit: 0.00, fixed: 0, note: 'PER individuel en ligne: ~0.6–1.0%/an' },
+  'assurance-vie': { mgmt: 0.60, entry: 0.00, exit: 0.00, fixed: 0, note: `En ligne: ~0.5–0.8%/an sur UC ; 0% entrée/sortie` },
+  'per'          : { mgmt: 0.80, entry: 0.00, exit: 0.00, fixed: 0, note: `PER individuel en ligne: ~0.6–1.0%/an` },
 
   // Immobilier collectif
-  'scpi-av' : { mgmt: 1.00, entry: 0.00, exit: 0.00, fixed: 0, note: 'Via AV: surcouche de gestion côté contrat; frais de souscription portés par la SCPI' },
-  'scpi-cto': { mgmt: 0.00, entry: 12.00, exit: 0.00, fixed: 0, note: 'Souscription directe: 10-15% frais d\'entrée; 0% gestion annuelle' },
-  'opci'    : { mgmt: 1.20, entry: 3.00, exit: 0.00, fixed: 0, note: 'OPCI grand public: ~1-1.5%/an + frais entrée modérés' },
+  'scpi-av' : { mgmt: 1.00, entry: 0.00, exit: 0.00, fixed: 0, note: `Via AV: surcouche de gestion côté contrat; frais de souscription portés par la SCPI` },
+  'scpi-cto': { mgmt: 0.00, entry: 12.00, exit: 0.00, fixed: 0, note: `Souscription directe: 10-15% frais d'entrée; 0% gestion annuelle` },
+  'opci'    : { mgmt: 1.20, entry: 3.00, exit: 0.00, fixed: 0, note: `OPCI grand public: ~1-1.5%/an + frais entrée modérés` },
 
   // Épargne réglementée (sans frais)
-  'livret-a'    : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: 'Épargne réglementée - aucun frais' },
-  'ldds'        : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: 'Épargne réglementée - aucun frais' },
-  'lep'         : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: 'Épargne réglementée - aucun frais' },
-  'pel'         : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: 'Épargne réglementée - aucun frais' },
-  'cel'         : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: 'Épargne réglementée - aucun frais' },
-  'livret-jeune': { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: 'Épargne réglementée - aucun frais' },
+  'livret-a'    : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: `Épargne réglementée - aucun frais` },
+  'ldds'        : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: `Épargne réglementée - aucun frais` },
+  'lep'         : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: `Épargne réglementée - aucun frais` },
+  'pel'         : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: `Épargne réglementée - aucun frais` },
+  'cel'         : { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: `Épargne réglementée - aucun frais` },
+  'livret-jeune': { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: `Épargne réglementée - aucun frais` },
 
   // Investissements alternatifs
-  'fcpi-fip'    : { mgmt: 2.50, entry: 5.00, exit: 0.00, fixed: 0, note: 'FCPI/FIP: frais élevés mais réduction IR de 25%' },
-  'crypto-cto'  : { mgmt: 0.00, entry: 0.50, exit: 0.50, fixed: 0, note: 'Plateformes crypto: frais de transaction; pas de gestion' },
+  'fcpi-fip'    : { mgmt: 2.50, entry: 5.00, exit: 0.00, fixed: 0, note: `FCPI/FIP: frais élevés mais réduction IR de 25%` },
+  'crypto-cto'  : { mgmt: 0.00, entry: 0.50, exit: 0.50, fixed: 0, note: `Plateformes crypto: frais de transaction; pas de gestion` },
 
   // Défaut pour enveloppes non listées
-  '_default': { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: 'Aucun frais par défaut' }
+  '_default': { mgmt: 0.00, entry: 0.00, exit: 0.00, fixed: 0, note: `Aucun frais par défaut` }
 };
 
 // ============================================
@@ -245,25 +245,25 @@ document.addEventListener('DOMContentLoaded', function() {
     createChart();
     
     // Ajouter des événements aux sliders
-    document.getElementById('duration-slider').addEventListener('input', function() {
+    document.getElementById('duration-slider')?.addEventListener('input', function() {
         updateDurationValue(this.value);
     });
     
-    document.getElementById('return-slider').addEventListener('input', function() {
+    document.getElementById('return-slider')?.addEventListener('input', function() {
         updateReturnValue(this.value);
     });
     
     // Ajouter un événement au bouton de simulation
-    document.getElementById('simulate-button').addEventListener('click', runSimulation);
+    document.getElementById('simulate-button')?.addEventListener('click', runSimulation);
     
     // Ajouter un événement au sélecteur d'enveloppe fiscale
-    document.getElementById('investment-vehicle').addEventListener('change', function() {
+    document.getElementById('investment-vehicle')?.addEventListener('change', function() {
         updateTaxInfo();
         updateReturnSuggestions();
         updateFeeSuggestionsByVehicle(); // Application automatique (respecte les modifications utilisateur)
         
         // Relancer la simulation si déjà des résultats
-        if (document.querySelector('.result-value').textContent !== '') {
+        if (document.querySelector('.result-value')?.textContent !== '') {
             runSimulation();
         }
     });
@@ -301,7 +301,7 @@ document.addEventListener('DOMContentLoaded', function() {
     simulationBudgetInputs.forEach(input => {
         if (input) {
             input.addEventListener('change', function() {
-                if (document.querySelector('.result-value').textContent !== '') {
+                if (document.querySelector('.result-value')?.textContent !== '') {
                     runSimulation();
                 }
             });
@@ -332,7 +332,7 @@ function addFeeResetButton() {
     resetButton.addEventListener('click', function() {
         resetFeesToPreset();
         // Relancer la simulation si elle est active
-        if (document.querySelector('.result-value').textContent !== '') {
+        if (document.querySelector('.result-value')?.textContent !== '') {
             setTimeout(runSimulation, 100);
         }
     });
@@ -721,10 +721,10 @@ function updateReturnValue(value) {
  * Fonction pour mettre à jour les infos fiscales avec les vraies données
  */
 function updateTaxInfo() {
-    const vehicleId = document.getElementById('investment-vehicle').value;
+    const vehicleId = document.getElementById('investment-vehicle')?.value;
     const taxInfoElement = document.getElementById('tax-info');
     
-    if (!taxInfoElement) return;
+    if (!taxInfoElement || !vehicleId) return;
     
     const enveloppe = getEnveloppeInfo(vehicleId);
     if (!enveloppe) return;
@@ -764,8 +764,10 @@ function updateTaxInfo() {
  * Ajouter un sélecteur de rendement basé sur l'enveloppe
  */
 function updateReturnSuggestions() {
-    const vehicleId = document.getElementById('investment-vehicle').value;
+    const vehicleId = document.getElementById('investment-vehicle')?.value;
     const returnSlider = document.getElementById('return-slider');
+    
+    if (!vehicleId || !returnSlider) return;
     
     // Rendements suggérés par type d'enveloppe
     const suggestedReturns = {
@@ -791,7 +793,10 @@ function updateReturnSuggestions() {
         updateReturnValue(suggestedReturns[vehicleId]);
         
         // Afficher une info bulle
-        showTooltip(`Rendement suggéré pour ${getEnveloppeInfo(vehicleId).label}: ${suggestedReturns[vehicleId]}%`);
+        const enveloppe = getEnveloppeInfo(vehicleId);
+        if (enveloppe) {
+            showTooltip(`Rendement suggéré pour ${enveloppe.label}: ${suggestedReturns[vehicleId]}%`);
+        }
     }
 }
 
@@ -867,6 +872,8 @@ function suggestBestVehicle(amount, duration, objective = 'growth') {
 function runSimulation() {
     // Animation du bouton
     const button = document.getElementById('simulate-button');
+    if (!button) return;
+    
     button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Calcul en cours...';
     button.disabled = true;
     
@@ -886,8 +893,8 @@ function runSimulation() {
         const periodicAmount = (isPeriodicMode && periodicInput) ? 
                               parseFloat(periodicInput.value) || 0 : 0;
         
-        const years = parseInt(document.getElementById('duration-slider').value);
-        const annualReturn = parseFloat(document.getElementById('return-slider').value) / 100;
+        const years = parseInt(document.getElementById('duration-slider')?.value || 10);
+        const annualReturn = parseFloat(document.getElementById('return-slider')?.value || 7) / 100;
         
         // Calcul des résultats avec les nouveaux paramètres
         const results = calculateInvestmentResults(initialDeposit, periodicAmount, years, annualReturn);
@@ -917,7 +924,7 @@ function runSimulation() {
  * @returns {Object} Résultats de la simulation
  */
 function calculateInvestmentResults(initialDeposit, periodicAmount, years, annualReturn) {
-    const vehicleId = document.getElementById('investment-vehicle').value;
+    const vehicleId = document.getElementById('investment-vehicle')?.value || 'pea';
     const enveloppe = getEnveloppeInfo(vehicleId);
 
     const fees = readFeeParams();
@@ -1177,9 +1184,9 @@ function updateProfileAdequacy(results) {
     
     if (Math.abs(difference) > 0.5) {
         if (difference > 0) {
-            adequacyMessages.push("🎯 Vos versements réguliers améliorent le rendement global");
+            adequacyMessages.push(`🎯 Vos versements réguliers améliorent le rendement global`);
         } else {
-            adequacyMessages.push("📊 L'étalement des versements lisse les performances dans le temps");
+            adequacyMessages.push(`📊 L'étalement des versements lisse les performances dans le temps`);
         }
     }
 
@@ -1197,12 +1204,12 @@ function updateProfileAdequacy(results) {
     }
     
     if (results.vehicleId === 'pea' && annualizedPct >= 7) {
-        adequacyMessages.push("📈 Excellent rendement annualisé pour un PEA sur cette durée");
+        adequacyMessages.push(`📈 Excellent rendement annualisé pour un PEA sur cette durée`);
     } else if (results.vehicleId === 'assurance-vie' && annualizedPct >= 4) {
-        adequacyMessages.push("✅ Performance annualisée satisfaisante pour une assurance-vie");
+        adequacyMessages.push(`✅ Performance annualisée satisfaisante pour une assurance-vie`);
     } else if (annualizedPct < 2) {
         adequacyScore = Math.max(1, adequacyScore - 1);
-        adequacyMessages.push("⚠️ Rendement annualisé faible, considérez d'autres options");
+        adequacyMessages.push(`⚠️ Rendement annualisé faible, considérez d'autres options`);
     }
     
     // Suggérer une alternative si meilleure
@@ -1482,7 +1489,8 @@ function toggleInvestmentMode(mode) {
     }
     
     // Si une simulation est déjà active, la mettre à jour
-    if (document.querySelector('.result-value').textContent !== '') {
+    const resultValue = document.querySelector('.result-value')?.textContent;
+    if (resultValue && resultValue !== '') {
         runSimulation();
     }
 }
@@ -1499,9 +1507,9 @@ window.toggleInvestmentMode = toggleInvestmentMode;
  * Seulement quand on dépasse ou ≥ 80% du plafond
  */
 function checkPlafondLimits() {
-    const vehicleId = document.getElementById('investment-vehicle').value;
+    const vehicleId = document.getElementById('investment-vehicle')?.value;
     const isPeriodicMode = document.getElementById('periodic-investment')?.classList.contains('selected');
-    const years = parseInt(document.getElementById('duration-slider').value);
+    const years = parseInt(document.getElementById('duration-slider')?.value || 10);
     const enveloppe = getEnveloppeInfo(vehicleId);
     
     // Récupérer le bon montant selon le mode
@@ -1511,10 +1519,10 @@ function checkPlafondLimits() {
         if (periodicAmountElement) {
             amount = parseFloat(periodicAmountElement.value) || 100;
         } else {
-            amount = parseFloat(document.getElementById('investment-amount').value) || 100;
+            amount = parseFloat(document.getElementById('investment-amount')?.value) || 100;
         }
     } else {
-        amount = parseFloat(document.getElementById('investment-amount').value) || 1000;
+        amount = parseFloat(document.getElementById('investment-amount')?.value) || 1000;
     }
     
     if (!enveloppe || !enveloppe.plafond) {
@@ -1549,9 +1557,11 @@ function checkPlafondLimits() {
         // Trouver le bon conteneur parent selon le mode
         const parentElement = isPeriodicMode && document.getElementById('periodic-amount-container')
             ? document.getElementById('periodic-amount-container')
-            : document.getElementById('investment-amount').parentElement;
+            : document.getElementById('investment-amount')?.parentElement;
         
-        parentElement.appendChild(alertElement);
+        if (parentElement) {
+            parentElement.appendChild(alertElement);
+        }
     }
     
     const percentage = (totalAmount / plafond) * 100;
@@ -1599,7 +1609,7 @@ function checkPlafondLimits() {
 function addPlafondLineToChart() {
     if (!window.investmentChart) return;
     
-    const vehicleId = document.getElementById('investment-vehicle').value;
+    const vehicleId = document.getElementById('investment-vehicle')?.value;
     const enveloppe = getEnveloppeInfo(vehicleId);
     
     // Supprimer l'ancienne ligne de plafond si elle existe
@@ -1615,7 +1625,7 @@ function addPlafondLineToChart() {
             ? enveloppe.plafond.solo 
             : enveloppe.plafond;
         
-        const years = parseInt(document.getElementById('duration-slider').value);
+        const years = parseInt(document.getElementById('duration-slider')?.value || 10);
         
         // Ajouter la ligne de plafond
         window.investmentChart.data.datasets.push({
