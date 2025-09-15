@@ -20,6 +20,39 @@ from portfolio_adjuster import check_portfolio_constraints, adjust_portfolios, g
 # Importer la fonction de formatage du brief
 from brief_formatter import format_brief_data
 
+# ============= COMPLIANCE AMF - GARDE-FOUS RÉGLEMENTAIRES =============
+
+BANNED_MARKETING = [
+    r"\bacheter\b", r"\bvendre\b", r"\bconserver\b",
+    r"\b(prioriser|à\s*privilégier)\b", r"\bfortement recommandé\b",
+    r"\bgaranti(e|s)?\b", r"\bsans\s*risque\b",
+    r"\bobjectif de prix\b", r"\brendement attendu\b",
+    r"\bdevez\b", r"\bil faut\b", r"\bconseillons\b",
+    r"\brecommandons\b", r"\bvous devriez\b"
+]
+
+def sanitize_marketing_language(text: str) -> str:
+    """Supprime le langage d'incitation interdit par l'AMF"""
+    out = text or ""
+    for pat in BANNED_MARKETING:
+        out = re.sub(pat, "[formulation neutre]", out, flags=re.IGNORECASE)
+    return out
+
+def get_compliance_block() -> Dict:
+    """Retourne le bloc de compliance standardisé AMF"""
+    return {
+        "Disclaimer": "Communication d'information financière à caractère général. Ce contenu n'est pas un conseil en investissement personnalisé. Les performances passées ne préjugent pas des performances futures. Investir comporte un risque de perte en capital. Aucune exécution ni transmission d'ordres n'est fournie.",
+        "Risques": [
+            "Perte en capital possible",
+            "Performances passées ne préjugent pas des performances futures", 
+            "Volatilité accrue selon les classes d'actifs",
+            "Crypto-actifs : volatilité élevée, perte totale possible",
+            "Risques de change pour les actifs internationaux",
+            "Risque de liquidité sur certains marchés"
+        ],
+        "Methodologie": "Allocation issue d'un scoring quantitatif (momentum, volatilité, drawdown, liquidité). Les données et le classement peuvent évoluer. Cette approche ne garantit aucun résultat."
+    }
+
 # ============= NOUVEAU SYSTÈME DE SCORING V3 - QUANTITATIF =============
 
 LEVERAGED_RE = re.compile(r"(2x|3x|ultra|lev|leverage|inverse|bear|-1x|-2x|-3x)", re.I)
@@ -581,7 +614,7 @@ def extract_allowed_assets_legacy(filtered_data: Dict) -> Dict:
 
 def build_robust_prompt_v3(structured_data: Dict, allowed_assets: Dict, current_month: str) -> str:
     """
-    Construit le prompt v3 avec univers quantitatif et garde-fous renforcés
+    Construit le prompt v3 avec univers quantitatif et garde-fous renforcés + COMPLIANCE AMF
     """
     
     prompt = f"""Tu es un expert en allocation quantitative. Construis TROIS portefeuilles (Agressif, Modéré, Stable).
@@ -615,6 +648,17 @@ ALLOWED_CRYPTO = {json.dumps(allowed_assets['allowed_crypto'], ensure_ascii=Fals
 - **Anti-fin-de-cycle**: Interdiction d'ajouter un actif avec `YTD>100%` si `Perf 1M ≤ 0`.
 - Privilégier équilibrage `risk_class` : mix low/mid selon profil (Stable=80% low, Modéré=60% low, Agressif=40% low).
 
+## COMPLIANCE (obligatoire)
+- Ce contenu est une **information financière générale**. Il **ne constitue pas** un conseil en investissement personnalisé ni une recommandation individuelle.
+- N'utilise **aucune** donnée personnelle, ne déduis **aucun** profil de l'utilisateur et **n'adapte** pas les portefeuilles au lecteur. Reste **strictement générique**.
+- **Langage neutre uniquement** : interdit d'employer « acheter », « vendre », « conserver », « à privilégier », « fortement recommandé », « garanti », « sans risque », « objectif de prix », « rendement attendu ». Utiliser des formulations comme « pondération modèle », « exposition théorique », « scénarios possibles ».
+- **Aucune incitation** à passer un ordre, **aucun lien affilié**, **aucune promesse** de performance.
+- **Toujours** ajouter dans la sortie un bloc `Compliance` avec :
+  - `Disclaimer` : texte court (2–3 phrases) rappelant que c'est de l'information générale, que les performances passées ne préjugent pas des performances futures, et qu'il existe un risque de perte en capital.
+  - `Risques` : 3–6 puces, incluant au minimum : « Perte en capital possible », « Performances passées ≠ performances futures », « Volatilité des marchés », et pour la catégorie Crypto : « Forte volatilité, possibilité de perte totale ».
+  - `Methodologie` : 1–2 phrases sur l'approche quantitative (scoring momentum/risque/liquidité) et ses limites (incertitudes, données susceptibles d'évoluer).
+- Les commentaires/justifications doivent rester **descriptifs** (pas d'impératifs, pas d'injonctions).
+
 ## Logique d'investissement (synthèse)
 - Chaque actif doit être justifié par **≥2 références** parmi BRIEF(Macro), MARKETS(Géo), SECTORS(Secteur), THEMES(Thèmes).
   Utilise les **IDs** (ex: ["BR2","MC1"]).
@@ -639,17 +683,29 @@ ALLOWED_CRYPTO = {json.dumps(allowed_assets['allowed_crypto'], ensure_ascii=Fals
     "Commentaire": "...",
     "Lignes": [
       {{"id":"EQ_1",   "name":"Microsoft Corporation", "category":"Actions",     "allocation_pct":12.50, "justificationRefs":["BR1","SEC2"], "justification":"Score 1.23 (momentum tech) + résilience IA face ralentissement", "score":1.23, "risk_class":"low"}},
-      {{"id":"ETF_s1", "name":"Vanguard S&P 500 ETF",  "category":"ETF",         "allocation_pct":25.00, "justificationRefs":["MC1","TH1"],  "justification":"Score 0.87 + exposition large marché US", "score":0.87, "risk_class":"mid"}},
-      {{"id":"ETF_b1", "name":"iShares Euro Govt Bond", "category":"Obligations", "allocation_pct":15.00, "justificationRefs":["BR3","SEC4"], "justification":"Valeur refuge géopolitique", "score":0.12, "risk_class":"bond"}},
-      {{"id":"CR_1",   "name":"Bitcoin",               "category":"Crypto",      "allocation_pct":5.00,  "justificationRefs":["TH3","MC2"],  "justification":"Score 2.15 + tendance institutionnelle", "score":2.15, "risk_class":"mid"}}
+      {{"id":"ETF_s1", "name":"Vanguard S&P 500 ETF",  "category":"ETF",         "allocation_pct":25.00, "justificationRefs":["MC1","TH1"],  "justification":"Score 0.87 + exposition théorique large marché US", "score":0.87, "risk_class":"mid"}},
+      {{"id":"ETF_b1", "name":"iShares Euro Govt Bond", "category":"Obligations", "allocation_pct":15.00, "justificationRefs":["BR3","SEC4"], "justification":"Pondération refuge géopolitique", "score":0.12, "risk_class":"bond"}},
+      {{"id":"CR_1",   "name":"Bitcoin",               "category":"Crypto",      "allocation_pct":5.00,  "justificationRefs":["TH3","MC2"],  "justification":"Score 2.15 + exposition institutionnelle", "score":2.15, "risk_class":"mid"}}
     ],
     "ActifsExclus": [
       {{"name":"Tesla Inc", "reason":"Score -0.85 + sur-extension YTD >150%", "refs":["BR1","SEC1"]}},
-      {{"name":"ARKK ETF", "reason":"Score -1.23 + risque correction sévère", "refs":["BR2"]}}
-    ]
+      {{"name":"ARKK ETF", "reason":"Score -1.23 + exposition correction sévère", "refs":["BR2"]}}
+    ],
+    "Compliance": {{
+      "Disclaimer": "Communication d'information financière à caractère général. Ce contenu n'est pas un conseil en investissement personnalisé. Les performances passées ne préjugent pas des performances futures. Investir comporte un risque de perte en capital. Aucune exécution ni transmission d'ordres n'est fournie.",
+      "Risques": [
+        "Perte en capital possible",
+        "Performances passées ne préjugent pas des performances futures",
+        "Volatilité accrue selon les classes d'actifs",
+        "Crypto-actifs : volatilité élevée, perte totale possible",
+        "Risques de change pour les actifs internationaux",
+        "Risque de liquidité sur certains marchés"
+      ],
+      "Methodologie": "Allocation issue d'un scoring quantitatif (momentum, volatilité, drawdown, liquidité). Les données et le classement peuvent évoluer. Cette approche ne garantit aucun résultat."
+    }}
   }},
-  "Modéré": {{ "Commentaire": "...", "Lignes": [...], "ActifsExclus": [...] }},
-  "Stable": {{ "Commentaire": "...", "Lignes": [...], "ActifsExclus": [...] }}
+  "Modéré": {{ "Commentaire": "...", "Lignes": [...], "ActifsExclus": [...], "Compliance": {{...}} }},
+  "Stable": {{ "Commentaire": "...", "Lignes": [...], "ActifsExclus": [...], "Compliance": {{...}} }}
 }}
 
 ### CONTRÔLE QUALITÉ v3 (obligatoire avant d'émettre la réponse)
@@ -657,6 +713,7 @@ ALLOWED_CRYPTO = {json.dumps(allowed_assets['allowed_crypto'], ensure_ascii=Fals
 - Vérifie qu'aucun `id` n'est dupliqué et que chaque catégorie respecte ses univers autorisés.
 - Vérifie que ≥70% des actifs ont score ≥ 0 et médiane des scores ≥ 0.
 - Vérifie l'équilibrage risk_class selon profil.
+- Vérifie que chaque portefeuille contient le bloc `Compliance` complet.
 - Si une règle échoue, corrige puis ne sors que le JSON final conforme.
 - Ta réponse doit commencer par `{{` et finir par `}}` — **aucun autre caractère**.
 
@@ -667,7 +724,7 @@ Contexte temporel: Portefeuilles optimisés pour {current_month} 2025.
 
 def validate_portfolios_v3(portfolios: Dict, allowed_assets: Dict) -> Tuple[bool, List[str]]:
     """
-    Validation stricte des portefeuilles générés version 3 avec contrôle des scores
+    Validation stricte des portefeuilles générés version 3 avec contrôle des scores + COMPLIANCE
     """
     errors = []
     
@@ -702,6 +759,16 @@ def validate_portfolios_v3(portfolios: Dict, allowed_assets: Dict) -> Tuple[bool
         categories = set(ligne.get('category') for ligne in lignes)
         if len(categories) < 2:
             errors.append(f"{portfolio_name}: moins de 2 catégories ({categories})")
+        
+        # NOUVEAU: Vérifier la présence du bloc Compliance
+        compliance = portfolio.get('Compliance', {})
+        if not compliance:
+            errors.append(f"{portfolio_name}: bloc 'Compliance' manquant")
+        else:
+            required_compliance_fields = ['Disclaimer', 'Risques', 'Methodologie']
+            for field in required_compliance_fields:
+                if not compliance.get(field):
+                    errors.append(f"{portfolio_name}: champ Compliance.{field} manquant")
         
         # NOUVEAU: Vérifier les scores et classes de risque
         scores = []
@@ -804,6 +871,32 @@ def fix_portfolios_v3(portfolios: Dict, errors: List[str]) -> Dict:
                 diff = 100.0 - total
                 lignes[-1]['allocation_pct'] = round(lignes[-1]['allocation_pct'] + diff, 2)
                 print(f"  🔧 Ajustement {portfolio_name}: dernière ligne ajustée de {diff:.2f}%")
+        
+        # Ajouter le bloc Compliance s'il manque
+        if 'Compliance' not in portfolio:
+            portfolio['Compliance'] = get_compliance_block()
+            print(f"  🔧 Ajout bloc Compliance manquant pour {portfolio_name}")
+    
+    return portfolios
+
+def apply_compliance_sanitization(portfolios: Dict) -> Dict:
+    """Applique la sanitisation des termes marketing interdits"""
+    for portfolio_name, portfolio in portfolios.items():
+        # Sanitiser le commentaire
+        if 'Commentaire' in portfolio:
+            portfolio['Commentaire'] = sanitize_marketing_language(portfolio['Commentaire'])
+        
+        # Sanitiser les justifications
+        if 'Lignes' in portfolio:
+            for ligne in portfolio['Lignes']:
+                if 'justification' in ligne:
+                    ligne['justification'] = sanitize_marketing_language(ligne['justification'])
+        
+        # Sanitiser les raisons d'exclusion
+        if 'ActifsExclus' in portfolio:
+            for actif in portfolio['ActifsExclus']:
+                if 'reason' in actif:
+                    actif['reason'] = sanitize_marketing_language(actif['reason'])
     
     return portfolios
 
@@ -850,7 +943,7 @@ def post_with_retry(url, headers, payload, tries=3, timeout=60, backoff=1.7):
 
 def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     """
-    Version 3 améliorée avec système de scoring quantitatif
+    Version 3 améliorée avec système de scoring quantitatif + COMPLIANCE AMF
     """
     
     api_key = os.environ.get('API_CHAT')
@@ -879,7 +972,7 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     print(f"  📉 ETF obligataires: {len(allowed_assets['allowed_bond_etfs'])}")
     print(f"  🪙 Cryptos autorisées: {len(allowed_assets['allowed_crypto'])}")
     
-    # Construire le prompt robuste v3
+    # Construire le prompt robuste v3 avec compliance AMF
     prompt = build_robust_prompt_v3(structured_data, allowed_assets, current_month)
     
     # Horodatage pour les fichiers de debug
@@ -903,7 +996,7 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
         "response_format": {"type": "json_object"}  # Force le JSON
     }
     
-    print("🚀 Envoi de la requête à l'API OpenAI (prompt v3 quantitatif)...")
+    print("🚀 Envoi de la requête à l'API OpenAI (prompt v3 quantitatif + compliance)...")
     response = post_with_retry("https://api.openai.com/v1/chat/completions", headers, data, tries=3, timeout=60)
     response.raise_for_status()
     
@@ -928,6 +1021,10 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
         content = content.strip()
         portfolios = json.loads(content)
     
+    # NOUVEAU: Appliquer la sanitisation compliance
+    print("🛡️ Application de la sanitisation compliance AMF...")
+    portfolios = apply_compliance_sanitization(portfolios)
+    
     # Validation post-génération v3
     validation_ok, errors = validate_portfolios_v3(portfolios, allowed_assets)
     if not validation_ok:
@@ -946,7 +1043,7 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
         print(f"❌ Score guard failed: {e}")
         # On peut décider de régénérer ou accepter avec warning
     
-    print("✅ Portefeuilles v3 générés avec succès (scoring quantitatif)")
+    print("✅ Portefeuilles v3 générés avec succès (scoring quantitatif + compliance AMF)")
     
     # Afficher un résumé détaillé
     for portfolio_name, portfolio in portfolios.items():
@@ -969,10 +1066,12 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
             
             avg_score = np.mean(scores) if scores else 0
             median_score = np.median(scores) if scores else 0
+            compliance_ok = bool(portfolio.get('Compliance'))
             
             print(f"  📊 {portfolio_name}: {len(lignes)} actifs, {len(categories)} catégories, {total_alloc:.2f}%")
             print(f"     Score moyen: {avg_score:.2f}, médiane: {median_score:.2f}")
             print(f"     Répartition risque: {dict(risk_counts)}")
+            print(f"     Compliance AMF: {'✅' if compliance_ok else '❌'}")
     
     return portfolios
 
@@ -1452,7 +1551,7 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
     <!DOCTYPE html>
     <html>
     <head>
-        <title>TradePulse - Debug de Prompt v3 Quantitatif</title>
+        <title>TradePulse - Debug de Prompt v3 Quantitatif + Compliance</title>
         <meta charset="UTF-8">
         <style>
             body {{ font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }}
@@ -1462,15 +1561,16 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
             .highlight {{ background-color: #ffffcc; }}
             .v3-badge {{ background: linear-gradient(45deg, #6c5ce7, #a29bfe); color: white; padding: 5px 10px; border-radius: 15px; font-weight: bold; }}
             .feature {{ background: linear-gradient(45deg, #00b894, #00cec9); color: white; padding: 3px 8px; border-radius: 10px; font-size: 0.8em; margin: 0 3px; }}
+            .compliance {{ background: linear-gradient(45deg, #d63031, #e84393); color: white; padding: 3px 8px; border-radius: 10px; font-size: 0.8em; margin: 0 3px; }}
         </style>
     </head>
     <body>
-        <h1>TradePulse - Debug de Prompt v3 <span class="v3-badge">QUANTITATIF</span></h1>
+        <h1>TradePulse - Debug de Prompt v3 <span class="v3-badge">QUANTITATIF + COMPLIANCE</span></h1>
         <div class="info">
-            <p><strong>Version:</strong> v3 - Scoring quantitatif + Anti-hallucinations renforcées</p>
+            <p><strong>Version:</strong> v3 - Scoring quantitatif + Anti-hallucinations + Compliance AMF</p>
             <p><strong>Timestamp:</strong> {timestamp}</p>
             <p><strong>Taille totale du prompt:</strong> {len(prompt)} caractères</p>
-            <p><strong>Nouvelles fonctionnalités:</strong> 
+            <p><strong>Fonctionnalités:</strong> 
                 <span class="feature">Score Momentum</span>
                 <span class="feature">Détection Sur-extension</span>
                 <span class="feature">Classes de Risque</span>
@@ -1478,6 +1578,9 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
                 <span class="feature">Équilibrage Sectoriel</span>
                 <span class="feature">Retry API</span>
                 <span class="feature">Cache Univers</span>
+                <span class="compliance">Compliance AMF</span>
+                <span class="compliance">Anti-Marketing</span>
+                <span class="compliance">Disclaimer Auto</span>
             </p>
         </div>
         <h2>Contenu du prompt v3 envoyé à OpenAI :</h2>
@@ -1495,12 +1598,12 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
 
 def generate_portfolios(filtered_data):
     """
-    Fonction principale de génération - utilise maintenant la version v3 quantitative
+    Fonction principale de génération - utilise maintenant la version v3 quantitative + compliance
     """
-    print("🚀 Lancement de la génération de portefeuilles v3 (scoring quantitatif)")
+    print("🚀 Lancement de la génération de portefeuilles v3 (scoring quantitatif + compliance AMF)")
     
     try:
-        # Utiliser la nouvelle version quantitative v3
+        # Utiliser la nouvelle version quantitative v3 avec compliance
         portfolios = generate_portfolios_v3(filtered_data)
         
         # Validation finale avec les fonctions existantes pour compatibilité
@@ -1562,7 +1665,14 @@ def generate_portfolios_v2(filtered_data):
         content = content.strip()
         portfolios = json.loads(content)
     
-    print("✅ Portefeuilles v2 générés avec succès (fallback)")
+    # Ajouter compliance même en fallback
+    for portfolio_name, portfolio in portfolios.items():
+        if 'Compliance' not in portfolio:
+            portfolio['Compliance'] = get_compliance_block()
+    
+    portfolios = apply_compliance_sanitization(portfolios)
+    
+    print("✅ Portefeuilles v2 générés avec succès (fallback + compliance)")
     return portfolios
 
 def build_robust_prompt_v2(structured_data: Dict, allowed_assets: Dict, current_month: str) -> str:
@@ -1585,6 +1695,7 @@ ALLOWED_CRYPTO = {json.dumps(allowed_assets['allowed_crypto'], ensure_ascii=Fals
 - 3 portefeuilles : chacun **12 à 15** lignes (somme Actions+ETF+Obligations+Crypto).
 - **≥2 catégories** par portefeuille (parmi: Actions, ETF, Obligations, Crypto).
 - **Somme des allocations = 100.00** avec **2 décimales**. La **dernière ligne** ajuste pour atteindre 100.00.
+- Inclure un bloc `Compliance` dans chaque portefeuille.
 
 Format JSON strict. Contexte temporel: Portefeuilles pour {current_month} 2025.
 """
@@ -1632,7 +1743,7 @@ ETF OBLIGATAIRES AUTORISÉS:
 
 Format JSON strict:
 {{
-  "Agressif": {{"Commentaire": "...", "Actions": {{"Nom": "X%"}}, "ETF": {{}}, "Obligations": {{}}, "Crypto": {{}}}},
+  "Agressif": {{"Commentaire": "...", "Actions": {{"Nom": "X%"}}, "ETF": {{}}, "Obligations": {{}}, "Crypto": {{}}, "Compliance": {{...}}}},
   "Modéré": {{...}},
   "Stable": {{...}}
 }}
@@ -1661,6 +1772,13 @@ Format JSON strict:
     
     portfolios = json.loads(content)
     
+    # Ajouter compliance
+    for portfolio_name, portfolio in portfolios.items():
+        if 'Compliance' not in portfolio:
+            portfolio['Compliance'] = get_compliance_block()
+    
+    portfolios = apply_compliance_sanitization(portfolios)
+    
     print("✅ Portefeuilles legacy générés avec succès")
     return portfolios
 
@@ -1675,10 +1793,10 @@ def save_portfolios(portfolios):
         with open('portefeuilles.json', 'w', encoding='utf-8') as file:
             json.dump(portfolios, file, ensure_ascii=False, indent=4)
         
-        history_file = f"{history_dir}/portefeuilles_v3_patched_{timestamp}.json"
+        history_file = f"{history_dir}/portefeuilles_v3_compliance_{timestamp}.json"
         with open(history_file, 'w', encoding='utf-8') as file:
             portfolios_with_metadata = {
-                "version": "v3_quantitatif_patched",
+                "version": "v3_quantitatif_compliance_amf",
                 "timestamp": timestamp,
                 "date": datetime.datetime.now().isoformat(),
                 "portfolios": portfolios,
@@ -1688,14 +1806,17 @@ def save_portfolios(portfolios):
                     "validation_anti_fin_cycle",
                     "fallback_crypto_progressif",
                     "cache_univers_hash",
-                    "retry_api_robuste"
+                    "retry_api_robuste",
+                    "compliance_amf",
+                    "sanitisation_marketing",
+                    "disclaimer_automatique"
                 ]
             }
             json.dump(portfolios_with_metadata, file, ensure_ascii=False, indent=4)
         
         update_history_index(history_file, portfolios_with_metadata)
         
-        print(f"✅ Portefeuilles v3 (patched) sauvegardés avec succès dans portefeuilles.json et {history_file}")
+        print(f"✅ Portefeuilles v3 (compliance AMF) sauvegardés avec succès dans portefeuilles.json et {history_file}")
     except Exception as e:
         print(f"❌ Erreur lors de la sauvegarde des portefeuilles: {str(e)}")
 
@@ -1724,7 +1845,7 @@ def update_history_index(history_file, portfolio_data):
         for portfolio_type, portfolio in portfolio_data["portfolios"].items():
             entry["summary"][portfolio_type] = {}
             for category, assets in portfolio.items():
-                if category not in ["Commentaire", "ActifsExclus"]:
+                if category not in ["Commentaire", "ActifsExclus", "Compliance"]:
                     if isinstance(assets, list):
                         count = len(assets)
                     elif isinstance(assets, dict):
@@ -1745,7 +1866,7 @@ def update_history_index(history_file, portfolio_data):
         print(f"⚠️ Avertissement: Erreur lors de la mise à jour de l'index: {str(e)}")
 
 def main():
-    """Version modifiée pour utiliser le système de scoring quantitatif v3 avec tous les patchs."""
+    """Version modifiée pour utiliser le système de scoring quantitatif v3 avec compliance AMF."""
     print("🔍 Chargement des données financières...")
     print("=" * 60)
     
@@ -1844,7 +1965,7 @@ def main():
     
     # ========== GÉNÉRATION DES PORTEFEUILLES AVEC UNIVERS QUANTITATIF ==========
     
-    print("\n🧠 Génération des portefeuilles optimisés v3 (quantitatif + patchs)...")
+    print("\n🧠 Génération des portefeuilles optimisés v3 (quantitatif + compliance AMF)...")
     
     # Préparer le dictionnaire des données filtrées avec l'univers quantitatif
     filtered_data = {
@@ -1868,8 +1989,8 @@ def main():
     print("\n💾 Sauvegarde des portefeuilles...")
     save_portfolios(portfolios)
     
-    print("\n✨ Traitement terminé avec la version v3 quantitative (PATCHED)!")
-    print("🎯 Nouvelles fonctionnalités activées:")
+    print("\n✨ Traitement terminé avec la version v3 quantitative + COMPLIANCE AMF!")
+    print("🎯 Fonctionnalités activées:")
     print("   • Scoring quantitatif (momentum, volatilité, drawdown)")
     print("   • Filtrage automatique des ETF à effet de levier")
     print("   • Détection des actifs sur-étendus")
@@ -1879,6 +2000,12 @@ def main():
     print("   • Fallback crypto progressif")
     print("   • Cache intelligent d'univers (hash fichiers)")
     print("   • Retry API robuste (3 tentatives)")
+    print("   🛡️ COMPLIANCE AMF:")
+    print("     ∘ Langage neutre (pas d'incitation)")
+    print("     ∘ Disclaimer automatique")
+    print("     ∘ Liste des risques")
+    print("     ∘ Méthodologie transparente")
+    print("     ∘ Sanitisation anti-marketing")
 
 def load_json_data(file_path):
     """Charger des données depuis un fichier JSON."""
