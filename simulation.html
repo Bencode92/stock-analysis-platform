@@ -418,8 +418,8 @@
                                   <button class="py-1.5 rounded bg-blue-800 bg-opacity-30 hover:bg-blue-700 text-sm font-medium" data-sensi="10">10%</button>
                                 </div>
 
-                                <!-- ✅ NOUVEAU : Affichage en € constants -->
-                                <div class="mt-4 flex items-center gap-3">
+                                <!-- ✅ CONTRÔLES INFLATION : masqués en mode auto -->
+                                <div id="inflation-controls" class="mt-4 flex items-center gap-3">
                                   <label class="text-sm text-gray-300 flex items-center gap-2">
                                     <input type="checkbox" id="real-terms-toggle" class="w-4 h-4">
                                     Afficher en € constants (inflation)
@@ -591,14 +591,18 @@
                                 <canvas id="investment-chart"></canvas>
                             </div>
 
-                            <!-- ✅ NOUVEAU : Résumé en 1 phrase -->
-                            <p id="result-story" class="mt-2 text-sm text-blue-200"></p>
+                            <!-- ✅ MASQUER la phrase au-dessus du graphique -->
+                            <p id="result-story" class="mt-2 text-sm text-blue-200 hidden"></p>
                             
                             <div id="profile-adequacy" class="bg-blue-900 bg-opacity-20 p-4 rounded-lg border-l-4 border-blue-400">
                                 <h5 class="text-blue-400 font-medium flex items-center mb-2">
                                     <i class="fas fa-check-circle mr-2"></i>
                                     Adéquation avec votre profil
                                 </h5>
+
+                                <!-- ✅ NOUVEAU : One-liner déplacée ici -->
+                                <div id="adequacy-one-liner" class="text-sm text-blue-200 mb-2"></div>
+
                                 <div class="adequacy-score bg-green-900 bg-opacity-20 text-green-400 inline-block px-2 py-1 rounded text-sm font-medium mb-2">
                                     Adéquation: 5/5
                                 </div>
@@ -1567,280 +1571,79 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <!-- Analyses de scénarios -->
                     <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
-                            <i class="fas fa-flask mr-2"></i>
-                            Analyse de scénarios
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <i class="fas fa-chart-area text-green-400 mr-2"></i>
+                            Analyses de scénarios
                         </h3>
-                        
-                        <div class="scenario-block">
-                            <h4 class="font-medium mb-2">Que se passe-t-il en cas de krach boursier ?</h4>
-                            <p class="text-sm text-gray-300 mb-3">Simulation d'une baisse de 30% suivie d'une reprise progressive sur 5 ans.</p>
-                            <button class="text-green-400 text-sm font-medium flex items-center btn-scenario-krach">
-                                Simuler ce scénario <i class="fas fa-chevron-right ml-2"></i>
-                            </button>
-                        </div>
-                        
-                        <div class="scenario-block">
-                            <h4 class="font-medium mb-2">Investissement progressif vs somme forfaitaire</h4>
-                            <p class="text-sm text-gray-300 mb-3">Comparaison entre investir une somme d'un coup ou progressivement.</p>
-                            <button class="text-green-400 text-sm font-medium flex items-center btn-scenario-progressif">
-                                Simuler ce scénario <i class="fas fa-chevron-right ml-2"></i>
-                            </button>
-                        </div>
+                        <p class="text-gray-300 text-sm mb-4">Découvrez les stratégies d'investissement des différents profils et adaptez-les à votre situation.</p>
+                        <ul class="space-y-2 text-sm text-gray-300">
+                            <li>• Profil prudent : 70% fonds euro + 30% UC</li>
+                            <li>• Profil équilibré : 50% actions + 50% obligations</li>
+                            <li>• Profil dynamique : 80% actions + 20% alternatives</li>
+                        </ul>
+                        <a href="scenarios.html" class="inline-block mt-4 text-green-400 hover:text-green-300 transition text-sm">
+                            Voir tous les scénarios →
+                        </a>
                     </div>
                     
-                    <!-- Formations recommandées -->
+                    <!-- Formation investissement -->
                     <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
-                            <i class="fas fa-graduation-cap mr-2"></i>
-                            Formations recommandées
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <i class="fas fa-graduation-cap text-green-400 mr-2"></i>
+                            Formation investissement
                         </h3>
-                        
-                        <div class="space-y-4">
-                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
-                                    <i class="fas fa-chart-line text-green-400"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-medium">L'effet des intérêts composés</h4>
-                                    <p class="text-xs text-gray-400">12 min de lecture</p>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
-                                    <i class="fas fa-file-invoice-dollar text-green-400"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-medium">Choisir le bon véhicule fiscal</h4>
-                                    <p class="text-xs text-gray-400">15 min de lecture</p>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
-                                    <i class="fas fa-balance-scale text-green-400"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-medium">Répartition d'actifs: principes</h4>
-                                    <p class="text-xs text-gray-400">18 min de lecture</p>
-                                </div>
-                            </div>
-                        </div>
+                        <p class="text-gray-300 text-sm mb-4">Apprenez les bases de l'investissement et développez vos compétences financières.</p>
+                        <ul class="space-y-2 text-sm text-gray-300">
+                            <li>• Comprendre les marchés financiers</li>
+                            <li>• Diversification et gestion des risques</li>
+                            <li>• Optimisation fiscale et enveloppes</li>
+                        </ul>
+                        <a href="formation.html" class="inline-block mt-4 text-green-400 hover:text-green-300 transition text-sm">
+                            Accéder aux formations →
+                        </a>
                     </div>
                     
-                    <!-- Questions fréquentes -->
+                    <!-- Calculatrices avancées -->
                     <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
-                            <i class="fas fa-question-circle mr-2"></i>
-                            Questions fréquentes
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <i class="fas fa-calculator text-green-400 mr-2"></i>
+                            Calculatrices avancées
                         </h3>
-                        
-                        <div class="space-y-4">
-                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <h4 class="font-medium mb-1">Comment estimer le rendement ?</h4>
-                                <p class="text-sm text-gray-300">Le rendement dépend de l'actif. Pour les indices boursiers, 7-10% est une estimation historique raisonnable sur le long terme.</p>
-                            </div>
-                            
-                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <h4 class="font-medium mb-1">Quelle durée d'investissement privilégier ?</h4>
-                                <p class="text-sm text-gray-300">Plus la durée est longue, plus l'effet des intérêts composés est puissant. Pour les actions, un horizon de 8-10 ans minimum est recommandé.</p>
-                            </div>
-                            
-                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <h4 class="font-medium mb-1">Quelle enveloppe choisir pour quel objectif ?</h4>
-                                <p class="text-sm text-gray-300">PEA pour les investissements en actions sur le long terme, Assurance-vie pour la flexibilité, PER pour la retraite.</p>
-                            </div>
-                        </div>
+                        <p class="text-gray-300 text-sm mb-4">Outils spécialisés pour des calculs financiers précis et des projections détaillées.</p>
+                        <ul class="space-y-2 text-sm text-gray-300">
+                            <li>• Calculateur de retraite complémentaire</li>
+                            <li>• Simulateur d'immobilier locatif</li>
+                            <li>• Optimiseur d'allocation d'actifs</li>
+                        </ul>
+                        <a href="calculatrices.html" class="inline-block mt-4 text-green-400 hover:text-green-300 transition text-sm">
+                            Découvrir les outils →
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Theme toggle -->
-    <div class="theme-toggle">
-        <button class="theme-toggle-btn">
-            <i class="fas fa-moon"></i>
-        </button>
-    </div>
-
-    <!-- Scripts essentiels -->
-    <script type="module" src="js/simulation.js"></script>
-    <script type="module" src="js/fiscal-optimizer.js"></script>
-    <script type="module" src="js/budget-epargne.js"></script>
-    <script type="module" src="js/loan-simulator.js"></script>
-    <script type="module" src="js/ptz-simulator.js"></script>
-    <!-- Scripts avancés -->
-    <script src="js/simulation-enhancements.js"></script>
-    <script src="js/simulation-fixes.js"></script>
-    <!-- Script de gestion des thèmes -->
+    <!-- ✅ CONFIGURATION INFLATION SERVEUR : Injectée côté serveur -->
     <script>
-        // Mise à jour de l'heure
-        function updateTime() {
-            const now = new Date();
-            const hours = now.getHours().toString().padStart(2, '0');
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            const seconds = now.getSeconds().toString().padStart(2, '0');
-            
-            const timeElement = document.getElementById('marketTime');
-            if (timeElement) {
-                timeElement.textContent = `${hours}:${minutes}:${seconds}`;
-            }
-        }
-
-        // Mettre à jour l'heure toutes les secondes
-        setInterval(updateTime, 1000);
-        updateTime(); // Initialiser immédiatement
-
-        // Toggle theme (placeholder)
-        document.querySelector('.theme-toggle-btn')?.addEventListener('click', function() {
-            console.log('Theme toggle clicked');
-        });
+      // Injecté côté serveur (ex: INSEE / config admin)
+      window.APP_CONFIG = window.APP_CONFIG || {};
+      window.APP_CONFIG.INFLATION = { 
+        mode: 'auto', 
+        annualRate: 0.020,  // 2.0% par an (données INSEE)
+        source: 'INSEE',
+        lastUpdate: '2024-09-15'
+      };
     </script>
-</body>
-</html>
 
-            <!-- Scénarios & Formations -->
-            <div class="mt-12">
-                <h2 class="text-2xl font-bold mb-6 text-green-400 flex items-center">
-                    <i class="fas fa-lightbulb mr-3"></i>
-                    Scénarios et formations
-                </h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Analyses de scénarios -->
-                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
-                            <i class="fas fa-flask mr-2"></i>
-                            Analyse de scénarios
-                        </h3>
-                        
-                        <div class="scenario-block">
-                            <h4 class="font-medium mb-2">Que se passe-t-il en cas de krach boursier ?</h4>
-                            <p class="text-sm text-gray-300 mb-3">Simulation d'une baisse de 30% suivie d'une reprise progressive sur 5 ans.</p>
-                            <button class="text-green-400 text-sm font-medium flex items-center btn-scenario-krach">
-                                Simuler ce scénario <i class="fas fa-chevron-right ml-2"></i>
-                            </button>
-                        </div>
-                        
-                        <div class="scenario-block">
-                            <h4 class="font-medium mb-2">Investissement progressif vs somme forfaitaire</h4>
-                            <p class="text-sm text-gray-300 mb-3">Comparaison entre investir une somme d'un coup ou progressivement.</p>
-                            <button class="text-green-400 text-sm font-medium flex items-center btn-scenario-progressif">
-                                Simuler ce scénario <i class="fas fa-chevron-right ml-2"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Formations recommandées -->
-                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
-                            <i class="fas fa-graduation-cap mr-2"></i>
-                            Formations recommandées
-                        </h3>
-                        
-                        <div class="space-y-4">
-                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
-                                    <i class="fas fa-chart-line text-green-400"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-medium">L'effet des intérêts composés</h4>
-                                    <p class="text-xs text-gray-400">12 min de lecture</p>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
-                                    <i class="fas fa-file-invoice-dollar text-green-400"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-medium">Choisir le bon véhicule fiscal</h4>
-                                    <p class="text-xs text-gray-400">15 min de lecture</p>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
-                                    <i class="fas fa-balance-scale text-green-400"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-medium">Répartition d'actifs: principes</h4>
-                                    <p class="text-xs text-gray-400">18 min de lecture</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Questions fréquentes -->
-                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
-                            <i class="fas fa-question-circle mr-2"></i>
-                            Questions fréquentes
-                        </h3>
-                        
-                        <div class="space-y-4">
-                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <h4 class="font-medium mb-1">Comment estimer le rendement ?</h4>
-                                <p class="text-sm text-gray-300">Le rendement dépend de l'actif. Pour les indices boursiers, 7-10% est une estimation historique raisonnable sur le long terme.</p>
-                            </div>
-                            
-                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <h4 class="font-medium mb-1">Quelle durée d'investissement privilégier ?</h4>
-                                <p class="text-sm text-gray-300">Plus la durée est longue, plus l'effet des intérêts composés est puissant. Pour les actions, un horizon de 8-10 ans minimum est recommandé.</p>
-                            </div>
-                            
-                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <h4 class="font-medium mb-1">Quelle enveloppe choisir pour quel objectif ?</h4>
-                                <p class="text-sm text-gray-300">PEA pour les investissements en actions sur le long terme, Assurance-vie pour la flexibilité, PER pour la retraite.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Theme toggle -->
-    <div class="theme-toggle">
-        <button class="theme-toggle-btn">
-            <i class="fas fa-moon"></i>
-        </button>
-    </div>
-
-    <!-- Scripts essentiels -->
+    <!-- Scripts JavaScript -->
+    <script type="module" src="js/fiscal-enveloppes.js"></script>
     <script type="module" src="js/simulation.js"></script>
-    <script type="module" src="js/fiscal-optimizer.js"></script>
+    <!-- Scripts pour Budget & Épargne -->
     <script type="module" src="js/budget-epargne.js"></script>
+    <!-- Scripts pour le simulateur de prêt -->
     <script type="module" src="js/loan-simulator.js"></script>
+    <!-- Scripts pour le simulateur PTZ -->
     <script type="module" src="js/ptz-simulator.js"></script>
-    <!-- Scripts avancés -->
-    <script src="js/simulation-enhancements.js"></script>
-    <script src="js/simulation-fixes.js"></script>
-    <!-- Script de gestion des thèmes -->
-    <script>
-        // Mise à jour de l'heure
-        function updateTime() {
-            const now = new Date();
-            const hours = now.getHours().toString().padStart(2, '0');
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            const seconds = now.getSeconds().toString().padStart(2, '0');
-            
-            const timeElement = document.getElementById('marketTime');
-            if (timeElement) {
-                timeElement.textContent = `${hours}:${minutes}:${seconds}`;
-            }
-        }
-
-        // Mettre à jour l'heure toutes les secondes
-        setInterval(updateTime, 1000);
-        updateTime(); // Initialiser immédiatement
-
-        // Toggle theme (placeholder)
-        document.querySelector('.theme-toggle-btn')?.addEventListener('click', function() {
-            console.log('Theme toggle clicked');
-        });
-    </script>
 </body>
 </html>
