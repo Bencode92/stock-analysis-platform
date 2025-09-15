@@ -90,34 +90,51 @@ function calcCAGR({ invested, finalValue, years }) {
  * @return {number}                Taux annuel effectif (décimal)
  */
 function calcIRR({ initial, periodic, periodsPerYear, years, finalValue, guess = 0.07 }) {
-    if (periodic === 0 || periodsPerYear === 0) {
-        return calcCAGR({ invested: initial, finalValue, years });
+  // Cas simples → CAGR
+  if (periodic === 0 || !isFinite(periodsPerYear) || periodsPerYear <= 0) {
+    return calcCAGR({ invested: initial, finalValue, years });
+  }
+
+  // ✅ nombre de périodes ENTIER (évite "Invalid array length" quand years est fractionnaire)
+  const nFloat = years * periodsPerYear;
+  const n = Math.max(0, Math.round(nFloat)); // ou Math.floor(nFloat)
+
+  if (n === 0) {
+    return calcCAGR({ invested: initial, finalValue, years: Math.max(1e-9, years) });
+  }
+
+  // Flux de trésorerie : dépôts périodiques + dépôt initial + valeur finale
+  const cf = new Array(n + 1).fill(-periodic);
+  cf[0] = -initial;
+  cf[n] += finalValue;
+
+  // Point de départ = taux périodique ≈ taux annuel / p (borné)
+  let r = Math.max(-0.99, Math.min(1, guess / periodsPerYear));
+
+  // Newton–Raphson sur le taux périodique
+  for (let k = 0; k < 100; k++) {
+    let f = 0, fp = 0;
+    const onePlusR = 1 + r;
+
+    for (let t = 0; t <= n; t++) {
+      const v = Math.pow(onePlusR, -t);
+      f  += cf[t] * v;
+      fp += -t * cf[t] * v / onePlusR;
     }
 
-    const n  = years * periodsPerYear;
-    const cf = Array(n + 1).fill(-periodic);
-    cf[0] = -initial;
-    cf[n] += finalValue;
+    if (Math.abs(fp) < 1e-14) break;
 
-    // Point de départ = taux périodique ≈ taux annuel / p
-    let r = guess / periodsPerYear;
+    const step = f / fp;
+    const newR = r - step;
 
-    for (let k = 0; k < 100; k++) {
-        let f = 0, fp = 0;
-        for (let t = 0; t <= n; t++) {
-            const v = Math.pow(1 + r, -t);
-            f  += cf[t] * v;
-            fp += -t * cf[t] * v / (1 + r);
-        }
-        if (Math.abs(fp) < 1e-12) break;
+    // Bornes de sûreté (−99% à +100% par période)
+    r = Math.max(-0.99, Math.min(1, newR));
 
-        const newR = r - f / fp;
-        r = Math.max(-0.99, Math.min(1, newR));   // Borne entre −99% et +100% /période
+    if (Math.abs(step) < 1e-12) break; // Convergence
+  }
 
-        if (Math.abs(newR - r) < 1e-10) break;    // Convergence
-    }
-
-    return Math.pow(1 + r, periodsPerYear) - 1;   // Taux annuel effectif
+  // Convertit le taux périodique en taux annuel effectif
+  return Math.pow(1 + r, periodsPerYear) - 1;
 }
 
 // ============================================
