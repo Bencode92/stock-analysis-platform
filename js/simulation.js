@@ -814,184 +814,191 @@ window.resetFeesToPreset = resetFeesToPreset;
 window.setAllFeesZero = setAllFeesZero;
 
 document.addEventListener('DOMContentLoaded', function() {
-    // ✅ NOUVEAU : Masquer les contrôles inflation si mode auto
-    if (window.APP_CONFIG?.INFLATION?.mode === 'auto') {
-        document.getElementById('inflation-controls')?.classList.add('hidden');
-    }
+  // ✅ Masquer les contrôles inflation si mode auto
+  if (window.APP_CONFIG?.INFLATION?.mode === 'auto') {
+    document.getElementById('inflation-controls')?.classList.add('hidden');
+  }
 
-    // Mettre à jour la date du jour
-    updateDate();
-    
-    // Initialiser le graphique
-    createChart();
-    
-    // Ajouter des événements aux sliders
-    document.getElementById('duration-slider')?.addEventListener('input', function() {
-        updateDurationValue(this.value);
-    });
-    
-    document.getElementById('return-slider')?.addEventListener('input', function() {
-        updateReturnValue(this.value);
-    });
-    
-    // Ajouter un événement au bouton de simulation
-    document.getElementById('simulate-button')?.addEventListener('click', runSimulation);
-    
-    // Ajouter un événement au sélecteur d'enveloppe fiscale
-    document.getElementById('investment-vehicle')?.addEventListener('change', function() {
-        updateTaxInfo();
-        updateReturnSuggestions();
-        updateFeeSuggestionsByVehicle(); // Application automatique (respecte les modifications utilisateur)
-        
-        // Relancer la simulation si déjà des résultats
-        if (document.querySelector('.result-value')?.textContent !== '') {
-            runSimulation();
-        }
-    });
-    
-    // AJOUT : Gestion du changement de mode d'investissement (unique/périodique)
-    const uniqueBtn = document.getElementById('unique-investment');
-    const periodicBtn = document.getElementById('periodic-investment');
-    
-    if (uniqueBtn && periodicBtn) {
-        uniqueBtn.addEventListener('click', () => {
-            toggleInvestmentMode('unique');
-            checkPlafondLimits(); // Garde l'alerte plafond
-            updateFixedFeeTooltip(); // Mettre à jour le tooltip selon le mode
-        });
-        
-        periodicBtn.addEventListener('click', () => {
-            toggleInvestmentMode('periodic'); // Utilisation cohérente du terme 'periodic'
-            checkPlafondLimits(); // Garde l'alerte plafond
-            updateFixedFeeTooltip(); // Mettre à jour le tooltip selon le mode
-        });
-    }
+  // Mise à jour date + graphique
+  updateDate();
+  createChart();
 
-    // ✅ NOUVEAU : Listener pour le changement de fréquence
-    const frequencySelect = document.getElementById('investment-frequency');
-    if (frequencySelect) {
-        frequencySelect.addEventListener('change', function() {
-            updateFixedFeeTooltip();
-            // Relancer la simulation si déjà des résultats
-            if (document.querySelector('.result-value')?.textContent !== '') {
-                runSimulation();
-            }
-        });
-    }
-    
-    // ✅ NOUVEAU : Listeners inflation + boutons 5/7/10
-    document.getElementById('real-terms-toggle')?.addEventListener('change', () => runSimulation());
-    document.getElementById('inflation-rate')?.addEventListener('input', () => {
-      // pas de recalcul complexe — relance simple
+  // Sliders durée / rendement
+  document.getElementById('duration-slider')?.addEventListener('input', function () {
+    updateDurationValue(this.value);
+  });
+  document.getElementById('return-slider')?.addEventListener('input', function () {
+    updateReturnValue(this.value);
+  });
+
+  // Bouton simulation
+  document.getElementById('simulate-button')?.addEventListener('click', runSimulation);
+
+  // Changement d’enveloppe
+  document.getElementById('investment-vehicle')?.addEventListener('change', function () {
+    updateTaxInfo();
+    updateReturnSuggestions();
+    updateFeeSuggestionsByVehicle(); // respecte modifications utilisateur
+    if (document.querySelector('.result-value')?.textContent !== '') runSimulation();
+  });
+
+  // Toggle unique / périodique
+  const uniqueBtn   = document.getElementById('unique-investment');
+  const periodicBtn = document.getElementById('periodic-investment');
+  if (uniqueBtn && periodicBtn) {
+    uniqueBtn.addEventListener('click', () => {
+      toggleInvestmentMode('unique');
+      checkPlafondLimits();
+      updateFixedFeeTooltip();
+    });
+    periodicBtn.addEventListener('click', () => {
+      toggleInvestmentMode('periodic');
+      checkPlafondLimits();
+      updateFixedFeeTooltip();
+    });
+  }
+
+  // Changement de fréquence (principal)
+  const frequencySelect = document.getElementById('investment-frequency');
+  if (frequencySelect) {
+    frequencySelect.addEventListener('change', function () {
+      updateFixedFeeTooltip();
+      if (document.querySelector('.result-value')?.textContent !== '') runSimulation();
+    });
+  }
+
+  // 🔗 Sync fréquence "Objectifs" <-> fréquence principale
+  const gf = document.getElementById('goal-frequency');
+  const mf = document.getElementById('investment-frequency');
+  if (gf && mf) {
+    gf.value = mf.value || 'monthly';                // init
+    mf.addEventListener('change', e => { gf.value = e.target.value; }); // sync continu
+  }
+
+  // Inflation + presets 5/7/10
+  document.getElementById('real-terms-toggle')?.addEventListener('change', () => runSimulation());
+  document.getElementById('inflation-rate')?.addEventListener('input', () => runSimulation());
+  document.querySelectorAll('#sensi-row [data-sensi]')?.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const v = parseFloat(btn.getAttribute('data-sensi'));
+      const slider = document.getElementById('return-slider');
+      if (slider) { slider.value = v; updateReturnValue(v); }
       runSimulation();
     });
+  });
 
-    document.querySelectorAll('#sensi-row [data-sensi]')?.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const v = parseFloat(btn.getAttribute('data-sensi'));
-        const slider = document.getElementById('return-slider');
-        if (slider) { slider.value = v; updateReturnValue(v); }
-        runSimulation();
+  // 🔁 (REMPLACE L’ANCIEN) — Handler "Objectifs > Calculer"
+  document.getElementById('goal-run')?.addEventListener('click', () => {
+    const target       = Math.max(1, parseFloat(document.getElementById('goal-target')?.value) || 0);
+    const years        = parseFloat(document.getElementById('duration-slider')?.value || 10);
+    const annualReturn = parseFloat(document.getElementById('return-slider')?.value || 7) / 100;
+    const vehicleId    = document.getElementById('investment-vehicle')?.value || 'pea';
+    const fees         = readFeeParams();
+    const mode         = document.getElementById('goal-mode')?.value || 'periodic-for-target';
+
+    // Respecte le mode de l'UI (pas de périodique si "Unique" sélectionné)
+    const isPeriodicUI   = document.getElementById('periodic-investment')?.classList.contains('selected');
+    const frequency      = (document.getElementById('goal-frequency')?.value ||
+                            document.getElementById('investment-frequency')?.value || 'monthly');
+    const initialDeposit = parseFloat(document.getElementById('initial-investment-amount')?.value) || 0;
+
+    const periodicInputEl = document.getElementById('periodic-investment-amount');
+    const periodicUI      = isPeriodicUI ? (parseFloat(periodicInputEl?.value) || 0) : 0;
+
+    let html = '';
+
+    if (mode === 'periodic-for-target') {
+      // Cherche le versement périodique nécessaire (en tenant compte du dépôt initial)
+      const { periodic, results } = goalSeekPeriodicForTarget({
+        target, years, initialDeposit, annualReturn, vehicleId, fees, frequency
       });
-    });
-    
-    // ✅ MODIFIÉ : Event listeners pour goal-seek (ne pollue plus le panneau principal)
-    document.getElementById('goal-run')?.addEventListener('click', () => {
-        const target = Math.max(1, parseFloat(document.getElementById('goal-target')?.value)||0);
-        const years = parseInt(document.getElementById('duration-slider')?.value || 10);
-        const annualReturn = parseFloat(document.getElementById('return-slider')?.value || 7)/100;
-        const vehicleId = document.getElementById('investment-vehicle')?.value || 'pea';
-        const frequency = document.getElementById('goal-frequency')?.value || 'monthly';
-        const mode = document.getElementById('goal-mode')?.value || 'periodic-for-target';
-        const fees = readFeeParams();
-        const initialDeposit = parseFloat(document.getElementById('initial-investment-amount')?.value)||0;
-        const periodicUI = parseFloat(document.getElementById('periodic-investment-amount')?.value)||0;
+      const initialPart = initialDeposit > 0 ? ` (avec ${formatMoney(initialDeposit)} au départ)` : '';
+      html = `Pour atteindre <b>${formatMoney(target)}</b> en ${years} ans (net d'impôts),
+              il faut environ <b>${formatMoney(periodic)}</b> par ${freqLabelFR(frequency)}${initialPart}
+              via ${results.enveloppe?.label}.`;
+    } else {
+      // Cherche la durée nécessaire avec les MONTANTS ACTUELS de l’UI
+      const { years: y, results, unreachable, triedYears } = goalSeekYearsForTarget({
+        target,
+        initialDeposit,
+        periodicAmount: periodicUI, // = 0 si mode unique
+        annualReturn,
+        vehicleId,
+        fees,
+        frequency
+      });
 
-        let html = '';
+      const initialPart = initialDeposit > 0 ? ` (avec ${formatMoney(initialDeposit)} au départ)` : '';
 
-        if (mode === 'periodic-for-target') {
-            const { periodic, results } = goalSeekPeriodicForTarget({
-                target, years, initialDeposit, annualReturn, vehicleId, fees, frequency
-            });
-            html = `Pour atteindre <b>${formatMoney(target)}</b> en ${years} ans (net d'impôts),
-                    il faut environ <b>${formatMoney(periodic)}</b> par ${freqLabelFR(frequency)} via ${results.enveloppe?.label}.`;
+      if (unreachable) {
+        const labelFreq = isPeriodicUI && periodicUI > 0 ? '/' + freqLabelFR(frequency) : '';
+        html = `Avec <b>${formatMoney(periodicUI)}</b>${labelFreq}, l'objectif <b>${formatMoney(target)}</b>
+                n'est pas atteignable en ${triedYears} ans. Augmentez le versement, la durée ou le rendement.`;
+      } else {
+        if (isPeriodicUI && periodicUI > 0) {
+          html = `Avec <b>${formatMoney(periodicUI)}</b> par ${freqLabelFR(frequency)}${initialPart},
+                  il faut environ <b>${y.toFixed(1)} ans</b> pour atteindre <b>${formatMoney(target)}</b>
+                  (net via ${results.enveloppe?.label}).`;
         } else {
-            const { years: y, results, unreachable, triedYears } = goalSeekYearsForTarget({
-                target, initialDeposit, periodicAmount: periodicUI, annualReturn, vehicleId, fees, frequency
-            });
-            if (unreachable) {
-                html = `Avec <b>${formatMoney(periodicUI)}</b> par ${freqLabelFR(frequency)}, l'objectif <b>${formatMoney(target)}</b> n'est pas atteignable en ${triedYears} ans. Augmentez le versement, la durée ou le rendement.`;
-            } else {
-                html = `Avec <b>${formatMoney(periodicUI)}</b> par ${freqLabelFR(frequency)}, il faut environ <b>${y.toFixed(1)} ans</b> pour atteindre <b>${formatMoney(target)}</b> (net via ${results.enveloppe?.label}).`;
-            }
+          html = `Sans versements périodiques${initialPart}, il faut environ <b>${y.toFixed(1)} ans</b>
+                  pour atteindre <b>${formatMoney(target)}</b> (net via ${results.enveloppe?.label}).`;
         }
+      }
+    }
 
-        document.getElementById('goal-result').innerHTML = html;
-    });
+    document.getElementById('goal-result').innerHTML = html;
+  });
 
-    // ✅ NOUVEAU : UX micro-interactions goal-seek
-    document.getElementById('goal-mode')?.addEventListener('change', (e)=>{
-        document.getElementById('goal-frequency-wrap').style.display = (e.target.value==='periodic-for-target')?'block':'none';
-    });
-    
-    // ✅ NOUVEAU : Event listeners pour scénarios
-    document.getElementById('scenario-save')?.addEventListener('click', saveScenario);
-    document.getElementById('scenario-clear')?.addEventListener('click', clearScenarios);
-    
-    // ✅ NOUVEAU : Event listeners pour comparateur
-    document.querySelector('[data-target="envelope-compare"]')?.addEventListener('click', buildCompare);
-    
-    // ✅ NOUVEAU : Auto-refresh du comparateur sur changement paramètres
-    ['investment-vehicle','investment-frequency','periodic-investment-amount','initial-investment-amount','duration-slider','return-slider']
-        .forEach(id => document.getElementById(id)?.addEventListener('input', ()=> {
-            if (document.querySelector('.simulation-tab.active')?.getAttribute('data-target')==='envelope-compare') buildCompare();
-        }));
-    
-    // Initialiser les onglets de simulation
-    initSimulationTabs();
+  // Micro-UX Objectifs
+  document.getElementById('goal-mode')?.addEventListener('change', (e) => {
+    document.getElementById('goal-frequency-wrap').style.display =
+      (e.target.value === 'periodic-for-target') ? 'block' : 'none';
+  });
 
-    // Initialiser les listeners pour le calculateur fiscal si la section existe
-    initFiscalCalculator();
-    
-    // Écouter le changement sur les éléments de budget dans le simulateur
-    const simulationBudgetInputs = [
-        document.getElementById('simulation-budget-loyer'),
-        document.getElementById('simulation-budget-quotidien'),
-        document.getElementById('simulation-budget-extra'),
-        document.getElementById('simulation-budget-invest')
-    ];
-    
-    simulationBudgetInputs.forEach(input => {
-        if (input) {
-            input.addEventListener('change', function() {
-                if (document.querySelector('.result-value')?.textContent !== '') {
-                    runSimulation();
-                }
-            });
-        }
-    });
+  // Scénarios
+  document.getElementById('scenario-save')?.addEventListener('click', saveScenario);
+  document.getElementById('scenario-clear')?.addEventListener('click', clearScenarios);
 
-    // NOUVEAU : Ajouter un bouton de reset des frais près des champs de frais
-    addFeeResetButton();
+  // Comparateur
+  document.querySelector('[data-target="envelope-compare"]')?.addEventListener('click', buildCompare);
+  ['investment-vehicle','investment-frequency','periodic-investment-amount','initial-investment-amount','duration-slider','return-slider']
+    .forEach(id => document.getElementById(id)?.addEventListener('input', () => {
+      if (document.querySelector('.simulation-tab.active')?.getAttribute('data-target') === 'envelope-compare') {
+        buildCompare();
+      }
+    }));
 
-    // ✅ NOUVEAU : Initialiser le tooltip des frais fixes
-    setTimeout(() => {
-        updateFixedFeeTooltip();
-    }, 500); // Petit délai pour s'assurer que le DOM est entièrement chargé
+  // Onglets + calculateur fiscal
+  initSimulationTabs();
+  initFiscalCalculator();
 
-    // ✅ NOUVEAU : Initialiser UI périodique
-    setTimeout(() => {
-        updatePeriodicUI();
-    }, 100);
+  // Budget → relance si résultats déjà affichés
+  [
+    document.getElementById('simulation-budget-loyer'),
+    document.getElementById('simulation-budget-quotidien'),
+    document.getElementById('simulation-budget-extra'),
+    document.getElementById('simulation-budget-invest')
+  ].forEach(input => {
+    if (input) {
+      input.addEventListener('change', function () {
+        if (document.querySelector('.result-value')?.textContent !== '') runSimulation();
+      });
+    }
+  });
 
-    // ✅ NOUVEAU : Event listeners pour UI périodique
-    document.getElementById('investment-frequency')?.addEventListener('change', updatePeriodicUI);
-    document.getElementById('periodic-investment-amount')?.addEventListener('input', updatePeriodicUI);
-    document.getElementById('periodic-investment')?.addEventListener('click', () => setTimeout(updatePeriodicUI, 0));
-    document.getElementById('unique-investment')?.addEventListener('click', () => setTimeout(updatePeriodicUI, 0));
-    
-    // ✅ NOUVEAU : Initialiser le tableau de scénarios
-    renderScenarioTable();
+  // UI frais : boutons utilitaires + tooltips
+  addFeeResetButton();
+  setTimeout(() => { updateFixedFeeTooltip(); }, 500);
+
+  // UI périodique : init + listeners
+  setTimeout(() => { updatePeriodicUI(); }, 100);
+  document.getElementById('investment-frequency')?.addEventListener('change', updatePeriodicUI);
+  document.getElementById('periodic-investment-amount')?.addEventListener('input', updatePeriodicUI);
+  document.getElementById('periodic-investment')?.addEventListener('click', () => setTimeout(updatePeriodicUI, 0));
+  document.getElementById('unique-investment')?.addEventListener('click', () => setTimeout(updatePeriodicUI, 0));
+
+  // Table des scénarios
+  renderScenarioTable();
 });
 
 /**
