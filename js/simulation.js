@@ -445,9 +445,6 @@ function goalSeekPeriodicForTarget({ target, years, initialDeposit, annualReturn
   return { periodic, results };
 }
 
-Voici une version **robuste et fonctionnelle** du goal-seek sur la **durée** (vise le **net d’impôts**).
-Elle gère les cas limites, élargit la fenêtre si besoin, mémorise les évaluations pour éviter les recalculs et retourne un indicateur `unreachable` si la cible n’est pas atteignable dans la borne haute.
-
 // ✅ Goal-seek de la DURÉE pour atteindre un montant NET d'impôts donné
 function goalSeekYearsForTarget({
   target,
