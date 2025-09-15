@@ -1,4 +1,4 @@
-// Module MC adapté pour ETFs - v4.9.4 avec volatilité intelligente (3y→1y→SI)
+// Module MC adapté pour ETFs - v4.9.5 avec filtrage intelligent volatilité
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const num=x=>Number.isFinite(+x)?+x:NaN, str=s=>s==null?'':String(s);
@@ -6,6 +6,8 @@
   
   // Seuil pour ignorer les valeurs quasi-zéro
   const ZERO_EPS = 0.01;
+  // ✨ Seuil minimum pour volatilité valide (éviter les 0.0%)
+  const MIN_VALID_VOL = 0.5; // 0.5% minimum
   
   // Helpers d'identification
   const getTicker = (e) => e?.ticker || e?.symbol || e?.isin || '';
@@ -46,15 +48,15 @@
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results');
     const summary=document.getElementById('etf-mc-summary');
-    if(!root||!results){console.error('❌ ETF MC v4.9.4: DOM manquant');return;}
-    console.log('✅ ETF MC v4.9.4: Volatilité intelligente (3y→1y→SI) + Ultra-smooth DnD');
+    if(!root||!results){console.error('❌ ETF MC v4.9.5: DOM manquant');return;}
+    console.log('✅ ETF MC v4.9.5: Filtrage intelligent volatilité (exclusion 0.0%)');
 
     // Harmonisation du conteneur
     results.classList.add('glassmorphism','rounded-lg','p-4');
 
     // Styles harmonisés avec nouveau drag&drop ultra-fluide + badges volatilité
-    if(!document.getElementById('etf-mc-v494-styles')){
-      const s=document.createElement('style'); s.id='etf-mc-v494-styles'; s.textContent=`
+    if(!document.getElementById('etf-mc-v495-styles')){
+      const s=document.createElement('style'); s.id='etf-mc-v495-styles'; s.textContent=`
       #etf-mc-results { display:block }
       #etf-mc-results .space-y-2 > div { margin-bottom: .75rem }
       #etf-mc-results .etf-card{
@@ -165,7 +167,7 @@
     const cache = {};
     const masks = { facets:null, custom:null, final:null };
 
-    // ==== MÉTRIQUES AVEC VOLATILITÉ AMÉLIORÉE ====
+    // ==== MÉTRIQUES AVEC VOLATILITÉ AMÉLIORÉE ET FILTRAGE ====
     const classify=e=>{
       const ft=str(e.fund_type).toLowerCase();
       const dataset=str(e.dataset).toLowerCase();
@@ -174,14 +176,20 @@
       return 'equity';
     };
     
+    // ✨ Helper pour volatilité valide (éviter 0.0%)
+    const getValidVolatility = (e) => {
+      const vol = num(e.vol_pct) || num(e.vol_3y_pct);
+      return (Number.isFinite(vol) && vol >= MIN_VALID_VOL) ? vol : NaN;
+    };
+    
     const METRICS={
       ter:{label:'TER',unit:'%',max:false,get:e=>num(e.total_expense_ratio)*100},
       aum:{label:'AUM',unit:'$M',max:true,get:e=>num(e.aum_usd)/1e6},
       return_1d:{label:'Jour',unit:'%',max:true,get:e=>num(e.daily_change_pct)},
       return_ytd:{label:'YTD',unit:'%',max:true,get:e=>num(e.ytd_return_pct)},
       return_1y:{label:'1 An',unit:'%',max:true,get:e=>num(e.one_year_return_pct)},
-      // ✨ VOLATILITÉ AMÉLIORÉE : utilise vol_pct (3y→1y→SI) avec fallback vol_3y_pct
-      volatility:{label:'Vol',unit:'%',max:false,get:e=>num(e.vol_pct) || num(e.vol_3y_pct)},
+      // ✨ VOLATILITÉ FILTRÉE : exclut les valeurs < 0.5%
+      volatility:{label:'Vol',unit:'%',max:false,get:getValidVolatility},
       dividend_yield:{label:'Div',unit:'%',max:true,get:e=>num(e.yield_ttm)*100},
       yield_net:{label:'Rdt net',unit:'%',max:true,get:e=>{
         if(classify(e)!=='bonds') return NaN;
@@ -832,7 +840,7 @@
       return out.slice(0,TOP_N).map(x=>({e:state.data[x.i], score:x.score}));
     }
 
-    // ==== RENDU AVEC BADGES VOLATILITÉ ====
+    // ==== RENDU AVEC FILTRAGE VOLATILITÉ ====
     const fmt=(n,d=1)=>Number.isFinite(+n)?(+n).toFixed(d):'—';
     function render(entries){
       results.innerHTML = '<div class="space-y-2"></div>';
@@ -867,8 +875,8 @@
             if(m==='volatility') return raw<10?'g':raw<20?'g':'y';
             return raw>=0?'g':'r';
           };
-          // ✨ BADGE VOLATILITÉ : Afficher la fenêtre de calcul
-          const volBadge = (m === 'volatility' && e.vol_window) ? 
+          // ✨ BADGE VOLATILITÉ : Afficher la fenêtre de calcul (seulement si valide)
+          const volBadge = (m === 'volatility' && e.vol_window && Number.isFinite(raw)) ? 
             `<span class="vol-badge vol-${e.vol_window}">${e.vol_window}</span>` : '';
           
           return `<div class="metric-col"><div class="k">${d.label}${volBadge}</div><div class="v ${color()}">${renderVal()}</div></div>`;
