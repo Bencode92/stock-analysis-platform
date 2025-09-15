@@ -1,136 +1,178 @@
 {
-  "Agressif": {
-    "Commentaire": "Portefeuille dynamique orienté croissance, capitalisant sur les tendances technologiques et la transformation numérique. L'allocation privilégie les secteurs en forte expansion avec une exposition mesurée aux crypto-actifs pour capturer l'innovation financière.",
-    "Actions": {
-      "Microsoft Corporation": "12%",
-      "NVIDIA Corporation": "10%",
-      "Apple Inc.": "8%",
-      "Amazon.com Inc.": "7%",
-      "Alphabet Inc.": "6%",
-      "Meta Platforms": "5%"
-    },
-    "ETF": {
-      "Vanguard S&P 500 ETF": "15%",
-      "iShares MSCI Emerging Markets": "10%",
-      "ARK Innovation ETF": "8%"
-    },
-    "Obligations": {
-      "iShares Euro Government Bond 3-5yr": "10%"
-    },
-    "Crypto": {
-      "Bitcoin": "5%",
-      "Ethereum": "4%"
-    },
-    "ActifsExclus": [
-      {
-        "name": "Tesla Inc",
-        "reason": "Valorisation élevée après forte hausse YTD",
-        "refs": ["BR1", "SEC2"]
-      }
+    "Portefeuilles": [
+        {
+            "Nom": "Portefeuille Agressif",
+            "Description": "Ce portefeuille vise une croissance élevée avec une tolérance au risque supérieure, en se concentrant sur les actions et les cryptomonnaies.",
+            "Actifs": [
+                {
+                    "id": "EQ_4",
+                    "allocation": 8.0
+                },
+                {
+                    "id": "EQ_18",
+                    "allocation": 7.0
+                },
+                {
+                    "id": "EQ_8",
+                    "allocation": 6.0
+                },
+                {
+                    "id": "EQ_1",
+                    "allocation": 5.0
+                },
+                {
+                    "id": "EQ_19",
+                    "allocation": 5.0
+                },
+                {
+                    "id": "CR_1",
+                    "allocation": 14.0
+                },
+                {
+                    "id": "CR_2",
+                    "allocation": 12.0
+                },
+                {
+                    "id": "CR_3",
+                    "allocation": 10.0
+                },
+                {
+                    "id": "CR_4",
+                    "allocation": 8.0
+                },
+                {
+                    "id": "CR_5",
+                    "allocation": 7.0
+                },
+                {
+                    "id": "ETF_s9",
+                    "allocation": 5.0
+                },
+                {
+                    "id": "ETF_s15",
+                    "allocation": 3.0
+                },
+                {
+                    "allocation": 0.0
+                }
+            ]
+        },
+        {
+            "Nom": "Portefeuille Modéré",
+            "Description": "Équilibré entre croissance et sécurité, ce portefeuille combine des actions, des ETFs et des obligations pour une approche modérée.",
+            "Actifs": [
+                {
+                    "id": "EQ_2",
+                    "allocation": 8.0
+                },
+                {
+                    "id": "EQ_13",
+                    "allocation": 7.0
+                },
+                {
+                    "id": "EQ_6",
+                    "allocation": 6.0
+                },
+                {
+                    "id": "EQ_23",
+                    "allocation": 5.0
+                },
+                {
+                    "id": "EQ_24",
+                    "allocation": 5.0
+                },
+                {
+                    "id": "ETF_s1",
+                    "allocation": 8.0
+                },
+                {
+                    "id": "ETF_s2",
+                    "allocation": 7.0
+                },
+                {
+                    "id": "ETF_s3",
+                    "allocation": 6.0
+                },
+                {
+                    "id": "ETF_b1",
+                    "allocation": 10.0
+                },
+                {
+                    "id": "ETF_b2",
+                    "allocation": 8.0
+                },
+                {
+                    "id": "ETF_b3",
+                    "allocation": 7.0
+                },
+                {
+                    "id": "ETF_b4",
+                    "allocation": 5.0
+                },
+                {
+                    "allocation": 7.0
+                }
+            ]
+        },
+        {
+            "Nom": "Portefeuille Stable",
+            "Description": "Conçu pour minimiser le risque tout en offrant un rendement stable grâce à une combinaison d'obligations, d'ETFs et d'actions à faible volatilité.",
+            "Actifs": [
+                {
+                    "id": "EQ_9",
+                    "allocation": 10.0
+                },
+                {
+                    "id": "EQ_10",
+                    "allocation": 9.0
+                },
+                {
+                    "id": "EQ_17",
+                    "allocation": 8.0
+                },
+                {
+                    "id": "EQ_20",
+                    "allocation": 7.0
+                },
+                {
+                    "id": "EQ_22",
+                    "allocation": 6.0
+                },
+                {
+                    "id": "ETF_s4",
+                    "allocation": 8.0
+                },
+                {
+                    "id": "ETF_s5",
+                    "allocation": 7.0
+                },
+                {
+                    "id": "ETF_s6",
+                    "allocation": 6.0
+                },
+                {
+                    "id": "ETF_b5",
+                    "allocation": 10.0
+                },
+                {
+                    "id": "ETF_b6",
+                    "allocation": 8.0
+                },
+                {
+                    "id": "ETF_b7",
+                    "allocation": 6.0
+                },
+                {
+                    "id": "ETF_b8",
+                    "allocation": 5.0
+                },
+                {
+                    "allocation": 10.0
+                }
+            ]
+        }
     ],
     "Compliance": {
-      "jurisdiction": "FR",
-      "disclaimer": "Information à caractère purement indicatif et pédagogique. Ce contenu ne constitue ni un conseil en investissement, ni une recommandation personnalisée, ni une sollicitation d'achat/vente. Performances passées non indicatives des performances futures. Vous restez seul responsable de vos décisions.",
-      "risk_notice": [
-        "Les crypto-actifs sont très volatils et peuvent entraîner une perte totale.",
-        "Les ETF à effet de levier et produits inverses sont exclus.",
-        "Diversification et horizon d'investissement requis.",
-        "Risques de change pour les actifs internationaux.",
-        "Risque de liquidité sur certains marchés."
-      ],
-      "sources": ["Données de marché publiques/CSV internes"],
-      "last_update": "2025-09-15T14:00:00Z"
+        "Règles": "Chaque portefeuille respecte les règles d'allocation, de diversification et de conformité aux listes d'actifs autorisés."
     }
-  },
-  "Modéré": {
-    "Commentaire": "Allocation équilibrée recherchant un compromis entre croissance et stabilité. La diversification sectorielle et géographique vise à limiter la volatilité tout en maintenant un potentiel de performance attractif.",
-    "Actions": {
-      "Microsoft Corporation": "8%",
-      "Johnson & Johnson": "6%",
-      "Procter & Gamble": "5%",
-      "Berkshire Hathaway": "5%",
-      "JPMorgan Chase": "4%",
-      "Visa Inc.": "4%"
-    },
-    "ETF": {
-      "Vanguard Total Stock Market": "15%",
-      "iShares Core MSCI Europe": "12%",
-      "SPDR Gold Shares": "8%"
-    },
-    "Obligations": {
-      "iShares Euro Government Bond 3-5yr": "15%",
-      "Xtrackers II Eurozone Government Bond": "10%",
-      "iShares Core Euro Corporate Bond": "8%"
-    },
-    "Crypto": {
-      "Bitcoin": "3%",
-      "Ethereum": "2%"
-    },
-    "ActifsExclus": [
-      {
-        "name": "GameStop Corp",
-        "reason": "Volatilité excessive et fondamentaux fragiles",
-        "refs": ["MC1", "SEC3"]
-      }
-    ],
-    "Compliance": {
-      "jurisdiction": "FR",
-      "disclaimer": "Information à caractère purement indicatif et pédagogique. Ce contenu ne constitue ni un conseil en investissement, ni une recommandation personnalisée, ni une sollicitation d'achat/vente. Performances passées non indicatives des performances futures. Vous restez seul responsable de vos décisions.",
-      "risk_notice": [
-        "Les crypto-actifs sont très volatils et peuvent entraîner une perte totale.",
-        "Les ETF à effet de levier et produits inverses sont exclus.",
-        "Diversification et horizon d'investissement requis.",
-        "Risques de change pour les actifs internationaux.",
-        "Risque de liquidité sur certains marchés."
-      ],
-      "sources": ["Données de marché publiques/CSV internes"],
-      "last_update": "2025-09-15T14:00:00Z"
-    }
-  },
-  "Stable": {
-    "Commentaire": "Portefeuille défensif privilégiant la préservation du capital avec une exposition limitée aux actifs risqués. L'accent est mis sur les obligations de qualité et les actions défensives à dividendes stables.",
-    "Actions": {
-      "Nestlé SA": "5%",
-      "Johnson & Johnson": "5%",
-      "Coca-Cola Company": "4%",
-      "Verizon Communications": "4%",
-      "Walmart Inc.": "3%",
-      "Colgate-Palmolive": "3%"
-    },
-    "ETF": {
-      "Vanguard Dividend Appreciation": "10%",
-      "iShares Core US Aggregate Bond": "12%",
-      "SPDR S&P Dividend ETF": "8%"
-    },
-    "Obligations": {
-      "iShares Euro Government Bond 3-5yr": "20%",
-      "Xtrackers II Eurozone Government Bond": "15%",
-      "Lyxor Euro Government Bond": "10%",
-      "iShares Euro Corporate Bond Large Cap": "8%"
-    },
-    "Crypto": {
-      "Bitcoin": "2%",
-      "Stablecoin USDC": "1%"
-    },
-    "ActifsExclus": [
-      {
-        "name": "Palantir Technologies",
-        "reason": "Profil de risque inadapté pour un portefeuille stable",
-        "refs": ["BR3", "TH2"]
-      }
-    ],
-    "Compliance": {
-      "jurisdiction": "FR",
-      "disclaimer": "Information à caractère purement indicatif et pédagogique. Ce contenu ne constitue ni un conseil en investissement, ni une recommandation personnalisée, ni une sollicitation d'achat/vente. Performances passées non indicatives des performances futures. Vous restez seul responsable de vos décisions.",
-      "risk_notice": [
-        "Les crypto-actifs sont très volatils et peuvent entraîner une perte totale.",
-        "Les ETF à effet de levier et produits inverses sont exclus.",
-        "Diversification et horizon d'investissement requis.",
-        "Risques de change pour les actifs internationaux.",
-        "Risque de liquidité sur certains marchés."
-      ],
-      "sources": ["Données de marché publiques/CSV internes"],
-      "last_update": "2025-09-15T14:00:00Z"
-    }
-  }
 }
