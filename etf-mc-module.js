@@ -1,4 +1,4 @@
-// Module MC adapté pour ETFs - v4.9.3 avec fix écouteurs dupliqués + drag&drop ultra-fluide
+// Module MC adapté pour ETFs - v4.9.4 avec volatilité intelligente (3y→1y→SI)
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const num=x=>Number.isFinite(+x)?+x:NaN, str=s=>s==null?'':String(s);
@@ -46,15 +46,15 @@
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results');
     const summary=document.getElementById('etf-mc-summary');
-    if(!root||!results){console.error('❌ ETF MC v4.9.3: DOM manquant');return;}
-    console.log('✅ ETF MC v4.9.3: Fix écouteurs dupliqués + Ultra-smooth DnD');
+    if(!root||!results){console.error('❌ ETF MC v4.9.4: DOM manquant');return;}
+    console.log('✅ ETF MC v4.9.4: Volatilité intelligente (3y→1y→SI) + Ultra-smooth DnD');
 
     // Harmonisation du conteneur
     results.classList.add('glassmorphism','rounded-lg','p-4');
 
-    // Styles harmonisés avec nouveau drag&drop ultra-fluide
-    if(!document.getElementById('etf-mc-v49-styles')){
-      const s=document.createElement('style'); s.id='etf-mc-v49-styles'; s.textContent=`
+    // Styles harmonisés avec nouveau drag&drop ultra-fluide + badges volatilité
+    if(!document.getElementById('etf-mc-v494-styles')){
+      const s=document.createElement('style'); s.id='etf-mc-v494-styles'; s.textContent=`
       #etf-mc-results { display:block }
       #etf-mc-results .space-y-2 > div { margin-bottom: .75rem }
       #etf-mc-results .etf-card{
@@ -83,6 +83,16 @@
       #etf-mc-results .metric-col .k{ font-size:.65rem !important; opacity:.65 !important; text-transform:uppercase; font-weight:700; }
       #etf-mc-results .metric-col .v{ font-size:.95rem !important; font-weight:800; }
       #etf-mc-results .badge{ font-size:.58rem !important; padding:2px 7px !important; border-radius:999px !important; font-weight:700; }
+      
+      /* === NOUVEAUX BADGES VOLATILITÉ === */
+      #etf-mc-results .vol-badge{ 
+        font-size:.5rem !important; padding:1px 4px !important; border-radius:6px !important; 
+        font-weight:600; margin-left:2px; opacity:.85;
+      }
+      #etf-mc-results .vol-badge.vol-3y{ color:#22c55e; background:rgba(34,197,94,.12); border:1px solid rgba(34,197,94,.25); }
+      #etf-mc-results .vol-badge.vol-1y{ color:#f59e0b; background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.25); }
+      #etf-mc-results .vol-badge.vol-SI{ color:#3b82f6; background:rgba(59,130,246,.12); border:1px solid rgba(59,130,246,.25); }
+      
       .g{color:#34d399}.y{color:#fbbf24}.r{color:#f87171}
       #etf-mc-section .mc-pill{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border:1px solid rgba(0,200,255,.2);border-radius:10px;background:rgba(0,255,255,.03);cursor:pointer;transition:.2s}
       #etf-mc-section .mc-pill:hover{background:rgba(0,255,255,.08);border-color:rgba(0,255,255,.35)}
@@ -155,7 +165,7 @@
     const cache = {};
     const masks = { facets:null, custom:null, final:null };
 
-    // ==== MÉTRIQUES ====
+    // ==== MÉTRIQUES AVEC VOLATILITÉ AMÉLIORÉE ====
     const classify=e=>{
       const ft=str(e.fund_type).toLowerCase();
       const dataset=str(e.dataset).toLowerCase();
@@ -170,7 +180,8 @@
       return_1d:{label:'Jour',unit:'%',max:true,get:e=>num(e.daily_change_pct)},
       return_ytd:{label:'YTD',unit:'%',max:true,get:e=>num(e.ytd_return_pct)},
       return_1y:{label:'1 An',unit:'%',max:true,get:e=>num(e.one_year_return_pct)},
-      volatility:{label:'Vol',unit:'%',max:false,get:e=>num(e.vol_3y_pct)},
+      // ✨ VOLATILITÉ AMÉLIORÉE : utilise vol_pct (3y→1y→SI) avec fallback vol_3y_pct
+      volatility:{label:'Vol',unit:'%',max:false,get:e=>num(e.vol_pct) || num(e.vol_3y_pct)},
       dividend_yield:{label:'Div',unit:'%',max:true,get:e=>num(e.yield_ttm)*100},
       yield_net:{label:'Rdt net',unit:'%',max:true,get:e=>{
         if(classify(e)!=='bonds') return NaN;
@@ -821,7 +832,7 @@
       return out.slice(0,TOP_N).map(x=>({e:state.data[x.i], score:x.score}));
     }
 
-    // ==== RENDU ====
+    // ==== RENDU AVEC BADGES VOLATILITÉ ====
     const fmt=(n,d=1)=>Number.isFinite(+n)?(+n).toFixed(d):'—';
     function render(entries){
       results.innerHTML = '<div class="space-y-2"></div>';
@@ -856,7 +867,11 @@
             if(m==='volatility') return raw<10?'g':raw<20?'g':'y';
             return raw>=0?'g':'r';
           };
-          return `<div class="metric-col"><div class="k">${d.label}</div><div class="v ${color()}">${renderVal()}</div></div>`;
+          // ✨ BADGE VOLATILITÉ : Afficher la fenêtre de calcul
+          const volBadge = (m === 'volatility' && e.vol_window) ? 
+            `<span class="vol-badge vol-${e.vol_window}">${e.vol_window}</span>` : '';
+          
+          return `<div class="metric-col"><div class="k">${d.label}${volBadge}</div><div class="v ${color()}">${renderVal()}</div></div>`;
         }).join('');
 
         // Micro avec nettoyage des 0%
