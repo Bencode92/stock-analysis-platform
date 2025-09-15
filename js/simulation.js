@@ -138,6 +138,18 @@ function formatMoney(amount) {
     }).format(amount);
 }
 
+// ✅ NOUVEAU : Utilitaires inflation
+function isRealTermsOn() {
+  return document.getElementById('real-terms-toggle')?.checked === true;
+}
+function getInflationRate() {
+  const v = parseFloat(document.getElementById('inflation-rate')?.value || '2');
+  return isFinite(v) ? Math.max(0, Math.min(15, v/100)) : 0.02; // Cap à 15%
+}
+function deflatorAt(years, infl) {
+  return Math.pow(1 + infl, years);
+}
+
 // Fonction pour afficher un tooltip
 function showTooltip(message) {
     const tooltip = document.createElement('div');
@@ -351,6 +363,96 @@ function setAllFeesZero() {
     updateFixedFeeTooltip(); // Mettre à jour le tooltip après modification
 }
 
+// ✅ NOUVEAU : KPI intelligents
+function computeKPIs(params, results) {
+  // Recalcule CTO de référence avec mêmes params
+  const refCTO = calculateInvestmentResults(
+    params.initialDeposit, params.periodicAmount, params.years, params.annualReturn,
+    { vehicleId: 'cto' }
+  );
+
+  const deltaCto = results.afterTaxAmount - refCTO.afterTaxAmount;
+  const feesPct  = results.finalAmount > 0 ? (results.feesImpact / results.finalAmount) * 100 : 0;
+
+  // IRR vs nominal
+  const irrPct = (results.annualizedReturn || 0) * 100;
+  const nominalPct = (results.annualReturn || 0) * 100;
+  const irrLabel = `${irrPct.toFixed(2)}% (${nominalPct.toFixed(1)}%)`;
+
+  // Plafond restant
+  let plafondRestant = null;
+  if (results.enveloppe?.plafond) {
+    const p = typeof results.enveloppe.plafond === 'object' ? results.enveloppe.plafond.solo : results.enveloppe.plafond;
+    plafondRestant = Math.max(0, p - results.investedTotal);
+  }
+
+  return { deltaCto, feesPct, irrLabel, plafondRestant };
+}
+
+function updateKPICards(kpis) {
+  const fmtEur = (x) => new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(x);
+  const feeColor = kpis.feesPct > 10 ? 'text-red-400' : (kpis.feesPct > 5 ? 'text-yellow-300' : 'text-green-400');
+
+  const elDelta = document.getElementById('kpi-delta-cto');
+  if (elDelta) { 
+    elDelta.textContent = (kpis.deltaCto>=0?'+':'') + fmtEur(kpis.deltaCto); 
+    elDelta.className = `text-xl font-bold ${kpis.deltaCto>=0?'text-green-400':'text-amber-300'}`;
+    elDelta.title = 'Gain/perte net(te) vs CTO, fiscalité incluse';
+  }
+
+  const elFees = document.getElementById('kpi-fees-pct');
+  if (elFees) { 
+    elFees.textContent = `${kpis.feesPct.toFixed(1)} %`; 
+    elFees.className = `text-xl font-bold ${feeColor}`;
+    elFees.title = '⚠️ >10% élevé, 5–10% modéré, <5% ok';
+  }
+
+  const elIrr = document.getElementById('kpi-irr');
+  if (elIrr) elIrr.textContent = kpis.irrLabel;
+
+  const elPlaf = document.getElementById('kpi-plafond');
+  if (elPlaf) elPlaf.textContent = kpis.plafondRestant==null ? '—' : fmtEur(kpis.plafondRestant);
+}
+
+// ✅ NOUVEAU : Résumé en 1 phrase
+function updateStory(params, results, deltaCto) {
+  const story = document.getElementById('result-story');
+  if (!story) return;
+  const fmt = (x) => new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(x);
+  const sign = deltaCto>=0 ? '+' : '';
+  story.textContent =
+    `Sur ${results.years} ans, à ${(params.annualReturn*100).toFixed(1)}% brut, `
+  + `${results.enveloppe?.label || results.vehicleId} vous laisserait ${fmt(results.afterTaxAmount)} net, `
+  + `soit ${sign}${fmt(deltaCto)} par rapport au CTO, `
+  + `après ${fmt(results.feesImpact)} de frais et ${fmt(results.taxAmount)} d'impôts.`;
+}
+
+// ✅ NOUVEAU : Appliquer l'inflation à l'affichage (pas au calcul)
+function applyInflationDisplay(results) {
+  if (!isRealTermsOn()) {
+    // On ré-affiche juste les valeurs nominales
+    updateResultsDisplay(results);
+    return;
+  }
+  const infl = getInflationRate();
+  const d = deflatorAt(results.years, infl);
+
+  // Clone léger
+  const real = { ...results };
+  real.finalAmount      = Math.max(0, results.finalAmount / d);
+  real.afterTaxAmount   = Math.max(0, results.afterTaxAmount / d);
+  real.gains            = Math.max(0, results.gains / d);
+  real.feesImpact       = Math.max(0, results.feesImpact / d);
+
+  updateResultsDisplay(real);
+
+  // Mentionner "€ constants"
+  const story = document.getElementById('result-story');
+  if (story) {
+    story.insertAdjacentHTML('beforeend', ` <span class="ml-1 text-xs text-gray-400">(affiché en € constants, ${ (infl*100).toFixed(1) }%/an)</span>`);
+  }
+}
+
 // Exposer les fonctions globalement pour l'utiliser depuis l'interface
 window.resetFeesToPreset = resetFeesToPreset;
 window.setAllFeesZero = setAllFeesZero;
@@ -415,6 +517,22 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // ✅ NOUVEAU : Listeners inflation + boutons 5/7/10
+    document.getElementById('real-terms-toggle')?.addEventListener('change', () => runSimulation());
+    document.getElementById('inflation-rate')?.addEventListener('input', () => {
+      // pas de recalcul complexe — relance simple
+      runSimulation();
+    });
+
+    document.querySelectorAll('#sensi-row [data-sensi]')?.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const v = parseFloat(btn.getAttribute('data-sensi'));
+        const slider = document.getElementById('return-slider');
+        if (slider) { slider.value = v; updateReturnValue(v); }
+        runSimulation();
+      });
+    });
     
     // Initialiser les onglets de simulation
     initSimulationTabs();
@@ -1064,8 +1182,17 @@ function runSimulation() {
         // Mettre à jour le graphique avec les nouveaux paramètres
         updateSimulationChart(initialDeposit, periodicAmount, years, annualReturn);
         
-        // Mettre à jour les résultats affichés
-        updateResultsDisplay(results);
+        // ✅ NOUVEAU : KPIs + Story (sur valeurs nominales)
+        const kpis = computeKPIs({ initialDeposit, periodicAmount, years, annualReturn }, results);
+        updateKPICards(kpis);
+        updateStory({ initialDeposit, periodicAmount, years, annualReturn }, results, kpis.deltaCto);
+
+        // ✅ NOUVEAU : € constants : ré-affiche les résultats + graphe si toggle ON
+        if (isRealTermsOn()) {
+          applyInflationDisplay(results);
+        } else {
+          updateResultsDisplay(results); // nominal
+        }
         
         // Calculer et mettre à jour les résultats du budget
         updateBudgetResults(results, years);
@@ -1078,18 +1205,21 @@ function runSimulation() {
 
 /**
  * Calcule les résultats d'investissement avec la vraie fiscalité et les frais
- * MODIFIÉE : Correction de l'incohérence de capitalisation avec taux périodique effectif + prélèvement annuel des frais fixes
+ * ✅ MODIFIÉE : Signature avec opts pour permettre overrides (vehicleId, fees)
  * @param {number} initialDeposit - Montant initial versé au départ
  * @param {number} periodicAmount - Montant des versements périodiques
  * @param {number} years - Nombre d'années
  * @param {number} annualReturn - Rendement annuel (en décimal)
+ * @param {Object} opts - Options (vehicleId, fees)
  * @returns {Object} Résultats de la simulation
  */
-function calculateInvestmentResults(initialDeposit, periodicAmount, years, annualReturn) {
-    const vehicleId = document.getElementById('investment-vehicle')?.value || 'pea';
+function calculateInvestmentResults(initialDeposit, periodicAmount, years, annualReturn, opts = {}) {
+    const vehicleId = opts.vehicleId || document.getElementById('investment-vehicle')?.value || 'pea';
     const enveloppe = getEnveloppeInfo(vehicleId);
 
-    const fees = readFeeParams();
+    // fees : soit overrides (comparateur), soit UI
+    const fees = opts.fees || readFeeParams();
+
     const isPeriodicMode = document.getElementById('periodic-investment')?.classList.contains('selected');
     const frequency = document.getElementById('investment-frequency')?.value || 'monthly';
     const p = (frequency === 'weekly') ? 52 : (frequency === 'monthly') ? 12 : (frequency === 'quarterly') ? 4 : 1;
@@ -1518,7 +1648,7 @@ function createChart() {
 
 /**
  * Fonction pour mettre à jour le graphique de simulation
- * MODIFIÉE : Prend maintenant initialDeposit et periodicAmount séparés + courbe "sans frais"
+ * MODIFIÉE : Prend maintenant initialDeposit et periodicAmount séparés + courbe "sans frais" + inflation
  * @param {number} initialDeposit - Montant initial versé au départ
  * @param {number} periodicAmount - Montant des versements périodiques
  * @param {number} years - Nombre d'années
@@ -1592,12 +1722,31 @@ function updateSimulationChart(initialDeposit, periodicAmount, years, annualRetu
         }
     }
 
-    // Injecter/mettre à jour le dataset pointillé
+    // ✅ NOUVEAU : € constants (déflateur année par année)
+    if (isRealTermsOn()) {
+      const infl = getInflationRate();
+      const deflateSeries = (arr) => arr.map((v, idx) => v / deflatorAt(idx, infl));
+      // idx = année
+      window.investmentChart.data.datasets[0].data = deflateSeries(totalValues);
+      window.investmentChart.data.datasets[1].data = deflateSeries(investedValues);
+
+      const idxNF = window.investmentChart.data.datasets.findIndex(d => d.label === 'Capital total (sans frais)');
+      if (idxNF !== -1) window.investmentChart.data.datasets[idxNF].data = deflateSeries(totalNoFees);
+    } else {
+      // Nominal
+      window.investmentChart.data.datasets[0].data = totalValues;
+      window.investmentChart.data.datasets[1].data = investedValues;
+    }
+
+    // Injecter/mettre à jour le dataset pointillé "sans frais"
     const labelNoFees = 'Capital total (sans frais)';
     const idx = window.investmentChart.data.datasets.findIndex(d => d.label === labelNoFees);
+    const noFeesData = isRealTermsOn() ? 
+      totalNoFees.map((v, i) => v / deflatorAt(i, getInflationRate())) : 
+      totalNoFees;
     const noFeesDataset = {
         label: labelNoFees,
-        data: totalNoFees,
+        data: noFeesData,
         borderColor: '#94a3b8',
         backgroundColor: 'transparent',
         borderDash: [6,4],
@@ -1615,8 +1764,6 @@ function updateSimulationChart(initialDeposit, periodicAmount, years, annualRetu
     
     // Mettre à jour le graphique
     window.investmentChart.data.labels = labels;
-    window.investmentChart.data.datasets[0].data = totalValues;
-    window.investmentChart.data.datasets[1].data = investedValues;
     window.investmentChart.update();
 }
 
