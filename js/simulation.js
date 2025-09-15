@@ -138,14 +138,26 @@ function formatMoney(amount) {
     }).format(amount);
 }
 
-// ✅ NOUVEAU : Utilitaires inflation
+// ✅ NOUVEAU : Utilitaires inflation (server first)
+function getServerInflationRate() {
+  const r = window.APP_CONFIG?.INFLATION?.annualRate;
+  if (typeof r === 'number' && isFinite(r)) return Math.max(0, Math.min(0.15, r));
+  return null;
+}
+
 function isRealTermsOn() {
+  // Mode "auto" = on garde les résultats NOMINAUX (on n'active pas l'affichage constant global)
+  if (window.APP_CONFIG?.INFLATION?.mode === 'auto') return false;
   return document.getElementById('real-terms-toggle')?.checked === true;
 }
+
 function getInflationRate() {
+  const srv = getServerInflationRate();
+  if (srv !== null) return srv; // priorise serveur (pour nos calculs complémentaires)
   const v = parseFloat(document.getElementById('inflation-rate')?.value || '2');
-  return isFinite(v) ? Math.max(0, Math.min(15, v/100)) : 0.02; // Cap à 15%
+  return isFinite(v) ? Math.max(0, Math.min(0.15, v / 100)) : 0.02;
 }
+
 function deflatorAt(years, infl) {
   return Math.pow(1 + infl, years);
 }
@@ -414,17 +426,38 @@ function updateKPICards(kpis) {
   if (elPlaf) elPlaf.textContent = kpis.plafondRestant==null ? '—' : fmtEur(kpis.plafondRestant);
 }
 
-// ✅ NOUVEAU : Résumé en 1 phrase
-function updateStory(params, results, deltaCto) {
-  const story = document.getElementById('result-story');
-  if (!story) return;
-  const fmt = (x) => new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(x);
-  const sign = deltaCto>=0 ? '+' : '';
-  story.textContent =
-    `Sur ${results.years} ans, à ${(params.annualReturn*100).toFixed(1)}% brut, `
-  + `${results.enveloppe?.label || results.vehicleId} vous laisserait ${fmt(results.afterTaxAmount)} net, `
-  + `soit ${sign}${fmt(deltaCto)} par rapport au CTO, `
-  + `après ${fmt(results.feesImpact)} de frais et ${fmt(results.taxAmount)} d'impôts.`;
+// ✅ NOUVEAU : Résumé en 1 phrase déplacé dans bloc d'adéquation + pouvoir d'achat
+function updateStory(params, results, deltaCtoNominal) {
+  const fmt = (x) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(x);
+  const adequacyOneLiner = document.getElementById('adequacy-one-liner');
+  const storyAbove = document.getElementById('result-story'); // on le vide/masque
+
+  // Base nominale
+  const sign = deltaCtoNominal >= 0 ? '+' : '';
+  let line = `Sur ${results.years} ans, à ${(params.annualReturn*100).toFixed(1)}% brut, `
+           + `${results.enveloppe?.label || results.vehicleId} vous laisserait ${fmt(results.afterTaxAmount)} net, `
+           + `soit ${sign}${fmt(deltaCtoNominal)} par rapport au CTO, `
+           + `après ${fmt(results.feesImpact)} de frais et ${fmt(results.taxAmount)} d'impôts.`;
+
+  // Ajout "pouvoir d'achat" (toujours, en utilisant l'inflation serveur si dispo)
+  const infl = getInflationRate();                    // 0.02 = 2%/an par ex.
+  const d = Math.pow(1 + infl, results.years);        // déflateur
+  const netReel = results.afterTaxAmount / d;         // € constants
+  // CTO de référence pour le delta réel
+  const refCTO = calculateInvestmentResults(
+    params.initialDeposit, params.periodicAmount, params.years, params.annualReturn, { vehicleId: 'cto' }
+  );
+  const ctoReel = refCTO.afterTaxAmount / d;
+  const deltaCtoReel = netReel - ctoReel;
+  const pertePouvoirAchat = results.afterTaxAmount - netReel;
+
+  line += ` <br><span class="text-xs text-gray-400">Pouvoir d'achat : ≈ ${fmt(netReel)} d'aujourd'hui `
+       +  `(Δ vs CTO : ${(deltaCtoReel>=0?'+':'')}${fmt(deltaCtoReel)} ; `
+       +  `écart nominal→réel : −${fmt(Math.abs(pertePouvoirAchat))} ; `
+       +  `inflation ${(infl*100).toFixed(1)}%/an)</span>`;
+
+  if (adequacyOneLiner) adequacyOneLiner.innerHTML = line;
+  if (storyAbove) { storyAbove.textContent = ''; storyAbove.classList.add('hidden'); }
 }
 
 // ✅ NOUVEAU : Appliquer l'inflation à l'affichage (pas au calcul)
@@ -458,6 +491,11 @@ window.resetFeesToPreset = resetFeesToPreset;
 window.setAllFeesZero = setAllFeesZero;
 
 document.addEventListener('DOMContentLoaded', function() {
+    // ✅ NOUVEAU : Masquer les contrôles inflation si mode auto
+    if (window.APP_CONFIG?.INFLATION?.mode === 'auto') {
+        document.getElementById('inflation-controls')?.classList.add('hidden');
+    }
+
     // Mettre à jour la date du jour
     updateDate();
     
