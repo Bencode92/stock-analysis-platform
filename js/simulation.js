@@ -375,6 +375,205 @@ function setAllFeesZero() {
     updateFixedFeeTooltip(); // Mettre à jour le tooltip après modification
 }
 
+// ============================================
+// NOUVELLES FONCTIONNALITÉS AVANCÉES
+// ============================================
+
+// ✅ NOUVEAU : Utilitaires pour goal-seek et comparateur
+function _ppyear(freq) { 
+    return freq === 'weekly' ? 52 : freq === 'monthly' ? 12 : freq === 'quarterly' ? 4 : 1; 
+}
+
+function feesFromPreset(id) {
+    const p = FEE_PRESETS[id] || FEE_PRESETS._default;
+    return { mgmtPct: p.mgmt/100, entryPct: p.entry/100, exitPct: p.exit/100, fixedAnnual: p.fixed };
+}
+
+// ✅ NOUVEAU : Goal-seek pour versement périodique
+function goalSeekPeriodicForTarget({ target, years, initialDeposit, annualReturn, vehicleId, fees, frequency='monthly' }) {
+    // borne basse et estimation haute (annuité)
+    const p = _ppyear(frequency);
+    const rPer = Math.pow(1+annualReturn, 1/p)-1;
+    const annuityFactor = rPer === 0 ? (years*p) : ((Math.pow(1+rPer, years*p) - 1) / rPer) * (1 + rPer);
+
+    let lo = 0, hi = Math.max(10, (target - initialDeposit*Math.pow(1+rPer, years*p)) / annuityFactor);
+    hi = isFinite(hi) && hi>0 ? hi : target/(years*p);
+
+    for (let k=0;k<60;k++){
+        const mid = (lo+hi)/2;
+        const res = calculateInvestmentResults(
+            initialDeposit, mid, years, annualReturn,
+            { vehicleId, fees, overridePeriodic:{ mode:'periodic', frequency } }
+        );
+        if (Math.abs(res.afterTaxAmount - target) < 1) return { periodic: mid, results: res }; // tolérance 1€
+        if (res.afterTaxAmount < target) lo = mid; else hi = mid;
+    }
+    const periodic = (lo+hi)/2;
+    const results = calculateInvestmentResults(initialDeposit, periodic, years, annualReturn,
+                    { vehicleId, fees, overridePeriodic:{ mode:'periodic', frequency }});
+    return { periodic, results };
+}
+
+// ✅ NOUVEAU : Goal-seek pour durée
+function goalSeekYearsForTarget({ target, initialDeposit, periodicAmount, annualReturn, vehicleId, fees, frequency='monthly', maxYears=60 }) {
+    let lo = 1, hi = maxYears;
+    for (let k=0;k<40;k++){
+        const mid = (lo+hi)/2;
+        const res = calculateInvestmentResults(
+            initialDeposit, periodicAmount, mid, annualReturn,
+            { vehicleId, fees, overridePeriodic:{ mode:'periodic', frequency } }
+        );
+        if (Math.abs(res.afterTaxAmount - target) < 1) return { years: mid, results: res };
+        if (res.afterTaxAmount < target) lo = mid; else hi = mid;
+    }
+    const years = (lo+hi)/2;
+    const results = calculateInvestmentResults(initialDeposit, periodicAmount, years, annualReturn,
+                   { vehicleId, fees, overridePeriodic:{ mode:'periodic', frequency }});
+    return { years, results };
+}
+
+// ✅ NOUVEAU : Comparateur d'enveloppes
+let compareChart = null;
+
+function buildCompare() {
+    const initialDeposit = parseFloat(document.getElementById('initial-investment-amount')?.value)||0;
+    const periodicAmount = document.getElementById('periodic-investment')?.classList.contains('selected')
+                           ? (parseFloat(document.getElementById('periodic-investment-amount')?.value)||0) : 0;
+    const years = parseInt(document.getElementById('duration-slider')?.value || 10);
+    const annualReturn = parseFloat(document.getElementById('return-slider')?.value || 7)/100;
+    const frequency = document.getElementById('investment-frequency')?.value || 'monthly';
+
+    // CTO de référence
+    const ref = calculateInvestmentResults(initialDeposit, periodicAmount, years, annualReturn,
+               { vehicleId:'cto', fees: feesFromPreset('cto'), overridePeriodic:{ mode: periodicAmount>0?'periodic':'unique', frequency }});
+
+    const ids = Object.keys(FEE_PRESETS).filter(k=>!k.startsWith('_'));
+    const rows = ids.map(id => {
+        const r = calculateInvestmentResults(initialDeposit, periodicAmount, years, annualReturn,
+                  { vehicleId:id, fees: feesFromPreset(id), overridePeriodic:{ mode: periodicAmount>0?'periodic':'unique', frequency }});
+        const plafond = r.enveloppe?.plafond ? (typeof r.enveloppe.plafond==='object' ? r.enveloppe.plafond.solo : r.enveloppe.plafond) : Infinity;
+        const invested = r.investedTotal;
+        const alert = invested > plafond ? `🚨` : (invested >= 0.8*plafond ? `⚠️` : '');
+        return {
+            id,
+            label: r.enveloppe?.label || id,
+            net: r.afterTaxAmount,
+            impots: r.taxAmount,
+            frais: r.feesImpact,
+            deltaCto: r.afterTaxAmount - ref.afterTaxAmount,
+            alert,
+            results: r
+        };
+    }).sort((a,b)=>b.net - a.net).slice(0,5);
+
+    // Table
+    const tbody = document.getElementById('compare-tbody');
+    if (tbody){
+        tbody.innerHTML = rows.map((row, i)=>`
+            <tr class="border-b border-blue-800/40">
+                <td class="px-3 py-2">${row.label} ${i===0?'<span class="ml-1 text-xs bg-green-900 bg-opacity-30 text-green-400 px-1.5 py-0.5 rounded">meilleure</span>':''}</td>
+                <td class="px-3 py-2 text-right">${formatMoney(row.net)}</td>
+                <td class="px-3 py-2 text-right text-amber-300">${formatMoney(row.impots)}</td>
+                <td class="px-3 py-2 text-right text-blue-300">${formatMoney(row.frais)}</td>
+                <td class="px-3 py-2 text-right ${row.deltaCto>=0?'text-green-400':'text-amber-300'}">${(row.deltaCto>=0?'+':'')+formatMoney(row.deltaCto)}</td>
+                <td class="px-3 py-2 text-center">${row.alert}</td>
+            </tr>
+        `).join('');
+    }
+
+    // Chart (stacked)
+    const ctx = document.getElementById('compare-chart');
+    if (ctx){
+        if (compareChart) compareChart.destroy();
+        compareChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: rows.map(r=>r.label),
+                datasets: [
+                    { label:'Net',   data: rows.map(r=>r.net),   backgroundColor:'rgba(0,210,110,0.7)', borderColor:'rgba(0,210,110,1)', borderWidth:1, stack:'S' },
+                    { label:'Impôts',data: rows.map(r=>r.impots),backgroundColor:'rgba(255,71,87,0.7)', borderColor:'rgba(255,71,87,1)', borderWidth:1, stack:'S' },
+                    { label:'Frais', data: rows.map(r=>r.frais), backgroundColor:'rgba(33,150,243,0.7)', borderColor:'rgba(33,150,243,1)', borderWidth:1, stack:'S' },
+                ]
+            },
+            options:{
+                responsive:true, maintainAspectRatio:false,
+                scales:{ x:{ stacked:true }, y:{ stacked:true, ticks:{ callback:v=>formatMoney(v) } } },
+                plugins:{ legend:{ position:'top' } }
+            }
+        });
+    }
+}
+
+// ✅ NOUVEAU : Système de scénarios
+const SC_KEY = 'tp_invest_scenarios_v1';
+
+function readScenarioParams(){
+    const initialDeposit = parseFloat(document.getElementById('initial-investment-amount')?.value)||0;
+    const periodicOn = document.getElementById('periodic-investment')?.classList.contains('selected');
+    const periodicAmount = periodicOn ? (parseFloat(document.getElementById('periodic-investment-amount')?.value)||0) : 0;
+    const frequency = document.getElementById('investment-frequency')?.value || 'monthly';
+    const years = parseInt(document.getElementById('duration-slider')?.value || 10);
+    const annualReturn = parseFloat(document.getElementById('return-slider')?.value || 7)/100;
+    const vehicleId = document.getElementById('investment-vehicle')?.value || 'pea';
+    const fees = readFeeParams();
+    return { initialDeposit, periodicAmount, frequency, years, annualReturn, vehicleId, fees };
+}
+
+function saveScenario(){
+    const p = readScenarioParams();
+    const r = calculateInvestmentResults(p.initialDeposit, p.periodicAmount, p.years, p.annualReturn,
+              { vehicleId:p.vehicleId, fees:p.fees, overridePeriodic:{ mode: p.periodicAmount>0?'periodic':'unique', frequency:p.frequency }});
+    const item = {
+        ts: Date.now(),
+        label: getEnveloppeInfo(p.vehicleId)?.label || p.vehicleId,
+        vehicleId: p.vehicleId,
+        net: r.afterTaxAmount,
+        frais: r.feesImpact,
+        impots: r.taxAmount,
+        irr: r.annualizedReturn,
+        years: p.years,
+        initial: p.initialDeposit,
+        periodic: p.periodicAmount,
+        frequency: p.frequency
+    };
+    let arr = JSON.parse(localStorage.getItem(SC_KEY) || '[]');
+    arr.unshift(item);
+    arr = arr.slice(0,3); // 2–3 scénarios
+    localStorage.setItem(SC_KEY, JSON.stringify(arr));
+    renderScenarioTable();
+    showTooltip('Scénario sauvegardé');
+}
+
+function clearScenarios(){
+    localStorage.removeItem(SC_KEY);
+    renderScenarioTable();
+}
+
+function renderScenarioTable(){
+    const tbody = document.getElementById('scenario-tbody');
+    if (!tbody) return;
+    const arr = JSON.parse(localStorage.getItem(SC_KEY) || '[]');
+    if (!arr.length) { 
+        tbody.innerHTML = `<tr><td colspan="9" class="px-3 py-3 text-center text-gray-400">Aucun scénario sauvegardé</td></tr>`; 
+        return; 
+    }
+    // meilleur = net max
+    const bestNet = Math.max(...arr.map(x=>x.net));
+    tbody.innerHTML = arr.map(x=>`
+        <tr class="border-b border-blue-800/40">
+            <td class="px-3 py-2">${x.label}</td>
+            <td class="px-3 py-2 text-right">${formatMoney(x.net)}</td>
+            <td class="px-3 py-2 text-right text-blue-300">${formatMoney(x.frais)}</td>
+            <td class="px-3 py-2 text-right text-amber-300">${formatMoney(x.impots)}</td>
+            <td class="px-3 py-2 text-right">${(x.irr*100).toFixed(2)}%</td>
+            <td class="px-3 py-2 text-right">${x.years}</td>
+            <td class="px-3 py-2 text-right">${formatMoney(x.initial)}</td>
+            <td class="px-3 py-2 text-right">${formatMoney(x.periodic)}/${freqLabelFR(x.frequency)}</td>
+            <td class="px-3 py-2 text-center">${x.net===bestNet? '🏆' : ''}</td>
+        </tr>
+    `).join('');
+}
+
 // ✅ NOUVEAU : KPI intelligents
 function computeKPIs(params, results) {
   // Recalcule CTO de référence avec mêmes params
@@ -572,6 +771,59 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
     
+    // ✅ NOUVEAU : Event listeners pour goal-seek
+    document.getElementById('goal-run')?.addEventListener('click', () => {
+        const target = Math.max(1, parseFloat(document.getElementById('goal-target')?.value)||0);
+        const years = parseInt(document.getElementById('duration-slider')?.value || 10);
+        const annualReturn = parseFloat(document.getElementById('return-slider')?.value || 7)/100;
+        const vehicleId = document.getElementById('investment-vehicle')?.value || 'pea';
+        const frequency = document.getElementById('goal-frequency')?.value || 'monthly';
+        const mode = document.getElementById('goal-mode')?.value || 'periodic-for-target';
+        const fees = readFeeParams();
+
+        const initialDeposit = parseFloat(document.getElementById('initial-investment-amount')?.value)||0;
+        const periodicUI = parseFloat(document.getElementById('periodic-investment-amount')?.value)||0;
+
+        let html='';
+        if (mode === 'periodic-for-target') {
+            const { periodic, results } = goalSeekPeriodicForTarget({
+                target, years, initialDeposit, annualReturn, vehicleId, fees, frequency
+            });
+            html = `Pour atteindre <b>${formatMoney(target)}</b> en ${years} ans, il faut environ
+                    <b>${formatMoney(periodic)}</b> par ${freqLabelFR(frequency)} (net d'impôts via ${results.enveloppe?.label}).`;
+            updateSimulationChart(initialDeposit, periodic, years, annualReturn);
+            updateResultsDisplay(results);
+        } else {
+            // years-for-target
+            const { years: y, results } = goalSeekYearsForTarget({
+                target, initialDeposit, periodicAmount: periodicUI, annualReturn, vehicleId, fees, frequency
+            });
+            html = `Avec <b>${formatMoney(periodicUI)}</b> par ${freqLabelFR(frequency)}, il faut environ
+                    <b>${y.toFixed(1)} ans</b> pour atteindre <b>${formatMoney(target)}</b> (net via ${results.enveloppe?.label}).`;
+            updateSimulationChart(initialDeposit, periodicUI, y, annualReturn);
+            updateResultsDisplay(results);
+        }
+        document.getElementById('goal-result').innerHTML = html;
+    });
+
+    // ✅ NOUVEAU : UX micro-interactions goal-seek
+    document.getElementById('goal-mode')?.addEventListener('change', (e)=>{
+        document.getElementById('goal-frequency-wrap').style.display = (e.target.value==='periodic-for-target')?'block':'none';
+    });
+    
+    // ✅ NOUVEAU : Event listeners pour scénarios
+    document.getElementById('scenario-save')?.addEventListener('click', saveScenario);
+    document.getElementById('scenario-clear')?.addEventListener('click', clearScenarios);
+    
+    // ✅ NOUVEAU : Event listeners pour comparateur
+    document.querySelector('[data-target="envelope-compare"]')?.addEventListener('click', buildCompare);
+    
+    // ✅ NOUVEAU : Auto-refresh du comparateur sur changement paramètres
+    ['investment-vehicle','investment-frequency','periodic-investment-amount','initial-investment-amount','duration-slider','return-slider']
+        .forEach(id => document.getElementById(id)?.addEventListener('input', ()=> {
+            if (document.querySelector('.simulation-tab.active')?.getAttribute('data-target')==='envelope-compare') buildCompare();
+        }));
+    
     // Initialiser les onglets de simulation
     initSimulationTabs();
 
@@ -614,6 +866,9 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('periodic-investment-amount')?.addEventListener('input', updatePeriodicUI);
     document.getElementById('periodic-investment')?.addEventListener('click', () => setTimeout(updatePeriodicUI, 0));
     document.getElementById('unique-investment')?.addEventListener('click', () => setTimeout(updatePeriodicUI, 0));
+    
+    // ✅ NOUVEAU : Initialiser le tableau de scénarios
+    renderScenarioTable();
 });
 
 /**
@@ -1185,7 +1440,7 @@ function suggestBestVehicle(amount, duration, objective = 'growth') {
 
 /**
  * Fonction pour exécuter la simulation
- * MODIFIÉE : Séparation montant initial et montant périodique
+ * MODIFIÉE : Séparation montant initial et montant périodique + hook comparateur
  */
 function runSimulation() {
     // Animation du bouton
@@ -1238,17 +1493,20 @@ function runSimulation() {
         // Restaurer le bouton
         button.innerHTML = '<i class="fas fa-play-circle mr-2"></i> Lancer la simulation';
         button.disabled = false;
+        
+        // ✅ NOUVEAU : Auto-refresh du comparateur après simulation
+        setTimeout(buildCompare, 0);
     }, 800);
 }
 
 /**
  * Calcule les résultats d'investissement avec la vraie fiscalité et les frais
- * ✅ MODIFIÉE : Signature avec opts pour permettre overrides (vehicleId, fees)
+ * ✅ MODIFIÉE : Signature avec opts pour permettre overrides (vehicleId, fees, overridePeriodic)
  * @param {number} initialDeposit - Montant initial versé au départ
  * @param {number} periodicAmount - Montant des versements périodiques
  * @param {number} years - Nombre d'années
  * @param {number} annualReturn - Rendement annuel (en décimal)
- * @param {Object} opts - Options (vehicleId, fees)
+ * @param {Object} opts - Options (vehicleId, fees, overridePeriodic)
  * @returns {Object} Résultats de la simulation
  */
 function calculateInvestmentResults(initialDeposit, periodicAmount, years, annualReturn, opts = {}) {
@@ -1258,8 +1516,13 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
     // fees : soit overrides (comparateur), soit UI
     const fees = opts.fees || readFeeParams();
 
-    const isPeriodicMode = document.getElementById('periodic-investment')?.classList.contains('selected');
-    const frequency = document.getElementById('investment-frequency')?.value || 'monthly';
+    // ✅ NOUVEAU : overrides explicites (ne dépend plus du DOM si fournis)
+    const override = opts.overridePeriodic || null;
+    const isPeriodicMode = override
+        ? (override.mode === 'periodic')
+        : document.getElementById('periodic-investment')?.classList.contains('selected');
+
+    const frequency = override?.frequency || (document.getElementById('investment-frequency')?.value || 'monthly');
     const p = (frequency === 'weekly') ? 52 : (frequency === 'monthly') ? 12 : (frequency === 'quarterly') ? 4 : 1;
     const n = years * p;
 
