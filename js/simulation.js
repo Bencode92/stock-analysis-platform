@@ -60,7 +60,12 @@ const FEE_PRESETS = {
 
   _default: { mgmt: 0, entry: 0, exit: 0, fixed: 0, note: `Aucun frais par défaut` }
 };
-
+// Produits à taux fixes / rendement "natif" → exclus du comparateur à rendement constant
+const NON_COMPARABLE_IDS = new Set([
+  'livret-a', 'ldds', 'lep', 'pel', 'cel', 'livret-jeune',
+  // (optionnel) rendements "nativement" différents du 7% marché
+  'scpi-cto', 'scpi-av', 'opci'
+]);
 // ============================================
 // FONCTIONS DE CALCUL DU RENDEMENT ANNUALISÉ
 // ============================================
