@@ -445,37 +445,85 @@ function goalSeekPeriodicForTarget({ target, years, initialDeposit, annualReturn
   return { periodic, results };
 }
 
-// ✅ NOUVEAU : Goal-seek pour durée (vise STRICTEMENT le net d'impôts)
-function goalSeekYearsForTarget({ target, initialDeposit, periodicAmount, annualReturn, vehicleId, fees, frequency='monthly', maxYears=60 }) {
-  const valueForYears = (yrs) =>
-    calculateInvestmentResults(initialDeposit, periodicAmount, yrs, annualReturn,
-      { vehicleId, fees, overridePeriodic:{ mode: periodicAmount>0?'periodic':'unique', frequency } }
-    ).afterTaxAmount;
+Voici une version **robuste et fonctionnelle** du goal-seek sur la **durée** (vise le **net d’impôts**).
+Elle gère les cas limites, élargit la fenêtre si besoin, mémorise les évaluations pour éviter les recalculs et retourne un indicateur `unreachable` si la cible n’est pas atteignable dans la borne haute.
 
-  let lo = 0.1, hi = Math.max(1, maxYears);
-  // 🔒 agrandir la fenêtre jusqu'à atteindre la cible en net (ou 120 ans max)
-  let vhi = valueForYears(hi), guard = 0;
-  while (vhi < target && hi < 120 && guard++ < 20) { hi = Math.min(120, hi*1.5); vhi = valueForYears(hi); }
-  if (vhi < target) {
-    return { years: null, results: calculateInvestmentResults(initialDeposit, periodicAmount, hi, annualReturn,
-            { vehicleId, fees, overridePeriodic:{ mode: periodicAmount>0?'periodic':'unique', frequency } }),
-             unreachable: true, triedYears: hi };
+// ✅ Goal-seek de la DURÉE pour atteindre un montant NET d'impôts donné
+function goalSeekYearsForTarget({
+  target,
+  initialDeposit = 0,
+  periodicAmount = 0,
+  annualReturn,
+  vehicleId,
+  fees,
+  frequency = 'monthly',
+  maxYears = 60,
+  tol = 0.5,         // tolérance sur la cible en €
+  maxIter = 80       // itérations bisection max
+}) {
+  const mode = periodicAmount > 0 ? 'periodic' : 'unique';
+
+  // Helper avec mémoïsation (évite de recalculer pour la même durée)
+  const cache = new Map();
+  const getResults = (yrs) => {
+    const k = +yrs.toFixed(6); // clé stable
+    if (!cache.has(k)) {
+      cache.set(k, calculateInvestmentResults(
+        initialDeposit,
+        periodicAmount,
+        yrs,
+        annualReturn,
+        { vehicleId, fees, overridePeriodic: { mode, frequency } }
+      ));
+    }
+    return cache.get(k);
+  };
+  const valueForYears = (yrs) => getResults(yrs).afterTaxAmount;
+
+  // Cas triviaux / garde-fous
+  if (!isFinite(target) || target <= 0) {
+    return { years: 0, results: getResults(0) };
   }
-  // 🔁 bisection
-  for (let k=0;k<60;k++){
-    const mid = (lo+hi)/2;
+
+  // Si déjà atteint à t=0
+  const v0 = valueForYears(0);
+  if (v0 >= target) {
+    return { years: 0, results: getResults(0) };
+  }
+
+  // Fenêtre initiale
+  let lo = 0;
+  let hi = Math.max(1, maxYears);
+
+  // 🔒 Étendre la fenêtre jusqu'à couvrir la cible, bornée à 120 ans
+  let guard = 0;
+  let vhi = valueForYears(hi);
+  while (vhi < target && hi < 120 && guard++ < 24) {
+    hi = Math.min(120, hi * 1.5);
+    vhi = valueForYears(hi);
+  }
+  if (vhi < target) {
+    return {
+      years: null,
+      results: getResults(hi),
+      unreachable: true,
+      triedYears: hi
+    };
+  }
+
+  // 🔁 Bisection (fonction monotone croissante en pratique)
+  for (let i = 0; i < maxIter; i++) {
+    const mid = (lo + hi) / 2;
     const vm = valueForYears(mid);
-    if (Math.abs(vm - target) < 0.5) {
-      const results = calculateInvestmentResults(initialDeposit, periodicAmount, mid, annualReturn,
-        { vehicleId, fees, overridePeriodic:{ mode: periodicAmount>0?'periodic':'unique', frequency } });
-      return { years: mid, results };
+
+    if (Math.abs(vm - target) <= tol) {
+      return { years: mid, results: getResults(mid) };
     }
     if (vm < target) lo = mid; else hi = mid;
   }
-  const years = (lo+hi)/2;
-  const results = calculateInvestmentResults(initialDeposit, periodicAmount, years, annualReturn,
-    { vehicleId, fees, overridePeriodic:{ mode: periodicAmount>0?'periodic':'unique', frequency } });
-  return { years, results };
+
+  const years = (lo + hi) / 2;
+  return { years, results: getResults(years) };
 }
 
 // ✅ NOUVEAU : Fonction pour capper les versements selon le plafond
@@ -1586,146 +1634,156 @@ function runSimulation() {
  * @param {number} annualReturn - Rendement annuel (en décimal)
  * @param {Object} opts - Options (vehicleId, fees, overridePeriodic, stopAfterYears)
  * @returns {Object} Résultats de la simulation
- */
 function calculateInvestmentResults(initialDeposit, periodicAmount, years, annualReturn, opts = {}) {
-    const vehicleId = opts.vehicleId || document.getElementById('investment-vehicle')?.value || 'pea';
-    const enveloppe = getEnveloppeInfo(vehicleId);
+ */
+  // --- Helper : FV d'une série de versements "ordinaires" (fin de période)
+  // k = nombre de versements effectués ; n = horizon total (en périodes)
+  function fvSeries(ratePerPeriod, payment, k, n) {
+    if (payment <= 0 || k <= 0) return 0;
+    if (!isFinite(ratePerPeriod) || Math.abs(ratePerPeriod) < 1e-12) {
+      // Taux ~ 0 => pas de capitalisation
+      return payment * k;
+    }
+    // FV à l'horizon n d'une annuité "ordinaire" stoppée après k versements
+    // = payment * ((1+r)^k - 1)/r * (1+r)^(n - k)
+    return payment * ((Math.pow(1 + ratePerPeriod, k) - 1) / ratePerPeriod) * Math.pow(1 + ratePerPeriod, (n - k));
+  }
 
-    // fees : soit overrides (comparateur), soit UI
-    const fees = opts.fees || readFeeParams();
+  const vehicleId = opts.vehicleId || document.getElementById('investment-vehicle')?.value || 'pea';
+  const enveloppe = getEnveloppeInfo(vehicleId);
 
-    // ✅ NOUVEAU : overrides explicites (ne dépend plus du DOM si fournis)
-    const override = opts.overridePeriodic || null;
-    const isPeriodicMode = override
-        ? (override.mode === 'periodic')
-        : document.getElementById('periodic-investment')?.classList.contains('selected');
+  // Frais : overrides (comparateur) ou UI
+  const fees = opts.fees || readFeeParams();
 
-    const frequency = override?.frequency || (document.getElementById('investment-frequency')?.value || 'monthly');
-    const p = (frequency === 'weekly') ? 52 : (frequency === 'monthly') ? 12 : (frequency === 'quarterly') ? 4 : 1;
-    
-    // ✅ NOUVEAU : Support du stopAfterYears pour les plafonds
-    const stopAfterYears = (typeof opts.stopAfterYears === 'number')
-        ? Math.max(0, Math.min(years, opts.stopAfterYears))
-        : years;
+  // Overrides explicites pour le mode périodique / fréquence
+  const override = opts.overridePeriodic || null;
+  const isPeriodicMode = override
+    ? (override.mode === 'periodic')
+    : document.getElementById('periodic-investment')?.classList.contains('selected');
 
-    const k = Math.round(stopAfterYears * p); // nb de périodes AVEC versements
-    const n = years * p;
+  const frequency = override?.frequency || (document.getElementById('investment-frequency')?.value || 'monthly');
+  const p = (frequency === 'weekly') ? 52 : (frequency === 'monthly') ? 12 : (frequency === 'quarterly') ? 4 : 1;
 
-    // --- Versements bruts investis
-    const periodicTotal = isPeriodicMode ? periodicAmount * k : 0;
-    const investedTotal = initialDeposit + periodicTotal;
+  // Stop des versements (plafond) éventuel
+  const stopAfterYears = (typeof opts.stopAfterYears === 'number')
+    ? Math.max(0, Math.min(years, opts.stopAfterYears))
+    : years;
 
-    // Versements nets après frais d'entrée
-    const initialNet  = initialDeposit * (1 - fees.entryPct);
-    const periodicNet = isPeriodicMode ? periodicAmount * (1 - fees.entryPct) : 0;
+  const k = Math.max(0, Math.round(stopAfterYears * p)); // nb de périodes AVEC versements
+  const n = Math.max(0, Math.round(years * p));          // horizon total en périodes
 
-    // ✅ CORRECTIF : Taux périodique effectif — garantit (1+rPer)^p = (1+annualReturn)
-    const rPer = Math.pow(1 + annualReturn, 1 / p) - 1;
+  // --- Versements bruts investis
+  const periodicTotal = isPeriodicMode ? periodicAmount * k : 0;
+  const investedTotal = initialDeposit + periodicTotal;
 
-    // ✅ CORRECTIF : Capital final SANS frais — même base de capitalisation que "AVEC frais"
-    let finalNoFees = initialDeposit * Math.pow(1 + rPer, n);
-    if (isPeriodicMode && periodicAmount > 0 && k > 0) {
-        finalNoFees += periodicAmount * ((Math.pow(1 + rPer, k) - 1) / rPer) * Math.pow(1 + rPer, (n - k + 1));
+  // Versements nets après frais d'entrée
+  const initialNet  = initialDeposit * (1 - fees.entryPct);
+  const periodicNet = isPeriodicMode ? periodicAmount * (1 - fees.entryPct) : 0;
+
+  // Taux périodique effectif (garantit (1+rPer)^p = 1+annualReturn)
+  const rPer = Math.pow(1 + annualReturn, 1 / p) - 1;
+
+  // --- Capital final SANS frais (référence pour mesurer l'impact des frais)
+  let finalNoFees = initialDeposit * Math.pow(1 + rPer, n);
+  if (isPeriodicMode && periodicAmount > 0 && k > 0) {
+    // ⬇️ série ordinaire (fin de période) — pas de (1+r) supplémentaire
+    finalNoFees += fvSeries(rPer, periodicAmount, k, n);
+  }
+
+  // Raccourci "zéro frais"
+  const noFees = fees.mgmtPct === 0 && fees.entryPct === 0 && fees.exitPct === 0 && fees.fixedAnnual === 0;
+
+  let finalWithFees;
+  if (noFees) {
+    finalWithFees = finalNoFees;
+  } else {
+    // --- Capital final AVEC frais ---
+    // Gestion (%/an) proratisée par période
+    const fPer = fees.mgmtPct / p;
+    const rNetPer = ((1 + rPer) * (1 - fPer)) - 1;
+
+    // 1) Croissance du dépôt initial net
+    finalWithFees = initialNet * Math.pow(1 + rNetPer, n);
+
+    // 2) Valeur future des versements périodiques nets (série ordinaire), stoppés après k périodes
+    if (isPeriodicMode && periodicNet > 0 && k > 0) {
+      finalWithFees += fvSeries(rNetPer, periodicNet, k, n);
     }
 
-    // ✅ Raccourci "zéro frais"
-    const noFees = fees.mgmtPct === 0 && fees.entryPct === 0 && fees.exitPct === 0 && fees.fixedAnnual === 0;
+    // 3) Frais fixes annuels (prélevés fin d'année) capitalisés jusqu'à l'horizon
+    if (fees.fixedAnnual > 0) {
+      let fixedFV = 0;
+      for (let year = 1; year <= Math.max(1, Math.round(years)); year++) {
+        const periodsRemaining = (Math.round(years) - year) * p;
+        fixedFV += fees.fixedAnnual * Math.pow(1 + rNetPer, periodsRemaining);
+      }
+      finalWithFees -= fixedFV;
+    }
 
-    let finalWithFees;
-    if (noFees) {
-        finalWithFees = finalNoFees; // pas d'écart possible
+    // 4) Frais de sortie (en % du capital final)
+    if (fees.exitPct > 0) {
+      finalWithFees *= (1 - fees.exitPct);
+    }
+  }
+
+  const finalAmount = round2(finalWithFees);
+  const gains = round2(finalAmount - investedTotal);
+
+  // Impact des frais (référence sans frais – avec frais)
+  let feesImpact = round2(finalNoFees - finalWithFees);
+  if (Math.abs(feesImpact) < 0.01) feesImpact = 0;
+
+  // Rendement annualisé (IRR si versements périodiques sinon CAGR)
+  let annualizedReturn;
+  if (periodicTotal === 0) {
+    annualizedReturn = calcCAGR({ invested: initialDeposit, finalValue: finalAmount, years });
+  } else {
+    annualizedReturn = calcIRR({
+      initial: initialDeposit,
+      periodic: isPeriodicMode ? periodicAmount : 0,
+      periodsPerYear: p,
+      years,
+      finalValue: finalAmount,
+      guess: annualReturn
+    });
+  }
+
+  // Fiscalité sur le gain
+  let afterTaxAmount = finalAmount;
+  let taxAmount = 0;
+  if (gains > 0) {
+    if (enveloppe && enveloppe.fiscalite.calcGainNet) {
+      const netGain = enveloppe.fiscalite.calcGainNet({
+        gain: gains,
+        duree: years,
+        tmi: 0.30,
+        primesVerseesAvantRachat: 0,
+        estCouple: false,
+      });
+      afterTaxAmount = investedTotal + netGain;
+      taxAmount = round2(gains - netGain);
     } else {
-        // --- Capital final AVEC frais ---
-        // Taux net avec frais de gestion (proratisé par période)
-        const fPer = fees.mgmtPct / p;
-        const rNetPer = ((1 + rPer) * (1 - fPer)) - 1;
-
-        // 1) Croissance du dépôt initial (net entrée) au taux net
-        finalWithFees = initialNet * Math.pow(1 + rNetPer, n);
-
-        // 2) Annuité des versements périodiques (nets) - avec arrêt après k périodes
-        if (isPeriodicMode && periodicNet > 0 && k > 0) {
-            // Annuity-due pendant k périodes, puis capitalisation jusqu'à n
-            const annDueK = ((Math.pow(1 + rNetPer, k) - 1) / rNetPer) * Math.pow(1 + rNetPer, (n - k + 1));
-            finalWithFees += periodicNet * annDueK;
-        }
-
-        // ✅ CORRECTIF : 3) Frais fixes annuels (prélevés chaque fin d'année)
-        if (fees.fixedAnnual > 0) {
-            let fixedImpact = 0;
-            for (let year = 1; year <= years; year++) {
-                // Prélèvement en fin d'année, actualisé jusqu'à la fin
-                const periodsRemaining = (years - year) * p;
-                const presentValue = fees.fixedAnnual * Math.pow(1 + rNetPer, periodsRemaining);
-                fixedImpact += presentValue;
-            }
-            finalWithFees -= fixedImpact;
-        }
-
-        // 4) Frais de sortie à la fin
-        if (fees.exitPct > 0) {
-            finalWithFees *= (1 - fees.exitPct);
-        }
+      const taxRate = years >= 5 ? TAXES.PRL_SOC : TAXES.PFU_TOTAL;
+      taxAmount = round2(gains * taxRate);
+      afterTaxAmount = round2(finalAmount - taxAmount);
     }
+  }
 
-    const finalAmount = round2(finalWithFees);
-    const gains = round2(finalAmount - investedTotal);
-
-    // Impact des frais – sans bruit numérique
-    let feesImpact = round2(finalNoFees - finalWithFees);
-    if (Math.abs(feesImpact) < 0.01) feesImpact = 0; // tue les centimes résiduels
-
-    // Rendement annualisé (IRR si périodique)
-    let annualizedReturn;
-    if (periodicTotal === 0) {
-        annualizedReturn = calcCAGR({ invested: initialDeposit, finalValue: finalAmount, years });
-    } else {
-        annualizedReturn = calcIRR({
-            initial: initialDeposit,
-            periodic: isPeriodicMode ? periodicAmount : 0,
-            periodsPerYear: p,
-            years,
-            finalValue: finalAmount,
-            guess: annualReturn
-        });
-    }
-
-    // Fiscalité sur le gain net (inchangé)
-    let afterTaxAmount = finalAmount;
-    let taxAmount = 0;
-    if (gains > 0) {
-        if (enveloppe && enveloppe.fiscalite.calcGainNet) {
-            const netGain = enveloppe.fiscalite.calcGainNet({
-                gain: gains,
-                duree: years,
-                tmi: 0.30,
-                primesVerseesAvantRachat: 0,
-                estCouple: false,
-            });
-            afterTaxAmount = investedTotal + netGain;
-            taxAmount = round2(gains - netGain);
-        } else {
-            const taxRate = years >= 5 ? TAXES.PRL_SOC : TAXES.PFU_TOTAL;
-            taxAmount = round2(gains * taxRate);
-            afterTaxAmount = round2(finalAmount - taxAmount);
-        }
-    }
-
-    return {
-        initialDeposit,
-        periodicTotal,
-        investedTotal,
-        finalAmount,
-        gains,
-        afterTaxAmount,
-        taxAmount,
-        feesImpact,
-        annualizedReturn,
-        years,
-        annualReturn,
-        vehicleId,
-        enveloppe
-    };
+  return {
+    initialDeposit,
+    periodicTotal,
+    investedTotal,
+    finalAmount,
+    gains,
+    afterTaxAmount,
+    taxAmount,
+    feesImpact,
+    annualizedReturn,
+    years,
+    annualReturn,
+    vehicleId,
+    enveloppe
+  };
 }
 
 /**
