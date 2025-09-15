@@ -7,6 +7,7 @@ import time
 import random
 import re
 import math
+import hashlib
 from pathlib import Path
 import pandas as pd
 import numpy as np
@@ -80,7 +81,8 @@ def compute_score(rows, kind):
     vol_used = [vol30[i] if vol30[i] != 0 else vol3y[i] for i in range(n)]
     risk_vol = _z(vol_used)
 
-    dd = [fnum(r.get("maxdd90")) for r in rows]
+    # drawdown: toujours en valeur absolue
+    dd = [abs(fnum(r.get("maxdd90"))) for r in rows]
     risk_dd = _z(dd) if any(dd) else np.zeros(n)
 
     # -- Détection de sur-extension (anti-fin-de-cycle)
@@ -165,11 +167,11 @@ def build_scored_universe_v3(stocks_jsons, etf_csv_path, crypto_csv_path):
     # Filtrage actions : vol contrôlée + drawdown acceptable + pas de sur-extension
     def in_equity_bounds(r):
         v = fnum(r.get("vol_3y"))
-        dd = fnum(r.get("maxdd90"))
-        return 12 <= v <= 60 and dd > -25 and not r["flags"]["overextended"]
+        dd = abs(fnum(r.get("maxdd90")))
+        return 12 <= v <= 60 and dd <= 25 and not r["flags"]["overextended"]
     
     eq_filtered = [r for r in eq_rows if in_equity_bounds(r)]
-    print(f"  ✅ Actions filtrées: {len(eq_filtered)}/{len(eq_rows)} (vol 12-60%, DD>-25%, non sur-étendues)")
+    print(f"  ✅ Actions filtrées: {len(eq_filtered)}/{len(eq_rows)} (vol 12-60%, DD≤25%, non sur-étendues)")
 
     # ====== ETFs (CSV combiné) ======
     etf_df = read_combined_etf_csv(etf_csv_path)
@@ -247,6 +249,28 @@ def build_scored_universe_v3(stocks_jsons, etf_csv_path, crypto_csv_path):
                 crypto_filtered.append(r)
         
         print(f"  ✅ Cryptos filtrées: {len(crypto_filtered)}/{len(cr_rows)} (tendance stable + vol 40-140% + DD>-40%)")
+        
+        # Fallback: si trop peu de candidats, desserrer légèrement les critères
+        if len(crypto_filtered) < 5:
+            crypto_relaxed = []
+            for r in cr_rows:
+                p7d  = fnum(r.get("perf_7d"))
+                p24h = fnum(r.get("perf_24h"))
+                v    = fnum(r.get("vol30"))
+                ddv  = abs(fnum(r.get("maxdd90")))
+                ok_trend2 = p7d > p24h > 0 and p24h <= 0.5 * p7d
+                ok_vol2   = 40 <= v <= 160
+                ok_dd2    = ddv <= 50
+                if ok_trend2 and ok_vol2 and ok_dd2:
+                    crypto_relaxed.append(r)
+
+            # Concat sans doublon puis limite à 10
+            seen = set(id(x) for x in crypto_filtered)
+            for r in crypto_relaxed:
+                if id(r) not in seen:
+                    crypto_filtered.append(r)
+                    seen.add(id(r))
+            print(f"  🔁 Fallback crypto appliqué → {len(crypto_filtered)} candidats")
     
     except Exception as e:
         print(f"  ⚠️ Erreur crypto: {e}")
@@ -274,21 +298,43 @@ def build_scored_universe_v3(stocks_jsons, etf_csv_path, crypto_csv_path):
         return low + mid
 
     # Diversification sectorielle pour les actions
-    def sector_balanced(eq_rows, n):
-        """Évite la surconcentration sectorielle"""
-        eq_rows = sorted(eq_rows, key=lambda x: x["score"], reverse=True)
-        sectors = defaultdict(list)
-        for eq in eq_rows:
-            sector = eq.get("sector", "Unknown")
-            sectors[sector].append(eq)
-        
-        # Max 40% par secteur
-        balanced = []
-        max_per_sector = max(1, int(n * 0.4))
-        for sector, stocks in sectors.items():
-            balanced.extend(stocks[:max_per_sector])
-        
-        return sorted(balanced, key=lambda x: x["score"], reverse=True)[:n]
+    def sector_balanced(eq_rows, n, sector_cap=0.30):
+        """Round-robin par secteur avec cap (30% par défaut)"""
+        if not eq_rows:
+            return []
+
+        # Tri par score décroissant et bucket par secteur
+        buckets = defaultdict(list)
+        for x in sorted(eq_rows, key=lambda x: x["score"], reverse=True):
+            buckets[x.get("sector", "Unknown")].append(x)
+
+        # Ordre des secteurs: meilleur top-score en premier
+        sector_order = sorted(
+            buckets.keys(),
+            key=lambda s: buckets[s][0]["score"] if buckets[s] else -1e9,
+            reverse=True
+        )
+
+        out, picked_per_sector = [], defaultdict(int)
+        max_per_sector = max(1, int(n * sector_cap))
+
+        # Round-robin
+        while len(out) < n:
+            progressed = False
+            for s in sector_order:
+                if picked_per_sector[s] >= max_per_sector:
+                    continue
+                if buckets[s]:
+                    out.append(buckets[s].pop(0))
+                    picked_per_sector[s] += 1
+                    progressed = True
+                    if len(out) >= n:
+                        break
+            if not progressed:
+                # plus rien à prendre
+                break
+
+        return out[:n]
 
     universe = {
         "equities": sector_balanced(eq_filtered, 30),
@@ -399,7 +445,10 @@ def extract_allowed_assets(filtered_data: Dict) -> Dict:
                     "risk_class": it.get("risk_class", "mid"),
                     "flags": it.get("flags", {}),
                     "sector": it.get("sector", "Unknown"),
-                    "country": it.get("country", "Global")
+                    "country": it.get("country", "Global"),
+                    # >>> métriques utiles à la validation
+                    "ytd": fnum(it.get("ytd")),
+                    "perf_1m": fnum(it.get("perf_1m")),
                 })
             return out
         
@@ -408,12 +457,15 @@ def extract_allowed_assets(filtered_data: Dict) -> Dict:
             "allowed_etfs_standard": mk(u.get("etfs", []), "ETF_s"),
             "allowed_bond_etfs": mk(u.get("bonds", []), "ETF_b"),
             "allowed_crypto": [{
-                "id": f"CR_{i+1}", 
-                "name": it["name"], 
+                "id": f"CR_{i+1}",
+                "name": it["name"],
                 "symbol": it["name"][:6].upper(),
-                "sevenDaysPositif": True, 
+                "sevenDaysPositif": True,
                 "score": round(float(it.get("score", 0)), 3),
-                "risk_class": it.get("risk_class", "mid")
+                "risk_class": it.get("risk_class", "mid"),
+                # métriques pour contrôles
+                "ytd": fnum(it.get("ytd")),
+                "perf_1m": fnum(it.get("perf_1m")),
             } for i, it in enumerate(u.get("crypto", []))]
         }
     
@@ -448,7 +500,9 @@ def extract_allowed_assets_legacy(filtered_data: Dict) -> Dict:
                         "sector": sector,
                         "score": 0.0,
                         "risk_class": "mid",
-                        "flags": {"overextended": False}
+                        "flags": {"overextended": False},
+                        "ytd": 0.0,
+                        "perf_1m": 0.0
                     })
                     equity_id += 1
                     if equity_id > 30:
@@ -469,7 +523,9 @@ def extract_allowed_assets_legacy(filtered_data: Dict) -> Dict:
                         "symbol": etf_name.split()[0][:4].upper() if etf_name.split() else "ETF",
                         "score": 0.0,
                         "risk_class": "mid",
-                        "flags": {"overextended": False}
+                        "flags": {"overextended": False},
+                        "ytd": 0.0,
+                        "perf_1m": 0.0
                     })
                     etf_id += 1
                     if etf_id > 20:
@@ -485,7 +541,9 @@ def extract_allowed_assets_legacy(filtered_data: Dict) -> Dict:
                 "symbol": name.split()[0][:4].upper() if name.split() else "BOND",
                 "score": 0.0,
                 "risk_class": "bond",
-                "flags": {"overextended": False}
+                "flags": {"overextended": False},
+                "ytd": 0.0,
+                "perf_1m": 0.0
             })
     
     # Cryptos autorisées
@@ -506,7 +564,9 @@ def extract_allowed_assets_legacy(filtered_data: Dict) -> Dict:
                     "symbol": name.upper()[:3],
                     "sevenDaysPositif": seven_days_positive,
                     "score": 0.0,
-                    "risk_class": "mid"
+                    "risk_class": "mid",
+                    "ytd": 0.0,
+                    "perf_1m": 0.0
                 })
                 crypto_id += 1
                 if crypto_id > 10:
@@ -652,6 +712,13 @@ def validate_portfolios_v3(portfolios: Dict, allowed_assets: Dict) -> Tuple[bool
             asset_id = ligne.get('id', '')
             asset = id_to_asset.get(asset_id)
             
+            # Règle anti-fin-de-cycle: si info dispo sur l'actif
+            if asset:
+                ytd_val = fnum(asset.get("ytd"))
+                m1_val  = fnum(asset.get("perf_1m"))
+                if ytd_val > 100 and m1_val <= 0:
+                    errors.append(f"{portfolio_name}: {asset_id} viole 'YTD>100% & 1M≤0' (anti-fin-de-cycle)")
+            
             if asset:
                 score = asset.get('score', 0)
                 scores.append(score)
@@ -740,12 +807,46 @@ def fix_portfolios_v3(portfolios: Dict, errors: List[str]) -> Dict:
     
     return portfolios
 
-@lru_cache(maxsize=1)
+# ============= CACHE D'UNIVERS AVEC HASH DE FICHIERS =============
+
+_UNIVERSE_CACHE = {}
+
+def _sha1_bytes(b: bytes) -> str:
+    return hashlib.sha1(b).hexdigest()
+
+def file_sha1(path: Path) -> str:
+    try:
+        with open(path, "rb") as fh:
+            return _sha1_bytes(fh.read())
+    except Exception:
+        return "NA"
+
+def json_sha1(obj: Any) -> str:
+    try:
+        blob = json.dumps(obj, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")
+        return _sha1_bytes(blob)
+    except Exception:
+        return str(random.random())
+
+def set_cached_universe(etf_hash: str, stocks_hash: str, crypto_hash: str, universe: Dict):
+    _UNIVERSE_CACHE[(etf_hash, stocks_hash, crypto_hash)] = universe
+
 def get_cached_universe(etf_hash: str, stocks_hash: str, crypto_hash: str):
-    """Cache intelligent pour éviter le recalcul de l'univers"""
-    # Cette fonction sera appelée avec des hash des fichiers
-    # pour éviter les recalculs inutiles
-    pass
+    return _UNIVERSE_CACHE.get((etf_hash, stocks_hash, crypto_hash))
+
+# ============= RETRY API ROBUSTE =============
+
+def post_with_retry(url, headers, payload, tries=3, timeout=60, backoff=1.7):
+    last_err = None
+    for i in range(tries):
+        try:
+            return requests.post(url, headers=headers, json=payload, timeout=timeout)
+        except requests.RequestException as e:
+            last_err = e
+            wait = backoff ** i
+            print(f"  ⚠️ API retry {i+1}/{tries} dans {wait:.1f}s: {e}")
+            time.sleep(wait)
+    raise last_err
 
 def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     """
@@ -803,7 +904,7 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     }
     
     print("🚀 Envoi de la requête à l'API OpenAI (prompt v3 quantitatif)...")
-    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data, timeout=60)
+    response = post_with_retry("https://api.openai.com/v1/chat/completions", headers, data, tries=3, timeout=60)
     response.raise_for_status()
     
     result = response.json()
@@ -1375,6 +1476,8 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
                 <span class="feature">Classes de Risque</span>
                 <span class="feature">Filtre Anti-Levier</span>
                 <span class="feature">Équilibrage Sectoriel</span>
+                <span class="feature">Retry API</span>
+                <span class="feature">Cache Univers</span>
             </p>
         </div>
         <h2>Contenu du prompt v3 envoyé à OpenAI :</h2>
@@ -1444,7 +1547,7 @@ def generate_portfolios_v2(filtered_data):
     }
     
     print("🚀 Envoi de la requête à l'API OpenAI (prompt v2 fallback)...")
-    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
+    response = post_with_retry("https://api.openai.com/v1/chat/completions", headers, data, tries=3, timeout=60)
     response.raise_for_status()
     
     result = response.json()
@@ -1546,7 +1649,7 @@ Format JSON strict:
         "temperature": 0.3
     }
     
-    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
+    response = post_with_retry("https://api.openai.com/v1/chat/completions", headers, data, tries=3, timeout=60)
     response.raise_for_status()
     
     result = response.json()
@@ -1572,19 +1675,27 @@ def save_portfolios(portfolios):
         with open('portefeuilles.json', 'w', encoding='utf-8') as file:
             json.dump(portfolios, file, ensure_ascii=False, indent=4)
         
-        history_file = f"{history_dir}/portefeuilles_v3_{timestamp}.json"
+        history_file = f"{history_dir}/portefeuilles_v3_patched_{timestamp}.json"
         with open(history_file, 'w', encoding='utf-8') as file:
             portfolios_with_metadata = {
-                "version": "v3_quantitatif",
+                "version": "v3_quantitatif_patched",
                 "timestamp": timestamp,
                 "date": datetime.datetime.now().isoformat(),
-                "portfolios": portfolios
+                "portfolios": portfolios,
+                "features": [
+                    "drawdown_normalisé",
+                    "diversification_round_robin", 
+                    "validation_anti_fin_cycle",
+                    "fallback_crypto_progressif",
+                    "cache_univers_hash",
+                    "retry_api_robuste"
+                ]
             }
             json.dump(portfolios_with_metadata, file, ensure_ascii=False, indent=4)
         
         update_history_index(history_file, portfolios_with_metadata)
         
-        print(f"✅ Portefeuilles v3 sauvegardés avec succès dans portefeuilles.json et {history_file}")
+        print(f"✅ Portefeuilles v3 (patched) sauvegardés avec succès dans portefeuilles.json et {history_file}")
     except Exception as e:
         print(f"❌ Erreur lors de la sauvegarde des portefeuilles: {str(e)}")
 
@@ -1606,6 +1717,7 @@ def update_history_index(history_file, portfolio_data):
             "version": portfolio_data.get("version", "legacy"),
             "timestamp": portfolio_data["timestamp"],
             "date": portfolio_data["date"],
+            "features": portfolio_data.get("features", []),
             "summary": {}
         }
 
@@ -1633,7 +1745,7 @@ def update_history_index(history_file, portfolio_data):
         print(f"⚠️ Avertissement: Erreur lors de la mise à jour de l'index: {str(e)}")
 
 def main():
-    """Version modifiée pour utiliser le système de scoring quantitatif v3."""
+    """Version modifiée pour utiliser le système de scoring quantitatif v3 avec tous les patchs."""
     print("🔍 Chargement des données financières...")
     print("=" * 60)
     
@@ -1681,21 +1793,32 @@ def main():
     
     print("\n" + "=" * 60)
     
-    # ========== CONSTRUCTION DE L'UNIVERS QUANTITATIF V3 ==========
+    # ========== CONSTRUCTION DE L'UNIVERS QUANTITATIF V3 AVEC CACHE ==========
     
-    print("\n🧮 Construction de l'univers quantitatif v3...")
+    print("\n🧮 Construction de l'univers quantitatif v3 (avec cache)...")
     
     # Charger les données JSON des stocks
     stocks_jsons = []
     for f in stocks_files_exist:
         stocks_jsons.append(load_json_data(str(f)))
     
-    # Construire l'univers avec scoring quantitatif
-    universe = build_scored_universe_v3(
-        stocks_jsons,
-        str(etf_csv),
-        str(crypto_csv)
-    )
+    # Hash des sources pour cache
+    etf_hash    = file_sha1(etf_csv) if etf_csv.exists() else "NA"
+    stocks_hash = json_sha1(stocks_jsons)
+    crypto_hash = file_sha1(crypto_csv) if crypto_csv.exists() else "NA"
+
+    cached = get_cached_universe(etf_hash, stocks_hash, crypto_hash)
+    if cached:
+        print("🗃️ Univers récupéré depuis le cache")
+        universe = cached
+    else:
+        universe = build_scored_universe_v3(
+            stocks_jsons,
+            str(etf_csv),
+            str(crypto_csv)
+        )
+        set_cached_universe(etf_hash, stocks_hash, crypto_hash, universe)
+        print("🗂️ Univers mis en cache")
     
     # ========== FILTRAGE ET PRÉPARATION DES DONNÉES ==========
     
@@ -1721,7 +1844,7 @@ def main():
     
     # ========== GÉNÉRATION DES PORTEFEUILLES AVEC UNIVERS QUANTITATIF ==========
     
-    print("\n🧠 Génération des portefeuilles optimisés v3 (quantitatif)...")
+    print("\n🧠 Génération des portefeuilles optimisés v3 (quantitatif + patchs)...")
     
     # Préparer le dictionnaire des données filtrées avec l'univers quantitatif
     filtered_data = {
@@ -1745,13 +1868,17 @@ def main():
     print("\n💾 Sauvegarde des portefeuilles...")
     save_portfolios(portfolios)
     
-    print("\n✨ Traitement terminé avec la version v3 quantitative!")
+    print("\n✨ Traitement terminé avec la version v3 quantitative (PATCHED)!")
     print("🎯 Nouvelles fonctionnalités activées:")
     print("   • Scoring quantitatif (momentum, volatilité, drawdown)")
     print("   • Filtrage automatique des ETF à effet de levier")
     print("   • Détection des actifs sur-étendus")
     print("   • Équilibrage par classes de risque")
-    print("   • Diversification sectorielle automatique")
+    print("   • Diversification sectorielle round-robin (cap 30%)")
+    print("   • Validation anti-fin-de-cycle (YTD>100% & 1M≤0)")
+    print("   • Fallback crypto progressif")
+    print("   • Cache intelligent d'univers (hash fichiers)")
+    print("   • Retry API robuste (3 tentatives)")
 
 def load_json_data(file_path):
     """Charger des données depuis un fichier JSON."""
