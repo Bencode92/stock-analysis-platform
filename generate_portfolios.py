@@ -41,21 +41,39 @@ def sanitize_marketing_language(text: str) -> str:
 def get_compliance_block() -> Dict:
     """Retourne le bloc de compliance standardisé AMF"""
     return {
-        "Disclaimer": "Communication d'information financière à caractère général. Ce contenu n'est pas un conseil en investissement personnalisé. Les performances passées ne préjugent pas des performances futures. Investir comporte un risque de perte en capital. Aucune exécution ni transmission d'ordres n'est fournie.",
-        "Risques": [
-            "Perte en capital possible",
-            "Performances passées ne préjugent pas des performances futures", 
-            "Volatilité accrue selon les classes d'actifs",
-            "Crypto-actifs : volatilité élevée, perte totale possible",
-            "Risques de change pour les actifs internationaux",
-            "Risque de liquidité sur certains marchés"
+        "jurisdiction": "FR",
+        "disclaimer": (
+            "Information à caractère purement indicatif et pédagogique. "
+            "Ce contenu ne constitue ni un conseil en investissement, ni une recommandation personnalisée, "
+            "ni une sollicitation d'achat/vente. Performances passées non indicatives des performances futures. "
+            "Vous restez seul responsable de vos décisions. Si besoin, consultez un conseiller en investissement financier (CIF) agréé."
+        ),
+        "risk_notice": [
+            "Les crypto-actifs sont très volatils et peuvent entraîner une perte totale.",
+            "Les ETF à effet de levier et produits inverses sont exclus.",
+            "Diversification et horizon d'investissement requis.",
+            "Risques de change pour les actifs internationaux.",
+            "Risque de liquidité sur certains marchés."
         ],
-        "Methodologie": "Allocation issue d'un scoring quantitatif (momentum, volatilité, drawdown, liquidité). Les données et le classement peuvent évoluer. Cette approche ne garantit aucun résultat."
+        "sources": ["Données de marché publiques/CSV internes"],
+        "last_update": datetime.datetime.utcnow().isoformat() + "Z"
     }
+
+def attach_compliance(portfolios: Dict) -> Dict:
+    """Attache le bloc compliance de manière sûre en vérifiant les types"""
+    if not isinstance(portfolios, dict):
+        return portfolios
+    
+    block = get_compliance_block()
+    for key in ["Agressif", "Modéré", "Stable"]:
+        if isinstance(portfolios.get(key), dict):
+            portfolios[key]["Compliance"] = block
+    return portfolios
 
 # ============= NOUVEAU SYSTÈME DE SCORING V3 - QUANTITATIF =============
 
-LEVERAGED_RE = re.compile(r"(2x|3x|ultra|lev|leverage|inverse|bear|-1x|-2x|-3x)", re.I)
+# FIX 1: Regex non-capturant pour éviter le warning pandas
+LEVERAGED_RE = re.compile(r"(?:2x|3x|ultra|lev|leverage|inverse|bear|-1x|-2x|-3x)", re.I)
 
 def fnum(x):
     """Conversion robuste vers float"""
@@ -147,22 +165,42 @@ def compute_score(rows, kind):
     return rows
 
 def read_combined_etf_csv(path_csv):
-    """Lecture et préparation des ETF avec détection auto des ETF à effet de levier"""
+    """
+    FIX 2: Lecture et préparation des ETF avec détection corrigée des ETF à effet de levier
+    """
     df = pd.read_csv(path_csv)
     
     # Cast des colonnes numériques
-    num_cols = ["daily_change_pct", "ytd_return_pct", "one_year_return_pct", "vol_pct", "vol_3y_pct", "aum_usd", "total_expense_ratio", "yield_ttm"]
+    num_cols = ["daily_change_pct", "ytd_return_pct", "one_year_return_pct", 
+                "vol_pct", "vol_3y_pct", "aum_usd", "total_expense_ratio", "yield_ttm"]
     for c in num_cols:
         if c in df.columns: 
             df[c] = pd.to_numeric(df[c], errors="coerce")
     
-    # Flags automatiques
-    df["is_bond"] = df["fund_type"].astype(str).str.contains("Bond|Fixed Income|Obligation", case=False, na=False) | \
-                    df["etf_type"].astype(str).str.contains("Bond|Fixed Income|Obligation", case=False, na=False)
+    # --- Détection obligations
+    df["is_bond"] = (
+        df.get("fund_type", "").astype(str).str.contains(r"Bond|Fixed Income|Obligation", case=False, na=False) |
+        df.get("etf_type", "").astype(str).str.contains(r"Bond|Fixed Income|Obligation", case=False, na=False)
+    )
+
+    # --- FIX 2: Détection levier corrigée
+    lev_field = df.get("leverage")
+    if lev_field is not None:
+        lev_text = lev_field.fillna("").astype(str).str.strip().str.lower()
+        has_lev_value = ~lev_text.isin(["", "0", "none", "nan", "na", "n/a"])
+    else:
+        has_lev_value = pd.Series(False, index=df.index)
+
+    looks_leveraged = (
+        df.get("etf_type", "").astype(str).str.contains(r"\b(?:lev|inverse|bear|bull)\b", case=False, na=False) |
+        df.get("name", "").astype(str).str.contains(LEVERAGED_RE, regex=True, na=False)
+    )
+
+    df["is_leveraged"] = has_lev_value | looks_leveraged
     
-    df["is_leveraged"] = df["leverage"].astype(str).str.strip().ne("").fillna(False) | \
-                         df["etf_type"].astype(str).str.contains("lev|inverse|bear|bull", case=False, na=False) | \
-                         df["name"].astype(str).str.contains(LEVERAGED_RE)
+    print(f"  🔍 Debug ETF: Total={len(df)}, Bonds={df['is_bond'].sum()}, Leveraged={df['is_leveraged'].sum()}")
+    print(f"  📊 ETF standards disponibles: {len(df[~df['is_bond'] & ~df['is_leveraged']])}")
+    print(f"  📉 ETF obligations disponibles: {len(df[df['is_bond'] & ~df['is_leveraged']])}")
     
     return df
 
@@ -369,11 +407,12 @@ def build_scored_universe_v3(stocks_jsons, etf_csv_path, crypto_csv_path):
 
         return out[:n]
 
+    # Limiter le nombre d'actifs pour réduire la taille du prompt
     universe = {
-        "equities": sector_balanced(eq_filtered, 30),
-        "etfs": top_balanced(etf_filtered, 20),
-        "bonds": sorted(bond_rows, key=lambda x: x["score"], reverse=True)[:20],
-        "crypto": sorted(crypto_filtered, key=lambda x: x["score"], reverse=True)[:10],
+        "equities": sector_balanced(eq_filtered, min(25, len(eq_filtered))),  # Réduit de 30 à 25
+        "etfs": top_balanced(etf_filtered, min(15, len(etf_filtered))),       # Réduit de 20 à 15
+        "bonds": sorted(bond_rows, key=lambda x: x["score"], reverse=True)[:10],  # Réduit de 20 à 10
+        "crypto": sorted(crypto_filtered, key=lambda x: x["score"], reverse=True)[:5],  # Réduit de 10 à 5
     }
 
     # Stats de l'univers
@@ -384,7 +423,7 @@ def build_scored_universe_v3(stocks_jsons, etf_csv_path, crypto_csv_path):
         "total_assets": sum(len(v) for v in universe.values())
     }
     
-    print(f"  📊 Univers final: {stats['total_assets']} actifs")
+    print(f"  📊 Univers final: {stats['total_assets']} actifs (optimisé pour prompt)")
     print(f"     • Actions: {len(universe['equities'])} (score moy: {stats['equities_avg_score']:.2f})")
     print(f"     • ETF: {len(universe['etfs'])} (score moy: {stats['etfs_avg_score']:.2f})")  
     print(f"     • Obligations: {len(universe['bonds'])}")
@@ -872,8 +911,8 @@ def fix_portfolios_v3(portfolios: Dict, errors: List[str]) -> Dict:
                 lignes[-1]['allocation_pct'] = round(lignes[-1]['allocation_pct'] + diff, 2)
                 print(f"  🔧 Ajustement {portfolio_name}: dernière ligne ajustée de {diff:.2f}%")
         
-        # Ajouter le bloc Compliance s'il manque
-        if 'Compliance' not in portfolio:
+        # Ajouter le bloc Compliance s'il manque (protection type)
+        if isinstance(portfolio, dict) and 'Compliance' not in portfolio:
             portfolio['Compliance'] = get_compliance_block()
             print(f"  🔧 Ajout bloc Compliance manquant pour {portfolio_name}")
     
@@ -882,20 +921,23 @@ def fix_portfolios_v3(portfolios: Dict, errors: List[str]) -> Dict:
 def apply_compliance_sanitization(portfolios: Dict) -> Dict:
     """Applique la sanitisation des termes marketing interdits"""
     for portfolio_name, portfolio in portfolios.items():
+        if not isinstance(portfolio, dict):
+            continue
+            
         # Sanitiser le commentaire
         if 'Commentaire' in portfolio:
             portfolio['Commentaire'] = sanitize_marketing_language(portfolio['Commentaire'])
         
         # Sanitiser les justifications
-        if 'Lignes' in portfolio:
+        if 'Lignes' in portfolio and isinstance(portfolio['Lignes'], list):
             for ligne in portfolio['Lignes']:
-                if 'justification' in ligne:
+                if isinstance(ligne, dict) and 'justification' in ligne:
                     ligne['justification'] = sanitize_marketing_language(ligne['justification'])
         
         # Sanitiser les raisons d'exclusion
-        if 'ActifsExclus' in portfolio:
+        if 'ActifsExclus' in portfolio and isinstance(portfolio['ActifsExclus'], list):
             for actif in portfolio['ActifsExclus']:
-                if 'reason' in actif:
+                if isinstance(actif, dict) and 'reason' in actif:
                     actif['reason'] = sanitize_marketing_language(actif['reason'])
     
     return portfolios
@@ -927,19 +969,33 @@ def set_cached_universe(etf_hash: str, stocks_hash: str, crypto_hash: str, unive
 def get_cached_universe(etf_hash: str, stocks_hash: str, crypto_hash: str):
     return _UNIVERSE_CACHE.get((etf_hash, stocks_hash, crypto_hash))
 
-# ============= RETRY API ROBUSTE =============
+# ============= FIX 3: RETRY API ROBUSTE AVEC TIMEOUTS ÉTENDUS =============
 
-def post_with_retry(url, headers, payload, tries=3, timeout=60, backoff=1.7):
+def post_with_retry(url, headers, payload, tries=5, timeout=(20, 180), backoff=2.0):
+    """
+    FIX 3: Retry robuste avec timeouts étendus
+    timeout = (connect_timeout, read_timeout)
+    """
     last_err = None
     for i in range(tries):
         try:
             return requests.post(url, headers=headers, json=payload, timeout=timeout)
-        except requests.RequestException as e:
+        except (requests.ReadTimeout, requests.ConnectionError, requests.Timeout) as e:
             last_err = e
             wait = backoff ** i
             print(f"  ⚠️ API retry {i+1}/{tries} dans {wait:.1f}s: {e}")
             time.sleep(wait)
     raise last_err
+
+# ============= FIX 4: FILET DE SÉCURITÉ CACHE =============
+
+def load_cached_portfolios(path="portefeuilles.json"):
+    """Charge le dernier portefeuille validé en cache"""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
 
 def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     """
@@ -983,7 +1039,7 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     debug_file, html_file = save_prompt_to_debug_file(prompt, debug_timestamp)
     print(f"✅ Prompt v3 sauvegardé dans {debug_file}")
     
-    # Configuration API avec forçage JSON et température 0
+    # FIX 3: Configuration API avec forçage JSON, température 0 et limite de tokens
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
@@ -993,11 +1049,12 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
         "model": "gpt-4-turbo",  # Modèle stable et fiable
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,  # 0 pour maximum de déterminisme
-        "response_format": {"type": "json_object"}  # Force le JSON
+        "response_format": {"type": "json_object"},  # Force le JSON
+        "max_tokens": 1800  # FIX 3: Borne raisonnable pour éviter des réponses trop longues
     }
     
     print("🚀 Envoi de la requête à l'API OpenAI (prompt v3 quantitatif + compliance)...")
-    response = post_with_retry("https://api.openai.com/v1/chat/completions", headers, data, tries=3, timeout=60)
+    response = post_with_retry("https://api.openai.com/v1/chat/completions", headers, data, tries=5, timeout=(20, 180))
     response.raise_for_status()
     
     result = response.json()
@@ -1020,6 +1077,9 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
         content = re.sub(r'```$', '', content)
         content = content.strip()
         portfolios = json.loads(content)
+    
+    # FIX 3: Attacher compliance de manière sûre
+    portfolios = attach_compliance(portfolios)
     
     # NOUVEAU: Appliquer la sanitisation compliance
     print("🛡️ Application de la sanitisation compliance AMF...")
@@ -1047,7 +1107,7 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     
     # Afficher un résumé détaillé
     for portfolio_name, portfolio in portfolios.items():
-        if 'Lignes' in portfolio:
+        if isinstance(portfolio, dict) and 'Lignes' in portfolio:
             lignes = portfolio['Lignes']
             total_alloc = sum(ligne.get('allocation_pct', 0) for ligne in lignes)
             categories = set(ligne.get('category') for ligne in lignes)
@@ -1192,7 +1252,7 @@ def load_etf_dict_from_csvs(etf_csv_path, bonds_csv_path):
                     short = df[df[dur_col] <= 1.0]
                 else:
                     pattern = r"short\s*term|ultra\s*short|0[-–]1|1[-–]3\s*year"
-                    short = df[df[name_col].astype(str).str.contains(pattern, case=False, regex=True)]
+                    short = df[df[name_col].astype(str).str.contains(pattern, case=False, regex=True, na=False)]
                 
                 for _, r in short.head(20).iterrows():
                     etf["top_short_term_etfs"].append({
@@ -1551,7 +1611,7 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
     <!DOCTYPE html>
     <html>
     <head>
-        <title>TradePulse - Debug de Prompt v3 Quantitatif + Compliance</title>
+        <title>TradePulse - Debug de Prompt v3 Quantitatif + Compliance STABLE</title>
         <meta charset="UTF-8">
         <style>
             body {{ font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }}
@@ -1562,12 +1622,13 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
             .v3-badge {{ background: linear-gradient(45deg, #6c5ce7, #a29bfe); color: white; padding: 5px 10px; border-radius: 15px; font-weight: bold; }}
             .feature {{ background: linear-gradient(45deg, #00b894, #00cec9); color: white; padding: 3px 8px; border-radius: 10px; font-size: 0.8em; margin: 0 3px; }}
             .compliance {{ background: linear-gradient(45deg, #d63031, #e84393); color: white; padding: 3px 8px; border-radius: 10px; font-size: 0.8em; margin: 0 3px; }}
+            .fix {{ background: linear-gradient(45deg, #fdcb6e, #e17055); color: white; padding: 3px 8px; border-radius: 10px; font-size: 0.8em; margin: 0 3px; }}
         </style>
     </head>
     <body>
-        <h1>TradePulse - Debug de Prompt v3 <span class="v3-badge">QUANTITATIF + COMPLIANCE</span></h1>
+        <h1>TradePulse - Debug de Prompt v3 <span class="v3-badge">STABLE</span></h1>
         <div class="info">
-            <p><strong>Version:</strong> v3 - Scoring quantitatif + Anti-hallucinations + Compliance AMF</p>
+            <p><strong>Version:</strong> v3 - Scoring quantitatif + Anti-hallucinations + Compliance AMF + Fixes de stabilité</p>
             <p><strong>Timestamp:</strong> {timestamp}</p>
             <p><strong>Taille totale du prompt:</strong> {len(prompt)} caractères</p>
             <p><strong>Fonctionnalités:</strong> 
@@ -1581,6 +1642,10 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
                 <span class="compliance">Compliance AMF</span>
                 <span class="compliance">Anti-Marketing</span>
                 <span class="compliance">Disclaimer Auto</span>
+                <span class="fix">Regex Fixed</span>
+                <span class="fix">ETF Detection Fixed</span>
+                <span class="fix">Timeout Extended</span>
+                <span class="fix">Type Safety</span>
             </p>
         </div>
         <h2>Contenu du prompt v3 envoyé à OpenAI :</h2>
@@ -1598,7 +1663,7 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
 
 def generate_portfolios(filtered_data):
     """
-    Fonction principale de génération - utilise maintenant la version v3 quantitative + compliance
+    FIX 4: Fonction principale de génération avec filet de sécurité cache
     """
     print("🚀 Lancement de la génération de portefeuilles v3 (scoring quantitatif + compliance AMF)")
     
@@ -1616,9 +1681,20 @@ def generate_portfolios(filtered_data):
         return portfolios
         
     except Exception as e:
-        print(f"❌ Erreur dans la génération v3, fallback vers version v2: {str(e)}")
-        # Fallback vers la v2 si la v3 échoue
-        return generate_portfolios_v2(filtered_data)
+        print(f"❌ Erreur dans la génération v3: {e}\n⚠️ Fallback v2…")
+        try:
+            portfolios = generate_portfolios_v2(filtered_data)
+            return portfolios
+        except Exception as e2:
+            print(f"❌ Erreur v2: {e2}")
+            # FIX 4: Filet de sécurité - utiliser le cache
+            cached = load_cached_portfolios()
+            if cached:
+                print("🛟 API indisponible → on réutilise le dernier portefeuille en cache.")
+                # S'assurer que le cache a la compliance
+                cached = attach_compliance(cached)
+                return cached
+            raise  # plus rien en réserve → on laisse échouer
 
 def generate_portfolios_v2(filtered_data):
     """Version v2 en fallback si v3 échoue"""
@@ -1646,11 +1722,12 @@ def generate_portfolios_v2(filtered_data):
         "model": "gpt-4-turbo",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,
-        "response_format": {"type": "json_object"}
+        "response_format": {"type": "json_object"},
+        "max_tokens": 1800  # FIX 3: Même limite pour v2
     }
     
     print("🚀 Envoi de la requête à l'API OpenAI (prompt v2 fallback)...")
-    response = post_with_retry("https://api.openai.com/v1/chat/completions", headers, data, tries=3, timeout=60)
+    response = post_with_retry("https://api.openai.com/v1/chat/completions", headers, data, tries=5, timeout=(20, 180))
     response.raise_for_status()
     
     result = response.json()
@@ -1665,11 +1742,8 @@ def generate_portfolios_v2(filtered_data):
         content = content.strip()
         portfolios = json.loads(content)
     
-    # Ajouter compliance même en fallback
-    for portfolio_name, portfolio in portfolios.items():
-        if 'Compliance' not in portfolio:
-            portfolio['Compliance'] = get_compliance_block()
-    
+    # FIX 3: Attacher compliance de manière sûre même en fallback
+    portfolios = attach_compliance(portfolios)
     portfolios = apply_compliance_sanitization(portfolios)
     
     print("✅ Portefeuilles v2 générés avec succès (fallback + compliance)")
@@ -1757,10 +1831,11 @@ Format JSON strict:
     data = {
         "model": "gpt-4-turbo",
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.3
+        "temperature": 0.3,
+        "max_tokens": 1800  # FIX 3: Même limite pour legacy
     }
     
-    response = post_with_retry("https://api.openai.com/v1/chat/completions", headers, data, tries=3, timeout=60)
+    response = post_with_retry("https://api.openai.com/v1/chat/completions", headers, data, tries=5, timeout=(20, 180))
     response.raise_for_status()
     
     result = response.json()
@@ -1772,11 +1847,8 @@ Format JSON strict:
     
     portfolios = json.loads(content)
     
-    # Ajouter compliance
-    for portfolio_name, portfolio in portfolios.items():
-        if 'Compliance' not in portfolio:
-            portfolio['Compliance'] = get_compliance_block()
-    
+    # FIX 3: Attacher compliance même en legacy
+    portfolios = attach_compliance(portfolios)
     portfolios = apply_compliance_sanitization(portfolios)
     
     print("✅ Portefeuilles legacy générés avec succès")
@@ -1793,10 +1865,10 @@ def save_portfolios(portfolios):
         with open('portefeuilles.json', 'w', encoding='utf-8') as file:
             json.dump(portfolios, file, ensure_ascii=False, indent=4)
         
-        history_file = f"{history_dir}/portefeuilles_v3_compliance_{timestamp}.json"
+        history_file = f"{history_dir}/portefeuilles_v3_stable_{timestamp}.json"
         with open(history_file, 'w', encoding='utf-8') as file:
             portfolios_with_metadata = {
-                "version": "v3_quantitatif_compliance_amf",
+                "version": "v3_quantitatif_compliance_amf_stable",
                 "timestamp": timestamp,
                 "date": datetime.datetime.now().isoformat(),
                 "portfolios": portfolios,
@@ -1809,14 +1881,19 @@ def save_portfolios(portfolios):
                     "retry_api_robuste",
                     "compliance_amf",
                     "sanitisation_marketing",
-                    "disclaimer_automatique"
+                    "disclaimer_automatique",
+                    "regex_pandas_fixed",
+                    "etf_detection_fixed",
+                    "timeout_extended",
+                    "type_safety_improved",
+                    "cache_fallback_system"
                 ]
             }
             json.dump(portfolios_with_metadata, file, ensure_ascii=False, indent=4)
         
         update_history_index(history_file, portfolios_with_metadata)
         
-        print(f"✅ Portefeuilles v3 (compliance AMF) sauvegardés avec succès dans portefeuilles.json et {history_file}")
+        print(f"✅ Portefeuilles v3 (stable) sauvegardés avec succès dans portefeuilles.json et {history_file}")
     except Exception as e:
         print(f"❌ Erreur lors de la sauvegarde des portefeuilles: {str(e)}")
 
@@ -1866,7 +1943,7 @@ def update_history_index(history_file, portfolio_data):
         print(f"⚠️ Avertissement: Erreur lors de la mise à jour de l'index: {str(e)}")
 
 def main():
-    """Version modifiée pour utiliser le système de scoring quantitatif v3 avec compliance AMF."""
+    """Version modifiée pour utiliser le système de scoring quantitatif v3 avec compliance AMF et fixes de stabilité."""
     print("🔍 Chargement des données financières...")
     print("=" * 60)
     
@@ -1965,7 +2042,7 @@ def main():
     
     # ========== GÉNÉRATION DES PORTEFEUILLES AVEC UNIVERS QUANTITATIF ==========
     
-    print("\n🧠 Génération des portefeuilles optimisés v3 (quantitatif + compliance AMF)...")
+    print("\n🧠 Génération des portefeuilles optimisés v3 (quantitatif + compliance AMF + stabilité)...")
     
     # Préparer le dictionnaire des données filtrées avec l'univers quantitatif
     filtered_data = {
@@ -1989,7 +2066,7 @@ def main():
     print("\n💾 Sauvegarde des portefeuilles...")
     save_portfolios(portfolios)
     
-    print("\n✨ Traitement terminé avec la version v3 quantitative + COMPLIANCE AMF!")
+    print("\n✨ Traitement terminé avec la version v3 quantitative + COMPLIANCE AMF + STABILITÉ!")
     print("🎯 Fonctionnalités activées:")
     print("   • Scoring quantitatif (momentum, volatilité, drawdown)")
     print("   • Filtrage automatique des ETF à effet de levier")
@@ -1999,13 +2076,19 @@ def main():
     print("   • Validation anti-fin-de-cycle (YTD>100% & 1M≤0)")
     print("   • Fallback crypto progressif")
     print("   • Cache intelligent d'univers (hash fichiers)")
-    print("   • Retry API robuste (3 tentatives)")
+    print("   • Retry API robuste (5 tentatives, timeouts étendus)")
     print("   🛡️ COMPLIANCE AMF:")
     print("     ∘ Langage neutre (pas d'incitation)")
     print("     ∘ Disclaimer automatique")
     print("     ∘ Liste des risques")
     print("     ∘ Méthodologie transparente")
     print("     ∘ Sanitisation anti-marketing")
+    print("   🔧 FIXES DE STABILITÉ:")
+    print("     ∘ Regex pandas warning corrigé")
+    print("     ∘ Détection ETF levier corrigée")
+    print("     ∘ Timeouts API étendus (20s/180s)")
+    print("     ∘ Protection de type améliorée")
+    print("     ∘ Système de fallback cache")
 
 def load_json_data(file_path):
     """Charger des données depuis un fichier JSON."""
