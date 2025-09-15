@@ -552,80 +552,106 @@ function capByPlafond({ initialDeposit, periodicAmount, years, frequency, envelo
 let compareChart = null;
 
 function buildCompare() {
-    const initialDeposit = parseFloat(document.getElementById('initial-investment-amount')?.value)||0;
-    const periodicAmount = document.getElementById('periodic-investment')?.classList.contains('selected')
-                           ? (parseFloat(document.getElementById('periodic-investment-amount')?.value)||0) : 0;
-    const years = parseInt(document.getElementById('duration-slider')?.value || 10);
-    const annualReturn = parseFloat(document.getElementById('return-slider')?.value || 7)/100;
-    const frequency = document.getElementById('investment-frequency')?.value || 'monthly';
+  const initialDeposit = parseFloat(document.getElementById('initial-investment-amount')?.value) || 0;
+  const periodicAmount = document.getElementById('periodic-investment')?.classList.contains('selected')
+      ? (parseFloat(document.getElementById('periodic-investment-amount')?.value) || 0)
+      : 0;
+  const years     = parseFloat(document.getElementById('duration-slider')?.value || 10);
+  const annRet    = (parseFloat(document.getElementById('return-slider')?.value || 7) / 100); // ← rendement constant
+  const frequency = document.getElementById('investment-frequency')?.value || 'monthly';
 
-    // CTO de référence
-    const ref = calculateInvestmentResults(initialDeposit, periodicAmount, years, annualReturn,
-               { vehicleId:'cto', fees: feesFromPreset('cto'), overridePeriodic:{ mode: periodicAmount>0?'periodic':'unique', frequency }});
-
-    const ids = Object.keys(FEE_PRESETS).filter(k=>!k.startsWith('_'));
-    const rows = ids.map(id => {
-        const env = getEnveloppeInfo(id);
-        const cap = capByPlafond({ initialDeposit, periodicAmount, years, frequency, enveloppe: env });
-
-        const r = calculateInvestmentResults(
-          cap.initial, cap.periodic, years, annualReturn,
-          { vehicleId:id, fees: feesFromPreset(id),
-            overridePeriodic:{ mode: cap.periodic>0?'periodic':'unique', frequency },
-            stopAfterYears: cap.stopAfterYears }
-        );
-
-        const plafond = env?.plafond ? (typeof env.plafond==='object' ? env.plafond.solo : env.plafond) : Infinity;
-        const alert = (cap.investedCapped >= plafond) ? `🧢` : '';
-
-        return {
-            id,
-            label: env?.label || id,
-            net: r.afterTaxAmount,
-            impots: r.taxAmount,
-            frais: r.feesImpact,
-            deltaCto: r.afterTaxAmount - ref.afterTaxAmount,
-            alert,
-            results: r
-        };
-    }).sort((a,b)=>b.net - a.net).slice(0,5);
-
-    // Table
-    const tbody = document.getElementById('compare-tbody');
-    if (tbody){
-        tbody.innerHTML = rows.map((row, i)=>`
-            <tr class="border-b border-blue-800/40">
-                <td class="px-3 py-2">${row.label} ${i===0?'<span class="ml-1 text-xs bg-green-900 bg-opacity-30 text-green-400 px-1.5 py-0.5 rounded">meilleure</span>':''}</td>
-                <td class="px-3 py-2 text-right">${formatMoney(row.net)}</td>
-                <td class="px-3 py-2 text-right text-amber-300">${formatMoney(row.impots)}</td>
-                <td class="px-3 py-2 text-right text-blue-300">${formatMoney(row.frais)}</td>
-                <td class="px-3 py-2 text-right ${row.deltaCto>=0?'text-green-400':'text-amber-300'}">${(row.deltaCto>=0?'+':'')+formatMoney(row.deltaCto)}</td>
-                <td class="px-3 py-2 text-center">${row.alert}</td>
-            </tr>
-        `).join('');
+  // Référence CTO au même rendement
+  const ref = calculateInvestmentResults(
+    initialDeposit, periodicAmount, years, annRet,
+    {
+      vehicleId: 'cto',
+      fees: feesFromPreset('cto'),
+      overridePeriodic: { mode: periodicAmount > 0 ? 'periodic' : 'unique', frequency }
     }
+  );
 
-    // Chart (stacked)
-    const ctx = document.getElementById('compare-chart');
-    if (ctx){
-        if (compareChart) compareChart.destroy();
-        compareChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: rows.map(r=>r.label),
-                datasets: [
-                    { label:'Net',   data: rows.map(r=>r.net),   backgroundColor:'rgba(0,210,110,0.7)', borderColor:'rgba(0,210,110,1)', borderWidth:1, stack:'S' },
-                    { label:'Impôts',data: rows.map(r=>r.impots),backgroundColor:'rgba(255,71,87,0.7)', borderColor:'rgba(255,71,87,1)', borderWidth:1, stack:'S' },
-                    { label:'Frais', data: rows.map(r=>r.frais), backgroundColor:'rgba(33,150,243,0.7)', borderColor:'rgba(33,150,243,1)', borderWidth:1, stack:'S' },
-                ]
-            },
-            options:{
-                responsive:true, maintainAspectRatio:false,
-                scales:{ x:{ stacked:true }, y:{ stacked:true, ticks:{ callback:v=>formatMoney(v) } } },
-                plugins:{ legend:{ position:'top' } }
-            }
-        });
-    }
+  // Filtre : on exclut les produits à taux fixes / non comparables
+  const ids = Object.keys(FEE_PRESETS)
+    .filter(k => !k.startsWith('_') && !NON_COMPARABLE_IDS.has(k));
+
+  const rows = ids.map(id => {
+      const env = getEnveloppeInfo(id);
+      const cap = capByPlafond({ initialDeposit, periodicAmount, years, frequency, enveloppe: env });
+
+      const r = calculateInvestmentResults(
+        cap.initial, cap.periodic, years, annRet, // ← même rendement pour tous
+        {
+          vehicleId: id,
+          fees: feesFromPreset(id),
+          overridePeriodic: { mode: cap.periodic > 0 ? 'periodic' : 'unique', frequency },
+          stopAfterYears: cap.stopAfterYears
+        }
+      );
+
+      const plafond = env?.plafond ? (typeof env.plafond === 'object' ? env.plafond.solo : env.plafond) : Infinity;
+      const alert = (cap.investedCapped >= plafond) ? '🧢' : '';
+
+      return {
+        id,
+        label: env?.label || id,
+        net: r.afterTaxAmount,
+        impots: r.taxAmount,
+        frais: r.feesImpact,
+        deltaCto: r.afterTaxAmount - ref.afterTaxAmount,
+        alert
+      };
+  })
+  .sort((a, b) => b.net - a.net)
+  .slice(0, 5);
+
+  // Table
+  const tbody = document.getElementById('compare-tbody');
+  if (tbody) {
+    tbody.innerHTML = rows.map((row, i) => `
+      <tr class="border-b border-blue-800/40">
+        <td class="px-3 py-2">
+          ${row.label}
+          ${i === 0 ? '<span class="ml-1 text-xs bg-green-900 bg-opacity-30 text-green-400 px-1.5 py-0.5 rounded">meilleure</span>' : ''}
+        </td>
+        <td class="px-3 py-2 text-right">${formatMoney(row.net)}</td>
+        <td class="px-3 py-2 text-right text-amber-300">${formatMoney(row.impots)}</td>
+        <td class="px-3 py-2 text-right text-blue-300">${formatMoney(row.frais)}</td>
+        <td class="px-3 py-2 text-right ${row.deltaCto>=0?'text-green-400':'text-amber-300'}">
+          ${(row.deltaCto>=0?'+':'') + formatMoney(row.deltaCto)}
+        </td>
+        <td class="px-3 py-2 text-center">${row.alert}</td>
+      </tr>
+    `).join('');
+  }
+
+  // Note d’info (si présente dans le DOM)
+  const note = document.getElementById('compare-note');
+  if (note) {
+    note.textContent = `Comparaison à rendement constant ${(annRet * 100).toFixed(1)} % — produits à taux fixe exclus.`;
+  }
+
+  // Chart
+  const ctx = document.getElementById('compare-chart');
+  if (ctx) {
+    if (compareChart) compareChart.destroy();
+    compareChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: rows.map(r => r.label),
+        datasets: [
+          { label: 'Net',    data: rows.map(r => r.net),    backgroundColor: 'rgba(0,210,110,0.7)', borderColor: 'rgba(0,210,110,1)', borderWidth: 1, stack: 'S' },
+          { label: 'Impôts', data: rows.map(r => r.impots), backgroundColor: 'rgba(255,71,87,0.7)', borderColor: 'rgba(255,71,87,1)', borderWidth: 1, stack: 'S' },
+          { label: 'Frais',  data: rows.map(r => r.frais),  backgroundColor: 'rgba(33,150,243,0.7)', borderColor: 'rgba(33,150,243,1)', borderWidth: 1, stack: 'S' }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { x: { stacked: true }, y: { stacked: true, ticks: { callback: v => formatMoney(v) } } },
+        plugins: { legend: { position: 'top' } }
+      }
+    });
+  }
 }
 
 // ✅ NOUVEAU : Système de scénarios
