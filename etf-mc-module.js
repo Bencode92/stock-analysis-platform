@@ -1,4 +1,4 @@
-// Module MC adapté pour ETFs - v4.9.5 avec filtrage intelligent volatilité
+// Module MC adapté pour ETFs - v4.9.6 avec exclusion stricte volatilité manquante
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const num=x=>Number.isFinite(+x)?+x:NaN, str=s=>s==null?'':String(s);
@@ -6,8 +6,8 @@
   
   // Seuil pour ignorer les valeurs quasi-zéro
   const ZERO_EPS = 0.01;
-  // ✨ Seuil minimum pour volatilité valide (éviter les 0.0%)
-  const MIN_VALID_VOL = 0.5; // 0.5% minimum
+  // ✨ Volatilité considérée "absente" si < 0.01% (exclusion stricte si critère coché)
+  const VOL_MISSING_EPS = 0.01; // en points %, considéré "absent" si < 0.01
   
   // Helpers d'identification
   const getTicker = (e) => e?.ticker || e?.symbol || e?.isin || '';
@@ -48,15 +48,15 @@
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results');
     const summary=document.getElementById('etf-mc-summary');
-    if(!root||!results){console.error('❌ ETF MC v4.9.5: DOM manquant');return;}
-    console.log('✅ ETF MC v4.9.5: Filtrage intelligent volatilité (exclusion 0.0%)');
+    if(!root||!results){console.error('❌ ETF MC v4.9.6: DOM manquant');return;}
+    console.log('✅ ETF MC v4.9.6: Exclusion stricte volatilité manquante (si critère coché)');
 
     // Harmonisation du conteneur
     results.classList.add('glassmorphism','rounded-lg','p-4');
 
     // Styles harmonisés avec nouveau drag&drop ultra-fluide + badges volatilité
-    if(!document.getElementById('etf-mc-v495-styles')){
-      const s=document.createElement('style'); s.id='etf-mc-v495-styles'; s.textContent=`
+    if(!document.getElementById('etf-mc-v496-styles')){
+      const s=document.createElement('style'); s.id='etf-mc-v496-styles'; s.textContent=`
       #etf-mc-results { display:block }
       #etf-mc-results .space-y-2 > div { margin-bottom: .75rem }
       #etf-mc-results .etf-card{
@@ -167,7 +167,7 @@
     const cache = {};
     const masks = { facets:null, custom:null, final:null };
 
-    // ==== MÉTRIQUES AVEC VOLATILITÉ AMÉLIORÉE ET FILTRAGE ====
+    // ==== MÉTRIQUES AVEC VOLATILITÉ AMÉLIORÉE ====
     const classify=e=>{
       const ft=str(e.fund_type).toLowerCase();
       const dataset=str(e.dataset).toLowerCase();
@@ -176,20 +176,14 @@
       return 'equity';
     };
     
-    // ✨ Helper pour volatilité valide (éviter 0.0%)
-    const getValidVolatility = (e) => {
-      const vol = num(e.vol_pct) || num(e.vol_3y_pct);
-      return (Number.isFinite(vol) && vol >= MIN_VALID_VOL) ? vol : NaN;
-    };
-    
     const METRICS={
       ter:{label:'TER',unit:'%',max:false,get:e=>num(e.total_expense_ratio)*100},
       aum:{label:'AUM',unit:'$M',max:true,get:e=>num(e.aum_usd)/1e6},
       return_1d:{label:'Jour',unit:'%',max:true,get:e=>num(e.daily_change_pct)},
       return_ytd:{label:'YTD',unit:'%',max:true,get:e=>num(e.ytd_return_pct)},
       return_1y:{label:'1 An',unit:'%',max:true,get:e=>num(e.one_year_return_pct)},
-      // ✨ VOLATILITÉ FILTRÉE : exclut les valeurs < 0.5%
-      volatility:{label:'Vol',unit:'%',max:false,get:getValidVolatility},
+      // ✨ VOLATILITÉ : utilise vol_pct (3y→1y→SI) avec fallback vol_3y_pct
+      volatility:{label:'Vol',unit:'%',max:false,get:e=>num(e.vol_pct) || num(e.vol_3y_pct)},
       dividend_yield:{label:'Div',unit:'%',max:true,get:e=>num(e.yield_ttm)*100},
       yield_net:{label:'Rdt net',unit:'%',max:true,get:e=>{
         if(classify(e)!=='bonds') return NaN;
@@ -762,13 +756,24 @@
       for(let i=0;i<n;i++) out[i]=(masks.facets[i] & masks.custom[i]) ? 1 : 0;
       masks.final=out; return out;
     }
+    
+    // ✨ EXCLUSION STRICTE VOLATILITÉ MANQUANTE (si critère coché)
     function getFilteredIndices(requireMetrics=[]){
       if(!masks.final) buildFinalMask();
       const n=state.data.length, indices=[];
+      const needVol = requireMetrics.includes('volatility'); // vol obligatoire si cochée
+
       for(let i=0;i<n;i++){
         if(!masks.final[i]) continue;
+        // ⛔️ Si vol est exigée mais manquante ou ~0, on saute
+        if (needVol) {
+          const v = cache.volatility?.raw?.[i];
+          if (!Number.isFinite(v) || v < VOL_MISSING_EPS) continue;
+        }
         let valid=0;
-        for(const m of requireMetrics){ if(Number.isFinite(cache[m]?.raw[i])) valid++; }
+        for(const m of requireMetrics){
+          if(Number.isFinite(cache[m]?.raw[i])) valid++;
+        }
         if(valid >= requireMetrics.length - ALLOW_MISSING) indices.push(i);
       }
       return indices;
@@ -840,7 +845,7 @@
       return out.slice(0,TOP_N).map(x=>({e:state.data[x.i], score:x.score}));
     }
 
-    // ==== RENDU AVEC FILTRAGE VOLATILITÉ ====
+    // ==== RENDU AVEC BADGES VOLATILITÉ ====
     const fmt=(n,d=1)=>Number.isFinite(+n)?(+n).toFixed(d):'—';
     function render(entries){
       results.innerHTML = '<div class="space-y-2"></div>';
