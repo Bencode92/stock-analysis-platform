@@ -8,11 +8,413 @@ import random
 import re
 from pathlib import Path
 import pandas as pd
+from typing import Dict, List, Any, Tuple
 
 # Importer les fonctions d'ajustement des portefeuilles
 from portfolio_adjuster import check_portfolio_constraints, adjust_portfolios, get_portfolio_prompt_additions, valid_etfs_cache, valid_bonds_cache
 # Importer la fonction de formatage du brief
 from brief_formatter import format_brief_data
+
+# ============= NOUVELLES FONCTIONS ROBUSTES VERSION 2 =============
+
+def prepare_structured_data(filtered_data: Dict) -> Dict:
+    """
+    Transforme les données filtrées en format structuré avec IDs courts
+    pour réduire les tokens et améliorer la précision
+    """
+    
+    # 1. Brief en points numérotés
+    brief_points = []
+    if filtered_data.get('brief'):
+        brief_text = filtered_data['brief']
+        # Extraire les points clés du brief et les structurer
+        # Ici on peut parser plus finement selon la structure du brief
+        brief_lines = brief_text.split('\n')
+        point_id = 1
+        for line in brief_lines:
+            line = line.strip()
+            if line and len(line) > 20:  # Éviter les lignes trop courtes
+                brief_points.append({
+                    "id": f"BR{point_id}",
+                    "text": line[:150] + "..." if len(line) > 150 else line
+                })
+                point_id += 1
+                if point_id > 10:  # Limiter à 10 points max
+                    break
+    
+    # 2. Points marchés (extraits depuis filtered_markets)
+    market_points = []
+    if filtered_data.get('markets'):
+        markets_text = filtered_data['markets']
+        market_lines = [line.strip() for line in markets_text.split('\n') if line.strip() and '•' in line]
+        for i, line in enumerate(market_lines[:8]):  # Max 8 points
+            market_points.append({
+                "id": f"MC{i+1}",
+                "text": line.replace('•', '').strip()[:120]
+            })
+    
+    # 3. Points sectoriels (extraits depuis filtered_sectors)
+    sector_points = []
+    if filtered_data.get('sectors'):
+        sectors_text = filtered_data['sectors']
+        sector_lines = [line.strip() for line in sectors_text.split('\n') if line.strip() and '•' in line]
+        for i, line in enumerate(sector_lines[:8]):  # Max 8 points
+            sector_points.append({
+                "id": f"SEC{i+1}",
+                "text": line.replace('•', '').strip()[:120]
+            })
+    
+    # 4. Thèmes (extraits depuis filtered_themes)
+    theme_points = []
+    if filtered_data.get('themes'):
+        themes_text = filtered_data['themes']
+        theme_lines = [line.strip() for line in themes_text.split('\n') if line.strip() and '•' in line]
+        for i, line in enumerate(theme_lines[:6]):  # Max 6 points
+            theme_points.append({
+                "id": f"TH{i+1}",
+                "text": line.replace('•', '').strip()[:120]
+            })
+    
+    return {
+        "brief_points": brief_points,
+        "market_points": market_points,
+        "sector_points": sector_points,
+        "theme_points": theme_points
+    }
+
+def extract_allowed_assets(filtered_data: Dict) -> Dict:
+    """
+    Extrait les actifs autorisés depuis les données filtrées
+    et les structure en univers fermés pour éliminer les hallucinations
+    """
+    
+    # Actions autorisées (extraire depuis filtered_lists)
+    allowed_equities = []
+    if filtered_data.get('lists'):
+        lists_text = filtered_data['lists']
+        # Parser les actions depuis le texte filtré
+        equity_id = 1
+        for line in lists_text.split('\n'):
+            if '•' in line and 'YTD' in line:
+                # Extraire le nom de l'action
+                parts = line.split(':')
+                if len(parts) >= 2:
+                    name = parts[0].replace('•', '').strip()
+                    # Nettoyer les émojis et tags
+                    name = re.sub(r'[🚩📉]', '', name).strip()
+                    if '(' in name and 'potentielle' in name:
+                        name = name.split('(')[0].strip()
+                    
+                    # Déterminer la région et le secteur basé sur le contexte
+                    region = "US" if any(x in name for x in ["Inc", "Corp", "LLC"]) else "Europe"
+                    sector = "Technology"  # Par défaut, à améliorer avec une logique plus fine
+                    
+                    allowed_equities.append({
+                        "id": f"EQ_{equity_id}",
+                        "name": name,
+                        "symbol": name.split()[0] if len(name.split()) > 0 else name[:4].upper(),
+                        "region": region,
+                        "sector": sector
+                    })
+                    equity_id += 1
+                    if equity_id > 30:  # Limiter à 30 actions max
+                        break
+    
+    # ETF standards autorisés (extraire depuis filtered_etfs)
+    allowed_etfs_standard = []
+    if filtered_data.get('etfs'):
+        etfs_text = filtered_data['etfs']
+        etf_id = 1
+        for line in etfs_text.split('\n'):
+            if '•' in line and 'ETF' in line and 'OBLIGATAIRE' not in line.upper():
+                # Extraire le nom de l'ETF
+                etf_name = line.split('•')[1].split(':')[0].strip() if '•' in line else ""
+                if etf_name and len(etf_name) > 5:
+                    allowed_etfs_standard.append({
+                        "id": f"ETF_s{etf_id}",
+                        "name": etf_name,
+                        "symbol": etf_name.split()[0][:4].upper() if etf_name.split() else "ETF"
+                    })
+                    etf_id += 1
+                    if etf_id > 20:  # Limiter à 20 ETF standards max
+                        break
+    
+    # ETF obligataires autorisés
+    allowed_bond_etfs = []
+    if filtered_data.get('bond_etf_names'):
+        for i, name in enumerate(filtered_data['bond_etf_names'][:15]):  # Top 15
+            allowed_bond_etfs.append({
+                "id": f"ETF_b{i+1}",
+                "name": name,
+                "symbol": name.split()[0][:4].upper() if name.split() else "BOND"
+            })
+    
+    # Cryptos autorisées (analyser filtered_crypto pour déterminer sevenDaysPositif)
+    allowed_crypto = []
+    if filtered_data.get('crypto'):
+        crypto_text = filtered_data['crypto']
+        crypto_id = 1
+        for line in crypto_text.split('\n'):
+            if '•' in line and '7j:' in line:
+                # Extraire nom et performance 7j
+                parts = line.split('(')[0].replace('•', '').strip()
+                name = parts.split(':')[0].strip() if ':' in parts else parts
+                
+                # Extraire la performance 7j
+                seven_days_positive = '7j: +' in line or ('7j:' in line and '+' in line.split('7j:')[1][:10])
+                
+                allowed_crypto.append({
+                    "id": f"CR_{crypto_id}",
+                    "name": name,
+                    "symbol": name.upper()[:3],
+                    "sevenDaysPositif": seven_days_positive
+                })
+                crypto_id += 1
+                if crypto_id > 10:  # Limiter à 10 cryptos max
+                    break
+    
+    return {
+        "allowed_equities": allowed_equities,
+        "allowed_etfs_standard": allowed_etfs_standard,
+        "allowed_bond_etfs": allowed_bond_etfs,
+        "allowed_crypto": allowed_crypto
+    }
+
+def build_robust_prompt_v2(structured_data: Dict, allowed_assets: Dict, current_month: str) -> str:
+    """
+    Construit le prompt v2 robuste avec univers fermés et anti-hallucinations
+    """
+    
+    prompt = f"""Tu es un expert en allocation. Construis TROIS portefeuilles (Agressif, Modéré, Stable).
+
+## Données structurées (univers fermés)
+BRIEF_POINTS = {json.dumps(structured_data['brief_points'], ensure_ascii=False)}
+MARKETS = {json.dumps(structured_data['market_points'], ensure_ascii=False)}
+SECTORS = {json.dumps(structured_data['sector_points'], ensure_ascii=False)}
+THEMES = {json.dumps(structured_data['theme_points'], ensure_ascii=False)}
+
+ALLOWED_EQUITIES = {json.dumps(allowed_assets['allowed_equities'], ensure_ascii=False)}
+ALLOWED_ETFS_STANDARD = {json.dumps(allowed_assets['allowed_etfs_standard'], ensure_ascii=False)}
+ALLOWED_BOND_ETFS = {json.dumps(allowed_assets['allowed_bond_etfs'], ensure_ascii=False)}
+ALLOWED_CRYPTO = {json.dumps(allowed_assets['allowed_crypto'], ensure_ascii=False)}
+
+## Règles ABSOLUES
+- Choisir uniquement des actifs dont l'`id` figure dans les listes ALLOWED_*.
+- 3 portefeuilles : chacun **12 à 15** lignes (somme Actions+ETF+Obligations+Crypto).
+- **≥2 catégories** par portefeuille (parmi: Actions, ETF, Obligations, Crypto).
+- **Somme des allocations = 100.00** avec **2 décimales**. La **dernière ligne** ajuste pour atteindre 100.00.
+- Catégorie **Obligations** = ALLOWED_BOND_ETFS exclusivement. Interdit ailleurs.
+- Catégorie **ETF** = uniquement ALLOWED_ETFS_STANDARD (aucun bond ETF ici).
+- Catégorie **Crypto** = actifs de ALLOWED_CRYPTO avec `sevenDaysPositif=true`.
+- Un même `id` ne peut apparaître qu'**une fois** par portefeuille.
+
+## Logique d'investissement (synthèse)
+- Chaque actif doit être justifié par **≥2 références** parmi BRIEF(Macro), MARKETS(Géo), SECTORS(Secteur), THEMES(Thèmes).
+  Utilise les **IDs** (ex: ["BR2","MC1"]).
+- Ne **jamais** choisir sur la seule base de la perf YTD.
+- Mentionne brièvement s'il y a opportunité technique vs. risque (si pertinent).
+
+## Commentaires attendus (par portefeuille)
+- `Commentaire` (≤1200 caractères), structure:
+  1) Actualités (BRIEF) — 2–3 phrases neutres
+  2) Marchés (MARKETS) — 2–3 phrases
+  3) Secteurs (SECTORS/THEMES) — 2–3 phrases
+  4) Choix des actifs — 3–5 phrases max reliant le mix aux refs (IDs)
+
+## Actifs exclus
+- Fournis 2–3 `ActifsExclus` avec `reason` courte et `refs` (IDs) expliquant l'exclusion.
+
+## Format de SORTIE (STRICT, JSON UNIQUEMENT, pas de markdown, aucun texte hors JSON)
+{{
+  "Agressif": {{
+    "Commentaire": "…",
+    "Lignes": [
+      {{"id":"EQ_1",   "name":"Microsoft Corporation", "category":"Actions",     "allocation_pct":12.50, "justificationRefs":["BR1","SEC2"], "justification":"Résilience face à la récession et leadership IA"}},
+      {{"id":"ETF_s1", "name":"Vanguard S&P 500 ETF",  "category":"ETF",         "allocation_pct":25.00, "justificationRefs":["MC1","TH1"],  "justification":"Exposition large au marché US malgré volatilité"}},
+      {{"id":"ETF_b1", "name":"iShares Euro Govt Bond", "category":"Obligations", "allocation_pct":15.00, "justificationRefs":["BR3","SEC4"], "justification":"Valeur refuge en cas de stress géopolitique"}},
+      {{"id":"CR_1",   "name":"Bitcoin",               "category":"Crypto",      "allocation_pct":5.00,  "justificationRefs":["TH3","MC2"],  "justification":"Diversification et adoption institutionnelle"}}
+    ],
+    "ActifsExclus": [
+      {{"name":"Tesla Inc", "reason":"+80% YTD mais valorisation excessive vs fondamentaux", "refs":["BR1","SEC1"]}},
+      {{"name":"ARKK ETF", "reason":"Risque de correction sévère en environnement récessif", "refs":["BR2"]}}
+    ]
+  }},
+  "Modéré": {{ "Commentaire": "...", "Lignes": [...], "ActifsExclus": [...] }},
+  "Stable": {{ "Commentaire": "...", "Lignes": [...], "ActifsExclus": [...] }}
+}}
+
+### CONTRÔLE QUALITÉ (obligatoire avant d'émettre la réponse)
+- Vérifie que chaque portefeuille a 12–15 lignes, ≥2 catégories, somme = 100.00 exactement (2 décimales).
+- Vérifie qu'aucun `id` n'est dupliqué et que chaque catégorie respecte ses univers autorisés.
+- Si une règle échoue, corrige puis ne sors que le JSON final conforme.
+- Ta réponse doit commencer par `{{` et finir par `}}` — **aucun autre caractère**.
+
+Contexte temporel: Portefeuilles optimisés pour {current_month} 2025.
+"""
+    
+    return prompt
+
+def validate_portfolios_v2(portfolios: Dict) -> Tuple[bool, List[str]]:
+    """
+    Validation stricte des portefeuilles générés version 2
+    """
+    errors = []
+    
+    for portfolio_name, portfolio in portfolios.items():
+        if not isinstance(portfolio.get('Lignes'), list):
+            errors.append(f"{portfolio_name}: 'Lignes' manquant ou invalide")
+            continue
+            
+        lignes = portfolio['Lignes']
+        
+        # Vérifier le nombre d'actifs
+        if not (12 <= len(lignes) <= 15):
+            errors.append(f"{portfolio_name}: {len(lignes)} actifs (requis: 12-15)")
+        
+        # Vérifier la somme des allocations
+        total_allocation = sum(ligne.get('allocation_pct', 0) for ligne in lignes)
+        if abs(total_allocation - 100.0) > 0.01:
+            errors.append(f"{portfolio_name}: allocation totale = {total_allocation:.2f}% (requis: 100.00%)")
+        
+        # Vérifier les IDs uniques
+        ids = [ligne.get('id') for ligne in lignes]
+        if len(ids) != len(set(ids)):
+            errors.append(f"{portfolio_name}: IDs dupliqués détectés")
+        
+        # Vérifier les catégories
+        categories = set(ligne.get('category') for ligne in lignes)
+        if len(categories) < 2:
+            errors.append(f"{portfolio_name}: moins de 2 catégories ({categories})")
+        
+        # Vérifier que les catégories respectent les univers fermés
+        for ligne in lignes:
+            category = ligne.get('category')
+            id_asset = ligne.get('id', '')
+            
+            if category == 'Obligations' and not id_asset.startswith('ETF_b'):
+                errors.append(f"{portfolio_name}: {id_asset} dans Obligations mais n'est pas un bond ETF")
+            elif category == 'ETF' and id_asset.startswith('ETF_b'):
+                errors.append(f"{portfolio_name}: {id_asset} est un bond ETF mais placé dans ETF standard")
+            elif category == 'Crypto' and not id_asset.startswith('CR_'):
+                errors.append(f"{portfolio_name}: {id_asset} dans Crypto mais n'est pas une crypto autorisée")
+            elif category == 'Actions' and not id_asset.startswith('EQ_'):
+                errors.append(f"{portfolio_name}: {id_asset} dans Actions mais n'est pas une action autorisée")
+    
+    return len(errors) == 0, errors
+
+def fix_portfolios_v2(portfolios: Dict, errors: List[str]) -> Dict:
+    """
+    Correction automatique des portefeuilles si possible
+    """
+    for portfolio_name, portfolio in portfolios.items():
+        if 'Lignes' in portfolio:
+            lignes = portfolio['Lignes']
+            
+            # Ajuster les allocations pour atteindre 100%
+            total = sum(ligne.get('allocation_pct', 0) for ligne in lignes)
+            if abs(total - 100.0) > 0.01 and len(lignes) > 0:
+                # Ajuster la dernière ligne
+                diff = 100.0 - total
+                lignes[-1]['allocation_pct'] = round(lignes[-1]['allocation_pct'] + diff, 2)
+                print(f"  🔧 Ajustement {portfolio_name}: dernière ligne ajustée de {diff:.2f}%")
+    
+    return portfolios
+
+def generate_portfolios_v2(filtered_data: Dict) -> Dict:
+    """
+    Version améliorée de la génération de portefeuilles avec prompt robuste
+    """
+    
+    api_key = os.environ.get('API_CHAT')
+    if not api_key:
+        raise ValueError("La clé API OpenAI (API_CHAT) n'est pas définie.")
+    
+    current_month = get_current_month_fr()
+    
+    # Préparer les données structurées
+    print("🔄 Préparation des données structurées...")
+    structured_data = prepare_structured_data(filtered_data)
+    allowed_assets = extract_allowed_assets(filtered_data)
+    
+    print(f"  📊 Brief: {len(structured_data['brief_points'])} points")
+    print(f"  📈 Marchés: {len(structured_data['market_points'])} points")
+    print(f"  🏭 Secteurs: {len(structured_data['sector_points'])} points")
+    print(f"  🔍 Thèmes: {len(structured_data['theme_points'])} points")
+    print(f"  💼 Actions autorisées: {len(allowed_assets['allowed_equities'])}")
+    print(f"  📊 ETF standards: {len(allowed_assets['allowed_etfs_standard'])}")
+    print(f"  📉 ETF obligataires: {len(allowed_assets['allowed_bond_etfs'])}")
+    print(f"  🪙 Cryptos autorisées: {len(allowed_assets['allowed_crypto'])}")
+    
+    # Construire le prompt robuste
+    prompt = build_robust_prompt_v2(structured_data, allowed_assets, current_month)
+    
+    # Horodatage pour les fichiers de debug
+    debug_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    
+    # Sauvegarder le prompt pour debug
+    print("🔍 Sauvegarde du prompt v2 pour debug...")
+    debug_file, html_file = save_prompt_to_debug_file(prompt, debug_timestamp)
+    print(f"✅ Prompt v2 sauvegardé dans {debug_file}")
+    
+    # Configuration API avec forçage JSON et température 0
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    data = {
+        "model": "gpt-4-turbo",  # Modèle stable et fiable
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0,  # 0 pour maximum de déterminisme
+        "response_format": {"type": "json_object"}  # Force le JSON
+    }
+    
+    print("🚀 Envoi de la requête à l'API OpenAI (prompt v2 robuste)...")
+    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
+    response.raise_for_status()
+    
+    result = response.json()
+    content = result["choices"][0]["message"]["content"]
+    
+    # Sauvegarder la réponse
+    response_debug_file = f"debug/prompts/response_v2_{debug_timestamp}.txt"
+    with open(response_debug_file, 'w', encoding='utf-8') as f:
+        f.write(content)
+    print(f"✅ Réponse v2 sauvegardée dans {response_debug_file}")
+    
+    # Parsing direct (pas de nettoyage nécessaire avec response_format)
+    try:
+        portfolios = json.loads(content)
+    except json.JSONDecodeError as e:
+        print(f"❌ Erreur de parsing JSON: {e}")
+        # Essayer de nettoyer le contenu
+        content = re.sub(r'^```json', '', content)
+        content = re.sub(r'```$', '', content)
+        content = content.strip()
+        portfolios = json.loads(content)
+    
+    # Validation post-génération
+    validation_ok, errors = validate_portfolios_v2(portfolios)
+    if not validation_ok:
+        print(f"⚠️ Erreurs de validation détectées: {errors}")
+        portfolios = fix_portfolios_v2(portfolios, errors)
+        
+        # Re-valider après correction
+        validation_ok, remaining_errors = validate_portfolios_v2(portfolios)
+        if not validation_ok:
+            print(f"⚠️ Erreurs restantes après correction: {remaining_errors}")
+    
+    print("✅ Portefeuilles v2 générés avec succès")
+    
+    # Afficher un résumé
+    for portfolio_name, portfolio in portfolios.items():
+        if 'Lignes' in portfolio:
+            lignes = portfolio['Lignes']
+            total_alloc = sum(ligne.get('allocation_pct', 0) for ligne in lignes)
+            categories = set(ligne.get('category') for ligne in lignes)
+            print(f"  📊 {portfolio_name}: {len(lignes)} actifs, {len(categories)} catégories, {total_alloc:.2f}%")
+    
+    return portfolios
 
 # ============= NOUVELLES FONCTIONS HELPER POUR LES NOUVEAUX FICHIERS =============
 
@@ -442,144 +844,6 @@ def filter_sectors_data(sectors_data):
     
     return "\n".join(summary) if summary else "Aucune donnée sectorielle significative"
 
-def filter_lists_data(lists_data):
-    """Filtre les actifs avec YTD entre -5% et 120%, et Daily > -10% depuis lists.json,
-    puis sélectionne les 5 meilleurs par secteur et par pays."""
-    if not lists_data or not isinstance(lists_data, dict):
-        return "Aucune liste d'actifs disponible"
-    
-    # Dictionnaires pour regrouper les actifs par secteur et par pays
-    assets_by_sector = {}
-    assets_by_country = {}  # Pour regroupement par pays
-    
-    # Parcourir toutes les listes d'actifs
-    for list_name, list_data in lists_data.items():
-        if not isinstance(list_data, dict):
-            continue
-
-        indices = list_data.get("indices", {})
-        for letter, assets in indices.items():
-            if not isinstance(assets, list):
-                continue
-
-            for asset in assets:
-                if not isinstance(asset, dict):
-                    continue
-
-                name = asset.get("name", "")
-                ytd = asset.get("ytd", "")
-                daily = asset.get("change", "")  # Variation journalière
-                sector = asset.get("sector", "Non classé")  # "Non classé" si pas de secteur
-                country = asset.get("country", "Non précisé")  # "Non précisé" si pas de pays
-
-                # Nettoyage et conversion
-                try:
-                    ytd_value = float(re.sub(r"[^\d\.-]", "", str(ytd).replace(",", ".")))
-                    daily_value = float(re.sub(r"[^\d\.-]", "", str(daily).replace(",", ".")))
-                except (ValueError, AttributeError):
-                    continue
-
-                # Filtre : YTD entre -5% et 120%, et Daily > -10%
-                if -5 <= ytd_value <= 120 and daily_value > -10:
-                    # Ajouter des tags pour les actifs potentiellement intéressants
-                    display_name = name
-                    if ytd_value > 50 and daily_value < 0:
-                        display_name = f"🚩 {name} (potentielle surévaluation)"
-                    elif ytd_value > 10 and daily_value < -5:
-                        display_name = f"📉 {name} (forte baisse récente mais secteur haussier)"
-                    
-                    # Créer l'entrée pour cet actif
-                    asset_entry = {
-                        "name": display_name,
-                        "ytd": ytd_value,
-                        "daily": daily_value,
-                        "sector": sector,
-                        "country": country,
-                        "original_name": name  # Conserver le nom original pour référence
-                    }
-                    
-                    # Ajouter au dictionnaire sectoriel
-                    if sector not in assets_by_sector:
-                        assets_by_sector[sector] = []
-                    assets_by_sector[sector].append(asset_entry)
-                    
-                    # Ajouter au dictionnaire par pays
-                    if country not in assets_by_country:
-                        assets_by_country[country] = []
-                    assets_by_country[country].append(asset_entry)
-
-    # Résumé textuel organisé par secteur
-    summary_lines = ["📋 TOP 5 ACTIFS PAR SECTEUR (YTD -5% à 120% et Daily > -10%) :"]
-    
-    # Trier les secteurs par ordre alphabétique pour une présentation cohérente
-    sorted_sectors = sorted(assets_by_sector.keys())
-    
-    for sector in sorted_sectors:
-        sector_assets = assets_by_sector[sector]
-        
-        # Si le secteur n'a pas d'actifs qui correspondent aux critères, on saute
-        if not sector_assets:
-            continue
-        
-        # Trier les actifs du secteur par YTD décroissant
-        sector_assets.sort(key=lambda x: x["ytd"], reverse=True)
-        
-        # Sélectionner uniquement les 5 meilleurs
-        top_5_assets = sector_assets[:5]
-        
-        # Ajouter l'en-tête du secteur
-        summary_lines.append(f"\n🏭 SECTEUR: {sector.upper()} ({len(top_5_assets)} actifs)")
-        
-        # Ajouter chaque actif du top 5
-        for asset in top_5_assets:
-            # Construire la ligne de description avec les informations disponibles
-            country_info = f" | Pays: {asset['country']}" if asset['country'] else ""
-            
-            summary_lines.append(
-                f"• {asset['name']}: YTD {asset['ytd']:.2f}%, Daily {asset['daily']:.2f}%{country_info}"
-            )
-    
-    # Ajouter un compteur global pour les secteurs
-    total_filtered_assets_sectors = sum(len(assets_by_sector[sector][:5]) for sector in sorted_sectors if assets_by_sector[sector])
-    summary_lines.insert(1, f"Total: {total_filtered_assets_sectors} actifs répartis dans {len(sorted_sectors)} secteurs")
-    
-    # Ajouter le résumé par pays
-    summary_lines.append("\n🌍 TOP 5 ACTIFS PAR PAYS (YTD -5% à 120% et Daily > -10%) :")
-    
-    # Trier les pays par ordre alphabétique
-    sorted_countries = sorted(assets_by_country.keys())
-    
-    # Ajouter un compteur global pour les pays
-    total_filtered_assets_countries = sum(len(assets_by_country[country][:5]) for country in sorted_countries if assets_by_country[country])
-    summary_lines.append(f"Total: {total_filtered_assets_countries} actifs répartis dans {len(sorted_countries)} pays")
-    
-    for country in sorted_countries:
-        country_assets = assets_by_country[country]
-        
-        # Si le pays n'a pas d'actifs qui correspondent aux critères, on saute
-        if not country_assets:
-            continue
-        
-        # Trier les actifs du pays par YTD décroissant
-        country_assets.sort(key=lambda x: x["ytd"], reverse=True)
-        
-        # Sélectionner uniquement les 5 meilleurs
-        top_5_assets = country_assets[:5]
-        
-        # Ajouter l'en-tête du pays
-        summary_lines.append(f"\n📌 PAYS: {country.upper()} ({len(top_5_assets)} actifs)")
-        
-        # Ajouter chaque actif du top 5
-        for asset in top_5_assets:
-            # Construire la ligne de description avec les informations sectorielles
-            sector_info = f" | Secteur: {asset['sector']}" if asset['sector'] else ""
-            
-            summary_lines.append(
-                f"• {asset['name']}: YTD {asset['ytd']:.2f}%, Daily {asset['daily']:.2f}%{sector_info}"
-            )
-    
-    return "\n".join(summary_lines) if assets_by_sector else "Aucune donnée d'actifs significative"
-
 def filter_etf_data(etfs_data):
     """Filtre les ETF par catégories."""
     if not etfs_data or not isinstance(etfs_data, dict):
@@ -803,37 +1067,38 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     
     # Créer le nom du fichier de débogage
-    debug_file = f"{debug_dir}/prompt_{timestamp}.txt"
+    debug_file = f"{debug_dir}/prompt_v2_{timestamp}.txt"
     
     # Sauvegarder le prompt dans le fichier
     with open(debug_file, 'w', encoding='utf-8') as f:
         f.write(prompt)
     
     # Générer un fichier HTML plus lisible
-    html_file = f"{debug_dir}/prompt_{timestamp}.html"
+    html_file = f"{debug_dir}/prompt_v2_{timestamp}.html"
     html_content = f"""
     <!DOCTYPE html>
     <html>
     <head>
-        <title>TradePulse - Debug de Prompt</title>
+        <title>TradePulse - Debug de Prompt v2 Robuste</title>
         <meta charset="UTF-8">
         <style>
             body {{ font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }}
             pre {{ background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; }}
             h1, h2 {{ color: #2c3e50; }}
             .info {{ background-color: #e8f4f8; padding: 10px; border-radius: 5px; margin-bottom: 20px; }}
-            .stats {{ display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; }}
-            .stat-box {{ background: #f0f7fa; padding: 10px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }}
             .highlight {{ background-color: #ffffcc; }}
+            .v2-badge {{ background: linear-gradient(45deg, #ff6b6b, #4ecdc4); color: white; padding: 5px 10px; border-radius: 15px; font-weight: bold; }}
         </style>
     </head>
     <body>
-        <h1>TradePulse - Debug de Prompt ChatGPT</h1>
+        <h1>TradePulse - Debug de Prompt v2 <span class="v2-badge">ROBUSTE</span></h1>
         <div class="info">
-            <p>Timestamp: {timestamp}</p>
-            <p>Taille totale du prompt: {len(prompt)} caractères</p>
+            <p><strong>Version:</strong> v2 - Univers fermés + Anti-hallucinations</p>
+            <p><strong>Timestamp:</strong> {timestamp}</p>
+            <p><strong>Taille totale du prompt:</strong> {len(prompt)} caractères</p>
+            <p><strong>Améliorations:</strong> Format JSON strict, Références courtes (IDs), Validation intégrée</p>
         </div>
-        <h2>Contenu du prompt envoyé à ChatGPT :</h2>
+        <h2>Contenu du prompt v2 envoyé à OpenAI :</h2>
         <pre>{prompt.replace('<', '&lt;').replace('>', '&gt;')}</pre>
     </body>
     </html>
@@ -842,30 +1107,38 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
     with open(html_file, 'w', encoding='utf-8') as f:
         f.write(html_content)
     
-    # Créer également un fichier JavaScript pour enregistrer le debug dans localStorage
-    # (pour l'intégration avec l'interface web)
-    js_debug_path = "debug/prompts/debug_data.js"
-    with open(js_debug_path, 'w', encoding='utf-8') as f:
-        f.write(f"""
-// Script de debug généré automatiquement
-// Ce fichier est utilisé par l'interface web de debug
-
-// Enregistrer les infos de ce debug
-if (window.recordDebugFile) {{
-    window.recordDebugFile('{timestamp}', {{
-        prompt_length: {len(prompt)},
-        prompt_path: '{debug_file}',
-        html_path: '{html_file}'
-    }});
-}}
-""")
-    
-    print(f"✅ Pour voir le prompt dans l'interface web, accédez à: debug-prompts.html")
+    print(f"✅ Pour voir le prompt v2 dans l'interface web, accédez à: debug-prompts.html")
     
     return debug_file, html_file
 
 def generate_portfolios(filtered_data):
-    """Version modifiée qui reçoit les données déjà filtrées dans un dictionnaire."""
+    """
+    Fonction principale de génération - maintenant utilise la version v2 robuste
+    """
+    print("🚀 Lancement de la génération de portefeuilles v2 (robuste)")
+    
+    try:
+        # Utiliser la nouvelle version robuste
+        portfolios = generate_portfolios_v2(filtered_data)
+        
+        # Validation finale avec les fonctions existantes pour compatibilité
+        validation_ok, validation_errors = check_portfolio_constraints(portfolios)
+        if not validation_ok:
+            print(f"⚠️ Validation finale échouée: {validation_errors}")
+            portfolios = adjust_portfolios(portfolios)
+            print("🔧 Portefeuilles ajustés avec les fonctions existantes")
+        
+        return portfolios
+        
+    except Exception as e:
+        print(f"❌ Erreur dans la génération v2, fallback vers version originale: {str(e)}")
+        # Fallback vers l'ancienne méthode si la v2 échoue
+        return generate_portfolios_legacy(filtered_data)
+
+def generate_portfolios_legacy(filtered_data):
+    """Version originale en fallback"""
+    print("⚠️ Utilisation de la version legacy en fallback")
+    
     api_key = os.environ.get('API_CHAT')
     if not api_key:
         raise ValueError("La clé API OpenAI (API_CHAT) n'est pas définie.")
@@ -886,347 +1159,60 @@ def generate_portfolios(filtered_data):
     # Formater la liste des ETF obligataires
     bond_etf_list = "\n".join([f"- {name}" for name in bond_etf_names])
     
-    # Logs de débogage
-    print(f"\n🔍 Longueur des données FILTRÉES:")
-    print(f"  📰 Actualités: {len(filtered_news)} caractères")
-    print(f"  📜 Brief: {len(filtered_brief)} caractères")
-    print(f"  📈 Marché: {len(filtered_markets)} caractères")
-    print(f"  🏭 Secteurs: {len(filtered_sectors)} caractères")
-    print(f"  📋 Listes: {len(filtered_lists)} caractères")
-    print(f"  📊 ETFs: {len(filtered_etfs)} caractères")
-    print(f"  🪙 Cryptos: {len(filtered_crypto)} caractères")
-    print(f"  🔍 Thèmes: {len(filtered_themes)} caractères")
+    # Obtenir les exigences minimales pour les portefeuilles
+    minimum_requirements = get_portfolio_prompt_additions()
     
-    # Afficher les données filtrées pour vérification
-    print("\n===== APERÇU DES DONNÉES FILTRÉES =====")
-    print("\n----- ACTUALITÉS (données filtrées) -----")
-    print(filtered_news[:200] + "..." if len(filtered_news) > 200 else filtered_news)
-    print("\n----- RÉSUMÉ D'ACTUALITÉS COMPLET (données filtrées) -----")
-    print(filtered_brief[:200] + "..." if len(filtered_brief) > 200 else filtered_brief)
-    print("\n----- MARCHÉS (données filtrées) -----")
-    print(filtered_markets[:200] + "..." if len(filtered_markets) > 200 else filtered_markets)
-    print("\n----- SECTEURS (données filtrées) -----")
-    print(filtered_sectors[:200] + "..." if len(filtered_sectors) > 200 else filtered_sectors)
-    print("\n----- LISTES (données filtrées) -----")
-    print(filtered_lists[:200] + "..." if len(filtered_lists) > 200 else filtered_lists)
-    print("\n----- ETF (données filtrées) -----")
-    print(filtered_etfs[:200] + "..." if len(filtered_etfs) > 200 else filtered_etfs)
-    print("\n----- CRYPTO (données filtrées) -----")
-    print(filtered_crypto[:200] + "..." if len(filtered_crypto) > 200 else filtered_crypto)
-    print("\n----- THÈMES (données filtrées) -----")
-    print(filtered_themes[:200] + "..." if len(filtered_themes) > 200 else filtered_themes)
-    print("\n=========================================")
-    
-    # Afficher la liste des ETF obligataires trouvés
-    print(f"\n📊 ETF obligataires trouvés: {len(bond_etf_names)}")
-    for name in bond_etf_names:
-        print(f"  - {name}")
-    
-    # ===== SYSTÈME DE RETRY AVEC BACKOFF EXPONENTIEL =====
-    max_retries = 3
-    backoff_time = 1  # Commencer avec 1 seconde
-    
-    # Horodatage pour les fichiers de debug
-    debug_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    
-    for attempt in range(max_retries):
-        try:
-            # Obtenir les exigences minimales pour les portefeuilles
-            minimum_requirements = get_portfolio_prompt_additions()
-            
-            # Construire un prompt avec la whitelist d'ETF obligataires explicite
-            prompt = f"""
-Tu es un expert en gestion de portefeuille. Tu dois IMPÉRATIVEMENT créer TROIS portefeuilles contenant EXACTEMENT entre 12 et 15 actifs CHACUN.
+    # Prompt legacy simplifié
+    prompt = f"""
+Tu es un expert en gestion de portefeuille. Crée TROIS portefeuilles (Agressif, Modéré, Stable) avec 12-15 actifs chacun.
 
-Utilise ces données filtrées pour générer les portefeuilles :
+📜 BRIEF STRATÉGIQUE: {filtered_brief[:500]}...
+📰 ACTUALITÉS: {filtered_news[:300]}...
+📈 MARCHÉS: {filtered_markets[:300]}...
+🏭 SECTEURS: {filtered_sectors[:300]}...
+📋 ACTIFS: {filtered_lists[:500]}...
+📊 ETF: {filtered_etfs[:300]}...
+🪙 CRYPTO: {filtered_crypto[:200]}...
 
-📜 RÉSUMÉ COMPLET DE L'ACTUALITÉ FINANCIÈRE: 
-{filtered_brief}
-
-📌 **INSTRUCTION MAJEURE : PRIORISATION DU BRIEF STRATÉGIQUE**
-Le document stratégique ci-dessus (brief_ia.json) est ta source d'information prioritaire. Il reflète les anticipations économiques, géopolitiques et sectorielles les plus récentes et les plus fiables.
-
-✅ Chaque actif sélectionné doit obligatoirement répondre à au moins une de ces conditions :
-- Être en ligne avec un scénario ou une conviction macro du brief
-- Refléter une stratégie sectorielle ou géographique justifiée dans le brief
-- S'inscrire dans une logique de prudence, d'anticipation ou d'opportunité signalée dans le brief
-
-🚫 Tu NE DOIS PAS inclure un actif si :
-- Il est en contradiction avec le scénario central (ex: récession ➝ ne pas inclure de cyclique spéculatif sans raison)
-- Sa seule justification est sa performance récente (ex: +80% YTD)
-
-💡 Tu peux mentionner explicitement dans tes commentaires :
-> "Cet actif est aligné avec la conviction X du brief stratégique"
-> "Cet ETF répond à la logique de repli obligataire indiquée dans le scénario de récession"
-
-🎯 Ton objectif est de construire des portefeuilles qui incarnent les convictions du brief tout en restant diversifiés, logiques, et adaptés aux profils de risque (Agressif / Modéré / Stable).
-
-⚠️ **AMÉLIORATIONS CRITIQUES D'ALIGNEMENT AVEC LE BRIEF** :
-1️⃣ **Références explicites obligatoires :**
-   Pour chaque actif sélectionné, indique explicitement s'il est aligné avec le brief stratégique, et avec quelle conviction (ex: récession, hausse budget défense, stabilisation des taux, etc.).
-
-2️⃣ **Restriction des actifs contradictoires :**
-   Ne sélectionne aucun actif cyclique ou spéculatif à moins qu'il soit justifié par une dynamique macro du brief ou un thème identifié (ex : résilience de la Chine ou des pays émergents dans le scénario 2).
-
-3️⃣ **Justifications précises et détaillées :**
-   La section "Choix des actifs" doit justifier chaque actif avec :
-   - lien explicite avec le brief (citer scénario ou conviction précise)
-   - logique sectorielle ou géographique alignée avec le brief
-   - ET potentiel futur (pas uniquement performance passée)
-
-🔺 **Attention aux performances trompeuses**
-Certains actifs affichent des **performances YTD spectaculaires**, mais sont **déjà en fin de cycle** ou exposés à des **risques récents majeurs** :
-* Exemples : **Rheinmetall** (+80% YTD) qui chute suite à un changement dans la politique étrangère américaine ; ou un ETF tech US qui baisse malgré un bon YTD, car les taux longs remontent brutalement.
-👉 Tu dois **impérativement croiser** :
-* **Les performances passées (YTD, 1M, 1D)** **AVEC**
-* **Les signaux actuels** (actualités, tendances macro, dynamique sectorielle, signaux faibles)
-🧠 Objectif : détecter si la performance est encore **pertinente et soutenable**, ou si elle est **artificielle et risquée**.
-**Règle :** *N'intègre jamais un actif **juste** parce qu'il a +X% YTD.*
-Tu dois vérifier :
-* Est-ce que des signaux **récents** confirment cette tendance ?
-* Ou au contraire, y a-t-il un **risque de retournement** non encore reflété dans les prix ?
-
-🧩 **Favorise la résilience sectorielle (vs performance passée)**
-Ne privilégie pas les secteurs **seulement** parce qu'ils ont performé récemment. Tu dois identifier ceux qui **tiennent dans la tempête actuelle**, même si leur performance récente est modeste.
-🎯 Cherche des **signes de résilience ou de reprise structurelle** :
-* Secteurs défensifs (santé, utilities, consommation de base)
-* Secteurs résilients à l'inflation ou aux hausses de taux
-* Zones géographiques stables ou en rebond macro (Amérique Latine, Asie émergente…)
-🔍 Exemple :
-Un secteur comme la santé peut avoir un YTD neutre, mais bénéficier d'un regain d'intérêt en période d'instabilité géopolitique ou de repli économique.
-🧠 Inclure ces secteurs **montre une logique de préservation et d'anticipation**, pas seulement de performance.
-
-📉 **Sur-réaction du marché = opportunité ?**
-Un actif ou un secteur peut baisser fortement à court terme, **non pas à cause de ses fondamentaux**, mais à cause d'un **excès de peur** ou d'une réaction irrationnelle du marché.
-🧠 Tu dois détecter ces cas et les traiter intelligemment :
-Si un actif baisse de -6% en 1 jour, mais que :
-* Le secteur est en croissance
-* L'actualité ne remet pas en cause ses fondamentaux
-* Le thème est haussier (ex : énergie verte, digitalisation)
-👉 Tu peux l'inclure, **à condition de justifier clairement** qu'il s'agit d'un **retournement technique temporaire** ou d'une **opportunité liée à une exagération du marché.**
-🚫 Inversement, si la baisse est liée à un vrai changement de paradigme (ex : sanctions économiques, changement de politique budgétaire), il faut **exclure** cet actif même s'il est encore bien classé YTD.
-
-🧠 **Checklist mentale à appliquer avant de sélectionner un actif**
-Pour chaque actif sélectionné, **pose-toi ces 4 questions**. Si une seule réponse est négative, **exclue ou justifie fortement** :
-1. **Tendance actuelle :** L'actif est-il aligné avec une **tendance macroéconomique, géopolitique ou sectorielle récente** ?
-2. **Contexte sectoriel :** Le **secteur ou la région** montre-t-il une **stabilité, une croissance ou un retournement anticipé** ?
-3. **Performance soutenable :** La performance passée est-elle **confirmée** par des **signaux récents positifs** ? Ou bien est-ce un pic isolé ?
-4. **Signal d'alerte ou opportunité ?** Une récente baisse ou volatilité est-elle :
-   * 🟥 un **signal de danger** ? (→ exclure)
-   * 🟩 ou une **opportunité technique ou structurelle** ? (→ justifier avec données macro/thème)
-
-📰 Actualités financières récentes: 
-{filtered_news}
-
-📈 Tendances du marché: 
-{filtered_markets}
-
-🏭 Analyse sectorielle: 
-{filtered_sectors}
-
-📋 Listes d'actifs surveillés: 
-{filtered_lists}
-
-📊 Analyse des ETF: 
-{filtered_etfs}
-
-🪙 Crypto-monnaies performantes:
-{filtered_crypto}
-
-🔍 Tendances et thèmes actuels:
-{filtered_themes}
-
-📅 Contexte : Ces portefeuilles sont optimisés pour le mois de {current_month}.
-
-🛡️ LISTE DES SEULS ETF OBLIGATAIRES AUTORISÉS (TOP BOND ETFs) :
+ETF OBLIGATAIRES AUTORISÉS:
 {bond_etf_list}
-
-🎯 INSTRUCTIONS TRÈS PRÉCISES (À RESPECTER ABSOLUMENT) :
-
-1. Tu dois générer trois portefeuilles :
-   a) Agressif : EXACTEMENT entre 12 et 15 actifs au total
-   b) Modéré : EXACTEMENT entre 12 et 15 actifs au total  
-   c) Stable : EXACTEMENT entre 12 et 15 actifs au total
-
-2. Pour les obligations : Tu dois piocher UNIQUEMENT dans la **liste ci-dessus des ETF obligataires autorisés**. Tu ne dois JAMAIS inventer ou utiliser d'autres noms. 
-
-🛡️ RÈGLES DE CATÉGORISATION STRICTES (À RESPECTER IMPÉRATIVEMENT) :
-
-1. Catégorie "ETF" : Utilise UNIQUEMENT les ETF provenant des sections "TOP ETF STANDARDS 2025" et "ETF COURT TERME"
-   * N'inclus JAMAIS les ETF obligataires dans cette catégorie
-
-2. Catégorie "Obligations" : Utilise EXCLUSIVEMENT les ETF de la liste suivante:
-{bond_etf_list}
-   * Ces ETF obligataires doivent UNIQUEMENT apparaître dans la catégorie "Obligations"
-   * Ne les place JAMAIS dans la catégorie "ETF"
-
-📌 CONCERNANT LES CRYPTO-MONNAIES :
-
-- Tu peux inclure des crypto-monnaies dans les portefeuilles si elles ont une performance positive sur 7 jours (7D%)
-- Les crypto-monnaies sont particulièrement adaptées au portefeuille Agressif, mais peuvent être incluses dans les autres profils avec une allocation plus faible
-- Tu dois sélectionner uniquement parmi les crypto-monnaies listées dans la section "Crypto-monnaies performantes"
-- N'inclus PAS de crypto-monnaies si aucune ne présente une performance positive sur 7 jours
 
 {minimum_requirements}
 
-3. Pour chaque portefeuille (Agressif, Modéré, Stable), tu dois générer un **commentaire unique** qui suit une structure **top-down** claire et logique.
-
-Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
-
-📰 **Actualités** — Résume objectivement les tendances macroéconomiques ou géopolitiques actuelles (ex. inflation, taux, conflits, croissance).  
-📈 **Marchés** — Analyse les performances récentes des marchés régionaux (Europe, US, Amérique Latine...), en insistant sur les mouvements marquants (hausse, baisse, stabilité).  
-🏭 **Secteurs** — Détaille les secteurs les plus dynamiques ou les plus en retrait selon les données récentes, sans orientation personnelle.  
-📊 **Choix des actifs** — Explique les allocations choisies dans le portefeuille en cohérence avec le profil (Agressif / Modéré / Stable), en s'appuyant uniquement sur les données fournies (ETF, actions, obligations, crypto...). Pour chaque actif, cite OBLIGATOIREMENT le lien avec le brief stratégique.
-
-📌 COHÉRENCE ET LOGIQUE DANS LA CONSTRUCTION DES PORTEFEUILLES :
-- Tous les actifs sélectionnés doivent refléter une **analyse rationnelle** basée sur les données fournies.
-- Il est strictement interdit de choisir des actifs par défaut, sans lien évident avec les tendances économiques, géographiques ou sectorielles.
-- Le commentaire ne doit jamais mentionner un secteur, une région ou une dynamique **qui n'est pas représentée** dans les actifs choisis.
-- Chaque portefeuille doit être construit de manière 100% logique à partir des données fournies.
-- Les actifs sélectionnés doivent découler directement des performances réelles, secteurs en croissance, régions dynamiques, et tendances de marché analysées dans les données ci-dessus.
-
-- Ne sélectionne **jamais** un actif uniquement parce qu'il a une **forte performance récente** (ex: YTD élevé). Cela ne garantit **ni la pertinence actuelle, ni la performance future**.
-- Inversement, **n'exclus pas automatiquement** un actif ou un secteur en baisse (ex: -8% YTD) : une **reprise sectorielle, une amélioration du contexte macroéconomique, ou des signaux positifs** dans les actualités ou marchés peuvent justifier sa présence.
-- Le but est d'**anticiper intelligemment** : un actif faiblement valorisé mais soutenu par **des données cohérentes et des dynamiques récentes** peut offrir **plus de potentiel** qu'un actif déjà en haut du cycle.
-- ⚠️ L'IA doit analyser les données de manière **contextuelle et stratégique**, en **croisant toutes les sources** (actualités, marchés, secteurs, performance, ETF filtrés…).
-- La sélection doit refléter une **lecture intelligente des tendances en cours ou en formation**, pas une simple extrapolation du passé.
-
-🚫 Tu NE DOIS PAS prioriser un actif simplement en raison de sa performance récente (ex : +80% YTD). 
-👉 Cette performance passée n'est PAS un indicateur suffisant. Tu dois d'abord évaluer si :
-   - L'actualité valide ou remet en question cette tendance
-   - Le secteur ou la région de l'actif est cohérent avec les dynamiques actuelles
-   - L'actif n'est pas en phase terminale de cycle haussier sans justification macroéconomique
-   Si tu n'as **aucune justification actuelle**, ne sélectionne pas l'actif, même s'il est très performant.
-
-🧩 Chaque actif sélectionné doit résulter d'au moins **deux sources cohérentes** parmi les suivantes :
-   - Actualités macroéconomiques ou sectorielles
-   - Tendances géographiques du marché
-   - Dynamique sectorielle spécifique
-   - Indicateurs de performance récents cohérents avec ces éléments
-   - Thèmes émergents identifiés dans les données de tendances
-   ⚠️ Ne sélectionne **aucun actif** s'il n'est justifié que par sa performance brute.
-
-🔍 Tu dois privilégier les actifs qui présentent des **signaux de potentiel futur cohérents**, même si leur performance passée est modeste, s'ils sont :
-   - Alignés avec des tendances émergentes dans les actualités
-   - Représentatifs d'un secteur ou d'une région en reprise ou en croissance
-   - Soutenus par une dynamique géopolitique, monétaire ou sectorielle
-   - En phase avec les thèmes haussiers identifiés dans les données de tendances
-   ⚠️ Un actif peut être sous-évalué à court terme mais pertinent dans un contexte stratégique.
-
-❌ Tu ne dois **JAMAIS** utiliser de logique par défaut comme "cet actif est performant donc je l'ajoute".
-✅ Chaque choix doit être **contextualisé, stratégique et cohérent avec le profil de risque**.
-
-⚠️ Exemple à NE PAS suivre : "L'action X a pris +90% YTD donc elle est à privilégier".
-👉 Mauvais raisonnement. Ce n'est pas une justification valide. La croissance passée ne garantit **aucune** pertinence actuelle ou future.
-
-📝 Dans la section "Choix des actifs" du commentaire, pour CHAQUE actif sélectionné, tu dois explicitement :
-   1. Identifier la tendance actuelle ou émergente qui justifie sa sélection
-   2. Expliquer pourquoi cet actif est bien positionné pour en bénéficier
-   3. Si l'actif a connu une forte performance passée, préciser les facteurs ACTUELS qui pourraient soutenir sa croissance future
-   4. Si l'actif a connu une performance modeste, expliquer les catalyseurs potentiels qui justifient son inclusion
-
-📝 Pour chaque portefeuille généré, tu dois également fournir une brève liste "ActifsExclus" avec 2-3 actifs que tu as délibérément écartés malgré leur forte performance YTD, en expliquant pourquoi (ex: "Rheinmetall: +80% YTD mais risque de correction suite aux annonces de politique étrangère américaine").
-
-✅ Voici la phrase à ajouter dans ton prompt pour **forcer cette logique** :
-🧠 **Tu dois justifier chacun des actifs sélectionnés** dans chaque portefeuille (Agressif, Modéré, Stable).
-* Pour chaque actif, explique **clairement et de manière concise** pourquoi il a été choisi, en t'appuyant sur **les données fournies** (actualités, marchés, secteurs, ETF, crypto, tendances thématiques, etc.).
-* Chaque actif doit avoir une **raison précise et cohérente** d'être inclus, en lien direct avec la stratégie du portefeuille.
-* Ces justifications doivent apparaître **dans la section "Choix des actifs"** du commentaire.
-* Ne laisse **aucun actif sans justification explicite**.
-
-🎯 Le style doit être fluide, professionnel et synthétique.  
-❌ Aucun biais : ne fais pas d'hypothèse sur les classes d'actifs à privilégier. Base-toi uniquement sur les données fournies.  
-✅ Le commentaire doit être **adapté au profil de risque** (Agressif / Modéré / Stable) sans forcer une direction (ex: ne dis pas "la techno est à privilégier" sauf si les données le montrent clairement).
-
-📊 Format JSON requis:
+Format JSON strict:
 {{
-  "Agressif": {{
-    "Commentaire": "Texte structuré suivant le format top-down demandé",
-    "Actions": {{
-      "Nom Précis de l'Action 1": "X%",
-      "Nom Précis de l'Action 2": "Y%",
-      ...etc (jusqu'à avoir entre 12-15 actifs au total)
-    }},
-    "Crypto": {{ ... }},
-    "ETF": {{ ... }},
-    "Obligations": {{ ... }},
-    "ActifsExclus": [
-      "Nom de l'actif exclu 1: Raison de l'exclusion",
-      "Nom de l'actif exclu 2: Raison de l'exclusion"
-    ]
-  }},
-  "Modéré": {{ ... }},
-  "Stable": {{ ... }}
+  "Agressif": {{"Commentaire": "...", "Actions": {{"Nom": "X%"}}, "ETF": {{}}, "Obligations": {{}}, "Crypto": {{}}}},
+  "Modéré": {{...}},
+  "Stable": {{...}}
 }}
-
-⚠️ CRITÈRES DE VALIDATION (ABSOLUMENT REQUIS) :
-- Chaque portefeuille DOIT contenir EXACTEMENT entre 12 et 15 actifs au total, PAS MOINS, PAS PLUS
-- La somme des allocations de chaque portefeuille DOIT être EXACTEMENT 100%
-- Minimum 2 classes d'actifs par portefeuille
-- Chaque actif doit avoir un nom SPÉCIFIQUE et PRÉCIS, PAS de noms génériques
-- Ne réponds qu'avec le JSON, sans commentaire ni explication supplémentaire
 """
-            
-            # ===== NOUVELLE FONCTIONNALITÉ: SAUVEGARDER LE PROMPT POUR DEBUG =====
-            print("\n🔍 GÉNÉRATION DU PROMPT COMPLET POUR DEBUG...")
-            debug_file, html_file = save_prompt_to_debug_file(prompt, debug_timestamp)
-            print(f"✅ Prompt complet sauvegardé dans {debug_file}")
-            print(f"✅ Version HTML plus lisible sauvegardée dans {html_file}")
-            print(f"📝 Consultez ces fichiers pour voir exactement ce qui est envoyé à ChatGPT")
-            
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            }
-            
-            data = {
-                "model": "gpt-o3",  # 👈 ICI
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.3           # 👈 Température réduite
-            }
-            
-            print(f"\n🚀 Envoi de la requête à l'API OpenAI (tentative {attempt+1}/{max_retries})...")
-            response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
-            response.raise_for_status()
-            
-            result = response.json()
-            content = result["choices"][0]["message"]["content"]
-            
-            # Sauvegarder également la réponse pour analyse
-            response_debug_file = f"debug/prompts/response_{debug_timestamp}.txt"
-            with open(response_debug_file, 'w', encoding='utf-8') as f:
-                f.write(content)
-            print(f"✅ Réponse de l'API sauvegardée dans {response_debug_file}")
-            
-            # Nettoyer la réponse pour extraire seulement le JSON
-            content = re.sub(r'^```json', '', content)
-            content = re.sub(r'```$', '', content)
-            content = content.strip()
-            
-            # Vérifier que le contenu est bien du JSON valide
-            portfolios = json.loads(content)
-            
-            print("\n✅ Portefeuilles générés avec succès")
-            
-            # Afficher un résumé des actifs par portefeuille
-            for portfolio_type, portfolio in portfolios.items():
-                asset_count = sum(len(assets) for cat, assets in portfolio.items() if cat != "Commentaire" and cat != "ActifsExclus")
-                categories = [cat for cat in portfolio.keys() if cat != "Commentaire" and cat != "ActifsExclus"]
-                print(f"  📊 {portfolio_type}: {asset_count} actifs, {len(categories)} catégories")
-            
-            return portfolios
-        
-        except Exception as e:
-            print(f"❌ Erreur lors de la tentative {attempt+1}: {str(e)}")
-            
-            if attempt < max_retries - 1:
-                sleep_time = backoff_time + random.uniform(0, 1)
-                print(f"⏳ Nouvelle tentative dans {sleep_time:.2f} secondes...")
-                time.sleep(sleep_time)
-                backoff_time *= 2  # Double le temps d'attente pour la prochaine tentative
-            else:
-                print("❌ Échec après plusieurs tentatives")
-                raise
+    
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    data = {
+        "model": "gpt-4-turbo",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.3
+    }
+    
+    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
+    response.raise_for_status()
+    
+    result = response.json()
+    content = result["choices"][0]["message"]["content"]
+    
+    # Nettoyer et parser
+    content = re.sub(r'^```json', '', content)
+    content = re.sub(r'```$', '', content)
+    content = content.strip()
+    
+    portfolios = json.loads(content)
+    
+    print("✅ Portefeuilles legacy générés avec succès")
+    return portfolios
 
 def save_portfolios(portfolios):
     """Sauvegarder les portefeuilles dans un fichier JSON et conserver l'historique."""
@@ -1243,10 +1229,11 @@ def save_portfolios(portfolios):
             json.dump(portfolios, file, ensure_ascii=False, indent=4)
         
         # Sauvegarder dans l'historique avec l'horodatage
-        history_file = "{}/portefeuilles_{}.json".format(history_dir, timestamp)
+        history_file = f"{history_dir}/portefeuilles_v2_{timestamp}.json"
         with open(history_file, 'w', encoding='utf-8') as file:
             # Ajouter les métadonnées de date pour faciliter la recherche ultérieure
             portfolios_with_metadata = {
+                "version": "v2_robuste",
                 "timestamp": timestamp,
                 "date": datetime.datetime.now().isoformat(),
                 "portfolios": portfolios
@@ -1256,9 +1243,9 @@ def save_portfolios(portfolios):
         # Mettre à jour le fichier d'index d'historique
         update_history_index(history_file, portfolios_with_metadata)
         
-        print("✅ Portefeuilles sauvegardés avec succès dans portefeuilles.json et {}".format(history_file))
+        print(f"✅ Portefeuilles v2 sauvegardés avec succès dans portefeuilles.json et {history_file}")
     except Exception as e:
-        print("❌ Erreur lors de la sauvegarde des portefeuilles: {}".format(str(e)))
+        print(f"❌ Erreur lors de la sauvegarde des portefeuilles: {str(e)}")
 
 def update_history_index(history_file, portfolio_data):
     """Mettre à jour l'index des portefeuilles historiques."""
@@ -1278,6 +1265,7 @@ def update_history_index(history_file, portfolio_data):
         # Créer une entrée d'index avec les métadonnées essentielles
         entry = {
             "file": os.path.basename(history_file),
+            "version": portfolio_data.get("version", "legacy"),
             "timestamp": portfolio_data["timestamp"],
             "date": portfolio_data["date"],
             # Ajouter un résumé des allocations pour référence rapide
@@ -1288,9 +1276,14 @@ def update_history_index(history_file, portfolio_data):
         for portfolio_type, portfolio in portfolio_data["portfolios"].items():
             entry["summary"][portfolio_type] = {}
             for category, assets in portfolio.items():
-                if category != "Commentaire" and category != "ActifsExclus":  # Ne pas compter le commentaire comme une catégorie d'actifs
-                    count = len(assets)
-                    entry["summary"][portfolio_type][category] = "{} actifs".format(count)
+                if category not in ["Commentaire", "ActifsExclus"]:  # Ne pas compter le commentaire comme une catégorie d'actifs
+                    if isinstance(assets, list):  # Format v2
+                        count = len(assets)
+                    elif isinstance(assets, dict):  # Format legacy
+                        count = len(assets)
+                    else:
+                        count = 0
+                    entry["summary"][portfolio_type][category] = f"{count} actifs"
         
         # Ajouter la nouvelle entrée au début de la liste (plus récente en premier)
         index_data.insert(0, entry)
@@ -1304,7 +1297,7 @@ def update_history_index(history_file, portfolio_data):
             json.dump(index_data, file, ensure_ascii=False, indent=4)
             
     except Exception as e:
-        print("⚠️ Avertissement: Erreur lors de la mise à jour de l'index: {}".format(str(e)))
+        print(f"⚠️ Avertissement: Erreur lors de la mise à jour de l'index: {str(e)}")
 
 def main():
     """Version modifiée pour utiliser les nouveaux fichiers."""
@@ -1384,7 +1377,7 @@ def main():
     
     # ========== GÉNÉRATION DES PORTEFEUILLES ==========
     
-    print("\n🧠 Génération des portefeuilles optimisés...")
+    print("\n🧠 Génération des portefeuilles optimisés v2...")
     
     # Préparer le dictionnaire des données filtrées
     filtered_data = {
@@ -1399,7 +1392,7 @@ def main():
         'bond_etf_names': bond_etf_names
     }
     
-    # Générer les portefeuilles
+    # Générer les portefeuilles avec la nouvelle version robuste
     portfolios = generate_portfolios(filtered_data)
     
     # ========== SAUVEGARDE ==========
@@ -1407,7 +1400,7 @@ def main():
     print("\n💾 Sauvegarde des portefeuilles...")
     save_portfolios(portfolios)
     
-    print("\n✨ Traitement terminé!")
+    print("\n✨ Traitement terminé avec la version v2 robuste!")
 
 def load_json_data(file_path):
     """Charger des données depuis un fichier JSON."""
