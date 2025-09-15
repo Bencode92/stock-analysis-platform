@@ -1519,9 +1519,9 @@ function updateReturnSuggestions() {
     
     // Rendements suggérés par type d'enveloppe
     const suggestedReturns = {
-        'livret-a': 2.4,
-        'ldds': 2.4,
-        'lep': 3.5,
+        'livret-a': 1.7,
+        'ldds': 1.7,
+        'lep': 2.7,
         'pel': 1.75,
         'cel': 1.5,
         'livret-jeune': 2.7,
