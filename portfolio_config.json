@@ -1,0 +1,71 @@
+{
+  "portfolio_generation": {
+    "version": "v2",
+    "fallback_to_v1": true,
+    "description": "Configuration pour la génération de portefeuilles"
+  },
+  "openai_settings": {
+    "model": "gpt-4-turbo",
+    "temperature": 0,
+    "use_json_format": true,
+    "max_retries": 3,
+    "timeout": 15
+  },
+  "validation": {
+    "enforce_asset_count": true,
+    "min_assets": 12,
+    "max_assets": 15,
+    "enforce_100_percent": true,
+    "min_categories": 2,
+    "allow_auto_fix": true
+  },
+  "universe_constraints": {
+    "use_closed_universe": true,
+    "max_equities": 50,
+    "max_etfs_standard": 20,
+    "max_bond_etfs": 15,
+    "max_crypto": 10
+  },
+  "debug": {
+    "save_prompts": true,
+    "save_responses": true,
+    "debug_directory": "debug/prompts",
+    "verbose_logging": true
+  },
+  "data_sources": {
+    "brief_priority": true,
+    "use_structured_references": true,
+    "reference_id_format": "short",
+    "max_brief_points": 10,
+    "max_market_points": 8,
+    "max_sector_points": 8,
+    "max_theme_points": 6
+  },
+  "portfolio_profiles": {
+    "agressif": {
+      "actions_range": [60, 80],
+      "etf_range": [10, 25],
+      "obligations_range": [5, 15],
+      "crypto_range": [0, 15]
+    },
+    "modere": {
+      "actions_range": [40, 60],
+      "etf_range": [25, 40],
+      "obligations_range": [15, 25],
+      "crypto_range": [0, 10]
+    },
+    "stable": {
+      "actions_range": [20, 40],
+      "etf_range": [30, 50],
+      "obligations_range": [25, 40],
+      "crypto_range": [0, 5]
+    }
+  },
+  "output_format": {
+    "use_legacy_compatibility": true,
+    "include_justification_refs": true,
+    "include_excluded_assets": true,
+    "max_comment_length": 1000,
+    "allocation_decimals": 2
+  }
+}
