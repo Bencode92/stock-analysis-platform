@@ -389,50 +389,104 @@ function feesFromPreset(id) {
     return { mgmtPct: p.mgmt/100, entryPct: p.entry/100, exitPct: p.exit/100, fixedAnnual: p.fixed };
 }
 
-// ✅ NOUVEAU : Goal-seek pour versement périodique
+// ✅ NOUVEAU : Goal-seek pour versement périodique (vise STRICTEMENT le net d'impôts)
 function goalSeekPeriodicForTarget({ target, years, initialDeposit, annualReturn, vehicleId, fees, frequency='monthly' }) {
-    // borne basse et estimation haute (annuité)
-    const p = _ppyear(frequency);
-    const rPer = Math.pow(1+annualReturn, 1/p)-1;
-    const annuityFactor = rPer === 0 ? (years*p) : ((Math.pow(1+rPer, years*p) - 1) / rPer) * (1 + rPer);
+  const p = _ppyear(frequency);
+  const valueFor = (periodic) =>
+    calculateInvestmentResults(initialDeposit, periodic, years, annualReturn,
+      { vehicleId, fees, overridePeriodic:{ mode:'periodic', frequency } }
+    ).afterTaxAmount;
 
-    let lo = 0, hi = Math.max(10, (target - initialDeposit*Math.pow(1+rPer, years*p)) / annuityFactor);
-    hi = isFinite(hi) && hi>0 ? hi : target/(years*p);
+  let lo = 0;
+  // estimation haute "annuité" (brute), puis on augmente jusqu'à dépasser le net cible
+  const rPer = Math.pow(1+annualReturn, 1/p)-1;
+  const annuityFactor = rPer === 0 ? (years*p) : ((Math.pow(1+rPer, years*p)-1)/rPer)*(1+rPer);
+  let hi = Math.max(10, (target - initialDeposit*Math.pow(1+rPer, years*p)) / Math.max(1e-9, annuityFactor));
+  hi = isFinite(hi) && hi > 0 ? hi : target/(years*p);
 
-    for (let k=0;k<60;k++){
-        const mid = (lo+hi)/2;
-        const res = calculateInvestmentResults(
-            initialDeposit, mid, years, annualReturn,
-            { vehicleId, fees, overridePeriodic:{ mode:'periodic', frequency } }
-        );
-        if (Math.abs(res.afterTaxAmount - target) < 1) return { periodic: mid, results: res }; // tolérance 1€
-        if (res.afterTaxAmount < target) lo = mid; else hi = mid;
-    }
-    const periodic = (lo+hi)/2;
-    const results = calculateInvestmentResults(initialDeposit, periodic, years, annualReturn,
-                    { vehicleId, fees, overridePeriodic:{ mode:'periodic', frequency }});
-    return { periodic, results };
+  // 🔒 s'assurer que hi atteint le NET visé
+  let vhi = valueFor(hi), guard=0;
+  while (vhi < target && guard++ < 40) { hi *= 1.6; vhi = valueFor(hi); }
+
+  // Si même énormement élevé on n'y arrive pas, on retourne la meilleure valeur trouvée
+  if (vhi < target) return { periodic: hi, results: calculateInvestmentResults(initialDeposit, hi, years, annualReturn,
+                          { vehicleId, fees, overridePeriodic:{ mode:'periodic', frequency } }) };
+
+  // 🔁 bisection
+  for (let k=0; k<60; k++) {
+    const mid = (lo+hi)/2;
+    const res = calculateInvestmentResults(initialDeposit, mid, years, annualReturn,
+      { vehicleId, fees, overridePeriodic:{ mode:'periodic', frequency } }
+    );
+    if (Math.abs(res.afterTaxAmount - target) < 0.5) return { periodic: mid, results: res };
+    if (res.afterTaxAmount < target) lo = mid; else hi = mid;
+  }
+  const periodic = (lo+hi)/2;
+  const results = calculateInvestmentResults(initialDeposit, periodic, years, annualReturn,
+    { vehicleId, fees, overridePeriodic:{ mode:'periodic', frequency } }
+  );
+  return { periodic, results };
 }
 
-// ✅ NOUVEAU : Goal-seek pour durée
+// ✅ NOUVEAU : Goal-seek pour durée (vise STRICTEMENT le net d'impôts)
 function goalSeekYearsForTarget({ target, initialDeposit, periodicAmount, annualReturn, vehicleId, fees, frequency='monthly', maxYears=60 }) {
-    let lo = 1, hi = maxYears;
-    for (let k=0;k<40;k++){
-        const mid = (lo+hi)/2;
-        const res = calculateInvestmentResults(
-            initialDeposit, periodicAmount, mid, annualReturn,
-            { vehicleId, fees, overridePeriodic:{ mode:'periodic', frequency } }
-        );
-        if (Math.abs(res.afterTaxAmount - target) < 1) return { years: mid, results: res };
-        if (res.afterTaxAmount < target) lo = mid; else hi = mid;
+  const valueForYears = (yrs) =>
+    calculateInvestmentResults(initialDeposit, periodicAmount, yrs, annualReturn,
+      { vehicleId, fees, overridePeriodic:{ mode: periodicAmount>0?'periodic':'unique', frequency } }
+    ).afterTaxAmount;
+
+  let lo = 0.1, hi = Math.max(1, maxYears);
+  // 🔒 agrandir la fenêtre jusqu'à atteindre la cible en net (ou 120 ans max)
+  let vhi = valueForYears(hi), guard = 0;
+  while (vhi < target && hi < 120 && guard++ < 20) { hi = Math.min(120, hi*1.5); vhi = valueForYears(hi); }
+  if (vhi < target) {
+    return { years: null, results: calculateInvestmentResults(initialDeposit, periodicAmount, hi, annualReturn,
+            { vehicleId, fees, overridePeriodic:{ mode: periodicAmount>0?'periodic':'unique', frequency } }),
+             unreachable: true, triedYears: hi };
+  }
+  // 🔁 bisection
+  for (let k=0;k<60;k++){
+    const mid = (lo+hi)/2;
+    const vm = valueForYears(mid);
+    if (Math.abs(vm - target) < 0.5) {
+      const results = calculateInvestmentResults(initialDeposit, periodicAmount, mid, annualReturn,
+        { vehicleId, fees, overridePeriodic:{ mode: periodicAmount>0?'periodic':'unique', frequency } });
+      return { years: mid, results };
     }
-    const years = (lo+hi)/2;
-    const results = calculateInvestmentResults(initialDeposit, periodicAmount, years, annualReturn,
-                   { vehicleId, fees, overridePeriodic:{ mode:'periodic', frequency }});
-    return { years, results };
+    if (vm < target) lo = mid; else hi = mid;
+  }
+  const years = (lo+hi)/2;
+  const results = calculateInvestmentResults(initialDeposit, periodicAmount, years, annualReturn,
+    { vehicleId, fees, overridePeriodic:{ mode: periodicAmount>0?'periodic':'unique', frequency } });
+  return { years, results };
 }
 
-// ✅ NOUVEAU : Comparateur d'enveloppes
+// ✅ NOUVEAU : Fonction pour capper les versements selon le plafond
+function capByPlafond({ initialDeposit, periodicAmount, years, frequency, enveloppe }) {
+  const p = _ppyear(frequency);
+  const plafond = enveloppe?.plafond
+    ? (typeof enveloppe.plafond === 'object' ? enveloppe.plafond.solo : enveloppe.plafond)
+    : Infinity;
+
+  if (!isFinite(plafond)) {
+    return { initial: initialDeposit, periodic: periodicAmount, stopAfterYears: years, investedCapped: initialDeposit + periodicAmount * p * years };
+  }
+
+  const initialCapped = Math.min(initialDeposit, plafond);
+  let remaining = Math.max(0, plafond - initialCapped);
+
+  if (periodicAmount <= 0 || remaining <= 0) {
+    return { initial: initialCapped, periodic: 0, stopAfterYears: 0, investedCapped: initialCapped };
+  }
+
+  const periodsAllowed = Math.floor(remaining / periodicAmount);
+  const stopAfterYears = Math.min(years, periodsAllowed / p);
+  const investedCapped = initialCapped + periodicAmount * periodsAllowed;
+
+  return { initial: initialCapped, periodic: periodicAmount, stopAfterYears, investedCapped };
+}
+
+// ✅ NOUVEAU : Comparateur d'enveloppes avec respect des plafonds
 let compareChart = null;
 
 function buildCompare() {
@@ -449,14 +503,22 @@ function buildCompare() {
 
     const ids = Object.keys(FEE_PRESETS).filter(k=>!k.startsWith('_'));
     const rows = ids.map(id => {
-        const r = calculateInvestmentResults(initialDeposit, periodicAmount, years, annualReturn,
-                  { vehicleId:id, fees: feesFromPreset(id), overridePeriodic:{ mode: periodicAmount>0?'periodic':'unique', frequency }});
-        const plafond = r.enveloppe?.plafond ? (typeof r.enveloppe.plafond==='object' ? r.enveloppe.plafond.solo : r.enveloppe.plafond) : Infinity;
-        const invested = r.investedTotal;
-        const alert = invested > plafond ? `🚨` : (invested >= 0.8*plafond ? `⚠️` : '');
+        const env = getEnveloppeInfo(id);
+        const cap = capByPlafond({ initialDeposit, periodicAmount, years, frequency, enveloppe: env });
+
+        const r = calculateInvestmentResults(
+          cap.initial, cap.periodic, years, annualReturn,
+          { vehicleId:id, fees: feesFromPreset(id),
+            overridePeriodic:{ mode: cap.periodic>0?'periodic':'unique', frequency },
+            stopAfterYears: cap.stopAfterYears }
+        );
+
+        const plafond = env?.plafond ? (typeof env.plafond==='object' ? env.plafond.solo : env.plafond) : Infinity;
+        const alert = (cap.investedCapped >= plafond) ? `🧢` : '';
+
         return {
             id,
-            label: r.enveloppe?.label || id,
+            label: env?.label || id,
             net: r.afterTaxAmount,
             impots: r.taxAmount,
             frais: r.feesImpact,
@@ -771,7 +833,7 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
     
-    // ✅ NOUVEAU : Event listeners pour goal-seek
+    // ✅ MODIFIÉ : Event listeners pour goal-seek (ne pollue plus le panneau principal)
     document.getElementById('goal-run')?.addEventListener('click', () => {
         const target = Math.max(1, parseFloat(document.getElementById('goal-target')?.value)||0);
         const years = parseInt(document.getElementById('duration-slider')?.value || 10);
@@ -780,29 +842,28 @@ document.addEventListener('DOMContentLoaded', function() {
         const frequency = document.getElementById('goal-frequency')?.value || 'monthly';
         const mode = document.getElementById('goal-mode')?.value || 'periodic-for-target';
         const fees = readFeeParams();
-
         const initialDeposit = parseFloat(document.getElementById('initial-investment-amount')?.value)||0;
         const periodicUI = parseFloat(document.getElementById('periodic-investment-amount')?.value)||0;
 
-        let html='';
+        let html = '';
+
         if (mode === 'periodic-for-target') {
             const { periodic, results } = goalSeekPeriodicForTarget({
                 target, years, initialDeposit, annualReturn, vehicleId, fees, frequency
             });
-            html = `Pour atteindre <b>${formatMoney(target)}</b> en ${years} ans, il faut environ
-                    <b>${formatMoney(periodic)}</b> par ${freqLabelFR(frequency)} (net d'impôts via ${results.enveloppe?.label}).`;
-            updateSimulationChart(initialDeposit, periodic, years, annualReturn);
-            updateResultsDisplay(results);
+            html = `Pour atteindre <b>${formatMoney(target)}</b> en ${years} ans (net d'impôts),
+                    il faut environ <b>${formatMoney(periodic)}</b> par ${freqLabelFR(frequency)} via ${results.enveloppe?.label}.`;
         } else {
-            // years-for-target
-            const { years: y, results } = goalSeekYearsForTarget({
+            const { years: y, results, unreachable, triedYears } = goalSeekYearsForTarget({
                 target, initialDeposit, periodicAmount: periodicUI, annualReturn, vehicleId, fees, frequency
             });
-            html = `Avec <b>${formatMoney(periodicUI)}</b> par ${freqLabelFR(frequency)}, il faut environ
-                    <b>${y.toFixed(1)} ans</b> pour atteindre <b>${formatMoney(target)}</b> (net via ${results.enveloppe?.label}).`;
-            updateSimulationChart(initialDeposit, periodicUI, y, annualReturn);
-            updateResultsDisplay(results);
+            if (unreachable) {
+                html = `Avec <b>${formatMoney(periodicUI)}</b> par ${freqLabelFR(frequency)}, l'objectif <b>${formatMoney(target)}</b> n'est pas atteignable en ${triedYears} ans. Augmentez le versement, la durée ou le rendement.`;
+            } else {
+                html = `Avec <b>${formatMoney(periodicUI)}</b> par ${freqLabelFR(frequency)}, il faut environ <b>${y.toFixed(1)} ans</b> pour atteindre <b>${formatMoney(target)}</b> (net via ${results.enveloppe?.label}).`;
+            }
         }
+
         document.getElementById('goal-result').innerHTML = html;
     });
 
@@ -1501,12 +1562,12 @@ function runSimulation() {
 
 /**
  * Calcule les résultats d'investissement avec la vraie fiscalité et les frais
- * ✅ MODIFIÉE : Signature avec opts pour permettre overrides (vehicleId, fees, overridePeriodic)
+ * ✅ MODIFIÉE : Signature avec opts pour permettre overrides + stopAfterYears pour plafonds
  * @param {number} initialDeposit - Montant initial versé au départ
  * @param {number} periodicAmount - Montant des versements périodiques
  * @param {number} years - Nombre d'années
  * @param {number} annualReturn - Rendement annuel (en décimal)
- * @param {Object} opts - Options (vehicleId, fees, overridePeriodic)
+ * @param {Object} opts - Options (vehicleId, fees, overridePeriodic, stopAfterYears)
  * @returns {Object} Résultats de la simulation
  */
 function calculateInvestmentResults(initialDeposit, periodicAmount, years, annualReturn, opts = {}) {
@@ -1524,10 +1585,17 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
 
     const frequency = override?.frequency || (document.getElementById('investment-frequency')?.value || 'monthly');
     const p = (frequency === 'weekly') ? 52 : (frequency === 'monthly') ? 12 : (frequency === 'quarterly') ? 4 : 1;
+    
+    // ✅ NOUVEAU : Support du stopAfterYears pour les plafonds
+    const stopAfterYears = (typeof opts.stopAfterYears === 'number')
+        ? Math.max(0, Math.min(years, opts.stopAfterYears))
+        : years;
+
+    const k = Math.round(stopAfterYears * p); // nb de périodes AVEC versements
     const n = years * p;
 
-    // Versements bruts (ce que l'utilisateur paie)
-    const periodicTotal = isPeriodicMode ? periodicAmount * p * years : 0;
+    // --- Versements bruts investis
+    const periodicTotal = isPeriodicMode ? periodicAmount * k : 0;
     const investedTotal = initialDeposit + periodicTotal;
 
     // Versements nets après frais d'entrée
@@ -1539,8 +1607,8 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
 
     // ✅ CORRECTIF : Capital final SANS frais — même base de capitalisation que "AVEC frais"
     let finalNoFees = initialDeposit * Math.pow(1 + rPer, n);
-    if (isPeriodicMode && periodicAmount > 0) {
-        finalNoFees += periodicAmount * ((Math.pow(1 + rPer, n) - 1) / rPer) * (1 + rPer);
+    if (isPeriodicMode && periodicAmount > 0 && k > 0) {
+        finalNoFees += periodicAmount * ((Math.pow(1 + rPer, k) - 1) / rPer) * Math.pow(1 + rPer, (n - k + 1));
     }
 
     // ✅ Raccourci "zéro frais"
@@ -1558,9 +1626,11 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
         // 1) Croissance du dépôt initial (net entrée) au taux net
         finalWithFees = initialNet * Math.pow(1 + rNetPer, n);
 
-        // 2) Annuité des versements périodiques (nets)
-        if (isPeriodicMode && periodicNet > 0) {
-            finalWithFees += periodicNet * ((Math.pow(1 + rNetPer, n) - 1) / rNetPer) * (1 + rNetPer);
+        // 2) Annuité des versements périodiques (nets) - avec arrêt après k périodes
+        if (isPeriodicMode && periodicNet > 0 && k > 0) {
+            // Annuity-due pendant k périodes, puis capitalisation jusqu'à n
+            const annDueK = ((Math.pow(1 + rNetPer, k) - 1) / rNetPer) * Math.pow(1 + rNetPer, (n - k + 1));
+            finalWithFees += periodicNet * annDueK;
         }
 
         // ✅ CORRECTIF : 3) Frais fixes annuels (prélevés chaque fin d'année)
@@ -2220,169 +2290,3 @@ function checkPlafondLimits() {
         }
     }
 }
-
-/**
- * Ajoute une ligne de plafond au graphique
- * La ligne reste visible même si on est en dessous
- */
-function addPlafondLineToChart() {
-    if (!window.investmentChart) return;
-    
-    const vehicleId = document.getElementById('investment-vehicle')?.value;
-    const enveloppe = getEnveloppeInfo(vehicleId);
-    
-    // Supprimer l'ancienne ligne de plafond si elle existe
-    const plafondDatasetIndex = window.investmentChart.data.datasets.findIndex(
-        ds => ds.label && ds.label.includes('Plafond')
-    );
-    if (plafondDatasetIndex !== -1) {
-        window.investmentChart.data.datasets.splice(plafondDatasetIndex, 1);
-    }
-    
-    if (enveloppe && enveloppe.plafond) {
-        const plafond = typeof enveloppe.plafond === 'object' 
-            ? enveloppe.plafond.solo 
-            : enveloppe.plafond;
-        
-        const years = parseInt(document.getElementById('duration-slider')?.value || 10);
-        
-        // Ajouter la ligne de plafond
-        window.investmentChart.data.datasets.push({
-            label: `Plafond ${enveloppe.label}`,
-            data: Array(years + 1).fill(plafond),
-            borderColor: 'rgba(255, 71, 87, 0.8)',
-            backgroundColor: 'transparent',
-            borderWidth: 2,
-            borderDash: [8, 4],
-            fill: false,
-            pointRadius: 0,
-            pointHoverRadius: 0,
-            tension: 0,
-            order: -1 // Pour être derrière les autres courbes
-        });
-    }
-    
-    window.investmentChart.update();
-}
-
-/**
- * Affiche un badge récapitulatif si dépassement
- * Avec conseils de diversification
- */
-function showPlafondBadgeInResults(results) {
-    const resultsContainer = document.querySelector('.bg-blue-900.bg-opacity-20.p-6.rounded-lg:last-child');
-    if (!resultsContainer) return;
-    
-    // Supprimer l'ancien badge s'il existe
-    const oldBadge = document.getElementById('plafond-results-badge');
-    if (oldBadge) oldBadge.remove();
-    
-    if (!results.enveloppe || !results.enveloppe.plafond) return;
-    
-    const plafond = typeof results.enveloppe.plafond === 'object' 
-        ? results.enveloppe.plafond.solo 
-        : results.enveloppe.plafond;
-    
-    // Calculer le montant total investi
-    const totalInvested = results.investedTotal;
-    
-    if (totalInvested > plafond) {
-        const excess = totalInvested - plafond;
-        
-        const badge = document.createElement('div');
-        badge.id = 'plafond-results-badge';
-        badge.className = 'mb-4 p-4 bg-red-900 bg-opacity-20 border border-red-600 rounded-lg animate-fadeIn';
-        badge.innerHTML = `
-            <div class="flex items-start gap-3">
-                <i class="fas fa-exclamation-triangle text-red-500 text-xl mt-1"></i>
-                <div class="flex-1">
-                    <h5 class="text-red-400 font-semibold mb-2">
-                        ⚠️ Dépassement du plafond de ${formatMoney(excess)}
-                    </h5>
-                    <p class="text-sm text-gray-300 mb-3">
-                        Le ${results.enveloppe.label} est limité à ${formatMoney(plafond)}. 
-                        Votre simulation porte sur ${formatMoney(totalInvested)}.
-                    </p>
-                    <div class="bg-blue-900 bg-opacity-30 p-3 rounded">
-                        <p class="text-sm text-blue-300 font-medium mb-2">
-                            💡 Conseils de diversification :
-                        </p>
-                        <ul class="text-sm text-gray-300 space-y-1 ml-4">
-                            <li>• Placez ${formatMoney(plafond)} sur votre ${results.enveloppe.label}</li>
-                            <li>• Investissez les ${formatMoney(excess)} restants sur :</li>
-                            <li class="ml-4">→ Assurance-vie (sans plafond, fiscalité dégressive)</li>
-                            <li class="ml-4">→ CTO (flexibilité totale, flat tax 30%)</li>
-                            ${results.enveloppe.id === 'pea' ? '<li class="ml-4">→ PEA‑PME (plafond additionnel de 225k€)</li>' : ''}
-                        </ul>
-                    </div>
-            </div>
-        `;
-        
-        resultsContainer.insertBefore(badge, resultsContainer.firstChild);
-    }
-}
-
-// Modifier la fonction updateSimulationChart existante pour ajouter la ligne de plafond
-const originalUpdateChart = updateSimulationChart;
-updateSimulationChart = function(initialDeposit, periodicAmount, years, annualReturn) {
-    // Appeler la fonction originale
-    originalUpdateChart.call(this, initialDeposit, periodicAmount, years, annualReturn);
-    // Ajouter la ligne de plafond
-    addPlafondLineToChart();
-};
-
-// Modifier la fonction updateResultsDisplay existante pour ajouter le badge
-const originalUpdateResults = updateResultsDisplay;
-updateResultsDisplay = function(results) {
-    // Appeler la fonction originale
-    originalUpdateResults.call(this, results);
-    // Ajouter le badge si nécessaire
-    showPlafondBadgeInResults(results);
-};
-
-// Event listeners pour la gestion des plafonds
-document.addEventListener('DOMContentLoaded', function() {
-    // Listeners pour l'alerte temps réel
-    const inputs = [
-        'investment-amount',
-        'periodic-investment-amount',
-        'initial-investment-amount',
-        'duration-slider',
-        'investment-frequency'
-    ];
-    
-    inputs.forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.addEventListener('input', checkPlafondLimits);
-            element.addEventListener('change', checkPlafondLimits);
-        }
-    });
-    
-    // Listener pour le changement d'enveloppe
-    const vehicleSelect = document.getElementById('investment-vehicle');
-    if (vehicleSelect) {
-        vehicleSelect.addEventListener('change', function() {
-            checkPlafondLimits();
-            // Redessiner le graphe si déjà visible
-            if (window.investmentChart) {
-                addPlafondLineToChart();
-            }
-        });
-    }
-    
-    // Listener pour le mode d'investissement
-    ['unique-investment', 'periodic-investment'].forEach(id => {
-        const btn = document.getElementById(id);
-        if (btn) {
-            btn.addEventListener('click', () => {
-                setTimeout(checkPlafondLimits, 100);
-            });
-        }
-    });
-});
-
-// Fonction placeholder pour l'optimisation automatique
-window.toggleOptimizationMode = function() {
-    showTooltip('Optimisation automatique en cours de développement...');
-};
