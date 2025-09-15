@@ -1623,16 +1623,26 @@ function runSimulation() {
 }
 
 /**
- * Calcule les résultats d'investissement avec la vraie fiscalité et les frais
- * ✅ MODIFIÉE : Signature avec opts pour permettre overrides + stopAfterYears pour plafonds
- * @param {number} initialDeposit - Montant initial versé au départ
- * @param {number} periodicAmount - Montant des versements périodiques
- * @param {number} years - Nombre d'années
- * @param {number} annualReturn - Rendement annuel (en décimal)
- * @param {Object} opts - Options (vehicleId, fees, overridePeriodic, stopAfterYears)
- * @returns {Object} Résultats de la simulation
-function calculateInvestmentResults(initialDeposit, periodicAmount, years, annualReturn, opts = {}) {
+ * Calcule les résultats d'investissement avec fiscalité et frais.
+ * ✅ Supporte les overrides (mode périodique/fréquence) et l'arrêt des versements (stopAfterYears).
+ *
+ * @param {number} initialDeposit  Montant initial versé au départ
+ * @param {number} periodicAmount  Montant des versements périodiques
+ * @param {number} years           Nombre d'années (peut être fractionnaire)
+ * @param {number} annualReturn    Rendement annuel (décimal, ex: 0.07 pour 7%)
+ * @param {Object} [opts]          Options
+ * @param {string} [opts.vehicleId]              ID de l’enveloppe (sinon lu depuis l’UI)
+ * @param {Object} [opts.fees]                   Frais { mgmtPct, entryPct, exitPct, fixedAnnual }
+ * @param {Object} [opts.overridePeriodic]       { mode:'periodic'|'unique', frequency:'weekly'|'monthly'|'quarterly'|'annually' }
+ * @param {number} [opts.stopAfterYears]         Durée (en années) après laquelle les versements cessent
+ * @returns {{
+ *   initialDeposit:number, periodicTotal:number, investedTotal:number,
+ *   finalAmount:number, gains:number, afterTaxAmount:number, taxAmount:number,
+ *   feesImpact:number, annualizedReturn:number, years:number, annualReturn:number,
+ *   vehicleId:string, enveloppe:Object|null
+ * }}
  */
+function calculateInvestmentResults(initialDeposit, periodicAmount, years, annualReturn, opts = {}) {
   // --- Helper : FV d'une série de versements "ordinaires" (fin de période)
   // k = nombre de versements effectués ; n = horizon total (en périodes)
   function fvSeries(ratePerPeriod, payment, k, n) {
@@ -1641,8 +1651,8 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
       // Taux ~ 0 => pas de capitalisation
       return payment * k;
     }
-    // FV à l'horizon n d'une annuité "ordinaire" stoppée après k versements
-    // = payment * ((1+r)^k - 1)/r * (1+r)^(n - k)
+    // FV à l'horizon n d'une annuité "ordinaire" stoppée après k versements :
+    // payment * ((1+r)^k - 1)/r * (1+r)^(n - k)
     return payment * ((Math.pow(1 + ratePerPeriod, k) - 1) / ratePerPeriod) * Math.pow(1 + ratePerPeriod, (n - k));
   }
 
@@ -1683,7 +1693,7 @@ function calculateInvestmentResults(initialDeposit, periodicAmount, years, annua
   // --- Capital final SANS frais (référence pour mesurer l'impact des frais)
   let finalNoFees = initialDeposit * Math.pow(1 + rPer, n);
   if (isPeriodicMode && periodicAmount > 0 && k > 0) {
-    // ⬇️ série ordinaire (fin de période) — pas de (1+r) supplémentaire
+    // série ordinaire (fin de période)
     finalNoFees += fvSeries(rPer, periodicAmount, k, n);
   }
 
