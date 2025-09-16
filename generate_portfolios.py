@@ -1220,54 +1220,64 @@ def _pct(v) -> str:
     except: return f"{v}%"
 
 def normalize_v3_to_frontend_v1(raw_obj: dict, allowed_assets: dict) -> dict:
-    """
-    Convertit le format v3 (avec Lignes et id) vers l'ancien format frontend
-    """
     lut = _build_asset_lookup(allowed_assets)
-    
     out = {}
-    
-    # Traiter chaque type de portefeuille
+
+    def _put(pf_key, category, name, alloc):
+        out.setdefault(pf_key, {
+            "Commentaire": "",
+            "Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}
+        })
+        out[pf_key][category][name] = _pct(alloc)
+
+    # --- 1) Format v3 "classique" avec Lignes ---
     for portfolio_name in ["Agressif", "Modéré", "Stable"]:
-        if portfolio_name not in raw_obj:
-            continue
-            
-        portfolio_v3 = raw_obj[portfolio_name]
-        portfolio_v1 = {
-            "Commentaire": portfolio_v3.get("Commentaire", ""),
-            "Actions": {},
-            "ETF": {},
-            "Obligations": {},
-            "Crypto": {}
-        }
-        
-        # Ajouter les autres champs s'ils existent
-        if "ActifsExclus" in portfolio_v3:
-            portfolio_v1["ActifsExclus"] = portfolio_v3["ActifsExclus"]
-        if "Compliance" in portfolio_v3:
-            portfolio_v1["Compliance"] = portfolio_v3["Compliance"]
-        
-        # Convertir les lignes
-        if "Lignes" in portfolio_v3 and isinstance(portfolio_v3["Lignes"], list):
-            for ligne in portfolio_v3["Lignes"]:
-                asset_id = ligne.get("id", "")
-                allocation = ligne.get("allocation_pct", 0)
-                
-                # Récupérer le nom et la catégorie depuis le lookup ou la ligne elle-même
+        if isinstance(raw_obj.get(portfolio_name), dict):
+            pf = raw_obj[portfolio_name]
+            # Cas v2 déjà en catégories -> on recopie tel quel
+            if any(k in pf for k in ("Actions","ETF","Obligations","Crypto")):
+                out[portfolio_name] = {
+                    "Commentaire": pf.get("Commentaire",""),
+                    "Actions": pf.get("Actions",{}),
+                    "ETF": pf.get("ETF",{}),
+                    "Obligations": pf.get("Obligations",{}),
+                    "Crypto": pf.get("Crypto",{}),
+                }
+                continue
+
+            # Cas v3 attendu avec Lignes
+            for ligne in pf.get("Lignes", []):
+                asset_id = ligne.get("id","")
+                alloc = ligne.get("allocation_pct", 0)
                 if asset_id in lut:
-                    name = lut[asset_id]["name"]
-                    category = lut[asset_id]["category"]
+                    name = lut[asset_id]["name"]; category = lut[asset_id]["category"]
                 else:
                     name = ligne.get("name", asset_id)
-                    category = ligne.get("category", _infer_category_from_id(asset_id))
-                
-                # Ajouter l'actif dans la bonne catégorie
-                if category in portfolio_v1:
-                    portfolio_v1[category][name] = _pct(allocation)
-        
-        out[portfolio_name] = portfolio_v1
-    
+                    category = _infer_category_from_id(asset_id)
+                _put(portfolio_name, category, name, alloc)
+
+    # --- 2) Format "Portefeuilles" (archive v2/v3 non standard) ---
+    if not out and isinstance(raw_obj, dict):
+        pfs = raw_obj.get("Portefeuilles") or raw_obj.get("portefeuilles") or []
+        def canon(nom:str) -> str:
+            s = (nom or "").lower()
+            if "agress" in s: return "Agressif"
+            if "mod" in s or "équili" in s or "equili" in s: return "Modéré"
+            return "Stable"  # défaut
+        for pf in pfs:
+            pf_key = canon(pf.get("Nom") or pf.get("name"))
+            for it in pf.get("Actifs", []):
+                asset_id = it.get("id") or it.get("ID")
+                alloc = it.get("allocation") or it.get("allocation_pct") or 0
+                if asset_id in lut:
+                    name = lut[asset_id]["name"]; category = lut[asset_id]["category"]
+                else:
+                    name = it.get("name", asset_id)
+                    category = _infer_category_from_id(asset_id)
+                _put(pf_key, category, name, alloc)
+
     return out
+
 
 def update_history_index_from_normalized(normalized_json: dict, history_file: str, version: str):
     """Met à jour l'index avec les données normalisées"""
