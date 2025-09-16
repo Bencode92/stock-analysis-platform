@@ -1070,7 +1070,6 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     """
     Version 3 améliorée avec système de scoring quantitatif + COMPLIANCE AMF
     """
-    
     api_key = os.environ.get('API_CHAT')
     if not api_key:
         raise ValueError("La clé API OpenAI (API_CHAT) n'est pas définie.")
@@ -1108,18 +1107,17 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     debug_file, html_file = save_prompt_to_debug_file(prompt, debug_timestamp)
     print(f"✅ Prompt v3 sauvegardé dans {debug_file}")
     
-    # FIX 3: Configuration API avec forçage JSON, température 0 et limite de tokens
+    # Appel API (forçage JSON, température 0, limites de tokens)
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-    
     data = {
-        "model": "gpt-4-turbo",  # Modèle stable et fiable
+        "model": "gpt-4-turbo",
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0,  # 0 pour maximum de déterminisme
-        "response_format": {"type": "json_object"},  # Force le JSON
-        "max_tokens": 1800  # FIX 3: Borne raisonnable pour éviter des réponses trop longues
+        "temperature": 0,
+        "response_format": {"type": "json_object"},
+        "max_tokens": 1800
     }
     
     print("🚀 Envoi de la requête à l'API OpenAI (prompt v3 quantitatif + compliance)...")
@@ -1129,28 +1127,24 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     result = response.json()
     content = result["choices"][0]["message"]["content"]
     
-    # Sauvegarder la réponse
+    # Sauvegarder la réponse brute pour debug
     response_debug_file = f"debug/prompts/response_v3_{debug_timestamp}.txt"
     os.makedirs("debug/prompts", exist_ok=True)
     with open(response_debug_file, 'w', encoding='utf-8') as f:
         f.write(content)
     print(f"✅ Réponse v3 sauvegardée dans {response_debug_file}")
     
-    # Parsing direct (pas de nettoyage nécessaire avec response_format)
+    # ✅ Parsing robuste (réparateur JSON)
     try:
-        portfolios = json.loads(content)
-    except json.JSONDecodeError as e:
-        print(f"❌ Erreur de parsing JSON: {e}")
-        # Essayer de nettoyer le contenu
-        content = re.sub(r'^```json', '', content)
-        content = re.sub(r'```$', '', content)
-        content = content.strip()
-        portfolios = json.loads(content)
+        portfolios = parse_json_strict_or_repair(content)
+    except Exception as e:
+        print(f"❌ Erreur de parsing JSON après réparation: {e}")
+        raise
     
-    # FIX 3: Attacher compliance de manière sûre
+    # Attacher compliance de manière sûre
     portfolios = attach_compliance(portfolios)
     
-    # NOUVEAU: Appliquer la sanitisation compliance
+    # Sanitisation compliance (langage neutre)
     print("🛡️ Application de la sanitisation compliance AMF...")
     portfolios = apply_compliance_sanitization(portfolios)
     
@@ -1159,8 +1153,6 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     if not validation_ok:
         print(f"⚠️ Erreurs de validation v3 détectées: {errors}")
         portfolios = fix_portfolios_v3(portfolios, errors)
-        
-        # Re-valider après correction
         validation_ok, remaining_errors = validate_portfolios_v3(portfolios, allowed_assets)
         if not validation_ok:
             print(f"⚠️ Erreurs restantes après correction: {remaining_errors}")
@@ -1170,18 +1162,18 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
         score_guard(portfolios, allowed_assets)
     except ValueError as e:
         print(f"❌ Score guard failed: {e}")
-        # On peut décider de régénérer ou accepter avec warning
+        # ici on peut décider de régénérer ou de poursuivre avec avertissement
     
     print("✅ Portefeuilles v3 générés avec succès (scoring quantitatif + compliance AMF)")
     
-    # Afficher un résumé détaillé
+    # Petit récap console (facultatif)
     for portfolio_name, portfolio in portfolios.items():
         if isinstance(portfolio, dict) and 'Lignes' in portfolio:
             lignes = portfolio['Lignes']
             total_alloc = sum(ligne.get('allocation_pct', 0) for ligne in lignes)
             categories = set(ligne.get('category') for ligne in lignes)
             
-            # Calculer stats des scores
+            # Stats scores
             scores = []
             risk_counts = defaultdict(int)
             for ligne in lignes:
@@ -1203,6 +1195,7 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
             print(f"     Compliance AMF: {'✅' if compliance_ok else '❌'}")
     
     return portfolios
+
     # === NORMALISATION V3 -> SCHÉMA FRONT HISTORIQUE (Agressif/Modéré/Stable) ===
 def _infer_category_from_id(asset_id: str) -> str:
     if str(asset_id).startswith("EQ_"):    return "Actions"
@@ -1313,28 +1306,38 @@ def update_history_index_from_normalized(normalized_json: dict, history_file: st
     except Exception as e:
         print(f"⚠️ Avertissement: index non mis à jour ({e})")
 
-def save_portfolios(portfolios):
-    """Sauvegarder les portefeuilles dans un fichier JSON et conserver l'historique."""
+def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict):
+    """Sauvegarde les portefeuilles :
+       - data/portefeuilles.json : format v1 (frontend)
+       - data/portfolio_history/portefeuilles_v3_stable_<ts>.json : archive v3 + métadonnées
+       - met à jour data/portfolio_history/index.json à partir de la vue normalisée
+    """
     try:
         history_dir = 'data/portfolio_history'
         os.makedirs(history_dir, exist_ok=True)
         os.makedirs('data', exist_ok=True)
-        
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        
-        with open('data/portefeuilles.json', 'w', encoding='utf-8') as file:
-            json.dump(portfolios, file, ensure_ascii=False, indent=4)
-        
-        history_file = f"{history_dir}/portefeuilles_v3_stable_{timestamp}.json"
-        with open(history_file, 'w', encoding='utf-8') as file:
-            portfolios_with_metadata = {
+
+        ts = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+
+        # 1) Normaliser le v3 vers l'ancien format v1 (frontend)
+        normalized_portfolios = normalize_v3_to_frontend_v1(portfolios_v3, allowed_assets)
+
+        # 2) Écrire le fichier principal (consommé par le frontend)
+        with open('data/portefeuilles.json', 'w', encoding='utf-8') as f:
+            json.dump(normalized_portfolios, f, ensure_ascii=False, indent=4)
+
+        # 3) Archiver le format v3 complet pour traçabilité
+        history_file = f"{history_dir}/portefeuilles_v3_stable_{ts}.json"
+        with open(history_file, 'w', encoding='utf-8') as f:
+            json.dump({
                 "version": "v3_quantitatif_compliance_amf_stable",
-                "timestamp": timestamp,
+                "timestamp": ts,
                 "date": datetime.datetime.now().isoformat(),
-                "portfolios": portfolios,
+                "portfolios": portfolios_v3,
                 "features": [
+                    "normalisation_v3_vers_v1",
                     "drawdown_normalisé",
-                    "diversification_round_robin", 
+                    "diversification_round_robin",
                     "validation_anti_fin_cycle",
                     "fallback_crypto_progressif",
                     "cache_univers_hash",
@@ -1348,14 +1351,20 @@ def save_portfolios(portfolios):
                     "type_safety_improved",
                     "cache_fallback_system"
                 ]
-            }
-            json.dump(portfolios_with_metadata, file, ensure_ascii=False, indent=4)
-        
-        update_history_index(history_file, portfolios_with_metadata)
-        
-        print(f"✅ Portefeuilles v3 (stable) sauvegardés avec succès dans data/portefeuilles.json et {history_file}")
+            }, f, ensure_ascii=False, indent=4)
+
+        # 4) Mettre à jour l'index à partir de la vue normalisée (v1)
+        update_history_index_from_normalized(
+            normalized_json=normalized_portfolios,
+            history_file=history_file,
+            version="v3_stable_normalized"
+        )
+
+        print(f"✅ Sauvegarde OK → data/portefeuilles.json (v1) + {history_file} (archive v3)")
+
     except Exception as e:
         print(f"❌ Erreur lors de la sauvegarde des portefeuilles: {str(e)}")
+
 
 
 # ============= FONCTIONS HELPER POUR LES NOUVEAUX FICHIERS (améliorées) =============
@@ -2124,50 +2133,48 @@ def save_portfolios(portfolios):
     except Exception as e:
         print(f"❌ Erreur lors de la sauvegarde des portefeuilles: {str(e)}")
 
-def update_history_index(history_file, portfolio_data):
-    """Mettre à jour l'index des portefeuilles historiques."""
+def update_history_index_from_normalized(normalized_json: dict, history_file: str, version: str):
+    """Met à jour l'index avec les données normalisées (vue frontend v1)."""
     try:
         index_file = 'data/portfolio_history/index.json'
-        
+        # S'assurer que le dossier existe
+        os.makedirs(os.path.dirname(index_file), exist_ok=True)
+
         index_data = []
         if os.path.exists(index_file):
             try:
-                with open(index_file, 'r', encoding='utf-8') as file:
-                    index_data = json.load(file)
+                with open(index_file, 'r', encoding='utf-8') as f:
+                    index_data = json.load(f)
             except json.JSONDecodeError:
                 index_data = []
-        
+
         entry = {
             "file": os.path.basename(history_file),
-            "version": portfolio_data.get("version", "legacy"),
-            "timestamp": portfolio_data["timestamp"],
-            "date": portfolio_data["date"],
-            "features": portfolio_data.get("features", []),
+            "version": version,
+            "timestamp": datetime.datetime.now().strftime('%Y%m%d_%H%M%S'),
+            "date": datetime.datetime.now().isoformat(),
             "summary": {}
         }
 
-        for portfolio_type, portfolio in portfolio_data["portfolios"].items():
-            entry["summary"][portfolio_type] = {}
-            for category, assets in portfolio.items():
-                if category not in ["Commentaire", "ActifsExclus", "Compliance"]:
-                    if isinstance(assets, list):
-                        count = len(assets)
-                    elif isinstance(assets, dict):
-                        count = len(assets)
-                    else:
-                        count = 0
-                    entry["summary"][portfolio_type][category] = f"{count} actifs"
-        
+        # normalized_json = {"Agressif": {...}, "Modéré": {...}, "Stable": {...}}
+        for pf_name, pf in normalized_json.items():
+            if isinstance(pf, dict):
+                entry["summary"][pf_name] = {
+                    "Actions": f"{len(pf.get('Actions', {}))} actifs",
+                    "ETF": f"{len(pf.get('ETF', {}))} actifs",
+                    "Obligations": f"{len(pf.get('Obligations', {}))} actifs",
+                    "Crypto": f"{len(pf.get('Crypto', {}))} actifs",
+                }
+
+        # Ajouter en tête et limiter à 100 entrées
         index_data.insert(0, entry)
-        
-        if len(index_data) > 100:
-            index_data = index_data[:100]
-        
-        with open(index_file, 'w', encoding='utf-8') as file:
-            json.dump(index_data, file, ensure_ascii=False, indent=4)
-            
+        index_data = index_data[:100]
+
+        with open(index_file, 'w', encoding='utf-8') as f:
+            json.dump(index_data, f, ensure_ascii=False, indent=4)
+
     except Exception as e:
-        print(f"⚠️ Avertissement: Erreur lors de la mise à jour de l'index: {str(e)}")
+        print(f"⚠️ Avertissement: index non mis à jour ({e})")
 
 def main():
     """Version modifiée pour utiliser le système de scoring quantitatif v3 avec compliance AMF et fixes de stabilité."""
