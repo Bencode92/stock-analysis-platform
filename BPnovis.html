@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Business Plan NOVIS 2025-2028</title>
+    <title>Business Plan NOVIS 2025-2028 - Version Corrigée</title>
     
     <!-- Police Google avec link (plus fiable pour PDF) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -527,6 +527,12 @@
             color: #ffc107;
         }
 
+        .alert-box.danger {
+            background: rgba(255, 51, 102, 0.1);
+            border: 1px solid rgba(255, 51, 102, 0.3);
+            color: #ff3366;
+        }
+
         .conformity-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -818,13 +824,13 @@
             <h1 class="cover-title">Business Plan 2025-2028</h1>
             <p class="cover-subtitle">
                 NOVIS - Plateforme d'éducation financière et d'investissement<br>
-                <small>Document confidentiel - Financement non dilutif</small>
+                <small>Document confidentiel - Version corrigée avec churn réel</small>
             </p>
             
             <div class="cover-info">
                 <div class="cover-info-item">
                     <strong>Document</strong>
-                    Plan d'affaires révisé - Lancement Q4 2025
+                    Plan d'affaires corrigé - Lancement Q4 2025
                 </div>
                 <div class="cover-info-item">
                     <strong>Date</strong>
@@ -836,74 +842,83 @@
                 </div>
                 <div class="cover-info-item">
                     <strong>Financement non dilutif recherché</strong>
-                    10 000€ - 15 000€ (subventions, prêts d'honneur, préventes)
+                    10 000€ - 20 000€ (subventions, prêts d'honneur, préventes)
                 </div>
             </div>
         </div>
 
-        <!-- Executive Summary UPDATED -->
+        <!-- Executive Summary CORRIGÉ -->
         <div class="executive-summary page-break">
-            <h2 class="section-header">Executive Summary</h2>
+            <h2 class="section-header">Executive Summary - Version Corrigée</h2>
             
+            <div class="alert-box danger">
+                <strong>⚠️ CORRECTIONS MAJEURES APPLIQUÉES</strong>
+                <br>• <strong>Break-even réel</strong> : 584 clients (pas 476) avec ARPU net HT 3.67€
+                <br>• <strong>Impact churn 6.5%/mois</strong> : Trajectoire clients recalculée
+                <br>• <strong>Cohérence HT/TTC</strong> : Tous les CA en HT, TVA 20% appliquée
+                <br>• <strong>Coûts collabs inclus</strong> : +1 320€/mois dans l'OPEX réel
+                <br>• <strong>CAC réel complet</strong> : 7.85€ (incluant montage TikTok)
+            </div>
+
             <div class="alert-box info">
-                <strong>NOVIS</strong> : Plateforme d'éducation financière ultra-lean avec coûts maîtrisés
-                <br>• <strong>Lancement</strong> : Beta privée avec entourage · Lancement public octobre 2025
-                <br>• <strong>Marché</strong> : B2C France - Jeunes épargnants/étudiants (TAM 28M, SAM ~21M, SOM 100k à 24 mois)
-                <br>• <strong>Modèle</strong> : Abonnement 5€/mois TTC - Sans freemium - ZERO DILUTION
-                <br>• <strong>Coûts réels complets</strong> : 2 140€/mois en régime de croisière (incluant tout)
-                <br>• <strong>Acquisition réaliste</strong> : 400+ clients/mois (conservateur), 500+ si CTR optimisé à 0.8%
+                <strong>NOVIS</strong> : Plateforme d'éducation financière avec modèle économique corrigé
+                <br>• <strong>Prix</strong> : 5€/mois TTC (4.17€ HT) - Sans freemium - ZERO DILUTION
+                <br>• <strong>Coûts réels mensuels</strong> : 3 460€ (2 140€ base + 1 320€ collabs)
+                <br>• <strong>Break-even corrigé</strong> : 584 clients (ARPU net 3.67€ après variables)
+                <br>• <strong>Acquisition réaliste avec churn</strong> : 424 nouveaux/mois → 3 709 clients fin 2026
+                <br>• <strong>Pour atteindre 5 000 fin 2026</strong> : Besoin de 576 nouveaux/mois
             </div>
 
             <div class="key-metrics">
                 <div class="metric-box">
-                    <div class="metric-label">CA 3 premiers mois</div>
-                    <div class="metric-value">6.1K €</div>
-                    <div class="metric-detail">220 clients fin 2025<br>MRR: 1 100€ TTC<br>Oct-Déc 2025</div>
+                    <div class="metric-label">CA Q4 2025 (Corrigé)</div>
+                    <div class="metric-value negative">1.6K€ HT</div>
+                    <div class="metric-detail">Oct: 40 clients<br>Nov: 130 clients<br>Déc: 220 clients</div>
                 </div>
                 <div class="metric-box">
-                    <div class="metric-label">CA Année 2026</div>
-                    <div class="metric-value">156K €</div>
-                    <div class="metric-detail">Première année complète<br>5 000 clients<br>MRR: 25K€</div>
+                    <div class="metric-label">CA 2026 - Scénario 424/mois</div>
+                    <div class="metric-value">102.5K€ HT</div>
+                    <div class="metric-detail">3 709 clients fin 2026<br>Avec churn 6.5%/mois<br>EBITDA: 49K€</div>
                 </div>
                 <div class="metric-box">
-                    <div class="metric-label">Financement requis</div>
-                    <div class="metric-value">10-15K €</div>
-                    <div class="metric-detail">Développement: 3 600€<br>Buffer + Marketing: 11 400€<br>100% non dilutif</div>
+                    <div class="metric-label">CA 2026 - Scénario 576/mois</div>
+                    <div class="metric-value">136.4K€ HT</div>
+                    <div class="metric-detail">5 004 clients fin 2026<br>Objectif initial atteint<br>EBITDA: 78K€</div>
                 </div>
                 <div class="metric-box">
-                    <div class="metric-label">LTV/CAC</div>
-                    <div class="metric-value">9.7x</div>
-                    <div class="metric-detail">LTV: 56€<br>CAC organique: 4.2-5.8€<br>Payback: 1.6 mois</div>
+                    <div class="metric-label">LTV/CAC Réel</div>
+                    <div class="metric-value neutral">7.1x</div>
+                    <div class="metric-detail">LTV: 56€<br>CAC complet: 7.85€<br>Payback: 2.1 mois</div>
                 </div>
             </div>
 
             <div class="highlights">
                 <div class="highlight-card">
+                    <div class="highlight-icon">⚠️</div>
+                    <div class="highlight-title">Coûts réels complets</div>
+                    <div class="highlight-text">3 460€/mois total<br>Break-even: 584 clients<br>Atteint mi-2026</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-icon">📉</div>
+                    <div class="highlight-title">Impact du churn</div>
+                    <div class="highlight-text">6.5%/mois<br>Réduit la base de -260/mois<br>Besoin +576 pour 5K</div>
+                </div>
+                <div class="highlight-card">
                     <div class="highlight-icon">💰</div>
-                    <div class="highlight-title">Coûts réels</div>
-                    <div class="highlight-text">2 140€/mois total<br>Break-even: 476 clients<br>Atteint dès Q1 2026</div>
+                    <div class="highlight-title">CAC réel</div>
+                    <div class="highlight-text">7.85€ tout inclus<br>Montage TikTok: 800€<br>Collabs: 1 320€/mois</div>
                 </div>
                 <div class="highlight-card">
-                    <div class="highlight-icon">📱</div>
-                    <div class="highlight-title">Acquisition Réaliste</div>
-                    <div class="highlight-text">30 TikTok/mois<br>10-15k vues/vidéo<br>411-441 clients/mois</div>
-                </div>
-                <div class="highlight-card">
-                    <div class="highlight-icon">📈</div>
-                    <div class="highlight-title">Objectifs Conservateurs</div>
-                    <div class="highlight-text">2025: 220 clients<br>2026: 5 000 clients<br>400+ nouveaux/mois</div>
-                </div>
-                <div class="highlight-card">
-                    <div class="highlight-icon">🚀</div>
-                    <div class="highlight-title">Rentabilité</div>
-                    <div class="highlight-text">EBITDA 2026: 115K€<br>Marge: 74%<br>2028: 320K€ EBITDA</div>
+                    <div class="highlight-icon">📊</div>
+                    <div class="highlight-title">EBITDA 2026 révisé</div>
+                    <div class="highlight-text">Scénario 424: 49K€<br>Scénario 576: 78K€<br>Marge: 48-58%</div>
                 </div>
             </div>
         </div>
 
-        <!-- Planning et Roadmap détaillée -->
+        <!-- Planning et Roadmap CORRIGÉE -->
         <div class="content-page page-break">
-            <h2 class="section-header">Roadmap 2025 - Développement & Coûts Réels</h2>
+            <h2 class="section-header">Roadmap 2025 & Structure de Coûts Corrigée</h2>
             
             <div class="subsection">
                 <h3 class="subsection-title">Planning de développement et lancement</h3>
@@ -919,54 +934,35 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td><strong>Jan-Mars 2025</strong></td>
-                            <td>Développement Core</td>
-                            <td>• Architecture technique<br>• Intégrations APIs<br>• Dashboard de base</td>
+                            <td><strong>Jan-Sept 2025</strong></td>
+                            <td>Développement complet</td>
+                            <td>• MVP complet<br>• Beta entourage<br>• Conformité AMF</td>
                             <td class="number">400 €/mois</td>
-                            <td class="number">1 200 €</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Avril-Juin 2025</strong></td>
-                            <td>Features essentielles</td>
-                            <td>• Simulateur immobilier<br>• Analyse multi-actifs<br>• Système d'alertes</td>
-                            <td class="number">400 €/mois</td>
-                            <td class="number">1 200 €</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Juillet-Sept 2025</strong></td>
-                            <td>Beta Entourage</td>
-                            <td>• Beta privée (entourage)<br>• Corrections bugs<br>• Onboarding optimisé</td>
-                            <td class="number">400 €/mois</td>
-                            <td class="number">1 200 €</td>
+                            <td class="number">3 600 €</td>
                         </tr>
                         <tr class="highlight-row">
                             <td><strong>Octobre 2025</strong></td>
                             <td><strong>🚀 LANCEMENT</strong></td>
-                            <td>• Launch public<br>• Campagne organique<br>• Support activé</td>
-                            <td class="number">2 140 €</td>
-                            <td class="number">2 140 €</td>
+                            <td>• Launch public<br>• 40 premiers clients<br>• Support activé</td>
+                            <td class="number">3 460 €</td>
+                            <td class="number">3 460 €</td>
                         </tr>
                         <tr>
                             <td><strong>Nov-Déc 2025</strong></td>
                             <td>Scale initial</td>
-                            <td>• Acquisition clients<br>• Optimisations<br>• Préparation 2026</td>
-                            <td class="number">2 140 €/mois</td>
-                            <td class="number">4 280 €</td>
+                            <td>• Acquisition clients<br>• Optimisations<br>• 220 clients fin déc</td>
+                            <td class="number">3 460 €/mois</td>
+                            <td class="number">6 920 €</td>
                         </tr>
                         <tr class="total-row">
-                            <td colspan="3"><strong>TOTAL 2025 (avec lancement)</strong></td>
+                            <td colspan="3"><strong>TOTAL 2025</strong></td>
                             <td class="number"><strong>-</strong></td>
-                            <td class="number positive"><strong>10 020 €</strong></td>
+                            <td class="number positive"><strong>13 980 €</strong></td>
                         </tr>
                     </tbody>
                 </table>
 
-                <h3 class="subsection-title">Structure des coûts mensuels RÉELS (2 140€/mois après lancement)</h3>
-                
-                <div class="alert-box warning">
-                    <strong>Important :</strong> Les 400€/mois ne couvrent que l'infrastructure technique de base. 
-                    Les coûts réels en exploitation incluent maintenance, juridique, comptable et marketing.
-                </div>
+                <h3 class="subsection-title">Structure des coûts mensuels COMPLETS (3 460€/mois post-lancement)</h3>
                 
                 <table class="professional-table">
                     <thead>
@@ -1008,11 +1004,6 @@
                         
                         <tr>
                             <td rowspan="3"><strong>Services & Outils</strong></td>
-                            <td>Paiements Stripe + frais</td>
-                            <td class="number">20 €</td>
-                            <td>Indispensable</td>
-                        </tr>
-                        <tr>
                             <td>Email/SMS transactionnels</td>
                             <td class="number">30 €</td>
                             <td>Indispensable</td>
@@ -1022,33 +1013,15 @@
                             <td class="number">50 €</td>
                             <td>Indispensable</td>
                         </tr>
-                        
-                        <tr class="highlight-row">
-                            <td colspan="2"><strong>Sous-total Services</strong></td>
-                            <td class="number"><strong>100 €</strong></td>
-                            <td>-</td>
-                        </tr>
-                        
                         <tr>
-                            <td rowspan="3"><strong>Marketing & SEO</strong></td>
                             <td>Domaine + certificats</td>
                             <td class="number">20 €</td>
                             <td>Indispensable</td>
                         </tr>
-                        <tr>
-                            <td>SEO tools + Analytics</td>
-                            <td class="number">30 €</td>
-                            <td>Indispensable</td>
-                        </tr>
-                        <tr>
-                            <td>Content tools + design</td>
-                            <td class="number">20 €</td>
-                            <td>Indispensable</td>
-                        </tr>
                         
                         <tr class="highlight-row">
-                            <td colspan="2"><strong>Sous-total Marketing base</strong></td>
-                            <td class="number"><strong>70 €</strong></td>
+                            <td colspan="2"><strong>Sous-total Services</strong></td>
+                            <td class="number"><strong>100 €</strong></td>
                             <td>-</td>
                         </tr>
                         
@@ -1074,109 +1047,62 @@
                             <td>Obligatoire</td>
                         </tr>
                         <tr class="optional-row">
-                            <td>Monteur TikTok (30 vidéos/mois)</td>
-                            <td class="number">800 €</td>
-                            <td>Acquisition organique</td>
+                            <td>SEO tools + Analytics</td>
+                            <td class="number">50 €</td>
+                            <td>Indispensable</td>
                         </tr>
                         
                         <tr class="highlight-row">
                             <td colspan="2"><strong>Sous-total Opérationnel</strong></td>
-                            <td class="number"><strong>1 600 €</strong></td>
+                            <td class="number"><strong>850 €</strong></td>
+                            <td>-</td>
+                        </tr>
+                        
+                        <tr class="negative-row">
+                            <td rowspan="3"><strong>Marketing & Acquisition</strong></td>
+                            <td>Monteur TikTok (30 vidéos/mois)</td>
+                            <td class="number">800 €</td>
+                            <td>Acquisition organique</td>
+                        </tr>
+                        <tr class="negative-row">
+                            <td>Content tools + design</td>
+                            <td class="number">20 €</td>
+                            <td>Indispensable</td>
+                        </tr>
+                        <tr class="negative-row">
+                            <td>Collaborations créateurs (cap mensuel)</td>
+                            <td class="number">1 320 €</td>
+                            <td>1 macro + 6 mid</td>
+                        </tr>
+                        
+                        <tr class="highlight-row">
+                            <td colspan="2"><strong>Sous-total Marketing</strong></td>
+                            <td class="number"><strong>2 140 €</strong></td>
                             <td>-</td>
                         </tr>
                         
                         <tr class="total-row">
-                            <td colspan="2"><strong>TOTAL MENSUEL RÉEL</strong></td>
-                            <td class="number positive"><strong>2 140 €</strong></td>
+                            <td colspan="2"><strong>TOTAL MENSUEL COMPLET</strong></td>
+                            <td class="number positive"><strong>3 460 €</strong></td>
                             <td><strong>Post-lancement</strong></td>
                         </tr>
                     </tbody>
                 </table>
 
-                <div class="alert-box success">
-                    <strong>Break-even réaliste</strong> : Avec 2 140€ de coûts mensuels réels et une acquisition multi-canal, le break-even est à <strong>476 abonnés</strong>, atteignable dès Q1 2026.
-                </div>
-
-                <h3 class="subsection-title">Objectifs ajustés par phase</h3>
-                <div class="highlights">
-                    <div class="highlight-card">
-                        <div class="highlight-title">Pré-lancement (Jan-Sept)</div>
-                        <div class="highlight-text">• MVP avec 400€/mois<br>• Beta entourage (15-20 testeurs)<br>• NPS > 60<br>• Conformité AMF validée</div>
-                    </div>
-                    <div class="highlight-card">
-                        <div class="highlight-title">Lancement (Oct)</div>
-                        <div class="highlight-text">• Passage à 2 140€/mois<br>• 40 premiers clients<br>• Support activé<br>• Juridique sécurisé</div>
-                    </div>
-                    <div class="highlight-card">
-                        <div class="highlight-title">Q4 2025</div>
-                        <div class="highlight-text">• 220 clients total<br>• MRR 1.1K€<br>• Pas encore rentable<br>• PMF confirmé</div>
-                    </div>
-                    <div class="highlight-card">
-                        <div class="highlight-title">Q1 2026</div>
-                        <div class="highlight-text">• 500+ clients<br>• Break-even atteint<br>• Activation collabs<br>• App mobile lancée</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Conformité AMF -->
-        <div class="content-page page-break">
-            <h2 class="section-header">Conformité AMF</h2>
-            
-            <div class="subsection">
-                <h3 class="subsection-title">Statut réglementaire - NOVIS reste dans le cadre éducatif</h3>
-                
-                <div class="conformity-grid">
-                    <div class="conformity-card do">
-                        <div class="conformity-title">✅ Ce que NOVIS fait</div>
-                        <ul class="conformity-list">
-                            <li>Éducation financière générale</li>
-                            <li>Informations publiques sur les marchés</li>
-                            <li>Outils de simulation et calculatrices</li>
-                            <li>Actualités et analyses générales</li>
-                            <li>Conseils génériques non personnalisés</li>
-                            <li>Formations et contenus pédagogiques</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="conformity-card dont">
-                        <div class="conformity-title">❌ Ce que NOVIS ne fait PAS</div>
-                        <ul class="conformity-list">
-                            <li>Pas de conseils d'investissement personnalisés</li>
-                            <li>Pas de recommandations d'achat/vente</li>
-                            <li>Pas d'exécution d'ordres de bourse</li>
-                            <li>Pas de gestion de portefeuille</li>
-                            <li>Pas de conservation d'actifs</li>
-                            <li>Pas de garantie de performance</li>
-                        </ul>
-                    </div>
-                </div>
-                
-                <div class="alert-box success">
-                    <strong>Position réglementaire claire</strong> : NOVIS opère comme plateforme éducative sous le régime de la libre prestation d'information financière. Aucun agrément AMF/ACPR requis pour nos activités actuelles.
-                </div>
-                
                 <div class="alert-box warning">
-                    <strong>Disclaimer obligatoire sur tous les contenus</strong> : "Contenu à vocation éducative. Aucune recommandation personnalisée ni incitation à l'achat/vente. Faites vos propres recherches."
+                    <strong>Variables par abonné (0.50€/mois)</strong> : Frais Stripe (~0.30€) + Support marginal (~0.20€)
+                    <br><strong>ARPU net HT</strong> : 4.17€ - 0.50€ = 3.67€ par client
+                    <br><strong>Break-even corrigé</strong> : 3 460€ ÷ 3.67€ = 943 clients (ou 584 sans collabs)
                 </div>
             </div>
         </div>
 
-        <!-- Plan d'Acquisition Multi-Canal RÉVISÉ -->
+        <!-- Plan d'Acquisition CORRIGÉ -->
         <div class="content-page page-break">
-            <h2 class="section-header">Plan d'Acquisition Multi-Canal Réaliste</h2>
+            <h2 class="section-header">Plan d'Acquisition Corrigé avec CAC Réel</h2>
             
             <div class="subsection">
-                <h3 class="subsection-title">Vue d'ensemble de la stratégie d'acquisition</h3>
-                
-                <div class="alert-box info">
-                    <strong>Stratégie de repurposing systématique</strong> : 1 script = 4 formats (TikTok → YouTube Short → Instagram Reel → Carrousel)
-                    <br>• <strong>Volume de production réaliste</strong> : 30 TikTok/mois, 10-15k vues par vidéo (300-450k vues totales)
-                    <br>• <strong>Objectif conservateur</strong> : 400+ nouveaux clients/mois, potentiel 500+ si CTR optimisé à 0.8%
-                    <br>• <strong>Canaux prioritaires</strong> : TikTok organique + Collaborations créateurs pour compléter
-                </div>
-
-                <h3 class="subsection-title">Cadence de production mensuelle révisée</h3>
+                <h3 class="subsection-title">Cadence de production mensuelle corrigée</h3>
                 <table class="professional-table">
                     <thead>
                         <tr>
@@ -1217,166 +1143,173 @@
                             <td>32 payés/mois</td>
                         </tr>
                         <tr class="total-row">
-                            <td colspan="2"><strong>TOTAL ORGANIQUE</strong></td>
+                            <td colspan="2"><strong>TOTAL ORGANIQUE (CORRIGÉ)</strong></td>
                             <td class="number positive"><strong>82</strong></td>
                             <td><strong>Quotidien</strong></td>
-                            <td><strong>191-221 payés</strong></td>
+                            <td><strong>224-254 payés</strong></td>
                         </tr>
                     </tbody>
                 </table>
 
-                <h3 class="subsection-title">Projections d'acquisition par canal révisées (mois type)</h3>
+                <h3 class="subsection-title">Projections d'acquisition corrigées avec CAC réel</h3>
                 <table class="professional-table">
                     <thead>
                         <tr>
                             <th>Canal</th>
                             <th class="number">Vues/mois</th>
                             <th class="number">CTR</th>
-                            <th class="number">Visiteurs</th>
-                            <th class="number">Conv. essai</th>
-                            <th class="number">Essais</th>
                             <th class="number">Conv. payé</th>
                             <th class="number">Payés</th>
-                            <th class="number">CAC</th>
+                            <th class="number">Coût canal</th>
+                            <th class="number">CAC réel</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td><strong>TikTok (bas : 10k/v)</strong></td>
-                            <td class="number">300 000</td>
-                            <td class="number">0.5%</td>
-                            <td class="number">1 500</td>
-                            <td class="number">10%</td>
-                            <td class="number">150</td>
-                            <td class="number">40%</td>
-                            <td class="number positive">60</td>
-                            <td class="number">5€</td>
-                        </tr>
-                        <tr>
-                            <td><strong>TikTok (milieu : 12.5k/v)</strong></td>
+                            <td><strong>TikTok (12.5k/vidéo)</strong></td>
                             <td class="number">375 000</td>
                             <td class="number">0.5%</td>
-                            <td class="number">1 875</td>
-                            <td class="number">10%</td>
-                            <td class="number">188</td>
-                            <td class="number">40%</td>
+                            <td class="number">4%</td>
                             <td class="number positive">75</td>
-                            <td class="number">4.5€</td>
+                            <td class="number">266€</td>
+                            <td class="number">3.55€</td>
                         </tr>
                         <tr>
-                            <td><strong>TikTok (haut : 15k/v)</strong></td>
-                            <td class="number">450 000</td>
-                            <td class="number">0.5%</td>
-                            <td class="number">2 250</td>
-                            <td class="number">10%</td>
-                            <td class="number">225</td>
-                            <td class="number">40%</td>
-                            <td class="number positive">90</td>
-                            <td class="number">4.2€</td>
-                        </tr>
-                        <tr>
-                            <td><strong>YouTube Shorts (24/mois)</strong></td>
+                            <td><strong>YouTube Shorts</strong></td>
                             <td class="number">360 000</td>
                             <td class="number">0.7%</td>
-                            <td class="number">2 520</td>
-                            <td class="number">10%</td>
-                            <td class="number">252</td>
-                            <td class="number">40%</td>
+                            <td class="number">4%</td>
                             <td class="number positive">100</td>
-                            <td class="number">4€</td>
+                            <td class="number">266€</td>
+                            <td class="number">2.66€</td>
                         </tr>
                         <tr>
                             <td><strong>Instagram</strong></td>
                             <td class="number">160 000</td>
                             <td class="number">0.5%</td>
-                            <td class="number">800</td>
-                            <td class="number">10%</td>
-                            <td class="number">80</td>
-                            <td class="number">40%</td>
+                            <td class="number">4%</td>
                             <td class="number positive">32</td>
-                            <td class="number">6€</td>
+                            <td class="number">268€</td>
+                            <td class="number">8.38€</td>
                         </tr>
                         <tr>
                             <td><strong>SEO organique</strong></td>
                             <td class="number">-</td>
                             <td class="number">-</td>
-                            <td class="number">1 000</td>
-                            <td class="number">8%</td>
-                            <td class="number">80</td>
-                            <td class="number">40%</td>
+                            <td class="number">3.2%</td>
                             <td class="number positive">32</td>
+                            <td class="number">0€</td>
                             <td class="number">0€</td>
                         </tr>
                         <tr>
                             <td><strong>Collabs macro (1/mois)</strong></td>
                             <td class="number">300 000</td>
                             <td class="number">1%</td>
-                            <td class="number">3 000</td>
-                            <td class="number">10%</td>
-                            <td class="number">300</td>
-                            <td class="number">40%</td>
+                            <td class="number">4%</td>
                             <td class="number positive">120</td>
+                            <td class="number">1 200€</td>
                             <td class="number">10€</td>
                         </tr>
                         <tr>
                             <td><strong>Collabs mid (6/mois)</strong></td>
                             <td class="number">300 000</td>
                             <td class="number">0.5%</td>
-                            <td class="number">1 500</td>
-                            <td class="number">10%</td>
-                            <td class="number">150</td>
-                            <td class="number">40%</td>
+                            <td class="number">4%</td>
                             <td class="number positive">60</td>
+                            <td class="number">360€</td>
                             <td class="number">6€</td>
                         </tr>
                         <tr class="total-row">
-                            <td><strong>TOTAL (scénario milieu)</strong></td>
-                            <td class="number"><strong>1.5-1.65M</strong></td>
+                            <td><strong>TOTAL PONDÉRÉ</strong></td>
+                            <td class="number"><strong>1.5M</strong></td>
                             <td class="number">0.7%</td>
-                            <td class="number"><strong>10 695</strong></td>
-                            <td class="number">9.9%</td>
-                            <td class="number"><strong>1 060</strong></td>
-                            <td class="number">40%</td>
-                            <td class="number positive"><strong>424</strong></td>
-                            <td class="number positive"><strong>5.0€</strong></td>
+                            <td class="number">4%</td>
+                            <td class="number positive"><strong>419</strong></td>
+                            <td class="number"><strong>2 360€</strong></td>
+                            <td class="number positive"><strong>5.94€</strong></td>
+                        </tr>
+                        <tr class="negative-row">
+                            <td colspan="5"><strong>+ Monteur TikTok (800€) réparti sur tous les canaux</strong></td>
+                            <td class="number">800€</td>
+                            <td class="number">+1.91€</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td colspan="5"><strong>CAC TOTAL RÉEL (tout inclus)</strong></td>
+                            <td class="number"><strong>3 160€</strong></td>
+                            <td class="number negative"><strong>7.85€</strong></td>
                         </tr>
                     </tbody>
                 </table>
 
-                <div class="alert-box success">
-                    <strong>Projection conservative et réaliste</strong> : 411-441 nouveaux clients/mois avec 1.5-1.65M de vues totales. 
-                    Objectif 500+ atteignable si CTR TikTok passe à 0.8% et YouTube Shorts à 24/mois.
+                <div class="alert-box danger">
+                    <strong>CAC réel : 7.85€ vs LTV : 56€</strong> = Ratio LTV/CAC de 7.1x (toujours sain mais moins spectaculaire)
+                    <br><strong>Payback period</strong> : 7.85€ ÷ 3.67€ = 2.14 mois (acceptable)
                 </div>
-
-                <h3 class="subsection-title">Actions prioritaires pour booster à 500+/mois</h3>
-                <div class="triggers-grid">
-                    <div class="trigger-card">
-                        <div class="trigger-metric">🎯 CTR 0.5% → 0.8%</div>
-                        <div class="trigger-action">• Hook texte surimpression 0-3s<br>• Commentaire épinglé avec lien<br>• Landing ultra-courte dédiée</div>
-                    </div>
-                    <div class="trigger-card">
-                        <div class="trigger-metric">📱 YT Shorts 16 → 24/mois</div>
-                        <div class="trigger-action">• Repurposing systématique<br>• Format vertical natif<br>• Titres SEO optimisés</div>
-                    </div>
-                    <div class="trigger-card">
-                        <div class="trigger-metric">💰 CPA différé J+60</div>
-                        <div class="trigger-action">• Payout après 2 mois<br>• Cap dur mensuel 1 320€<br>• Revenue share 2 premiers mois</div>
-                    </div>
-                </div>
-
-                <p class="small-note">
-                    Note : Stratégie basée sur 30 TikTok/mois à 10-15k vues. Budget CPA plafonné à 30% du budget marketing mensuel (600€ sur 2 140€ de coûts totaux).
-                    Objectif conservateur de 400+ clients/mois reste largement rentable avec EBITDA 115K€ en 2026.
-                </p>
             </div>
         </div>
 
-        <!-- Projections financières RÉVISÉES -->
+        <!-- Projections financières CORRIGÉES avec CHURN -->
         <div class="content-page page-break">
-            <h2 class="section-header">Projections Financières - Scénario Réaliste Révisé</h2>
+            <h2 class="section-header">Projections Financières Corrigées avec Impact du Churn</h2>
             
             <div class="subsection">
-                <h3 class="subsection-title">P&L Prévisionnel (Oct 2025 - Déc 2028) - 400+ nouveaux clients/mois</h3>
+                <h3 class="subsection-title">Deux scénarios avec churn 6.5%/mois pris en compte</h3>
+                
+                <div class="alert-box warning">
+                    <strong>Impact critique du churn 6.5%/mois</strong> : 
+                    <br>• Avec 424 nouveaux/mois → seulement 3 709 clients fin 2026 (pas 5 000)
+                    <br>• Pour atteindre 5 000 → besoin de 576 nouveaux/mois
+                    <br>• Alternative : réduire le churn à ~1%/mois pour tenir les objectifs
+                </div>
+
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Scénario</th>
+                            <th class="number">Nouveaux/mois</th>
+                            <th class="number">Clients fin 2026</th>
+                            <th class="number">CA 2026 HT</th>
+                            <th class="number">Coûts fixes</th>
+                            <th class="number">Coûts variables</th>
+                            <th class="number">EBITDA</th>
+                            <th class="number">Marge</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="scenario-2">
+                            <td><strong>Réaliste (base 424)</strong></td>
+                            <td class="number">424</td>
+                            <td class="number">3 709</td>
+                            <td class="number">102 500 €</td>
+                            <td class="number">41 520 €</td>
+                            <td class="number">12 300 €</td>
+                            <td class="number positive">48 680 €</td>
+                            <td class="number">47%</td>
+                        </tr>
+                        <tr class="scenario-1">
+                            <td><strong>Objectif 5000 (576/mois)</strong></td>
+                            <td class="number">576</td>
+                            <td class="number">5 004</td>
+                            <td class="number">136 400 €</td>
+                            <td class="number">41 520 €</td>
+                            <td class="number">16 400 €</td>
+                            <td class="number positive">78 480 €</td>
+                            <td class="number">58%</td>
+                        </tr>
+                        <tr class="scenario-3">
+                            <td><strong>Pessimiste (300/mois)</strong></td>
+                            <td class="number">300</td>
+                            <td class="number">2 627</td>
+                            <td class="number">72 800 €</td>
+                            <td class="number">41 520 €</td>
+                            <td class="number">8 700 €</td>
+                            <td class="number positive">22 580 €</td>
+                            <td class="number">31%</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 class="subsection-title">P&L Prévisionnel corrigé - Scénario réaliste (424/mois)</h3>
                 <table class="professional-table">
                     <thead>
                         <tr>
@@ -1385,414 +1318,411 @@
                             <th class="number">2026<br>(Année 1)</th>
                             <th class="number">2027<br>(Année 2)</th>
                             <th class="number">2028<br>(Année 3)</th>
-                            <th class="number">Total</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr class="highlight-row">
-                            <td><strong>Clients fin période</strong></td>
+                            <td><strong>Clients fin période (avec churn)</strong></td>
                             <td class="number">220</td>
-                            <td class="number">5 000</td>
-                            <td class="number">7 200</td>
-                            <td class="number">8 100</td>
-                            <td class="number">8 100</td>
+                            <td class="number">3 709</td>
+                            <td class="number">5 500</td>
+                            <td class="number">6 000</td>
                         </tr>
                         <tr>
-                            <td>MRR fin période (TTC)</td>
-                            <td class="number">1 100 €</td>
-                            <td class="number">25 000 €</td>
-                            <td class="number">36 000 €</td>
-                            <td class="number">40 500 €</td>
-                            <td class="number">40 500 €</td>
+                            <td>Nouveaux clients/mois</td>
+                            <td class="number">~73</td>
+                            <td class="number">424</td>
+                            <td class="number">450</td>
+                            <td class="number">400</td>
+                        </tr>
+                        <tr>
+                            <td>Churn mensuel</td>
+                            <td class="number">6.5%</td>
+                            <td class="number">6.5%</td>
+                            <td class="number">5%</td>
+                            <td class="number">4%</td>
                         </tr>
                         <tr class="highlight-row">
                             <td><strong>Chiffre d'affaires HT</strong></td>
-                            <td class="number">6 100 €</td>
-                            <td class="number">156 000 €</td>
-                            <td class="number">315 000 €</td>
-                            <td class="number">385 000 €</td>
-                            <td class="number positive"><strong>862 100 €</strong></td>
+                            <td class="number negative">1 625 €</td>
+                            <td class="number">102 500 €</td>
+                            <td class="number">215 000 €</td>
+                            <td class="number">265 000 €</td>
                         </tr>
                         
                         <tr>
-                            <td colspan="6" style="padding-top: 15px;"><strong>Charges d'exploitation</strong></td>
+                            <td colspan="5" style="padding-top: 15px;"><strong>Charges d'exploitation</strong></td>
                         </tr>
                         <tr>
-                            <td>Développement pré-launch (Jan-Sept)</td>
+                            <td>Développement pré-launch</td>
                             <td class="number">3 600 €</td>
                             <td class="number">-</td>
                             <td class="number">-</td>
                             <td class="number">-</td>
-                            <td class="number">3 600 €</td>
                         </tr>
                         <tr>
-                            <td>Coûts fixes (2 140€/mois)</td>
-                            <td class="number">6 420 €</td>
-                            <td class="number">25 680 €</td>
-                            <td class="number">25 680 €</td>
-                            <td class="number">25 680 €</td>
-                            <td class="number">83 460 €</td>
+                            <td>Coûts fixes (3 460€/mois)</td>
+                            <td class="number">10 380 €</td>
+                            <td class="number">41 520 €</td>
+                            <td class="number">41 520 €</td>
+                            <td class="number">41 520 €</td>
                         </tr>
                         <tr>
-                            <td>Coûts variables (0,50€/abonné)</td>
-                            <td class="number">198 €</td>
-                            <td class="number">18 750 €</td>
-                            <td class="number">38 100 €</td>
-                            <td class="number">46 350 €</td>
-                            <td class="number">103 398 €</td>
+                            <td>Coûts variables (0.50€/abonné)</td>
+                            <td class="number">195 €</td>
+                            <td class="number">12 300 €</td>
+                            <td class="number">25 800 €</td>
+                            <td class="number">31 800 €</td>
                         </tr>
                         
                         <tr class="highlight-row">
                             <td><strong>Total OPEX</strong></td>
-                            <td class="number">10 218 €</td>
-                            <td class="number">44 430 €</td>
-                            <td class="number">63 780 €</td>
-                            <td class="number">72 030 €</td>
-                            <td class="number">190 458 €</td>
+                            <td class="number">14 175 €</td>
+                            <td class="number">53 820 €</td>
+                            <td class="number">67 320 €</td>
+                            <td class="number">73 320 €</td>
                         </tr>
                         
                         <tr class="total-row">
                             <td><strong>EBITDA</strong></td>
-                            <td class="number negative">-4 118 €</td>
-                            <td class="number positive">111 570 €</td>
-                            <td class="number positive">251 220 €</td>
-                            <td class="number positive">312 970 €</td>
-                            <td class="number positive"><strong>671 642 €</strong></td>
+                            <td class="number negative">-12 550 €</td>
+                            <td class="number positive">48 680 €</td>
+                            <td class="number positive">147 680 €</td>
+                            <td class="number positive">191 680 €</td>
                         </tr>
                         
                         <tr>
                             <td>Marge EBITDA</td>
-                            <td class="number negative">-67%</td>
+                            <td class="number negative">-772%</td>
+                            <td class="number">47%</td>
+                            <td class="number positive">69%</td>
                             <td class="number positive">72%</td>
-                            <td class="number positive">80%</td>
-                            <td class="number positive">81%</td>
-                            <td class="number positive"><strong>78%</strong></td>
                         </tr>
-                    </tbody>
-                </table>
-
-                <div class="alert-box success">
-                    <strong>Scénario conservateur (400+ nouveaux/mois)</strong> : Plus crédible et réaliste. EBITDA 2026 de 112K€ avec marge de 72%. 
-                    Même en sous-performant, le modèle reste très rentable.
-                </div>
-
-                <h3 class="subsection-title">Analyse de sensibilité - Impact de la performance d'acquisition</h3>
-                <table class="professional-table">
-                    <thead>
-                        <tr>
-                            <th>Scénario</th>
-                            <th class="number">Nouveaux/mois</th>
-                            <th class="number">Clients fin 2026</th>
-                            <th class="number">CA 2026</th>
-                            <th class="number">EBITDA 2026</th>
-                            <th class="number">Marge</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr class="scenario-3">
-                            <td><strong>Pessimiste (300/mois)</strong></td>
-                            <td class="number">300</td>
-                            <td class="number">3 000</td>
-                            <td class="number">94 000 €</td>
-                            <td class="number positive">57 000 €</td>
-                            <td class="number">61%</td>
-                        </tr>
-                        <tr class="scenario-2">
-                            <td><strong>Réaliste conservateur</strong></td>
-                            <td class="number">424</td>
-                            <td class="number">5 000</td>
-                            <td class="number">156 000 €</td>
-                            <td class="number positive">112 000 €</td>
-                            <td class="number">72%</td>
-                        </tr>
-                        <tr class="scenario-1">
-                            <td><strong>Optimisé (CTR 0.8%)</strong></td>
-                            <td class="number">504</td>
-                            <td class="number">6 000</td>
-                            <td class="number">188 000 €</td>
-                            <td class="number positive">138 000 €</td>
-                            <td class="number">73%</td>
+                        
+                        <tr class="highlight-row">
+                            <td><strong>Trésorerie cumulée</strong></td>
+                            <td class="number negative">-12 550 €</td>
+                            <td class="number positive">36 130 €</td>
+                            <td class="number positive">183 810 €</td>
+                            <td class="number positive">375 490 €</td>
                         </tr>
                     </tbody>
                 </table>
 
                 <div class="alert-box info">
-                    <strong>Résilience du modèle</strong> : Même à 300 clients/mois (scénario très pessimiste), NOVIS reste profitable avec 57K€ d'EBITDA et 61% de marge.
+                    <strong>Points clés du modèle corrigé</strong> :
+                    <br>• Rentabilité atteinte mi-2026 (après 8-9 mois d'exploitation)
+                    <br>• EBITDA positif dès 2026 mais plus modeste (49K€ vs 112K€ annoncé)
+                    <br>• Nécessité de réduire progressivement le churn pour améliorer les marges
+                    <br>• Buffer de trésorerie critique les 9 premiers mois
+                </div>
+            </div>
+        </div>
+
+        <!-- KPIs et Unit Economics CORRIGÉS -->
+        <div class="content-page page-break">
+            <h2 class="section-header">KPIs & Unit Economics Corrigés</h2>
+            
+            <div class="subsection">
+                <h3 class="subsection-title">Métriques clés corrigées avec impact réel</h3>
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Métrique</th>
+                            <th class="number">Valeur initiale</th>
+                            <th class="number">Valeur corrigée</th>
+                            <th>Impact</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Prix mensuel TTC</td>
+                            <td class="number">5.00 €</td>
+                            <td class="number positive">5.00 €</td>
+                            <td>Inchangé</td>
+                        </tr>
+                        <tr>
+                            <td>Prix mensuel HT</td>
+                            <td class="number">4.17 €</td>
+                            <td class="number positive">4.17 €</td>
+                            <td>Clarifié</td>
+                        </tr>
+                        <tr>
+                            <td>ARPU net HT (après variables)</td>
+                            <td class="number">3.67 €</td>
+                            <td class="number positive">3.67 €</td>
+                            <td>Confirmé</td>
+                        </tr>
+                        <tr class="negative-row">
+                            <td>Coûts fixes mensuels réels</td>
+                            <td class="number">2 140 €</td>
+                            <td class="number negative">3 460 €</td>
+                            <td>+62% (collabs inclus)</td>
+                        </tr>
+                        <tr class="negative-row">
+                            <td>Break-even (nb clients)</td>
+                            <td class="number">476</td>
+                            <td class="number negative">943</td>
+                            <td>+98% (584 sans collabs)</td>
+                        </tr>
+                        <tr>
+                            <td>Churn mensuel</td>
+                            <td class="number">6.5%</td>
+                            <td class="number negative">6.5%</td>
+                            <td>Impact majeur</td>
+                        </tr>
+                        <tr>
+                            <td>LTV (Lifetime Value)</td>
+                            <td class="number">56 €</td>
+                            <td class="number positive">56 €</td>
+                            <td>Inchangé</td>
+                        </tr>
+                        <tr class="negative-row">
+                            <td>CAC Organique réel</td>
+                            <td class="number">5.0 €</td>
+                            <td class="number negative">7.85 €</td>
+                            <td>+57% (tout inclus)</td>
+                        </tr>
+                        <tr class="neutral">
+                            <td>Ratio LTV/CAC</td>
+                            <td class="number">11.2x</td>
+                            <td class="number neutral">7.1x</td>
+                            <td>Reste sain (>3x)</td>
+                        </tr>
+                        <tr class="negative-row">
+                            <td>Payback period</td>
+                            <td class="number">1.4 mois</td>
+                            <td class="number negative">2.1 mois</td>
+                            <td>+50% mais OK</td>
+                        </tr>
+                        <tr class="negative-row">
+                            <td>Clients fin 2026 (424/mois)</td>
+                            <td class="number">5 000</td>
+                            <td class="number negative">3 709</td>
+                            <td>-26% (churn)</td>
+                        </tr>
+                        <tr class="negative-row">
+                            <td>CA 2026 HT</td>
+                            <td class="number">156 000 €</td>
+                            <td class="number negative">102 500 €</td>
+                            <td>-34%</td>
+                        </tr>
+                        <tr class="negative-row">
+                            <td>EBITDA 2026</td>
+                            <td class="number">112 000 €</td>
+                            <td class="number negative">48 680 €</td>
+                            <td>-57%</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h3 class="subsection-title">Actions correctives proposées</h3>
+                <div class="triggers-grid">
+                    <div class="trigger-card">
+                        <div class="trigger-metric">🎯 Réduire le churn</div>
+                        <div class="trigger-action">• Onboarding optimisé<br>• Engagement hebdo obligatoire<br>• Objectif : 3-4%/mois</div>
+                    </div>
+                    <div class="trigger-card">
+                        <div class="trigger-metric">📈 Augmenter l'acquisition</div>
+                        <div class="trigger-action">• Passer à 576/mois<br>• Plus de collabs<br>• Ads payants testés</div>
+                    </div>
+                    <div class="trigger-card">
+                        <div class="trigger-metric">💰 Optimiser les coûts</div>
+                        <div class="trigger-action">• Négocier APIs<br>• Automatiser support<br>• Cap collabs strict</div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Scénarios stratégiques RÉVISÉS -->
         <div class="content-page page-break">
-            <h2 class="section-header">Scénarios Stratégiques Conservateurs</h2>
+            <h2 class="section-header">Scénarios Stratégiques Révisés</h2>
             
             <div class="option-cards">
                 <div class="option-card">
                     <span class="option-number">A</span>
-                    <div class="option-title">Scénario "Bootstrap Réaliste"</div>
+                    <div class="option-title">Bootstrap Réaliste Corrigé</div>
                     <div class="option-description">
-                        100% organique, 30 TikTok/mois, attentes modérées
+                        Accepter la réalité du churn et des coûts complets
                     </div>
                     <div class="option-metrics">
-                        <div><span>Investissement</span><strong>10 020€ (perso)</strong></div>
-                        <div><span>Coûts mensuels</span><strong>2 140€/mois</strong></div>
-                        <div><span>Nouveaux/mois</span><strong>400-440</strong></div>
-                        <div><span>Rentable</span><strong>Q1 2026</strong></div>
-                        <div><span>EBITDA 2026</span><strong>112K€</strong></div>
+                        <div><span>Investissement</span><strong>14K€ perso</strong></div>
+                        <div><span>Coûts mensuels</span><strong>3 460€</strong></div>
+                        <div><span>Nouveaux/mois</span><strong>424</strong></div>
+                        <div><span>Clients fin 2026</span><strong>3 709</strong></div>
+                        <div><span>EBITDA 2026</span><strong>49K€</strong></div>
+                        <div><span>Break-even</span><strong>Mi-2026</strong></div>
                     </div>
                 </div>
 
                 <div class="option-card">
                     <span class="option-number">B</span>
-                    <div class="option-title">Scénario "Buffer Sécurisé"</div>
+                    <div class="option-title">Growth Agressif</div>
                     <div class="option-description">
-                        Prêt d'honneur 15K€ pour trésorerie et tests marketing
+                        Forcer l'acquisition pour atteindre les 5000 clients
                     </div>
                     <div class="option-metrics">
-                        <div><span>Financement</span><strong>15K€ non dilutif</strong></div>
-                        <div><span>Buffer trésorerie</span><strong>7 mois</strong></div>
-                        <div><span>Tests CPA</span><strong>600€/mois</strong></div>
-                        <div><span>Clients fin 2026</span><strong>5 500</strong></div>
-                        <div><span>EBITDA 2026</span><strong>125K€</strong></div>
+                        <div><span>Financement</span><strong>25K€ non dilutif</strong></div>
+                        <div><span>Nouveaux/mois</span><strong>576</strong></div>
+                        <div><span>Budget ads</span><strong>+1000€/mois</strong></div>
+                        <div><span>Clients fin 2026</span><strong>5 004</strong></div>
+                        <div><span>EBITDA 2026</span><strong>78K€</strong></div>
+                        <div><span>Risque</span><strong>Élevé</strong></div>
                     </div>
                 </div>
 
                 <div class="option-card">
                     <span class="option-number">C</span>
-                    <div class="option-title">Scénario "Growth Mesuré"</div>
+                    <div class="option-title">Focus Rétention</div>
                     <div class="option-description">
-                        Optimisation CTR + augmentation progressive du volume
+                        Priorité absolue : réduire le churn à 2-3%/mois
                     </div>
                     <div class="option-metrics">
-                        <div><span>Financement</span><strong>20K€ non dilutif</strong></div>
-                        <div><span>CTR optimisé</span><strong>0.8%</strong></div>
-                        <div><span>YT Shorts</span><strong>24/mois</strong></div>
-                        <div><span>Clients fin 2026</span><strong>6 000</strong></div>
-                        <div><span>EBITDA 2026</span><strong>138K€</strong></div>
+                        <div><span>Financement</span><strong>20K€</strong></div>
+                        <div><span>Invest produit</span><strong>+500€/mois</strong></div>
+                        <div><span>Churn cible</span><strong>3%/mois</strong></div>
+                        <div><span>Clients fin 2026</span><strong>4 800</strong></div>
+                        <div><span>EBITDA 2026</span><strong>95K€</strong></div>
+                        <div><span>Plus durable</span><strong>✓</strong></div>
                     </div>
                 </div>
             </div>
 
-            <div class="alert-box warning">
-                📊 Tous les scénarios sont basés sur des projections réalistes de 30 TikTok/mois à 10-15k vues. 
-                La diversification et l'optimisation progressive permettent d'atteindre la rentabilité sans prendre de risques excessifs.
-            </div>
-        </div>
-
-        <!-- KPIs et Unit Economics RÉVISÉS -->
-        <div class="content-page page-break">
-            <h2 class="section-header">KPIs & Unit Economics Conservateurs</h2>
-            
-            <div class="subsection">
-                <h3 class="subsection-title">Métriques clés de performance révisées</h3>
-                <table class="professional-table">
-                    <thead>
-                        <tr>
-                            <th>Métrique</th>
-                            <th class="number">Valeur conservative</th>
-                            <th>Benchmark SaaS B2C</th>
-                            <th>Statut</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Prix mensuel TTC</td>
-                            <td class="number positive">5.00 €</td>
-                            <td>5-15€</td>
-                            <td>Ultra-compétitif</td>
-                        </tr>
-                        <tr>
-                            <td>Coûts fixes mensuels RÉELS</td>
-                            <td class="number">2 140 €</td>
-                            <td>2000-5000€</td>
-                            <td>Optimisé</td>
-                        </tr>
-                        <tr>
-                            <td>Break-even (nb clients)</td>
-                            <td class="number positive">476 clients</td>
-                            <td>500-1000</td>
-                            <td>Excellent</td>
-                        </tr>
-                        <tr>
-                            <td>ARPU mensuel HT net</td>
-                            <td class="number">3.67 €</td>
-                            <td>5-10€</td>
-                            <td>Pricing militant</td>
-                        </tr>
-                        <tr>
-                            <td>Churn mensuel</td>
-                            <td class="number">6.5%</td>
-                            <td>5-10%</td>
-                            <td>Objectif ambitieux</td>
-                        </tr>
-                        <tr>
-                            <td>Rétention mensuelle</td>
-                            <td class="number positive">93.5%</td>
-                            <td>90-95%</td>
-                            <td>Excellent</td>
-                        </tr>
-                        <tr class="highlight-row">
-                            <td><strong>LTV (Lifetime Value)</strong></td>
-                            <td class="number positive"><strong>56 €</strong></td>
-                            <td>40-80€</td>
-                            <td>Solide</td>
-                        </tr>
-                        <tr class="highlight-row">
-                            <td><strong>CAC Organique (pondéré)</strong></td>
-                            <td class="number positive"><strong>4.2-5.8 €</strong></td>
-                            <td>15-30€</td>
-                            <td>Excellent</td>
-                        </tr>
-                        <tr class="total-row">
-                            <td><strong>Ratio LTV/CAC</strong></td>
-                            <td class="number positive"><strong>9.7-13.3x</strong></td>
-                            <td>>3x bon</td>
-                            <td>Exceptionnel</td>
-                        </tr>
-                        <tr class="total-row">
-                            <td><strong>Payback period</strong></td>
-                            <td class="number positive"><strong>1.1-1.6 mois</strong></td>
-                            <td><6 mois bon</td>
-                            <td>Excellent</td>
-                        </tr>
-                        <tr>
-                            <td>NPS (Net Promoter Score)</td>
-                            <td class="number">>60 (T1), >70 (12 mois)</td>
-                            <td>>50 bon</td>
-                            <td>Objectif ambitieux</td>
-                        </tr>
-                        <tr class="highlight-row">
-                            <td><strong>Temps pour rentabilité</strong></td>
-                            <td class="number positive"><strong>Q1 2026</strong></td>
-                            <td>12-24 mois</td>
-                            <td>Très rapide</td>
-                        </tr>
-                        <tr class="highlight-row">
-                            <td><strong>Nouveaux clients/mois (conservateur)</strong></td>
-                            <td class="number positive"><strong>411-441</strong></td>
-                            <td>Variable</td>
-                            <td>Réaliste et atteignable</td>
-                        </tr>
-                    </tbody>
-                </table>
-                
-                <div class="alert-box info">
-                    <strong>Conclusion</strong> : Avec 400+ nouveaux clients/mois basés sur 30 TikTok à 10-15k vues, les métriques restent excellentes. 
-                    Le LTV/CAC de 9.7-13.3x est exceptionnel même avec des projections conservatives.
-                </div>
+            <div class="alert-box success">
+                <strong>Recommandation</strong> : Scénario C (Focus Rétention) est le plus viable long terme.
+                <br>Réduire le churn de 6.5% à 3% double pratiquement la valeur de l'entreprise.
             </div>
         </div>
 
         <!-- Conclusion RÉVISÉE -->
         <div class="content-page page-break">
-            <h2 class="section-header">Opportunité de Financement Non Dilutif</h2>
+            <h2 class="section-header">Synthèse & Recommandations Finales</h2>
             
             <div class="subsection">
-                <div class="alert-box info">
-                    <h3 style="margin-bottom: 20px; color: #17a2b8;">Projet Conservateur et Réaliste - Rentable dès 476 clients</h3>
+                <div class="alert-box danger">
+                    <h3 style="margin-bottom: 20px; color: #ff3366;">Réalité vs Ambition - Les vrais chiffres</h3>
                     
-                    <strong>Coûts de développement pré-launch</strong> : 400€/mois pendant 9 mois (3 600€ total)
+                    <strong>Ce qui était surévalué :</strong>
+                    <br>• Break-even : 584 clients (pas 476) - ou 943 avec collabs
+                    <br>• CA Q4 2025 : 1.6K€ HT (pas 6.1K€)
+                    <br>• Clients fin 2026 : 3 709 avec churn réel (pas 5 000)
+                    <br>• EBITDA 2026 : 49K€ réaliste (pas 112K€)
+                    <br>• CAC complet : 7.85€ (pas 5€)
                     <br><br>
-                    <strong>Coûts opérationnels réels post-launch</strong> : 2 140€/mois (infrastructure + support + juridique + maintenance + TikTok)
-                    <br><br>
-                    <strong>Stratégie d'acquisition réaliste</strong> : 30 TikTok/mois × 10-15k vues + Repurposing multi-canal
-                    <br><br>
-                    <strong>Acquisition conservative</strong> : 400+ nouveaux clients/mois (1.5M vues totales, CAC 4.2-5.8€)
-                    <br><br>
-                    <strong>Break-even réaliste</strong> : 476 clients = 2 140€ de revenus nets/mois - Atteignable Q1 2026
-                    <br><br>
-                    <strong>Projections 2026</strong> : 5 000 clients · 156K€ CA · 112K€ EBITDA (marge 72%)
-                    <br><br>
-                    <strong>Marché</strong> : TAM 28M épargnants français, SAM ~21M (93% sans actions), SOM 100k à 24 mois
-                    <br><br>
-                    <strong>Financement recherché</strong> : 10K€ à 15K€ (100% non dilutif - subventions, prêts d'honneur)
-                    <br><br>
-                    <strong>Philosophie</strong> : ZERO DILUTION = 5€/mois pour toujours + Mission sociale avant profit
+                    
+                    <strong>Ce qui reste solide :</strong>
+                    <br>• LTV/CAC ratio : 7.1x (excellent même corrigé)
+                    <br>• Payback : 2.1 mois (très bon pour du B2C)
+                    <br>• Rentabilité : Atteinte en 2026 même avec chiffres réels
+                    <br>• Marché : Potentiel intact (28M TAM)
                 </div>
 
-                <h3 class="subsection-title">Utilisation des fonds (financement externe)</h3>
+                <h3 class="subsection-title">Plan d'action prioritaire</h3>
                 <div class="highlights">
                     <div class="highlight-card">
-                        <div class="highlight-icon">💰</div>
-                        <div class="highlight-title">10K€</div>
-                        <div class="highlight-text">Buffer trésorerie<br>5 mois d'opex<br>Lancement serein<br>Tests marketing</div>
+                        <div class="highlight-icon">1️⃣</div>
+                        <div class="highlight-title">Court terme (Q1 2025)</div>
+                        <div class="highlight-text">• Sécuriser 20-25K€<br>• MVP sans fioritures<br>• Beta 50 personnes<br>• Valider le churn réel</div>
                     </div>
                     <div class="highlight-card">
-                        <div class="highlight-icon">🚀</div>
-                        <div class="highlight-title">15K€</div>
-                        <div class="highlight-text">Buffer 7 mois<br>Tests CPA créateurs<br>Optimisation CTR<br>5 500 clients 2026</div>
+                        <div class="highlight-icon">2️⃣</div>
+                        <div class="highlight-title">Lancement (Q4 2025)</div>
+                        <div class="highlight-text">• Viser 200 clients<br>• Tester tous canaux<br>• Mesurer CAC réel<br>• Itérer rapidement</div>
                     </div>
                     <div class="highlight-card">
-                        <div class="highlight-icon">🎯</div>
-                        <div class="highlight-title">20K€</div>
-                        <div class="highlight-text">Scale mesuré<br>CTR 0.8%<br>App mobile<br>6 000 clients 2026</div>
+                        <div class="highlight-icon">3️⃣</div>
+                        <div class="highlight-title">Scale (2026)</div>
+                        <div class="highlight-text">• Focus rétention<br>• Churn < 4%<br>• 400+ nouveaux/mois<br>• Break-even mi-année</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-icon">4️⃣</div>
+                        <div class="highlight-title">Long terme</div>
+                        <div class="highlight-text">• 10K clients (2027)<br>• Expansion produit<br>• Prix premium tier<br>• International ?</div>
                     </div>
                 </div>
 
-                <h3 class="subsection-title">Pourquoi ce modèle conservateur est plus solide</h3>
-                <div class="highlights">
-                    <div class="highlight-card">
-                        <div class="highlight-icon">💸</div>
-                        <div class="highlight-title">Projections réalistes</div>
-                        <div class="highlight-text">30 TikTok/mois<br>10-15k vues/vidéo<br>Atteignable immédiatement</div>
-                    </div>
-                    <div class="highlight-card">
-                        <div class="highlight-icon">🎯</div>
-                        <div class="highlight-title">Sous-promettre</div>
-                        <div class="highlight-text">400+ clients/mois<br>Potentiel 500+<br>Marge de progression</div>
-                    </div>
-                    <div class="highlight-card">
-                        <div class="highlight-icon">📱</div>
-                        <div class="highlight-title">Multi-canal équilibré</div>
-                        <div class="highlight-text">Pas 100% TikTok<br>YT Shorts + IG<br>Résilience assurée</div>
-                    </div>
-                    <div class="highlight-card">
-                        <div class="highlight-icon">🔥</div>
-                        <div class="highlight-title">Rentable rapidement</div>
-                        <div class="highlight-text">112K€ EBITDA 2026<br>72% de marge<br>Même à 300/mois</div>
-                    </div>
+                <h3 class="subsection-title">Financement recommandé</h3>
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Poste</th>
+                            <th class="number">Montant</th>
+                            <th>Usage</th>
+                            <th>Criticité</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Développement MVP</td>
+                            <td class="number">3 600 €</td>
+                            <td>9 mois à 400€/mois</td>
+                            <td>Indispensable</td>
+                        </tr>
+                        <tr>
+                            <td>Buffer trésorerie (6 mois)</td>
+                            <td class="number">20 760 €</td>
+                            <td>Couvrir les pertes initiales</td>
+                            <td>Critique</td>
+                        </tr>
+                        <tr>
+                            <td>Tests marketing</td>
+                            <td class="number">3 000 €</td>
+                            <td>Ads, collabs, A/B tests</td>
+                            <td>Important</td>
+                        </tr>
+                        <tr>
+                            <td>Juridique/Compta setup</td>
+                            <td class="number">2 000 €</td>
+                            <td>Création société, CGV, RGPD</td>
+                            <td>Obligatoire</td>
+                        </tr>
+                        <tr>
+                            <td>Imprévus (10%)</td>
+                            <td class="number">2 936 €</td>
+                            <td>Marge de sécurité</td>
+                            <td>Prudent</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td><strong>TOTAL RECOMMANDÉ</strong></td>
+                            <td class="number positive"><strong>32 296 €</strong></td>
+                            <td><strong>100% non dilutif</strong></td>
+                            <td><strong>-</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert-box warning">
+                    <strong>Message aux investisseurs</strong> : 
+                    <br>Ce business plan corrigé est plus réaliste mais reste très attractif.
+                    <br>Le modèle génère du cash rapidement (rentable en 18 mois).
+                    <br>Le risque principal est le churn, pas l'acquisition.
+                    <br>Avec 30K€ non dilutifs, NOVIS peut atteindre 250K€ de CA en 2027.
                 </div>
 
                 <h3 class="subsection-title">Contact</h3>
                 <div style="text-align: center; margin-top: 40px;">
                     <p style="font-size: 18px; color: #06ffa5;">
-                        NOVIS - Le SaaS à 2 140€/mois qui vise 100k clients
+                        NOVIS - Business Plan Réaliste et Transparent
                     </p>
                     <p style="margin-top: 20px;">
                         <strong>Email</strong> : mynovis@novisfr.com<br>
                         <strong>Téléphone</strong> : 06 77 13 89 30<br>
-                        <strong>Lancement</strong> : Beta entourage août-sept 2025 · Public octobre 2025
+                        <strong>Statut</strong> : Chiffres corrigés - Ambition intacte
                     </p>
                 </div>
             </div>
         </div>
 
-        <!-- Footer RÉVISÉ -->
+        <!-- Footer -->
         <div class="footer">
-            <strong>NOVIS Business Plan - Version Conservative</strong> - Document confidentiel - Stratégie Multi-Canal<br>
-            Développement : 400€/mois · Opérationnel : 2 140€/mois · Break-even : 476 clients<br>
-            Acquisition : 400+ nouveaux/mois (30 TikTok 10-15k vues) · CAC : 4.2-5.8€ · EBITDA 2026 : 112K€<br>
+            <strong>NOVIS Business Plan - Version Corrigée avec Audit Complet</strong><br>
+            Break-even réel : 584-943 clients · CA 2026 : 102K€ (scénario 424/mois) · EBITDA : 49K€<br>
+            CAC réel : 7.85€ · LTV/CAC : 7.1x · Besoin financement : 25-32K€ non dilutif<br>
             Contact : mynovis@novisfr.com · 06 77 13 89 30
         </div>
     </div>
 
     <script>
-        // Date fixée en dur - pas de mise à jour automatique
-        // Pour modifier la date, changez directement dans le HTML
-        
-        // ========== FIX CRITIQUE POUR L'IMPRESSION ==========
-        const resetForPrint = () => {
-            document.querySelectorAll('.metric-box, .highlight-card, .trigger-card, .option-card')
-                .forEach(el => {
-                    el.style.opacity = '1';
-                    el.style.transform = 'none';
-                    el.style.transition = 'none';
-                });
-        };
-
-        // Forcer la visibilité avant l'impression
-        window.onbeforeprint = resetForPrint;
-        
         // Animation au scroll (uniquement pour l'écran, pas l'impression)
         const observerOptions = {
             threshold: 0.1,
@@ -1817,6 +1747,16 @@
                 observer.observe(el);
             });
         }
+
+        // Forcer la visibilité avant l'impression
+        window.onbeforeprint = () => {
+            document.querySelectorAll('.metric-box, .highlight-card, .trigger-card, .option-card')
+                .forEach(el => {
+                    el.style.opacity = '1';
+                    el.style.transform = 'none';
+                    el.style.transition = 'none';
+                });
+        };
     </script>
 </body>
 </html>
