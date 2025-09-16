@@ -1307,63 +1307,63 @@ def update_history_index_from_normalized(normalized_json: dict, history_file: st
         print(f"⚠️ Avertissement: index non mis à jour ({e})")
 
 def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict):
-    """Sauvegarde les portefeuilles :
-       - data/portefeuilles.json : format v1 (frontend)
-       - data/portfolio_history/portefeuilles_v3_stable_<ts>.json : archive v3 + métadonnées
-       - met à jour data/portfolio_history/index.json à partir de la vue normalisée
+    """
+    Sauvegarde double :
+      - vue normalisée v1 pour le front: data/portfolios.json  (EN, historique)
+      - archive v3 détaillée avec métadonnées: data/portfolio_history/portefeuilles_v3_stable_YYYYMMDD_HHMMSS.json
+      - met à jour l'index d'historique
     """
     try:
-        history_dir = 'data/portfolio_history'
-        os.makedirs(history_dir, exist_ok=True)
-        os.makedirs('data', exist_ok=True)
+        os.makedirs("data", exist_ok=True)
+        os.makedirs("data/portfolio_history", exist_ok=True)
 
+        # 1) Normaliser v3 -> v1 (schéma attendu par le front)
+        normalized_v1 = normalize_v3_to_frontend_v1(portfolios_v3, allowed_assets)
+
+        # 2) Fichier v1 (nom historique en anglais)
+        v1_path = "data/portfolios.json"
+        with open(v1_path, "w", encoding="utf-8") as f:
+            json.dump(normalized_v1, f, ensure_ascii=False, indent=4)
+
+        # 3) Archive v3 + meta
         ts = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        hist_path = f"data/portfolio_history/portefeuilles_v3_stable_{ts}.json"
+        archive_payload = {
+            "version": "v3_quantitatif_compliance_amf_stable",
+            "timestamp": ts,
+            "date": datetime.datetime.now().isoformat(),
+            "portfolios": portfolios_v3,
+            "features": [
+                "drawdown_normalisé",
+                "diversification_round_robin",
+                "validation_anti_fin_cycle",
+                "fallback_crypto_progressif",
+                "cache_univers_hash",
+                "retry_api_robuste",
+                "compliance_amf",
+                "sanitisation_marketing",
+                "disclaimer_automatique",
+                "regex_pandas_fixed",
+                "etf_detection_fixed",
+                "timeout_extended",
+                "type_safety_improved",
+                "cache_fallback_system"
+            ]
+        }
+        with open(hist_path, "w", encoding="utf-8") as f:
+            json.dump(archive_payload, f, ensure_ascii=False, indent=4)
 
-        # 1) Normaliser le v3 vers l'ancien format v1 (frontend)
-        normalized_portfolios = normalize_v3_to_frontend_v1(portfolios_v3, allowed_assets)
-
-        # 2) Écrire le fichier principal (consommé par le frontend)
-        with open('data/portefeuilles.json', 'w', encoding='utf-8') as f:
-            json.dump(normalized_portfolios, f, ensure_ascii=False, indent=4)
-
-        # 3) Archiver le format v3 complet pour traçabilité
-        history_file = f"{history_dir}/portefeuilles_v3_stable_{ts}.json"
-        with open(history_file, 'w', encoding='utf-8') as f:
-            json.dump({
-                "version": "v3_quantitatif_compliance_amf_stable",
-                "timestamp": ts,
-                "date": datetime.datetime.now().isoformat(),
-                "portfolios": portfolios_v3,
-                "features": [
-                    "normalisation_v3_vers_v1",
-                    "drawdown_normalisé",
-                    "diversification_round_robin",
-                    "validation_anti_fin_cycle",
-                    "fallback_crypto_progressif",
-                    "cache_univers_hash",
-                    "retry_api_robuste",
-                    "compliance_amf",
-                    "sanitisation_marketing",
-                    "disclaimer_automatique",
-                    "regex_pandas_fixed",
-                    "etf_detection_fixed",
-                    "timeout_extended",
-                    "type_safety_improved",
-                    "cache_fallback_system"
-                ]
-            }, f, ensure_ascii=False, indent=4)
-
-        # 4) Mettre à jour l'index à partir de la vue normalisée (v1)
+        # 4) Mettre à jour l’index d’historique à partir de la vue normalisée
         update_history_index_from_normalized(
-            normalized_json=normalized_portfolios,
-            history_file=history_file,
-            version="v3_stable_normalized"
+            normalized_json=normalized_v1,
+            history_file=hist_path,
+            version="v3_quantitatif_compliance_amf_stable"
         )
 
-        print(f"✅ Sauvegarde OK → data/portefeuilles.json (v1) + {history_file} (archive v3)")
-
+        print(f"✅ Sauvegarde OK → {v1_path} (v1) + {hist_path} (archive v3)")
     except Exception as e:
-        print(f"❌ Erreur lors de la sauvegarde des portefeuilles: {str(e)}")
+        print(f"❌ Erreur lors de la sauvegarde normalisée: {e}")
+
 
 
 
