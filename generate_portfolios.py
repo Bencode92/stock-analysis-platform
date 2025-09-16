@@ -1647,32 +1647,84 @@ _THEMATIC_SYNONYMS = {
     "oil":"oil","energy":"energy","bitcoin":"bitcoin","silver":"silver"
 }
 
-def _tokenize_theme(name: str) -> set:
-    """Tokenisation grossière du nom d’ETF (avec stopwords & synonymes) pour comparer les thèmes."""
-    t = re.findall(r"[a-zA-Z0-9&]+", str(name or "").lower())
-    out = set()
-    for w in t:
-        if w in _THEMATIC_STOPWORDS or len(w) <= 2:
-            continue
-        out.add(_THEMATIC_SYNONYMS.get(w, w))
-    # normalisations fréquentes
-    low = (name or "").lower()
-    if "s&p" in low or "s&p 500" in low:
-        out.add("sp500")
-    if "gold" in low or " or " in f" {low} ":
-        out.add("gold")
-    return out
+# ---------- Shims (sécurise l'exécution si tes helpers ne sont pas déjà importés) ----------
+try:
+    _build_asset_lookup  # type: ignore[name-defined]
+except NameError:  # pragma: no cover
+    def _build_asset_lookup(allowed_assets: dict) -> dict:
+        """Fallback minimal : mappe id -> {name, category} depuis allowed_assets."""
+        lut = {}
+        mapping = [
+            ("allowed_equities", "Actions"),
+            ("allowed_etfs_standard", "ETF"),
+            ("allowed_bond_etfs", "Obligations"),
+            ("allowed_crypto", "Crypto"),
+        ]
+        for key, cat in mapping:
+            for a in allowed_assets.get(key, []) or []:
+                lut[a["id"]] = {"name": a.get("name", a["id"]), "category": cat}
+        return lut
 
-def _build_etf_holdings_index(etf_df: pd.DataFrame) -> dict:
+try:
+    _infer_category_from_id  # type: ignore[name-defined]
+except NameError:  # pragma: no cover
+    def _infer_category_from_id(asset_id: str) -> str:
+        """Fallback minimal : infère la catégorie depuis le préfixe de l'ID."""
+        s = str(asset_id)
+        if s.startswith("EQ_"): return "Actions"
+        if s.startswith("ETF_b"): return "Obligations"
+        if s.startswith("ETF_s"): return "ETF"
+        if s.startswith("CR_"): return "Crypto"
+        return "Autres"
+
+# ---------- Tokenisation thématique ----------
+def _tokenize_theme(name: str) -> set:
     """
-    Construit un index {etf_name: {'holdings': set(tickers), 'tokens': set(...)}}.
-    Utilise toute colonne contenant 'holding'/'constituent' si dispo dans le CSV combiné.
+    Tokenisation grossière du nom d’ETF pour comparer les thèmes :
+      - enlève stopwords & mots très courts
+      - normalise via _THEMATIC_SYNONYMS
+      - ajoute ancres fortes (sp500 / gold) si repérées
     """
-    idx = {}
+    low = (name or "").lower()
+    toks = set()
+
+    # mots alphanumériques
+    for w in re.findall(r"[a-z0-9&]+", low):
+        if len(w) <= 2 or w in _THEMATIC_STOPWORDS:
+            continue
+        toks.add(_THEMATIC_SYNONYMS.get(w, w))
+
+    # ancres fortes fréquemment écrites d'une autre manière
+    if "s&p" in low or "s&p 500" in low:
+        toks.add("sp500")
+    # “or” (FR) comme mot entier, sans confondre avec “world”
+    if re.search(r"\bor\b", low) or "gold" in low:
+        toks.add("gold")
+
+    # précision utile pour dissocier bullion vs. miners
+    if re.search(r"\bminers?\b|\bmineurs?\b|\bminiers?\b|\bmines?\b", low):
+        toks.add("miners")
+
+    return toks
+
+# ---------- Index des holdings ETF ----------
+def _build_etf_holdings_index(etf_df: Optional[pd.DataFrame]) -> dict:
+    """
+    Construit un index :
+        { etf_name: { 'holdings': set(tickers), 'tokens': set(...) } }
+    Reconnait des colonnes contenant 'holding' / 'constituent' si présentes.
+    """
+    idx: dict = {}
     if etf_df is None or etf_df.empty:
         return idx
 
-    name_col = next((c for c in ["name","long_name","etf_name","symbol","ticker"] if c in etf_df.columns), None)
+    name_col = next(
+        (c for c in ["name", "long_name", "etf_name", "symbol", "ticker"] if c in etf_df.columns),
+        None
+    )
+    if not name_col:
+        return idx
+
     hold_cols = [c for c in etf_df.columns if re.search(r"(holding|constituent)", c, re.I)]
 
     for _, r in etf_df.iterrows():
@@ -1680,19 +1732,22 @@ def _build_etf_holdings_index(etf_df: pd.DataFrame) -> dict:
         if not name:
             continue
 
-        holdings = set()
+        holdings: set = set()
         for c in hold_cols:
             val = r.get(c)
             if pd.isna(val):
                 continue
-            s = str(val)
-            if s.strip().startswith('['):
-                # JSON-like
+            s = str(val).strip()
+            if not s:
+                continue
+
+            # JSON-like (["AAPL","MSFT",...]) OU simple CSV de tickers
+            if s.startswith("["):
                 try:
                     arr = json.loads(s)
                     for t in arr:
                         if isinstance(t, str):
-                            holdings.add(re.sub(r'[^A-Z0-9]', '', t.upper())[:8])
+                            holdings.add(re.sub(r"[^A-Z0-9]", "", t.upper())[:8])
                 except Exception:
                     pass
             else:
@@ -1701,19 +1756,27 @@ def _build_etf_holdings_index(etf_df: pd.DataFrame) -> dict:
 
         idx[name] = {
             "holdings": holdings,
-            "tokens": _tokenize_theme(name)
+            "tokens": _tokenize_theme(name),
         }
 
     return idx
 
-def _pair_overlap_score(n1: str, n2: str, idx: dict, theme_thresh=0.6, hold_thresh=0.5):
+# ---------- Score de recouvrement pour une paire d'ETF ----------
+def _pair_overlap_score(
+    n1: str,
+    n2: str,
+    idx: dict,
+    theme_thresh: float = 0.6,
+    hold_thresh: float = 0.5
+) -> Tuple[Optional[str], float]:
     """
-    Score d’overlap pour une paire d’ETF:
-      - si 2 listes de holdings dispo → Jaccard holdings
-      - sinon → détection par ancres fortes, puis Jaccard sur tokens thématiques
-    Retourne: (type_overlap, score) ou (None, 0.0)
+    Calcule un score d’overlap pour n1/n2 :
+      1) si 2 listes de holdings → Jaccard holdings
+      2) sinon ancres fortes (gold/sp500/nasdaq/world/treasury/…) à ~1.0
+      3) sinon Jaccard sur tokens thématiques
+    Retourne (type_overlap, score) ou (None, 0.0)
     """
-    # 1) Overlap sur holdings (si dispo)
+    # 1) Overlap via holdings (si dispo)
     h1 = idx.get(n1, {}).get("holdings") or set()
     h2 = idx.get(n2, {}).get("holdings") or set()
     if h1 and h2:
@@ -1721,20 +1784,19 @@ def _pair_overlap_score(n1: str, n2: str, idx: dict, theme_thresh=0.6, hold_thre
         if jac >= hold_thresh:
             return ("holdings_overlap", round(jac, 3))
 
-    # 2) Tokens thématiques
+    # 2) Tokens thématiques (avec ancres fortes)
     t1 = idx.get(n1, {}).get("tokens") or _tokenize_theme(n1)
     t2 = idx.get(n2, {}).get("tokens") or _tokenize_theme(n2)
 
-    # 2a) Raccourci: ancres fortes (gold, sp500, nasdaq, world, treasury, etc.)
     STRONG = {"gold", "sp500", "nasdaq", "world", "treasury", "eurozone", "emerging", "bitcoin", "silver", "oil", "energy"}
     common_anchor = next((a for a in STRONG if a in t1 and a in t2), None)
     if common_anchor:
-        # Exception: ne pas considérer "gold miners" == "gold bullion"
+        # Exception : ne pas confondre “gold miners” avec “gold bullion”
         if not (common_anchor == "gold" and (("miners" in t1) ^ ("miners" in t2))):
             typ = "thematic_gold_overlap" if common_anchor == "gold" else "thematic_overlap"
             return (typ, 0.99)
 
-    # 2b) Fallback: Jaccard sur tokens
+    # 3) Jaccard sur tokens thématiques
     jac_t = len(t1 & t2) / max(1, len(t1 | t2))
     if jac_t >= theme_thresh:
         typ = "thematic_gold_overlap" if ("gold" in t1 and "gold" in t2) else "thematic_overlap"
@@ -1742,29 +1804,33 @@ def _pair_overlap_score(n1: str, n2: str, idx: dict, theme_thresh=0.6, hold_thre
 
     return (None, 0.0)
 
-
-def detect_portfolio_overlaps_v3(portfolio: dict, allowed_assets: dict, etf_df: pd.DataFrame = None,
-                                 theme_thresh=0.6, hold_thresh=0.5):
+# ---------- Détection des doublons dans un portefeuille ----------
+def detect_portfolio_overlaps_v3(
+    portfolio: dict,
+    allowed_assets: dict,
+    etf_df: Optional[pd.DataFrame] = None,
+    theme_thresh: float = 0.6,
+    hold_thresh: float = 0.5
+) -> List[dict]:
     """
     Inspecte un portefeuille v3 ('Lignes') et renvoie une liste de paires d’ETF potentiellement en doublon.
-    Inclut aussi les ETF obligataires (catégorie 'Obligations') pour détecter les clusters (ex: several gold ETFs).
+    Inclut les ETF obligataires (catégorie 'Obligations') pour repérer les clusters thématiques (ex: plusieurs gold ETFs).
     """
-    # Utilise le mapping id -> (name, category) déjà présent dans le code
     lut = _build_asset_lookup(allowed_assets)
 
-    etf_names = []
-    for l in portfolio.get("Lignes", []):
+    etf_names: List[str] = []
+    for l in portfolio.get("Lignes", []) or []:
         aid = l.get("id", "")
         meta = lut.get(aid, {"name": l.get("name", ""), "category": _infer_category_from_id(aid)})
-        if meta["category"] in ("ETF", "Obligations"):
-            if meta["name"]:
-                etf_names.append(meta["name"])
+        if meta.get("category") in ("ETF", "Obligations"):
+            if meta.get("name"):
+                etf_names.append(str(meta["name"]))
 
     if len(etf_names) < 2:
         return []
 
     idx = _build_etf_holdings_index(etf_df) if etf_df is not None else {}
-    out = []
+    out: List[dict] = []
     for i in range(len(etf_names)):
         for j in range(i + 1, len(etf_names)):
             typ, sc = _pair_overlap_score(etf_names[i], etf_names[j], idx, theme_thresh, hold_thresh)
@@ -1772,12 +1838,19 @@ def detect_portfolio_overlaps_v3(portfolio: dict, allowed_assets: dict, etf_df: 
                 out.append({"names": [etf_names[i], etf_names[j]], "type": typ, "score": sc})
     return out
 
-def build_overlap_report(portfolios_v3: dict, allowed_assets: dict, etf_csv_path: str = "data/combined_etfs.csv"):
+# ---------- Rapport multi-portefeuilles ----------
+def build_overlap_report(
+    portfolios_v3: dict,
+    allowed_assets: dict,
+    etf_csv_path: str = "data/combined_etfs.csv",
+    theme_thresh: float = 0.6,
+    hold_thresh: float = 0.5
+) -> Dict[str, List[dict]]:
     """
-    Applique la détection d’overlap aux 3 portefeuilles et retourne un rapport:
+    Applique la détection d’overlap aux 3 portefeuilles et retourne un dict :
       { "Agressif": [...], "Modéré": [...], "Stable": [...] }
     """
-    etf_df = None
+    etf_df: Optional[pd.DataFrame] = None
     try:
         p = Path(etf_csv_path)
         if p.exists():
@@ -1785,12 +1858,34 @@ def build_overlap_report(portfolios_v3: dict, allowed_assets: dict, etf_csv_path
     except Exception as e:
         print(f"⚠️ Overlap: impossible de lire {etf_csv_path} ({e})")
 
-    report = {}
-    for name in ["Agressif", "Modéré", "Stable"]:
+    report: Dict[str, List[dict]] = {}
+    for name in ("Agressif", "Modéré", "Stable"):
         pf = portfolios_v3.get(name, {}) or {}
-        report[name] = detect_portfolio_overlaps_v3(pf, allowed_assets, etf_df=etf_df)
+        report[name] = detect_portfolio_overlaps_v3(
+            pf, allowed_assets, etf_df=etf_df, theme_thresh=theme_thresh, hold_thresh=hold_thresh
+        )
     return report
 
+# ---------- Bonus : déduplication pré-génération par ancres ----------
+def dedupe_by_anchors(
+    items: List[dict],
+    anchors: set = {"gold", "sp500", "nasdaq", "world", "treasury", "eurozone", "emerging", "silver", "oil", "energy"}
+) -> List[dict]:
+    """
+    Garde au plus 1 ETF par grande ancre thématique (gold/sp500/…).
+    Trie d’abord par score décroissant, puis filtre.
+      items: liste d’objets de allowed_assets (ex: allowed_etfs_standard)
+    """
+    seen, out = set(), []
+    for it in sorted(items or [], key=lambda x: x.get("score", 0), reverse=True):
+        toks = _tokenize_theme(it.get("name", ""))
+        hit = next((a for a in anchors if a in toks), None)
+        if hit and hit in seen:
+            continue
+        if hit:
+            seen.add(hit)
+        out.append(it)
+    return out
 
 def update_history_index_from_normalized(normalized_json: dict, history_file: str, version: str):
     """Met à jour l'index avec les données normalisées"""
