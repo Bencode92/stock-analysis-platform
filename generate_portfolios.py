@@ -14,6 +14,8 @@ import numpy as np
 from typing import Dict, List, Any, Tuple
 from functools import lru_cache
 from collections import defaultdict
+import copy as _copy
+
 
 # Importer les fonctions d'ajustement des portefeuilles
 from portfolio_adjuster import check_portfolio_constraints, adjust_portfolios, get_portfolio_prompt_additions, valid_etfs_cache, valid_bonds_cache
@@ -1156,6 +1158,26 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
         validation_ok, remaining_errors = validate_portfolios_v3(portfolios, allowed_assets)
         if not validation_ok:
             print(f"⚠️ Erreurs restantes après correction: {remaining_errors}")
+            
+# 👉 NEW: Rapport de doublons / chevauchements (console)
+try:
+    overlap_report = build_overlap_report(
+        portfolios,
+        allowed_assets,
+        etf_csv_path="data/combined_etfs.csv"
+    )
+    for k, v in overlap_report.items():
+        if v:
+            sample = v[0]
+            print(
+                f"🔎 Overlap {k}: {len(v)} paire(s) suspecte(s) — "
+                f"ex: {sample['names'][0]} ↔ {sample['names'][1]} "
+                f"({sample['type']} {sample['score']})"
+            )
+        else:
+            print(f"🔎 Overlap {k}: RAS")
+except Exception as e:
+    print(f"⚠️ Overlap: erreur durant l'analyse ({e})")
     
     # Contrôle final des scores
     try:
@@ -1324,7 +1346,206 @@ def normalize_v3_to_frontend_v1(raw_obj: dict, allowed_assets: dict) -> dict:
 
     return out
 
+# === V1: validation & auto-fix de la somme 100% ===
+def _to_float_pct(v):
+    s = re.sub(r'[^0-9.\-\.]', '', str(v) if v is not None else '')
+    try:
+        return float(s) if s else 0.0
+    except:
+        return 0.0
 
+def _fmt_int_pct(x):
+    # v1 = entiers avec "%" (ex: "12%")
+    try:
+        return f"{int(round(float(x)))}%"
+    except:
+        return f"{x}%"
+
+def validate_and_fix_v1_sum(portfolios_v1: dict, fix: bool = True):
+    """
+    Vérifie que chaque portefeuille (Agressif/Modéré/Stable) en format v1
+    a une somme d'allocations = 100%. Si fix=True, ajuste la DERNIÈRE ligne rencontrée.
+    Retourne: (ok: bool, erreurs: [str], v1_fixed: dict)
+    """
+    errors = []
+    fixed = _copy.deepcopy(portfolios_v1)
+
+    for pf_name in ["Agressif", "Modéré", "Stable"]:
+        pf = fixed.get(pf_name, {})
+        if not isinstance(pf, dict):
+            continue
+
+        total = 0.0
+        last_key = None  # (cat, nom_actif)
+
+        for cat in ["Actions", "ETF", "Obligations", "Crypto"]:
+            d = pf.get(cat, {})
+            if not isinstance(d, dict):
+                continue
+            for name, val in d.items():
+                total += _to_float_pct(val)
+                last_key = (cat, name)
+
+        if round(total) != 100:
+            if fix and last_key:
+                diff = 100.0 - total
+                cat, name = last_key
+                cur = _to_float_pct(fixed[pf_name][cat][name])
+                newv = max(0.0, min(100.0, cur + diff))  # borne prudente
+                fixed[pf_name][cat][name] = _fmt_int_pct(newv)
+            else:
+                errors.append(f"{pf_name}: somme={total:.2f}% (≠ 100%)")
+
+    return (len(errors) == 0), errors, fixed
+
+# === Module Overlap / Doublons ===
+# Détection de paires d’ETF potentiellement redondantes (mêmes thèmes ou mêmes principaux holdings).
+
+_THEMATIC_STOPWORDS = {
+    "ishares","xtrackers","invesco","lyxor","spdr","vanguard","amundi","hsbc",
+    "ucits","etf","acc","dist","eur","usd","gbp","inc","cap","accumulating",
+    "distributing","hedged","unhedged","physically","replicating","swap","1c","1d","2d"
+}
+
+_THEMATIC_SYNONYMS = {
+    "or":"gold","gold":"gold","xau":"gold","metaux":"metals","métaux":"metals",
+    "precious":"metals","precieux":"metals","précieux":"metals",
+    "miners":"miners","mineurs":"miners","miniers":"miners","mines":"miners",
+    "sp500":"sp500","s&p":"sp500","s&p500":"sp500","sandp":"sp500",
+    "nasdaq":"nasdaq","nasdaq100":"nasdaq","world":"world","msci":"msci",
+    "eurozone":"eurozone","euro":"euro","gov":"government","sovereign":"government",
+    "treasury":"treasury","oil":"oil","energy":"energy","bitcoin":"bitcoin"
+}
+
+def _tokenize_theme(name: str) -> set:
+    """Tokenisation grossière du nom d’ETF (avec stopwords & synonymes) pour comparer les thèmes."""
+    t = re.findall(r"[a-zA-Z0-9&]+", str(name or "").lower())
+    out = set()
+    for w in t:
+        if w in _THEMATIC_STOPWORDS or len(w) <= 2:
+            continue
+        out.add(_THEMATIC_SYNONYMS.get(w, w))
+    # normalisations fréquentes
+    low = (name or "").lower()
+    if "s&p" in low or "s&p 500" in low:
+        out.add("sp500")
+    if "gold" in low or " or " in f" {low} ":
+        out.add("gold")
+    return out
+
+def _build_etf_holdings_index(etf_df: pd.DataFrame) -> dict:
+    """
+    Construit un index {etf_name: {'holdings': set(tickers), 'tokens': set(...)}}.
+    Utilise toute colonne contenant 'holding'/'constituent' si dispo dans le CSV combiné.
+    """
+    idx = {}
+    if etf_df is None or etf_df.empty:
+        return idx
+
+    name_col = next((c for c in ["name","long_name","etf_name","symbol","ticker"] if c in etf_df.columns), None)
+    hold_cols = [c for c in etf_df.columns if re.search(r"(holding|constituent)", c, re.I)]
+
+    for _, r in etf_df.iterrows():
+        name = str(r.get(name_col) or "").strip()
+        if not name:
+            continue
+
+        holdings = set()
+        for c in hold_cols:
+            val = r.get(c)
+            if pd.isna(val):
+                continue
+            s = str(val)
+            if s.strip().startswith('['):
+                # JSON-like
+                try:
+                    arr = json.loads(s)
+                    for t in arr:
+                        if isinstance(t, str):
+                            holdings.add(re.sub(r'[^A-Z0-9]', '', t.upper())[:8])
+                except Exception:
+                    pass
+            else:
+                for t in re.findall(r"[A-Z]{2,6}", s.upper()):
+                    holdings.add(t)
+
+        idx[name] = {
+            "holdings": holdings,
+            "tokens": _tokenize_theme(name)
+        }
+
+    return idx
+
+def _pair_overlap_score(n1: str, n2: str, idx: dict, theme_thresh=0.6, hold_thresh=0.5):
+    """
+    Score d’overlap pour une paire d’ETF:
+      - si 2 listes de holdings dispo → Jaccard holdings
+      - sinon → Jaccard sur tokens thématiques
+    Retourne: (type_overlap, score) ou (None, 0.0)
+    """
+    h1 = idx.get(n1, {}).get("holdings", set())
+    h2 = idx.get(n2, {}).get("holdings", set())
+    if h1 and h2:
+        jac = len(h1 & h2) / max(1, len(h1 | h2))
+        if jac >= hold_thresh:
+            return ("holdings_overlap", round(jac, 3))
+
+    t1 = idx.get(n1, {}).get("tokens") or _tokenize_theme(n1)
+    t2 = idx.get(n2, {}).get("tokens") or _tokenize_theme(n2)
+    jac_t = len(t1 & t2) / max(1, len(t1 | t2))
+    if jac_t >= theme_thresh:
+        typ = "thematic_gold_overlap" if ("gold" in t1 and "gold" in t2) else "thematic_overlap"
+        return (typ, round(jac_t, 3))
+
+    return (None, 0.0)
+
+def detect_portfolio_overlaps_v3(portfolio: dict, allowed_assets: dict, etf_df: pd.DataFrame = None,
+                                 theme_thresh=0.6, hold_thresh=0.5):
+    """
+    Inspecte un portefeuille v3 ('Lignes') et renvoie une liste de paires d’ETF potentiellement en doublon.
+    Inclut aussi les ETF obligataires (catégorie 'Obligations') pour détecter les clusters (ex: several gold ETFs).
+    """
+    # Utilise le mapping id -> (name, category) déjà présent dans le code
+    lut = _build_asset_lookup(allowed_assets)
+
+    etf_names = []
+    for l in portfolio.get("Lignes", []):
+        aid = l.get("id", "")
+        meta = lut.get(aid, {"name": l.get("name", ""), "category": _infer_category_from_id(aid)})
+        if meta["category"] in ("ETF", "Obligations"):
+            if meta["name"]:
+                etf_names.append(meta["name"])
+
+    if len(etf_names) < 2:
+        return []
+
+    idx = _build_etf_holdings_index(etf_df) if etf_df is not None else {}
+    out = []
+    for i in range(len(etf_names)):
+        for j in range(i + 1, len(etf_names)):
+            typ, sc = _pair_overlap_score(etf_names[i], etf_names[j], idx, theme_thresh, hold_thresh)
+            if typ:
+                out.append({"names": [etf_names[i], etf_names[j]], "type": typ, "score": sc})
+    return out
+
+def build_overlap_report(portfolios_v3: dict, allowed_assets: dict, etf_csv_path: str = "data/combined_etfs.csv"):
+    """
+    Applique la détection d’overlap aux 3 portefeuilles et retourne un rapport:
+      { "Agressif": [...], "Modéré": [...], "Stable": [...] }
+    """
+    etf_df = None
+    try:
+        p = Path(etf_csv_path)
+        if p.exists():
+            etf_df = pd.read_csv(p)
+    except Exception as e:
+        print(f"⚠️ Overlap: impossible de lire {etf_csv_path} ({e})")
+
+    report = {}
+    for name in ["Agressif", "Modéré", "Stable"]:
+        pf = portfolios_v3.get(name, {}) or {}
+        report[name] = detect_portfolio_overlaps_v3(pf, allowed_assets, etf_df=etf_df)
+    return report
 
 
 def update_history_index_from_normalized(normalized_json: dict, history_file: str, version: str):
@@ -1374,9 +1595,12 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict):
     try:
         os.makedirs("data", exist_ok=True)
         os.makedirs("data/portfolio_history", exist_ok=True)
+        overlap_report = build_overlap_report(portfolios_v3, allowed_assets, etf_csv_path="data/combined_etfs.csv")
 
         # 1) Normaliser v3 -> v1 (schéma attendu par le front)
         normalized_v1 = normalize_v3_to_frontend_v1(portfolios_v3, allowed_assets)
+        # NEW: Somme v1 = 100% garantie
+_, _, normalized_v1 = validate_and_fix_v1_sum(normalized_v1, fix=True)
 
         # 2) Fichier v1 (nom historique en anglais)
         v1_path = "data/portfolios.json"
@@ -1391,6 +1615,7 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict):
             "timestamp": ts,
             "date": datetime.datetime.now().isoformat(),
             "portfolios": portfolios_v3,
+            "overlap_report": overlap_report,
             "features": [
                 "drawdown_normalisé",
                 "diversification_round_robin",
@@ -1966,6 +2191,12 @@ def generate_portfolios(filtered_data):
         try:
             allowed_assets = extract_allowed_assets(filtered_data)
             normalized_view = normalize_v3_to_frontend_v1(portfolios, allowed_assets)
+
+            # NEW: forcer Somme=100% sur la vue v1 (lecture/affichage)
+            ok100, errs100, normalized_view = validate_and_fix_v1_sum(normalized_view, fix=True)
+            if not ok100 and errs100:
+                print(f"⚠️ Somme v1 non-100%: {errs100}")
+
             ok, errs = check_portfolio_constraints(normalized_view)
             if not ok:
                 print(f"⚠️ Avertissements (schéma v1): {errs}")
@@ -1988,7 +2219,6 @@ def generate_portfolios(filtered_data):
                 cached = attach_compliance(cached)
                 return cached
             raise  # plus rien en réserve → on laisse échouer
-
 
 def generate_portfolios_v2(filtered_data):
     """Version v2 en fallback si v3 échoue"""
@@ -2042,6 +2272,7 @@ def generate_portfolios_v2(filtered_data):
     
     print("✅ Portefeuilles v2 générés avec succès (fallback + compliance)")
     return portfolios
+
 
 def build_robust_prompt_v2(structured_data: Dict, allowed_assets: Dict, current_month: str) -> str:
     """Version v2 du prompt pour fallback"""
