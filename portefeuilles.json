@@ -2,7 +2,7 @@
     "Portefeuilles": [
         {
             "Nom": "Portefeuille Agressif",
-            "Description": "Ce portefeuille vise une croissance élevée avec une tolérance au risque plus importante. Il est composé principalement d'actions et de cryptomonnaies.",
+            "Description": "Ce portefeuille vise une croissance élevée avec une tolérance au risque plus importante. Il est principalement composé d'actions et de cryptomonnaies.",
             "Actifs": [
                 {
                     "id": "EQ_4",
@@ -21,7 +21,7 @@
                     "allocation": 6.0
                 },
                 {
-                    "id": "EQ_12",
+                    "id": "EQ_7",
                     "allocation": 5.0
                 },
                 {
@@ -33,7 +33,7 @@
                     "allocation": 12.0
                 },
                 {
-                    "id": "CR_5",
+                    "id": "CR_3",
                     "allocation": 10.0
                 },
                 {
@@ -45,25 +45,38 @@
                     "allocation": 7.0
                 },
                 {
-                    "id": "ETF_s13",
+                    "id": "ETF_s14",
                     "allocation": 6.0
                 },
                 {
-                    "id": "ETF_s14",
+                    "id": "ETF_s13",
                     "allocation": 5.0
                 },
                 {
-                    "id": "Compliance",
-                    "allocation": 0.0
+                    "id": "CR_5",
+                    "allocation": 1.0
                 }
-            ]
+            ],
+            "Compliance": {
+                "TotalAllocation": 100.0,
+                "CategoriesIncluded": [
+                    "Actions",
+                    "Crypto",
+                    "ETF"
+                ],
+                "RiskTolerance": "High"
+            }
         },
         {
             "Nom": "Portefeuille Modéré",
-            "Description": "Ce portefeuille cherche un équilibre entre croissance et sécurité, combinant actions, ETFs et obligations.",
+            "Description": "Ce portefeuille cherche un équilibre entre croissance et préservation du capital, avec une diversification à travers des actions, des ETF et des obligations.",
             "Actifs": [
                 {
                     "id": "EQ_2",
+                    "allocation": 10.0
+                },
+                {
+                    "id": "EQ_13",
                     "allocation": 8.0
                 },
                 {
@@ -71,7 +84,7 @@
                     "allocation": 7.0
                 },
                 {
-                    "id": "EQ_13",
+                    "id": "EQ_14",
                     "allocation": 6.0
                 },
                 {
@@ -92,11 +105,11 @@
                 },
                 {
                     "id": "ETF_b1",
-                    "allocation": 12.0
+                    "allocation": 10.0
                 },
                 {
                     "id": "ETF_b3",
-                    "allocation": 10.0
+                    "allocation": 9.0
                 },
                 {
                     "id": "ETF_b6",
@@ -104,17 +117,22 @@
                 },
                 {
                     "id": "ETF_b7",
-                    "allocation": 7.0
-                },
-                {
-                    "id": "Compliance",
-                    "allocation": 0.0
+                    "allocation": 10.0
                 }
-            ]
+            ],
+            "Compliance": {
+                "TotalAllocation": 100.0,
+                "CategoriesIncluded": [
+                    "Actions",
+                    "ETF",
+                    "Obligations"
+                ],
+                "RiskTolerance": "Moderate"
+            }
         },
         {
             "Nom": "Portefeuille Stable",
-            "Description": "Ce portefeuille est conçu pour minimiser le risque tout en offrant un rendement stable grâce à une combinaison d'obligations et d'ETFs sécurisés.",
+            "Description": "Ce portefeuille est conçu pour minimiser le risque tout en offrant un rendement stable à travers des obligations et des ETF sécurisés.",
             "Actifs": [
                 {
                     "id": "ETF_b1",
@@ -122,19 +140,19 @@
                 },
                 {
                     "id": "ETF_b2",
-                    "allocation": 14.0
+                    "allocation": 15.0
                 },
                 {
                     "id": "ETF_b3",
-                    "allocation": 13.0
+                    "allocation": 15.0
                 },
                 {
                     "id": "ETF_b4",
-                    "allocation": 12.0
+                    "allocation": 15.0
                 },
                 {
                     "id": "ETF_b5",
-                    "allocation": 11.0
+                    "allocation": 10.0
                 },
                 {
                     "id": "ETF_b6",
@@ -142,28 +160,25 @@
                 },
                 {
                     "id": "ETF_b7",
-                    "allocation": 9.0
+                    "allocation": 10.0
                 },
                 {
-                    "id": "ETF_s2",
-                    "allocation": 8.0
+                    "id": "ETF_b8",
+                    "allocation": 5.0
                 },
                 {
-                    "id": "ETF_s3",
-                    "allocation": 7.0
-                },
-                {
-                    "id": "ETF_s4",
-                    "allocation": 1.0
-                },
-                {
-                    "id": "Compliance",
-                    "allocation": 0.0
+                    "id": "ETF_b9",
+                    "allocation": 5.0
                 }
-            ]
+            ],
+            "Compliance": {
+                "TotalAllocation": 100.0,
+                "CategoriesIncluded": [
+                    "Obligations",
+                    "ETF"
+                ],
+                "RiskTolerance": "Low"
+            }
         }
-    ],
-    "Compliance": {
-        "Règles": "Chaque portefeuille respecte les règles d'allocation et de diversification des catégories d'actifs. Les allocations sont ajustées pour totaliser exactement 100.00%."
-    }
+    ]
 }
