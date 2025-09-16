@@ -871,6 +871,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Sliders durée / rendement
   document.getElementById('duration-slider')?.addEventListener('input', function () {
     updateDurationValue(this.value);
+    checkPlafondLimits(); // ← la durée influence le total périodique
   });
   document.getElementById('return-slider')?.addEventListener('input', function () {
     updateReturnValue(this.value);
@@ -884,6 +885,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateTaxInfo();
     updateReturnSuggestions();
     updateFeeSuggestionsByVehicle(); // respecte modifications utilisateur
+    checkPlafondLimits();            // ← plafond dépend de l’enveloppe
     if (document.querySelector('.result-value')?.textContent !== '') runSimulation();
   });
 
@@ -908,6 +910,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (frequencySelect) {
     frequencySelect.addEventListener('change', function () {
       updateFixedFeeTooltip();
+      checkPlafondLimits(); // ← la fréquence change le nombre de versements/an
       if (document.querySelector('.result-value')?.textContent !== '') runSimulation();
     });
   }
@@ -917,7 +920,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const mf = document.getElementById('investment-frequency');
   if (gf && mf) {
     gf.value = mf.value || 'monthly';                // init
-    mf.addEventListener('change', e => { gf.value = e.target.value; }); // sync continu
+    mf.addEventListener('change', e => { 
+      gf.value = e.target.value; 
+      checkPlafondLimits();                           // ← garder l’alerte en phase
+    });
   }
 
   // Inflation + presets 5/7/10
@@ -953,7 +959,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let html = '';
 
     if (mode === 'periodic-for-target') {
-      // Cherche le versement périodique nécessaire (en tenant compte du dépôt initial)
       const { periodic, results } = goalSeekPeriodicForTarget({
         target, years, initialDeposit, annualReturn, vehicleId, fees, frequency
       });
@@ -962,11 +967,10 @@ document.addEventListener('DOMContentLoaded', function() {
               il faut environ <b>${formatMoney(periodic)}</b> par ${freqLabelFR(frequency)}${initialPart}
               via ${results.enveloppe?.label}.`;
     } else {
-      // Cherche la durée nécessaire avec les MONTANTS ACTUELS de l’UI
       const { years: y, results, unreachable, triedYears } = goalSeekYearsForTarget({
         target,
         initialDeposit,
-        periodicAmount: periodicUI, // = 0 si mode unique
+        periodicAmount: periodicUI,
         annualReturn,
         vehicleId,
         fees,
@@ -1011,6 +1015,10 @@ document.addEventListener('DOMContentLoaded', function() {
       if (document.querySelector('.simulation-tab.active')?.getAttribute('data-target') === 'envelope-compare') {
         buildCompare();
       }
+      // ⚠️ ces champs impactent potentiellement le plafond
+      if (['investment-frequency','periodic-investment-amount','initial-investment-amount','duration-slider'].includes(id)) {
+        checkPlafondLimits();
+      }
     }));
 
   // Onglets + calculateur fiscal
@@ -1038,13 +1046,26 @@ document.addEventListener('DOMContentLoaded', function() {
   // UI périodique : init + listeners
   setTimeout(() => { updatePeriodicUI(); }, 100);
   document.getElementById('investment-frequency')?.addEventListener('change', updatePeriodicUI);
-  document.getElementById('periodic-investment-amount')?.addEventListener('input', updatePeriodicUI);
-  document.getElementById('periodic-investment')?.addEventListener('click', () => setTimeout(updatePeriodicUI, 0));
-  document.getElementById('unique-investment')?.addEventListener('click', () => setTimeout(updatePeriodicUI, 0));
+  document.getElementById('periodic-investment-amount')?.addEventListener('input', () => {
+    updatePeriodicUI();
+    checkPlafondLimits(); // ← taper un montant périodique doit rafraîchir l’alerte
+  });
+  document.getElementById('periodic-investment')?.addEventListener('click', () => {
+    setTimeout(updatePeriodicUI, 0);
+    checkPlafondLimits();
+  });
+  document.getElementById('unique-investment')?.addEventListener('click', () => {
+    setTimeout(updatePeriodicUI, 0);
+    checkPlafondLimits();
+  });
 
   // Table des scénarios
   renderScenarioTable();
+
+  // ✅ Alerte plafond initiale
+  checkPlafondLimits();
 });
+
 
 /**
  * Ajoute un bouton de reset des frais à l'interface
@@ -2328,99 +2349,86 @@ window.toggleInvestmentMode = toggleInvestmentMode;
  * Vérifie les plafonds et affiche une alerte discrète
  * Seulement quand on dépasse ou ≥ 80% du plafond
  */
+// --- helpers plafonds ---
+function _getPlafondValue(enveloppe){
+  if (!enveloppe || !enveloppe.plafond) return null;
+  return (typeof enveloppe.plafond === 'object') ? enveloppe.plafond.solo : enveloppe.plafond;
+}
+
+function _ensurePlafondAlertEl(parent){
+  let el = document.getElementById('plafond-alert');
+  if (!el){
+    el = document.createElement('div');
+    el.id = 'plafond-alert';
+    el.className = 'mt-3 p-3 rounded-lg flex items-start gap-2 transition-all duration-300';
+  } else if (parent && el.parentElement !== parent){
+    // déplace si nécessaire
+    el.remove();
+  }
+  if (parent && !parent.contains(el)) parent.appendChild(el);
+  return el;
+}
+
+/**
+ * Vérifie les plafonds et affiche l’alerte (rouge si dépassement, jaune ≥80%)
+ * Compte le dépôt initial + les versements périodiques sur la durée.
+ * Place l’alerte dans le bon bloc (initial/périodique).
+ */
 function checkPlafondLimits() {
-    const vehicleId = document.getElementById('investment-vehicle')?.value;
-    const isPeriodicMode = document.getElementById('periodic-investment')?.classList.contains('selected');
-    const years = parseInt(document.getElementById('duration-slider')?.value || 10);
-    const enveloppe = getEnveloppeInfo(vehicleId);
-    
-    // Récupérer le bon montant selon le mode
-    let amount;
-    if (isPeriodicMode) {
-        const periodicAmountElement = document.getElementById('periodic-investment-amount');
-        if (periodicAmountElement) {
-            amount = parseFloat(periodicAmountElement.value) || 100;
-        } else {
-            amount = parseFloat(document.getElementById('investment-amount')?.value) || 100;
-        }
-    } else {
-        // ✅ CORRECTIF : ID corrigé pour mode unique
-        amount = parseFloat(document.getElementById('initial-investment-amount')?.value) || 1000;
-    }
-    
-    if (!enveloppe || !enveloppe.plafond) {
-        // Masquer l'alerte si elle existe
-        const alertElement = document.getElementById('plafond-alert');
-        if (alertElement) alertElement.style.display = 'none';
-        return;
-    }
-    
-    // Calculer le montant total selon le mode
-    let totalAmount = amount;
-    if (isPeriodicMode) {
-        const frequency = document.getElementById('investment-frequency')?.value || 'monthly';
-        const periodsPerYear = frequency === 'weekly' ? 52 : 
-                              frequency === 'monthly' ? 12 : 
-                              frequency === 'quarterly' ? 4 : 1;
-        totalAmount = amount * periodsPerYear * years;
-    }
-    
-    // Récupérer le plafond applicable (TODO: gérer couple/solo via une checkbox)
-    const plafond = typeof enveloppe.plafond === 'object' 
-        ? enveloppe.plafond.solo 
-        : enveloppe.plafond;
-    
-    // Créer/mettre à jour l'alerte
-    let alertElement = document.getElementById('plafond-alert');
-    if (!alertElement) {
-        alertElement = document.createElement('div');
-        alertElement.id = 'plafond-alert';
-        alertElement.className = 'mt-3 p-3 rounded-lg flex items-start gap-2 transition-all duration-300';
-        
-        // Trouver le bon conteneur parent selon le mode
-        const parentElement = isPeriodicMode && document.getElementById('periodic-amount-container')
-            ? document.getElementById('periodic-amount-container')
-            : document.getElementById('investment-amount')?.parentElement;
-        
-        if (parentElement) {
-            parentElement.appendChild(alertElement);
-        }
-    }
-    
-    const percentage = (totalAmount / plafond) * 100;
-    
-    if (totalAmount > plafond) {
-        // Dépassement - Alerte rouge
-        const excess = totalAmount - plafond;
-        alertElement.innerHTML = `
-            <i class="fas fa-exclamation-circle text-red-500 mt-0.5"></i>
-            <div class="flex-1 text-sm">
-                <span class="text-red-400 font-medium">Plafond dépassé de ${formatMoney(excess)}</span>
-                <span class="text-gray-400 ml-2">(limite : ${formatMoney(plafond)})</span>
-            </div>
-        `;
-        alertElement.className = 'mt-3 p-3 rounded-lg flex items-start gap-2 bg-red-900 bg-opacity-20 border border-red-600 animate-fadeIn';
-        alertElement.style.display = 'flex';
-    } else if (percentage >= 80) {
-        // Proche du plafond - Alerte jaune
-        const remaining = plafond - totalAmount;
-        alertElement.innerHTML = `
-            <i class="fas fa-info-circle text-yellow-500 mt-0.5"></i>
-            <div class="flex-1 text-sm">
-                <span class="text-yellow-400">Il reste ${formatMoney(remaining)}</span>
-                <span class="text-gray-400 ml-2">(${Math.round(percentage)}% du plafond)</span>
-            </div>
-        `;
-        alertElement.className = 'mt-3 p-3 rounded-lg flex items-start gap-2 bg-yellow-900 bg-opacity-20 border border-yellow-600 animate-fadeIn';
-        alertElement.style.display = 'flex';
-    } else {
-        // Sous les 80% - Masquer l'alerte avec fade out
-        if (alertElement.style.display !== 'none') {
-            alertElement.classList.add('animate-fadeOut');
-            setTimeout(() => {
-                alertElement.style.display = 'none';
-                alertElement.classList.remove('animate-fadeOut');
-            }, 300);
-        }
-    }
+  const vehicleId = document.getElementById('investment-vehicle')?.value;
+  const years = parseFloat(document.getElementById('duration-slider')?.value || '10');
+  const isPeriodic = document.getElementById('periodic-investment')?.classList.contains('selected');
+
+  const env = getEnveloppeInfo(vehicleId);
+  const plafond = _getPlafondValue(env);
+
+  // pas de plafond → masquer l’alerte s’il y en a une
+  if (!isFinite(plafond) || plafond === null) {
+    const old = document.getElementById('plafond-alert');
+    if (old) old.style.display = 'none';
+    return;
+  }
+
+  // montants
+  const initial = parseFloat(document.getElementById('initial-investment-amount')?.value) || 0;
+  const periodic = isPeriodic ? (parseFloat(document.getElementById('periodic-investment-amount')?.value) || 0) : 0;
+  const freq = document.getElementById('investment-frequency')?.value || 'monthly';
+  const p = (freq === 'weekly') ? 52 : (freq === 'monthly') ? 12 : (freq === 'quarterly') ? 4 : 1;
+
+  // total contribué (hors perfs/frais)
+  const totalContrib = initial + (isPeriodic ? periodic * p * years : 0);
+
+  // parent pour l’alerte
+  const parent = isPeriodic
+    ? document.getElementById('periodic-amount-container')
+    : document.getElementById('initial-amount-container');
+
+  const alertEl = _ensurePlafondAlertEl(parent);
+  if (!alertEl) return;
+
+  const pct = plafond > 0 ? (totalContrib / plafond) * 100 : 0;
+
+  if (totalContrib > plafond) {
+    const excess = totalContrib - plafond;
+    alertEl.innerHTML = `
+      <i class="fas fa-exclamation-circle text-red-500 mt-0.5"></i>
+      <div class="flex-1 text-sm">
+        <span class="text-red-400 font-medium">Plafond dépassé de ${formatMoney(excess)}</span>
+        <span class="text-gray-400 ml-2">(limite : ${formatMoney(plafond)})</span>
+      </div>`;
+    alertEl.className = 'mt-3 p-3 rounded-lg flex items-start gap-2 bg-red-900 bg-opacity-20 border border-red-600 animate-fadeIn';
+    alertEl.style.display = 'flex';
+  } else if (pct >= 80) {
+    const remaining = plafond - totalContrib;
+    alertEl.innerHTML = `
+      <i class="fas fa-info-circle text-yellow-500 mt-0.5"></i>
+      <div class="flex-1 text-sm">
+        <span class="text-yellow-400">Il reste ${formatMoney(remaining)}</span>
+        <span class="text-gray-400 ml-2">(${Math.round(pct)}% du plafond)</span>
+      </div>`;
+    alertEl.className = 'mt-3 p-3 rounded-lg flex items-start gap-2 bg-yellow-900 bg-opacity-20 border border-yellow-600 animate-fadeIn';
+    alertEl.style.display = 'flex';
+  } else {
+    alertEl.style.display = 'none';
+  }
 }
