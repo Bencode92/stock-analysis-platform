@@ -991,8 +991,16 @@ def score_guard(portfolios: Dict, allowed_assets: Dict):
     
     print("✅ Score guard: tous les portefeuilles passent les contrôles quantitatifs")
 
-def fix_portfolios_v3(portfolios: Dict, errors: List[str]) -> Dict:
-    # Corrections de base (crypto interdite en Stable, ajustements 100%, Compliance)
+def fix_portfolios_v3(portfolios: Dict, errors: List[str], allowed_assets: Dict) -> Dict:
+    """
+    Corrections post-LLM :
+      - Crypto interdite en Stable
+      - Somme = 100%
+      - Ajout du bloc Compliance si manquant
+      - Remplacement des doublons d'ETF par détection d'overlap
+      - Dernier filet : max 1 ETF par ancre forte (gold/sp500/nasdaq/world/treasury/eurozone/emerging)
+    """
+    # --- Corrections de base (stable: pas de crypto, somme 100, compliance) ---
     for portfolio_name, portfolio in portfolios.items():
         if 'Lignes' in portfolio and isinstance(portfolio['Lignes'], list):
             lignes = portfolio['Lignes']
@@ -1015,31 +1023,33 @@ def fix_portfolios_v3(portfolios: Dict, errors: List[str]) -> Dict:
         if isinstance(portfolio, dict) and 'Compliance' not in portfolio:
             portfolio['Compliance'] = get_compliance_block()
 
-    # ---------- Anti-doublon ETF / remplacement (était après un return) ----------
-    def _id2asset(aid):
+    # --- Helpers internes ---
+    def _id2asset(aid: str) -> Dict:
         for k in ("allowed_equities","allowed_etfs_standard","allowed_bond_etfs","allowed_crypto"):
             for a in allowed_assets.get(k, []):
                 if a["id"] == aid:
                     return a
         return {}
 
-    def _tokens(name: str):
+    def _tokens(name: str) -> set:
         return _tokenize_theme(name or "")
 
+    # --- Traitement par portefeuille ---
     for pf_name in ["Agressif","Modéré","Stable"]:
         pf = portfolios.get(pf_name, {})
         if not isinstance(pf, dict) or not isinstance(pf.get("Lignes"), list):
             continue
 
+        lignes = pf["Lignes"]
+
+        # 1) Détection & correction des overlaps d'ETF (plus souple)
         try:
-            overlaps = detect_portfolio_overlaps_v3(pf, allowed_assets, etf_df=None, theme_thresh=0.6, hold_thresh=0.5)
+            overlaps = detect_portfolio_overlaps_v3(
+                pf, allowed_assets, etf_df=None, theme_thresh=0.45, hold_thresh=0.5
+            )
         except Exception:
             overlaps = []
 
-        if not overlaps:
-            continue
-
-        lignes = pf["Lignes"]
         used_ids = {l.get("id") for l in lignes}
         present_tokens = set()
         for l in lignes:
@@ -1077,9 +1087,61 @@ def fix_portfolios_v3(portfolios: Dict, errors: List[str]) -> Dict:
                 target = bond_target or a_keep
                 target["allocation_pct"] = round(float(target.get("allocation_pct",0))+freed, 2)
 
+        # 2) Dernier filet : max 1 ETF par ancre forte
+        anchors = {"gold","sp500","nasdaq","world","treasury","eurozone","emerging"}
+        groups = {a: [] for a in anchors}
+
+        # Recalcule les sets après éventuels remplacements
+        used_ids = {l.get("id") for l in lignes}
+        present_tokens = set()
+        for l in lignes:
+            present_tokens |= _tokens(l.get("name",""))
+
+        for l in lignes:
+            if l.get("category") not in ("ETF","Obligations"):
+                continue
+            toks = _tokens(l.get("name",""))
+            for a in anchors:
+                if a in toks:
+                    groups[a].append(l)
+
+        for a, lines in groups.items():
+            if len(lines) <= 1:
+                continue
+
+            # garder le meilleur score
+            best = max(lines, key=lambda x: float(_id2asset(x.get("id")).get("score", 0)))
+            for loser in (x for x in lines if x is not best):
+                freed = float(loser.get("allocation_pct", 0) or 0)
+
+                # chercher un remplaçant non-chevauchant ni ancre identique
+                repl = None
+                for cand in sorted(allowed_assets.get("allowed_etfs_standard", []), key=lambda x: x.get("score",0), reverse=True):
+                    if cand["id"] in used_ids:
+                        continue
+                    t = _tokens(cand.get("name",""))
+                    if a not in t and t.isdisjoint(present_tokens):
+                        repl = cand
+                        break
+
+                if repl:
+                    loser.update({"id": repl["id"], "name": repl["name"], "category":"ETF"})
+                    used_ids.add(repl["id"])
+                    present_tokens |= _tokens(repl["name"])
+                else:
+                    # à défaut, on redistribue l'allocation vers la meilleure ligne du groupe
+                    loser["allocation_pct"] = 0.0
+                    best["allocation_pct"] = round(float(best.get("allocation_pct",0)) + freed, 2)
+
+        # Purge des lignes tombées à 0 et ultime équilibrage à 100%
         pf["Lignes"] = [l for l in lignes if float(l.get("allocation_pct",0) or 0) > 0]
+        total_pf = sum(float(l.get('allocation_pct', 0) or 0) for l in pf["Lignes"])
+        if abs(total_pf - 100.0) > 0.01 and pf["Lignes"]:
+            diff = 100.0 - total_pf
+            pf["Lignes"][-1]["allocation_pct"] = round(float(pf["Lignes"][-1].get("allocation_pct", 0)) + diff, 2)
 
     return portfolios
+
 
 
 
@@ -1325,6 +1387,7 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     # Validation post-génération v3
     validation_ok, errors = validate_portfolios_v3(portfolios, allowed_assets)
     if not validation_ok:
+         portfolios = fix_portfolios_v3(portfolios, errors, allowed_assets)
         print(f"⚠️ Erreurs de validation v3 détectées: {errors}")
         portfolios = fix_portfolios_v3(portfolios, errors)
         validation_ok, remaining_errors = validate_portfolios_v3(portfolios, allowed_assets)
@@ -1577,17 +1640,21 @@ def validate_and_fix_v1_sum(portfolios_v1: dict, fix: bool = True):
 _THEMATIC_STOPWORDS = {
     "ishares","xtrackers","invesco","lyxor","spdr","vanguard","amundi","hsbc",
     "ucits","etf","acc","dist","eur","usd","gbp","inc","cap","accumulating",
-    "distributing","hedged","unhedged","physically","replicating","swap","1c","1d","2d"
+    "distributing","hedged","unhedged","physically","replicating","swap","1c","1d","2d",
+     "shares","share","trust","physical","core","ftse","all","fund","index","class","ucits"
 }
 
 _THEMATIC_SYNONYMS = {
-    "or":"gold","gold":"gold","xau":"gold","metaux":"metals","métaux":"metals",
-    "precious":"metals","precieux":"metals","précieux":"metals",
+    "or":"gold","gold":"gold","xau":"gold",
+    "metaux":"metals","métaux":"metals","precious":"metals","precieux":"metals","précieux":"metals",
     "miners":"miners","mineurs":"miners","miniers":"miners","mines":"miners",
     "sp500":"sp500","s&p":"sp500","s&p500":"sp500","sandp":"sp500",
-    "nasdaq":"nasdaq","nasdaq100":"nasdaq","world":"world","msci":"msci",
-    "eurozone":"eurozone","euro":"euro","gov":"government","sovereign":"government",
-    "treasury":"treasury","oil":"oil","energy":"energy","bitcoin":"bitcoin"
+    "nasdaq":"nasdaq","nasdaq100":"nasdaq",
+    "world":"world","global":"world","acwi":"world","allworld":"world",
+    "msci":"msci",
+    "eurozone":"eurozone","euro":"eurozone",
+    "gov":"treasury","sovereign":"treasury","treasury":"treasury",
+    "oil":"oil","energy":"energy","bitcoin":"bitcoin","silver":"silver"
 }
 
 def _tokenize_theme(name: str) -> set:
@@ -1653,24 +1720,38 @@ def _pair_overlap_score(n1: str, n2: str, idx: dict, theme_thresh=0.6, hold_thre
     """
     Score d’overlap pour une paire d’ETF:
       - si 2 listes de holdings dispo → Jaccard holdings
-      - sinon → Jaccard sur tokens thématiques
+      - sinon → détection par ancres fortes, puis Jaccard sur tokens thématiques
     Retourne: (type_overlap, score) ou (None, 0.0)
     """
-    h1 = idx.get(n1, {}).get("holdings", set())
-    h2 = idx.get(n2, {}).get("holdings", set())
+    # 1) Overlap sur holdings (si dispo)
+    h1 = idx.get(n1, {}).get("holdings") or set()
+    h2 = idx.get(n2, {}).get("holdings") or set()
     if h1 and h2:
         jac = len(h1 & h2) / max(1, len(h1 | h2))
         if jac >= hold_thresh:
             return ("holdings_overlap", round(jac, 3))
 
+    # 2) Tokens thématiques
     t1 = idx.get(n1, {}).get("tokens") or _tokenize_theme(n1)
     t2 = idx.get(n2, {}).get("tokens") or _tokenize_theme(n2)
+
+    # 2a) Raccourci: ancres fortes (gold, sp500, nasdaq, world, treasury, etc.)
+    STRONG = {"gold", "sp500", "nasdaq", "world", "treasury", "eurozone", "emerging", "bitcoin", "silver", "oil", "energy"}
+    common_anchor = next((a for a in STRONG if a in t1 and a in t2), None)
+    if common_anchor:
+        # Exception: ne pas considérer "gold miners" == "gold bullion"
+        if not (common_anchor == "gold" and (("miners" in t1) ^ ("miners" in t2))):
+            typ = "thematic_gold_overlap" if common_anchor == "gold" else "thematic_overlap"
+            return (typ, 0.99)
+
+    # 2b) Fallback: Jaccard sur tokens
     jac_t = len(t1 & t2) / max(1, len(t1 | t2))
     if jac_t >= theme_thresh:
         typ = "thematic_gold_overlap" if ("gold" in t1 and "gold" in t2) else "thematic_overlap"
         return (typ, round(jac_t, 3))
 
     return (None, 0.0)
+
 
 def detect_portfolio_overlaps_v3(portfolio: dict, allowed_assets: dict, etf_df: pd.DataFrame = None,
                                  theme_thresh=0.6, hold_thresh=0.5):
