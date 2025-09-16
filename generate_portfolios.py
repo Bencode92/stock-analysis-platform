@@ -1142,16 +1142,6 @@ def fix_portfolios_v3(portfolios: Dict, errors: List[str], allowed_assets: Dict)
 
     return portfolios
 
-
-
-
-    def _id2asset(aid):
-        for k in ("allowed_equities","allowed_etfs_standard","allowed_bond_etfs","allowed_crypto"):
-            for a in allowed_assets.get(k, []):
-                if a["id"] == aid:
-                    return a
-        return {}
-
     def _tokens(name: str):
         return _tokenize_theme(name or "")
 
@@ -1386,13 +1376,12 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     
     # Validation post-génération v3
     validation_ok, errors = validate_portfolios_v3(portfolios, allowed_assets)
+if not validation_ok:
+    print(f"⚠️ Erreurs de validation v3 détectées: {errors}")
+    portfolios = fix_portfolios_v3(portfolios, errors, allowed_assets)
+    validation_ok, remaining_errors = validate_portfolios_v3(portfolios, allowed_assets)
     if not validation_ok:
-         portfolios = fix_portfolios_v3(portfolios, errors, allowed_assets)
-        print(f"⚠️ Erreurs de validation v3 détectées: {errors}")
-        portfolios = fix_portfolios_v3(portfolios, errors)
-        validation_ok, remaining_errors = validate_portfolios_v3(portfolios, allowed_assets)
-        if not validation_ok:
-            print(f"⚠️ Erreurs restantes après correction: {remaining_errors}")
+        print(f"⚠️ Erreurs restantes après correction: {remaining_errors}")
             
     # 👉 NEW: Rapport de doublons / chevauchements (console)
     try:
