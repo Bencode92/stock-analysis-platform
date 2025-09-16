@@ -1236,82 +1236,94 @@ def normalize_v3_to_frontend_v1(raw_obj: dict, allowed_assets: dict) -> dict:
             for v in d.values():
                 try:
                     tot += float(re.sub(r'[^0-9.\-]', '', str(v)))
-                except:
+                except Exception:
                     pass
         return round(tot)
 
+    def _ensure_comment(pf_key: str, base_text: str = ""):
+        base = sanitize_marketing_language((base_text or "").strip())
+        if base:
+            out[pf_key]["Commentaire"] = base
+            return
+        a = _sum_pct_dict(out[pf_key].get("Actions"))
+        e = _sum_pct_dict(out[pf_key].get("ETF"))
+        b = _sum_pct_dict(out[pf_key].get("Obligations"))
+        c = _sum_pct_dict(out[pf_key].get("Crypto"))
+        out[pf_key]["Commentaire"] = sanitize_marketing_language(
+            f"Portefeuille modèle {pf_key.lower()} : ≈{a}% Actions, ≈{e}% ETF, "
+            f"≈{b}% Obligations, ≈{c}% Crypto. Répartition indicative, non prescriptive. "
+            "Information générale ; performances passées non indicatives des performances futures."
+        )
+
+    # --- 1) Clés directes: Agressif / Modéré / Stable ---
     for portfolio_name in ["Agressif", "Modéré", "Stable"]:
-        if isinstance(raw_obj.get(portfolio_name), dict):
-            pf = raw_obj[portfolio_name]
-            base_comment = sanitize_marketing_language(pf.get("Commentaire", "")) if isinstance(pf, dict) else ""
-            out.setdefault(portfolio_name, {
-                "Commentaire": base_comment,
-                "Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}
-            })
+        pf = raw_obj.get(portfolio_name)
+        if not isinstance(pf, dict):
+            continue
 
-            # --- Cas v2: catégories déjà présentes ---
-            if any(k in pf for k in ("Actions", "ETF", "Obligations", "Crypto")):
-                out[portfolio_name].update({
-                    "Actions": pf.get("Actions", {}),
-                    "ETF": pf.get("ETF", {}),
-                    "Obligations": pf.get("Obligations", {}),
-                    "Crypto": pf.get("Crypto", {})
-                })
-                if base_comment:
-                    out[portfolio_name]["Commentaire"] = base_comment
-                else:
-                    a = _sum_pct_dict(pf.get("Actions"))
-                    e = _sum_pct_dict(pf.get("ETF"))
-                    b = _sum_pct_dict(pf.get("Obligations"))
-                    c = _sum_pct_dict(pf.get("Crypto"))
-                    out[portfolio_name]["Commentaire"] = sanitize_marketing_language(
-                        f"Portefeuille modèle {portfolio_name.lower()} : ≈{a}% Actions, ≈{e}% ETF, "
-                        f"≈{b}% Obligations, ≈{c}% Crypto. Répartition indicative, non prescriptive. "
-                        "Information générale ; performances passées non indicatives des performances futures."
-                    )
-                continue
+        # Prend Commentaire puis Description en fallback
+        base_comment = pf.get("Commentaire") or pf.get("Description") or ""
 
-            # --- Cas v3: format 'Lignes' (tu l'as déjà) ---
-            for ligne in pf.get("Lignes", []):
-                asset_id = ligne.get("id", "")
-                alloc = ligne.get("allocation_pct", 0)
-                if asset_id in lut:
-                    name = lut[asset_id]["name"]; category = lut[asset_id]["category"]
-                else:
-                    name = ligne.get("name", asset_id)
-                    category = _infer_category_from_id(asset_id)
-                _put(portfolio_name, category, name, alloc)
+        out.setdefault(portfolio_name, {
+            "Commentaire": "",
+            "Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}
+        })
 
-            if base_comment:
-                out[portfolio_name]["Commentaire"] = base_comment
+        # --- Cas v2: catégories déjà présentes ---
+        if any(k in pf for k in ("Actions", "ETF", "Obligations", "Crypto")):
+            out[portfolio_name]["Actions"] = pf.get("Actions", {}) or {}
+            out[portfolio_name]["ETF"] = pf.get("ETF", {}) or {}
+            out[portfolio_name]["Obligations"] = pf.get("Obligations", {}) or {}
+            out[portfolio_name]["Crypto"] = pf.get("Crypto", {}) or {}
+            _ensure_comment(portfolio_name, base_comment)
+            continue
+
+        # --- Cas v3: format 'Lignes' ---
+        for ligne in pf.get("Lignes", []):
+            asset_id = ligne.get("id") or ligne.get("ID") or ""
+            alloc = ligne.get("allocation_pct") or ligne.get("allocation") or 0
+            if asset_id in lut:
+                name = lut[asset_id]["name"]; category = lut[asset_id]["category"]
+            else:
+                name = ligne.get("name", asset_id)
+                category = _infer_category_from_id(asset_id)
+            _put(portfolio_name, category, name, alloc)
+
+        _ensure_comment(portfolio_name, base_comment)
 
     # --- 2) Format "Portefeuilles" (archive v2/v3 non standard) ---
     if not out and isinstance(raw_obj, dict):
         pfs = raw_obj.get("Portefeuilles") or raw_obj.get("portefeuilles") or []
+
         def canon(nom: str) -> str:
             s = (nom or "").lower()
             if "agress" in s: return "Agressif"
             if "mod" in s or "équili" in s or "equili" in s: return "Modéré"
             return "Stable"
+
         for pf in pfs:
             pf_key = canon(pf.get("Nom") or pf.get("name"))
-            # 👉 copie commentaire s’il existe dans ce schéma
-            base_comment = sanitize_marketing_language(pf.get("Commentaire", ""))
+            base_comment = pf.get("Commentaire") or pf.get("Description") or ""
+
             out.setdefault(pf_key, {
-                "Commentaire": base_comment,
+                "Commentaire": "",
                 "Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}
             })
+
             for it in pf.get("Actifs", []):
-                asset_id = it.get("id") or it.get("ID")
+                asset_id = it.get("id") or it.get("ID") or ""
                 alloc = it.get("allocation") or it.get("allocation_pct") or 0
                 if asset_id in lut:
                     name = lut[asset_id]["name"]; category = lut[asset_id]["category"]
                 else:
-                    name = it.get("name", asset_id)
+                    name = it.get("name") or it.get("Nom") or asset_id
                     category = _infer_category_from_id(asset_id)
                 _put(pf_key, category, name, alloc)
 
+            _ensure_comment(pf_key, base_comment)
+
     return out
+
 
 
 
