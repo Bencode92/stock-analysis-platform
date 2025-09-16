@@ -807,23 +807,6 @@ function updateStory(params, results, deltaCtoNominal) {
            + `soit ${sign}${fmt(deltaCtoNominal)} par rapport au CTO, `
            + `après ${fmt(results.feesImpact)} de frais et ${fmt(results.taxAmount)} d'impôts.`;
 
-  // Ajout "pouvoir d'achat" (toujours, en utilisant l'inflation serveur si dispo)
-  const infl = getInflationRate();                    // 0.02 = 2%/an par ex.
-  const d = Math.pow(1 + infl, results.years);        // déflateur
-  const netReel = results.afterTaxAmount / d;         // € constants
-  // CTO de référence pour le delta réel
-  const refCTO = calculateInvestmentResults(
-    params.initialDeposit, params.periodicAmount, params.years, params.annualReturn, { vehicleId: 'cto' }
-  );
-  const ctoReel = refCTO.afterTaxAmount / d;
-  const deltaCtoReel = netReel - ctoReel;
-  const pertePouvoirAchat = results.afterTaxAmount - netReel;
-
-  line += ` <br><span class="text-xs text-gray-400">Pouvoir d'achat : ≈ ${fmt(netReel)} d'aujourd'hui `
-       +  `(Δ vs CTO : ${(deltaCtoReel>=0?'+':'')}${fmt(deltaCtoReel)} ; `
-       +  `écart nominal→réel : −${fmt(Math.abs(pertePouvoirAchat))} ; `
-       +  `inflation ${(infl*100).toFixed(1)}%/an)</span>`;
-
   if (adequacyOneLiner) adequacyOneLiner.innerHTML = line;
   if (storyAbove) { storyAbove.textContent = ''; storyAbove.classList.add('hidden'); }
 }
