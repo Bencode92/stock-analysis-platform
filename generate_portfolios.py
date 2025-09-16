@@ -992,44 +992,95 @@ def score_guard(portfolios: Dict, allowed_assets: Dict):
     print("✅ Score guard: tous les portefeuilles passent les contrôles quantitatifs")
 
 def fix_portfolios_v3(portfolios: Dict, errors: List[str]) -> Dict:
-    """
-    Correction automatique des portefeuilles si possible (version v3)
-    """
+    # Corrections de base (crypto interdite en Stable, ajustements 100%, Compliance)
     for portfolio_name, portfolio in portfolios.items():
         if 'Lignes' in portfolio and isinstance(portfolio['Lignes'], list):
             lignes = portfolio['Lignes']
 
-            # a) Stable : supprimer les lignes Crypto et réallouer
             if portfolio_name == "Stable":
                 crypto_lines = [l for l in lignes if l.get("category") == "Crypto"]
                 if crypto_lines:
                     freed = sum(float(l.get("allocation_pct", 0) or 0) for l in crypto_lines)
-                    # remove crypto
                     lignes[:] = [l for l in lignes if l.get("category") != "Crypto"]
-                    # réallouer en priorité vers Obligations, sinon dernière ligne
                     bond_target = next((x for x in lignes if x.get("category") == "Obligations"), None)
                     target = bond_target or (lignes[-1] if lignes else None)
                     if target:
                         target["allocation_pct"] = round(float(target.get("allocation_pct", 0)) + freed, 2)
-                    print(f"  🔧 {portfolio_name}: Crypto retirée et {freed:.2f}% réalloué")
 
-            # Ajuster les allocations pour atteindre 100%
             total = sum(float(ligne.get('allocation_pct', 0) or 0) for ligne in lignes)
             if abs(total - 100.0) > 0.01 and len(lignes) > 0:
                 diff = 100.0 - total
                 lignes[-1]['allocation_pct'] = round(float(lignes[-1].get('allocation_pct', 0) or 0) + diff, 2)
-                print(f"  🔧 Ajustement {portfolio_name}: dernière ligne ajustée de {diff:.2f}%")
 
-        # Ajouter le bloc Compliance s'il manque (protection type)
         if isinstance(portfolio, dict) and 'Compliance' not in portfolio:
             portfolio['Compliance'] = get_compliance_block()
-            print(f"  🔧 Ajout bloc Compliance manquant pour {portfolio_name}")
 
-        # --- Anti-doublon ETF : garder le mieux noté, remplacer l'autre ---
-        # (si tu as déjà un bloc plus bas dans ta version complète, laisse-le tel quel)
-        # Ici on ne modifie rien de plus pour rester fidèle à ta structure.
-    
+    # ---------- Anti-doublon ETF / remplacement (était après un return) ----------
+    def _id2asset(aid):
+        for k in ("allowed_equities","allowed_etfs_standard","allowed_bond_etfs","allowed_crypto"):
+            for a in allowed_assets.get(k, []):
+                if a["id"] == aid:
+                    return a
+        return {}
+
+    def _tokens(name: str):
+        return _tokenize_theme(name or "")
+
+    for pf_name in ["Agressif","Modéré","Stable"]:
+        pf = portfolios.get(pf_name, {})
+        if not isinstance(pf, dict) or not isinstance(pf.get("Lignes"), list):
+            continue
+
+        try:
+            overlaps = detect_portfolio_overlaps_v3(pf, allowed_assets, etf_df=None, theme_thresh=0.6, hold_thresh=0.5)
+        except Exception:
+            overlaps = []
+
+        if not overlaps:
+            continue
+
+        lignes = pf["Lignes"]
+        used_ids = {l.get("id") for l in lignes}
+        present_tokens = set()
+        for l in lignes:
+            present_tokens |= _tokens(l.get("name",""))
+
+        for o in overlaps:
+            l1 = next((x for x in lignes if x.get("name")==o["names"][0]), None)
+            l2 = next((x for x in lignes if x.get("name")==o["names"][1]), None)
+            if not l1 or not l2:
+                continue
+
+            s1 = float(_id2asset(l1.get("id")).get("score", 0))
+            s2 = float(_id2asset(l2.get("id")).get("score", 0))
+            a_keep, a_drop = (l1, l2) if s1 >= s2 else (l2, l1)
+            freed = float(a_drop.get("allocation_pct", 0) or 0)
+
+            replacement = None
+            for cand in sorted(allowed_assets.get("allowed_etfs_standard", []), key=lambda x: x.get("score",0), reverse=True):
+                if cand["id"] in used_ids:
+                    continue
+                t = _tokens(cand.get("name",""))
+                if t and t.isdisjoint(present_tokens):
+                    replacement = cand
+                    break
+
+            if replacement:
+                a_drop["id"] = replacement["id"]
+                a_drop["name"] = replacement["name"]
+                a_drop["category"] = "ETF"
+                present_tokens |= _tokens(replacement["name"])
+                used_ids.add(replacement["id"])
+            else:
+                a_drop["allocation_pct"] = 0.0
+                bond_target = next((x for x in lignes if x.get("category")=="Obligations"), None)
+                target = bond_target or a_keep
+                target["allocation_pct"] = round(float(target.get("allocation_pct",0))+freed, 2)
+
+        pf["Lignes"] = [l for l in lignes if float(l.get("allocation_pct",0) or 0) > 0]
+
     return portfolios
+
 
 
     def _id2asset(aid):
