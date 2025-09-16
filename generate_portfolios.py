@@ -749,6 +749,10 @@ ALLOWED_CRYPTO = {json.dumps(allowed_assets['allowed_crypto'], ensure_ascii=Fals
 - Catégorie **ETF** = uniquement ALLOWED_ETFS_STANDARD (aucun bond ETF ici).
 - Catégorie **Crypto** = actifs de ALLOWED_CRYPTO avec `sevenDaysPositif=true`.
 - Un même `id` ne peut apparaître qu'**une fois** par portefeuille.
+- Diversification anti-doublon (ETF) :
+  - Éviter deux ETF offrant la même exposition (même thème/indice/métal).
+  - **Au plus 1 ETF par thème fortement corrélé** (gold, S&P 500, Nasdaq 100, World, Treasuries, etc.).
+  - Interdit si overlap thématique ≥ 0.6 ou overlap de holdings ≥ 0.5.
 
 ## Règles de scoring quantitatif (NOUVELLES)
 - N'utiliser que les actifs avec `flags.overextended=false`.
@@ -941,6 +945,18 @@ def validate_portfolios_v3(portfolios: Dict, allowed_assets: Dict) -> Tuple[bool
             
             if abs(low_ratio - expected_low) > 0.20:  # Tolérance de 20%
                 errors.append(f"{portfolio_name}: {low_ratio:.1%} d'actifs low-risk (attendu: ~{expected_low:.0%})")
+                
+      # ===== Anti-doublon ETF (thématique/holdings) =====
+        try:
+            overlaps = detect_portfolio_overlaps_v3(
+                portfolio, allowed_assets, etf_df=None,  # thématique si pas de holdings
+                theme_thresh=0.6, hold_thresh=0.5
+            )
+            for o in overlaps:
+                n1, n2, typ, sc = o["names"][0], o["names"][1], o["type"], o["score"]
+                errors.append(f"{portfolio_name}: doublon ETF {n1} ↔ {n2} ({typ} {sc})")
+        except Exception as e:
+            print(f"⚠️ Validation overlap: {portfolio_name}: {e}")
     
     return len(errors) == 0, errors
 
@@ -986,6 +1002,82 @@ def fix_portfolios_v3(portfolios: Dict, errors: List[str]) -> Dict:
         if isinstance(portfolio, dict) and 'Compliance' not in portfolio:
             portfolio['Compliance'] = get_compliance_block()
             print(f"  🔧 Ajout bloc Compliance manquant pour {portfolio_name}")
+                # --- Anti-doublon ETF : garder le mieux noté, remplacer l'autre ---
+    def _id2asset(aid):
+        for k in ("allowed_equities","allowed_etfs_standard","allowed_bond_etfs","allowed_crypto"):
+            for a in allowed_assets.get(k, []):
+                if a["id"] == aid:
+                    return a
+        return {}
+
+    def _tokens(name: str):
+        return _tokenize_theme(name or "")
+
+    for pf_name in ["Agressif","Modéré","Stable"]:
+        pf = portfolios.get(pf_name, {})
+        if not isinstance(pf, dict) or not isinstance(pf.get("Lignes"), list):
+            continue
+
+        # 1) repérer les overlaps
+        try:
+            overlaps = detect_portfolio_overlaps_v3(pf, allowed_assets, etf_df=None, theme_thresh=0.6, hold_thresh=0.5)
+        except Exception:
+            overlaps = []
+
+        if not overlaps:
+            continue
+
+        lignes = pf["Lignes"]
+        used_ids = {l.get("id") for l in lignes}
+        # cache tokens déjà présents (évite nouveau doublon)
+        present_tokens = set()
+        for l in lignes:
+            present_tokens |= _tokens(l.get("name",""))
+
+        for o in overlaps:
+            # choisir lequel garder (meilleur score autorisé)
+            a_keep = None; a_drop = None
+            # retrouver lignes
+            l1 = next((x for x in lignes if x.get("name")==o["names"][0]), None)
+            l2 = next((x for x in lignes if x.get("name")==o["names"][1]), None)
+            if not l1 or not l2: 
+                continue
+            s1 = float(_id2asset(l1.get("id")).get("score", 0))
+            s2 = float(_id2asset(l2.get("id")).get("score", 0))
+            if s1 >= s2:
+                a_keep, a_drop = l1, l2
+            else:
+                a_keep, a_drop = l2, l1
+
+            freed = float(a_drop.get("allocation_pct", 0) or 0)
+            # 2) tenter un remplaçant ETF standard non-chevauchant
+            replacement = None
+            for cand in sorted(allowed_assets.get("allowed_etfs_standard", []), key=lambda x: x.get("score",0), reverse=True):
+                if cand["id"] in used_ids: 
+                    continue
+                t = _tokens(cand.get("name",""))
+                if t and t.isdisjoint(present_tokens):
+                    replacement = cand
+                    break
+
+            # 3) appliquer la correction
+            if replacement:
+                a_drop["id"] = replacement["id"]
+                a_drop["name"] = replacement["name"]
+                a_drop["category"] = "ETF"
+                # garder l’allocation; mettre à jour contexte tokens
+                present_tokens |= _tokens(replacement["name"])
+                used_ids.add(replacement["id"])
+            else:
+                # à défaut : rebasculer l’allocation vers Obligations (ou la ligne gardée)
+                a_drop["allocation_pct"] = 0.0
+                bond_target = next((x for x in lignes if x.get("category")=="Obligations"), None)
+                target = bond_target or a_keep
+                target["allocation_pct"] = round(float(target.get("allocation_pct",0))+freed, 2)
+
+        # purge lignes mises à 0
+        pf["Lignes"] = [l for l in lignes if float(l.get("allocation_pct",0) or 0) > 0]
+
     
     return portfolios
 
