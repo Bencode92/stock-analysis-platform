@@ -753,6 +753,8 @@ ALLOWED_CRYPTO = {json.dumps(allowed_assets['allowed_crypto'], ensure_ascii=Fals
   - Éviter deux ETF offrant la même exposition (même thème/indice/métal).
   - **Au plus 1 ETF par thème fortement corrélé** (gold, S&P 500, Nasdaq 100, World, Treasuries, etc.).
   - Interdit si overlap thématique ≥ 0.6 ou overlap de holdings ≥ 0.5.
+- Spécifique au profil Stable :
+  - **Aucune ligne Crypto (0%)**.
 
 ## Règles de scoring quantitatif (NOUVELLES)
 - N'utiliser que les actifs avec `flags.overextended=false`.
@@ -854,6 +856,11 @@ def validate_portfolios_v3(portfolios: Dict, allowed_assets: Dict) -> Tuple[bool
             continue
             
         lignes = portfolio['Lignes']
+
+        # 🔒 Règle spécifique profil Stable : crypto interdite
+        if portfolio_name == "Stable":
+            if any(l.get('category') == 'Crypto' for l in lignes):
+                errors.append("Stable: Crypto interdite (0 ligne attendue)")
         
         # Vérifier le nombre d'actifs
         if not (12 <= len(lignes) <= 15):
@@ -945,8 +952,8 @@ def validate_portfolios_v3(portfolios: Dict, allowed_assets: Dict) -> Tuple[bool
             
             if abs(low_ratio - expected_low) > 0.20:  # Tolérance de 20%
                 errors.append(f"{portfolio_name}: {low_ratio:.1%} d'actifs low-risk (attendu: ~{expected_low:.0%})")
-                
-      # ===== Anti-doublon ETF (thématique/holdings) =====
+        
+        # ===== Anti-doublon ETF (thématique/holdings) =====
         try:
             overlaps = detect_portfolio_overlaps_v3(
                 portfolio, allowed_assets, etf_df=None,  # thématique si pas de holdings
@@ -959,6 +966,7 @@ def validate_portfolios_v3(portfolios: Dict, allowed_assets: Dict) -> Tuple[bool
             print(f"⚠️ Validation overlap: {portfolio_name}: {e}")
     
     return len(errors) == 0, errors
+
 
 def score_guard(portfolios: Dict, allowed_assets: Dict):
     """Garde-fou post-LLM pour la santé des scores"""
@@ -988,21 +996,42 @@ def fix_portfolios_v3(portfolios: Dict, errors: List[str]) -> Dict:
     Correction automatique des portefeuilles si possible (version v3)
     """
     for portfolio_name, portfolio in portfolios.items():
-        if 'Lignes' in portfolio:
+        if 'Lignes' in portfolio and isinstance(portfolio['Lignes'], list):
             lignes = portfolio['Lignes']
-            
+
+            # a) Stable : supprimer les lignes Crypto et réallouer
+            if portfolio_name == "Stable":
+                crypto_lines = [l for l in lignes if l.get("category") == "Crypto"]
+                if crypto_lines:
+                    freed = sum(float(l.get("allocation_pct", 0) or 0) for l in crypto_lines)
+                    # remove crypto
+                    lignes[:] = [l for l in lignes if l.get("category") != "Crypto"]
+                    # réallouer en priorité vers Obligations, sinon dernière ligne
+                    bond_target = next((x for x in lignes if x.get("category") == "Obligations"), None)
+                    target = bond_target or (lignes[-1] if lignes else None)
+                    if target:
+                        target["allocation_pct"] = round(float(target.get("allocation_pct", 0)) + freed, 2)
+                    print(f"  🔧 {portfolio_name}: Crypto retirée et {freed:.2f}% réalloué")
+
             # Ajuster les allocations pour atteindre 100%
-            total = sum(ligne.get('allocation_pct', 0) for ligne in lignes)
+            total = sum(float(ligne.get('allocation_pct', 0) or 0) for ligne in lignes)
             if abs(total - 100.0) > 0.01 and len(lignes) > 0:
                 diff = 100.0 - total
-                lignes[-1]['allocation_pct'] = round(lignes[-1]['allocation_pct'] + diff, 2)
+                lignes[-1]['allocation_pct'] = round(float(lignes[-1].get('allocation_pct', 0) or 0) + diff, 2)
                 print(f"  🔧 Ajustement {portfolio_name}: dernière ligne ajustée de {diff:.2f}%")
-        
+
         # Ajouter le bloc Compliance s'il manque (protection type)
         if isinstance(portfolio, dict) and 'Compliance' not in portfolio:
             portfolio['Compliance'] = get_compliance_block()
             print(f"  🔧 Ajout bloc Compliance manquant pour {portfolio_name}")
-                # --- Anti-doublon ETF : garder le mieux noté, remplacer l'autre ---
+
+        # --- Anti-doublon ETF : garder le mieux noté, remplacer l'autre ---
+        # (si tu as déjà un bloc plus bas dans ta version complète, laisse-le tel quel)
+        # Ici on ne modifie rien de plus pour rester fidèle à ta structure.
+    
+    return portfolios
+
+
     def _id2asset(aid):
         for k in ("allowed_equities","allowed_etfs_standard","allowed_bond_etfs","allowed_crypto"):
             for a in allowed_assets.get(k, []):
