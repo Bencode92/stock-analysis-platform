@@ -1230,18 +1230,26 @@ def normalize_v3_to_frontend_v1(raw_obj: dict, allowed_assets: dict) -> dict:
         })
         out[pf_key][category][name] = _pct(alloc)
 
+    def _sum_pct_dict(d):
+        tot = 0.0
+        if isinstance(d, dict):
+            for v in d.values():
+                try:
+                    tot += float(re.sub(r'[^0-9.\-]', '', str(v)))
+                except:
+                    pass
+        return round(tot)
+
     for portfolio_name in ["Agressif", "Modéré", "Stable"]:
         if isinstance(raw_obj.get(portfolio_name), dict):
             pf = raw_obj[portfolio_name]
-
-            # 👉 seed du commentaire dès le départ (et sanitisation)
             base_comment = sanitize_marketing_language(pf.get("Commentaire", "")) if isinstance(pf, dict) else ""
             out.setdefault(portfolio_name, {
                 "Commentaire": base_comment,
                 "Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}
             })
 
-            # Cas v2 déjà en catégories → on recopie en conservant le commentaire
+            # --- Cas v2: catégories déjà présentes ---
             if any(k in pf for k in ("Actions", "ETF", "Obligations", "Crypto")):
                 out[portfolio_name].update({
                     "Actions": pf.get("Actions", {}),
@@ -1249,12 +1257,21 @@ def normalize_v3_to_frontend_v1(raw_obj: dict, allowed_assets: dict) -> dict:
                     "Obligations": pf.get("Obligations", {}),
                     "Crypto": pf.get("Crypto", {})
                 })
-                # s'assure que le commentaire est bien là
                 if base_comment:
                     out[portfolio_name]["Commentaire"] = base_comment
+                else:
+                    a = _sum_pct_dict(pf.get("Actions"))
+                    e = _sum_pct_dict(pf.get("ETF"))
+                    b = _sum_pct_dict(pf.get("Obligations"))
+                    c = _sum_pct_dict(pf.get("Crypto"))
+                    out[portfolio_name]["Commentaire"] = sanitize_marketing_language(
+                        f"Portefeuille modèle {portfolio_name.lower()} : ≈{a}% Actions, ≈{e}% ETF, "
+                        f"≈{b}% Obligations, ≈{c}% Crypto. Répartition indicative, non prescriptive. "
+                        "Information générale ; performances passées non indicatives des performances futures."
+                    )
                 continue
 
-            # Cas v3 attendu avec Lignes → on construit les lignes ET on copie le commentaire
+            # --- Cas v3: format 'Lignes' (tu l'as déjà) ---
             for ligne in pf.get("Lignes", []):
                 asset_id = ligne.get("id", "")
                 alloc = ligne.get("allocation_pct", 0)
@@ -1265,7 +1282,6 @@ def normalize_v3_to_frontend_v1(raw_obj: dict, allowed_assets: dict) -> dict:
                     category = _infer_category_from_id(asset_id)
                 _put(portfolio_name, category, name, alloc)
 
-            # s'assure que le commentaire n'a pas été écrasé par setdefault
             if base_comment:
                 out[portfolio_name]["Commentaire"] = base_comment
 
