@@ -260,9 +260,10 @@ def read_combined_etf_csv(path_csv):
     has_lev_value = ~lev_text.isin(["", "0", "none", "nan", "na", "n/a"])
 
     looks_leveraged = (
-        _series("etf_type").astype(str).str.contains(r"\b(lev|inverse|bear|bull)\b", case=False, na=False)
+        _series("etf_type").astype(str).str.contains(r"\b(?:lev|inverse|bear|bull)\b", case=False, na=False)
         | df["name"].astype(str).str.contains(LEVERAGED_RE, regex=True, na=False)
     )
+
 
     df["is_leveraged"] = has_lev_value | looks_leveraged
 
@@ -1057,7 +1058,7 @@ def post_with_retry(url, headers, payload, tries=5, timeout=(20, 180), backoff=2
 
 # ============= FIX 4: FILET DE SÉCURITÉ CACHE =============
 
-def load_cached_portfolios(path="portefeuilles.json"):
+def load_cached_portfolios(path="data/portefeuilles.json"):
     """Charge le dernier portefeuille validé en cache"""
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -1312,30 +1313,26 @@ def update_history_index_from_normalized(normalized_json: dict, history_file: st
     except Exception as e:
         print(f"⚠️ Avertissement: index non mis à jour ({e})")
 
-def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict):
-    """Sauvegarde les portefeuilles en normalisant vers l'ancien format"""
+def save_portfolios(portfolios):
+    """Sauvegarder les portefeuilles dans un fichier JSON et conserver l'historique."""
     try:
         history_dir = 'data/portfolio_history'
         os.makedirs(history_dir, exist_ok=True)
-        ts = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-
-        # 1) Normaliser vers l'ancien format pour le frontend
-        normalized_portfolios = normalize_v3_to_frontend_v1(portfolios_v3, allowed_assets)
+        os.makedirs('data', exist_ok=True)
         
-        # 2) Sauvegarder le fichier principal pour le frontend
-        with open('portefeuilles.json','w',encoding='utf-8') as f:
-            json.dump(normalized_portfolios, f, ensure_ascii=False, indent=4)
-
-        # 3) Archive du format v3 original pour debug/traçabilité
-        history_file = f"{history_dir}/portefeuilles_v3_stable_{ts}.json"
-        with open(history_file,'w',encoding='utf-8') as f:
-            json.dump({
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        with open('data/portefeuilles.json', 'w', encoding='utf-8') as file:
+            json.dump(portfolios, file, ensure_ascii=False, indent=4)
+        
+        history_file = f"{history_dir}/portefeuilles_v3_stable_{timestamp}.json"
+        with open(history_file, 'w', encoding='utf-8') as file:
+            portfolios_with_metadata = {
                 "version": "v3_quantitatif_compliance_amf_stable",
-                "timestamp": ts,
+                "timestamp": timestamp,
                 "date": datetime.datetime.now().isoformat(),
-                "portfolios": portfolios_v3,
+                "portfolios": portfolios,
                 "features": [
-                    "normalisation_v3_vers_v1",
                     "drawdown_normalisé",
                     "diversification_round_robin", 
                     "validation_anti_fin_cycle",
@@ -1351,15 +1348,15 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict):
                     "type_safety_improved",
                     "cache_fallback_system"
                 ]
-            }, f, ensure_ascii=False, indent=4)
-
-        # 4) Mettre à jour l'index
-        update_history_index_from_normalized(normalized_portfolios, history_file, "v3_stable_normalized")
-
-        print(f"✅ Sauvegarde OK → portefeuilles.json (format v1 pour frontend) + {history_file} (archive v3)")
+            }
+            json.dump(portfolios_with_metadata, file, ensure_ascii=False, indent=4)
         
+        update_history_index(history_file, portfolios_with_metadata)
+        
+        print(f"✅ Portefeuilles v3 (stable) sauvegardés avec succès dans data/portefeuilles.json et {history_file}")
     except Exception as e:
         print(f"❌ Erreur lors de la sauvegarde des portefeuilles: {str(e)}")
+
 
 # ============= FONCTIONS HELPER POUR LES NOUVEAUX FICHIERS (améliorées) =============
 
