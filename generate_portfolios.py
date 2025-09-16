@@ -1882,8 +1882,8 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
     
     with open(html_file, 'w', encoding='utf-8') as f:
         f.write(html_content)
-    
- print(f"✅ Fichier HTML lisible généré : {html_file}")
+
+    print(f"✅ Fichier HTML lisible généré : {html_file}")
     
     return debug_file, html_file
 
