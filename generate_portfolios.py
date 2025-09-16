@@ -261,7 +261,7 @@ def read_combined_etf_csv(path_csv):
 
     looks_leveraged = (
         _series("etf_type").astype(str).str.contains(r"\b(?:lev|inverse|bear|bull)\b", case=False, na=False)
-        | df["name"].astype(str).str.contains(LEVERAGED_RE, regex=True, na=False)
+      | df["name"].astype(str).str.contains(LEVERAGED_RE, na=False)
     )
 
 
@@ -2149,90 +2149,22 @@ Format JSON strict:
     return portfolios
 
 def save_portfolios(portfolios):
-    """Sauvegarder les portefeuilles dans un fichier JSON et conserver l'historique."""
+    """
+    Wrapper rétro-compatibilité : délègue à save_portfolios_normalized.
+    Évite l'appel à update_history_index() qui n'existe pas.
+    """
     try:
-        history_dir = 'data/portfolio_history'
-        os.makedirs(history_dir, exist_ok=True)
-        
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        
-        with open('portefeuilles.json', 'w', encoding='utf-8') as file:
-            json.dump(portfolios, file, ensure_ascii=False, indent=4)
-        
-        history_file = f"{history_dir}/portefeuilles_v3_stable_{timestamp}.json"
-        with open(history_file, 'w', encoding='utf-8') as file:
-            portfolios_with_metadata = {
-                "version": "v3_quantitatif_compliance_amf_stable",
-                "timestamp": timestamp,
-                "date": datetime.datetime.now().isoformat(),
-                "portfolios": portfolios,
-                "features": [
-                    "drawdown_normalisé",
-                    "diversification_round_robin", 
-                    "validation_anti_fin_cycle",
-                    "fallback_crypto_progressif",
-                    "cache_univers_hash",
-                    "retry_api_robuste",
-                    "compliance_amf",
-                    "sanitisation_marketing",
-                    "disclaimer_automatique",
-                    "regex_pandas_fixed",
-                    "etf_detection_fixed",
-                    "timeout_extended",
-                    "type_safety_improved",
-                    "cache_fallback_system"
-                ]
-            }
-            json.dump(portfolios_with_metadata, file, ensure_ascii=False, indent=4)
-        
-        update_history_index(history_file, portfolios_with_metadata)
-        
-        print(f"✅ Portefeuilles v3 (stable) sauvegardés avec succès dans portefeuilles.json et {history_file}")
-    except Exception as e:
-        print(f"❌ Erreur lors de la sauvegarde des portefeuilles: {str(e)}")
-
-def update_history_index_from_normalized(normalized_json: dict, history_file: str, version: str):
-    """Met à jour l'index avec les données normalisées (vue frontend v1)."""
-    try:
-        index_file = 'data/portfolio_history/index.json'
-        # S'assurer que le dossier existe
-        os.makedirs(os.path.dirname(index_file), exist_ok=True)
-
-        index_data = []
-        if os.path.exists(index_file):
-            try:
-                with open(index_file, 'r', encoding='utf-8') as f:
-                    index_data = json.load(f)
-            except json.JSONDecodeError:
-                index_data = []
-
-        entry = {
-            "file": os.path.basename(history_file),
-            "version": version,
-            "timestamp": datetime.datetime.now().strftime('%Y%m%d_%H%M%S'),
-            "date": datetime.datetime.now().isoformat(),
-            "summary": {}
+        # on peut passer un mapping vide : la normalisation saura inférer les catégories via les préfixes d'ID (EQ_/ETF_s/ETF_b/CR_)
+        allowed_assets_stub = {
+            "allowed_equities": [],
+            "allowed_etfs_standard": [],
+            "allowed_bond_etfs": [],
+            "allowed_crypto": []
         }
-
-        # normalized_json = {"Agressif": {...}, "Modéré": {...}, "Stable": {...}}
-        for pf_name, pf in normalized_json.items():
-            if isinstance(pf, dict):
-                entry["summary"][pf_name] = {
-                    "Actions": f"{len(pf.get('Actions', {}))} actifs",
-                    "ETF": f"{len(pf.get('ETF', {}))} actifs",
-                    "Obligations": f"{len(pf.get('Obligations', {}))} actifs",
-                    "Crypto": f"{len(pf.get('Crypto', {}))} actifs",
-                }
-
-        # Ajouter en tête et limiter à 100 entrées
-        index_data.insert(0, entry)
-        index_data = index_data[:100]
-
-        with open(index_file, 'w', encoding='utf-8') as f:
-            json.dump(index_data, f, ensure_ascii=False, indent=4)
-
+        save_portfolios_normalized(portfolios, allowed_assets_stub)
     except Exception as e:
-        print(f"⚠️ Avertissement: index non mis à jour ({e})")
+        print(f"❌ Erreur lors de la sauvegarde (wrapper): {e}")
+
 
 def main():
     """Version modifiée pour utiliser le système de scoring quantitatif v3 avec compliance AMF et fixes de stabilité."""
