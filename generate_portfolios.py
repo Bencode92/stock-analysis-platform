@@ -570,11 +570,13 @@ def prepare_structured_data(filtered_data: Dict) -> Dict:
 
 def extract_allowed_assets(filtered_data: Dict) -> Dict:
     """
-    Extrait les actifs autorisés depuis les données filtrées
-    NOUVEAU: utilise l'univers quantitatif si disponible
+    Extrait les actifs autorisés depuis les données filtrées.
+    NOUVEAU: déduplication des ETF standards par ancres (gold, sp500, nasdaq, world,
+    treasury, eurozone, emerging, silver, oil, energy) via dedupe_by_anchors,
+    afin de n'autoriser qu'UN seul ETF par thème fortement corrélé.
     """
-    
-    # NOUVEAU: si on a 'universe', on l'utilise (système v3)
+
+    # ====== Cas v3 : univers quantitatif présent ======
     u = filtered_data.get("universe")
     if u:
         def mk(items, prefix):
@@ -582,40 +584,151 @@ def extract_allowed_assets(filtered_data: Dict) -> Dict:
             for i, it in enumerate(items, start=1):
                 out.append({
                     "id": f"{prefix}{i}",
-                    "name": it["name"],
-                    "symbol": it["name"].split()[0][:6].upper(),
+                    "name": it.get("name"),
+                    "symbol": (it.get("name") or "").split()[0][:6].upper(),
                     "score": round(float(it.get("score", 0)), 3),
                     "risk_class": it.get("risk_class", "mid"),
                     "flags": it.get("flags", {}),
                     "sector": it.get("sector", "Unknown"),
                     "country": it.get("country", "Global"),
-                    # >>> métriques utiles à la validation
+                    # métriques utiles pour les contrôles
                     "ytd": fnum(it.get("ytd")),
                     "perf_1m": fnum(it.get("perf_1m")),
                 })
             return out
-        
+
+        # Déduplique les ETF standards par ancres AVANT mappage ID
+        etfs_raw = u.get("etfs", []) or []
+        etfs_dedup = dedupe_by_anchors(etfs_raw)  # <= clé: max 1 "gold", "sp500", etc.
+
         return {
-            "allowed_equities": mk(u.get("equities", []), "EQ_"),
-            "allowed_etfs_standard": mk(u.get("etfs", []), "ETF_s"),
-            "allowed_bond_etfs": mk(u.get("bonds", []), "ETF_b"),
+            "allowed_equities": mk(u.get("equities", []) or [], "EQ_"),
+            "allowed_etfs_standard": mk(etfs_dedup, "ETF_s"),
+            "allowed_bond_etfs": mk(u.get("bonds", []) or [], "ETF_b"),  # pas de dédup spécifique demandée côté bonds
             "allowed_crypto": [{
                 "id": f"CR_{i+1}",
-                "name": it["name"],
-                "symbol": it["name"][:6].upper(),
+                "name": it.get("name"),
+                "symbol": (it.get("name") or "")[:6].upper(),
                 "sevenDaysPositif": True,
                 "score": round(float(it.get("score", 0)), 3),
                 "risk_class": it.get("risk_class", "mid"),
-                # métriques pour contrôles
                 "ytd": fnum(it.get("ytd")),
                 "perf_1m": fnum(it.get("perf_1m")),
-            } for i, it in enumerate(u.get("crypto", []))]
+            } for i, it in enumerate(u.get("crypto", []) or [])]
         }
-    
-    # Fallback sur l'ancien parsing texte si pas d'univers quantitatif
-    print("⚠️ Pas d'univers quantitatif, utilisation du fallback parsing texte")
-    return extract_allowed_assets_legacy(filtered_data)
 
+    # ====== Fallback legacy : parsing texte ======
+    print("⚠️ Pas d'univers quantitatif, utilisation du fallback parsing texte")
+    # Actions autorisées
+    allowed_equities = []
+    if filtered_data.get('lists'):
+        lists_text = filtered_data['lists']
+        equity_id = 1
+        for line in lists_text.split('\n'):
+            if '•' in line and 'YTD' in line:
+                parts = line.split(':')
+                if len(parts) >= 2:
+                    name = parts[0].replace('•', '').strip()
+                    name = re.sub(r'[🚩📉]', '', name).strip()
+                    if '(' in name and 'potentielle' in name:
+                        name = name.split('(')[0].strip()
+                    region = "US" if any(x in name for x in ["Inc", "Corp", "LLC"]) else "Europe"
+                    sector = "Technology"
+                    allowed_equities.append({
+                        "id": f"EQ_{equity_id}",
+                        "name": name,
+                        "symbol": name.split()[0] if len(name.split()) > 0 else name[:4].upper(),
+                        "region": region,
+                        "sector": sector,
+                        "score": 0.0,
+                        "risk_class": "mid",
+                        "flags": {"overextended": False},
+                        "ytd": 0.0,
+                        "perf_1m": 0.0
+                    })
+                    equity_id += 1
+                    if equity_id > 30:
+                        break
+
+    # ETF standards autorisés (legacy) —> dédupliqués par ancres
+    raw_etfs_standard = []
+    if filtered_data.get('etfs'):
+        etfs_text = filtered_data['etfs']
+        for line in etfs_text.split('\n'):
+            if '•' in line and 'ETF' in line and 'OBLIGATAIRE' not in line.upper():
+                etf_name = line.split('•')[1].split(':')[0].strip() if '•' in line else ""
+                if etf_name and len(etf_name) > 5:
+                    raw_etfs_standard.append({
+                        "name": etf_name,
+                        "score": 0.0,  # inconnu en legacy → neutre
+                        "risk_class": "mid",
+                        "flags": {"overextended": False},
+                        "ytd": 0.0,
+                        "perf_1m": 0.0
+                    })
+
+    # Déduplication par ancres (gold/sp500/nasdaq/world/treasury/…)
+    etfs_dedup_legacy = dedupe_by_anchors(raw_etfs_standard)
+
+    # Réindexation propre des IDs après dédup
+    allowed_etfs_standard = []
+    for j, it in enumerate(etfs_dedup_legacy[:20], start=1):
+        allowed_etfs_standard.append({
+            "id": f"ETF_s{j}",
+            "name": it["name"],
+            "symbol": it["name"].split()[0][:4].upper() if it["name"].split() else "ETF",
+            "score": float(it.get("score", 0.0)),
+            "risk_class": it.get("risk_class", "mid"),
+            "flags": it.get("flags", {"overextended": False}),
+            "ytd": fnum(it.get("ytd")),
+            "perf_1m": fnum(it.get("perf_1m")),
+        })
+
+    # ETF obligataires autorisés (legacy)
+    allowed_bond_etfs = []
+    if filtered_data.get('bond_etf_names'):
+        for i, name in enumerate(filtered_data['bond_etf_names'][:15]):
+            allowed_bond_etfs.append({
+                "id": f"ETF_b{i+1}",
+                "name": name,
+                "symbol": name.split()[0][:4].upper() if name.split() else "BOND",
+                "score": 0.0,
+                "risk_class": "bond",
+                "flags": {"overextended": False},
+                "ytd": 0.0,
+                "perf_1m": 0.0
+            })
+
+    # Cryptos autorisées (legacy)
+    allowed_crypto = []
+    if filtered_data.get('crypto'):
+        crypto_text = filtered_data['crypto']
+        crypto_id = 1
+        for line in crypto_text.split('\n'):
+            if '•' in line and '7j:' in line:
+                parts = line.split('(')[0].replace('•', '').strip()
+                name = parts.split(':')[0].strip() if ':' in parts else parts
+                seven_days_positive = '7j: +' in line or ('7j:' in line and '+' in line.split('7j:')[1][:10])
+                allowed_crypto.append({
+                    "id": f"CR_{crypto_id}",
+                    "name": name,
+                    "symbol": name.upper()[:3],
+                    "sevenDaysPositif": seven_days_positive,
+                    "score": 0.0,
+                    "risk_class": "mid",
+                    "ytd": 0.0,
+                    "perf_1m": 0.0
+                })
+                crypto_id += 1
+                if crypto_id > 10:
+                    break
+
+    return {
+        "allowed_equities": allowed_equities,
+        "allowed_etfs_standard": allowed_etfs_standard,
+        "allowed_bond_etfs": allowed_bond_etfs,
+        "allowed_crypto": allowed_crypto
+    }
 def extract_allowed_assets_legacy(filtered_data: Dict) -> Dict:
     """Version legacy pour compatibilité"""
     # Actions autorisées (extraire depuis filtered_lists)
@@ -1706,7 +1819,60 @@ def _tokenize_theme(name: str) -> set:
         toks.add("miners")
 
     return toks
+def enforce_one_per_anchor_v1(portfolios_v1: dict,
+                              anchors: set = {"gold","sp500","nasdaq","world","treasury","eurozone","emerging","silver","oil","energy"}):
+    def tok(name: str) -> set:
+        return _tokenize_theme(name or "")
 
+    fixed = _copy.deepcopy(portfolios_v1)
+
+    for pf_name in ["Agressif","Modéré","Stable"]:
+        pf = fixed.get(pf_name, {})
+        if not isinstance(pf, dict):
+            continue
+
+        # 🔒 Stable: aucune crypto
+        if pf_name == "Stable":
+            pf["Crypto"] = {}
+
+        etf_dict = pf.get("ETF", {}) or {}
+        if etf_dict:
+            seen = set()
+            keep = {}
+            surplus_pct = 0.0
+
+            # garde le 1er ETF par ancre; accumule l’allocation des doublons
+            for etf_name, alloc in etf_dict.items():
+                toks = tok(etf_name)
+                hit = next((a for a in anchors if a in toks), None)
+                if hit:
+                    if hit in seen:
+                        surplus_pct += _to_float_pct(alloc)
+                        continue
+                    seen.add(hit)
+                keep[etf_name] = alloc
+
+            # redistribute : privilégie Obligations si présent, sinon la dernière ligne ETF
+            pf["ETF"] = keep
+            if surplus_pct > 0:
+                target = None
+                if pf.get("Obligations"):
+                    last_bond = next(reversed(pf["Obligations"]))
+                    target = ("Obligations", last_bond)
+                elif pf.get("ETF"):
+                    last_etf = next(reversed(pf["ETF"]))
+                    target = ("ETF", last_etf)
+
+                if target:
+                    cat, name = target
+                    cur = _to_float_pct(pf[cat][name])
+                    pf[cat][name] = _fmt_int_pct(cur + surplus_pct)
+
+        fixed[pf_name] = pf
+
+    # somme = 100% sûre
+    _, _, fixed = validate_and_fix_v1_sum(fixed, fix=True)
+    return fixed
 # ---------- Index des holdings ETF ----------
 def _build_etf_holdings_index(etf_df: Optional[pd.DataFrame]) -> dict:
     """
@@ -1941,10 +2107,14 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict):
             etf_csv_path="data/combined_etfs.csv"
         )
 
-        # 1) Normaliser v3 -> v1 (schéma attendu par le front)
-        normalized_v1 = normalize_v3_to_frontend_v1(portfolios_v3, allowed_assets)
-        # NEW: Somme v1 = 100% garantie
-        _, _, normalized_v1 = validate_and_fix_v1_sum(normalized_v1, fix=True)
+# 1) Normaliser v3 -> v1
+normalized_v1 = normalize_v3_to_frontend_v1(portfolios_v3, allowed_assets)
+
+# 🔒 NEW: filet anti-doublon thème & anti-crypto en Stable
+normalized_v1 = enforce_one_per_anchor_v1(normalized_v1)
+
+# 2) Force somme = 100%
+_, _, normalized_v1 = validate_and_fix_v1_sum(normalized_v1)
 
         # 2) Fichier v1 (nom historique en anglais)
         v1_path = "data/portfolios.json"
@@ -2638,6 +2808,8 @@ ALLOWED_CRYPTO = {json.dumps(allowed_assets['allowed_crypto'], ensure_ascii=Fals
 - **≥2 catégories** par portefeuille (parmi: Actions, ETF, Obligations, Crypto).
 - **Somme des allocations = 100.00** avec **2 décimales**. La **dernière ligne** ajuste pour atteindre 100.00.
 - Inclure un bloc `Compliance` dans chaque portefeuille.
+- 🔒 **Au plus 1 ETF par thème fortement corrélé** (ex: gold, S&P 500, Nasdaq 100, World, Treasuries, etc.).  # ← NEW
+- 🔒 **Stable : aucune ligne Crypto (0%)**.  # ← NEW
 
 Format JSON strict. Contexte temporel: Portefeuilles pour {current_month} 2025.
 """
