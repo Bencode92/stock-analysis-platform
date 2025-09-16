@@ -1134,6 +1134,164 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
             print(f"     Compliance AMF: {'✅' if compliance_ok else '❌'}")
     
     return portfolios
+    # === NORMALISATION V3 -> SCHÉMA FRONT HISTORIQUE (Agressif/Modéré/Stable) ===
+def _infer_category_from_id(asset_id: str) -> str:
+    if str(asset_id).startswith("EQ_"):    return "Actions"
+    if str(asset_id).startswith("ETF_b"):  return "Obligations"
+    if str(asset_id).startswith("ETF_s"):  return "ETF"
+    if str(asset_id).startswith("CR_"):    return "Crypto"
+    return "Autres"
+
+def _build_asset_lookup(allowed_assets: dict) -> dict:
+    # id -> {name, category}
+    lut = {}
+    for k, cat in [("allowed_equities","Actions"),
+                   ("allowed_etfs_standard","ETF"),
+                   ("allowed_bond_etfs","Obligations"),
+                   ("allowed_crypto","Crypto")]:
+        for a in allowed_assets.get(k, []):
+            lut[a["id"]] = {"name": a.get("name", a["id"]), "category": cat}
+    return lut
+
+def _pct(v) -> str:
+    try: return f"{round(float(v))}%"
+    except: return f"{v}%"
+
+def normalize_v3_to_frontend_v1(raw_obj: dict, allowed_assets: dict) -> dict:
+    """
+    Convertit le format v3 (avec Lignes et id) vers l'ancien format frontend
+    """
+    lut = _build_asset_lookup(allowed_assets)
+    
+    out = {}
+    
+    # Traiter chaque type de portefeuille
+    for portfolio_name in ["Agressif", "Modéré", "Stable"]:
+        if portfolio_name not in raw_obj:
+            continue
+            
+        portfolio_v3 = raw_obj[portfolio_name]
+        portfolio_v1 = {
+            "Commentaire": portfolio_v3.get("Commentaire", ""),
+            "Actions": {},
+            "ETF": {},
+            "Obligations": {},
+            "Crypto": {}
+        }
+        
+        # Ajouter les autres champs s'ils existent
+        if "ActifsExclus" in portfolio_v3:
+            portfolio_v1["ActifsExclus"] = portfolio_v3["ActifsExclus"]
+        if "Compliance" in portfolio_v3:
+            portfolio_v1["Compliance"] = portfolio_v3["Compliance"]
+        
+        # Convertir les lignes
+        if "Lignes" in portfolio_v3 and isinstance(portfolio_v3["Lignes"], list):
+            for ligne in portfolio_v3["Lignes"]:
+                asset_id = ligne.get("id", "")
+                allocation = ligne.get("allocation_pct", 0)
+                
+                # Récupérer le nom et la catégorie depuis le lookup ou la ligne elle-même
+                if asset_id in lut:
+                    name = lut[asset_id]["name"]
+                    category = lut[asset_id]["category"]
+                else:
+                    name = ligne.get("name", asset_id)
+                    category = ligne.get("category", _infer_category_from_id(asset_id))
+                
+                # Ajouter l'actif dans la bonne catégorie
+                if category in portfolio_v1:
+                    portfolio_v1[category][name] = _pct(allocation)
+        
+        out[portfolio_name] = portfolio_v1
+    
+    return out
+
+def update_history_index_from_normalized(normalized_json: dict, history_file: str, version: str):
+    """Met à jour l'index avec les données normalisées"""
+    try:
+        index_file = 'data/portfolio_history/index.json'
+        index_data = []
+        if os.path.exists(index_file):
+            try:
+                with open(index_file,'r',encoding='utf-8') as f:
+                    index_data = json.load(f)
+            except json.JSONDecodeError:
+                index_data = []
+
+        entry = {
+            "file": os.path.basename(history_file),
+            "version": version,
+            "timestamp": datetime.datetime.now().strftime('%Y%m%d_%H%M%S'),
+            "date": datetime.datetime.now().isoformat(),
+            "summary": {}
+        }
+        
+        for pf_name, pf in normalized_json.items():
+            if isinstance(pf, dict):
+                entry["summary"][pf_name] = {
+                    "Actions": f"{len(pf.get('Actions',{}))} actifs",
+                    "ETF": f"{len(pf.get('ETF',{}))} actifs",
+                    "Obligations": f"{len(pf.get('Obligations',{}))} actifs",
+                    "Crypto": f"{len(pf.get('Crypto',{}))} actifs",
+                }
+        
+        index_data.insert(0, entry)
+        index_data = index_data[:100]
+        
+        with open(index_file,'w',encoding='utf-8') as f:
+            json.dump(index_data, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"⚠️ Avertissement: index non mis à jour ({e})")
+
+def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict):
+    """Sauvegarde les portefeuilles en normalisant vers l'ancien format"""
+    try:
+        history_dir = 'data/portfolio_history'
+        os.makedirs(history_dir, exist_ok=True)
+        ts = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+
+        # 1) Normaliser vers l'ancien format pour le frontend
+        normalized_portfolios = normalize_v3_to_frontend_v1(portfolios_v3, allowed_assets)
+        
+        # 2) Sauvegarder le fichier principal pour le frontend
+        with open('portefeuilles.json','w',encoding='utf-8') as f:
+            json.dump(normalized_portfolios, f, ensure_ascii=False, indent=4)
+
+        # 3) Archive du format v3 original pour debug/traçabilité
+        history_file = f"{history_dir}/portefeuilles_v3_stable_{ts}.json"
+        with open(history_file,'w',encoding='utf-8') as f:
+            json.dump({
+                "version": "v3_quantitatif_compliance_amf_stable",
+                "timestamp": ts,
+                "date": datetime.datetime.now().isoformat(),
+                "portfolios": portfolios_v3,
+                "features": [
+                    "normalisation_v3_vers_v1",
+                    "drawdown_normalisé",
+                    "diversification_round_robin", 
+                    "validation_anti_fin_cycle",
+                    "fallback_crypto_progressif",
+                    "cache_univers_hash",
+                    "retry_api_robuste",
+                    "compliance_amf",
+                    "sanitisation_marketing",
+                    "disclaimer_automatique",
+                    "regex_pandas_fixed",
+                    "etf_detection_fixed",
+                    "timeout_extended",
+                    "type_safety_improved",
+                    "cache_fallback_system"
+                ]
+            }, f, ensure_ascii=False, indent=4)
+
+        # 4) Mettre à jour l'index
+        update_history_index_from_normalized(normalized_portfolios, history_file, "v3_stable_normalized")
+
+        print(f"✅ Sauvegarde OK → portefeuilles.json (format v1 pour frontend) + {history_file} (archive v3)")
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de la sauvegarde des portefeuilles: {str(e)}")
 
 # ============= FONCTIONS HELPER POUR LES NOUVEAUX FICHIERS (améliorées) =============
 
@@ -2063,8 +2221,10 @@ def main():
     
     # ========== SAUVEGARDE ==========
     
-    print("\n💾 Sauvegarde des portefeuilles...")
-    save_portfolios(portfolios)
+   print("\n💾 Sauvegarde des portefeuilles...")
+allowed_assets = extract_allowed_assets(filtered_data)  # mapping id -> nom/catégorie
+front_json = normalize_v3_to_frontend_v1(portfolios, allowed_assets)
+save_portfolios_dual(front_json, portfolios, version_tag="v3_stable_compliance")
     
     print("\n✨ Traitement terminé avec la version v3 quantitative + COMPLIANCE AMF + STABILITÉ!")
     print("🎯 Fonctionnalités activées:")
