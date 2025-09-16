@@ -22,15 +22,16 @@ from brief_formatter import format_brief_data
 # ============= PARSER JSON RÉPARATEUR (NOUVEAU) =============
 
 def parse_json_strict_or_repair(s: str) -> dict:
-    """Essaye json.loads, sinon répare: retire fences, extrait le bloc {...} externe,
-    échappe les retours de ligne dans les chaînes, supprime virgules traînantes, remplace guillemets "". """
+    """Essaye json.loads, sinon répare: retire fences, extrait {...} externe,
+    normalise guillemets typographiques, échappe CR/LF dans les chaînes, supprime virgules traînantes."""
     try:
         return json.loads(s)
-    except json.JSONDecodeError:
+    except Exception:
         print("⚠️ JSON invalide détecté, tentative de réparation...")
-        
+
+        s2 = s.strip()
         # 1) retirer fences éventuels
-        s2 = re.sub(r'^\s*```(?:json)?\s*', '', s)
+        s2 = re.sub(r'^\s*```(?:json)?\s*', '', s2)
         s2 = re.sub(r'\s*```\s*$', '', s2)
 
         # 2) ne garder que le premier '{' jusqu'au dernier '}'
@@ -39,10 +40,15 @@ def parse_json_strict_or_repair(s: str) -> dict:
         if start != -1 and end != -1 and end > start:
             s2 = s2[start:end+1]
 
-        # 3) normaliser guillemets typographiques
-        s2 = s2.replace('"', '"').replace('"', '"').replace(''', "'").replace(''', "'")
+        # 3) normaliser guillemets typographiques vers ' et "
+        s2 = s2.translate({
+            0x2018: 39,  # ‘ -> '
+            0x2019: 39,  # ’ -> '
+            0x201C: 34,  # “ -> "
+            0x201D: 34,  # ” -> "
+        })
 
-        # 4) remplacer retours de ligne CR/LF bruts à l'intérieur des chaînes par \n
+        # 4) remplacer CR/LF bruts à l’intérieur des chaînes par \n
         out = []
         in_str = False
         esc = False
@@ -69,7 +75,7 @@ def parse_json_strict_or_repair(s: str) -> dict:
 
         # 5) supprimer virgules finales avant } ou ]
         s3 = re.sub(r',(\s*[}\]])', r'\1', s3)
-        
+
         print("✅ JSON réparé avec succès")
         return json.loads(s3)
 
@@ -220,42 +226,50 @@ def compute_score(rows, kind):
 
 def read_combined_etf_csv(path_csv):
     """
-    FIX 2: Lecture et préparation des ETF avec détection corrigée des ETF à effet de levier
+    Lecture et préparation des ETF avec détection corrigée des ETF à effet de levier
+    + fallback robuste quand certaines colonnes manquent.
     """
     df = pd.read_csv(path_csv)
-    
-    # Cast des colonnes numériques
-    num_cols = ["daily_change_pct", "ytd_return_pct", "one_year_return_pct", 
+
+    # Cast des colonnes numériques (si présentes)
+    num_cols = ["daily_change_pct", "ytd_return_pct", "one_year_return_pct",
                 "vol_pct", "vol_3y_pct", "aum_usd", "total_expense_ratio", "yield_ttm"]
     for c in num_cols:
-        if c in df.columns: 
+        if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce")
-    
-    # --- Détection obligations
+
+    # ------ Fallback nom (assure la présence de df["name"]) ------
+    name_col = next((c for c in ["name", "long_name", "etf_name", "symbol", "ticker"] if c in df.columns), None)
+    if name_col is None:
+        df["name"] = [f"ETF_{i}" for i in range(len(df))]
+    else:
+        df["name"] = df[name_col].astype(str)
+
+    # Helper pour récupérer une Series (sinon série vide alignée sur l’index)
+    def _series(col, default=""):
+        return df[col] if col in df.columns else pd.Series(default, index=df.index)
+
+    # --- Détection obligations (robuste si colonnes absentes)
     df["is_bond"] = (
-        df.get("fund_type", "").astype(str).str.contains(r"Bond|Fixed Income|Obligation", case=False, na=False) |
-        df.get("etf_type", "").astype(str).str.contains(r"Bond|Fixed Income|Obligation", case=False, na=False)
+        _series("fund_type").astype(str).str.contains(r"Bond|Fixed Income|Obligation", case=False, na=False)
+        | _series("etf_type").astype(str).str.contains(r"Bond|Fixed Income|Obligation", case=False, na=False)
     )
 
-    # --- FIX 2: Détection levier corrigée
-    lev_field = df.get("leverage")
-    if lev_field is not None:
-        lev_text = lev_field.fillna("").astype(str).str.strip().str.lower()
-        has_lev_value = ~lev_text.isin(["", "0", "none", "nan", "na", "n/a"])
-    else:
-        has_lev_value = pd.Series(False, index=df.index)
+    # --- Détection levier corrigée (valeur explicite OU mots-clés)
+    lev_text = _series("leverage").fillna("").astype(str).str.strip().str.lower()
+    has_lev_value = ~lev_text.isin(["", "0", "none", "nan", "na", "n/a"])
 
     looks_leveraged = (
-        df.get("etf_type", "").astype(str).str.contains(r"\b(?:lev|inverse|bear|bull)\b", case=False, na=False) |
-        df.get("name", "").astype(str).str.contains(LEVERAGED_RE, regex=True, na=False)
+        _series("etf_type").astype(str).str.contains(r"\b(lev|inverse|bear|bull)\b", case=False, na=False)
+        | df["name"].astype(str).str.contains(LEVERAGED_RE, regex=True, na=False)
     )
 
     df["is_leveraged"] = has_lev_value | looks_leveraged
-    
+
     print(f"  🔍 Debug ETF: Total={len(df)}, Bonds={df['is_bond'].sum()}, Leveraged={df['is_leveraged'].sum()}")
     print(f"  📊 ETF standards disponibles: {len(df[~df['is_bond'] & ~df['is_leveraged']])}")
     print(f"  📉 ETF obligations disponibles: {len(df[df['is_bond'] & ~df['is_leveraged']])}")
-    
+
     return df
 
 def build_scored_universe_v3(stocks_jsons, etf_csv_path, crypto_csv_path):
@@ -1869,29 +1883,33 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
     with open(html_file, 'w', encoding='utf-8') as f:
         f.write(html_content)
     
-    print(f"✅ Pour voir le prompt v3 dans l'interface web, accédez à: debug-prompts.html")
+ print(f"✅ Fichier HTML lisible généré : {html_file}")
     
     return debug_file, html_file
 
 def generate_portfolios(filtered_data):
     """
     FIX 4: Fonction principale de génération avec filet de sécurité cache
+    (Validation "v1" effectuée en lecture seule sur une vue normalisée)
     """
     print("🚀 Lancement de la génération de portefeuilles v3 (scoring quantitatif + compliance AMF)")
-    
+
     try:
-        # Utiliser la nouvelle version quantitative v3 avec compliance
+        # Génération v3
         portfolios = generate_portfolios_v3(filtered_data)
-        
-        # Validation finale avec les fonctions existantes pour compatibilité
-        validation_ok, validation_errors = check_portfolio_constraints(portfolios)
-        if not validation_ok:
-            print(f"⚠️ Validation finale échouée: {validation_errors}")
-            portfolios = adjust_portfolios(portfolios)
-            print("🔧 Portefeuilles ajustés avec les fonctions existantes")
-        
+
+        # ✅ Compatibilité: contrôle "v1" en lecture seule (pas de mutation du v3)
+        try:
+            allowed_assets = extract_allowed_assets(filtered_data)
+            normalized_view = normalize_v3_to_frontend_v1(portfolios, allowed_assets)
+            ok, errs = check_portfolio_constraints(normalized_view)
+            if not ok:
+                print(f"⚠️ Avertissements (schéma v1): {errs}")
+        except Exception as e:
+            print(f"ℹ️ Contrôle de compatibilité v1 ignoré: {e}")
+
         return portfolios
-        
+
     except Exception as e:
         print(f"❌ Erreur dans la génération v3: {e}\n⚠️ Fallback v2…")
         try:
@@ -1899,14 +1917,14 @@ def generate_portfolios(filtered_data):
             return portfolios
         except Exception as e2:
             print(f"❌ Erreur v2: {e2}")
-            # FIX 4: Filet de sécurité - utiliser le cache
+            # Filet de sécurité - utiliser le cache
             cached = load_cached_portfolios()
             if cached:
                 print("🛟 API indisponible → on réutilise le dernier portefeuille en cache.")
-                # S'assurer que le cache a la compliance
                 cached = attach_compliance(cached)
                 return cached
             raise  # plus rien en réserve → on laisse échouer
+
 
 def generate_portfolios_v2(filtered_data):
     """Version v2 en fallback si v3 échoue"""
