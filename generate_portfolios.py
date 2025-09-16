@@ -1376,14 +1376,14 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     
     # Validation post-génération v3
     validation_ok, errors = validate_portfolios_v3(portfolios, allowed_assets)
-if not validation_ok:
-    print(f"⚠️ Erreurs de validation v3 détectées: {errors}")
-    portfolios = fix_portfolios_v3(portfolios, errors, allowed_assets)
-    validation_ok, remaining_errors = validate_portfolios_v3(portfolios, allowed_assets)
     if not validation_ok:
-        print(f"⚠️ Erreurs restantes après correction: {remaining_errors}")
-            
-    # 👉 NEW: Rapport de doublons / chevauchements (console)
+        print(f"⚠️ Erreurs de validation v3 détectées: {errors}")
+        portfolios = fix_portfolios_v3(portfolios, errors, allowed_assets)
+        validation_ok, remaining_errors = validate_portfolios_v3(portfolios, allowed_assets)
+        if not validation_ok:
+            print(f"⚠️ Erreurs restantes après correction: {remaining_errors}")
+
+    # 👉 Rapport de doublons / chevauchements (console)
     try:
         overlap_report = build_overlap_report(
             portfolios,
@@ -1441,6 +1441,7 @@ if not validation_ok:
             print(f"     Compliance AMF: {'✅' if compliance_ok else '❌'}")
 
     return portfolios
+
 
 
     # === NORMALISATION V3 -> SCHÉMA FRONT HISTORIQUE (Agressif/Modéré/Stable) ===
