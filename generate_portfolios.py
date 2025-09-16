@@ -1159,42 +1159,42 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
         if not validation_ok:
             print(f"⚠️ Erreurs restantes après correction: {remaining_errors}")
             
-# 👉 NEW: Rapport de doublons / chevauchements (console)
-try:
-    overlap_report = build_overlap_report(
-        portfolios,
-        allowed_assets,
-        etf_csv_path="data/combined_etfs.csv"
-    )
-    for k, v in overlap_report.items():
-        if v:
-            sample = v[0]
-            print(
-                f"🔎 Overlap {k}: {len(v)} paire(s) suspecte(s) — "
-                f"ex: {sample['names'][0]} ↔ {sample['names'][1]} "
-                f"({sample['type']} {sample['score']})"
-            )
-        else:
-            print(f"🔎 Overlap {k}: RAS")
-except Exception as e:
-    print(f"⚠️ Overlap: erreur durant l'analyse ({e})")
-    
-    # Contrôle final des scores
+    # 👉 NEW: Rapport de doublons / chevauchements (console)
+    try:
+        overlap_report = build_overlap_report(
+            portfolios,
+            allowed_assets,
+            etf_csv_path="data/combined_etfs.csv"
+        )
+        for k, v in overlap_report.items():
+            if v:
+                sample = v[0]
+                print(
+                    f"🔎 Overlap {k}: {len(v)} paire(s) suspecte(s) — "
+                    f"ex: {sample['names'][0]} ↔ {sample['names'][1]} "
+                    f"({sample['type']} {sample['score']})"
+                )
+            else:
+                print(f"🔎 Overlap {k}: RAS")
+    except Exception as e:
+        print(f"⚠️ Overlap: erreur durant l'analyse ({e})")
+
+    # Contrôle final des scores (toujours exécuté)
     try:
         score_guard(portfolios, allowed_assets)
     except ValueError as e:
         print(f"❌ Score guard failed: {e}")
         # ici on peut décider de régénérer ou de poursuivre avec avertissement
-    
+
     print("✅ Portefeuilles v3 générés avec succès (scoring quantitatif + compliance AMF)")
-    
+
     # Petit récap console (facultatif)
     for portfolio_name, portfolio in portfolios.items():
         if isinstance(portfolio, dict) and 'Lignes' in portfolio:
             lignes = portfolio['Lignes']
             total_alloc = sum(ligne.get('allocation_pct', 0) for ligne in lignes)
             categories = set(ligne.get('category') for ligne in lignes)
-            
+
             # Stats scores
             scores = []
             risk_counts = defaultdict(int)
@@ -1206,17 +1206,18 @@ except Exception as e:
                             scores.append(asset.get('score', 0))
                             risk_counts[asset.get('risk_class', 'unknown')] += 1
                             break
-            
+
             avg_score = np.mean(scores) if scores else 0
             median_score = np.median(scores) if scores else 0
             compliance_ok = bool(portfolio.get('Compliance'))
-            
+
             print(f"  📊 {portfolio_name}: {len(lignes)} actifs, {len(categories)} catégories, {total_alloc:.2f}%")
             print(f"     Score moyen: {avg_score:.2f}, médiane: {median_score:.2f}")
             print(f"     Répartition risque: {dict(risk_counts)}")
             print(f"     Compliance AMF: {'✅' if compliance_ok else '❌'}")
-    
+
     return portfolios
+
 
     # === NORMALISATION V3 -> SCHÉMA FRONT HISTORIQUE (Agressif/Modéré/Stable) ===
 def _infer_category_from_id(asset_id: str) -> str:
@@ -1597,10 +1598,11 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict):
         os.makedirs("data/portfolio_history", exist_ok=True)
         overlap_report = build_overlap_report(portfolios_v3, allowed_assets, etf_csv_path="data/combined_etfs.csv")
 
-        # 1) Normaliser v3 -> v1 (schéma attendu par le front)
-        normalized_v1 = normalize_v3_to_frontend_v1(portfolios_v3, allowed_assets)
-        # NEW: Somme v1 = 100% garantie
-_, _, normalized_v1 = validate_and_fix_v1_sum(normalized_v1, fix=True)
+     # 1) Normaliser v3 -> v1 (schéma attendu par le front)
+     normalized_v1 = normalize_v3_to_frontend_v1(portfolios_v3, allowed_assets)
+     # NEW: Somme v1 = 100% garantie
+-_, _, normalized_v1 = validate_and_fix_v1_sum(normalized_v1, fix=True)
++        _, _, normalized_v1 = validate_and_fix_v1_sum(normalized_v1, fix=True)
 
         # 2) Fichier v1 (nom historique en anglais)
         v1_path = "data/portfolios.json"
