@@ -19,6 +19,60 @@ from collections import defaultdict
 from portfolio_adjuster import check_portfolio_constraints, adjust_portfolios, get_portfolio_prompt_additions, valid_etfs_cache, valid_bonds_cache
 # Importer la fonction de formatage du brief
 from brief_formatter import format_brief_data
+# ============= PARSER JSON RÉPARATEUR (NOUVEAU) =============
+
+def parse_json_strict_or_repair(s: str) -> dict:
+    """Essaye json.loads, sinon répare: retire fences, extrait le bloc {...} externe,
+    échappe les retours de ligne dans les chaînes, supprime virgules traînantes, remplace guillemets "". """
+    try:
+        return json.loads(s)
+    except json.JSONDecodeError:
+        print("⚠️ JSON invalide détecté, tentative de réparation...")
+        
+        # 1) retirer fences éventuels
+        s2 = re.sub(r'^\s*```(?:json)?\s*', '', s)
+        s2 = re.sub(r'\s*```\s*$', '', s2)
+
+        # 2) ne garder que le premier '{' jusqu'au dernier '}'
+        start = s2.find('{')
+        end = s2.rfind('}')
+        if start != -1 and end != -1 and end > start:
+            s2 = s2[start:end+1]
+
+        # 3) normaliser guillemets typographiques
+        s2 = s2.replace('"', '"').replace('"', '"').replace(''', "'").replace(''', "'")
+
+        # 4) remplacer retours de ligne CR/LF bruts à l'intérieur des chaînes par \n
+        out = []
+        in_str = False
+        esc = False
+        for ch in s2:
+            if in_str:
+                if esc:
+                    out.append(ch)
+                    esc = False
+                elif ch == '\\':
+                    out.append(ch)
+                    esc = True
+                elif ch == '"':
+                    out.append(ch)
+                    in_str = False
+                elif ch in '\r\n':
+                    out.append('\\n')
+                else:
+                    out.append(ch)
+            else:
+                out.append(ch)
+                if ch == '"':
+                    in_str = True
+        s3 = ''.join(out)
+
+        # 5) supprimer virgules finales avant } ou ]
+        s3 = re.sub(r',(\s*[}\]])', r'\1', s3)
+        
+        print("✅ JSON réparé avec succès")
+        return json.loads(s3)
+
 
 # ============= COMPLIANCE AMF - GARDE-FOUS RÉGLEMENTAIRES =============
 
