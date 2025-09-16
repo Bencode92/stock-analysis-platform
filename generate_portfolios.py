@@ -2090,38 +2090,39 @@ def update_history_index_from_normalized(normalized_json: dict, history_file: st
     except Exception as e:
         print(f"⚠️ Avertissement: index non mis à jour ({e})")
 
-def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict):
+def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict) -> None:
     """
     Sauvegarde double :
-      - vue normalisée v1 pour le front: data/portfolios.json  (EN, historique)
-      - archive v3 détaillée avec métadonnées: data/portfolio_history/portefeuilles_v3_stable_YYYYMMDD_HHMMSS.json
+      - vue normalisée v1 pour le front : data/portfolios.json
+      - archive v3 détaillée avec métadonnées : data/portfolio_history/portefeuilles_v3_stable_YYYYMMDD_HHMMSS.json
       - met à jour l'index d'historique
     """
     try:
         os.makedirs("data", exist_ok=True)
         os.makedirs("data/portfolio_history", exist_ok=True)
 
+        # Rapport d’overlap (diagnostic)
         overlap_report = build_overlap_report(
             portfolios_v3,
             allowed_assets,
             etf_csv_path="data/combined_etfs.csv"
         )
 
-# 1) Normaliser v3 -> v1
-normalized_v1 = normalize_v3_to_frontend_v1(portfolios_v3, allowed_assets)
+        # 1) Normaliser v3 -> v1
+        normalized_v1 = normalize_v3_to_frontend_v1(portfolios_v3, allowed_assets)
 
-# 🔒 NEW: filet anti-doublon thème & anti-crypto en Stable
-normalized_v1 = enforce_one_per_anchor_v1(normalized_v1)
+        # 2) Filet post-génération : 1 ETF par ancre + pas de crypto en Stable
+        normalized_v1 = enforce_one_per_anchor_v1(normalized_v1)
 
-# 2) Force somme = 100%
-_, _, normalized_v1 = validate_and_fix_v1_sum(normalized_v1)
+        # 3) Force la somme = 100%
+        _, _, normalized_v1 = validate_and_fix_v1_sum(normalized_v1, fix=True)
 
-        # 2) Fichier v1 (nom historique en anglais)
+        # 4) Fichier v1 (nom historique en anglais)
         v1_path = "data/portfolios.json"
         with open(v1_path, "w", encoding="utf-8") as f:
             json.dump(normalized_v1, f, ensure_ascii=False, indent=4)
 
-        # 3) Archive v3 + meta
+        # 5) Archive v3 + métadonnées
         ts = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         hist_path = f"data/portfolio_history/portefeuilles_v3_stable_{ts}.json"
         archive_payload = {
@@ -2150,7 +2151,7 @@ _, _, normalized_v1 = validate_and_fix_v1_sum(normalized_v1)
         with open(hist_path, "w", encoding="utf-8") as f:
             json.dump(archive_payload, f, ensure_ascii=False, indent=4)
 
-        # 4) Mettre à jour l’index d’historique à partir de la vue normalisée
+        # 6) Mettre à jour l’index d’historique à partir de la vue normalisée
         update_history_index_from_normalized(
             normalized_json=normalized_v1,
             history_file=hist_path,
@@ -2161,6 +2162,7 @@ _, _, normalized_v1 = validate_and_fix_v1_sum(normalized_v1)
 
     except Exception as e:
         print(f"❌ Erreur lors de la sauvegarde normalisée: {e}")
+
 
 
 # ============= FONCTIONS HELPER POUR LES NOUVEAUX FICHIERS (améliorées) =============
