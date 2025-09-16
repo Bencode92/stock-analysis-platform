@@ -1596,13 +1596,17 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict):
     try:
         os.makedirs("data", exist_ok=True)
         os.makedirs("data/portfolio_history", exist_ok=True)
-        overlap_report = build_overlap_report(portfolios_v3, allowed_assets, etf_csv_path="data/combined_etfs.csv")
 
-     # 1) Normaliser v3 -> v1 (schéma attendu par le front)
-     normalized_v1 = normalize_v3_to_frontend_v1(portfolios_v3, allowed_assets)
-     # NEW: Somme v1 = 100% garantie
--_, _, normalized_v1 = validate_and_fix_v1_sum(normalized_v1, fix=True)
-+        _, _, normalized_v1 = validate_and_fix_v1_sum(normalized_v1, fix=True)
+        overlap_report = build_overlap_report(
+            portfolios_v3,
+            allowed_assets,
+            etf_csv_path="data/combined_etfs.csv"
+        )
+
+        # 1) Normaliser v3 -> v1 (schéma attendu par le front)
+        normalized_v1 = normalize_v3_to_frontend_v1(portfolios_v3, allowed_assets)
+        # NEW: Somme v1 = 100% garantie
+        _, _, normalized_v1 = validate_and_fix_v1_sum(normalized_v1, fix=True)
 
         # 2) Fichier v1 (nom historique en anglais)
         v1_path = "data/portfolios.json"
@@ -1646,10 +1650,9 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict):
         )
 
         print(f"✅ Sauvegarde OK → {v1_path} (v1) + {hist_path} (archive v3)")
+
     except Exception as e:
         print(f"❌ Erreur lors de la sauvegarde normalisée: {e}")
-
-
 
 
 # ============= FONCTIONS HELPER POUR LES NOUVEAUX FICHIERS (améliorées) =============
