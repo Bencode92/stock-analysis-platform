@@ -1230,24 +1230,33 @@ def normalize_v3_to_frontend_v1(raw_obj: dict, allowed_assets: dict) -> dict:
         })
         out[pf_key][category][name] = _pct(alloc)
 
-    # --- 1) Format v3 "classique" avec Lignes ---
     for portfolio_name in ["Agressif", "Modéré", "Stable"]:
         if isinstance(raw_obj.get(portfolio_name), dict):
             pf = raw_obj[portfolio_name]
-            # Cas v2 déjà en catégories -> on recopie tel quel
-            if any(k in pf for k in ("Actions","ETF","Obligations","Crypto")):
-                out[portfolio_name] = {
-                    "Commentaire": pf.get("Commentaire",""),
-                    "Actions": pf.get("Actions",{}),
-                    "ETF": pf.get("ETF",{}),
-                    "Obligations": pf.get("Obligations",{}),
-                    "Crypto": pf.get("Crypto",{}),
-                }
+
+            # 👉 seed du commentaire dès le départ (et sanitisation)
+            base_comment = sanitize_marketing_language(pf.get("Commentaire", "")) if isinstance(pf, dict) else ""
+            out.setdefault(portfolio_name, {
+                "Commentaire": base_comment,
+                "Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}
+            })
+
+            # Cas v2 déjà en catégories → on recopie en conservant le commentaire
+            if any(k in pf for k in ("Actions", "ETF", "Obligations", "Crypto")):
+                out[portfolio_name].update({
+                    "Actions": pf.get("Actions", {}),
+                    "ETF": pf.get("ETF", {}),
+                    "Obligations": pf.get("Obligations", {}),
+                    "Crypto": pf.get("Crypto", {})
+                })
+                # s'assure que le commentaire est bien là
+                if base_comment:
+                    out[portfolio_name]["Commentaire"] = base_comment
                 continue
 
-            # Cas v3 attendu avec Lignes
+            # Cas v3 attendu avec Lignes → on construit les lignes ET on copie le commentaire
             for ligne in pf.get("Lignes", []):
-                asset_id = ligne.get("id","")
+                asset_id = ligne.get("id", "")
                 alloc = ligne.get("allocation_pct", 0)
                 if asset_id in lut:
                     name = lut[asset_id]["name"]; category = lut[asset_id]["category"]
@@ -1256,16 +1265,26 @@ def normalize_v3_to_frontend_v1(raw_obj: dict, allowed_assets: dict) -> dict:
                     category = _infer_category_from_id(asset_id)
                 _put(portfolio_name, category, name, alloc)
 
+            # s'assure que le commentaire n'a pas été écrasé par setdefault
+            if base_comment:
+                out[portfolio_name]["Commentaire"] = base_comment
+
     # --- 2) Format "Portefeuilles" (archive v2/v3 non standard) ---
     if not out and isinstance(raw_obj, dict):
         pfs = raw_obj.get("Portefeuilles") or raw_obj.get("portefeuilles") or []
-        def canon(nom:str) -> str:
+        def canon(nom: str) -> str:
             s = (nom or "").lower()
             if "agress" in s: return "Agressif"
             if "mod" in s or "équili" in s or "equili" in s: return "Modéré"
-            return "Stable"  # défaut
+            return "Stable"
         for pf in pfs:
             pf_key = canon(pf.get("Nom") or pf.get("name"))
+            # 👉 copie commentaire s’il existe dans ce schéma
+            base_comment = sanitize_marketing_language(pf.get("Commentaire", ""))
+            out.setdefault(pf_key, {
+                "Commentaire": base_comment,
+                "Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}
+            })
             for it in pf.get("Actifs", []):
                 asset_id = it.get("id") or it.get("ID")
                 alloc = it.get("allocation") or it.get("allocation_pct") or 0
@@ -1277,6 +1296,7 @@ def normalize_v3_to_frontend_v1(raw_obj: dict, allowed_assets: dict) -> dict:
                 _put(pf_key, category, name, alloc)
 
     return out
+
 
 
 def update_history_index_from_normalized(normalized_json: dict, history_file: str, version: str):
