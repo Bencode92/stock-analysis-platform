@@ -2219,12 +2219,10 @@ def main():
     # Générer les portefeuilles avec la nouvelle version quantitative v3
     portfolios = generate_portfolios(filtered_data)
     
-    # ========== SAUVEGARDE ==========
-    
-   print("\n💾 Sauvegarde des portefeuilles...")
-allowed_assets = extract_allowed_assets(filtered_data)  # mapping id -> nom/catégorie
-front_json = normalize_v3_to_frontend_v1(portfolios, allowed_assets)
-save_portfolios_dual(front_json, portfolios, version_tag="v3_stable_compliance")
+  # ========== SAUVEGARDE ==========
+    print("\n💾 Sauvegarde des portefeuilles...")
+    allowed_assets = extract_allowed_assets(filtered_data)  # mapping id -> nom/catégorie
+    save_portfolios_normalized(portfolios, allowed_assets)
     
     print("\n✨ Traitement terminé avec la version v3 quantitative + COMPLIANCE AMF + STABILITÉ!")
     print("🎯 Fonctionnalités activées:")
