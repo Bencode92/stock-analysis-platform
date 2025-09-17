@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Pitch Deck – NOVIS (THE PROJECT × Revolut)</title>
+  <meta name="description" content="NOVIS - L'app qui relie budget, fiscalité et portefeuilles pour investir simplement — 5€/mois. Candidature THE PROJECT × Revolut." />
+  <meta name="robots" content="noindex,nofollow" />
+  <style>
+    /* Design System */
+    :root {
+      --bg: #0a0b14;
+      --bg-soft: #0f1224;
+      --text: #e6e8ef;
+      --muted: #aab2c8;
+      --card: rgba(255,255,255,0.06);
+      --stroke: rgba(255,255,255,0.12);
+      --accent: #24d17e;
+      --accent-2: #00b7ff;
+      --gradient: radial-gradient(60% 60% at 20% 10%, rgba(36,209,126,0.25), transparent 60%),
+                  radial-gradient(50% 50% at 80% 20%, rgba(0,183,255,0.25), transparent 60%),
+                  radial-gradient(40% 40% at 50% 90%, rgba(255,255,255,0.04), transparent 60%);
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --shadow: 0 10px 30px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
+      --shadow-soft: 0 10px 24px rgba(0,0,0,0.35);
+    }
+    
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0;
+    }
+    
+    html { 
+      scroll-behavior: smooth;
+    }
+    
+    body {
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "Helvetica Neue", Arial, "Noto Sans";
+      background: linear-gradient(180deg, var(--bg) 0%, var(--bg-soft) 100%);
+      background-attachment: fixed;
+      color: var(--text);
+      line-height: 1.6;
+      letter-spacing: 0.2px;
+    }
+
+    /* Fixed badge */
+    .badge-fixed {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 100;
+      padding: 10px 16px;
+      background: linear-gradient(135deg, #1a0736, #2c0b5e);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 12px;
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: .3px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    }
+
+    /* Animated backdrop */
+    .backdrop {
+      position: fixed; 
+      inset: 0; 
+      pointer-events: none; 
+      z-index: 0;
+      background-image: var(--gradient);
+      filter: blur(40px) saturate(120%);
+      animation: float 18s ease-in-out infinite alternate;
+      opacity: 0.8;
+    }
+    
+    @keyframes float { 
+      from { transform: translateY(-6%) } 
+      to { transform: translateY(6%) } 
+    }
+
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+      padding: 80px 24px 24px; 
+      position: relative; 
+      z-index: 1; 
+    }
+
+    /* Slides */
+    .slide {
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius-xl);
+      padding: clamp(40px, 5vw, 64px);
+      margin: 0 auto 44px;
+      box-shadow: var(--shadow);
+      min-height: 600px;
+      max-width: 1120px;
+      position: relative; 
+      overflow: clip;
+      isolation: isolate;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    
+    .slide::after {
+      content: ""; 
+      position: absolute; 
+      inset: -2px; 
+      border-radius: inherit; 
+      z-index: -1;
+      background: conic-gradient(from 180deg at 50% 50%, 
+                 rgba(36,209,126,0.35), 
+                 rgba(0,183,255,0.25), 
+                 transparent 60%, 
+                 rgba(36,209,126,0.35));
+      filter: blur(30px); 
+      opacity: .25; 
+      transform: scale(1.02);
+    }
+
+    /* Typography */
+    h1 {
+      font-size: clamp(36px, 5vw, 56px);
+      margin: 0 0 8px; 
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff, #b9ffde 40%, #a9e8ff 85%);
+      -webkit-background-clip: text; 
+      background-clip: text; 
+      color: transparent;
+      letter-spacing: 0.5px;
+      line-height: 1.1;
+    }
+    
+    h2 {
+      font-size: clamp(28px, 3.4vw, 42px);
+      margin: 0 0 20px; 
+      font-weight: 800; 
+      color: #fff;
+      text-align: center;
+    }
+    
+    h3 { 
+      font-size: clamp(20px, 2.4vw, 26px); 
+      color: var(--text); 
+      margin: 20px 0 12px; 
+    }
+    
+    p { 
+      margin: 12px 0; 
+      font-size: clamp(15px, 1.8vw, 18px);
+    }
+    
+    ul { 
+      margin: 0; 
+      padding-left: 20px; 
+    }
+    
+    li { 
+      margin: 8px 0; 
+      font-size: clamp(14px, 1.6vw, 17px);
+    }
+
+    /* Components */
+    .tagline { 
+      font-size: clamp(18px, 2.3vw, 24px); 
+      color: var(--muted); 
+      margin: 8px 0 12px; 
+    }
+    
+    .author { 
+      font-weight: 700; 
+      color: var(--accent); 
+      margin-top: 16px;
+      font-size: clamp(16px, 2vw, 20px);
+    }
+
+    .pill { 
+      display: inline-flex; 
+      align-items: center; 
+      gap: 8px; 
+      padding: 10px 14px; 
+      border-radius: 999px; 
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,0.06); 
+      color: var(--text); 
+      font-weight: 600; 
+      font-size: 15px; 
+    }
+    
+    .badge { 
+      display: inline-block;
+      padding: 10px 14px;
+      border: 1px solid var(--stroke);
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      font-weight: 600;
+      font-size: 15px; 
+    }
+    
+    .subtitle { 
+      color: var(--muted);
+      font-size: 0.95em;
+      margin-top: 6px; 
+    }
+
+    /* Problem cards */
+    .problem { 
+      display: grid; 
+      gap: 16px; 
+      margin: 20px 0 10px; 
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+    
+    .callout {
+      background: linear-gradient(180deg, rgba(255,63,94,0.1), rgba(255,63,94,0.04));
+      border: 1px solid rgba(255,63,94,0.28);
+      color: #ffd9df; 
+      padding: 18px 20px; 
+      border-radius: var(--radius-lg);
+      text-align: center;
+    }
+    
+    .callout strong { 
+      color: #ff8fa1;
+      font-size: 1.2em;
+    }
+
+    /* Solution flow */
+    .flow { 
+      display: flex; 
+      flex-wrap: wrap; 
+      gap: 16px; 
+      align-items: center; 
+      justify-content: center; 
+      margin: 16px 0 28px; 
+    }
+    
+    .chip { 
+      padding: 14px 18px; 
+      border-radius: 14px; 
+      font-weight: 700; 
+      letter-spacing: .3px; 
+      color: #0a0b14; 
+      background: linear-gradient(135deg, var(--accent), var(--accent-2)); 
+      font-size: 16px;
+    }
+    
+    .arrow { 
+      color: var(--muted); 
+      font-weight: 900; 
+      font-size: 24px; 
+    }
+
+    /* Features grid */
+    .grid { 
+      display: grid; 
+      gap: 16px; 
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); 
+      margin-top: 16px; 
+    }
+    
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+      border: 1px solid var(--stroke);
+      border-radius: 16px; 
+      padding: 16px 18px; 
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+    
+    .card:hover { 
+      transform: translateY(-4px); 
+      box-shadow: var(--shadow-soft); 
+    }
+    
+    .card strong { 
+      color: var(--accent); 
+      display: block; 
+      margin-bottom: 8px;
+      font-size: 1.1em;
+    }
+
+    /* Table */
+    .table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      overflow: hidden; 
+      border-radius: 14px; 
+      border: 1px solid var(--stroke); 
+      margin-top: 8px; 
+    }
+    
+    .table th { 
+      text-align: left; 
+      padding: 18px; 
+      background: linear-gradient(135deg, var(--accent), var(--accent-2)); 
+      color: #0a0b14; 
+      font-size: 17px; 
+    }
+    
+    .table td { 
+      padding: 18px; 
+      border-top: 1px solid var(--stroke);
+      font-size: 16px;
+    }
+    
+    .table tr:nth-child(even) td { 
+      background: rgba(255,255,255,0.03); 
+    }
+
+    /* Metrics */
+    .metrics { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); 
+      gap: 18px; 
+      margin: 16px 0 20px; 
+    }
+    
+    .metric { 
+      text-align: center; 
+      padding: 20px; 
+      border-radius: 18px; 
+      border: 1px solid var(--stroke); 
+      background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04)); 
+    }
+    
+    .metric .val { 
+      font-size: clamp(32px, 3vw, 44px); 
+      font-weight: 900; 
+      color: var(--accent); 
+    }
+    
+    .metric .lab { 
+      color: var(--muted);
+      font-size: 16px;
+      margin-top: 4px;
+    }
+
+    /* Timeline */
+    .timeline { 
+      position: relative; 
+      margin-top: 8px; 
+    }
+    
+    .timeline::before { 
+      content: ""; 
+      position: absolute; 
+      left: 16px; 
+      top: 0; 
+      bottom: 0; 
+      width: 2px; 
+      background: linear-gradient(180deg, var(--accent), var(--accent-2)); 
+    }
+    
+    .mile { 
+      position: relative; 
+      margin: 20px 0 20px 40px; 
+      padding: 16px 20px; 
+      border-radius: 14px; 
+      border: 1px solid var(--stroke); 
+      background: rgba(255,255,255,0.05); 
+    }
+    
+    .mile::before { 
+      content: ""; 
+      position: absolute; 
+      left: -8px; 
+      top: 20px; 
+      width: 16px; 
+      height: 16px; 
+      border-radius: 999px; 
+      background: linear-gradient(135deg, var(--accent), var(--accent-2)); 
+      border: 2px solid #0a0b14; 
+    }
+    
+    .time { 
+      font-weight: 800; 
+      color: var(--accent); 
+      margin-bottom: 8px;
+      font-size: 18px;
+    }
+
+    /* CTA */
+    .cta { 
+      display: inline-flex; 
+      align-items: center; 
+      gap: 12px; 
+      padding: 16px 24px; 
+      border-radius: 999px; 
+      font-weight: 800; 
+      text-decoration: none; 
+      color: #0a0b14;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2)); 
+      border: none; 
+      box-shadow: 0 16px 40px rgba(0,183,255,0.26); 
+      cursor: pointer;
+      font-size: 17px;
+      margin: 8px;
+    }
+    
+    .cta:hover { 
+      transform: translateY(-2px); 
+      box-shadow: 0 20px 50px rgba(0,183,255,0.35); 
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container {
+        padding: 60px 16px 16px;
+      }
+      
+      .slide {
+        padding: 32px 24px;
+        min-height: auto;
+      }
+      
+      .problem,
+      .grid,
+      .metrics {
+        grid-template-columns: 1fr;
+      }
+      
+      .flow {
+        flex-direction: column;
+      }
+      
+      .badge-fixed {
+        font-size: 11px;
+        padding: 8px 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+  <div class="badge-fixed">THE PROJECT × Revolut — Dossier de candidature</div>
+  
+  <div class="container">
+    <!-- Slide 1 - Couverture -->
+    <section class="slide" style="text-align: center;">
+      <h1 style="font-size: clamp(48px, 8vw, 72px); margin-bottom: 24px;">NOVIS</h1>
+      
+      <p class="tagline" style="font-size: clamp(20px, 3vw, 28px); line-height: 1.4;">
+        L'app qui <span style="color:var(--accent);">relie budget</span>, 
+        <span style="color:var(--accent);">fiscalité</span> et 
+        <span style="color:var(--accent);">portefeuilles</span><br/>
+        pour investir simplement — <b style="background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent;">5 €/mois</b>
+      </p>
+      
+      <div style="margin: 32px 0; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
+        <span class="pill" style="background: rgba(255,183,3,0.15); border-color: rgba(255,183,3,0.4); color: #ffb703;">
+          🚀 424 nouveaux/mois
+        </span>
+        <span class="pill" style="background: rgba(36,209,126,0.15); border-color: rgba(36,209,126,0.4); color: var(--accent);">
+          🎯 Break-even 943 clients
+        </span>
+        <span class="pill" style="background: rgba(0,183,255,0.15); border-color: rgba(0,183,255,0.4); color: var(--accent-2);">
+          💰 LTV/CAC 11.1x
+        </span>
+      </div>
+      
+      <div style="margin: 24px auto; padding: 18px 28px; background: linear-gradient(135deg, rgba(36,209,126,0.15), rgba(0,183,255,0.1)); border: 2px solid var(--accent); border-radius: 20px; max-width: 500px;">
+        <p style="margin: 0; font-weight: 700; font-size: 20px; color: var(--accent);">
+          🎯 Lancement octobre 2025
+        </p>
+        <p style="margin: 6px 0 0; font-size: 17px; opacity: 0.9;">
+          Beta août 2025 • CA 2026 : 117-156K€
+        </p>
+      </div>
+      
+      <p class="author" style="margin-top: 32px; font-size: 24px;">
+        Benoît Comas — Fondateur
+      </p>
+    </section>
+
+    <!-- Slide 2 - Problème -->
+    <section class="slide">
+      <h2>Le Vrai Problème : Les Jeunes n'Investissent Pas</h2>
+      <div class="problem">
+        <div class="callout">
+          <strong>6,8 %</strong> détiennent des actions
+          <div style="font-size:.9em;opacity:.85;">Encore moins chez les 18-30 ans¹</div>
+        </div>
+        <div class="callout">
+          <strong>-2 à -3 %/an</strong> de pouvoir d'achat
+          <div style="font-size:.9em;opacity:.85;">Inflation vs taux Livret A²</div>
+        </div>
+        <div class="callout" style="background:linear-gradient(180deg,rgba(36,209,126,.12),rgba(36,209,126,.06));border-color:rgba(36,209,126,.35);">
+          <strong>Pourquoi maintenant ?</strong><br/>
+          Loyers explosifs + salaires stagnants = <b>zéro épargne</b>
+        </div>
+      </div>
+      <h3 style="text-align:center; margin-top: 24px; color: var(--accent); font-size: 24px;">
+        Info partout, <span style="color:#ffb703;">prix nulle part</span> → 5€ change tout.
+      </h3>
+      <p style="text-align: center; font-size: 14px; color: var(--muted); margin-top: 24px;">
+        Sources : ¹OCDE/AMF 2023 · ²Banque de France 2024
+      </p>
+    </section>
+
+    <!-- Slide 3 - Solution -->
+    <section class="slide">
+      <h2>NOVIS : La Solution Ultra-Lean</h2>
+      <h3 style="text-align:center; margin-bottom: 28px; color: var(--accent);">
+        5€/mois · Coûts 3 460€/mois · Break-even 943 clients
+      </h3>
+      <div class="flow">
+        <span class="chip">1. J'organise</span>
+        <span class="arrow">→</span>
+        <span class="chip">2. J'apprends</span>
+        <span class="arrow">→</span>
+        <span class="chip">3. J'investis</span>
+        <span class="arrow">→</span>
+        <span class="chip">4. Je prospère</span>
+      </div>
+      
+      <h3 style="color: var(--accent); text-align: center; margin-top: 32px;">Notre croissance validée</h3>
+      <div class="grid">
+        <div class="card">
+          <strong>🎯 Prix psychologique</strong>
+          5€ = seuil d'achat impulsif<br/>
+          <small style="color: var(--muted);">4.17€ HT, 3.67€ net/client</small>
+        </div>
+        <div class="card">
+          <strong>📱 Acquisition optimisée</strong>
+          CAC 5.05€ · LTV 56€<br/>
+          <small style="color: var(--muted);">Payback 1.38 mois</small>
+        </div>
+        <div class="card">
+          <strong>🚀 Rentabilité rapide</strong>
+          Break-even février 2026<br/>
+          <small style="color: var(--muted);">Tréso positive juin 2026</small>
+        </div>
+      </div>
+      
+      <p style="text-align:center; margin-top: 24px; font-size: 20px; color: var(--accent);">
+        « 3 709 clients fin 2026 · 117K€ CA · 61.5K€ EBITDA (53% marge) »
+      </p>
+    </section>
+
+    <!-- Slide 4 - Fonctionnalités -->
+    <section class="slide">
+      <h2>NOVIS : L'App Mobile First</h2>
+      
+      <div style="text-align: center; margin: 24px 0;">
+        <h3 style="color: var(--accent);">🔗 Le cœur : 3 Portefeuilles Gamifiés</h3>
+        <div style="display: flex; justify-content: center; gap: 16px; margin: 18px 0; flex-wrap: wrap;">
+          <span class="pill">🔥 Agressif (crypto)</span>
+          <span class="pill">⚖️ Modéré (ETF)</span>
+          <span class="pill">🛡️ Stable (fonds €)</span>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div style="text-align: center;">
+          <h3 style="color: var(--accent); font-size: 20px;">📊 Marchés Simplifiés</h3>
+          <div class="card"><strong>Swipe</strong> Actions triées</div>
+          <div class="card"><strong>Cards</strong> ETF expliqués</div>
+          <div class="card"><strong>Stories</strong> News du jour</div>
+        </div>
+        
+        <div style="text-align: center;">
+          <h3 style="color: var(--accent); font-size: 20px;">💰 Budget Gaming</h3>
+          <div class="card"><strong>Challenges</strong> Économies</div>
+          <div class="card"><strong>Progress</strong> Goals visuels</div>
+          <div class="card"><strong>Social</strong> Compare amis</div>
+        </div>
+        
+        <div style="text-align: center;">
+          <h3 style="color: var(--accent); font-size: 20px;">🎓 Learn TikTok</h3>
+          <div class="card"><strong>60s videos</strong> Daily tips</div>
+          <div class="card"><strong>Quizz</strong> Earn badges</div>
+          <div class="card"><strong>Lives</strong> Q&A hebdo</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 5 - Différenciation -->
+    <section class="slide">
+      <h2>La Révolution 5€ : Zero Dilution Forever</h2>
+      
+      <div style="margin: 24px 0;">
+        <div class="card" style="padding: 24px; margin: 18px 0; border-left: 4px solid var(--accent);">
+          <h3 style="color:var(--accent); margin: 0 0 10px;">1. Structure de coûts maîtrisée</h3>
+          <ul>
+            <li>Infrastructure : 370€/mois</li>
+            <li>Marketing : 2 140€/mois (TikTok + collabs)</li>
+            <li>Opérationnel : 950€/mois</li>
+            <li><strong>Total : 3 460€/mois = 943 clients break-even</strong></li>
+          </ul>
+        </div>
+        
+        <div class="card" style="padding: 24px; margin: 18px 0; border-left: 4px solid var(--accent);">
+          <h3 style="color:var(--accent); margin: 0 0 10px;">2. Unit economics solides</h3>
+          <ul>
+            <li>LTV : 56€ (15.4 mois × 3.67€ net)</li>
+            <li>CAC : 5.05€ tout inclus</li>
+            <li>Ratio LTV/CAC : 11.1x</li>
+            <li>Payback : 1.38 mois</li>
+          </ul>
+        </div>
+        
+        <div class="card" style="padding: 24px; margin: 18px 0; border-left: 4px solid var(--accent);">
+          <h3 style="color:var(--accent); margin: 0 0 10px;">3. Projections financières validées</h3>
+          <ul>
+            <li>2026 : 3 709 clients · 117K€ CA · 61.5K€ EBITDA</li>
+            <li>2027 : 5 500 clients · 240K€ CA · 169K€ EBITDA</li>
+            <li>2028 : 5 990 clients · 290K€ CA · 213K€ EBITDA</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 6 - Modèle économique -->
+    <section class="slide">
+      <h2>Modèle Économique Ultra-Lean</h2>
+      
+      <div class="metrics">
+        <div class="metric">
+          <div class="val">5 €</div>
+          <div class="lab">Prix TTC/mois<br/>(4.17€ HT)</div>
+        </div>
+        <div class="metric">
+          <div class="val">3 460 €</div>
+          <div class="lab">Coûts fixes/mois</div>
+        </div>
+        <div class="metric">
+          <div class="val">943</div>
+          <div class="lab">Clients pour<br/>break-even</div>
+        </div>
+        <div class="metric">
+          <div class="val">53%</div>
+          <div class="lab">Marge EBITDA<br/>2026</div>
+        </div>
+      </div>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Période</th>
+            <th>Clients fin</th>
+            <th>CA brut HT</th>
+            <th>EBITDA</th>
+            <th>Marge</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Q4 2025</td>
+            <td>220</td>
+            <td>1.6K€</td>
+            <td style="color:#ff3366">-11.9K€</td>
+            <td>-</td>
+          </tr>
+          <tr>
+            <td>2026 (base)</td>
+            <td>3 709</td>
+            <td>117.1K€</td>
+            <td style="color:var(--accent)">61.5K€</td>
+            <td>53%</td>
+          </tr>
+          <tr>
+            <td>2027</td>
+            <td>5 500</td>
+            <td>239.7K€</td>
+            <td style="color:var(--accent)">169.5K€</td>
+            <td>71%</td>
+          </tr>
+          <tr>
+            <td>2028</td>
+            <td>5 990</td>
+            <td>289.5K€</td>
+            <td style="color:var(--accent)">213.3K€</td>
+            <td>74%</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Slide 7 - Conformité -->
+    <section class="slide">
+      <h2>100% Conforme AMF & Légal</h2>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin: 32px 0;">
+        <div style="text-align: center;">
+          <h3 style="color: var(--accent); margin-bottom: 18px;">✅ CE QUE NOVIS FAIT</h3>
+          <div class="card"><strong>Éducation financière</strong><br/>Contenus pédagogiques généraux</div>
+          <div class="card"><strong>Conseils généraux</strong><br/>Jamais personnalisés</div>
+          <div class="card"><strong>Outils de simulation</strong><br/>Calculs et projections neutres</div>
+          <div class="card"><strong>Information publique</strong><br/>Données de marché accessibles</div>
+        </div>
+        
+        <div style="text-align: center;">
+          <h3 style="color: #ff8fa1; margin-bottom: 18px;">❌ CE QUE NOVIS NE FAIT PAS</h3>
+          <div class="card" style="background: rgba(255,63,94,0.1);"><strong>Conseil personnalisé</strong><br/>Pas de "vous devriez acheter X"</div>
+          <div class="card" style="background: rgba(255,63,94,0.1);"><strong>Gestion pour compte</strong><br/>Pas de gestion d'argent client</div>
+          <div class="card" style="background: rgba(255,63,94,0.1);"><strong>Recommandation individuelle</strong><br/>Pas d'adaptation au profil</div>
+          <div class="card" style="background: rgba(255,63,94,0.1);"><strong>Exécution d'ordres</strong><br/>Pas de trading direct</div>
+        </div>
+      </div>
+      
+      <p class="pill" style="padding: 18px 32px; font-size: 18px; background: rgba(33,150,243,0.15); margin: 0 auto; display: table;">
+        🏛️ Conforme au cadre AMF : éducation, conseils non personnalisés, simulations
+      </p>
+    </section>
+
+    <!-- Slide 8 - Roadmap -->
+    <section class="slide">
+      <h2>Roadmap : 6K Clients en 36 Mois</h2>
+      <div class="timeline">
+        <div class="mile">
+          <div class="time">Q4 2025 : Lancement</div>
+          <strong>MVP + Beta privée</strong><br/>
+          KPI : 220 clients · CA 1.6K€ · NPS >60
+        </div>
+        <div class="mile">
+          <div class="time">2026 : Croissance</div>
+          <strong>3.7K clients · 117K€ CA</strong><br/>
+          KPI : 424 nouveaux/mois · Churn <7% · EBITDA 61.5K€
+        </div>
+        <div class="mile">
+          <div class="time">2027 : Scale</div>
+          <strong>5.5K clients · 240K€ CA</strong><br/>
+          KPI : CAC<6€ · EBITDA 169K€ · Marge 71%
+        </div>
+        <div class="mile">
+          <div class="time">2028 : Leader</div>
+          <strong>6K clients · 290K€ CA</strong><br/>
+          KPI : #1 app finance jeunes · EBITDA 213K€
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 9 - Contact -->
+    <section class="slide" style="text-align: center;">
+      <h2>Rejoignez NOVIS</h2>
+      
+      <h3 style="color: var(--accent); margin: 28px 0;">Notre Mission</h3>
+      <p style="font-style: italic; font-size: 22px; margin: 16px 0;">
+        « Permettre à 21 millions de jeunes de créer leur patrimoine<br/>
+        avec 5€/mois — sans enrichir des investisseurs »
+      </p>
+      
+      <div style="margin: 40px 0;">
+        <h3 style="color: var(--accent); margin: 20px 0;">Benoît Comas — Fondateur</h3>
+        <p style="font-size: 18px;">Expert Finance · Investisseur actif · Vision sociale</p>
+        
+        <p style="display:flex; flex-wrap:wrap; gap: 12px; justify-content: center; margin: 28px 0;">
+          <a href="mailto:mynovis@novisfr.com" class="pill" style="text-decoration:none;">📧 mynovis@novisfr.com</a>
+          <span class="pill">📱 06 77 13 89 30</span>
+        </p>
+      </div>
+      
+      <div style="background: rgba(255,183,3,0.1); border: 2px solid rgba(255,183,3,0.3); border-radius: 20px; padding: 24px; margin: 28px 0;">
+        <h3 style="color: #ffb703; margin-bottom: 12px;">📊 Métriques Clés</h3>
+        <p style="margin: 8px 0; font-size: 18px;">
+          <strong>424 nouveaux/mois</strong> · <strong>3.7K clients fin 2026</strong><br/>
+          <strong>CA 117K€</strong> · <strong>EBITDA 61.5K€ (53%)</strong><br/>
+          <strong>LTV/CAC 11.1x</strong> · <strong>Payback 1.38 mois</strong>
+        </p>
+      </div>
+      
+      <p style="color: var(--muted); margin-top: 24px; padding: 14px; background: rgba(33,150,243,0.1); border-radius: 12px;">
+        ✅ 100% conforme AMF · Lancement octobre 2025 · Financement 25-32K€ non dilutif
+      </p>
+    </section>
+  </div>
+</body>
+</html>
